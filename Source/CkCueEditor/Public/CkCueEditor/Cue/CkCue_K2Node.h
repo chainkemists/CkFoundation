@@ -31,13 +31,10 @@ public:
     friend class SCk_GraphNode_Cue_Base;
 
 public:
-    // UObject interface
     auto PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) -> void override;
     auto PreSave(FObjectPreSaveContext SaveContext) -> void override;
     auto ShouldShowNodeProperties() const -> bool override;
-    // End of UObject interface
 
-    // K2Node implementation
     auto IsNodePure() const -> bool override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
     auto GetMenuCategory() const -> FText override;
@@ -46,12 +43,9 @@ public:
     auto GetPinMetaData(FName InPinName, FName InKey) -> FString override;
     auto GetJumpTargetForDoubleClick() const -> UObject* override;
     auto CreateVisualWidget() -> TSharedPtr<SGraphNode> override;
-    // End of K2Node implementation
 
-    // UEdGraphNode implementation
     auto GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText override;
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
-    // End of UEdGraphNode implementation
 
 public:
     auto DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> UClass*;
@@ -67,18 +61,15 @@ protected:
     auto DoGet_Menu_NodeTitle() const -> FText override;
     auto DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void override;
 
-    // Virtual method for display node title (can include UTF-8 symbols)
     virtual auto DoGet_DisplayNodeTitle() const -> FText
     {
         return CK_UTILS_IO_GET_LOCTEXT(TEXT("UCk_K2Node_Cue_Base"), TEXT("[Ck] Execute Cue"));
     }
 
 protected:
-    // Must be implemented by derived classes to specify which executor subsystem to use
     virtual auto Get_CueExecutorSubsystemClass() const -> TSubclassOf<UCk_CueExecutor_Subsystem_Base_UE>
     PURE_VIRTUAL(UCk_K2Node_Cue_Base::Get_CueExecutorSubsystemClass, return {};);
 
-    // Must be implemented by derived classes to specify the gameplay tag category
     virtual auto Get_CueTagCategory() const -> FString
     PURE_VIRTUAL(UCk_K2Node_Cue_Base::Get_CueTagCategory, return TEXT("Cue"););
 

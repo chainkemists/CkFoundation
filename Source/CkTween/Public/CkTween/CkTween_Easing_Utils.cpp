@@ -89,8 +89,7 @@ auto UCk_Utils_TweenEasing_UE::Interpolate(const FCk_TweenValue& InStart, const 
         }
         else if constexpr (std::is_same_v<T, FCk_Handle_Transform>)
         {
-            // Transform handles should be resolved to concrete values before interpolation
-            // This branch should never execute at runtime
+            // Unreachable: transform handles are resolved to concrete values before interpolation.
             return FCk_TweenValue{0.0f};
         }
         else
@@ -102,16 +101,12 @@ auto UCk_Utils_TweenEasing_UE::Interpolate(const FCk_TweenValue& InStart, const 
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Linear
-// --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::Linear(FCk_FloatRange_0to1 InT) -> float
 {
     return InT.Get_Value();
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Sine
 // --------------------------------------------------------------------------------------------------------------------
 
 // ReSharper disable CppInconsistentNaming
@@ -135,8 +130,6 @@ auto UCk_Utils_TweenEasing_UE::InOutSine(FCk_FloatRange_0to1 InT) -> float
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Quad
-// --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InQuad(FCk_FloatRange_0to1 InT) -> float
 {
@@ -156,8 +149,6 @@ auto UCk_Utils_TweenEasing_UE::InOutQuad(FCk_FloatRange_0to1 InT) -> float
     return T < 0.5f ? 2.0f * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 2.0f) / 2.0f;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Cubic
 // --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InCubic(FCk_FloatRange_0to1 InT) -> float
@@ -179,8 +170,6 @@ auto UCk_Utils_TweenEasing_UE::InOutCubic(FCk_FloatRange_0to1 InT) -> float
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Quart
-// --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InQuart(FCk_FloatRange_0to1 InT) -> float
 {
@@ -201,8 +190,6 @@ auto UCk_Utils_TweenEasing_UE::InOutQuart(FCk_FloatRange_0to1 InT) -> float
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Quint
-// --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InQuint(FCk_FloatRange_0to1 InT) -> float
 {
@@ -222,8 +209,6 @@ auto UCk_Utils_TweenEasing_UE::InOutQuint(FCk_FloatRange_0to1 InT) -> float
     return T < 0.5f ? 16.0f * T * T * T * T * T : 1.0f - FMath::Pow(-2.0f * T + 2.0f, 5.0f) / 2.0f;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Expo
 // --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InExpo(FCk_FloatRange_0to1 InT) -> float
@@ -251,8 +236,6 @@ auto UCk_Utils_TweenEasing_UE::InOutExpo(FCk_FloatRange_0to1 InT) -> float
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Circ
-// --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InCirc(FCk_FloatRange_0to1 InT) -> float
 {
@@ -274,8 +257,6 @@ auto UCk_Utils_TweenEasing_UE::InOutCirc(FCk_FloatRange_0to1 InT) -> float
         : (FMath::Sqrt(1.0f - FMath::Pow(-2.0f * T + 2.0f, 2.0f)) + 1.0f) / 2.0f;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Back
 // --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InBack(FCk_FloatRange_0to1 InT) -> float
@@ -307,8 +288,6 @@ auto UCk_Utils_TweenEasing_UE::InOutBack(FCk_FloatRange_0to1 InT) -> float
         : (FMath::Pow(2.0f * T - 2.0f, 2.0f) * ((C2 + 1.0f) * (T * 2.0f - 2.0f) + C2) + 2.0f) / 2.0f;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Elastic
 // --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InElastic(FCk_FloatRange_0to1 InT) -> float
@@ -346,8 +325,6 @@ auto UCk_Utils_TweenEasing_UE::InOutElastic(FCk_FloatRange_0to1 InT) -> float
         : (FMath::Pow(2.0f, -20.0f * T + 10.0f) * FMath::Sin((20.0f * T - 11.125f) * C5)) / 2.0f + 1.0f;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Bounce
 // --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InBounce(FCk_FloatRange_0to1 InT) -> float
@@ -393,8 +370,6 @@ auto UCk_Utils_TweenEasing_UE::InOutBounce(FCk_FloatRange_0to1 InT) -> float
 
 // ReSharper restore CppInconsistentNaming
 
-// --------------------------------------------------------------------------------------------------------------------
-// Type-specific interpolation
 // --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Utils_TweenEasing_UE::InterpolateFloat(float InStart, float InEnd, float InT) -> float

@@ -25,14 +25,10 @@ auto
         TEXT("Invalid handle [{}] passed to UCk_Utils_Nav_UE::Request_FindPath"), InHandle)
     { return InHandle; }
 
-    // Make sure the result fragment exists so consumers can read PathResult immediately
-    // (before the processor drains the request, Status will be None — Pending becomes
-    // visible after the processor's next ForEachEntity tick).
     auto& Result = InHandle.AddOrGet<ck::FFragment_Nav_PathResult>();
 
-    // Append to the per-entity request queue. The processor's view membership is keyed
-    // on the existence of FFragment_Nav_Requests, so AddOrGet is what re-arms the dirty
-    // event when the queue had been drained empty in a prior tick.
+    // AddOrGet, not Get: the processor's view membership is keyed on the fragment existing,
+    // so re-adding it is what re-arms the dirty event after a prior tick drained it away.
     auto& Requests = InHandle.AddOrGet<ck::FFragment_Nav_Requests>();
     Requests._Requests.Add(InRequest);
 
@@ -108,8 +104,6 @@ auto
     if (NavSys == nullptr)
     { return; }
 
-    // Triggers a full async rebuild — leaves IsNavigationBuildInProgress=true for several
-    // ticks, which is what an autotest needs to exercise the deferred-request queue.
     NavSys->Build();
     ck::nav::Verbose(TEXT("Request_NavigationRebuild_ForTesting kicked off Build() on world [{}]"), World);
 }
@@ -141,9 +135,8 @@ auto
     { return false; }
 
     const auto HalfExt = FMath::Max(InHalfExtentUu, 1.0f);
-    // Negative vertical extent (the default) preserves the uniform cube; a caller with a known
-    // floor band passes a tight Z so the snap can't select a stray surface far above/below.
-    const auto VertHalfExt = (InVerticalHalfExtentUu < 0.0f) ? HalfExt : FMath::Max(InVerticalHalfExtentUu, 1.0f);
+    const auto UseUniformCube = InVerticalHalfExtentUu < 0.0f;
+    const auto VertHalfExt = UseUniformCube ? HalfExt : FMath::Max(InVerticalHalfExtentUu, 1.0f);
     const auto ProjectionExtent = FVector{HalfExt, HalfExt, VertHalfExt};
 
     auto Projected = FNavLocation{};

@@ -47,17 +47,9 @@ namespace ck::angelscriptgenerator::self_heal
         bool  sDidSynthesizeAssetRegistryStub = false;
         bool  sBootstrapComplete = false;
 
-        // Per-signature convergence tracking. Mid-session synthesis was
-        // unbounded before May 2026 — a "dueling-overloads" loop (e.g. caller
-        // arg order doesn't match the entity script's declared field order, or
-        // two callers force mutually-exclusive overload shapes) re-synthesized
-        // the same stubs every cleanup boundary and the editor never settled.
-        // Each key tracks count + observed callsites; on hitting
-        // MaxPerSignatureRepeats the key is blacklisted, the breaker fires
-        // Log_TerminalBanner_ConvergenceFailed, and no further synthesis is
-        // attempted this session for that signature. Cleared at cold-launch
-        // (Reset_CyclesRun) and at the bootstrap→mid-session transition
-        // (Mark_BootstrapComplete) — same semantics as sCyclesRun.
+        // Breaker for "dueling-overloads" loops that re-synthesize the same stubs
+        // at every cleanup boundary — the module CLAUDE.md § Per-signature
+        // convergence cap owns the mechanism and its reset semantics.
         struct FConvergenceTracker
         {
             int32          RecoveryCount = 0;
@@ -66,37 +58,24 @@ namespace ck::angelscriptgenerator::self_heal
         TMap<FString, FConvergenceTracker> sPerSignatureRecoveryCount;
         TSet<FString>                      sBlacklistedSignatures;
 
-        // Canonicals quarantined this session (absolute path). Quarantine is a
-        // one-shot per canonical: the delete+rebuild reduces a stale canonical
-        // to the proven fresh-clone path, so a second request for the SAME
-        // canonical in the same phase means either the first fixed it (no
-        // request arrives) or the source is genuinely broken (re-deleting would
-        // thrash with no MaxCycles cap mid-session). The guard is added on the
-        // ATTEMPT, not on success, so a failed quarantine also does not loop —
-        // the terminal banner tells the user to restart. Reset alongside the
-        // convergence trackers (cold launch + bootstrap->mid-session), so a
-        // genuinely-new staleness event in the next phase gets a fresh attempt.
+        // Canonicals quarantined this session (absolute path) — one shot each.
+        // The guard is added on the ATTEMPT, not on success, so a FAILED
+        // quarantine cannot loop either (mid-session has no MaxCycles cap).
         TSet<FString> sQuarantinedEspCanonicals;
 
-        // Cold-start deferral: file mutations applied inside OnReloadHadErrors
-        // are invisible to Hazelight's AS hot-reload checker thread because that
-        // thread hasn't started yet — its first scan establishes mtime baselines
-        // for every .as file, including any we've already written, so no
-        // subsequent scan detects a change. We defer to the modal-tick pump
-        // which fires AFTER the modal opens and the thread is running.
-        // Empirically caught 2026-05-12.
-        //
-        // sModalTicksToWait is a safety margin for the thread's first-scan
-        // baseline. Empirically one tick (~16ms at 60Hz) suffices.
+        // Cold-start deferral: mutations applied inside OnReloadHadErrors land
+        // BEFORE Hazelight's hot-reload thread baselines .as mtimes, so no later
+        // scan ever sees them. The modal-tick pump fires after the thread is up.
+        // Full rationale: CLAUDE.md § The modal-tick deferral.
+        // sModalTicksToWait is a settling margin; one tick empirically suffices.
         TArray<FCk_RecoveryAction> sPendingActions;
         FDelegateHandle            sModalTickHandle;
         int32                      sModalTicksWaited  = 0;
         constexpr int32            sModalTicksToWait  = 2;
 
-        // Mid-session deferral (Issue #7, 2026-05-13): mid-session hot-reload
-        // failures do NOT open a Hazelight modal, so modal-tick never fires.
-        // FTSTicker covers that case. No settle margin needed — the AS hot-
-        // reload thread is already running and quiescent between scans.
+        // Mid-session hot-reload failures do NOT open a Hazelight modal, so
+        // modal-tick never fires; FTSTicker covers that case. No settle margin
+        // needed — the AS hot-reload thread is already running.
         FTSTicker::FDelegateHandle sTickerHandle;
         constexpr float            sTickerDelaySeconds = 0.15f;
 
@@ -104,16 +83,13 @@ namespace ck::angelscriptgenerator::self_heal
         constexpr auto* sSelfHealLogChannel = TEXT("CkAngelscriptGenerator");
 
         // Held across the OnReloadHadErrors → modal-tick-apply lifetime so the
-        // apply path can transition the in-progress toast in place rather than
-        // spawning a new one. Weak pointer; the notification's 30s ExpireDuration
-        // is the safety net if anything orphans it.
+        // apply path transitions this toast in place instead of spawning a new
+        // one. The notification's 30s ExpireDuration is the orphan safety net.
         TWeakPtr<SNotificationItem> sInProgressNotification;
 
-        // Fallback-path coalescing. The in-progress→final transition above is
-        // already singleton'd via sInProgressNotification, so spam can only
-        // arise from the fallback branches in Show_RecoveryToast /
-        // Show_TerminalToast — mid-session ticker drains and any path where
-        // no in-progress toast was spawned. Identical-content bursts within
+        // Coalescing for the fallback branches of Show_RecoveryToast /
+        // Show_TerminalToast (the in-progress→final transition is already
+        // singleton'd above): identical-content bursts within
         // kCoalesceWindowSeconds collapse into one toast with a (xN) counter.
         enum class ECk_BannerKind : uint8 { None, Recovery, Terminal };
 
@@ -152,14 +128,10 @@ namespace ck::angelscriptgenerator::self_heal
             return Candidates;
         }
 
-        // A generated EntitySpawnParams canonical: `.../Script/Generated/<X>_
-        // EntitySpawnParams.as`. These are the ONLY generated files the
-        // dispatcher may delete (the one sanctioned canonical-mutation
-        // exception) — gitignored, machine-local, byte-derivable from
-        // source. Tracked generated files (BusterBlockAssets.as,
-        // *_AutoTestActors.as) never carry this suffix, so they can never be
-        // quarantined. Pure string predicate (no IO) so classification stays
-        // deterministic and unit-testable, independent of what exists on disk.
+        // These are the ONLY generated files the dispatcher may delete — the one
+        // sanctioned canonical mutation. TRACKED generated files never carry this
+        // suffix, so they can never be quarantined. Deliberately IO-free, so
+        // classification stays deterministic and unit-testable.
         auto Is_EntitySpawnParamsCanonicalPath(
             const FString& InFilePath) -> bool
         {
@@ -167,17 +139,15 @@ namespace ck::angelscriptgenerator::self_heal
             { return false; }
 
             auto Normalized = InFilePath;
-            FPaths::NormalizeFilename(Normalized);  // backslashes -> forward slashes
+            FPaths::NormalizeFilename(Normalized);
             return Normalized.Contains(TEXT("/Script/Generated/"));
         }
 
         // ---- DynamicHandle strategy ------------------------------------------------
 
-        // Chicken-and-egg: a missing handle's data asset can't materialize until
-        // AS compiles, but AS won't compile because the JSON lacks the entry. We
-        // break it by synthesizing a minimal JSON entry from the error text alone
-        // (TypeName + ShortName are sufficient for AS bindings; the rest are
-        // placeholders that the next clean regen sources from the data asset).
+        // Chicken-and-egg: the handle's data asset can't materialize until AS
+        // compiles, and AS won't compile until the JSON has the entry. TypeName +
+        // ShortName from the error text alone are enough to break it.
 
         auto Derive_HandleShortName(
             const FString& InMissingIdentifier) -> FString
@@ -188,8 +158,6 @@ namespace ck::angelscriptgenerator::self_heal
             return InMissingIdentifier;
         }
 
-        // Sibling stub path: same dir as canonical, filename prefixed with
-        // `_StubRecovery_`. Mirrors EntitySpawnParams + AssetRegistry conventions.
         auto Derive_DynamicHandleStubPath(
             const FString& InCanonicalJsonPath) -> FString
         {
@@ -242,7 +210,6 @@ namespace ck::angelscriptgenerator::self_heal
             if (RootObj->HasField(TEXT("HandleTypes")))
             { HandleTypes = RootObj->GetArrayField(TEXT("HandleTypes")); }
 
-            // Already-recovered: refresh in-memory registry and bail.
             for (const auto& Entry : HandleTypes)
             {
                 const auto Obj = Entry->AsObject();
@@ -272,7 +239,7 @@ namespace ck::angelscriptgenerator::self_heal
             HandleTypes.Add(MakeShared<FJsonValueObject>(NewEntry));
             RootObj->SetArrayField(TEXT("HandleTypes"), HandleTypes);
 
-            // Atomic write to SIBLING stub file. Canonical JSON never touched.
+            // SIBLING stub file — the canonical JSON is never touched.
             auto NewContent = FString{};
             auto Writer     = TJsonWriterFactory<>::Create(&NewContent);
             if (NOT FJsonSerializer::Serialize(RootObj.ToSharedRef(), Writer))
@@ -306,10 +273,9 @@ namespace ck::angelscriptgenerator::self_heal
             const auto NewBindingCount = FCkAngelScript_HandleRegistry::RegisterNewTypesIncremental();
             Log(TEXT("[SelfHeal] DynamicHandle: registered {} new AS binding(s) after JSON reload."), NewBindingCount);
 
-            // Stub's empty RequiredFragments registers a PERMISSIVE validator —
-            // handle.As_<ShortName>() casts succeed unchecked until OnPostEngineInit's
-            // DiscoverAndRegisterAllDefinitions upgrades it to strict via
-            // UpdateExistingDynamicHandle. Window is sub-second after main screen.
+            // The stub's empty RequiredFragments registers a PERMISSIVE validator:
+            // As_<ShortName>() casts succeed unchecked until OnPostEngineInit
+            // upgrades it to strict, a sub-second window after main screen.
             Log(TEXT("[SelfHeal] Permissive validator in effect for '{}' until OnPostEngineInit deferred regen fires."),
                 InError.MissingIdentifier);
 
@@ -326,12 +292,9 @@ namespace ck::angelscriptgenerator::self_heal
 
         // ---- Strategy application --------------------------------------------------
 
-        // ESP-strategy actions arrive via two error shapes: the classic
-        // `U<X>::Params(<args>)` overload miss (NoMatchingSignatures), and
-        // the direct-construction shapes — `F<X>_SpawnParams` as a missing
-        // declared type (IdentifierNotADataType) or as a bare ctor call
-        // (BareCtorNoMatchingSignatures). The latter two carry the struct
-        // name in MissingIdentifier instead of a namespace + signature.
+        // The direct-construction error shapes carry the struct name in
+        // MissingIdentifier instead of a namespace + signature; the classic
+        // `U<X>::Params(<args>)` overload miss does not. Empty means the latter.
         auto Get_EspStructErrorIdentifier(
             const FCk_AsParsedError& InError) -> FString
         {
@@ -342,13 +305,10 @@ namespace ck::angelscriptgenerator::self_heal
             return IsStructShapedError ? InError.MissingIdentifier : FString{};
         }
 
-        // Quarantine + full-shape rebuild for a stale EntitySpawnParams
-        // canonical that references a deleted type. The error's FilePath IS the
-        // canonical. Seedless: Quarantine_And_ResynthesizeFullShapes enumerates
-        // the class union from the canonical's own `namespace U<X>` blocks, so
-        // every entity-script shape it covered is rebuilt from CURRENT source in
-        // one pass — the retry compile then succeeds without burning a cycle per
-        // "every other class just lost its struct".
+        // For a stale canonical referencing a deleted type, the error's FilePath
+        // IS the canonical. Passing NO seed classes makes the rebuild enumerate
+        // the union from the canonical's own blocks, so every shape it covered is
+        // rebuilt in ONE pass rather than one cycle per orphaned class.
         auto Apply_QuarantineStaleEspCanonical(
             const FCk_AsParsedError& InError,
             const TArray<FString>&   InScanRoots,
@@ -356,10 +316,8 @@ namespace ck::angelscriptgenerator::self_heal
         {
             const auto& CanonicalPath = InError.FilePath;
 
-            // Defense in depth: only a gitignored ESP canonical may be deleted
-            // (the sole sanctioned canonical mutation).
-            // Classify already gated on this — re-check so a future caller can't
-            // route a tracked generated file into a delete.
+            // Defense in depth — Classify already gated on this; re-checked so a
+            // future caller can't route a TRACKED generated file into a delete.
             if (NOT Is_EntitySpawnParamsCanonicalPath(CanonicalPath))
             {
                 Warning(TEXT("[SelfHeal] Refusing quarantine — '{}' is not an EntitySpawnParams canonical."),
@@ -395,10 +353,8 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         // InCandidates / InScanRoots / InScanCache are hoisted to ONCE PER DRAIN
-        // by the drain handlers (QW1/QW2) — the candidate set and scan roots are
-        // invariant across every action in a drain, and the scan cache shares
-        // the *.as enumeration + file reads across every ESP drift (and every
-        // class in a quarantine). Non-ESP strategies ignore them.
+        // by the drain handlers — they are invariant across a drain. Non-ESP
+        // strategies ignore them.
         auto Apply_Strategy(
             ECk_RecoveryStrategy     InStrategy,
             const FCk_AsParsedError& InError,
@@ -424,15 +380,9 @@ namespace ck::angelscriptgenerator::self_heal
                         return false;
                     }
 
-                    // Prefer source-derived full-shape synthesis: parse the
-                    // entity-script class's own .as declaration for the
-                    // complete ExposeOnSpawn field set, so direct
-                    // construction and field-access callers (`P.Phase = ...`)
-                    // heal too — the wholesale-missing case a gitignored
-                    // canonical creates on every fresh clone. Falls back to
-                    // the error-text stub when the class source can't be
-                    // found/parsed or when an earlier error-text stub in the
-                    // sibling owns the struct (in-session incremental drift).
+                    // Source-derived full shapes are preferred because they heal
+                    // direct-construction and field-access callers (`P.Phase = ...`)
+                    // too — the wholesale-missing case of a fresh clone.
                     const auto SourceDerived = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
                         ClassName, InError, Candidates, InScanRoots, InScanCache);
 
@@ -443,14 +393,10 @@ namespace ck::angelscriptgenerator::self_heal
                         return true;
                     }
 
-                    // Rev 11 stale-canonical escalation: the struct exists in
-                    // a PRESENT canonical whose signatures drifted from the
-                    // source (untracked leftover surviving a pull). The
-                    // per-signature error-text path cannot heal mixed-type
-                    // callers against it (the 2026-06-11 wedge) — quarantine
-                    // the canonical (forensic copy + delete; it regenerates
-                    // on the next successful compile) and bulk-resynthesize
-                    // exact-typed full shapes for every class it covered.
+                    // The struct exists in a PRESENT canonical whose signatures
+                    // drifted from source. Per-signature error-text stubs cannot
+                    // heal mixed-type callers against it — only a quarantine +
+                    // exact-typed bulk resynthesis can.
                     if (SourceDerived.FailReason == ECk_StubInjectFailReason::StructExistsInCanonical)
                     {
                         Log(TEXT("[SelfHeal] Stale canonical detected for {} ('{}') — escalating to quarantine + full-shape resynthesis."),
@@ -475,12 +421,10 @@ namespace ck::angelscriptgenerator::self_heal
                     Log(TEXT("[SelfHeal] Source-derived synthesis unavailable for {} ({}) — falling back to error-text stub."),
                         ClassName, SourceDerived.ErrorMessage);
 
-                    // Error-text fallback. Direct-construction errors carry
-                    // no namespace signature — synthesize the no-arg shape
-                    // (empty struct + Params()), which heals no-arg
-                    // construction and Params() callers; field-access
-                    // callers are unrecoverable without the class source and
-                    // surface the convergence banner.
+                    // Error-text fallback. Direct-construction errors carry no
+                    // namespace signature, so the no-arg shape is all that can be
+                    // synthesized; field-access callers then hit the convergence
+                    // banner, which is correct — they are genuinely unrecoverable.
                     auto FallbackError = InError;
                     if (NOT StructIdentifier.IsEmpty())
                     {
@@ -502,12 +446,9 @@ namespace ck::angelscriptgenerator::self_heal
                         return true;
                     }
 
-                    // Rev 11: the same-arity ambiguity gate no longer fakes
-                    // success — an existing same-arity stub that does NOT
-                    // satisfy this caller (mixed static types across call
-                    // sites) is unhealable per-signature. Escalate: rebuild
-                    // the sibling from exact-typed full shapes (quarantining
-                    // the canonical too, when one exists).
+                    // An existing same-arity stub that does NOT satisfy this
+                    // caller (mixed static types across call sites) is unhealable
+                    // per-signature — escalate to exact-typed full shapes.
                     if (Result.FailReason == ECk_StubInjectFailReason::SameArityAmbiguous)
                     {
                         Log(TEXT("[SelfHeal] Same-arity wedge for {}::{} — escalating to quarantine + full-shape resynthesis."),
@@ -541,15 +482,9 @@ namespace ck::angelscriptgenerator::self_heal
 
                 case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
                 {
-                    // Tier 1: AssetData.GetClass() for loaded native classes.
-                    // Tier 2: sync-load asset + Get_NonBlueprintParentClass walk.
-                    // Tier 3 (sync load fails): REFUSED for all flavors as of
-                    // 2026-05-13 — see AssetRegistryStub.h docstring for the
-                    // probe_a2.log rationale. The synthesizer returns Success=false
-                    // with an actionable manual-recovery banner; we log it and
-                    // bail so Hazelight's modal continues displaying the original
-                    // `No matching signatures` error (actionable) instead of a
-                    // parser-blind typed-conversion derivative (wedging).
+                    // An unresolvable class is a deliberate refusal, not a bug:
+                    // logging and bailing leaves Hazelight's original actionable
+                    // error on screen (see the synthesizer's Tier3_IsAllowed).
                     const auto Synth = FCkAsAssetRegistryStubSynthesizer::Inject_AssetRegistryStub(InError);
 
                     if (Synth.Success)
@@ -575,11 +510,9 @@ namespace ck::angelscriptgenerator::self_heal
 
                 case ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral:
                 {
-                    // No auto-fix — modifying user source is out of contract for
-                    // the dispatcher. Emit an actionable diagnostic; return true
-                    // so the dispatcher's outer flow doesn't fall through to the
-                    // "all-actions-failed" terminal banner (this IS the
-                    // recognized action — diagnose and surface).
+                    // No auto-fix — modifying user source is out of contract.
+                    // Returns TRUE anyway: diagnosing IS the recognized action, and
+                    // the outer flow must not fall through to "all actions failed".
                     Error(TEXT("[SelfHeal] AS compile error at {}:{}:{} — adjacent string literals not supported. ")
                           TEXT("AngelScript does not splice `\"foo \" \"bar\"` C-style across lines. ")
                           TEXT("Fix: join the literals into one string, or chain via f\"{{Base}}continuation\" / a local variable. ")
@@ -648,10 +581,9 @@ namespace ck::angelscriptgenerator::self_heal
                 Sites,
                 LINE_TERMINATOR);
 
-            // Also surface in MessageLog — the "View details" hyperlink on the
-            // toast opens MessageLog, so the diagnostic needs to live here too.
-            // (The regular log goes to Saved/Logs/<Project>.log only, which the
-            // user can't reach from the toast.)
+            // Duplicated into MessageLog because that is where the toast's
+            // "View details" hyperlink lands — the plain log file is unreachable
+            // from the toast.
             auto MessageLog = FMessageLog{FName{sSelfHealLogChannel}};
             auto SitesAsBullets = FString{};
             for (const auto& Site : InCallsites)
@@ -677,14 +609,9 @@ namespace ck::angelscriptgenerator::self_heal
 
         // ---- UI surfacing (Slate toast + MessageLog) -------------------------------
         //
-        // Single notification lifecycle, transitioning in place:
-        //   1. In-progress — spawned at OnReloadHadErrors (cold-start only).
-        //      User sees "self-heal attempting recovery" alongside Hazelight's modal.
-        //   2. Recovered — transitioned at successful apply (CS_Success, fade out).
-        //   3. Failed — transitioned at terminal-banner paths (CS_Fail, longer hold).
-        //
-        // Skipped mid-session: recovery completes in <200ms with no modal to
-        // mediate panic, so a throbber would just be noise.
+        // ONE notification, transitioned in place: in-progress (cold start only) →
+        // success on apply, or fail on a terminal banner. Deliberately skipped
+        // mid-session — recovery is sub-200ms with no modal, so it would be noise.
 
         auto Describe_Action(
             const FCk_RecoveryAction& InAction) -> FString
@@ -778,12 +705,9 @@ namespace ck::angelscriptgenerator::self_heal
                 sInProgressNotification = NotificationPtr;
             }
 
-            // Orphan guard. If modal-tick doesn't transition this notification
-            // within 5s, the failure path that fired OnReloadHadErrors did NOT
-            // open a Hazelight modal (typical "Cycle 2 with no modal" hot-reload
-            // retry after a successful initial-compile recovery — finding
-            // 2026-05-13). Cycle 1 transitions in ~1.2s empirically, so 5s is
-            // comfortably outside the normal path.
+            // Orphan guard: no transition within 5s means the failure path that
+            // fired OnReloadHadErrors opened no Hazelight modal, so modal-tick
+            // will never run. The normal path transitions in ~1.2s.
             FTSTicker::GetCoreTicker().AddTicker(
                 FTickerDelegate::CreateLambda([](float) -> bool
                 {
@@ -820,9 +744,8 @@ namespace ck::angelscriptgenerator::self_heal
             }
         }
 
-        // Returns true when the incoming banner matched the last one and was
-        // folded into it in place. Callers must skip their AddNotification path
-        // in that case.
+        // True when the incoming banner was folded into the last one in place —
+        // callers MUST then skip their AddNotification path.
         auto TryCoalesce_LastBanner(
             ECk_BannerKind InKind,
             const FText&   InSummary,
@@ -855,9 +778,8 @@ namespace ck::angelscriptgenerator::self_heal
             return true;
         }
 
-        // Record_NewBanner is called after a fresh fallback toast was spawned.
-        // If the previous tracked banner accumulated more than one event in its
-        // window, emit a postmortem MessageLog entry before overwriting state.
+        // Called after a fresh fallback toast was spawned: emits a postmortem for
+        // the outgoing banner if it had accumulated repeats, then overwrites state.
         auto Record_NewBanner(
             ECk_BannerKind                     InKind,
             const FText&                       InBaseSummary,
@@ -908,8 +830,7 @@ namespace ck::angelscriptgenerator::self_heal
                 LOCTEXT("RecoveryToast", "AngelScript self-heal recovered {0} drift(s)"),
                 FText::AsNumber(NumApplied));
 
-            // Transition the in-progress toast in place so the user sees one
-            // continuous notification rather than a flash of nothing.
+            // In place, so the user sees one continuous notification.
             if (auto Item = sInProgressNotification.Pin(); Item.IsValid())
             {
                 Item->SetText(SummaryText);
@@ -921,9 +842,8 @@ namespace ck::angelscriptgenerator::self_heal
                 return;
             }
 
-            // Fallback: no in-progress toast (e.g. mid-session, or Slate wasn't
-            // up at OnReloadHadErrors time). Coalesce identical bursts so a
-            // save-storm doesn't stack N copies on screen.
+            // No in-progress toast (mid-session, or Slate was down earlier) —
+            // coalesce so a save-storm doesn't stack N copies on screen.
             const auto SubtextAsText = FText::FromString(Subtext);
             constexpr auto kRecoveryExpire = 12.0f;
             if (TryCoalesce_LastBanner(ECk_BannerKind::Recovery, SummaryText, SubtextAsText, kRecoveryExpire))
@@ -998,13 +918,9 @@ namespace ck::angelscriptgenerator::self_heal
 
         // ---- Per-signature convergence gate ----------------------------------------
         //
-        // Built from the same content the existing Describe_Action helper uses
-        // for log/MessageLog entries, except the args list is NORMALIZED
-        // (const/& stripped) so call-site argument-category variants of the
-        // same logical signature (literal vs lvalue → "const int" vs "int&")
-        // share one tracker instead of each getting an independent repeat
-        // budget. Describe_Action stays raw on purpose — it echoes the error
-        // verbatim for forensics.
+        // Mirrors Describe_Action except the args list is NORMALIZED, so
+        // argument-category variants of one logical signature ("const int" vs
+        // "int&") share a repeat budget. Describe_Action stays raw for forensics.
         auto Build_SignatureKey(
             const FCk_RecoveryAction& InAction) -> FString
         {
@@ -1013,11 +929,8 @@ namespace ck::angelscriptgenerator::self_heal
                 case ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams:
                 case ECk_RecoveryStrategy::KickGenerator_AssetRegistry:
                 {
-                    // Direct-construction ESP errors carry a struct name, not
-                    // a namespace + signature — one convergence key per
-                    // struct, NOT one shared "::()"-shaped key for all of
-                    // them (which would trip the breaker after 3 distinct
-                    // classes during bulk bootstrap).
+                    // One key PER STRUCT — a shared "::()"-shaped key would trip
+                    // the breaker after 3 distinct classes during bulk bootstrap.
                     if (const auto StructIdentifier = Get_EspStructErrorIdentifier(InAction.Error);
                         NOT StructIdentifier.IsEmpty())
                     {
@@ -1036,30 +949,23 @@ namespace ck::angelscriptgenerator::self_heal
                 }
                 case ECk_RecoveryStrategy::Quarantine_StaleEspCanonical:
                 {
-                    // One-shot per canonical, gated by sQuarantinedEspCanonicals
-                    // in Apply — NOT the per-signature convergence counter,
-                    // whose cap of 3 would permit three deletes of the same
-                    // canonical. Untracked here (empty key => Try_ReserveSynthesis
-                    // passes through; the set does the real loop prevention).
+                    // Untracked on purpose: a cap of 3 would permit three deletes
+                    // of one canonical. sQuarantinedEspCanonicals gates it instead.
                     return FString{};
                 }
                 case ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral:
                 case ECk_RecoveryStrategy::Unrecognized:
                 default:
                 {
-                    // Author-fixup and Unrecognized don't synthesize files —
-                    // they can't form a synthesis loop, so we don't track them.
+                    // These synthesize no files, so they can't form a loop.
                     return FString{};
                 }
             }
         }
 
-        // Returns true when the action is cleared to proceed to Apply_Strategy.
-        // Returns false when the key is blacklisted (already tripped) or trips
-        // the breaker on this call — caller should skip Apply_Strategy and
-        // move to the next queued action. The breaker emits the terminal
-        // banner + toast exactly once per signature; subsequent skips are
-        // silent (one log line for observability, no UI spam).
+        // False when the key is blacklisted or trips the breaker on this call —
+        // the caller must then skip Apply_Strategy. The banner + toast fire
+        // exactly once per signature; later skips are log-only.
         auto Try_ReserveSynthesis(
             const FCk_RecoveryAction& InAction) -> bool
         {
@@ -1085,8 +991,6 @@ namespace ck::angelscriptgenerator::self_heal
             if (Tracker.RecoveryCount < FCkAsRecoveryDispatcher::MaxPerSignatureRepeats)
             { return true; }
 
-            // Trip the breaker — refuse synthesis on this attempt, blacklist
-            // the key for the rest of the session, emit banner + toast.
             sBlacklistedSignatures.Add(Key);
             Log_TerminalBanner_ConvergenceFailed(Key, Tracker.Callsites);
             Show_TerminalToast(FText::Format(
@@ -1098,11 +1002,9 @@ namespace ck::angelscriptgenerator::self_heal
             return false;
         }
 
-        // Single-writer gate (G9) for the drain handlers. Every recovery strategy mutates a
-        // generated/sibling file, so a SECONDARY instance must not drain — it drops its queued
-        // actions, self-cleans the subscription via the caller's empty-queue path on the next
-        // tick, and relies on the OWNER's heals reaching this process through its hot-reload
-        // watcher (passive cross-process healing). Returns true when the drain should be skipped.
+        // Single-writer gate (G9). A SECONDARY instance must not drain: it drops its
+        // queued actions and relies on the OWNER's heals arriving through its own
+        // hot-reload watcher. True means skip the drain.
         auto Should_SuppressDrain_AsSecondary(FStringView InGateSite) -> bool
         {
             if (FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(InGateSite))
@@ -1153,13 +1055,7 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] Modal-tick deferred apply firing — draining {} pending action(s)."),
                 sPendingActions.Num());
 
-            // Hoisted once per drain (QW1/QW2): the scan roots and ESP candidate
-            // set are identical for every action in this drain, and DrainScanCache
-            // shares the *.as enumeration + file-contents across every ESP drift
-            // (and every class in a quarantine resynthesis) instead of re-walking
-            // the tree per drift. DrainScanCache is a drain-LOCAL — it is destroyed
-            // when this handler returns, so it can never carry a stale shape into a
-            // later compile cycle (see FCk_AsSourceScanCache lifetime contract).
+            // DrainScanCache is drain-LOCAL by contract — never hoist it out.
             const auto DrainScanRoots  = FCkAsSourceScanner::Get_DefaultScanRoots();
             const auto DrainCandidates = Collect_EntitySpawnParamsCandidates();
             auto       DrainScanCache  = FCk_AsSourceScanCache{};
@@ -1203,18 +1099,11 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         // Headless (commandlet / unattended) bootstrap drain. No Slate modal
-        // will ever pump here, and for commandlets Hazelight hard-exits the
-        // process right after the OnReloadHadErrors broadcast returns
-        // ("Cannot run when angelscript has failed to compile" —
-        // AngelscriptManager.cpp's IsRunningCommandlet() guard). There is no
-        // hot-reload watcher thread in that flow either, so the mtime-baseline
-        // hazard the modal-tick deferral exists for does not apply — applying
-        // strategies SYNCHRONOUSLY inside the broadcast is safe and is the
-        // only window we get. The stubs land on disk before the exit: the
-        // next invocation of the same commandlet (e.g. a CI cook step with
-        // automatic retry) compiles against them, regenerates the canonicals
-        // post-compile, and proceeds. Pinned by the 2026-06-10 CI cook
-        // failure on the first gitignored-EntitySpawnParams fresh clone.
+        // pumps here and Hazelight hard-exits right after the broadcast returns,
+        // so this synchronous apply is the only window we get — and it is SAFE,
+        // because there is no hot-reload watcher whose mtime baseline could
+        // swallow the writes. The stubs land before the exit; the next run of
+        // the same commandlet compiles against them.
         auto Drain_PendingActions_Headless() -> void
         {
             if (Should_SuppressDrain_AsSecondary(TEXT("Dispatcher.Drain_PendingActions_Headless")))
@@ -1224,13 +1113,7 @@ namespace ck::angelscriptgenerator::self_heal
                 TEXT("(no modal pump in commandlet/unattended mode)."),
                 sPendingActions.Num());
 
-            // Hoisted once per drain (QW1/QW2): the scan roots and ESP candidate
-            // set are identical for every action in this drain, and DrainScanCache
-            // shares the *.as enumeration + file-contents across every ESP drift
-            // (and every class in a quarantine resynthesis) instead of re-walking
-            // the tree per drift. DrainScanCache is a drain-LOCAL — it is destroyed
-            // when this handler returns, so it can never carry a stale shape into a
-            // later compile cycle (see FCk_AsSourceScanCache lifetime contract).
+            // DrainScanCache is drain-LOCAL by contract — never hoist it out.
             const auto DrainScanRoots  = FCkAsSourceScanner::Get_DefaultScanRoots();
             const auto DrainCandidates = Collect_EntitySpawnParamsCandidates();
             auto       DrainScanCache  = FCk_AsSourceScanCache{};
@@ -1298,13 +1181,7 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] Mid-session ticker firing — draining {} pending action(s)."),
                 sPendingActions.Num());
 
-            // Hoisted once per drain (QW1/QW2): the scan roots and ESP candidate
-            // set are identical for every action in this drain, and DrainScanCache
-            // shares the *.as enumeration + file-contents across every ESP drift
-            // (and every class in a quarantine resynthesis) instead of re-walking
-            // the tree per drift. DrainScanCache is a drain-LOCAL — it is destroyed
-            // when this handler returns, so it can never carry a stale shape into a
-            // later compile cycle (see FCk_AsSourceScanCache lifetime contract).
+            // DrainScanCache is drain-LOCAL by contract — never hoist it out.
             const auto DrainScanRoots  = FCkAsSourceScanner::Get_DefaultScanRoots();
             const auto DrainCandidates = Collect_EntitySpawnParamsCandidates();
             auto       DrainScanCache  = FCk_AsSourceScanCache{};
@@ -1326,11 +1203,8 @@ namespace ck::angelscriptgenerator::self_heal
                 Log(TEXT("[SelfHeal] Cycle {} applied {} strategy/strategies (mid-session)."),
                     sCyclesRun, AppliedActions.Num());
 
-                // Mid-session success is intentionally silent on screen — no
-                // Hazelight modal was up, recovery is invisible-and-fast, and
-                // a green toast for a problem the user never saw is noise.
-                // Cold-start still transitions the in-progress throbber to
-                // success in place (separate code path).
+                // Silent on screen by design: a green toast for a problem the user
+                // never saw is noise. Cold start still transitions its throbber.
                 Log_AppliedActions_ToMessageLog(AppliedActions);
             }
             else
@@ -1384,22 +1258,15 @@ namespace ck::angelscriptgenerator::self_heal
                 if (InError.MissingIdentifier.StartsWith(TEXT("FCk_Handle_")))
                 { return ECk_RecoveryStrategy::KickGenerator_DynamicHandle; }
 
-                // `F<X>_SpawnParams` used as a declared type while its
-                // generated canonical is missing (gitignored ESP / fresh
-                // clone) — ESP synthesis, preferring the source-derived
-                // full shape.
+                // `F<X>_SpawnParams` used as a declared type while its generated
+                // canonical is missing (gitignored ESP / fresh clone).
                 if (NOT FCkAsStubSynthesizer::Derive_ClassNameFromStructName(InError.MissingIdentifier).IsEmpty())
                 { return ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams; }
 
-                // The identifier is neither a dynamic handle nor a generated
-                // SpawnParams struct — it's an ordinary type (enum/struct) that
-                // no longer exists. If the error is located INSIDE a generated
-                // EntitySpawnParams canonical, the canonical is stale: it
-                // references a type deleted/renamed out from under it (e.g. an
-                // ExposeOnSpawn field enum unified away). Quarantine + rebuild
-                // from source. Location-keyed, so the identical "not a data
-                // type" error in author source stays Unrecognized (a real
-                // authoring bug the dispatcher must not paper over).
+                // An ordinary type that no longer exists. Located INSIDE a
+                // generated canonical, that means the canonical is stale — rebuild
+                // it. Keyed on LOCATION, so the identical error in author source
+                // stays Unrecognized: a real authoring bug must not be papered over.
                 if (ck_angelscript_generator_dispatcher::Is_EntitySpawnParamsCanonicalPath(InError.FilePath))
                 { return ECk_RecoveryStrategy::Quarantine_StaleEspCanonical; }
 
@@ -1408,10 +1275,9 @@ namespace ck::angelscriptgenerator::self_heal
 
             case ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures:
             {
-                // Direct construction of a generated `F<X>_SpawnParams`
-                // (`auto P = FBb_X_SpawnParams(...)`) whose canonical is
-                // missing. Any other bare-ctor miss is an authoring error —
-                // terminal banner.
+                // Direct construction of a generated `F<X>_SpawnParams` whose
+                // canonical is missing. Any OTHER bare-ctor miss is an authoring
+                // error and gets the terminal banner.
                 if (NOT FCkAsStubSynthesizer::Derive_ClassNameFromStructName(InError.MissingIdentifier).IsEmpty())
                 { return ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams; }
 
@@ -1490,9 +1356,8 @@ namespace ck::angelscriptgenerator::self_heal
         }
         ck_angelscript_generator_dispatcher::sModalTickHandle.Reset();
 
-        // The in-progress toast is normally transitioned by the drain that
-        // applied the recovery; if it's still pending here, the compile
-        // succeeded without our intervention — fade it out.
+        // Still pending here means the compile succeeded without our
+        // intervention (the applying drain normally transitions it) — fade it out.
         if (auto Item = ck_angelscript_generator_dispatcher::sInProgressNotification.Pin(); Item.IsValid())
         {
             Item->SetCompletionState(SNotificationItem::CS_None);
@@ -1519,11 +1384,8 @@ namespace ck::angelscriptgenerator::self_heal
     auto FCkAsRecoveryDispatcher::Mark_BootstrapComplete() -> void
     {
         ck_angelscript_generator_dispatcher::sBootstrapComplete = true;
-        // Reset cycle counter so bootstrap-consumed cycles don't count against
-        // mid-session. (Cap is bootstrap-only anyway, but accurate counter
-        // makes logs easier to read.) Same for the per-signature tracker —
-        // bootstrap-mode counts shouldn't penalize mid-session attempts on
-        // brand-new entity scripts authored after the editor reached main.
+        // Bootstrap-mode counts must not penalize mid-session attempts on entity
+        // scripts authored after the editor reached main screen.
         ck_angelscript_generator_dispatcher::sCyclesRun = 0;
         ck_angelscript_generator_dispatcher::sPerSignatureRecoveryCount.Reset();
         ck_angelscript_generator_dispatcher::sBlacklistedSignatures.Reset();
@@ -1576,10 +1438,9 @@ namespace ck::angelscriptgenerator::self_heal
             Log(TEXT("[SelfHeal] Queued {} recovery action(s) for bootstrap modal-tick apply ")
                 TEXT("(queue depth now {})."), Plan.Num(), ck_angelscript_generator_dispatcher::sPendingActions.Num());
 
-            // OnReloadHadErrors fires synchronously inside CompileModules —
-            // i.e. before Hazelight's modal opens. The notification manager
-            // queues the toast and renders it on the modal's tick, so the
-            // user sees both at the same time.
+            // This runs BEFORE Hazelight's modal opens; the notification manager
+            // queues the toast and renders it on the modal's tick, so the user
+            // sees both at once.
             ck_angelscript_generator_dispatcher::Show_InProgressToast();
             ck_angelscript_generator_dispatcher::Ensure_ModalTickSubscribed();
         }

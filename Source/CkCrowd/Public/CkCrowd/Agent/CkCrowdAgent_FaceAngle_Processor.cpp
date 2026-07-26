@@ -31,9 +31,8 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_FaceAngleProc);
 
-        // Project desired velocity onto the XY plane — yaw is independent of vertical motion (a path
-        // descent shouldn't make the agent face the ground). When horizontal speed is ~0 there's no
-        // meaningful target heading; keep the last cached _TargetYaw and skip the rotation request.
+        // Yaw is independent of vertical motion; with no horizontal speed there is no meaningful
+        // target heading, so the last cached _TargetYaw stands.
         auto Heading = InDesired.Get_Velocity();
         Heading.Z = 0.0f;
         const auto SpeedXY = Heading.Size();
@@ -50,8 +49,6 @@ namespace ck
         const auto CurrentRot = InTransform.Get_Transform().Rotator();
         const auto CurrentYawRad = FMath::DegreesToRadians(CurrentRot.Yaw);
 
-        // Shortest-arc delta in (-pi, pi]. FindDeltaAngleRadians handles the wrap so we always pick
-        // the direction that minimizes total rotation — no spinning the long way around.
         const auto DeltaYaw = FMath::FindDeltaAngleRadians(CurrentYawRad, TargetYawRad);
         if (FMath::IsNearlyZero(DeltaYaw))
         { return; }

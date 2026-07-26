@@ -66,8 +66,7 @@ namespace ck
             const FCk_Request_DialogEmitter_Query& InRequest)
         -> void
     {
-        // Benign drop: an invalid ENTER tag matches nothing, so fall-through would only enqueue a dead query. Safe to
-        // collapse the recovery into the ensure body.
+        // Benign drop: an invalid ENTER tag matches nothing, so the recovery collapses into the ensure body.
         CK_ENSURE_IF_NOT(InRequest.Get_EventTag().IsValid(),
             TEXT("Dialog Query on Emitter [{}] has an invalid ENTER tag — dropped"), InEmitter)
         { return; }
@@ -92,14 +91,12 @@ namespace ck
     {
         const auto& Line = InRequest.Get_Line();
 
-        // Benign drop: an invalid line handle would only add a junk cooldown entry that the next prune discards. Safe
-        // to collapse the recovery into the ensure body.
+        // Benign drop: a junk entry would only be discarded by the next prune, so the recovery collapses into it.
         CK_ENSURE_IF_NOT(ck::IsValid(Line),
             TEXT("Dialog StartCooldown on Emitter [{}] has an invalid line handle — dropped"), InEmitter)
         { return; }
 
-        // Re-starting an already-cooling line replaces the entry, so the window restarts from zero rather than
-        // extending whatever was left — "spent again" is a fresh cooldown.
+        // Re-starting an already-cooling line REPLACES the entry: the window restarts from zero, never extends.
         InEmitter.Get<FFragment_DialogEmitter_Cooldowns>()._Cooldowns.Add(Line,
             FCk_DialogEmitter_CooldownEntry{FCk_Chrono{InRequest.Get_Duration()}, InRequest.Get_DurationMode()});
 
@@ -121,8 +118,7 @@ namespace ck
             const FCk_Request_DialogEmitter_ClearCooldown& InRequest)
         -> void
     {
-        // Removing an absent key is a harmless no-op — but it is NOT a transition, so neither the signal nor the
-        // completion delegate fires for it. A caller told "cleared" when nothing was cooling would be misled.
+        // Removing an absent key is not a transition, so neither the signal nor the completion delegate fires.
         auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
         const auto Line = InRequest.Get_Line();
 
@@ -149,8 +145,7 @@ namespace ck
     {
         auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
 
-        // Snapshot the keys before emptying: each line still gets its own Ended signal, so an observer watching one
-        // line cannot miss the transition just because it happened as part of a bulk clear.
+        // Snapshot the keys before emptying: each line still gets its own Ended signal out of a bulk clear.
         auto Cleared = TArray<FCk_Handle_DialogLine>{};
         Cooldowns._Cooldowns.GenerateKeyArray(Cleared);
         Cooldowns._Cooldowns.Empty();
@@ -187,8 +182,8 @@ namespace ck
 
         if (NOT RegistryReady)
         {
-            // Deferred: leave the pending-queries fragment in place (idempotent). Log once; ensure once past the
-            // settings timeout (a never-ready registry is a misconfiguration, not silence).
+            // Deferred: the pending-queries fragment stays in place. Log once, then ensure past the settings
+            // timeout — a never-ready registry is a misconfiguration, not silence.
             if (NOT InPending._LoggedNotReadyOnce)
             {
                 dialog::Display(TEXT("Dialog Emitter [{}] deferring query: Dialog registry not ready yet"), InEmitter);
@@ -210,14 +205,10 @@ namespace ck
             return;
         }
 
-        // Advancing and retiring cooldowns belongs to FProcessor_DialogEmitter_TickCooldowns, which this processor
-        // declares a RunAfter on. That ordering is load-bearing now that cooldown state is ticked rather than
-        // compared against a deadline: evaluate first and a line that finished this frame still reads as cooling.
         const auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
 
-        // Evaluate from a COPY: a per-request OnComplete delegate below runs caller code that may enqueue a follow-up
-        // query (Request_QueryFollowUp). That lands in FFragment_DialogEmitter_Requests, not here, but iterating the
-        // live array while arbitrary caller code runs is a reentrancy hazard not worth taking.
+        // Evaluate from a COPY: a per-request OnComplete below runs caller code that may enqueue a follow-up query,
+        // and iterating the live array while arbitrary caller code runs is a reentrancy hazard.
         const auto QueriesCopy = InPending._Queries;
 
         for (const auto& Query : QueriesCopy)
@@ -228,17 +219,15 @@ namespace ck
 
             UUtils_Signal_OnDialogQueryCompleted::Broadcast(InEmitter, ck::MakePayload(InEmitter, Result));
 
-            // Per-request continuation, correlated to THIS query — fired after the broadcast so emitter-wide observers
-            // see the result before the requester can chain a follow-up. Executed directly rather than bound through
-            // the signal (the CkEqs approach): CkEqs owns a per-query entity whose signal it can bind + auto-unbind,
-            // whereas OnDialogQueryCompleted is emitter-wide, so a bind-per-iteration would deliver query N's payload
-            // to every delegate still bound when the payload flushes.
+            // Per-request continuation, fired AFTER the broadcast so emitter-wide observers see the result before the
+            // requester can chain a follow-up. Executed directly rather than bound through the signal:
+            // OnDialogQueryCompleted is emitter-wide, so a bind-per-iteration would deliver this query's payload to
+            // every delegate still bound at flush.
             if (const auto& OnComplete = Query.Get_OnComplete();
                 OnComplete.IsBound())
             { OnComplete.Execute(InEmitter, Result); }
         }
 
-        // Draining the fragment discards the queries + readiness-defer bookkeeping in one step (fresh next query).
         InEmitter.Remove<FFragment_DialogEmitter_PendingQueries>();
     }
 
@@ -293,12 +282,14 @@ namespace ck
             const FCk_Handle_DialogLine& InLine)
         -> ECk_DialogLine_QueryResult
     {
-        // Cooldown FIRST (cheap map lookup): a cooling line reports Fail_EmitterCondition and its conditions are
-        // skipped (documented precedence). Presence alone is not enough — TickCooldowns retires finished entries and
-        // this processor is ordered after it, but a Forever entry is never ticked and so never reports Done.
-        if (const auto* Entry = InCooldowns.Get_Cooldowns().Find(InLine);
-            Entry != nullptr && (Entry->Get_DurationMode() == ECk_Dialog_CooldownDuration::Forever ||
-                                 NOT Entry->Get_Cooldown().Get_IsDone()))
+        // Cooldown takes precedence over the line's own conditions, which are skipped entirely when it is cooling.
+        // Presence alone is not enough: a Forever entry is never ticked and so never reports Done.
+        const auto* CooldownEntry = InCooldowns.Get_Cooldowns().Find(InLine);
+        const auto LineIsCooling = CooldownEntry != nullptr &&
+            (CooldownEntry->Get_DurationMode() == ECk_Dialog_CooldownDuration::Forever ||
+             NOT CooldownEntry->Get_Cooldown().Get_IsDone());
+
+        if (LineIsCooling)
         { return ECk_DialogLine_QueryResult::Fail_EmitterCondition; }
 
         auto Failed = false;
@@ -351,10 +342,8 @@ namespace ck
         -> void
     {
         // Collect before broadcasting: a handler is free to start or clear a cooldown on this same emitter, and
-        // mutating the map while iterating it would be a use-after-invalidate.
-        //
-        // Forever entries are never ticked — a Chrono cannot express "no goal", so the mode is what holds them.
-        // A line whose entity died is retired silently: there is nothing left for an observer to act on.
+        // mutating the map while iterating it would be a use-after-invalidate. Forever entries are never ticked;
+        // a line whose entity died is retired silently, since there is nothing left for an observer to act on.
         auto Lapsed = TArray<FCk_Handle_DialogLine>{};
         for (auto It = InCooldowns._Cooldowns.CreateIterator(); It; ++It)
         {

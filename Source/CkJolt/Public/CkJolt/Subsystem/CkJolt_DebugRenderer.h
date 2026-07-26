@@ -17,25 +17,9 @@ class UWorld;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Batched implementation of Jolt's debug renderer.
-//
-// The previous implementation derived from JPH::DebugRendererSimple, whose DrawGeometry fallback decomposes
-// EVERY triangle of EVERY body into individual DrawDebugLine calls, EVERY frame — at stress-gym body counts
-// that is hundreds of thousands of one-frame line submissions per frame, all on the game thread.
-//
-// This implementation uses the batch API the DebugRenderer interface is designed around:
-// - CreateTriangleBatch is called ONCE per unique geometry (Jolt's shapes cache their GeometryRef —
-//   HeightFieldShape/MeshShape/ConvexHullShape hold a mutable mGeometry; primitives share unit geometry),
-//   and we store the triangle data CPU-side, lazily building a transient UStaticMesh on first draw.
-// - DrawGeometry only accumulates (batch, model transform, color) into per-(geometry, color) buckets.
-// - EndFrame reconciles each bucket into one UInstancedStaticMeshComponent: buckets whose instance
-//   transforms did not change (all static bodies, all sleeping bodies) cost nothing; moving bodies cost one
-//   instance-transform upload instead of a rebuilt line soup.
-//
-// DrawLine/DrawTriangle/DrawText3D remain immediate-mode (velocity vectors, transform axes, contact
-// normals are genuinely line-shaped and low-count).
-//
-// Game-thread only, mirroring DrawBodies' invocation from the subsystem Tick.
+// Batched JPH::DebugRenderer: geometry becomes transient UStaticMeshes instanced per (geometry, color)
+// bucket; line/text primitives stay immediate-mode. Game-thread only, mirroring DrawBodies' invocation
+// from the subsystem Tick. Rationale: CkJolt/CLAUDE.md § "Debug draw + stats".
 class CkJoltDebugger : public JPH::DebugRenderer
 {
 public:

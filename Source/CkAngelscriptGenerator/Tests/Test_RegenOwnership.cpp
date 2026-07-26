@@ -1,14 +1,7 @@
-// Tests for the cross-process single-writer regen guard's exclusivity primitive.
-//
 // Same-process double-OpenWrite is a valid proxy for the two-process case: Windows sharing-mode
-// conflicts are enforced PER HANDLE, not per process, so a second open on a held path fails
-// exactly as a second process's would. All cases run against a temp path under
-// ProjectIntermediateDir() — never the real Saved/ lock, so a live editor session running the
-// suite cannot lose (or grant away) its own ownership.
-//
-// PLATFORM CAVEAT (documented in CkAngelscriptGenerator_RegenOwnership.h): POSIX OpenWrite does
-// not enforce write exclusivity, so the conflict assertion is Windows-only; elsewhere the case
-// logs-and-skips, which keeps the caveat visible in executable form.
+// conflicts are enforced PER HANDLE, not per process. Every case runs against a temp path under
+// ProjectIntermediateDir(), never the real Saved/ lock — a live editor running this suite must
+// not lose (or grant away) its own ownership.
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_RegenOwnership.h"
 
@@ -89,13 +82,9 @@ bool FCkTest_RegenOwnership_ReadAllowedWhileHeld::RunTest(const FString&)
     Handle->Write(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
     Handle->Flush();
 
-    // bAllowRead=true grants FILE_SHARE_READ on the held write handle. On Windows the OS still
-    // requires the READER to share-write (the held handle has GENERIC_WRITE access), so a reader
-    // must open with bAllowWrite=true — that combination is exactly what OpenWrite(bAllowRead=true)
-    // permits and what OpenWrite(bAllowRead=false) would REFUSE. This proves the share flag is live
-    // (a cooperating tool/debugger can inspect the breadcrumb) without asserting the stronger, false
-    // claim that any reader can open it. Normal operation never reads the lock file anyway — the
-    // "reads unaffected" guarantee is about the generated .as files, which no one holds exclusively.
+    // The held handle has GENERIC_WRITE, so Windows requires the READER to share-write too:
+    // this combination is exactly what OpenWrite(bAllowRead=true) permits and bAllowRead=false
+    // would refuse. It proves the share flag is live, not that any reader can open the lock.
     auto& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     constexpr auto AllowWriteWhileReading = true;
     auto ReadHandle = TUniquePtr<IFileHandle>{PlatformFile.OpenRead(*LockPath, AllowWriteWhileReading)};

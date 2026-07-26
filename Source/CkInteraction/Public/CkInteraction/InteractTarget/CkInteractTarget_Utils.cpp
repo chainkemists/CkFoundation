@@ -215,7 +215,6 @@ auto
             NOT TargetChannel.MatchesTagExact(SourceChannel))
         { return ECk_CanInteractWithResult::ChannelMismatch; }
 
-        // If no multiple interactions, don't allow interactions if any are current or pending
         if (UCk_Utils_InteractSource_UE::Get_ConcurrentInteractionsPolicy(InteractSource) == ECk_InteractionSource_ConcurrentInteractionsPolicy::SingleInteraction)
         {
             if (UCk_Utils_InteractSource_UE::Get_CurrentInteractions(InteractSource).Num() + UCk_Utils_InteractSource_UE::Get_PendingInteractions(InteractSource).Num() > 0)
@@ -227,13 +226,11 @@ auto
     if (const auto& MatchingInteraction = UCk_Utils_Interaction_UE::TryGet(InTarget, InteractSource, InTarget, Get_InteractionChannel(InTarget));
         ck::IsValid(MatchingInteraction))
     {
-        // No duplicate interactions
         return ECk_CanInteractWithResult::AlreadyExists;
     }
 
     const auto& Params = InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params();
 
-    // If no multiple interactions, don't allow interactions there are
     if (Params.Get_ConcurrentInteractionsPolicy() == ECk_InteractionTarget_ConcurrentInteractionsPolicy::SingleInteraction &&
         UCk_Utils_Interaction_UE::RecordOfInteractions_Utils::Get_ValidEntriesCount(InTarget) > 0)
     { return ECk_CanInteractWithResult::TargetRejectedSecondInteraction; }

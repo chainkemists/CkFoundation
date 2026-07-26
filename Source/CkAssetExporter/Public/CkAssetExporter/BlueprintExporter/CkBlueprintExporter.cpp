@@ -48,8 +48,6 @@
 #include <Misc/DateTime.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Public API
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_BlueprintExporter::
@@ -67,7 +65,6 @@ auto
 
     Result.AssetName = InBlueprint->GetName();
 
-    // Serialize to JSON
     const auto JsonObject = DoSerializeToJson(InBlueprint);
     if (NOT JsonObject.IsValid())
     {
@@ -79,10 +76,8 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    // Serialize to plain text
     const auto TextString = DoSerializeToText(InBlueprint);
 
-    // Resolve output paths
     const auto JsonPath = DoResolveOutputPath(InBlueprint, TEXT(".json"));
     const auto TextPath = DoResolveOutputPath(InBlueprint, TEXT(".txt"));
 
@@ -92,7 +87,6 @@ auto
         return Result;
     }
 
-    // Write files
     const auto JsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     const auto TextWritten = FFileHelper::SaveStringToFile(
@@ -106,8 +100,7 @@ auto
         return Result;
     }
 
-    // Widget Blueprints additionally emit the designer-clipboard paste artifacts (hierarchy + per-animation dumps);
-    // they are part of the WBP export contract, so a failure there fails the export loudly.
+    // The paste artifacts are part of the WBP export contract, so a failure there fails the whole export loudly.
     const auto BasePathNoExt = DoResolveOutputPath(InBlueprint, TEXT(""));
     const auto ArtifactsResult = FCk_WidgetPasteArtifacts::ExportFor(InBlueprint, BasePathNoExt);
     if (NOT ArtifactsResult.Succeeded)
@@ -140,8 +133,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// JSON Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_BlueprintExporter::
@@ -156,7 +147,6 @@ auto
     RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InBlueprint, ck::asset_exporter::version::Blueprint));
     RootObject->SetStringField(TEXT("blueprintType"), InBlueprint->GetClass()->GetName());
 
-    // Parent class
     if (InBlueprint->ParentClass != nullptr)
     {
         RootObject->SetStringField(TEXT("parentClass"), InBlueprint->ParentClass->GetName());
@@ -170,14 +160,11 @@ auto
     RootObject->SetArrayField(TEXT("implementedInterfaces"),
         DoSerializeImplementedInterfaces_Json(InBlueprint));
 
-    // Variables
     RootObject->SetArrayField(TEXT("variables"),
         DoSerializeVariables_Json(InBlueprint->NewVariables));
 
-    // Class Default Object property values — captures EditDefaultsOnly /
-    // BlueprintVisible inherited properties (essential for data-only Blueprints
-    // where NewVariables is empty but the CDO carries all the configured data,
-    // including instanced UObject subobjects).
+    // The CDO carries inherited EditDefaultsOnly / BlueprintVisible values — for a data-only Blueprint,
+    // NewVariables is empty and this is where ALL the configured data lives.
     if (const auto* GeneratedClass = InBlueprint->GeneratedClass.Get())
     {
         if (const auto* CDO = GeneratedClass->GetDefaultObject())
@@ -205,8 +192,7 @@ auto
     RootObject->SetArrayField(TEXT("functionGraphs"), SerializeGraphSet(InBlueprint->FunctionGraphs, TEXT("Function")));
     RootObject->SetArrayField(TEXT("macroGraphs"),    SerializeGraphSet(InBlueprint->MacroGraphs,    TEXT("Macro")));
 
-    // Widget Blueprint (UMG) — widget hierarchy and animations live as editor-only
-    // data on the UWidgetBlueprint and are not captured by the generic Blueprint sections.
+    // Widget hierarchy and animations are editor-only data on the UWidgetBlueprint — no generic section sees them.
     if (const auto* WidgetBlueprint = Cast<UWidgetBlueprint>(InBlueprint))
     {
         RootObject->SetObjectField(TEXT("widgetHierarchy"),
@@ -260,10 +246,8 @@ auto
     GraphObject->SetStringField(TEXT("graphName"), InGraph->GetName());
     GraphObject->SetStringField(TEXT("graphCategory"), InGraphCategory);
 
-    // Execution flows
     GraphObject->SetArrayField(TEXT("executionFlows"), DoExtractExecutionFlow_Json(InGraph));
 
-    // All nodes
     auto NodesArray = TArray<TSharedPtr<FJsonValue>>{};
     ck::algo::ForEachIsValid(InGraph->Nodes, [&](const UEdGraphNode* Node)
     {
@@ -291,7 +275,6 @@ auto
         NodeObject->SetStringField(TEXT("nodeComment"), InNode->NodeComment);
     }
 
-    // Separate input and output pins
     auto InputPins = TArray<TSharedPtr<FJsonValue>>{};
     auto OutputPins = TArray<TSharedPtr<FJsonValue>>{};
 
@@ -344,7 +327,6 @@ auto
         PinObject->SetStringField(TEXT("defaultValue"), InPin->DefaultObject->GetPathName());
     }
 
-    // Connections
     auto Connections = TArray<TSharedPtr<FJsonValue>>{};
     ck::algo::ForEach(InPin->LinkedTo, [&](const UEdGraphPin* LinkedPin)
     {
@@ -409,7 +391,6 @@ auto
 {
     auto Flows = TArray<TSharedPtr<FJsonValue>>{};
 
-    // Find entry point nodes (events, function entries)
     for (const UEdGraphNode* Node : InGraph->Nodes)
     {
         if (ck::Is_NOT_Valid(Node))
@@ -426,7 +407,6 @@ auto
         FlowObject->SetStringField(TEXT("entryPoint"), DoGetNodeDisplayName(Node));
         FlowObject->SetStringField(TEXT("entryNodeId"), DoGetNodeId(Node));
 
-        // Walk exec chain
         auto Steps = TArray<TSharedPtr<FJsonValue>>{};
         auto Visited = TSet<const UEdGraphNode*>{};
 
@@ -463,7 +443,6 @@ auto
 
             Steps.Add(MakeShared<FJsonValueObject>(StepObject));
 
-            // Find output exec pins and follow them
             auto ExecOutputPins = TArray<const UEdGraphPin*>{};
             for (const auto* Pin : Current.Node->Pins)
             {
@@ -476,7 +455,6 @@ auto
                 }
             }
 
-            // If single exec output, continue chain. If multiple, label branches.
             if (ExecOutputPins.Num() == 1)
             {
                 for (const auto* LinkedPin : ExecOutputPins[0]->LinkedTo)
@@ -513,8 +491,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Components & Interfaces — JSON
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_blueprint_exporter_internal
 {
@@ -527,14 +503,9 @@ namespace ck_blueprint_exporter_internal
         FString Origin;
     };
 
-    // Resolves the effective component template for a parent-chain SCS node
-    // by consulting the leaf BP's InheritableComponentHandler (ICH). UE stores
-    // child-BP property overrides on inherited SCS components in the ICH, not
-    // on the parent SCS node itself, so reading InNode->ComponentTemplate
-    // directly always returns the un-overridden parent value. Walks the chain
-    // from leaf upward so the closest override wins.
-    //
-    // Returns the parent's template when no override is present.
+    // UE stores child-BP overrides of inherited SCS components in the leaf's InheritableComponentHandler, NOT on the
+    // parent SCS node — so reading InNode->ComponentTemplate directly always yields the un-overridden parent value.
+    // Walks leaf-upward so the closest override wins; falls back to the parent's template when there is none.
     static auto
         DoResolveEffectiveTemplate(
             const USCS_Node* InNode,
@@ -550,9 +521,8 @@ namespace ck_blueprint_exporter_internal
 
         const auto Key = FComponentKey{InNode};
 
-        // UBlueprintGeneratedClass::GetInheritableComponentHandler is not
-        // const-callable in UE 5.5/5.6/5.7, even with bCreateIfNecessary=false.
-        // const_cast once at loop entry — we only read from the ICH here.
+        // GetInheritableComponentHandler is not const-callable in UE 5.5/5.6/5.7 even with bCreateIfNecessary=false;
+        // this loop only ever READS from the ICH.
         auto* Cursor = const_cast<UBlueprintGeneratedClass*>(InLeafBPGC);
         while (ck::IsValid(Cursor))
         {
@@ -641,13 +611,8 @@ namespace ck_blueprint_exporter_internal
         if (ck::Is_NOT_Valid(ActorCDO))
         { return Collected; }
 
-        // UBlueprint::GeneratedClass is typed UClass* (not UBlueprintGeneratedClass*).
-        // Cast once here so the InheritedSCS walk below can pass the leaf BPGC into
-        // DoResolveEffectiveTemplate for ICH lookup. Any UBlueprint we hit in practice
-        // has a UBlueprintGeneratedClass at runtime, but guard for the editor edge case.
         const auto* LeafBPGC = Cast<UBlueprintGeneratedClass>(GeneratedClass);
 
-        // 1. Native components on the CDO
         auto NativeComponents = TArray<UActorComponent*>{};
         ActorCDO->GetComponents(NativeComponents);
         for (const auto* Component : NativeComponents)
@@ -672,12 +637,8 @@ namespace ck_blueprint_exporter_internal
             });
         }
 
-        // 2. This-BP SCS nodes
         DoCollectScsNodes(InBlueprint->SimpleConstructionScript, FString{TEXT("SCS")}, LeafBPGC, Collected, Seen);
 
-        // 3. Inherited SCS from parent BP chain — leaf BPGC threaded through
-        // so DoResolveEffectiveTemplate can consult the child's ICH for
-        // property overrides on inherited components.
         const auto* ParentClass = GeneratedClass->GetSuperClass();
         while (ck::IsValid(ParentClass))
         {
@@ -869,12 +830,9 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Widget Blueprint (UMG) Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_blueprint_exporter
 {
-    // Guards against pathological / cyclic trees (mirrors the execution-flow step guard).
     constexpr int32 MaxWidgetTreeDepth = 100;
 }
 
@@ -925,8 +883,6 @@ auto
         WidgetObject->SetStringField(TEXT("toolTip"), ToolTip);
     }
 
-    // Layout slot (Canvas anchors, VerticalBox padding/alignment, etc.) — properties
-    // declared by the concrete UPanelSlot subclass.
     if (const auto* PanelSlot = InWidget->Slot.Get())
     {
         auto SlotObject = MakeShared<FJsonObject>();
@@ -936,8 +892,7 @@ auto
         WidgetObject->SetObjectField(TEXT("slot"), SlotObject);
     }
 
-    // Type-specific editable properties (Text, Brush, fonts, colors, …) — declared by
-    // classes derived from UWidget (UWidget-level fields are captured explicitly above).
+    // Stops at UWidget because UWidget-level fields are captured explicitly above.
     if (auto Properties = FCk_DataAssetExporter::DoSerializeProperties_Json(InWidget, UWidget::StaticClass());
         Properties.Num() > 0)
     {
@@ -949,7 +904,6 @@ auto
 
     auto Children = TArray<TSharedPtr<FJsonValue>>{};
 
-    // Panel children
     if (const auto* PanelWidget = Cast<UPanelWidget>(InWidget))
     {
         for (auto ChildIndex = int32{0}; ChildIndex < PanelWidget->GetChildrenCount(); ++ChildIndex)
@@ -962,7 +916,6 @@ auto
         }
     }
 
-    // Named slots (UserWidgets, etc.)
     if (const auto* NamedSlotHost = Cast<INamedSlotInterface>(InWidget))
     {
         auto SlotNames = TArray<FName>{};
@@ -1021,8 +974,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Plain-text Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_BlueprintExporter::
@@ -1032,7 +983,6 @@ auto
 {
     auto Text = FCk_AssetExportMeta::Get_SummaryTextBanner(InBlueprint->GetName());
 
-    // Header
     Text += ck::Format_UE(TEXT("=== Blueprint: {} ===\n"), InBlueprint->GetName());
     Text += ck::Format_UE(TEXT("Path: {}\n"), InBlueprint->GetPathName());
     Text += ck::Format_UE(TEXT("Type: {}\n"), InBlueprint->GetClass()->GetName());
@@ -1046,10 +996,8 @@ auto
 
     DoSerializeImplementedInterfaces_Text(InBlueprint, Text);
 
-    // Variables
     DoSerializeVariables_Text(InBlueprint->NewVariables, Text);
 
-    // Class Default Object property values
     if (const auto* GeneratedClass = InBlueprint->GeneratedClass.Get())
     {
         if (const auto* CDO = GeneratedClass->GetDefaultObject())
@@ -1104,7 +1052,6 @@ auto
             OutText += ck::Format_UE(TEXT(" = {}"), Var.DefaultValue);
         }
 
-        // Metadata in parentheses
         auto Meta = TArray<FString>{};
 
         if (NOT Var.Category.IsEmpty())
@@ -1143,10 +1090,8 @@ auto
 {
     OutText += ck::Format_UE(TEXT("--- {}: {} ---\n"), InGraphCategory, InGraph->GetName());
 
-    // Execution flows first (most useful for understanding logic)
     DoExtractExecutionFlow_Text(InGraph, OutText);
 
-    // All nodes
     const auto ValidNodeCount = ck::algo::CountIf(InGraph->Nodes,
         [](const UEdGraphNode* Node) { return ck::IsValid(Node); });
 
@@ -1178,7 +1123,6 @@ auto
         OutText += ck::Format_UE(TEXT("{}  Comment: {}\n"), Indent, InNode->NodeComment);
     }
 
-    // Shared per-direction pin serializer to de-dup input / output blocks.
     const auto SerializePinBlock = [&](EEdGraphPinDirection InDirection,
                                        const TCHAR* InHeader,
                                        const TCHAR* InArrow)
@@ -1243,7 +1187,6 @@ auto
         FString& OutText)
     -> void
 {
-    // Find entry points
     auto EntryNodes = TArray<const UEdGraphNode*>{};
     ck::algo::ForEachIsValid(InGraph->Nodes, [&](const UEdGraphNode* Node)
     {
@@ -1264,7 +1207,6 @@ auto
         OutText += ck::Format_UE(TEXT("    [{}] {}"),
             FlowIndex++, DoGetNodeDisplayName(EntryNode));
 
-        // Walk the exec chain
         auto Visited = TSet<const UEdGraphNode*>{};
         Visited.Add(EntryNode);
 
@@ -1277,7 +1219,6 @@ auto
 
         auto Queue = TArray<FWalkState>{};
 
-        // Seed with first exec output
         for (const auto* Pin : EntryNode->Pins)
         {
             if (Pin == nullptr || Pin->Direction != EGPD_Output || NOT DoIsExecPin(Pin))
@@ -1325,7 +1266,6 @@ auto
                     DoGetNodeDisplayName(Current.Node));
             }
 
-            // Find exec outputs
             auto ExecOutputPins = TArray<const UEdGraphPin*>{};
             for (const auto* Pin : Current.Node->Pins)
             {
@@ -1350,7 +1290,6 @@ auto
             }
             else if (ExecOutputPins.Num() > 1)
             {
-                // Multiple branches - add each with a label
                 for (auto i = ExecOutputPins.Num() - 1; i >= 0; --i)
                 {
                     const auto* ExecPin = ExecOutputPins[i];
@@ -1597,8 +1536,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Helpers
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_BlueprintExporter::
@@ -1632,7 +1569,6 @@ auto
     return ck::Format_UE(TEXT("Node_{}"), InNode->NodeGuid.ToString(EGuidFormats::Short));
 }
 
-// Returns true if the string only contains printable ASCII characters
 static auto
     DoIsCleanAscii(
         const FString& InStr)
@@ -1644,7 +1580,7 @@ static auto
     return ck::algo::AllOf(InStr, [](TCHAR Ch) { return Ch >= 32 && Ch <= 126; });
 }
 
-// Attempts to get a clean name from a UObject, returns empty string if garbled
+// Empty when neither the object's name nor its class name is clean ASCII.
 static auto
     DoGetCleanObjectName(
         const TWeakObjectPtr<UObject>& InObj)
@@ -1657,7 +1593,6 @@ static auto
     if (DoIsCleanAscii(Name))
     { return Name; }
 
-    // Try the class name of the object instead
     if (ck::IsValid(InObj->GetClass()))
     {
         const auto ClassName = InObj->GetClass()->GetName();
@@ -1677,7 +1612,6 @@ auto
     const auto Cat = InPinType.PinCategory;
     auto BaseName = FString{};
 
-    // Map known K2 categories to readable strings
     if (Cat == UEdGraphSchema_K2::PC_Exec)
     {
         BaseName = TEXT("exec");
@@ -1754,7 +1688,6 @@ auto
     }
     else
     {
-        // Unknown category — try to extract something readable
         const auto CatStr = Cat.ToString();
         if (DoIsCleanAscii(CatStr))
         {
@@ -1762,13 +1695,11 @@ auto
         }
         else
         {
-            // Last resort: try SubCategoryObject name
             const auto ObjName = DoGetCleanObjectName(InPinType.PinSubCategoryObject);
             BaseName = ObjName.IsEmpty() ? TEXT("Pin") : ObjName;
         }
     }
 
-    // Container types
     if (InPinType.ContainerType == EPinContainerType::Array)
     {
         return ck::Format_UE(TEXT("TArray<{}>"), BaseName);

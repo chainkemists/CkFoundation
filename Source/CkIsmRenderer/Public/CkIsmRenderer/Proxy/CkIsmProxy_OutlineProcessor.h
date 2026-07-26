@@ -12,14 +12,12 @@
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Entity outlines for ISM proxies (see CkUsf/DESIGN_EntityOutlines.md). Custom depth is per-component, so an
-// outlined proxy's instance is mirrored into a custom-depth-only "shadow ISM" (one per renderer+preset, owned
-// by UCk_IsmRenderer_Subsystem_UE). All processors here iterate outlined entities only.
+// Entity outlines for ISM proxies — see CkIsmRenderer/CLAUDE.md and CkUsf/DESIGN_EntityOutlines.md.
 
 namespace ck
 {
-    // Apply / re-apply on preset drift. Per-frame over (OutlineTarget + IsmProxy) — self-heals ordering
-    // races (outline requested before the proxy finished setup, proxy re-enabled, etc.).
+    // Runs per-frame rather than on a dirty tag so it self-heals ordering races (outline requested
+    // before the proxy finished setup, proxy re-enabled, preset swapped).
     class CKISMRENDERER_API FProcessor_IsmProxy_Outline_Sync : public ck_exp::TProcessor<
         FProcessor_IsmProxy_Outline_Sync,
         FCk_Handle_IsmProxy,
@@ -55,18 +53,13 @@ namespace ck
             const FFragment_Transform& InTransform) const -> void;
 
     private:
-        // Refreshed every frame
         TWeakObjectPtr<UWorld> _World;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Keep the shadow instance glued to the entity transform (movable proxies). Mirrors
-    // FProcessor_IsmProxy_TransformInstance's push, incl. the batched MarkRenderStateDirty.
-    // Deliberately NOT keyed on FTag_Transform_Updated: that dirty marker is shared by writers in other
-    // modules (CkRaySense) we can't declare ordering against without a dependency cycle — the scheduler's
-    // conflict advisory would fire on every world. Per-frame over outlined MOVABLE proxies only (a tiny
-    // set), and UpdateInstanceTransformById on an unchanged transform is cheap.
+    // Deliberately NOT keyed on FTag_Transform_Updated — that dirty marker is shared with writers in
+    // modules we cannot declare ordering against without a dependency cycle. See CkIsmRenderer/CLAUDE.md.
     class CKISMRENDERER_API FProcessor_IsmProxy_Outline_TransformSync : public ck_exp::TProcessor<
         FProcessor_IsmProxy_Outline_TransformSync,
         FCk_Handle_IsmProxy,
@@ -106,8 +99,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Proxy disabled while outlined: pull the shadow instance too. The OutlineTarget survives, so
-    // re-enabling re-applies via Sync.
+    // The OutlineTarget survives a suspend, so re-enabling the proxy re-applies via Sync.
     class CKISMRENDERER_API FProcessor_IsmProxy_Outline_Suspend : public ck_exp::TProcessor<
         FProcessor_IsmProxy_Outline_Suspend,
         FCk_Handle_IsmProxy,
@@ -132,7 +124,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Outline removed (Target gone, shadow still applied): undo.
     class CKISMRENDERER_API FProcessor_IsmProxy_Outline_Remove : public ck_exp::TProcessor<
         FProcessor_IsmProxy_Outline_Remove,
         FCk_Handle_IsmProxy,

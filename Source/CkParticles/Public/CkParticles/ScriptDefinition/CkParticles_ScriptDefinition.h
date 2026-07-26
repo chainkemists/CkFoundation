@@ -7,7 +7,6 @@
 class UNiagaraSystem;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Describes one generated particle system: which behavior it runs and which template it is built from.
 // The generator (CkParticlesEditor) duplicates _TemplateSystem and patches the BehaviorId user parameter.
 // --------------------------------------------------------------------------------------------------------------------
 

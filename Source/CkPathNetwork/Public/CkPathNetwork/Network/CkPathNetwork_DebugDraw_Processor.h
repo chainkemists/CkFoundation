@@ -9,9 +9,7 @@
 
 namespace ck
 {
-    // Draws built networks when ck.PathNetwork.DebugDraw > 0: edge centerlines + width edges +
-    // nodes; >= 2 also draws chunk-grid bounds. Single-frame lines, server world only (that is
-    // where networks live).
+    // Gated on ck.PathNetwork.DebugDraw > 0 (>= 2 also draws chunk-grid bounds). Server world only.
     class CKPATHNETWORK_API FProcessor_PathNetwork_DebugDraw : public ck_exp::TProcessor<
         FProcessor_PathNetwork_DebugDraw,
         FCk_Handle_PathNetwork,
@@ -30,8 +28,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Draws follower corridors when ck.PathNetwork.DebugDraw > 0: compiled waypoints as a chain,
-    // legs colored by type (on-ribbon orange, off-path cyan), goal marker.
+    // Gated on ck.PathNetwork.DebugDraw > 0. Legs are colored by type: on-ribbon orange, off-path cyan.
     class CKPATHNETWORK_API FProcessor_PathNetworkFollower_DebugDrawCorridor : public ck_exp::TProcessor<
         FProcessor_PathNetworkFollower_DebugDrawCorridor,
         FCk_Handle_PathNetworkFollower,

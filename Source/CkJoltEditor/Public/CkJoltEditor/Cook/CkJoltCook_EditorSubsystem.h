@@ -8,8 +8,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/// Editor entry point for the Jolt static-world cooker (mirrors UCkVat_BakerSubsystem). Callable
-/// from Blueprint editor utilities, AngelScript editor scripts, and the Tools menu.
+/// Editor entry point for the Jolt static-world cooker. Callable from Blueprint editor utilities,
+/// AngelScript editor scripts, and the Tools menu.
 UCLASS()
 class CKJOLTEDITOR_API UCk_JoltCook_EditorSubsystem_UE : public UEditorSubsystem
 {

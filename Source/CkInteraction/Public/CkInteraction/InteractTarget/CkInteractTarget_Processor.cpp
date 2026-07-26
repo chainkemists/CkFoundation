@@ -128,7 +128,6 @@ namespace ck
         );
         InCurrent._InteractionFinishedSignals.Add(InteractionEntity, OnInteractionFinishedConnection);
 
-        // This does cause InteractTarget to rely on InteractSource which is not ideal, but works for now and matches the pattern in Resolver
         if (auto InteractSource = UCk_Utils_InteractSource_UE::Cast(InteractSourceRawHandle);
             ck::IsValid(InteractSource))
         {
@@ -145,7 +144,7 @@ namespace ck
             const FCk_Request_InteractTarget_CancelInteraction& InRequest) const
         -> void
     {
-        // Collect all interactions from this source first to avoid mutating the record while iterating
+        // Collected first: cancelling in-place would mutate the record while iterating it.
         auto InteractionsToCancel = TArray<FCk_Handle_Interaction>{};
         UCk_Utils_Interaction_UE::ForEach(InHandle, [&](const FCk_Handle_Interaction& InInteraction)
         {
@@ -204,7 +203,6 @@ namespace ck
 
         UCk_Utils_Interaction_UE::RecordOfInteractions_Utils::Request_Disconnect(InteractTarget, InteractionHandle);
 
-        // Since InteractTarget creates interaction entities, it's also responsible for destroying them
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InteractionHandle);
     }
 
@@ -219,8 +217,7 @@ namespace ck
             FFragment_InteractTarget_Current& InComp)
         -> void
     {
-        // TODO: This processor doesn't get called, can cause issues if teardown is mid interaction!!!
-        // Will need to investigate later
+        // TODO: this processor does not get called — teardown mid-interaction leaks the bindings.
         for (auto& InteractionFinishedSignal : InComp._InteractionFinishedSignals)
         {
             InteractionFinishedSignal.Value.release();

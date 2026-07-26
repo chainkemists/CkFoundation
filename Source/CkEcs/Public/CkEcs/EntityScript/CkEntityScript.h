@@ -97,13 +97,9 @@ public:
     virtual auto
     Get_EffectiveReplication() const -> ECk_Replication;
 
-    // Snapshot respawn opt-in. Only entity scripts that return true are re-bridged/re-spawned by a CkSnapshot
-    // load (the WithActor script stamps FFragment_ActorSpawnIntent when true), and only those classes abstain
-    // from Request_SpawnEntity during the load's EARLY window on the fresh post-travel world (world-init →
-    // world-ready) — the restore owns their entities. Default false: framework infrastructure (ActorRelay /
-    // CueRelay / StateMachineRelay, etc.) and ordinary scripts spawn normally and are wiped by the restore's
-    // registry clear. Lives on this base (CkEcs) so the spawn guard in CkEntityScript_Utils can query the CDO
-    // without depending on CkEcsExt.
+    // Snapshot respawn opt-in: only scripts returning true are re-spawned by a CkSnapshot load, and only those
+    // abstain from Request_SpawnEntity during the load's EARLY window on the fresh post-travel world. Default
+    // false. Lives on this CkEcs base so the spawn guard can query the CDO without depending on CkEcsExt.
     [[nodiscard]]
     virtual auto
     Get_IsSnapshotRespawnable() const -> bool;
@@ -159,7 +155,7 @@ protected:
     FName _AssetRegistryCategory = TEXT("CkEntityScript");
 
 public:
-    // CK_PROPERTY_GET(_Replication); // Use Get_EffectiveReplication
+    // No getter for _Replication on purpose — read Get_EffectiveReplication instead.
     CK_PROPERTY_GET(_InstancingPolicy);
     CK_PROPERTY_GET(_PoolParams);
     CK_PROPERTY_GET(_AssociatedEntity);

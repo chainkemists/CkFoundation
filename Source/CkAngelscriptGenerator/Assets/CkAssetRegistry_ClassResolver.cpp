@@ -20,9 +20,6 @@ namespace ck::angelscriptgenerator
 {
     namespace ck_asset_registry_class_resolver
     {
-        // Walks past Blueprint-generated classes in the parent chain — a BPGC
-        // name is not an AS identifier and must never be emitted. Native and
-        // AS-script classes return unchanged.
         auto Get_AsResolvableClass(
             UClass* InClass) -> UClass*
         {
@@ -84,12 +81,9 @@ namespace ck::angelscriptgenerator
     {
         auto Result = FCk_ResolvedAssetClass{};
 
-        // AR's GetAssetByObjectPath is safe at modal-tick — point-query that
-        // bypasses the IsEngineStartupModuleLoadingComplete gate (engine:
-        // AssetRegistry.cpp ~3179). The tag value is a STRING; no class-load
-        // needed to read it. For AS-parented WBPs the tag often caches as
-        // "None" because the AR-scan-time walk couldn't reach a native parent
-        // — that's the case the PackageReader walk below picks up.
+        // GetAssetByObjectPath is a point-query and stays safe at modal-tick: it bypasses the
+        // IsEngineStartupModuleLoadingComplete gate, and the tag is a string needing no class-load.
+        // AS-parented WBPs often cache it as "None" — Resolve_ViaPackageReader covers those.
         auto* AssetRegistry = IAssetRegistry::Get();
         if (NOT AssetRegistry)
         {
@@ -104,16 +98,12 @@ namespace ck::angelscriptgenerator
             return Result;
         }
 
-        // NativeParentClassPath first; fall back to ParentClassPath
-        // (immediate parent — may be the AS class itself, which resolves
-        // when Hazelight has its UClass registered).
         auto Try_ResolveTag = [&](const FName& InTagName) -> UClass*
         {
             auto TagValue = FString{};
             if (NOT AssetData.GetTagValue<FString>(InTagName, TagValue) || TagValue.IsEmpty() || TagValue == TEXT("None"))
             { return nullptr; }
 
-            // `Class'/Script/Module.ClassName'` -> `/Script/Module.ClassName`
             const auto Unwrapped = FPackageName::ExportTextPathToObjectPath(TagValue);
             auto* Resolved = UClass::TryFindTypeSlow<UClass>(Unwrapped);
             if (NOT Resolved)
@@ -130,11 +120,6 @@ namespace ck::angelscriptgenerator
 
         if (NOT TaggedParent) { return Result; }
 
-        // ParentClassPath's immediate-parent is either an AS class (what the
-        // caller's typed slot expects — keep it) or another Blueprint's
-        // generated class (not an AS identifier — must not be emitted).
-        // Get_AsResolvableClass distinguishes the two: AS script classes
-        // return unchanged, BPGCs walk up to the nearest native/AS ancestor.
         TaggedParent = ck_asset_registry_class_resolver::Get_AsResolvableClass(TaggedParent);
 
         Result.ResolvedClass = TaggedParent;
@@ -153,7 +138,6 @@ namespace ck::angelscriptgenerator
     {
         auto Result = FCk_ResolvedAssetClass{};
 
-        // /Game/X/Y/Z.Z -> /Game/X/Y/Z
         auto LongPackageName = InPackagePath;
         const auto DotIdx = LongPackageName.Find(TEXT("."), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
         if (DotIdx != INDEX_NONE)
@@ -178,9 +162,7 @@ namespace ck::angelscriptgenerator
         if (NOT Reader.GetImports(Imports) || NOT Reader.GetExports(Exports))
         { return Result; }
 
-        // Walk an FPackageIndex up the OuterIndex chain to a flat path
-        // like `/Script/Module.ClassName`. NOTE: `ToImport()` already
-        // returns the 0-based array index — DO NOT apply `-X - 1` again.
+        // ToImport() ALREADY returns the 0-based array index — do NOT apply `-X - 1` again.
         auto Resolve_ImportPath = [&Imports](FPackageIndex InIndex) -> FString
         {
             if (NOT InIndex.IsImport()) { return FString{}; }
@@ -197,8 +179,7 @@ namespace ck::angelscriptgenerator
             }
             if (Names.Num() < 2) { return FString{}; }
 
-            // Package name may be stored with or without leading slash;
-            // normalize to `/Script/<Module>`.
+            // The package name may be stored with OR without its leading slash.
             auto PackageStr = Names[0].ToString();
             if (NOT PackageStr.StartsWith(TEXT("/"))) { PackageStr = FString{TEXT("/Script/")} + PackageStr; }
 
@@ -210,12 +191,9 @@ namespace ck::angelscriptgenerator
             return PackageStr + TEXT(".") + ClassStr;
         };
 
-        // AS-class fallback when TryFindTypeSlow fails: derive the AS
-        // type name from the path. Hazelight unregisters AS UClasses
-        // during the reload window, so even validly-parsed AS classes
-        // can be unfindable at modal-tick. Restricted to AS paths only
-        // because the `U` prefix rule only holds for UObject-derived AS
-        // classes — native Actor classes use `A`, and we'd guess wrong.
+        // Fallback for the reload window, where Hazelight has unregistered AS UClasses and even a
+        // validly-parsed one is unfindable. AS paths ONLY: the `U` prefix rule holds for AS classes,
+        // but a native Actor would need `A` and we would guess wrong.
         auto Derive_AsClassNameFromPath = [](const FString& InPath) -> FString
         {
             static const auto AsPrefix = FString{TEXT("/Script/Angelscript.")};
@@ -225,10 +203,8 @@ namespace ck::angelscriptgenerator
             return FString{TEXT("U")} + BaseName;
         };
 
-        // Path A — generated-class export's SuperIndex. Fails when the
-        // .uasset was saved while the parent was unloadable (serializer
-        // wrote SuperIndex=0 because it couldn't reference what wasn't
-        // there); Path B below picks up that case.
+        // Path A — the generated-class export's SuperIndex. A .uasset saved while its parent was
+        // unloadable has SuperIndex=0 and falls through to Path B.
         for (const auto& Export : Exports)
         {
             const auto NameStr = Export.ObjectName.ToString();
@@ -240,9 +216,6 @@ namespace ck::angelscriptgenerator
 
             if (auto* ParentClass = UClass::TryFindTypeSlow<UClass>(ParentPath))
             {
-                // The SuperIndex import can be another Blueprint's generated
-                // class (BP-of-BP chains) — walk to the nearest AS-resolvable
-                // ancestor before emitting.
                 ParentClass = ck_asset_registry_class_resolver::Get_AsResolvableClass(ParentClass);
 
                 Result.ResolvedClass = ParentClass;
@@ -264,11 +237,9 @@ namespace ck::angelscriptgenerator
             }
         }
 
-        // Path B — scan the import table directly for Class-typed AS
-        // imports. The parent's name survives there even when Path A's
-        // SuperIndex was zero'd at save time. AS classes use ClassName
-        // "ASClass" specifically (not "Class") — accept any *Class
-        // suffix to be robust to engine changes.
+        // Path B — the parent's name survives in the import table even when Path A's SuperIndex was
+        // zero'd at save time. AS imports carry ClassName "ASClass", not "Class"; any *Class suffix
+        // is accepted to stay robust to engine changes.
         const auto AssetBaseName = FPaths::GetBaseFilename(InPackagePath);
 
         auto Get_OuterPackageName = [&Imports](const FObjectImport& InImport) -> FString
@@ -287,7 +258,6 @@ namespace ck::angelscriptgenerator
                                     || ClassNameStr.EndsWith(TEXT("Class"));
             if (NOT IsClassImport) { continue; }
 
-            // Package name normalisation: with or without leading slash.
             const auto OuterPkg = Get_OuterPackageName(Import);
             const auto IsAsPkg = OuterPkg == TEXT("/Script/Angelscript")
                               || OuterPkg == TEXT("Angelscript");
@@ -315,8 +285,8 @@ namespace ck::angelscriptgenerator
         }
         else if (AsCandidates.Num() > 1)
         {
-            // Tie-break by longest shared prefix with asset basename
-            // (WBP naming convention ties parent AS class name to file).
+            // Tie-break on shared prefix: the WBP naming convention ties the parent AS class name
+            // to the asset's own file name.
             auto BestIdx       = int32{INDEX_NONE};
             auto BestPrefixLen = int32{-1};
             for (auto i = 0; i < AsCandidates.Num(); ++i)

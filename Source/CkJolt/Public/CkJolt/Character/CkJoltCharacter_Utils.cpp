@@ -24,21 +24,18 @@ auto
         TEXT("Invalid Handle passed to JoltCharacter Add"))
     { return {}; }
 
-    // The character rides the entity's Transform (writeback + teleport both operate on it), so a
-    // JoltCharacter REQUIRES the Transform feature (it composes onto the target entity directly, like a body).
+    // Writeback + teleport both operate on the entity's own Transform.
     CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InHandle),
         TEXT("Cannot Add a JoltCharacter to Entity [{}] because it does NOT have the Transform feature."), InHandle)
     { return {}; }
 
-    // Cross-engine ownership: a Chaos-simulated (or JoltBody) entity cannot also be a JoltCharacter. Claim
-    // fails loudly at the composing site (its own ensure) and returns an invalid handle here.
+    // Chaos XOR Jolt per entity. A failed claim already ensured inside TryClaim_Jolt.
     if (NOT ck::physics_ownership::TryClaim_Jolt(InHandle))
     { return {}; }
 
     InHandle.Add<ck::FFragment_JoltCharacter_Params>(InParams);
     InHandle.Add<ck::FFragment_JoltCharacter_Current>();
-    // Shared step-pose reuse: a character interpolates through the JoltBody StepPose + WritebackInterpolated
-    // path, so it carries the same FFragment_JoltBody_StepPose.
+    // A character interpolates through the JoltBody StepPose + WritebackInterpolated path, hence the reuse.
     InHandle.Add<ck::FFragment_JoltBody_StepPose>();
     InHandle.Add<ck::FTag_JoltCharacter_NeedsSetup>();
 

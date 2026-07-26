@@ -36,8 +36,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_FlipbookSource);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Sprite-sheet source params, grouped so a single EditCondition hides them all when
-// the source mode is PaperFlipbook.
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_FlipbookSpriteSheet
 {
@@ -90,7 +88,6 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Ck|UI|Flipbook|Events")
     FCk_Flipbook_Event OnFinished;
 
-    // Fired each time a looping flipbook wraps back to the start.
     UPROPERTY(BlueprintAssignable, Category = "Ck|UI|Flipbook|Events")
     FCk_Flipbook_Event OnLoop;
 
@@ -108,8 +105,7 @@ public:
     void
     StopFlipbookAnimation();
 
-    // Re-applies appearance, rebuilds brushes, and restarts the timer after any
-    // config property changes (SourceFlipbook, ImageSize, Tint, PlayRate, ...).
+    // Call after changing any config property (SourceFlipbook, ImageSize, Tint, PlayRate, ...).
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Flipbook")
     void
     RestartWithUpdatedParameters();
@@ -187,8 +183,7 @@ protected:
               meta = (AllowPrivateAccess = true))
     bool _Autoplay = true;
 
-    // Editor-only: play the animation live in the UMG designer preview. Deliberately
-    // not BlueprintReadWrite — it has no runtime meaning, only design-time preview.
+    // Design-time only — deliberately not BlueprintReadWrite; it has no runtime meaning.
     UPROPERTY(EditAnywhere, Category = "Flipbook",
               meta = (EditCondition = "_Autoplay"))
     bool _PreviewInDesigner = true;
@@ -217,9 +212,8 @@ private:
     void
     HandleFlipbookTick();
 
-    // Design-time preview driver. Runtime uses the world timer (PlayFlipbookAnimation),
-    // which the designer preview world does not tick — so the editor preview is driven
-    // off a Slate active timer on MyImage instead.
+    // Design-time preview driver: the designer preview world does not tick FTimerManager, so this
+    // runs off a Slate active timer on MyImage instead of the world timer PlayFlipbookAnimation uses.
     auto ArmDesignPreview() -> void;
     auto DisarmDesignPreview() -> void;
 

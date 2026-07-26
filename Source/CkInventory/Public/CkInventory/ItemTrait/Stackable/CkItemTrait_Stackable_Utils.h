@@ -43,10 +43,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Return payload for Request_FillExistingStacks — bundles the total count that was moved into
-// existing stacks with a handle to the last stack that received quantity. Bundled into a struct
-// rather than using a pointer out-param so the function matches the codebase's returned-by-value
-// result convention (see FCk_SpatialPlacementResult).
+// Result of Request_FillExistingStacks: units moved into existing stacks + the last stack filled.
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_FillExistingStacksResult
 {
@@ -218,8 +215,7 @@ public:
         const FCk_Delegate_Stackable_OnStackCountChanged& InDelegate);
 
 public:
-    // Internal helpers — plain C++ statics (not UFUNCTIONs); not exposed to BP/AS.
-    // Used by typed inventory processors and inventory_helpers namespace.
+    // Internal helpers — plain C++ statics, deliberately not UFUNCTIONs (no BP/AS surface).
 
     /** Sets the stack count to an absolute value via the underlying integer attribute's Override modifier.
      *  WARNING: Override modifiers coalesce as last-writer-wins within a single frame. Safe ONLY for

@@ -146,13 +146,6 @@ auto
         TEXT("Unable to Add Transform to [{}] and AttachTo because Unreal SceneComponent [{}] is INVALID"), InHandle, InAttachTo)
     { return {}; }
 
-    // Loud-failure on missing socket — we deliberately do NOT fall back to
-    // GetSocketTransform's component-world default. A typo in the socket
-    // name silently anchoring to component world is the kind of bug that
-    // shows up in QA as "my muzzle flash is in the wrong place" with no
-    // log line to grep for. If "track component world" is what you want,
-    // use AddAndAttachToUnrealComponent; if you genuinely need a mesh
-    // socket, fix the name.
     CK_ENSURE_IF_NOT(InAttachTo->DoesSocketExist(InSocketName),
         TEXT("Socket [{}] does NOT exist on MeshComponent [{}]. "
              "If you wanted to anchor to the component's world transform (no socket), use "
@@ -389,9 +382,8 @@ auto
     if (const auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
         ck::IsValid(RootComponentFragment.Get_RootComponent()))
     {
-        // Need to update the transform value in the fragment since when a RootComponent exists, we don't update it
-        // every frame through the processors. We need to set the current value NOW so that we can determine if it has changed
-        // when the Update processor is ticked
+        // RootComponent-backed entities are not refreshed every frame by the processors, so the fragment has to
+        // be seeded NOW for the Update processor's change detection to have a baseline.
         InHandle.Get<ck::FFragment_Transform>()._Transform = RootComponentFragment.Get_RootComponent()->GetComponentToWorld();
     }
 
@@ -461,11 +453,8 @@ auto
         FCk_Handle_Transform& InHandle)
     -> void
 {
-    // Called from inside FProcessor_Transform_HandleRequests after applying
-    // a value-changing request; the tag-add needs to land THIS frame so
-    // FireSignals (later in the frame, in Transform_Finalize) sees it.
-    // Routing through the request queue (as Request_ForceRefresh does for
-    // gameplay-side callers) would add a 1-frame delay we don't want here.
+    // Immediate (not queued like Request_ForceRefresh): the tag must land THIS frame so FireSignals sees it
+    // later in the same frame's Transform_Finalize group.
     InHandle.AddOrGet<ck::FTag_Transform_Updated>();
 }
 
@@ -497,7 +486,6 @@ auto
 
     ck::algo::ForEachIsValid(InSceneComp->GetAttachChildren(), [&](USceneComponent* InAttachedComp)
     {
-        // This * transforms from local space to world space!
         const auto CompWorldTransform = InAttachedComp->GetRelativeTransform() * InTransform;
 
         Request_SetWorldTransformFastPath(InAttachedComp,CompWorldTransform);

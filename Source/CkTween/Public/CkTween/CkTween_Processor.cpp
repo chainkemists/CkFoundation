@@ -81,11 +81,7 @@ namespace ck_tween
         }
     }
 
-    // Resolves a normalized 0..1 progress onto the spline and enqueues transform
-    // requests on the tween's lifetime owner. Single source of truth shared by
-    // FProcessor_Tween_ApplySplineFollow (per-tick) and the completion path.
-    // CkSpline distance queries are arc-length-parameterized, so a linear progress
-    // yields constant travel speed.
+    // Shared by FProcessor_Tween_ApplySplineFollow (per-tick) and the completion snap.
     auto ApplyProgressToSplineFollow(
         const FCk_Handle& InTweenHandle,
         const ck::FFragment_Tween_SplineFollow& InSplineFollow,
@@ -230,12 +226,10 @@ namespace ck
 
             InCurrent.Set_CurrentValue(FinalValue);
 
-            // Apply final transform before tags change — ApplyToTransform processor
-            // will skip this entity once it is tagged as Completed.
+            // ApplyToTransform excludes FTag_Tween_Completed, so the final value must be applied here.
             ck_tween::ApplyValueToTransform(InHandle, FinalValue, InParams.Get_Target());
 
-            // Spline-follow tweens resolve their own transform — snap to the final
-            // spline position so the follower lands exactly on the path end.
+            // Snap to the path end so the follower lands exactly on it.
             if (InHandle.Has<FFragment_Tween_SplineFollow>())
             {
                 ck_tween::ApplyProgressToSplineFollow(
@@ -394,13 +388,10 @@ namespace ck
             const FCk_Request_Tween_Stop& InRequest)
         -> void
     {
-        // Stop only acts on a running tween. A tween that has already reached a
-        // terminal state — Completed (natural finish) or Cancelled (a prior
-        // Stop) — must be left untouched: re-running this body would bare-Add
-        // FTag_Tween_Completed (it is already present → ensure) and re-broadcast
-        // OnTweenComplete to every listener. This is reachable without misuse:
-        // requests are deferred, so a tween can complete naturally between the
-        // Stop call and this handler running.
+        // A tween already in a terminal state must be left untouched: re-running this body would
+        // bare-Add an already-present FTag_Tween_Completed (ensure) and re-broadcast OnTweenComplete.
+        // Reachable without misuse — requests are deferred, so a tween can finish between the call
+        // and this handler.
         if (InCurrent.Get_State() != ECk_TweenState::Playing &&
             InCurrent.Get_State() != ECk_TweenState::Paused)
         { return; }
@@ -435,9 +426,8 @@ namespace ck
         InCurrent.Set_CurrentLoop(0);
         InCurrent.Set_IsReversed(false);
 
-        // Restart returns the tween to Playing from ANY prior state, so clear
-        // every state tag first — including Playing itself (Restart-while-
-        // -playing is valid), otherwise the bare Add below ensures.
+        // Restart is valid from ANY prior state, including Playing, so every state tag is cleared
+        // first — otherwise the bare Add below ensures.
         InHandle.Try_Remove<FTag_Tween_Playing>();
         InHandle.Try_Remove<FTag_Tween_Paused>();
         InHandle.Try_Remove<FTag_Tween_Completed>();

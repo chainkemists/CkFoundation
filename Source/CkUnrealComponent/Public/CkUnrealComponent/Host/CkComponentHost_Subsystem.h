@@ -20,17 +20,10 @@ public:
     static auto
     Get(UWorld* InWorld) -> UCk_ComponentHost_Subsystem_UE*;
 
-    // Lazily-spawned per-world Actor that OWNS the scene components created by the
-    // UnrealComponent feature. A component can only register with the navigation
-    // octree when GetOwner() is non-null (UNavigationSystemV1::RegisterComponentToNavOctree
-    // early-outs otherwise), so world-hosted/owner-less components could never cut the
-    // navmesh. Owning them under this Actor restores nav relevance; the engine still
-    // gates actual geometry export on collision (query + Pawn block), so cosmetic
-    // NoCollision meshes remain harmless.
-    //
-    // Editor-preview components do NOT host here — they go to the per-selection-owner host
-    // (UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionProxyHostActor) so viewport clicks on them
-    // redirect selection to the placed actor that owns the preview.
+    // Lazily-spawned per-world Actor that OWNS the scene components created by the UnrealComponent
+    // feature: UNavigationSystemV1::RegisterComponentToNavOctree early-outs when GetOwner() is null,
+    // so owner-less components could never cut the navmesh. Editor previews host elsewhere — on the
+    // per-selection-owner proxy (UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionProxyHostActor).
     auto
     Get_HostActor() -> AActor*;
 

@@ -16,11 +16,8 @@ namespace ck::angelscriptgenerator::self_heal
     {
         // ---- Argument-list emission ------------------------------------------------
 
-        // Splits an args-list captured from "No matching signatures to '...(X, Y, Z)'"
-        // into individual type strings. Tolerates spaces around commas. Does NOT try
-        // to handle templates with commas inside (e.g. TMap<int, FString>) — those
-        // are not seen in EntitySpawnParams Params() signatures and would require a
-        // bracket-aware tokenizer.
+        // Does NOT handle templates with commas inside (TMap<int, FString>) — those
+        // don't appear in EntitySpawnParams Params() signatures.
         auto Split_ArgTypes(
             const FString& InArgsList) -> TArray<FString>
         {
@@ -35,41 +32,16 @@ namespace ck::angelscriptgenerator::self_heal
             return Out;
         }
 
-        // Fallback param type for call-site arguments whose type the AS error
-        // cannot report (a bare `nullptr` has no inferable type — the compiler
-        // emits the placeholder `<null handle>` instead). Stub bodies discard
-        // their args, and a nullptr literal binds to a UObject param, so this
-        // is the weakest type that still satisfies the call site.
         constexpr auto* kUninferableTypeFallback = TEXT("UObject");
 
-        // True when the (already-trimmed) token is a compiler placeholder like
-        // `<null handle>` rather than a real type. Placeholders are always a
-        // whole bracketed token; templated types (TArray<int>) start with an
-        // identifier character and don't match.
+        // Placeholders are always a whole bracketed token; templated types
+        // (TArray<int>) start with an identifier character and don't match.
         auto Is_UninferablePlaceholder(
             const FString& InTrimmedToken) -> bool
         {
             return InTrimmedToken.StartsWith(TEXT("<"));
         }
 
-        // Canonicalizes a type token to the value-typed shape the real generator
-        // emits: strips a leading "const " and a trailing "&". The AS error reports
-        // the CALL SITE's argument category, not the function's declared parameter
-        // — the same Params() called with a literal vs an lvalue yields "const int"
-        // vs "int&" in two otherwise-identical error records. Stubs must collapse
-        // those to one value-typed overload: value params accept every argument
-        // category, whereas emitting one stub per reported variant produces
-        // overloads that are mutually ambiguous at every call site ("Multiple
-        // matching signatures" — unhealable, since the dispatcher only recognizes
-        // "No matching signatures").
-        //
-        // Compiler placeholders (`<null handle>` for a bare nullptr arg) map to
-        // the UObject fallback instead of passing through: emitting the
-        // placeholder verbatim produces an unparseable stub ("Expected data
-        // type / Instead found '<'") that wedges every subsequent compile —
-        // worse than the original mismatch, because the corrupt file is self-
-        // heal's own output and it parses "0 actionable roots" from it. Pinned
-        // by the 2026-06-10 UBb_StoreDriver_EntityScript incident.
         auto Normalize_TypeToken(
             const FString& InTypeToken) -> FString
         {
@@ -94,7 +66,6 @@ namespace ck::angelscriptgenerator::self_heal
             return false;
         }
 
-        // "FTransform, const UClass" -> "FTransform Arg0, UClass Arg1"
         auto Format_ParameterList(
             const FString& InArgsList) -> FString
         {
@@ -110,11 +81,9 @@ namespace ck::angelscriptgenerator::self_heal
             return FString::Join(Parts, TEXT(", "));
         }
 
-        // Extracts the normalized args list of every already-synthesized stub
-        // for <NS>::<FUNC> in the sibling's content, by scanning its
-        // `// End synthesized stub for <NS>::<FUNC>(<args>)` marker lines.
-        // Full-shape (source-derived) blocks emit per-overload markers with
-        // the same prefix, so their overloads are visible here too.
+        // Scans the sibling's `// End synthesized stub for <NS>::<FUNC>(<args>)`
+        // markers. Full-shape blocks emit the same prefix, so their overloads
+        // are visible here too.
         auto Collect_ExistingStubArgsLists(
             const FString& InExistingStub,
             const FString& InNamespace,
@@ -148,19 +117,10 @@ namespace ck::angelscriptgenerator::self_heal
             return Out;
         }
 
-        // Classes whose source-derived FULL SHAPE was synthesized by THIS
-        // process. Distinguishes "signature error in the same bulk drain that
-        // wrote the full shape" (never compile-tested — wait for the next
-        // compile) from "signature error after a compile that already
-        // included the full shape" (genuine divergence — per-signature
-        // fallback). Session-static on purpose: mirrors the dispatcher's
-        // convergence trackers; a new process starts clean, which is exactly
-        // the headless cook-retry boundary.
         TSet<FString> sFullShapeClassesThisSession;
 
         // ---- File IO helpers -------------------------------------------------------
 
-        // Read full file contents as text. Returns empty string + false if not found.
         auto Try_ReadFile(
             const FString& InPath,
             FString&       OutContents) -> bool
@@ -168,23 +128,18 @@ namespace ck::angelscriptgenerator::self_heal
             return FFileHelper::LoadFileToString(OutContents, *InPath);
         }
 
-        // Atomic write: temp + rename. The destination is overwritten only on a
-        // successful temp write; partial writes never reach the destination.
         auto Try_AtomicWrite(
             const FString& InPath,
             const FString& InContents) -> bool
         {
             const auto TempPath = InPath + TEXT(".stubtmp");
 
-            // Ensure the parent directory exists. For the caller-path anchor
-            // fallback (brand-new plugin / project where Script/Generated/
-            // hasn't been created yet) the dir may be missing — without this,
-            // SaveStringToFile fails opaquely.
+            // A brand-new plugin/project has no Script/Generated/ yet, and
+            // SaveStringToFile fails opaquely into a missing directory.
             const auto ParentDir = FPaths::GetPath(InPath);
             if (NOT ParentDir.IsEmpty())
             { IFileManager::Get().MakeDirectory(*ParentDir, /*Tree=*/true); }
 
-            // Make sure no leftover from a prior failed write blocks us.
             IFileManager::Get().Delete(*TempPath, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true);
 
             if (NOT FFileHelper::SaveStringToFile(InContents, *TempPath,
@@ -310,10 +265,6 @@ namespace ck::angelscriptgenerator::self_heal
         if (InNamespaceName.IsEmpty())
         { return FString{}; }
 
-        // Convention from the real generator: U<X> -> F<X>_SpawnParams.
-        // If the leading char isn't 'U', we don't recognize the input as an
-        // entity-script class name and refuse to derive (the dispatcher won't
-        // route this case to us anyway, but defend against misuse).
         if (NOT InNamespaceName.StartsWith(TEXT("U")))
         { return FString{}; }
 
@@ -384,15 +335,9 @@ namespace ck::angelscriptgenerator::self_heal
         Out += FString::Printf(TEXT("        return %s();"), *StructName);                        Out += LINE_TERMINATOR;
         Out += TEXT("    }");                                                                     Out += LINE_TERMINATOR;
         Out += TEXT("}");                                                                         Out += LINE_TERMINATOR;
-        // Include the NORMALIZED args list in the marker so distinct overloads
-        // of the same NS::FUNC name dedup independently (int vs float stay
-        // separate), while call-site argument-category variants of the SAME
-        // logical signature collapse to one stub: literal vs lvalue
-        // ("const int" vs "int&" — the 2026-06-10 CheckoutSettle ambiguity
-        // wedge) AND const-qualified duplicates that emit the same declaration
-        // ("const FTransform" vs "FTransform" — the fresh-clone bulk-synthesis
-        // duplicate-overload wedge). The `// Target:` line above keeps the raw
-        // error string for forensics.
+        // NORMALIZED args: distinct overloads (int vs float) still dedup
+        // independently, while argument-category variants of one signature
+        // collapse to a single stub. `// Target:` keeps the raw error string.
         Out += FString::Printf(TEXT("// End synthesized stub for %s::%s(%s)"),
             *InError.TargetNamespace, *InError.FunctionName, *Normalize_ArgsList(InError.ArgsList)); Out += LINE_TERMINATOR;
 
@@ -411,8 +356,8 @@ namespace ck::angelscriptgenerator::self_heal
         if (InStructName.IsEmpty())
         { return false; }
 
-        // Look for a definition-style occurrence: "struct <Name>". This avoids
-        // false positives on references like "FX_SpawnParams()" calls.
+        // Definition-style needle — avoids false positives on references like
+        // "FX_SpawnParams()" calls.
         const auto Needle = FString::Printf(TEXT("struct %s"), *InStructName);
         return InFileContents.Contains(Needle);
     }
@@ -430,10 +375,8 @@ namespace ck::angelscriptgenerator::self_heal
         { return FString{}; }
 
         const auto StructName = Derive_SpawnParamsStructName(InNamespaceName);
-        // We accept a match on either the namespace name OR the derived struct
-        // name — a corruption that mangled one but not the other still resolves.
-        // The class-identifier suffix (without leading 'U' / 'F') is also a
-        // strong signal that survives prefix-preserving renames.
+        // OR'd on purpose: a corruption that mangled one of the three identifiers
+        // but not the others still resolves.
         const auto Suffix = InNamespaceName.StartsWith(TEXT("U")) ? InNamespaceName.RightChop(1) : InNamespaceName;
 
         auto Match = FString{};
@@ -449,12 +392,10 @@ namespace ck::angelscriptgenerator::self_heal
 
             if (HasNamespace || HasStruct || HasSuffix)
             {
+                // Ambiguous — the identifier is in multiple candidates; refuse to
+                // choose and let the caller fall back to a default.
                 if (NOT Match.IsEmpty())
-                {
-                    // Ambiguous — the identifier appears in multiple candidates.
-                    // Refuse to choose; caller falls back to a default.
-                    return FString{};
-                }
+                { return FString{}; }
                 Match = Path;
             }
         }
@@ -481,14 +422,7 @@ namespace ck::angelscriptgenerator::self_heal
 
         auto CanonicalPath = Find_TargetFile_ByContent(InError.TargetNamespace, InCandidateFilePaths);
         if (CanonicalPath.IsEmpty())
-        {
-            // Brand-new namespace fallback: no existing file references it yet
-            // (e.g. an entity-script class just authored mid-session, hot-reload
-            // failing on its first Params() call site). Anchor deterministically
-            // by walking up the caller's .as file path to the owning plugin or
-            // project root.
-            CanonicalPath = Anchor_ByCallerAsPath(InError.FilePath);
-        }
+        { CanonicalPath = Anchor_ByCallerAsPath(InError.FilePath); }
         if (CanonicalPath.IsEmpty())
         {
             Result.FailReason   = ECk_StubInjectFailReason::AnchorFailed;
@@ -509,15 +443,10 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        // Read prior stub-file contents if any (accumulating-append). When no
-        // stub file exists yet, we start with the recovery header banner.
         auto ExistingStub = FString{};
         const auto StubFileExists = ck_angelscript_generator_stub_synthesizer::Try_ReadFile(StubPath, ExistingStub);
 
         const auto StructName = Derive_SpawnParamsStructName(InError.TargetNamespace);
-        // Emit the struct only if neither the canonical nor the in-progress
-        // stub file already defines it. Accumulating drift on the same plugin
-        // must not redefine the struct multiple times.
         auto CanonicalContents = FString{};
         ck_angelscript_generator_stub_synthesizer::Try_ReadFile(CanonicalPath, CanonicalContents);
         const auto CanonicalHasStruct = Has_SpawnParamsStruct(CanonicalContents, StructName);
@@ -534,11 +463,6 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        // Per-accessor dedup. Each appended block ends with a unique
-        // "// End synthesized stub for <NS>::<FUNC>" line. If the existing
-        // sibling already carries that marker, the accessor is covered — a
-        // second append would produce a duplicate-function collision when AS
-        // merges the namespace blocks at compile time.
         if (StubFileExists)
         {
             static const auto EndMarkerPrefix = FString{TEXT("// End synthesized stub for ")};
@@ -561,14 +485,9 @@ namespace ck::angelscriptgenerator::self_heal
                 }
             }
 
-            // Declaration-level backstop: even when the marker key differs,
-            // appending a block whose EMITTED overload declaration already
-            // exists in the sibling wedges the merged namespace ("A function
-            // with the same name and parameters already exists"). The marker
-            // canonicalization covers const-aliasing; this catches any alias
-            // class it doesn't (e.g. engine type aliases). A decl line
-            // embeds the struct name, so it uniquely identifies
-            // (namespace, signature) within the sibling.
+            // Declaration-level backstop for alias classes the marker
+            // canonicalization doesn't enumerate: a duplicate emitted overload
+            // wedges the merged namespace.
             const auto DeclLine = FString::Printf(TEXT("%s %s(%s)"),
                 *StructName, *InError.FunctionName, *ck_angelscript_generator_stub_synthesizer::Format_ParameterList(InError.ArgsList));
             if (ExistingStub.Contains(DeclLine))
@@ -580,30 +499,9 @@ namespace ck::angelscriptgenerator::self_heal
             }
         }
 
-        // Same-arity ambiguity gate (2026-06-10 nullptr-arg incident). A call
-        // site passing a bare nullptr reports the uninferable placeholder
-        // `<null handle>`, which we emit as a UObject fallback param. A
-        // fallback stub and a typed stub of the same NS::FUNC + arity are
-        // mutually ambiguous at every call site (nullptr binds to both, and a
-        // typed handle implicitly converts to UObject) — "Multiple matching
-        // signatures", which the dispatcher can't recognize or heal. Never
-        // write the second one, in either order: stub bodies discard their
-        // args. Full-shape (source-derived) blocks emit per-overload
-        // markers with the same prefix, so a nullptr variant of a full-shape
-        // typed overload is suppressed here too. Distinct fully-typed
-        // same-arity overloads (int vs float) still dedup independently —
-        // the gate only fires when a fallback is involved on either side.
-        //
-        // Rev 11: the gate FAILS LOUDLY (SameArityAmbiguous) instead of
-        // returning fake success. "Whichever stub landed first satisfies
-        // them all" only holds when every caller's static arg types are
-        // compatible with the existing overload — mixed-type callers at the
-        // same position (FCk_Handle_Economy vs plain FCk_Handle at the
-        // StoreEntity slot; AS has no implicit base→typesafe conversion)
-        // stay unmatched forever while the heal reports green (the
-        // 2026-06-11 stale-canonical wedge: green toast, red compile,
-        // editor modal blocked indefinitely). The dispatcher escalates this
-        // reason to the canonical-quarantine path.
+        // Same-arity ambiguity gate: a fallback-typed and a typed stub of the same
+        // NS::FUNC + arity are mutually ambiguous at every call site. Fails LOUDLY
+        // so the dispatcher escalates to the canonical-quarantine path.
         if (StubFileExists)
         {
             const auto NewArity       = ck_angelscript_generator_stub_synthesizer::Split_ArgTypes(InError.ArgsList).Num();
@@ -801,8 +699,8 @@ namespace ck::angelscriptgenerator::self_heal
         auto CanonicalPath = Find_TargetFile_ByContent(InClassName, InCandidateFilePaths);
         if (CanonicalPath.IsEmpty() && NOT Shape.SourceFilePath.IsEmpty())
         {
-            // The class's declaring file determines the owning plugin/project
-            // bucket — the same attribution the real generator uses.
+            // The declaring file determines the owning plugin/project bucket — the
+            // same attribution the real generator uses.
             CanonicalPath = Anchor_ByCallerAsPath(Shape.SourceFilePath);
         }
         if (CanonicalPath.IsEmpty())
@@ -830,29 +728,17 @@ namespace ck::angelscriptgenerator::self_heal
         auto ExistingStub = FString{};
         const auto StubFileExists = ck_angelscript_generator_stub_synthesizer::Try_ReadFile(StubPath, ExistingStub);
 
-        // Re-fire for a class whose full shape already landed:
-        //  - struct-shaped errors (missing type / bare ctor): the struct
-        //    exists in the sibling — satisfied, no-op success.
-        //  - signature errors (NoMatchingSignatures) where the full shape was
-        //    written THIS SESSION (typically the same bulk drain): the
-        //    signature has never been compile-tested against the fresh full
-        //    shape — no-op success and let the next compile decide. Deferring
-        //    here appended junk per-signature overloads for calls the full
-        //    shape would have satisfied (and a `nullptr`-passing call then
-        //    coexists ambiguously with the full-shape overload).
-        //  - signature errors where the full shape came from a PREVIOUS
-        //    session/process (marker on disk, not in the session set — the
-        //    headless cook-retry flow): that compile already ran against the
-        //    full shape and still missed, so the caller genuinely diverges
-        //    (arg-order drift, base-vs-typed-handle slot). Return failure so
-        //    the dispatcher falls back to the per-signature error-text append
-        //    ALONGSIDE the full shape. Returning success unconditionally
-        //    swallowed that fallback and wedged the headless cook retry on
-        //    BB_CorridorGym.as's stale 25-arg StoreDriver call (2026-06-10).
-        if (StubFileExists && ExistingStub.Contains(Get_FullShapeMarkerLine(InClassName)))
+        const auto FullShapeAlreadyInSibling = StubFileExists
+            && ExistingStub.Contains(Get_FullShapeMarkerLine(InClassName));
+
+        if (FullShapeAlreadyInSibling)
         {
-            if (InError.Kind != ECk_AsParsedError_Kind::NoMatchingSignatures
-                || ck_angelscript_generator_stub_synthesizer::sFullShapeClassesThisSession.Contains(InClassName))
+            const auto FullShapeWrittenThisProcess =
+                ck_angelscript_generator_stub_synthesizer::sFullShapeClassesThisSession.Contains(InClassName);
+            const auto ErrorIsStructShaped = InError.Kind != ECk_AsParsedError_Kind::NoMatchingSignatures;
+            const auto SignatureNeverCompileTested = ErrorIsStructShaped || FullShapeWrittenThisProcess;
+
+            if (SignatureNeverCompileTested)
             {
                 Result.Success        = true;
                 Result.TargetFilePath = StubPath;
@@ -866,15 +752,6 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        // A struct defined in the canonical means the canonical is PRESENT
-        // but its accessor signatures no longer match the source — the
-        // stale-canonical case (e.g. an untracked leftover surviving a pull).
-        // Appending a full-shape block alongside it would duplicate the
-        // struct and the Params() overloads in the merged namespace. Rev 11:
-        // surface StructExistsInCanonical so the dispatcher escalates to
-        // canonical quarantine (delete + bulk full-shape resynthesis). A
-        // struct defined only by an earlier error-text stub in the sibling
-        // is in-session incremental drift — the per-signature path owns it.
         auto CanonicalContents = FString{};
         ck_angelscript_generator_stub_synthesizer::Try_ReadFile(CanonicalPath, CanonicalContents);
         if (Has_SpawnParamsStruct(CanonicalContents, StructName))
@@ -945,14 +822,12 @@ namespace ck::angelscriptgenerator::self_heal
             { continue; }
 
             auto Name = Line.RightChop(NamespaceKeyword.Len()).TrimStartAndEnd();
-            // Tolerate a same-line opening brace ("namespace UFoo {").
             const auto BracePos = Name.Find(TEXT("{"));
             if (BracePos != INDEX_NONE)
             { Name = Name.Left(BracePos).TrimEnd(); }
 
-            // Only entity-script namespaces (U<X>), corroborated by their
-            // derived F<X>_SpawnParams struct being defined in the same text
-            // — guards against unrelated namespaces in a hand-mangled file.
+            // Corroborate with the derived struct — guards against unrelated
+            // namespaces in a hand-mangled file.
             const auto StructName = Derive_SpawnParamsStructName(Name);
             if (StructName.IsEmpty() || NOT Has_SpawnParamsStruct(InCanonicalContents, StructName))
             { continue; }
@@ -1015,10 +890,7 @@ namespace ck::angelscriptgenerator::self_heal
         const auto SiblingExists = ck_angelscript_generator_stub_synthesizer::Try_ReadFile(StubPath, SiblingContents);
         if (SiblingExists)
         {
-            // Classes already healed this session — full-shape markers
-            // (`// End synthesized full-shape stub for <X>`) and error-text
-            // markers (`// End synthesized stub for <NS>::...`) both name
-            // the class; carry them into the rebuilt sibling so the retry
+            // Carry already-healed classes into the rebuilt sibling so the retry
             // compile doesn't regress accessors that were already covered.
             auto SiblingLines = TArray<FString>{};
             SiblingContents.ParseIntoArrayLines(SiblingLines, /*InCullEmpty=*/true);
@@ -1047,15 +919,6 @@ namespace ck::angelscriptgenerator::self_heal
         { IFileManager::Get().Delete(*StubPath, /*RequireExists=*/false, /*EvenReadOnly=*/false, /*Quiet=*/true); }
 
         // ---- 3. Quarantine the canonical -----------------------------------
-        // Forensic copy lands under Saved/ (ignored, outside the AS script
-        // roots so the copy itself can never compile); the canonical is then
-        // DELETED — it is rewritten from live reflection on every successful
-        // compile, and the startup stub-sweep retention rule keeps the
-        // rebuilt sibling alive across a force-quit while its canonical is
-        // missing (the proven fresh-bootstrap path). If hot-reload ever
-        // proves blind to the deletion mid-session, switch to an atomic
-        // truncate-in-place (one-line header) — mtime-detected, compiles to
-        // empty, PostCompile regen restores it.
         if (CanonicalExists)
         {
             const auto QuarantineDir = FPaths::ProjectSavedDir() / TEXT("CkSelfHeal/Quarantine");
@@ -1065,8 +928,8 @@ namespace ck::angelscriptgenerator::self_heal
             const auto ForensicPath = QuarantineDir /
                 FString::Printf(TEXT("%s.stale_%s"), *FPaths::GetCleanFilename(InCanonicalPath), *Stamp);
 
-            // Copy failure is log-worthy but not blocking — the forensic
-            // copy is a courtesy; the heal itself only needs the delete.
+            // The forensic copy is a courtesy — its failure must not block the
+            // heal, which only needs the delete.
             if (IFileManager::Get().Copy(*ForensicPath, *InCanonicalPath) != COPY_OK)
             {
                 Result.ErrorMessage = FString::Printf(
@@ -1084,9 +947,8 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         // ---- 4. Bulk full-shape resynthesis --------------------------------
-        // Empty candidate list on purpose: the canonical no longer exists, so
-        // each class anchors via its own declaring file's plugin/project root
-        // (the same attribution the real generator uses).
+        // Empty candidate list on purpose: the canonical is gone, so each class
+        // anchors via its own declaring file.
         auto SeedFailures = TArray<FString>{};
         auto SkippedCount = 0;
         for (const auto& ClassName : ClassUnion)
@@ -1107,9 +969,8 @@ namespace ck::angelscriptgenerator::self_heal
             }
             else
             {
-                // Non-seed scan failures are expected for deleted classes —
-                // they simply drop out of the regenerated canonical; a live
-                // caller of one surfaces the convergence banner, correctly.
+                // Non-seed scan failures are expected for deleted classes — they
+                // simply drop out of the regenerated canonical.
                 ++SkippedCount;
             }
         }

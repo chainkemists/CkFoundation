@@ -19,12 +19,8 @@ DECLARE_STATS_GROUP(TEXT("CkSignals_Listeners"), STATGROUP_CkSignals_Listeners, 
 
 namespace ck
 {
-    // Per-LISTENER signal profiling (opt-in via `ck.Signal.StatListeners 1`). When enabled,
-    // each bound delegate invoked during a signal broadcast is timed under `stat CkSignals_Listeners`,
-    // named "ClassName::FunctionName" — this answers "WHICH listener of a hot signal (e.g.
-    // OnTimerUpdate) is expensive", which the per-signal-TYPE stat alone cannot. Off by default
-    // (the dynamic stat-id construction is not free), so there is zero cost on the hot path unless
-    // a profiling session opts in.
+    // Per-LISTENER signal profiling, opt-in via `ck.Signal.StatListeners 1` — the dynamic stat-id
+    // construction is not free, so it stays off the hot path by default.
     CKECS_API auto Get_ShouldStat_SignalListeners() -> bool;
     CKECS_API auto Make_SignalListenerStatId(const FString& InListenerName) -> TStatId;
 

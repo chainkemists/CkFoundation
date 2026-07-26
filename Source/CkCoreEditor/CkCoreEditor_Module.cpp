@@ -219,14 +219,12 @@ auto
     { return; }
     #endif
 
-    // First, handle the Blueprint itself if it's a component
     if (ck::IsValid(Blueprint->GeneratedClass) &&
         Blueprint->GeneratedClass->IsChildOf(UActorComponent::StaticClass()))
     {
         TryUpdateVisualizerForComponentBlueprint(Blueprint);
     }
 
-    // If it's an Actor Blueprint, also check its components
     if (ck::IsValid(Blueprint->GeneratedClass) &&
         Blueprint->GeneratedClass->IsChildOf(AActor::StaticClass()))
     {
@@ -314,16 +312,13 @@ auto
     if (ck::Is_NOT_Valid(ActorBlueprint) || ck::Is_NOT_Valid(ActorBlueprint->GeneratedClass))
     { return; }
 
-    // Get the CDO (Class Default Object) of the Actor
     if (auto* ActorCDO = Cast<AActor>(ActorBlueprint->GeneratedClass->GetDefaultObject());
         ck::IsValid(ActorCDO))
     {
-        // Scan all components in the Actor CDO
         ScanActorComponentsForVisualizers(ActorCDO);
     }
 
-    // Also scan the Blueprint's component templates directly
-    // This catches components that might not be in the CDO yet
+    // The SCS templates catch components that are not in the CDO yet
     if (ck::IsValid(ActorBlueprint->SimpleConstructionScript))
     {
         for (const auto& RootNodes = ActorBlueprint->SimpleConstructionScript->GetRootNodes();
@@ -343,14 +338,12 @@ auto
     if (ck::Is_NOT_Valid(Node))
     { return; }
 
-    // Check the component template
     if (const auto* ComponentTemplate = Node->ComponentTemplate.Get();
         ck::IsValid(ComponentTemplate))
     {
         ProcessComponentForVisualizers(ComponentTemplate);
     }
 
-    // Recursively scan child nodes
     for (const auto* ChildNode : Node->GetChildNodes())
     {
         ScanSCSNodeForComponentVisualizers(ChildNode);
@@ -384,13 +377,11 @@ auto
     if (const auto* ComponentClass = Component->GetClass();
         ck::IsValid(ComponentClass))
     {
-        // Handle Blueprint components
         if (auto* ComponentBlueprint = UBlueprint::GetBlueprintFromClass(ComponentClass);
             ck::IsValid(ComponentBlueprint))
         {
             TryUpdateVisualizerForComponentBlueprint(ComponentBlueprint);
         }
-        // Handle native C++ components
         else if (ck::Is_NOT_Valid(ComponentClass->ClassGeneratedBy))
         {
             TryUpdateVisualizerForClass(ComponentClass);
@@ -444,7 +435,6 @@ auto
         if (ck::Is_NOT_Valid(Actor))
         { continue; }
 
-        // Use the shared component processing logic
         for (const auto* Component : Actor->GetComponents())
         {
             if (ck::Is_NOT_Valid(Component))
@@ -452,7 +442,6 @@ auto
 
             ProcessComponentForVisualizers(Component);
 
-            // Track processed native classes to avoid duplicates
             if (const auto* ComponentClass = Component->GetClass();
                 ck::IsValid(ComponentClass) && ck::Is_NOT_Valid(ComponentClass->ClassGeneratedBy))
             {

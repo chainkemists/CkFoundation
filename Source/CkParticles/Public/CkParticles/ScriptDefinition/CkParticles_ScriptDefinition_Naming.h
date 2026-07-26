@@ -4,7 +4,6 @@
 
 namespace ck::particles
 {
-    // Generated systems live in CkFoundation plugin content under GeneratedSystems/.
     inline auto Get_GeneratedSystemPackagePath(const FName InScriptName) -> FString
     {
         return FString::Printf(TEXT("/CkFoundation/CkParticles/GeneratedSystems/PS_CkParticles_%s"),
@@ -17,16 +16,12 @@ namespace ck::particles
         return FString::Printf(TEXT("%s.PS_CkParticles_%s"), *Pkg, *InScriptName.ToString());
     }
 
-    // Seed template the generator duplicates when a UCkParticles_ScriptDefinition leaves _TemplateSystem unset.
-    // This is the one hand-authored Niagara System (see the seed-template setup notes).
     inline auto Get_DefaultTemplateSystemObjectPath() -> FString
     {
         return TEXT("/CkFoundation/CkParticles/Templates/PS_CkParticles_Template.PS_CkParticles_Template");
     }
 
-    // Burst-spawn variant of the seed template (one instantaneous burst per ~1.2s loop instead of a continuous
-    // rate) — the one-shot archetypes (slash/impact/muzzle/...) spawn through this. Same DI, same BehaviorId
-    // contract, same renderer set.
+    // Burst-spawn variant of the seed template — the one-shot archetypes spawn through this.
     inline auto Get_BurstTemplateSystemObjectPath() -> FString
     {
         return TEXT("/CkFoundation/CkParticles/Templates/PS_CkParticles_Template_Burst.PS_CkParticles_Template_Burst");
@@ -60,14 +55,11 @@ namespace ck::particles
             *InName.ToString(), *InName.ToString());
     }
 
-    // The sprite renderer's material is bound to this system User parameter, so a spawn can swap the per-effect
-    // texture (material instance) per component via UNiagaraComponent::SetVariableMaterial. Falls back to the
-    // renderer's direct Material if unset — so a miss renders the default glow, never invisible.
+    // Bound to the sprite renderer's material: unset falls back to the renderer's own Material, so a miss
+    // renders the default glow rather than nothing.
     inline auto Get_SpriteMaterialParameterName() -> FName { return FName(TEXT("User.SpriteMaterial")); }
 
-    // One-shot archetypes (a single arc per ~1.2s loop) spawn through the burst template; everything else uses
-    // the continuous-rate seed. Spawn_BehaviorAtLocation routes automatically — keep this table in sync with the
-    // behavior roster in CkParticles_Behaviors.ush.
+    // Keep this table in sync with the behavior roster in CkParticles_Behaviors.ush.
     inline auto Get_BehaviorUsesBurstTemplate(const int32 InBehaviorId) -> bool
     {
         switch (InBehaviorId)

@@ -16,9 +16,8 @@
 namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
-    // COMMIT PENDING SCRIPT ATTACH — Materializes deferred EntityScripts on SM child entities
-    // before the EntityScript construction pipeline observes them. Runs in the same script
-    // group as FProcessor_EntityScript_ContinueConstruction and must precede it so the
+    // Materializes deferred EntityScripts on SM child entities before the EntityScript construction
+    // pipeline observes them; must precede FProcessor_EntityScript_ContinueConstruction so the
     // attach's FTag_EntityScript_ContinueConstruction is in place for the same frame.
 
     class CKSTATEMACHINE_API FProcessor_SmScript_CommitPendingAttach : public ck_exp::TProcessor<
@@ -47,7 +46,6 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // --------------------------------------------------------------------------------------------------------------------
-    // SETUP — One-time initialization, auto-start if configured
 
     class CKSTATEMACHINE_API FProcessor_Sm_Setup : public ck_exp::TProcessor<
         FProcessor_Sm_Setup,
@@ -74,7 +72,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // HANDLE REQUESTS — Process Start/Stop/Pause/Resume/Transition
 
     class CKSTATEMACHINE_API FProcessor_Sm_HandleRequests : public ck_exp::TProcessor<
         FProcessor_Sm_HandleRequests,
@@ -154,9 +151,8 @@ namespace ck
             FFragment_Sm_Current& InCurrent,
             TSubclassOf<UCk_SmState_EntityScript> InStateClass) -> void;
 
-        // InScheduleDestroy=false runs the exit cascade but leaves the previous state entity
-        // alive; the caller (transition path) is then responsible for destroying it after the
-        // new state is committed. See FProcessor_Sm_CommitPendingTransition.
+        // InScheduleDestroy=false runs the exit cascade but leaves the previous state entity alive;
+        // the transition path then destroys it after FProcessor_Sm_CommitPendingTransition commits.
         static auto
         DoExitCurrentState(
             HandleType InSmHandle,
@@ -164,24 +160,14 @@ namespace ck
             bool InScheduleDestroy = true) -> void;
     };
 
-    // Forward decl — the processors below name CommitPendingTransition in their RunBefore, but
-    // declaring it first keeps the replay path next to the request path it complements.
     class FProcessor_Sm_CommitPendingTransition;
     class FProcessor_Sm_ApplyReplicatedHistory;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // FIRST-SYNC INITIAL STATE — Non-authority machines enter their initial state on first sync.
-    //
-    // The authority enters its initial state via DoStart (Request_Start). Non-authority machines
-    // never run Start (single-authority rule) and the initial entry is not a replayed transition,
-    // so without this they sit at <none> until the first transition replays — and a sink-state SM
-    // would stay <none> forever. MirrorRunStatus tags the SM (FTag_Sm_NeedsInitialStateEntry) when
-    // it first learns the SM is Running with no current state; this processor enters the locally-
-    // known initial state (resolved through the override map) and fires the initial OnSmStateChanged
-    // (PreviousStateClass=null), matching standalone/owning behaviour. Runs BEFORE ApplyReplicatedHistory
-    // so the initial state is in place before any transition drains; TExclude<PendingTransition>
-    // keeps it from racing an in-flight transition. No publish — each machine reconstructs locally
-    // from the replicated run-status, exactly like the replay path reconstructs transitions.
+    // FIRST-SYNC INITIAL STATE — a non-authority machine never runs Start, and the initial entry is
+    // not a replayed transition, so without this it sits at <none> until the first transition drains
+    // (forever for a sink-state SM). Tagged by MirrorRunStatus; enters the locally-known initial
+    // state and fires the initial OnSmStateChanged locally, with no publish.
 
     class CKSTATEMACHINE_API FProcessor_Sm_FirstSyncInitialState : public ck_exp::TProcessor<
         FProcessor_Sm_FirstSyncInitialState,
@@ -212,16 +198,9 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // FLUSH PENDING REPLICATION — DRAIN — Releases stashed rep entries into the replay queue.
-    //
-    // The OnChange/OnAdd handlers (CkStateMachine_Replication.cpp) park incoming events in
-    // FFragment_Sm_PendingReplicationEntries when either FFragment_Sm_Current is not yet present
-    // (Setup hasn't run on the client) or the stash already has entries (preserving arrival
-    // order under back-to-back deliveries). This processor releases the stash into ReplayQueue
-    // in arrival order once Setup is complete and the SM is not faulted.
-    //
-    // Runs BEFORE ApplyReplicatedHistory in the same group so a newly-released entry can be
-    // drained from the queue in the same tick.
+    // FLUSH PENDING REPLICATION — DRAIN. Releases entries the OnChange/OnAdd handlers stashed
+    // (Setup not yet run on the client, or the stash already non-empty) into ReplayQueue in arrival
+    // order. Runs BEFORE ApplyReplicatedHistory so a released entry can drain in the same tick.
 
     class CKSTATEMACHINE_API FProcessor_Sm_FlushPendingReplication_Drain : public ck_exp::TProcessor<
         FProcessor_Sm_FlushPendingReplication_Drain,
@@ -242,8 +221,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        // Note: FFragment_Sm_Current is TReadWrite because MirrorRunStatus mutates it when
-        // applying the stashed run-status after events drain.
+        // FFragment_Sm_Current is TReadWrite because MirrorRunStatus mutates it when applying the
+        // stashed run-status after events drain.
         static auto
         ForEachEntity(
             TimeType InDeltaT,
@@ -253,15 +232,9 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // APPLY REPLICATED HISTORY — Non-owning client replay path. Drains FFragment_Sm_ReplayQueue
-    // one entry per tick into FFragment_Sm_PendingTransition, which the CommitPendingTransition
-    // processor then lands as a real state transition. The replicated history populates the queue
-    // via the OnChange handler registered in CkStateMachine_Replication.cpp.
-    //
-    // TExclude<FFragment_Sm_PendingTransition>: don't double-stack a new replay entry on top of
-    // an in-flight transition — wait for it to commit first.
-    // TExclude<FTag_Sm_DeterminismFault>: fingerprint mismatch puts the SM in a faulted state
-    // where no further transitions land until the fault is cleared (spec §9).
+    // APPLY REPLICATED HISTORY — non-owning client replay path: drains FFragment_Sm_ReplayQueue one
+    // entry per tick into FFragment_Sm_PendingTransition for CommitPendingTransition to land. The
+    // TExcludes keep it off an in-flight transition and off a determinism-faulted SM.
 
     class CKSTATEMACHINE_API FProcessor_Sm_ApplyReplicatedHistory : public ck_exp::TProcessor<
         FProcessor_Sm_ApplyReplicatedHistory,
@@ -293,8 +266,8 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // COMMIT PENDING TRANSITION — Defer the new state's entry until the previous state's
-    // exit cascade has fully drained.
+    // COMMIT PENDING TRANSITION — defers the new state's entry until the previous state's exit
+    // cascade has fully drained.
 
     class CKSTATEMACHINE_API FProcessor_Sm_CommitPendingTransition : public ck_exp::TProcessor<
         FProcessor_Sm_CommitPendingTransition,
@@ -323,29 +296,10 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // HYDRATION RESUME — Authority-side, save-load. Drives a freshly-composed StateMachine to its SAVED run-state
-    // through its own lifecycle machinery (Option A replay-through).
-    //
-    // Under the v3 rebuild+hydrate load the fresh world already re-created + Setup-composed the SM normally (when
-    // AutoStart==OnSetup, Setup enqueues a Start that FProcessor_Sm_HandleRequests enters as InitialState). The SM's
-    // save-load HydrationApply handler (CkStateMachine_Replication.cpp) stashes
-    // FFragment_Sm_HydrationResume{DesiredRunStatus, DesiredStateClass} from the saved
-    // payload. This processor then walks the phase ladder to converge Current onto that decision record: Start
-    // (idempotent against AutoStart's own Start; or Stop if AutoStart resurrected a saved-Stopped machine) ->
-    // Transition into the saved state -> re-Pause if saved Paused -> remove FFragment_Sm_HydrationResume (the done
-    // marker). Because the SM is already composed there is NO virgin reset and NO WaitDriver phase — the fresh boot
-    // built the replication driver, and the redrive only steers the live SM. MarkedDirtyBy pumps the ladder inside the
-    // settle drain; each of the load's settle frames also main-passes it (the scheduler main pass runs every processor
-    // once), so convergence does not depend on pump re-run subtleties.
-    //
-    // Option A cost (accepted v1): InitialState's Enter/Exit side effects re-run on every load before the restore
-    // transition lands. Because the redrive re-fires Initial-state AND saved-state entry effects, a spawn decision on
-    // a re-entered state can duplicate a subordinate — the N1 never-double contract (Blocker [SM-B]) keeps spawn
-    // decisions off the InitialState / saved state, or idempotent behind hydrated guard flags.
-    //
-    // v1 scope: only machines where the LOCAL machine is the request authority re-drive (ServerAuth /
-    // DoesNotReplicate / Standalone — and the listen-host owning-client case). OwningClientAuthoritative SMs hydrated
-    // on a machine that is not their authority come back composed-but-Stopped — authority-side resume is a follow-up.
+    // HYDRATION RESUME — authority-side save-load: walks a phase ladder (Start or Stop -> Transition
+    // into the saved state -> re-Pause -> remove the fragment, which is the done marker) to converge
+    // a freshly-composed StateMachine onto its SAVED run-state. Only machines where the LOCAL machine
+    // is the request authority re-drive; the rest come back composed-but-Stopped.
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKSTATEMACHINE_API FProcessor_Sm_HydrationResume : public ck_exp::TProcessor<
@@ -374,18 +328,11 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // PUSH OWNING-CLIENT BATCH — End-of-frame flush of locally-buffered transitions to the server.
-    //
-    // The owning client of an OwningClientAuthoritative SM applies transitions locally for zero
-    // latency (CommitPendingTransition writes them into FFragment_Sm_PendingClientBatch instead
-    // of the replicated payload). This processor drains the batch into a single RPC call on the
-    // per-actor StateMachineRelay (Server_PushTransitionBatch / Server_PushCurrentState). The
-    // server's RPC handler — wired in a follow-up — resolves the SM and reconstructs
-    // the transitions, after which the standard server-side publication path takes over.
-    //
-    // ClientOnly NetModeRequirement: the processor is created only on machines that have
-    // FTag_NetMode_IsClient (pure clients + listen-server clients excluded). Server processes
-    // never push to themselves.
+    // PUSH OWNING-CLIENT BATCH — end-of-frame flush of the owning client's locally-buffered
+    // transitions / run-status into a single RPC on the per-actor StateMachineRelay, after which
+    // the standard server-side publication path takes over. ClientOnly NetModeRequirement: the
+    // processor is created only on machines with FTag_NetMode_IsClient — servers never push to
+    // themselves.
 
     class CKSTATEMACHINE_API FProcessor_Sm_PushOwningClientBatch : public ck_exp::TProcessor<
         FProcessor_Sm_PushOwningClientBatch,
@@ -397,16 +344,10 @@ namespace ck
     public:
         using Group = FGroup_Replication;
 
-        // Intentionally NO MarkedDirtyBy. This processor flushes a buffered batch over the
-        // owning-client → server relay RPC, but the relay channel is server-spawned and must
-        // replicate to this client first — which can take several frames after the transition is
-        // committed. Acquire_RelayChannel is a sync "resolve-or-retry-next-pump" call; if the relay
-        // isn't ready yet the push DEFERS without consuming the batch. A MarkedDirtyBy gate only
-        // re-fires when the batch fragment's dirty-version bumps (i.e. a new transition), so a
-        // deferred batch would STRAND until the next transition — the server would silently never
-        // receive the relayed transition. Running every tick while a pending batch exists (the
-        // fragment is removed on a successful push) makes the flush retry until the relay resolves.
-        // The fragment is transient, so this iterates nothing on the vast majority of frames.
+        // Intentionally NO MarkedDirtyBy: the relay channel is server-spawned and can take several
+        // frames to replicate, so a push may DEFER without consuming the batch. A dirty gate would
+        // only re-fire on a NEW transition, stranding the deferred batch forever. The fragment is
+        // transient (removed on a successful push), so this iterates nothing on most frames.
 
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::ClientOnly;
 
@@ -423,7 +364,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // ENDPLAY — Cleanup on SM entity destruction
 
     class CKSTATEMACHINE_API FProcessor_Sm_EndPlay : public ck_exp::TProcessor<
         FProcessor_Sm_EndPlay,

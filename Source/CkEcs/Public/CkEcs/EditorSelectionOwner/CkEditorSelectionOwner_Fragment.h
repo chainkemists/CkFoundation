@@ -11,19 +11,9 @@ class AActor;
 #if WITH_EDITOR
 namespace ck
 {
-    // Stamped (via UCk_Utils_EditorSelectionOwner_UE::Request_SetupEntityWithEditorSelectionOwner)
-    // on the root entity of an editor-world preview spawned on behalf of a placed actor (e.g.
-    // ACk_EntitySpawner_UE's editor entity), then inherited by every lifetime-descendant at
-    // creation — same strategy as ContextOwner (see Request_SetupEntityWithLifetimeOwner).
-    // Consumers read it directly off their entity; there is no chain walk. Editor-world visuals
-    // (ISM/ISKM instances, hosted scene components, world-space widgets, opted-in PMG shapes) use
-    // it to host on a per-owner proxy actor, so a viewport click on the visual redirects selection
-    // to the placed actor via the engine's selection-parent mechanism (AActor::GetSelectionParent —
-    // the same pattern ALevelInstanceEditorInstanceActor uses).
-    //
-    // The weak ptr doubles as the per-owner cache identity: TWeakObjectPtr compares and hashes by
-    // object index + serial, so lookups keyed on it stay correct even after the owner actor is
-    // destroyed (teardown removes preview visuals from the per-owner host that actually holds them).
+    // Stamped on an editor-preview root and inherited by every lifetime-descendant at creation, so consumers
+    // read it off their own entity — no chain walk. The weak ptr doubles as the per-owner cache identity:
+    // it compares/hashes by object index + serial, so lookups survive the owner actor's destruction.
     struct CKECS_API FFragment_EditorSelectionOwner
     {
     public:

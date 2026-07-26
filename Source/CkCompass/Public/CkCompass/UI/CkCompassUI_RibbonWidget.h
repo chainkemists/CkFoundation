@@ -23,15 +23,12 @@ class UCk_CompassUI_MarkerWidget;
 UENUM(BlueprintType)
 enum class ECk_CompassRibbon_Presentation : uint8
 {
-    // Zero-asset debug/default presentation: the widget code-builds its whole tree (root canvas,
-    // cardinal letters, debug icon markers, optional _RibbonMaterial strip). The WBP must NOT
-    // author a widget tree.
+    // Zero-asset debug/default presentation: the widget code-builds the whole tree (root canvas, cardinal
+    // letters, debug icon markers, optional _RibbonMaterial strip). The WBP must NOT author a tree.
     CodeBuilt,
 
-    // Designer-authored: the WBP owns the tree. Bind _RibbonImage to have its brush material fed
-    // the heading/arc scalars; bind _MarkerCanvas (+ set _MarkerWidgetClass) for POI markers.
-    // Nothing is code-built at the root — a material with baked cardinal markings only needs
-    // _RibbonImage bound and _ShowCardinals off.
+    // Designer-authored: the WBP owns the tree. Bind _RibbonImage (its brush material is fed the
+    // heading/arc scalars) and _MarkerCanvas (+ _MarkerWidgetClass) for POI markers.
     Custom
 };
 

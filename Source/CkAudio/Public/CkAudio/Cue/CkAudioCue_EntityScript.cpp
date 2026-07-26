@@ -279,7 +279,6 @@ auto
     if (_TrackLibrary.Num() <= 1)
     { return _TrackLibrary.IsEmpty() ? INDEX_NONE : 0; }
 
-    // Build list of eligible indices (not recently played)
     TArray<int32> EligibleIndices;
     EligibleIndices.Reserve(_TrackLibrary.Num());
 
@@ -291,7 +290,6 @@ auto
         }
     }
 
-    // If all tracks are recent, fall back to any track except the last played
     if (EligibleIndices.IsEmpty())
     {
         for (int32 i = 0; i < _TrackLibrary.Num(); ++i)
@@ -303,7 +301,6 @@ auto
         }
     }
 
-    // If still empty (single track library), allow anything
     if (EligibleIndices.IsEmpty())
     { return FMath::RandRange(0, _TrackLibrary.Num() - 1); }
 
@@ -326,7 +323,6 @@ auto
     {
         const auto& Track = _TrackLibrary[i];
 
-        // Zero out weight for recently played tracks
         if (InRecentTracks.Contains(Track.Get_TrackName()))
         {
             Weights.Add(0.0);
@@ -337,13 +333,11 @@ auto
         }
     }
 
-    // If all weights are zero (all tracks recently played), reset to use priorities
     const bool AllZero = !Weights.ContainsByPredicate([](double W) { return W > 0.0; });
     if (AllZero)
     {
         for (int32 i = 0; i < _TrackLibrary.Num(); ++i)
         {
-            // Allow all except the last selected
             if (i != _LastSelectedIndex)
             {
                 Weights[i] = FMath::Max(1.0, static_cast<double>(_TrackLibrary[i].Get_Priority()));
@@ -495,7 +489,7 @@ auto
         return;
     }
 
-    // For Persistent cues: auto-advance to the next track if the track finished naturally
+    // Persistent cues auto-advance, but only when the previous track ended on its own.
     if (NOT _WasStoppedExplicitly)
     {
         ck::audio::Verbose(TEXT("AudioCue EntityScript [{}] received OnAllTracksFinished - auto-advancing to next track"), Get_CueName());

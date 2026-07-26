@@ -79,10 +79,7 @@ auto
     auto Base = ck::CreateInventory<ck::TInventoryRequestTraits<FCk_Handle_Inventory_DataOnly>>(
         InOwnerEntity, FCk_Fragment_Inventory_ParamsData{InParams}, InReplicates, InWorldContextObject);
 
-    // Auto-name the new inventory entity from the Params' name tag so the ECS
-    // Debugger shows a meaningful identifier instead of NONAME. Callers that
-    // need a different debug name can still call Set_DebugName afterward
-    // (default Override mode replaces this).
+    // Without this the ECS Debugger shows NONAME; a caller's later Set_DebugName still overrides it.
     UCk_Utils_Handle_UE::Set_DebugName(Base, InParams.Get_Name().GetTagName());
 
     return Cast(Base);
@@ -162,8 +159,7 @@ auto
 
     const auto& Params = InInventory.Get<ck::FFragment_Inventory_Params>();
 
-    // A runtime Request_OverrideBounds on a declared-Unbounded inventory has no metric on
-    // record — fall back to the legacy interpretation (entries).
+    // An override on a declared-Unbounded inventory has no metric on record — read it as entries.
     if (Params.Get_BoundMode() == ECk_Inventory_DataOnly_BoundMode::Unbounded)
     { return ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries; }
 

@@ -270,11 +270,8 @@ auto
         }
         case ECk_EnableDisable::Disable:
         {
-            // Without this, the persistent processor's tick-by-tick "fire
-            // EndOverlap for stale overlaps" loop never runs (we short-circuit
-            // it via the disabled tag), so listeners — e.g. an Interactable
-            // focused by the trace's overlap handler — would keep their state
-            // stuck. Mirrors FProcessor_Probe_EndPlay's same-named lambda.
+            // The disabled tag short-circuits the processor's stale-overlap loop, so listeners
+            // would stay stuck mid-overlap unless we end every pair here first.
             const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
             {
                 for (const auto& OverlapInfo : Get_CurrentOverlaps(InProbeTrace))
@@ -295,8 +292,7 @@ auto
 
             DoManuallyTriggerAllEndOverlaps();
 
-            // Clear the processor's overlap set so re-enable starts fresh —
-            // the next cast cleanly re-populates as BeginOverlaps.
+            // Re-enable must start fresh: the next cast re-populates as BeginOverlaps.
             InProbeTrace.Get<TSet<FCk_Probe_OverlapInfo>>().Empty();
 
             InProbeTrace.AddOrGet<ck::FTag_ProbeTrace_Disabled>();
@@ -447,10 +443,8 @@ auto
     {
         const auto ProbeName = UCk_Utils_Probe_UE::Get_Name(Hit.Get_Probe());
 
-        // Match direction must mirror Get_CanOverlapWith (Name vs Filter). The
-        // previous Filter.HasTag(ProbeName) expanded the FILTER's parents, so a
-        // probe with the default root "Probe" name matched any filter — large
-        // trigger volumes stole Single-policy traces from real targets.
+        // Direction is load-bearing: the probe NAME is matched against the filter, never the
+        // reverse — same as Get_CanOverlapWith.
         if (NOT ProbeName.MatchesAny(InSettings.Get_Filter()))
         { continue; }
 
@@ -539,9 +533,6 @@ auto
         BoxColor = FLinearColor::Yellow;
     }
 
-    // Disabled traces still draw — but flat gray, matching Probe's disabled
-    // visualization (Probe colors with InDebugInfo.Get_DisabledColor()).
-    // No hit/miss split because the underlying cast was skipped.
     if (InIsDisabled)
     {
         HitColor = FLinearColor::Gray;
@@ -569,10 +560,8 @@ auto
         UCk_Utils_DebugDraw_UE::DrawDebugLine(WorldContext, InSettings.Get_StartPos(), InSettings.Get_EndPos(),
             NoHitColor, Duration, LineThickness);
 
-        // Disabled traces also paint a small endpoint marker — line traces
-        // alone are visually thin and easy to miss against scene geometry.
-        // The hit case draws a box at the hit location; mirror that for
-        // disabled so the endpoint stays legible.
+        // A bare gray line is easy to miss against scene geometry — mark the endpoint like the
+        // hit case marks the hit location.
         if (InIsDisabled)
         {
             UCk_Utils_DebugDraw_UE::DrawDebugBox(WorldContext, InSettings.Get_EndPos(), FVector{1.0},
@@ -619,9 +608,8 @@ auto
             JoltShape = Settings.Create().Get();
             break;
         }
-        // Jolt's Capsule/Cylinder are Y-AXIS ALIGNED, but this trace runs in Unreal's Z-up frame (and its
-        // own debug draw below assumes a Z-aligned capsule/cylinder) — stand the leaf shape up via a
-        // RotatedTranslatedShape. See jolt::Get_ShapeAxisCorrection_YToZ.
+        // Jolt's Capsule/Cylinder are Y-AXIS ALIGNED and this trace runs Z-up — the
+        // RotatedTranslatedShape wrapper stands the leaf shape up. See CkSpatialQuery/CLAUDE.md.
         case ECk_Shape_Type::Capsule:
         {
             const auto& Dimensions = Shape.Get_Capsule();
@@ -684,8 +672,7 @@ auto
     auto Collector = details::CastShapeCollector{InAnyHandle, BodyInterface};
     InPhysicsSystem.GetNarrowPhaseQuery().CastShape(ShapeCast, ShapeCastSettings, JPH::Vec3::sReplicate(0.0f), Collector);
 
-    // Jolt collectors receive hits in broadphase-traversal order, NOT distance order — sort by
-    // fraction so Multi results are nearest-first and Single's Result[0] is the closest hit.
+    // Same broadphase-order sort as the line-trace path above.
     auto SortedHits = Collector.Get_Hits();
     SortedHits.Sort([](const auto& InA, const auto& InB) { return InA.second < InB.second; });
 
@@ -718,7 +705,6 @@ auto
     {
         const auto ProbeName = UCk_Utils_Probe_UE::Get_Name(Hit.Get_Probe());
 
-        // Same Name-vs-Filter direction fix as the line-trace path above.
         if (NOT ProbeName.MatchesAny(InSettings.Get_Filter()))
         { continue; }
 
@@ -790,9 +776,6 @@ auto
     const auto& Orientation = UKismetMathLibrary::FindLookAtRotation(StartPos, EndPos);
     const auto& Shape = InSettings.Get_Shape();
 
-    // Disabled traces draw the swept shape at both ends + a single connector,
-    // all in gray. Mirrors Probe's flat-disabled visualization. The cast
-    // result is ignored because the underlying cast was skipped.
     if (InIsDisabled)
     {
         DrawShapeAtLocation(WorldContext, InSettings, StartPos, Orientation,

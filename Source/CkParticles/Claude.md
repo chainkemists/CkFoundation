@@ -131,6 +131,18 @@ a per-component override (`UNiagaraComponent::SetVariableMaterial`) bound to a `
 
 ## Runtime spawn
 
+**Behavior roster (the `BehaviorId` a caller passes):** Gravity=0, Swirl=1, Explosion=2, Fire=3, Fireworks=4,
+Galaxy=5, Beam=6, Slash=7, Nova=8, MuzzleFlash=9, ImpactBurst=10, Tracer=11, SmokePlume=12, SparksBurst=13,
+GroundRing=14, LightningStrike=15, AuraSwirl=16.
+
+**Aim-axis conventions** (these are baked into the behavior math — spawn rotation aims them):
+MuzzleFlash/Tracer forward = **+X**; ImpactBurst surface normal = **+Z**;
+GroundRing/LightningStrike/AuraSwirl ground plane = local **XY**; Beam travels down **+X**.
+
+**Sprite material fallback:** `User.SpriteMaterial` (`ck::particles::Get_SpriteMaterialParameterName`) overrides
+the sprite renderer's material per component. When unset, the renderer's own Material is used — a miss renders
+the default glow, never an invisible effect.
+
 `UCk_Utils_Particles_UE` (runtime module, BlueprintCallable / AngelScript-callable):
 - `Spawn_BehaviorAtLocation(WorldContext, BehaviorId, Location, Rotation, Scale)` — spawns the seed template and sets
   `User.BehaviorId`.

@@ -36,7 +36,6 @@ auto
     RecordOfEntityCollections_Utils::AddIfMissing(InEntityCollectionOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfEntityCollections_Utils::Request_Connect(InEntityCollectionOwnerEntity, NewEntityCollectionEntity);
 
-    // it's possible that we have pending replication info
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InEntityCollectionOwnerEntity))
     {
         if (const auto* ContainerData = UCk_Utils_Net_UE::TryGetContainerFragmentData<FCk_RepData_EntityCollections>(InEntityCollectionOwnerEntity))
@@ -240,29 +239,12 @@ auto
         FCk_Handle_EntityCollection& InEntityCollectionHandle)
     -> void
 {
-    // Refresh the Previous snapshot of the collection's entries.
-    //
-    // We deliberately do NOT Try_Remove<Previous> + AddIfMissing here.
-    // TUtils_RecordOfEntities::Request_Connect stores a per-record
-    // disconnect lambda on each connected entry's FFragment_RecordEntry.
-    // That lambda fires from FProcessor_RecordEntry_Destructor when the
-    // entry is destroyed, and it does Get<Previous>() on this collection
-    // handle. If we had Try_Remove'd Previous (or had FireSignals::DoTick
-    // clear it) while the prior entries still held those lambdas, those
-    // lambdas would ensure-fail on the missing fragment during the entry's
-    // destruction cascade.
-    //
-    // Instead, properly Disconnect every previously-snapshot'd entry
-    // (which removes both the back-reference and the disconnect lambda
-    // from the entry), then re-connect the current set. The Previous
-    // fragment's lifetime is now bounded by the collection entity itself,
-    // not by the FireSignals tick.
+    // Disconnect-then-reconnect, never Try_Remove<Previous> + AddIfMissing: connected entries hold
+    // disconnect lambdas that Get<Previous>() during their destruction cascade.
+    // Claude.md § Previous-snapshot lifetime.
     EntityCollections_RecordOfEntities_Previous_Utils::AddIfMissing(InEntityCollectionHandle);
 
-    // Valid only — Request_Disconnect Get<>s the entry's FFragment_RecordEntry
-    // with the default validity policy and would ensure-fail on pending-kill
-    // entries. Pending-kill entries clean themselves up via their own
-    // FProcessor_RecordEntry_Destructor pass; they're not our problem here.
+    // Valid entries only — Request_Disconnect would ensure-fail on pending-kill ones.
     auto PreviousEntries = EntityCollections_RecordOfEntities_Previous_Utils::Get_ValidEntries(InEntityCollectionHandle);
     for (auto PreviousEntry : PreviousEntries)
     {

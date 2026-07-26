@@ -73,8 +73,7 @@ private:
     FPerPlatformFloat _MaxDrawDistance;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FPerPlatformFloat _LODScale;
-    // UHT: static C-style arrays cannot be `BlueprintReadWrite`. Keep `EditAnywhere`
-    // for editor-side authoring; code-side reads go through `Get_LODDistance(int32)`.
+    // UHT: static C-style arrays cannot be `BlueprintReadWrite` — code-side reads go through `Get_LODDistance`.
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
     float _LODDistances[7] = { 0.f };
 public:
@@ -141,10 +140,8 @@ private:
               meta = (AllowPrivateAccess = true, TitleProperty = "{_Name}"))
     TArray<FCk_IskmRenderer_MeshDesc> _Submeshes;
 
-    // GPU instance custom-data slots are finite. Plan-2's cluster proxy packs mesh
-    // presence as a 4-bit bitmask = 15 slots. Plan-1 enforces this cap at
-    // Request_AttachSubmesh time so game code can't silently break under Plan-2.
-    // UHT: `uint32` is not BP-exposable; `int32` is fine and the 1-15 range fits.
+    // Hard cap 15: Plan-2's cluster proxy packs mesh presence as a 4-bit bitmask. Plan-1 enforces the
+    // same cap at Request_AttachSubmesh time so game code can't silently break under Plan-2.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Meshes",
               meta = (AllowPrivateAccess = true,
                       UIMin = 1, ClampMin = 1, UIMax = 15, ClampMax = 15))
@@ -158,8 +155,7 @@ private:
     int32 _NumCustomDataFloat = 0;
 
     // ---- render flags / culling / clustering / lighting / bounds ----
-    // Plan-1 applies these to the SKMC at Setup time (they're all `SKMC->Set...`
-    // calls). Plan-2 forwards them to the cluster scene proxy.
+    // Plan-1 applies these to the SKMC at Setup; Plan-2 forwards them to the cluster scene proxy.
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rendering",
               meta = (AllowPrivateAccess = true))

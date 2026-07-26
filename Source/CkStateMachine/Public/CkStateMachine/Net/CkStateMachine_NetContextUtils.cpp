@@ -18,7 +18,6 @@ DECLARE_CYCLE_STAT(TEXT("Sm::ComputeNetContext"), STAT_Sm_ComputeNetContext, STA
 
 namespace ck::statemachine
 {
-    // .cpp-internal: the un-memoized resolution behind Get_IsTransitionAuthority.
     auto
     DoGet_IsTransitionAuthority_Live(
         const FCk_Handle_StateMachine& InSm) -> bool;
@@ -35,9 +34,8 @@ namespace ck::statemachine
         if (InSm.Has<ck::FFragment_Sm_NetIdentity>())
         { return InSm.Get<ck::FFragment_Sm_NetIdentity>().Get_NetContext(); }
 
-        // Per-frame memo (FFragment_Sm_NetContextMemo): the live resolve below walks
-        // owning-actor/PlayerState chains and is called several times per SM element per frame
-        // by the lifecycle processors. Resolve once per SM per frame, hand back the snapshot.
+        // Per-frame memo: the live resolve below walks owning-actor/PlayerState chains and the
+        // lifecycle processors call it several times per SM element per frame.
         auto Sm = InSm;
         auto& Memo = Sm.AddOrGet<ck::FFragment_Sm_NetContextMemo>();
         if (Memo.Get_NetContextFrame() == GFrameCounter)
@@ -45,16 +43,9 @@ namespace ck::statemachine
 
         const auto LiveNetContext = [&]() -> ECk_Sm_NetContext
         {
-            // DoesNotReplicate SMs are self-authoritative on EVERY machine — the same contract
-            // FProcessor_Sm_HandleRequests already honors (it exempts DoesNotReplicate from the
-            // single-authority gate). They have no replicated history to replay, so the lifecycle
-            // processors' NonOwningClient / OwningClient gates (FProcessor_SmTask_Tick,
-            // FProcessor_SmCondition, FProcessor_SmTransition) must NOT suppress them. A local-only SM
-            // hosted on a server-replicated, non-player-owned entity would otherwise resolve
-            // NonOwningClient on a client and go inert there while running fine on the host. Resolving
-            // to Standalone makes each machine run the full lifecycle locally, which IS the
-            // DoesNotReplicate semantic. (Sub-SMs short-circuit above via FFragment_Sm_NetIdentity, so
-            // their stamped identity is preserved either way.)
+            // DoesNotReplicate SMs are self-authoritative on EVERY machine, so Standalone (not the
+            // machine's real role) is the correct answer: a local-only SM hosted on a replicated,
+            // non-player-owned entity would otherwise resolve NonOwningClient and go inert there.
             if (UCk_Utils_StateMachine_UE::Get_Replication(InSm) == ECk_Replication::DoesNotReplicate)
             { return ECk_Sm_NetContext::Standalone; }
 
@@ -84,9 +75,8 @@ namespace ck::statemachine
             const FCk_Handle_StateMachine& InSm)
         -> bool
     {
-        // Per-frame memo — same contract as ComputeNetContext's memo above: this predicate gates
-        // the state, transition, condition, and task processors and was resolved fresh per element
-        // per frame (including Get_EffectiveAuthorityModel's PlayerState walk for AutoDetect SMs).
+        // Per-frame memo — same contract as ComputeNetContext's above; this predicate gates the
+        // state, transition, condition and task processors, once per element per frame.
         auto Sm = InSm;
         auto& Memo = Sm.AddOrGet<ck::FFragment_Sm_NetContextMemo>();
         if (Memo.Get_TransitionAuthorityFrame() == GFrameCounter)
@@ -107,12 +97,10 @@ namespace ck::statemachine
         const auto EffectiveAuth = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InSm);
         const auto Replication   = UCk_Utils_StateMachine_UE::Get_Replication(InSm);
 
-        // The locally-controlled probe MUST target the ROOT SM (which is bridged to the pawn), not InSm.
-        // A sub-SM is a driverless child entity with no owning-actor, so probing it directly always
-        // returns IsNotValidPawn — a listen host that owns the pawn would then be misread as "not the
-        // owning client" and its OWN sub-SM suppressed below, freezing it in its initial child state
-        // (the player locomotion sub-SM stuck in Loco_Idle, which has no Movement task → the listen
-        // server can't move). Get_RootStateMachine returns InSm unchanged for a top-level SM.
+        // The locally-controlled probe MUST target the ROOT SM (the one bridged to the pawn): a sub-SM
+        // is a driverless child entity with no owning actor, so probing it directly always returns
+        // IsNotValidPawn and a listen host would be misread as not-the-owning-client, freezing its own
+        // sub-SM. Get_RootStateMachine returns InSm unchanged for a top-level SM.
         const auto RootSm = UCk_Utils_StateMachine_UE::Get_RootStateMachine(InSm);
         const auto IsHostOwningClient =
             NetContext == ECk_Sm_NetContext::Server
@@ -120,18 +108,11 @@ namespace ck::statemachine
             && UCk_Utils_Net_UE::Get_IsEntityLocallyControlled_ByPlayer(RootSm)
                 == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
 
-        // Suppress self-evaluation for a RELAYED sub-SM (DoesNotReplicate, but carrying an
-        // OwningClientAuthoritative NetIdentity inherited from its replicated root) on EVERY machine
-        // except the owning client — the only machine that holds the client-local input and originates
-        // the transition. Two such machines:
-        //   - the server the host does NOT own (it follows the owning client's relayed transitions), and
-        //   - non-owning observer clients (P4: they follow the server's leg-2 republish onto the root's
-        //     WithHistory container — they have neither the non-replicated input nor authority).
-        // Without this, such a machine self-evaluates the release condition (its local input copy is 0)
-        // and reverts the relayed state right back (the sprint self-revert). This is the single exception
-        // to the DoesNotReplicate-is-self-authoritative shortcut below; a ServerAuthoritative sub-SM still
-        // self-derives on every machine from its replicated inputs (the "preserve non-owning self-derive"
-        // intent is untouched — only OwningClientAuth relayed sub-SMs, now driven by the relay, are gated).
+        // The single exception to the DoesNotReplicate-is-self-authoritative shortcut below: a RELAYED
+        // sub-SM must not self-evaluate anywhere but the owning client, the only machine holding the
+        // client-local input. Elsewhere it would evaluate the release condition against its own zeroed
+        // input copy and revert the relayed state immediately. ServerAuthoritative sub-SMs are
+        // untouched and still self-derive everywhere from their replicated inputs.
         if (Replication == ECk_Replication::DoesNotReplicate
             && EffectiveAuth == ECk_Sm_AuthorityModel::OwningClientAuthoritative
             && (NetContext == ECk_Sm_NetContext::Server || NetContext == ECk_Sm_NetContext::NonOwningClient)
@@ -139,11 +120,8 @@ namespace ck::statemachine
         { return false; }
 
         // Otherwise mirror FProcessor_Sm_HandleRequests' request-authority, INCLUDING the
-        // DoesNotReplicate-self-authoritative shortcut. A non-relayed local sub-SM (ServerAuth or
-        // standalone NetIdentity) still self-derives on EVERY machine from its replicated inputs, so
-        // non-owning clients keep deriving sub-SM state exactly as before this gate was introduced.
-        // Replicates SMs do NOT get the shortcut: their non-authority machines (server of an
-        // OwningClientAuth root, all non-owning clients) follow replication and never self-evaluate.
+        // DoesNotReplicate-self-authoritative shortcut. Replicates SMs do NOT get that shortcut:
+        // their non-authority machines follow replication and never self-evaluate.
         return Replication == ECk_Replication::DoesNotReplicate
             || NetContext == ECk_Sm_NetContext::Standalone
             || (NetContext == ECk_Sm_NetContext::Server
@@ -180,12 +158,9 @@ namespace ck::statemachine
 
                 if (OldStatus == ECk_SmRunStatus::Stopped)
                 {
-                    // First sync: this non-authority machine just learned the SM started, but it
-                    // never ran DoStart (Start is authority-only) and the initial-state entry isn't
-                    // a replayed transition. If it has no current state yet, schedule entry into the
-                    // locally-known initial state so non-owning views show it instead of <none>.
-                    // The actual entry runs in FProcessor_Sm_FirstSyncInitialState (registry-safe,
-                    // outside this replication/RPC callback). Subsequent transitions replay on top.
+                    // First sync: this non-authority machine never ran DoStart and the initial-state
+                    // entry is not a replayed transition, so schedule it here or the view shows <none>.
+                    // FProcessor_Sm_FirstSyncInitialState does the entry, outside this RPC callback.
                     if (ck::Is_NOT_Valid(Current.Get_CurrentStateHandle()))
                     {
                         InEntity.AddOrGet<ck::FTag_Sm_NeedsInitialStateEntry>();
@@ -229,8 +204,7 @@ namespace ck::statemachine
             return;
         }
 
-        // A Running mirror supersedes any parked non-Running status (collapse semantics: the
-        // authority's LAST status wins, and Running is always safe to apply ahead of events).
+        // A Running mirror supersedes any parked non-Running status: the authority's LAST status wins.
         InEntity.Try_Remove<ck::FFragment_Sm_DeferredRunStatusMirror>();
         MirrorRunStatus(InEntity, InNewStatus);
     }

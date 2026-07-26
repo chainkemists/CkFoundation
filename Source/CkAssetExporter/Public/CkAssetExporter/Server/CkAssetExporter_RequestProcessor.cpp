@@ -232,7 +232,6 @@ namespace ck_asset_exporter_requestprocessor
             TEXT("[Server] dumpGraph: [{}] -> {} ({} assets)"), Dir, GraphPath, static_cast<int32>(Count));
     }
 
-    // Returns true when the request asked the server to quit.
     static auto
     Process_Request(
         const FString& InRequestPath,
@@ -324,8 +323,6 @@ auto
         return false;
     }
 
-    // Stale request files from a crashed prior run would otherwise be re-processed against whatever they asked for.
-    // The editor bridge passes PreserveExisting so it never discards work someone queued (see the enum doc).
     if (InStaleRequestPolicy == ECk_AssetExporter_StaleRequestPolicy::WipeStale)
     { Delete_FilesIn(_RequestsDir, TEXT("*.json")); }
 
@@ -388,19 +385,18 @@ auto
         const auto RequestPath = FPaths::Combine(_RequestsDir, RequestFileName);
         const auto ResultPath  = FPaths::Combine(_ResultsDir, FPaths::GetBaseFilename(RequestFileName) + TEXT(".json"));
 
-        // A request seen the instant it appears may still be mid-write by the submitter (writers hold the file
-        // with shared-read access, so a premature read sees truncated json and the request would be consumed as
-        // "malformed" — a lost request). Skip sub-second-old files; the next poll tick picks them up settled.
+        // A request seen the instant it appears may still be mid-write by the submitter; a premature read sees
+        // truncated json and would consume it as "malformed" — a lost request. The next poll picks it up settled.
+        constexpr auto MidWriteSettleSeconds = 1.0;
         const auto FileAge = FDateTime::UtcNow() - FileManager.GetTimeStamp(*RequestPath);
-        if (FileAge < FTimespan::FromSeconds(1.0))
+        if (FileAge < FTimespan::FromSeconds(MidWriteSettleSeconds))
         { continue; }
 
         Do_WriteStatusFile(true, RequestFileName);
 
         const auto ShouldQuit = Process_Request(RequestPath, ResultPath);
 
-        // Delete the request only AFTER the result is written, so an external watcher never sees a consumed
-        // request with no result.
+        // Deleted only AFTER the result is written, so an external watcher never sees a consumed request with no result.
         constexpr auto RequireExists = false;
         FileManager.Delete(*RequestPath, RequireExists);
 
@@ -425,7 +421,6 @@ auto
     Shutdown()
     -> void
 {
-    // On EVERY exit path the status file is removed so external drivers can tell the server is down.
     constexpr auto RequireExists = false;
     IFileManager::Get().Delete(*_ServerStatusPath, RequireExists);
 }

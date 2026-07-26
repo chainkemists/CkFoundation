@@ -38,9 +38,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Runtime Jolt-constraint state. _Constraint owns the JPH constraint ref for the entity's lifetime;
-    // _BodyA/_BodyB are the constrained body ENTITIES (B invalid = world anchor); _ConstraintAdded tracks
-    // physics-system membership so teardown only removes what was added.
     struct CKJOLT_API FFragment_JoltConstraint_Current
     {
     public:

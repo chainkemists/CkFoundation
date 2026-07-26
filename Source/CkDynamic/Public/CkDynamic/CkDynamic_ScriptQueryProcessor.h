@@ -17,17 +17,8 @@ class UClass;
 class UCk_Processor_Script_Base_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Hosted wrapper for a typed script processor. Satisfies ck::concepts::FTickable_Concept (Tick + Pump) so the
-// scheduler drives it alongside C++ TProcessors. This is the sole hosting path for script processors.
-//
-// Per tick it performs the native N-way join over the declared dynamic-fragment storages (driving the smallest pool,
-// contains()-probing the rest, honoring Require/Exclude + the destroy filter) into a persistent, reused entity list,
-// then makes ONE ForEachBatch call into the hosted instance. That is the whole point: O(1) native->script crossings
-// per tick instead of one per visited entity.
-//
-// ONE instance: the generated <Dev>_Driver is a SUBCLASS of the dev class, so a single object carries the author's
-// BeginPlay/EndPlay/ForEachEntity (inherited) plus the driver's Configure/ForEachBatch overrides. In direct mode
-// (InDriverClass == nullptr) the dev class overrides ForEachBatch itself and is instantiated directly.
+// Hosted wrapper for a typed script processor — the sole hosting path. Satisfies ck::concepts::FTickable_Concept
+// so the scheduler drives it alongside C++ TProcessors.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -61,13 +52,10 @@ namespace ck
         auto Pump() -> int32;
 
     private:
-        // Resolve the declared slots' storages into _BatchState and fill _BatchState._Entities via the join. Returns
-        // false for the empty-join early-out (a required/read pool is empty, or only Exclude slots were declared) so
-        // the caller skips the VM call entirely.
+        // False means the empty-join early-out, so the caller skips the VM call entirely.
         auto DoResolveAndJoin() -> bool;
 
-        // Construct the batch over the current _BatchState, call the batch instance's ForEachBatch, then bump the
-        // generation so any batch the script stashed past the call is detectably stale.
+        // Bumps the generation on the way out so a batch the script stashed past the call is detectably stale.
         auto DoDispatchBatch(TimeType InDeltaT) -> void;
 
     private:
@@ -77,9 +65,7 @@ namespace ck
         FCk_ScriptQueryBatchState                      _BatchState;     // per-tick native state handed to script
         bool                                           _Disabled = false;
 
-        // One stat row per script processor class in stat CkProcessors, alongside the C++
-        // TProcessor rows — covers the native join AND the ForEachBatch VM call; without it
-        // the whole cost hides in the scheduler's Dispatch self-time.
+        // Covers the native join AND the ForEachBatch VM call; without it the cost hides in Dispatch self-time.
         TStatId                                        _TickStatId;
     };
 }

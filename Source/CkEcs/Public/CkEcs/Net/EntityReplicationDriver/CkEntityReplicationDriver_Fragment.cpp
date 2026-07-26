@@ -38,13 +38,9 @@ UCk_Fragment_EntityReplicationDriver_Rep::
 
     if (ck::Is_NOT_Valid(World))
     {
-        // ROOT FAILURE (surfaced loudly on purpose). A replicated EntityReplicationDriver was constructed on
-        // a client before its outer Actor had a UWorld. _AssociatedEntity is created ONLY here, so it stays
-        // permanently invalid — any child entity-driver that lists this one as its owner will park forever
-        // (the park queues in the OnReps below are never drained, and this owner never becomes valid). This
-        // is not expected to occur; if it ever does it explains a silently-missing replicated subtree on the
-        // client (followed ~10s later by PendingReplicationRetry timeouts). Investigated 2026-06: never
-        // reproduced across same-actor + cross-actor burst stress — see the EntityReplicationDriver.Net tests.
+        // ROOT FAILURE, loud on purpose: _AssociatedEntity is created ONLY here, so a driver built before
+        // its outer Actor had a UWorld stays permanently invalid and every child driver that names it as
+        // owner parks forever in a queue nothing ever drains. See CkEcs/CLAUDE.md.
         ck::ecs::Warning(TEXT("EntityReplicationDriver constructed with NO valid UWorld (Outer=[{}]). Its associated "
             "entity can never be created, permanently stranding any dependent child drivers on the client."), GetOuter());
         return;
@@ -96,9 +92,8 @@ auto
     if (ck::Is_NOT_Valid(Entity))
     { return; }
 
-    // Link is pure bookkeeping — the deferred dispatcher applies the entries after OnConstructed-
-    // driven composition has run (FProcessor_ReplicatedFragments_Dispatch runs after
-    // FProcessor_EntityScript_FinishConstruction in the same frame).
+    // Link is pure bookkeeping: FProcessor_ReplicatedFragments_Dispatch applies these entries later
+    // in the frame, after OnConstructed-driven composition has run.
     for (auto& Entry : _Fragments._Items)
     {
         const auto* Handler = FCk_PersistenceHandlerRegistry::Resolve(Entry.Data.GetScriptStruct());
@@ -144,13 +139,10 @@ auto
 
     const auto OwningEntity = OwningEntityDriver->Get_AssociatedEntity();
 
-    // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
     {
-        // The owner driver has no valid associated entity. On the client a driver's _AssociatedEntity never
-        // recovers (it is only ever set in the ctor), so this child cannot be set up now or later —
-        // _PendingChildEntityConstructions is never drained. Surfaced loudly so a real occurrence is visible
-        // rather than a silent missing subtree. See the ctor no-world warning above for the root cause.
+        // NOT a wait: a client driver's _AssociatedEntity is only ever set in its ctor, so this child can
+        // never be set up and the queue below is never drained. Root cause is the ctor no-world warning.
         ck::ecs::Warning(TEXT("Replicated child driver [{}] cannot construct: owner driver [{}] has no valid associated "
             "entity and will never recover. Child parked in a queue that is never drained."), this, OwningEntityDriver);
         OwningEntityDriver->_PendingChildEntityConstructions.Emplace(this);
@@ -207,8 +199,7 @@ auto
     // Make sure to call this on "self" since the # of dependent rep driver include "self" as well
     DoAdd_SyncedDependentReplicationDriver();
 
-    // This is necessary in case this Replicated Entity was built from inside the OwningEntity's ConstructionScript.
-    // If that is the case, then this Replicated Entity is a dependent
+    // A Replicated Entity built from inside the OwningEntity's ConstructionScript is a dependent of it
     if (_ReplicationData.Get_IsOwningEntityDriverDependentOnThis())
     {
         OwningEntityDriver->DoAdd_SyncedDependentReplicationDriver();
@@ -234,10 +225,8 @@ auto
 
         if (ck::Is_NOT_Valid(OwningEntity))
         {
-            // The owner driver has no valid associated entity. On the client a driver's _AssociatedEntity
-            // never recovers, so this child entity-script cannot be set up now or later —
-            // _PendingChildEntityConstructions is never drained. Surfaced loudly so a real occurrence is
-            // visible rather than a silent missing subtree. See the ctor no-world warning for the root cause.
+            // NOT a wait: a client driver's _AssociatedEntity never recovers, so this child entity-script
+            // can never be set up and the queue below is never drained. See the ctor no-world warning.
             ck::ecs::Warning(TEXT("Replicated child entity-script driver [{}] cannot construct: owner driver [{}] has no "
                 "valid associated entity and will never recover. Child parked in a queue that is never drained."),
                 this, _ReplicationData_EntityScript.Get_OwningEntityDriver());
@@ -253,19 +242,16 @@ auto
         UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, TransientEntity);
     }
 
-    // Re-home the ContextOwner the client copy resolves to. Request_SetupEntityWithLifetimeOwner above
-    // inherited it from the lifetime owner (for the non-self-referencing case, the ActorRelay channel),
-    // which is the regression. An unset (invalid) override means the authority resolved the entity as
-    // its own ContextOwner, so map it back to self; otherwise adopt the replicated override entity.
+    // Re-home the ContextOwner: the setup call above inherited it from the lifetime owner. An unset
+    // override means the authority resolved the entity as its own ContextOwner, so map it back to self.
     if (const auto& ContextOwnerOverride = _ReplicationData_EntityScript.Get_ContextOwnerOverride();
         ck::IsValid(ContextOwnerOverride))
     { UCk_Utils_ContextOwner_UE::Request_Override(_AssociatedEntity, ContextOwnerOverride); }
     else
     { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_AssociatedEntity); }
 
-    // On clients, the entity's ownership chain may not resolve to a World yet
-    // (the owning entity hasn't been fully constructed). Add the World directly
-    // so Get_WorldForEntity can resolve without walking the chain.
+    // The ownership chain may not resolve to a World yet on clients, so Get_WorldForEntity is given
+    // one directly rather than having to walk it.
     _AssociatedEntity.AddOrGet<TWeakObjectPtr<UWorld>>(GetWorld());
 
     auto ThisAsWeakPtr = TWeakObjectPtr<ThisType>{this};
@@ -280,8 +266,7 @@ auto
         // --------------------------------------------------------------------------------------------------------------------
         // Make sure to call this on "self" since the # of dependent rep driver include "self" as well
         ThisAsWeakPtr->DoAdd_SyncedDependentReplicationDriver();
-        // This is necessary in case this Replicated Entity was built from inside the OwningEntity's ConstructionScript.
-        // If that is the case, then this Replicated Entity is a dependent
+        // A Replicated Entity built from inside the OwningEntity's ConstructionScript is a dependent of it
         if (ThisAsWeakPtr->_ReplicationData_EntityScript.Get_IsOwningEntityDriverDependentOnThis())
         {
             ThisAsWeakPtr->_ReplicationData_EntityScript.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
@@ -327,12 +312,10 @@ auto
 
     const auto OwningEntity = _ReplicationData_Ability.Get_OwningEntityDriver()->Get_AssociatedEntity();
 
-    // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
     {
-        // The owner driver has no valid associated entity. On the client a driver's _AssociatedEntity never
-        // recovers, so this child ability cannot be set up now or later — _PendingChildAbilityEntityConstructions
-        // is never drained. Surfaced loudly so a real occurrence is visible. See the ctor no-world warning.
+        // NOT a wait: a client driver's _AssociatedEntity never recovers, so this child ability can never
+        // be set up and the queue below is never drained. See the ctor no-world warning.
         ck::ecs::Warning(TEXT("Replicated child ability driver [{}] cannot construct: owner driver [{}] has no valid "
             "associated entity and will never recover. Child parked in a queue that is never drained."),
             this, _ReplicationData_Ability.Get_OwningEntityDriver());
@@ -357,8 +340,7 @@ auto
         ECk_Net_EntityNetRole::Proxy
     });
 
-    // For Abilities, we have to pass the information for construction to the Ability Processor. This will be removed once
-    // the processor has had the chance to construct the Entity correctly
+    // Handed to the Ability Processor for construction, which removes it once the Entity is built
     _AssociatedEntity.Add<FCk_EntityReplicationDriver_AbilityData>(_ReplicationData_Ability);
 
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
@@ -366,12 +348,9 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // NOTE: The #SyncedDrivers count is NOT incremented here. Instead, it is handled in the FProcessor_AbilityOwner_HandleRequests processor.
-    // This ensures that the increment occurs only after the replicated ability has been created and assigned.
-    // Incrementing prematurely would cause the ReplicationComplete and ReplicationCompleteAllDependents signals to fire too early.
-    // If the replicated ability is added as an EntityExtension, any attempts to manipulate extended features (e.g., Attributes)
-    // would fail because those features would not yet exist.
-    //_ReplicationData_Ability.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
+    // The #SyncedDrivers count is deliberately NOT incremented here — FProcessor_AbilityOwner_HandleRequests
+    // does it once the replicated ability exists. Incrementing now fires ReplicationComplete before an
+    // extension-added ability's features exist, and manipulating them then fails.
 }
 
 auto

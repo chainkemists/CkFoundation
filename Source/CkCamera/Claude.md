@@ -22,6 +22,12 @@
 - Each layer has `FFragment_CameraLayer_Blend` (alpha ramps 0→1 on enter, 1→0 on exit). `FProcessor_CameraLayer_Blend` (in `FGroup_Gameplay_TimeDelta`, before the attribute recompute in `FGroup_Gameplay`) rewrites each acquired modifier's effective delta from the stored target × alpha, per op: Additive → `target*α`; Multiplicative → `Lerp(1,target,α)`; Override → `α*(target−base)` against an **Add** modifier (revocable Override is unsupported, so Override is realized additively from base).
 - `FProcessor_CameraLayer_Lifecycle` (`FGroup_Gameplay_Camera`) prunes alpha-0 layers (destroying their acquired modifiers), dispatches `DoTick`, resolves the dominant layer + look-at, and refreshes the composed-profile cache. `FProcessor_Camera_UpdatePOV` runs the POV pipeline against that cache.
 
+### Implementation notes
+
+- **`FCk_CameraProfile` deliberately carries no bone-name field.** The anchor is a caller-supplied `FCk_Handle_Transform` (e.g. a socket-following transform entity), so the camera module never needs one. Every profile leaf uses `CK_PROPERTY` (get + set) so modifiers can mutate a running profile.
+- **Tuner materialization is adopt-or-add.** A restore brings the tuner attributes back, so `DoMaterializeAttributes` re-seats the profile onto the existing attribute (`TryGet` + `Request_Override`) instead of adding a duplicate, which would trip the attribute's one-per-label ensure.
+- **`FProcessor_CameraLayer_Blend` tolerates husk layers.** An owner-destroyed layer can still carry the blend + acquired-modifier fragments with no EntityScript; the tuner blend runs regardless and only the opt-in script hook (`Blend`/`FullyBlendedIn`/`FullyBlendedOut`) is skipped.
+
 ---
 
 ## Anti-patterns

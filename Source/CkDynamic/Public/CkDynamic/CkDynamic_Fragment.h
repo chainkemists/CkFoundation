@@ -27,11 +27,8 @@ namespace ck
     using FFragment_DynamicFragment_Data = FCk_Fragment_DynamicFragment_Data;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // Replication
 
-    // Host-side: the set of dynamic-fragment types on this entity that opted into replication (added with
-    // ECk_Replication::Replicates). The server Replicate processor pushes exactly these into the driver,
-    // so a co-located tag/non-replicated dynamic fragment is never pushed.
+    // Host-side. The server Replicate processor pushes EXACTLY these types, never a co-located local-only one.
     struct CKDYNAMIC_API FFragment_DynamicFragment_ReplicatedTypes
     {
         CK_GENERATED_BODY(FFragment_DynamicFragment_ReplicatedTypes);
@@ -44,11 +41,9 @@ namespace ck
         CK_PROPERTY_GET_NON_CONST(_Types);
     };
 
-    // Host-side dirty gate for FProcessor_DynamicFragment_Replicate.
     CK_DEFINE_ECS_TAG(FTag_DynamicFragment_MayRequireReplication);
 
     // --------------------------------------------------------------------------------------------------------------------
-    // Signal
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKDYNAMIC_API,

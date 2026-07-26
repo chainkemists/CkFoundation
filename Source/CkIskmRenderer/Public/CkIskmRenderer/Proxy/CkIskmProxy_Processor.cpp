@@ -17,8 +17,7 @@
 #include "CkIskmRenderer/CkIskmRenderer_Stats.h"
 #include "CkIskmRenderer/Notify/CkIskmNotify_AnimInstance.h"
 
-// ck::Is_NOT_Valid on UPhysicsAsset* needs the full class definition
-// for the validation trait's __is_base_of intrinsic.
+// ck::Is_NOT_Valid on UPhysicsAsset* needs the full class definition for the __is_base_of intrinsic.
 #include "PhysicsEngine/PhysicsAsset.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,11 +31,8 @@ DECLARE_CYCLE_STAT(TEXT("Iskm::EmitFinishedEvents"), STAT_CkIskm_EmitFinishedEve
 
 namespace ck_iskmproxy_processor
 {
-    // Sets an AnimInstance class on the SKMC and re-wires the notify-forwarder owning
-    // handle on the resulting AnimInstance. Called from Setup, the SetAnimInstanceClass
-    // handler, and the lazy-AnimInstance branch in PlayMontage. (unity builds concatenate
-    // TUs, so a filename-derived named namespace — a file-local static or an anonymous
-    // namespace would collide with same-named internal-linkage helpers in the unity blob.)
+    // Sets an AnimInstance class on the SKMC and re-wires the notify-forwarder owning handle on the
+    // resulting instance. Every site that changes the class must go through here.
     auto DoApply_AnimInstanceClass(
         USkeletalMeshComponent* InSKMC,
         TSubclassOf<UAnimInstance> InClass,
@@ -48,10 +44,6 @@ namespace ck_iskmproxy_processor
         { return; }
         InSKMC->SetAnimInstanceClass(InClass);
 
-        // The `::` qualification is a holdover from when this helper lived inside
-        // `namespace ck` (where Fragment.h's friend-class declarations inject a
-        // shadowing forward decl). In this namespace unqualified lookup resolves
-        // correctly; the qualifier is kept as harmless.
         if (auto* IskmAI = Cast<::UCk_IskmNotify_AnimInstance>(InSKMC->GetAnimInstance()))
         {
             IskmAI->Set_OwningProxyHandle(InOwningHandle);
@@ -69,9 +61,7 @@ namespace ck_iskmproxy_processor
 
 namespace ck
 {
-    // refresh the world pointer once per tick. ForEachEntity then reads `_World`
-    // directly instead of paying the per-entity lookup cost. Sibling pattern from
-    // CkIsmProxy_Processor.cpp lines 100-130.
+    // Resolved once per tick so ForEachEntity never pays the per-entity world lookup.
     auto
         FProcessor_IskmProxy_Setup::
         DoTick(TimeType InDeltaT) -> void
@@ -107,14 +97,12 @@ namespace ck
             TEXT("IskmProxy Setup: AnimCollection invalid for [{}]"), InHandle)
         { return; }
 
-        // Validated before Acquire_BaseSKMC so there is nothing to unwind — a null
-        // DefaultMesh would leave every later request handler operating on a meshless SKMC.
+        // Validated BEFORE Acquire_BaseSKMC so there is nothing to unwind.
         CK_ENSURE_IF_NOT(ck::IsValid(AnimCollection->Get_DefaultMesh()),
             TEXT("IskmProxy Setup: AnimCollection [{}] has no DefaultMesh for [{}]"),
             GetNameSafe(AnimCollection), InHandle)
         { return; }
 
-        // cached world pointer; resolved once per tick in DoTick(). Asserts cheaply.
         auto* World = _World.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}),
             TEXT("IskmProxy Setup: cached world is invalid for [{}]"), InHandle)
@@ -127,10 +115,8 @@ namespace ck
         { return; }
 
 #if WITH_EDITOR
-        // Editor previews acquire their SKMC from a per-owner renderer actor so a viewport click
-        // on the mesh redirects selection to the placed actor that owns the preview (see
-        // ck::FFragment_EditorSelectionOwner). Release stays owner-derived (SKMC->GetOwner()), so
-        // teardown needs no extra bookkeeping. Submesh SKMCs outer to the same actor and follow.
+        // Editor previews acquire from a PER-OWNER renderer actor so a viewport click on the mesh
+        // redirects selection to the placed actor. Release stays owner-derived (SKMC->GetOwner()).
         if (World->WorldType == EWorldType::Editor)
         {
             if (auto* SelectionOwner = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwner(InHandle);
@@ -154,21 +140,17 @@ namespace ck
 
         SKMC->SetSkeletalMesh(AnimCollection->Get_DefaultMesh());
 
-        // Cache the per-instance render offset and compose it into the initial pose (entity-space ->
-        // world via the spawn rotation). UpdateTransform re-applies it every frame for movable proxies.
+        // Composed entity-space -> world via the spawn rotation; UpdateTransform re-applies it each frame.
         InCurrent._LocalLocationOffset = InParams.Get_LocalLocationOffset();
         auto SpawnXf = InParams.Get_SpawnTransform();
         SpawnXf.AddToTranslation(SpawnXf.GetRotation().RotateVector(InCurrent._LocalLocationOffset));
         SKMC->SetWorldTransform(SpawnXf);
 
-        // Resolve the AnimBP class. Sync-load — first use of an AnimCollection can hitch.
-        // Fall back to the notify-bridging UAnimInstance subclass
-        // so OnAnimationNotify and OnMontageFinished still fire in sequence mode.
+        // Sync-load: first use of an AnimCollection can hitch.
         const auto SoftClass = RendererData->Get_DefaultAnimInstanceClass();
         auto* AnimClass = SoftClass.IsNull() ? nullptr : SoftClass.LoadSynchronous();
-        // A deliberately-unset soft ref (IsNull) is normal flow — sequence mode. A SET
-        // ref that fails to load is broken content (deleted/renamed AnimBP asset) and
-        // must be loud: the proxy would otherwise silently T-pose in sequence mode.
+        // An UNSET soft ref is normal flow (sequence mode); a SET ref that fails to load is broken
+        // content and must be loud, or the proxy silently T-poses.
         CK_ENSURE_IF_NOT(SoftClass.IsNull() || ck::IsValid(AnimClass),
             TEXT("IskmProxy Setup: _DefaultAnimInstanceClass [{}] failed to load for [{}] — falling back to sequence mode"),
             SoftClass.ToString(), InHandle)
@@ -187,10 +169,8 @@ namespace ck
 
         const auto NumCustom = RendererData->Get_NumCustomDataFloat();
         InCustomData._Values.Init(0.0f, NumCustom);
-        // USkeletalMeshComponent doesn't have SetNumCustomDataFloats (that's on
-        // UInstancedStaticMeshComponent for ISM batching). For non-instanced
-        // components we just write per-slot via SetCustomPrimitiveDataFloat;
-        // the underlying CustomPrimitiveData array grows automatically.
+        // SetNumCustomDataFloats is an ISM-only API; on a plain component the CustomPrimitiveData array
+        // grows itself as each slot is written.
         for (auto Idx = 0; Idx < NumCustom; ++Idx)
         {
             SKMC->SetCustomPrimitiveDataFloat(Idx, 0.0f);
@@ -226,11 +206,6 @@ namespace ck
             InCurrent._AttachedSubmeshIndices.Add(Idx);
         }
 
-        // seed per-instance custom data from ParamsData defaults.
-        // FCk_CustomPrimitiveData uses _CustomDataIndex (not _DataIndex) and a
-        // tagged-union FCk_CustomPrimitiveData_Value (Float/Vec2/Vec3/Vec4/Color).
-        // Sibling CkIsmProxy_Setup converts via Value.ConvertToFloatArray() and
-        // writes consecutive slots. We mirror that exact pattern.
         for (const auto& Override : InParams.Get_CustomInstanceDataDefaults())
         {
             const auto& StartIdx = Override.Get_CustomDataIndex();
@@ -247,25 +222,20 @@ namespace ck
             }
         }
 
-        // Re-apply stored material overrides. Empty on first Setup (requests only
-        // drain post-Setup) — load-bearing if the SKMC is ever (re)acquired after
-        // overrides were recorded on this entity.
+        // Empty on first Setup (requests only drain post-Setup); load-bearing when the SKMC is
+        // (re)acquired after overrides were already recorded on this entity.
         for (const auto& Kvp : InMaterialOverrides._SlotToMaterial)
         {
             SKMC->SetMaterial(Kvp.Key, Kvp.Value.Get());
         }
         InMaterialOverrides._Dirty = false;
 
-        // Re-apply stored morph targets — same rationale as the material
-        // overrides above.
         for (const auto& Kvp : InMorphTargets._Values)
         {
             SKMC->SetMorphTarget(Kvp.Key, Kvp.Value);
         }
         InMorphTargets._Dirty = false;
 
-        // tag the entity as movable if requested. Static proxies (no tag) are skipped
-        // by FProcessor_IskmProxy_UpdateTransform every frame.
         if (InParams.Get_IsMovable() == ECk_EnableDisable::Enable)
         {
             InHandle.Add<FTag_IskmProxy_Movable>();
@@ -287,16 +257,9 @@ namespace ck
             FFragment_IskmProxy_Requests& InRequests,
             const FFragment_Transform& InTransform) const -> void
     {
-        // Canonical visitor pattern from CkIsmProxy_Processor.cpp:396-411 — single generic
-        // lambda dispatching to the overloaded DoHandleRequest member functions per request
-        // type. New request types only need a new DoHandleRequest overload (decl in the
-        // header, def below) — the visitor body never changes.
-        // Drain a COPY (canonical pattern, CkTimer_Processor.cpp): handlers broadcast
-        // signals synchronously (OnAnimationFinished), and a listener may enqueue new
-        // Request_IskmProxy_* on this same entity mid-drain — appending to the live
-        // array would dangle the loop's iterators on realloc, and a trailing Reset
-        // would silently discard the new requests. Re-entrant requests survive in the
-        // fragment instead and are re-pumped next tick (MarkedDirtyBy).
+        // Drain a COPY: handlers broadcast signals synchronously and a listener may enqueue new requests
+        // on this same entity mid-drain, which would dangle the loop's iterators on realloc and be
+        // discarded by a trailing Reset. Re-entrant requests survive in the fragment for the next tick.
         auto RequestsCopy = MoveTemp(InRequests._Requests);
         InRequests._Requests.Reset();
 
@@ -323,16 +286,9 @@ namespace ck
             InHandle)
         { return; }
 
-        // Entity transform comes from the VIEW (Add's FCk_Handle_Transform contract
-        // guarantees the fragment) — no per-entity handle cast. A plain fragment
-        // read is exact even for actor-backed owners: this runs in
-        // FGroup_PostTransform, AFTER FGroup_Transform_SyncFrom mirrored the live
-        // root component into the fragment this tick. Gated by
-        // FTag_IskmProxy_Movable + FTag_Transform_Updated (set only when the
-        // transform changed) and TExclude<FTag_IskmProxy_Ragdolling>.
+        // The plain fragment read is exact even for actor-backed owners: this runs in FGroup_PostTransform,
+        // AFTER FGroup_Transform_SyncFrom mirrored the live root component into the fragment this tick.
         auto NewTransform = InTransform.Get_Transform();
-        // Compose the cached per-instance render offset (entity-space) into the world transform so the
-        // body renders off the entity origin (e.g. drop a Character-actor proxy by the capsule half-height).
         NewTransform.AddToTranslation(NewTransform.GetRotation().RotateVector(InCurrent.Get_LocalLocationOffset()));
         SKMC->SetWorldTransform(NewTransform);
     }
@@ -351,9 +307,8 @@ namespace ck
 
         auto Leader = InFollower.Get_Leader();
 
-        // Intentional silent return: teardown ordering can destroy the leader entity a
-        // frame before the follower's own destruction/cleanup processes — one silent
-        // skip (follower holds its last pose) during that window is correct.
+        // Intentional silent return: teardown ordering can destroy the leader a frame before the
+        // follower, and holding the last pose through that window is correct.
         if (ck::Is_NOT_Valid(Leader))
         { return; }
 
@@ -361,14 +316,9 @@ namespace ck
 
         if (Leader.Has<FTag_IskmProxy_Ragdolling>())
         {
-            // Ragdoll breaks the component-space composition below. Physics now owns the SKMC world
-            // pose, and FProcessor_IskmProxy_UpdateTransform (TExclude<FTag_IskmProxy_Ragdolling>)
-            // stops pushing the entity transform onto it — so the leader's ENTITY transform is frozen
-            // at the death pose while the SKMC drifts. Re-anchoring the live component-space socket
-            // onto that stale root sends the follower off on its own (the hair-detach bug). Read the
-            // physics-authoritative WORLD socket instead: it is the exact pose the leader body renders
-            // from, so the follower stays glued to it. It already carries ComponentToWorld, so the
-            // entity-space _LocalLocationOffset must NOT be re-added here (that would double-count it).
+            // Ragdoll breaks the component-space composition below: physics owns the SKMC world pose and
+            // UpdateTransform is excluded, so the leader's ENTITY transform is frozen at the death pose.
+            // The world socket already carries ComponentToWorld — do NOT re-add _LocalLocationOffset.
             const auto SocketWorldSpace = ::UCk_Utils_IskmProxy_UE::Get_SocketTransform(
                 Leader, InFollower.Get_Socket(), ECk_IskmProxy_TransformSpace::World);
 
@@ -376,16 +326,14 @@ namespace ck
         }
         else
         {
-            // Component-space socket = pure animation pose (the SKMC's world placement
-            // is deliberately NOT consulted — it is one frame stale by construction);
-            // the root term comes from the leader's live entity transform instead.
+            // The SKMC's world placement is deliberately NOT consulted — it is one frame stale by
+            // construction; the root term comes from the leader's live entity transform instead.
             const auto SocketComponentSpace = ::UCk_Utils_IskmProxy_UE::Get_SocketTransform(
                 Leader, InFollower.Get_Socket(), ECk_IskmProxy_TransformSpace::Component);
 
             auto LeaderTransform = ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Leader);
-            // Compose the leader's render offset into the root so followers track the *offset* body
-            // rather than the entity origin — must match FProcessor_IskmProxy_UpdateTransform's SKMC
-            // placement (line ~258), or cosmetics float by the offset (e.g. a Character's capsule half-height).
+            // Must match FProcessor_IskmProxy_UpdateTransform's SKMC placement, or the follower tracks
+            // the entity origin instead of the offset body and floats by the offset.
             const auto LeaderOffset = Leader.Get<FFragment_IskmProxy_Current>().Get_LocalLocationOffset();
             LeaderTransform.AddToTranslation(LeaderTransform.GetRotation().RotateVector(LeaderOffset));
 
@@ -419,9 +367,8 @@ namespace ck
         SCOPE_CYCLE_COUNTER(STAT_CkIskm_SocketFollowerSyncDescendants);
 
         // FTag_Transform_Updated is deliberately NOT a view requirement: this body ADDS that tag to
-        // descendant (non-follower) entities, and mutating a pool the view iterates would invalidate
-        // iteration. Gate on the follower's own tag here instead — it is set by SyncTransform (same
-        // group, RunAfter) the frames the follower actually moved, and only descendants inherit motion.
+        // descendant entities, and mutating a pool the view iterates would invalidate iteration. Gate on
+        // it here instead — SyncTransform (same group, RunAfter) sets it the frames the follower moved.
         if (NOT InHandle.Has<FTag_Transform_Updated>())
         { return; }
 
@@ -440,9 +387,8 @@ namespace ck
             if (InChild.Has<FFragment_SceneNode_UnrealAnchor>())
             { return; }
 
-            // A descendant that is itself a socket follower drives its own pose (and subtree) via
-            // SyncTransform + this same SyncDescendants pass; recomputing it here as relative*parentWorld
-            // would contest that. Followers must be scene-node leaves w.r.t. another follower.
+            // A descendant that is itself a socket follower drives its own pose (and subtree) via this
+            // same pass; recomputing it here as relative*parentWorld would contest that.
             if (InChild.Has<FFragment_IskmProxy_SocketFollower>())
             { return; }
 
@@ -455,10 +401,8 @@ namespace ck
             const auto NewTransform = InChild.Get<FFragment_SceneNode_Current>().Get_RelativeTransform() * InParentWorld;
 
             auto ChildAsTransform = UCk_Utils_Transform_UE::Cast(InChild);
-            // Guaranteed-present Get (scene nodes always carry FFragment_Transform, added by
-            // SceneNode Add/Create), so this never structurally inserts into a view-member pool
-            // mid-iteration. Descendants are assumed non-replicating (held presentation); a replicating
-            // node parented under a follower would need OR-merged _ComponentsModified vs the canonical pass.
+            // Scene nodes always carry FFragment_Transform, so this never structurally inserts into a
+            // view-member pool mid-iteration. Descendants are assumed non-replicating.
             auto& ChildTransform = ChildAsTransform.AddOrGet<FFragment_Transform>();
 
             // Unchanged parent-derived pose means the whole subtree below is unchanged too.
@@ -485,8 +429,7 @@ namespace ck
 
         if (InAnimState._LastFinishedDispatched)
         { return; }
-        // Intentional silent return: no current sequence means there's no
-        // Completed event to fire. This is the normal "nothing playing" state.
+        // Intentional silent return: no current sequence is the normal "nothing playing" state.
         auto* Cur = InAnimState._CurrentSequence.Get();
         if (ck::Is_NOT_Valid(Cur))
         { return; }
@@ -501,9 +444,7 @@ namespace ck
             UUtils_Signal_IskmProxy_OnAnimationFinished::Broadcast(
                 InHandle,
                 MakePayload(InHandle, FCk_IskmProxy_AnimSequenceRef{Cur}, ECk_IskmProxy_AnimFinishReason::Completed));
-            // Reset _CurrentSequence so Get_PlayingAnimation reflects "not playing"
-            // and a subsequent Request_StopAnimation doesn't fire a duplicate Stopped
-            // event for an already-completed sequence.
+            // Reset so a subsequent Request_StopAnimation cannot fire a duplicate Stopped event.
             InAnimState._CurrentSequence.Reset();
             InAnimState._LastFinishedDispatched = true;
         }
@@ -532,19 +473,12 @@ namespace ck
         InCurrent._SubmeshSKMCs.Reset();
         InCurrent._AttachedSubmeshIndices.Reset();
 
-        // Pool hygiene (load-bearing): OverrideMaterials is a component-level array
-        // that survives Release_BaseSKMC's SetSkeletalMesh(nullptr) — without this
-        // clear, per-proxy material overrides leak to the next proxy that borrows
-        // this SKMC. V1 owns ALL override slots on the base SKMC, so a full clear
-        // restores mesh-default materials exactly.
+        // Pool hygiene (load-bearing): both arrays are component-level state that survives
+        // Release_BaseSKMC, so without these clears the proxy's materials and morphs leak to the next
+        // borrower. This proxy owns ALL override slots, so a full clear restores mesh defaults exactly.
         SKMC->EmptyOverrideMaterials();
-
-        // Same pool hygiene for morph curves: MorphTargetCurves survives
-        // Release_BaseSKMC, so per-proxy morphs would leak to the next borrower.
         SKMC->ClearMorphTargets();
 
-        // Same invariant as the AttachSubmesh handler: BaseSKMC is always acquired from
-        // a renderer actor, so a missing/mismatched owner here means the pooled SKMC leaks.
         auto* RendererActor = Cast<ACk_IskmRenderer_Actor_UE>(SKMC->GetOwner());
         CK_ENSURE_IF_NOT(ck::IsValid(RendererActor),
             TEXT("IskmProxy [{}]: BaseSKMC has no ACk_IskmRenderer_Actor_UE owner in EndPlay — pooled SKMC leaked"),
@@ -559,8 +493,7 @@ namespace ck
 
     // ---- DoHandleRequest handlers ----
     //
-    // The HandleRequests visitor instantiates DoHandleRequest(...) for every std::variant
-    // alternative in FFragment_IskmProxy_Requests::RequestType — one overload per request type.
+    // One overload per std::variant alternative in FFragment_IskmProxy_Requests::RequestType.
 
     auto
         FProcessor_IskmProxy_HandleRequests::
@@ -591,20 +524,13 @@ namespace ck
             InHandle)
         { return; }
 
-        // Intentional dedup: if the caller opted into "unique" semantics and the
-        // same sequence is already active, skip restarting from frame 0.
         if (InRequest.Get_Unique() && InAnimState._CurrentSequence.Get() == InRequest.Get_Sequence())
         {
             return;
         }
 
-        // Only clear the AnimInstance class if we're not already in single-node
-        // mode. Calling SetAnimInstanceClass(nullptr) when AnimClass is already
-        // null tears down the existing SingleNodeInstance before PlayAnimation
-        // re-creates one; that momentary teardown leaves the render proxy in a
-        // half-initialized state and the SKMC visibly snaps to ref pose.
-        // Observed via TransitionCycle gym station: re-issuing PlayAnimation
-        // from a timer reliably A-poses the proxy.
+        // Guarded: SetAnimInstanceClass(nullptr) on an ALREADY-null AnimClass tears down the live
+        // SingleNodeInstance before PlayAnimation recreates one, and that gap visibly A-poses the proxy.
         if (SKMC->AnimClass != nullptr)
         {
             SKMC->SetAnimInstanceClass(nullptr);
@@ -766,9 +692,8 @@ namespace ck
             InHandle, InRequest.Get_SlotIndex(), SKMC->GetNumMaterials())
         { return; }
 
-        // MaterialOverrides is added unconditionally in Add(...) but isn't threaded
-        // through the processor signature — re-threading every DoHandleRequest
-        // overload for two consumers isn't worth the churn.
+        // Guaranteed-present Get: Add(...) composes MaterialOverrides unconditionally. It is not threaded
+        // through the processor signature — re-threading every overload for two consumers isn't worth it.
         auto& Overrides = InHandle.Get<FFragment_IskmProxy_MaterialOverrides>();
         Overrides._SlotToMaterial.Add(
             InRequest.Get_SlotIndex(),
@@ -798,15 +723,13 @@ namespace ck
 
         auto& Overrides = InHandle.Get<FFragment_IskmProxy_MaterialOverrides>();
 
-        // Intentional silent return: clearing with no recorded overrides is a
-        // no-op (e.g. a randomizer that always clears before re-rolling).
+        // Intentional silent return: clearing with no recorded overrides is a no-op.
         if (Overrides._SlotToMaterial.IsEmpty())
         { return; }
         Overrides._SlotToMaterial.Reset();
         Overrides._Dirty = true;
 
-        // V1 owns ALL override slots on the base SKMC, so a full component-level
-        // clear restores mesh-default materials exactly.
+        // This proxy owns ALL override slots, so a component-level clear restores mesh defaults exactly.
         SKMC->EmptyOverrideMaterials();
     }
 
@@ -833,8 +756,7 @@ namespace ck
             InHandle)
         { return; }
 
-        // MorphTargets is added unconditionally in Add(...) but isn't threaded
-        // through the processor signature — same rationale as MaterialOverrides.
+        // Guaranteed-present Get — same rationale as MaterialOverrides.
         auto& Morphs = InHandle.Get<FFragment_IskmProxy_MorphTargets>();
         Morphs._Values.Add(InRequest.Get_MorphName(), InRequest.Get_Value());
         Morphs._Dirty = true;
@@ -897,16 +819,14 @@ namespace ck
         constexpr auto ReinitPose = true;
         SKMC->SetSkeletalMesh(InRequest.Get_Mesh(), ReinitPose);
 
-        // SetSkeletalMesh re-runs InitAnim -> a fresh AnimInstance of the preserved AnimClass.
-        // Re-establish the notify bridge's owning-proxy handle on the new instance (mirrors
-        // DoApply_AnimInstanceClass) so OnAnimationNotify / OnMontageFinished keep routing.
+        // SetSkeletalMesh re-ran InitAnim -> a FRESH AnimInstance of the preserved AnimClass, so the
+        // notify bridge's owning handle must be re-established or the signals stop routing.
         if (auto* IskmAI = Cast<::UCk_IskmNotify_AnimInstance>(SKMC->GetAnimInstance()))
         {
             IskmAI->Set_OwningProxyHandle(FCk_Handle_IskmProxy{InHandle});
         }
 
-        // The swap rebuilt the component's material slots / morph curves / custom data —
-        // re-apply the proxy's recorded state (mirrors the Setup re-apply path).
+        // The swap rebuilt the component's material slots / morph curves / custom data.
         auto& Overrides = InHandle.Get<FFragment_IskmProxy_MaterialOverrides>();
         for (const auto& Kvp : Overrides._SlotToMaterial)
         {
@@ -940,7 +860,6 @@ namespace ck
             const FFragment_Transform& /*InTransform*/,
             const FCk_Request_IskmProxy_AttachSubmesh& InRequest) const -> void
     {
-        // ::-qualified — see the friend-class forward-decl injection note above.
         auto* RendererData = ::UCk_Utils_IskmRenderer_UE::Get_RendererData(InParams.Get_Renderer());
         CK_ENSURE_IF_NOT(ck::IsValid(RendererData),
             TEXT("IskmProxy [{}]: RendererData missing in AttachSubmesh handler — Renderer handle [{}] no longer resolves"),
@@ -956,8 +875,8 @@ namespace ck
         // Intentional dedup: re-attaching an already-attached submesh is a no-op.
         if (InCurrent._AttachedSubmeshIndices.Contains(Idx))
         { return; }
-        // enforce GPU custom-data bitmask cap (Plan-2 packs mesh presence in 4 bits = 15
-        // slots). Plan-1 game code that exceeds this would silently break under Plan-2.
+        // The cap is the Plan-2 GPU custom-data bitmask (mesh presence packs into 4 bits = 15 slots);
+        // game code that exceeds it today would silently break under the batched path.
         CK_ENSURE_IF_NOT(InCurrent._AttachedSubmeshIndices.Num() < RendererData->Get_MaxSubmeshPerInstance(),
             TEXT("IskmProxy [{}]: cannot attach submesh [{}] — already at MaxSubmeshPerInstance ({})"),
             InHandle, InRequest.Get_SubmeshName(), RendererData->Get_MaxSubmeshPerInstance())
@@ -976,8 +895,8 @@ namespace ck
         { return; }
 
         const auto& Def = RendererData->Get_Submeshes()[Idx];
-        // Validated before creating the child SKMC — a null Mesh would produce an
-        // invisible submesh that still consumes one of the capped MaxSubmeshPerInstance slots.
+        // Validated BEFORE creating the child SKMC: a null Mesh would produce an invisible submesh that
+        // still consumes one of the capped MaxSubmeshPerInstance slots.
         CK_ENSURE_IF_NOT(ck::IsValid(Def.Get_Mesh()),
             TEXT("IskmProxy [{}]: submesh [{}] in RendererData [{}] has no Mesh set"),
             InHandle, InRequest.Get_SubmeshName(), GetNameSafe(RendererData))
@@ -1027,14 +946,11 @@ namespace ck
             InHandle, InRequest.Get_SubmeshName(), GetNameSafe(RendererData))
         { return; }
 
-        // Intentional silent return: detaching a submesh that isn't currently
-        // attached is a no-op (e.g. cycle-detach driven by a state machine that
-        // doesn't track attach state).
+        // Intentional silent return: detaching an unattached submesh is a no-op.
         const auto Slot = InCurrent._AttachedSubmeshIndices.IndexOfByKey(Idx);
         if (Slot == INDEX_NONE)
         { return; }
-        // Invariant tripwire: _AttachedSubmeshIndices and _SubmeshSKMCs are parallel
-        // arrays maintained by this file's Add/RemoveAt/Reset pairs.
+        // Tripwire on the parallel-array invariant maintained by this file's Add/RemoveAt/Reset pairs.
         CK_ENSURE_IF_NOT(InCurrent._SubmeshSKMCs.IsValidIndex(Slot),
             TEXT("IskmProxy [{}]: _AttachedSubmeshIndices/_SubmeshSKMCs desynced (slot [{}] vs [{}] SKMCs)"),
             InHandle, Slot, InCurrent._SubmeshSKMCs.Num())
@@ -1086,9 +1002,7 @@ namespace ck
             InHandle)
         { return; }
 
-        // Intentional: null AnimInstanceClass is the documented sentinel for
-        // "fall back to UCk_IskmNotify_AnimInstance (sequence mode)". Callers
-        // pass NullClass explicitly to drop out of AnimBP mode.
+        // A null class is the documented sentinel for "drop to sequence mode", not a caller error.
         const auto IsAnimBpMode = ck::IsValid(InRequest.Get_AnimInstanceClass());
         const auto ClassToApply = IsAnimBpMode
             ? InRequest.Get_AnimInstanceClass()
@@ -1099,9 +1013,8 @@ namespace ck
             ? ECk_IskmProxy_PoseSource::AnimBP
             : ECk_IskmProxy_PoseSource::Sequence;
 
-        // Switching AnimInstance class invalidates any sequence playing through
-        // the previous single-node instance. Clear the tracked sequence + dispatch
-        // flag so EmitFinishedEvents doesn't fire a spurious Completed event.
+        // The class switch invalidated any sequence playing through the previous single-node instance;
+        // clearing both keeps EmitFinishedEvents from firing a spurious Completed event.
         InAnimState._CurrentSequence.Reset();
         InAnimState._LastFinishedDispatched = true;
     }
@@ -1129,10 +1042,8 @@ namespace ck
             InHandle)
         { return; }
 
-        // Lazy-create the bridging AnimInstance if the SKMC doesn't have one
-        // yet — montage playback requires an AnimInstance with a slot. Use the
-        // notify-bridging subclass so OnAnimationNotify / OnMontageFinished
-        // signals still fire from this entity.
+        // Montage playback requires an AnimInstance with a slot; the notify-bridging subclass keeps
+        // OnAnimationNotify / OnMontageFinished firing from this entity.
         if (ck::Is_NOT_Valid(SKMC->GetAnimInstance()))
         {
             ck_iskmproxy_processor::DoApply_AnimInstanceClass(
@@ -1146,9 +1057,8 @@ namespace ck
             InHandle)
         { return; }
 
-        // Montage_Play returns 0 on failure (skeleton/slot mismatch — bad content).
-        // Bail BEFORE mutating state: otherwise the entity is permanently marked
-        // montage-active with nothing playing and OnMontageFinished never fires.
+        // Montage_Play returns 0 on failure. Bail BEFORE mutating state, or the entity is permanently
+        // marked montage-active with nothing playing and OnMontageFinished never fires.
         const auto MontageLength = AI->Montage_Play(InRequest.Get_Montage(), InRequest.Get_PlayRate());
         CK_ENSURE_IF_NOT(MontageLength > 0.0f,
             TEXT("IskmProxy [{}]: Montage_Play failed for Montage [{}] — montage/skeleton/slot mismatch with the current SkeletalMesh"),
@@ -1159,9 +1069,8 @@ namespace ck
             AI->Montage_JumpToSection(InRequest.Get_StartSection(), InRequest.Get_Montage());
         }
         InAnimState._CurrentMontage = InRequest.Get_Montage();
-        // Re-triggering PlayMontage while one is already active is normal (e.g.
-        // gym MontageBurst station fires every 3s). Guard the tag add against
-        // the "tag already exists" ensure.
+        // Re-triggering while a montage is already active is normal flow, so the add must be guarded
+        // against the "tag already exists" ensure.
         if (NOT InHandle.Has<FTag_IskmProxy_HasActiveMontage>())
         {
             InHandle.Add<FTag_IskmProxy_HasActiveMontage>();
@@ -1197,10 +1106,8 @@ namespace ck
             AI->Montage_Stop(InRequest.Get_BlendOutTime(), Montage);
         }
 
-        // Clear the active-montage tag and current-montage ref so future processors
-        // filtering on FTag_IskmProxy_HasActiveMontage see correct state. Guarded
-        // symmetrically with the PlayMontage add: a redundant StopMontage (nothing
-        // playing) is normal flow and must not fire the registry's absent-tag ensure.
+        // Guarded symmetrically with the PlayMontage add: a redundant StopMontage is normal flow and must
+        // not fire the registry's absent-tag ensure.
         InAnimState._CurrentMontage.Reset();
         if (InHandle.Has<FTag_IskmProxy_HasActiveMontage>())
         {
@@ -1242,19 +1149,15 @@ namespace ck
             SKMC->AddImpulse(InRequest.Get_Impulse(), InRequest.Get_ImpulseBoneName(), VelChange);
         }
         InPoseSource._PoseSource = ECk_IskmProxy_PoseSource::Ragdoll;
-        // Re-triggering BeginRagdoll while already ragdolling is plausible normal flow
-        // (e.g. overlapping death impulses) — the physics setters above are idempotent
-        // and a repeat impulse on an active ragdoll is meaningful. Guard the tag add
-        // against the "tag already exists" ensure (mirrors the PlayMontage guard).
+        // Re-triggering while already ragdolling is normal flow (overlapping death impulses): the setters
+        // above are idempotent and a repeat impulse is meaningful, so guard only the tag add.
         if (NOT InHandle.Has<FTag_IskmProxy_Ragdolling>())
         {
             InHandle.Add<FTag_IskmProxy_Ragdolling>();
         }
 
-        // Switching to ragdoll halts SKMC anim playback. If a sequence was active,
-        // EmitFinishedEvents would otherwise see IsPlaying() == false next tick and
-        // fire a spurious OnAnimationFinished(Completed). Clear the tracked sequence
-        // and mark the finish as already-dispatched.
+        // Ragdoll halts SKMC anim playback, so without this EmitFinishedEvents sees IsPlaying() == false
+        // next tick and fires a spurious OnAnimationFinished(Completed).
         InAnimState._CurrentSequence.Reset();
         InAnimState._LastFinishedDispatched = true;
     }
@@ -1277,9 +1180,8 @@ namespace ck
             InHandle)
         { return; }
 
-        // Rejected at entry, BEFORE any physics mutation: end-without-begin would
-        // silently disable collision and rewrite _PoseSource on a proxy that was
-        // never ragdolling (caller-logic error).
+        // Rejected BEFORE any physics mutation: end-without-begin would silently disable collision and
+        // rewrite _PoseSource on a proxy that was never ragdolling.
         CK_ENSURE_IF_NOT(InHandle.Has<FTag_IskmProxy_Ragdolling>(),
             TEXT("IskmProxy [{}]: EndRagdoll without an active ragdoll"),
             InHandle)
@@ -1287,25 +1189,16 @@ namespace ck
 
         SKMC->SetSimulatePhysics(false);
         SKMC->SetAllBodiesSimulatePhysics(false);
-        // Stopping simulation does NOT clear the per-body physics blend weights —
-        // they stay at 1.0, so the (now frozen) simulated pose keeps winning over
-        // the resumed animation and the mesh lies flat forever while sockets/anim
-        // report a standing pose. Zero the weights and force one re-evaluation so
-        // the get-up is visible this frame.
+        // Stopping simulation does NOT clear the per-body blend weights: left at 1.0 the frozen simulated
+        // pose keeps beating the resumed animation, and the mesh lies flat forever while sockets/anim
+        // report standing. The RefreshBoneTransforms below forces the get-up to be visible this frame.
         SKMC->SetAllBodiesPhysicsBlendWeight(0.0f);
         SKMC->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-        // Physics owned the SKMC world pose while ragdolling (UpdateTransform
-        // excludes Ragdolling), so the component is stranded at the fallen
-        // root-body pose. UpdateTransform only re-anchors on the next ENTITY
-        // transform CHANGE (FTag_Transform_Updated) — which never comes for an
-        // NPC that recovers standing still (e.g. locked at a kiosk), leaving it
-        // rendering its idle animation sideways on the ground forever. Re-push
-        // the entity transform here so the get-up is upright immediately.
-        // Unlike UpdateTransform (FGroup_PostTransform), request handlers run in
-        // FGroup_Gameplay_Rendering — BEFORE this tick's Transform_SyncFrom — so
-        // the fragment mirror is a tick stale for actor-backed owners; prefer the
-        // live root component there (e.g. a same-frame teleport before the sync).
+        // The SKMC is stranded at the fallen root-body pose, and UpdateTransform only re-anchors on the
+        // next entity-transform CHANGE — which never comes for an NPC that recovers standing still. The
+        // fragment mirror is a tick stale here (handlers run BEFORE Transform_SyncFrom), so an
+        // actor-backed owner must be read from its live root component instead.
         auto NewTransform = InHandle.Has<FFragment_Transform_RootComponent>()
             ? ::UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle)
             : InTransform.Get_Transform();
@@ -1320,9 +1213,6 @@ namespace ck
     }
 }
 
-// Inline processor registration — same pattern as CkIsmRenderer_Processor.cpp and the
-// renderer-side CkIskmRenderer_Processor.cpp. Registrations land at file scope, outside
-// `namespace ck`.
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_UpdateTransform);

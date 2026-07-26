@@ -13,20 +13,13 @@
 #include <UObject/UnrealType.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Framework Save-transport handler for EntityScript SaveGame-tagged UPROPERTYs (spec §4B.3).
-//
-// Registered once by CkEcs (this file's static registrar) rather than per-script — the reflect walk over the script
-// class's CPF_SaveGame FProperties is generic. Save-only handler (HydrationApply + Produce, no Apply): the payload
-// type is never placed in a replicated container, so it stays off the wire and the load-path hydration dispatcher
-// (FProcessor_Hydration_Dispatch) is its sole caller.
-//
+// Framework Save-transport handler for EntityScript SaveGame-tagged UPROPERTYs. Registered once by CkEcs rather than
+// per-script — the reflect walk over the script class's CPF_SaveGame FProperties is generic. Save-only: the payload
+// never rides the wire, so the load-path hydration dispatcher is its sole caller.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_entity_script_save_fields
 {
-    // True iff the script class declares at least one UPROPERTY(SaveGame) — the "no-op for scripts without SaveGame
-    // fields" gate. Reflect-walks every FProperty (own + inherited) checking CPF_SaveGame.
     auto
         Has_AnySaveGameProperty(
             const UClass* InClass)
@@ -50,9 +43,8 @@ namespace ck_entity_script_save_fields
         FRegistrar()
         {
             FCk_PersistenceHandlerRegistry::Register_SaveOnly<FCk_SaveData_EntityScriptFields>({
-                    // Capture the script instance's CPF_SaveGame fields as a Save-only payload. UNSET when there is no
-                    // script, it is a shared CDO (NotInstanced), or the class declares no SaveGame field — those cases
-                    // have nothing to persist and must not emit a (misleading) empty payload.
+                    // UNSET — not an empty payload — when there is no script, it is a shared CDO, or the class
+                    // declares no SaveGame field: those cases have nothing to persist.
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
                         if (NOT Entity.Has<ck::FFragment_EntityScript_Current>())
@@ -82,8 +74,6 @@ namespace ck_entity_script_save_fields
                         Payload.Set_FieldBytes(MoveTemp(Blob));
                         return FInstancedStruct::Make(Payload);
                     },
-                    // Save-only: HydrationApply is the load-path applier — the only path this type ever takes. It is
-                    // never placed in a replicated container, so it has no net Apply.
                     .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                     {
                         if (NOT Entity.Has<ck::FFragment_EntityScript_Current>())
@@ -105,9 +95,8 @@ namespace ck_entity_script_save_fields
                         const auto CurrentClassPath = Script->GetClass()->GetPathName();
                         if (Payload.Get_ScriptClassPath() != CurrentClassPath)
                         {
-                            // Tagged-property replay is name-based and layout-tolerant, so a drifted class still applies
-                            // the fields it recognizes — warn (script re-Constructed as a different class than saved)
-                            // but proceed.
+                            // Tagged-property replay is name-based and layout-tolerant, so a drifted class still
+                            // applies the fields it recognizes — warn but proceed.
                             ck::ecs::Warning(TEXT("EntityScript SaveGame-field hydration for [{}] — saved script class "
                                 "[{}] != current [{}]; applying recognized fields by name"), Entity, Payload.Get_ScriptClassPath(), CurrentClassPath);
                         }

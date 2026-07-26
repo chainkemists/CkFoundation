@@ -15,17 +15,9 @@
 
 namespace ck
 {
-    // Each frame, reads the agent's probe-child overlap set, transforms each
-    // overlap into a FCk_CrowdAgent_Neighbor (excluding self via the lifetime-owner mapping back from
-    // the other probe's host entity), sorts by distance ascending, and trims to _MaxNeighborsForSteering.
-    //
-    // Group: FGroup_Physics. RunBefore Steering so the combined force calculation reads the same
-    // frame's cache. The probe overlap set itself is updated by FProcessor_Probe_HandleRequests in
-    // FGroup_Overlap (TG_PostPhysics); NeighborSync reads it from the *previous* frame's PostPhysics
-    // pass — one frame of latency, well below the rate at which agents close on each other.
-    //
-    // PARALLEL: the per-agent body is registry READS (probe overlaps, neighbor transforms/velocities)
-    // plus a write to the agent's OWN NeighborCache — no structural mutations, no signals.
+    // Consumes the probe overlap set produced by the PREVIOUS frame's FGroup_Overlap pass — one
+    // frame of latency, well below the rate at which agents close on each other.
+    // Parallel-safe: registry reads plus a write to the agent's OWN cache; no structural mutations.
     class CKCROWD_API FProcessor_CrowdAgent_NeighborSync : public TParallelProcessor<
             FProcessor_CrowdAgent_NeighborSync,
             FCk_Handle_CrowdAgent,

@@ -493,9 +493,8 @@ auto
         const TArray<int32>& InCounts)
     -> void
 {
-    // Compose Current on demand — RestoreSet is the one applier that may run on an entity whose Construct seeded no
-    // EntityTag, so Current can legitimately be absent. The trailing NowEmpty guard removes it again if the saved set
-    // turns out empty (only reachable via a degenerate double-apply; Produce never emits an empty payload).
+    // RestoreSet is the one applier that may run on an entity whose Construct seeded no EntityTag,
+    // so Current can legitimately be absent here.
     auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag_Current>();
 
     const auto Num = FMath::Min(InTagNames.Num(), InCounts.Num());
@@ -503,15 +502,13 @@ auto
     auto SavedPresent = TSet<FName>{};
     SavedPresent.Reserve(Num);
 
-    // ---- Phase A: raise/add every saved tag to its EXACT count. Done BEFORE any removal so the live set never
-    //               transiently empties and trips the NowEmpty auto-remove mid-apply. ----
+    // Raise/add saved tags BEFORE removing any: a transiently empty live set would trip the NowEmpty auto-remove.
     for (auto Index = 0; Index < Num; ++Index)
     {
         const auto SavedName  = InTagNames[Index];
         const auto SavedCount = InCounts[Index];
 
-        // A None name or non-positive count means "not present" — skip (and it is excluded from SavedPresent, so
-        // Phase B strips any live copy). Produce never emits these; the guard is for a hand-built/corrupt payload.
+        // Not-present in the saved set, so it stays out of SavedPresent and any live copy is stripped below.
         if (SavedName.IsNone() || SavedCount <= 0)
         { continue; }
 
@@ -529,15 +526,11 @@ auto
         }
         else
         {
-            // Already present (count >= 1) — set the count EXACTLY (raise or lower).
             Current._Tags[TagIndex]._Count = SavedCount;
         }
 
-        // Unconditional + idempotent, mirroring DoApply_Add: a present tag always carries its storage marker.
         Set_StoragePresence(InHandle, SavedName, true);
 
-        // Signal only on the 0->1 presence flip (AddNew), like DoApply_Add — an exact-count set of an already-present
-        // tag is not a presence change.
         if (AddNew)
         {
             ck::UUtils_Signal_EntityTag_OnTagUpdated::Broadcast(
@@ -548,8 +541,7 @@ auto
         }
     }
 
-    // ---- Phase B: remove every currently-present FName tag NOT in the saved set. Gather first (mutating _Tags while
-    //               iterating it is unsafe), then remove — one Removed signal per tag, on the 1->0 presence flip. ----
+    // Gather before removing — mutating _Tags while iterating it is unsafe.
     auto TagsToRemove = TArray<FName>{};
     for (const auto& TagCount : Current._Tags)
     {
@@ -577,9 +569,7 @@ auto
         DoBroadcast_AnyEntityListeners(InHandle, TagName, ECk_EntityTagUpdate::Removed);
     }
 
-    // ---- NowEmpty guard: only reachable when the saved set is empty (degenerate). Auto-remove Current to preserve
-    //      the "Current exists iff it holds >= 1 tag" invariant, mirroring DoApply_TryRemove. Current MUST NOT be
-    //      touched after this. ----
+    // Preserves the "Current exists iff it holds >= 1 tag" invariant. Current MUST NOT be touched after this.
     const auto NowEmpty =
         Current._Tags.IsEmpty() &&
         Current._GameplayTagCounts.IsEmpty();

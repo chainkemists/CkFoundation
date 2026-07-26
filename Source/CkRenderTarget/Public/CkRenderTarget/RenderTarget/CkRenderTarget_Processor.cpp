@@ -68,8 +68,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("RenderTarget Pixel Payloads Produced"), STAT_Ck
 namespace ck_render_target_processor
 {
 
-    // Sync-or-null relay channel resolution for a specific player (mirrors CkStateMachine's
-    // Acquire_RelayChannel): callers retry next tick on null — never block, never subscribe.
+    // Sync-or-null: callers retry next tick on null — never block, never subscribe.
     auto
     ResolveRelayChannel_ForPlayer(
         UWorld* InWorld,
@@ -104,17 +103,8 @@ namespace ck_render_target_processor
         return LocalController->PlayerState;
     }
 
-    // Draws a CPU pixel buffer into the entity's local render target through a transient
-    // upload texture (full-rect; per-block dirty rects are a possible later optimization).
-    // No-ops when the process cannot render. Shared by the client staging apply and the host's
-    // accepted-upload redraw.
-    //
-    // The final hop is an RHI CopyTexture, NOT a canvas draw: canvas writes go through the
-    // material/gamma pipeline and are not byte-preserving (display-gamma encode on write), and
-    // the upload texture must match the target's native pixel format (RTF_RGBA8 is PF_B8G8R8A8
-    // under the hood) or the channels swizzle. Staging bytes are raw readback bytes — the redraw
-    // must put back EXACTLY those bytes or every reconcile visibly corrupts the board
-    // (pinned by CkAutoTest_RenderTarget_GpuRoundTrip_BytePreserving).
+    // The final hop MUST stay an RHI CopyTexture (never a canvas draw) and the upload texture MUST
+    // match the target's native format, or this stops being byte-preserving — CkRenderTarget/Claude.md.
     auto
     DrawPixelsToTarget(
         const FCk_Handle_RenderTarget& InRenderTargetEntity,
@@ -161,8 +151,8 @@ namespace ck_render_target_processor
             InOutUploadTexture = TStrongObjectPtr{UploadTexture};
         }
 
-        // UpdateTextureRegions consumes the data on the render thread — hand it a heap copy
-        // with a cleanup fn (the source buffer remains owned by the caller's fragment).
+        // UpdateTextureRegions consumes the data on the render thread — hand it a heap copy with a
+        // cleanup fn; the source buffer stays owned by the caller's fragment.
         const auto NumBytes = InPixels.Num();
         auto* DataCopy = static_cast<uint8*>(FMemory::Malloc(NumBytes));
         FMemory::Memcpy(DataCopy, InPixels.GetData(), NumBytes);
@@ -204,10 +194,7 @@ namespace ck_render_target_processor
             });
     }
 
-    // Resolves (or creates) the drawable RGBA8 target for a sync entity from its params — the
-    // managed/provided switch used by FProcessor_RenderTarget_Setup, which runs on both fresh spawns
-    // and snapshot loads (v3 rebuild+hydrate re-Constructs the entity, re-running Setup). Returns null
-    // after a loud ensure on misconfiguration; the caller pins the result into FFragment_RenderTarget_Current::_Target.
+    // Runs on fresh spawns AND snapshot loads — a load re-Constructs the entity, re-running Setup.
     auto
     ResolveDrawableTarget(
         const FCk_Handle_RenderTarget& InRenderTargetEntity,
@@ -277,7 +264,6 @@ namespace ck_render_target_processor
         return nullptr;
     }
 
-    // Builds the per-player chunk queue entries for one compressed payload.
     auto
     BuildChunks(
         ECk_RenderTarget_PixelPayloadKind InKind,
@@ -333,16 +319,12 @@ namespace ck
 
         InCurrent._Target = TStrongObjectPtr{ResolvedTarget};
 
-        // Composition anchor for the snapshot restore pass: HydrateFromSavedChannel's view keys on
-        // Params + AuthoredLog, so the log must exist on EVERY sync entity from setup — not lazily at
-        // first publish — or a never-drawn (or non-publishing) target restores as a half-composed
-        // zombie (Params only, no Current/label, unreachable). Empty until a covered author records.
+        // Composition anchor for the snapshot restore view, needed on EVERY sync entity even if it
+        // never draws — CkRenderTarget/Claude.md.
         InRenderTargetEntity.AddOrGet<FFragment_RenderTarget_AuthoredLog>();
 
-        // Attach the owner-entity instruction container on authority (channel A). One container
-        // per owner, one channel per sync child. TryAddContainerFragment no-ops when the owner
-        // doesn't replicate or has no driver — gating here keeps the local-only fast path free
-        // of the driver lookup and makes the intent explicit (SM Setup pattern).
+        // The gate is not correctness (TryAdd no-ops) — it keeps the local-only fast path free of
+        // the driver lookup. One container per owner, one channel per sync child.
         if (InParams.Get_Replication() == ECk_Replication::Replicates
             && UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InRenderTargetEntity))
         {
@@ -397,16 +379,8 @@ namespace ck
             const FCk_RenderTarget_ChannelState& InChannel)
         -> bool
     {
-        // The v3 hydration payload is CHILD-keyed (Produce reads this sync child's own AuthoredLog,
-        // CkRenderTarget_Replication.cpp), so InChild IS the sync child — unlike the net Apply below it,
-        // which is owner-keyed (TryGet_RenderTarget on the owner). On the loading AUTHORITY, refill the
-        // child's instruction ring + repaint + (Replicates) re-publish into a fresh owner container so
-        // post-load clients reconverge through the ordinary ApplyReplicatedBatches path.
-
-        // ---- Preconditions: evaluate ALL before any mutation (exactly-once repaint) ----
-        // The fresh v3 Construct re-created this child; its Setup (FGroup_Gameplay_Rendering) runs in the
-        // load's Full settle-pump BEFORE FGroup_DeferredApply, adding Current + resolving the target + removing
-        // NeedsSetup. Return NotReady (retry) until it has composed.
+        // Preconditions: evaluate ALL before any mutation, so the repaint below happens exactly
+        // once. The restored child's Setup runs BEFORE FGroup_DeferredApply — retry until it has.
         if (NOT InChild.Has<FFragment_RenderTarget_Params>()
             || NOT InChild.Has<FFragment_RenderTarget_Current>()
             || NOT InChild.Has<FFragment_RenderTarget_AuthoredLog>())
@@ -417,10 +391,7 @@ namespace ck
 
         const auto& Params = InChild.Get<FFragment_RenderTarget_Params>();
 
-        // Replicating targets re-publish into a fresh owner container (the owner-hosted FCk_RepData_RenderTarget
-        // lives in the replication driver's FastArray, which the snapshot never captures). Gate on the owner's
-        // driver — re-established by the snapshot respawn pass — retrying until it exists. DoesNotReplicate
-        // targets skip the container half but still restore their drawn state (mode-agnostic, per Produce).
+        // Replicating targets re-publish into a fresh owner container — wait for the respawned driver.
         const auto RepublishToOwner = Params.Get_Replication() == ECk_Replication::Replicates
             && UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InChild);
 
@@ -432,22 +403,20 @@ namespace ck
             { return false; }
         }
 
-        // ---- Mutations: past every NotReady gate, so this runs exactly once per load ----
+        // Past every NotReady gate: everything below runs exactly once per load.
         auto  RenderTargetEntity = ck::StaticCast<FCk_Handle_RenderTarget>(InChild);
         auto& Current            = InChild.Get<FFragment_RenderTarget_Current>();
         auto& AuthoredLog        = InChild.Get<FFragment_RenderTarget_AuthoredLog>();
         const auto& Batches      = InChannel.Get_Batches();
 
-        // Refill the persisted ring the fresh Setup left empty: a re-save must re-capture the drawn state,
-        // and future local draws must continue monotonically past the restored watermark (Get_LatestAppliedBatchSeq
-        // reads Current._NextBatchSeq - 1 on the host).
+        // Refill the ring the fresh Setup left empty, so a re-save re-captures the drawn state and
+        // local draws continue monotonically past the restored watermark.
         for (const auto& Batch : Batches)
         { AuthoredLog.Record_PublishedBatch(Batch, Batch.Get_Seq() + 1); }
 
         if (NOT Batches.IsEmpty())
         { Current._NextBatchSeq = Batches.Last().Get_Seq() + 1; }
 
-        // Repaint the restored target by replaying the ring (no-ops headless / on non-rendering processes).
         for (const auto& Batch : Batches)
         { DoApplyBatch(RenderTargetEntity, Current, Batch.Get_Cmds()); }
 
@@ -500,10 +469,6 @@ namespace ck
         if (RequestsCopy.IsEmpty())
         { return; }
 
-        // Single-author gate: draw mutations may only originate on a machine allowed to author
-        // this target. DoesNotReplicate targets are self-authoritative everywhere; replicating
-        // targets are authored by the host, plus clients when _ClientAuthoring is Allowed
-        // (zero-latency prediction; PushClientBatches forwards the batch to the server).
         const auto IsLocalAuthor =
             InParams.Get_Replication() == ECk_Replication::DoesNotReplicate
             || UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InRenderTargetEntity)
@@ -544,11 +509,7 @@ namespace ck
         const auto BatchSeq = InCurrent._NextBatchSeq;
         InCurrent._NextBatchSeq = BatchSeq + 1;
 
-        // Channel A publication. The host republishes locally-applied batches into the owner's
-        // instruction ring; an authoring CLIENT applied the batch locally as prediction and
-        // buffers it for the relay push (the server re-applies, assigns its own seq, and
-        // republishes with the sender stamped). Pixels-only targets reconcile via the pixel
-        // stream and never carry instructions on the wire.
+        // Pixels-only targets reconcile through the pixel stream and never carry instructions.
         if (InParams.Get_Replication() == ECk_Replication::Replicates
             && InParams.Get_SyncMode() != ECk_RenderTarget_SyncMode::Pixels)
         {
@@ -569,11 +530,7 @@ namespace ck
         }
         else if (InParams.Get_Replication() == ECk_Replication::DoesNotReplicate)
         {
-            // Local-only targets never publish (no DoPublishBatch), but their drawn state must still
-            // persist through a snapshot — record the applied batch into the authored log directly.
-            // Each world is self-authoritative for DoesNotReplicate; only the server world is ever
-            // captured, so recording everywhere is harmless. Replicates+Pixels falls through both
-            // branches unrecorded — pixel-baseline persistence is the documented v1 deferral.
+            // Local-only targets never publish, but their drawn state must still persist.
             InRenderTargetEntity.AddOrGet<FFragment_RenderTarget_AuthoredLog>()
                 .Record_PublishedBatch(
                     FCk_RenderTarget_InstructionBatch{}.Set_Seq(BatchSeq).Set_Cmds(Cmds),
@@ -630,12 +587,7 @@ namespace ck
                 Channel->Set_LatestSeq(InBatchSeq);
             });
 
-        // Mirror the published batch into the snapshotable host-authoritative log on the SYNC CHILD.
-        // The channel ring above lives in the replication driver's FastArray, which is re-created
-        // empty on a snapshot load and is not itself a snapshotable fragment — so this mirror is the
-        // only persistent home for the instruction stream (see FFragment_RenderTarget_AuthoredLog).
-        // DoPublishBatch is the single host-side publish site (server draws + applied client batches
-        // both flow through it), so the log stays an exact mirror of the channel ring.
+        // Mirror into the snapshotable log on the SYNC CHILD — the channel ring is not persistable.
         InRenderTargetEntity.AddOrGet<FFragment_RenderTarget_AuthoredLog>()
             .Record_PublishedBatch(Batch, InBatchSeq + 1);
     }
@@ -828,8 +780,7 @@ namespace ck
 
         auto* Target = InCurrent.Get_Target().Get();
 
-        // Setup already ensured loudly when the target could not be resolved — stay quiet here so
-        // a single misconfiguration doesn't ensure once per batch.
+        // Setup already ensured loudly — stay quiet so one misconfiguration doesn't ensure per batch.
         if (ck::Is_NOT_Valid(Target))
         { return; }
 
@@ -924,7 +875,6 @@ namespace ck
             }
             case ECk_RenderTarget_DrawCmdType::Text:
             {
-                // Font is optional — fall back to the engine's small font when unset.
                 auto* Font = ::Cast<UFont>(InCmd.Get_Asset());
 
                 if (ck::Is_NOT_Valid(Font))
@@ -1014,11 +964,7 @@ namespace ck
         if (InParams.Get_SyncInterval() <= FCk_Time::ZeroSecond())
         { return; }
 
-        // Interval reconciliation is the AUTHORITY's job — narrower than PixelCapture's
-        // authoring gate on purpose. Letting Allowed clients tick the interval makes every
-        // authoring client full-upload its board each period (uploads are FullSync-only),
-        // ping-ponging state against the host's own reconcile. Clients upload explicitly
-        // via Request_SyncPixels.
+        // Deliberately NARROWER than PixelCapture's authoring gate — CkRenderTarget/Claude.md.
         const auto IsReconcileAuthority =
             InParams.Get_Replication() == ECk_Replication::DoesNotReplicate
             || UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InRenderTargetEntity);
@@ -1049,8 +995,7 @@ namespace ck
     {
         InRenderTargetEntity.Remove<MarkedDirtyBy>();
 
-        // Capture authoring gate: the host always captures; clients only for the pixel-upload
-        // path (_ClientAuthoring == Allowed). DoesNotReplicate targets are self-authoritative.
+        // The host always captures; clients only for the pixel-upload path.
         const auto IsCaptureAuthor =
             InParams.Get_Replication() == ECk_Replication::DoesNotReplicate
             || UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InRenderTargetEntity)
@@ -1117,7 +1062,6 @@ namespace ck
 
         if (NOT InPixelSync._Readback.IsValid())
         {
-            // Neither readback nor job — stale in-flight tag (should not happen); recover.
             CK_TRIGGER_ENSURE(TEXT("RenderTarget [{}] is tagged PixelSyncInFlight with no readback or job"),
                 InRenderTargetEntity);
             InRenderTargetEntity.Remove<FTag_RenderTarget_PixelSyncInFlight>();
@@ -1140,9 +1084,8 @@ namespace ck
 
                 InPixelSync._Readback.Reset();
 
-                // Client upload captures always produce a FullSync (empty previous forces it):
-                // the server's snapshot may have diverged (other authors interleave), so a delta
-                // diffed against THIS client's history would not patch cleanly there.
+                // Client upload captures always produce a FullSync — an empty previous snapshot
+                // forces that path. Why uploads are never deltas: CkRenderTarget/Claude.md.
                 const auto IsUploadBound =
                     InRenderTargetEntity.Get<FFragment_RenderTarget_Params>().Get_Replication() == ECk_Replication::Replicates
                     && NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InRenderTargetEntity);
@@ -1268,22 +1211,19 @@ namespace ck
         {
             const auto Seq = Batch.Get_Seq();
 
-            // Already applied, or baked into a pixel baseline this world received.
             if (Seq <= ReplayState._LastAppliedSeq || Seq <= ReplayState._BaselineInstructionWatermark)
             { continue; }
 
-            // Echo suppression: this world authored the batch and applied it at request time
-            // (prediction). Advance the watermark WITHOUT re-applying — skipping silently would
-            // leave a seq hole that falsely trips the ring-wrap gap recovery below.
+            // Echo suppression: this world already applied the batch as prediction. Advance the
+            // watermark WITHOUT re-applying — a silent skip trips the gap recovery below.
             if (Batch.Get_Sender().IsValid() && Batch.Get_Sender().Get() == LocalPlayer)
             {
                 ReplayState._LastAppliedSeq = Seq;
                 continue;
             }
 
-            // Ring-wrap gap: instructions between the watermark and this batch aged out of the
-            // ring before this world saw them. Apply what we have (best-effort) and flag for a
-            // pixel-baseline reconcile — ClientNetMaintenance turns the tag into Server_RequestFullSync.
+            // Ring-wrap gap: the batches in between aged out. Apply what we have, then reconcile
+            // against a fresh pixel baseline.
             if (Seq > ReplayState._LastAppliedSeq + 1 && ReplayState._LastAppliedSeq > 0)
             {
                 render_target::Warning(
@@ -1352,8 +1292,7 @@ namespace ck
 
             auto& Stream = Streams._Streams.FindOrAdd(Player);
 
-            // The payload re-broadcasts this player's own upload — they already have the pixels
-            // (they authored them). Skip the stream and promote their baseline instead.
+            // The payload re-broadcasts this player's own upload — promote their baseline instead.
             if (Payload.Get_ExcludePlayer().IsValid() && Payload.Get_ExcludePlayer().Get() == Player)
             {
                 if (NOT Stream._HasBaseline)
@@ -1366,8 +1305,7 @@ namespace ck
                 continue;
             }
 
-            // A delta is meaningless without the baseline it patches — flag for an on-demand
-            // FullSync instead (late joiners always get a FullSync first).
+            // A delta is meaningless without the baseline it patches.
             if (Payload.Get_Kind() == ECk_RenderTarget_PixelPayloadKind::Delta && NOT Stream._HasBaseline)
             {
                 Stream._NeedsFullSync = true;
@@ -1495,8 +1433,7 @@ namespace ck
 
         if (InPixelSync._LastSyncedSnapshot.IsEmpty())
         {
-            // Nothing has ever been captured — there is no baseline to give. The flags persist;
-            // the first capture's payload (a FullSync, since there's no snapshot) serves them.
+            // No baseline to give yet — the flags persist and the first capture's FullSync serves them.
             return;
         }
 
@@ -1532,9 +1469,7 @@ namespace ck
 
             auto& Stream = StreamIt->Value;
 
-            // Cull-distance relevancy: players beyond the owning actor's
-            // NetCullDistanceSquared are skipped and their baseline invalidated — on re-entry
-            // the no-baseline path forces a FullSync before any deltas.
+            // Out-of-range players lose their baseline — re-entry forces a FullSync before deltas.
             if (ck::IsValid(OwningActor, ck::IsValid_Policy_NullptrOnly{})
                 && OwningActor->GetNetCullDistanceSquared() > 0.0f)
             {
@@ -1650,8 +1585,7 @@ namespace ck
         if (InStaging._Assembling.IsEmpty() || InStaging._ApplyJob.IsValid())
         { return; }
 
-        // Reliable+ordered delivery means the head of _Assembling is the current payload, in
-        // chunk order. Collect its prefix; kick the apply job once all chunks are present.
+        // Reliable+ordered delivery means the head of _Assembling is the current payload, in chunk order.
         const auto HeadSeq = InStaging._Assembling[0].Get_PayloadSeq();
         const auto HeadNumChunks = InStaging._Assembling[0].Get_NumChunks();
 
@@ -1724,8 +1658,7 @@ namespace ck
 
         if (InStaging._ApplyJobKind == ECk_RenderTarget_PixelPayloadKind::FullSync)
         {
-            // Instructions at or below the baseline's watermark are baked into these pixels —
-            // drop them from the replay paths and advance the applied watermark.
+            // Instructions at or below the baseline's watermark are baked into these pixels.
             const auto Watermark = InStaging._ApplyJobInstructionWatermark;
 
             auto& ReplayState = InRenderTargetEntity.AddOrGet<FFragment_RenderTarget_ClientReplayState>();
@@ -1789,9 +1722,8 @@ namespace ck
         if (InParams.Get_Replication() == ECk_Replication::DoesNotReplicate)
         { return; }
 
-        // A locally-produced pixel payload on a client is an UPLOAD — chunk it for the paced
-        // Server_PushPixelChunk sends below. (The authority's payloads are consumed by
-        // DispatchPixelPayload instead, which never runs on clients.)
+        // A locally-produced payload on a client is an UPLOAD (DispatchPixelPayload, the authority's
+        // route, never runs on clients).
         if (InRenderTargetEntity.Has<FFragment_RenderTarget_PendingPixelPayload>())
         {
             const auto& Payload = InRenderTargetEntity.Get<FFragment_RenderTarget_PendingPixelPayload>();
@@ -1978,16 +1910,14 @@ namespace ck
         if (InAssembly._ApplyJob.IsValid())
         { return; }
 
-        // Collect the head sender's prefix for the head payload — reliable per-sender ordering
-        // means a sender's chunks arrive in idx order, though chunks of different senders may
-        // interleave in the inbox.
+        // Per-sender collection, not a flat prefix: each sender's chunks arrive in idx order, but
+        // different senders' chunks interleave in the inbox.
         const auto HeadSender = InAssembly._Inbox[0].Get_Sender();
         const auto HeadSeq = InAssembly._Inbox[0].Get_Chunk().Get_PayloadSeq();
         const auto HeadNumChunks = InAssembly._Inbox[0].Get_Chunk().Get_NumChunks();
         const auto& HeadChunk = InAssembly._Inbox[0].Get_Chunk();
 
-        // v1 uploads are FullSync-only (a delta upload would diff against the uploader's own
-        // history, which may have diverged from the server snapshot) and size-capped.
+        // v1 uploads are FullSync-only and size-capped — CkRenderTarget/Claude.md.
         const auto IsValidUpload =
             HeadChunk.Get_Kind() == ECk_RenderTarget_PixelPayloadKind::FullSync
             && HeadChunk.Get_Size().X > 0 && HeadChunk.Get_Size().Y > 0
@@ -2032,7 +1962,6 @@ namespace ck
             return;
         }
 
-        // Per-player upload rate limit (sliding 1s window over accepted compressed bytes).
         if (const auto BudgetPerSecond = UCk_Utils_RenderTarget_Settings_UE::Get_ClientUploadMaxBytesPerSecond();
             BudgetPerSecond > 0)
         {
@@ -2097,9 +2026,8 @@ namespace ck
             return;
         }
 
-        // The upload becomes the new authoritative pixel state: snapshot + local target. The
-        // upload's watermark is irrelevant server-side — the server's own applied-batch seq is
-        // the truth for what's baked into ITS pixels.
+        // The uploader's own watermark is irrelevant — the server's applied-batch seq is the truth
+        // for what is baked into ITS pixels.
         InPixelSync._LastSyncedSnapshot = JobResult->_NewStaging;
         InPixelSync._SnapshotSize = JobResult->_Size;
         InPixelSync._SnapshotInstructionWatermark = InCurrent.Get_NextBatchSeq() - 1;
@@ -2110,9 +2038,7 @@ namespace ck
         const auto PayloadSeq = InPixelSync._NextPayloadSeq;
         InPixelSync._NextPayloadSeq = PayloadSeq + 1;
 
-        // Re-broadcast to every OTHER client (the uploader's stream is skipped + promoted by
-        // dispatch), and bump the channel's _PixelEpoch so receivers know a non-instruction
-        // pixel change happened.
+        // Re-broadcast to every OTHER client — dispatch skips the uploader and promotes its baseline.
         auto& Payload = InRenderTargetEntity.AddOrGet<FFragment_RenderTarget_PendingPixelPayload>();
         Payload._Kind = ECk_RenderTarget_PixelPayloadKind::FullSync;
         Payload._PayloadSeq = PayloadSeq;

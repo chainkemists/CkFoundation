@@ -33,8 +33,6 @@ namespace ck
             FFragment_2dGridOccupancy_Current& InCurrent) const
         -> void
     {
-        // 1. Build the desired set: every cell of every VALID placement -> that placement.
-        //    Valid entries only; dead placements are already pruned by CkRecord.
         auto GridBase = FCk_Handle{InHandle};
         auto Desired = TMap<FIntPoint, FCk_Handle_2dGridPlacement>{};
         RecordOf_GridPlacements_Utils::ForEach_ValidEntry(GridBase,
@@ -47,7 +45,6 @@ namespace ck
             }
         });
 
-        // 2. Un-stamp cells that are stamped now but not in Desired.
         for (const auto& StampedPair : InCurrent._StampedCells)
         {
             if (Desired.Contains(StampedPair.Key))
@@ -63,7 +60,6 @@ namespace ck
             { Cell.Get<FFragment_2dGridCell_Occupancy>()._Placement = FCk_Handle_2dGridPlacement{}; }
         }
 
-        // 3. Stamp cells that are desired but not currently stamped (or stamped by a different placement).
         for (const auto& DesiredPair : Desired)
         {
             const auto* MaybeStamped = InCurrent._StampedCells.Find(DesiredPair.Key);
@@ -78,7 +74,6 @@ namespace ck
             Cell.AddOrGet<FFragment_2dGridCell_Occupancy>()._Placement = DesiredPair.Value;
         }
 
-        // 4. The desired set is now authoritative.
         InCurrent._StampedCells = MoveTemp(Desired);
     }
 
@@ -93,8 +88,6 @@ namespace ck
     {
         auto GridBase = FCk_Handle{InHandle};
 
-        // Consume the registered Produce (Ck2dGridOccupancy_Fragment.cpp) — it does the identical record walk.
-        // Byte-identical wire content; the container write + dirty-marker clear are unchanged.
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_2dGridPlacements>(GridBase);
         if (Produced.IsSet())
         { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_2dGridPlacements>(GridBase, *Produced); }
@@ -121,18 +114,13 @@ namespace ck
             return;
         }
 
-        // Identity is the occupant handle. Diffing only by occupant would miss a same-occupant
-        // re-place (move/rotate keeps the occupant, changes anchor/cells), so any occupant whose
-        // ENTRY changed is treated as a remove-then-add. The set of occupants needing a teardown is
-        // therefore "everything in Previous that is not present-AND-identical in Current".
+        // Diffing by occupant alone would miss a same-occupant re-place (move/rotate keeps the
+        // occupant, changes anchor/cells), so an occupant whose ENTRY changed is torn down and re-added.
         const auto ByOccupant = &FCk_2dGridPlacement_ReplicatedEntry::Get_Occupant;
         const auto OccupantsGone = ck::algo::Except(InPrevious, InCurrent, ByOccupant);
 
         auto Grid = InHandle;
 
-        // Teardown pass: an occupant whose entry is gone OR changed loses its client placement first
-        // (CkRecord prunes it; reconcile un-stamps the cells next tick). A removed-then-readded entry
-        // in the same delta frees its old footprint before the add pass re-places it.
         const auto TearDownOccupant = [&](const FCk_Handle& InOccupant)
         {
             auto Existing = UCk_Utils_2dGridOccupancy_UE::Get_PlacementForOccupant(InOccupant);
@@ -144,11 +132,8 @@ namespace ck
         for (const auto& Entry : OccupantsGone)
         { TearDownOccupant(Entry.Get_Occupant()); }
 
-        // Apply pass: every current entry that differs from its previous counterpart (new occupant,
-        // or same occupant with a changed footprint) is (re)built. Request_AddPlacement is the raw,
-        // un-authority-gated data layer — it auto-replaces any stale placement for that occupant,
-        // connects into the record, and the reconcile pass stamps the cells. Clients never originate
-        // placements; this only mirrors replicated state.
+        // Request_AddPlacement is the raw, un-authority-gated data layer; clients only mirror
+        // replicated state and never originate a placement.
         for (const auto& Entry : InCurrent)
         {
             const auto* Prev = InPrevious.FindByPredicate([&](const FCk_2dGridPlacement_ReplicatedEntry& InPrev)

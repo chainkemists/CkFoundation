@@ -99,10 +99,8 @@ public:
         UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag);
 
 public:
-    // Save/load reconstitution entry point — enqueues ONE composite FCk_Request_EntityTag_RestoreSet that, at drain,
-    // SETs the entity's FName tag set to EXACTLY the {name -> count} map supplied. Deliberately NOT a UFUNCTION: it is
-    // the v3 hydration path's private plumbing (called from the EntityTag persistence handler's HydrationApply), not a
-    // designer-facing "replace my whole tag set" verb. Deferred like the other requests — see Timing in the module doc.
+    // Enqueues ONE composite RestoreSet request that, at drain, SETs the FName tag set to EXACTLY the supplied
+    // {name -> count} map. Deliberately NOT a UFUNCTION — hydration-path plumbing, not a designer-facing verb.
     static auto
     Request_RestoreSet(
         FCk_Handle& InHandle,
@@ -197,26 +195,20 @@ public:
         const FCk_Delegate_EntityTag_OnTagUpdated_AnyEntity& InDelegate);
 
 private:
-    // Set/clear the per-tag EnTT storage marker used by ForEach_Entity. Lives in this
-    // class so its friend access to FCk_Registry::Storage<T> resolves.
+    // Lives in this class so its friend access to FCk_Registry::Storage<T> resolves.
     static auto
     Set_StoragePresence(
         FCk_Handle& InHandle,
         FName InTag,
         bool InPresent) -> void;
 
-    // Increment/decrement the per-tag AnyEntity subscription marker on a listener entity.
-    // Mirrors Set_StoragePresence storage-access idiom; refcounts so multiple delegates
-    // bound on the same (entity, tag) pair share one marker.
+    // Refcounted: multiple delegates bound on the same (entity, tag) pair share one marker.
     static auto
     Set_SubscriptionMarker(
         FCk_Handle& InListenerHost,
         FName InTagFilter,
         bool InIncrement) -> void;
 
-    // Iterate per-tag and wildcard subscription storage, broadcasting OnTagUpdated_AnyEntity
-    // to each registered listener. Called from DoApply_Add / DoApply_TryRemove and from the
-    // destruction processor.
     static auto
     DoBroadcast_AnyEntityListeners(
         FCk_Handle& InMutatedEntity,
@@ -247,11 +239,8 @@ private:
         FCk_Handle& InHandle,
         FGameplayTag InTag) -> void;
 
-    // Drain-time applier for FCk_Request_EntityTag_RestoreSet. SETs the entity's live FName tag set to EXACTLY the
-    // saved {name -> count} map, diffing against whatever is live at drain time: raises/adds every saved tag to its
-    // exact count FIRST (so the live set never transiently empties and trips the NowEmpty auto-remove mid-apply), then
-    // removes every present tag not in the saved set. Updates per-tag EnTT storage presence + fires the net Added/
-    // Removed signals only on 0<->1 presence flips, mirroring DoApply_Add / DoApply_TryRemove.
+    // Drain-time applier for FCk_Request_EntityTag_RestoreSet. Fires Added/Removed only on 0<->1 presence flips,
+    // mirroring DoApply_Add / DoApply_TryRemove.
     static auto
     DoApply_RestoreSet(
         FCk_Handle& InHandle,

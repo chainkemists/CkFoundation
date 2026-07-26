@@ -21,11 +21,9 @@ class UAnimSequenceBase;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Which VAT encoding the bake produces (a collection bakes exactly one).
-// Vertex: per-vertex position/normal texel per frame — cheapest playback, no bone data at runtime,
-//         vertex count bounded by the texture width; textures are per-mesh.
-// Bone:   per-bone position/rotation texel per frame + per-vertex indices/weights carried on the mesh —
-//         scales to high-vertex meshes; textures shareable across meshes that skin to the same skeleton.
+// Vertex: per-vertex position/normal texel per frame — cheapest, vertex count bounded by texture width.
+// Bone:   per-bone position/rotation texel per frame + mesh-carried indices/weights — scales to
+//         high-vertex meshes; textures shareable across meshes on the same skeleton.
 UENUM(BlueprintType)
 enum class ECk_Vat_BakeMode : uint8
 {
@@ -52,8 +50,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Vat_Precision);
 // --------------------------------------------------------------------------------------------------------------------
 
 // Bone mode: how many bone influences each vertex keeps (strongest-N, weights renormalized).
-// Fewer influences = rigid-er skinning; the shader skips zero-weight influences, so this is a
-// bake-side quality/data knob with no separate shader variant.
+// The shader skips zero-weight influences, so this is a bake-side knob with no shader variant.
 UENUM(BlueprintType)
 enum class ECk_Vat_BoneInfluences : uint8
 {
@@ -67,12 +64,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Vat_BoneInfluences);
 // --------------------------------------------------------------------------------------------------------------------
 
 // Bone mode: where per-vertex bone indices/weights live.
-// MeshChannels: indices in two UV channels + weights in vertex color (v1 default; weights are
-//               sRGB-pre-decoded to survive the static-mesh build's color encode).
-// WeightTexture: indices + weights in two per-vertex data textures addressed by a single lookup UV —
-//               frees the extra UV channels and vertex color, avoids the color-encode pipeline
-//               entirely, and is the prerequisite for the Nanite investigation (mesh data channels
-//               are limited under Nanite; a texture fetch by lookup UV is not).
+// MeshChannels:  indices in two UV channels + weights in vertex color (sRGB-pre-decoded).
+// WeightTexture: indices + weights in two data textures addressed by one lookup UV.
+// Trade-offs: CkVat/CLAUDE.md.
 UENUM(BlueprintType)
 enum class ECk_Vat_BoneWeightStorage : uint8
 {
@@ -109,9 +103,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One baked clip's slot in the texture frame layout. Written by the CkVatEditor baker, SERIALIZED on the
-// collection asset (unlike CkIskmRenderer's transient bake, the VAT bake IS the shipped asset — cooked
-// builds never re-sample sequences).
+// One baked clip's slot in the texture frame layout — written by the CkVatEditor baker, SERIALIZED
+// on the collection asset.
 USTRUCT(BlueprintType)
 struct CKVAT_API FCk_Vat_BakedClip
 {
@@ -151,8 +144,6 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 // Every bake KNOB in one value-struct (the skeleton/mesh/clip identity stays on the collection).
-// Fluent Set_* chain for programmatic collections (the transient factory); designers edit the
-// fields inline via ShowOnlyInnerProperties on the owning collection.
 USTRUCT(BlueprintType)
 struct CKVAT_API FCk_Vat_BakeSettings
 {
@@ -212,7 +203,7 @@ private:
               meta = (AllowPrivateAccess = true))
     bool _ExtractRootMotion = false;
 
-    // Sample the raw authored tracks, skipping skeleton retargeting (mirrors the Iskm collection toggle).
+    // Sample the raw authored tracks, skipping skeleton retargeting.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     bool _DisableRetargeting = false;
@@ -233,8 +224,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Every bake OUTPUT in one value-struct — written ONLY by ApplyBakeResults (the collection is a
-// friend); read-only everywhere else.
+// Every bake OUTPUT in one value-struct — written ONLY by ApplyBakeResults; read-only everywhere else.
 USTRUCT(BlueprintType)
 struct CKVAT_API FCk_Vat_BakedData
 {
@@ -256,9 +246,7 @@ private:
     TObjectPtr<UTexture2D> _PositionTexture;
 
     // Vertex mode: skinned normals in each vertex's BIND-POSE TANGENT frame, one row per frame.
-    // Tangent-space is deliberate: it is invariant under the per-instance transform (the TBN
-    // co-rotates), so the pixel shader feeds the material's tangent-space Normal pin directly —
-    // no per-instance basis exists in the PS (only IS_NANITE_PASS exposes InstanceId there).
+    // Tangent-space is deliberate — invariant under the per-instance transform (CkVat/CLAUDE.md).
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UTexture2D> _NormalTexture;
@@ -289,11 +277,8 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<FCk_Vat_BakedClip> _BakedClips;
 
-    // Texel dimensions of the VAT textures (width = vertex count / render-bone count by mode;
-    // rows = total frame rows). SERIALIZED because the runtime must never derive them from
-    // UTexture2D::GetSizeX/Y — those read PLATFORM data and return 0 while a freshly-baked
-    // texture is still async-compiling, which seeded zero BoneCount/TotalRows into the shared
-    // MID and collapsed every bone lookup onto one texel (found via Ck_Vat_DebugVerifyBake).
+    // Texel dimensions of the VAT textures (width = vertex / render-bone count by mode; rows =
+    // total frame rows). SERIALIZED: never derive them from GetSizeX/Y (see CkVat/CLAUDE.md).
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     int32 _TextureWidth = 0;
@@ -307,9 +292,8 @@ private:
               meta = (AllowPrivateAccess = true))
     FBox _AnimatedBounds = FBox(ForceInit);
 
-    // Value range of the position texels (vertex-mode offsets / bone-mode translations). Low precision
-    // stores texels normalized into this range; the material decode needs it in BOTH precisions for a
-    // uniform shader path.
+    // Value range of the position texels. Low precision stores texels normalized into this range; the
+    // material decode needs it in BOTH precisions for a uniform shader path.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     FVector _PositionBoundsMin = FVector::ZeroVector;
@@ -323,8 +307,7 @@ private:
     bool _IsBaked = false;
 
     // Digest of the bake INPUTS captured when the bake ran — Get_IsBakeStale compares it against the
-    // current inputs so edits after a bake surface loudly (details-panel Rebake + IsDataValid error)
-    // instead of silently playing stale textures.
+    // current inputs so edits after a bake surface loudly instead of silently playing stale textures.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     FString _BakedInputsHash;
@@ -349,17 +332,14 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Vertex-animation-texture collection: bake INPUTS (skeleton + source skeletal mesh + clip list +
-// FCk_Vat_BakeSettings knobs) and bake OUTPUTS (FCk_Vat_BakedData). The bake itself lives in
-// CkVatEditor (in-editor only); at runtime this asset is read-only.
-// Mirrors UCk_IskmAnimCollection_Data's shape where the concerns overlap.
+// Vertex-animation-texture collection: the bake INPUTS and OUTPUTS for one skeletal mesh. The bake
+// itself lives in CkVatEditor (in-editor only); at runtime this asset is read-only.
 UCLASS(BlueprintType)
 class CKVAT_API UCk_VatCollection_Data : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
 
-    // The baker subsystem's transient-collection factory fills the bake INPUTS programmatically
-    // (gyms/tests); serialized assets are authored in the details panel instead.
+    // The baker subsystem's transient-collection factory fills the bake INPUTS programmatically (gyms/tests).
     friend class UCkVat_BakerSubsystem;
 
 public:
@@ -420,9 +400,8 @@ public:
 
 #if WITH_EDITOR
 public:
-    // Digest of the CURRENT bake inputs (skeleton/mesh/clips/sampling settings). ApplyBakeResults
-    // stamps it into _BakedInputsHash; a mismatch afterwards means the serialized bake no longer
-    // matches what the inputs would produce.
+    // Digest of the CURRENT bake inputs. ApplyBakeResults stamps it into _BakedInputsHash; a
+    // mismatch afterwards means the serialized bake no longer matches what the inputs would produce.
     auto
     Compute_BakeInputsHash() const -> FString;
 
@@ -431,10 +410,8 @@ public:
     Get_IsBakeStale() const -> bool;
 
     // The CkVatEditor baker's write-back (the ONLY sanctioned mutation path for the Baked category).
-    // TStrongObjectPtr, not TObjectPtr: this is a plain (non-USTRUCT) struct, so GC would NOT trace
-    // TObjectPtr members — the freshly-baked mesh/textures could be collected between bake and
-    // apply. The strong ptrs root them for the struct's lifetime (the baker owns them until the
-    // collection's UPROPERTY _BakedData takes over).
+    // TStrongObjectPtr, not TObjectPtr: a plain non-USTRUCT struct is NOT GC-traced, so the freshly
+    // baked mesh/textures would be collectable between bake and apply.
     struct FCk_Vat_BakeResults
     {
         TStrongObjectPtr<UStaticMesh> BakedMesh;

@@ -17,17 +17,9 @@ public:
     CK_GENERATED_BODY(UCk_Utils_ItemQuery_UE);
 
 public:
-    // Deferred query over item definitions. The completion delegate fires on the
-    // ItemQuery processor's next tick once the definition index is ready: as soon
-    // as the next tick if the index is already built, or once the async index
-    // build finishes otherwise. Mirrors
-    // UCk_Utils_RenderStatus_UE::Request_QueryRenderedActors.
-    //
-    // Querying is ALWAYS deferred through this request — there is no synchronous
-    // getter. Design-time / non-ECS callers cannot run this request.
-    //
-    // InAnyHandle only scopes the transient request entity; it carries no meaning
-    // beyond "any valid entity in this world" — ck::TransientEntity() is fine.
+    // Deferred query over item definitions — there is no synchronous getter. The delegate fires on
+    // the ItemQuery processor's next tick once the definition index is ready (the very next tick
+    // when already built). InAnyHandle only scopes the transient request entity — any valid entity.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ItemQuery",
               DisplayName = "[Ck][ItemQuery] Request Query Item Definitions")

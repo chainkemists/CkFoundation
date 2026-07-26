@@ -9,35 +9,19 @@ namespace ck::goap
 {
 
 // --------------------------------------------------------------------------------------------------------------------
-// Regressive planning graph adapter satisfying AStarGraph<FGoapGraph, int32>
-//
-// Nodes are FConstraintSets (the regressive-search state type — a set of
-// typed constraints a predecessor state must satisfy). NodeId = int32 = index
-// into _StatePool.
-//
-// Edges are actions applied in reverse: an action's effects resolve
-// constraints (Set removes; Add/Sub shifts) and its preconditions become new
-// constraints on the predecessor.
-//
-// Search direction: BACKWARD (regressive)
-//   Start = the goal's conditions expressed as an FConstraintSet (index 0)
-//   Goal  = "every constraint satisfied by the current world state"
-//
-// Plan extraction: reverse the edge actions along the A* path to get
-// execution order.
+// Regressive planning graph adapter satisfying AStarGraph<FGoapGraph, int32>.
+// Nodes are FConstraintSets indexed into _StatePool; edges are actions applied in
+// reverse; the search runs BACKWARD from the goal. See CkGoap CLAUDE.md.
 
 struct FGoapGraphSharedData
 {
-	// Every regressive-search node discovered by Neighbors() lives here. The
-	// A* closed set keys off the int32 index so two nodes with the same
-	// content collapse via the StateLookup table below.
+	// The A* closed set keys off the int32 index, so identical content collapses
+	// via StateLookup rather than producing a second node.
 	TArray<FConstraintSet> StatePool;
 	TMap<int64, int32> EdgeActions;
 
-	// Content-addressed lookup — equivalent FConstraintSets reached via
-	// different action orderings share a single StatePool index. Without
-	// this, conjunctive goals explode the search space (every ordering
-	// produces a unique index even though the content is identical).
+	// Content-addressed: equivalent FConstraintSets reached via different action
+	// orderings share one StatePool index, or conjunctive goals explode the search.
 	TMap<uint32, TArray<int32>> StateLookup;
 };
 
@@ -64,7 +48,6 @@ public:
 	}
 
 	// ----------------------------------------------------------------------------------------------------------------
-	// AStarGraph INTERFACE
 	// ----------------------------------------------------------------------------------------------------------------
 
 	auto
@@ -108,8 +91,8 @@ public:
 		return _Shared.IsValid() ? _Shared->StatePool.Num() : 0;
 	}
 
-	// Edge map (PackEdgeKey(from,to) → action index) — read by the debugger to
-	// reconstruct which action's reverse application discovered each node.
+	// PackEdgeKey(from,to) → action index; read by the debugger to reconstruct
+	// which action's reverse application discovered each node.
 	auto
 	Get_EdgeActions() const -> const TMap<int64, int32>&
 	{

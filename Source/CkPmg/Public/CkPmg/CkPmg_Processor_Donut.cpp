@@ -49,7 +49,6 @@ namespace ck_pmg
         const auto FillRadians = FMath::DegreesToRadians(FMath::Clamp(InFillAngle, 0.0f, 360.0f));
         const auto SegmentsToGenerate = InFillAngle >= 360.0f ? InSegments : InSegments + 1;
 
-        // Generate vertices for top face
         for (auto i = 0; i < SegmentsToGenerate; ++i)
         {
             const auto Angle = (FillRadians * i) / InSegments;
@@ -78,7 +77,6 @@ namespace ck_pmg
 
         const auto TopVertexCount = Vertices.Num();
 
-        // Generate vertices for bottom face (same positions, reversed normals) if double-sided
         if (InRenderMode == ECk_Pmg_RenderMode::DoubleSided)
         {
             for (auto i = 0; i < SegmentsToGenerate; ++i)
@@ -110,7 +108,6 @@ namespace ck_pmg
 
         const auto TriangleCount = InFillAngle >= 360.0f ? InSegments : InSegments;
 
-        // Generate triangles for top face
         for (auto i = 0; i < TriangleCount; ++i)
         {
             const auto Current = i * 2;
@@ -125,7 +122,6 @@ namespace ck_pmg
             Triangles.Add(Current + 1);
         }
 
-        // Generate triangles for bottom face (reversed winding) if double-sided
         if (InRenderMode == ECk_Pmg_RenderMode::DoubleSided)
         {
             for (auto i = 0; i < TriangleCount; ++i)

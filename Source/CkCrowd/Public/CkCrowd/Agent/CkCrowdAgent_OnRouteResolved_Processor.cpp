@@ -36,18 +36,16 @@ namespace ck
 
         const auto& Result = InCorridor.Get_Result();
 
-        // Only agents with an active goal consume corridors; Idle/Failed agents have nothing the
-        // corridor could answer (the fragment persists after arrival/stop).
+        // The corridor fragment persists after arrival/stop, so only an agent with an active goal
+        // may consume it.
         const auto IsPathPending = InHandle.Has<FTag_CrowdAgent_PathPending>();
         const auto IsWalking     = InHandle.Has<FTag_CrowdAgent_Walking>();
 
         if (NOT IsPathPending && NOT IsWalking)
         { return; }
 
-        // Only consume a result that answers the goal THIS MoveTo asked for. A leftover result for
-        // the previous goal (the follower processor hasn't drained the fresh FindRoute yet — its
-        // status was parked at Pending by Request_FindRoute, but the goal is still the old one)
-        // must not transition the agent.
+        // A result left over from the previous goal (the follower has not drained the fresh
+        // FindRoute yet) must never transition the agent.
         constexpr auto GoalMatchEpsilonCm = 25.0f;
         if (FVector::Dist(Result.Get_GoalLocation(), InPathFollow.Get_ActiveGoal()) > GoalMatchEpsilonCm)
         { return; }
@@ -56,40 +54,32 @@ namespace ck
         {
             case ECk_PathNetwork_RouteStatus::Ready:
             {
-                // Skip corridors already installed: goal pins the MoveTo, epoch pins the network
-                // build. A rebuild replans the same goal at a new epoch and lands here again —
-                // that's the mid-walk corridor swap.
                 if (InHandle.Has<FFragment_CrowdAgent_InstalledRoute>())
                 {
                     const auto& Installed = InHandle.Get<FFragment_CrowdAgent_InstalledRoute>();
 
-                    if (Installed.Get_NetworkEpoch() == InCorridor.Get_NetworkEpoch() &&
-                        FVector::Dist(Installed.Get_GoalLocation(), Result.Get_GoalLocation()) <= GoalMatchEpsilonCm)
+                    const auto IsCorridorAlreadyInstalled =
+                        Installed.Get_NetworkEpoch() == InCorridor.Get_NetworkEpoch() &&
+                        FVector::Dist(Installed.Get_GoalLocation(), Result.Get_GoalLocation()) <= GoalMatchEpsilonCm;
+
+                    if (IsCorridorAlreadyInstalled)
                     { return; }
                 }
 
-                // Install the corridor as the agent's nav path. For PathPending agents,
-                // OnPathResolved's poll sees the Ready result and performs the → Walking
-                // transition; for Walking agents (rebuild swap) steering just reads the fresh
-                // waypoints — either way the corridor is indistinguishable from a navmesh path.
                 auto NonConstHandle = InHandle;
                 FCk_Nav_Algorithm::InstallExternalPath(
                     NonConstHandle, Result.Get_CompiledWaypoints(), Result.Get_GoalLocation());
 
-                // Fresh polyline, fresh cursor — for the mid-walk swap the old index may point
-                // past (or into the wrong stretch of) the new waypoint array.
+                // Fresh polyline, fresh cursor — on a mid-walk swap the old index may point past
+                // the new waypoint array.
                 InPathFollow._WaypointIndex = 0;
 
-                // Anchor the FIRST corridor segment for Steering's plane-crossing retirement. The
-                // corridor's leading waypoint has no predecessor in the array, so the incoming
-                // direction comes from where the agent actually IS at install time (the view
-                // guarantees the Transform fragment). This covers the mid-walk rebuild swap too:
-                // the agent may be deep into the old corridor, and the new segment starts from
-                // there, not from some stale origin.
+                // The corridor's leading waypoint has no predecessor, so the incoming direction for
+                // Steering's plane-crossing retirement comes from where the agent IS at install time.
                 InPathFollow._CurrentSegmentStart = InTransform.Get_Transform().GetLocation();
 
-                // This corridor was planned against every disc painted up to now — only NEWER
-                // discs may trigger a PathRefresh re-path.
+                // Planned against every disc painted up to now — only NEWER discs may trigger a
+                // PathRefresh re-path.
                 InPathFollow._PathSerial = FProcessor_CrowdAgent_StationaryMarkup::Get_CurrentPaintSerial();
 
                 auto& Installed = NonConstHandle.AddOrGet<FFragment_CrowdAgent_InstalledRoute>();
@@ -105,7 +95,7 @@ namespace ck
             case ECk_PathNetwork_RouteStatus::Failed:
             {
                 // Failed while WALKING = a rebuild replan came back unroutable; keep walking the
-                // already-installed world-space waypoints rather than hard-stopping mid-street.
+                // already-installed waypoints rather than hard-stopping mid-street.
                 if (NOT IsPathPending)
                 { break; }
 
@@ -124,7 +114,6 @@ namespace ck
             case ECk_PathNetwork_RouteStatus::None:
             case ECk_PathNetwork_RouteStatus::Pending:
             default:
-                // Route still being planned — no-op until the follower processor completes it.
                 break;
         }
     }

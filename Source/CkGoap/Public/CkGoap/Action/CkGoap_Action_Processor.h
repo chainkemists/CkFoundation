@@ -13,14 +13,11 @@
 
 namespace ck
 {
-	// Forward decl — Planner-tier Setup processor lives in
-	// CkGoap_Planner_Processor.h. We need to refer to it in RunAfter lists
-	// here so the Planner-on-Planner processors order after it.
+	// Defined in CkGoap_Planner_Processor.h; needed by the RunAfter lists below.
 	class FProcessor_Goap_Planner_Setup;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Extract action CDOs into FActionDef list; resolve raw tags via the
-//         tier's resolved WS-source registry; seed root tier's initial goal.
+// Extract each Action's CDO into its own FActionDef
 
 class CKGOAP_API FProcessor_Goap_Action_Setup : public ck_exp::TProcessor<
 	FProcessor_Goap_Action_Setup,
@@ -38,11 +35,6 @@ public:
 	using TProcessor::TProcessor;
 
 public:
-	// per-Action CDO extraction stays Action-side. Each Action
-	// entity carries its own _Definition (CDO-extracted preconditions/effects/
-	// cost), used by the Planner-on-Planner HandleRequests as a candidate
-	// operator. Planner-side goal resolution (_GoalAuthored → _Goal) moved to
-	// FProcessor_Goap_Planner_Setup (matches Planner directly).
 	static auto
 	ForEachEntity(
 		TimeType InDeltaT,
@@ -54,10 +46,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 // Throttle + policy + initial-plan dispatch
-//
-// matches Planner. Reads PlannerParams for replan policy/
-// interval; Planner-side ReplanThrottle. Disable gate reads Planner's own
-// FFragment_Goap_Planner_Current directly (no helper walk).
 
 class CKGOAP_API FProcessor_Goap_Planner_AutoReplan : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_AutoReplan,
@@ -88,14 +76,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 // Drain Planner-side request queue
-//
-// matches Planner. Drains the Planner-side request queue,
-// reads Planner-side PlanState/Goal/WorldStateSource/SearchState/Result/
-// PlanContext. Candidate operators come from the implicit-root Action's
-// Tree.Get_ChildActions() (top-level Planner) or the Planner's own
-// Tree.Get_ChildActions() (promoted mid-tier Planner). Each child Action
-// still carries its own FFragment_Goap_Action_Definition (CDO-extracted by
-// the per-Action Setup processor below).
 
 class CKGOAP_API FProcessor_Goap_Planner_HandleRequests : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_HandleRequests,
@@ -143,8 +123,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 // Time-sliced A* search (parallel; pure data)
-//
-// instantiated on Planner entity.
 
 struct FProcessor_Goap_Planner_Execute
 	: TProcessor_AStar_Execute<FProcessor_Goap_Planner_Execute,
@@ -157,9 +135,6 @@ struct FProcessor_Goap_Planner_Execute
 
 // --------------------------------------------------------------------------------------------------------------------
 // Convert A* path to action sequence, fire signals
-//
-// matches Planner. Writes to Planner's PlanState. Broadcasts
-// per-Planner signals directly from the Planner handle (no resolver walk).
 
 class CKGOAP_API FProcessor_Goap_Planner_HandleResult : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_HandleResult,

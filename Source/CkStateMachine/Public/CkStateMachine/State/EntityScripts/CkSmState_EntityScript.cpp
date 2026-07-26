@@ -41,11 +41,9 @@ auto
 
     auto StateHandle = ck::StaticCast<FCk_Handle_SmState_UnderConstruction>(InHandle);
 
-    // Transient scratch used by ComposeFromState to record composed-from classes during
-    // DefineState. Removed below once the fingerprint is built. Pre-seeded here so that
-    // nested ComposeFromState calls (which call back into DefineState on a different CDO
-    // but with this same handle) append into the host state's list rather than try to
-    // create the fragment from a possibly-iterating context.
+    // Transient scratch for ComposeFromState, removed once the fingerprint is built. Pre-seeded here
+    // so nested composes (same handle, different CDO) append into the host state's list instead of
+    // creating the fragment from a possibly-iterating context.
     StateHandle.AddOrGet<ck::FFragment_SmState_ComposedFromInProgress>();
 
     DefineState(StateHandle);
@@ -66,28 +64,23 @@ auto
 {
     Super::BeginPlay();
 
-    // Graph-walk temp entities exist only to let DefineState populate the SM's static
-    // structure for the debugger. They must not activate — EnterState stamps
-    // FTag_SmState_Active which would admit them to the runtime evaluation loop and
-    // cause their tasks' DoEnterTask to run real gameplay side effects on an SM that
-    // is not supposed to be advancing.
+    // Graph-walk temp entities exist only to populate the debugger's static structure. Activating
+    // them would admit them to the runtime evaluation loop and run their tasks' real side effects
+    // on an SM that is not supposed to be advancing.
     if (_AssociatedEntity.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
     { return; }
 
-    // Has-guard mirror of EndPlay below: a snapshot-restored SM-graph entity keeps its EntityScript
-    // but not its SmState feature fragment (the redrive rebuilds the real graph fresh), so this
-    // BeginPlay runs on a husk with nothing to enter. Proceeding would CastChecked-ensure and then
-    // resolve NetContext through the stale _OwnerStateMachine captured from the saved world.
+    // A snapshot-restored SM-graph entity keeps its EntityScript but not its SmState fragment (the
+    // redrive rebuilds the graph fresh) — a husk with nothing to enter, where proceeding would
+    // CastChecked-ensure and resolve NetContext through a stale _OwnerStateMachine.
     if (NOT UCk_Utils_SmState_UE::Has(_AssociatedEntity))
     { return; }
 
     const auto Self = UCk_Utils_SmState_UE::CastChecked(_AssociatedEntity);
 
-    // A fingerprint-mismatch verify (in Construct, before this BeginPlay) may have already
-    // faulted the SM and requested this state's exit. Its EnterState side effects must not fire —
-    // running a structurally-divergent state's gameplay logic is exactly what the determinism
-    // fence exists to prevent. Without this gate, DoEnterState ran once before the
-    // fault-requested exit landed.
+    // A fingerprint-mismatch verify in Construct may have already faulted the SM and requested this
+    // state's exit; running a structurally-divergent state's EnterState is exactly what the
+    // determinism fence exists to prevent.
     if (UCk_Utils_SmState_UE::Get_IsPendingExit(Self)
         || (ck::IsValid(_OwnerStateMachine) && _OwnerStateMachine.Has<ck::FTag_Sm_DeterminismFault>()))
     { return; }
@@ -101,14 +94,9 @@ auto
     EndPlay()
     -> void
 {
-    // Fallback for cascade-destroyed states whose FProcessor_SmState_Exit never runs
-    // (e.g. sub-SM states destroyed via parent task cascade). Dedup'd via FTag_SmState_Active
-    // inside ExitState — if the processor already handled this state, the tag is gone and
-    // ExitState is a no-op.
-    //
-    // Has-guard (not CastChecked) because a snapshot-restored SM-graph entity keeps its EntityScript
-    // but not its SmState feature fragment (the redrive rebuilds the real graph fresh), so CastChecked
-    // would ensure. No fragment -> nothing to exit; skip.
+    // Fallback for cascade-destroyed states whose FProcessor_SmState_Exit never runs; dedup'd via
+    // FTag_SmState_Active inside ExitState. Has-guard rather than CastChecked because a
+    // snapshot-restored graph entity keeps its EntityScript but not its SmState fragment.
     if (UCk_Utils_SmState_UE::Has(_AssociatedEntity))
     {
         auto Self = UCk_Utils_SmState_UE::CastChecked(_AssociatedEntity);
@@ -125,14 +113,6 @@ auto
     Get_EffectiveReplication() const
     -> ECk_Replication
 {
-    // State/condition/task entities are NEVER independent net objects, regardless of whether the
-    // owning SM replicates. The SM's transition-history container fragment is the sole server→client
-    // transport; non-authority machines rebuild the entire state sub-graph locally via the replay
-    // path (FProcessor_Sm_ApplyReplicatedHistory → DoEnterState → Create). Letting these children
-    // inherit the CkEntityScript default of Replicates made the server push each state out as an Iris
-    // net object too, so non-owning clients reconstructed a second, malformed copy via SpawnProcessor:
-    // no FFragment_RecordOfSmTransitions (Create never ran) and an owner ref that resolved to a
-    // tombstone — the orphaned initial-state husks. Forcing DoesNotReplicate removes that second path.
     return ECk_Replication::DoesNotReplicate;
 }
 
@@ -243,9 +223,7 @@ auto
     VisitedClasses.Add(InOtherStateClass.Get());
     ON_SCOPE_EXIT { VisitedClasses.Remove(InOtherStateClass.Get()); };
 
-    // Record this compose call against the host state's in-progress fingerprint inputs.
-    // The scratch fragment was added by Construct just before invoking DefineState; nested
-    // composes append in call order.
+    // Record this compose call against the host state's fingerprint inputs, in call order.
     if (InStateHandle.Has<ck::FFragment_SmState_ComposedFromInProgress>())
     {
         auto& InProgress = InStateHandle.Get<ck::FFragment_SmState_ComposedFromInProgress>();
@@ -299,8 +277,7 @@ auto
     auto& FingerprintFrag = InStateHandle.AddOrGet<ck::FFragment_SmState_Fingerprint>();
     FingerprintFrag._Hash = ck::statemachine::ComputeFingerprint(Inputs);
 
-    // Populate the per-class cache so future replications can publish the fingerprint
-    // synchronously without waiting for an instance to exist (see Get_CachedFingerprint).
+    // Warm the per-class cache so publication needn't wait for an instance (see Get_CachedFingerprint).
     Set_CachedFingerprint(GetClass(), FingerprintFrag._Hash);
 }
 
@@ -321,8 +298,7 @@ auto
     const auto Expected = InStateHandle.Get<ck::FFragment_SmState_ExpectedFingerprint>().Get_Hash();
     const auto Local    = InStateHandle.Get<ck::FFragment_SmState_Fingerprint>().Get_Hash();
 
-    // Carrier consumed regardless of match — Construct only runs once per state instance, so
-    // there's no second chance to verify and no reason to leave the fragment behind.
+    // Consume the carrier regardless of match — Construct runs once, so there is no second chance.
     InStateHandle.Try_Remove<ck::FFragment_SmState_ExpectedFingerprint>();
 
     if (Expected == Local)
@@ -353,18 +329,10 @@ auto
         FCk_Handle_SmState_UnderConstruction& InStateHandle)
     -> void
 {
-    // The publication path reads the per-class fingerprint cache (Get_CachedFingerprint), which
-    // is warm for any class that has constructed at least once in this process — so events
-    // normally ship with the real hash synchronously. The residual gap is the FIRST-EVER
-    // instantiation of a class: at publication time the cache misses and the event ships with
-    // _NewStateFingerprint = 0 (clients treat 0 as "skip verify" for that one transition).
-    // DoComputeFingerprint just ran above, so this backfill patches the already-published payload
-    // after the fact — useful for inspection / the debugger / late joiners who receive the
-    // patched ring. Clients that already applied the zero-fingerprint event do NOT re-verify
-    // (Seq dedup); closing that fully would need a CDO graph-walk cache pre-warm at SM setup.
-    //
-    // Authority-only: clients receive the payload, they don't write it. Local-only SMs (no
-    // Replicates intent) skip the whole branch via the gate below.
+    // Publication reads the per-class cache, warm for any class constructed at least once in this
+    // process. The residual gap is a class's FIRST-EVER instantiation, whose event ships with
+    // _NewStateFingerprint = 0 (clients skip verify) — this backfill patches that payload after the
+    // fact for the debugger and late joiners. Authority-only; local-only SMs skip via the gates below.
 
     if (NOT ck::IsValid(_OwnerStateMachine))
     { return; }
@@ -394,10 +362,8 @@ auto
     const auto SelfClass        = GetClass();
 
 #if WITH_DEV_AUTOMATION_TESTS
-    // Test-only fake-fingerprint injection (spec §13 test 9 shape). The InitialState scope
-    // replaces the LocalFingerprint reaching the rep payload. NOTE: the receive-side initial-state
-    // check (spec §9.5) is not implemented, so today this only affects what test support reads
-    // back from the payload (Test_Get_LastPublishedFingerprint).
+    // Test-only fake-fingerprint injection. The receive-side initial-state check is not implemented,
+    // so this only affects what test support reads back from the payload.
     if (_OwnerStateMachine.Has<ck::FFragment_Sm_TestFakeFingerprintInjection>())
     {
         auto& Injection = _OwnerStateMachine.Get<ck::FFragment_Sm_TestFakeFingerprintInjection>();
@@ -421,17 +387,13 @@ auto
                     auto& History = RepData.Get_History();
                     if (History.IsEmpty())
                     {
-                        // Initial state — no transition events yet. Stamp the seed slot.
                         RepData.Set_InitialStateFingerprint(LocalFingerprint);
                         return;
                     }
 
-                    // Patch the most recent event only if its NewStateClass actually matches our
-                    // class. Defensive guard against the race where a follow-up transition
-                    // commits and publishes its own event before this Construct callback fires —
-                    // in that case the back-patch would write to the wrong event. The cost of
-                    // skipping under that race is a single zero fingerprint left in the ring,
-                    // which is benign for the (currently informational) verify path.
+                    // Only patch when the latest event's NewStateClass is ours: a follow-up transition
+                    // can commit and publish before this Construct callback fires, and the back-patch
+                    // would then write to the wrong event.
                     auto& Latest = History.Last();
                     if (Latest.Get_NewStateClass() == SelfClass)
                     {
@@ -446,16 +408,11 @@ auto
                 _OwnerStateMachine,
                 [&](FCk_RepData_StateMachine_NoHistory& RepData) -> void
                 {
-                    // Only patch when the rep payload's CurrentStateClass matches our class.
-                    // If the SM has already transitioned past this state (faster authority),
-                    // the payload reflects a different state and we shouldn't overwrite.
+                    // Only patch when the payload's CurrentStateClass is ours — if authority already
+                    // transitioned past this state, the payload reflects a different one.
                     if (RepData.Get_CurrentStateClass() == SelfClass)
                     {
                         RepData.Set_CurrentStateFingerprint(LocalFingerprint);
-
-                        // Initial-state seed too — covers the WithoutHistory analogue of the
-                        // WithHistory.IsEmpty() branch above. If the initial-state Setup never
-                        // populated the field, Seq is still 0 and we're patching alongside.
                     }
                 });
             break;
@@ -562,12 +519,9 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Static cache shared across the module. Keyed by CLASS PATH (not the short FName): two state
-// classes with the same short name in different packages must not share a slot — a collision
-// publishes the wrong fingerprint for one of them, and the verify side then false-faults a
-// healthy SM with FTag_Sm_DeterminismFault. Path keys survive hot reload + PIE-restart cycles
-// the same way name keys did (the path is stable; a recreated UClass re-maps on next compute).
-// Single-threaded: all CkFoundation processor work runs on the main thread.
+// Keyed by CLASS PATH, not the short FName: two state classes with the same short name in different
+// packages sharing a slot would publish the wrong fingerprint and false-fault a healthy SM.
+// Single-threaded — all CkFoundation processor work runs on the main thread.
 static TMap<FTopLevelAssetPath, int32> GSmStateFingerprintCache;
 
 auto

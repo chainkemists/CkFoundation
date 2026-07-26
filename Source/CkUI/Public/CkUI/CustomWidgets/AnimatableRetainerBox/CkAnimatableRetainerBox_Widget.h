@@ -21,12 +21,8 @@ private:
     UPROPERTY(EditAnywhere, Category = "Appearance", meta = (AllowPrivateAccess = true))
     FSlateBrush Brush;
 
-    // Runtime-available designer-preview toggle. NOTE: distinct name from the parent's
-    // URetainerBox::bShowEffectsInDesigner ON PURPOSE — the parent's is editor-only
-    // (WITH_EDITORONLY_DATA, unavailable in game builds), so we need our own. The previous
-    // name "ShowEffectsInDesigner" collided with the parent's under AngelScript binding (the
-    // binder strips the parent's `b`, so both produced Get/SetShowEffectsInDesigner ->
-    // asALREADY_REGISTERED, failing the cook). A distinct name keeps both bindings unique.
+    // Runtime-available designer-preview toggle; the parent's URetainerBox::bShowEffectsInDesigner is
+    // editor-only. The name must NOT match the parent's — see CkUI/CLAUDE.md (AngelScript binder collision).
     UPROPERTY(EditAnywhere, Category = "Effect", meta = (AllowPrivateAccess = true))
     bool bShowEffectsPreview = true;
 

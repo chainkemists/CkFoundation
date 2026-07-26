@@ -50,6 +50,64 @@ Create an IsmProxy entity per mesh type, not per instance. Each IsmProxy entity 
 
 ---
 
+## Implementation notes
+
+Rationale that used to live as comments in the source. Read this before "simplifying" any of it.
+
+**Renderer actors are transient, and naming them must not dirty the level.**
+`ACk_IsmRenderer_Actor_UE` is a runtime cache derived from `UCk_IsmRenderer_Data` and must never be
+saved into the level package — without `RF_Transient` every editor open re-spawns one and dirties the
+level, then a save bakes the duplicate in. `UCk_IsmRenderer_Subsystem_UE::DoSweepLeakedRenderers`
+exists to clean up actors that a pre-`RF_Transient` version already baked in; it runs once on
+subsystem init in both editor and runtime worlds, and dirties editor levels so the user can save a
+clean copy. The cache is empty at that point, so later `GetOrCreate` calls spawn fresh replacements.
+Renderers are identified via `SpawnInfo.Name` (`.Set_NonUniqueName`), never `.Set_Label()`:
+`SetActorLabel` calls `AActor::Modify()` → `MarkPackageDirty()`, and in editor worlds the only package
+is the persistent level, so every spawn would dirty it. `RF_Transient` is applied in the post-spawn
+callback, too late to undo a dirty flag that already fired. `SpawnInfo.Name` is a construction-time
+identifier, does not call `Modify()`, and surfaces as the actor's `FName`.
+
+**One renderer per (data asset, selection owner) in editor worlds.** A viewport click on a preview
+instance must select the placed actor whose preview it is; per-instance→actor mapping is impossible at
+the actor level, so the renderer split IS the mapping. A shared renderer would make every preview mesh
+select the same meaningless transient actor. Editor previews are small, so the lost batching is
+irrelevant; runtime worlds always use the shared renderer. The per-owner caches key on
+`TWeakObjectPtr`, which compares by object index + serial — lookups keep resolving the SAME component
+after the owner actor is destroyed, so teardown removes instances from the component that actually
+holds them instead of silently falling back to the shared one.
+
+**Local rotation offset is post-multiplied, never pre-multiplied.**
+`InTransform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion()` composes the offset in
+the entity's LOCAL frame, like an Unreal relative transform (`childWorldRot = parentRot * relativeRot`).
+Pre-multiplying conjugates any pitch/roll the entity picks up by the offset — a 180-degree yaw offset
+would mirror the entity's rock relative to true child entities (e.g. SceneNode-parented doors). Every
+site that builds an instance transform (`AddInstance`, `TransformInstance`, `EnsureStaticNotMoved_DEBUG`,
+and the outline processors' `Get_TransformWithLocalOffset`) must compose identically or the shadow
+instance drifts off the main one.
+
+**`FProcessor_IsmProxy_Outline_TransformSync` is deliberately not keyed on `FTag_Transform_Updated`.**
+That dirty marker is shared by writers in other modules (`CkRaySense`) that we cannot declare ordering
+against without a dependency cycle — the scheduler's conflict advisory would fire on every world. It
+runs per-frame over outlined MOVABLE proxies only (a tiny set), and `UpdateInstanceTransformById` on an
+unchanged transform is cheap.
+
+**`UCk_IsmRenderer_Data::_MeshSoft` vs `_Mesh`.** Authoring prefers the soft ref (`assets::Foo()`) over
+an eager `assets::load::Foo()` into `_Mesh`: the blocking load behind `assets::load` ensures during cook
+(AS-load runs before the engine is load-safe), nulling `_Mesh`. `Get_Mesh()` is hand-written rather than
+`CK_PROPERTY_GET` so it resolves `_MeshSoft` lazily at first consumption (post-init) and caches the
+result; every consumer routes through it, making resolution order-independent. If both are set, `_Mesh`
+wins.
+
+**Known limitations.**
+- Per-instance custom data written after setup is only pushed to the component for `Movable` proxies
+  (both `SetCustomInstanceData` request handlers gate on mobility). A `Static` proxy's post-setup write
+  updates the CPU-side cache but never reaches the GPU.
+- Pushing a previous-instance transform (`SetPreviousTransformById`) from `FProcessor_IsmProxy_TransformInstance`
+  was tried for TSR dithering and appeared to do nothing while costing CPU; the call was removed. It also
+  requires `SetHasPerInstancePrevTransform(true)`, which is not exposed as a renderer param.
+
+---
+
 ## See also
 
 - `CkGraphics/Claude.md` — lower-level graphics utilities.

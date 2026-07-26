@@ -20,9 +20,6 @@ extern ENGINE_API uint64 GFrameCounter;
 
 namespace ck_watermark
 {
-    // Resolve the initial display policy from the -CkWatermark command-line argument.
-    // FParse::Value works at any point during startup — no dependency on the
-    // engine's CVar command-line processing pass (which may be skipped in Shipping).
     // Usage: -CkWatermark (defaults to Regular) or -CkWatermark=Regular|Detailed|Hidden
     static auto ResolveCommandLineDisplayPolicy(int32 InDefault) -> int32
     {
@@ -153,8 +150,7 @@ auto
     if (ck::Is_NOT_Valid(ClientGameViewport))
     { return; }
 
-    // Remove any previously-added Slate widget so we never end up with duplicates
-    // (PlayerControllerChanged can fire more than once, e.g. listen-server travel).
+    // PlayerControllerChanged can fire more than once (e.g. listen-server travel) — drop the old widget.
     if (const auto CachedSlateWidget = _WatermarkWidget->GetCachedWidget(); CachedSlateWidget.IsValid())
     {
         ClientGameViewport->RemoveViewportWidgetContent(CachedSlateWidget.ToSharedRef());
@@ -195,11 +191,7 @@ auto
     if (ck::IsValid(_WatermarkWidget))
     { return; }
 
-    // Apply command-line override once, before the first widget is created.
-    // In shipping builds the base default comes from the project setting
-    // (_Watermark_DefaultDisplayPolicy_Shipping) instead of the hardcoded Hidden,
-    // so teams can enable the watermark from INI without a command-line arg.
-    // The -CkWatermark arg still takes priority if present.
+    // Precedence: -CkWatermark arg > project setting (Shipping) / CVar default. Resolved once.
     static auto bCommandLineResolved = false;
     if (!bCommandLineResolved)
     {
@@ -595,8 +587,6 @@ void
         FName InActivityId,
         const FText& InDisplayLabel)
 {
-    // If this Id is already active, skip — the existing entry will naturally
-    // show the held underline accent (GFrameCounter > ActivatedFrame).
     for (const FCkWatermarkActivityState& Existing : _ActivityStates)
     {
         if (Existing.Id == InActivityId && Existing.IsActive)
@@ -609,8 +599,6 @@ void
         _ActivitySequenceCounters.Reset();
     }
 
-    // Create a new entry so each press/release cycle appears as a
-    // separate chip in the history (e.g. LMB, LMB, TAB).
     int32& SeqCounter = _ActivitySequenceCounters.FindOrAdd(InActivityId);
     SeqCounter += 1;
 
@@ -632,7 +620,6 @@ void
     Request_ActivityInactive(
         FName InActivityId)
 {
-    // Find the most recent ACTIVE entry with this Id (search from the end).
     for (int32 i = _ActivityStates.Num() - 1; i >= 0; --i)
     {
         if (_ActivityStates[i].Id == InActivityId && _ActivityStates[i].IsActive)
@@ -669,8 +656,6 @@ auto
     DoSortActivityStates()
     -> void
 {
-    // Inactive items first (oldest deactivation on the left), then active items
-    // (oldest activation on the left, newest on the right).
     _ActivityStates.Sort([](const FCkWatermarkActivityState& A, const FCkWatermarkActivityState& B) -> bool
     {
         if (A.IsActive != B.IsActive)
@@ -695,9 +680,7 @@ auto
     if (_ActivityStates.Num() <= MaxHistory)
     { return; }
 
-    // Remove oldest inactive entries first. They will be at the front after sorting,
-    // but sorting hasn't happened yet so we need to identify them manually.
-    // Remove inactive entries with the smallest DeactivatedFrame until we're within budget.
+    // Runs BEFORE DoSortActivityStates, so the oldest inactive entry has to be found by scan.
     while (_ActivityStates.Num() > MaxHistory)
     {
         int32 OldestInactiveIdx = INDEX_NONE;
@@ -718,7 +701,6 @@ auto
         }
         else
         {
-            // All entries are active — nothing to trim.
             break;
         }
     }

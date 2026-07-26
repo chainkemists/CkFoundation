@@ -20,8 +20,7 @@ UCk_OverlapBody_ActorComponent_Box_UE::
     this->bAlwaysCreatePhysicsState = false;
     this->bWantsInitializeComponent = true;
 
-    // Our Sensors do NOT yet have CCD support
-    // DoSet_CanEverTick_ForCCD();
+    // Sensors have no CCD support yet, so DoSet_CanEverTick_ForCCD stays unwired.
 
     UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(this, ECk_EnableDisable::Disable, this);
 }
@@ -43,8 +42,7 @@ UCk_OverlapBody_ActorComponent_Sphere_UE::
     this->bAlwaysCreatePhysicsState = false;
     this->bWantsInitializeComponent = true;
 
-    // Our Sensors do NOT yet have CCD support
-    // DoSet_CanEverTick_ForCCD();
+    // Sensors have no CCD support yet, so DoSet_CanEverTick_ForCCD stays unwired.
 
     UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(this, ECk_EnableDisable::Disable, this);
 }
@@ -66,8 +64,7 @@ UCk_OverlapBody_ActorComponent_Capsule_UE::
     this->bAlwaysCreatePhysicsState = false;
     this->bWantsInitializeComponent = true;
 
-    // Our Sensors do NOT yet have CCD support
-    // DoSet_CanEverTick_ForCCD();
+    // Sensors have no CCD support yet, so DoSet_CanEverTick_ForCCD stays unwired.
 
     UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(this, ECk_EnableDisable::Disable, this);
 }

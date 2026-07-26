@@ -15,8 +15,6 @@
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Processor registrations
-// --------------------------------------------------------------------------------------------------------------------
 
 #define CK_EQS_FACTORY(ProcessorType) \
     CK_REGISTER_PROCESSOR_WITH_FACTORY(ProcessorType, \
@@ -39,13 +37,6 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_Cleanup);
 namespace ck
 {
     // ----------------------------------------------------------------------------------------------------------------
-    // Local helper — fail a query, broadcast OnComplete, transition tags.
-    //
-    // Friend access on FFragment_EqsQuery_State / FCk_Eqs_QueryResults is granted to
-    // FProcessor_Eqs_Generate / Test / Finalize so the file-scope helper can manipulate
-    // them via members of those processors. Here we don't need to mutate State or Results
-    // beyond what's exposed publicly; we add tags + broadcast an empty result struct.
-    // ----------------------------------------------------------------------------------------------------------------
 
     namespace
     {
@@ -58,10 +49,8 @@ namespace ck
             InQueryHandle.AddOrGet<FTag_EqsQuery_Failed>();
             InQueryHandle.AddOrGet<FTag_EqsQuery_Complete>();
 
-            // Replace any prior results with an empty results fragment.
-            // (Use Try_Remove+Add — there's a latent bug in FCk_Registry::AddOrReplace at
-            // CkRegistry.h:584 that forgets to forward InEntity; the Try_Remove+Add pattern
-            // sidesteps it cleanly.)
+            // Try_Remove+Add rather than AddOrReplace: FCk_Registry::AddOrReplace (CkRegistry.h:584)
+            // forgets to forward InEntity.
             const auto EmptyResults = FCk_Eqs_QueryResults{};
             InQueryHandle.Try_Remove<FFragment_EqsQuery_Results>();
             InQueryHandle.Add<FFragment_EqsQuery_Results>(EmptyResults);
@@ -70,8 +59,6 @@ namespace ck
         }
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // FProcessor_Eqs_HandleRequests
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
@@ -100,8 +87,7 @@ namespace ck
                     InHandle);
             }
 
-            // Spawn the query entity as a child of the querier (context-owner cascade
-            // gives us automatic lifetime tie-in: if querier dies, query dies).
+            // Child of the querier, so the context-owner cascade kills the query with it.
             auto QueryEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
             QueryEntity.Add<FFragment_EqsQuery_Params>(QueryParams);
             QueryEntity.Add<FFragment_EqsQuery_State>();
@@ -115,11 +101,8 @@ namespace ck
                 QueryEntity,
                 FName{*ck::Format_UE(TEXT("EqsQuery_{}"), InHandle)});
 
-            // Cast to typed handle for the signal payload + delegate bind.
             auto TypedQueryHandle = ck::StaticCast<FCk_Handle_EqsQuery>(QueryEntity);
 
-            // Optional per-request OnComplete delegate. CK_SIGNAL_BIND_REQUEST_FULFILLED
-            // ignores in-flight payloads and auto-unbinds after first fire.
             const auto& OnComplete = Request.Get_OnComplete();
             if (OnComplete.IsBound())
             {
@@ -134,8 +117,6 @@ namespace ck
         InHandle.Try_Remove<FFragment_EqsQuery_Requests>();
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // FProcessor_Eqs_Generate
     // ----------------------------------------------------------------------------------------------------------------
 
     FProcessor_Eqs_Generate::
@@ -156,7 +137,6 @@ namespace ck
             FFragment_EqsQuery_State& InState) const
         -> void
     {
-        // Validate querier validity + has a transform.
         const auto& Querier = InParams.Get_Querier();
 
         if (ck::Is_NOT_Valid(Querier))
@@ -183,13 +163,10 @@ namespace ck
             return;
         }
 
-        // Generated successfully → transition to InProgress.
         InHandle.Try_Remove<FTag_EqsQuery_Pending>();
         InHandle.AddOrGet<FTag_EqsQuery_InProgress>();
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // FProcessor_Eqs_Test
     // ----------------------------------------------------------------------------------------------------------------
 
     FProcessor_Eqs_Test::
@@ -207,15 +184,12 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        // Per-tick budget reset. Mirrors CkProbe_Processor.cpp:818-827 shape.
         _RemainingBudgetThisFrame = UCk_Utils_Eqs_Settings_UE::Get_MaxCandidatesPerFrame();
 
-        // 0 == disabled-with-warn, NOT unbounded. Default to a non-zero
-        // floor so the query pipeline doesn't deadlock when configured at 0.
+        // A configured 0 means disabled-with-warn, NOT unbounded — floor it so the pipeline
+        // degrades to DoRunTests' one-test-per-tick slow path instead of deadlocking.
         if (_RemainingBudgetThisFrame <= 0)
         {
-            // Static one-time warn would be ideal; for v1 we let the anti-deadlock clause
-            // in DoRunTests run one test per tick as the floor (effectively a slow path).
             _RemainingBudgetThisFrame = 1;
         }
 
@@ -232,7 +206,6 @@ namespace ck
             FFragment_EqsQuery_DebugInfo& InDebug)
         -> void
     {
-        // Caller-issued cancel.
         if (InHandle.Has<FTag_EqsQuery_Cancelled>())
         {
             ck::eqs::Verbose(TEXT("EqsQuery [{}] cancelled by caller; failing query."), InHandle);
@@ -240,8 +213,7 @@ namespace ck
             return;
         }
 
-        // Re-validate querier — multi-frame queries must tolerate the querier dying
-        // between Generate and Test (or between Test resumes).
+        // Re-validated every tick: a multi-frame query must tolerate the querier dying mid-run.
         const auto& Querier = InParams.Get_Querier();
         if (ck::Is_NOT_Valid(Querier))
         {
@@ -250,13 +222,9 @@ namespace ck
             return;
         }
 
-        // Run tests with the budget cursor. May yield at a test boundary.
         FCk_Eqs_Algorithm::DoRunTests(InHandle, InParams, InState, InDebug, _PhysicsSystem, _RemainingBudgetThisFrame);
-        // No tag changes here — Finalize handles the transition once the cursor resets to 0.
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // FProcessor_Eqs_Finalize
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
@@ -269,8 +237,8 @@ namespace ck
             FFragment_EqsQuery_DebugInfo& InDebug) const
         -> void
     {
-        // If Test yielded mid-pipeline, _NextTestIndex is non-zero; nothing to finalise yet.
-        if (InState.Get_NextTestIndex() != 0)
+        const auto TestsStillRunning = InState.Get_NextTestIndex() != 0;
+        if (TestsStillRunning)
         { return; }
 
         auto Results = FCk_Eqs_Algorithm::DoFinalize(InHandle, InParams, InState, InDebug);
@@ -283,8 +251,6 @@ namespace ck
         UUtils_Signal_OnEqsQueryComplete::Broadcast(InHandle, MakePayload(InHandle, Results));
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // FProcessor_Eqs_Cleanup
     // ----------------------------------------------------------------------------------------------------------------
 
     auto

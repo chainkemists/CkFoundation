@@ -24,7 +24,10 @@ commandlet command line. Components:
   submitter's cwd.
 - `ExportMeta/` — deterministic `_meta` (source .uasset MD5 + per-exporter version constant)
   stamped in every sibling `.json`; powers `-SkipFresh` (hash AND version must match). Bump the
-  version constant whenever an exporter's output shape changes. NO timestamps in any export
+  version constant whenever an exporter's output shape changes (`version::Blueprint = 2` — bumped
+  for the WBP paste artifacts: `hierarchy.copy.txt` + per-animation t3d dumps). Only the versioned
+  exporters participate in the `-SkipFresh` gate at all — Niagara and Cascade stamp no versioned
+  `_meta` and therefore always re-export. NO timestamps in any export
   output (write-if-changed sweeps + clean diffs depend on it). The json is the ONLY sibling
   carrying `_meta` — `.txt`/`.csv`/WBP paste-artifact siblings carry none of their own, but all
   siblings of an asset are written in the SAME export call, so the json's `_meta` verdict covers
@@ -41,18 +44,29 @@ commandlet command line. Components:
   one poll (mid-write settle guard).
 - `Bridge/` — `UCkAssetExporter_BridgeSubsystem`: the OPEN editor claims the same protocol
   (zero boots). Never activates under commandlets; defers to a live editor-named owner pid;
-  `PreserveExisting` startup so a re-claim can't eat the triggering request.
+  `PreserveExisting` startup so a re-claim can't eat the triggering request. A `quit` op (e.g.
+  `-StopServer`) releases the claim WITHOUT exiting the editor, and the bridge re-claims only once
+  new requests arrive — clean handoff, no re-grab in the idle gap. Unlike the `-ExportServer` loop
+  it has NO idle / wall-clock watchdogs: the editor's lifetime is the user's business.
 - `AutoSidecar/` — on-save sidecar refresh for logic-bearing classes (toggle
   `ck.AssetExporter.AutoSidecarOnSave`); inert for commandlets/procedural saves/non-canonical
-  save targets (autosaves must not stamp sidecars with unsaved states).
+  save targets (autosaves must not stamp sidecars with unsaved states). This is what keeps
+  committed sidecars truthful MECHANICALLY rather than by convention: every editor save of a
+  logic-bearing asset re-exports its sibling `.json`/`.txt` in place, and because output is
+  deterministic + write-if-changed, saving an unchanged asset produces zero diff noise.
 - `DataTableExporter/`, `GraphDump/` — sibling `.csv` + rows-json; full dependency graph with
-  hard/soft deps and cascade/redirector hazard flags.
+  hard/soft deps and cascade/redirector hazard flags. `GraphDump/` enumerates with NO class filter
+  (migration-closure planning must see art and redirectors too) and records dependencies pointing
+  OUTSIDE the root — those are the closure frontier. Output is deterministic: no timestamps, assets
+  sorted by object path, dep arrays sorted lexically.
 - `BlueprintExporter/CkWidgetPasteArtifacts` — WBP exports also emit `<Base>.hierarchy.copy.txt`
   (byte-identical to the UMG Designer's Ctrl+C clipboard text — paste-ready into another WBP;
   format stable 5.5↔5.7) and per-animation `.t3d.txt` reference dumps (NOT pasteable — the
   Designer has no paste-animation path). Neither carries the freshness banner by design — byte
   identity to the clipboard format forbids any prepended text; the sibling json's `_meta` is
   their freshness oracle instead (same all-siblings-one-export-call rule as `ExportMeta/` above).
+  Stale `<Base>.animation.*.t3d.txt` files from renamed or removed animations are deleted before the
+  current set is written, so the sibling set always mirrors the asset.
   Committed under `Content/BusterBlock` in the legacy superproject (`BusterBlock_5-5`) as the WBP
   porting source of truth; stay machine-local/gitignored in current-repo consumers.
 
@@ -77,6 +91,28 @@ commandlet command line. Components:
 - Don't force-kill a `busy` server (`server.json`) — its quit is queued; killing destroys
   another session's in-flight work.
 - Don't name commandlet flags after reserved engine switches (`-Server`, `-Client`, ...).
+
+---
+
+## Implementation notes
+
+- **Niagara "recipe numbers" live in the Rapid Iteration Parameter store**, not the graph: sizes,
+  colors, counts, lifetimes sit in each stage script's RI store keyed
+  `Constants.[Emitter].[Module].[Input]`. The module graph pins expose only the static-switch
+  selectors — reading pins alone loses every authored constant.
+- **The exported material recipe** is base properties (domain, blend mode, shading model, two-sided,
+  connected outputs) + effective parameter values resolved through the instance chain + an
+  expression histogram of the base graph. The histogram IS the "material tricks" list (DepthFade,
+  Fresnel, Panner, DynamicParameter, SubUV) a faithful recreation needs.
+- **VFX corpus layout** (`CkVfxCorpusExporter.h`): `<CorpusRoot>/index.json` manifest;
+  `systems/<Pack>/<Name>.json|txt`; `materials/<Pack>/<Name>.json`; `textures/<Pack>/<Name>.png|json`;
+  `meshes/<Pack>/<Name>.obj|json` (the VFX carrier meshes referenced by mesh renderers). Discovery is
+  by asset class via the asset registry — pack naming conventions are unreliable. Referenced
+  materials/textures/meshes are exported once, deduplicated across systems.
+- `FCk_NiagaraExporter::ExportNiagaraSystem` / `FCk_MeshExporter::ExportStaticMesh` take an optional
+  `InOutputDir` (same dual-mode shape as `FCk_MaterialExporter`): empty — the default — writes the
+  siblings next to the `.uasset`; set writes them into that directory, the mode the corpus
+  orchestrator drives.
 
 ---
 

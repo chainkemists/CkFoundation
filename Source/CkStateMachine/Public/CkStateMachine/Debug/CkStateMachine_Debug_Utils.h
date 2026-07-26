@@ -8,9 +8,8 @@
 #include "CkStateMachine_Debug_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Debug-side mirror of UCk_Utils_StateMachine_UE — exposes Request_* entry points that
-// push FCk_Request_SmDebug_* into FFragment_SmDebug_Requests. The core state machine
-// code calls these instead of reaching into the debug processor directly.
+// Debug-side mirror of UCk_Utils_StateMachine_UE: the core state machine calls these Request_*
+// entry points instead of reaching into the debug processor directly.
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
@@ -19,17 +18,15 @@ class CKSTATEMACHINE_API UCk_Utils_StateMachineDebug_UE : public UBlueprintFunct
     GENERATED_BODY()
 
 public:
-    // Queue a "record this transition in history" request on the SM entity. Called the
-    // moment a transition fires — supports same-frame pumps (A→B→C) where each record
-    // is drained in order by the debug handle-requests processor.
+    // Called the moment a transition fires; same-frame pumps (A→B→C) each queue their own record
+    // and are drained in order by the debug handle-requests processor.
     static auto
     Request_RecordTransition(
         FCk_Handle_StateMachine& InStateMachine,
         const FCk_Request_SmDebug_RecordTransition& InRequest) -> FCk_Handle_StateMachine;
 
-    // Demand tracking for the Sm_Debug poll processor. Pull-based debugger consumers (SM
-    // Debugger window, ECS Debugger inspector) stamp each read of FFragment_Sm_Debug data
-    // here; the poll processor skips its whole view iteration when nothing consumed
+    // Demand tracking for the Sm_Debug poll processor: pull-based debugger consumers stamp each read
+    // of FFragment_Sm_Debug here, and the poll skips its whole view iteration when nothing consumed
     // recently AND the on-screen debug overlay (ck.DebugOverlay) is off. Game thread only.
     static auto
     NotifyDebugDataConsumed() -> void;

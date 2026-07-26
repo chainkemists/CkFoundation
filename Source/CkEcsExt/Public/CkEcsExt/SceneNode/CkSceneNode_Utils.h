@@ -128,12 +128,9 @@ public:
         UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
         const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest);
 
-    // Severs the scene-node's parent link, keeping the current world transform. After
-    // detach, TProcessor_SceneNode_Update no longer iterates this entity (the parent /
-    // current / layer fragments are gone), so the Transform fragment stays where it was
-    // at detach time and can be authoritatively set by downstream callers. Used by
-    // physics-driven death paths that want a previously parent-driven mesh to fall
-    // free (Rentnet Kiosk Film teardown).
+    // Severs the scene-node's parent link, keeping the current world transform. After detach,
+    // TProcessor_SceneNode_Update no longer iterates this entity, so the Transform fragment stays where it
+    // was and can be authoritatively set by downstream callers.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|SceneNode",
         DisplayName="[Ck][SceneNode] Request Detach (Keep World)")

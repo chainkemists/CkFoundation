@@ -64,20 +64,14 @@ public:
     auto
     Request_Redraw() -> void;
 
-    // False during the PIE start/stop transition window: either PIE is active (GEditor->PlayWorld
-    // valid) or the editor ECS registry has been torn down / not yet built (the transient entity
-    // resolves invalid). Mutating editor entities in this window — spawning (Set_DebugName Has-query
-    // + deferred archetype spawn) or destroying — resolves stale handles against a freed registry
-    // and floods the MessageLog. Callers must skip and re-arm. Mirrors the scheduler-tick guard in
-    // Tick().
+    // False during the PIE start/stop transition window, when mutating an editor entity would resolve
+    // stale handles against a freed registry and flood the MessageLog. Callers must skip and re-arm.
     auto
     Get_IsEditorEcsMutationSafe() const -> bool;
 
 #if WITH_EDITOR
-    // Lazily-spawned transient host actor for InSelectionOwner's editor-preview components (see
-    // ck::FFragment_EditorSelectionOwner). Loose scene components (hosted UActorComponents,
-    // world-space widgets, ...) outer here so a viewport click on them redirects selection to
-    // the owner — one host per owner, shared by every module that creates preview visuals.
+    // Lazily-spawned transient host for InSelectionOwner's editor-preview components. Loose scene
+    // components outer here so a viewport click on them redirects selection to the owner.
     auto
     Get_SelectionProxyHostActor(
         AActor* InSelectionOwner) -> AActor*;
@@ -99,9 +93,7 @@ private:
     OnEndFrame_DoRebuild() -> void;
 
 private:
-    // Owns the underlying entt registry. Slot is registered with
-    // ck::registry_table on Initialize; freed on Deinitialize. _Registry below
-    // is a non-owning view (slot+gen) bound to this owned registry.
+    // _Registry below is a non-owning (slot+gen) view bound to this owned registry.
     TUniquePtr<ck::registry_table::EnttRegistryType> _OwnedRegistry;
     FCk_Registry _Registry;
 
@@ -117,9 +109,8 @@ private:
 
 #if WITH_EDITORONLY_DATA
 private:
-    // Weak on both sides: the actors are owned by the world; entries self-heal via validity
-    // checks. TWeakObjectPtr keys compare by object index + serial, so entries stay addressable
-    // even while an owner is mid-undo or already destroyed.
+    // Weak on both sides — the world owns the actors, and weak keys stay addressable while an owner
+    // is mid-undo or already destroyed.
     TMap<TWeakObjectPtr<const AActor>, TWeakObjectPtr<ACk_EditorSelectionProxyHost_Actor_UE>> _SelectionProxyHostActors;
 #endif
 };

@@ -1,15 +1,3 @@
-// Tests for the AS stub synthesizer (Rev 10 dispatcher recovery strategy #1).
-//
-// Coverage spans:
-//   * Pure-string builders (Build_*, Derive_*, Get_*) — input/output shape.
-//   * Candidate-file discovery (Find_TargetFile_ByContent, Anchor_ByCallerAsPath).
-//   * Sibling-stub IO (Inject_EntityScriptParamsStub end-to-end via
-//     temp-file fixtures: writes the sibling, preserves canonical, accumulates
-//     distinct accessors, dedups same-accessor re-injects).
-//
-// Individual test names are self-documenting; the canonical list is whatever
-// `IMPLEMENT_SIMPLE_AUTOMATION_TEST` instances live in this file.
-
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_StubSynthesizer.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsErrorParser.h"
 
@@ -26,9 +14,6 @@ using namespace ck::angelscriptgenerator::self_heal;
 
 namespace
 {
-    // Builds a probe-shaped NoMatchingSignatures error for tests that need an
-    // FCk_AsParsedError input. Mirrors what Parser produces for the probe-1
-    // capture except where overrides are supplied.
     auto Make_ParsedError(
         const TCHAR* InTargetNamespace,
         const TCHAR* InFunctionName,
@@ -62,12 +47,8 @@ namespace
         return Hits;
     }
 
-    // Extracts every emitted overload DECLARATION line from a stub file's
-    // contents — the `    F<X>_SpawnParams Params(<params>)` lines AS would
-    // collide on during namespace-merge. Comment lines (`// Target:`,
-    // end-markers) reference `::Params(` without a leading space and are
-    // excluded by the `" Params("` needle; `return F<X>_SpawnParams();`
-    // lines don't contain the needle at all.
+    // The `" Params("` needle (leading space) is what separates a declaration line from the
+    // `::Params(` of comment markers and the `return F<X>_SpawnParams();` of bodies.
     auto Extract_OverloadDeclLines(
         const FString& InStubContents) -> TArray<FString>
     {
@@ -86,8 +67,6 @@ namespace
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Derive_SpawnParamsStructName: convention U<X> -> F<X>_SpawnParams.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -117,9 +96,6 @@ bool FCkTest_StubSynthesizer_DeriveStructName::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Build_EntityScriptParamsStub: no-arg variant — most common case (no
-// ExposeOnSpawn properties on the entity script).
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Build_NoArg,
@@ -143,9 +119,6 @@ bool FCkTest_StubSynthesizer_Build_NoArg::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Build_EntityScriptParamsStub: single typed argument with "const " stripped
-// from the emission to match the real generator's parameter shape.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Build_TypedArg_StripsConst,
@@ -161,17 +134,10 @@ bool FCkTest_StubSynthesizer_Build_TypedArg_StripsConst::RunTest(const FString&)
     TestFalse(TEXT("param-decl does NOT include 'const'"),            Stub.Contains(TEXT("const FTransform Arg0")));
     TestFalse(TEXT("does NOT emit USTRUCT (suppressed)"),             Stub.Contains(TEXT("USTRUCT()")));
     TestTrue(TEXT("references derived struct"),                       Stub.Contains(TEXT("FBb_DeliveryTruck_EntityScript_SpawnParams")));
-    // The diagnostic comment "// Target: <NS>::Params(const FTransform)" preserves
-    // the original error string verbatim for forensic context; only the parameter
-    // declaration itself is canonicalized to match the real generator's shape.
 
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Build_EntityScriptParamsStub: a 'T&' lvalue-spelled arg is emitted by-value
-// — matching the real generator's parameter shape and preventing a dueling
-// 'T'/'T&' overload pair ("Multiple matching signatures" wedge).
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -195,8 +161,6 @@ bool FCkTest_StubSynthesizer_Build_TypedArg_StripsRefMarker::RunTest(const FStri
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Build_EntityScriptParamsStub: multi-arg signature.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Build_MultiArg,
@@ -217,8 +181,6 @@ bool FCkTest_StubSynthesizer_Build_MultiArg::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Wrong-kind error rejects: the synthesizer is for NoMatchingSignatures only.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Build_WrongKind_ReturnsEmpty,
@@ -238,8 +200,6 @@ bool FCkTest_StubSynthesizer_Build_WrongKind_ReturnsEmpty::RunTest(const FString
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Has_SpawnParamsStruct: present / absent.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -271,8 +231,6 @@ bool FCkTest_StubSynthesizer_HasSpawnParamsStruct::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Find_TargetFile_ByContent: unique match, no match, ambiguous match.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_FindTargetFile_ByContent,
@@ -281,7 +239,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_StubSynthesizer_FindTargetFile_ByContent::RunTest(const FString&)
 {
-    // Set up temp candidate files.
     const auto TempRoot   = FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest");
     const auto FileA      = TempRoot / TEXT("PluginA_EntitySpawnParams.as");
     const auto FileB      = TempRoot / TEXT("PluginB_EntitySpawnParams.as");
@@ -291,7 +248,6 @@ bool FCkTest_StubSynthesizer_FindTargetFile_ByContent::RunTest(const FString&)
     FFileHelper::SaveStringToFile(FString{TEXT("// PluginB — no relevant content\n")},                  *FileB);
     FFileHelper::SaveStringToFile(FString{TEXT("// PluginC — also references UBb_Foo_EntityScript\n")}, *FileC);
 
-    // Single-candidate hit (PluginA only).
     {
         const auto Match = FCkAsStubSynthesizer::Find_TargetFile_ByContent(
             TEXT("UBb_Foo_EntityScript"),
@@ -299,7 +255,6 @@ bool FCkTest_StubSynthesizer_FindTargetFile_ByContent::RunTest(const FString&)
         TestEqual(TEXT("single match -> that path"), Match, FileA);
     }
 
-    // No-candidate hit.
     {
         const auto Match = FCkAsStubSynthesizer::Find_TargetFile_ByContent(
             TEXT("UBb_DoesNotExist_EntityScript"),
@@ -307,25 +262,17 @@ bool FCkTest_StubSynthesizer_FindTargetFile_ByContent::RunTest(const FString&)
         TestEqual(TEXT("no match -> empty"), Match, FString{});
     }
 
-    // Ambiguous hit (PluginA and PluginC both reference) -> defensive empty.
     {
         const auto Match = FCkAsStubSynthesizer::Find_TargetFile_ByContent(
             TEXT("UBb_Foo_EntityScript"),
             {FileA, FileB, FileC});
-        TestEqual(TEXT("ambiguous match -> empty (defensive)"), Match, FString{});
+        TestEqual(TEXT("ambiguous match (PluginA + PluginC) -> empty (defensive)"), Match, FString{});
     }
 
-    // Cleanup.
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Inject_EntityScriptParamsStub: end-to-end with a temp fixture that mimics
-// the post-corruption shape (struct intact, namespace mangled).
-// Verifies the original contents are preserved and the stub is appended with
-// the namespace-only variant (no second struct definition, since the struct
-// is already in the file).
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -340,8 +287,7 @@ bool FCkTest_StubSynthesizer_Inject_EndToEnd::RunTest(const FString&)
     const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
     IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
 
-    // Pre-corruption fixture content. The struct is intact, the namespace has
-    // been renamed (mimicking corrupt_for_rev7_test.bat).
+    // Corrupted-canonical fixture: struct intact, namespace renamed.
     const auto Original = FString{TEXT(
         "// Auto-generated EntityScript spawn-params — DO NOT EDIT.\n"
         "\n"
@@ -371,12 +317,10 @@ bool FCkTest_StubSynthesizer_Inject_EndToEnd::RunTest(const FString&)
     TestEqual(TEXT("Target = sibling stub"), Result.TargetFilePath, ExpectedStubFile);
     TestFalse(TEXT("InjectedBlock non-empty"), Result.InjectedBlock.IsEmpty());
 
-    // The canonical fixture file must be byte-identical to its pre-call state.
     auto CanonicalAfter = FString{};
     FFileHelper::LoadFileToString(CanonicalAfter, *FixtureFile);
     TestEqual(TEXT("canonical fixture untouched"), CanonicalAfter, Original);
 
-    // The sibling stub file must exist and contain the injected block + header.
     auto StubAfter = FString{};
     TestTrue(TEXT("sibling stub written"), FFileHelper::LoadFileToString(StubAfter, *ExpectedStubFile));
     TestTrue(TEXT("stub starts with recovery header"),
@@ -396,9 +340,6 @@ bool FCkTest_StubSynthesizer_Inject_EndToEnd::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Inject_EntityScriptParamsStub: missing-struct path — when no struct of the
-// expected name is present, the injected block must include a USTRUCT stub.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Inject_MissingStruct,
@@ -412,8 +353,6 @@ bool FCkTest_StubSynthesizer_Inject_MissingStruct::RunTest(const FString&)
     const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
     IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
 
-    // Fixture: file references the namespace by name (so Find_TargetFile_ByContent
-    // can locate it) but the struct definition is absent.
     const auto Original = FString{TEXT(
         "// Auto-generated EntityScript spawn-params — DO NOT EDIT.\n"
         "// (No FBb_Orphan_EntityScript_SpawnParams struct present.)\n"
@@ -431,7 +370,6 @@ bool FCkTest_StubSynthesizer_Inject_MissingStruct::RunTest(const FString&)
     TestTrue(TEXT("injected block includes struct decl"),
         Result.InjectedBlock.Contains(TEXT("struct FBb_Orphan_EntityScript_SpawnParams")));
 
-    // Canonical untouched.
     auto CanonicalAfter = FString{};
     FFileHelper::LoadFileToString(CanonicalAfter, *FixtureFile);
     TestEqual(TEXT("canonical untouched"), CanonicalAfter, Original);
@@ -441,10 +379,6 @@ bool FCkTest_StubSynthesizer_Inject_MissingStruct::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Inject_EntityScriptParamsStub: brand-new namespace (no content match) anchors
-// against the caller .as file's nearest .uproject ancestor — the project-side
-// case (BB-style layout: caller under <ProjectRoot>/Script/...).
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_Project,
@@ -453,8 +387,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_Project::RunTest(const FString&)
 {
-    // Normalize to absolute up-front so the expected path matches what
-    // Anchor_ByCallerAsPath returns (it canonicalizes via ConvertRelativePathToFull).
+    // Absolute up-front: Anchor_ByCallerAsPath canonicalizes via ConvertRelativePathToFull.
     const auto TempRoot = FPaths::ConvertRelativePathToFull(
         FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_AnchorProject"));
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
@@ -491,9 +424,6 @@ bool FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_Project::RunTest(const F
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Inject_EntityScriptParamsStub: brand-new namespace anchors against the
-// caller .as file's nearest .uplugin ancestor — the plugin-side case.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -534,10 +464,6 @@ bool FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_Plugin::RunTest(const FS
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Inject_EntityScriptParamsStub: no candidate match AND no .uplugin/.uproject
-// ancestor — must fail cleanly with a descriptive error. Pins the defensive
-// failure path so a regression doesn't silently write a stub at filesystem root.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_NoManifest_Fails,
@@ -546,10 +472,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_NoManifest_Fails::RunTest(const FString&)
 {
-    // Caller path with no manifest ancestor anywhere on the chain. Use a path
-    // intentionally outside the engine + project trees — UE Saved/ dirs never
-    // contain a .uplugin/.uproject, and we don't traverse into them under
-    // normal authoring conditions.
+    // No manifest ancestor anywhere on the chain, and outside the engine + project trees:
+    // without a clean failure the synthesizer would write a stub at the filesystem root.
     const auto BogusCaller = FString{TEXT("//NoSuch/RootOnly/Probe.as")};
 
     auto Error = Make_ParsedError(
@@ -567,9 +491,6 @@ bool FCkTest_StubSynthesizer_Inject_AnchorsByCallerPath_NoManifest_Fails::RunTes
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Anchor_ByCallerAsPath: direct unit test of the new helper across the three
-// shape cases. Cheaper / faster signal than going through Inject_*.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_AnchorByCallerAsPath_Direct,
@@ -582,7 +503,6 @@ bool FCkTest_StubSynthesizer_AnchorByCallerAsPath_Direct::RunTest(const FString&
         FPaths::ProjectIntermediateDir() / TEXT("CkStubSynthTest_AnchorDirect"));
     IFileManager::Get().DeleteDirectory(*TempRoot, /*RequireExists=*/false, /*Tree=*/true);
 
-    // --- Project case: .uproject at TempRoot, caller a few dirs below.
     {
         const auto ProjectName  = FString{TEXT("FakeProj")};
         const auto UProjectFile = TempRoot / (ProjectName + TEXT(".uproject"));
@@ -595,9 +515,8 @@ bool FCkTest_StubSynthesizer_AnchorByCallerAsPath_Direct::RunTest(const FString&
         TestEqual(TEXT("project anchor"), Got, Expected);
     }
 
-    // --- Plugin case: .uplugin nested under TempRoot (and the project case
-    // above already left a .uproject at TempRoot, so this also pins the
-    // "plugin wins when both ancestors exist" guarantee).
+    // Depends on the block above having left a .uproject at TempRoot — that is what makes
+    // this also the "plugin wins when both ancestors exist" case.
     {
         const auto PluginName = FString{TEXT("Bar")};
         const auto PluginRoot = TempRoot / TEXT("Plugins") / PluginName;
@@ -611,7 +530,6 @@ bool FCkTest_StubSynthesizer_AnchorByCallerAsPath_Direct::RunTest(const FString&
         TestEqual(TEXT("plugin anchor (wins over project ancestor)"), Got, Expected);
     }
 
-    // --- Empty input -> empty output.
     {
         TestEqual(TEXT("empty caller -> empty"),
             FCkAsStubSynthesizer::Anchor_ByCallerAsPath(FString{}), FString{});
@@ -621,8 +539,6 @@ bool FCkTest_StubSynthesizer_AnchorByCallerAsPath_Direct::RunTest(const FString&
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Derive_StubSiblingPath: filename gets `_StubRecovery_` prefix in same dir.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -645,8 +561,6 @@ bool FCkTest_StubSynthesizer_DeriveStubSiblingPath::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Stub-file recovery header is non-empty and identifies the file as auto-generated.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_StubFileHeader,
@@ -665,10 +579,6 @@ bool FCkTest_StubSynthesizer_StubFileHeader::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Accumulating append: two consecutive Inject calls against the same plugin's
-// canonical file land both stubs in the same sibling file with header written
-// only once.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Inject_Accumulating,
@@ -682,8 +592,6 @@ bool FCkTest_StubSynthesizer_Inject_Accumulating::RunTest(const FString&)
     const auto ExpectedStubFile = TempRoot / TEXT("_StubRecovery_BusterBlock_EntitySpawnParams.as");
     IFileManager::Get().MakeDirectory(*TempRoot, /*Tree=*/true);
 
-    // Canonical references two namespaces but has no struct for either —
-    // each Inject should emit its own USTRUCT + namespace.
     const auto Original = FString{TEXT(
         "// Pre-existing canonical.\n"
         "// References UBb_Alpha_EntityScript and UBb_Beta_EntityScript as strings.\n")};
@@ -712,7 +620,6 @@ bool FCkTest_StubSynthesizer_Inject_Accumulating::RunTest(const FString&)
     TestTrue(TEXT("header for both alpha"),  Stub.Contains(TEXT("namespace UBb_Alpha_EntityScript")));
     TestTrue(TEXT("header for both beta"),   Stub.Contains(TEXT("namespace UBb_Beta_EntityScript")));
 
-    // Header banner appears exactly once (count the unique banner text).
     auto Cursor   = 0;
     auto HitCount = 0;
     const auto Needle = FString{TEXT("AUTO-GENERATED RECOVERY STUBS")};
@@ -723,7 +630,6 @@ bool FCkTest_StubSynthesizer_Inject_Accumulating::RunTest(const FString&)
     }
     TestEqual(TEXT("header banner appears exactly once"), HitCount, 1);
 
-    // Canonical untouched.
     auto CanonicalAfter = FString{};
     FFileHelper::LoadFileToString(CanonicalAfter, *FixtureFile);
     TestEqual(TEXT("canonical untouched after both injects"), CanonicalAfter, Original);
@@ -732,15 +638,6 @@ bool FCkTest_StubSynthesizer_Inject_Accumulating::RunTest(const FString&)
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Dedup on same accessor: regression for the duplicate-function collision
-// (user-reported 2026-05-14). Two Inject calls for the same (namespace,
-// function) must NOT produce a duplicate `Params(...)` declaration in the
-// sibling — AS namespace-merge would reject it with "A function with the
-// same name and parameters already exists" at next compile. The per-accessor
-// dedup gate in Inject_EntityScriptParamsStub scans existing sibling content
-// for the unique `// End synthesized stub for <NS>::<FUNC>(<args>)` marker
-// line and short-circuits the append when present.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -770,7 +667,6 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnSameAccessor::RunTest(const FString&)
     auto Stub = FString{};
     TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
 
-    // End-marker line for this accessor must appear exactly once.
     auto Cursor   = 0;
     auto HitCount = 0;
     const auto Needle = FString{TEXT("// End synthesized stub for UBb_Gamma_EntityScript::Params")};
@@ -781,8 +677,6 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnSameAccessor::RunTest(const FString&)
     }
     TestEqual(TEXT("end-marker for the accessor appears exactly once"), HitCount, 1);
 
-    // The Params(...) overload declaration must appear exactly once — this is
-    // the AS-side identifier that would collide on namespace-merge.
     auto ParamsCursor = 0;
     auto ParamsHits   = 0;
     const auto ParamsNeedle = FString{TEXT(" Params(")};
@@ -799,9 +693,8 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnSameAccessor::RunTest(const FString&)
 
 
 // --------------------------------------------------------------------------------------------------------------------
-// Normalize_ArgsList: strips const and & per token; distinct base types stay
-// distinct. This is the canonicalization shared by stub emission, the dedup
-// end-marker, and the dispatcher's convergence key.
+// The canonicalization shared by stub emission, the dedup end-marker, and the dispatcher's
+// convergence key — all three must agree or the dedup gates stop matching.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -835,13 +728,6 @@ bool FCkTest_StubSynthesizer_NormalizeArgsList::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Dedup on argument-category variants: regression for the 2026-06-10
-// CheckoutSettle incident. Two call sites of the SAME Params() — one passing
-// a literal (error reports "const int"), one passing an lvalue (error reports
-// "int&") — must produce ONE value-typed stub, not two. Two stubs differing
-// only by lvalue-ness are mutually ambiguous at every call site ("Multiple
-// matching signatures"), which the dispatcher cannot recognize or heal.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Inject_DedupOnArgCategoryVariants,
@@ -859,7 +745,6 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnArgCategoryVariants::RunTest(const FS
     FFileHelper::SaveStringToFile(Original, *FixtureFile,
         FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
-    // Same function, two call sites: literal int vs lvalue int.
     const auto ErrorLiteral = Make_ParsedError(
         TEXT("UBb_Settle_EntityScript"), TEXT("Params"),
         TEXT("FTransform, FCk_Handle_CheckoutCounter&, const EBb_Role, const int, FVector"),
@@ -878,8 +763,6 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnArgCategoryVariants::RunTest(const FS
     auto Stub = FString{};
     TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
 
-    // Exactly one Params(...) declaration — the AS-side identifier that would
-    // be ambiguous on namespace-merge if both variants landed.
     auto Cursor   = 0;
     auto HitCount = 0;
     const auto Needle = FString{TEXT(" Params(")};
@@ -890,9 +773,7 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnArgCategoryVariants::RunTest(const FS
     }
     TestEqual(TEXT("Params(...) declaration appears exactly once"), HitCount, 1);
 
-    // The emitted parameter list is value-typed — accepts both a literal and
-    // an lvalue at the call sites.
-    TestTrue(TEXT("emitted param list is value-typed"),
+    TestTrue(TEXT("emitted param list is value-typed (accepts literal and lvalue)"),
         Stub.Contains(TEXT("Params(FTransform Arg0, FCk_Handle_CheckoutCounter Arg1, EBb_Role Arg2, int Arg3, FVector Arg4)")));
     TestFalse(TEXT("no reference-typed int param emitted"), Stub.Contains(TEXT("int& Arg3")));
 
@@ -901,17 +782,6 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnArgCategoryVariants::RunTest(const FS
 }
 
 
-// --------------------------------------------------------------------------------------------------------------------
-// Dedup on const-aliased args: regression for the BULK-synthesis duplicate-
-// overload collision (fresh-clone boot test, 2026-06 — errors at
-// _StubRecovery_BusterBlock_EntitySpawnParams.as (761:5)/(911:5)).
-//
-// Two call sites hit the same overload with differently-qualified arguments,
-// so the parser reports two RAW args lists ("FTransform" vs "const
-// FTransform"). The emitted declaration is const-stripped in both cases —
-// `Params(FTransform Arg0)` — so unless the dedup key is canonicalized the
-// same way, both blocks append and AS rejects the merged namespace with
-// "A function with the same name and parameters already exists".
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -961,13 +831,6 @@ bool FCkTest_StubSynthesizer_Inject_DedupOnConstAliasedArgs::RunTest(const FStri
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Bulk synthesis sweep: the wholesale-missing-ESP case a fresh clone creates.
-// Many accessors across several namespaces synthesize into one sibling, with
-// the whole batch re-fired a second time (a second modal-tick drain after a
-// still-failing compile) including const-aliased variants. Every emitted
-// overload declaration must appear exactly once — any duplicate wedges the
-// next compile.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Inject_BulkSynthesis_NoDuplicateOverloads,
@@ -987,8 +850,6 @@ bool FCkTest_StubSynthesizer_Inject_BulkSynthesis_NoDuplicateOverloads::RunTest(
     FFileHelper::SaveStringToFile(Original, *FixtureFile,
         FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
-    // Drain 1: distinct namespaces and overload shapes, including a
-    // const-aliased pair within the batch (BulkB).
     const auto Drain1 = TArray<FCk_AsParsedError>{
         Make_ParsedError(TEXT("UBb_BulkA_EntityScript"), TEXT("Params"), TEXT("")),
         Make_ParsedError(TEXT("UBb_BulkB_EntityScript"), TEXT("Params"), TEXT("const FTransform")),
@@ -997,8 +858,7 @@ bool FCkTest_StubSynthesizer_Inject_BulkSynthesis_NoDuplicateOverloads::RunTest(
         Make_ParsedError(TEXT("UBb_BulkD_EntityScript"), TEXT("Params"), TEXT("const UClass, bool")),
     };
 
-    // Drain 2: the same batch re-fires (compile still failing), with the
-    // const-qualifications flipped on the multi-arg signatures.
+    // The same batch re-fires (compile still failing), const-qualifications flipped.
     const auto Drain2 = TArray<FCk_AsParsedError>{
         Make_ParsedError(TEXT("UBb_BulkA_EntityScript"), TEXT("Params"), TEXT("")),
         Make_ParsedError(TEXT("UBb_BulkB_EntityScript"), TEXT("Params"), TEXT("FTransform")),
@@ -1025,11 +885,10 @@ bool FCkTest_StubSynthesizer_Inject_BulkSynthesis_NoDuplicateOverloads::RunTest(
     TestEqual(TEXT("every overload declaration appears exactly once"),
         UniqueDecls.Num(), DeclLines.Num());
 
-    // 4 distinct canonical overloads total: A(), B(FTransform),
-    // C(FTransform, int32), D(UClass, bool) — and nothing else.
-    TestEqual(TEXT("exactly 4 canonical overload declarations emitted"), DeclLines.Num(), 4);
+    constexpr auto DistinctCanonicalOverloads = 4;
+    TestEqual(TEXT("exactly 4 canonical overload declarations emitted"),
+        DeclLines.Num(), DistinctCanonicalOverloads);
 
-    // Struct definitions must also be unique per namespace.
     for (const auto* StructName : {
         TEXT("struct FBb_BulkA_EntityScript_SpawnParams"),
         TEXT("struct FBb_BulkB_EntityScript_SpawnParams"),
@@ -1045,8 +904,6 @@ bool FCkTest_StubSynthesizer_Inject_BulkSynthesis_NoDuplicateOverloads::RunTest(
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Derive_ClassNameFromStructName: inverse of Derive_SpawnParamsStructName.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_DeriveClassNameFromStructName,
@@ -1059,7 +916,6 @@ bool FCkTest_StubSynthesizer_DeriveClassNameFromStructName::RunTest(const FStrin
         FCkAsStubSynthesizer::Derive_ClassNameFromStructName(TEXT("FBb_CombatReceiver_DamageReceiver_SpawnParams")),
         FString{TEXT("UBb_CombatReceiver_DamageReceiver")});
 
-    // Round-trip with the forward derivation.
     const auto Forward = FCkAsStubSynthesizer::Derive_SpawnParamsStructName(TEXT("UBb_DayCycle_EntityScript"));
     TestEqual(TEXT("round-trip"),
         FCkAsStubSynthesizer::Derive_ClassNameFromStructName(Forward),
@@ -1077,10 +933,6 @@ bool FCkTest_StubSynthesizer_DeriveClassNameFromStructName::RunTest(const FStrin
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Build_EntityScriptParamsStub_FullShape: fielded struct (no defaults) +
-// positional ctor + both Params overloads + class-level and per-overload
-// dedup markers with canonical (const-stripped) types.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1138,7 +990,6 @@ bool FCkTest_StubSynthesizer_Build_FullShape::RunTest(const FString&)
     TestTrue(TEXT("forensic: source path"), Stub.Contains(TEXT("// Source-derived from: D:/Test/BB_Fielded.as")));
     TestTrue(TEXT("forensic: target identifier"), Stub.Contains(TEXT("missing type 'FBb_Fielded_EntityScript_SpawnParams'")));
 
-    // Zero-property shape: no positional ctor, single Params(), single end-marker.
     auto EmptyShape = FCk_AsClassShape{};
     EmptyShape.Found     = true;
     EmptyShape.ClassName = TEXT("UBb_Empty_EntityScript");
@@ -1146,21 +997,13 @@ bool FCkTest_StubSynthesizer_Build_FullShape::RunTest(const FString&)
     TestTrue(TEXT("zero-prop: struct emitted"), EmptyStub.Contains(TEXT("struct FBb_Empty_EntityScript_SpawnParams")));
     TestEqual(TEXT("zero-prop: only the no-arg overload is declared"),
         Count_Occurrences(EmptyStub, TEXT(" Params(")), 1);
-    // The ctor decl would sit at 4-space indent; the no-arg overload's
-    // `return FBb_...();` body line does not match this needle.
+    // The 4-space indent is what excludes the no-arg overload's `return FBb_...();` body line.
     TestFalse(TEXT("zero-prop: no positional ctor"),
         EmptyStub.Contains(TEXT("    FBb_Empty_EntityScript_SpawnParams(")));
 
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Inject_EntityScriptParamsStub_SourceDerived: end-to-end against a temp
-// project tree — the CombatReceiver-shaped wholesale-missing case. The class
-// declares 6 ExposeOnSpawn props; the sibling stub must carry all of them
-// (so `P.Phase = ...` field-access callers compile), re-fires must no-op,
-// and a subsequent ERROR-TEXT inject for the same class's Params() must
-// dedup against the full-shape block (cross-path dedup).
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1219,7 +1062,6 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_EndToEnd::RunTest(const FStrin
     auto Stub = FString{};
     TestTrue(TEXT("sibling readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStub));
 
-    // The fields that make `ReceiverParams.Phase = ...`-style callers compile.
     TestTrue(TEXT("field: DataBundleNames"), Stub.Contains(TEXT("    FGameplayTagContainer DataBundleNames;")));
     TestTrue(TEXT("field: Phase typed FGameplayTag"), Stub.Contains(TEXT("    FGameplayTag Phase;")));
     TestTrue(TEXT("field: Receiver"), Stub.Contains(TEXT("    FCk_Handle_CombatReceiver Receiver;")));
@@ -1227,16 +1069,13 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_EndToEnd::RunTest(const FStrin
     TestTrue(TEXT("positional ctor assigns"), Stub.Contains(TEXT("        Phase = InPhase;")));
     TestTrue(TEXT("namespace block"), Stub.Contains(TEXT("namespace UTestSynth_DamageReceiver")));
 
-    // Re-fire with a struct-shaped error: no-op success, struct still
-    // defined exactly once.
     const auto ResultB = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
         TEXT("UTestSynth_DamageReceiver"), Error, {}, {ScriptRoot});
     TestTrue(TEXT("struct-shaped re-fire reports success (no-op)"), ResultB.Success);
 
-    // Re-fire with a SIGNATURE error in the SAME session that wrote the full
-    // shape: never compile-tested against it yet — must no-op success and
-    // let the next compile decide (deferring here appended junk overloads
-    // for calls the full shape satisfies).
+    // A signature miss in the SAME session that wrote the full shape has never been
+    // compile-tested against it, so it must no-op and let the next compile decide —
+    // deferring here appended junk overloads for calls the full shape already satisfies.
     auto DivergentSignature = FCk_AsParsedError{};
     DivergentSignature.Kind            = ECk_AsParsedError_Kind::NoMatchingSignatures;
     DivergentSignature.TargetNamespace = TEXT("UTestSynth_DamageReceiver");
@@ -1247,13 +1086,9 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_EndToEnd::RunTest(const FStrin
         TEXT("UTestSynth_DamageReceiver"), DivergentSignature, {}, {ScriptRoot});
     TestTrue(TEXT("same-session signature re-fire no-ops (Success = true)"), ResultSameSession.Success);
 
-    // Same signature error from the NEXT process (headless cook retry — the
-    // full shape is on disk from the prior run and the compile that just
-    // failed already included it): the caller genuinely diverges — must
-    // DEFER so the dispatcher's error-text fallback appends the
-    // per-signature overload alongside the full shape. Returning success
-    // here swallowed the fallback and wedged the headless cook retry
-    // (BB_CorridorGym's stale 25-arg StoreDriver call, 2026-06-10).
+    // The NEXT process is the opposite case: the on-disk full shape was already part of the
+    // compile that just failed, so the caller genuinely diverges and the inject must DEFER —
+    // that is what lets the dispatcher's error-text fallback append the per-signature overload.
     FCkAsStubSynthesizer::Reset_SessionState_ForTests();
     const auto ResultNextSession = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub_SourceDerived(
         TEXT("UTestSynth_DamageReceiver"), DivergentSignature, {}, {ScriptRoot});
@@ -1261,10 +1096,8 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_EndToEnd::RunTest(const FStrin
     TestTrue(TEXT("deferral reason mentions per-signature path"),
         ResultNextSession.ErrorMessage.Contains(TEXT("per-signature")));
 
-    // Cross-path dedup: an error-text inject for the same class's Params()
-    // must no-op against the full-shape block's end-marker. No candidates
-    // (the canonical doesn't exist on a fresh clone) — the caller-path
-    // anchor resolves the same project bucket and thus the same sibling.
+    // Cross-path dedup, with no candidates because a fresh clone has no canonical: the
+    // caller-path anchor resolves the same project bucket and thus the same sibling.
     const auto ErrorText = Make_ParsedError(TEXT("UTestSynth_DamageReceiver"), TEXT("Params"), TEXT(""), *ClassFile);
     const auto ResultC = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorText, /*InCandidateFilePaths=*/{});
     TestTrue(TEXT("error-text inject after full shape reports success (no-op)"), ResultC.Success);
@@ -1280,12 +1113,8 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_EndToEnd::RunTest(const FStrin
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Inject_EntityScriptParamsStub_SourceDerived: when the struct already exists
-// in the canonical, full-shape synthesis must fail with
-// StructExistsInCanonical (a second struct definition would itself wedge the
-// compile) — the DISPATCHER then escalates that reason to the Rev 11
-// canonical-quarantine path. The synthesizer itself never mutates the
-// canonical here.
+// A second struct definition would itself wedge the compile, so the synthesizer never mutates
+// the canonical — it fails with StructExistsInCanonical and the dispatcher escalates.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1313,7 +1142,6 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_DefersOnExistingStruct::RunTes
         "    int32 Knob;\n"
         "}\n")}, *ClassFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
-    // Canonical already defines the struct (stale shape — incremental drift).
     FFileHelper::SaveStringToFile(FString{TEXT(
         "USTRUCT()\n"
         "struct FTestSynth_Drift_SpawnParams\n"
@@ -1347,12 +1175,8 @@ bool FCkTest_StubSynthesizer_Inject_SourceDerived_DefersOnExistingStruct::RunTes
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Build_EntityScriptParamsStub: a bare-nullptr call-site arg arrives as the
-// compiler placeholder `<null handle>` — it must be emitted as a UObject
-// fallback param, never verbatim. Verbatim emission makes the stub file
-// unparseable ("Expected data type / Instead found '<'"), which wedges every
-// subsequent compile and is unrecoverable because the corrupt file is
-// self-heal's own output (2026-06-10 UBb_StoreDriver_EntityScript incident).
+// Emitting the `<null handle>` placeholder verbatim makes the stub file unparseable, which is
+// unrecoverable — the corrupt file is self-heal's own output, so it cannot heal itself.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1373,12 +1197,9 @@ bool FCkTest_StubSynthesizer_Build_NullHandleArg_EmitsUObjectFallback::RunTest(c
         Stub.Contains(TEXT("Params(FTransform Arg0, bool Arg1, UObject Arg2)")));
     TestFalse(TEXT("placeholder never emitted as a param type"),
         Stub.Contains(TEXT("<null handle> Arg")));
-    // The diagnostic `// Target:` line keeps the raw error verbatim for
-    // forensics — a comment can hold the placeholder safely.
+    // A comment can hold the placeholder safely, so `// Target:` keeps the raw error verbatim.
     TestTrue(TEXT("Target comment preserves the raw error"),
         Stub.Contains(TEXT("// Target: UBb_StoreDriver_EntityScript::Params(FTransform, bool, <null handle>)")));
-    // The end-marker uses the normalized list, so the placeholder never leaks
-    // into the dedup key either.
     TestTrue(TEXT("end-marker uses the normalized (UObject) list"),
         Stub.Contains(TEXT("// End synthesized stub for UBb_StoreDriver_EntityScript::Params(FTransform, bool, UObject)")));
 
@@ -1386,12 +1207,8 @@ bool FCkTest_StubSynthesizer_Build_NullHandleArg_EmitsUObjectFallback::RunTest(c
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Same-arity ambiguity gate, typed-first order: once a fully-typed stub
-// exists, a nullptr-variant (UObject fallback) of the same arity must NOT be
-// appended — nullptr binds against the typed stub, and the pair would be
-// mutually ambiguous ("Multiple matching signatures", which the dispatcher
-// cannot recognize or heal). A fallback variant of a DIFFERENT arity is a
-// genuinely distinct overload and must still land.
+// nullptr binds against a typed same-arity stub, so the pair would be mutually ambiguous
+// ("Multiple matching signatures" — an error kind the dispatcher cannot recognize or heal).
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1410,7 +1227,6 @@ bool FCkTest_StubSynthesizer_Inject_NullVariant_SkippedWhenTypedSameArityExists:
     FFileHelper::SaveStringToFile(Original, *FixtureFile,
         FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
-    // Call site A passes a real config object; call site B passes nullptr.
     const auto ErrorTyped = Make_ParsedError(
         TEXT("UBb_StoreDriver_EntityScript"), TEXT("Params"),
         TEXT("FTransform, UBb_StoreCustomization_Config"),
@@ -1423,10 +1239,9 @@ bool FCkTest_StubSynthesizer_Inject_NullVariant_SkippedWhenTypedSameArityExists:
     const auto ResultTyped = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorTyped, {FixtureFile});
     TestTrue(TEXT("typed inject succeeded"), ResultTyped.Success);
 
-    // Rev 11: the gate FAILS LOUDLY instead of faking success — the existing
-    // typed stub does not necessarily satisfy the nullptr caller's other
-    // args, and a fake success hid exactly that wedge (2026-06-11 incident).
-    // The dispatcher escalates SameArityAmbiguous to canonical quarantine.
+    // The gate fails loudly rather than faking success: the existing typed stub does not
+    // necessarily satisfy the nullptr caller's other args, and the dispatcher needs the
+    // SameArityAmbiguous reason to escalate to canonical quarantine.
     const auto ResultNull = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorNull, {FixtureFile});
     TestFalse(TEXT("null-variant inject FAILS (no fake success)"), ResultNull.Success);
     TestTrue(TEXT("FailReason is SameArityAmbiguous"),
@@ -1449,14 +1264,13 @@ bool FCkTest_StubSynthesizer_Inject_NullVariant_SkippedWhenTypedSameArityExists:
     TestFalse(TEXT("no UObject-fallback overload landed"),
         Stub.Contains(TEXT("UObject Arg1)")));
 
-    // A fallback variant of a DIFFERENT arity is a distinct overload — it
-    // must still append.
     const auto ErrorNull3Arg = Make_ParsedError(
         TEXT("UBb_StoreDriver_EntityScript"), TEXT("Params"),
         TEXT("FTransform, bool, <null handle>"),
         TEXT("D:/Test/CallerC.as"), 300, 5);
     const auto ResultNull3Arg = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorNull3Arg, {FixtureFile});
-    TestTrue(TEXT("different-arity null variant succeeded"), ResultNull3Arg.Success);
+    TestTrue(TEXT("different-arity null variant is a distinct overload and still appends"),
+        ResultNull3Arg.Success);
 
     TestTrue(TEXT("sibling re-readable"), FFileHelper::LoadFileToString(Stub, *ExpectedStubFile));
     TestTrue(TEXT("different-arity fallback overload landed"),
@@ -1467,11 +1281,8 @@ bool FCkTest_StubSynthesizer_Inject_NullVariant_SkippedWhenTypedSameArityExists:
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Same-arity ambiguity gate, fallback-first order: when the nullptr variant
-// landed first (UObject fallback stub), a later fully-typed variant of the
-// same arity must NOT be appended — the typed call site's handle implicitly
-// converts to UObject, so the existing fallback stub already satisfies it,
-// and appending the typed twin would create the same mutual ambiguity.
+// The reverse order: a typed call site's handle implicitly converts to UObject, so an existing
+// same-arity fallback stub already satisfies it and the typed twin would re-create the ambiguity.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1502,8 +1313,6 @@ bool FCkTest_StubSynthesizer_Inject_TypedVariant_SkippedWhenFallbackSameArityExi
     const auto ResultNull = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorNull, {FixtureFile});
     TestTrue(TEXT("null-variant inject succeeded"), ResultNull.Success);
 
-    // Rev 11: fails loudly (SameArityAmbiguous) — see the typed-first twin
-    // test above. Nothing is appended either way.
     const auto ResultTyped = FCkAsStubSynthesizer::Inject_EntityScriptParamsStub(ErrorTyped, {FixtureFile});
     TestFalse(TEXT("typed inject FAILS (no fake success)"), ResultTyped.Success);
     TestTrue(TEXT("FailReason is SameArityAmbiguous"),
@@ -1530,11 +1339,6 @@ bool FCkTest_StubSynthesizer_Inject_TypedVariant_SkippedWhenFallbackSameArityExi
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Enumerate_EntityScriptNamespaces: pure string scan — entity-script
-// namespaces (U<X> with a corroborating F<X>_SpawnParams struct in the same
-// text) are enumerated in order, deduped; unrelated namespaces and
-// struct-less ones are ignored.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1585,12 +1389,6 @@ bool FCkTest_StubSynthesizer_EnumerateEntityScriptNamespaces::RunTest(const FStr
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Quarantine_And_ResynthesizeFullShapes: scaled replay of the 2026-06-11
-// incident. A stale canonical holds a 2-param accessor while the class
-// source declares 3 ExposeOnSpawn props (one a typesafe handle). Quarantine
-// must delete the canonical (forensic copy under Saved/), rebuild the
-// sibling with the exact-typed full shape, and define the struct once.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Quarantine_StaleCanonical_EndToEnd,
@@ -1614,7 +1412,6 @@ bool FCkTest_StubSynthesizer_Quarantine_StaleCanonical_EndToEnd::RunTest(const F
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(CanonicalFile), /*Tree=*/true);
     FFileHelper::SaveStringToFile(FString{TEXT("{}")}, *(TempRoot / TEXT("FakeProj.uproject")));
 
-    // Current source: THREE props, the second a typesafe handle.
     FFileHelper::SaveStringToFile(FString{TEXT(
         "class UTestQ_Driver : UCk_GenericEntityScript_UE\n"
         "{\n"
@@ -1626,7 +1423,7 @@ bool FCkTest_StubSynthesizer_Quarantine_StaleCanonical_EndToEnd::RunTest(const F
         "    int32 Knob;\n"
         "}\n")}, *ClassFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
-    // Stale canonical: TWO-param accessor from before the third prop landed.
+    // Stale canonical: a TWO-param accessor from before the third prop landed.
     FFileHelper::SaveStringToFile(FString{TEXT(
         "USTRUCT()\n"
         "struct FTestQ_Driver_SpawnParams\n"
@@ -1654,7 +1451,6 @@ bool FCkTest_StubSynthesizer_Quarantine_StaleCanonical_EndToEnd::RunTest(const F
 
     TestFalse(TEXT("stale canonical deleted"), IFileManager::Get().FileExists(*CanonicalFile));
 
-    // Forensic copy landed under Saved/CkSelfHeal/Quarantine.
     auto ForensicMatches = TArray<FString>{};
     IFileManager::Get().FindFiles(ForensicMatches,
         *(FPaths::ProjectSavedDir() / TEXT("CkSelfHeal/Quarantine") / TEXT("FakeProj_EntitySpawnParams.as.stale_*")),
@@ -1676,11 +1472,6 @@ bool FCkTest_StubSynthesizer_Quarantine_StaleCanonical_EndToEnd::RunTest(const F
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Quarantine rebuilds the sibling from scratch: a wedged per-call-site
-// error-text stub (typed from ONE caller — the Arg0..ArgN shape that cannot
-// satisfy mixed-type callers) must be GONE after quarantine, replaced by the
-// exact-typed full shape.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1724,8 +1515,8 @@ bool FCkTest_StubSynthesizer_Quarantine_RebuildsSibling_DroppingWedgedErrorTextS
         "    FTestQ_Wedge_SpawnParams Params() { return FTestQ_Wedge_SpawnParams(); }\n"
         "}\n")}, *CanonicalFile, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
-    // The wedged leftover: an error-text stub typed from ONE call site
-    // (Economy-typed handle at the StoreEntity slot).
+    // The wedged leftover: an Arg0..ArgN error-text stub typed from ONE call site, which
+    // cannot satisfy mixed-type callers.
     FFileHelper::SaveStringToFile(FString{TEXT(
         "// stub header\n"
         "namespace UTestQ_Wedge\n"
@@ -1762,9 +1553,8 @@ bool FCkTest_StubSynthesizer_Quarantine_RebuildsSibling_DroppingWedgedErrorTextS
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Quarantine synthesizes the UNION of canonical classes — not just the seed.
-// Deleting the canonical removes EVERY class's struct; rebuilding only the
-// erroring one would burn a bootstrap cycle per remaining class.
+// Deleting the canonical removes EVERY class's struct, so rebuilding only the erroring one
+// would burn a bootstrap cycle per remaining class.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -1834,10 +1624,6 @@ bool FCkTest_StubSynthesizer_Quarantine_SynthesizesUnionOfCanonicalClasses::RunT
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Quarantine skips non-seed classes whose source can't be scanned (deleted
-// entity-script classes drop out of the regenerated canonical) without
-// failing the escalation; the seed still synthesizes.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_StubSynthesizer_Quarantine_SkipsClassesWithNoSource,
@@ -1866,9 +1652,7 @@ bool FCkTest_StubSynthesizer_Quarantine_SkipsClassesWithNoSource::RunTest(const 
         "    UPROPERTY(ExposeOnSpawn)\n"
         "    int32 Live;\n"
         "}\n")}, *(ScriptRoot / TEXT("Classes/TestQ_Live.as")), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
-    // UTestQ_Gone has NO source file — a deleted class surviving in the
-    // stale canonical.
-
+    // UTestQ_Gone has NO source file — a deleted class surviving in the stale canonical.
     FFileHelper::SaveStringToFile(FString{TEXT(
         "struct FTestQ_Live_SpawnParams\n"
         "{\n"
@@ -1897,7 +1681,6 @@ bool FCkTest_StubSynthesizer_Quarantine_SkipsClassesWithNoSource::RunTest(const 
     TestTrue(TEXT("live class synthesized"),  Stub.Contains(TEXT("namespace UTestQ_Live")));
     TestFalse(TEXT("gone class absent"),      Stub.Contains(TEXT("namespace UTestQ_Gone")));
 
-    // A seed whose source is unscannable must FAIL the escalation loudly.
     FCkAsStubSynthesizer::Reset_SessionState_ForTests();
     FFileHelper::SaveStringToFile(FString{TEXT(
         "struct FTestQ_Gone_SpawnParams\n"

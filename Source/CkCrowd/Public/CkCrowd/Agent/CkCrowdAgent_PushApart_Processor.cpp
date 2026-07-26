@@ -20,8 +20,7 @@ namespace ck
 {
     namespace ck_crowd_agent_push_apart_processor
     {
-        // Per dtCrowd's COLLISION_RESOLVE_FACTOR (DetourCrowd.cpp:1599). Sub-1 so we don't
-        // overshoot the resolution; iterations converge on the right answer.
+        // Sub-1 on purpose: the iterations converge rather than overshooting in one step.
         constexpr auto COLLISION_RESOLVE_FACTOR = 0.7f;
 
         auto Get_IterationCount(ECk_PushApartMode InMode) -> int32
@@ -58,18 +57,8 @@ namespace ck
 
         const auto SelfRadius = InParams.Get_Radius();
 
-        // An IDLE agent has ARRIVED. It has no restoring drive to walk back to where it was, so any
-        // displacement it absorbs is permanent — which is how a newcomer pressing into an agent that
-        // already reached its goal was body-checking it clean off the spot (an NPC standing at a shelf,
-        // evicted by the next customer). Idle agents therefore absorb only a fraction of the shared
-        // correction, and the still-walking party — which CAN steer and re-approach — takes the rest.
-        //
-        // This is a bound on the damage, not the cure. The real fix for a newcomer that presses forever
-        // is for it to notice its goal is unreachable and stop pressing; this only limits how far a
-        // stander is shoved in the meantime (and when a player barges through a crowd).
-        //
-        // Deliberately not zero: PushApart must still resolve idle-vs-idle overlap (a cluster settling
-        // at a shared goal), which requires both parties to yield something.
+        // An idle agent has ARRIVED and has no drive to walk back, so what it absorbs is permanent —
+        // hence the reduced share. Deliberately NOT zero: idle-vs-idle overlap must still resolve.
         const auto SelfYield = InHandle.Has<FTag_CrowdAgent_Idle>()
             ? InParams.Get_PushApartIdleYield()
             : 1.0f;
@@ -77,24 +66,19 @@ namespace ck
         auto Displacement = FVector::ZeroVector;
 
         {
-            // O(Iterations × Neighbors) relaxation — the per-iteration re-scan is the hidden cost.
             SCOPE_CYCLE_COUNTER(STAT_CkCrowd_PushApart);
 
             for (auto Iter = 0; Iter < Iterations; ++Iter)
             {
                 for (const auto& Nbr : Neighbors)
                 {
-                    // Use the cache's RelativeOffset directly — it's NbrLoc - SelfLoc as of NeighborSync.
-                    // After self has displaced by Displacement, the offset from new-self to neighbor is:
-                    //   NbrLoc - (SelfLoc + Displacement) = RelOffset - Displacement
-                    // We want the vector pointing FROM neighbor TO new-self (the push direction):
-                    //   (SelfLoc + Displacement) - NbrLoc = -RelOffset + Displacement
-                    auto Diff = -Nbr.Get_RelativeOffset() + Displacement;
-                    // Crowd push is planar — agents walk on the navmesh, Z is owned by path-follow
-                    // and the integrator. Without this, any Z delta between agents gets amplified
-                    // each iteration and shoves capsules through the floor.
-                    Diff.Z = 0.0f;
-                    const auto Dist = static_cast<float>(Diff.Size());
+                    // Points FROM the neighbor TO already-displaced self, which is the push direction.
+                    auto PushFromNeighbor = -Nbr.Get_RelativeOffset() + Displacement;
+
+                    // Must stay planar: a Z delta gets amplified each iteration and shoves agents
+                    // through the floor. Z is owned by path-follow and the integrator.
+                    PushFromNeighbor.Z = 0.0f;
+                    const auto Dist = static_cast<float>(PushFromNeighbor.Size());
                     const auto NeighborRadius = SelfRadius;  // approximation — neighbors share radius
                     const auto CombinedRadius = SelfRadius + NeighborRadius;
 
@@ -103,17 +87,15 @@ namespace ck
 
                     if (Dist < KINDA_SMALL_NUMBER)
                     {
-                        // Degenerate overlap (exact center match). The old code pushed EVERY
-                        // coincident agent along a shared +X, so two stacked agents translated
-                        // together forever (the "slide off in +X" bug) instead of separating.
-                        // Derive a deterministic axis from the unordered pair — both agents agree
-                        // on the LINE — and give each the OPPOSITE sign along it so they move APART.
-                        // Once they are a hair apart, the penetration resolution below takes over.
+                        // Exact center match: a SHARED axis (the xor is symmetric, so both agents
+                        // pick the same line) with OPPOSITE signs, otherwise coincident agents
+                        // translate together forever instead of separating.
+                        constexpr auto AngleBucketCount = 3600;
+                        constexpr auto RadiansPerAngleBucket = PI / 1800.0f;
+
                         const auto SelfHash  = GetTypeHash(static_cast<const FCk_Handle&>(InHandle));
                         const auto NbrHash   = GetTypeHash(Nbr.Get_Handle());
-                        // (SelfHash ^ NbrHash) is symmetric → same axis for both; % 3600 * (PI/1800)
-                        // maps to [0, 2π) at 0.1° resolution.
-                        const auto PairAngle = static_cast<float>((SelfHash ^ NbrHash) % 3600) * (PI / 1800.0f);
+                        const auto PairAngle = static_cast<float>((SelfHash ^ NbrHash) % AngleBucketCount) * RadiansPerAngleBucket;
                         const auto Axis      = FVector(FMath::Cos(PairAngle), FMath::Sin(PairAngle), 0.0f);
                         const auto Sign      = SelfHash > NbrHash ? 1.0f : -1.0f;
                         Displacement += Axis * (Sign * 0.5f * CombinedRadius * SelfYield);
@@ -121,8 +103,8 @@ namespace ck
                     }
 
                     const auto Penetration = CombinedRadius - Dist;
-                    const auto Pen = (Penetration * 0.5f) * ck_crowd_agent_push_apart_processor::COLLISION_RESOLVE_FACTOR * SelfYield / Dist;
-                    Displacement += Diff * Pen;
+                    const auto PenetrationScale = (Penetration * 0.5f) * ck_crowd_agent_push_apart_processor::COLLISION_RESOLVE_FACTOR * SelfYield / Dist;
+                    Displacement += PushFromNeighbor * PenetrationScale;
                 }
             }
         }

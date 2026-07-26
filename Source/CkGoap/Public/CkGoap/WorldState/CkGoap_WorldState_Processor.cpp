@@ -69,9 +69,8 @@ auto
 	const auto Key = InKeyRegistry._Registry.FindOrRegister(InRequest.Get_Key());
 	if (Key == goap::InvalidGoapKey)
 	{
-		// Boundary condition (registry at MAX_KEYS or tag invalid) — Verbose
-		// rather than Warning so the AutoTest harness doesn't escalate to a
-		// test failure for the documented overflow path.
+		// Verbose, not Warning: the AutoTest harness escalates Warnings to failures and this
+		// registry-full / invalid-tag path is a documented, expected boundary condition.
 		ck::goap::Verbose(TEXT("GOAP WorldState [{}] dropped Set for key [{}] — registry full or tag invalid."),
 			InHandle, InRequest.Get_Key());
 		return;
@@ -90,8 +89,6 @@ auto
 		MakePayload(InHandle, FCk_Goap_WorldState_Payload_OnValueChanged{
 			InRequest.Get_Key(), PreviousValue, InRequest.Get_Value()}));
 
-	// Walk subscribers; tag each planner dirty so its AutoReplan picks the
-	// change up on next tick. Lazy-prune dead handles in place.
 	for (auto Index = InSubscribers._Subscribers.Num() - 1; Index >= 0; --Index)
 	{
 		auto& Subscriber = InSubscribers._Subscribers[Index];

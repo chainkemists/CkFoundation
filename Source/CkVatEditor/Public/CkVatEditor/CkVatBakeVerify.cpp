@@ -1,11 +1,6 @@
-// `Ck_Vat_DebugVerifyBake` — bakes transient Mannequin collections (BOTH bone-weight storages) and
-// numerically verifies every CPU-checkable link of the bone-mode pipeline. The standing bake-data
-// verifier: when VAT visuals look wrong, run this FIRST — a full PASS means the bug is in the
-// material/VF layer, not the data.
-//   [A] collection/texture shape        [B] texture texels vs freshly-sampled pose transforms
-//   [C] per-vertex carriers vs source   [D] full GPU-decode reconstruction vs direct CPU skinning
-//   [E] render-state MID uniforms vs the collection (dims, storage, texture bindings)
-// Every line is prefixed [VAT-VERIFY]; each check ends PASS/FAIL.
+// `Ck_Vat_DebugVerifyBake` — the standing bake-data verifier: when VAT visuals look wrong, run this FIRST.
+// A full PASS means the bug is in the material/VF layer, not the data. Checks [A]..[E] below, every line
+// prefixed [VAT-VERIFY].
 
 #include "CkVatEditor/CkVatBaker.h"
 #include "CkVatEditor/CkVat_BakerSubsystem.h"
@@ -89,7 +84,6 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
     const int32 BoneCount = SkeletonData->RenderBoneCount;
     const int32 TotalRows = Layout.TotalFrameCount;
 
-    // Middle frame of the clip; global row = FrameIndex + local.
     const int32 LocalFrame = Layout.Sequences[0].FrameCount / 2;
     const int32 GlobalRow = Layout.Sequences[0].FrameIndex + LocalFrame;
 
@@ -140,8 +134,7 @@ auto RunOne(ECk_Vat_BoneWeightStorage InStorage) -> void
         if (NOT PosTex->Source.GetMipData(PosData, 0) || NOT RotTex->Source.GetMipData(RotData, 0))
         { Fail(TEXT("[B] texture source mip read")); return; }
 
-        // The reinterpret to 8-byte RGBA16F texels below is only valid for High-precision bakes —
-        // validate the actual byte size so a format change can never index out of bounds.
+        // The reinterpret to 8-byte RGBA16F texels below is only valid for High-precision bakes.
         const auto ExpectedPoseBytes = static_cast<int64>(BoneCount) * TotalRows * static_cast<int64>(sizeof(FFloat16Color));
         if (PosData.Num() != ExpectedPoseBytes || RotData.Num() != ExpectedPoseBytes)
         { Fail(TEXT("[B] unexpected mip byte size — texel format is not RGBA16F")); return; }

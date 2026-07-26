@@ -58,10 +58,8 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 UENUM(BlueprintType)
 enum class ECk_ActorEcsReady_Policy : uint8
 {
-    // Fire once the Entity is linked AND its replicated values have been applied
-    // (OnReplicationComplete). On authority and for non-replicated Entities this collapses to
-    // link-time. The multiplayer-safe default — replicated values (attributes, team, state
-    // machine state, etc.) are readable inside the callback on every world.
+    // Fire once the Entity is linked AND its replicated values have been applied (OnReplicationComplete).
+    // Collapses to link-time on authority and for non-replicated Entities. The multiplayer-safe default.
     ValuesReplicated,
 
     // Fire as soon as the Actor↔Entity link is established. On clients this is OnConstructed-time:
@@ -101,12 +99,8 @@ private:
 private:
     FCk_Handle _EntityHandle;
 
-    // Promises queued by Promise_OnActorEcsReady while the Actor was not yet ECS ready (and, for the
-    // ValuesReplicated policy, while the linked Entity's replication was still pending). These live
-    // with the component, so they are discarded automatically if the Actor is destroyed before ever
-    // becoming ready. LinkEstablished queues flush the moment the OwningActor link is established;
-    // ValuesReplicated queues flush once the linked Entity's OnReplicationComplete fires (immediately
-    // at link-time when the Entity does not replicate).
+    // Promises queued by Promise_OnActorEcsReady while the Actor was not yet ECS ready. Living on the
+    // component means they are discarded automatically if the Actor dies before ever becoming ready.
     TArray<FCk_Delegate_OwningActor_OnEcsReady> _PendingEcsReadyDelegates_LinkEstablished;
     TArray<TFunction<void(AActor*, FCk_Handle)>> _PendingEcsReadyCallbacks_LinkEstablished;
     TArray<FCk_Delegate_OwningActor_OnEcsReady> _PendingEcsReadyDelegates_ValuesReplicated;
@@ -118,7 +112,6 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// IsValid and Formatters
 
 CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_EntityOwningActor_BasicDetails, IsValid_Policy_Default,
 [=](const FCk_EntityOwningActor_BasicDetails& InBasicDetails)

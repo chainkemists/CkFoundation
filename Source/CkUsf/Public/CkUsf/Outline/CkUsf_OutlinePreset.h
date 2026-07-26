@@ -6,23 +6,20 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// How the outline behaves with respect to occlusion / fill, mirroring the reference SolidOutlineSystem.
-//   Normal           : silhouette + fill only where the object is actually visible (hidden behind walls).
-//   SeeThrough       : silhouette + fill always visible, even when the object is occluded.
-//   MaskedSeeThrough : see-through, but the fill is stippled into a screen-space mask pattern.
+// How the outline behaves with respect to occlusion / fill.
 UENUM(BlueprintType)
 enum class ECk_Usf_OutlineType : uint8
 {
-    Normal,
-    SeeThrough,
-    MaskedSeeThrough
+    Normal,             // silhouette + fill only where the object is actually visible (hidden behind walls)
+    SeeThrough,         // silhouette + fill always visible, even when the object is occluded
+    MaskedSeeThrough    // see-through, but the fill is stippled into a screen-space mask pattern
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Data-driven outline style. Authorable in AngelScript via `asset DA_Foo of UCkUsf_OutlinePreset {...}` and
-// in the editor. UCkUsf_OutlineSubsystem assigns each ACTIVE preset a Custom-Stencil value and packs these
-// fields into a row of the params LUT bound to the SolidOutline post-process look (see SolidOutline.ush).
+// Data-driven outline style (authorable in AngelScript via `asset DA_Foo of UCkUsf_OutlinePreset {...}`).
+// UCkUsf_OutlineSubsystem assigns each ACTIVE preset a Custom-Stencil value and packs these fields into a
+// row of the params LUT bound to the SolidOutline post-process look (see SolidOutline.ush).
 UCLASS(BlueprintType)
 class CKUSF_API UCkUsf_OutlinePreset : public UDataAsset
 {
@@ -53,8 +50,7 @@ public:
               meta = (UIMin = 0.0, UIMax = 1.0, ClampMin = 0.0, ClampMax = 1.0, EditCondition = "_FillEnabled"))
     float _FillOpacity = 0.25f;
 
-    // v1: when set, the interior samples the subsystem's single shared fill texture instead of a flat fill
-    // color. Per-preset fill textures are a documented follow-up (would need a texture atlas/array).
+    // When set, the interior samples the subsystem's single shared fill texture instead of a flat fill color.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|Outline", meta = (EditCondition = "_FillEnabled"))
     bool _UseFillTexture = false;
 };

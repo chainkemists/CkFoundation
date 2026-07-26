@@ -46,7 +46,6 @@ public:
     // Drag factor k = |Gravity| / (2 * |TerminalVelocity|), as per the Carpentier paper
     auto Get_DragK() const -> double;
 
-    // Combined velocity the projectile converges to: TerminalVelocity + Wind
     auto Get_TerminalVelocityWithWind() const -> FVector;
 
 public:
@@ -74,12 +73,10 @@ public:
     CK_GENERATED_BODY(FCk_Ballistic_InitialConditions);
 
 private:
-    // World time at which this trajectory segment began
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Time _StartTime;
 
-    // World location at which this trajectory segment began
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FVector _StartLocation = FVector::ZeroVector;

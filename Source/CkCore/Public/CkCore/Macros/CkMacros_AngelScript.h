@@ -59,9 +59,7 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
 });
 
 // --------------------------------------------------------------------------------------------------------------------
-// AngelScript Constructor Registration Macros
 
-// Helper macro to generate lambda parameter list
 #define CK_ANGELSCRIPT_LAMBDA_PARAM_1(_ClassType_, _1) _ClassType_* Address, decltype(_1) _1
 #define CK_ANGELSCRIPT_LAMBDA_PARAM_2(_ClassType_, _1, _2) CK_ANGELSCRIPT_LAMBDA_PARAM_1(_ClassType_, _1), decltype(_2) _2
 #define CK_ANGELSCRIPT_LAMBDA_PARAM_3(_ClassType_, _1, _2, _3) CK_ANGELSCRIPT_LAMBDA_PARAM_2(_ClassType_, _1, _2), decltype(_3) _3
@@ -75,7 +73,6 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
 #define CK_ANGELSCRIPT_LAMBDA_PARAM_VARIADIC(_ClassType_, M, ...) EXPAND(M(_ClassType_, __VA_ARGS__))
 #define CK_ANGELSCRIPT_LAMBDA_PARAMS(_ClassType_, ...) CK_ANGELSCRIPT_LAMBDA_PARAM_VARIADIC(_ClassType_, CK_CONCAT(CK_ANGELSCRIPT_LAMBDA_PARAM_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
 
-// Helper macro to generate constructor call arguments
 #define CK_ANGELSCRIPT_CTOR_ARG_1(_1) std::move(_1)
 #define CK_ANGELSCRIPT_CTOR_ARG_2(_1, _2) CK_ANGELSCRIPT_CTOR_ARG_1(_1), std::move(_2)
 #define CK_ANGELSCRIPT_CTOR_ARG_3(_1, _2, _3) CK_ANGELSCRIPT_CTOR_ARG_2(_1, _2), std::move(_3)
@@ -103,7 +100,6 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
 #define CK_ANGELSCRIPT_UNIQUE_SUFFIX_VARIADIC(M, ...) EXPAND(M(__VA_ARGS__))
 #define CK_ANGELSCRIPT_UNIQUE_SUFFIX(...) CK_ANGELSCRIPT_UNIQUE_SUFFIX_VARIADIC(CK_CONCAT(CK_ANGELSCRIPT_UNIQUE_SUFFIX_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
 
-// Helper macros to generate parameter type retrieval calls
 #define CK_ANGELSCRIPT_GET_TYPE_1(_1) auto Param1 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_1)>();
 #define CK_ANGELSCRIPT_GET_TYPE_2(_1, _2) CK_ANGELSCRIPT_GET_TYPE_1(_1) auto Param2 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_2)>();
 #define CK_ANGELSCRIPT_GET_TYPE_3(_1, _2, _3) CK_ANGELSCRIPT_GET_TYPE_2(_1, _2) auto Param3 = ck::Get_RuntimeTypeToString_AngelScript<decltype(_3)>();
@@ -117,7 +113,6 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
 #define CK_ANGELSCRIPT_GET_TYPE_VARIADIC(M, ...) EXPAND(M(__VA_ARGS__))
 #define CK_ANGELSCRIPT_GET_TYPES(...) CK_ANGELSCRIPT_GET_TYPE_VARIADIC(CK_CONCAT(CK_ANGELSCRIPT_GET_TYPE_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
 
-// Helper macros to generate format signatures with actual parameter names
 #define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_1(_1) TEXT("void f({} " #_1 ")")
 #define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_2(_1, _2) TEXT("void f({} " #_1 ", {} " #_2 ")")
 #define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_3(_1, _2, _3) TEXT("void f({} " #_1 ", {} " #_2 ", {} " #_3 ")")
@@ -131,7 +126,6 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
 #define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_VARIADIC(M, ...) EXPAND(M(__VA_ARGS__))
 #define CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES(...) CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_VARIADIC(CK_CONCAT(CK_ANGELSCRIPT_FORMAT_SIG_WITH_NAMES_, EXPAND(NARG_(__VA_ARGS__))), __VA_ARGS__)
 
-// Helper macros to generate format argument lists
 #define CK_ANGELSCRIPT_FORMAT_ARGS_1() Param1
 #define CK_ANGELSCRIPT_FORMAT_ARGS_2() Param1, Param2
 #define CK_ANGELSCRIPT_FORMAT_ARGS_3() Param1, Param2, Param3
@@ -144,7 +138,6 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
 
 #define CK_ANGELSCRIPT_FORMAT_ARGS(...) CK_CONCAT(CK_ANGELSCRIPT_FORMAT_ARGS_, EXPAND(NARG_(__VA_ARGS__)))()
 
-// Helper macros to validate parameter types for AngelScript compatibility
 #define CK_ANGELSCRIPT_VALIDATE_TYPE_1() \
     if (NOT ck::angelscript::IsTypeValidForAngelScript(Param1)) { return; }
 #define CK_ANGELSCRIPT_VALIDATE_TYPE_2() \
@@ -202,7 +195,6 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
 
 #define CK_ANGELSCRIPT_VALIDATE_TYPES(...) CK_CONCAT(CK_ANGELSCRIPT_VALIDATE_TYPE_, EXPAND(NARG_(__VA_ARGS__)))()
 
-// Main AngelScript constructor registration macro with unique naming and proper type resolution
 #define CK_ANGELSCRIPT_CTOR_REGISTRATION(_ClassType_, ...)\
     static void CK_CONCAT(RegisterAngelScriptCtor, CK_ANGELSCRIPT_UNIQUE_SUFFIX(__VA_ARGS__))()\
     {\
@@ -241,7 +233,6 @@ AS_FORCE_LINK const FAngelscriptBinds::FBind _AS_Op_Name_##_##_Type_##_Other_Typ
     }();
 
 // --------------------------------------------------------------------------------------------------------------------
-// AngelScript Property Registration System
 
 class CKCORE_API FCkAngelScriptPropertyFunctionRegistration
 {
@@ -287,9 +278,8 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// AngelScript Property Registration Macros
 
-// Simplified property registration that only handles const getter and setter (avoids overload issues)
+// Const getter + setter only — registering the non-const getter too collides on overload resolution.
 #define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_GETTER_SETTER(_InVar_)\
     static void CK_CONCAT(RegisterAngelScriptProperty_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_)))()\
     {\
@@ -360,7 +350,6 @@ private:
         return true;\
     }();
 
-// Const reference getter-only property registration
 #define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_GETTER_CONSTREF(_InVar_)\
     static void CK_CONCAT(RegisterAngelScriptPropertyGetterConstRef_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_)))()\
     {\
@@ -416,7 +405,6 @@ private:
         return true;\
     }();
 
-// Setter-only property registration
 #define CK_ANGELSCRIPT_PROPERTY_REGISTRATION_SETTER_ONLY(_InVar_)\
     static void CK_CONCAT(RegisterAngelScriptPropertySetterOnly_, CK_CONCAT(__LINE__, CK_CONCAT(_, _InVar_)))()\
     {\

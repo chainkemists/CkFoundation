@@ -93,6 +93,20 @@ A "Meta Fragment" is a fragment that is itself a Record entry — the entry has 
 
 ---
 
+## Implementation notes
+
+- **Snapshot round-trip.** `TFragment_RecordOfEntities::SerializeSnapshot` remaps *every* entry through
+  `FSnapshotContext::Snapshot_Handle` — each entry is an entity handle. `_RecordEntriesTagNamePairs` is the
+  persistent label→entry index (maintained imperatively as labeled entries are added/removed, NOT lazily
+  rebuilt), so both the `FName` label and the handle remap are round-tripped too. `_EntryHandlingPolicy` is
+  a plain enum.
+- **`CK_DEFINE_RECORD_OF_ENTITIES_ROUNDTRIP` / `_TRANSIENT` are inert aliases** of the single canonical
+  `CK_DEFINE_RECORD_OF_ENTITIES`. The old `T_Policy` snapshot-classification parameter was removed with the
+  Model-A purge — it fed nothing (the `IsSnapshotable` marker had no consumer left). The aliases survive only
+  so existing call sites are untouched; they carry no meaning. Prefer the plain macro in new code.
+
+---
+
 ## See also
 - `CkLabel/Claude.md` — how entries are identified by role.
 - `CkEcs/Claude.md` — entity creation / destruction primitives.

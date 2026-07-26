@@ -53,19 +53,12 @@ auto
 {
     Super::Initialize(Collection);
 
-    // 1. Create the underlying entt registry; we own its lifetime.
     _OwnedRegistry = MakeUnique<ck::registry_table::EnttRegistryType>();
 
-    // 2. Register it with the slot table — this gives us a (slot, gen) handle
-    //    embedded in every FCk_Handle/FCk_Registry view.
     const auto RegistryHandle = ck::registry_table::Allocate(_OwnedRegistry.Get());
 
-    // 3. Create the per-world transient entity inside the entt registry.
     const auto TransientEntityId = FCk_Entity{_OwnedRegistry->create()};
 
-    // 4. Bind the FCk_Registry view to the slot, then push the transient
-    //    entity into the registry's ctx (single source of truth — any view
-    //    resolved from the same slot reads the same transient entity).
     _Registry = FCk_Registry{RegistryHandle};
     _Registry.SetContext<ck::FCtx_TransientEntity>(ck::FCtx_TransientEntity{TransientEntityId});
 
@@ -104,10 +97,8 @@ auto
 
     DoTeardownSchedulers();
 
-    // Free the slot FIRST so any outstanding handle resolves to nullptr from
-    // here on. Then destroy the entt registry. Order matters: between these
-    // two calls, ghost-handle access fails safe (resolve -> null), not access
-    // freed memory.
+    // Free the slot BEFORE destroying the registry: in between, a ghost handle resolves to null
+    // rather than reaching freed memory.
     ck::registry_table::Free(_Registry.Get_RegistryHandle());
 
     _Registry        = FCk_Registry{};
@@ -126,10 +117,9 @@ auto
     Super::Tick(DeltaTime);
 
 #if WITH_EDITOR
-    // Skip scheduler work while PIE is active. Editor-world entities are authoring-time only
-    // (FTag_EditorOnlyEntity) and dynamic-fragment iteration here can dereference handles whose
-    // registry was destroyed by a previous PIE teardown — converted to a hard crash inside EnTT.
-    // The redraw request below is still serviced so editor viewports refresh normally.
+    // Skip scheduler work while PIE is active: dynamic-fragment iteration here can dereference handles
+    // whose registry a previous PIE teardown destroyed, which EnTT turns into a hard crash. The redraw
+    // request below is still serviced so editor viewports refresh normally.
     if (ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(GEditor->PlayWorld))
     {
         if (_PendingRedraw)
@@ -181,9 +171,8 @@ auto
     { return false; }
 #endif
 
-    // Registry freed (Deinitialize) or not yet initialized — the transient entity resolves invalid
-    // in both cases (fail-safe per the Deinitialize free-slot-first ordering). A processor-graph
-    // rebuild does NOT free the registry, so the transient stays valid and spawning is not gated.
+    // Invalid whether the registry was freed or never built. A processor-graph rebuild does NOT free
+    // the registry, so the transient stays valid there and spawning is not gated.
     if (ck::Is_NOT_Valid(_TransientEntity))
     { return false; }
 
@@ -238,10 +227,8 @@ auto
         UCk_EntityScript_UE* InScriptArchetype)
     -> FCk_Handle
 {
-    // Hard backstop: never enqueue an editor-entity spawn during the PIE-transition window. The
-    // deferred spawn would later resolve a stale archetype and the synchronous Set_DebugName would
-    // Has-query a torn-down registry. The spawner's rebuild path re-arms for the next safe
-    // end-of-frame, so the preview is not lost.
+    // Never enqueue a spawn during the PIE-transition window — it would later resolve a stale
+    // archetype against a torn-down registry. The spawner's rebuild path re-arms, so nothing is lost.
     if (NOT Get_IsEditorEcsMutationSafe())
     { return {}; }
 
@@ -335,8 +322,7 @@ auto
         return;
     }
 
-    // Same pre-build hook the runtime uses so CkDynamic (and similar) can inject script-defined
-    // processors before the graph is snapshot.
+    // Same pre-build hook the runtime uses, so CkDynamic can inject script-defined processors first.
     if (auto* World = GetWorld(); ck::IsValid(World))
     {
         UCk_EcsWorld_Subsystem_UE::Get_OnPreBuildProcessorGraph().Broadcast(*World);

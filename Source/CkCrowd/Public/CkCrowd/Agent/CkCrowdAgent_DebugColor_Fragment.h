@@ -7,11 +7,8 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-agent identity colour, used by every visualisation (breadcrumb path, planned-path overlay,
-// debugger Agent List swatch). Opt-in fragment: only present on agents the gym/debugger
-// explicitly stamps via UCk_Utils_CrowdAgent_UE::Set_DebugColor. Production agents that never
-// opt in carry zero overhead — Get_DebugColor falls back to a hash-derived colour so untagged
-// agents still get a stable distinct colour when a tool happens to render them.
+// Per-agent identity colour shared by every visualisation. Opt-in via Set_DebugColor — Get_DebugColor
+// falls back to a stable hash-derived colour for agents that never opted in.
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_CrowdAgent_UE;

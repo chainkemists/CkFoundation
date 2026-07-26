@@ -52,8 +52,7 @@ auto
     }
     else
     {
-        // Seed the container with REAL data at construction (the switch above composed FFragment_TeamInfo, so
-        // Produce reads InTeamID). Consume the registered Produce — one projection for wire + save.
+        // The switch above composed FFragment_TeamInfo, so Produce reads InTeamID — one projection for wire + save.
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Team>(InHandle);
         if (Produced.IsSet())
         { UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_Team>(InHandle, *Produced); }

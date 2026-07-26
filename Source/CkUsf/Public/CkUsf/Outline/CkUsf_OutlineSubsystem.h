@@ -16,11 +16,9 @@ class UPrimitiveComponent;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Per-world manager for CkUsf solid-color outlines (the reference SolidOutlineSystem's "subsystem").
-// Owns the SolidOutline post-process blendable on the local view, the automatic Custom-Stencil allocation
-// (one value per ACTIVE preset, refcounted, within a configurable range), and the params LUT bound to the
-// SolidOutline material. Apply/Remove mark a primitive's Custom Depth + Stencil so the post-process draws
-// its silhouette. Project requirement: Custom Depth-Stencil pass enabled WITH stencil (r.CustomDepth=3).
+// Per-world manager for CkUsf solid-color outlines: owns the SolidOutline post-process blendable on the
+// local view, refcounted Custom-Stencil allocation (one value per ACTIVE preset, within a configurable
+// range), and the params LUT. Project requirement: r.CustomDepth=3 (Custom Depth-Stencil WITH stencil).
 UCLASS(NotBlueprintable, BlueprintType, DisplayName = "CkSubsystem_Usf_Outline")
 class CKUSF_API UCkUsf_OutlineSubsystem : public UWorldSubsystem
 {
@@ -30,7 +28,6 @@ public:
     CK_GENERATED_BODY(UCkUsf_OutlineSubsystem);
 
 public:
-    // Convenience accessor.
     UFUNCTION(BlueprintCallable, Category = "Ck|Usf|Outline",
               DisplayName = "[Ck][Usf] Get Outline Subsystem",
               meta = (WorldContext = "InWorldContextObject"))
@@ -73,8 +70,7 @@ public:
     Set_GlobalOutlineThickness(
         float InThickness);
 
-    // ---- Stencil allocation (public so other renderers, e.g. CkIsmRenderer's shadow ISM, can share the
-    //      same per-preset stencil value without depending on this module's apply path). Refcounted. ----
+    // ---- Stencil allocation (refcounted; shared with the other renderer modules) ----
 
     // Returns the Custom-Stencil value assigned to InPreset (allocating + registering its LUT row on first
     // use), and increments its refcount. Returns 0 if allocation failed (e.g. range exhausted).
@@ -100,17 +96,17 @@ public:
     uint8 Get_StencilMax() const { return _StencilMax; }
 
 private:
-    // Lazily create the params LUT, the SolidOutline MID, and the unbound post-process component on the view.
     auto DoEnsure_ViewEffect() -> bool;
-    // Re-pack a preset's row into the LUT mirror and upload (rows: 0 = outline color/type, 1 = fill).
     auto DoWrite_PresetRow(int32 InSlot, const UCkUsf_OutlinePreset* InPreset) -> void;
     auto DoUpload_Lut() -> void;
-    // Drop tracking entries whose components have been GC'd (releases their stencil refcount).
+    // Also releases each reaped component's stencil refcount.
     auto DoReap_DeadComponents() -> void;
 
 private:
     static constexpr int32 kLutWidth = 16;   // max active presets (must match SolidOutline.ush CKUSF_OUTLINE_LUT_W)
     static constexpr int32 kLutHeight = 2;    // rows per preset column   (must match CKUSF_OUTLINE_LUT_H)
+    static constexpr int32 kLutRow_Outline = 0; // row order must match SolidOutline.ush
+    static constexpr int32 kLutRow_Fill = 1;
 
     UPROPERTY(Transient)
     TObjectPtr<UMaterialInstanceDynamic> _OutlineMID;
@@ -132,6 +128,5 @@ private:
     TMap<TWeakObjectPtr<UCkUsf_OutlinePreset>, FStencilSlot> _ActivePresets;
     TMap<TWeakObjectPtr<UPrimitiveComponent>, TWeakObjectPtr<UCkUsf_OutlinePreset>> _AppliedComponents;
 
-    // CPU mirror of the LUT, uploaded to _ParamsTex on change.
     TArray<FFloat16Color> _LutData;
 };

@@ -355,10 +355,8 @@ auto
 
     Profile->ResetToDefault();
 
-    // ResetToDefault operates on the profile directly, bypassing the
-    // UEnhancedInputUserSettings layer, so OnSettingsChanged is never
-    // broadcast.  Fire it manually so the keybind watcher subsystem
-    // (and any other listeners) pick up the changes.
+    // ResetToDefault bypasses the UEnhancedInputUserSettings layer, so OnSettingsChanged is never
+    // broadcast — fire it by hand or the keybind watcher subsystem never sees the change.
     Settings->OnSettingsChanged.Broadcast(Settings);
 }
 
@@ -405,7 +403,6 @@ auto
     if (ck::Is_NOT_Valid(Profile, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
-    // Resolve the source category from the first excluded mapping when filtering by SameCategory
     auto SourceCategory = FText::GetEmpty();
     if (InScope == ECk_KeyConflictScope::SameCategory && NOT InExcludeMappingNames.IsEmpty())
     {
@@ -474,7 +471,6 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(Profile), TEXT("No active key profile found"))
     { return {}; }
 
-    // Find the current key of the mapping being rebound (becomes the swap target)
     auto OldKey = FKey{EKeys::Invalid};
     {
         auto FindArgs = FMapPlayerKeyArgs{};
@@ -520,7 +516,6 @@ auto
         }
     }
 
-    // Now assign InNewKey to the original mapping
     {
         auto Args = FMapPlayerKeyArgs{};
         Args.MappingName = InMappingName;
@@ -592,7 +587,6 @@ auto
         }
     }
 
-    // Now assign InNewKey to the target mapping
     {
         auto Args = FMapPlayerKeyArgs{};
         Args.MappingName = InMappingName;

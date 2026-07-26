@@ -12,7 +12,6 @@
 
 #include <StructUtils/InstancedStruct.h>
 
-// Per-feature fragment headers — included here for backward compatibility
 #include "CkStateMachine/State/CkSmState_Fragment.h"
 #include "CkStateMachine/Condition/CkSmCondition_Fragment.h"
 #include "CkStateMachine/Transition/CkSmTransition_Fragment.h"
@@ -34,7 +33,6 @@ namespace ck
 {
     class FProcessor_SmState_Evaluate;
 
-    // Forward decls for replication-related processors.
     class FProcessor_Sm_PushOwningClientBatch;
     class FProcessor_Sm_FlushPendingReplication_Drain;
     class FProcessor_Sm_ApplyReplicatedHistory;
@@ -45,42 +43,31 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Sm_Running);
     CK_DEFINE_ECS_TAG(FTag_Sm_Paused);
 
-    // Marks a sub-state-machine (created by UCk_SmTask_SubStateMachine, owned by a parent SM's task) vs
-    // a top-level SM. Top-level SMs never carry this tag. A sub-SM is derived graph state — under the v3
-    // rebuild+hydrate load its parent's task recreates it fresh when the parent redrives, so it is never
-    // image-restored as an orphan.
+    // Marks a sub-state-machine (created by UCk_SmTask_SubStateMachine, owned by a parent SM's task).
+    // Top-level SMs never carry it.
     CK_DEFINE_ECS_TAG(FTag_Sm_IsSubMachine);
 
-    // Marks an SM child entity (Task/Condition) whose user-authored EntityScript has been
-    // deferred. A commit processor materializes the script before EntityScript processors
-    // see the entity. Strip this tag + FFragment_SmScript_PendingAttach to cancel the
-    // attach (e.g. when the child is removed before commit runs).
+    // Marks an SM child entity (Task/Condition) whose EntityScript attach is deferred until
+    // FProcessor_SmScript_CommitPendingAttach materializes it. Strip this tag +
+    // FFragment_SmScript_PendingAttach to cancel the attach before commit runs.
     CK_DEFINE_ECS_TAG(FTag_SmScript_PendingAttach);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Sticky fault tag set by UCk_SmState_EntityScript::DoVerifyFingerprintAgainstExpected when
-    // a replayed transition's replicated fingerprint diverges from the locally-computed one.
-    // Excluded by ApplyReplicatedHistory via TExclude, so the SM is permanently
-    // quiesced after the fault fires. Only the transition-time verify sets this — there is
-    // no initial-state Setup-time check.
+    // Sticky fault tag set by UCk_SmState_EntityScript::DoVerifyFingerprintAgainstExpected when a
+    // replayed transition's fingerprint diverges from the locally-computed one. ApplyReplicatedHistory
+    // TExcludes it, so the SM is permanently quiesced. Only the transition-time verify sets it.
     CK_DEFINE_ECS_TAG(FTag_Sm_DeterminismFault);
 
-    // One-shot trigger added by MirrorRunStatus when a NON-AUTHORITY machine first learns the SM
-    // is Running but has no current state. The authority enters its initial state via DoStart;
-    // non-authority machines never run Start (it's authority-only) and the initial entry isn't a
-    // replayed transition, so without this they'd sit at <none> until the first transition.
-    // Consumed (removed) by FProcessor_Sm_FirstSyncInitialState, which enters the locally-known
-    // initial state so non-owning views reflect it immediately.
+    // One-shot trigger added by MirrorRunStatus when a NON-AUTHORITY machine first learns the SM is
+    // Running but has no current state. Consumed by FProcessor_Sm_FirstSyncInitialState, which enters
+    // the locally-known initial state.
     CK_DEFINE_ECS_TAG(FTag_Sm_NeedsInitialStateEntry);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Carries the EntityScript class to attach to an SM child entity (Task/Condition) when
-    // the commit processor runs. Deferring the attach avoids
-    // a same-frame race with FProcessor_EntityScript_ContinueConstruction when the child
-    // is removed before BeginPlay runs — see CkEntityLifetime_Fragment.cpp destruction
-    // pipeline, where CK_IGNORE_PENDING_KILL does NOT exclude FTag_DestroyEntity_Initiate.
+    // Carries the EntityScript class to attach to an SM child entity (Task/Condition) when the
+    // commit processor runs.
     struct CKSTATEMACHINE_API FFragment_SmScript_PendingAttach
     {
     public:
@@ -154,11 +141,9 @@ namespace ck
         TSubclassOf<UCk_SmState_EntityScript> _PreviousStateClass;
         TSubclassOf<UCk_SmState_EntityScript> _TargetStateClass;
 
-        // Fingerprint carried from the replicated event (set by ApplyReplicatedHistory). The
-        // commit processor uses it post-Construct to verify the non-authority machine's local
-        // DefineState produced the same structural hash as authority. Server-originated
-        // transitions (HandleRequests path) leave this at 0 — that's the sentinel for "no
-        // verification, this is the authoritative branch".
+        // Fingerprint carried from the replicated event (set by ApplyReplicatedHistory); the commit
+        // processor verifies the local DefineState hash against it post-Construct. 0 is the sentinel
+        // for "server-originated, no verification".
         int32 _NewStateFingerprint = 0;
 
     public:
@@ -244,12 +229,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Transient phase ladder for the save-load SM hydration redrive (FProcessor_Sm_HydrationResume). Stashed by the
-    // SM's save-transport Apply handler (CkStateMachine_Replication.cpp) via Populate() with the saved
-    // {RunStatus, CurrentStateClass}; the ladder then drives the freshly-composed SM to that state through its own
-    // Start/Transition/Finalize machinery and REMOVES itself (the done marker) once it converges. The fresh world's
-    // normal boot already composed + Setup-drove the SM (no virgin reset needed).
-    // Never snapshotted (transient by construction — only exists between a load and the redrive's completion).
+    // Transient phase ladder for the save-load SM hydration redrive (FProcessor_Sm_HydrationResume).
+    // Populated by the SM's save-transport Apply handler with the saved {RunStatus, CurrentStateClass};
+    // removes itself (the done marker) once the SM converges. Never persisted.
     struct CKSTATEMACHINE_API FFragment_Sm_HydrationResume
     {
     public:
@@ -278,8 +260,7 @@ namespace ck
         bool _PauseEnqueued = false;
 
     public:
-        // Seed the desired end-state from the save-transport Apply handler (not a friend). The ladder reads
-        // these via the getters below and drives the composed SM to them.
+        // Seeded by the save-transport Apply handler, which is not a friend.
         auto
         Populate(
             ECk_SmRunStatus                       InDesiredRunStatus,
@@ -301,21 +282,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Resolved-once net identity, present only on SUB-SMs. A sub-SM entity is created detached
-    // from the pawn (Request_CreateEntity under the task entity), so it never carries
-    // FFragment_OwningActor_Current. The live ComputeNetContext / Get_EffectiveAuthorityModel
-    // queries need the owning pawn (non-recursive owning-actor lookup) and therefore misresolve
-    // on a sub-SM — it would see itself as NonOwningClient on the owning client and AutoDetect to
-    // ServerAuthoritative. The SubStateMachine task snapshots the PARENT SM's live-resolved
-    // identity into this fragment at EnterTask. EnterTask runs on every machine and the parent is
-    // fully resolved by then, so each machine captures its own correct per-machine role. When
-    // present, ComputeNetContext / Get_EffectiveAuthorityModel return these stored values instead
-    // of resolving live. Top-level SMs never carry it (they hold the pawn and resolve live).
-    // Nesting chains automatically: a nested sub-SM reads its parent sub-SM's already-stored value.
-    //
-    // Snapshot caveat: the per-machine NetContext is frozen at EnterTask. A mid-life re-possession
-    // of the owning pawn would leave it stale; sub-SMs are expected not to outlive a possession
-    // change. The EffectiveAuthority half is machine-independent and immutable, so it is never stale.
+    // Resolved-once net identity, present only on SUB-SMs — a sub-SM is detached from the pawn, so
+    // the live ComputeNetContext / Get_EffectiveAuthorityModel queries misresolve on it. When present
+    // those queries return these stored values instead. The NetContext half is frozen at EnterTask.
     struct CKSTATEMACHINE_API FFragment_Sm_NetIdentity
     {
     public:
@@ -335,12 +304,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Per-frame memo of the live net-context / transition-authority resolution
-    // (ck::statemachine::ComputeNetContext / Get_IsTransitionAuthority). The live resolve walks
-    // owning-actor/PlayerState chains and is queried by the state, transition, condition, and task
-    // processors — several times per SM element per frame when uncached. GFrameCounter-stamped, so
-    // no invalidation hook is needed: a possession change is observed on the next frame, and all
-    // elements of one SM read a single consistent snapshot within a frame.
+    // Per-frame memo of the live net-context / transition-authority resolution, which walks
+    // owning-actor/PlayerState chains and is queried several times per SM element per frame.
+    // GFrameCounter-stamped, so no invalidation hook is needed.
     struct CKSTATEMACHINE_API FFragment_Sm_NetContextMemo
     {
     public:
@@ -362,17 +328,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Owning-client outbound buffer. Filled by FProcessor_Sm_CommitPendingTransition on the
-    // owning client when it lands a transition on an OwningClientAuthoritative SM, and by
-    // DoPublishRunStatus when the owning client changes run-status (Start/Stop/Pause/Resume).
-    // Flushed end-of-frame via FProcessor_Sm_PushOwningClientBatch → Server_PushTransitionBatch /
-    // Server_PushRunStatus RPCs.
-    //
-    // Run-status relay note: before this was added, owning-client run-status changes only wrote the
-    // server→client rep container (a no-op on the client, which doesn't own it), so Server_PushRunStatus
-    // was dead code and the server's OwningClientAuth SM never started. ApplyReplicatedHistory then
-    // dropped every relayed transition (it requires _RunStatus == Running). Relaying run-status fixes
-    // the owning-client authority path end-to-end.
+    // Owning-client outbound buffer, filled by FProcessor_Sm_CommitPendingTransition (transitions)
+    // and DoPublishRunStatus (run-status). Flushed end-of-frame by FProcessor_Sm_PushOwningClientBatch
+    // via Server_PushTransitionBatch / Server_PushRunStatus.
     struct CKSTATEMACHINE_API FFragment_Sm_PendingClientBatch
     {
     public:
@@ -415,12 +373,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Parks a Paused/Stopped run-status mirror that arrived while replayed transitions are still
-    // queued or mid-commit on this entity. Applying it immediately would jump the on-the-wire
-    // ordering: FProcessor_Sm_CommitPendingTransition's not-Running branch would then DISCARD the
-    // queued transition and destroy the client's live state entity. Applied (latest-wins) by the
-    // commit tail once the replay queue is empty and no transition is in flight. Running mirrors
-    // are never parked — transitions require Running, and authority only emits events while
-    // Running, so a Running mirror is always safe (and necessary) to apply first.
+    // queued or mid-commit — applying it immediately would make FProcessor_Sm_CommitPendingTransition
+    // DISCARD the queued transition. Applied (latest-wins) by the commit tail once the queue drains.
     struct CKSTATEMACHINE_API FFragment_Sm_DeferredRunStatusMirror
     {
     public:
@@ -466,10 +420,9 @@ namespace ck
     private:
         TArray<FCk_Sm_TransitionEvent> _StashedEntries;
 
-        // Latest run-status from any rep payload that arrived while stashing. Applied by Drain
-        // after the stashed events are queued. The bool gate distinguishes "no run-status was
-        // ever observed during stash" (don't mirror) from "stash was empty but RunStatus update
-        // was received during the same stash window" (mirror without touching events).
+        // Latest run-status from any rep payload that arrived while stashing, applied by Drain after
+        // the stashed events queue. The bool distinguishes "never observed" from "observed with an
+        // empty stash".
         ECk_SmRunStatus _PendingRunStatus = ECk_SmRunStatus::Stopped;
         bool            _HasPendingRunStatus = false;
 

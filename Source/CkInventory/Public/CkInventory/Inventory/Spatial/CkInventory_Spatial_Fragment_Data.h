@@ -50,15 +50,13 @@ private:
                       EditCondition = "_StackingPolicy == ECk_Inventory_StackingPolicy::ClampMaxStackSize", SaveGame))
     int32 _MaxStackSizeClamp = 1;
 
-    // Not SaveGame: native delegate — runtime wiring, not persisted state.
+    // Every field below is deliberately NOT SaveGame: runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomCanAcceptItem _CustomCanAcceptItem;
 
-    // Not SaveGame: dynamic delegate — runtime wiring, not persisted state.
     UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Accept Item",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic _CustomCanAcceptItemDynamic;
 
-    // Not SaveGame: FMemberReference — Blueprint function reference, not persisted state.
     UPROPERTY(EditAnywhere, DisplayName = "Custom Can Accept Item",
               meta = (AllowPrivateAccess = true,
                       FunctionReference,
@@ -66,15 +64,12 @@ private:
                       PrototypeFunction = "/Script/CkInventory.Ck_Utils_Inventory_UE.Prototype_CanAcceptItem"))
     FMemberReference _CanAcceptItemRef;
 
-    // Not SaveGame: native delegate — runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomCanStackItems _CustomCanStackItems;
 
-    // Not SaveGame: dynamic delegate — runtime wiring, not persisted state.
     UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Can Stack Items",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomCanStackItems_Dynamic _CustomCanStackItemsDynamic;
 
-    // Not SaveGame: FMemberReference — Blueprint function reference, not persisted state.
     UPROPERTY(EditAnywhere, DisplayName = "Custom Can Stack Items",
               meta = (AllowPrivateAccess = true,
                       FunctionReference,
@@ -82,15 +77,12 @@ private:
                       PrototypeFunction = "/Script/CkInventory.Ck_Utils_ItemTrait_Stackable_UE.Prototype_CanStackItems"))
     FMemberReference _CanStackItemsRef;
 
-    // Not SaveGame: native delegate — runtime wiring, not persisted state.
     FCk_Delegate_Inventory_CustomGetAbsorbableUnits _CustomGetAbsorbableUnits;
 
-    // Not SaveGame: dynamic delegate — runtime wiring, not persisted state.
     UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Get Absorbable Units",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_Inventory_CustomGetAbsorbableUnits_Dynamic _CustomGetAbsorbableUnitsDynamic;
 
-    // Not SaveGame: FMemberReference — Blueprint function reference, not persisted state.
     UPROPERTY(EditAnywhere, DisplayName = "Custom Get Absorbable Units",
               meta = (AllowPrivateAccess = true,
                       FunctionReference,

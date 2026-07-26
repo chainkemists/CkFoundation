@@ -95,10 +95,8 @@ enum class ECk_Goap_WorldStateMutator : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Goap_WorldStateMutator);
 
 // --------------------------------------------------------------------------------------------------------------------
-// One recorded world-state mutation whose EFFECTIVE value changed. The ring on
-// the WorldState entity keeps the most recent entries (see
-// FFragment_Goap_WorldState_ChangeLog); the debugger's timeline lane and the
-// Planner's replan-cause attribution both read it.
+// One recorded world-state mutation whose EFFECTIVE value changed; ring-buffered
+// on the WorldState entity (FFragment_Goap_WorldState_ChangeLog).
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Goap_WorldStateChange
@@ -229,10 +227,8 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// BlueprintType-friendly (tag, bool) pair for declaring
-// goal / initial-state entries from editor or AngelScript. The Setup processor
-// resolves these into the internal FCk_GoapKey-indexed form against the
-// WorldState registry.
+// BlueprintType-friendly (tag, bool) pair for declaring goal / initial-state
+// entries; Setup resolves them into FCk_GoapKey-indexed form.
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_GoapWS_Condition_Authored
@@ -260,7 +256,6 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Reused by Action-scoped signals declared in Action/CkGoap_Action_Fragment_Data.h
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Goap_Payload_OnPlanComplete
@@ -353,9 +348,7 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// One regressive-search node from the last completed search, in discovery
-// order: the constraint set, the action whose reverse application produced it,
-// and how many of its constraints the seed-time world state left unsatisfied.
+// One regressive-search node from the last completed search, in discovery order.
 // (Declared after FCk_GoapWS_Condition_Authored — UHT needs in-file order.)
 
 USTRUCT(BlueprintType)

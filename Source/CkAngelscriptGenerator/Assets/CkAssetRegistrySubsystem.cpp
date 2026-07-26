@@ -42,15 +42,10 @@ auto
     auto AssetPath = InAssetData.GetSoftObjectPath();
     auto AssetName = InAssetData.AssetName.ToString();
 
-    // Sync resolve — runs BEFORE the async-load so the result lands before the
-    // regen-completion event fires. Without this, slow async callbacks return
-    // AFTER the batch is declared complete, dropping the accessor from the
-    // output and triggering the self-heal synth/cleanup loop.
-    //
-    // BP-gating is load-bearing: an AnimMontage containing embedded
-    // AnimNotifyState `_C` exports would fool the linker walk into returning
-    // the embedded BP's class instead of the asset's. AssetData::GetClass() is
-    // authoritative for non-BPs and doesn't need the walk.
+    // Sync resolve runs BEFORE the async load so the result lands before the regen-completion
+    // event; a late async callback drops its accessor from the output and kicks the self-heal
+    // synth/cleanup loop. The BP gate is load-bearing: embedded `_C` exports (an AnimMontage's
+    // AnimNotifyStates) would fool the linker walk, and GetClass() is authoritative for non-BPs.
     if (const auto AssetClass = InAssetData.GetClass(); ck::IsValid(AssetClass))
     {
         const auto IsBlueprintAsset = AssetClass->IsChildOf<UBlueprint>();
@@ -62,13 +57,8 @@ auto
 
             if (NOT SyncResolved.ClassName.IsEmpty())
             {
-                // ResolvedClass is null when the name was derived without a
-                // live UClass (AS reload window), but those classes are
-                // runtime by definition (UCk_* AS classes aren't editor-only),
-                // so the false-default is the correct answer in that failure
-                // mode. Native editor-utility parents (UEditorUtilityWidget,
-                // etc.) always carry a live UClass since they're loaded at
-                // engine startup.
+                // A null ResolvedClass (AS reload window) correctly defaults to false: AS classes
+                // are runtime by definition, and editor-utility parents are loaded at startup.
                 const auto IsEditorOnly = ck::IsValid(SyncResolved.ResolvedClass)
                     && UCk_Utils_Reflection_UE::Is_EditorOnlyClass(SyncResolved.ResolvedClass);
 
@@ -80,15 +70,10 @@ auto
                 return;
             }
 
-            // ViaPackageReader couldn't resolve the parent. A Blueprint whose parent
-            // class was deleted/renamed must NOT fall through to the async load below:
-            // regenerating its BPGC requires the parent class, so the package load is
-            // cancelled and its streamable completion delegate never fires — *PendingAssets
-            // never drains, WriteCanonicalAndAdvance never runs, and the whole batch stalls
-            // (IsGenerationInProgress stuck true, completion delegate never broadcast, and
-            // the progress notification hangs sub-100% forever). Resolve the parent straight
-            // from the asset-registry tags (no asset load) and SKIP the BP if it has none —
-            // either way the BP branch always fires the callback and returns.
+            // A Blueprint with a deleted/renamed parent must NOT fall through to the async load:
+            // its package load is cancelled, the streamable delegate never fires, *PendingAssets
+            // never drains, and the whole batch stalls forever. Resolving from AR tags instead
+            // needs no load, and either outcome fires the callback and returns.
             auto BlueprintParentClass = UBlueprint::GetBlueprintParentClassFromAssetTags(InAssetData);
 
             if (ck::Is_NOT_Valid(BlueprintParentClass))
@@ -121,10 +106,8 @@ auto
         }
         else
         {
-            // Non-BP path. Loses LoadedAsset->IsEditorOnly() (instance-level
-            // UObject flag) vs the async path; preserves the class-level
-            // Is_EditorOnlyClass check, which is the load-bearing branch on
-            // game assets.
+            // Trades the async path's instance-level LoadedAsset->IsEditorOnly() for the
+            // class-level check, which is the load-bearing one on game assets.
             if (const auto NativeParentClass = Get_NonBlueprintParentClass(AssetClass);
                 ck::IsValid(NativeParentClass))
             {
@@ -181,7 +164,6 @@ auto
                 if (auto NativeParentClass = Get_NonBlueprintParentClass(ParentClass);
                     ck::IsValid(NativeParentClass))
                 {
-                    // Check if the class is from an editor-only module
                     if (UCk_Utils_Reflection_UE::Is_EditorOnlyClass(NativeParentClass))
                     { IsEditorOnly = true; }
 
@@ -197,15 +179,12 @@ auto
             }
             else
             {
-                // For non-Blueprint assets (DataAssets, curves, etc.), use the loaded object's class
                 if (const auto AssetClass = LoadedAsset->GetClass();
                     ck::IsValid(AssetClass))
                 {
-                    // Also traverse inheritance for non-Blueprint assets in case they inherit from Blueprint classes
                     if (const auto NativeParentClass = Get_NonBlueprintParentClass(AssetClass);
                         ck::IsValid(NativeParentClass))
                     {
-                        // Check if the class is from an editor-only module
                         if (UCk_Utils_Reflection_UE::Is_EditorOnlyClass(NativeParentClass))
                         { IsEditorOnly = true; }
 
@@ -259,14 +238,12 @@ auto
         ck::angelscriptgenerator::Log(TEXT("Checking class: {} (HasAnyClassFlags(CLASS_CompiledFromBlueprint): {})"),
             CurrentClass->GetName(), CurrentClass->HasAnyClassFlags(CLASS_CompiledFromBlueprint));
 
-        // If this class is not compiled from Blueprint, it's native
         if (NOT IsBlueprint)
         {
             ck::angelscriptgenerator::Log(TEXT("Found non blueprint class: {}"), CurrentClass->GetName());
             return CurrentClass;
         }
 
-        // Move up to the parent class - this will traverse Blueprint inheritance chains
         CurrentClass = CurrentClass->GetSuperClass();
     }
 
@@ -293,17 +270,14 @@ auto
     AssetRegistry.OnAssetRemoved().AddUObject(this, &UCkAssetRegistrySubsystem::OnAssetRemoved);
     AssetRegistry.OnAssetUpdated().AddUObject(this, &UCkAssetRegistrySubsystem::OnAssetUpdated);
 
-    // Pre-delete warning for assets referenced in AngelScript
     PreDeleteDelegateHandle = FEditorDelegates::OnAssetsPreDelete.AddUObject(
         this, &UCkAssetRegistrySubsystem::HandleAssetsPreDelete);
 
-    // Rebuild usage map after every AS compilation (initial + hot-reload)
 #if WITH_ANGELSCRIPT_CK
     PostCompileDelegateHandle = FAngelscriptCodeModule::GetPostCompile().AddUObject(
         this, &UCkAssetRegistrySubsystem::HandleAngelscriptPostCompile);
 #endif
 
-    // Seed Map 1 from existing generated files and run initial usage scan
     SeedMapsFromGeneratedFiles();
     ScanScriptFilesForUsage();
 
@@ -382,15 +356,11 @@ auto
     GenerateAllAssetRegistries()
     -> void
 {
-    // Pre-init guard (single choke point for ALL regen triggers — OnAssetAdded timer,
-    // PostCompile/PostInit settle-tickers, editor buttons): the generation sweep resolves asset
+    // Pre-init guard, and the single choke point for every regen trigger. The sweep resolves
     // classes via LoadObject, and loading a package with UActorComponent exports before
-    // UEngine::Init registers the engine typed elements asserts fatally ("Element type
-    // 'Components' has not been registered!"). The settle-tickers gate on shader-compiler/AR
-    // idleness, which a fast headless boot (-unattended -nullrhi) satisfies PRE-init — a
-    // regen-vs-engine-init race that kills the editor. Defer to init-complete;
-    // IsEngineSafeForBlockingLoads() flips on exactly OnFEngineLoopInitComplete
-    // (see CkIO_Utils.cpp FBlockingLoadSafetyRegistrar).
+    // UEngine::Init asserts fatally ("Element type 'Components' has not been registered!").
+    // A fast headless boot satisfies the settle-tickers' idleness gates PRE-init, so this race
+    // is reachable. IsEngineSafeForBlockingLoads() flips exactly on OnFEngineLoopInitComplete.
     if (NOT UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads())
     {
         ck::angelscriptgenerator::Log(
@@ -403,11 +373,9 @@ auto
         return;
     }
 
-    // In-flight guard: generation now spans multiple frames (per-frame ticker), so a
-    // re-trigger landing mid-run (config-asset change → 1s timer → ExecuteDelayedRegeneration,
-    // or a PostCompile/PostInit ticker) must NOT reset the shared dedup/name state under the
-    // active batch — that would corrupt its output and can kick a self-heal regen cycle.
-    // Reschedule instead; the timer retries once the current run drains.
+    // In-flight guard: generation spans multiple frames, so a re-trigger landing mid-run must
+    // NOT reset the shared dedup/name state under the active batch — that corrupts its output
+    // and can kick a self-heal regen cycle. The reschedule retries once the run drains.
     if (IsGenerationInProgress)
     {
         ck::angelscriptgenerator::Warning(
@@ -448,9 +416,8 @@ auto
         DispatchedCount++;
     }
 
-    // _Internal generates synchronously OR queues when a generation is already
-    // in flight — per-config success is reported by OnAssetRegistryComplete,
-    // so only dispatch counts are knowable here.
+    // Only dispatch counts are knowable here — _Internal may queue instead of generating, and
+    // per-config success is reported by OnAssetRegistryComplete.
     ck::angelscriptgenerator::Log(TEXT("Asset Registry generation dispatched: {} configs ({} invalid skipped)"),
                                  DispatchedCount, InvalidConfigCount);
 }
@@ -463,8 +430,7 @@ auto
         UCkAssetRegistryConfig* InConfig)
     -> void
 {
-    // In-flight guard (see GenerateAllAssetRegistries): never reset shared dedup/name state
-    // under an active multi-frame run. Reschedule and let the timer retry once it drains.
+    // In-flight guard — see GenerateAllAssetRegistries.
     if (IsGenerationInProgress)
     {
         ck::angelscriptgenerator::Warning(
@@ -489,10 +455,9 @@ auto
         TEXT("Cannot generate asset registry for invalid config"))
     { return; }
 
-    // Single-writer gate (G8): the single choke point for every *Assets.as canonical write
-    // (editor buttons, PostCompile/PostInit AR tickers, asset-change regen queue). A secondary
-    // must write nothing — clear the queue and broadcast a "did nothing" completion so listeners
-    // aren't left hanging, and never flip IsGenerationInProgress (which a deferred ticker reads).
+    // Single-writer gate over every *Assets.as canonical write. A secondary writes nothing: it
+    // clears the queue and broadcasts a did-nothing completion so listeners aren't left hanging,
+    // and it must never flip IsGenerationInProgress, which a deferred ticker reads.
     if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
             TEXT("AssetRegistrySubsystem.GenerateAssetRegistryForConfig")))
     {
@@ -504,10 +469,8 @@ auto
         return;
     }
 
-    // If generation is in progress, queue this request
     if (IsGenerationInProgress)
     {
-        // Check if this config is already in the queue to avoid duplicates
         if (NOT PendingGenerationQueue.Contains(InConfig))
         {
             PendingGenerationQueue.Add(InConfig);
@@ -558,12 +521,10 @@ auto
     auto TotalAssets = DiscoveredAssets.Num();
     ck::angelscriptgenerator::Log(TEXT("Processing {} assets with async loading"), TotalAssets);
 
-    // Non-blocking status-bar progress notification (bottom-right), the same surface
-    // the engine uses for shader/static-mesh compilation. Unlike FScopedSlowTask::MakeDialog
-    // this does NOT block editor interaction. Headless/commandlet boots have no status-bar
-    // handler registered, so these calls are silent no-ops there. Auto-dismisses once
-    // work-done reaches total (the last async callback drives it there); the completion
-    // sites then Cancel to remove the entry from the status bar's tracking array.
+    // Status-bar notification, NOT FScopedSlowTask::MakeDialog — it must not block editor
+    // interaction. Headless boots register no status-bar handler, so it no-ops silently there.
+    // It auto-dismisses once work-done reaches total; the completion sites Cancel to drop the
+    // entry from the status bar's tracking array.
     ActiveProgressNotification = FSlateNotificationManager::Get().StartProgressNotification(
         FText::FromString(ck::Format_UE(TEXT("Generating Asset Registry: {}"), InConfig->OutputFileName)),
         TotalAssets);
@@ -580,8 +541,8 @@ auto
     CollectedFunctions->Reserve(TotalAssets);
     CollectedLoadFunctions->Reserve(TotalAssets);
 
-    // Single write per config. Fires from the last async callback to drain, OR
-    // directly post-loop when every asset resolved sync (Race A path).
+    // Exactly one write per config: fired by the last async callback to drain, or post-loop
+    // when every asset resolved synchronously.
     auto WriteCanonicalAndAdvance = [this, Content, CollectedFunctions, CollectedLoadFunctions,
                                      GeneratedFunctionCount, SkippedAssetCount, InConfig, TotalAssets]()
     {
@@ -615,8 +576,8 @@ auto
         auto OutputDir = Get_OutputDirectoryForRootPath(InConfig->AssetDiscoveryRoot);
         auto OutputPath = OutputDir / InConfig->OutputFileName;
 
-        // Refuse to clobber a populated canonical with a 0-accessor regen --
-        // AR hasn't finished cataloging this mount yet; next pass will retry.
+        // A 0-accessor regen over a populated canonical means AR has not finished cataloging
+        // this mount; refuse the write and let the next pass retry.
         if (*GeneratedFunctionCount == 0 && IFileManager::Get().FileExists(*OutputPath))
         {
             auto ExistingContent = FString{};
@@ -671,8 +632,7 @@ auto
         Request_ProcessNextInQueue();
     };
 
-    // Per-asset dispatch (the body is unchanged — hoisted into a reusable lambda so the
-    // per-frame ticker below can call it on a slice of assets at a time).
+    // Called by the per-frame ticker below on a slice of assets at a time.
     auto DispatchOneAsset = [this, PendingAssets, CollectedFunctions, CollectedLoadFunctions,
                              GeneratedFunctionCount, SkippedAssetCount, ProcessedAssetCount,
                              InConfig, TotalAssets, DispatchComplete, WriteCanonicalAndAdvance]
@@ -727,11 +687,9 @@ auto
 
                         LoadFunction += ck::Format_UE(TEXT("    {} {}()\n"), AssetType, FinalAssetName);
                         LoadFunction += TEXT("    {\n");
-                        // Before engine-init, blocking loads are unsafe → return null so the query trips
-                        // WasBlockingLoadQueriedWhileUnsafe and UCk_DeferredAssetInit_UE re-runs post-init.
-                        // Report the premature call via the cheap aggregator (EnsureIfNot_PrematureAssetLoad —
-                        // no per-call stack walks) so a stray premature assets::load::X() is still surfaced as
-                        // one summary line. Gated on Get_IsRunningCommandlet() so it stays SILENT during cook.
+                        // The emitted null return trips WasBlockingLoadQueriedWhileUnsafe so
+                        // UCk_DeferredAssetInit_UE re-runs post-init. EnsureIfNot_PrematureAssetLoad
+                        // aggregates (no per-call stack walks) and stays silent during cook.
                         LoadFunction += TEXT("        if (UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false)\n");
                         LoadFunction += TEXT("        {\n");
                         LoadFunction += ck::Format_UE(TEXT("            ck::EnsureIfNot_PrematureAssetLoad(UCk_Utils_IO_UE::Get_IsRunningCommandlet(), \"{}::load::{}() called before engine init. Use {}::{}() (soft ref) with UCk_DeferredConfig_UE instead.\");\n"), InConfig->Namespace, FinalAssetName, InConfig->Namespace, FinalAssetName);
@@ -806,8 +764,8 @@ auto
 
                 OnAssetRegistryProgress.Broadcast(*ProcessedAssetCount, TotalAssets);
 
-                // Gate on DispatchComplete to suppress writes during the sync drain
-                // (Race A causes ~1400 callbacks to fire inside this for-loop).
+                // DispatchComplete suppresses writes during the sync drain, where every callback
+                // fires inside the dispatch loop itself.
                 if (*DispatchComplete && *PendingAssets <= 0)
                 {
                     WriteCanonicalAndAdvance();
@@ -815,14 +773,10 @@ auto
             }));
     };
 
-    // Why a per-frame ticker instead of a tight for-loop: nearly every asset now
-    // resolves SYNCHRONOUSLY (sync linker walk / AssetData-tag parent resolution),
-    // so a single for-loop would process the whole batch in one game-thread burst —
-    // Slate never ticks, the status-bar progress bar can't repaint until the burst
-    // ends, and the editor freezes for a second or two with the bar only flashing in
-    // near 100%. Dispatching a time-boxed slice of assets per frame yields to Slate
-    // between slices: the editor stays interactive and the bar fills live. (Resolution
-    // touches UObject/reflection/AssetData, which is game-thread-only — no worker thread.)
+    // A ticker rather than a for-loop because nearly every asset resolves SYNCHRONOUSLY now:
+    // one loop would burn the whole batch in a single game-thread burst, freezing Slate for
+    // seconds. Time-boxed slices yield between frames. Resolution is game-thread-only
+    // (UObject/reflection/AssetData), so a worker thread is not an option.
     auto RemainingAssets = MakeShared<TArray<FAssetData>>(MoveTemp(DiscoveredAssets));
     auto NextIndex = MakeShared<int32>(0);
 
@@ -831,8 +785,7 @@ auto
         [this, RemainingAssets, NextIndex, DispatchOneAsset, DispatchComplete, PendingAssets, WriteCanonicalAndAdvance]
         (float) -> bool
         {
-            // ~8ms/frame budget keeps the editor interactive (knob: lower = smoother
-            // editor + longer wall-clock; higher = faster finish + more hitch per frame).
+            // Tuning knob: lower = smoother editor + longer wall-clock; higher = the reverse.
             constexpr auto TickBudgetSeconds = 0.008;
             const auto SliceStartTime = FPlatformTime::Seconds();
             const auto Total = RemainingAssets->Num();
@@ -849,10 +802,9 @@ auto
             if (*NextIndex < Total)
             { return true; } // more assets to dispatch next frame — keep ticking
 
-            // All assets dispatched. Reset the handle BEFORE WriteCanonicalAndAdvance,
-            // which may start the next queued config (and overwrite GenerationTickerHandle).
-            // All-sync path: drain already complete, fire the write here.
-            // All-async path: PendingAssets > 0, the last async callback owns the write.
+            // Reset BEFORE WriteCanonicalAndAdvance, which may start the next queued config and
+            // overwrite GenerationTickerHandle. All-sync fires the write here; all-async leaves
+            // PendingAssets > 0 and the last callback owns it.
             GenerationTickerHandle.Reset();
             *DispatchComplete = true;
             if (*PendingAssets <= 0)
@@ -872,7 +824,6 @@ auto
     if (PendingGenerationQueue.IsEmpty())
     { return; }
 
-    // Get the next config from the queue
     auto NextConfig = PendingGenerationQueue[0];
     PendingGenerationQueue.RemoveAt(0);
 
@@ -885,7 +836,6 @@ auto
     else
     {
         ck::angelscriptgenerator::Warning(TEXT("Invalid config in queue, skipping to next"));
-        // Recursively process the next one
         Request_ProcessNextInQueue();
     }
 }
@@ -1060,7 +1010,6 @@ auto
     auto Result = FString{};
     Result.Reserve(InAssetName.Len());
 
-    // Sanitize: keep only alphanumeric characters and underscores
     for (int32 i = 0; i < InAssetName.Len(); i++)
     {
         if (const auto Char = InAssetName[i];
@@ -1070,13 +1019,12 @@ auto
         }
     }
 
-    // Handle empty result (shouldn't happen, but just in case)
     if (Result.IsEmpty())
     {
         Result = TEXT("Asset");
     }
 
-    // Add underscore prefix if name starts with a digit (invalid identifier in AngelScript)
+    // An AngelScript identifier cannot start with a digit.
     if (FChar::IsDigit(Result[0]))
     {
         Result = TEXT("_") + Result;
@@ -1204,7 +1152,6 @@ auto
     SeedMapsFromGeneratedFiles()
     -> void
 {
-    // Discover configs to get namespaces and generated file paths
     auto Configs = Request_DiscoverAllConfigs();
     if (Configs.IsEmpty())
     { return; }
@@ -1223,8 +1170,7 @@ auto
         if (NOT FFileHelper::LoadFileToString(FileContents, *OutputPath))
         { continue; }
 
-        // Parse lines matching: FSoftObjectPath("AssetPath")
-        // and extract the function name from: FunctionName() {
+        // Parses the emitted shape: `FunctionName() { return TSoftObjectPtr<X>(FSoftObjectPath("Y"))`
         auto SoftPathPrefix = FString{TEXT("FSoftObjectPath(\"")};
         auto SearchStart = int32{0};
 
@@ -1241,28 +1187,23 @@ auto
 
             auto AssetPath = FileContents.Mid(AssetPathStart, AssetPathEnd - AssetPathStart);
 
-            // Skip _C class paths (Blueprint class refs are derived from the base entry)
+            // Blueprint class refs are derived from the base entry, so `_C` paths are skipped.
             if (AssetPath.EndsWith(TEXT("_C")))
             {
                 SearchStart = AssetPathEnd + 1;
                 continue;
             }
 
-            // Walk backwards from FSoftObjectPath to find the function name
-            // Pattern: FunctionName() { return TSoftObjectPtr<...>(FSoftObjectPath("...
-            // Look for the ") {" before this FSoftObjectPath call, then find "FunctionName("
+            // The function name is the identifier immediately before the first "()" on the line.
             auto LineStart = FileContents.Find(TEXT("\n"), ESearchCase::CaseSensitive, ESearchDir::FromEnd, PathStart);
             if (LineStart == INDEX_NONE)
             { LineStart = 0; }
 
             auto LineContent = FileContents.Mid(LineStart, PathStart - LineStart);
 
-            // Find the pattern: "> FunctionName() {" or just "FunctionName() {"
-            // The function name is right before the first "()" on this line
             auto ParenIndex = LineContent.Find(TEXT("()"), ESearchCase::CaseSensitive);
             if (ParenIndex != INDEX_NONE)
             {
-                // Walk backwards from paren to find the start of the function name
                 auto NameEnd = ParenIndex;
                 auto NameStart = NameEnd;
                 while (NameStart > 0)
@@ -1299,7 +1240,6 @@ auto
 {
     FunctionUsageMap.Reset();
 
-    // If Map 1 hasn't been populated by a generation pass yet, seed it from the existing generated files
     if (AssetPathToFunctionName.IsEmpty() || ActiveNamespaces.IsEmpty())
     {
         SeedMapsFromGeneratedFiles();
@@ -1314,9 +1254,7 @@ auto
     auto AsFiles = TArray<FString>{};
     IFileManager::Get().FindFilesRecursive(AsFiles, *ScriptDir, TEXT("*.as"), true, false);
 
-    // Built once per scan — per-occurrence membership checks against the
-    // generated function names would otherwise be linear map scans (FindKey)
-    // repeated for every candidate in every script file.
+    // Built once per scan: the alternative is a linear FindKey per candidate per script file.
     auto GeneratedFunctionNames = TSet<FString>{};
     GeneratedFunctionNames.Reserve(AssetPathToFunctionName.Num());
     for (const auto& [AssetPath, FunctionName] : AssetPathToFunctionName)
@@ -1390,7 +1328,6 @@ auto
             if (FoundIndex == INDEX_NONE)
             { break; }
 
-            // Skip if this is actually the load:: prefix
             if (FileContents.Mid(FoundIndex, LoadPrefix.Len()) == LoadPrefix)
             {
                 SearchStart = FoundIndex + 1;

@@ -4,11 +4,9 @@
 #include "Fonts/SlateFontInfo.h"
 
 // ====================================================================================================================
-// Color, font-size, and node-visual tokens shared by Ck editor tooling UIs
-// (debuggers, analyzers, and future Slate tools). All non-constexpr values
-// route through UCk_Style_UserSettings_UE so users can tune the palette from
-// Editor Preferences → Ck → Style. The function accessors are lazy-resolved
-// so there are no static init order surprises.
+// Color, font-size, and node-visual tokens shared by Ck editor tooling UIs. Non-constexpr values route
+// through UCk_Style_UserSettings_UE (Editor Preferences → Ck → Style); the function accessors are
+// lazy-resolved so there are no static-init-order surprises.
 // ====================================================================================================================
 
 struct FSlateBrush;
@@ -182,17 +180,15 @@ namespace CkStyle
 	constexpr auto SpaceXXL = 24.0f;
 
 	// ----- Typography helpers -------------------------------------------------
-	// Single authority for font families so every debugger surface agrees:
-	// data/ids/costs render Mono, headers Bold, prose Regular.
+	// Single authority for font families: data/ids/costs render Mono, headers Bold, prose Regular
 	CKEDITORTOOLS_API auto RegularFont(int32 InSize) -> FSlateFontInfo;
 	CKEDITORTOOLS_API auto BoldFont(int32 InSize)    -> FSlateFontInfo;
 	CKEDITORTOOLS_API auto MonoFont(int32 InSize)    -> FSlateFontInfo;
 
 	// ----- Brushes / helpers --------------------------------------------------
-	// The rounded brushes are WHITE procedural rounded boxes — tint at the use
-	// site (SBorder::BorderBackgroundColor / SImage::ColorAndOpacity). Nest an
-	// outer (border tint, 1px padding) around an inner (fill tint) for the
-	// bordered-chip look.
+	// The rounded brushes are WHITE procedural rounded boxes — tint at the use site
+	// (SBorder::BorderBackgroundColor / SImage::ColorAndOpacity). Nest an outer (border tint, 1px
+	// padding) around an inner (fill tint) for the bordered-chip look.
 	CKEDITORTOOLS_API auto GetFilledBrush()        -> const FSlateBrush*;
 	CKEDITORTOOLS_API auto GetRoundedBrush()       -> const FSlateBrush*;   // 6px — chips, buttons, value pills
 	CKEDITORTOOLS_API auto GetRoundedBrush_Small() -> const FSlateBrush*;   // 3px — badges, meters, count chips

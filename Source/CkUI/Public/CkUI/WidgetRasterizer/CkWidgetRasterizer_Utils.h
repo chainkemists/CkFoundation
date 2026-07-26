@@ -17,8 +17,7 @@ UENUM(BlueprintType)
 enum class ECk_WidgetRasterizer_GammaCorrection : uint8
 {
     // Renderer applies gamma correction (linear->sRGB). Correct when the render target is left
-    // linear; against an sRGB render target it double-encodes (washes the result out). Default
-    // to preserve existing callers.
+    // linear; against an sRGB render target it double-encodes (washes the result out).
     Enabled,
 
     // Renderer skips gamma correction — the source widget's sRGB art is drawn as-is so the sRGB

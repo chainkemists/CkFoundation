@@ -3,12 +3,8 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// FCk_Registry now resolves to an entt::basic_registry on demand from the
-// slot-table-backed FCk_RegistryHandle. Implementations below mirror the
-// original behaviour: state-mutating methods fire CK_ENSURE_IF_NOT when
-// Resolve returns null (was previously a hard crash via TSharedPtr deref);
-// read-only methods return defaults silently to match the prior shipping
-// behaviour where IsValid already gated on registry validity.
+// Convention for a null Resolve() (unset or stale slot-table handle): state-mutating methods fire
+// CK_ENSURE_IF_NOT; read-only methods return defaults silently.
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

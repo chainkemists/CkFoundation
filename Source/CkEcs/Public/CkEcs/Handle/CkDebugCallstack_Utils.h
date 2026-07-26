@@ -6,14 +6,12 @@
 
 namespace ck
 {
-	// Templated utils class for debug callstack operations
 	template<typename TTrackedFragment>
 	class TCk_Utils_Debug_Callstack
 	{
 		using FCallstackFragment = typename TCallstackFragmentTrait<TTrackedFragment>::Type;
 
 	public:
-		// Add callstack entry without message
 		static auto
 		Add(
 			FCk_Handle InEntity,
@@ -21,7 +19,6 @@ namespace ck
 			int32 InLine)
 			-> void;
 
-		// Add callstack entry with formatted message
 		static auto
 		Add(
 			FCk_Handle InEntity,
@@ -30,7 +27,6 @@ namespace ck
 			const FString& InMessage)
 			-> void;
 
-		// Clear all callstack entries for entity
 		static auto
 		Clear(FCk_Handle InEntity)
 			-> void;

@@ -66,11 +66,9 @@ public:
         const FCk_Handle_EntityScript& InHandle);
 
 public:
-    // Re-establish every entity script's _AssociatedEntity back-pointer to its owning entity after a CkSnapshot
-    // restore. The back-pointer is a Transient field set only at spawn (see FProcessor_EntityScript_SpawnEntity),
-    // so restore — which recreates each script UObject — leaves it unset; the next teardown's EndPlay would then
-    // read a default (tombstone) handle and ensure. Not Blueprint-exposed; internal restore plumbing. Returns the
-    // number of scripts re-linked.
+    // Re-establish every entity script's _AssociatedEntity back-pointer after a CkSnapshot restore: the field is
+    // Transient and set only at spawn, so a restored script would read a tombstone handle at teardown and ensure.
+    // Not Blueprint-exposed; internal restore plumbing. Returns the number of scripts re-linked.
     static int32
     Relink_AssociatedEntities_AfterRestore(
         UWorld* InWorld);
@@ -124,11 +122,8 @@ public:
         const FInstancedStruct& InSpawnParams) -> void;
 
     // Establishes entity-script replication for an already-constructed, driver-bearing entity on the authority:
-    // resolves the owning driver, accounts for a just-created owner's dependent count, calls Request_Replicate (which
-    // sets the driver's ReplicationData_EntityScript — the payload Iris pushes so clients materialise + re-derive the
-    // entity), and marks it to fire OnDependentsReplicationComplete. Used by the fresh-spawn replicate processor
-    // (FProcessor_EntityScript_Replicate); the snapshot respawn re-replicate (FProcessor_ActorRespawn) that once shared
-    // it was retired in Phase 5. Caller must ensure InHandle already has a ReplicationDriver fragment.
+    // resolves the owning driver, accounts for a just-created owner's dependent count, calls Request_Replicate and
+    // marks it to fire OnDependentsReplicationComplete. Caller must ensure InHandle already has a driver fragment.
     static auto
     Request_ReplicateEntityScript(
         FCk_Handle& InHandle,

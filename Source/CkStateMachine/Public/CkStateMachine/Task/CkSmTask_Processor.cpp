@@ -52,10 +52,6 @@ namespace ck
 
         const auto SmHandle = UCk_Utils_SmTask_UE::Get_OwningStateMachine(InHandle);
 
-        // Invariant: a task never outlives its owning SM (destroy cascades mark owner + dependents
-        // together). A destroyed owner under a live, ticking task means someone created or kept this
-        // task outside its owner's lifetime cascade — name both so the creator can be found, instead
-        // of the former symptom (a tombstone-ensure storm from inside ComputeNetContext).
         CK_ENSURE_IF_NOT(ck::IsValid(SmHandle),
             TEXT("SmTask [{}] (script [{}]) is alive and ticking but its owning StateMachine [{}] is destroyed — "
                  "a task must never outlive its owning SM (broken lifetime cascade)"),
@@ -64,12 +60,9 @@ namespace ck
 
         const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
 
-        // Authority gating (spec §5/§6): only the machine that owns this SM's transitions ticks
-        // tasks. Non-authority machines replay state-entry/exit via the replicated history; their
-        // tasks must not produce side effects locally. Uses the shared transition-authority
-        // predicate — the prior inline gate only skipped NonOwningClient and non-OwningClientAuth
-        // OwningClient, so the server of an OwningClientAuth SM (which must follow the relay,
-        // listen-host-owns-pawn excepted) still ticked tasks.
+        // Authority gating: only the machine that owns this SM's transitions ticks tasks —
+        // non-authority machines replay state entry/exit via the replicated history and their tasks
+        // must not produce side effects locally.
         if (NOT ck::statemachine::Get_IsTransitionAuthority(SmHandle))
         { return; }
 

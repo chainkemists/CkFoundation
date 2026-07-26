@@ -18,11 +18,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Attribution state for a baked-static-world source actor. _BodyIds are the raw JPH::BodyIDs (index+seq)
-    // this actor contributed; the subsystem stamps each body's Jolt user-data with this entity's id so hits
-    // resolve back here. _SourceActor observes the contributing actor (may go null when it dies);
-    // _SourceActorName caches its FName so attribution survives the actor's death. An empty _BodyIds array is
-    // the idempotence guard for the bidirectional removal helper.
+    // An empty _BodyIds array is the idempotence guard for the bidirectional removal helper.
     struct CKJOLT_API FFragment_JoltStaticActor_Current
     {
     public:

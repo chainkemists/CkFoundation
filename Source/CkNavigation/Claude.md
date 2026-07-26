@@ -125,6 +125,26 @@ if (Result.Get_Status() != ECk_Nav_PathStatus::Ready)
 
 ---
 
+## Implementation notes
+
+Rationale relocated out of the source during the 2026-07-25 comment sweep. These are the
+"why it looks like that" answers for `FCk_Nav_Algorithm` / `UCk_Utils_Nav_UE`:
+
+- **`FindPathSync` passes the query filter explicitly.** The `FPathFindingQuery` ctor derives the
+  filter from NavData when `SourceFilter` is null; passing it explicitly avoids relying on that
+  fallback (and is what makes the `_QueryFilter` tag mapping work).
+- **It calls `ARecastNavMesh::FindPath` directly**, not through the nav system — that skips the
+  NavSys agent-dispatch step, and the query ctor has already populated `Query.NavAgentProperties`
+  from `InNavData.GetConfig()`.
+- **No typesafe handle by design.** Pathfinding is a service exposed to any entity with a Transform
+  feature (CkEcsExt) plus the path-result fragment slot, which the Utils add lazily on first
+  request — so there is nothing for an `FCk_Handle_Nav` to mean.
+- **`Try_ProjectOntoNavmesh` is a single-shot helper.** CkEqs' `_ProjectOntoNav` post-pass inlines
+  the same `UNavigationSystemV1::ProjectPointToNavigation` call directly rather than going through
+  this UFUNCTION, to avoid dispatch overhead per candidate. Keep the two in sync.
+
+---
+
 ## Anti-patterns
 
 - **Don't enqueue path requests from a client.** `Request_FindPath` checks authority and fails with `NotAuthority`. Pathing is server-only.
@@ -139,6 +159,9 @@ if (Result.Get_Status() != ECk_Nav_PathStatus::Ready)
 - `_QueryFilter` field is reserved but unused in v1. Plug into `UNavigationQueryFilter` subclasses post-ship if needed.
 - No async path queries. `FindPathSync` is fast enough at 8/frame for any realistic scenario; if it ever isn't, a dedicated async processor lives at the next layer.
 - No off-mesh links / jumps. Recast supports them but we don't surface them.
+- **The deferred-FindPath queue is process-wide, not keyed on world** (`ck_nav_processor::GDeferredNavRequests`
+  in `CkNav_Processor.cpp`) — it is not multi-PIE-instance safe. Entries are dropped when their
+  handle goes invalid and force-failed with `NoNavData` past `ck.Nav.MaxDeferralSeconds` (5s).
 
 ## Future work
 

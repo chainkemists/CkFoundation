@@ -37,14 +37,10 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Eqs Candidates Generated"), STAT_Eqs_Candidates
 DECLARE_DWORD_COUNTER_STAT(TEXT("Eqs Physics Casts Issued"), STAT_Eqs_PhysicsCastsIssued, STATGROUP_CkEqs);
 
 // --------------------------------------------------------------------------------------------------------------------
-// Anonymous-namespace helpers. All file-local. No state retained between calls.
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_eqs_algorithm
 {
-    // Epsilon for degenerate Min ≈ Max detection. Larger than KINDA_SMALL_NUMBER so that
-    // raw values clustered within ~1e-4 are treated as "all equal" (UE's own NormalizeItemScores
-    // uses a similar threshold to skip the per-item normalization loop).
+    // Coarser than KINDA_SMALL_NUMBER on purpose — matches UE NormalizeItemScores' skip threshold.
     constexpr auto Eqs_DegenerateRangeEpsilon = 1.0e-4f;
 
     auto
@@ -92,7 +88,6 @@ namespace ck_eqs_algorithm
         return Reference.Get<ck::FFragment_Transform>().Get_Transform().GetRotation().GetForwardVector();
     }
 
-    // Filter evaluation. Returns true if the candidate passes the filter.
     auto
     Eqs_PassesFilter(
         float InRawValue,
@@ -110,7 +105,6 @@ namespace ck_eqs_algorithm
         return true;
     }
 
-    // Resolve the clamp lower bound from the split clamp enums. Returns the actual numeric clamp.
     auto
     Eqs_ResolveClampMin(
         const FCk_Eqs_ScoringConfig& InConfig,
@@ -143,8 +137,6 @@ namespace ck_eqs_algorithm
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// NormalizeAndScore (verified against UE EnvQueryTest.cpp).
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_Eqs_Algorithm::
@@ -155,34 +147,25 @@ auto
         const FCk_Eqs_ScoringConfig& InConfig)
     -> float
 {
-    // Degenerate case — every candidate's raw value is essentially equal.
-    // The per-item normalization is mathematically undefined (divide-by-zero), so skip:
-    // multiplicative-identity score (1.0) scaled by ScoringFactor matches UE's "skip the
-    // per-item loop" behaviour. Caller is also expected to treat this as a no-op test.
-    if (FMath::Abs(InMax - InMin) < ck_eqs_algorithm::Eqs_DegenerateRangeEpsilon)
-    { return 1.0f * InConfig.Get_ScoringFactor(); }
+    constexpr auto MultiplicativeIdentity = 1.0f;
 
-    // Resolve effective range from clamp config.
-    // FilterConfig is required for FilterThreshold clamp resolution; pull from
-    // FCk_Eqs_FilterConfig{} default since callers also pass us their TestParams' filter
-    // separately — but we don't have it here. Conservatively, when ClampType is FilterThreshold
-    // we fall back to data range (the test helper that sets up clamp wiring should pre-compute
-    // this if it wants filter-thresholded normalization). For v1, NormalizeAndScore consumers
-    // should use ClampType::None or SpecifiedValue.
+    const auto RangeIsDegenerate = FMath::Abs(InMax - InMin) < ck_eqs_algorithm::Eqs_DegenerateRangeEpsilon;
+    if (RangeIsDegenerate)
+    { return MultiplicativeIdentity * InConfig.Get_ScoringFactor(); }
+
+    // No FilterConfig reaches this function, so ClampType::FilterThreshold resolves against a
+    // default filter, not the test's own. For a real threshold use ClampType::None/SpecifiedValue.
     const auto FilterStub = FCk_Eqs_FilterConfig{};
     const auto EffectiveMin = ck_eqs_algorithm::Eqs_ResolveClampMin(InConfig, FilterStub, InMin);
     const auto EffectiveMax = ck_eqs_algorithm::Eqs_ResolveClampMax(InConfig, FilterStub, InMax);
 
-    // Clamp the raw value to the effective range.
     const auto ClampedValue = FMath::Clamp(InValue, EffectiveMin, EffectiveMax);
 
-    // Map to normalized [0, 1] based on NormalizationType.
     auto Normalized = 0.0f;
     switch (InConfig.Get_NormalizationType())
     {
         case ECk_Eqs_NormalizationType::Absolute:
         {
-            // Baseline 0; range [0, EffectiveMax].
             const auto AbsMax = FMath::Max(FMath::Abs(EffectiveMax), ck_eqs_algorithm::Eqs_DegenerateRangeEpsilon);
             Normalized = ClampedValue / AbsMax;
             break;
@@ -198,7 +181,6 @@ auto
 
     Normalized = FMath::Clamp(Normalized, 0.0f, 1.0f);
 
-    // Apply equation transform.
     auto Transformed = 0.0f;
     switch (InConfig.Get_ScoringEquation())
     {
@@ -215,8 +197,6 @@ auto
             Transformed = 1.0f - Normalized;
             break;
         case ECk_Eqs_ScoringEquation::Constant:
-            // UE-parity binary: any non-zero normalized score → 1, else 0. UE's own comment at
-            // EnvQueryTest.cpp:145 acknowledges the misnomer; we keep the name for designer-familiarity.
             Transformed = Normalized > 0.0f ? 1.0f : 0.0f;
             break;
     }
@@ -224,8 +204,6 @@ auto
     return Transformed * InConfig.Get_ScoringFactor();
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// DoGenerate — orchestrator
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -278,10 +256,6 @@ auto
             return false;
     }
 
-    // ---- NavProjection post-pass (v1.1) ----
-    // Applied after any generator except EntitiesWithTag. Each candidate is snapped to the nearest
-    // navmesh tile within _NavProjectionSearchHalfExtentUu. Candidates that fail projection are
-    // dropped here — before tests run — so the test phase always sees only valid navmesh positions.
     const auto& GenParams = InParams.Get_GeneratorParams();
     if (GenParams.Get_ProjectOntoNav()
         && GenParams.Get_GeneratorType() != ECk_Eqs_GeneratorType::EntitiesWithTag
@@ -319,8 +293,6 @@ auto
     return NOT OutCandidates.IsEmpty();
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Generators
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -363,7 +335,6 @@ auto
 
     if (ck::Is_NOT_Valid(PhysicsSystem))
     {
-        // No physics — fall back to flat grid (already populated). Log Verbose so we know.
         ck::eqs::Verbose(TEXT("DoGenerate_Grid: physics unavailable; using flat-grid fallback ({} candidates)."),
             OutCandidates.Num());
         return;
@@ -373,16 +344,13 @@ auto
     const auto ProjectDown = FMath::Max(InGen.Get_ProjectDown(), 0.0f);
     const auto& Filter = InGen.Get_ProjectionFilter();
 
-    // EQS scores the world — its casts must not fire overlap events into hit probes, and the
-    // per-candidate volume makes debug-draw noise (draw the query result instead).
+    // EQS scores the world — its casts must not fire overlap events into hit probes.
     constexpr auto FireOverlaps = false;
     constexpr auto TryDrawDebug = false;
 
-    // PARALLEL: per-candidate ground-projection casts run on worker threads. Jolt narrow-phase
-    // queries are thread-safe and the trace path performs registry READS only (FireOverlaps is
-    // false, so nothing enqueues requests); each iteration writes only its own candidate.
-    // The Multi overload with TryDrawDebug=false issues zero debug-draw calls (the Single
-    // overload draws unconditionally — not worker-safe); its first result is the nearest hit.
+    // Worker threads: Jolt narrow-phase is thread-safe, FireOverlaps=false keeps the trace path
+    // registry-read-only, and each iteration writes only its own candidate. Multi (not Single)
+    // because Single draws debug unconditionally.
     const auto RegistryHandle = InAnyHandle.Get_RegistryView().Get_RegistryHandle();
 #if !UE_BUILD_SHIPPING
     ck::registry_table::BeginParallelRegion(RegistryHandle);
@@ -423,18 +391,15 @@ auto
     const auto OuterRadius = FMath::Max(InGen.Get_OuterRadius(), InnerRadius);
     const auto ArcAngle = FMath::Clamp(InGen.Get_ArcAngle(), 0.0f, 360.0f);
 
-    // NumRings == 1 divide-by-zero guard. UE has a latent bug here; we explicitly guard.
-    // Single-ring case sits at OuterRadius (matches designer intuition).
+    // UE divides by (NumRings - 1) unguarded; a single ring sits at OuterRadius here.
     const auto RadiusDelta = NumRings > 1
         ? (OuterRadius - InnerRadius) / static_cast<float>(NumRings - 1)
         : 0.0f;
     const auto FirstRingRadius = NumRings > 1 ? InnerRadius : OuterRadius;
 
-    // Per-point angle delta — point-count denominator (NOT minus-one) because UE doesn't close
-    // the loop on a full circle.
+    // Point-count denominator (NOT minus-one): UE doesn't close the loop on a full circle.
     const auto AngleDeltaDeg = ArcAngle / static_cast<float>(PointsPerRing);
 
-    // Arc direction yaw (degrees, around world Up axis).
     const auto ArcYawDeg = InGen.Get_ArcDirection().GetSafeNormal().Rotation().Yaw;
     const auto ArcStartDeg = ArcYawDeg - ArcAngle * 0.5f;
 
@@ -443,7 +408,6 @@ auto
     auto RingRadius = FirstRingRadius;
     for (auto r = 0; r < NumRings; ++r, RingRadius += RadiusDelta)
     {
-        // Spiral: stagger ring-r's start by AngleDelta / NumRings * r so spokes don't align.
         const auto SpiralOffsetDeg = InGen.Get_UseSpiralPattern()
             ? (AngleDeltaDeg / static_cast<float>(NumRings)) * static_cast<float>(r)
             : 0.0f;
@@ -541,12 +505,10 @@ auto
 {
     const auto NumPoints = FMath::Max(InGen.Get_NumPointsOnCircle(), 2);
     const auto Radius = FMath::Max(InGen.Get_CircleRadius(), 1.0f);
-    // Clamp arc angle: ClampMin/Max metadata on the field handles editor, but guard in code too.
     const auto ArcAngle = FMath::Clamp(InGen.Get_CircleArcAngle(), 1.0f, 360.0f);
 
-    // AngleDelta matches Donut's convention: ArcAngle / NumPoints (denominator is NOT minus-one).
-    // For a full 360° circle this avoids a duplicate at 0°/360°. For a partial arc the last
-    // point sits one step inside the arc end so the spread is symmetric about the arc centre.
+    // Donut's convention (denominator NOT minus-one): a full circle gets no duplicate at 0°/360°,
+    // and a partial arc ends one step inside so the spread stays symmetric about the arc centre.
     const auto AngleDeltaDeg = ArcAngle / static_cast<float>(NumPoints);
     const auto ArcStartDeg = -(ArcAngle * 0.5f);  // centred on querier's forward (+X = 0°)
 
@@ -560,8 +522,6 @@ auto
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// DoRunTests — orchestrator with budget cursor (anti-deadlock)
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -588,9 +548,8 @@ auto
 
     const auto NumCandidates = InState._Candidates.Num();
 
-    // Lazy-size debug fragment on first entry. Idempotent on resume because
-    // size already matches.
-    if (InOutDebug._PerCandidate.Num() != NumCandidates)
+    const auto DebugRowsNeedSizing = InOutDebug._PerCandidate.Num() != NumCandidates;
+    if (DebugRowsNeedSizing)
     {
         InOutDebug._PerCandidate.Reset();
         InOutDebug._PerCandidate.SetNum(NumCandidates);
@@ -603,15 +562,10 @@ auto
 
     while (InState._NextTestIndex < NumTests)
     {
-        // Budget gate. Anti-deadlock: yield only at test boundaries; if we haven't
-        // made progress this tick AND no progress was made before entry, run one test anyway
-        // (otherwise queries with very large candidate sets never advance).
-        if (InOutRemainingBudget < NumCandidates)
-        {
-            if (MadeProgressThisCall || MadeProgressBeforeEntry)
-            { return false; }
-            // anti-deadlock: fall through and run this test
-        }
+        const auto BudgetExhausted = InOutRemainingBudget < NumCandidates;
+        const auto MadeAnyProgress = MadeProgressThisCall || MadeProgressBeforeEntry;
+        if (BudgetExhausted && MadeAnyProgress)
+        { return false; }
 
         const auto TestIdx = InState._NextTestIndex;
         const auto& Test = Tests[TestIdx];
@@ -654,8 +608,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Test helpers — three-pass contract (Raw / Min-Max / Score+Filter)
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_Eqs_Algorithm::
@@ -673,8 +625,6 @@ auto
     const auto IncludesFilter = Purpose == ECk_Eqs_TestPurpose::Filter
                              || Purpose == ECk_Eqs_TestPurpose::FilterAndScore;
 
-    // Compute Min/Max across only candidates that produced a meaningful raw value
-    // (those still _Passed == true going into this pass).
     auto Min = TNumericLimits<float>::Max();
     auto Max = TNumericLimits<float>::Lowest();
     auto SeenAny = false;
@@ -700,15 +650,11 @@ auto
     {
         auto& Candidate = InOutCandidates[i];
 
-        // Already failed an earlier test — it can never surface in Finalize, so scoring and
-        // filtering it is wasted work (its raw slot holds the caller's 0.0f placeholder).
         if (NOT Candidate.Get_Passed())
         { continue; }
 
         const auto Raw = InRawValues[i];
 
-        // Per-test debug slot for this (test, candidate). Raw was already
-        // written by the caller's raw pass; we add normalized / weighted / passed here.
         auto& DebugSlot = InOutDebug._PerCandidate[i]._PerTest[InTestIndex];
 
         if (IncludesScore)
@@ -852,11 +798,7 @@ auto
     auto RawValues = TArray<float>{};
     RawValues.SetNumZeroed(InOutCandidates.Num());
 
-    // PARALLEL: per-candidate LOS casts run on worker threads. Jolt narrow-phase queries are
-    // thread-safe and the trace path performs registry READS only (FireOverlaps is false);
-    // each iteration writes only its own RawValues/debug slot. The Multi overloads with
-    // TryDrawDebug=false issue zero debug-draw calls (the Single overloads draw
-    // unconditionally — not worker-safe); LOS-clear == no filtered hits.
+    // Same worker-thread contract as DoGenerate_Grid: read-only Jolt casts, per-index writes.
     const auto RegistryHandle = InAnyHandle.Get_RegistryView().Get_RegistryHandle();
 #if !UE_BUILD_SHIPPING
     ck::registry_table::BeginParallelRegion(RegistryHandle);
@@ -866,11 +808,7 @@ auto
     {
         const auto& Candidate = InOutCandidates[InIndex];
         if (NOT Candidate.Get_Passed())
-        {
-            // RawValues[InIndex] stays 0; leave the debug slot at defaults — this candidate
-            // already failed an earlier test; we didn't actually run Trace on it.
-            return;
-        }
+        { return; }
 
         auto LosClear = false;
         switch (Mode)
@@ -945,7 +883,6 @@ auto
 
         if (ck::Is_NOT_Valid(EntityHandle))
         {
-            // Mismatch: GameplayTag test paired with location-only generator. Fail and continue.
             Candidate._Passed = false;
             DebugSlot._RawValue = 0.0f;          // no entity to query
             DebugSlot._PassedThisTest = false;
@@ -1007,7 +944,6 @@ auto
         return;
     }
 
-    // v1 overlap approach: zero-length sphere ShapeTrace (Start == End).
     const auto Radius = FMath::Max(InTest.Get_OverlapRadius(), 1.0f);
     const auto Sphere = FCk_AnyShape{FCk_ShapeSphere_Dimensions{Radius}};
     const auto& OverlapFilter = InTest.Get_OverlapFilter();
@@ -1019,7 +955,7 @@ auto
     auto RawValues = TArray<float>{};
     RawValues.SetNumZeroed(InOutCandidates.Num());
 
-    // PARALLEL: same contract as DoRunTest_Trace — read-only Jolt casts, per-index writes.
+    // Same worker-thread contract as DoGenerate_Grid: read-only Jolt casts, per-index writes.
     const auto RegistryHandle = InAnyHandle.Get_RegistryView().Get_RegistryHandle();
 #if !UE_BUILD_SHIPPING
     ck::registry_table::BeginParallelRegion(RegistryHandle);
@@ -1134,8 +1070,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// DoFinalize — drop failed, sort, apply RunMode, build results
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_Eqs_Algorithm::
@@ -1151,9 +1085,6 @@ auto
     auto Results = FCk_Eqs_QueryResults{};
     auto& Final = Results._Candidates;
 
-    // Pair surviving candidates with their original index so we can mirror the
-    // drop / sort / truncate operations onto InOutDebug._PerCandidate. After this function
-    // returns, _PerCandidate[i] is the breakdown for Final[i].
     struct FSurvivor
     {
         FCk_Eqs_Candidate Candidate;
@@ -1167,13 +1098,12 @@ auto
         { Survivors.Emplace(FSurvivor{MoveTemp(InState._Candidates[i]), i}); }
     }
 
-    // Sort by score descending.
     Survivors.Sort([](const FSurvivor& A, const FSurvivor& B)
     {
         return A.Candidate.Get_Score() > B.Candidate.Get_Score();
     });
 
-    // RunMode truncation — applied to Survivors so the OriginalIndex pairing stays in lockstep.
+    // Truncation happens on Survivors so the OriginalIndex pairing stays in lockstep.
     switch (InParams.Get_RunMode())
     {
         case ECk_Eqs_RunMode::SingleBest:
@@ -1184,8 +1114,7 @@ auto
         }
         case ECk_Eqs_RunMode::AllMatching:
         case ECk_Eqs_RunMode::AllMatchingSorted:
-            // Already sorted; AllMatching makes no ordering promise but sorted is a fine
-            // superset.
+            // AllMatching promises no ordering, so the sort above already satisfies both.
             break;
         case ECk_Eqs_RunMode::RandomBest5Pct:
         {
@@ -1211,15 +1140,13 @@ auto
         }
     }
 
-    // Unzip: candidates into Final, debug rows reordered into a fresh array.
     Final.Reserve(Survivors.Num());
     auto NewPerCandidate = TArray<FCk_Eqs_DebugInfo_PerCandidate>{};
     NewPerCandidate.Reserve(Survivors.Num());
     for (auto& S : Survivors)
     {
-        // Bounds-check the debug array — DoRunTests pre-sized it to the original candidate
-        // count, so OriginalIndex must be in range. Defensive guard against a future refactor
-        // that decouples the two.
+        // DoRunTests pre-sizes _PerCandidate to the original candidate count, so the index is in
+        // range today; the guard only covers a future refactor that decouples the two.
         if (InOutDebug._PerCandidate.IsValidIndex(S.OriginalIndex))
         { NewPerCandidate.Emplace(MoveTemp(InOutDebug._PerCandidate[S.OriginalIndex])); }
         else

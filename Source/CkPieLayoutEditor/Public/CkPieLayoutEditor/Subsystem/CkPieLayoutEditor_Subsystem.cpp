@@ -20,11 +20,6 @@
 #include "Widgets/SWindow.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Arrange logic. Pure(ish) helpers + the single DoArrangePieWindows entry point the subsystem calls. Kept in a
-// namespace (not on the UObject) so the geometry math stays free of editor-subsystem lifetime concerns.
-//
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::pie_layout
 {
@@ -321,10 +316,8 @@ namespace ck::pie_layout
         constexpr auto HostWidthFraction = 0.62;
         const auto HostW = FMath::Max(static_cast<double>(InMinW), (InArea.W - InGap) * HostWidthFraction);
 
-        // Host occupies the full-height left region.
         Rects.Add(FRect{InArea.X, InArea.Y, HostW, InArea.H});
 
-        // Clients tile the remaining right region as a balanced sub-grid.
         auto ClientArea = FRect{};
         ClientArea.X = InArea.X + HostW + InGap;
         ClientArea.Y = InArea.Y;
@@ -468,10 +461,9 @@ namespace ck::pie_layout
             if (IsUnchanged)
             { continue; }
 
-            // Capture this window's pre-move rect the first time we move it, so Stop can restore it. Done
-            // lazily here (not as an up-front snapshot) so late-spawning client windows are also captured.
-            // Always recorded regardless of the restore setting — it's cheap, and the restore decision lives
-            // solely in OnPrePIEEnded (so toggling the setting on mid-session still works).
+            // Captured lazily on first move (not as an up-front snapshot) so late-spawning client windows are
+            // covered too, and unconditionally — the restore setting is read solely in OnPrePIEEnded, so
+            // toggling it on mid-session still works.
             const auto IsAlreadyTracked = ck::algo::AnyOf(InOutRestore,
                 [&](const FCk_PieLayout_WindowRestoreEntry& InEntry)
                 { return InEntry.Window.Pin().Get() == &Window.Get(); });
@@ -546,8 +538,7 @@ auto
 {
     DoStopTickers();
 
-    // Fresh session — drop any restore rects from a previous play. New ones are captured lazily as windows
-    // are moved (covers both auto-arrange and a manual "Arrange Now" during this session).
+    // Fresh session — new restore rects are captured lazily as windows are moved
     _OriginalWindowRects.Reset();
 
     // Simulate-In-Editor runs inside the level viewport — there are no standalone PIE windows to arrange.
@@ -572,8 +563,6 @@ auto
     // Stop any pending arrange/retry first so nothing reshapes a window as PIE is ending.
     DoStopTickers();
 
-    // Move the windows back to where the editor opened them (best-effort; restores only windows we moved).
-    // Fires before PIE teardown, so the windows are still valid and CommonInput is still alive.
     if (UCk_Utils_PieLayout_Settings_UE::Get_RestoreWindowPositionsOnStop() && _OriginalWindowRects.Num() > 0)
     {
         ck::pie_layout::Restore_PieWindowRects(_OriginalWindowRects);
@@ -591,7 +580,6 @@ auto
 
     ck::pie_layout::DoArrangePieWindows(UCk_Utils_PieLayout_Settings_UE::Get_ArrangeSingleWindow(), _OriginalWindowRects);
 
-    // Arm the retry window so client windows created shortly after Play also get placed.
     const auto RetryDuration = UCk_Utils_PieLayout_Settings_UE::Get_RetryDuration();
     if (RetryDuration.Get_Seconds() > 0.0)
     {

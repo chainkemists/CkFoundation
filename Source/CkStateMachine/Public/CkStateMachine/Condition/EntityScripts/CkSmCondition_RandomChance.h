@@ -10,10 +10,9 @@
 
 namespace ck::statemachine
 {
-    // Converts the per-SECOND fire probability into the equivalent per-evaluation probability
-    // for a frame of InDeltaSeconds: 1 - (1-p)^dt. Compounding across frames is tick-rate
-    // invariant — P(not fired after 1s of evaluation) = (1-p)^Σdt = (1-p)^1 at any frame rate.
-    // Exposed for unit testing (Ck.StateMachine.UnitTests.RandomChance.*).
+    // Per-SECOND fire probability → per-evaluation probability for a frame of InDeltaSeconds:
+    // 1 - (1-p)^dt. Tick-rate invariant: P(not fired after 1s) = (1-p)^Σdt = (1-p)^1 at any rate.
+    // Exported for unit tests (Ck.StateMachine.UnitTests.RandomChance.*).
     CKSTATEMACHINE_API auto
     Get_RandomChance_FrameProbability(
         float InProbabilityPerSecond,

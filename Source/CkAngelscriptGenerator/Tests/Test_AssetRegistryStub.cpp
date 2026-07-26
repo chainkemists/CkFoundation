@@ -1,9 +1,6 @@
-// Tests for the AssetRegistry stub synthesizer (Rev 10 strategy #3).
-//
-// Pure-logic surfaces (Classify_*, Strip_*, Build_*, header parsing, site
-// picking). The live Inject_AssetRegistryStub entry point isn't unit-tested
-// — it exercises engine state (LoadObject, file IO); coverage there comes
-// from the `_probe_assets_corrupt.bat` end-to-end smoke runs.
+// Pure-logic surfaces only. The live Inject_AssetRegistryStub entry point
+// exercises engine state (LoadObject, file IO); its coverage is the
+// `_probe_assets_corrupt.bat` end-to-end smoke runs.
 
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AssetRegistryStub.h"
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsErrorParser.h"
@@ -44,8 +41,6 @@ namespace
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Classify_AccessorFlavor: namespace + function-name shape disambiguation.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AssetRegistryStub_Classify_Flavor,
@@ -69,15 +64,13 @@ bool FCkTest_AssetRegistryStub_Classify_Flavor::RunTest(const FString&)
             Make_AssetParsedError(TEXT("assets"), TEXT("MyActor_BP_Class")))),
         static_cast<int32>(ECk_AssetAccessorFlavor::SoftClass));
 
-    // Blocking variant of the soft-class accessor — its own flavor. Plain
-    // BlockingLoad would skip `_Class` strip; plain SoftClass would emit
-    // TSoftClassPtr instead of the blocking body.
+    // Its own flavor: plain BlockingLoad would skip the `_Class` strip; plain
+    // SoftClass would emit TSoftClassPtr instead of the blocking body.
     TestEqual(TEXT("assets::load::FOO_Class() -> BlockingLoadClass (load + class both)"),
         static_cast<int32>(FCkAsAssetRegistryStubSynthesizer::Classify_AccessorFlavor(
             Make_AssetParsedError(TEXT("assets::load"), TEXT("MyActor_BP_Class")))),
         static_cast<int32>(ECk_AssetAccessorFlavor::BlockingLoadClass));
 
-    // Plugin-scoped namespace ("game_assets" etc.) follows the same rules.
     TestEqual(TEXT("game_assets::load::FOO() -> BlockingLoad"),
         static_cast<int32>(FCkAsAssetRegistryStubSynthesizer::Classify_AccessorFlavor(
             Make_AssetParsedError(TEXT("game_assets::load"), TEXT("FOO")))),
@@ -86,8 +79,6 @@ bool FCkTest_AssetRegistryStub_Classify_Flavor::RunTest(const FString&)
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Strip_LoadSuffix / Strip_ClassSuffix: string-trimming helpers.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -113,7 +104,6 @@ bool FCkTest_AssetRegistryStub_Strip_LoadSuffix::RunTest(const FString&)
         FCkAsAssetRegistryStubSynthesizer::Strip_LoadSuffix(FString{}),
         FString{});
 
-    // Defensive: don't trim "load" if it isn't preceded by "::".
     TestEqual(TEXT("preload (not :: load) -> preload"),
         FCkAsAssetRegistryStubSynthesizer::Strip_LoadSuffix(TEXT("preload")),
         FString{TEXT("preload")});
@@ -144,8 +134,6 @@ bool FCkTest_AssetRegistryStub_Strip_ClassSuffix::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Build_SoftRefAccessor: TSoftObjectPtr<X> shape.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AssetRegistryStub_Build_SoftRef,
@@ -166,8 +154,6 @@ bool FCkTest_AssetRegistryStub_Build_SoftRef::RunTest(const FString&)
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Build_SoftClassAccessor: TSoftClassPtr<X> shape, with "_C" appended to AssetPath.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -191,8 +177,6 @@ bool FCkTest_AssetRegistryStub_Build_SoftClass::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Build_BlockingLoadAccessor: engine-init guard + LoadAsset_Blocking delegation.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AssetRegistryStub_Build_BlockingLoad,
@@ -208,23 +192,18 @@ bool FCkTest_AssetRegistryStub_Build_BlockingLoad::RunTest(const FString&)
 
     TestTrue(TEXT("contains return type (no Soft wrapper)"), Body.Contains(TEXT("USkeletalMesh MALE_SKEL_NEW()")));
     TestTrue(TEXT("contains engine-init guard"), Body.Contains(TEXT("UCk_Utils_IO_UE::IsEngineSafeForBlockingLoads() == false")));
-    // First-pass loads are benign and self-heal via UCk_DeferredAssetInit_UE. The premature-load report
-    // is COMMANDLET-GATED on Get_IsRunningCommandlet() so it stays silent during cook and loud in
-    // editor/PIE/game — but cheap (no per-call stack walks) via EnsureIfNot_PrematureAssetLoad.
+    // The premature-load report is commandlet-gated so it stays silent during cook
+    // and loud in editor/PIE/game; first-pass loads self-heal via UCk_DeferredAssetInit_UE.
     TestTrue(TEXT("guard reports (cheap), commandlet-gated (cook-safe)"),
         Body.Contains(TEXT("ck::EnsureIfNot_PrematureAssetLoad(UCk_Utils_IO_UE::Get_IsRunningCommandlet()")));
     TestTrue(TEXT("contains nullptr early return"), Body.Contains(TEXT("return nullptr;")));
     TestTrue(TEXT("delegates to soft accessor"), Body.Contains(TEXT("System::LoadAsset_Blocking(assets::MALE_SKEL_NEW())")));
-    // Error message correctly references both namespaces.
     TestTrue(TEXT("ensure message references assets::load::FOO"), Body.Contains(TEXT("assets::load::MALE_SKEL_NEW()")));
     TestTrue(TEXT("ensure message references assets::FOO (soft)"), Body.Contains(TEXT("Use assets::MALE_SKEL_NEW() (soft ref)")));
 
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Build_BlockingLoadClassAccessor: engine-init guard + LoadClassAsset_Blocking
-// delegation, TSubclassOf<Class> return shape.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -255,8 +234,6 @@ bool FCkTest_AssetRegistryStub_Build_BlockingLoadClass::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Build_NamespaceBlock: marker comment + namespace wrapper around function body.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AssetRegistryStub_Build_NamespaceBlock,
@@ -286,8 +263,6 @@ bool FCkTest_AssetRegistryStub_Build_NamespaceBlock::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Marker comment is non-empty and uniquely identifies AssetRegistry stubs.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AssetRegistryStub_MarkerComment,
@@ -307,13 +282,9 @@ bool FCkTest_AssetRegistryStub_MarkerComment::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Output-site disambiguation: when multiple *Assets.as files share `namespace
-// assets` but cover disjoint DiscoveryRoots (BusterBlockAssets.as on
-// /Game/BusterBlock/, RawAssets.as on /Game/Raw/), the synthesizer must pick
-// the file whose root prefixes the failing asset's package path — not the
-// first-alphabetical match. Fixture: write two fake *Assets.as files into a
-// temp dir, run Collect_MatchingSites + Pick_BestSite_ByAssetPath against
-// them, assert the right one is selected.
+// When several *Assets.as files share `namespace assets` over disjoint
+// DiscoveryRoots, the synthesizer must pick the file whose root prefixes the
+// failing asset's package path — not the first-alphabetical match.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -323,9 +294,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_AssetRegistryStub_PickSite_ByAssetPath::RunTest(const FString&)
 {
-    // Build a transient fixture directory under the engine's intermediate area
-    // so it survives even if ProjectIntermediateDir isn't accessible in this
-    // automation context. Cleanup happens on scope exit regardless of outcome.
+    // Engine intermediate, not project: ProjectIntermediateDir isn't guaranteed
+    // accessible in this automation context.
     const auto FixtureDir = FPaths::Combine(
         FPaths::EngineIntermediateDir(),
         TEXT("CkAsAssetRegistryStub_Tests"),
@@ -340,15 +310,12 @@ bool FCkTest_AssetRegistryStub_PickSite_ByAssetPath::RunTest(const FString&)
     ON_SCOPE_EXIT
     { IFileManager::Get().DeleteDirectory(*FixtureDir, /*RequireExists=*/false, /*Tree=*/true); };
 
-    // Two files, same namespace, distinct discovery roots. Mirror the real
-    // generator's header shape exactly.
     const auto BusterBlockFile = FPaths::Combine(FixtureDir, TEXT("BusterBlockAssets.as"));
     const auto RawFile         = FPaths::Combine(FixtureDir, TEXT("RawAssets.as"));
 
-    // Mirror the real generator's malformed `Source config:` token (missing
-    // slash before the .as filename) for the BB file — this is the actual
-    // shape we have to be robust against, per the 2026-05-12 smoke test.
-    // The canonical root is on the separate `Discovery root:` line.
+    // The BB fixture mirrors the real generator's malformed `Source config:` token
+    // (missing slash before the .as filename) — the shape we must be robust
+    // against. The canonical root is on the separate `Discovery root:` line.
     const auto BusterBlockBody = FString{TEXT(
         "// Auto-generated Asset Registry\r\n")
         TEXT("// Source config: BusterBlockAssets (/Game/BusterBlockBusterBlockAssets.as [assets])\r\n")
@@ -387,8 +354,8 @@ bool FCkTest_AssetRegistryStub_PickSite_ByAssetPath::RunTest(const FString&)
 
     // ---- Pick_BestSite_ByAssetPath ------------------------------------------------
 
-    // The bug case: failing asset lives under /Game/Raw/ — the RawAssets site
-    // must win even though BusterBlockAssets.as sorts first alphabetically.
+    // The bug case: RawAssets must win even though BusterBlockAssets.as sorts
+    // first alphabetically.
     {
         const auto PickedIdx = FCkAsAssetRegistryStubSynthesizer::Pick_BestSite_ByAssetPath(
             Sites, TEXT("/Game/Raw/SKM/MALE_SKEL_NEW.MALE_SKEL_NEW"));
@@ -400,7 +367,6 @@ bool FCkTest_AssetRegistryStub_PickSite_ByAssetPath::RunTest(const FString&)
         }
     }
 
-    // The symmetric case: asset lives under /Game/BusterBlock/.
     {
         const auto PickedIdx = FCkAsAssetRegistryStubSynthesizer::Pick_BestSite_ByAssetPath(
             Sites, TEXT("/Game/BusterBlock/Char/Foo.Foo"));
@@ -412,22 +378,19 @@ bool FCkTest_AssetRegistryStub_PickSite_ByAssetPath::RunTest(const FString&)
         }
     }
 
-    // No candidate's root prefixes the asset path -> INDEX_NONE (caller's
-    // first-match fallback then kicks in).
+    // INDEX_NONE hands the caller back to its first-match fallback.
     {
         const auto PickedIdx = FCkAsAssetRegistryStubSynthesizer::Pick_BestSite_ByAssetPath(
             Sites, TEXT("/Engine/Foo/Bar.Bar"));
         TestTrue(TEXT("unrelated path -> INDEX_NONE"), PickedIdx == INDEX_NONE);
     }
 
-    // Empty asset path -> INDEX_NONE (defensive).
     {
         const auto PickedIdx = FCkAsAssetRegistryStubSynthesizer::Pick_BestSite_ByAssetPath(
             Sites, FString{});
         TestTrue(TEXT("empty path -> INDEX_NONE"), PickedIdx == INDEX_NONE);
     }
 
-    // Longest-prefix wins: synthesize a 3-candidate set with nested roots.
     {
         auto Nested = TArray<ck::angelscriptgenerator::self_heal::FCk_AssetConfigSiteInfo>{};
         {
@@ -453,8 +416,6 @@ bool FCkTest_AssetRegistryStub_PickSite_ByAssetPath::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Derive_StubSiblingPath: AssetRegistry variant — same convention.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AssetRegistryStub_DeriveStubSiblingPath,
@@ -475,8 +436,6 @@ bool FCkTest_AssetRegistryStub_DeriveStubSiblingPath::RunTest(const FString&)
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Stub-file recovery header banner is present + identifies the file.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

@@ -7,8 +7,7 @@
 #include "CkCrowd_ProjectSettings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Algorithm-mode enums for the hybrid (force + sampling) avoidance system. Every mode is an enum
-// (never a bool) so the per-game-mode customisation story stays consistent and extensible.
+// Algorithm-mode enums for the hybrid (force + sampling) avoidance system.
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
@@ -122,7 +121,6 @@ private:
             ToolTip = "Side-preference behaviour. Disabled skips the wSide cross product entirely. PassLeft mirrors dtCrowd's default convention."))
     ECk_AvoidanceSidePreference _AvoidanceSidePreference = ECk_AvoidanceSidePreference::PassLeft;
 
-    // Penalty weights — see DetourObstacleAvoidance.cpp:471-475 for the dtCrowd defaults we mirror.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling|Penalty",
         meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0))
     float _AvoidanceWeightDesVel = 2.0f;
@@ -145,10 +143,6 @@ private:
     float _AvoidanceHorizonTime = 2.5f;
 
     // ---- Block detection ----
-    // The tier CkCrowd was missing entirely: noticing that an agent cannot reach its goal. Without it
-    // an agent grinds against an obstruction forever and nothing in the system is aware. Stock UE puts
-    // this ABOVE the solver (UPathFollowingComponent block detection => abort the move => behaviour
-    // tree decides); we put it in the module so gameplay gets a signal instead of a frozen NPC.
     UPROPERTY(Config, EditDefaultsOnly, Category = "BlockDetection",
         meta = (AllowPrivateAccess = true,
             ToolTip = "Master switch for goal-blocked detection. Disabled restores the old behaviour: an agent that cannot reach its goal presses against the obstruction indefinitely and nothing notices."))
@@ -180,21 +174,12 @@ private:
     float _BlockedRecheckInterval = 1.0f;
 
     // ---- Navmesh constraint ----
-    // The stage the dtCrowd port originally dropped: Detour passes every integrated agent position
-    // through dtPathCorridor::movePosition (moveAlongSurface), so a dtCrowd agent CANNOT leave the
-    // navmesh — walls stop it and it slides. Without this, any lateral force (separation redirect,
-    // avoidance velocity, push-apart shove) moves the transform straight through a navmesh boundary.
     UPROPERTY(Config, EditDefaultsOnly, Category = "NavmeshConstraint",
         meta = (AllowPrivateAccess = true,
             ToolTip = "Master switch for the navmesh movement constraint. Enabled walks every per-frame agent displacement along the navmesh surface (dtCrowd movePosition semantics) so no force can push an agent off the mesh. Disabled restores free-space integration — for A/B comparison only. Worlds without nav data are unaffected either way."))
     ECk_CrowdNavmeshConstraintMode _NavmeshConstraintMode = ECk_CrowdNavmeshConstraintMode::Enabled;
 
     // ---- Stationary markup ----
-    // The path planner only sees static geometry: without this, a path for an agent headed past a
-    // standing crowd goes straight THROUGH it, and the local avoidance sampler (short-horizon,
-    // greedy) cannot escape a line-shaped local minimum — the agent presses into the crowd
-    // forever. Stationary agents therefore paint a UCk_NavArea_CrowdAgent cost disc so fresh
-    // paths (including BlockedRecheck re-paths) genuinely route around.
     UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
         meta = (AllowPrivateAccess = true,
             ToolTip = "Master switch for stationary-agent nav markup. Enabled paints a cost area under agents that have held still past the delay, so pathfinding detours around standing crowds when a detour exists (a fully-plugged corridor still paths through — cost, not exclusion). Disabled restores agent-blind pathfinding."))

@@ -27,14 +27,9 @@ namespace ck::angelscriptgenerator::self_heal
             return FChar::IsAlnum(InChar) || InChar == TEXT('_');
         }
 
-        // Returns a same-length copy with comment text and string-literal
-        // CONTENTS blanked to spaces (newlines preserved), so structural
-        // scanning (brace/paren matching, token searches) can't be fooled by
-        // braces in comments or semicolons in strings. Identifiers and types
-        // are never inside comments/strings, so extraction from the blanked
-        // text is lossless for our purposes. Handles //, /* */, "..." and
-        // '...' with backslash escapes (the f"..."/n"..." prefixes need no
-        // special-casing — blanking starts at the quote).
+        // SAME-LENGTH copy with newlines preserved, so every index into the
+        // result still addresses the original text. Identifiers and types are
+        // never inside comments/strings, so extraction stays lossless.
         auto Blank_CommentsAndStrings(
             const FString& InText) -> FString
         {
@@ -100,8 +95,6 @@ namespace ck::angelscriptgenerator::self_heal
             return Out;
         }
 
-        // Single space between tokens, no leading/trailing whitespace —
-        // canonicalizes multi-line declarations into one comparable line.
         auto Collapse_Whitespace(
             const FString& InText) -> FString
         {
@@ -124,9 +117,7 @@ namespace ck::angelscriptgenerator::self_heal
             return Out.TrimEnd();
         }
 
-        // Locates `class <InClassName>` (token-boundary exact) in blanked
-        // text; outputs the index of the body's opening brace and the base
-        // class name (empty if the declaration has none).
+        // Token-boundary exact; OutBaseName is empty when the declaration has no base.
         auto Find_ClassDecl(
             const FString& InBlanked,
             const FString& InClassName,
@@ -199,9 +190,8 @@ namespace ck::angelscriptgenerator::self_heal
             return true;
         }
 
-        // Walks the class body (from its opening brace) collecting depth-1
-        // UPROPERTY(...ExposeOnSpawn...) member declarations in order.
-        // Returns false on unbalanced braces (malformed/truncated source).
+        // Collects depth-1 UPROPERTY(...ExposeOnSpawn...) members in declaration
+        // order. Returns false on unbalanced braces (malformed/truncated source).
         auto Parse_ExposedMembers(
             const FString&                 InBlanked,
             int32                          InBodyOpenBrace,
@@ -229,7 +219,8 @@ namespace ck::angelscriptgenerator::self_heal
 
                 if (Depth == 1 && Char == TEXT('U') && Matches_Token(InBlanked, Index, TEXT("UPROPERTY")))
                 {
-                    auto Pos = Index + 9; // after "UPROPERTY"
+                    constexpr auto UPropertyTokenLen = 9;
+                    auto Pos = Index + UPropertyTokenLen;
                     while (Pos < N && FChar::IsWhitespace(InBlanked[Pos])) { ++Pos; }
                     if (Pos >= N || InBlanked[Pos] != TEXT('('))
                     { Index = Pos; continue; }
@@ -248,7 +239,6 @@ namespace ck::angelscriptgenerator::self_heal
 
                     const auto Specifiers = InBlanked.Mid(Pos + 1, SpecEnd - Pos - 1);
 
-                    // The member declaration runs to the next top-level ';'.
                     const auto DeclStart = SpecEnd + 1;
                     auto DeclEnd   = DeclStart;
                     auto InnerParen = 0;
@@ -267,8 +257,7 @@ namespace ck::angelscriptgenerator::self_heal
                     {
                         auto Decl = InBlanked.Mid(DeclStart, DeclEnd - DeclStart);
 
-                        // Strip the default initializer — a stub only has to
-                        // compile; the canonical regen restores real defaults.
+                        // Default initializers are dropped: a stub only has to compile.
                         const auto EqPos = Decl.Find(TEXT("="));
                         if (EqPos != INDEX_NONE)
                         { Decl = Decl.Left(EqPos); }
@@ -296,10 +285,8 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         // C++ boundary: AS source writes prefixed names (UCk_Foo_UE) but
-        // UClass::GetName() is prefix-less. C++ classes ARE registered during
-        // a failed AS compile, so reflection works here — and
-        // Get_ExposedPropertiesOfClass returns the class's WHOLE chain
-        // flattened base-first, so the walk stops at this link.
+        // UClass::GetName() is prefix-less. Get_ExposedPropertiesOfClass returns
+        // the WHOLE chain flattened base-first, so the walk stops at this link.
         auto Try_ResolveCppClassShape(
             const FString&                 InClassName,
             TArray<FCk_AsExposedProperty>& OutProps) -> bool
@@ -442,9 +429,6 @@ namespace ck::angelscriptgenerator::self_heal
             return Result;
         }
 
-        // Enumerate once. With a drain-scoped cache the recursive *.as walk is
-        // shared across every class resolved in this drain; without it the walk
-        // runs per call (original behavior — tests, one-off callers).
         auto       LocalFiles = TArray<FString>{};
         const auto FilesFor   = [&]() -> const TArray<FString>&
         {
@@ -466,8 +450,6 @@ namespace ck::angelscriptgenerator::self_heal
         {
             for (const auto& Path : Files)
             {
-                // Read once per file: a cache hit avoids re-reading a base-class
-                // file shared by multiple derived classes (and across drifts).
                 // An empty cached value means a prior load failed / empty file —
                 // Contains() then no-matches it exactly as a fresh failed read.
                 auto              LocalContents = FString{};
@@ -536,8 +518,7 @@ namespace ck::angelscriptgenerator::self_heal
                 continue;
             }
 
-            // Not declared in any scanned .as — the C++ boundary (its own
-            // supers come flattened from reflection), or unresolvable.
+            // Not declared in any scanned .as — the C++ boundary, or unresolvable.
             auto CppProps = TArray<FCk_AsExposedProperty>{};
             if (ck_angelscript_generator_as_source_scanner::Try_ResolveCppClassShape(Current, CppProps))
             {

@@ -16,9 +16,7 @@ class UWorld;
 
 namespace ck_render_target_processor
 {
-    // Draws a CPU pixel buffer into the entity's local render target through a transient
-    // upload texture. Shared by the pixel-apply processors and the Utils test seam
-    // (Debug_RedrawTargetFromLastSnapshot). Defined in CkRenderTarget_Processor.cpp.
+    // Shared by the pixel-apply processors and the Utils test seam Debug_RedrawTargetFromLastSnapshot.
     CKRENDERTARGET_API auto
     DrawPixelsToTarget(
         const FCk_Handle_RenderTarget& InRenderTargetEntity,
@@ -32,9 +30,7 @@ namespace ck_render_target_processor
 
 namespace ck
 {
-    // Resolves the drawable target for the sync entity: Managed mode creates a transient RGBA8
-    // render target from params, Provided mode validates and pins the caller's object. Runs on
-    // every machine — each world owns its local copy of the target.
+    // Runs on every machine — each world owns its local copy of the target.
     class CKRENDERTARGET_API FProcessor_RenderTarget_Setup : public ck_exp::TProcessor<
         FProcessor_RenderTarget_Setup,
         FCk_Handle_RenderTarget,
@@ -62,10 +58,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains the frame's draw requests, normalizes them into one FCk_RenderTarget_DrawCmd batch,
-    // applies the batch to the local render target through a single canvas pass, and broadcasts
-    // OnInstructionsApplied with the batch seq. Replication of the batch (channel A) attaches in
-    // a later phase — this processor is the single apply site on every machine.
+    // The single local apply site on every machine: one frame's requests, one batch, one canvas pass.
     class CKRENDERTARGET_API FProcessor_RenderTarget_HandleRequests : public ck_exp::TProcessor<
         FProcessor_RenderTarget_HandleRequests,
         FCk_Handle_RenderTarget,
@@ -162,8 +155,7 @@ namespace ck
             APlayerState* InSender = nullptr) -> void;
 
     public:
-        // Applies a normalized batch to the entity's local render target. Shared by the local
-        // request path and the replicated replay path. No-ops gracefully when
+        // Shared by the local request path and the replicated replay path. No-ops gracefully when
         // the process cannot render (-nullrhi, dedicated server) or the target failed setup.
         static auto
         DoApplyBatch(
@@ -171,13 +163,8 @@ namespace ck
             const FFragment_RenderTarget_Current& InCurrent,
             const TArray<FCk_RenderTarget_DrawCmd>& InCmds) -> void;
 
-        // Save-load hydration (Phase 4B): re-drives a v3-restored sync CHILD from its saved single-channel
-        // payload — refills the persisted ring, restores the author seq watermark, repaints, and (Replicates)
-        // re-publishes into a fresh owner container. Lives here because this class is already a friend of
-        // FFragment_RenderTarget_Current (for the _NextBatchSeq write) and owns DoApplyBatch (the repaint
-        // primitive). Returns false (NotReady, retry) until the child's Setup has composed Current; true
-        // (Applied) after exactly one repaint. Called from the hydration-scope branch of the
-        // FCk_RepData_RenderTarget Apply handler (CkRenderTarget_Replication.cpp).
+        // Returns false (NotReady, retry) until the restored child's Setup has composed Current;
+        // true after exactly one repaint. Contract and call site: CkRenderTarget/Claude.md.
         static auto
         HydrateFromSavedChannel(
             FCk_Handle& InChild,
@@ -192,9 +179,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drives the Interval pixel-sync policy: ticks the per-entity chrono and requests a capture
-    // each time it elapses. Body-gated to capture authors (same gate as PixelCapture). GPU
-    // completion of the resulting pass is handled by the normal capture pipeline.
+    // Body-gated to the reconcile authority, deliberately narrower than PixelCapture's authoring
+    // gate — CkRenderTarget/Claude.md.
     class CKRENDERTARGET_API FProcessor_RenderTarget_IntervalSync : public ck_exp::TProcessor<
         FProcessor_RenderTarget_IntervalSync,
         FCk_Handle_RenderTarget,
@@ -222,10 +208,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Starts a GPU readback for sync entities with an accepted SyncPixels request. Skipped while
-    // a pass is already in flight (the pending tag persists and is consumed on the next pass).
-    // Authoring-gated in the body: hosts always capture, clients only when _ClientAuthoring is
-    // Allowed (the pixel-upload path).
+    // Skipped while a pass is in flight — the pending tag persists and is consumed on the next
+    // pass. Hosts always capture; clients only when _ClientAuthoring is Allowed (body gate).
     class CKRENDERTARGET_API FProcessor_RenderTarget_PixelCapture : public ck_exp::TProcessor<
         FProcessor_RenderTarget_PixelCapture,
         FCk_Handle_RenderTarget,
@@ -258,11 +242,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drives the in-flight pixel pass to completion: polls the readback fence/copy, hands the
-    // captured pixels to the diff+compress background job, then lands the produced payload
-    // (FFragment_RenderTarget_PendingPixelPayload + OnPixelPayloadProduced) or drops it on
-    // zero-diff. GPU completion is inherently poll-based — the framework-accepted exception to
-    // event-driven.
+    // GPU completion is inherently poll-based — the accepted exception to event-driven processors.
     class CKRENDERTARGET_API FProcessor_RenderTarget_PixelSyncPump : public ck_exp::TProcessor<
         FProcessor_RenderTarget_PixelSyncPump,
         FCk_Handle_RenderTarget,
@@ -294,9 +274,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Releases batches stashed by the rep handler (arrivals before client-side Setup completed)
-    // into the replay queue in arrival order. Runs before ApplyReplicatedBatches so released
-    // batches commit in the same tick (SM FlushPendingReplication_Drain pattern).
+    // Releases stashed batches into the replay queue in arrival order.
     class CKRENDERTARGET_API FProcessor_RenderTarget_FlushPendingReplication : public ck_exp::TProcessor<
         FProcessor_RenderTarget_FlushPendingReplication,
         FCk_Handle_RenderTarget,
@@ -325,10 +303,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Client-side commit point for replicated instruction batches: drains the replay queue in
-    // arrival order, drops batches at or below the watermark / pixel-baseline watermark, detects
-    // ring-wrap gaps (FTag_RenderTarget_NeedsBaseline), applies via the shared DoApplyBatch, and
-    // broadcasts OnInstructionsApplied with the wire seq.
+    // The client-side commit point for replicated instruction batches (echo suppression and
+    // ring-wrap gap detection live here, not in the rep handler — CkRenderTarget/Claude.md).
     class CKRENDERTARGET_API FProcessor_RenderTarget_ApplyReplicatedBatches : public ck_exp::TProcessor<
         FProcessor_RenderTarget_ApplyReplicatedBatches,
         FCk_Handle_RenderTarget,
@@ -359,10 +335,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Host: consumes the produced pixel payload into per-player chunk queues. Players without a
-    // baseline cannot apply a delta — they're flagged for an on-demand FullSync instead (built by
-    // PaceStreams from the snapshot). The local (listen-server) player is skipped — the host
-    // already applied the pixels at capture time.
+    // Host: a player without a baseline cannot apply a delta, so they are flagged for an on-demand
+    // FullSync; the local (listen-server) player is skipped — it applied the pixels at capture time.
     class CKRENDERTARGET_API FProcessor_RenderTarget_DispatchPixelPayload : public ck_exp::TProcessor<
         FProcessor_RenderTarget_DispatchPixelPayload,
         FCk_Handle_RenderTarget,
@@ -392,9 +366,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Host: drives the per-player streams every tick — drains the client request inbox (acks /
-    // baseline requests), manages the on-demand FullSync baseline job, and sends queued chunks
-    // within the per-stream byte budget via reliable Client RPCs on each player's relay channel.
+    // Host: sends queued chunks within the per-stream, per-tick byte budget.
     class CKRENDERTARGET_API FProcessor_RenderTarget_PaceStreams : public ck_exp::TProcessor<
         FProcessor_RenderTarget_PaceStreams,
         FCk_Handle_RenderTarget,
@@ -440,8 +412,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Client: routes chunks stashed on the owner (arrivals that raced the sync child's
-    // composition) into the child's inbox once it exists.
+    // Client: routes chunks that raced the sync child's composition into its inbox once it exists.
     class CKRENDERTARGET_API FProcessor_RenderTarget_FlushOwnerChunkStash : public ck_exp::TProcessor<
         FProcessor_RenderTarget_FlushOwnerChunkStash,
         FCk_Handle,
@@ -467,10 +438,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Client: reassembles inbound chunks, runs the background decompress/patch job, lands the
-    // result in the CPU staging mirror, uploads to the local target (full-rect, v1), queues the
-    // FullSync ack, and reconciles the instruction watermark (batches at or below the baseline's
-    // watermark are dropped — they're baked into the pixels).
+    // Client: chunks → decompress/patch job → CPU staging mirror → full-rect local target upload.
+    // Batches at or below an applied baseline's watermark are already in those pixels and get dropped.
     class CKRENDERTARGET_API FProcessor_RenderTarget_ReceivePixels : public ck_exp::TProcessor<
         FProcessor_RenderTarget_ReceivePixels,
         FCk_Handle_RenderTarget,
@@ -513,9 +482,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Client: retries outstanding client→server stream messages each tick until the local
-    // player's relay channel resolves — FullSync acks (FFragment_RenderTarget_PendingAck) and
-    // baseline requests (FTag_RenderTarget_NeedsBaseline → Server_RequestFullSync).
+    // Client: retries outstanding client→server stream messages (FullSync acks, baseline requests,
+    // paced uploads) until the local player's relay channel resolves.
     class CKRENDERTARGET_API FProcessor_RenderTarget_ClientNetMaintenance : public ck_exp::TProcessor<
         FProcessor_RenderTarget_ClientNetMaintenance,
         FCk_Handle_RenderTarget,
@@ -545,10 +513,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Authoring client: flushes predicted draw batches to the server via Server_PushDrawBatch.
-    // Runs every tick while a pending batch exists — the relay channel may not have resolved yet
-    // and a MarkedDirtyBy gate would strand a deferred batch until the next draw (the SM
-    // PushOwningClientBatch lesson).
+    // Authoring client: flushes predicted draw batches to the server. Deliberately has no
+    // MarkedDirtyBy — a dirty gate would strand a deferred batch (CkRenderTarget/Claude.md).
     class CKRENDERTARGET_API FProcessor_RenderTarget_PushClientBatches : public ck_exp::TProcessor<
         FProcessor_RenderTarget_PushClientBatches,
         FCk_Handle_RenderTarget,
@@ -575,8 +541,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Host: commits client-pushed draw batches — the _ClientAuthoring gate, the local apply, the
-    // server-side seq assignment, and the republish (with sender stamped for echo suppression).
+    // Host: commits client-pushed draw batches under server-side seq assignment, republished with
+    // the sender stamped for echo suppression.
     class CKRENDERTARGET_API FProcessor_RenderTarget_ApplyClientBatches : public ck_exp::TProcessor<
         FProcessor_RenderTarget_ApplyClientBatches,
         FCk_Handle_RenderTarget,
@@ -609,9 +575,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Host: reassembles client pixel uploads, validates them (authoring gate + size caps),
-    // applies the result as the new authoritative snapshot (+ local target redraw), bumps the
-    // channel's _PixelEpoch, and re-publishes the payload to every OTHER client.
+    // Host: a validated client upload becomes the new authoritative snapshot and is re-published
+    // to every OTHER client.
     class CKRENDERTARGET_API FProcessor_RenderTarget_ReceiveClientUploads : public ck_exp::TProcessor<
         FProcessor_RenderTarget_ReceiveClientUploads,
         FCk_Handle_RenderTarget,

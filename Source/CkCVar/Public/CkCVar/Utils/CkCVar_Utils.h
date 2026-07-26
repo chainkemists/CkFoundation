@@ -13,11 +13,9 @@ class CKCVAR_API UCk_Utils_CVar_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
-public:
-    // =================================================================================================================
-    // Registration (K2Node expansion targets)
-    // =================================================================================================================
+    // The INTERNAL_* functions are the expansion targets of the CkK2Nodes CVar nodes.
 
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CVar|INTERNAL",
               meta = (BlueprintInternalUseOnly = true))
@@ -71,10 +69,6 @@ public:
         const FString& InHelp,
         const FCk_Delegate_CVar_OnCommand& InCallback);
 
-    // =================================================================================================================
-    // Binding (K2Node expansion targets)
-    // =================================================================================================================
-
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CVar|INTERNAL",
               meta = (BlueprintInternalUseOnly = true))
@@ -119,20 +113,12 @@ public:
         FCk_CVarRef InRef,
         const FCk_Delegate_CVar_OnCommand& InCallback);
 
-    // =================================================================================================================
-    // Unbinding
-    // =================================================================================================================
-
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CVar|INTERNAL",
               meta = (BlueprintInternalUseOnly = true))
     static void
     INTERNAL_Unbind(
         FCk_CVarCallbackHandle InHandle);
-
-    // =================================================================================================================
-    // Get (K2Node expansion targets)
-    // =================================================================================================================
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CVar|INTERNAL",
@@ -161,10 +147,6 @@ public:
     static FString
     INTERNAL_Get_String(
         FCk_CVarRef InRef);
-
-    // =================================================================================================================
-    // Set (K2Node expansion targets)
-    // =================================================================================================================
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CVar|INTERNAL",
@@ -198,10 +180,6 @@ public:
         FCk_CVarRef InRef,
         const FString& InValue);
 
-    // =================================================================================================================
-    // Construction
-    // =================================================================================================================
-
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CVar",
               DisplayName = "[Ck][CVar] Make CVar Ref",
@@ -211,20 +189,12 @@ public:
         FName InName,
         ECk_CVarType InType);
 
-    // =================================================================================================================
-    // Public Query
-    // =================================================================================================================
-
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CVar",
               DisplayName = "[Ck][CVar] Is Registered")
     static bool
     IsRegistered(
         FCk_CVarRef InRef);
-
-    // =================================================================================================================
-    // Type Detection
-    // =================================================================================================================
 
     static auto
     DetectCVarType(

@@ -153,11 +153,9 @@ auto
     DoAllocate_DefaultPins()
     -> void
 {
-    // CVarRef input pin
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Struct,
         FCk_CVarRef::StaticStruct(), CVar_Set_Pins::CVarRef_Pin);
 
-    // Value input pin (typed based on detection)
     CreateValuePinForType();
 }
 
@@ -217,7 +215,6 @@ auto
     CallNode->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallNode, this);
 
-    // Wire exec
     InCompilerContext.MovePinLinksToIntermediate(
         *FindPinChecked(UEdGraphSchema_K2::PN_Execute),
         *CallNode->FindPinChecked(UEdGraphSchema_K2::PN_Execute));
@@ -225,7 +222,6 @@ auto
         *FindPinChecked(UEdGraphSchema_K2::PN_Then),
         *CallNode->FindPinChecked(UEdGraphSchema_K2::PN_Then));
 
-    // Wire CVarRef
     auto* MyCVarPin = FindPinChecked(CVar_Set_Pins::CVarRef_Pin);
     auto* CallCVarPin = CallNode->FindPin(TEXT("InRef"));
     if (CallCVarPin != nullptr)
@@ -237,7 +233,6 @@ auto
         }
     }
 
-    // Wire Value
     auto* MyValuePin = FindPinChecked(CVar_Set_Pins::Value_Pin);
     auto* CallValuePin = CallNode->FindPin(TEXT("InValue"));
     if (CallValuePin != nullptr)

@@ -7,18 +7,9 @@
 #include "CkDeferredAssetInit_AngelScript.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Deferred Asset Init
-//
-// Fixes assets::load:: returning nullptr when called during AS __InitDefaults / literal-asset
-// init (engine init isn't yet safe for blocking loads), and the matching hot-reload case where
-// the AS plugin re-runs __Init_<Name> on the same cached instance — `_Arr.Add(...)` in the
-// body would otherwise double on every reload.
-//
-//   Phase 1 (boot only) — re-run each AS class's DefaultsFunction chain on its CDO. No
-//     pre-reset: scalar/object-ref defaults are idempotent, and clearing first risks
-//     abandoning state if a mid-chain statement aborts.
-//   Phase 2 (boot + hot-reload) — for each literal asset, reset the cached instance from its
-//     CDO then call __Init_<Name> directly (bypassing the getter's first-call cache).
+// assets::load:: returns nullptr during AS __InitDefaults (blocking loads aren't safe that early), and
+// hot-reload re-runs __Init_<Name> on the same cached instance. Phase 1 (boot only) re-runs each AS
+// class's DefaultsFunction on its CDO; Phase 2 resets each literal asset from its CDO and re-inits it.
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
@@ -37,9 +28,8 @@ public:
     static void OnAngelscriptPostReload(bool InFullReload);
 
     // Called from the AS premature-load helper (ck::EnsureIfNot_PrematureAssetLoad) on every
-    // assets::load::* that returns null before engine-safe. Captures the exact CDO whose
-    // DefaultsFunction is executing (via the active AS call stack) so the heal sweep can re-run
-    // ONLY those CDOs instead of all ~1200. Ungated (runs in cook too). Cheap — no stack symbolication.
+    // assets::load::* that returns null before engine-safe: captures the CDO whose DefaultsFunction is
+    // executing, so the heal sweep re-runs ONLY those CDOs instead of all ~1200. Runs in cook too.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DeferredAssetInit",
               DisplayName = "[Ck] Note Deferred Asset Load (Active Context)")

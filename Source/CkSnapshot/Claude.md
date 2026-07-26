@@ -158,6 +158,76 @@ These are **diagnostics only** — the loader does not act on them.
 
 ---
 
+## Capture classification rules
+
+`Run_CaptureV3_Registry` (`Snapshot/CkSnapshot_CaptureV3.cpp`) walks every entity carrying ≥1 fragment/tag and
+classifies it in this exact branch order. The rule numbers are the module's shared vocabulary — other files and this
+doc cite them; the code itself is now unannotated, so **this table is the definition**:
+
+| Rule | Test | Outcome |
+|---|---|---|
+| 1 | `IsMarkedForDestruction` (any `FTag_DestroyEntity_*`) | skip |
+| 1.5 | `FTag_Snapshot_SaveTransient` | skip + count; derived state the owner's construction/re-drive recreates on load. A payload on one is an AUDIT Warning (it will be dropped) |
+| 2 | `FFragment_SaveKey`, or a player pawn/controller/state rendezvous (world path only) | `EngineOwned` |
+| 3 | `FTag_ConstructSpawned` **with a real (named) label** | `ConstructSpawned`. Unlabeled ⇒ save-transient, skipped + counted; a payload on one is an AUDIT Warning |
+| 4 | `FFragment_SpawnRecipe` (retained EntityScript spawn recipe) | `RuntimeSpawned` |
+| 4.5 | `FFragment_BuildRecipe` (built via `Request_BuildAndReplicate`) | `DefinitionBuilt` |
+| 5 | none of the above — anonymous scratch | skip + count |
+
+The transient entity is resolved up front and never persisted (bookkeeping, not world state). Truly empty entities
+never even appear as candidates; they would fall to rule 5 anyway. Classified entries are then sorted by lifetime
+depth (ties by saved-id, for determinism) so **owners precede dependents** in the entity table — the load-side adopt
+and owner-mapping passes rely on that ordering.
+
+---
+
+## The v3 load machine
+
+`DoTick_Load` drives `TearingDown → AwaitingWorld → Rebuilding → Hydrating → Settling`. Rationale that used to live
+as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
+
+- **Hydrating is ATOMIC.** One ticker callback enqueues payloads, queues the reconcile-destroys, AND opens the gate,
+  so no gated world-tick ever sees pending payloads; hydration can only drain in post-gate FULL passes (Setup then
+  hydration, no stomp). `Settling` then lets the parked destroys finish.
+- **Ownership restore runs before any payload.** Rebuild APIs establish a *valid temporary* ownership chain so
+  Construct can run, but not necessarily the saved one: RuntimeSpawned scripts can override ContextOwner after spawn,
+  and DefinitionBuilt items are rebuilt under a driver-bearing context owner (historically they waited for a feature
+  payload — Inventory — to transfer LifetimeOwner later). `DoRestore_SavedOwnership` restores every resolvable hard
+  link once rebuild mapping has settled and before hydration; endpoints absent from `_SavedIdMap` keep their
+  rebuild-time relationship.
+- **The saved world transform rides the entity table, not a `Produce` payload.** A payload handler would race
+  `FProcessor_Transform_SyncFromActor`'s per-tick stomp on actor-backed entities. `DoApply_SavedTransforms` runs once
+  from `DoHydrate_Enqueue`, before payloads are enqueued; its deferred Transform requests / `SetActorTransform` calls
+  land in the load-kernel settle pumps. Actor-backed entities are driven through the ACTOR only.
+- **`FTag_Snapshot_JustRestored` is stamped on every mapped entity before the gate opens.** Game-side rebind
+  processors (BusterBlock's `Bb_SnapshotRestore` fleet) key off it to re-resolve handles their persisted fragments
+  carry. The Model-A purge deleted the old stamp site and silently killed every consumer; v3 restores the semantic.
+- **Orphan accounting is per-entry, not a subtraction.** It used to be a bare `N - mapped - skipped` count; the walk
+  enumerates the identical set (`_SavedIdMap` / `_SkippedIds` are disjoint subsets of the entity table) but emits one
+  Warning + one report record per orphan, so a lossy load is self-explaining.
+- **Reconcile keeps two classes of child it would otherwise destroy.** (a) `FTag_Snapshot_SaveTransient` children —
+  never captured as rows, so "absent from the save" is their NORMAL state; without the skip, reconcile destroyed the
+  loaded pawn's live intent/camera/movement attribute children every load (the ConstructSpawned stamp is
+  timing-dependent — possession-driven composition lands inside the construct window only under the load gate's
+  stretched construction, so the loaded world stamps children the save world never captured). (b) payload-bearing
+  children — feature STATE, not grants; destroying them dropped live state the save cannot express (the
+  QuickUse-containers-destroyed-on-load incident, 2026-07-14). Leaving them keeps boot defaults, which is strictly
+  better.
+- **Settling waits on hydration, not just frames.** It previously finished on a bare frame countdown, so
+  `OnLoadComplete` could fire with hydration still in flight. The frame cap is now a LOUD abort backstop — reaching it
+  means some payloads never applied.
+
+### Restore invariants
+
+`Verify_AllStoredHandlesResolve` (`Snapshot/CkSnapshot_RestoreInvariants.*`) reports every structurally-inconsistent
+stored handle in a restored registry: a dangling HARD ref (`LifetimeOwner` / `ContextOwner`), or a live
+`LifetimeDependent` whose own `LifetimeOwner` names someone else (aliasing / registry-rehome corruption). Unset and
+tombstone handles are skipped, and an empty result means the backbone is consistent. The dependents leg asserts
+**back-pointer consistency, not resolvability**: `FFragment_LifetimeDependents` is a lazily-pruned WEAK-ref list, so
+an entry pointing at a destroyed entity is by design and is not reported.
+
+---
+
 ## Anti-patterns
 
 1. **Don't compose the feature from inside `HydrationApply`.** Composition belongs to construction (the recipe

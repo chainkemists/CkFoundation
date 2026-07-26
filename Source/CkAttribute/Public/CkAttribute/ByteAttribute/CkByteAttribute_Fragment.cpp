@@ -33,13 +33,7 @@ static auto
     UCk_Utils_ByteAttributeModifier_UE::Request_ClearAllModifiers(InAttributeEntity, InEntry.Get_Component());
     UCk_Utils_ByteAttribute_UE::Request_Override(InAttributeEntity, InEntry.Get_Base(), InEntry.Get_Component());
 
-    // The Final modifier's Add/Subtract operation tag is frozen at creation and Override's delta
-    // parameter is unsigned (uint8), so a re-apply whose Final−Base difference changed sign
-    // cannot be expressed by mutating the existing modifier in place — the old else-branch
-    // wrapped the negative int difference through uint8 AND applied it with the stale operation,
-    // producing garbage client values. Recreate through the same sign-aware path as the first
-    // apply instead. (Float/Integer/Vector/Rotator keep their in-place Override: their deltas
-    // are signed, always applied with the Add operation.)
+    // Byte-only: a sign-flipped re-apply must RECREATE the Final modifier, never Override it. See CkAttribute/CLAUDE.md.
     if (auto ExistingModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(InAttributeEntity,
             ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), InEntry.Get_Component());
         ck::IsValid(ExistingModifier))
@@ -63,7 +57,6 @@ static auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handler for Byte Attributes
 
 static struct FByteAttributeRepHandlerRegistrar
 {
@@ -87,8 +80,6 @@ static struct FByteAttributeRepHandlerRegistrar
                         auto AttributeEntity = UCk_Utils_ByteAttribute_UE::TryGet(Entity, Entry.Get_AttributeName());
                         if (ck::Is_NOT_Valid(AttributeEntity))
                         {
-                            // Not composed yet — keep the whole container entry pending. Siblings
-                            // that did apply are skipped on the retry by the value check below.
                             Result = ECk_Persistence_ApplyResult::NotReady;
                             continue;
                         }
@@ -116,9 +107,6 @@ static struct FByteAttributeRepHandlerRegistrar
 
                     return Result;
                 },
-                // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-attribute-entity
-                // Produce), so Entity IS the attribute entity — write its value directly via ApplyReplicatedByteAttributeEntry.
-                // The OWNER-keyed net Apply above never resolves it.
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_restore::HydrationApply<ck::TFragment_ByteAttribute, FCk_RepData_ByteAttributes, UCk_Utils_ByteAttribute_UE>(

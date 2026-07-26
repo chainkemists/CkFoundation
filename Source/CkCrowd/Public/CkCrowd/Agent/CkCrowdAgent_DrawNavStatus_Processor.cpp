@@ -25,7 +25,6 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DrawNavStatus"), STAT_CkCrowd_DrawNavStatusProc,
 
 namespace ck_crowd_agent_draw_nav_status_processor
 {
-    // Prefixed to avoid Unity-build collisions with same-named constants in sibling draw processors.
     constexpr auto NavStatus_MarkerHeightAbove = 230.0f;
     constexpr auto NavStatus_MarkerHalfSize    = 30.0f;
     constexpr auto NavStatus_MarkerThickness   = 4.0f;
@@ -69,10 +68,8 @@ namespace ck
         const auto MarkerColor   = bIsFailed ? ck_crowd_agent_draw_nav_status_processor::NavStatus_FailedColor     : ck_crowd_agent_draw_nav_status_processor::NavStatus_PendingColor;
         const auto LabelColor    = bIsFailed ? ck_crowd_agent_draw_nav_status_processor::NavStatus_FailedTextColor : ck_crowd_agent_draw_nav_status_processor::NavStatus_PendingTextColor;
 
-        // X drawn as two crossing diagonals — easier to read at distance than a single line and
-        // scale-invariant in screen space. Red for terminal failure, yellow for in-flight pending
-        // (which can stick if the deferred queue is parking the request waiting for a navmesh
-        // that never arrives — same actionable signal, different colour code).
+        // Red marks a terminal failure; yellow an in-flight Pending, which can stick forever when
+        // the deferred queue is parked waiting for a navmesh that never arrives.
         UCk_Utils_DebugDraw_UE::DrawDebugLine(
             World,
             MarkerCentre + FVector(-ck_crowd_agent_draw_nav_status_processor::NavStatus_MarkerHalfSize, -ck_crowd_agent_draw_nav_status_processor::NavStatus_MarkerHalfSize, 0.0f),
@@ -84,8 +81,6 @@ namespace ck
             MarkerCentre + FVector(+ck_crowd_agent_draw_nav_status_processor::NavStatus_MarkerHalfSize, -ck_crowd_agent_draw_nav_status_processor::NavStatus_MarkerHalfSize, 0.0f),
             MarkerColor, ck_crowd_agent_draw_nav_status_processor::NavStatus_DurationOneFrame, ck_crowd_agent_draw_nav_status_processor::NavStatus_MarkerThickness);
 
-        // Label: actionable text the dev can read at a glance. DrawDebugString is the
-        // immediate-mode floating-text path in UE's debug API.
         FString Label;
         if (bIsFailed)
         {

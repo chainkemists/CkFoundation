@@ -79,9 +79,8 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _IsMovable = ECk_EnableDisable::Enable;
 
-    // per-instance transform offsets relative to the entity transform. _LocalLocationOffset is
-    // HONORED in Plan-1 (composed into the SKMC world transform each frame — see Setup + UpdateTransform);
-    // _LocalRotationOffset and _ScaleMultiplier remain reserved for the Plan-2 cluster proxy.
+    // Per-instance offsets relative to the entity transform. Only _LocalLocationOffset is honored today
+    // (composed into the SKMC world transform each frame); the other two await the Plan-2 cluster proxy.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _LocalLocationOffset = FVector::ZeroVector;
 
@@ -133,18 +132,15 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _PlayRate = 1.0f;
 
-    // cross-fade transition fields. Plan-1 IGNORES them — `USkeletalMeshComponent::
-    // PlayAnimation` uses `UAnimSingleNodeInstance` with no transition support. Plan-2's
-    // GPU pose buffer generates transitions on demand and reads these. Reserved here so
-    // callers don't rewrite every Request_PlayAnimation site when Plan-2 lands.
+    // Cross-fade transition fields, IGNORED today: USkeletalMeshComponent::PlayAnimation uses
+    // UAnimSingleNodeInstance, which has no transition support. Reserved for the Plan-2 pose buffer.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _TransitionDuration = 0.2f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     EAlphaBlendOption _BlendOption = EAlphaBlendOption::Linear;
 
-    // HONORED in Plan-1. When true, if the same UAnimSequenceBase is already the
-    // active _CurrentSequence, the request is a no-op (avoids restarting from frame 0).
+    // When true, a request naming the already-active sequence is a no-op (no restart from frame 0).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _Unique = false;
 
@@ -255,11 +251,9 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetPlayRate, _Rate);
 };
 
-// Deferred via the request queue so visibility flips in the same handle-requests pass as
-// animation/pose updates (avoids mid-frame flicker). Hides the base SKMC and all attached
-// submesh SKMCs. Pool-hygiene note: a released SKMC keeps its last visibility; the V1 caller
-// (named NPCs that never release their proxy) is unaffected — add a Setup reset if a future
-// caller hides a proxy then returns its SKMC to the pool.
+// Hides the base SKMC and all attached submeshes. Deferred via the request queue so visibility flips in
+// the same pass as animation/pose updates (avoids mid-frame flicker). Pool-hygiene caveat: a released
+// SKMC keeps its last visibility — a caller that hides a proxy then releases it needs a Setup reset.
 USTRUCT(BlueprintType)
 struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetVisibility : public FCk_Request_Base
 {
@@ -276,10 +270,8 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetVisibility, _IsVisible);
 };
 
-// Per-instance custom data slot write. Bounded by AnimCollection's _NumCustomDataFloat
-// (validated in the handler against InCustomData._Values.IsValidIndex). The handler
-// also fans the write out to attached submesh SKMCs so material parameters stay in
-// sync across the leader/follower pose.
+// Per-instance custom data slot write, bounded by the RendererData's _NumCustomDataFloat. The handler
+// fans the write out to attached submeshes so material parameters stay in sync across the pose.
 USTRUCT(BlueprintType)
 struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetCustomDataFloat : public FCk_Request_Base
 {
@@ -300,12 +292,9 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetCustomDataFloat, _Offset, _Value);
 };
 
-// Per-proxy material override on the BASE SKMC only (v1 scope — submeshes carry
-// their own def-time override materials via FCk_IskmRenderer_MeshDesc). Stored
-// sparsely in FFragment_IskmProxy_MaterialOverrides so EndPlay can restore the
-// pooled SKMC's mesh-default materials and Setup can re-apply after a
-// (re)allocation. SlotIndex is validated in the handler against the mesh's
-// material-slot count.
+// Per-proxy material override on the BASE SKMC only — submeshes carry their own def-time override
+// materials via FCk_IskmRenderer_MeshDesc. Stored sparsely in FFragment_IskmProxy_MaterialOverrides so
+// EndPlay can restore the pooled SKMC's mesh defaults and Setup can re-apply after a (re)allocation.
 USTRUCT(BlueprintType)
 struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetMaterialOverride : public FCk_Request_Base
 {
@@ -337,13 +326,9 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_ClearMaterialOverrides);
 };
 
-// Per-proxy morph-target (blend-shape) write on the BASE SKMC only (v1 scope —
-// LeaderPoseComponent copies bone transforms, not morph curves, so submeshes do
-// NOT inherit these). Stored in FFragment_IskmProxy_MorphTargets so EndPlay can
-// ClearMorphTargets() on the pooled SKMC and Setup can re-apply after a
-// (re)allocation. Names that don't exist on the mesh are stored as curves with
-// no visual effect (engine behavior) — no validation against the mesh's morph
-// list is performed.
+// Per-proxy morph-target (blend-shape) write on the BASE SKMC only — LeaderPoseComponent copies bone
+// transforms, not morph curves, so submeshes do NOT inherit these. Names absent from the mesh are stored
+// as inert curves (engine behavior); the morph list is deliberately not validated against.
 USTRUCT(BlueprintType)
 struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetMorphTarget : public FCk_Request_Base
 {
@@ -374,10 +359,9 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_ClearMorphTargets);
 };
 
-// Swaps the BASE SKMC's skeletal mesh (e.g. a male<->female body sharing one skeleton).
-// SetSkeletalMesh re-runs InitAnim (fresh AnimInstance of the preserved AnimClass); the
-// handler re-establishes the notify bridge and re-applies recorded material overrides,
-// morphs and per-instance custom data so the swap keeps the current outfit / body shape.
+// Swaps the BASE SKMC's skeletal mesh (e.g. a male<->female body sharing one skeleton). SetSkeletalMesh
+// re-runs InitAnim, so the handler re-establishes the notify bridge and re-applies recorded material
+// overrides, morphs and custom data to keep the current outfit / body shape.
 USTRUCT(BlueprintType)
 struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetSkeletalMesh : public FCk_Request_Base
 {
@@ -438,10 +422,8 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_DetachAllSubmeshes);
 };
 
-// Switches the SKMC's AnimInstance class — flipping pose source between AnimBP
-// (when InClass is valid) and Sequence (when nullptr). nullptr falls back to
-// UCk_IskmNotify_AnimInstance so OnAnimationNotify / OnMontageFinished signals
-// keep firing in sequence mode.
+// Flips pose source between AnimBP (valid class) and Sequence (null class). Null falls back to
+// UCk_IskmNotify_AnimInstance so OnAnimationNotify / OnMontageFinished keep firing in sequence mode.
 USTRUCT(BlueprintType)
 struct CKISKMRENDERER_API FCk_Request_IskmProxy_SetAnimInstanceClass : public FCk_Request_Base
 {
@@ -508,12 +490,9 @@ public:
 
 // ---- signal payload wrappers ----
 //
-// Framework convention: CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE static_asserts that
-// no T_Args are raw pointers, AND UE's DECLARE_DYNAMIC_DELEGATE macros can't reflect
-// TObjectPtr<T> template params cleanly. The codebase pattern (AnimPlan, AudioTrack,
-// Aggro, etc.) is to wrap UObject refs in a small BlueprintType struct that carries
-// a TObjectPtr as a UPROPERTY field. Subscribers read the wrapped pointer via the
-// generated CK_PROPERTY_GET accessor.
+// CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE static_asserts that no T_Args are raw pointers, and UE's
+// DECLARE_DYNAMIC_DELEGATE macros cannot reflect TObjectPtr<T> template params — hence the house
+// pattern of wrapping a UObject ref in a small BlueprintType struct holding a TObjectPtr UPROPERTY.
 
 USTRUCT(BlueprintType)
 struct CKISKMRENDERER_API FCk_IskmProxy_AnimSequenceRef
@@ -549,15 +528,9 @@ public:
 
 // ---- signals + delegates ----
 //
-// The signal macro expects the dynamic delegate to ALREADY be declared via DECLARE_DYNAMIC_DELEGATE_*
-// — the macro doesn't auto-generate it from the name argument. Declare each delegate
-// inline before the corresponding signal macro.
-//
-// Sibling pattern (CkAudioTrack_Fragment_Data.h:222 + CkAudioTrack_Fragment.h:97):
-// DECLARE_DYNAMIC_DELEGATE_* lives at FILE scope, but the
-// CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE invocations live INSIDE `namespace ck`
-// — the generated `UUtils_Signal_*` classes end up in `ck::`. Call sites use the
-// `ck::UUtils_Signal_*::Broadcast/Bind/Unbind` form. Mirror the split exactly.
+// The signal macro does NOT generate the dynamic delegate from its name argument: each
+// DECLARE_DYNAMIC_DELEGATE_* must be declared first, and at FILE scope, while the
+// CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE invocations sit inside `namespace ck`.
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FCk_Delegate_IskmProxy_OnAnimationFinished,
     FCk_Handle_IskmProxy, InHandle,

@@ -12,10 +12,8 @@
 
 #include "CkIskmAnimCollection_Fragment_Data.generated.h"
 
-// Plan-2 transient CPU bone-matrix bake (see CkIskmAnimCollection_BakedPose.h). Forward-declared here so the
-// widely-included asset header stays light; the full types are only pulled into the .cpp.
+// Forward-declared so this widely-included asset header stays light; full types are pulled into the .cpp only.
 struct FCk_Iskm_BakedPose;
-// Plan-2 render-thread resources (the baked SRV, its uniform buffer, the default mesh's vertex factories).
 struct FCk_Iskm_BatchedRenderData;
 class FCk_Iskm_BatchedMeshData;
 
@@ -85,36 +83,31 @@ private:
               meta = (AllowPrivateAccess = true, TitleProperty = "{_Name}"))
     TArray<FCk_IskmAnimCollection_SequenceDef> _Sequences;
 
-    // Plan-2: frames-per-second the bake samples each sequence at. Higher = smoother + more VRAM.
-    // Skelot uses 10..60 per sequence; we use one rate for the whole collection (matches Skelot's common case).
+    // Frames-per-second the bake samples every sequence at. Higher = smoother + more VRAM.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation",
               meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1, UIMax = 120, ClampMax = 120))
     int32 _SampleFrequency = 30;
 
-    // Sockets (or bare bone names) whose component-space transforms are baked per-frame into the
-    // pose data (far cosmetics) — queryable per member via
-    // ACk_Iskm_BatchedCrowd_Actor::TryGet_MemberSocketTransform. Script-authored collections
-    // configure this (BB adds head_attach), so it must stay BlueprintReadWrite like _Sequences
-    // (_BonesToCache above is BlueprintReadOnly and NOT script-assignable — do not reuse it).
+    // Sockets (or bare bone names) whose component-space transforms are baked per-frame into the pose
+    // data — queryable per member via ACk_Iskm_BatchedCrowd_Actor::TryGet_MemberSocketTransform. Must
+    // stay BlueprintReadWrite: script-authored collections configure it (_BonesToCache is not assignable).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation",
               meta = (AllowPrivateAccess = true))
     TArray<FName> _BakedSockets;
 
     // ---- Plan-2 reservations (declared now so we don't migrate .uassets later) ----
 
-    // Bones whose CPU transforms are cached per-frame for socket attaching / cheap line
-    // trace. Plan-1 leaves this empty; Plan-2 reads it during the bake.
+    // Bones whose CPU transforms are cached per-frame for socket attaching / cheap line trace.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Plan-2 Reservations",
               meta = (AllowPrivateAccess = true))
     TSet<FName> _BonesToCache;
 
     // Animation curves sampled into VRAM, accessible from materials via GetCurveValue().
-    // Plan-2 only — declared now to lock asset shape.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Plan-2 Reservations",
               meta = (AllowPrivateAccess = true))
     TArray<FName> _CurvesToCache;
 
-    // GPU pose-buffer pool sizes. Plan-2 only.
+    // GPU pose-buffer pool sizes.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Plan-2 Reservations",
               meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
     int32 _MaxTransitionPose = 2000;
@@ -123,7 +116,6 @@ private:
               meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
     int32 _MaxDynamicPose = 0;
 
-    // Anim-bake flags consumed by Plan-2's GPU bake pass. Plan-1 ignores them.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Plan-2 Reservations",
               meta = (AllowPrivateAccess = true))
     bool _ExtractRootMotion = false;
@@ -151,10 +143,9 @@ private:
     FRenderCommandFence _ReleaseResourcesFence;
 
 public:
-    // _Skeleton with a fallback to the DefaultMesh's own skeleton. Script-authored collections
-    // (e.g. BusterBlock's BB_Npc_Iskm_Assets.as) cannot assign _Skeleton — AS only reflects the
-    // const USkeletalMesh::GetSkeleton() overload — and Plan-1 never needed it. Everything on the
-    // batched (Plan-2) path must resolve the skeleton through this, never read _Skeleton raw.
+    // _Skeleton with a fallback to the DefaultMesh's own skeleton. Script-authored collections cannot
+    // assign _Skeleton (AS only reflects the const USkeletalMesh::GetSkeleton() overload), so the
+    // batched path must always resolve the skeleton through this and never read _Skeleton raw.
     auto
     Get_EffectiveSkeleton() const -> USkeleton*;
 
@@ -163,7 +154,6 @@ public:
     CK_PROPERTY_GET(_Sequences);
     CK_PROPERTY_GET(_SampleFrequency);
     CK_PROPERTY_GET(_BakedSockets);
-    // Plan-2 reservation accessors (read-only; nothing in Plan-1 reads these)
     CK_PROPERTY_GET(_BonesToCache);
     CK_PROPERTY_GET(_CurvesToCache);
     CK_PROPERTY_GET(_MaxTransitionPose);

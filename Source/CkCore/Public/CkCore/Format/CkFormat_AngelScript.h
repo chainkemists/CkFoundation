@@ -37,7 +37,6 @@ namespace ck
     DEFINE_TYPE_MAPPING(FBox, "FBox")
     DEFINE_TYPE_MAPPING(FBox2D, "FBox2D")
 
-    // Helper template to extract container element types
     template<typename T>
     struct ContainerTraits
     {
@@ -48,27 +47,22 @@ namespace ck
     template <typename T>
     auto Get_RuntimeTypeToString_AngelScript() -> FString
     {
-        // First check if we have a direct mapping
         if constexpr (RuntimeTypeToString_AngelScript<T>::Value != nullptr)
         {
             return RuntimeTypeToString_AngelScript<T>::Value;
         }
-        // Check if it's a container type we can handle directly
         else if constexpr (ContainerTraits<T>::IsContainer)
         {
             return ContainerTraits<T>::Simplify();
         }
-        // Check for enum types
         else if constexpr (std::is_enum_v<T>)
         {
             const auto& CleanName = cleantype::clean<T>();
             const auto CleanNameStr = FString{static_cast<int32>(CleanName.length()), CleanName.data()};
             return CleanNameStr.Replace(TEXT("enum "), TEXT(""), ESearchCase::CaseSensitive);
         }
-        // Check for pointer types — strip the pointer, but preserve const on the pointee so AS
-        // sees `const X` for C++ `const X*`. UObject pointers are AS reference types, so the
-        // pointer itself has no AS-side syntax; const must propagate to the AS type string so
-        // const→non-const conversion is rejected on the script side.
+        // UObject pointers are AS reference types, so the pointer itself has no AS-side syntax — but
+        // const MUST propagate to the type string, or AS accepts a const→non-const conversion.
         else if constexpr (std::is_pointer_v<T>)
         {
             using PointeeType     = std::remove_pointer_t<T>;
@@ -83,7 +77,6 @@ namespace ck
                 return Get_RuntimeTypeToString_AngelScript<BarePointeeType>();
             }
         }
-        // Default case: just use cleantype output
         else
         {
             const auto& CleanName = cleantype::clean<T>();
@@ -91,7 +84,6 @@ namespace ck
         }
     }
 
-    // Specialization for TArray
     template<typename ElementType, typename AllocatorType>
     struct ContainerTraits<TArray<ElementType, AllocatorType>>
     {
@@ -105,7 +97,6 @@ namespace ck
         }
     };
 
-    // Specialization for TSet
     template<typename ElementType, typename KeyFuncs, typename AllocatorType>
     struct ContainerTraits<TSet<ElementType, KeyFuncs, AllocatorType>>
     {
@@ -119,7 +110,6 @@ namespace ck
         }
     };
 
-    // Specialization for TMap
     template<typename KeyType, typename ValueType, typename SetAllocator, typename KeyFuncs>
     struct ContainerTraits<TMap<KeyType, ValueType, SetAllocator, KeyFuncs>>
     {
@@ -135,7 +125,6 @@ namespace ck
         }
     };
 
-    // Specialization for TWeakPtr
     template<typename ObjectType, ESPMode InMode>
     struct ContainerTraits<TWeakPtr<ObjectType, InMode>>
     {
@@ -149,7 +138,6 @@ namespace ck
         }
     };
 
-    // Specialization for TUniquePtr
     template<typename T, typename Deleter>
     struct ContainerTraits<TUniquePtr<T, Deleter>>
     {
@@ -163,7 +151,6 @@ namespace ck
         }
     };
 
-    // Specialization for TOptional
     template<typename OptionalType>
     struct ContainerTraits<TOptional<OptionalType>>
     {
@@ -177,7 +164,6 @@ namespace ck
         }
     };
 
-    // Specialization for TSubclassOf
     template<typename TClass>
     struct ContainerTraits<TSubclassOf<TClass>>
     {
@@ -191,7 +177,6 @@ namespace ck
         }
     };
 
-    // Specialization for TEnumAsByte
     template<typename TEnum>
     struct ContainerTraits<TEnumAsByte<TEnum>>
     {
@@ -200,12 +185,10 @@ namespace ck
 
         static FString Simplify()
         {
-            // Remove TEnumAsByte wrapper and return the underlying enum type
             return *Get_RuntimeTypeToString_AngelScript<TEnum>();
         }
     };
 
-    // Specialization for TSharedPtr
     template<typename ObjectType, ESPMode InMode>
     struct ContainerTraits<TSharedPtr<ObjectType, InMode>>
     {
@@ -219,7 +202,6 @@ namespace ck
         }
     };
 
-    // Specialization for TSharedRef
     template<typename ObjectType, ESPMode InMode>
     struct ContainerTraits<TSharedRef<ObjectType, InMode>>
     {
@@ -233,7 +215,6 @@ namespace ck
         }
     };
 
-    // Specialization for TWeakObjectPtr
     template<typename T>
     struct ContainerTraits<TWeakObjectPtr<T>>
     {
@@ -247,7 +228,6 @@ namespace ck
         }
     };
 
-    // Specialization for TObjectPtr (UE5)
     template<typename T>
     struct ContainerTraits<TObjectPtr<T>>
     {
@@ -261,7 +241,6 @@ namespace ck
         }
     };
 
-    // Specialization for TSoftObjectPtr
     template<typename T>
     struct ContainerTraits<TSoftObjectPtr<T>>
     {
@@ -275,7 +254,6 @@ namespace ck
         }
     };
 
-    // Specialization for TSoftClassPtr
     template<typename T>
     struct ContainerTraits<TSoftClassPtr<T>>
     {
@@ -289,7 +267,6 @@ namespace ck
         }
     };
 
-    // Specialization for TScriptInterface
     template<typename T>
     struct ContainerTraits<TScriptInterface<T>>
     {
@@ -303,7 +280,6 @@ namespace ck
         }
     };
 
-    // Specialization for TInstancedStruct
     template<typename T>
     struct ContainerTraits<TInstancedStruct<T>>
     {
@@ -317,7 +293,6 @@ namespace ck
         }
     };
 
-    // Specialization for TPair (used in TMap iteration)
     template<typename KeyType, typename ValueType>
     struct ContainerTraits<TPair<KeyType, ValueType>>
     {

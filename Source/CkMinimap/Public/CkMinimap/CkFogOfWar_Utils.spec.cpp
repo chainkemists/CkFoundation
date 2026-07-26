@@ -1,9 +1,3 @@
-// Pure-math coverage for the fog-grid cell helpers — no world, no entities.
-//
-// Conventions under test (documented in CkFogOfWar_Utils.h): cell counts are ceil(extent / cell size)
-// per axis (min 1x1), anchored at the bounds min corner; indices are row-major (CellY * Counts.X + CellX);
-// UV rects normalize over the BOUNDS extent, clamped to [0, 1].
-
 #include "CkMinimap/CkFogOfWar_Utils.h"
 
 #include "Misc/AutomationTest.h"
@@ -40,7 +34,6 @@ bool FCkTest_FogOfWar_CellMath_IndexEdgesAndUV::RunTest(const FString&)
 
     TestTrue(TEXT("degenerate cell size -> 1x1"), UCk_Utils_FogOfWar_UE::Get_CellCounts(Bounds, 0.0f) == FIntPoint{1, 1});
 
-    // Min corner is cell (0, 0) = index 0; max corner is INCLUSIVE and clamps into the last cell
     TestEqual(TEXT("min corner -> index 0"), UCk_Utils_FogOfWar_UE::Get_CellIndex(FVector{-1000, -500, 0}, Bounds, CellSize, Counts), 0);
     TestEqual(TEXT("max corner -> last index (inclusive, clamped floor)"),
         UCk_Utils_FogOfWar_UE::Get_CellIndex(FVector{1000, 500, 0}, Bounds, CellSize, Counts), 3 * 7 + 6);
@@ -48,11 +41,9 @@ bool FCkTest_FogOfWar_CellMath_IndexEdgesAndUV::RunTest(const FString&)
     TestEqual(TEXT("on the min-X boundary -> included"),
         UCk_Utils_FogOfWar_UE::Get_CellIndex(FVector{-1000, 0, 0}, Bounds, CellSize, Counts), FMath::FloorToInt32(500.0 / CellSize) * 7 + 0);
 
-    // Cell centers anchor at the bounds min corner
     TestTrue(TEXT("cell (0,0) center = min + half-cell"),
         Get_IsNearlyEqual(UCk_Utils_FogOfWar_UE::Get_CellCenter(0, 0, Bounds, CellSize), FVector2D{-850, -350}));
 
-    // UV rects normalize over the BOUNDS extent (clamped) — partial edge cells never seam past 1
     const auto UV_FirstCell = UCk_Utils_FogOfWar_UE::Get_CellUVRect(0, Bounds, CellSize);
     TestTrue(TEXT("cell (0,0) UV = [0, 0.3] x [0.85, 1] (bottom-left of the map)"),
         Get_IsNearlyEqual(UV_FirstCell.Min, FVector2D{0.0, 0.85}) && Get_IsNearlyEqual(UV_FirstCell.Max, FVector2D{0.3, 1.0}));

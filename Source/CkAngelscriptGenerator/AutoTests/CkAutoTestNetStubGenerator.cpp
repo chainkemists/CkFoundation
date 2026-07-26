@@ -28,17 +28,12 @@ namespace ck_autotest_netstub_generator
 
     // ---- Constants -----------------------------------------------------
 
-    // The AS base class authors subclass to define a test body. Same one the wrapper generator
-    // finds; mirrors that lookup verbatim so the two generators agree on the subclass set.
-    // UClass storage name strips the `U` prefix — see CkAutoTestWrapperGenerator.cpp:35 for the
-    // long-form explanation.
+    // Storage name (no `U` prefix). The wrapper generator's lookup is mirrored VERBATIM so the
+    // two generators can never disagree on the subclass set.
     static const TCHAR* AutoTestBaseBareName = TEXT("Ck_AutoTest_Base");
 
-    // Source-form prefix every AS net-mode test class shares by convention. The hand-written
-    // stubs derived their per-test "suffix" by stripping this prefix from the class name; we
-    // replicate that derivation so the generator's output names match the hand-written ones
-    // byte-for-byte. Classes that don't start with this prefix fall back to using the bare
-    // class name as the suffix (mostly a future-proofing safety net — no current test does this).
+    // Every leaf net test is named `Ck_AutoTest_Net_<Suffix>` by convention; stripping this
+    // prefix yields the suffix every emitted name is built from.
     static const TCHAR* NetTestClassPrefix = TEXT("Ck_AutoTest_Net_");
 
     // ---- _NetMode reflection ------------------------------------------
@@ -53,8 +48,7 @@ namespace ck_autotest_netstub_generator
         if (Property == nullptr)
         { return 0; }
 
-        // UENUM-backed UPROPERTY appears as FByteProperty (or FEnumProperty wrapping a byte).
-        // Both surface here depending on UE version + reflection emit path.
+        // A UENUM-backed UPROPERTY surfaces as FByteProperty OR as an FEnumProperty wrapping one.
         if (const auto* ByteProp = CastField<FByteProperty>(Property))
         {
             return ByteProp->GetPropertyValue_InContainer(CDO);
@@ -74,28 +68,12 @@ namespace ck_autotest_netstub_generator
 
     // ---- _NetSubjectClass reflection ----------------------------------
 
-    // Default subject class path emitted when an AS test doesn't override `_NetSubjectClass`.
-    // The default `ACk_AutoTest_NetSubject` (in CkTests) adds a Float attribute on its entity-
-    // script — sufficient for CkAttribute net tests but not for modules with different per-entity
-    // state. Modules with custom subjects (CkRelationship, CkInventory, CkStateMachine, etc.)
-    // author a subclass and override the UPROPERTY on their AS test class.
-    //
-    // NOTE: UE's FSoftClassPath C++-class lookup strips the `A`/`U`/`F` prefix from class names —
-    // the resolved path is `/Script/<Module>.<Name-without-prefix>`. The per-test override path
-    // below uses `Resolved->GetPathName()` which already strips correctly, so the bug only
-    // surfaces on the default fallback. Until this fix, every AS net test that DIDN'T override
-    // `_NetSubjectClass` failed at SpawnActor with "failed to resolve NetSubject class via
-    // FSoftClassPath" because TryLoadClass returns nullptr on the prefixed form. The first net
-    // tests authored (CkAttribute) happened to override the path implicitly via the same
-    // mistake working out in the FSoftClassPath registry's tolerance — but newer net tests
-    // (CkTransform, which uses the default subject) tripped it.
+    // Prefix-LESS on purpose: FSoftClassPath's C++-class lookup strips `A`/`U`/`F`, so the
+    // prefixed form resolves to nullptr and every non-overriding test fails at SpawnActor.
     static const TCHAR* DefaultNetSubjectClassPath = TEXT("/Script/CkTests.Ck_AutoTest_NetSubject");
 
-    // Read the AS test's CDO `_NetSubjectClass` UPROPERTY (declared on UCk_AutoTest_NetBase).
-    // Returns the class path string suitable for emission as an FSoftClassPath literal in the
-    // generated C++ stub. Falls back to the default subject path when the property is unset
-    // (nullptr) or missing (a test class that doesn't derive from NetBase). Reflection mirrors
-    // the existing `Read_NetModeByte` pattern; class properties surface as FClassProperty.
+    // Emitted as an FSoftClassPath literal in the stub. Falls back to the default subject when
+    // `_NetSubjectClass` is unset or the test doesn't derive from UCk_AutoTest_NetBase at all.
     auto Read_NetSubjectClassPath(const UClass* InEntityScriptClass) -> FString
     {
         const auto* CDO = InEntityScriptClass->GetDefaultObject();
@@ -125,9 +103,8 @@ namespace ck_autotest_netstub_generator
 
     // ---- Filtering -----------------------------------------------------
 
-    // Same shape as the wrapper generator's filter — same staleness checks, same disqualifying
-    // flags. Diverges on the mode check: this generator keeps only Net-mode classes; the wrapper
-    // keeps only Standalone-mode ones. Together they cover every subclass exactly once.
+    // Deliberately the wrapper generator's filter with the mode check INVERTED: it keeps
+    // Standalone, this keeps Net, and between them every subclass is covered exactly once.
     auto Is_IncludedNetClass(UClass* InClass, UClass* InAutoTestBase) -> bool
     {
         if (ck::Is_NOT_Valid(InClass, ck::IsValid_Policy_NullptrOnly{}))
@@ -164,17 +141,13 @@ namespace ck_autotest_netstub_generator
         if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(InClass))
         { return false; }
 
-        // Filter out Standalone-mode classes — the wrapper generator handles those. Anything
-        // non-zero is a Net mode (Independent or Replicated).
-        if (Read_NetModeByte(InClass) == 0)
+        constexpr auto StandaloneNetModeByte = uint8{0};
+        if (Read_NetModeByte(InClass) == StandaloneNetModeByte)
         { return false; }
 
-        // Filter out base/scaffolding classes — only leaf test classes named
-        // `Ck_AutoTest_Net_<Name>` should emit stubs. Without this, `Ck_AutoTest_NetBase`
-        // (which sets `default _NetMode = Replicated` for its subclasses' convenience) would
-        // itself get a stub and surface in Session Frontend as a phantom test — and any future
-        // intermediate base like `Ck_AutoTest_NetBase_WithRefill` would too. The prefix is the
-        // natural leaf-test marker; bases live under `Common/` and are named without it.
+        // The prefix is the leaf-test marker — scaffolding bases live under `Common/` without it.
+        // `Ck_AutoTest_NetBase` sets `default _NetMode` for its subclasses and would otherwise get
+        // a stub of its own, surfacing in Session Frontend as a phantom test.
         if (NOT InClass->GetName().StartsWith(NetTestClassPrefix, ESearchCase::CaseSensitive))
         { return false; }
 
@@ -183,10 +156,7 @@ namespace ck_autotest_netstub_generator
 
     // ---- Naming derivation --------------------------------------------
 
-    // Class storage name strips the `U` prefix: `UCk_AutoTest_Net_Foo` -> `Ck_AutoTest_Net_Foo`.
-    // We strip the further `Ck_AutoTest_Net_` prefix to get the per-test "suffix" that all the
-    // emitted names build off of. Classes lacking that prefix fall back to their bare class
-    // name — generator stays useful even if naming convention drifts in the future.
+    // Falls back to the bare class name so the generator survives a drift in naming convention.
     auto Get_TestSuffix(const UClass* InEntityScriptClass) -> FString
     {
         const auto BareName = InEntityScriptClass->GetName();
@@ -195,8 +165,7 @@ namespace ck_autotest_netstub_generator
         return BareName;
     }
 
-    // Resolves the AS source file path for a test class. Empty when the class isn't AS-backed
-    // (or AS support is compiled out) — callers treat empty as "no path convention applies".
+    // Empty when the class isn't AS-backed — callers read that as "no path convention applies".
     auto Get_AsSourceFilePath(const UClass* InEntityScriptClass) -> FString
     {
 #if WITH_ANGELSCRIPT_CK
@@ -210,24 +179,18 @@ namespace ck_autotest_netstub_generator
 #endif
     }
 
-    // Derives the "feature" segment used in the test path's middle component (e.g. "Attribute"
-    // for `Ck.Attribute.Net.AS_*`) AND in the output filename. Reads the AS source path; the
-    // path-convention logic lives in `Derive_FeatureFromSourcePath` (pure, unit-tested).
     auto Get_TestFeature(const UClass* InEntityScriptClass) -> FString
     {
         return FCkAutoTestNetStubGenerator::Derive_FeatureFromSourcePath(
             Get_AsSourceFilePath(InEntityScriptClass));
     }
 
-    // The C++ AutomationTest class identifier emitted to `IMPLEMENT_SIMPLE_AUTOMATION_TEST`.
-    // Matches the hand-written stubs' shape: `FCk<Feature>Net_AS_<Suffix>`.
     auto Get_TestClassName(const FString& InFeature, const FString& InSuffix) -> FString
     {
         return ck::Format_UE(TEXT("FCk{}Net_AS_{}"), InFeature, InSuffix);
     }
 
-    // The test path string emitted to `IMPLEMENT_SIMPLE_AUTOMATION_TEST`. Surfaces in Session
-    // Frontend / `--test-pattern` matches as e.g. `Ck.Attribute.Net.AS_Float_InitialValueReplicates`.
+    // This is what Session Frontend rows and `--test-pattern` match against.
     auto Get_TestPath(const FString& InFeature, const FString& InSuffix) -> FString
     {
         return ck::Format_UE(TEXT("Ck.{}.Net.AS_{}"), InFeature, InSuffix);
@@ -235,9 +198,8 @@ namespace ck_autotest_netstub_generator
 
     // ---- Block formatting ---------------------------------------------
 
-    // Per-test block. Two variants — Replicated includes the server-side NetSubject spawn +
-    // post-spawn settle ticks; Independent skips both. Everything else is identical, including
-    // the log-suppression bracketing the harness relies on.
+    // Replicated adds the server-side NetSubject spawn plus post-spawn settle ticks; Independent
+    // skips both. Everything else — including the harness' log-suppression bracketing — is shared.
     auto Format_TestBlock(
         const UClass* InEntityScriptClass,
         FCkAutoTestNetStubGenerator::ENetMode InNetMode)
@@ -290,12 +252,8 @@ namespace ck_autotest_netstub_generator
 
         if (IsReplicated)
         {
-            // The AS class CDO's `_NetSubjectClass` UPROPERTY (declared on UCk_AutoTest_NetBase)
-            // selects which subject actor the harness spawns. Default fallback is the base
-            // `ACk_AutoTest_NetSubject`. The class path is embedded as an FSoftClassPath literal
-            // and resolved at run time via TryLoadClass — same lazy-resolve pattern the standalone
-            // wrapper generator uses for entity-script class lookups (avoids hard C++ header deps
-            // on a per-test subject subclass).
+            // Embedded as a literal and resolved at run time via TryLoadClass — the same lazy
+            // resolve the wrapper generator uses, so a per-test subject subclass needs no C++ dep.
             const auto SubjectClassPath = Read_NetSubjectClassPath(InEntityScriptClass);
 
             Block += TEXT("    ADD_LATENT_AUTOMATION_COMMAND(FCk_Latent_RunOnServer(\n");
@@ -317,9 +275,8 @@ namespace ck_autotest_netstub_generator
             Block += TEXT("    ADD_LATENT_AUTOMATION_COMMAND(FCk_Latent_TickWorlds(FramesAfterSpawn));\n\n");
         }
 
-        // Literal braces around `kAsClassPath_<Suffix>` need libfmt `{{` / `}}` escaping;
-        // the FString{...} initializer in the emitted C++ collides with fmt's substitution
-        // syntax otherwise.
+        // The emitted `FString{...}` initializer collides with fmt substitution syntax, hence the
+        // `{{` / `}}` escaping around `kAsClassPath_<Suffix>`.
         Block += ck::Format_UE(
             TEXT("    ADD_LATENT_AUTOMATION_COMMAND(FCk_Latent_RunAsTestOnAllWorlds(this, FString{{kAsClassPath_{}}}, kTimeoutSeconds_{}));\n\n"),
             Suffix, Suffix);
@@ -352,7 +309,7 @@ namespace ck_autotest_netstub_generator
         TArray<UClass*> Classes;
     };
 
-    // Output root for plugin-authored tests. Empty when CkTests isn't enabled.
+    // Empty when CkTests isn't enabled.
     auto Get_CkTestsOutputDir() -> FString
     {
         if (const auto CkTestsPlugin = IPluginManager::Get().FindPlugin(TEXT("CkTests")))
@@ -363,11 +320,8 @@ namespace ck_autotest_netstub_generator
         return {};
     }
 
-    // Output root for project-authored tests: `<ProjectDir>/Source/<ProjectName>/Tests/Net/
-    // Generated`. Empty when the project has no `Source/<ProjectName>` module dir to emit into
-    // (e.g. a content-only project, or a primary module named differently from the .uproject) —
-    // we refuse to guess rather than fall back to the CkTests submodule, because a cross-repo
-    // stub is exactly the churn this split exists to prevent.
+    // Empty when there is no `Source/<ProjectName>` dir to emit into. Refusing to guess is
+    // deliberate: falling back to the CkTests submodule is the cross-repo churn the split prevents.
     auto Get_ProjectOutputDir() -> FString
     {
         const auto ProjectModuleDir = FPaths::GameSourceDir() / FApp::GetProjectName();
@@ -377,10 +331,8 @@ namespace ck_autotest_netstub_generator
         return ProjectModuleDir / TEXT("Tests") / TEXT("Net") / TEXT("Generated");
     }
 
-    // Longest-base-dir-prefix match of a source path against every enabled plugin. Mirrors
-    // FCkAutoTestWrapperGenerator::Find_PluginByPathPrefix verbatim — the proven in-repo way to
-    // resolve an AS source file's owning plugin (this engine fork has no path->plugin lookup we
-    // rely on; the wrapper generator uses exactly this).
+    // Mirrors FCkAutoTestWrapperGenerator::Find_PluginByPathPrefix verbatim — the engine fork
+    // offers no path->plugin lookup, so longest-base-dir-prefix is the in-repo way to resolve one.
     auto Find_PluginByPathPrefix(const FString& InPath) -> const IPlugin*
     {
         if (InPath.IsEmpty())
@@ -409,33 +361,22 @@ namespace ck_autotest_netstub_generator
         return BestMatch;
     }
 
-    // Output root for a test authored in a plugin OTHER than CkTests that ships its own compiled
-    // C++ module to host the stub: `<Plugin>/Source/<Module>/Private/Net/Generated`, mirroring
-    // CkTests' own layout. Returns empty (caller falls back to CkTests, preserving prior behavior)
-    // when:
-    //   * the source path resolves to no enabled plugin,
-    //   * the owning plugin IS CkTests (keep its dedicated, byte-stable Get_CkTestsOutputDir branch),
-    //   * the plugin has no host-able code module (script-only plugin), or
-    //   * the chosen module's Source dir doesn't exist on disk (refuse to guess, same precedent as
-    //     Get_ProjectOutputDir).
-    // A plugin hosting these stubs MUST have a module that publicly depends on CkTests — the emitted
-    // C++ #includes the CkTests/Net/* harness headers (same requirement the project module carries).
+    // `<Plugin>/Source/<Module>/Private/Net/Generated`, mirroring CkTests' own layout. Empty on
+    // every case the caller should route to CkTests instead. The hosting module MUST publicly
+    // depend on CkTests — the emitted C++ includes the `CkTests/Net/*` harness headers.
     auto Get_PluginOutputDir(const FString& InSourcePath) -> FString
     {
         const auto* Plugin = Find_PluginByPathPrefix(InSourcePath);
         if (Plugin == nullptr)
         { return {}; }
 
-        // CkTests keeps its dedicated root so its own net tests stay byte-identical (its module
-        // dir would resolve to the same path here, but routing it explicitly through
-        // Get_CkTestsOutputDir leaves that code path untouched).
+        // CkTests routes through its own dedicated root instead, keeping that path untouched.
         if (Plugin->GetName() == TEXT("CkTests"))
         { return {}; }
 
-        // Pick a host-able module: prefer Runtime (matches where CkTests itself hosts net stubs),
-        // then UncookedOnly / DeveloperTool. Editor-typed modules are intentionally skipped — the
-        // stub bodies are WITH_DEV_AUTOMATION_TESTS-guarded, but the file must still compile in the
-        // editor target's build, which a Runtime/UncookedOnly module in an Editor-gated plugin does.
+        // Runtime first (where CkTests hosts its own), then UncookedOnly / DeveloperTool.
+        // Editor-typed modules are skipped: the bodies are WITH_DEV_AUTOMATION_TESTS-guarded but
+        // the file must still compile in the editor target's build.
         auto HostModuleName = FString{};
         const auto& Modules = Plugin->GetDescriptor().Modules;
         for (const auto& Module : Modules)
@@ -461,12 +402,9 @@ namespace ck_autotest_netstub_generator
         return ModuleDir / TEXT("Private") / TEXT("Net") / TEXT("Generated");
     }
 
-    // Buckets by (output root, feature) using a THREE-way routing decision: the project's own
-    // Script tree -> the project module; a plugin (other than CkTests) that ships its own code
-    // module -> that plugin's module; everything else (CkTests' own tests, or a plugin with no
-    // hostable module) -> CkTests. The plugin branch keeps a plugin's committed stub in the SAME
-    // repo as its .as test — the same atomicity the project/CkTests split already enforces. Classes
-    // whose root is unavailable are skipped with a warning (never silently, never rerouted cross-repo).
+    // Buckets by (output root, feature); the root routing keeps a committed stub in the same repo
+    // as its .as test. A class whose root is unavailable is skipped LOUDLY — never rerouted
+    // cross-repo.
     auto Bucket_ClassesByFeature(const TArray<UClass*>& InClasses) -> TArray<FFeatureBucket>
     {
         const auto CkTestsOutputDir = Get_CkTestsOutputDir();
@@ -482,8 +420,6 @@ namespace ck_autotest_netstub_generator
             const auto IsProjectAuthored = FCkAutoTestNetStubGenerator::Get_IsProjectAuthoredPath(
                 SourcePath, FPaths::ProjectDir());
 
-            // Three-way routing (see the function header). A plugin with its own code module roots
-            // its stub there; otherwise we keep the prior project-vs-CkTests outcome unchanged.
             auto OutputDir = FString{};
             if (IsProjectAuthored)
             {
@@ -540,9 +476,7 @@ namespace ck_autotest_netstub_generator
         return Result;
     }
 
-    // Deletes every `*_NetAutoTestStubs.spec.cpp` under `InOutputDir` that isn't in the expected
-    // set. No-op when the root is unresolved. Membership is by full path, so one combined
-    // expected set serves both roots.
+    // Membership is by FULL path, so one combined expected set can serve every root.
     auto Prune_StaleStubs(const FString& InOutputDir, const TSet<FString>& InExpectedPaths) -> void
     {
         if (InOutputDir.IsEmpty())
@@ -627,10 +561,8 @@ auto
     auto Parts = TArray<FString>{};
     Normalized.ParseIntoArray(Parts, TEXT("/"), /*InCullEmpty=*/true);
 
-    // Walk path components from leaf to root looking for a convention match; the nearest match
-    // to the leaf wins, so deeper nestings (`Script/CkAttribute/Sub/foo.as`) still bucket to
-    // `Attribute`. The loop starts at the file's PARENT — the feature segment must be a
-    // directory, never the filename itself.
+    // Leaf-to-root so the nearest match wins (`Script/CkAttribute/Sub/foo.as` still buckets to
+    // `Attribute`), starting at the file's PARENT because the feature must be a directory.
     for (auto i = Parts.Num() - 2; i > 0; --i)
     {
         // Plugin convention: `Script/Ck<Feature>/`.
@@ -642,9 +574,8 @@ auto
             { return Feature; }
         }
 
-        // Project convention: `Script/Tests/<Feature>/`. Matched on the `Tests/<Feature>` pair —
-        // plugin trees never produce one (their tests sit directly under `Script/Ck<Feature>/`,
-        // which the branch above claims first when both could apply).
+        // Project convention: `Script/Tests/<Feature>/`. Plugin trees never produce that pair, and
+        // the branch above claims the ambiguous case first.
         if (Parts[i - 1].Equals(TEXT("Tests"), ESearchCase::IgnoreCase))
         { return Parts[i]; }
     }
@@ -665,8 +596,8 @@ auto
     auto ProjectScriptDir = FPaths::ConvertRelativePathToFull(InProjectDir / TEXT("Script"));
     FPaths::NormalizeDirectoryName(ProjectScriptDir);
 
-    // Trailing separator guards against sibling-prefix false positives (`.../ScriptExtra/`).
-    // Case-insensitive: generated/source paths on Windows mix casings freely.
+    // The trailing separator guards against sibling-prefix false positives (`.../ScriptExtra/`);
+    // the comparison is case-insensitive because Windows paths mix casings freely.
     return NormalizedSource.StartsWith(ProjectScriptDir + TEXT("/"), ESearchCase::IgnoreCase);
 }
 
@@ -691,8 +622,7 @@ auto
 {
 #if WITH_EDITOR
 
-    // Single-writer gate (G5): a secondary instance must not write/prune the net-test .spec.cpp
-    // stubs (these land in Source trees but carry the identical two-process churn risk).
+    // Single-writer gate: a secondary instance must never write or prune these stubs.
     if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
             TEXT("NetStubGenerator.GenerateAll")))
     { return; }
@@ -729,19 +659,11 @@ auto
 
     const auto Buckets = ck_autotest_netstub_generator::Bucket_ClassesByFeature(AllSubclasses);
 
-    // Prune stale generated files. Unlike the wrapper generator (one file per plugin, plugin
-    // names don't churn), this generator's bucket key is "feature subdir under Script/" — and
-    // a feature can disappear if its last net test is deleted, or MOVE buckets if its source
-    // file relocates (a stale copy left behind would then duplicate the emitted C++ test class
-    // and trip UBT). Each output root is pruned against the set of file paths the current pass
-    // intends to write.
-    //
-    // Conservative guard: when discovery finds ZERO net-mode classes, skip pruning entirely.
-    // A legitimate all-tests-deleted state is indistinguishable here from a broken discovery
-    // pass (e.g. an unusual boot where AS classes aren't registered), and deleting committed
-    // files on a broken pass surfaces as mysterious repo churn on every affected machine. The
-    // cost of skipping is bounded: a genuinely-orphaned stub compiles standalone (its class
-    // references are string paths) and merely surfaces a phantom Session Frontend entry.
+    // A feature bucket vanishes when its last net test is deleted and MOVES when its source
+    // relocates; a stale copy left behind duplicates the emitted C++ test class and trips UBT.
+    // ZERO discovered classes skips the prune entirely: all-tests-deleted is indistinguishable
+    // from a broken discovery pass, and deleting committed files on the latter is repo-wide
+    // churn, whereas an orphaned stub only costs a phantom Session Frontend entry.
     if (AllSubclasses.Num() > 0)
     {
         auto ExpectedPaths = TSet<FString>{};
@@ -752,11 +674,9 @@ auto
             OutputRoots.Add(FPaths::ConvertRelativePathToFull(FPaths::GetPath(Bucket.OutputFilePath)));
         }
 
-        // Always prune the two fixed roots even when this pass wrote nothing to them, so a feature
-        // whose LAST test was deleted (its bucket vanishes -> root absent from OutputRoots) still
-        // gets its orphaned stub removed — preserving the original unconditional two-root prune.
-        // Plugin roots only appear when a bucket targeted them this pass, which is correct: never
-        // enumerate (and risk deleting in) a plugin dir the current pass knows nothing about.
+        // The two fixed roots are pruned even when this pass wrote nothing to them, so a vanished
+        // bucket still loses its orphan. Plugin roots deliberately appear only when a bucket
+        // targeted them: never enumerate — and risk deleting in — a dir this pass knows nothing of.
         const auto CkTestsRoot = ck_autotest_netstub_generator::Get_CkTestsOutputDir();
         if (NOT CkTestsRoot.IsEmpty())
         { OutputRoots.Add(FPaths::ConvertRelativePathToFull(CkTestsRoot)); }
@@ -765,8 +685,6 @@ auto
         if (NOT ProjectRoot.IsEmpty())
         { OutputRoots.Add(FPaths::ConvertRelativePathToFull(ProjectRoot)); }
 
-        // Membership is by full path, so the single combined ExpectedPaths set is safe across every
-        // root — a stub expected in root A is never pruned by the pass over root B.
         for (const auto& Root : OutputRoots)
         { ck_autotest_netstub_generator::Prune_StaleStubs(Root, ExpectedPaths); }
     }
@@ -794,9 +712,8 @@ auto
         const auto OutputDir = FPaths::GetPath(Bucket.OutputFilePath);
         IFileManager::Get().MakeDirectory(*OutputDir, true);
 
-        // Diff-skip in LF-normalized form — same pattern as the wrapper generator. Without
-        // this, our own write would re-trigger UBT's source-tree scan -> AS PostCompile ->
-        // GenerateAll, ad infinitum.
+        // Diff-skip LF-normalized: writing unchanged content re-triggers UBT's source-tree scan ->
+        // AS PostCompile -> GenerateAll, ad infinitum.
         auto ExistingContent = FString{};
         const auto HasExisting = FFileHelper::LoadFileToString(ExistingContent, *Bucket.OutputFilePath);
 

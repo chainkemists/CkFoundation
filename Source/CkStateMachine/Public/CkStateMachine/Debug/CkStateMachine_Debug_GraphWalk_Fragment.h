@@ -9,16 +9,10 @@
 
 namespace ck
 {
-    // Marker for temp state / transition / condition / task entities created by the graph-walk
-    // processor to extract the sub-SM's static structure. Defined unconditionally (cheap) so
-    // utility-level propagation checks in SmTransition/SmCondition/SmTask Create can reference
-    // it without bracketing every call site with #if CK_BUILD_SM_GRAPH_WALK. When the graph
-    // walk is compiled out, the tag is never stamped and every check is a no-op.
-    //
-    // Entities carrying this tag must be excluded from the normal runtime evaluation pipeline:
-    // processors must TExclude it; EntityScript BeginPlay must skip Enter*. Otherwise the
-    // task side effects (e.g. signal broadcasts, Request_Stop) execute on what is supposed to
-    // be inert reflection data and corrupt the real SM.
+    // Marks the temp entities the graph-walk processor creates to extract a sub-SM's static
+    // structure. Defined unconditionally so the Create-site checks need no #if bracketing. Carriers
+    // MUST be excluded from the runtime pipeline (processors TExclude it; EntityScript BeginPlay
+    // skips Enter*) or their side effects corrupt the real SM.
     CK_DEFINE_ECS_TAG(FTag_Sm_Debug_GraphWalkEntity);
 }
 
@@ -38,7 +32,6 @@ namespace ck
     class FProcessor_Sm_Debug_GraphWalk_Iterate;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // STATE DEFINITION — Per-state graph structure discovered by the walker
 
     struct CKSTATEMACHINE_API FCk_SmDebug_StateDefinition
     {
@@ -75,7 +68,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // SUB-SM DEFINITION — Full sub-SM graph keyed by parent state class
 
     struct CKSTATEMACHINE_API FCk_SmDebug_SubSmDefinition
     {
@@ -85,7 +77,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // GRAPH DEFINITION FRAGMENT — Stored on the SM entity
 
     struct CKSTATEMACHINE_API FFragment_Sm_Debug_GraphDefinition
     {
@@ -107,7 +98,7 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // GRAPH WALK PROGRESS — Tracks multi-frame walk state
+    // Walk state carried across frames.
 
     struct CKSTATEMACHINE_API FFragment_Sm_Debug_GraphWalk_Progress
     {
@@ -136,7 +127,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // ONE-SHOT TAG — Triggers the graph walk
 
     CK_DEFINE_ECS_TAG(FTag_Sm_Debug_RequiresGraphWalk);
 }

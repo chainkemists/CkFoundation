@@ -10,10 +10,8 @@ namespace ck::astar
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Walks the path and checks that each consecutive pair (Path[i], Path[i+1]) is connected
-// via Graph.Neighbors(Path[i]). Returns the index of the first invalid step, or
-// Path.Num() if the entire path is valid.
-
+// Returns the index of the first step (Path[i] -> Path[i+1]) not connected in the graph,
+// or Path.Num() when the whole path is valid.
 template <AStarNodeId T_NodeId, typename T_Graph>
 	requires AStarGraph<T_Graph, T_NodeId>
 auto
@@ -30,15 +28,14 @@ struct TSearchState
 public:
 	// ----------------------------------------------------------------------------------------------------------------
 
-	// Fresh search: seeds open set with InStart, reserves containers to InInitialCapacity.
 	TSearchState(
 		T_Graph InGraph,
 		T_NodeId InStart,
 		T_NodeId InGoal,
 		int32 InInitialCapacity = 64);
 
-	// Warm-start (plan repair): seeds closed set and g-scores with the valid prefix
-	// [0..InWarmStartFromIndex-1] of InExistingPath, opens search from the last valid node.
+	// Warm-start (plan repair): InExistingPath[0..InWarmStartFromIndex-1] is taken as an
+	// already-searched prefix; the search opens from the last node of that prefix.
 	TSearchState(
 		T_Graph InGraph,
 		T_NodeId InStart,
@@ -52,8 +49,7 @@ public:
 
 	// ----------------------------------------------------------------------------------------------------------------
 
-	// Run A* iterations within the given budget. Returns the current status.
-	// If InProgress, the state is preserved for the next call.
+	// Time-sliced: on InProgress the state is preserved for the next call.
 	auto
 	ContinueSearch(const FSearchParams& InParams) -> ESearchStatus;
 

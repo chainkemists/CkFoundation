@@ -1,13 +1,3 @@
-// Tests for the AS source scanner (source-derived stub synthesis input layer).
-//
-// Coverage:
-//   * Parse_ClassDeclaration — pure-text fixtures: specifier variants,
-//     defaults stripped, comment/string immunity, multi-class files,
-//     token-boundary name matching, depth-1-only member capture.
-//   * Scan_ClassShape — temp-dir trees: AS->AS inheritance flattening
-//     (base-first), the AS->C++ reflection boundary, unresolvable bases,
-//     Generated/ + _StubRecovery_ exclusion, inheritance cycles.
-
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsSourceScanner.h"
 
 #include "CkAngelscriptGenerator/CkAngelscriptGenerator_SharedUtils.h"
@@ -38,9 +28,6 @@ namespace
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Parse_ClassDeclaration: specifier variants, default stripping, comment and
-// string immunity, non-exposed exclusion, method bodies skipped.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -96,7 +83,6 @@ bool FCkTest_AsSourceScanner_Parse_SimpleClass::RunTest(const FString&)
     TestEqual(TEXT("[2] type (const + multi-line decl collapsed)"), Result.ExposedProperties[2].TypeText, FString{TEXT("const UCk_InventoryItem_Definition")});
     TestEqual(TEXT("[2] name"), Result.ExposedProperties[2].Name, FString{TEXT("Definition")});
 
-    // The fake class names in comments/strings must not parse.
     TestFalse(TEXT("comment class not found"),
         FCkAsSourceScanner::Parse_ClassDeclaration(Contents, TEXT("UTestScan_Fake"), TEXT("D:/Test/Fixture.as")).Found);
     TestFalse(TEXT("block-comment class not found"),
@@ -107,10 +93,6 @@ bool FCkTest_AsSourceScanner_Parse_SimpleClass::RunTest(const FString&)
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Parse_ClassDeclaration: multi-class files — member capture must stop at the
-// class body's closing brace; token-boundary name matching must not match a
-// prefix of a longer class name.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -153,8 +135,6 @@ bool FCkTest_AsSourceScanner_Parse_MultiClassFile::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Scan_ClassShape: AS->AS inheritance chain flattens base-first across files.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AsSourceScanner_ScanShape_AsToAsChain,
@@ -192,8 +172,7 @@ bool FCkTest_AsSourceScanner_ScanShape_AsToAsChain::RunTest(const FString&)
     TestEqual(TEXT("flattened count"), Shape.FlattenedProperties.Num(), 3);
     if (Shape.FlattenedProperties.Num() != 3) { return false; }
 
-    // Base-first, per-class declaration order — positional Params(...) arg
-    // order depends on this.
+    // Positional Params(...) arg order depends on base-first, per-class order.
     TestEqual(TEXT("[0] = base.Params"),             Shape.FlattenedProperties[0].Name, FString{TEXT("Params")});
     TestEqual(TEXT("[1] = base.RestoreOnConstruct"), Shape.FlattenedProperties[1].Name, FString{TEXT("RestoreOnConstruct")});
     TestEqual(TEXT("[2] = derived.ExtraKnob"),       Shape.FlattenedProperties[2].Name, FString{TEXT("ExtraKnob")});
@@ -203,10 +182,8 @@ bool FCkTest_AsSourceScanner_ScanShape_AsToAsChain::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Scan_ClassShape: the AS->C++ boundary — a base with no .as declaration
-// resolves via reflection, contributing ITS flattened exposed properties
-// (UCk_EntityScript_WithActor_UE carries _OwningActor) ahead of the AS
-// class's own.
+// A base with no .as declaration resolves via reflection, contributing ITS
+// flattened exposed properties ahead of the AS class's own.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -236,8 +213,8 @@ bool FCkTest_AsSourceScanner_ScanShape_CppBoundary::RunTest(const FString&)
         return false;
     }
 
-    // Expectation computed from the SAME reflection the real generator uses —
-    // the scanner's C++-boundary output must match it name-for-name, in order.
+    // The SAME reflection the real generator uses — the scanner's C++-boundary
+    // output must match it name-for-name, in order.
     const auto CppProps = UCk_Utils_Reflection_UE::Get_ExposedPropertiesOfClass(
         UCk_EntityScript_WithActor_UE::StaticClass());
 
@@ -269,9 +246,6 @@ bool FCkTest_AsSourceScanner_ScanShape_CppBoundary::RunTest(const FString&)
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Scan_ClassShape: failure modes — unresolvable base, class not declared
-// anywhere, inheritance cycle, and the Generated/ + _StubRecovery_ exclusions.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -312,7 +286,6 @@ bool FCkTest_AsSourceScanner_ScanShape_FailureModes::RunTest(const FString&)
         "{\n"
         "}\n"));
 
-    // Unresolvable base — fails with the base named in the message.
     {
         const auto Shape = FCkAsSourceScanner::Scan_ClassShape(TEXT("UTestScanFail_Orphan"), {ScriptRoot});
         TestFalse(TEXT("orphan: Found = false"), Shape.Found);
@@ -320,14 +293,12 @@ bool FCkTest_AsSourceScanner_ScanShape_FailureModes::RunTest(const FString&)
             Shape.ErrorMessage.Contains(TEXT("UNoSuchBase_NeverExists")));
     }
 
-    // Class not declared anywhere.
     {
         const auto Shape = FCkAsSourceScanner::Scan_ClassShape(TEXT("UTestScanFail_DoesNotExist"), {ScriptRoot});
         TestFalse(TEXT("missing class: Found = false"), Shape.Found);
         TestFalse(TEXT("missing class: error populated"), Shape.ErrorMessage.IsEmpty());
     }
 
-    // Inheritance cycle terminates with an error instead of looping.
     {
         const auto Shape = FCkAsSourceScanner::Scan_ClassShape(TEXT("UTestScanFail_CycleA"), {ScriptRoot});
         TestFalse(TEXT("cycle: Found = false"), Shape.Found);
@@ -335,7 +306,6 @@ bool FCkTest_AsSourceScanner_ScanShape_FailureModes::RunTest(const FString&)
             Shape.ErrorMessage.Contains(TEXT("cycle")));
     }
 
-    // Generated/ subtree and _StubRecovery_ files are excluded from the scan.
     {
         TestFalse(TEXT("Generated/ decoy not found"),
             FCkAsSourceScanner::Scan_ClassShape(TEXT("UTestScanFail_GeneratedDecoy"), {ScriptRoot}).Found);
@@ -348,11 +318,8 @@ bool FCkTest_AsSourceScanner_ScanShape_FailureModes::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Scan_ClassShape: the drain-scoped FCk_AsSourceScanCache (QW1) must (a) produce
-// results identical to the uncached walk, and (b) actually REUSE its enumeration
-// + file-contents on subsequent calls. (b) is proven white-box by poisoning the
-// cache: if the cache were ignored, a fresh enumeration/read would still find
-// the class — so a NotFound proves the cached state was trusted.
+// Cache reuse is proven white-box by poisoning the cache: a fresh enumeration or
+// read would still find the class, so NotFound proves the cached state was used.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -402,8 +369,6 @@ bool FCkTest_AsSourceScanner_ScanShape_DrainCache::RunTest(const FString&)
     TestTrue(TEXT("cache: contents populated"),    Cache.ContentsByPath.Num() > 0);
 
     // ---- (b1) Enumeration reuse: a cache marked enumerated to an EMPTY file ----
-    // list must NOT re-enumerate — the class becomes unfindable. A fresh walk
-    // would find Derived.as, so NotFound proves the cached list was trusted.
     {
         auto Poisoned = FCk_AsSourceScanCache{};
         Poisoned.FilesEnumerated = true; // Files left empty on purpose
@@ -413,8 +378,6 @@ bool FCkTest_AsSourceScanner_ScanShape_DrainCache::RunTest(const FString&)
     }
 
     // ---- (b2) Contents reuse: poison the derived file's cached contents to "" --
-    // A re-read from disk would still find the class; NotFound proves the cached
-    // (poisoned) contents were used instead of re-reading the file.
     {
         auto Cache2 = FCk_AsSourceScanCache{};
         TestTrue(TEXT("warm-up scan found"),

@@ -45,7 +45,6 @@ auto
         [
             SNew(SVerticalBox)
 
-            // Button bar
             + SVerticalBox::Slot()
             .AutoHeight()
             .Padding(0, 0, 0, AssetExporterTab_Constants::SectionSpacing)
@@ -53,7 +52,6 @@ auto
                 DoCreateButtonBar()
             ]
 
-            // Separator
             + SVerticalBox::Slot()
             .AutoHeight()
             .Padding(0, 0, 0, AssetExporterTab_Constants::SectionSpacing)
@@ -61,7 +59,6 @@ auto
                 SNew(SSeparator)
             ]
 
-            // Status text
             + SVerticalBox::Slot()
             .AutoHeight()
             .Padding(0, 0, 0, AssetExporterTab_Constants::SectionSpacing)
@@ -70,7 +67,6 @@ auto
                 .Text(FText::FromString(TEXT("Select assets in the Content Browser, then click Export.")))
             ]
 
-            // Results panel
             + SVerticalBox::Slot()
             .FillHeight(1.0f)
             [
@@ -240,7 +236,6 @@ auto
     DoOnExportSelectedClicked()
     -> FReply
 {
-    // Get selected BTs from Content Browser
     auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
     auto SelectedAssets = TArray<FAssetData>{};
     ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
@@ -315,7 +310,6 @@ auto
     DoOnExportSelectedBlueprintsClicked()
     -> FReply
 {
-    // Get selected Blueprints from Content Browser
     auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
     auto SelectedAssets = TArray<FAssetData>{};
     ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
@@ -390,7 +384,6 @@ auto
     DoOnExportSelectedDataAssetsClicked()
     -> FReply
 {
-    // Get selected DataAssets from Content Browser
     auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
     auto SelectedAssets = TArray<FAssetData>{};
     ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
@@ -465,7 +458,6 @@ auto
     DoOnExportSelectedEQSClicked()
     -> FReply
 {
-    // Get selected EQS Queries from Content Browser
     auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
     auto SelectedAssets = TArray<FAssetData>{};
     ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
@@ -540,7 +532,6 @@ auto
     DoOnExportSelectedMaterialsClicked()
     -> FReply
 {
-    // Get selected Materials / Material Instances from Content Browser
     auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
     auto SelectedAssets = TArray<FAssetData>{};
     ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
@@ -615,7 +606,6 @@ auto
     DoOnExportSelectedStateTreesClicked()
     -> FReply
 {
-    // Get selected State Trees from Content Browser
     auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
     auto SelectedAssets = TArray<FAssetData>{};
     ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
@@ -690,7 +680,6 @@ auto
     DoOnExportSelectedUserDefinedStructsClicked()
     -> FReply
 {
-    // Get selected Blueprint structs from Content Browser
     auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
     auto SelectedAssets = TArray<FAssetData>{};
     ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
@@ -765,7 +754,6 @@ auto
     DoOnExportSelectedUserDefinedEnumsClicked()
     -> FReply
 {
-    // Get selected Blueprint enums from Content Browser
     auto& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
     auto SelectedAssets = TArray<FAssetData>{};
     ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
@@ -856,7 +844,6 @@ auto
         [
             SNew(SHorizontalBox)
 
-            // Status
             + SHorizontalBox::Slot()
             .AutoWidth()
             .VAlign(VAlign_Center)
@@ -867,7 +854,6 @@ auto
                 .ColorAndOpacity(FSlateColor(StatusColor))
             ]
 
-            // Asset name
             + SHorizontalBox::Slot()
             .FillWidth(0.3f)
             .VAlign(VAlign_Center)
@@ -877,7 +863,6 @@ auto
                 .Text(FText::FromString(InEntry->AssetName))
             ]
 
-            // Output path
             + SHorizontalBox::Slot()
             .FillWidth(0.7f)
             .VAlign(VAlign_Center)

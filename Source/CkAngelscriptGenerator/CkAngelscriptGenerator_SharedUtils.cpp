@@ -83,20 +83,17 @@ auto
 {
     auto Result = UnrealType;
 
-    // Handle TArray<Type> - preserve the full template type
     if (Result.StartsWith(TEXT("TArray<")) && Result.EndsWith(TEXT(">")))
     {
         auto StartIndex = int32{7}; // Length of "TArray<"
         auto EndIndex = Result.Len() - 1; // Remove the closing ">"
         auto InnerType = Result.Mid(StartIndex, EndIndex - StartIndex);
 
-        // Recursively clean the inner type
         auto CleanInnerType = Get_ConvertedToAngelscriptType(InnerType);
         Result = ck::Format_UE(TEXT("TArray<{}>"), CleanInnerType);
         return Result;
     }
 
-    // Handle TMap<KeyType, ValueType>
     if (Result.StartsWith(TEXT("TMap<")) && Result.EndsWith(TEXT(">")))
     {
         auto StartIndex = int32{5}; // Length of "TMap<"
@@ -116,7 +113,6 @@ auto
         }
     }
 
-    // Handle TSet<Type>
     if (Result.StartsWith(TEXT("TSet<")) && Result.EndsWith(TEXT(">")))
     {
         auto StartIndex = int32{5}; // Length of "TSet<"
@@ -128,7 +124,6 @@ auto
         return Result;
     }
 
-    // Remove TEnumAsByte wrapper - extract the enum type
     if (Result.StartsWith(TEXT("TEnumAsByte<")) && Result.EndsWith(TEXT(">")))
     {
         Result = Result.Mid(12); // Remove "TEnumAsByte<"
@@ -146,10 +141,9 @@ auto
         return Result;
     }
 
-    // Remove all pointers - Angelscript doesn't have pointers
+    // AngelScript has no pointers.
     Result = Result.Replace(TEXT("*"), TEXT(""));
 
-    // Remove const at the end
     if (Result.EndsWith(TEXT(" const")))
     {
         Result = Result.Left(Result.Len() - 6);
@@ -171,18 +165,15 @@ auto
     if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
     { return TEXT("void"); }
 
-    // Weak/soft UObject wrappers carry lifetime semantics that must survive
-    // code generation. Keep the reflected property class as an independent
-    // source of truth: runtime-generated AS properties have historically
-    // reported a raw UObject or TObjectPtr declaration in some reinstancing
-    // states even though their FProperty subclass still records the wrapper.
+    // Independent source of truth for retention: in some reinstancing states a runtime-generated
+    // AS property reports a raw UObject/TObjectPtr declaration even though its FProperty
+    // subclass still records the weak/soft wrapper.
     const auto ReflectedObjectWrapperType = Get_ReflectedObjectWrapperType(InProperty);
 
 #if WITH_ANGELSCRIPT_CK
-    // AngelScript-declared UPROPERTYs carry their narrow type (including dynamic typesafe
-    // handles like FCk_Handle_Trigger) only in AS's asITypeInfo — the FProperty itself
-    // collapses them to FCk_Handle. Walk owner UClass -> UASClass -> asITypeInfo to
-    // recover the full type declaration as written in source.
+    // An AS-declared UPROPERTY keeps its narrow type (e.g. a typesafe FCk_Handle_Trigger) only in
+    // AS's asITypeInfo — the FProperty collapses it to FCk_Handle. Walk UClass -> UASClass ->
+    // asITypeInfo to recover the declaration as written in source.
     if ((InProperty->AngelscriptPropertyFlags & APF_RuntimeGenerated) != 0)
     {
         if (auto* OwnerClass = InProperty->GetOwner<UClass>())
@@ -217,12 +208,9 @@ auto
                                         }
                                     }
 
-                                    // FAngelscriptTypeUsage::FromProperty(asITypeInfo*, int)
-                                    // only forwards the TypeId through FromTypeId and never
-                                    // populates bIsConst — so `const UFoo` member properties
-                                    // come back without the qualifier in the declaration.
-                                    // Recover it from the asTYPEID_HANDLETOCONST flag that AS
-                                    // encodes directly into the property's TypeId.
+                                    // FAngelscriptTypeUsage::FromProperty never populates
+                                    // bIsConst, so `const UFoo` loses its qualifier — recover it
+                                    // from the flag AS encodes into the property's TypeId.
                                     const auto bIsConstHandle = (AsTypeId & asTYPEID_HANDLETOCONST) != 0;
                                     if (bIsConstHandle && NOT Decl.StartsWith(TEXT("const ")))
                                     {

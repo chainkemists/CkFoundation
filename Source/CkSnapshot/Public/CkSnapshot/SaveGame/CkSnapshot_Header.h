@@ -17,10 +17,8 @@ public:
 private:
     UPROPERTY() FString  _DisplayName;
     UPROPERTY() uint32   _EnttTypeHash = 0;
-    // The entt storage id this entry was captured from. For most fragments this equals _EnttTypeHash (the default
-    // storage). Dynamic fragments (CkDynamic) keep one NAMED storage per AS struct type, all of value-type
-    // FCk_Fragment_DynamicFragment_Data -- so several entries share _EnttTypeHash but carry distinct _StorageId.
-    // Restore replays each entry onto ITS storage id via entt's id-parameterized get<T>(archive, id).
+    // Equals _EnttTypeHash except for CkDynamic's NAMED per-AS-struct storages, which all share one value type —
+    // those entries share _EnttTypeHash but carry distinct _StorageId. Restore replays each onto ITS storage id.
     UPROPERTY() uint32   _StorageId    = 0;
     UPROPERTY() int32    _EntityCount  = 0;
     UPROPERTY() int64    _ByteLength   = 0;
@@ -46,28 +44,22 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_Header);
 
 public:
-    // Version history:
-    //   1 — initial format.
-    //   2 — dynamic-fragment handle remap covers TYPED handles (IsChildOf, not exact-match) + TSet/TMap containers,
-    //       so v2 streams carry handle ids a v1 reader would not expect (and vice versa) — no cross-compatibility.
     static constexpr uint16 CurrentFormatVersion = 2;
 
 private:
     UPROPERTY() uint16              _FormatVersion = CurrentFormatVersion;
-    // Stored as string (FEngineVersion is not a USTRUCT and cannot be a UPROPERTY).
-    // Populated via FEngineVersion::Current().ToString() on save.
+    // String because FEngineVersion is not a USTRUCT and cannot be a UPROPERTY.
     UPROPERTY() FString             _EngineVersion;
     UPROPERTY() FGuid               _PluginBuildHash;
     UPROPERTY() FDateTime           _TimestampUTC;
     UPROPERTY() FSoftObjectPath     _WorldAssetPath;
     UPROPERTY() TArray<FCk_Snapshot_Header_FragmentManifestEntry> _Manifest;
     UPROPERTY() int32               _EntityCount = 0;
-    // Raw entt id (underlying uint32) of the registry's transient entity at capture time. Consumed only by the
-    // live-world restore to adopt the restored transient. 0xFFFFFFFF == entt::null (registry-core captures with
-    // no transient ctx leave it at the sentinel; that path never adopts).
+    // Raw entt id of the registry's transient entity at capture; 0xFFFFFFFF == entt::null (a registry-core capture
+    // has no transient ctx and never adopts). Consumed only by the live-world restore.
     UPROPERTY() uint32              _TransientEntityId = 0xFFFFFFFFu;
-    // Byte offset (within the snapshot stream) of the self-describing tag section, appended after all fragment
-    // passes. Restore Seeks here rather than trusting the stream position, since the fragment manifest byte-jumps.
+    // Byte offset of the self-describing tag section — restore Seeks here rather than trusting the stream
+    // position, since the fragment manifest byte-jumps.
     UPROPERTY() int64               _TagSectionByteOffset = 0;
 
 public:
@@ -83,13 +75,7 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Format v3 — rebuild+hydrate. v3 stores a per-entity recipe/identity table + minimal hydration payloads
-// instead of a raw fragment image.
 
-// One provenance per persisted entity. EngineOwned re-created by the level/engine flow (adopt by
-// rendezvous key); ConstructSpawned re-created by its owner's replayed Construct/BeginPlay (adopt by identity);
-// RuntimeSpawned re-created from a stored EntityScript recipe; DefinitionBuilt re-created from a stored
-// construction-script/archetype recipe (entities built via Request_BuildAndReplicate, e.g. inventory items).
 UENUM()
 enum class ECk_Snapshot_V3_Provenance : uint8
 {
@@ -99,8 +85,7 @@ enum class ECk_Snapshot_V3_Provenance : uint8
     DefinitionBuilt,
 };
 
-// One step of a DefinitionBuilt entity's construction recipe: the construction-script class + optional archetype
-// asset (both captured by path). Reconstructed on load into a FCk_EntityReplicationDriver_ConstructionInfo.
+// Reconstructed on load into a FCk_EntityReplicationDriver_ConstructionInfo.
 USTRUCT()
 struct CKSNAPSHOT_API FCk_Snapshot_V3_BuildStep
 {
@@ -110,8 +95,8 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_V3_BuildStep);
 
 private:
-    // Paths are FStrings (not FSoftObjectPath) — the v3 tables serialize through a plain FArchive, which does not
-    // support FSoftObjectPath. Reconstructed into a soft path on load. Mirrors _ScriptClassPath / _ActorClassPath.
+    // FStrings, not FSoftObjectPath: the v3 tables serialize through a plain FArchive, which cannot carry one.
+    // Reconstructed into a soft path on load. Mirrors _ScriptClassPath / _ActorClassPath.
     UPROPERTY() FString _ScriptClassPath;
     UPROPERTY() FString _ArchetypePath; // asset path; empty when the step carries no archetype
 
@@ -120,9 +105,8 @@ public:
     CK_PROPERTY(_ArchetypePath);
 };
 
-// One entry per persisted entity. Fields not relevant to the entry's provenance stay defaulted. Handle-bearing
-// data (spawn params) is pre-serialized into _SpawnParamsBytes with FSnapshotContext handle-remap; the entry
-// itself carries only plain fields + byte blobs, so it SerializeItem's without a handle context.
+// Fields not relevant to the entry's provenance stay defaulted. Handle-bearing data (spawn params) is
+// pre-serialized into _SpawnParamsBytes, so the entry itself SerializeItem's without a handle context.
 USTRUCT()
 struct CKSNAPSHOT_API FCk_Snapshot_V3_EntityEntry
 {
@@ -152,17 +136,14 @@ private:
     UPROPERTY() TArray<uint8>               _SpawnParamsBytes;      // FInstancedStruct::Serialize + handle-remap
     UPROPERTY() uint32                      _ContextOwnerSavedId = 0xFFFFFFFFu;
     UPROPERTY() FString                     _ActorClassPath;        // FFragment_ActorSpawnIntent, if present
-    // World transform captured for a bridged (_ActorClassPath set) RuntimeSpawned entity so the loader spawns the
-    // actor at its saved position (the entity Transform is seeded from the actor at Construct; hydrating it would
-    // be stomped by FProcessor_Transform_SyncFromActor). Identity for non-Transform entities.
+    // Spawn seed for a bridged (_ActorClassPath set) RuntimeSpawned entity: the entity Transform is seeded from the
+    // actor at Construct, so hydrating it instead would be stomped by FProcessor_Transform_SyncFromActor.
     UPROPERTY() FTransform                  _ActorSpawnTransform;
 
-    // ---- All-provenance world transform (G1 Transform parity) ----
-    // CURRENT world transform of EVERY persisted entity that carries a Transform fragment (all provenances), so the
-    // loader restores its post-settle world position. Distinct from _ActorSpawnTransform above: that is a spawn-time
-    // seed for BRIDGED actors only; this column corrects post-spawn drift for everyone else (the EngineOwned player
-    // pawn, EngineOwned SaveKey level actors, and pure-ECS movers). Identity when the entity has no Transform fragment
-    // (default; apply is a no-op). The loader skips bridged actors here — they already respawn at _ActorSpawnTransform.
+    // ---- All-provenance world transform ----
+    // CURRENT world transform of every persisted entity carrying a Transform fragment, so the loader restores its
+    // post-settle world position. Unlike _ActorSpawnTransform (a spawn seed for BRIDGED actors only) this corrects
+    // post-spawn drift for everyone else; the loader skips bridged actors here. Identity == no Transform fragment.
     UPROPERTY() FTransform                  _SavedWorldTransform;
 
     // ---- DefinitionBuilt recipe ----
@@ -184,7 +165,6 @@ public:
     CK_PROPERTY(_BuildRecipe);
 };
 
-// One hydration payload: the byte image (tagged-property + handle-remap) a feature's Produce emitted for an entity.
 USTRUCT()
 struct CKSNAPSHOT_API FCk_Snapshot_V3_PayloadEntry
 {
@@ -204,7 +184,6 @@ public:
     CK_PROPERTY(_PayloadBytes);
 };
 
-// The whole v3 stream content: the entity table + the payload table. SerializeItem'd into _SnapshotBytesV3.
 USTRUCT()
 struct CKSNAPSHOT_API FCk_Snapshot_V3_Tables
 {
@@ -222,7 +201,6 @@ public:
     CK_PROPERTY(_Payloads);
 };
 
-// v3 header — metadata + provenance census (the inspectable counts the classification gate asserts on).
 USTRUCT(BlueprintType)
 struct CKSNAPSHOT_API FCk_Snapshot_HeaderV3
 {
@@ -232,11 +210,6 @@ public:
     CK_GENERATED_BODY(FCk_Snapshot_HeaderV3);
 
 public:
-    // v3 rebuild+hydrate format version history:
-    //   3 — initial rebuild+hydrate format (per-entity recipe/identity table + minimal hydration payloads).
-    //   4 — added FCk_Snapshot_V3_EntityEntry::_SavedWorldTransform (G1 Transform parity): every persisted entity's
-    //       world transform round-trips, not just bridged RuntimeSpawned actors' spawn seed. No cross-version
-    //       compatibility — a v3 stream is rejected by Request_Load (loud, clean abort — see CkSnapshot_Subsystem.cpp).
     static constexpr uint16 CurrentFormatVersion = 4;
 
 private:
@@ -251,8 +224,7 @@ private:
     UPROPERTY() int32           _RuntimeSpawnedCount = 0;
     UPROPERTY() int32           _DefinitionBuiltCount = 0;
     UPROPERTY() int32           _PayloadCount = 0;
-    // Rule-3 unlabeled ConstructSpawned children (save-transient) and rule-5 anonymous scratch entities skipped
-    // outright — reported in the save log line; the audit count flags unlabeled children that had a Produce payload.
+    // Capture rules 3 and 5 (both skipped outright); the audit count flags unlabeled children that had a payload.
     UPROPERTY() int32           _UnlabeledConstructSkippedCount = 0;
     UPROPERTY() int32           _AnonymousSkippedCount = 0;
     UPROPERTY() int32           _UnlabeledWithPayloadAuditCount = 0;

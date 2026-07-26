@@ -31,8 +31,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct CKECSEXT_API FFragment_SceneNode_Current
     {
     public:
@@ -56,13 +54,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Foreign Unreal anchor for a scene-node that follows a USceneComponent (Socket == None) or a mesh
-    // socket (Socket set) at the authored FFragment_SceneNode_Current offset. FProcessor_SceneNode_FollowUnrealAnchor
-    // composes entity.world = offset * anchor.world every tick. Deliberately NOT the Transform module's
-    // FFragment_Transform_RootComponent / _MeshSocket: those pair with SyncFromActor/SyncToActor (a bidirectional
-    // actor bridge that would drag a Movable anchor). This keeps anchor-follow a read-only SceneNode concern and
-    // leaves the Transform feature untouched. Not snapshotable — the live component ref can't be remapped
-    // (parity with the Transform anchor fragments); the composed world pose is restored via FFragment_Transform.
+    // Foreign Unreal anchor a scene-node follows: a USceneComponent (Socket == None) or a mesh socket.
+    // Deliberately NOT the Transform module's FFragment_Transform_RootComponent / _MeshSocket, which would
+    // engage the bidirectional actor bridge. See CkEcsExt/CLAUDE.md § "SceneNode Unreal anchors".
     struct CKECSEXT_API FFragment_SceneNode_UnrealAnchor
     {
     public:
@@ -116,9 +110,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Scene hierarchy links: SceneNodeParent is the parent link (EntityHolder<FCk_Handle_Transform>) and
-    // FFragment_RecordOfSceneNodes is the child list (RecordOfEntities<FCk_Handle_SceneNode>). Declared with the
-    // RoundTrip snapshot classification (fork-deferred).
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS_ROUNDTRIP(USceneNodeParent_Utils, SceneNodeParent, FCk_Handle_Transform);
 
     // --------------------------------------------------------------------------------------------------------------------

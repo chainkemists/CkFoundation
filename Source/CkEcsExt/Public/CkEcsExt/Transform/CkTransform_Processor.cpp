@@ -68,9 +68,7 @@ namespace ck_transform
         return TeleportType;
     }
 
-    /// Shared helper for DoHandleRequest overloads.
-    /// If the entity has a RootComponent, resolves it and its TeleportType, then invokes
-    /// InApplyFn(RootComponent, TeleportType).  Returns true when the component path was taken.
+    /// Returns true when the component path was taken (i.e. the caller must NOT also write the fragment).
     template <typename THandle, typename TApplyFn>
     auto
         WithRootComponent(
@@ -121,7 +119,6 @@ namespace ck
         if (InTransform.Get_Transform().Equals(RootCompTransform))
         { return; }
 
-        // PARALLEL-SAFE: direct data write to owned fragments (no structural mutations)
         const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
             InTransform, InPrevTransform, RootCompTransform);
 
@@ -159,7 +156,6 @@ namespace ck
         if (InTransform.Get_Transform().Equals(SocketTransform))
         { return; }
 
-        // PARALLEL-SAFE: direct data write to owned fragments (no structural mutations)
         const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
             InTransform, InPrevTransform, SocketTransform);
 
@@ -257,11 +253,8 @@ namespace ck
                 }
             });
 
-            // Force-refresh: any pending FCk_Request_Transform_ForceRefresh
-            // means "rebroadcast OnUpdate next frame regardless of whether
-            // the transform value changed." Setting the tag here (inside
-            // HandleRequests' tick) lands in time for FireSignals to pick
-            // it up later in the same frame's Transform_Finalize group.
+            // Tagging here (inside HandleRequests' tick) lands in time for FireSignals to pick it up
+            // later in the same frame's Transform_Finalize group.
             if (NOT InRequests._ForceRefreshRequests.IsEmpty())
             {
                 InHandle.AddOrGet<FTag_Transform_Updated>();
@@ -610,9 +603,6 @@ namespace ck
             return;
         }
 
-        // algorithm:
-        // - calculate the fraction of the goal we need to interpolate this frame
-        // - add the fraction of the goal to the current location
         const auto Fraction =  FMath::Clamp(InDeltaT / SmoothTime, 0.0f, 1.0f);
         const auto GoalFraction = InGoal.Get_InterpolationOffset() * Fraction;
 

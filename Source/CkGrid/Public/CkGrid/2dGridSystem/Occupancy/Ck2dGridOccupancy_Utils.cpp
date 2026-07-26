@@ -29,20 +29,15 @@ auto
 
     auto GridBase = FCk_Handle{InGrid};
 
-    // Ensure the grid carries the occupancy record + authoritative stamped-state. The
-    // StampCells processor runs un-gated and reconciles from the record every tick.
     ck::RecordOf_GridPlacements_Utils::AddIfMissing(GridBase);
     InGrid.AddOrGet<ck::FFragment_2dGridOccupancy_Current>();
 
-    // Ensure the replicated container exists on the grid (no-op off-host / non-replicating /
-    // already-present) and flag the grid for the authority-only Replicate pass to rebuild + push
-    // the RepData. Both are safe to call on clients too (the client-apply processor reuses this
-    // helper): TryAddContainerFragment / the Replicate processor are host/authority gated.
+    // Safe on clients too — the client sync path reuses this helper, and TryAddContainerFragment
+    // plus the Replicate processor are themselves host/authority gated.
     UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_2dGridPlacements>(GridBase);
     InGrid.AddOrGet<ck::FTag_2dGridOccupancy_MayRequireReplication>();
 
-    // Create the placement entity with the GRID as its lifetime owner so it dies with the grid.
-    // The generated constructor covers (Occupant, Grid, Anchor, Cells); set Rotation explicitly.
+    // The GRID is the placement's lifetime owner, so the placement dies with the grid.
     auto Params = ck::FFragment_2dGridPlacement_Params{InOccupant, InGrid, InAnchor, InCells};
     Params.Set_Rotation(InRotation);
 
@@ -51,15 +46,12 @@ auto
 
     auto Placement = ck::StaticCast<FCk_Handle_2dGridPlacement>(PlacementBase);
 
-    // Connect the placement into the grid's record. Optional label requirement (no GameplayLabel).
     ck::RecordOf_GridPlacements_Utils::Request_Connect(
         GridBase, Placement, ECk_Record_LabelRequirementPolicy::Optional);
 
-    // Death-watch the OCCUPANT: store a back-ref so the handler can find + destroy the placement.
-    // The watch is bound at most ONCE per occupant — the handler always reads the CURRENT back-ref,
-    // so an auto-replace re-place just overwrites _Placement; re-binding would double-bind the same
-    // delegate signature and trip CkEnsure (ContainsDelegateWithSignature). The PlacementRef fragment
-    // is added in lockstep with the watch, so its prior presence means the watch is already bound.
+    // Bind the occupant death-watch at most ONCE: re-binding the same delegate signature trips
+    // CkEnsure (ContainsDelegateWithSignature). The handler always reads the CURRENT back-ref, so
+    // a re-place just overwrites _Placement; the ref fragment is added in lockstep with the watch.
     if (ck::IsValid(InOccupant))
     {
         auto Occupant = InOccupant;
@@ -89,16 +81,13 @@ auto
     if (ck::Is_NOT_Valid(InPlacement))
     { return false; }
 
-    // Flag the grid so the authority Replicate pass re-pushes the (now-shorter) placement set.
-    // Read the grid BEFORE destroying the placement entity (its params go away with it).
+    // Read the grid BEFORE destroying the placement — its params die with the entity.
     if (auto Grid = InPlacement.Get<ck::FFragment_2dGridPlacement_Params>().Get_Grid();
         ck::IsValid(Grid))
     {
         Grid.AddOrGet<ck::FTag_2dGridOccupancy_MayRequireReplication>();
     }
 
-    // CkRecord's reverse-link prunes the now-dead record entry; the un-gated StampCells pass
-    // then un-stamps its cells on the next tick.
     auto PlacementBase = FCk_Handle{InPlacement};
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PlacementBase);
 
@@ -157,12 +146,9 @@ auto
     if (ck::Is_NOT_Valid(Placement))
     { return {}; }
 
-    // The Occupied tag + back-ref un-stamp one reconcile tick AFTER the placement entity is
-    // destroyed. In the window between Request_RemovePlacement (which tags the placement
-    // pending-destroy) and the next reconcile, the stale stamp still points at a dying placement.
-    // Treat a pending-destroy placement as already gone so the cell reads free synchronously —
-    // otherwise a same-tick remove+re-place sees the cell as still occupied and rejects the new
-    // placement until the reconcile catches up.
+    // A cell's stamp still points at a dying placement until the next reconcile tick; treat a
+    // pending-destroy placement as gone so a same-tick remove+re-place reads the cell as free
+    // (see "Occupancy reconcile" in CkGrid/Claude.md).
     if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(
             FCk_Handle{Placement}, ECk_EntityLifetime_DestructionPhase::BeginDestroy))
     { return {}; }

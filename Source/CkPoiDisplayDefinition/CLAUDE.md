@@ -62,6 +62,11 @@ Gate 4 additionally wires the projectors to the `Get_IsEffectivelyHidden` /
 - Consumer tags live under the native root **`Poi.Consumer`** (declared in
   `CkPoiDisplayDefinition_Utils.cpp`).
 
+`FFragment_RecordOfPoiDisplayDefinitions` is declared `..._TRANSIENT` to document intent: definition
+children carry only static config and rebuild from their owner's Construct recipe on load, so they are
+never round-tripped through a save. (The `_ROUNDTRIP`/`_TRANSIENT` policy split is inert post-Model-A
+purge; the macro name is the surviving documentation.)
+
 This module ships **no processors and no signals of its own** — the cascade is a native signal bind to
 CkVisibleRange, not a polling processor (the CkTween↔CkTimer precedent). Display definitions are static
 config: no `Current` fragment, no requests.

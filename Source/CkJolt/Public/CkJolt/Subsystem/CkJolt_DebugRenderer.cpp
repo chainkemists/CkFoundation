@@ -39,8 +39,6 @@ namespace ck_jolt_debug_renderer
             TEXT("Opacity of the batched Jolt debug-draw meshes (0..1). Applies live."));
     }
 
-    // CPU-side triangle batch handed back to Jolt as a Ref<RefTargetVirtual>. Jolt's shapes cache these
-    // (one per unique geometry), so the transient render mesh is built at most once per batch.
     class FBatch : public JPH::RefTargetVirtual
     {
     public:
@@ -113,9 +111,7 @@ namespace ck_jolt_debug_renderer
             const auto InstanceB = Instances[static_cast<int32>(B)];
             const auto InstanceC = Instances[static_cast<int32>(C)];
 
-            // Emit BOTH windings: ck::jolt::Conv is a component-wise passthrough between Jolt's
-            // right-handed convention and UE's left-handed one, so a single winding renders
-            // inside-out. With both, backface culling keeps exactly one face per surface visible.
+            // BOTH windings: Conv is a handedness passthrough, so a single winding renders inside-out.
             Description.CreatePolygon(Group, TArray<FVertexInstanceID>{InstanceA, InstanceB, InstanceC});
             Description.CreatePolygon(Group, TArray<FVertexInstanceID>{InstanceA, InstanceC, InstanceB});
             ++EmittedTriangles;
@@ -163,8 +159,7 @@ namespace ck_jolt_debug_renderer
 
     struct FBucket
     {
-        // Keeps the FBatch (and its transient mesh) alive for as long as the bucket exists.
-        JPH::DebugRenderer::Batch _BatchRef;
+        JPH::DebugRenderer::Batch _BatchKeepAlive;
         FLinearColor _BaseColor = FLinearColor::White;
         TWeakObjectPtr<UInstancedStaticMeshComponent> _Ism;
         TWeakObjectPtr<UMaterialInstanceDynamic> _Mid;
@@ -217,17 +212,14 @@ namespace ck_jolt_debug_renderer
             TEXT("Failed to create an InstancedStaticMeshComponent for the Jolt debug renderer"))
         { return false; }
 
-        // Debug geometry must never influence gameplay systems.
         Ism->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         Ism->SetCanEverAffectNavigation(false);
         Ism->SetCastShadow(false);
         Ism->SetMobility(EComponentMobility::Movable);
 
-        // Registered at identity: instance transforms are authored in world space, so component
-        // space == world space and every Add/BatchUpdate below passes local-space transforms.
+        // Registered at identity so component space == world space; Add/BatchUpdate pass WorldSpace=false.
         Ism->SetWorldLocation(FVector::ZeroVector);
-        // No BeginPlay (protected on UStaticMeshComponent, unlike UProceduralMeshComponent): a
-        // render-only ownerless component needs its render state — registration provides that.
+        // No BeginPlay (protected here, unlike UProceduralMeshComponent) — registration alone gives the render state.
         Ism->RegisterComponentWithWorld(&InWorld);
 
         Ism->SetVisibility(true);
@@ -270,8 +262,7 @@ struct CkJoltDebugger::FImpl
 CkJoltDebugger::CkJoltDebugger()
     : _Impl(MakePimpl<FImpl>())
 {
-    // Creates the shared unit-geometry batches (box/sphere/capsule/...) through our
-    // CreateTriangleBatch overrides — required by the base-class contract.
+    // Base-class contract: builds the shared unit-geometry batches through our CreateTriangleBatch overrides.
     Initialize();
 }
 
@@ -407,8 +398,7 @@ auto
     if (inGeometry.GetPtr() == nullptr || inGeometry->mLODs.empty())
     { return; }
 
-    // Highest-detail LOD unconditionally — instancing makes the triangle count a GPU non-issue,
-    // and there is no reliable camera position to select against.
+    // Highest-detail LOD unconditionally — instancing makes the triangle count a GPU non-issue.
     const auto& TriangleBatch = inGeometry->mLODs.front().mTriangleBatch;
     if (TriangleBatch.GetPtr() == nullptr)
     { return; }
@@ -420,9 +410,9 @@ auto
     const auto Key = ck_jolt_debug_renderer::FBucketKey{BatchImpl, inModelColor.mU32};
     auto& Bucket = _Impl->_Buckets.FindOrAdd(Key);
 
-    if (Bucket._BatchRef.GetPtr() == nullptr)
+    if (Bucket._BatchKeepAlive.GetPtr() == nullptr)
     {
-        Bucket._BatchRef = TriangleBatch;
+        Bucket._BatchKeepAlive = TriangleBatch;
         Bucket._BaseColor = ck::jolt::Conv(inModelColor);
     }
 
@@ -465,10 +455,8 @@ auto
 
         if (NOT Bucket._Touched)
         {
-            // Refcount 1 == only the bucket still holds this batch: every Jolt geometry that used it is
-            // gone (shapes re-cooked across gym restarts, static-world re-bakes). Without pruning, the
-            // transient mesh + instanced component leak once per re-cook for the rest of the session.
-            if (Kvp.Key._Batch->Get_RefCount() == 1)
+            const auto OnlyTheBucketStillHoldsThisBatch = Kvp.Key._Batch->Get_RefCount() == 1;
+            if (OnlyTheBucketStillHoldsThisBatch)
             {
                 auto* StaleIsm = Bucket._Ism.Get();
                 if (ck::IsValid(StaleIsm))

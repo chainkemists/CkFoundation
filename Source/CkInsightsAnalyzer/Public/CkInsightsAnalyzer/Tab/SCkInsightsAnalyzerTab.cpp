@@ -256,8 +256,8 @@ public:
                    .IndentAmount(12.0f)
                ];
 
-            // The synthetic "(+N below threshold)" reconciliation row renders muted — it is an
-            // aggregate of pruned children, not a timer of its own.
+            // The synthetic "(+N below threshold)" row renders muted — it aggregates pruned
+            // children rather than naming a timer.
             Row->AddSlot()
                .AutoWidth()
                .VAlign(VAlign_Center)
@@ -348,9 +348,10 @@ public:
 private:
     auto DoBuildBreadcrumbSuffix() const -> FString
     {
-        // Show at most the last two collapsed wrappers, like the markdown report
+        constexpr auto MaxShownWrappers = 2;
+
         FString Breadcrumb;
-        const int32 Start = FMath::Max(0, _Node->Breadcrumbs.Num() - 2);
+        const int32 Start = FMath::Max(0, _Node->Breadcrumbs.Num() - MaxShownWrappers);
         for (int32 i = Start; i < _Node->Breadcrumbs.Num(); ++i)
         {
             const FString Simplified = FCk_TimerCategorizer::SimplifyName(_Node->Breadcrumbs[i]);
@@ -409,7 +410,6 @@ auto
         [
             SNew(SVerticalBox)
 
-            // Toolbar
             + SVerticalBox::Slot()
             .AutoHeight()
             .Padding(0.0f, 0.0f, 0.0f, SectionSpacing)
@@ -417,7 +417,6 @@ auto
                 DoCreateToolbar()
             ]
 
-            // Summary strip (stat tiles; hidden until a trace is loaded)
             + SVerticalBox::Slot()
             .AutoHeight()
             .Padding(0.0f, 0.0f, 0.0f, SectionSpacing)
@@ -425,7 +424,6 @@ auto
                 DoCreateSummaryStrip()
             ]
 
-            // Frame bar chart
             + SVerticalBox::Slot()
             .AutoHeight()
             .Padding(0.0f, 0.0f, 0.0f, SectionSpacing)
@@ -440,7 +438,6 @@ auto
                 ]
             ]
 
-            // Results (tree + side panels)
             + SVerticalBox::Slot()
             .FillHeight(1.0f)
             .Padding(0.0f, 0.0f, 0.0f, SectionSpacing)
@@ -448,7 +445,6 @@ auto
                 DoCreateResultsArea()
             ]
 
-            // Raw markdown report (collapsed)
             + SVerticalBox::Slot()
             .AutoHeight()
             [
@@ -471,7 +467,6 @@ auto
 
     return SNew(SHorizontalBox)
 
-        // Open .utrace button
         + SHorizontalBox::Slot()
         .AutoWidth()
         .Padding(0.0f, 0.0f, SectionSpacing, 0.0f)
@@ -483,7 +478,6 @@ auto
             .HAlign(HAlign_Center)
         ]
 
-        // Recent traces dropdown
         + SHorizontalBox::Slot()
         .AutoWidth()
         .Padding(0.0f, 0.0f, SectionSpacing, 0.0f)
@@ -500,7 +494,6 @@ auto
             ]
         ]
 
-        // Depth dropdown
         + SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
@@ -531,7 +524,6 @@ auto
             ]
         ]
 
-        // Show-all toggle — bypasses the hot-path tree's child threshold + cap
         + SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
@@ -551,7 +543,6 @@ auto
             ]
         ]
 
-        // Analyze Worst 10
         + SHorizontalBox::Slot()
         .AutoWidth()
         .Padding(0.0f, 0.0f, SectionSpacing, 0.0f)
@@ -563,7 +554,6 @@ auto
             .HAlign(HAlign_Center)
         ]
 
-        // Copy Report
         + SHorizontalBox::Slot()
         .AutoWidth()
         .Padding(0.0f, 0.0f, SectionSpacing, 0.0f)
@@ -575,7 +565,6 @@ auto
             .HAlign(HAlign_Center)
         ]
 
-        // Export JSON
         + SHorizontalBox::Slot()
         .AutoWidth()
         .Padding(0.0f, 0.0f, SectionSpacing, 0.0f)
@@ -587,7 +576,6 @@ auto
             .HAlign(HAlign_Center)
         ]
 
-        // Status pill (fills remaining space)
         + SHorizontalBox::Slot()
         .FillWidth(1.0f)
         .VAlign(VAlign_Center)
@@ -885,7 +873,6 @@ auto
         return;
     }
 
-    // Expand roots and their direct children so the interesting depth is visible immediately
     for (const auto& Root : _HotPathRoots)
     {
         _HotPathTree->SetItemExpansion(Root, true);
@@ -1358,7 +1345,6 @@ auto
         return;
     }
 
-    // Close any existing session
     _Session.Close();
     _FrameBarChart->ClearFrameData();
     DoClearResults();
@@ -1371,7 +1357,6 @@ auto
     DoMakeRecentTracesMenu()
     -> TSharedRef<SWidget>
 {
-    // (Path, ModificationTime, SizeBytes) for every .utrace in a candidate directory
     struct FTraceFileInfo
     {
         FString Path;
@@ -1379,8 +1364,8 @@ auto
         int64 SizeBytes = 0;
     };
 
-    // The default landing dir for -tracefile / Trace.File captures, plus the
-    // local Unreal Trace Server store (where traces without -tracefile go).
+    // Profiling/ is where -tracefile / Trace.File captures land; captures without one go to
+    // the local Unreal Trace Server store.
     const FString TraceStoreDir = FString{FPlatformProcess::UserSettingsDir()} /
         TEXT("UnrealEngine/Common/UnrealTrace/Store/001");
     const TArray<FString> SearchDirs = { FPaths::ProfilingDir(), TraceStoreDir };
@@ -1593,7 +1578,6 @@ auto
     else if (*NewValue == TEXT("Concise"))   _ReportDepth = ECkReportDepth::Concise;
     else                                    _ReportDepth = ECkReportDepth::HotPathsOnly;
 
-    // Re-run the current selection so the depth change is immediately visible
     DoRerunCurrentSelection();
 }
 
@@ -1612,7 +1596,6 @@ auto
 {
     _ShowAllChildren = NewState == ECheckBoxState::Checked;
 
-    // Re-run the current selection so the toggle is immediately visible
     DoRerunCurrentSelection();
 }
 
@@ -1625,8 +1608,7 @@ auto
     DoOnFrameSelectionChanged(uint64 StartFrame, uint64 EndFrame)
     -> void
 {
-    // Allow frame selection during ReadingFrames (user can inspect already-loaded frames).
-    // Only block during Opening when the session isn't ready yet.
+    // Only Opening is blocked — during ReadingFrames the user can inspect loaded frames.
     if (NOT _Session.IsOpen() || _LoadingState == ELoadingState::Opening) return;
 
     if (StartFrame == EndFrame)
@@ -1734,7 +1716,6 @@ auto
     FCk_FrameReport FrameReport(Config);
     DoSetReport(FrameReport.Generate(_Session, Result));
 
-    // Structured views
     _ResultsMode = EResultsMode::SingleFrame;
     _AnalyzedFrameMs = Result.FrameDurationMs;
     _LastSingleResult = Result;   // retained for Export JSON
@@ -1779,8 +1760,8 @@ auto
     Config.ApplyDepth();
 
     FCk_MultiFrameReport MultiReport(Config);
-    // EndFrame is inclusive from the chart, but AnalyzeAndGenerate expects exclusive
-    DoSetReport(MultiReport.AnalyzeAndGenerate(_Session, StartFrame, EndFrame + 1));
+    const uint64 EndFrameExclusive = EndFrame + 1;
+    DoSetReport(MultiReport.AnalyzeAndGenerate(_Session, StartFrame, EndFrameExclusive));
     DoPopulateMultiFrame(MultiReport.GetStats());
 
     DoSetStatus(FString::Printf(TEXT("Analyzed frames %llu-%llu (%llu frames)"), StartFrame, EndFrame, Count),
@@ -1809,7 +1790,6 @@ auto
     _ResultsMode = EResultsMode::MultiFrame;
     _AnalyzedFrameMs = 0.0;
 
-    // Multi-frame analysis has no single-frame tree/categories
     _HotPathRoots.Reset();
     _Categories.Reset();
     _TopTimers.Reset();
@@ -1942,10 +1922,9 @@ auto
         return;
     }
 
-    // START analysis here on the game thread — registered trace modules (e.g.
-    // ChaosVD) ensure(IsInGameThread()) inside OnAnalysisBegin, which fires
-    // synchronously in StartAnalysis. The heavy processing runs on
-    // TraceServices' own analysis thread; the ticker below polls completion.
+    // Must START on the game thread — registered trace modules (e.g. ChaosVD)
+    // ensure(IsInGameThread()) inside OnAnalysisBegin, which StartAnalysis fires synchronously.
+    // The heavy processing then runs on TraceServices' own thread; the ticker polls completion.
     if (NOT _PendingSession->StartAnalysis(TracePath))
     {
         DoSetStatus(FString::Printf(TEXT("Failed to open: %s"),
@@ -1955,7 +1934,6 @@ auto
         return;
     }
 
-    // Start polling ticker
     _LoadingTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateSP(this, &SCkInsightsAnalyzerTab::DoOnLoadingTick),
         0.1f);
@@ -1981,11 +1959,9 @@ auto
             return true; // keep ticking
         }
 
-        // Take ownership of the analyzed session
         _Session = MoveTemp(*_PendingSession);
         _PendingSession.Reset();
 
-        // Transition to frame reading
         _TotalFrameCount = _Session.GetFrameCount();
         _LoadedFrameCount = 0;
         _PendingFrameDurations.Reset();
@@ -2031,7 +2007,6 @@ auto
 
     const uint64 EndFrame = FMath::Min(_LoadedFrameCount + ChunkSize, _TotalFrameCount);
 
-    // Collect this chunk's durations separately so we can push them to the chart
     TArray<double> ChunkDurations;
     ChunkDurations.Reserve(static_cast<int32>(EndFrame - _LoadedFrameCount));
 
@@ -2051,7 +2026,6 @@ auto
 
     _PendingFrameDurations.Append(ChunkDurations);
 
-    // Push to bar chart progressively — bars fill up as frames are read
     if (ck::IsValid(_FrameBarChart))
     {
         _FrameBarChart->AppendFrameData(ChunkDurations);
@@ -2071,9 +2045,8 @@ auto
     DoFinishLoading()
     -> void
 {
-    // Chart already has all frame data from progressive AppendFrameData() calls.
-    // Recalculate display max with proper P95 (outlier-resistant) now that all data is loaded.
-    // This preserves the user's viewport/zoom unlike SetFrameData().
+    // The chart already has every frame from the progressive appends; rescaling to P95 here
+    // (rather than SetFrameData) preserves the user's viewport/zoom.
     if (ck::IsValid(_FrameBarChart))
     {
         _FrameBarChart->RecalculateDisplayMax();

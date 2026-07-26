@@ -33,19 +33,17 @@ public:
     auto
     DoInitialize(UCk_IskmRenderer_Data* InRendererData) -> void;
 
-    // Allocate a SKMC for a new proxy entity. Returns either a freshly created or pooled-reusable SKMC.
+    // Returns either a freshly created or a pooled-reusable SKMC.
     auto
     Acquire_BaseSKMC() -> USkeletalMeshComponent*;
 
 #if WITH_EDITOR
-    // Editor worlds freeze SKMC poses behind the editor-only bUpdateAnimationInEditor flag —
-    // enable it so previews animate. No-op outside Editor/EditorPreview worlds. Applied to every
-    // acquired base SKMC and every submesh child created in editor worlds.
+    // No-op outside Editor/EditorPreview worlds. Must be applied to every acquired base SKMC and every
+    // submesh child created in an editor world, or the preview renders a frozen pose.
     static auto
     EditorOnly_EnableAnimationTicking(USkeletalMeshComponent* InComp) -> void;
 #endif
 
-    // Release a SKMC back to the pool. SKMC is hidden, detached, anim cleared.
     auto
     Release_BaseSKMC(USkeletalMeshComponent* InComp) -> void;
 
@@ -54,9 +52,8 @@ protected:
 
 #if WITH_EDITOR
 public:
-    // Editor-world per-owner renderers redirect viewport clicks on their SKMCs to the placed
-    // actor whose preview they render (see ck::FFragment_EditorSelectionOwner) — clicking the
-    // preview mesh then selects/moves/deletes that actor like clicking its billboard.
+    // Redirects viewport clicks on this renderer's SKMCs to the placed actor whose preview they render
+    // (see ck::FFragment_EditorSelectionOwner), so clicking the mesh selects/moves/deletes that actor.
     auto
     IsSelectionChild() const -> bool override;
 
@@ -112,9 +109,8 @@ protected:
 
 #if WITH_EDITOR
 private:
-    // Backstop reclaim for per-owner renderers whose SKMC pool is already quiescent when their
-    // selection owner is deleted (no future Release_BaseSKMC → the actor-side self-reclaim never
-    // runs). The in-flight case is left to that self-reclaim — see Release_BaseSKMC.
+    // Backstop reclaim for per-owner renderers whose SKMC pool is already quiescent when their selection
+    // owner is deleted; the in-flight case is left to Release_BaseSKMC's self-reclaim.
     auto
     EditorOnly_OnLevelActorDeleted(AActor* InActor) -> void;
 #endif
@@ -125,21 +121,17 @@ public:
     GetOrCreate_RendererActor(UCk_IskmRenderer_Data* InRendererData);
 
 #if WITH_EDITOR
-    // Editor-world variant: one renderer per (data asset, selection owner), so a viewport click
-    // on any of its SKMCs can redirect selection to the owner. Selection redirect is actor-level,
-    // so the split IS the instance-to-spawner mapping; editor previews are a handful of meshes,
-    // and runtime worlds always use the shared renderer above. SKMC release stays owner-derived
-    // (SKMC->GetOwner()), so proxies need no extra teardown bookkeeping.
+    // Editor-world variant: one renderer per (data asset, selection owner). Selection redirect is
+    // actor-level, so this split IS the instance-to-spawner mapping; runtime worlds always use the
+    // shared renderer above.
     auto
     GetOrCreate_RendererActor_ForEditorSelectionOwner(
         UCk_IskmRenderer_Data* InRendererData,
         AActor* InSelectionOwner) -> ACk_IskmRenderer_Actor_UE*;
 
-    // Batched-crowd sibling of the per-owner renderer above: one preview crowd per
-    // (anim collection, selection owner), so a viewport click on any of its tile instances
-    // redirects selection to the owner — the split IS the member-to-spawner mapping (a shared
-    // crowd cannot attribute instances to owners at actor level). The crowd is Initialize()d
-    // and ready for AddInstance/Finalize; reclaimed when the owner is deleted.
+    // Batched-crowd sibling of the per-owner renderer above: one preview crowd per (anim collection,
+    // selection owner), since a shared crowd cannot attribute instances to owners at actor level.
+    // Returned Initialize()d and ready for AddInstance/Finalize; reclaimed when the owner is deleted.
     auto
     GetOrCreate_PreviewCrowd_ForEditorSelectionOwner(
         UCk_IskmAnimCollection_Data* InCollection,
@@ -158,9 +150,9 @@ private:
 
 #if WITH_EDITORONLY_DATA
 private:
-    // Weak on both sides: the actors are owned by the world; entries self-heal via validity
-    // checks. TWeakObjectPtr keys compare by object index + serial, so entries stay addressable
-    // even while an owner is mid-undo or already destroyed.
+    // Weak on both sides: the world owns the actors and entries self-heal via validity checks.
+    // TWeakObjectPtr keys compare by object index + serial, so an entry stays addressable even while
+    // its owner is mid-undo or already destroyed.
     using FPerOwnerRendererKey = TPair<TWeakObjectPtr<const UCk_IskmRenderer_Data>, TWeakObjectPtr<AActor>>; // {DataAsset, SelectionOwner}
     TMap<FPerOwnerRendererKey, TWeakObjectPtr<ACk_IskmRenderer_Actor_UE>> _PerOwnerRendererActors;
 

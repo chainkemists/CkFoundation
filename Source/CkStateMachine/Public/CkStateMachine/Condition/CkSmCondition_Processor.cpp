@@ -97,20 +97,16 @@ namespace ck
             TEXT("Polled condition entity [{}] script is not a UCk_SmCondition_Polled — wrong script type added with FTag_SmCondition_Polled"), InHandle)
         { return; }
 
-        // Authority gating: polled conditions evaluate user-defined predicates that often have
-        // observable side effects (timers, sensors). Only the SM's transition authority evaluates.
-        // Uses the shared predicate so the Server-of-OwningClientAuth case is covered too (a relayed
-        // sub-SM is OwningClientAuth on the server, which must follow the relay, not poll) — the prior
-        // inline gate only skipped NonOwningClient and non-OwningClientAuth OwningClient.
+        // Only the SM's transition authority evaluates: polled predicates are user code with
+        // observable side effects. The shared predicate also covers Server-of-OwningClientAuth,
+        // where a relayed sub-SM must follow the relay rather than poll.
         const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(InHandle);
 
         if (NOT ck::statemachine::Get_IsTransitionAuthority(SmHandle))
         { return; }
 
-        // Paused SM: the documented pause contract is "no ticking, no transitions" — user
-        // Evaluate predicates must not run while paused (they can have observable side effects),
-        // and a pause-time Pass must not latch a transition decision that commits on Resume.
-        // (FProcessor_SmCondition_ResetEveryFrame keeps running, so stale results wash out.)
+        // Pause contract is "no ticking, no transitions": user Evaluate predicates must not run
+        // while paused, and a pause-time Pass must not latch a decision that commits on Resume.
         if (UCk_Utils_StateMachine_UE::Get_RunStatus(SmHandle) == ECk_SmRunStatus::Paused)
         { return; }
 
@@ -124,12 +120,9 @@ namespace ck
                 : ECk_SmConditionResult::Fail;
         }
 
-        // Wake the parent transition so it re-checks condition results in the pump. Unconditional,
-        // mirroring the event-driven path (Request_UpdateConditionResult): AddOrGet bumps the
-        // dirty-marker version even when the tag already exists. Gating this on the transition
-        // still holding FTag_SmTransition_Evaluating made the wake dead code — the transition
-        // evaluator removes that tag at the top of its own run earlier in the same frame, so a
-        // freshly-computed result sat unconsumed until the next frame's evaluate cycle.
+        // Wake the parent transition so it re-checks results in this pump. Unconditional, mirroring
+        // Request_UpdateConditionResult: AddOrGet bumps the dirty-marker version even when the tag
+        // already exists, and the transition evaluator removes that tag at the top of its own run.
         if (auto ParentTransition = ck::TUtils_Sm_ParentTransition::Get_StoredEntity(InHandle);
             ck::IsValid(ParentTransition) && NOT ParentTransition.Has<ck::FTag_SmTransition_PendingExit>())
         {

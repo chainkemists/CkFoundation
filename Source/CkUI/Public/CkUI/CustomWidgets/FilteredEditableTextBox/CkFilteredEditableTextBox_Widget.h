@@ -15,8 +15,7 @@ DECLARE_DELEGATE_RetVal_OneParam(
     FCk_ValidateCharacterDelegate,
     TCHAR);
 
-// Blueprint-compatible version. Receives the character as a single-character FString.
-// Return true to allow the character.
+// Blueprint version: receives the character as a single-character FString; return true to allow it.
 DECLARE_DYNAMIC_DELEGATE_RetVal_OneParam(
     bool,
     FCk_ValidateCharacterDelegate_BP,
@@ -40,8 +39,7 @@ public:
     UCk_FilteredEditableTextBox();
 
 protected:
-    // C++ override point. Default implementation delegates to OnValidateCharacter
-    // if bound, otherwise allows all characters.
+    // Override point: the default delegates to OnValidateCharacter when bound, otherwise allows everything.
     virtual auto
     IsAllowedCharacter(
         TCHAR InChar) const -> bool;
@@ -59,21 +57,16 @@ private:
     bool Get_MaxLength_BP(int32& OutMaxLength) const;
 
 public:
-    // Bind this in C++ to define which characters are allowed.
-    // If unbound, all characters pass through (unless a C++ subclass overrides IsAllowedCharacter).
+    // Bind in C++ to define which characters are allowed; unbound means everything passes.
     FCk_ValidateCharacterDelegate OnValidateCharacter;
 
-    // Blueprint-bindable version of OnValidateCharacter.
-    // Receives the character as a single-character FString; return true to allow it.
-    // Called after the C++ delegate (if bound). Both must allow the character for it to pass.
+    // Blueprint-bindable twin, evaluated after OnValidateCharacter — BOTH must allow a character for it to pass.
     UPROPERTY(BlueprintReadWrite, Category = "Filter", DisplayName = "On Validate Character", meta = (AllowPrivateAccess = true))
     FCk_ValidateCharacterDelegate_BP OnValidateCharacter_BP;
 
-    // Fires when one or more characters were rejected during filtering.
     UPROPERTY(BlueprintAssignable, Category = "Filter", meta = (AllowPrivateAccess = true))
     FCk_TextFilteredEvent OnTextFiltered;
 
-    // Returns the max length if enforced, or an empty optional if unlimited.
     auto Get_MaxLength() const -> TOptional<int32>;
 
     UFUNCTION(BlueprintCallable, Category = "Filter", DisplayName = "Set Max Length")

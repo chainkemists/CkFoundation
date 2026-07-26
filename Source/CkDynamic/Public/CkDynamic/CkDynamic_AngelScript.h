@@ -22,8 +22,6 @@ class CKDYNAMIC_API FCkDynamic_HandleTypeRegistry
 {
 public:
     // ------------------------------------------------
-    // JSON Registry
-    // ------------------------------------------------
 
     static auto
     LoadFromJsonRegistry() -> bool;
@@ -31,8 +29,6 @@ public:
     static auto
     GetRegistryFilePath() -> FString;
 
-    // ------------------------------------------------
-    // Registration
     // ------------------------------------------------
 
     static auto
@@ -57,8 +53,6 @@ public:
     ResetJsonRegistryLoadedFlag() -> void;
 
     // ------------------------------------------------
-    // Queries (delegated to unified registry)
-    // ------------------------------------------------
 
     static auto
     IsHandleTypeRegistered(
@@ -77,8 +71,6 @@ public:
         const FCk_Handle& InHandle) -> bool;
 
     // ------------------------------------------------
-    // Utilities
-    // ------------------------------------------------
 
     /**
      * Extract short name from a type name by removing known prefixes.
@@ -89,8 +81,6 @@ public:
         const FString& InTypeName) -> FString;
 
     // ------------------------------------------------
-    // Initialization
-    // ------------------------------------------------
 
     static auto
     EnsureCallbackRegistered() -> void;
@@ -100,7 +90,6 @@ private:
     CreateMultiFragmentValidator(
         const TArray<FString>& InFragmentNames) -> TFunction<bool(const FCk_Handle&)>;
 
-    // Memoized. Cleared on AS pre-compile — see InvalidateScriptStructCache.
     static auto
     FindScriptStructByName(
         const FString& InStructName) -> const UScriptStruct*;

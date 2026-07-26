@@ -17,7 +17,6 @@ public:
     CK_GENERATED_BODY(UCk_SmTask_EntityScript);
 
     // --------------------------------------------------------------------------------------------------------------------
-    // LIFECYCLE (EntityScript overrides)
 
 protected:
     auto
@@ -31,16 +30,13 @@ protected:
     auto
     EndPlay() -> void override;
 
-    // See UCk_SmState_EntityScript::Get_EffectiveReplication for rationale. Always DoesNotReplicate —
-    // tasks are rebuilt locally via the SM replay path, never replicated as net objects.
+    // Always DoesNotReplicate — tasks are rebuilt locally via the SM replay path, never net objects.
     auto
     Get_EffectiveReplication() const -> ECk_Replication override;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // TASK LIFECYCLE (Enter/Exit)
-    //
-    // EnterTask fires from BeginPlay() once the task entity is fully constructed.
-    // ExitTask is invoked synchronously by the StateMachine processor (transition or SM EndPlay).
+    // EnterTask fires from BeginPlay() once the task entity is fully constructed; ExitTask is invoked
+    // synchronously by the StateMachine processor (transition or SM EndPlay).
 
 public:
     virtual auto
@@ -54,7 +50,6 @@ public:
         ECk_Sm_NetContext InNetContext) -> void;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // VIRTUAL METHODS (user overrides)
 
 public:
     virtual auto

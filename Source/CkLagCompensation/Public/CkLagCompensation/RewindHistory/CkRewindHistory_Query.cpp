@@ -122,7 +122,6 @@ namespace ck::lag_comp_detail
         if (AxisLengthSquared < UE_DOUBLE_SMALL_NUMBER)
         { return Get_RayVsSphere(InRayOrigin, InRayDirection, InRayLength, InCapA, InCapsuleRadius); }
 
-        // Infinite-cylinder quadratic on the components perpendicular to the axis
         const auto AxisDirection = Axis / FMath::Sqrt(AxisLengthSquared);
         const auto ToOrigin = InRayOrigin - InCapA;
 
@@ -167,7 +166,6 @@ namespace ck::lag_comp_detail
             }
         }
 
-        // End caps
         if (const auto CapHitA = Get_RayVsSphere(InRayOrigin, InRayDirection, InRayLength, InCapA, InCapsuleRadius);
             CapHitA.IsSet() && (NOT BestT.IsSet() || *CapHitA < *BestT))
         { BestT = CapHitA; }
@@ -179,8 +177,7 @@ namespace ck::lag_comp_detail
         return BestT;
     }
 
-    // Slab test against an oriented box inflated by the sweep radius (Minkowski sum approximated
-    // by box inflation — corners are slightly 'square'; conservative for hit registration)
+    // Minkowski sum approximated by box inflation — corners are slightly 'square', conservative by design
     static auto
     Get_RayVsOrientedBox(
         const FVector& InRayOrigin,
@@ -224,7 +221,6 @@ namespace ck::lag_comp_detail
         return TMin;
     }
 
-    // Capsule segment endpoints (cap-sphere centers) for a posed capsule/cylinder shape.
     // UE convention: HalfHeight spans the full capsule including the caps; axis is local Z
     static auto
     Get_CapsuleSegment(
@@ -253,17 +249,14 @@ namespace ck::lag_comp
         if (InFrames.Get_Count() < 2)
         { return {}; }
 
-        // Reject times older than the recorded window (with one frame interval of slack for
-        // boundary queries) — clamping those would invent poses that were never recorded. Times
-        // past the newest frame clamp to the newest pose instead: recording always lags the
-        // present by up to one interval
+        // Clamping a time older than the recorded window would invent poses that were never
+        // recorded; the one-interval slack is for boundary queries
         const auto OldestTime = InFrames.Get_FrameAt(0).Get_WorldTime();
         const auto OldestInterval = InFrames.Get_FrameAt(1).Get_WorldTime() - OldestTime;
 
         if (InWorldTime < OldestTime - OldestInterval)
         { return {}; }
 
-        // Find the first frame at-or-after the requested time; clamp to the recorded window
         auto AfterIndex = InFrames.Get_Count() - 1;
 
         for (auto Index = 0; Index < InFrames.Get_Count(); ++Index)
@@ -319,8 +312,6 @@ namespace ck::lag_comp
             const FCk_LagComp_HitShapeSnapshot& InShapeAtEnd)
         -> TOptional<FSweepResult>
     {
-        // Solve in the shape's rest frame: subtract the shape's own motion over the slice from
-        // the segment, then test against the shape posed at the start of the slice
         const auto ShapeMotion = InShapeAtEnd.Get_WorldTransform().GetLocation() - InShapeAtStart.Get_WorldTransform().GetLocation();
         const auto AdjustedEnd = InSegmentEnd - ShapeMotion;
 
@@ -438,7 +429,6 @@ namespace ck::lag_comp
         if (SnapshotsAtStart.IsEmpty() || SnapshotsAtStart.Num() != SnapshotsAtEnd.Num())
         { return {}; }
 
-        // Cheap rejection: segment AABB vs the union of the target's bounds over the slice
         auto TargetBounds = FBox{ForceInit};
         for (const auto& Snapshot : SnapshotsAtStart)
         { TargetBounds += Get_SnapshotWorldBounds(Snapshot); }

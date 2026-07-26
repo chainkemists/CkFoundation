@@ -95,11 +95,9 @@ namespace ck
 
         InHandle.Try_Remove<FTag_SmState_NeedsEvaluation>();
 
-        // A state-entity that reaches this processor without its owning-SM holder (FFragment_Sm_OwningStateMachine)
-        // is orphaned — under the v3 rebuild+hydrate load the SM re-creates its live state graph fresh via Construct.
-        // Strip the Active tag up front so the orphan drops out of the loop, and avoid the Get_StoredEntity ensure on
-        // the missing holder. (The Model-A generic tag-section restore that could resurrect an Active-but-orphaned
-        // state was deleted with Model A; this stays as a cheap guard.)
+        // A state-entity without its owning-SM holder is orphaned (the rebuild+hydrate load re-creates
+        // the live state graph fresh). Strip Active so the orphan drops out of the loop, and skip the
+        // Get_StoredEntity ensure on the missing holder.
         if (NOT TUtils_Sm_OwningStateMachine::Has(InHandle))
         {
             InHandle.Try_Remove<FTag_SmState_Active>();
@@ -116,11 +114,9 @@ namespace ck
             || StateMachine.Has<FTag_Sm_TransitionQueued>())
         { return; }
 
-        // Transition-authority gate: only the machine that DECIDES this SM's transitions walks them.
-        // Non-authority machines (the server of an OwningClientAuth SM, all non-owning clients) follow
-        // the replicated/relayed transitions and must NOT self-evaluate — else they fight the relay
-        // (e.g. a server self-reverting a relayed sub-SM when a release condition is locally true).
-        // Gating here prevents the decision outright: nothing is queued, so nothing is dropped later.
+        // Only the machine that DECIDES this SM's transitions walks them; non-authority machines follow
+        // the replicated/relayed transitions and would fight the relay if they self-evaluated. Gating
+        // here prevents the decision outright, so nothing is queued and nothing is dropped later.
         if (NOT ck::statemachine::Get_IsTransitionAuthority(StateMachine))
         { return; }
 

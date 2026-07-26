@@ -58,12 +58,15 @@ Cross-inventory placement logic that is NOT a request on a single inventory:
   "standalone paced operation" pattern (mirrors CkGoap / CkAudioTrack transient-owned ops).
   **Pump budget:** each merge-step cascades extra pump passes (deferred fold + inventory signal), so the
   request's `_MaxStepsPerFrame` defaults to **1** — at 2+ merge-steps/frame the worst case trips the
-  scheduler's pump-count warn (≥8). Relocate-heavy transfers can raise it.
+  scheduler's pump-count warn (≥8). Measured: at 2 steps/frame the worst case (every item merges into
+  one bounded stack) hits **8** pump passes — exactly the warn threshold — and any value >1 also forces
+  a churn re-bump pass. Relocate-heavy (non-merging) transfers may raise it, provided the caller
+  re-verifies zero pump warns.
 
   **§4.3 caveat (deferred to Adam's pass):** mass transfer into **≥2 candidate inventories that share
   one lifetime-owner AND shape** inherits the pre-existing multi-same-owner replicated-container
-  clobber on clients. The MVP is correct for distinct-owner targets (the common case). The gather site
-  carries a one-line comment to the same effect.
+  clobber on clients. The MVP is correct for distinct-owner targets (the common case). This doc is the
+  only home for the caveat — the gather site carries no marker.
 
 ## Capacity policies
 
@@ -92,6 +95,15 @@ Two orthogonal data knobs on the inventory params govern capacity; both are desi
 
 "6 unique items, stack ≤ 1 each" = `Make_Params_Bounded(6)` + `_StackingPolicy = NoStacking`.
 
+**Pre-fill parity.** `Request_FillExistingStacks` — the pre-fill step behind `AddByDefinition` and
+`DoTransfer` — must apply the same gates `Get_CanStackItems` applies on the explicit `StackItems`
+path: the trait-level `CanStackWith` check AND the inventory's custom stack hooks. Without both,
+pre-fill silently merges items a direct `Request_StackItems` would reject — same-definition items
+can still be unstackable when a trait distinguishes runtime state (the Tags trait: VHS rewound vs
+NotRewound), and a per-inventory stacking restriction would be enforced on `StackItems` but bypassed
+by pre-fill. `InSourceItem` is invalid on definition-driven fills (`AddByDefinition` has no runtime
+source to compare) — custom validators must tolerate that.
+
 ### Acceptance contract — categorical vs quantitative
 
 Custom acceptance rules split into two hooks with DIFFERENT retry semantics:
@@ -102,7 +114,19 @@ Custom acceptance rules split into two hooks with DIFFERENT retry semantics:
   MORE units can this inventory absorb under custom rules (weight, volume, ...)"
   → `Failed_NoSpaceAvailable`. Transient; retryable, partial amounts meaningful. Composes by
   `min()` with the built-in metrics (can only tighten). Must be a pure function of committed
-  state. This is how a game ships weight without a built-in weight metric.
+  state. This is how a game ships weight without a built-in weight metric. **`InItem` may be
+  INVALID** — the hook is also called for definition-level planning
+  (`Get_AbsorbableUnits(Inventory, Definition)` passes an invalid item); implementations must
+  tolerate that.
+
+**`ECk_AddAcceptance::AlreadyValidated`** (transfer path) — `ExecuteTransfer`'s split branch mints a
+copy whose OnSplit tag copy is a *deferred* request, so a synchronous categorical check on the copy
+would read not-yet-copied tags and wrongly reject it. The categorical question is therefore decided
+against the SOURCE (tags committed) — before the source stack is touched, so a rejection needs no
+rollback — and skipped on the copy. It skips **only** the categorical recheck: placement /
+grid-space / dimension checks still run, and only a *categorical* rejection aborts. A `NoSpace`
+result must fall through to the normal partial-transfer path — quantitative capacity is already
+clamped into `TransferCount` by `Get_AbsorbableUnits`.
 
 `Get_AbsorbableUnits(Inventory, Definition)` is the planning number: min over (existing-stack
 room with effective max, new-entry room, the bound metric's remaining capacity, the custom
@@ -206,6 +230,33 @@ The `Add()` forwarders on the typed Utils are one-liners over `CreateInventory(I
 3. **Don't add non-UFUNCTION statics to `UCk_Utils_Inventory_*_UE`** — those classes are the public BP / AS surface. C++-only helpers go in `ck::inventory_helpers::`.
 4. **Don't widen a processor's `HandleType` to `FCk_Handle_Inventory` (the base)** — that re-introduces the umbrella-era runtime branching the spatial/data-only split was created to eliminate. Per-request behavior lives in `inventory_handlers::TXxx::Handle` (templated, instantiated per concrete `(TInventoryHandle, TAddon)` pair via the per-shape Traits bundle); shared algorithmic bodies are templated functions in `Internal_Helpers` parameterized on the typed handle. Shape divergence inside a shared body uses typed-overload helpers in `Internal_Helpers`, not captured hook lambdas. **The Utils-boundary shape-branch in `DispatchEnqueue` is permitted** — public BP/AS surface only, dispatches *to* the typed enqueue path.
 5. **Don't put a public base-request USTRUCT directly into a typed `std::variant` alternative** — derived USTRUCTs slice. Wrap public base requests in `TInventory_RequestEntry<TBaseRequest, TAddon>` (internal, non-reflected) so each typed shape's variant carries C++-distinct alternatives per template instantiation. The carrier preserves slicing-safety while letting the public surface share base USTRUCTs across shapes.
+
+## Implementation notes
+
+- **Multi-value results come back by value in a small USTRUCT**, never through pointer out-params
+  (house convention, cf. `FCk_SpatialPlacementResult`) — e.g. `FCk_FillExistingStacksResult` bundles
+  the filled count with the last stack that received quantity.
+
+### ItemQuery
+
+Item definitions are world-agnostic data assets, so `UCk_ItemQuery_Subsystem_UE` is an
+**EngineSubsystem**: it builds the definition index once and shares it across worlds — this replaced
+a per-call AssetRegistry scan + synchronous load. Editor invalidation is driven by AssetRegistry
+add/remove/rename events plus `FCoreUObjectDelegates::OnObjectPropertyChanged` (a designer editing a
+definition's traits). `FProcessor_ItemQuery_HandleRequests` caches the subsystem at construction
+(resolved by the registration factory) rather than looking it up per entity — the same shape as
+`FProcessor_Probe_*` caching the `JPH::PhysicsSystem`. A completed query broadcasts the result signal
+and destroys the request entity.
+
+`UCk_Utils_ItemQuery_UE::Request_QueryItemDefinitions` mirrors
+`UCk_Utils_RenderStatus_UE::Request_QueryRenderedActors`: querying is ALWAYS deferred through the
+request — there is no synchronous getter — so design-time / non-ECS callers cannot run it.
+
+`FCk_ItemQuery_Filter`'s two custom-predicate flavours mirror the `CustomCanAcceptItem` pair above: a
+native C++ delegate (not reflected, C++ callers only) and a BP/AS-bindable dynamic delegate that
+reports through a `bool&` out-param because dynamic delegates cannot return a value. A definition
+matches when it has ALL of `RequiredAll`, at least one of `RequiredAny`, NONE of `Excluded`, and
+passes every bound predicate.
 
 ---
 

@@ -121,14 +121,11 @@ auto UCkInventory_GetItemTrait_K2Node::ReallocatePinsDuringReconstruction(
 
 auto UCkInventory_GetItemTrait_K2Node::AllocateDefaultPins() -> void
 {
-    // Create IN execution pin
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Execute);
 
-    // Create Valid and Invalid OUT execution pins
     CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, ck_k2_node_get_item_trait::PinName_Valid);
     CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, ck_k2_node_get_item_trait::PinName_Invalid);
 
-    // Create Item Handle input pin
     {
         auto HandlePinParams = FCreatePinParams{};
         HandlePinParams.bIsReference = true;
@@ -142,7 +139,6 @@ auto UCkInventory_GetItemTrait_K2Node::AllocateDefaultPins() -> void
         );
     }
 
-    // Create Trait output pin (typed to the selected trait class or base)
     {
         const auto* TraitClass = Get_TraitClassFromPin();
         auto* Pin = CreatePin(

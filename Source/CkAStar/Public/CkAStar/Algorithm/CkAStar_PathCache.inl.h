@@ -31,14 +31,12 @@ auto
 			continue;
 		}
 
-		// Stale entry — skip (effectively a miss)
 		if (Entry.Generation != _CurrentGeneration)
 		{
 			_Entries.RemoveAt(Index);
 			return nullptr;
 		}
 
-		// Hit — promote to front (LRU)
 		if (Index > 0)
 		{
 			auto HitEntry = MoveTemp(Entry);
@@ -62,7 +60,6 @@ auto
 		float InCost)
 	-> void
 {
-	// Remove existing entry with same key
 	for (auto Index = 0; Index < _Entries.Num(); ++Index)
 	{
 		if (_Entries[Index].Key == InKey)
@@ -72,13 +69,11 @@ auto
 		}
 	}
 
-	// Evict LRU tail if at capacity
 	while (_Entries.Num() >= _MaxEntries)
 	{
 		_Entries.RemoveAt(_Entries.Num() - 1);
 	}
 
-	// Insert at front
 	auto NewEntry = FEntry
 	{
 		.Key = MoveTemp(InKey),

@@ -15,8 +15,6 @@
 #include <ProceduralMeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Shape Generation Functions
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_pmg_processor_flat_shapes
 {
@@ -132,7 +130,6 @@ namespace ck_pmg_processor_flat_shapes
         const auto V2 = FVector(-Radius * 0.866f, -Radius * 0.5f + CenterY, 0.0f);
         const auto V3 = FVector(Radius * 0.866f, -Radius * 0.5f + CenterY, 0.0f);
 
-        // Top face
         Vertices.Add(V1);
         Vertices.Add(V2);
         Vertices.Add(V3);
@@ -145,7 +142,6 @@ namespace ck_pmg_processor_flat_shapes
 
         Triangles.Add(0); Triangles.Add(1); Triangles.Add(2);
 
-        // Bottom face
         const auto BottomStart = Vertices.Num();
         Vertices.Add(V1);
         Vertices.Add(V2);
@@ -318,19 +314,16 @@ namespace ck_pmg_processor_flat_shapes
 
         const auto HalfThickness = InThickness * 0.5f;
 
-        // Horizontal bar (along X axis in XY plane)
         const auto HorizTL = FVector(-InSize, -HalfThickness, 0.0f);
         const auto HorizTR = FVector( InSize, -HalfThickness, 0.0f);
         const auto HorizBR = FVector( InSize,  HalfThickness, 0.0f);
         const auto HorizBL = FVector(-InSize,  HalfThickness, 0.0f);
 
-        // Vertical bar (along Y axis in XY plane)
         const auto VertTL = FVector(-HalfThickness, -InSize, 0.0f);
         const auto VertTR = FVector( HalfThickness, -InSize, 0.0f);
         const auto VertBR = FVector( HalfThickness,  InSize, 0.0f);
         const auto VertBL = FVector(-HalfThickness,  InSize, 0.0f);
 
-        // Horizontal bar front face
         auto BaseIdx = Vertices.Num();
         Vertices.Add(HorizTL); Vertices.Add(HorizTR); Vertices.Add(HorizBR); Vertices.Add(HorizBL);
         for (auto i = 0; i < 4; ++i) { Normals.Add(FVector::ForwardVector); }
@@ -339,7 +332,6 @@ namespace ck_pmg_processor_flat_shapes
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 1); Triangles.Add(BaseIdx + 2);
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 2); Triangles.Add(BaseIdx + 3);
 
-        // Horizontal bar back face
         BaseIdx = Vertices.Num();
         Vertices.Add(HorizTL); Vertices.Add(HorizTR); Vertices.Add(HorizBR); Vertices.Add(HorizBL);
         for (auto i = 0; i < 4; ++i) { Normals.Add(FVector::BackwardVector); }
@@ -348,7 +340,6 @@ namespace ck_pmg_processor_flat_shapes
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 2); Triangles.Add(BaseIdx + 1);
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 3); Triangles.Add(BaseIdx + 2);
 
-        // Vertical bar front face
         BaseIdx = Vertices.Num();
         Vertices.Add(VertTL); Vertices.Add(VertTR); Vertices.Add(VertBR); Vertices.Add(VertBL);
         for (auto i = 0; i < 4; ++i) { Normals.Add(FVector::ForwardVector); }
@@ -357,7 +348,6 @@ namespace ck_pmg_processor_flat_shapes
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 1); Triangles.Add(BaseIdx + 2);
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 2); Triangles.Add(BaseIdx + 3);
 
-        // Vertical bar back face
         BaseIdx = Vertices.Num();
         Vertices.Add(VertTL); Vertices.Add(VertTR); Vertices.Add(VertBR); Vertices.Add(VertBL);
         for (auto i = 0; i < 4; ++i) { Normals.Add(FVector::BackwardVector); }
@@ -390,7 +380,6 @@ namespace ck_pmg_processor_flat_shapes
 
         const auto InnerRadius = InRadius * InInnerRadiusRatio;
 
-        // Top face
         Vertices.Add(FVector::ZeroVector);
         Normals.Add(FVector::UpVector);
         UVs.Add(FVector2D(0.5f, 0.5f));
@@ -417,7 +406,6 @@ namespace ck_pmg_processor_flat_shapes
             Triangles.Add(Next + 1);
         }
 
-        // Bottom face
         const auto BottomCenterIndex = Vertices.Num();
         Vertices.Add(FVector::ZeroVector);
         Normals.Add(FVector::DownVector);
@@ -469,14 +457,11 @@ namespace ck_pmg_processor_flat_shapes
 
         const float Half = InThickness * 0.5f;
 
-        // Points in local XY (Z = 0)
-
         const auto Rotation = FRotator{180.0f, 0, 0};
         const FVector P0 = Rotation.RotateVector(FVector(-InSize * 0.2f, -InSize * 0.5f, 0.f));      // Start
         const FVector P1 = Rotation.RotateVector(FVector( InSize * 0.3f, -InSize * 0.1f, 0.f));      // Junction
         const FVector P2 = Rotation.RotateVector(FVector(-InSize * 0.3f,  InSize * 0.6f, 0.f));      // End
 
-        // Clean 2D perpendicular in XY plane
         auto PerpXY = [&](const FVector& Dir)
         {
             FVector d = Dir;
@@ -491,19 +476,17 @@ namespace ck_pmg_processor_flat_shapes
         const FVector Pp0 = PerpXY(D0);
         const FVector Pp1 = PerpXY(D1);
 
-        // Junction should use average perpendicular (avoids gap)
+        // Averaging the two perpendiculars at the junction avoids a gap between the strokes.
         FVector PJ = (Pp0 + Pp1);
         if (PJ.IsNearlyZero())
             PJ = Pp0; // fallback if opposite
         PJ.Normalize();
 
-        // Create quad at stroke start (P0->P1)
         const FVector A0 = P0 - Pp0 * Half;
         const FVector A1 = P0 + Pp0 * Half;
         const FVector B0 = P1 - PJ   * Half;
         const FVector B1 = P1 + PJ   * Half;
 
-        // Create quad at stroke end (P1->P2)
         const FVector C0 = P1 - PJ   * Half;   // shared with B0
         const FVector C1 = P1 + PJ   * Half;   // shared with B1
         const FVector D0p= P2 - Pp1  * Half;
@@ -515,11 +498,9 @@ namespace ck_pmg_processor_flat_shapes
             V.Add(Q0); V.Add(Q1); V.Add(Q2); V.Add(Q3);
             UV.Add(FVector2D(0, 0)); UV.Add(FVector2D(1, 0)); UV.Add(FVector2D(1, 1)); UV.Add(FVector2D(0, 1));
 
-            // All normals up in local XY
             N.Add(FVector::UpVector); N.Add(FVector::UpVector);
             N.Add(FVector::UpVector); N.Add(FVector::UpVector);
 
-            // 2 tris
             T.Add(b + 0); T.Add(b + 1); T.Add(b + 2);
             T.Add(b + 0); T.Add(b + 2); T.Add(b + 3);
         };
@@ -527,7 +508,6 @@ namespace ck_pmg_processor_flat_shapes
         AddQuad(A0, A1, B1, B0);      // short stroke
         AddQuad(C0, C1, D1p, D0p);    // long stroke
 
-        // Rotate into desired axis like your other shapes
         UCk_Utils_Vector3_UE::ApplyPlaneAxisRotation(V, N, InAxis);
 
         InMeshComponent->CreateMeshSection_LinearColor(
@@ -552,7 +532,6 @@ namespace ck_pmg_processor_flat_shapes
         const auto HalfWidth = InWidth * 0.5f;
         const auto HalfHeight = InHeight * 0.5f;
 
-        // Top face
         Vertices.Add(FVector::ZeroVector);
         Vertices.Add(FVector(0.0f, HalfWidth, 0.0f));
         Vertices.Add(FVector(HalfHeight, 0.0f, 0.0f));
@@ -575,7 +554,6 @@ namespace ck_pmg_processor_flat_shapes
         Triangles.Add(0); Triangles.Add(3); Triangles.Add(4);
         Triangles.Add(0); Triangles.Add(4); Triangles.Add(1);
 
-        // Bottom face
         const auto BottomStart = Vertices.Num();
         Vertices.Add(FVector::ZeroVector);
         Vertices.Add(FVector(0.0f, HalfWidth, 0.0f));
@@ -607,8 +585,6 @@ namespace ck_pmg_processor_flat_shapes
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Common Setup Helper
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_pmg_processor_flat_shapes_impl
@@ -695,8 +671,6 @@ namespace ck_pmg_processor_flat_shapes_impl
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Processor Implementations
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -913,7 +887,6 @@ namespace ck
 
                 const auto FinalRotation = Rotation * AxisRotation;
 
-                // Horizontal bar (along X in XY plane)
                 const auto HX1 = Center + FinalRotation.RotateVector(FVector(-Size, -HalfThick, 0.0f));
                 const auto HX2 = Center + FinalRotation.RotateVector(FVector( Size, -HalfThick, 0.0f));
                 const auto HX3 = Center + FinalRotation.RotateVector(FVector( Size,  HalfThick, 0.0f));
@@ -924,7 +897,6 @@ namespace ck
                 ck::pmg::Append_DebugLine_World(InHandle,HX3, HX4, LineColor, InCommon.Get_LineThickness());
                 ck::pmg::Append_DebugLine_World(InHandle,HX4, HX1, LineColor, InCommon.Get_LineThickness());
 
-                // Vertical bar (along Y in XY plane)
                 const auto VY1 = Center + FinalRotation.RotateVector(FVector(-HalfThick, -Size, 0.0f));
                 const auto VY2 = Center + FinalRotation.RotateVector(FVector( HalfThick, -Size, 0.0f));
                 const auto VY3 = Center + FinalRotation.RotateVector(FVector( HalfThick,  Size, 0.0f));
@@ -1021,7 +993,7 @@ namespace ck
 
                 const auto Size = InParams.Get_Size();
 
-                // Keep the same axis mapping as your mesh code
+                // Axis mapping must stay identical to the mesh generation above.
                 auto AxisRotation = FQuat::Identity;
                 switch (InParams.Get_Axis())
                 {
@@ -1030,16 +1002,13 @@ namespace ck
                     case ECk_Plane_Axis::YZ: AxisRotation = FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f); break;
                 }
 
-                // Apply AxisRotation first, then actor/world rotation
                 const auto FinalRotation = Rotation * AxisRotation;
 
-                // Use the exact same local points the mesh used (same signs and values)
                 const auto FlipRotation = FRotator{180.0f, 0, 0};
                 const auto ShortStart = FlipRotation.RotateVector(FVector(-Size * 0.2f, -Size * 0.5f, 0.0f));
                 const auto ShortEnd   = FlipRotation.RotateVector(FVector( Size * 0.3f, -Size * 0.1f, 0.0f));
                 const auto LongEnd    = FlipRotation.RotateVector(FVector(-Size * 0.3f,  Size * 0.6f, 0.0f));
 
-                // Rotate to world and offset by actor center
                 const auto WorldShortStart = Center + FinalRotation.RotateVector(ShortStart);
                 const auto WorldShortEnd   = Center + FinalRotation.RotateVector(ShortEnd);
                 const auto WorldLongEnd    = Center + FinalRotation.RotateVector(LongEnd);

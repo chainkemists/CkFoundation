@@ -8,12 +8,12 @@
 
 namespace ck_pathnetwork_vectorize
 {
-    // Chamfer 3-4 weights: orthogonal step = 3, diagonal step = 4. Half-width = (DT / 3) * CellSize.
+    // Chamfer 3-4 distances are scaled by the orthogonal weight: cells = DT / ChamferOrtho.
     constexpr auto ChamferOrtho = 3;
     constexpr auto ChamferDiag = 4;
     constexpr auto ChamferInfinity = TNumericLimits<int32>::Max() / 2;
 
-    // Neighbor offsets in Zhang-Suen order P2..P9 (clockwise from north). Y grows south in mask space.
+    // Zhang-Suen P2..P9 order (clockwise from north); Y grows south in mask space.
     constexpr int32 NeighborDX[] = { 0, +1, +1, +1,  0, -1, -1, -1 };
     constexpr int32 NeighborDY[] = { -1, -1,  0, +1, +1, +1,  0, -1 };
 
@@ -49,8 +49,7 @@ namespace ck_pathnetwork_vectorize
             const auto NX = InX + InDX;
             const auto NY = InY + InDY;
 
-            // Out-of-bounds counts as empty (distance 0) so painted regions touching the mask
-            // border measure a small width there instead of blowing up.
+            // Out-of-bounds counts as empty so paint touching the mask border measures a small width.
             const auto NeighborDist = (NX < 0 || NY < 0 || NX >= InSizeX || NY >= InSizeY)
                 ? 0
                 : Dist[NY * InSizeX + NX];
@@ -159,11 +158,9 @@ namespace ck_pathnetwork_vectorize
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Thinned skeletons keep REDUNDANT diagonal adjacencies at corners and junctions: a diagonal
-    // neighbor that is also reachable through an orthogonal neighbor. Counting those as real
-    // connectivity manufactures spurious junction pixels (raw degree 3+ at every staircase elbow)
-    // and makes the chain walker ambiguous. A diagonal adjacency is REAL only when both of its
-    // orthogonal "between" pixels are empty.
+    // A diagonal adjacency is REAL only when both "between" orthogonal pixels are empty. Counting
+    // the redundant ones manufactures spurious junction pixels (degree 3+ at every staircase elbow)
+    // and makes the chain walker ambiguous.
     auto
     Get_IsReducedNeighbor(const TArray<uint8>& InGrid, int32 InSizeX, int32 InSizeY, int32 InX, int32 InY, int32 InDX, int32 InDY) -> bool
     {
@@ -239,7 +236,6 @@ namespace ck_pathnetwork_vectorize
             }
         };
 
-        // Chains between node pixels (junctions / endpoints).
         for (auto Index = 0; Index < InGrid.Num(); ++Index)
         {
             if (NOT IsNodePixel(Index))
@@ -258,7 +254,6 @@ namespace ck_pathnetwork_vectorize
                 auto Prev = Index;
                 auto Cur = InStartNeighbor;
 
-                // Safety bound: a chain can never exceed the pixel count.
                 for (auto Guard = 0; Guard <= InGrid.Num(); ++Guard)
                 {
                     Chain._PixelIndices.Add(Cur);
@@ -290,7 +285,6 @@ namespace ck_pathnetwork_vectorize
             });
         }
 
-        // Rings: leftover unvisited degree-2 pixels form closed loops with no junctions.
         for (auto Index = 0; Index < InGrid.Num(); ++Index)
         {
             if (InGrid[Index] == 0 || InDegrees[Index] != 2 || VisitedInterior[Index] != 0 || IsNodePixel(Index))
@@ -325,14 +319,14 @@ namespace ck_pathnetwork_vectorize
                 Cur = Next;
             }
 
-            if (Cur == Index)
+            const auto WalkClosedTheLoop = Cur == Index;
+
+            if (WalkClosedTheLoop)
             {
-                // Genuine closure.
                 Chain._PixelIndices.Add(Index);
             }
             else
             {
-                // The walk broke off — this was not a clean ring; treat it as open noise.
                 Chain._IsRing = false;
                 Chain._IsDeadEnd = true;
             }
@@ -398,8 +392,7 @@ namespace ck_pathnetwork_vectorize
         }
     }
 
-    // Returns the kept indices, sorted ascending. Rings (first == last) are split at the midpoint
-    // so the coincident anchors can't collapse the whole loop.
+    // Rings (first == last) are split at the midpoint so the coincident anchors can't collapse the loop.
     auto
     Simplify_DouglasPeucker(const TArray<FVector>& InPoints, float InTolerance, bool InIsRing) -> TArray<int32>
     {
@@ -479,15 +472,15 @@ namespace ck::pathnetwork
             for (auto Index = 0; Index < WorldPoints.Num() - 1; ++Index)
             { ChainLength += static_cast<float>(FVector::Dist(WorldPoints[Index], WorldPoints[Index + 1])); }
 
-            // Noise filters: short dead-end whiskers and short rings are artifacts of thinning /
-            // paint specks. Junction-to-junction chains are structural and kept — EXCEPT the
-            // few-pixel stubs inside a junction cluster (thinning can leave 2-3 adjacent node
-            // pixels); the builder fuses their endpoints into one node anyway, so the stub would
-            // only survive as a degenerate self-loop.
-            if ((Chain._IsDeadEnd || Chain._IsRing) && ChainLength < InParams.Get_MinRibbonLength())
+            const auto IsThinningWhiskerOrSpeck = (Chain._IsDeadEnd || Chain._IsRing) && ChainLength < InParams.Get_MinRibbonLength();
+            if (IsThinningWhiskerOrSpeck)
             { continue; }
 
-            const auto IsJunctionClusterStub = NOT Chain._IsRing && NOT Chain._IsDeadEnd && ChainLength < 3.0f * CellSize;
+            // Junction-to-junction chains are structural, EXCEPT few-pixel stubs inside a junction
+            // cluster (thinning can leave 2-3 adjacent node pixels): the builder fuses their endpoints
+            // into one node, so such a stub could only survive as a degenerate self-loop.
+            constexpr auto JunctionClusterStubCells = 3.0f;
+            const auto IsJunctionClusterStub = NOT Chain._IsRing && NOT Chain._IsDeadEnd && ChainLength < JunctionClusterStubCells * CellSize;
             if (IsJunctionClusterStub)
             { continue; }
 
@@ -500,8 +493,7 @@ namespace ck::pathnetwork
             {
                 const auto PixelIndex = Chain._PixelIndices[KeptIndex];
 
-                // DT measures to the CENTER of the nearest empty cell; the paint boundary sits
-                // half a cell closer.
+                // DT measures to the CENTER of the nearest empty cell; the paint boundary is half a cell closer.
                 const auto DistanceCells = DistanceTransform[PixelIndex] / static_cast<float>(ChamferOrtho);
                 const auto HalfWidth = FMath::Max(
                     InParams.Get_MinHalfWidth(),

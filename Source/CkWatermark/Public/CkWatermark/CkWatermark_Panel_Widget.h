@@ -38,18 +38,8 @@ struct CKWATERMARK_API FCk_Watermark_GroupPlacement
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Fully code-driven watermark panel. No Blueprint layout required.
-//
-// Place this widget in a full-screen overlay slot in your HUD Widget Blueprint
-// (or any UMG canvas that fills the viewport). All stat groups are positioned
-// internally via Slate — nothing else needs to be done in UMG.
-//
-// Display modes
-//   Hidden   — nothing visible.
-//   Regular  — main stats + build config visible.
-//   Detailed — everything visible, including ECS ticking group rows.
-//
-// Call Request_SetDisplayPolicy() from HUD code to switch modes at runtime.
+// Fully code-driven watermark panel — drop it in a full-screen overlay slot and every stat group
+// positions itself via Slate. Switch modes at runtime with Request_SetDisplayPolicy().
 
 UCLASS(BlueprintType, Blueprintable,
        meta = (DisplayName = "Ck Watermark Panel",
@@ -72,7 +62,7 @@ public:
 
 private:
     // ---- Placement -----------------------------------------------------------
-    // Bottom-right by default: Ensures / RAM / VRAM (row 1), Ping / ServerFPS / FPS / Time / Frame (row 2).
+    // Bottom-right by default: the activity bar and the settings-driven stat rows.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Watermark|Placement",
               meta = (AllowPrivateAccess = true))
     FCk_Watermark_GroupPlacement _StatsGroupPlacement;
@@ -87,8 +77,7 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Watermark_GroupPlacement _InfoGroupPlacement;
 
-    // Bottom-center by default: ECS pump pressure now; reserved for Server/Client connection + version
-    // mismatch info in the near future. Sits between the bottom-left (info) and bottom-right (stats) grids.
+    // Bottom-center by default: ECS pump pressure plus the Server/Client build-version rows.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Watermark|Placement",
               meta = (AllowPrivateAccess = true))
     FCk_Watermark_GroupPlacement _CenterGroupPlacement;

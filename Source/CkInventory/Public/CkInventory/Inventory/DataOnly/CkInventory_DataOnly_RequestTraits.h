@@ -5,12 +5,8 @@
 
 namespace ck
 {
-    // DataOnly inventory's trait bundle — pure type aliases. DataOnly uses every TXxx::Handle
-    // default body unchanged, so there are no per-shape Handle specializations in the cpp;
-    // only Setup_PerShape (the inventory-creation hook) is defined there.
-    //
-    // Relocate is intentionally omitted — DataOnly has no concept of cell placement to relocate
-    // (known gap; the dispatcher SFINAE-skips it for DataOnly).
+    // Relocate is intentionally omitted — DataOnly has no cell placement to relocate, and the
+    // dispatcher SFINAE-skips the branch for it (known gap).
     template <>
     struct CKINVENTORY_API TInventoryRequestTraits<FCk_Handle_Inventory_DataOnly>
     {

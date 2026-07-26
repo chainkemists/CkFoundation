@@ -10,8 +10,7 @@
 
 namespace ck
 {
-    // Selects which precomputed order the scheduler iterates this tick. Full = the whole graph (normal frames);
-    // LoadKernel = only RunsDuringLoad nodes, for the frames a CkSnapshot load spends rebuilding the world (spec §4.3).
+    // LoadKernel is for the frames a CkSnapshot load spends rebuilding the world.
     enum class ECk_SchedulerTickScope : uint8
     {
         Full,
@@ -47,34 +46,24 @@ namespace ck
     private:
         FProcessorGraphPartition _Partition;
 
-        // Precomputed at construction from _Partition._ExecutionOrder (which stays intact for
-        // diagnostics/debugger use): _MainPassOrder holds the instantiated, non-ghost nodes the
-        // main pass dispatches; _PumpOrder additionally requires a dirty marker and no SkipPump
-        // opt-out. Avoids re-scanning and branch-skipping the full node list every pass.
+        // Precomputed at construction; _Partition._ExecutionOrder stays intact for diagnostics/debugger use.
         TArray<int32> _MainPassOrder;
         TArray<int32> _PumpOrder;
 
-        // Load-kernel subsets of the two orders above: the RunsDuringLoad nodes only (spec §4.3). Iterated by
-        // Tick/DoPump when InScope == LoadKernel — the frames a CkSnapshot load spends rebuilding the world.
         TArray<int32> _LoadPassOrder;
         TArray<int32> _LoadPumpOrder;
 
         int32 _MaxPumpIterations = 30;
         bool _IsTickInProgress = false;
 
-        // Cached once at construction from UCk_Ecs_ProjectSettings_UE — this setting is not expected
-        // to change at runtime, so reading it per-Tick (let alone per-pump) would be wasteful.
+        // Cached from UCk_Ecs_ProjectSettings_UE at construction — neither is expected to change at runtime.
         bool _UseDirtyMarkerVersionShortCircuit = false;
-
-        // Cached like the above. Gates the main pass' empty-view skip (see ECk_ProcessorEmptyViewPolicy
-        // in CkProcessorDescriptor.h): eligible nodes whose view is provably empty are not dispatched.
         bool _UseEmptyViewMainPassSkip = false;
 
     private:
         int32 _LastFramePumpCount = 0;
         double _LastGraphBuildTimeMs = 0.0;
 
-        // Throttle state for the pump-pressure warnings (see GCk_Scheduler_PumpWarningThrottleSeconds in the .cpp).
         double _LastPumpWarningTime = 0.0;
         TArray<FName> _LastWarnedStillDirtyNames;
 

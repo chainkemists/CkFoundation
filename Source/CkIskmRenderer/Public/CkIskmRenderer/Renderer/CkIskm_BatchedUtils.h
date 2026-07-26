@@ -15,10 +15,9 @@ class UMaterialInterface;
 class UCkUsf_OutlinePreset;
 
 // --------------------------------------------------------------------------------------------------------------------
-// CkIskmRenderer Plan-2 — script-facing surface for the batched skeletal renderer.
-// Debug_* helpers stand up ready-made clusters/crowds for gyms/tests. Game flip-drivers build crowds through the
-// production entries (Create_Crowd -> Add_CrowdMember xN -> Finalize_Crowd) and drive members via Set_CrowdMember*.
-// Auto-routing UCk_Utils_IskmProxy_UE::Add to batched via PoseSource remains a possible later addition.
+// CkIskmRenderer Plan-2 — script-facing surface for the batched skeletal renderer. Debug_* helpers stand up
+// ready-made clusters/crowds for gyms/tests; production builds crowds via Create_Crowd -> Add_CrowdMember xN
+// -> Finalize_Crowd, then drives members with Set_CrowdMember*.
 UCLASS(NotBlueprintable)
 class CKISKMRENDERER_API UCk_Utils_IskmBatched_UE : public UBlueprintFunctionLibrary
 {
@@ -175,9 +174,8 @@ public:
     static void
     Set_CrowdMemberCustomData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, float InA, float InB);
 
-    // Absolute-indexed per-member custom data. InFirstFloat is the material PerInstanceCustomData
-    // DataIndex (game floats: 2..15; [0]/[1] carry the animation frame bits). Game layout of [2..15]:
-    // BB DESIGN_IskmCosmeticParity.md — [2..9] slot indices, [10..12] skin RGB, [13..15] spare.
+    // Absolute-indexed per-member custom data. InFirstFloat is the material PerInstanceCustomData DataIndex
+    // (game floats: 2..15; [0]/[1] carry the animation frame bits and are rejected).
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Set Crowd Member Custom Data Floats")
     static void
@@ -211,17 +209,15 @@ public:
     static void
     Clear_CrowdMemberCosmetics(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
 
-    // Default CustomPrimitiveData floats for every tile component (existing and future). CPD-parameterized
-    // materials (e.g. CharacterMaster skin color at CPD 0/1/2) read zeros on batched tiles otherwise — the
-    // whole crowd renders with unset (grey) parameters. One shared value per crowd.
+    // Default CustomPrimitiveData floats for every tile component (existing and future) — one shared value
+    // set per crowd. CPD-parameterized materials read zeros on batched tiles without it.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Set Crowd Default Custom Primitive Data")
     static void
     Set_CrowdDefaultCustomPrimitiveData(ACk_Iskm_BatchedCrowd_Actor* InCrowd, const TArray<float>& InFloats);
 
     // One material applied to EVERY slot of every tile (existing and future) — the far-LOD whole-body look.
-    // Mesh default slots authored for per-SKMC customization render unset/grey when batched; one cheap
-    // override (e.g. a skin-toned MID) gives coherent distant silhouettes. Null restores mesh materials.
+    // Null restores mesh materials.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
         DisplayName = "[Ck][IskmBatched] Set Crowd Override Material")
     static void

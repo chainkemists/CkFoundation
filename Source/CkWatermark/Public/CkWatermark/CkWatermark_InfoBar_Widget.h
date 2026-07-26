@@ -4,43 +4,23 @@
 #include <Widgets/SCompoundWidget.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// One key : value entry in an SCkWatermarkInfoBar.
-// Both Key and Value are TAttributes so they can be live (evaluated each Slate
-// paint pass). Visibility drives both the entry and its leading separator — set
-// to Collapsed to suppress an entry without leaving an orphaned delimiter.
 
 struct FCkWatermarkInfoBarEntry
 {
-    // Label shown before the key-value separator (e.g. "CPU").
-    // TAttribute so the key can change dynamically (e.g. custom field slot).
-    // Implicit from FText — existing callers need no change.
     TAttribute<FText> Key;
 
-    // Evaluated each paint pass — return the display string for this entry.
     TAttribute<FText> Value;
 
     // Drives both this entry and the separator that precedes it.
     TAttribute<EVisibility> Visibility = EVisibility::SelfHitTestInvisible;
 
-    // Optional per-entry key color. When unset the bar's DefaultKeyColor is used.
     TOptional<TAttribute<FSlateColor>> KeyColorOverride;
 
-    // Optional per-entry value color. When unset the bar's DefaultValueColor is used.
     TOptional<TAttribute<FSlateColor>> ValueColorOverride;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Horizontal compact info bar.
-//
-// Renders entries as:   Key: Value  |  Key: Value  |  Key: Value
-//
-// Visual contract:
-//   - KeyColor     — the label before the separator (e.g. gray)
-//   - ValueColor   — the value text after the separator (e.g. white)
-//   - SeparatorColor — both the inter-item delimiter and the key:value delimiter
-//
-// Separators between items share the visibility of their following entry so that
-// collapsing an entry never leaves a trailing or orphaned pipe.
+// Renders:   Key: Value  |  Key: Value.  SeparatorColor covers the inter-item AND key:value delimiters.
 
 class CKWATERMARK_API SCkWatermarkInfoBar : public SCompoundWidget
 {
@@ -54,31 +34,22 @@ public:
         , _ShadowOffset(FVector2D::ZeroVector)
         , _ShadowColorAndOpacity(FLinearColor::Black)
     {}
-        // Ordered list of entries to render.
         SLATE_ARGUMENT(TArray<FCkWatermarkInfoBarEntry>, Entries)
 
-        // Font applied to all text in the bar. Evaluated each paint pass — can be a lambda.
         SLATE_ATTRIBUTE(FSlateFontInfo, Font)
 
-        // String placed between consecutive entries (default "  |  ").
         SLATE_ARGUMENT(FText, Separator)
 
-        // String placed between a key and its value (default ": ").
         SLATE_ARGUMENT(FText, KeyValueSeparator)
 
-        // Color of each entry's key text. Evaluated each paint pass — can be a lambda.
         SLATE_ATTRIBUTE(FSlateColor, KeyColor)
 
-        // Color of each entry's value text. Evaluated each paint pass — can be a lambda.
         SLATE_ATTRIBUTE(FSlateColor, ValueColor)
 
-        // Color of both inter-item and key:value separators. Evaluated each paint pass — can be a lambda.
         SLATE_ATTRIBUTE(FSlateColor, SeparatorColor)
 
-        // Drop-shadow pixel offset applied to all text. Evaluated each paint pass — can be a lambda.
         SLATE_ATTRIBUTE(FVector2D,    ShadowOffset)
 
-        // Color and opacity of the drop shadow. Evaluated each paint pass — can be a lambda.
         SLATE_ATTRIBUTE(FLinearColor, ShadowColorAndOpacity)
     SLATE_END_ARGS()
 

@@ -15,10 +15,6 @@ class UScriptStruct;
 // --------------------------------------------------------------------------------------------------------------------
 // AngelScript mixin over FCk_ScriptProcessorQuery, letting a script processor's Configure read as:
 //   Query.ReadWrite(FFragment_X);   Query.Require(FTag_Y);   Query.Exclude(FTag_Z);   Query.NoEntities();
-// Mirrors the Meta=(ScriptMixin="FCk_Handle") pattern on UCk_Utils_DynamicFragment_UE. Mutators reject a
-// duplicate fragment type across all slots (keep-first + ensure) and an invalid type; NoEntities requires an
-// empty slot list. The struct itself lives in CkEcs (see CkProcessor_ScriptQuery_Data.h) so the base-class
-// Configure event can reference it without CkEcs depending on CkDynamic.
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_ScriptProcessorQuery"))
 class CKDYNAMIC_API UCk_ScriptProcessorQuery_Mixin_UE : public UBlueprintFunctionLibrary
 {

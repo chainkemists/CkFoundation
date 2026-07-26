@@ -20,7 +20,6 @@ namespace ck::snapshot
         {
             const auto Entity = InHandle.Get_Entity();
 
-            // Unset / tombstone handles are not references — skip them.
             if (Entity.Get_IsTombstone())
             { return; }
 
@@ -38,16 +37,8 @@ namespace ck::snapshot
                 static_cast<uint32>(entt::to_integral(Id))));
         }
 
-        // FFragment_LifetimeDependents is a LAZILY-PRUNED weak-reference list, UNLIKE the hard LifetimeOwner /
-        // ContextOwner refs: entity destruction does NOT remove the entity from its owner's dependents
-        // (CkEntityLifetime_Utils.cpp:153-155 — a deliberate perf choice; every consumer filters via ck::IsValid,
-        // e.g. Get_LifetimeDependents at :151-160). So a STALE (destroyed) dependent — e.g. the transient
-        // spawn-request child every EntityScript creates and immediately destroys (CkEntityScript_Utils.cpp:244 +
-        // CkEntityScript_Processor.cpp:54) — is BY DESIGN, not a dangling reference; a strict resolve would false-
-        // positive on every EntityScript world, saved or not. The genuine dependents-side invariant is BACK-POINTER
-        // CONSISTENCY: a still-LIVE dependent's FFragment_LifetimeOwner must name this owner (TransferLifetimeOwner
-        // keeps the two symmetric — CkEntityLifetime_Utils.cpp:570,583). A mismatch is the cross-entity aliasing /
-        // registry-rehome corruption this sweep exists to catch.
+        // Asserts BACK-POINTER CONSISTENCY, not resolvability: FFragment_LifetimeDependents is a lazily-pruned
+        // WEAK-ref list, so a stale entry is by design (rationale in CkSnapshot/CLAUDE.md).
         auto
             DoCheck_Dependent(
                 ck::SnapshotRegistryType& InRegistry,
@@ -63,7 +54,6 @@ namespace ck::snapshot
             if (DependentId == entt::null)
             { return; }
 
-            // Stale weak reference (the dependent was destroyed) — lazily pruned by design, not a dangler.
             if (NOT InRegistry.valid(DependentId))
             { return; }
 

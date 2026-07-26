@@ -113,7 +113,6 @@ auto
 
 namespace ck_stackable_details
 {
-    // Applies the inventory's StackingPolicy to a definition-level max (MAX_int32 = uncapped).
     static auto
     ApplyStackingPolicy(
         const FCk_Handle_Inventory& InInventory,
@@ -236,9 +235,8 @@ auto
     if (Get_IsStackFull(InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_TargetStackFull; }
 
-    // The inventory's StackingPolicy may cap stacks tighter than the item definition does.
-    // Only checkable with a valid inventory (callers that pass an invalid inventory to skip the
-    // containment check — e.g. Get_StackRoomFor — apply the clamp themselves).
+    // Only checkable with a valid inventory: callers that pass an invalid one to skip the
+    // containment check (e.g. Get_StackRoomFor) apply the StackingPolicy clamp themselves.
     if (ck::IsValid(InInventory)
         && Get_StackCount(InTargetItem) >= Get_EffectiveMaxStackSize(InInventory, InTargetItem))
     { return ECk_Inventory_OperationResult_Stack::Failed_TargetStackFull; }
@@ -385,19 +383,12 @@ auto
         if (UCk_Utils_Item_UE::Get_Definition(ExistingItem) != InDefinition)
         { continue; }
 
-        // Mirror the trait-level stack-compatibility gate that Get_CanStackItems applies on the
-        // explicit StackItems path. Same-definition items can still be unstackable when a trait
-        // distinguishes runtime state (e.g. the Tags trait — VHS rewound vs NotRewound). Without
-        // this, AddByDefinition / Transfer pre-fill silently merges items that a direct StackItems
-        // request would reject. InSourceItem is invalid for definition-driven fills (AddByDefinition),
-        // which have no runtime source to compare — gate only when it is valid.
+        // Same-definition items can still be unstackable when a trait distinguishes runtime state.
+        // InSourceItem is invalid for definition-driven fills — gate only when it is valid.
         if (ck::IsValid(InSourceItem) && NOT InDefinition->CanStackWith(InSourceItem, ExistingItem))
         { continue; }
 
-        // The inventory's custom stack hooks must also gate this fill path — otherwise a
-        // per-inventory stacking restriction is enforced on direct StackItems requests but
-        // silently bypassed by AddByDefinition / Transfer pre-fill. InSourceItem may be invalid
-        // (definition-driven fills); validators must tolerate that.
+        // InSourceItem may be invalid here; custom validators must tolerate that.
         if (NOT Get_PassesCustomStackValidation(InInventory, InSourceItem, ExistingItem))
         { continue; }
 

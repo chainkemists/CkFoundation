@@ -80,7 +80,6 @@ namespace ck
             const FFragment_Transform& InCurrentTransform) const -> void;
 
     private:
-        // Refreshed every frame
         TWeakObjectPtr<UWorld> _World;
     };
 
@@ -120,7 +119,6 @@ namespace ck
             const FFragment_Transform& InTransform) -> void;
 
     private:
-        // Refreshed every frame
         TWeakObjectPtr<UWorld> _World;
         TSet<UInstancedStaticMeshComponent*> _Isms;
     };
@@ -146,10 +144,8 @@ namespace ck
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
         using TProcessor::TProcessor;
         using MarkedDirtyBy = FTag_Transform_Updated;
-        // Shares MarkedDirtyBy (FTag_Transform_Updated) with the real transform writer
-        // FProcessor_IsmProxy_TransformInstance. This read-only debug check must run AFTER the
-        // instance transforms are actually pushed — declare it to resolve the scheduler's
-        // dirty-marker-conflict advisory.
+        // Shares MarkedDirtyBy with the real transform writer, so this read-only check must be
+        // ordered after it — both to read pushed transforms and to settle the scheduler advisory.
         using RunAfter = TDepList<FProcessor_IsmProxy_TransformInstance>;
 
     public:
@@ -172,7 +168,6 @@ namespace ck
             const FFragment_Transform& InTransform) -> void;
 
     private:
-        // Refreshed every frame
         TWeakObjectPtr<UWorld> _World;
     };
 
@@ -205,7 +200,6 @@ namespace ck
             FFragment_IsmProxy_Current& InCurrent) const -> void;
 
     private:
-        // Refreshed every frame
         TWeakObjectPtr<UWorld> _World;
     };
 
@@ -271,7 +265,6 @@ namespace ck
             const FCk_Request_IsmProxy_EnableDisable& InRequest) const -> void;
 
     private:
-        // Refreshed every frame
         TWeakObjectPtr<UWorld> _World;
     };
 }

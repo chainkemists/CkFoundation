@@ -13,25 +13,13 @@ class USceneComponent;
 class UCkUsf_OutlinePreset;
 
 // --------------------------------------------------------------------------------------------------------------------
-// CkIskmRenderer Plan-2 — spatial tile manager for a batched GPU-skinned crowd.
+// CkIskmRenderer Plan-2 — spatial tile manager for a batched GPU-skinned crowd. Architecture, tuning and the
+// distance-LOD flip contract: CkIskmRenderer/CLAUDE.md § Plan-2 production guide.
 //
-// Owns a crowd, spatially partitioned into tiles. Each occupied tile gets its own
-// UCk_Iskm_BatchedClusterComponent (one FPrimitiveSceneProxy) placed at the tile centre with FIXED conservative
-// bounds (tile extent + mesh pad), so frustum + per-instance occlusion culling operate per-tile and member
-// movement never recomputes bounds.
+// SINGLE SOURCE OF TRUTH: this manager owns all member state (transform, animation time/frames, visibility,
+// custom data) and ticks it itself; tile components are render-facing views with self-tick disabled.
 //
-// SINGLE SOURCE OF TRUTH: the manager owns all member state (transform, animation time/frames, visibility,
-// custom data) and ticks it itself — tile components are render-facing views with self-tick disabled. Tile
-// rebuilds therefore always carry live animation time (no snap-back), and members can MOVE:
-// Set_MemberTransform updates in-tile transforms via the light per-frame push path and migrates members
-// across tile borders (two Set_Instances rebuilds).
-//
-// Distance-LOD flip: Set_MemberVisible hides a member from its batched tile so a per-SKMC proxy
-// (Plan-1) can stand in for it (ragdoll/montage), then shows it again to return to batched. Hidden members
-// keep advancing time so they rejoin in phase.
-//
-// Usage: Initialize() -> AddInstance() x N -> Finalize(). Then drive members via Set_Member* as the game
-// (e.g. NPC/crowd systems) moves them.
+// Usage: Initialize() -> AddInstance() x N -> Finalize(), then drive members via Set_Member*.
 UCLASS(NotBlueprintable)
 class CKISKMRENDERER_API ACk_Iskm_BatchedCrowd_Actor : public AActor
 {
@@ -60,8 +48,7 @@ public:
     int32      Get_MemberSequenceIndex(int32 InIndex) const;
     bool       Get_MemberVisible(int32 InIndex) const;
 
-    // Move a member. In-tile moves ride the light per-frame push (no proxy recreate); crossing a tile border
-    // migrates the member (rebuilds both tiles). Velocity history is handled (no TAA smear on migration).
+    // In-tile moves ride the light per-frame push; crossing a tile border migrates the member (rebuilds both).
     void       Set_MemberTransform(int32 InIndex, const FTransform& InWorldTransform);
 
     // Switch a member's sequence/rate (e.g. idle -> walk when its NPC starts moving).
@@ -70,34 +57,27 @@ public:
     // Per-member material custom data, legacy 2-float form — writes UserData[0]/[1] (shader floats [2]/[3]).
     void       Set_MemberCustomData(int32 InIndex, float InA, float InB);
 
-    // Absolute-indexed writes into the per-instance custom-data floats. InFirstFloat is in the SAME index
-    // space as the material PerInstanceCustomData node's DataIndex (game data: 2..15; [0]/[1] are the
+    // InFirstFloat is the material PerInstanceCustomData DataIndex (game data: 2..15; [0]/[1] are the
     // animation frame bits and are rejected — writing them would corrupt pose lookup).
     void       Set_MemberCustomData(int32 InIndex, int32 InFirstFloat, const TArray<float>& InValues);
     float      Get_MemberCustomData(int32 InIndex, int32 InFloatIndex) const;
 
-    // World-space transform of a baked socket for one member at the member's CURRENT animation
-    // frame (far cosmetics — the crowd owns the clock). False when the collection bakes no
-    // such socket or the index is invalid; callers leave their cosmetics hidden/parked.
+    // World-space transform of a baked socket at the member's CURRENT animation frame (far cosmetics — the
+    // crowd owns the clock). False when the collection bakes no such socket or the index is invalid.
     bool       TryGet_MemberSocketTransform(int32 InIndex, FName InSocket, FTransform& OutWorld) const;
 
-    // Hide/show a member in its batched tile (rebuilds that one tile). Hidden members leave a gap for a per-SKMC stand-in.
+    // Hide/show a member in its batched tile (rebuilds that one tile), leaving a gap for a per-SKMC stand-in.
     void       Set_MemberVisible(int32 InIndex, bool InVisible);
 
-    // Default CustomPrimitiveData floats applied to EVERY tile component (existing and future). Materials whose
-    // parameters ride CPD (e.g. CharacterMaster skin color at CPD 0/1/2) read zeros on batched tiles otherwise —
-    // the whole crowd renders with unset (grey/black) parameters. One shared value set per crowd; per-member
-    // variation needs the per-instance floats ([2]/[3] via Set_MemberCustomData) and a material that reads them.
+    // Default CustomPrimitiveData floats applied to EVERY tile component, existing and future. One shared
+    // value set per crowd; per-member variation needs the per-instance floats via Set_MemberCustomData.
     void       Set_DefaultTileCustomPrimitiveData(const TArray<float>& InFloats);
 
-    // One material applied to EVERY slot of EVERY tile (existing and future) — the far-LOD whole-body look.
-    // Mesh default slots are usually authored for per-SKMC customization and render unset/grey when batched;
-    // one cheap override (e.g. a skin-toned MID) gives coherent distant silhouettes. Null restores mesh materials.
+    // One material applied to EVERY slot of EVERY tile, existing and future. Null restores mesh materials.
     void       Set_OverrideMaterial(UMaterialInterface* InMaterial);
 
-    // Per-SLOT override materials: element index = mesh material slot. The whole-body
-    // Set_OverrideMaterial above WINS over these (debug); null/absent entries fall back to mesh defaults.
-    // Applied to existing and future tiles.
+    // Per-SLOT override materials: element index = mesh material slot. Set_OverrideMaterial above WINS over
+    // these; null/absent entries fall back to mesh defaults. Applied to existing and future tiles.
     void       Set_SlotOverrideMaterials(const TArray<UMaterialInterface*>& InMaterials);
     UMaterialInterface* Get_SlotOverrideMaterial(int32 InSlotIndex) const;
 
@@ -105,11 +85,8 @@ public:
     int32      Get_RenderedInstanceCount() const;
 
     // ---- Entity outline (member-indexed — batched members are not entities; see CkUsf/DESIGN_EntityOutlines.md) ----
-    //
-    // Mechanism: one custom-depth-only "highlight cluster" per (crowd, preset) at the world origin, holding
-    // copies of the outlined members' instances; AdvanceAnimation pushes their live transforms/anim frames
-    // so the outline tracks the GPU-skinned pose. Hidden members (Plan-1 flip stand-ins) are excluded —
-    // outline the stand-in proxy via the entity API instead.
+    // One custom-depth-only "highlight cluster" per (crowd, preset) at the world origin, pushed every
+    // AdvanceAnimation. Hidden members (Plan-1 flip stand-ins) are excluded — outline those via the entity API.
 
     // Outline a member with InPreset (replaces any previous preset). Null preset = Clear_MemberOutline.
     void       Set_MemberOutline(int32 InIndex, UCkUsf_OutlinePreset* InPreset);
@@ -121,15 +98,13 @@ public:
 
     //~ AActor
     virtual void EndPlay(const EEndPlayReason::Type InEndPlayReason) override;
-    // Editor-world actors never BeginPlay/EndPlay — controller-entity cleanup for the per-owner
-    // editor preview crowds happens here instead (idempotent with EndPlay for runtime destroys).
+    // Editor-world actors never BeginPlay/EndPlay — controller-entity cleanup happens here for them.
     virtual void Destroyed() override;
 
 #if WITH_EDITOR
 public:
-    // Editor-world per-owner preview crowds redirect viewport clicks on their tile instances to
-    // the placed actor whose preview they render (see ck::FFragment_EditorSelectionOwner) —
-    // clicking the preview mesh then selects/moves/deletes that actor like clicking its billboard.
+    // Editor preview crowds redirect viewport clicks on their tile instances to the placed actor whose
+    // preview they render (ck::FFragment_EditorSelectionOwner), so the mesh selects like its billboard.
     auto
     IsSelectionChild() const -> bool override;
 
@@ -148,18 +123,16 @@ public:
 
     // ---- ECS-clock advance (the actor no longer self-ticks) ----
 
-    // Advance every member's animation time/frame and push dirty tiles, then push the outline groups
-    // (AdvanceAnimation replaces AActor::Tick — see the constructor's bCanEverTick = false). Driven once
-    // per frame by FProcessor_IskmCrowd_Advance (FGroup_Transform_Finalize) so member render, far-cosmetic
-    // placement, and the entity-outline highlight clusters all resolve on the SAME ECS clock.
+    // Advance every member's animation time/frame, push dirty tiles, then push the outline groups. Replaces
+    // AActor::Tick; driven once per frame by FProcessor_IskmCrowd_Advance so member render, far-cosmetic
+    // placement and the highlight clusters all resolve on the SAME ECS clock.
     void       AdvanceAnimation(float InDeltaTime);
 
-    // Place every registered member cosmetic at its baked socket for the member's CURRENT frame, via an
-    // immediate transform write — lockstep with the member PushTile that AdvanceAnimation just did.
+    // Place every registered member cosmetic at its baked socket for the member's CURRENT frame — lockstep
+    // with the PushTile that AdvanceAnimation just did.
     void       DriveCosmetics();
 
-    // A cosmetic ISM entity rides InIndex's baked socket while its member is far. Replace-if-same-entity
-    // (idempotent re-register). InRelOffset is the cosmetic's offset from the socket transform.
+    // A cosmetic ISM entity rides InIndex's baked socket while its member is far. Replace-if-same-entity.
     void       Register_MemberCosmetic(int32 InIndex, const FCk_Handle_Transform& InCosmetic, FName InSocket, const FTransform& InRelOffset);
 
     // Drop all cosmetics registered to InIndex (promote / hide / slot release). Idempotent.
@@ -174,7 +147,6 @@ private:
         bool       Visible = true;
     };
 
-    // a cosmetic ISM entity following a member's baked socket while the member is far.
     struct FMemberCosmetic
     {
         FCk_Handle_Transform Cosmetic;
@@ -182,8 +154,7 @@ private:
         FTransform           RelOffset = FTransform::Identity;
     };
 
-    // Destroy this crowd's controller entity (see _ControllerEntity). Idempotent — called from
-    // both EndPlay (runtime) and Destroyed (editor).
+    // Idempotent — called from both EndPlay (runtime) and Destroyed (editor).
     void      DoDestroy_ControllerEntity();
 
     FIntPoint TileCoordOf(const FVector& InWorldLocation) const;
@@ -233,10 +204,8 @@ private:
         FBox PaddedBounds = FBox(ForceInit);      // world box the fixed bounds cover; exceed → rebuild
     };
 
-    // Full rebuild of a group (Set_Instances + recomputed fixed bounds — proxy recreate). Membership /
-    // visibility changes and bounds-exceeding moves go through here. Takes the WEAK map key (a live
-    // raw preset converts implicitly) so a dead preset's group still resolves and rebuilds — a
-    // null-constructed weak would never match the stale key.
+    // Full rebuild of a group (Set_Instances + recomputed fixed bounds — proxy recreate). Takes the WEAK map
+    // key so a dead preset's group still resolves; a null-constructed weak would never match the stale key.
     void RebuildOutlineGroup(const TWeakObjectPtr<UCkUsf_OutlinePreset>& InPreset);
     // Light per-frame push of live member data into the group's cluster (no bounds work).
     void PushOutlineGroup(FOutlineGroup& InGroup);
@@ -244,11 +213,9 @@ private:
     TMap<TWeakObjectPtr<UCkUsf_OutlinePreset>, FOutlineGroup> _OutlineGroups;
     TMap<int32, TWeakObjectPtr<UCkUsf_OutlinePreset>> _MemberOutlines;
 
-    // member index -> cosmetics riding its socket while far. Non-UPROPERTY (ECS handles are
-    // value handles into the registry, not GC-tracked — matches _Members).
+    // Non-UPROPERTY: ECS handles are value handles into the registry, not GC-tracked (matches _Members).
     TMap<int32, TArray<FMemberCosmetic>> _MemberCosmetics;
 
-    // This crowd's ECS presence — FProcessor_IskmCrowd_Advance iterates it to drive AdvanceAnimation +
-    // DriveCosmetics on the ECS clock. Created in Initialize(); cleared with the world.
+    // FProcessor_IskmCrowd_Advance iterates this to drive AdvanceAnimation + DriveCosmetics.
     FCk_Handle _ControllerEntity;
 };

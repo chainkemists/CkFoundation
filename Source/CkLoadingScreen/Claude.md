@@ -68,6 +68,13 @@ line also suppresses (non-Shipping, Lyra parity).
    `ensureMsgf`.
 5. CVar names moved to the `ck.LoadingScreen.*` namespace.
 
+## Known issues (inherited from Lyra)
+
+- **The additional-hold window re-enables world rendering and never re-disables it.**
+  `DoShouldShowLoadingScreen` clears `bDisableWorldRendering` during the `HoldAdditionalSecs`
+  window so textures actually stream in; if `DoCheckForAnyNeedToShowLoadingScreen` bounces back
+  true inside that window, nothing turns it off again. Upstream Lyra carries the same defect.
+
 ## Anti-patterns
 
 - Don't implement `ICk_LoadingProcess` from Blueprint/AngelScript — the interface is C++

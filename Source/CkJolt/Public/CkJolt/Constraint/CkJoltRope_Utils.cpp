@@ -79,7 +79,6 @@ auto
             TEXT("Create_Rope: segment [{}] JoltBody Add FAILED — returning the partial rope"), Index)
         { return FCk_JoltRope_Result{Segments}.Set_Links(Links); }
 
-        // Link this segment back: to the previous segment, or (Index 0) to the anchor body / the world.
         auto PreviousBody = AnchorBody;
         if (Index > 0)
         { PreviousBody = static_cast<FCk_Handle>(Segments.Last()); }
@@ -90,8 +89,6 @@ auto
         {
             case ECk_JoltRope_LinkMode::Rigid:
             {
-                // Point constraint at the boundary between the two segments (for the anchor link, the
-                // anchor itself) — inextensible, rotation free: a chain.
                 const auto Boundary = Anchor + Direction * (SegmentLength * static_cast<float>(Index));
 
                 ConstraintParams = FCk_Fragment_JoltConstraint_ParamsData{ECk_JoltConstraint_Type::Point}
@@ -102,8 +99,6 @@ auto
             }
             case ECk_JoltRope_LinkMode::Springy:
             {
-                // Auto-distance spring between this center and the previous center (anchor link: the
-                // anchor point) — the rest length is the creation-time separation.
                 const auto PreviousPoint = Index == 0
                     ? Anchor
                     : Anchor + Direction * (SegmentLength * (static_cast<float>(Index) - 0.5f));

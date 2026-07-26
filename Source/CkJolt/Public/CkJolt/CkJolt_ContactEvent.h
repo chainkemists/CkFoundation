@@ -4,19 +4,15 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/// Contact event data captured during Jolt callbacks for deferred processing on the game thread.
-/// This is necessary because Jolt's JobSystemThreadPool fires contact callbacks from worker threads,
-/// and ECS mutations are not thread-safe. Entity resolution is deliberately NOT done here — the raw
-/// body UserData (a versioned entity id baked in at body registration) is carried verbatim, and
-/// consumers (ck::FCk_Jolt_ContactEventRouter registrants, routed by FProcessor_JoltWorld_DrainEvents)
-/// resolve it against their own registry.
+/// Contact data captured on a Jolt worker thread and queued for the game thread, because ECS mutation is
+/// not thread-safe. Entity resolution is deliberately NOT done here — the raw body UserData is carried
+/// verbatim and consumers (ck::FCk_Jolt_ContactEventRouter registrants) resolve it themselves.
 struct CKJOLT_API FCk_Jolt_ContactEvent
 {
     enum class EType : uint8 { Added, Persisted, Removed };
 
     EType Type;
 
-    // Entity identification (captured from body UserData during callback)
     uint64 Body1UserData;
     uint64 Body2UserData;
 
@@ -31,8 +27,7 @@ struct CKJOLT_API FCk_Jolt_ContactEvent
     float PenetrationDepth = 0.0f;
     float RelativeNormalVelocity = 0.0f;
 
-    // Body ID index+sequence — populated for ALL event types (consumers disambiguate multi-body entities
-    // by comparing against their own body id; also used for BodyIdToUserData map management on Added/Removed)
+    // Populated for ALL event types — consumers disambiguate multi-body entities against their own body id.
     uint32 Body1IndexAndSeq;
     uint32 Body2IndexAndSeq;
 };

@@ -28,22 +28,16 @@ public:
     CK_GENERATED_BODY(UCkInventory_GetItemTrait_K2Node);
 
 public:
-    // UObject interface
     auto PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) -> void override;
     auto ShouldShowNodeProperties() const -> bool override;
-    // End of UObject interface
 
-    // UEdGraphNode implementation
     auto GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText override;
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
-    // End of UEdGraphNode implementation
 
-    // K2Node implementation
     auto AllocateDefaultPins() -> void override;
     auto GetMenuCategory() const -> FText override;
     auto IsNodePure() const -> bool override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
-    // End of K2Node implementation
 
 protected:
     auto DoAllocate_DefaultPins() -> void override;

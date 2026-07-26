@@ -69,7 +69,6 @@ auto
         return;
     }
 
-    // Re-applying replaces any previous preset on this component cleanly (releases the old stencil refcount).
     if (_AppliedComponents.Contains(InComponent))
     { Remove_Outline_From_Component(InComponent); }
 
@@ -136,10 +135,9 @@ auto
     if (ck::Is_NOT_Valid(InPreset, ck::IsValid_Policy_NullptrOnly{}))
     { return 0; }
 
-    // External renderers (shadow ISM, ISKM SKMCs, batched highlight clusters) allocate directly without
-    // ever calling Apply_Outline_To_Component — bootstrap the view effect here too. Failure is non-fatal:
-    // allocation still proceeds (headless/tests); DoEnsure_ViewEffect re-writes all active rows on its
-    // first success so early allocations aren't left with zeroed LUT rows.
+    // External renderers (shadow ISM, ISKM SKMCs, batched clusters) allocate directly without ever calling
+    // Apply_Outline_To_Component. Failure here is non-fatal (headless/tests): DoEnsure_ViewEffect re-writes
+    // every active row on its first success, so early allocations are not left with zeroed LUT rows.
     DoEnsure_ViewEffect();
 
     DoReap_DeadComponents();
@@ -150,14 +148,13 @@ auto
         return Found->Value;
     }
 
-    // First use — find a free stencil value in [Min, Max].
-    TSet<uint8> Used;
+    TSet<uint8> UsedStencilValues;
     for (const auto& Active : _ActivePresets)
-    { Used.Add(Active.Value.Value); }
+    { UsedStencilValues.Add(Active.Value.Value); }
 
     for (auto Value = static_cast<int32>(_StencilMin); Value <= static_cast<int32>(_StencilMax); ++Value)
     {
-        if (Used.Contains(static_cast<uint8>(Value)) == false)
+        if (UsedStencilValues.Contains(static_cast<uint8>(Value)) == false)
         {
             const auto Chosen = static_cast<uint8>(Value);
             _ActivePresets.Add(InPreset, FStencilSlot{ Chosen, 1 });
@@ -192,8 +189,8 @@ auto
 
     if (_LutData.IsValidIndex(Slot))
     {
-        _LutData[0 * kLutWidth + Slot] = FFloat16Color(FLinearColor::Black);
-        _LutData[1 * kLutWidth + Slot] = FFloat16Color(FLinearColor(0.0f, 0.0f, 0.0f, 0.0f));
+        _LutData[kLutRow_Outline * kLutWidth + Slot] = FFloat16Color(FLinearColor::Black);
+        _LutData[kLutRow_Fill * kLutWidth + Slot] = FFloat16Color(FLinearColor(0.0f, 0.0f, 0.0f, 0.0f));
         DoUpload_Lut();
     }
 }
@@ -275,8 +272,8 @@ auto
         const UCkUsf_OutlinePreset* InPreset)
     -> void
 {
-    if (_LutData.IsValidIndex(0 * kLutWidth + InSlot) == false ||
-        _LutData.IsValidIndex(1 * kLutWidth + InSlot) == false ||
+    if (_LutData.IsValidIndex(kLutRow_Outline * kLutWidth + InSlot) == false ||
+        _LutData.IsValidIndex(kLutRow_Fill * kLutWidth + InSlot) == false ||
         ck::Is_NOT_Valid(InPreset, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
@@ -290,8 +287,8 @@ auto
     auto FillColor = InPreset->_FillColor;
     FillColor.A = InPreset->_FillEnabled ? InPreset->_FillOpacity : 0.0f;
 
-    _LutData[0 * kLutWidth + InSlot] = FFloat16Color(OutlineColor);
-    _LutData[1 * kLutWidth + InSlot] = FFloat16Color(FillColor);
+    _LutData[kLutRow_Outline * kLutWidth + InSlot] = FFloat16Color(OutlineColor);
+    _LutData[kLutRow_Fill * kLutWidth + InSlot] = FFloat16Color(FillColor);
 }
 
 auto

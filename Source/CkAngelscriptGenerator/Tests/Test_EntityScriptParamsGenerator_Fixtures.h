@@ -1,9 +1,3 @@
-// Test fixtures for `CkAngelscriptGenerator.UnitTests.ParamsGenerator.*`. The USTRUCT below
-// mirrors the failure shape that originally triggered the OpenSign codegen bug: a struct with
-// a mix of POD fields (overridable on a subclass CDO) and a UObject* field defaulting to nullptr.
-// The companion UCLASS exists so we can read a properly-reflected CDO + FStructProperty through
-// the normal reflection path.
-
 #pragma once
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
@@ -23,8 +17,8 @@ struct FCkTest_ParamsGenerator_MixedFields
     UPROPERTY() FVector     Offset = FVector::ZeroVector;
     UPROPERTY() FRotator    Rotation = FRotator::ZeroRotator;
 
-    // The trap field — exercising the bug class. Defaults to nullptr in the struct's own
-    // initializer; the generator emits this safely as `= nullptr` in field-decl position.
+    // The trap field: a nullptr UObject default is safe in field-decl position, not in a
+    // positional-ctor argument (AS rejects the bare nullptr as `<null handle>`).
     UPROPERTY() TObjectPtr<USoundBase> Sound = nullptr;
 };
 
@@ -51,8 +45,6 @@ public:
     UPROPERTY() TArray<TWeakObjectPtr<USoundBase>> WeakSounds;
 };
 
-// Concrete native entity-script subclass — the "included" shape for the class-filter test
-// (the UCk_EntityScript_UE base itself is UCLASS(Abstract) and therefore excluded).
 UCLASS(NotBlueprintable, BlueprintType)
 class UCkTest_ParamsGenerator_NativeEntityScript : public UCk_EntityScript_UE
 {

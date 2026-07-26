@@ -8,42 +8,10 @@
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// PERF STATS — templated header: these create per-TU internal-linkage statics (acceptable; few TUs).
-//
-// These two cycle stats are the body-level scopes for the shared template ForEachEntity bodies below. A single
-// declaration per template covers every derived/aliased processor that instantiates it:
-//   - STAT_AStar_Execute  → TProcessor_AStar_Execute::ForEachEntity  (FProcessor_Goap_Planner_Execute,
-//                                                                       FProcessor_AStarTest_Execute)
-//   - STAT_AStar_EndPlay  → TProcessor_AStar_EndPlay::ForEachEntity  (FProcessor_Goap_Planner_EndPlay,
-//                                                                       FProcessor_AStarTest_EndPlay)
-// Both report under STATGROUP_CkAStar (the template's owning module). The GOAP aliases therefore surface under
-// CkAStar rather than CkGoap — intentional, since the executing code lives in CkAStar.
-// --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("AStar::Execute"), STAT_AStar_Execute, STATGROUP_CkAStar);
 DECLARE_CYCLE_STAT(TEXT("AStar::EndPlay"), STAT_AStar_EndPlay, STATGROUP_CkAStar);
 
-// --------------------------------------------------------------------------------------------------------------------
-//
-// BASE TEMPLATE PROCESSORS — Consumers inherit from these, add Group/RunAfter, and register.
-//
-// Usage (e.g. in CkGoap):
-//
-//     // Define concrete fragment types
-//     using FFragment_Goap_SearchState = ck::TFragment_AStar_SearchState<FGoapNodeId, FGoapGraph>;
-//     using FFragment_Goap_Result = ck::TFragment_AStar_Result<FGoapNodeId>;
-//
-//     // Inherit from base processor, add scheduling
-//     struct FProcessor_Goap_Execute
-//         : ck::TProcessor_AStar_Execute<FProcessor_Goap_Execute,
-//               FCk_Handle_Goap, FFragment_Goap_SearchState, FFragment_Goap_Result>
-//     {
-//         using TProcessor_AStar_Execute::TProcessor_AStar_Execute;
-//         using Group = FGroup_Gameplay_AI;
-//         using RunAfter = TDepList<FProcessor_Goap_HandleRequests>;
-//     };
-//     CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Execute);
-//
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -92,7 +60,6 @@ public:
 
 		const auto Status = InSearchState._State.ContinueSearch(SearchParams);
 
-		// Write result
 		const auto IterationsThisFrame = InSearchState._State.GetTotalIterations() - PreviousIterations;
 
 		InResult._TotalIterations = InSearchState._State.GetTotalIterations();
@@ -129,7 +96,7 @@ public:
 			break;
 		}
 
-		// Update debug fragment (deferred because it may not exist on all entities)
+		// Deferred — the debug fragment is optional and outside this parallel processor's access policy.
 		const auto BudgetUsage = (SearchParams.BudgetMicroseconds > 0)
 			? static_cast<float>(InSearchState._State.GetTotalTimeMicroseconds())
 				/ static_cast<float>(SearchParams.BudgetMicroseconds) * 100.0f

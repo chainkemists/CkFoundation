@@ -74,10 +74,9 @@ auto
     if (World->WorldType != EWorldType::Editor && World->WorldType != EWorldType::EditorPreview)
     { return; }
 
-    // Editor worlds one-shot-tick a SKMC at registration then freeze it behind the editor-only
-    // bUpdateAnimationInEditor flag (engine SkeletalMeshComponent RefreshBoneTransforms gate) —
-    // VisibilityBasedAnimTickOption alone does nothing there. Without this, a preview renders a
-    // frozen pose. Runtime worlds ignore the flag entirely.
+    // Editor worlds one-shot-tick a SKMC at registration then freeze it behind bUpdateAnimationInEditor
+    // (the RefreshBoneTransforms gate); VisibilityBasedAnimTickOption alone does nothing there.
+    // Runtime worlds ignore the flag entirely.
     InComp->SetUpdateAnimationInEditor(true);
 }
 #endif
@@ -86,9 +85,8 @@ auto
     ACk_IskmRenderer_Actor_UE::
     Acquire_BaseSKMC() -> USkeletalMeshComponent*
 {
-    // A pooled component destroyed externally (editor level cleanup, owner teardown ordering) is
-    // nulled in this UPROPERTY array after the next GC — skip stale entries and fall through to a
-    // fresh allocation when no valid pooled entry remains.
+    // A pooled component destroyed externally (editor level cleanup, owner teardown ordering) is nulled
+    // in this UPROPERTY array after the next GC — skip stale entries rather than handing one out.
     while (_Pool_FreeSKMCs.Num() > 0)
     {
         auto Pooled = _Pool_FreeSKMCs.Pop(EAllowShrinking::No).Get();
@@ -121,17 +119,14 @@ auto
     if (ck::Is_NOT_Valid(InComp))
     { return; }
     InComp->SetVisibility(false);
-    // No Stop() here: on a component whose AnimScriptInstance is an AnimBP (or
-    // the notify bridge), Stop() logs the "Currently in Animation Blueprint
-    // mode" Warning — which the AutoTest harness escalates to a failure for any
-    // proxy destroyed mid-test. SetAnimInstanceClass(nullptr) destroys the live
-    // instance outright (single-node or AnimBP), halting playback either way.
+    // Never Stop() here: on an AnimBP / notify-bridge instance it logs the "Currently in Animation
+    // Blueprint mode" Warning, which the AutoTest harness escalates to a test failure. Clearing the
+    // class destroys the live instance outright, halting playback either way.
     InComp->SetAnimInstanceClass(nullptr);
     InComp->SetSkeletalMesh(nullptr);
     InComp->SetSimulatePhysics(false);
-    // Entity-outline state (CkUsf custom depth/stencil) is component-level and survives the mesh clear —
-    // strip it unconditionally so it never leaks to the next borrower, regardless of outline bookkeeping
-    // ordering at EndPlay (see CkUsf/DESIGN_EntityOutlines.md).
+    // Outline state (CkUsf custom depth/stencil) is component-level and survives the mesh clear — strip it
+    // unconditionally so it can never leak to the next borrower, whatever the EndPlay bookkeeping order.
     InComp->SetRenderCustomDepth(false);
     InComp->SetCustomDepthStencilValue(0);
     const auto NumRemoved = _LiveSKMCs.RemoveSwap(InComp);
@@ -141,11 +136,9 @@ auto
     _Pool_FreeSKMCs.Add(InComp);
 
 #if WITH_EDITORONLY_DATA
-    // Per-owner editor renderers reclaim themselves once their selection owner is gone and the
-    // last live SKMC returns to the pool. Reclaiming any earlier would race the owner's entity-
-    // destroy cascade (~4 ticks) — FProcessor_IskmProxy_EndPlay fires a loud ensure if the SKMC
-    // vanished before it ran. IsExplicitlyNull distinguishes "never a per-owner renderer"
-    // (shared runtime renderer — must never self-destroy) from "owner set, then destroyed".
+    // Reclaiming any earlier would race the owner's entity-destroy cascade (~4 ticks) — EndPlay fires a
+    // loud ensure if the SKMC vanished before it ran. IsExplicitlyNull distinguishes "never a per-owner
+    // renderer" (shared runtime renderer — must never self-destroy) from "owner set, then destroyed".
     if (NOT _EditorSelectionOwner.IsExplicitlyNull() &&
         NOT _EditorSelectionOwner.IsValid() &&
         _LiveSKMCs.IsEmpty())
@@ -162,10 +155,8 @@ auto
 {
     Super::Initialize(Collection);
 
-    // Owner-deletion backstop for per-owner editor renderers whose pool is ALREADY quiescent
-    // (no live SKMCs → no future Release_BaseSKMC will ever run the self-reclaim). The normal
-    // delete path (owner deleted → entity-destroy cascade → EndPlay releases each SKMC) is
-    // handled by the self-reclaim at the end of Release_BaseSKMC instead.
+    // Backstop for per-owner editor renderers whose pool is ALREADY quiescent: with no live SKMCs, no
+    // future Release_BaseSKMC will ever run the self-reclaim that handles the normal delete path.
     if (const auto* World = GetWorld();
         ck::IsValid(World) && World->WorldType == EWorldType::Editor && ck::IsValid(GEngine))
     {
@@ -196,18 +187,16 @@ auto
             ck::IsValid(Renderer) && Renderer->Get_LiveSKMCs().IsEmpty())
         { ToDestroy.Add(Renderer); }
 
-        // Live SKMCs still out → the owner's entity-destroy cascade is in flight; the
-        // self-reclaim in Release_BaseSKMC finishes the job. Drop the map entry either way —
-        // the owner is gone, so this renderer can never be handed out again.
+        // Live SKMCs still out → the destroy cascade is in flight and Release_BaseSKMC's self-reclaim
+        // finishes the job. Drop the map entry either way: the owner is gone.
         It.RemoveCurrent();
     }
 
     for (auto* Renderer : ToDestroy)
     { Renderer->Destroy(); }
 
-    // Preview crowds have no in-flight pool cascade to wait out (members are instances inside
-    // the crowd's own tile components, and the preview entity guards its crowd handle) —
-    // destroy immediately. Same collect-then-destroy discipline as above.
+    // Preview crowds have no in-flight pool cascade to wait out (members are instances inside the
+    // crowd's own tile components), so they can be destroyed immediately.
     auto CrowdsToDestroy = TArray<ACk_Iskm_BatchedCrowd_Actor*>{};
 
     for (auto It = _PerOwnerPreviewCrowds.CreateIterator(); It; ++It)

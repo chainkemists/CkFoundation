@@ -30,8 +30,6 @@ namespace ck::particles_editor::MeshGenLocal
     // (S, T) in [0,1]^2 -> position + UV. S maps to U (grid columns), T maps to V (grid rows).
     using FSurfaceFn = FGridPoint (*)(float, float);
 
-    // Fills a MeshDescription with a (InCols x InRows)-cell parametric grid — shared vertex instances, one
-    // polygon group whose material slot is named "VfxMaterial" (the slot the static-mesh material fills).
     static auto Build_GridDescription(
         FMeshDescription& OutDescription,
         FSurfaceFn        InSurface,
@@ -143,39 +141,47 @@ namespace ck::particles_editor::MeshGenLocal
 
     // ---- Surfaces. All sized around a ~100-unit base radius; behaviors scale via Particles.Scale. ------------------
 
-    // Crescent arc band: 140-degree arc around +Z centered on +X, outer edge circular, inner edge bellied so the
-    // band is razor-thin at the tips and ~55 units wide mid-swing (the marketplace slash silhouette).
     static auto Surface_Sweep(float S, float T) -> FGridPoint
     {
-        const float Theta = FMath::Lerp(-1.22173f, 1.22173f, T);
-        const float Belly = FMath::Sin(PI * T);
-        const float ROuter = 100.0f;
-        const float RInner = ROuter - (6.0f + 49.0f * Belly);
-        const float R = FMath::Lerp(RInner, ROuter, S);
+        constexpr auto HalfArcRadians = 1.22173f; // 70 degrees either side of +X
+        constexpr auto OuterRadius    = 100.0f;
+        constexpr auto TipWidth       = 6.0f;
+        constexpr auto BellyWidth     = 49.0f;
+
+        const float Theta  = FMath::Lerp(-HalfArcRadians, HalfArcRadians, T);
+        const float Belly  = FMath::Sin(PI * T);
+        const float RInner = OuterRadius - (TipWidth + BellyWidth * Belly);
+        const float R      = FMath::Lerp(RInner, OuterRadius, S);
         return { FVector3f(FMath::Cos(Theta) * R, FMath::Sin(Theta) * R, 0.0f), FVector2f(S, T) };
     }
 
-    // Open cylinder along +X: radius 30, length 100, no caps.
     static auto Surface_Tube(float S, float T) -> FGridPoint
     {
+        constexpr auto Radius = 30.0f;
+        constexpr auto Length = 100.0f;
+
         const float Alpha = 2.0f * PI * S;
-        return { FVector3f(T * 100.0f, FMath::Cos(Alpha) * 30.0f, FMath::Sin(Alpha) * 30.0f), FVector2f(S, T) };
+        return { FVector3f(T * Length, FMath::Cos(Alpha) * Radius, FMath::Sin(Alpha) * Radius), FVector2f(S, T) };
     }
 
-    // Sphere, radius 50. Polar angle clamped slightly off the poles so no degenerate triangles are emitted.
     static auto Surface_Shell(float S, float T) -> FGridPoint
     {
-        const float Phi   = FMath::Lerp(0.06f, PI - 0.06f, T);
+        constexpr auto Radius  = 50.0f;
+        constexpr auto PoleGap = 0.06f; // stops short of the poles so no degenerate triangles are emitted
+
+        const float Phi   = FMath::Lerp(PoleGap, PI - PoleGap, T);
         const float Alpha = 2.0f * PI * S;
         const float SinPhi = FMath::Sin(Phi);
-        return { FVector3f(SinPhi * FMath::Cos(Alpha), SinPhi * FMath::Sin(Alpha), FMath::Cos(Phi)) * 50.0f, FVector2f(S, T) };
+        return { FVector3f(SinPhi * FMath::Cos(Alpha), SinPhi * FMath::Sin(Alpha), FMath::Cos(Phi)) * Radius, FVector2f(S, T) };
     }
 
-    // Flat ring in the XY plane: inner radius 55, outer 100. V runs radially so a V-pan pulses outward.
     static auto Surface_Disc(float S, float T) -> FGridPoint
     {
+        constexpr auto InnerRadius = 55.0f;
+        constexpr auto OuterRadius = 100.0f;
+
         const float Alpha = 2.0f * PI * S;
-        const float R = FMath::Lerp(55.0f, 100.0f, T);
+        const float R = FMath::Lerp(InnerRadius, OuterRadius, T);
         return { FVector3f(FMath::Cos(Alpha) * R, FMath::Sin(Alpha) * R, 0.0f), FVector2f(S, T) };
     }
 }

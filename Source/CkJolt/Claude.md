@@ -33,7 +33,20 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   (see `CK_PROBE_FACTORY` in CkSpatialQuery, CkEqs' query processors).
 - `ck::jolt::Conv(...)` (CkJolt_Utils.h) — UE↔Jolt math/color conversions. **Z-up passthrough, no
   axis swap**; capsule/cylinder shapes need `Get_ShapeAxisCorrection_YToZ()` in a
-  `RotatedTranslatedShape` wrapper.
+  `RotatedTranslatedShape` wrapper. Jolt's cylinder/capsule caps sit at `(0, ∓HalfHeight, 0)`; the
+  correction is **+90° about X** precisely so the top cap lands at `(0, 0, +HalfHeight)` and the
+  shape stands UP — `-90°` builds it upside-down. An uncorrected shape is an anisotropic query
+  VOLUME, not merely a bad visual.
+- `ECk_MotionType` / `ECk_BackFaceMode` / `ECk_MotionQuality` (CkJolt_Common.h) were migrated out of
+  CkSpatialQuery's Probe. CoreRedirects in `Config/DefaultCkFoundation.ini` keep serialized BP
+  references valid; AngelScript rebinds by short name automatically. Do NOT rename these without
+  updating the redirects.
+- **Collision layer table** (`CkJoltCollisionLayerTable.h`) — pair semantics mirror UE touch
+  resolution: `min(A.Response[B.Channel], B.Response[A.Channel])` (documented once, on
+  `ECk_Jolt_PairInteraction`). Jolt's pair filter is BINARY — anything != Ignore means "interact";
+  Block-vs-Overlap is resolved at the query/contact sites. `FCk_Jolt_LayerContext` holds a
+  NON-const table pointer on purpose: JoltBody setup is a sanctioned game-thread registration site
+  (resolve-or-register via `Get_OrRegisterLayer`), while Probe setup only reads `_ProbeLayer`.
 - `ck::jolt::TryGet_EntityFromBody(...)` — body UserData (versioned entity id) → live handle, with
   self-skip and non-ensuring registry-liveness check (snapshot-load safe).
 - `FCk_Jolt_ContactEvent` (CkJolt_ContactEvent.h) — the contact-consumption payload; events carry
@@ -61,6 +74,14 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   No valid collision → CK_ENSURE + skip; NEVER a bounding-box substitute. One carve-out:
   a BrushComponent with a null BrushBodySetup is a Verbose skip, not an ensure — Chaos also
   creates no physics state for it, and every level's default/builder brush is one.
+- Dense-cluster ISM/HISM path (`ExtractComponent`, ≥ `_CompoundShapeInstanceThreshold` instances):
+  the single StaticCompoundShape's children are expressed RELATIVE to the component's world
+  position/rotation, and each instance's scale is baked into its cached child SHAPE, not into the
+  child transform. A cluster where all but one instance fails shape creation falls back to a single
+  plain body — Jolt requires ≥2 children for a compound.
+- `BuildShape_FromBodySetup` leaf combination: 0 leaves → null shape; 1 leaf at identity local
+  transform → the leaf itself; 1 leaf with an offset → `RotatedTranslatedShape` wrap; 2+ →
+  `StaticCompoundShape` (same ≥2-children rule).
 - `UCk_JoltStaticWorld_Subsystem_UE` — per-ULevel body tracking in lockstep with
   LevelAdded/RemovedFromWorld (WP cells stream as ULevels); live extraction in PIE (default) or
   cooked data (`_PIEStaticWorldMode`; packaged = always cooked); batch
@@ -109,7 +130,10 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   `OnJoltBodySleepStateChanged`. Contact routing: `"JoltBody.Signals"` router registered on
   the subsystem; UserData==0 = NO entity — never resolve raw id 0 (it is the registry's transient
   root). Baked statics now carry their source actor's JoltStaticActor entity id (not 0), so a
-  dynamic-vs-baked-floor contact resolves `_OtherEntity` to that attribution entity.
+  dynamic-vs-baked-floor contact resolves `_OtherEntity` to that attribution entity. A baked
+  static's JoltStaticActor entity arriving as the *self* side of a contact is benign — it has no
+  `FFragment_JoltBody_Current`, so the router's first guard drops it; only the JoltBody's own body
+  id (index+seq) may drive that entity's signals.
 - **JoltCharacter quartet** (`Character/`): `JPH::CharacterVirtual`-backed (no broadphase
   body, no BodyID). Params: capsule radius/half-height (CENTERED capsule — total half
   height = HalfHeight + Radius), MassKg, MaxSlopeAngleDegrees, MaxStrengthNewtons
@@ -121,7 +145,14 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   `DoStepCharacters_AnyThread` (velocity compose → `ExtendedUpdate`) BEFORE each
   `PhysicsSystem::Update` sub-step; all CharacterVirtual scalars that are meters in Jolt
   samples are centimeters here (mPredictiveContactDistance 10, mCharacterPadding 2,
-  mCollisionTolerance 0.1, mSupportingVolume Plane(+Z, +HalfHeight)).
+  mCollisionTolerance 0.1, mSupportingVolume Plane(+Z, +HalfHeight)). Left unconverted the
+  metre-based defaults are ~1 mm in uu: characters find contacts only after penetrating, then
+  jitter and stick on wall slides; `MaxStrengthNewtons` unconverted caps pushes at 1% of the
+  authored intent (hence the ×100). `mSupportingVolume` is deliberately NOT the Jolt sample's
+  `-radius`: our capsule is CENTERED at the character position (zero-translation wrapper from
+  `CkJoltShapeFactory`), not the sample's base-at-origin shape, so the sample constant would accept
+  "support" contacts up to +radius ABOVE the capsule center and waist-height ledge lips would read
+  as ground.
 - **Ownership**: Chaos XOR Jolt per entity, enforced at composition time (Phase-3 slice 2).
 - **JoltConstraint quartet** (`Constraint/`): `UCk_Utils_JoltConstraint_UE::Create(BodyA, Params)`
   spawns a CHILD entity of body A hosting a `JPH::TwoBodyConstraint`. Types
@@ -132,7 +163,10 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   `Get_Hinge_CurrentAngleDegrees`). Anchors/axes are WORLD-space at creation (Jolt converts to
   body-local internally, so they track moving bodies). `Params._OtherBody` INVALID = anchored to
   the WORLD (`_BodyBIsWorldAnchor` distinguishes this from a dead body). Setup runs after
-  JoltBody_Setup and retries while a referenced body exists but is not batch-added yet.
+  JoltBody_Setup and resolves each body to one of three outcomes: **Ready** (JPH body id valid),
+  **Retry** (the body entity exists but its batched AddBodies pass hasn't run — setup re-arms
+  `FTag_JoltConstraint_NeedsSetup` and retries next frame), **Failed** (configuration error, already
+  ensured — the constraint is never created).
   **Lifecycle invariant**: a JPH constraint must be gone BEFORE either of its bodies —
   `FProcessor_JoltConstraint_LivenessReap` (FGroup_EndPlay, `RunBefore` JoltBody_EndPlay) removes
   the constraint the same frame EITHER body entity begins destruction and queues the inert
@@ -153,7 +187,12 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   and `ck.Jolt.DebugDraw.SleepColoring` (SleepColor mode: awake dynamics yellow, sleeping
   red). The subsystem draws when the consumer gate (`Set_DebugDrawGate`, e.g.
   `ck.SpatialQuery.PreviewAllProbesUsingJolt`) OR the Enabled CVar says so. Skipped in
-  async frames.
+  async frames. The `ck.Jolt.DebugDraw.*` CVars follow the house C++ pattern —
+  `FAutoConsoleVariableRef` over a static in a filename-derived named namespace (exemplar:
+  `ck.SpatialQuery.PreviewAllProbesUsingJolt` in `CkSpatialQuery_Settings.cpp`) — and are read on
+  the game thread in Tick; there is no body filter. `jolt.EnableParallelPhysics` /
+  `jolt.EnableAsyncPhysicsUpdate` are startup-only because the JobSystem is created once in
+  `Initialize` (cmdline form: `-jolt.EnableParallelPhysics=0`).
 - The renderer (`CkJoltDebugger`, CkJolt_DebugRenderer.h) is a BATCHED `JPH::DebugRenderer`,
   not `DebugRendererSimple`: triangle batches become transient UStaticMeshes (built once per
   unique geometry — Jolt shapes cache their GeometryRef), instanced per (geometry, color)
@@ -163,6 +202,19 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   `ck.Jolt.DebugDraw.WorldTransform` (default OFF — line-heavy at stress counts) gate the
   remaining immediate-mode lines. Both windings are emitted per triangle (Conv is a
   handedness passthrough, so one winding renders inside-out).
+- WHY batched: `DebugRendererSimple`'s `DrawGeometry` fallback decomposes EVERY triangle of EVERY
+  body into individual `DrawDebugLine` calls EVERY frame — hundreds of thousands of one-frame line
+  submissions per frame on the game thread at stress-gym body counts. Instead `CreateTriangleBatch`
+  runs ONCE per unique geometry (Jolt shapes cache their `GeometryRef` — HeightField/Mesh/ConvexHull
+  hold a mutable `mGeometry`; primitives share unit geometry), triangle data is held CPU-side and
+  lazily built into the transient UStaticMesh on first draw, `DrawGeometry` only accumulates
+  (batch, transform, color) into per-(geometry, color) buckets, and EndFrame reconciles each bucket
+  into one ISM component. `DrawLine`/`DrawTriangle`/`DrawText3D` stay immediate-mode — velocity
+  vectors, transform axes and contact normals are genuinely line-shaped and low-count.
+- Stale-bucket pruning: EndFrame drops a bucket whose `FBatch` refcount is 1 (only the bucket still
+  holds it) — every Jolt geometry that referenced it is gone (shapes re-cooked across gym restarts,
+  static-world re-bakes). Without the prune, the transient mesh + ISM component leak once per
+  re-cook for the rest of the session.
 - Cycle stats under `STATGROUP_CkJolt` (`stat CkJolt` / Insights): `JoltWorld_Step` (whole
   fixed-step pump), `JoltPhysics_Update(_Async)` (the Update loop), `JoltBody_
   WritebackInterpolated`, `JoltBody_KinematicPush`, contact queue/drain stats.
@@ -211,6 +263,12 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
 - **Runtime CVars**: `ck.Jolt.DebugDraw.Enabled`, `ck.Jolt.DebugDraw.SleepColoring`,
   `ck.Jolt.DebugDraw.Opacity`, `ck.Jolt.DebugDraw.Velocity`, `ck.Jolt.DebugDraw.WorldTransform`,
   `ck.Jolt.DebugDraw.Constraints` (default on — anchors/axes/limits via `DrawConstraints`).
+- **Unit conversion**: Jolt's `PhysicsSettings` defaults are METRES-tuned and this world is
+  CENTIMETRES, so every length/velocity field is ×100 (squared manifold tolerances ×100²); ratios
+  (`mBaumgarte`, `mLinearCast*`), iteration counts and times keep their defaults. Left unconverted,
+  the 0.02 cm penetration slop keeps stacked bodies in permanent micro-jitter and the 0.03 cm/s
+  sleep threshold makes stacks effectively unable to sleep — exposed by the Ck.Jolt
+  BoxStackOfFiveSettlesAndStays test once it gated on real velocity quiescence.
 - Character feel: `FCk_Fragment_JoltCharacter_ParamsData` knobs (MaxStrengthNewtons,
   MaxSlopeAngleDegrees, mass) + the cm-converted ExtendedUpdate settings in
   `DoStepCharacters_AnyThread` (stick-to-floor 50, step-up 40).
@@ -231,6 +289,19 @@ WaitForAsync ──> DrainEvents ──> PlanStep ──> SleepStateMirror ─�
   those while the future is pending (`FProcessor_JoltWorld_WaitForAsync` consumes it first, then
   applies the buffered poses onto entities — `FFragment_JoltBody_StepPose` + `FTag_JoltBody_TransformDirty`,
   Body/CkJoltBody_Fragment.h). The pose apply and contact routing are game-thread only.
+- `FCk_Jolt_CharacterEntry` is field-split by owner: the in-fields (MoveVelocity, PushPolicy,
+  JumpVelocity, HasJump) are written by the game thread in `FProcessor_JoltCharacter_PreStep`
+  BEFORE the step is kicked; the out-fields are written by `DoStepCharacters_AnyThread` (task
+  graph) and read by `DoApplyCharacterPoses_GameThread` AFTER the async step is waited. HasJump is
+  the one field ARMED by the game thread and CONSUMED (cleared) by the step loop — both accesses
+  are serialized by the WaitForAsync gate, so it is never touched concurrently. The step while-loop
+  touches ONLY Jolt objects + `_PoseBuffer` + the character registry's Character pointers and
+  out-fields.
+- `UCk_Jolt_Subsystem::Deinitialize` CANNOT clear the `TSharedPtr<ck::FJoltWorld>` registry context:
+  `FCk_Registry::SetContext` wraps entt `ctx::emplace` (try_emplace semantics — it does NOT
+  overwrite) and there is no overwrite variant. That is safe — `FJoltWorld::Shutdown` nulls the
+  non-owning Jolt pointers so the still-published world is inert, and the registry (with its
+  context) is destroyed alongside the world during teardown.
 
 ---
 

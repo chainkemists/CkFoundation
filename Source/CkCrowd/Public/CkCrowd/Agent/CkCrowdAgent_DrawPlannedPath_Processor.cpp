@@ -25,10 +25,8 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DrawPlannedPath"), STAT_CkCrowd_DrawPlannedPathP
 
 namespace ck_crowd_agent_draw_planned_path_processor
 {
-    // Reads the selected agent's type-hash from the shared CVar `ck.Crowd.SelectedEntityId`
-    // (the CVar object itself lives in CkCrowdAgent_DiagDraw_Processor.cpp); -1 means "no selection".
-    // CVar `ck.Crowd.DrawPlannedPaths` is read through the settings BPFL so it persists across sessions;
-    // the selected agent draws regardless of that toggle.
+    // The `ck.Crowd.SelectedEntityId` CVar object lives in CkCrowdAgent_DiagDraw_Processor.cpp;
+    // -1 means "no selection". The selected agent draws regardless of the DrawPlannedPaths toggle.
     auto GetSelectedEntityId() -> int32
     {
         const auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.SelectedEntityId"));
@@ -40,10 +38,7 @@ namespace ck_crowd_agent_draw_planned_path_processor
     constexpr auto Thickness_Selected = 4.0f;
     constexpr auto AlphaScale         = 0.55f;
     constexpr auto DurationOneFrame   = 0.0f;
-    // The planned path is drawn DASHED so it reads as "where the agent intends to go" — visually
-    // distinct from the solid breadcrumb trail (FProcessor_CrowdAgent_DiagDraw), which is where the
-    // agent actually went. When the two diverge (e.g. an agent orbiting its goal), the dashed line
-    // still points at the goal while the solid trail circles.
+    // Dashed = intent, distinct from FProcessor_CrowdAgent_DiagDraw's solid actual-path trail.
     constexpr auto DashSize           = 20.0f;
 }
 
@@ -76,10 +71,8 @@ namespace ck
         if (Waypoints.Num() == 0)
         { return; }
 
-        // Draw only the REMAINING path — from the waypoint the agent is currently heading toward
-        // onward. Starting at Waypoints[0] (the path's start) would connect the agent backward to a
-        // point it has already passed, painting a useless line from the start to the agent. Once the
-        // cursor is past the last waypoint (goal reached) there is nothing ahead to draw.
+        // Only the REMAINING path: starting at Waypoints[0] would paint a line backward from the
+        // path's start to the agent.
         const auto NextWaypoint = InPathFollow.Get_WaypointIndex();
         if (NextWaypoint >= Waypoints.Num())
         { return; }
@@ -89,16 +82,14 @@ namespace ck
         if (NOT IsValid(World))
         { return; }
 
-        // Same identity colour as the breadcrumb. Reduce alpha so the planned-vs-actual lines
-        // still read distinctly when they overlap (which they will for an agent walking its
-        // intended path).
+        // Same identity colour as the breadcrumb, alpha-reduced so the two still read distinctly
+        // where they overlap.
         auto PathColor = UCk_Utils_CrowdAgent_UE::Get_DebugColor(InHandle);
         PathColor.A *= draw::AlphaScale;
 
         const auto PathThickness = bIsSelected ? draw::Thickness_Selected : draw::Thickness;
         const auto Lift = FVector(0.0f, 0.0f, draw::LiftZ);
 
-        // Start segment connects the agent's current position to its NEXT waypoint.
         auto Prev = InTransform.Get_Transform().GetLocation() + Lift;
 
         for (auto i = FirstIndex; i < Waypoints.Num(); ++i)

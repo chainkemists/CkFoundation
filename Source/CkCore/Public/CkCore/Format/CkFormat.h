@@ -59,17 +59,9 @@ namespace ck
     {
         using namespace ck_format_detail;
 
-        // Notes:
-        // - with C++20, fmt has support for compile time strings and verification of the formatting
-        // - we cannot directly pass a string literal to fmt::format with the C++20 interface
-        // - fmt::format takes a fmt::wformat_string which takes the same arg types as the args we are
-        //   attempting to format
-        // - we cannot pass the args directly because they have to go through our forwarded which resolves pointers
-        // - we feed the converted args to a manually constructed fmt::wformat_string, making sure the
-        //   arg types match the ones returned by ArgsForward
-        // - this results in a complex looking expression below, although most of it is forwarding and
-        //   figuring out the new return types
-
+        // fmt's C++20 interface wants a compile-time format string whose arg types match the args
+        // actually passed, and ours must first go through ArgsForward (which resolves pointers) —
+        // hence the hand-built fmt::wformat_string below.
         return ck_format_detail::DoFormat(
             fmt::wformat_string<decltype(ArgsForward(InArgs))...>(fmt::runtime_format_string<TCHAR>{InStr}),
             std::forward<decltype(ArgsForward(InArgs))>(ArgsForward(std::forward<TArgs>(InArgs)))...);
@@ -82,17 +74,7 @@ namespace ck
     {
         using namespace ck_format_detail;
 
-        // Notes:
-        // - with C++20, fmt has support for compile time strings and verification of the formatting
-        // - we cannot directly pass a string literal to fmt::format with the C++20 interface
-        // - fmt::format takes a fmt::wformat_string which takes the same arg types as the args we are
-        //   attempting to format
-        // - we cannot pass the args directly because they have to go through our forwarded which resolves pointers
-        // - we feed the converted args to a manually constructed fmt::wformat_string, making sure the
-        //   arg types match the ones returned by ArgsForward
-        // - this results in a complex looking expression below, although most of it is forwarding and
-        //   figuring out the new return types
-
+        // Same hand-built fmt::wformat_string dance as Format(); the wide result is narrowed at the end.
         const auto& WideStr = ck_format_detail::DoFormat(
             fmt::wformat_string<decltype(ArgsForward(InArgs))...>(fmt::runtime_format_string<TCHAR>{InStr}),
             std::forward<decltype(ArgsForward(InArgs))>(ArgsForward(std::forward<TArgs>(InArgs)))...);
@@ -133,7 +115,6 @@ namespace ck
 #define CK_ANSI_TEXT(_Text_, ...)\
     ck::Format_ANSI(TEXT(_Text_), __VA_ARGS__).c_str()
 
-// convenience macro to enable the formatter to access private members of a class/struct
 #define CK_ENABLE_CUSTOM_FORMATTER(_Class_)                  \
     friend struct fmt::formatter<_Class_, TCHAR>
 

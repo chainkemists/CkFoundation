@@ -28,9 +28,7 @@ class UCk_CameraLayer_EntityScript;
 namespace ck
 {
     // ----------------------------------------------------------------------------------------------------------------
-    // Director-side resolved ViewTarget state for the dominant layer's ViewTarget branch. _IsActive gates the
-    // final-POV blend in UpdatePOV; _Alpha reuses the dominant layer's blend alpha so the POV eases on the same
-    // curve as the layer. Plain data (not an attribute) — it is blended against the rig POV in the processor.
+    // _Alpha reuses the dominant layer's blend alpha, so the final POV eases on the same curve as the layer.
     // ----------------------------------------------------------------------------------------------------------------
     struct FCk_Camera_ViewTargetResolved
     {
@@ -74,12 +72,11 @@ namespace ck
         friend class UCk_Utils_Camera_UE;
 
     private:
-        // Resolved read-cache of the composed profile (assembled from the tuner attributes' final values + the
-        // bool/curve leaves below). Refreshed each frame by the lifecycle processor; read by UpdatePOV + observers.
+        // Read-cache; refreshed each frame by the lifecycle processor, read by UpdatePOV + observers.
         FCk_CameraProfile _ComposedProfile;
 
         // ---- Non-attribute leaves (bools + curves) ----
-        // These do not blend, so they are plain data rather than tuner attributes (decision #9 / curves can't be attributes).
+        // These do not blend, so they are plain data rather than tuner attributes.
         bool _UseFixedBoomRotation = false;
         bool _ConstrainAspectRatio = false;
         bool _HasOrientationControl = true;
@@ -91,28 +88,21 @@ namespace ck
         FAlphaBlend _XIntentionCurve;
         FAlphaBlend _YIntentionCurve;
 
-        // Persistent POV pipeline state (boom rotation, smoothed pivot, collision distance, noise) — advanced by UpdatePOV.
         ck::camera::FPov_State _PovState;
 
-        // Abstract orbit intention (a per-frame DELTA) fed by whoever owns input. Zero = no manual orbit. The camera
-        // never reads input directly; the caller pushes this each frame via Request_SetOrientationIntention.
-        // UpdatePOV CONSUMES it (resets to zero) after applying, so a momentary input doesn't keep applying once the
-        // source stops pushing.
+        // A per-frame DELTA pushed by whoever owns input. UpdatePOV CONSUMES it (resets to zero) after applying, so
+        // the caller must re-push every frame the input is active.
         FVector _OrientationIntention = FVector::ZeroVector;
 
-        // Look-at target resolved from the dominant active layer (for auto-reorient). Set by the lifecycle processor,
-        // consumed by UpdatePOV. Unset = the dominant layer has no look-at (a zero vector is a valid target).
+        // Unset = the dominant layer has no look-at (a zero vector is a valid target, so it cannot encode absence).
         TOptional<FVector> _DominantLookAt;
 
-        // ViewTarget resolved from the dominant active layer (full-POV blend). Set by the lifecycle processor,
-        // consumed by UpdatePOV. _IsActive=false = the dominant layer has no ViewTarget. Mutually exclusive with
-        // _DominantLookAt per the dominant layer's FCk_Camera_Target mode.
+        // Mutually exclusive with _DominantLookAt, per the dominant layer's FCk_Camera_Target mode.
         FCk_Camera_ViewTargetResolved _ViewTarget;
 
-        // Class of the dominant active layer (highest blend alpha). Set by the lifecycle processor; observable via Utils.
         TSubclassOf<UCk_CameraLayer_EntityScript> _DominantLayerClass;
 
-        // The final resolved POV — written by UpdatePOV, read by UCk_CameraComponent::GetCameraView.
+        // Written by UpdatePOV, read by UCk_CameraComponent::GetCameraView.
         FMinimalViewInfo _ViewInfo;
 
     public:
@@ -159,15 +149,9 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
     // PER-SECTION TUNER-ATTRIBUTE HANDLE FRAGMENTS
-    //
-    // One fragment per FCk_CameraProfile section on the Camera director; each member is a typed attribute handle for
-    // O(1) lookup of the tuner attribute backing a profile leaf. Populated by UCk_Utils_Camera_UE::DoMaterializeAttributes;
-    // read by UCk_Utils_Camera_UE::Get_Profile and by UCk_Utils_CameraLayer_UE::Acquire_CameraModifier_<Tuner>.
-    // FCk_FloatRange leaves are a single Float-with-MinMax attribute (Min/Max = bounds, Current unused).
+    // An FCk_FloatRange profile leaf is a SINGLE Float-with-MinMax attribute (Min/Max = the bounds, Current unused).
     // ----------------------------------------------------------------------------------------------------------------
 
-    // FCk_CameraProfile_Rotation → Speed (Float) + Limits (Float MinMax) + NormalSpeedRange (Float MinMax) +
-    // OutOfRangeMultiplier (Float). Reused 7× (Noise.Pitch/Yaw/Roll, OrientationControl.Pitch/Yaw, AutoReorient.Pitch/Yaw).
     struct CKCAMERA_API FCameraAttr_Rotation
     {
         FCk_Handle_FloatAttribute _Speed;

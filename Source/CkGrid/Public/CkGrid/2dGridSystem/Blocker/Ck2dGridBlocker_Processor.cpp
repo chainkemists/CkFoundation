@@ -23,7 +23,6 @@ namespace ck
             FFragment_2dGridBlocker_Current& InCurrent) const
         -> void
     {
-        // One-shot: clear the dirty marker so this runs exactly once per blocker.
         InHandle.Remove<MarkedDirtyBy>();
 
         const auto Grid = InParams.Get_Grid();
@@ -81,9 +80,6 @@ namespace ck
 
         InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_2dGridBlocker_Requests& InRequests)
         {
-            // Coalesce: only the FINAL requested active-state this tick matters.
-            // We drain every queued SetActive but keep just the last value, then act
-            // once if (and only if) it differs from our current _IsActive.
             auto FinalActive = InCurrent._IsActive;
             auto AnyRequest = false;
 
@@ -112,7 +108,6 @@ namespace ck
 
             if (FinalActive)
             {
-                // inactive -> active: re-stamp (increment) each previously-stamped cell.
                 for (const auto& Coord : InCurrent._StampedCells)
                 {
                     auto Cell = UCk_Utils_2dGridSystem_UE::Get_CellAt(Grid, Coord);
@@ -122,7 +117,6 @@ namespace ck
             }
             else
             {
-                // active -> inactive: un-stamp (decrement) each previously-stamped cell.
                 for (const auto& Coord : InCurrent._StampedCells)
                 {
                     auto Cell = UCk_Utils_2dGridSystem_UE::Get_CellAt(Grid, Coord);

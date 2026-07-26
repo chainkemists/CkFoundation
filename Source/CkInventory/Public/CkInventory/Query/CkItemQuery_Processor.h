@@ -13,15 +13,8 @@ class UCk_ItemQuery_Subsystem_UE;
 
 namespace ck
 {
-    // Drains item-definition query requests. Unlike most request processors this
-    // does NOT gate on MarkedDirtyBy: a request whose definition index isn't
-    // built yet is left pending and re-evaluated every tick until the async
-    // build finishes, at which point the result signal is broadcast and the
-    // request entity destroyed.
-    //
-    // The definition-index subsystem is cached at construction (resolved by the
-    // registration factory) rather than looked up per entity — mirrors how
-    // FProcessor_Probe_* cache the JPH::PhysicsSystem.
+    // Deliberately does NOT gate on MarkedDirtyBy: a request whose definition index isn't built
+    // yet stays pending and is re-evaluated every tick until the async build finishes.
     class CKINVENTORY_API FProcessor_ItemQuery_HandleRequests : public TProcessor<
             FProcessor_ItemQuery_HandleRequests,
             TReadWrite<FFragment_ItemQuery_Requests>,

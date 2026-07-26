@@ -719,8 +719,7 @@ auto
     if (InConeHalfAngleDegrees <= 0.0f)
     { return InDirection.GetSafeNormal(); }
 
-    // Consider the cone a concatenation of two rotations. One "away" from the center line, and another "around" the circle.
-    // Apply the exponent to the away-from-center rotation, a larger exponent will cluster points more tightly around the center
+    // A larger InExponent clusters samples more tightly around the center line.
     const auto& FromCenter = FMath::Pow(FMath::FRand(), InExponent);
     const auto& AngleFromCenter = FromCenter * InConeHalfAngleDegrees;
     const auto& AngleAround = FMath::FRand() * 360.0f;
@@ -798,11 +797,8 @@ auto
     {
         case ECk_Plane_Axis::XY: return FQuat::Identity;
         case ECk_Plane_Axis::XZ: return FQuat(FVector::ForwardVector, PI * 0.5f);
-        // YZ uses the UPRIGHT in-plane convention: a local-XY shape maps x->+Y, y->+Z (up),
-        // z->+X. Symmetric shapes (circles/spheres) are unaffected (rotationally symmetric
-        // about the plane normal), but asymmetric debug shapes (text/symbols/arrows) stand
-        // upright facing +/-X instead of being rotated 90 deg (the old RightVector,-90 form
-        // laid them on their side). CkCrowd only ever uses XY, so this is contained.
+        // YZ is the UPRIGHT in-plane convention: a local-XY shape maps x->+Y, y->+Z (up), z->+X,
+        // so asymmetric shapes stand upright facing +/-X rather than lying on their side.
         case ECk_Plane_Axis::YZ: return FQuat(FVector::UpVector, PI * 0.5f) * FQuat(FVector::ForwardVector, PI * 0.5f);
         default: return FQuat::Identity;
     }

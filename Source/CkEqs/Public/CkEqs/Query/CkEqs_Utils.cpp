@@ -15,8 +15,6 @@
 namespace JPH { class PhysicsSystem; }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Has / Cast / DoCast / DoCastChecked / Get_InvalidHandle — generated via macro.
-// --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_Eqs_UE,
@@ -24,8 +22,6 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     FFragment_EqsQuery_Params,
     FFragment_EqsQuery_State)
 
-// --------------------------------------------------------------------------------------------------------------------
-// Request_RunQuery — deferred path
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -53,8 +49,6 @@ auto
     return InQuerierEntity;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Request_RunQuery_Immediate — synchronous bypass path
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -89,10 +83,6 @@ auto
 
     if (FCk_Eqs_Algorithm::DoGenerate(TypedQuery, InQueryParams, State, PhysicsSystem))
     {
-        // Hard-cap candidate count for the Immediate path so a runaway generator
-        // can't stall the main thread. Truncate-with-warning, do NOT silently drop —
-        // include both numbers (configured count + cap) so the consumer can see the
-        // root cause, not just the symptom.
         const auto HardCap = UCk_Utils_Eqs_Settings_UE::Get_MaxCandidates_ImmediatePathHardCap();
         if (State.Get_Candidates().Num() > HardCap)
         {
@@ -100,8 +90,7 @@ auto
                 TEXT("EqsQuery_Immediate: generator produced {} candidates, hard-capping to {}. "
                      "Use Request_RunQuery (deferred) for larger queries."),
                 State.Get_Candidates().Num(), HardCap);
-            // Truncation requires friend access (which Utils has via the friend grant
-            // on FFragment_EqsQuery_State).
+            // Utils is a friend of FFragment_EqsQuery_State; the const_cast is the mutation path.
             const_cast<TArray<FCk_Eqs_Candidate>&>(State.Get_Candidates()).SetNum(HardCap);
         }
 
@@ -118,16 +107,12 @@ auto
     QueryEntity.Add<FFragment_EqsQuery_Results>(Results);
     QueryEntity.AddOrGet<ck::FTag_EqsQuery_Complete>();
 
-    // Immediate does NOT broadcast OnEqsQueryComplete. The signal would fire before
-    // the caller has the handle, making delegate binding impossible to time. Callers read
-    // results via the returned handle's accessors. For delegate-driven completion, use
-    // the deferred Request_RunQuery path.
+    // Deliberately no OnEqsQueryComplete broadcast: the signal would fire before the caller has
+    // the handle, so no delegate could ever be bound in time.
 
     return TypedQuery;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Request_CancelQuery
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -166,10 +151,8 @@ auto
 
     auto Count = int32{0};
 
-    // Query entities are context-owned by their querier (Request_CreateEntity(InQuerier)).
-    // Iterate every entity carrying FFragment_EqsQuery_Params and tag the ones whose
-    // context owner matches InQuerierEntity. Skip already-cancelled / already-complete
-    // queries (no point re-tagging — harmless but pollutes the count).
+    // There is no per-querier index of queries: the only link is the context owner, so this scans
+    // every query entity in the registry.
     InQuerierEntity.View<FFragment_EqsQuery_Params>().ForEach(
         [&](FCk_Entity InEntity, const FFragment_EqsQuery_Params&)
     {
@@ -189,8 +172,6 @@ auto
     return Count;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Signal bindings
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -217,8 +198,6 @@ auto
     return InQueryEntity;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Result accessors
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

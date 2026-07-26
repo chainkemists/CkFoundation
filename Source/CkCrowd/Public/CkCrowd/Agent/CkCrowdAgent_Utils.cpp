@@ -41,8 +41,7 @@ auto
     InOwner.Add<ck::FTag_CrowdAgent_NeedsSetup>();
     InOwner.Add<ck::FTag_CrowdAgent_Idle>();
 
-    // Seed _ActiveArrivalRadius from the agent's params default. Updated per-MoveTo if the request
-    // overrides it; otherwise this is what Steering's final-stop branch uses.
+    // Overridden per-MoveTo by _ArrivalRadiusOverride; otherwise Steering's final-stop branch reads this.
     InOwner.Get<ck::FFragment_CrowdAgent_PathFollow>()._ActiveArrivalRadius = InParams.Get_ArrivalRadius();
 
     ck::crowd::Verbose(TEXT("CrowdAgent added to [{}] (radius={}, height={})"),
@@ -381,10 +380,6 @@ auto
     if (InAgent.Has<ck::FFragment_CrowdAgent_DebugColor>())
     { return InAgent.Get<ck::FFragment_CrowdAgent_DebugColor>().Get_Color(); }
 
-    // Hash-derived fallback. Production agents that never opt in still get a stable distinct
-    // colour when an in-world overlay or debugger swatch happens to render them. Delegates to
-    // the framework helper so any other debug subsystem (DrawBody processor, breadcrumb,
-    // planned path, etc.) reaches the same color for the same entity.
     return UCk_Utils_LinearColor::Get_StableColorFromHash(static_cast<int32>(GetTypeHash(InAgent)));
 }
 

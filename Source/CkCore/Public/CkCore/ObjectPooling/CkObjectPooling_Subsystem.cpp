@@ -54,9 +54,6 @@ auto
         const EWorldType::Type InWorldType) const
     -> bool
 {
-    // the editor ECS world spawns EntityScripts/components through the pooled path too — without
-    // this subsystem there, those instances would be caller-owned with only weak holders (no GC
-    // root) and editor GC would collect them mid-preview
     return Super::DoesSupportWorldType(InWorldType) || InWorldType == EWorldType::Editor;
 }
 
@@ -293,8 +290,8 @@ auto
     CK_ENSURE_IF_NOT(InObject != nullptr, TEXT("Cannot Release a NULL object to its ObjectPool"))
     { return ECk_SucceededFailed::Failed; }
 
-    // already destroyed externally (destroy-then-release ordering) — reconcile tracking now while
-    // the pointer still hashes to its entries, and stay benign: release is fire-and-forget
+    // Destroyed externally (destroy-then-release ordering): reconcile tracking now, while the
+    // pointer still hashes to its entries. Release is fire-and-forget, so this stays benign.
     if (ck::Is_NOT_Valid(InObject))
     {
         _PinnedUnique.Remove(InObject);
@@ -363,17 +360,12 @@ auto
         UObject* InObject)
     -> void
 {
-    // pre-pooling, an object whose entity died was GC'd and its pending world timers / latent
-    // actions silently never fired. Pooling keeps the instance alive (pinned or parked), so a
-    // lingering timer WOULD fire post-release against dead associations — loudly, in whatever
-    // test/gameplay runs next. Release therefore quiesces exactly like death did (the same pair
-    // UActorComponent::EndPlay clears). Only TRACKED objects get this — release on an untracked
-    // object is a no-op and must not side-effect timers we don't own
+    // Pooling keeps a released instance alive, so a lingering timer would fire post-release against
+    // dead associations. Release quiesces exactly like death did (the pair EndPlay clears).
 
     if (auto* Hooks = _ReleaseQuiesceHooks.Find(FObjectKey{InObject}))
     {
-        // move out first — a hook that re-enters (an unbind can drop a delegate fragment and
-        // cascade) must not mutate the array mid-iteration
+        // Move out first: a re-entrant hook must not mutate the array mid-iteration.
         const auto LocalHooks = MoveTemp(*Hooks);
         _ReleaseQuiesceHooks.Remove(FObjectKey{InObject});
 
@@ -490,14 +482,9 @@ auto
         InObject)
     { return; }
 
-    // The reflected sweep below CAN skip the participant, but the AngelScript script-property copy
-    // further down CANNOT: UObject::CopyScriptPropertiesFrom is a whole-object asIScriptObject
-    // assignment that copies EVERY member declared on the script class, participant included, which
-    // would stomp the delegates and bind ledgers back to the CDO's empty ones. Snapshot the
-    // participant(s) and restore them after every copy path, so binds survive recycling on
-    // AngelScript-declared poolables too -- the contract CkObjectPoolingParticipant.h promises.
-    // ON_SCOPE_EXIT (not a restore at the bottom) because the AngelScript block early-returns from
-    // its ensure recovery path.
+    // The reflected sweep below can skip the participant, but the AngelScript script-property copy
+    // further down cannot — it would stomp the delegates back to the CDO's empty ones. ON_SCOPE_EXIT
+    // (not a restore at the bottom) because the AngelScript block early-returns from its ensure path.
     auto SavedParticipants = TArray<TPair<const FStructProperty*, FCk_Handle_ObjectPoolingParticipant>>{};
 
     for (TFieldIterator<FStructProperty> PropIt{InObject->GetClass(), EFieldIteratorFlags::IncludeSuper}; PropIt; ++PropIt)
@@ -526,15 +513,10 @@ auto
     }
 
 #if WITH_ANGELSCRIPT_CK
-    // AngelScript members declared WITHOUT UPROPERTY() exist only as script-object properties
-    // (byte offsets on the fused UObject) — the class generator creates FProperties solely for
-    // UPROPERTY-exported members, so the reflected sweep above cannot see them. A fresh instance
-    // gets their values from the class defaults function at construction; a recycled one must
-    // copy them back from the archetype or it resumes the previous life's state (e.g. a consumed
-    // one-shot cursor like UBb_DamageApplicator's NextResolution). The engine's script-registered
-    // UObject::CopyScriptPropertiesFrom does exactly this copy; it must be invoked through an
-    // execution context because the fork's asIScriptObject methods are non-virtual and not
-    // DLL-exported (a direct operator= call fails to link outside AngelscriptCode)
+    // AngelScript members declared WITHOUT UPROPERTY() exist only as script-object properties, so the
+    // reflected sweep above cannot see them and a recycled instance would resume its previous life's
+    // state. CopyScriptPropertiesFrom must go through an execution context: the fork's asIScriptObject
+    // methods are non-virtual and not DLL-exported, so a direct call fails to link outside AngelscriptCode.
     if (Cast<UASClass>(InObject->GetClass()) != nullptr)
     {
         static asIScriptFunction* CopyScriptPropertiesFunc = nullptr;
@@ -554,8 +536,8 @@ auto
         auto Context = FAngelscriptContext{InObject};
         Context.PrepareExternal(CopyScriptPropertiesFunc);
 
-        // dispatch through the asIScriptContext interface — its methods are virtual, so the call
-        // resolves via vtable instead of importing asCContext symbols the module does not export
+        // Dispatch through asIScriptContext: its virtual methods resolve via vtable, so the module
+        // never has to import asCContext symbols it does not export.
         asIScriptContext* ScriptContext = static_cast<asCContext*>(Context);
         ScriptContext->SetObject(InObject);
         ScriptContext->SetArgObject(0, const_cast<UObject*>(InArchetype));
@@ -564,12 +546,9 @@ auto
     }
 #endif
 
-    // the sweep above copied instanced-subobject POINTERS from the archetype — re-instance them so
-    // the recycled object owns fresh copies (a write through an aliased subobject would corrupt the
-    // archetype/CDO). Mirrors FObjectInitializer::InstanceSubobjects: the graph must map
-    // InArchetype -> InObject, so archetype-outered subobjects duplicate into the recycled object
-    // (parameterless UObject::InstanceSubobjectTemplates roots the graph at GetArchetype()/self and
-    // leaves the aliases untouched)
+    // The sweep above copied instanced-subobject POINTERS from the archetype; re-instance them so a
+    // write through an alias cannot corrupt the archetype/CDO. The graph must map InArchetype ->
+    // InObject: the parameterless InstanceSubobjectTemplates roots at self and leaves aliases untouched.
     if (InObject->GetClass()->HasAnyClassFlags(CLASS_HasInstancedReference))
     {
         auto InstancingGraph = FObjectInstancingGraph{};
@@ -578,11 +557,8 @@ auto
         InObject->GetClass()->InstanceSubobjectTemplates(
             InObject, InArchetype, InArchetype->GetClass(), InObject, &InstancingGraph);
 
-        // the instancing graph REUSES an existing same-named per-instance subobject instead of
-        // re-creating it — its properties still hold the previous incarnation's values. Recurse the
-        // reset into each (instance, template) pair so the whole reflected tree matches a fresh
-        // create. (Instanced subobjects inside Set/Map containers are not walked — none exist in
-        // the framework; add the container walk if one ever does)
+        // The graph REUSES a same-named per-instance subobject rather than re-creating it, so its
+        // properties still hold the previous incarnation's values. Set/Map containers are not walked.
         const auto ResetMatchedSubobject = [InObject](UObject* InSubobject, UObject* InTemplateSubobject) -> void
         {
             if (ck::Is_NOT_Valid(InSubobject) || ck::Is_NOT_Valid(InTemplateSubobject))
@@ -653,8 +629,8 @@ auto
             if (ck::IsValid(Slot))
             { continue; }
 
-            // once GC purges the slot to null the original key is unrecoverable here — the post-GC
-            // sweep (DoSweep_StaleAfterGC) prunes those reverse-map entries by dead-key resolve
+            // Once GC purges the slot to null the original key is unrecoverable here; DoSweep_StaleAfterGC
+            // prunes those reverse-map entries by dead-key resolve.
             if (InRemoveFromReverseMap && Slot != nullptr)
             { _InstanceToPool.Remove(FObjectKey{Slot}); }
 
@@ -682,9 +658,8 @@ auto
 
         DoSweep_NullSlots(Pool);
 
-        // zombie pool: its class or archetype died (BP recompile, editor-preview churn) — no future
-        // acquire can ever match its key again. Only drop it once nothing is in use: dropping the
-        // state would unpin in-use instances that holders still observe weakly
+        // Zombie pool: its key died, so no future acquire can match it. Drop only once nothing is in
+        // use — dropping the state would unpin in-use instances that holders still observe weakly.
         if ((ck::Is_NOT_Valid(Pool._Class.Get()) || ck::Is_NOT_Valid(Pool._Archetype.Get()))
             && Pool._InUseObjects.IsEmpty())
         {
@@ -706,8 +681,7 @@ auto
         { It.RemoveCurrent(); }
     }
 
-    // hooks of a stolen instance never ran (no release) — the dead object's bindings compare
-    // unequal to any live re-bind, which is exactly pre-pooling GC semantics, so just drop them
+    // A stolen instance's hooks never ran; its dead bindings compare unequal to any live re-bind.
     for (auto It = _ReleaseQuiesceHooks.CreateIterator(); It; ++It)
     {
         if (It->Key.ResolveObjectPtr() == nullptr)

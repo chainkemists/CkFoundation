@@ -55,12 +55,8 @@ namespace ck
 
         InHandle.Remove<MarkedDirtyBy>();
 
-        // Authority gating (spec §5/§6): condition evaluation drives transitions. Non-authority
-        // machines must not evaluate — they receive transitions via replication/relay. Keep the
-        // dirty marker removed (above) so we don't loop; the rep-driven replay path will
-        // commit the transition on its own schedule. Uses the shared transition-authority
-        // predicate — the prior inline gate only skipped NonOwningClient and non-OwningClientAuth
-        // OwningClient, which left the server of a relayed OwningClientAuth sub-SM evaluating.
+        // Non-authority machines never evaluate — they receive transitions via replication/relay.
+        // The dirty marker is cleared above this gate so they do not re-loop.
         const auto SmHandle = UCk_Utils_SmTransition_UE::Get_OwningStateMachine(InHandle);
 
         if (NOT ck::statemachine::Get_IsTransitionAuthority(SmHandle))
@@ -81,12 +77,6 @@ namespace ck
             return;
         }
 
-        // Single-pass eager AND: arm every Undetermined condition now instead of one per
-        // evaluate cycle. All of them get evaluated in the same polled main-pass sweep, whose
-        // unconditional parent wake re-runs this evaluate in the pump — the whole decision
-        // resolves within one frame instead of one condition per frame. Fail still wins
-        // immediately. Polled Evaluate is const (pure predicate), so eager evaluation of a
-        // condition that a failing sibling would previously have short-circuited is safe.
         auto AnyUndetermined = false;
 
         for (auto Condition : Conditions)

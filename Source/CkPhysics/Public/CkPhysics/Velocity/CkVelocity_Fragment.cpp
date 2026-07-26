@@ -7,7 +7,6 @@
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // Register_* entry-point bodies
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handler for Velocity
 
 static struct FVelocityRepHandlerRegistrar
 {
@@ -21,15 +20,11 @@ static struct FVelocityRepHandlerRegistrar
             if (ck::Is_NOT_Valid(VelocityHandle))
             { return ECk_Persistence_ApplyResult::NotReady; }
 
-            // (Phase 2 §2.6) The per-feature NeedsSetup apply-guard from 5eda3ac8a is retired: the late
-            // FGroup_DeferredApply dispatch + the ConstructedThisFrame defer (§2.4) + fire-gating (§2.5) now
-            // guarantee this apply runs AFTER the setup drain, so the applied value is final.
             UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value);
             return ECk_Persistence_ApplyResult::Applied;
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Velocity>({
-                // Capture-only Produce of the self-resident Velocity container from live Current.
                 // HydrationApply reuses the net Apply; no explicit replication re-arm tag is added.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {

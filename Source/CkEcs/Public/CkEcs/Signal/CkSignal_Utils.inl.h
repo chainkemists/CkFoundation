@@ -162,15 +162,9 @@ namespace ck
 
         const auto Invoker = [&Signal](auto&&... InArgs)
         {
-            // Store the payload tuple FIRST. We use forward<T_Args>() here, which for
-            // value-type T_Args deduced from rvalue callsite arguments casts to rvalue
-            // and moves into the stored tuple. After this line the local InArgs may
-            // be moved-from, so the subsequent publish() must source its arguments
-            // from the just-stored tuple — NOT from InArgs — otherwise listeners
-            // observe moved-from values (notably empty TArrays inside USTRUCT
-            // payloads). Repro: the GOAP autotests were receiving empty plans because
-            // FCk_Goap_Payload_OnPlanComplete was being broadcast as a temporary,
-            // which made T_Args[N] a value type, which made forward() move.
+            // Store the payload tuple FIRST: forward<T_Args>() moves value-type args, so InArgs may be
+            // moved-from after this line. publish() below must therefore source from the STORED tuple —
+            // sourcing from InArgs delivers moved-from values (empty TArrays inside USTRUCT payloads).
             Signal._Payload.Emplace(std::make_tuple(std::forward<T_Args>(InArgs)...));
             Signal._PayloadFrameNumber = UCk_Utils_Time_UE::Get_FrameCounter();
 
@@ -213,7 +207,6 @@ namespace ck
                 TempDelegate.template connect<T_Candidate>();
                 std::apply(TempDelegate, *Signal._Payload);
 
-                // If the behavior is to Unbind, we do not need to 'connect' this candidate to the Signal
                 if constexpr (InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
                 { return ReturnType{}; }
             }
@@ -253,7 +246,6 @@ namespace ck
                 TempDelegate.template connect<T_Candidate>(InInstance);
                 std::apply(TempDelegate, *Signal._Payload);
 
-                // See notes in the other Bind function
                 if constexpr (InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
                 { return ReturnType{}; }
             }
@@ -464,11 +456,9 @@ namespace ck
             ck::Context(InHandle))
         { return; }
 
-        // GC-equivalence for pool-vended bind targets: pre-pooling, a delegate whose UObject died
-        // was inert (dead weak ptr, unequal to any live re-bind); a parked instance keeps its
-        // pointer identity, so a bind it made on an entity that outlives it would leak into its
-        // next vend — stale delivery plus duplicate-signature rejection of the re-bind. Register
-        // a disconnect hook the pool runs on release; quiet no-op for untracked bind targets
+        // A parked pool instance keeps its pointer identity, so a bind it made on an entity that
+        // outlives it would leak into its next vend. Hook the pool's release to disconnect;
+        // quiet no-op for untracked bind targets.
         if (auto* BoundObject = InDelegate.GetUObject();
             ck::IsValid(BoundObject))
         {

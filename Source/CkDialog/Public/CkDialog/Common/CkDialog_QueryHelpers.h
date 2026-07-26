@@ -17,9 +17,8 @@ class UWorld;
 
 namespace ck
 {
-    // Stateless helpers for dialog query evaluation, shared by the emitter processor and the emitter utils. These were
-    // file-local namespace functions in each TU; hoisted into one named home so the logic is discoverable and reused
-    // rather than duplicated (world-time was, verbatim, in two places). Every method is a pure function of its args.
+    // Stateless helpers shared by the emitter processor and the emitter utils; every method is a pure function of
+    // its args.
     struct CKDIALOG_API FDialog_QueryHelpers
     {
         static auto
@@ -50,7 +49,6 @@ namespace ck
             const FCk_Handle_DialogLine& InLine,
             ECk_DialogLine_QueryResult InResult) -> FCk_DialogLine_QueryEntry;
 
-        // A request policy of None means "inherit the emitter's default".
         static auto
         Get_ResolvedSortPolicy(
             const FCk_Fragment_DialogEmitter_ParamsData& InParams,
@@ -67,8 +65,7 @@ namespace ck
 
 namespace ck::algo
 {
-    // StableSort comparators over query entries (used by FDialog_QueryHelpers::Sort_Entries). Named so the sort site
-    // reads as the policy it implements; stable sort keeps registration order among equal condition counts.
+    // Comparators for FDialog_QueryHelpers::Sort_Entries; stable sort keeps registration order among equal counts.
     struct CKDIALOG_API ByDialogLineConditionCount_Ascending
     {
         auto operator()(const FCk_DialogLine_QueryEntry& InL, const FCk_DialogLine_QueryEntry& InR) const -> bool;

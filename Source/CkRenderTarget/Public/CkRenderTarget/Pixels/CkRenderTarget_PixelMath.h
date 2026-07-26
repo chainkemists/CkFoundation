@@ -8,8 +8,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One changed block of a block-diff. _Pixels holds the block's content tightly packed
-// (row-major, BytesPerPixel per pixel, rows clamped to the image edge for edge blocks).
+// _Pixels is tightly packed: row-major, BytesPerPixel per pixel, rows clamped to the image edge
+// for edge blocks.
 struct CKRENDERTARGET_API FCk_RenderTarget_BlockDelta
 {
 public:
@@ -31,8 +31,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Pure pixel/payload math — no UObjects, no ECS, fully unit-testable. All buffers are raw
-// RGBA8 (4 bytes/pixel, row-major, tightly packed).
+// Pure pixel/payload math — no UObjects, no ECS. All buffers are raw RGBA8 (4 bytes/pixel,
+// row-major, tightly packed).
 namespace ck::render_target::pixel
 {
     constexpr auto BytesPerPixel = 4;
@@ -40,15 +40,13 @@ namespace ck::render_target::pixel
     // Fallback for when the BlockSize project setting is unavailable
     constexpr auto DefaultBlockSize = 16;
 
-    // Number of blocks per axis for an image of InSize at InBlockSize (edge blocks count even
-    // when smaller than InBlockSize).
+    // Edge blocks count even when smaller than InBlockSize.
     CKRENDERTARGET_API auto
     Get_BlockCounts(
         const FIntPoint& InSize,
         int32 InBlockSize) -> FIntPoint;
 
-    // Block-level diff of two same-sized images. Returns one delta per block whose content
-    // differs. Empty result == identical images.
+    // One delta per differing block; empty result == identical images.
     CKRENDERTARGET_API auto
     Diff_Blocks(
         const TArray<uint8>& InCurrent,
@@ -56,8 +54,7 @@ namespace ck::render_target::pixel
         const FIntPoint& InSize,
         int32 InBlockSize) -> TArray<FCk_RenderTarget_BlockDelta>;
 
-    // Applies block deltas onto InOutPixels in place. Deltas outside the image or with
-    // mismatched content size are skipped with an ensure.
+    // Deltas outside the image or with a mismatched content size are skipped with an ensure.
     CKRENDERTARGET_API auto
     Patch_Blocks(
         TArray<uint8>& InOutPixels,
@@ -75,8 +72,7 @@ namespace ck::render_target::pixel
     Deserialize_Deltas(
         const TArray<uint8>& InBuffer) -> TOptional<TArray<FCk_RenderTarget_BlockDelta>>;
 
-    // Splits a payload into <= InChunkSizeBytes pieces (last chunk may be smaller; empty
-    // payload yields no chunks). Reassemble is the exact inverse.
+    // Last chunk may be smaller; an empty payload yields no chunks. Reassemble is the exact inverse.
     CKRENDERTARGET_API auto
     Chunk_Payload(
         const TArray<uint8>& InPayload,

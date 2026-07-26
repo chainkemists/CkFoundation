@@ -33,9 +33,6 @@ DECLARE_CYCLE_STAT(TEXT("Minimap::DiffSignals"), STAT_CkMinimap_DiffSignals, STA
 
 namespace ck_minimap_processor
 {
-    // Per-index distance-feed record written by a worker into its own slot, consumed post-parallel on the
-    // calling thread. Distance is always set once computed (before any range/fog cull early-return); the
-    // DisplayDefinition is the resolved consumer child (invalid when this POI has none for this consumer).
     struct FCk_Minimap_PoiFeed
     {
         float Distance = 0.0f;
@@ -65,8 +62,7 @@ namespace ck
     {
         InMinimapEntity.Remove<MarkedDirtyBy>();
 
-        // Direct-attach default: the minimap entity IS the observer (mirrors the compass). A standalone
-        // minimap composed via Create points its observer at the lifetime owner through a SetObserver request.
+        // Direct-attach default only — Create points its child's observer at the lifetime owner via a request
         if (ck::Is_NOT_Valid(InCurrent._Observer))
         {
             InCurrent._Observer = InMinimapEntity;
@@ -92,8 +88,8 @@ namespace ck
 
         InCurrent._RotationMode = InParams.Get_RotationMode();
 
-        // Force the first projection pass to run immediately regardless of the update interval
-        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
+        const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
+        InCurrent._TimeSinceUpdate = ProjectImmediately;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -146,8 +142,8 @@ namespace ck
 
         InCurrent._ViewExtent = InRequest.Get_ViewExtent();
 
-        // Zoom changes must reflect immediately, not at the next throttled interval
-        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
+        const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
+        InCurrent._TimeSinceUpdate = ProjectImmediately;
     }
 
     auto
@@ -163,7 +159,8 @@ namespace ck
 
         InParams.Set_CategoryFilter(InRequest.Get_CategoryFilter());
 
-        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
+        const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
+        InCurrent._TimeSinceUpdate = ProjectImmediately;
     }
 
     auto
@@ -181,7 +178,8 @@ namespace ck
             ? InRequest.Get_Observer()
             : static_cast<const FCk_Handle&>(InMinimapEntity);
 
-        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
+        const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
+        InCurrent._TimeSinceUpdate = ProjectImmediately;
     }
 
     auto
@@ -197,7 +195,8 @@ namespace ck
 
         InCurrent._RotationMode = InRequest.Get_RotationMode();
 
-        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
+        const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
+        InCurrent._TimeSinceUpdate = ProjectImmediately;
     }
 
     auto
@@ -213,7 +212,8 @@ namespace ck
 
         InCurrent._FogOfWar = InRequest.Get_FogOfWar();
 
-        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
+        const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
+        InCurrent._TimeSinceUpdate = ProjectImmediately;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -227,9 +227,8 @@ namespace ck
             FFragment_Minimap_Current& InCurrent) const
         -> void
     {
-        // Observers die (pawn destroyed, possession changed) as part of normal play — degrade silently,
-        // drain the entries so bound UIs empty their pools, and wait for a Request_SetObserver.
-        // FixedBounds minimaps degrade the same way (recorded decision: no observer-less world map)
+        // Observers die (pawn destroyed, possession changed) as part of normal play — degrade silently and
+        // wait for a Request_SetObserver. FixedBounds minimaps degrade the same way (no observer-less world map)
         if (ck::Is_NOT_Valid(InCurrent._Observer))
         {
             DoClearAllEntries(InMinimapEntity, InCurrent);
@@ -252,8 +251,6 @@ namespace ck
 
         const auto UpdateInterval = InParams.Get_UpdateInterval();
 
-        // UNLIKE the compass there is no unthrottled channel — view origin/yaw and every entry position
-        // go stale together between updates (delivery contract point; default interval is 0)
         if (UpdateInterval > FCk_Time::ZeroSecond() && InCurrent._TimeSinceUpdate < UpdateInterval)
         { return; }
 
@@ -280,8 +277,6 @@ namespace ck
             const FFragment_Minimap_Current& InCurrent)
         -> float
     {
-        // Same resolution order as the compass' Auto heading: composed camera POV wins, transform yaw is
-        // the fallback (the observer is known transform-valid — the caller gated on it)
         if (const auto ObserverCamera = UCk_Utils_Camera_UE::Cast(InObserver);
             ck::IsValid(ObserverCamera))
         {
@@ -319,21 +314,9 @@ namespace ck
         const auto RotationMode = InCurrent._RotationMode;
         const auto& FogOfWar = InCurrent._FogOfWar;
 
-        // Manual view over every POI in this world's registry, keyed on the FTag_Poi identity. The four
-        // pending-kill excludes matter: fragments survive until destruction Finalize (~2 ticks after
+        // The four pending-kill excludes matter: fragments survive until destruction Finalize (~2 ticks after
         // Destroy) — without them, dying POIs would linger on the minimap. Initiate-frame POIs are
         // deliberately still projected (same policy as CK_IGNORE_PENDING_KILL).
-        //
-        // Base-entity FTag_VisibleRange_Hidden is consumed as a WORKER skip (below, after the distance
-        // record), deliberately NOT a view exclude — an excluded hidden POI would stop receiving the
-        // distance feed and could never re-evaluate back to visible. The inline max-range cull further
-        // down still runs for blip-free same-frame membership. The EntityTag disable convention stays a
-        // per-worker skip too.
-        //
-        // The POI set is GATHERED first, then projected data-parallel: the per-POI body is pure registry
-        // READS (EntityTag/VisibleRange/DisplayDefinition state, own transforms, fog grid) whose writers all
-        // ran in earlier groups, and each worker writes only its own index slot. Signals/sort/diff and every
-        // Update_Distance feed stay on the calling thread.
         auto& PoiEntities = InCurrent._ScratchPoiEntities;
         PoiEntities.Reset();
 
@@ -352,14 +335,9 @@ namespace ck
         Slots.Reset();
         Slots.SetNum(PoiEntities.Num());
 
-        // Per-index feed scratch, mirroring Slots: a worker records its POI's distance (+ resolved consumer
-        // DisplayDefinition) into its own slot; the calling-thread loop after the ParallelFor drives every
-        // Update_Distance. Kept a local (not a fragment member) — the record type is a filename-namespace
-        // struct, and the feed set is consumed and discarded within this one pass.
         TArray<TOptional<ck_minimap_processor::FCk_Minimap_PoiFeed>> FeedSlots;
         FeedSlots.SetNum(PoiEntities.Num());
 
-        // Below this the fan-out overhead exceeds the projection math — same body runs inline
         constexpr auto MinPoisForParallel = 64;
         const auto ForceSingleThread = PoiEntities.Num() < MinPoisForParallel;
 
@@ -368,16 +346,12 @@ namespace ck
         {
             const auto PoiGenericHandle = InMinimapEntity.Get_ValidHandle(PoiEntities[InIndex].Get_ID());
 
-            // Disabled POIs are excluded via the EntityTag convention tag (absence-safe: Has returns false
-            // when the store isn't present yet — the disable add is deferred one pump).
             if (UCk_Utils_EntityTag_UE::Has_UsingGameplayTag(PoiGenericHandle, Tag_Poi_DisabledName))
             { return; }
 
             if (NOT FilterIsEmpty && NOT CategoryFilter.Matches(UCk_Utils_EntityTag_UE::Get_AllTagsAsContainer(PoiGenericHandle)))
             { return; }
 
-            // POI position = the POI entity's own Transform location (direct-attach: the POI entity carries
-            // the Transform — see CkPoi's composition contract)
             const auto PoiTransformHandle = UCk_Utils_Transform_UE::Cast(PoiGenericHandle);
 
             if (ck::Is_NOT_Valid(PoiTransformHandle))
@@ -388,28 +362,23 @@ namespace ck
 
             const auto Distance = static_cast<float>(FVector::Dist(ViewOrigin, PoiLocation));
 
-            // Record the distance for the post-parallel feed BEFORE any subsequent early-return (the max-range
-            // and fog culls below can bail). A culled entry still feeds its base VR its distance — fine; its
-            // DisplayDefinition stays unresolved (invalid), so only the base VR is fed for it.
+            // Recorded BEFORE the culls below: a culled POI must keep feeding its VisibleRange, or it could
+            // never re-evaluate back to visible
             FeedSlots[InIndex].Emplace(ck_minimap_processor::FCk_Minimap_PoiFeed{Distance});
 
-            // Base-entity hidden state (explicit Request_SetVisibility, or its own range vote once fed) is a
-            // WORKER skip, deliberately NOT a view exclude: a view-excluded hidden POI would stop receiving
-            // the distance feed above and could never re-evaluate back to visible when the observer returns
-            // into range. Skips here, keeps feeding.
+            // A worker skip, deliberately NOT a view exclude — see the distance record above
             if (PoiGenericHandle.Has<ck::FTag_VisibleRange_Hidden>())
             { return; }
 
-            // MaxVisibleRange CONFIG now lives in CkVisibleRange (composed onto the POI). Absent -> 0 = unlimited
-            // (no cull). Same single-boundary cull as before, fed from the new home.
-            auto MaxVisibleRange = 0.0f;
+            constexpr auto UnlimitedRange = 0.0f;
+            auto MaxVisibleRange = UnlimitedRange;
 
             if (UCk_Utils_VisibleRange_UE::Has(PoiGenericHandle))
             {
                 MaxVisibleRange = UCk_Utils_VisibleRange_UE::Get_MaxRange(UCk_Utils_VisibleRange_UE::Cast(PoiGenericHandle));
             }
 
-            if (MaxVisibleRange > 0.0f && Distance > MaxVisibleRange)
+            if (MaxVisibleRange > UnlimitedRange && Distance > MaxVisibleRange)
             { return; }
 
             if (ck::IsValid(FogOfWar) && NOT UCk_Utils_FogOfWar_UE::Get_IsLocationExplored(FogOfWar, PoiLocation))
@@ -421,25 +390,16 @@ namespace ck
 
             const auto IsOutsideFrame = NOT UCk_Utils_Minimap_UE::Get_IsInsideFrame(FramePos, FrameShape);
 
-            // Presentation (priority/offscreen) resolves per-consumer via CkPoiDisplayDefinition. No
-            // definition -> the old field defaults (Hide / 0), so category-only POIs keep prior behavior.
-            // CastChecked, not ck::StaticCast: the view guarantees FTag_Poi, so the ensure can never fire,
-            // and going through the feature's own Cast keeps the Has check in one place.
             const auto PoiHandle = UCk_Utils_Poi_UE::CastChecked(PoiGenericHandle);
 
             const auto DisplayDefinition = UCk_Utils_PoiDisplayDefinition_UE::TryGet_PoiDisplayDefinition_ByConsumer(
                 PoiHandle, Tag_PoiConsumer_Minimap);
             const auto HasDisplayDefinition = ck::IsValid(DisplayDefinition);
 
-            // Record the resolved consumer DisplayDefinition for the post-parallel feed (invalid = none).
             FeedSlots[InIndex].GetValue().DisplayDefinition = DisplayDefinition;
 
-            // Per-consumer restriction: a VisibleRange composed on THIS consumer's DisplayDefinition child
-            // (own hidden state, or ParentHidden cascaded from the base) culls only this projector's entry —
-            // the other projectors are unaffected. Pure Has reads; one-frame latency accepted (new
-            // capability, no existing assertion depends on its timing). Direct-attach DDs alias the base
-            // entity, where both checks are harmless: base Hidden is already view-excluded, and ParentHidden
-            // only ever lands on record children.
+            // Per-consumer restriction: hidden state on THIS consumer's DisplayDefinition child culls only
+            // this projector's entry. Direct-attach DDs alias the base entity, where both checks are harmless
             if (HasDisplayDefinition
                 && (DisplayDefinition.Has<ck::FTag_VisibleRange_Hidden>()
                     || DisplayDefinition.Has<ck::FTag_PoiDisplayDefinition_ParentHidden>()))
@@ -472,12 +432,8 @@ namespace ck
             });
         }, ForceSingleThread);
 
-        // Distance feed — calling thread only. Worker purity holds: workers only WROTE their own FeedSlots
-        // index (same contract as Slots); every Update_Distance runs here, post-parallel. Feed the base
-        // entity's VisibleRange (if composed) and the resolved consumer DisplayDefinition's VisibleRange (if
-        // composed and not aliasing the base — a direct-attach DD IS the base entity, already fed above; the
-        // guard avoids a double-feed). Update_Distance is a plain setter; the VisibleRange processor
-        // evaluates on its own cadence, so this is what turns the view-exclude above into real state.
+        // Distance feed — calling thread ONLY: the workers above may not mutate ECS state. The
+        // DisplayDefinition != BaseHandle guard avoids double-feeding a direct-attach DD, which IS the base
         for (auto FeedIndex = 0; FeedIndex < FeedSlots.Num(); ++FeedIndex)
         {
             const auto& FeedSlot = FeedSlots[FeedIndex];
@@ -598,8 +554,6 @@ namespace ck
             FFragment_Minimap_Current& InCurrent)
         -> void
     {
-        // Drain the pooled UI deterministically when the minimap entity dies — every remaining entry gets
-        // exactly one Disappeared broadcast (the Update processor is excluded from the EndPlay window)
         for (const auto& Entry : InCurrent._Entries)
         {
             UUtils_Signal_OnMinimapEntryDisappeared::Broadcast(InMinimapEntity, MakePayload(InMinimapEntity, Entry.Get_Poi()));

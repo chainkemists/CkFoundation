@@ -16,15 +16,9 @@ struct FAssetData;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Process-global cache of every UCk_InventoryItem_Definition, built once (async)
-// from the AssetRegistry. Item definitions are world-agnostic data assets, so an
-// engine subsystem builds the index a single time and shares it across worlds —
-// replacing the previous per-call AssetRegistry scan + synchronous load.
-//
-// In the editor the index is invalidated when definition assets are added/removed/
-// renamed (AssetRegistry events) or when a designer edits a definition's traits
-// (FCoreUObjectDelegates::OnObjectPropertyChanged). Invalidation is lazy: the cache
-// is dropped and rebuilt on the next Request_BuildIndex (i.e. the next query).
+// Process-global index of every UCk_InventoryItem_Definition, built once asynchronously from the
+// AssetRegistry and shared across worlds. In the editor, asset and property changes invalidate it
+// lazily: the cache is dropped and rebuilt on the next Request_BuildIndex.
 UCLASS(NotBlueprintable, NotBlueprintType, DisplayName = "CkSubsystem_ItemQuery")
 class CKINVENTORY_API UCk_ItemQuery_Subsystem_UE : public UEngineSubsystem
 {
@@ -53,8 +47,7 @@ public:
     auto
     Request_BuildIndex() -> void;
 
-    // Filters the cached index. Caller must ensure the index is ready — returns
-    // empty when not yet built.
+    // Returns empty when the index isn't built yet.
     auto
     Query_Definitions(
         const FCk_ItemQuery_Filter& InFilter) const -> TArray<TObjectPtr<UCk_InventoryItem_Definition>>;
@@ -66,7 +59,6 @@ private:
     auto
     DoOnIndexLoaded() -> void;
 
-    // Drops the cached index so the next Request_BuildIndex rebuilds from scratch.
     auto
     DoInvalidateIndex() -> void;
 

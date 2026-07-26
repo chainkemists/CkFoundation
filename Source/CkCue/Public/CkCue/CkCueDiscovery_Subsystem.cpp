@@ -1,12 +1,3 @@
-// CkCueDiscovery_Subsystem.cpp
-//
-// UCk_CueSubsystem_Base_UE implementation:
-//   - Initialize / Deinitialize
-//   - Cue discovery (C++ class scan + Blueprint asset scan)
-//   - Asset registry integration (add, remove, rename, update callbacks)
-//   - Discovery lookup (Get_CueEntityScript, Get_DiscoveredCues)
-//   - Deferred discovery system (batches rapid asset registry events)
-
 #include "CkCueSubsystem_Base.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -340,9 +331,8 @@ auto
     }
     else
     {
-        // Asset registry fires rapidly during editor operations (save, rename, delete).
-        // We defer re-discovery by 60 frames to batch these events into a single scan.
-        // UGameInstanceSubsystem doesn't have Tick(), so a ticker callback is used.
+        // The asset registry fires rapidly during editor save/rename/delete, so re-discovery is
+        // batched into one scan. A ticker, because UGameInstanceSubsystem has no Tick().
         _DiscoveryDeferralFramesRemaining = DISCOVERY_DEFERRAL_FRAMES;
         _DiscoveryDeferralTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
             FTickerDelegate::CreateUObject(this, &UCk_CueSubsystem_Base_UE::DoTickDeferredDiscovery)

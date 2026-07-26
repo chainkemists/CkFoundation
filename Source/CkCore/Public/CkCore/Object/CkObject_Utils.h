@@ -161,9 +161,8 @@ public:
         TSubclassOf<T> InClass,
         TFunction<void(T*)> InInitFunc) -> T*;
 
-    // Pooling-aware create (the object-pooling hoist). The Outer world's subsystem owns the returned
-    // instance (hold it weakly); fresh-or-recycled is invisible to the caller. Release via
-    // TryReleaseToPool. TransientPackage variants stay non-pooled. See ObjectPooling/README.md
+    // The Outer world's subsystem owns the returned instance (hold it weakly) and fresh-or-recycled is
+    // invisible to the caller. Release via TryReleaseToPool. See ObjectPooling/README.md
     template<typename T>
     static auto
     Request_CreateNewObject(
@@ -193,16 +192,13 @@ public:
         TSubclassOf<T> InClass,
         T_Func InFunc) -> T*;
 
-    // Strips UHT-generated prefixes/suffixes ("BP_" prefix, "_C" suffix) from a class name.
-    // Returns "(unknown)" when InClass is null.
+    // Strips the "BP_" prefix and "_C" suffix; returns "(unknown)" when InClass is null.
     static auto
     Get_CleanClassName(
         const UClass* InClass) -> FString;
 
-    // Derives a gameplay tag from a class name by stripping the "_C" Blueprint CDO suffix and
-    // replacing every '_' with '.'. Example: "Ck_SmState_Chase" -> "Ck.SmState.Chase".
-    // InComment is forwarded to the gameplay tag resolver (used as the tag's description).
-    // Returns an invalid FGameplayTag when InClass is null.
+    // Strips the "_C" suffix and maps '_' to '.': "Ck_SmState_Chase" -> "Ck.SmState.Chase".
+    // InComment becomes the tag's description. Invalid FGameplayTag when InClass is null.
     static auto
     Get_TagFromClassName(
         const UClass* InClass,
@@ -251,7 +247,6 @@ public:
     Request_CopyAllProperties(
         const FCk_Utils_Object_CopyAllProperties_Params& InParams);
 
-    // Reset all the properties of a UObject to the value assigned in the CDO.
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Request Reset All Object Properties To Default",
               Category = "Ck|Utils|Object")
@@ -267,8 +262,7 @@ public:
     Request_CreateNewObject_TransientPackage_UE(
         TSubclassOf<UObject> InObject);
 
-    // Pooling-aware create (see the template overload above for the ownership contract).
-    // InTemplateArchetype may be null (class CDO is the archetype)
+    // Ownership contract: see the template overload above. InTemplateArchetype null = class CDO.
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Request Create New Object (Pooled)",
               Category = "Ck|Utils|Object",
@@ -280,8 +274,8 @@ public:
         UObject* InTemplateArchetype,
         const FCk_ObjectPooling_PoolParams& InPoolParams);
 
-    // Recycle -> park; DestroyOnRelease -> unpin. A benign no-op (returns Failed) for objects the
-    // subsystem never handed out — safe to call unconditionally from any teardown path
+    // Recycle -> park; DestroyOnRelease -> unpin. Benign no-op (Failed) for untracked objects, so it is
+    // safe to call unconditionally from any teardown path.
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Try Release Object To Pool",
               Category = "Ck|Utils|Object")
@@ -289,7 +283,6 @@ public:
     TryReleaseToPool(
         UObject* InObject);
 
-    // True when the subsystem handed out (and still tracks) this instance (query/tooling)
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Pool-Tracked Object",
               Category = "Ck|Utils|Object")
@@ -297,10 +290,8 @@ public:
     Get_IsPoolTrackedObject(
         const UObject* InObject);
 
-    // Registers a release-quiesce hook for InBoundObject with its world's pooling subsystem —
-    // the bind-site half of the pooled-object GC-equivalence contract (the subsystem runs the
-    // hook when the object is released, so no cross-object subscription outlives the logical
-    // life). Quiet no-op (false) when the object resolves no world/subsystem or is untracked
+    // Bind-site half of the pooled-object GC-equivalence contract: the subsystem runs InHook on release,
+    // so no subscription outlives the logical life. Quiet false when no world/subsystem or untracked.
     static auto
     TryRegisterPoolReleaseQuiesceHook(
         const UObject* InBoundObject,
@@ -317,8 +308,7 @@ public:
         TSubclassOf<UObject> InClass,
         UObject* InArchetype);
 
-    // Unreal prefixes some classes with REINST_. This is because REINST_ is a newer version of a static class.
-    // This function gets the most up to date default class.
+    // Unreal prefixes hot-reloaded classes with REINST_; this resolves back to the current default class.
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Default Class (Up-To-Date)",
               Category = "Ck|Utils|Object")

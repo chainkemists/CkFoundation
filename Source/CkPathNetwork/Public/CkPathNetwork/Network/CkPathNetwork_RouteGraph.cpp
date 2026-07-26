@@ -108,7 +108,6 @@ namespace ck::pathnetwork
         if (Get_IsOffPathHop(InFrom, InTo))
         { return DoGet_OffPathCost(InFrom, InTo); }
 
-        // On-network hops.
         if (InFrom._Kind == ERouteNodeKind::OverlayPoint && InTo._Kind == ERouteNodeKind::OverlayPoint)
         {
             const auto& A = _Shared->_OverlayPoints[InFrom._Index];

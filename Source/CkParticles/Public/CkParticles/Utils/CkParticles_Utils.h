@@ -9,13 +9,8 @@ class UNiagaraComponent;
 class UNiagaraSystem;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Runtime spawn helpers for CkParticles. CkParticles itself is a pure HLSL/CPU behavior framework (no ECS handle);
-// these wrap the standard Niagara spawn path and set the system's User.BehaviorId so a caller picks a behavior by
-// Id. Behaviors are authored in /CkParticles/Behaviors/*.ush (+ the CPU mirror): Gravity=0, Swirl=1, Explosion=2,
-// Fire=3, Fireworks=4, Galaxy=5, Beam=6, Slash=7, Nova=8, MuzzleFlash=9, ImpactBurst=10, Tracer=11, SmokePlume=12,
-// SparksBurst=13, GroundRing=14, LightningStrike=15, AuraSwirl=16. Ids 9-16 are recreations of marketplace VFX
-// recipes (see the VFX corpus translation sheets); their aim axis conventions: MuzzleFlash/Tracer forward = +X,
-// ImpactBurst surface normal = +Z, GroundRing/LightningStrike/AuraSwirl ground plane = local XY.
+// Runtime spawn helpers: they wrap the standard Niagara spawn path and set User.BehaviorId. The behavior roster
+// and each behavior's aim-axis convention live in CkParticles/CLAUDE.md.
 // --------------------------------------------------------------------------------------------------------------------
 UCLASS()
 class CKPARTICLES_API UCk_Utils_Particles_UE : public UBlueprintFunctionLibrary

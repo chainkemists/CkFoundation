@@ -38,14 +38,10 @@ namespace ck
     public:
         FFragment_WorldSpaceWidget_Current() = default;
 
-        // ScreenOverlay mode: wraps the content widget and adds it to the viewport.
         explicit
         FFragment_WorldSpaceWidget_Current(
             UCk_WorldSpaceWidget_Wrapper_UE* InWrapperWidget);
 
-        // WorldComponent mode: a real 3D UWidgetComponent displays the explicit
-        // content-widget instance (assigned via SetWidget), depth-occluded
-        // per-pixel by world geometry.
         FFragment_WorldSpaceWidget_Current(
             UWidgetComponent* InWidgetComponent,
             UUserWidget* InContentWidget);

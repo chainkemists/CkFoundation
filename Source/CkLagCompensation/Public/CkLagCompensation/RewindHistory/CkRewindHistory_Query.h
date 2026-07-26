@@ -40,7 +40,7 @@ namespace ck::lag_comp
 {
     struct FSweepResult
     {
-        // Fraction [0..1] along the (unadjusted) swept segment
+        // Fraction along the UNADJUSTED swept segment
         double _Time01 = 0.0;
         FVector _Location = FVector::ZeroVector;
         FVector _Normal = FVector::ZeroVector;
@@ -49,19 +49,15 @@ namespace ck::lag_comp
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Snapshots of all hit shapes interpolated at InWorldTime, from the bracketing recorded frames.
-    // Empty if the buffer cannot bracket the time (fewer than 2 frames, or the time predates the
-    // oldest recorded frame by more than one frame interval). Times after the newest frame clamp
-    // to the newest pose — recording lags the present by up to one record interval
+    // Empty if the buffer cannot bracket InWorldTime (fewer than 2 frames, or the time predates the
+    // oldest frame by more than one interval). Times after the newest frame clamp to the newest pose
     CKLAGCOMPENSATION_API auto
     Get_InterpolatedSnapshots(
         const FCk_LagComp_FrameBuffer& InFrames,
         FCk_Time InWorldTime) -> TArray<FCk_LagComp_HitShapeSnapshot>;
 
-    // Sweep a moving point (with InSweepRadius) from InSegmentStart to InSegmentEnd against ONE
-    // hit shape that itself moves from InShapeAtStart to InShapeAtEnd over the same time slice.
-    // Solved in the shape's rest frame by subtracting the shape's motion from the segment —
-    // pure math, no physics engine, deterministic
+    // Solved in the shape's rest frame by subtracting the shape's own motion over the slice from
+    // the segment — pure math, no physics engine, deterministic
     CKLAGCOMPENSATION_API auto
     Sweep_SegmentVsSnapshot(
         const FVector& InSegmentStart,
@@ -70,9 +66,7 @@ namespace ck::lag_comp
         const FCk_LagComp_HitShapeSnapshot& InShapeAtStart,
         const FCk_LagComp_HitShapeSnapshot& InShapeAtEnd) -> TOptional<FSweepResult>;
 
-    // Sweep a segment travelled over [InTimeStart, InTimeEnd] against the recorded history.
-    // Interpolates the target's pose at both ends of the slice, AABB pre-rejects, then runs the
-    // analytic shape sweeps. Returns the earliest hit, with _TargetEntity left unset
+    // Returns the earliest hit across the target's shapes, with _TargetEntity left unset
     CKLAGCOMPENSATION_API auto
     Sweep_SegmentVsHistory(
         const FCk_LagComp_FrameBuffer& InFrames,

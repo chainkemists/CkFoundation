@@ -69,7 +69,6 @@ auto
     FSlateFontInfo CounterFont = ChipFont;
     CounterFont.Size = FMath::Max(CounterFont.Size - 3, 6);
 
-    // Accent color for the SImage — bound once, evaluates project settings each frame.
     TAttribute<FSlateColor> AccentSlateColor = TAttribute<FSlateColor>::CreateLambda(
         [AccentColor = _HeldAccentColor]() -> FSlateColor
         {
@@ -146,18 +145,15 @@ auto
     const int32 Count = InStates.Num();
     DoEnsurePoolSize(Count);
 
-    // Snapshot fonts once per update.
     const FSlateFontInfo ChipFont = _Font.Get();
 
     FSlateFontInfo CounterFont = ChipFont;
     CounterFont.Size = FMath::Max(CounterFont.Size - 3, 6);
 
-    // Capture color attributes for per-chip lambdas.
     TAttribute<FSlateColor>  ActiveColor   = _ActiveColor;
     TAttribute<FLinearColor> AccentColor   = _HeldAccentColor;
     TAttribute<FSlateColor>  InactiveColor = _InactiveColor;
 
-    // ── First pass: check which IDs have duplicates visible ────────────────
     TMap<FName, int32> IdTotalCount;
     for (int32 i = 0; i < Count; ++i)
     {
@@ -179,7 +175,6 @@ auto
         const uint64 ActivatedFrame   = State.ActivatedFrame;
         const uint64 DeactivatedFrame = State.DeactivatedFrame;
 
-        // ── Chip text (with permanent sequence number when duplicates exist) ─
         const int32 TotalCount = IdTotalCount[State.Id];
         const FString ChipText = (TotalCount > 1)
             ? FString::Printf(TEXT("%s %s:%d %s"),
@@ -192,14 +187,11 @@ auto
                 *State.Label.ToString(),
                 *_BracketClose.ToString());
 
-        // ── Color: inactive = dim + age fade, active = white, held = accent ──
         TAttribute<FSlateColor> ChipColor = TAttribute<FSlateColor>::CreateLambda(
             [IsActive, ActivatedFrame, DeactivatedFrame, ActiveColor, AccentColor, InactiveColor]() -> FSlateColor
             {
                 if (!IsActive)
                 {
-                    // Age-based fade: newer inactive entries are brighter, older ones fade out.
-                    // Fade over ~600 frames (~10 seconds at 60fps) from full to 15% alpha.
                     const FSlateColor BaseColor = InactiveColor.Get();
                     FLinearColor Faded = BaseColor.GetSpecifiedColor();
 
@@ -207,7 +199,9 @@ auto
                         ? (GFrameCounter - DeactivatedFrame)
                         : 0;
 
-                    const float FadeFactor = FMath::Clamp(1.0f - static_cast<float>(Age) / 600.0f, 0.15f, 1.0f);
+                    constexpr auto FullyFadedAfterFrames = 600.0f;
+                    constexpr auto MinFadedAlpha         = 0.15f;
+                    const float FadeFactor = FMath::Clamp(1.0f - static_cast<float>(Age) / FullyFadedAfterFrames, MinFadedAlpha, 1.0f);
                     Faded.A *= FadeFactor;
 
                     return FSlateColor(Faded);
@@ -218,7 +212,6 @@ auto
                     : ActiveColor.Get();
             });
 
-        // ── Frame count: live when held, final when inactive ─────────────────
         TAttribute<FText> FrameCountText = TAttribute<FText>::CreateLambda(
             [IsActive, ActivatedFrame, DeactivatedFrame]() -> FText
             {
@@ -238,7 +231,6 @@ auto
                 return FText::FromString(FString::Printf(TEXT("%lluf"), Held));
             });
 
-        // ── Counter visible when held or inactive with duration > 0 ──────────
         TAttribute<EVisibility> CounterVis = TAttribute<EVisibility>::CreateLambda(
             [IsActive, ActivatedFrame, DeactivatedFrame]() -> EVisibility
             {
@@ -253,7 +245,6 @@ auto
                     : EVisibility::Collapsed;
             });
 
-        // ── Accent underline visible only when held ──────────────────────────
         TAttribute<EVisibility> AccentVis = TAttribute<EVisibility>::CreateLambda(
             [IsActive, ActivatedFrame]() -> EVisibility
             {
@@ -262,7 +253,6 @@ auto
                     : EVisibility::Collapsed;
             });
 
-        // ── Apply to pool widgets ────────────────────────────────────────────
         Slot.LabelBlock->SetText(FText::FromString(ChipText));
         Slot.LabelBlock->SetFont(ChipFont);
         Slot.LabelBlock->SetColorAndOpacity(ChipColor);

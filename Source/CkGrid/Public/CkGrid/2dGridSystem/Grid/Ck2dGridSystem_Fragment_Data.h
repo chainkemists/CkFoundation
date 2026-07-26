@@ -144,7 +144,6 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector2D _CellSize = FVector2D(100.0f, 100.0f);
 
-    // Default state for all cells
     UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _DefaultCellState = ECk_EnableDisable::Enable;
@@ -241,32 +240,27 @@ public:
     CK_GENERATED_BODY(FCk_GridIntersectionResult);
 
 private:
-    // All individual cell intersections
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     TArray<FCk_GridCellIntersection> _IntersectingCells;
 
-    // Summary statistics
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     int32 _TotalIntersections = 0;
 
-    // Indicates if GridA is completely contained within GridB's active area
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     bool _GridAFullyContainedInGridB = false;
 
-    // Indicates if GridB is completely contained within GridA's active area
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     bool _GridBFullyContainedInGridA = false;
 
-    // Percentage of GridA's active cells that intersect with GridB
+    // Fraction of GridA's filter-matched cells that intersect GridB (and vice versa).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     float _GridAOverlapPercent = 0.0f;
 
-    // Percentage of GridB's active cells that intersect with GridA
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     float _GridBOverlapPercent = 0.0f;
@@ -281,7 +275,6 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector2D _SnapPosition = FVector2D::ZeroVector;
 
-    // Whether a valid snap position was calculated
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     bool _HasValidSnapPosition = false;

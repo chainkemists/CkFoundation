@@ -5,8 +5,6 @@
 #include "CkPmg_Utils_FlatShapes.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Warning: Triangle with exclamation mark (triangle + bar + dot)
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     ck::FProcessor_Pmg_Warning_Setup::
@@ -60,12 +58,11 @@ auto
         ECk_Plane_Axis::XY,
         Duration);
 
-    // Calculate actual triangle bounds (Triangle shape centers vertices properly)
+    // Ratios come from the Triangle shape's own vertex centring.
     const auto ActualTriangleTop = 0.211f * TriangleSize;
     const auto ActualTriangleBottom = -0.539f * TriangleSize;
     const auto ActualTriangleHeight = ActualTriangleTop - ActualTriangleBottom;
     
-    // Add margins from triangle edges
     const auto TopMargin = ActualTriangleHeight * 0.15f;
     const auto BottomMargin = ActualTriangleHeight * 0.15f;
     const auto ExclamationTop = ActualTriangleTop - TopMargin;
@@ -111,8 +108,6 @@ auto
         Duration);
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Prohibition: Circle with diagonal X bars
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -201,8 +196,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// NoEntry: Circle with horizontal bar
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     ck::FProcessor_Pmg_NoEntry_Setup::
@@ -273,8 +266,6 @@ auto
         Duration);
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// InfoCircle: Circle with "i" (dot on top, bar on bottom)
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

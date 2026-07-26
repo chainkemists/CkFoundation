@@ -28,10 +28,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Grid semantics: cell (X,Y) covers world [BoundsMin + Coord*CellSize, BoundsMin + (Coord+1)*CellSize) per axis;
-    // index = CellY * _CellCounts.X + CellX (row-major, X fastest). The grid may overshoot the bounds' max edges by
-    // up to one cell (ceil counts). An UNALLOCATED grid (_Explored empty — invalid bounds or cell budget blown at
-    // Setup) degrades to fully-unfogged: every location queries as explored.
+    // An UNALLOCATED grid (_Explored empty — invalid bounds or cell budget blown at Setup) degrades to
+    // fully-unfogged: every location queries as explored. Cell math contracts: CkFogOfWar_Utils.h.
     struct CKMINIMAP_API FFragment_FogOfWar_Current
     {
     public:
@@ -47,11 +45,8 @@ namespace ck
         TBitArray<> _Explored;
         FIntPoint _CellCounts = FIntPoint::ZeroValue;
 
-        // Entities whose Transform positions reveal cells every update (invalid handles are pruned)
         TArray<FCk_Handle> _Revealers;
 
-        // Newly-set cell indices accumulated across this update's reveals — flushed as ONE batched
-        // OnCellsRevealed broadcast, then reset
         TArray<int32> _NewlyRevealedScratch;
 
         FCk_Time _TimeSinceUpdate;

@@ -33,8 +33,7 @@ auto
     Compute_BakeInputsHash() const
     -> FString
 {
-    // Every input the baker reads participates; PlayLength participates because it drives the frame
-    // layout (a re-imported/trimmed sequence at the same path must read as stale).
+    // PlayLength participates because it drives the frame layout — a re-imported/trimmed sequence at the same path must read as stale.
     auto Description = FString{};
     Description += FString::Printf(TEXT("Skeleton:%s|"), *GetPathNameSafe(_Skeleton.Get()));
     Description += FString::Printf(TEXT("SourceMesh:%s|"), *GetPathNameSafe(_SourceMesh.Get()));
@@ -77,9 +76,6 @@ auto
     ApplyBakeResults(const FCk_Vat_BakeResults& InResults)
     -> bool
 {
-    // The ONLY write path that flips the serialized _IsBaked bit — never stamp a collection as baked
-    // from results a partially-failed baker produced (the corruption would persist to disk and only
-    // surface at first render, far from the cause).
     CK_ENSURE_IF_NOT(ck::IsValid(InResults.BakedMesh) && InResults.TextureWidth > 0 && InResults.TextureRows > 0,
         TEXT("ApplyBakeResults received invalid bake results on collection [{}] — refusing to mark it baked"), this)
     { return false; }

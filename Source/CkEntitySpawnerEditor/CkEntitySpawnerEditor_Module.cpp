@@ -128,11 +128,9 @@ namespace ck::entity_spawner_editor_internal
     }
 
     // ----------------------------------------------------------------------------------------------------
-    // Place Actors panel integration: a 'Ck Entity Scripts' category populated with one draggable item per
-    // opt-in (UCk_EntityScript_UE::Get_ShowInPlaceActors) EntityScript class. Dragging an item routes
-    // through UCk_EntitySpawner_ActorFactory_UE, which already accepts a bare EntityScript UClass as its
-    // asset — so the drop spawns a configured ACk_EntitySpawner_UE with the script pre-assigned, with no
-    // Blueprint wrapper required.
+    // Place Actors panel: one draggable item per opt-in
+    // (UCk_EntityScript_UE::Get_ShowInPlaceActors) EntityScript class. No Blueprint wrapper is
+    // needed because UCk_EntitySpawner_ActorFactory_UE accepts a bare EntityScript UClass as its asset.
 
     static auto Get_PlacementCategoryHandle() -> FName
     {
@@ -281,10 +279,9 @@ void FCkEntitySpawnerEditorModule::StartupModule()
             &ck::layout::FCk_EntitySpawner_Details::MakeInstance));
 
 #if WITH_ANGELSCRIPT_CK
-    // GetPostCompile catches AS body-only edits (e.g. DoConstruct changes on script subclasses)
-    // that don't trigger OnObjectsReplaced — those changes hot-patch into the same UClass*, so
-    // neither OnObjectsReplaced nor OnClassReload fires. Coalesces into the existing
-    // _PendingSpawnerRebuild end-of-frame path.
+    // AS body-only edits (e.g. DoConstruct changes on script subclasses) hot-patch into the same
+    // UClass*, so neither OnObjectsReplaced nor OnClassReload fires — only GetPostCompile catches
+    // them. Coalesces into the existing _PendingSpawnerRebuild end-of-frame path.
     _PostAngelscriptCompileHandle = FAngelscriptCodeModule::GetPostCompile().AddLambda(
         [this]()
         {
@@ -341,8 +338,6 @@ void FCkEntitySpawnerEditorModule::DoPostEngineInit()
             [this](const FString&, bool) { DoRebuildAllEditorEntities(); });
     }
 
-    // Register the 'Ck Entity Scripts' Place Actors category and populate it from the opt-in EntityScript
-    // classes loaded at this point (native + AngelScript + already-loaded Blueprints).
     ck::entity_spawner_editor_internal::DoRefreshPlaceableEntityScripts();
 }
 
@@ -450,14 +445,9 @@ void FCkEntitySpawnerEditorModule::OnLevelActorAdded(AActor* InActor)
 void FCkEntitySpawnerEditorModule::OnObjectsReplaced(
     const TMap<UObject*, UObject*>& InReplacementMap)
 {
-    // AS and BP reinstancing fire this. Editor entities hold references to the replaced
-    // UCk_EntityScript_UE instances — rebuilding spawners drops those and picks up the new
-    // instances the reinstancer wrote into _EntityScript.
-    //
-    // Rebuild is deferred to end-of-frame so Unreal has fully patched object references
-    // before we touch the editor ECS. The C++ processor set does NOT change when script
-    // classes reload, so there is no Request_RebuildProcessorGraph here — tearing down
-    // schedulers mid-life exposes a latent handle-destructor crash in processor teardown.
+    // Rebuild is deferred to end-of-frame so Unreal has fully patched object references before we
+    // touch the editor ECS. NO Request_RebuildProcessorGraph here: the C++ processor set does not
+    // change on script reload, and tearing down schedulers mid-life crashes in handle destruction.
     if (InReplacementMap.IsEmpty() || GEditor == nullptr)
     { return; }
 

@@ -31,8 +31,6 @@ namespace ck
     public:
         using TProcessor::TProcessor;
 
-        // cache the world pointer once per tick so ForEachEntity doesn't re-resolve
-        // it 100× per frame. Refreshed at the top of each Setup pass.
         auto
         DoTick(TimeType InDeltaT) -> void;
 
@@ -62,10 +60,8 @@ namespace ck
         TReadWrite<FFragment_IskmProxy_CustomData>,
         TReadWrite<FFragment_IskmProxy_Requests>,
         TReadOnly<FFragment_Transform>,
-        // Setup-before-consumer guarantee: skip entities that haven't completed
-        // Setup yet. Combined with registration order (Setup is registered
-        // first in the same group), the SKMC is always valid when a request
-        // handler runs.
+        // Setup-before-consumer: with Setup registered first in the same group, excluding
+        // not-yet-setup entities guarantees a valid SKMC in every request handler.
         TExclude<FTag_IskmProxy_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -88,8 +84,6 @@ namespace ck
             const FFragment_Transform& InTransform) const -> void;
 
     public:
-        // One DoHandleRequest overload per request type. C++ overload resolution dispatches
-        // from the visitor lambda in ForEachEntity. Mirrors CkIsmProxy_Processor.cpp:396-411.
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FFragment_Transform&, const FCk_Request_IskmProxy_PlayAnimation&) const -> void;
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FFragment_Transform&, const FCk_Request_IskmProxy_StopAnimation&) const -> void;
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FFragment_Transform&, const FCk_Request_IskmProxy_SetPlayRate&) const -> void;
@@ -110,13 +104,8 @@ namespace ck
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FFragment_Transform&, const FCk_Request_IskmProxy_EndRagdoll&) const -> void;
     };
 
-    // gated by FTag_IskmProxy_Movable AND FTag_Transform_Updated. Static proxies
-    // (no _Movable tag) are skipped entirely at runtime. Movable proxies that didn't
-    // change transform this frame (no _Transform_Updated tag set by CkEcsExt's transform
-    // system) are also skipped. Plan-1's old per-frame Equals() guard is gone.
-    // TIgnoreInEditor<FTag_IskmProxy_Movable>: in editor worlds the _Movable gate is
-    // dropped so editor-placed proxies (which aren't tagged _Movable) still get their
-    // transform pushed when moved — mirrors FProcessor_IsmProxy_TransformInstance.
+    // TIgnoreInEditor<FTag_IskmProxy_Movable>: editor worlds drop the _Movable gate so
+    // editor-placed proxies (never tagged _Movable) still get their transform pushed.
     class CKISKMRENDERER_API FProcessor_IskmProxy_UpdateTransform : public ck_exp::TProcessor<
         FProcessor_IskmProxy_UpdateTransform,
         FCk_Handle_IskmProxy,
@@ -140,16 +129,9 @@ namespace ck
             const FFragment_Transform& InTransform) const -> void;
     };
 
-    // Runs in FGroup_Transform_Finalize so the follower is ordered after the ENTIRE FGroup_Transform
-    // group — not only FProcessor_Transform_HandleRequests (leaders that move via their own transform
-    // Request) but also TProcessor_SceneNode_Update, which moves scene-node-CHILD leaders each frame
-    // (e.g. a promoted NPC's proxy inherits the agent's per-frame movement through the scene-node
-    // hierarchy). The follower reads the leader transform via a runtime lookup the scheduler cannot
-    // see, so it has NO view-dependency ordering on either mover; a plain RunAfter HandleRequests (the
-    // original lag-free fix) left it racing SceneNode_Update within the group, so a scene-node-driven
-    // leader was read one frame stale and the cosmetic trailed the moving body. Finalize still precedes
-    // FGroup_PostTransform, so the renderer flush still picks up FTag_Transform_Updated the same frame —
-    // see FFragment_IskmProxy_SocketFollower for the composition rationale.
+    // The leader transform is read through a runtime lookup the scheduler cannot see, so this pass has
+    // NO view-dependency ordering on any mover: it must sit in FGroup_Transform_Finalize, after the
+    // WHOLE FGroup_Transform (both request-driven and scene-node-driven leaders). See CkIskmRenderer/CLAUDE.md.
     class CKISKMRENDERER_API FProcessor_IskmProxy_SocketFollower_SyncTransform : public ck_exp::TProcessor<
         FProcessor_IskmProxy_SocketFollower_SyncTransform,
         FCk_Handle_Transform,
@@ -171,15 +153,9 @@ namespace ck
             const FFragment_IskmProxy_SocketFollower& InFollower) const -> void;
     };
 
-    // Companion to SyncTransform (above). That pass runs in Finalize so scene-node-driven LEADERS are
-    // fresh — but Finalize is after TProcessor_SceneNode_Update (FGroup_Transform), so scene-node
-    // CHILDREN parented under a follower's output (e.g. a held item under a hand attach-point, plus
-    // that item's own probe children) would read the follower's FTag_Transform_Updated one group too
-    // late: Transform_Cleanup wipes the tag before the next frame's gate check, so after their
-    // construct-time one-shot they freeze at the follower's equip-time pose. This pass recomputes the
-    // follower's scene-node descendant subtree in place (same composition + anchor-skip contract as
-    // TProcessor_SceneNode_Update) right after the follower writes, and runs before SyncToActor so
-    // the recomputed poses land on their actors the same frame.
+    // Companion to SyncTransform: it writes AFTER TProcessor_SceneNode_Update has run, so scene-node
+    // children parented under a follower would miss that frame's tag entirely. This pass recomputes the
+    // follower's descendant subtree in place (same contract as TProcessor_SceneNode_Update).
     class CKISKMRENDERER_API FProcessor_IskmProxy_SocketFollower_SyncDescendants : public ck_exp::TProcessor<
         FProcessor_IskmProxy_SocketFollower_SyncDescendants,
         FCk_Handle_Transform,

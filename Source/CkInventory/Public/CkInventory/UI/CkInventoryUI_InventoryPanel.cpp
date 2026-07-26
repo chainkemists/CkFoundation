@@ -69,16 +69,12 @@ auto
 {
     if (_InventoryHandle == InInventory)
     {
-        // Same-inventory re-injection happens when a pooled widget is reused
-        // (CommonUI layer containers pool by class): NativeDestruct unbound the
-        // signal but kept the handle, so the early-out must restore the binding
-        // and re-sync the slots instead of assuming both are still live.
+        // A pooled widget re-injects the same inventory after NativeDestruct unbound the signal
+        // but kept the handle — restore the binding and re-sync instead of assuming both are live.
         DoBindSignal();
         RefreshPanel();
         return;
     }
-
-    // ---- Unbind previous ----
 
     if (_IsBound)
     {
@@ -87,14 +83,10 @@ auto
 
     DoClear();
 
-    // ---- Bind new ----
-
     _InventoryHandle = InInventory;
 
     if (ck::Is_NOT_Valid(_InventoryHandle))
     { return; }
-
-    // ---- Construct and refresh ----
 
     DoConstruct();
     DoBindSignal();
@@ -115,8 +107,7 @@ auto
     if (ck::Is_NOT_Valid(InventoryOp))
     { return false; }
 
-    // Reject cross-inventory drag-over when drop-in is disallowed, so the cursor
-    // reflects rejection. Same-inventory drag-over stays valid (intra-panel rearrange).
+    // Rejecting here (not at drop) is what makes the cursor reflect the rejection.
     if (NOT _DragDropPolicy.Get_AllowDropIn() &&
         InventoryOp->Get_SourceInventory() != _InventoryHandle)
     { return false; }
@@ -139,12 +130,8 @@ auto
     if (ck::Is_NOT_Valid(InventoryOp))
     { return false; }
 
-    // ---- Let Blueprint handle first ----
-
     if (OnDropReceived(InventoryOp))
     { return true; }
-
-    // ---- Default handling: transfer between inventories ----
 
     if (ck::Is_NOT_Valid(_InventoryHandle))
     { return false; }
@@ -155,17 +142,14 @@ auto
     if (ck::Is_NOT_Valid(SourceItem))
     { return false; }
 
-    // Only handle cross-inventory transfers in the default implementation.
     if (SourceInventory == _InventoryHandle)
     { return false; }
 
-    // Drop-in gated by the panel's drag-drop policy. This is a safety net for drops on
-    // non-slot panel area — slot drops are gated earlier by UCk_InventoryUI_ItemSlotEntry.
+    // Safety net for drops on non-slot panel area; slot drops are gated in UCk_InventoryUI_ItemSlotEntry.
     if (NOT _DragDropPolicy.Get_AllowDropIn())
     { return false; }
 
-    // Source / target are base-typed in the UI layer. Source dispatch is handled by the base Utils
-    // internally; target type still drives which Transfer variant we call.
+    // Target shape decides the Transfer variant; source dispatch is internal to the base Utils.
     auto SourceMutable = const_cast<FCk_Handle_Inventory&>(SourceInventory);
     auto TargetMutable = _InventoryHandle;
     const auto Callback = FCk_Delegate_Inventory_OnOperationResult_Transfer{};

@@ -168,7 +168,14 @@ this tier exists to make unnecessary.
 `FFragment_CrowdAgent_PathFollow` also carries `_CurrentSegmentStart` — the world-space start of the
 current path segment. Steering's plane-crossing waypoint retirement needs the *incoming* segment
 direction, and CkNavigation's `ExtractWaypoints` strips the path's start point, so `Waypoints[-1]`
-does not exist for the first segment. Captured at both path-install sites.
+does not exist for the first segment. Captured at both path-install sites. Mirrors
+`UPathFollowingComponent`'s `MoveSegmentDirection` (`PathFollowingComponent.cpp:954`).
+
+`FFragment_CrowdAgent_InstalledRoute` exists because the PathNetwork corridor fragment **persists
+across MoveTos and network rebuilds** — without the goal+epoch identity,
+`FProcessor_CrowdAgent_OnRouteResolved` cannot tell a fresh plan from the corridor it already
+installed. A rebuild replans the *same* goal at a *new* epoch, so the epoch compare is what forces a
+re-install. `HandleRequests` clears it on every network-routed MoveTo.
 
 **NOT BUILT:** `FFragment_CrowdAgent_PiercingPairs`, `FFragment_CrowdAgent_SleepState`,
 `FFragment_CrowdAgent_ProgressTracker`.
@@ -232,7 +239,7 @@ to be here for `_Piercing*`, `_Sleep*`, `_Replan*`, `_MaxReplansPerPath` and `_P
 | `_SeparationRadius` | **100 cm** | Distance below which the reactive separation force acts. NOTE: barely above the 84cm radius sum, so the usable repulsion band is only ~16cm and the force is tiny (~4cm/s) at first contact. Real avoidance is the sampler, not this. |
 | `_SeparationLookahead` | 100 cm | **Probe radius = `_Radius + _SeparationLookahead`** (= 142cm). Two probes overlap each other, so agents detect each other at up to 284cm. |
 | `_SeparationWeight` | **0.5** | Force multiplier. (This doc previously claimed 2.0 — wrong.) |
-| `_SeparationInertia` | 0.5 | Lerp toward last frame's separation force; kills frame-to-frame flicker. |
+| `_SeparationInertia` | 0.5 | Lerp toward last frame's separation force; kills frame-to-frame flicker. Mirrors dtCrowd's `weightCurVel` concept (`DetourObstacleAvoidance.cpp:472`), applied as a force-blend factor because this solver does not sample-and-score separation; 0.5 approximates Detour's `wCurVel`/`wDesVel` = 0.375 ratio. |
 | `_MaxNeighborsForSteering` | 6 | Top-N cap (sorted by distance). |
 | `_CollisionFlags` / `_IgnoreFlags` | -1 / 0 | Present on the struct; **no processor currently reads them.** |
 
@@ -291,7 +298,14 @@ point came within arrival radius. Nothing in the system was aware.
 | **Geometric** (primary) | a *stationary* neighbour sits on the final waypoint such that `SelfRadius + NbrRadius` exceeds the arrival radius — so the closest the agent can physically get is further out than "arrived" | agent-occupied goals, **exactly and immediately**, naming the blocker | walls, props, multi-agent plugs |
 | **No-progress** (safety net) | UE's feet-sample ring: N samples on a cadence, all within a small radius of their centroid (`_BlockDetectionSampleCount`/`Interval`/`Distance`) | everything else | an agent that **orbits** the blocker — its samples smear round a ~168cm circle and the centroid test never trips |
 
-That last row is why both exist. Geometry catches the orbit; the ring catches the wall.
+That last row is why both exist. Geometry catches the orbit; the ring catches the wall. The
+no-progress ring is UE's own mechanism (`PathFollowingComponent.cpp:1556-1608`), re-implemented.
+
+The geometric detector's **engagement range is derived, not a knob**:
+`(2 * SelfRadius) + ArrivalRadius + BrakingDistance + 20cm` slack, where
+`BrakingDistance = MaxSpeed² / (2 * MaxAcceleration)`. Engaging at the agent's own braking distance
+is the last moment it could still stop cleanly; a neighbour parked on a goal 30m away is not
+blocking anything yet.
 
 **On block:** `Walking` → `Idle` + `FTag_CrowdAgent_GoalBlocked`, and `OnGoalBlocked` fires **once per
 episode** (not once per re-check) with a payload naming the blocker — exactly what a gameplay-side
@@ -310,7 +324,17 @@ the blocker leaves. `HoldAndRetry` exists precisely so blocked is a *hold*, not 
 
 An arrived (Idle) agent also now only absorbs `_PushApartIdleYield` (0.25) of a de-penetration shove,
 so a newcomer pressing it takes most of the correction. Not zero — idle-vs-idle overlap must still
-resolve, and the at-rest non-penetration assertion in `Crowd_Separation_Convergence` depends on it.
+resolve, and the at-rest non-penetration assertion in `Crowd_Separation_Convergence` depends on it;
+clamped at 0.05 minimum because zero would leave two idle agents interpenetrated forever.
+
+Why 0.25 and not 1.0 (the product case): at 1.0 an NPC standing at a shelf is body-checked clean off
+its own goal by the next customer, and an *arrived* agent has no restoring drive — the eviction is a
+one-way random walk outward. At 0.25 a walker pressing a stander absorbs ~4× more of the correction
+than the stander; idle-vs-idle still separates, just over a few more frames.
+
+**`_PushApartIdleYield` is a bound on the damage, not the cure.** The real fix for a newcomer that
+presses forever is BlockDetect noticing the goal is unreachable and stopping the press; the yield only
+limits how far a stander is shoved in the meantime (and when a player barges through a crowd).
 
 ---
 
@@ -328,6 +352,13 @@ properly never let it engage.
 Gates (project settings): `_AvoidanceSampleTrigger` = `NeighborCountAndZoneTag`,
 `_AvoidanceSampleNeighborThreshold` = 1 (any neighbour at all triggers it), `_AvoidanceSampleStride` = 1
 (every frame). The view requires `FTag_CrowdAgent_Walking` + `FTag_CrowdAgent_HasProbe`.
+
+Three independent gates must all pass: triggered (project trigger mode + per-agent `AvoidancePolicy`
+override + zone tags), on this agent's 1-in-N frame (round-robin stride), and at least one cached
+neighbour. Scheduling: `FGroup_Physics`, RunAfter Steering (whose output it overwrites) + NeighborSync
+(whose cache it reads); RunBefore AccelClamp/VelocityBridge is enforced *indirectly* by AccelClamp's
+RunAfter on it. It is a `TParallelProcessor` because the Samples × Neighbors scoring loop is the
+module's only nested-loop hot spot.
 
 ### Invariants this port must preserve — each was violated once, and each cost days
 
@@ -358,6 +389,23 @@ Three bugs (2026-07-13/14), all in the cost function, all invisible to every beh
 
 Also restored: **RVO reciprocity** (`vab = 2*vcand - vel - nei.vel`) — the port had plain VO, so each
 agent solved as if the other would not move, and both over-corrected.
+
+Port details owned here (the processor is deliberately comment-light — this doc is where the
+rationale lives):
+
+- **Sample density / single depth iteration is deliberate.** `BuildSamplePattern` runs one depth
+  iteration (no `adaptiveDepth` refinement) — a shipped engine configuration:
+  UE's `ECrowdAvoidanceQuality::Low` is 5 divs × 2 rings + centre at velBias 0.5
+  (`CrowdManager.cpp:182-187`); our default 8 × 2 + centre is denser than that. The bias centre is
+  Detour's "sample at zero pattern offset" (`DetourObstacleAvoidance.cpp:551-554`) — VelBias of the
+  desired velocity ("slow down"), never a true stop; there are no off-grid desired/current/zero
+  anchors (see invariant 2).
+- **Side preference is the agent's own choice, not a function of neighbour position.**
+  `SideRightness` scores a candidate against the agent's own left-perpendicular, so two head-on
+  agents that both "pass left" diverge (their lefts point in opposite world directions).
+  Neighbour-relative side logic degenerates exactly in the head-on case (cross ≈ 0).
+- **Penalty-weight defaults** (`_AvoidanceWeightDesVel`/`CurVel`/`Side`/`Toi`) mirror dtCrowd's —
+  `DetourObstacleAvoidance.cpp:471-475`.
 
 **If you are tempted to add an impatience timer, a stagnation term, a minimum-speed floor, or
 randomised jitter to break a deadlock: don't.** dtCrowd has none of these, and reaching for one means
@@ -400,6 +448,158 @@ have.
 - Async path queries.
 - Anchor / queue gameplay primitives (currently gameplay-side; could move into the module if the queue pattern stabilizes and is reused across games).
 - Hard pushback collider on NPCs (`CkOverlapBody`-based) so the player physically can't pass through. ~0.5 day; intentionally deferred.
+
+## Implementation notes
+
+Relocated from code comments — the processors are deliberately comment-light and this doc owns the
+rationale.
+
+### AccelClamp — the ramp is vector-space, on purpose
+
+Steering writes the **raw** target velocity; `FProcessor_CrowdAgent_AccelClamp` brings it into the
+per-frame budget. It replaced a per-frame scalar `PreviousSpeed` clamp inside Steering, which bounded
+magnitude only and left direction free to snap.
+
+- **Direction and magnitude are decoupled deliberately.** A linear vector lerp *dips* in magnitude
+  through a direction change — lerping (240,0) toward (0,240) passes through (120,120), magnitude
+  170, so agents visibly slow ~30% during a 90° turn. Pedestrian NPCs must rotate at `_MaxTurnRate`
+  while holding pace; speed changes at `_MaxAcceleration` independently. Only the recombined
+  magnitude+direction is written back.
+- Mirrors `DetourCrowd.cpp` `integrate()` :53-69 — capping `|dv| <= MaxAccel * dt` is what kills the
+  head-on vibration mode, since Steering writes a fresh `Direction * TargetSpeed` every frame and the
+  direction can flip arbitrarily. (dtCrowd's matching separation clamp: dvel rebuilt at full maxSpeed
+  every frame `DetourCrowd.cpp:1468-1469`, opposing separation clamped to pure lateral :1499-1510.)
+- `UCk_Crowd_ProjectSettings_UE::_AccelClampMode = Disabled` exists **for A/B comparison only** —
+  production leaves it Enabled; disabling it restores the snap-flips that drive vibration.
+- **Order of the two fallbacks matters.** Newly spawned agents have `LastSpeed ≈ 0`, and falling back
+  to `FVector::ForwardVector` for `LastDir` produced a visible rotate-from-world-+X glitch on the
+  first frame after path resolve. So `NewDir` is computed *before* `LastDir`, and `LastDir` falls back
+  to `NewDir`.
+
+### Processor scheduling details
+
+- **`FProcessor_CrowdAgent_ApplyOffset`** is a pattern replication of `FProcessor_Projectile_Update`.
+  It shares `MarkedDirtyBy` (`FTag_EulerIntegrator_NeedsUpdate`) with it; the two act on disjoint
+  entity sets (agents vs projectiles), so the explicit RunAfter (EulerIntegrator_Update first) exists
+  only to silence the dirty-marker-conflict advisory. `PumpPolicy` is `SkipPump` because the
+  integrator's NeedsUpdate tag is sticky and a `DeltaT = 0` re-run would re-enqueue the same
+  `_DistanceOffset`, doubling per-frame movement. Its `TExclude<FTag_CrowdAgent_Asleep>` is
+  forward-compatible only (nothing stamps that tag today).
+- **`FProcessor_CrowdAgent_OnPathResolved`** polls `FFragment_Nav_PathResult` rather than binding a
+  delegate per move-request: it is view-iteration driven, only touches agents actually waiting for a
+  path, and the view filter excludes the entity again as soon as `PathPending` clears.
+- **`FProcessor_CrowdAgent_VelocityBridge`** calls `UCk_Utils_Velocity_UE::Request_OverrideVelocity`
+  (public API) rather than writing `FFragment_Velocity_Current::_CurrentVelocity` directly, so CkCrowd
+  needs no cross-module friend declaration into CkPhysics.
+
+### Path install & waypoint retirement
+
+- **Path install skips leading corners the agent is already past** (`OnPathResolved`). A stale first
+  corner arises two ways: the path was computed async while the agent kept its momentum (MoveTo
+  deliberately preserves velocity through `PathPending` — worst under FollowTarget's frequent
+  repaths), or the navmesh start-projection landed behind the agent. Without the skip, Steering aims
+  at the behind-corner (its plane test anchors on the agent's own install location, so "crossed"
+  never fires) and the agent visibly walks **backward** before turning around — the "360 at path
+  start" bug.
+- **Waypoint retirement** mirrors `UPathFollowingComponent::HasReachedCurrentTarget`
+  (`PathFollowingComponent.cpp:1293-1302`): `dot(target - feet, segmentDir) < 0` means passed. The
+  **final** waypoint is deliberately excluded (`Num()-1` bound) — an older loop could silently consume
+  a final waypoint inside the arrival radius, leaving the cursor past the end with `OnGoalReached`
+  never fired (agent stuck Walking at zero velocity, goal never reported).
+
+### Navmesh constraint, escape, and stationary markup
+
+- **ConstrainToNavmesh is the stage the original dtCrowd port dropped.** Detour passes every
+  integrated position through `dtPathCorridor::movePosition` (`DetourCrowd.cpp:1345`,
+  `updateStepMove`) — a `moveAlongSurface` walk that means a dtCrowd agent **cannot leave the
+  navmesh**: walls stop it and it slides. Without the stage, any lateral force (separation redirect,
+  avoidance velocity, push-apart shove) moved the transform straight through a navmesh boundary,
+  wall-eroded band included. `RECOVERY_EXTENT_RADIUS_MULTIPLIER = 4.0` self-healing exists so a
+  one-frame corner leak cannot disable the clamp forever.
+- **`Get_EscapedQueryStart` gates on PAINTED, not `_ConfirmedOnMesh`** — unlike the re-path trigger.
+  The escape is pure geometry: planning from a pushed-out start is valid the moment the disc exists
+  and merely arrives early when the rebake hasn't landed. Gating it on `_ConfirmedOnMesh` opened a
+  paint-to-confirm window where a fresh MoveTo from inside the band planned *through*, and a repaint
+  (push-apart drift) reopened that window by resetting the flag.
+- **The escape is a RAY-MARCH along the lean direction** (away from the nearest disc centre), not a
+  fixed-point pairwise push. For a painted *line* the discs' push-out zones overlap (spacing < 2×
+  required radius), so each pairwise push lands inside the neighbouring disc's zone and the iteration
+  ping-pongs between neighbours until the cap — giving up on exactly the scenario the tier exists for.
+  Along a fixed ray each convex disc is exited at most once, so the march terminates within one step
+  per disc.
+- **`FFragment_CrowdAgent_NavMarkup` stillness sampling is windowed, not instantaneous**, specifically
+  so a PushApart shove spike cannot unpaint a standing queue. `_ConfirmedOnMesh` exists because tile
+  rebuild latency is unbounded under churn — a fixed settle timer alone let the one-shot re-path fire
+  against the *pre*-rebuild mesh, return the same straight path, and burn the paint serial.
+- **PushApart port provenance:** a direct port of `DetourCrowd.cpp` `updateStepMove` :1601-1662, with
+  `COLLISION_RESOLVE_FACTOR` from :1599.
+
+### Query API notes
+
+- **`Get_SeparationForce` is the only assertion surface for an agent's neighbour-detection VOLUME.**
+  The probe is Jolt-side geometry and a defect in it (the Y-axis cylinder incident) is invisible to
+  every behavioural crowd test we own. It reads on an *idle* agent because the separation processor
+  excludes only `FTag_CrowdAgent_Asleep`, not Idle.
+- **`Get_CurrentWaypointIndex`** is meant to be paired with the path's waypoint list — e.g.
+  `UCk_Utils_PathNetworkFollower_UE::Get_RouteResult`'s compiled waypoints, which
+  `InstallExternalPath` copies verbatim into the nav path result — to say exactly *which* point the
+  agent is steering at.
+- **`Get_IsStationaryMarkupConfirmed`** is false while the agent is moving, before
+  `_StationaryMarkupDelaySeconds` elapses, and while the async navmesh tile rebake is still in flight.
+
+### Debug & diagnostics
+
+- **Settings, not CVars, for the persistent toggles.** `ck.Crowd.Debug` and `ck.Crowd.DrawBreadcrumbs`
+  are now UPROPERTYs on `UCk_Crowd_DebugSettings_UE` (`Settings/CkCrowd_DebugSettings.h`), read via the
+  settings BPFL, so they persist across editor sessions via `EditorPerProjectUserSettings.ini`. The
+  CVar *names* keep their historical spellings (`ck.Crowd.Debug`, `ck.Crowd.DrawBreadcrumbs`,
+  `ck.Crowd.DrawPlannedPaths`, plus the newer `ck.Crowd.Debug.AgentBody`) so console muscle memory
+  keeps working. File-scope CVar defaults mirror the UPROPERTY defaults and are overridden by
+  `PostInitProperties` hydration once the CDO exists; each CVar change callback writes the new value
+  back into the CDO UPROPERTY and `SaveConfig`s, so a console-driven change persists. The
+  CrowdDebugger's toolbar checkboxes resolve the same CVars via
+  `IConsoleManager::FindConsoleVariable`, so a checkbox flip flows through the CVar callback into the
+  settings and checkbox state stays aligned with persisted state.
+- **`ck.Crowd.SelectedEntityId`** (-1 = none) survives as a real CVar: the CrowdDebugger writes the
+  selected agent's `GetTypeHash` there, and every draw processor renders that agent *regardless* of the
+  global toggles.
+- **Identity colour.** `FFragment_CrowdAgent_DebugColor` is opt-in — only present on agents that
+  called `Set_DebugColor`, so production agents carry zero overhead. `Get_DebugColor` falls back to
+  `UCk_Utils_LinearColor::Get_StableColorFromHash`, so every visualisation (body capsule, breadcrumb,
+  planned-path overlay, debugger Agent List swatch) reaches the same colour for the same entity and
+  untracked agents still render distinguishably. `FFragment_CrowdAgent_DebugBody`'s
+  `_LastAppliedColor`/`_LastAppliedVisible` exist so `DrawBody_Update` only pushes `Set_Color`/
+  visibility requests to the PMG handles when the state-tinted value actually changes.
+- **Agent debug body** (`FProcessor_CrowdAgent_DrawBody_Setup`): the cone spawns with
+  `ECk_Pmg_ConeOrientation::Forward`, which bakes the apex along +X — this replaced an earlier
+  `Pitch = -90` SceneNode workaround; the orientation now lives in the mesh. Capsule/cone proportions
+  are the ones the old inline gym viz used, derived from agent radius/height so any agent sizing flows
+  through. Ring/body colours mirror the CkCrowd Debugger mockup legend.
+- **DebugDraw arrow scaling is aesthetic.** Separation force magnitudes reach several hundred with
+  overlapping neighbours at weight 2.0 and would dwarf the agent at 1:1, so the arrow uses
+  `VisualScale` 0.5 capped at `MaxArrowLength` 300. The circle uses 24 segments (smooth without
+  spamming line calls) anchored at the feet to show the floor-projected force zone. Neighbour lines
+  are drawn before the arrow so the arrow paints on top. Immediate-mode `DrawDebug` is chosen over PMG
+  entity overlays because it is always-current, never-persistent, and allocates nothing per tick.
+- **Diag recorder sizing.** `ck.Crowd.SampleHz` defaults to 10Hz — over a 9s diag-gym cycle that is
+  ~90 samples per agent, cheap in memory and trimmed when the agent destructs at cycle end. Consumers
+  are the diagnostic gym's `EmitDigest` and the debugger's world-draw breadcrumb overlay.
+  `_StartPos`/`_GoalPos` are captured at `Track()` time so efficiency (`path_len / straight`) is
+  computable at digest time without re-querying the agent. Breadcrumbs are lifted
+  `BreadcrumbLiftZ = 96` (the diag gym's capsule half-height) purely for display; recorder data stores
+  the unaltered transform position.
+- **Diag digest** (`UCk_Utils_CrowdAgent_Diag_UE::EmitDigest_ForAgent`) — one Display line each,
+  prefix `[CrowdDiag][C{cycle}][{station}][A{idx}]`:
+  `start=(x,y,z) goal=(x,y,z)`; `reached={true|false} t_to_goal={s}`;
+  `path_len={cm} straight={cm} efficiency={0..1}` (efficiency = straight/path_len, 1.0 = perfect
+  line); `min_sep_to_neighbors={cm} at t={s}` (-1 sentinel = no neighbours observed in the window);
+  `dir_reversals={n} max_angular_delta={deg}`; then one `simplified_path: t= x= y= z= v=` per
+  RDP-kept sample. Z is emitted so floor-clip bugs (root dropping below the floor) are grep-visible,
+  not just visual. Display verbosity is deliberate: the lines land in `Saved/Logs/CkTests.log` without
+  bumping `LogCk_Crowd` to Verbose.
+- **`ck.Crowd.RDPEpsilon` default 8cm** — chosen so a straight head-on test yields ~2-3 keypoints and a
+  curving cluster path ~10-20: enough to read the path shape, light enough to grep without paging.
+  Lower = more keypoints retained; higher = more aggressive collapse.
 
 ## See also
 

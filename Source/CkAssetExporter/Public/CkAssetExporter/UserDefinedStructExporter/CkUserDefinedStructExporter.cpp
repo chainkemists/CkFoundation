@@ -21,13 +21,10 @@
 #include <UObject/Class.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Internal helpers
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_user_defined_struct_exporter_internal
 {
-    // UDS user fields are never transient/deprecated, but apply the same lighter
-    // filter the shared struct-field walker uses for consistency.
+    // UDS fields are never transient/deprecated — this only mirrors the shared struct-field walker's filter.
     static auto
         DoShouldIncludeField(
             const FProperty* InProperty)
@@ -40,8 +37,6 @@ namespace ck_user_defined_struct_exporter_internal
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Public API
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -60,7 +55,6 @@ auto
 
     Result.AssetName = InStruct->GetName();
 
-    // Serialize to JSON
     const auto JsonObject = DoSerializeToJson(InStruct);
     if (NOT JsonObject.IsValid())
     {
@@ -72,10 +66,8 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    // Serialize to plain text
     const auto TextString = DoSerializeToText(InStruct);
 
-    // Resolve output paths
     const auto JsonPath = DoResolveOutputPath(InStruct, TEXT(".json"));
     const auto TextPath = DoResolveOutputPath(InStruct, TEXT(".txt"));
 
@@ -85,7 +77,6 @@ auto
         return Result;
     }
 
-    // Write files
     const auto JsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     const auto TextWritten = FFileHelper::SaveStringToFile(
@@ -123,8 +114,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// JSON Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_UserDefinedStructExporter::
@@ -142,12 +131,11 @@ auto
     RootObject->SetStringField(TEXT("structGuid"), InStruct->GetCustomGuid().ToString());
     RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InStruct, ck::asset_exporter::version::UserDefinedStruct));
 
-    // The shared serializer keeps thread-local dedup state across calls — reset it
-    // so stale entries from a previous (DataAsset/Blueprint) export don't leak in.
+    // The shared serializer keeps thread-local dedup state across calls — without this, stale entries from a
+    // previous (DataAsset/Blueprint) export leak in.
     FCk_DataAssetExporter::ResetSharedRecursionState();
 
-    // Default values are read from the struct's default instance (the authored
-    // per-field defaults). May be null if the struct isn't up to date.
+    // Null when the struct isn't up to date.
     const auto* DefaultInstance = InStruct->GetDefaultInstance();
 
     auto FieldsArray = TArray<TSharedPtr<FJsonValue>>{};
@@ -161,8 +149,7 @@ auto
 
         auto FieldObject = MakeShared<FJsonObject>();
 
-        // GetAuthoredName() strips the GUID suffix UDS appends to field names,
-        // yielding the friendly name the designer typed (GetName() keeps the suffix).
+        // GetAuthoredName() strips the GUID suffix UDS appends to field names; GetName() keeps it.
         FieldObject->SetStringField(TEXT("name"), Property->GetAuthoredName());
         FieldObject->SetStringField(TEXT("internalName"), Property->GetName());
         FieldObject->SetStringField(TEXT("type"), Property->GetCPPType());
@@ -199,8 +186,6 @@ auto
     return RootObject;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Plain-Text Serialization
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -255,8 +240,6 @@ auto
     return Text;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Helpers
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

@@ -29,21 +29,18 @@
 
 namespace ck_vat_baker
 {
-    // Hard slot count of the per-vertex carriers (4 indices + 4 weights). The KEPT count within
-    // these slots is the collection's _BoneInfluences (bone mode); texture-size budgets are the
-    // collection's _MaxTextureWidth/_MaxTextureRows.
+    // Hard slot count of the per-vertex carriers (4 indices + 4 weights). The KEPT count within these
+    // slots is the collection's _BoneInfluences (bone mode).
     constexpr int32 MaxInfluences = 4;
 
-    // Where bake outputs live. SaveAssets: sibling packages of the collection, saved to disk
-    // (shipped content). Transient: outered to the transient package, nothing written to disk —
-    // results die with the session (gym/test collections; the compute is identical).
+    // SaveAssets: sibling packages of the collection, written to disk. Transient: outered to the transient
+    // package, nothing written — results die with the session. The compute is identical.
     enum class EPersistence
     {
         SaveAssets,
         Transient
     };
 
-    // One source render-vertex, editor-model-sourced, with its influence chain fully resolved.
     struct FSourceVertex
     {
         FVector3f Position;
@@ -143,7 +140,6 @@ namespace ck_vat_baker
 
         if (InPrecision == ECk_Vat_Precision::Ultra)
         {
-            // Raw values, full-float source, RGBA32F compression (large VRAM; extreme ranges).
             TArray<FLinearColor> Pixels;
             Pixels.SetNumUninitialized(InPlane.Texels.Num());
             for (int32 i = 0; i < InPlane.Texels.Num(); ++i)
@@ -157,7 +153,6 @@ namespace ck_vat_baker
         }
         else if (InPrecision == ECk_Vat_Precision::High)
         {
-            // Raw values, half-float source, HDR (RGBA16F, no sRGB) compression.
             TArray<FFloat16Color> Pixels;
             Pixels.SetNumUninitialized(InPlane.Texels.Num());
             for (int32 i = 0; i < InPlane.Texels.Num(); ++i)
@@ -214,9 +209,8 @@ namespace ck_vat_baker
         const int32 KeptInfluences = FMath::Clamp(InKeptInfluences, 1, MaxInfluences);
         OutVertices.Reserve(InLODModel.NumVertices);
 
-        // Keep-strongest-4 is documented, expected behavior (standard Mannequin content carries
-        // 5-influence vertices) — summarize ONCE per bake instead of ensure-per-vertex, which
-        // treats legitimate content as a defect and stack-dumps per offending vertex.
+        // Keep-strongest-N is expected behavior (standard Mannequin content carries 5-influence vertices),
+        // so this is summarized ONCE per bake below rather than ensured per vertex.
         int32 OverInfluencedVertexCount = 0;
         int32 MostInfluencesSeen = 0;
 
@@ -295,8 +289,7 @@ namespace ck_vat_baker
             }
         }
 
-        // Display, not Warning: expected content behavior (the automation harness escalates
-        // warnings to test failures, and standard meshes legitimately carry >4 influences).
+        // Display, not Warning: the automation harness escalates warnings to test failures.
         if (OverInfluencedVertexCount > 0)
         {
             ck::vat::Display(TEXT("VatBaker: mesh [{}] has [{}] vertices with more than [{}] bone influences (most seen: [{}]) — strongest [{}] kept per vertex, weights renormalized."),
@@ -346,8 +339,7 @@ namespace ck_vat_baker
         StaticMesh->SetLightingGuid(FGuid::NewGuid());
         StaticMesh->SetNumSourceModels(1);
 
-        // The lookup UVs must survive the build untouched: no recomputed tangent basis, no generated
-        // lightmap UVs, full-precision UVs (half-float UVs would quantize the lookup coordinate).
+        // The lookup UVs must survive the build untouched — half-float UVs would quantize the coordinate.
         FStaticMeshSourceModel& SourceModel = StaticMesh->GetSourceModel(0);
         SourceModel.BuildSettings.bRecomputeNormals = false;
         SourceModel.BuildSettings.bRecomputeTangents = false;
@@ -367,8 +359,7 @@ namespace ck_vat_baker
         const auto UsesWeightTexture = BakeMode == ECk_Vat_BakeMode::Bone &&
             WeightStorage == ECk_Vat_BoneWeightStorage::WeightTexture;
         const int32 LookupCh = InCollection.Get_BakeSettings().Get_LookupUVChannel();
-        // Vertex mode and weight-texture storage carry ONE lookup UV; mesh-channel bone storage
-        // carries two index channels.
+        // Vertex mode and weight-texture storage carry ONE lookup UV; mesh-channel bone storage carries two.
         const int32 NumUVChannels = BakeMode == ECk_Vat_BakeMode::Vertex || UsesWeightTexture
             ? LookupCh + 1
             : LookupCh + 2;
@@ -391,8 +382,7 @@ namespace ck_vat_baker
         TVertexInstanceAttributesRef<FVector2f> UVs = Attributes.GetVertexInstanceUVs();
         TPolygonGroupAttributesRef<FName> GroupSlotNames = Attributes.GetPolygonGroupMaterialSlotNames();
 
-        // One material slot per source section, copied from the source skeletal mesh so the baked asset
-        // is viewable as-authored (the VAT look MID swaps in at runtime).
+        // Copied from the source mesh so the baked asset is viewable as-authored; the VAT look MID swaps in at runtime.
         const TArray<FSkeletalMaterial>& SourceMaterials = InSourceMesh.GetMaterials();
         TArray<FPolygonGroupID> PolygonGroups;
         TArray<FStaticMaterial> StaticMaterials;
@@ -455,14 +445,10 @@ namespace ck_vat_baker
                 UVs.Set(InstanceID, LookupCh + 1,
                     FVector2f(static_cast<float>(Sv.RenderBones[2]), static_cast<float>(Sv.RenderBones[3])));
 
-                // The static-mesh build sRGB-ENCODES vertex-color RGB (StaticMeshBuilder.cpp
-                // ToFColor(true)) and the GPU hands the shader the raw encoded bytes — so weights
-                // are pre-DECODED here: the build's encode cancels to identity and the shader reads
-                // the true linear weight. Without this, every BLENDED weight warps upward (0.5 ->
-                // ~0.74; weight sums reach ~1.5) and multi-influence regions shred, while pure 0/1
-                // weights — fixed points of the encode — stay correct (the "feet look fine, torso
-                // explodes" signature). Alpha is not sRGB-encoded by the build (and the shader
-                // derives weight3 = 1-r-g-b anyway), so it passes through raw.
+                // The static-mesh build sRGB-ENCODES vertex-color RGB and the GPU hands the shader the raw
+                // encoded bytes, so weights are pre-DECODED here and the build's encode cancels to identity.
+                // Without it every BLENDED weight warps upward while pure 0/1 weights stay correct ("feet fine,
+                // torso explodes"). Alpha is not encoded by the build, so it passes through raw.
                 const auto SrgbToLinear = [](float InEncoded) -> float
                 {
                     return InEncoded <= 0.04045f
@@ -479,9 +465,8 @@ namespace ck_vat_baker
             return InstanceID;
         };
 
-        // Hoisted index-buffer validation (no per-triangle ensures): the gathered vertices must mirror the
-        // LODModel's section-concatenated vertex order, and each section's index range must fit the merged
-        // buffer — a well-formed model bounds its indices by NumVertices, so these cover the inner loop.
+        // Hoisted so the inner triangle loop needs no ensures: a well-formed model bounds its indices by
+        // NumVertices, so these two checks cover every MakeVertexInstance call below.
         CK_ENSURE_IF_NOT(InLODModel.NumVertices == static_cast<uint32>(InVertices.Num()),
             TEXT("VatBaker: [{}] LODModel NumVertices [{}] != gathered vertices [{}]"),
             &InSourceMesh, InLODModel.NumVertices, InVertices.Num())
@@ -670,12 +655,9 @@ auto
                 PositionBounds += FVector(Offset);
                 PositionPlane.Texels[InGlobalFrame * Width + V] = FVector4f(Offset.X, Offset.Y, Offset.Z, 1.0f);
 
-                // Encode the skinned normal in the BIND-POSE TANGENT frame: tangent-space is invariant
-                // under the per-instance transform (the interpolated TBN co-rotates), so the pixel
-                // shader feeds the material's tangent-space Normal pin directly — the PS has no
-                // per-instance basis to do a local->world transform with (VS-only outside Nanite).
-                // Binormal is RECONSTRUCTED (cross * sign), matching how the engine rebuilds it from
-                // the baked static mesh's Normal/Tangent/BinormalSign at render time.
+                // Encode in the BIND-POSE TANGENT frame: tangent-space is invariant under the per-instance
+                // transform, and the pixel shader has no per-instance basis to transform with (VS-only outside
+                // Nanite). Binormal is RECONSTRUCTED exactly as the engine rebuilds it at render time.
                 const FVector3f SkinnedN = SkinnedNormal.GetSafeNormal();
                 const FVector3f BindT = Sv.TangentX;
                 const FVector3f BindN = FVector3f(Sv.TangentZ.X, Sv.TangentZ.Y, Sv.TangentZ.Z);
@@ -783,9 +765,8 @@ auto
             WeightPlane.Texels[V] = FVector4f(Sv.Weights[0], Sv.Weights[1], Sv.Weights[2], Sv.Weights[3]);
         }
 
-        // Indices are ALWAYS 16F raw (exact for index magnitudes; Low would quantize them);
-        // weights follow the collection precision (already [0,1] — Low's normalize expectation holds,
-        // and unlike vertex colors these textures are linear end-to-end: no sRGB pre-decode needed).
+        // Indices are ALWAYS 16F raw — Low would quantize them. Weights follow the collection precision and,
+        // unlike vertex colors, these textures are linear end-to-end: no sRGB pre-decode.
         BoneIndexTexture = SaveTexture(CollectionPkgDir,
             FString::Printf(TEXT("%s_BoneIdx"), *BaseName), IndexPlane, ECk_Vat_Precision::High, InPersistence);
         CK_ENSURE_IF_NOT(ck::IsValid(BoneIndexTexture), TEXT("VatBaker: bone-index texture bake failed for [{}]"), &InCollection)

@@ -12,10 +12,8 @@
 #include "CkNav_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Public BP API for CkNavigation. CkNavigation does not own a typesafe handle —
-// pathfinding is a service exposed to any entity that has a Transform feature
-// (CkEcsExt) and the requisite path-result fragment slot. The Utils helpers add
-// the result-fragment lazily on first request.
+// Public BP API for CkNavigation. No typesafe handle: pathfinding is a service on any entity
+// with a Transform feature; the result fragment is added lazily on first request.
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
@@ -27,15 +25,9 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Nav_UE);
 
 public:
-    // Enqueue a FindPath request on this entity. Adds FFragment_Nav_PathResult +
-    // FFragment_Nav_Requests if missing; the request is drained next tick by
-    // FProcessor_Nav_HandleRequests. Result lands in FFragment_Nav_PathResult; the
-    // Nav_OnPathReady / Nav_OnPathFailed signals fire on completion.
-    //
-    // Server-authoritative: client-side requests fail with NotAuthority.
-    //
-    // The entity must have CkEcsExt's Transform feature so the processor can read
-    // the start location. Without it the request fails with StartProjectFailed.
+    // Deferred: drained next tick by FProcessor_Nav_HandleRequests, which fires
+    // Nav_OnPathReady / Nav_OnPathFailed. Server-authoritative (client -> NotAuthority) and
+    // requires CkEcsExt's Transform feature for the start location (absent -> StartProjectFailed).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Nav",
               DisplayName = "[Ck][Nav] Request FindPath")
@@ -44,8 +36,7 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_Nav_FindPath& InRequest);
 
-    // Read the current path result. Returns a default-constructed result if the
-    // entity has never issued a request (Status == None).
+    // Default-constructed result (Status == None) if the entity has never issued a request.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Nav",
               DisplayName = "[Ck][Nav] Get Path Result")
@@ -67,11 +58,8 @@ public:
     Has_Path(
         const FCk_Handle& InHandle);
 
-    // Triggers an asynchronous navmesh rebuild on the entity's world. Used by autotests to
-    // exercise FProcessor_Nav_HandleRequests's deferred-request queue: a test calls this
-    // before issuing Request_FindPath so the request lands while IsNavigationBuildInProgress
-    // is true and exercises the queue/drain path. Production code should never need this —
-    // the nav system rebuilds automatically on geometry changes.
+    // Autotest hook for the deferred-request queue: a rebuild in flight makes the next
+    // Request_FindPath land while the start point is unbakeable. Production never needs this.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Nav",
               DisplayName = "[Ck][Nav] Request Rebuild (Testing)")
@@ -79,13 +67,7 @@ public:
     Request_NavigationRebuild_ForTesting(
         UPARAM(ref) FCk_Handle& InHandle);
 
-    // Synchronously project a world-space point onto the nearest navmesh surface within
-    // InHalfExtentUu (uniform XYZ search box). Returns true and writes OutSnappedPosition
-    // if a navmesh tile is found; returns false if no tile exists within the search extent.
-    //
-    // Single-shot helper for game code / tools that need to snap one point. The CkEqs
-    // _ProjectOntoNav post-pass inlines the same UNavigationSystemV1::ProjectPointToNavigation
-    // call directly to avoid UFUNCTION dispatch overhead per candidate.
+    // OutSnappedPosition is written only when a navmesh tile is found within the search box.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Nav",
               DisplayName = "[Ck][Nav] Try Project Onto Navmesh")
@@ -98,8 +80,6 @@ public:
         float InVerticalHalfExtentUu = -1.0f);
 
 public:
-    // Bind a delegate to fire whenever a FindPath request on this entity succeeds.
-    // The delegate fires with the entity handle + the new path result.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Nav",
               DisplayName = "[Ck][Nav] Bind To OnPathReady")

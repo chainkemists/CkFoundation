@@ -22,22 +22,20 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_JoltWorld_Step);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Moved from CkJolt_Subsystem.cpp when the step relocated into these processors.
 DECLARE_CYCLE_STAT(TEXT("JoltPhysics_WaitForAsync"), STAT_CkJolt_WaitForAsync, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltContacts_DrainQueue"), STAT_CkJolt_ContactsDrainQueue, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update_Async"), STAT_CkJolt_UpdateAsync, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltPhysics_Update"), STAT_CkJolt_Update, STATGROUP_CkJolt);
 
-// Benchmark stat (Phase 5): the whole fixed-step pump body — broadphase optimize + the N-sub-step batch
-// dispatch. Wraps the nested STAT_CkJolt_Update/_UpdateAsync (which time only the Update loop itself).
+// The whole fixed-step pump; wraps the nested STAT_CkJolt_Update/_UpdateAsync (the Update loop alone).
 DECLARE_CYCLE_STAT(TEXT("JoltWorld_Step"), STAT_CkJolt_WorldStep, STATGROUP_CkJolt);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_jolt_world_processor
 {
-    // Resolves the registry's Jolt-world context. A world with no Jolt subsystem never publishes it —
-    // an absent/null context is legal, so callers return silently (correct silent path, not an error).
+    // An absent context is legal (a world with no Jolt subsystem never publishes one) — callers return
+    // silently; this is the correct silent path, not an error.
     auto
         TryResolve_JoltWorld(
             const FCk_Handle& InTransientEntity)
@@ -125,9 +123,8 @@ namespace ck
         if (JoltWorld == nullptr)
         { return; }
 
-        // World invalid or paused -> gate planning: freeze the accumulator and zero the plan so the executor
-        // runs no sub-steps and KinematicPush (PendingSimTime <= 0) early-outs. Matches the pre-split Step's
-        // IsPaused position (which returned before touching the accumulator or stepping).
+        // Invalid or paused: freeze the accumulator and zero the plan, so the executor runs no sub-steps
+        // and KinematicPush (PendingSimTime <= 0) early-outs.
         const auto World = JoltWorld->Get_World();
         if (ck::Is_NOT_Valid(World) || World->IsPaused())
         {
@@ -136,7 +133,6 @@ namespace ck
             return;
         }
 
-        // Fixed-timestep accumulation — the math lives in ck::jolt::ComputeStepPlan (pure, test-pinned).
         const auto Plan = ck::jolt::ComputeStepPlan(
             JoltWorld->Get_Accumulator(),
             static_cast<float>(InDeltaT.Get_Seconds()),
@@ -174,33 +170,27 @@ namespace ck
         if (JoltWorld == nullptr)
         { return; }
 
-        // 1. World invalid or paused -> return, exactly as the pre-split Step did: no broadphase optimize and
-        //    no stepping while paused (PlanStep also zeroes the plan, but this guard preserves the optimize skip).
+        // Paused skips the broadphase optimize too — PlanStep already zeroed the plan, but not this.
         const auto World = JoltWorld->Get_World();
         if (ck::Is_NOT_Valid(World) || World->IsPaused())
         { return; }
 
-        // Times the fixed-step pump body: broadphase optimize + the sub-step batch dispatch (sync applies the
-        // poses here too; async only kicks the task). Zero-step frames return below without meaningful work.
         SCOPE_CYCLE_COUNTER(STAT_CkJolt_WorldStep);
 
-        // 2. Broadphase optimize if a bulk add/remove requested it. Safe: the async future was consumed upstream.
+        // Safe here: the async future was consumed upstream.
         if (JoltWorld->Get_OptimizeBroadPhaseRequested())
         { JoltWorld->DoOptimizeBroadPhase(); }
 
-        // 3. Read the plan from the FJoltWorld (computed by FProcessor_JoltWorld_PlanStep this frame). FixedDt is
-        //    recomputed from the same project setting PlanStep used -- constant within the frame, so no drift.
         const auto NumSteps = JoltWorld->Get_NumStepsLastFrame();
 
-        // 4. Zero-step frame: alpha keeps growing; nothing else runs.
         if (NumSteps == 0)
         { return; }
 
+        // Recomputed from the same project setting PlanStep read — constant within the frame, so no drift.
         const auto FixedHz = FMath::Max(1, UCk_Utils_Jolt_ProjectSettings::Get_FixedTimestepHz());
         const auto FixedDt = 1.0f / static_cast<float>(FixedHz);
 
-        // 5. Run the step batch: N fixed sub-steps. Each sub-step advances the characters (ExtendedUpdate)
-        //    BEFORE the rigid-body world Update, then captures the body poses.
+        // Characters advance BEFORE the rigid-body Update within each sub-step.
         const auto StepLoop = [JoltWorld, FixedDt, NumSteps]()
         {
             for (auto Step = 0; Step < NumSteps; ++Step)

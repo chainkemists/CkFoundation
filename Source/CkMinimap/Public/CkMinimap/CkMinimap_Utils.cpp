@@ -27,8 +27,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle supplied to Minimap Add"))
     { return {}; }
 
-    // NO owner-Transform requirement — a FixedBounds world map on a transform-less HUD entity is legal;
-    // only the OBSERVER needs a Transform, and the Update processor ensures that
+    // NO owner-Transform requirement on purpose — only the OBSERVER needs one (the Update processor ensures it)
 
     CK_ENSURE_IF_NOT(NOT Has(InHandle),
         TEXT("Handle [{}] already has the Minimap feature. Compose additional minimaps as child entities via Create"), InHandle)
@@ -58,12 +57,10 @@ auto
     if (ck::Is_NOT_Valid(NewMinimapEntity))
     { return {}; }
 
-    // Minimap children carry NO GameplayLabel (there is no category) — record ByTag lookups are unusable,
-    // enumeration is ForEach_ValidEntry only
+    // Minimap children carry NO GameplayLabel — record ByTag lookups are unusable, enumerate only
     RecordOfMinimaps_Utils::AddIfMissing(InLifetimeOwner, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfMinimaps_Utils::Request_Connect(InLifetimeOwner, NewMinimapEntity, ECk_Record_LabelRequirementPolicy::Optional);
 
-    // Standalone child: the lifetime owner is the observer (the entity whose position/view drives the projection)
     Request_SetObserver(NewMinimapEntity, InLifetimeOwner);
 
     return NewMinimapEntity;
@@ -384,7 +381,6 @@ auto
         ECk_Minimap_RotationMode InRotationMode)
     -> FVector2D
 {
-    // Invert the axis swap first (dX = -Frame.Y*E, dY = Frame.X*E), then undo the view rotation
     auto Delta = FVector2D{-InFramePos.Y * InViewExtent, InFramePos.X * InViewExtent};
 
     if (InRotationMode == ECk_Minimap_RotationMode::RotateWithObserver)

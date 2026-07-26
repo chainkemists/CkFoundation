@@ -86,8 +86,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One matched line + its per-emitter classification. Denormalized (LineID/Text/LinkedEventTag/NumConditions) so BP/AS
-// consumers read the result without a second round-trip through the line handle.
+// One matched line + its per-emitter classification, denormalized so BP/AS consumers need no second round-trip
+// through the line handle.
 USTRUCT(BlueprintType)
 struct CKDIALOG_API FCk_DialogLine_QueryEntry
 {
@@ -168,15 +168,14 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_DialogEmitter, InEmitter,
     FCk_DialogEmitter_QueryResult, InResult);
 
-// Line-scoped cooldown transitions. The SAME type serves both the per-request completion delegate and the
-// emitter-wide signal, so an observer and a requester see an identical payload.
+// The SAME type serves the per-request completion delegate and the emitter-wide signal, so an observer and a
+// requester see an identical payload.
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_DialogEmitter_OnCooldownStarted,
     FCk_Handle_DialogEmitter, InEmitter,
     FCk_Handle_DialogLine, InLine);
 
-// Fired whether the cooldown lapsed on its own or was cleared explicitly — off cooldown is off cooldown, and a
-// consumer re-enabling a barks-again affordance does not care which.
+// Fired whether the cooldown lapsed on its own or was cleared explicitly.
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_DialogEmitter_OnCooldownEnded,
     FCk_Handle_DialogEmitter, InEmitter,
@@ -189,16 +188,9 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One active cooldown, held as a Chrono: goal = the duration it was started with, elapsed = how far through it is.
-// That is the whole progress story in one field — Get_TimeRemaining / Get_TimeElapsed / Get_IsDone come with it, so
-// nothing downstream has to reconstruct progress from a deadline and a separately-remembered duration.
-//
-// Deliberately advanced by FProcessor_DialogEmitter_TickCooldowns rather than compared against an absolute world
-// deadline: a paused or time-dilated world then stops burning cooldown, and the entry carries its own progress
-// instead of only being meaningful against the clock that produced it.
-//
-// _DurationMode is still needed. A Chrono whose goal is <= 0 reports Done every tick, so "Forever" cannot be
-// expressed as a goal — the ticker skips those entries entirely and this flag is what tells it to.
+// One active cooldown: a Chrono (goal = the duration it was started with, elapsed = progress) plus the mode. Ticked
+// by FProcessor_DialogEmitter_TickCooldowns rather than compared against an absolute deadline, so a paused or
+// time-dilated world stops burning it. "Forever" is not expressible as a Chrono goal — hence _DurationMode.
 USTRUCT(BlueprintType)
 struct CKDIALOG_API FCk_DialogEmitter_CooldownEntry
 {
@@ -250,10 +242,8 @@ private:
               meta = (AllowPrivateAccess = true))
     FGameplayTagContainer _ExtraFilterTags;
 
-    // Optional per-request completion callback, fired with THIS query's result the moment it is evaluated. Unlike
-    // BindTo_OnQueryCompleted (an emitter-wide signal that fires for every query on the emitter), this is correlated
-    // to the one request that carried it, so concurrent queries on the same emitter cannot be confused. An unbound
-    // delegate is fine — nothing is executed. Mirrors FCk_Request_Eqs_RunQuery::_OnComplete.
+    // Optional per-request completion callback, fired with THIS query's result. Unlike the emitter-wide
+    // BindTo_OnQueryCompleted it is correlated to the one request that carried it. Unbound is fine.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_DialogEmitter_OnQueryCompleted _OnComplete;
@@ -325,8 +315,7 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle_DialogLine _Line;
 
-    // Fired only when a cooldown was actually removed — clearing a line that was not cooling is a no-op, and
-    // reporting completion for it would tell a caller something changed when nothing did.
+    // Fired only when a cooldown was actually removed; clearing a line that was not cooling is a silent no-op.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_DialogEmitter_OnCooldownEnded _OnComplete;
