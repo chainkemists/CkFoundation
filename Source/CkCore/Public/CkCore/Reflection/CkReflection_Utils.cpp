@@ -96,7 +96,7 @@ auto
     int32 LastUnderscoreIndex = INDEX_NONE;
     if (PropertyName.FindLastChar(TEXT('_'), LastUnderscoreIndex))
     {
-        return PropertyName.Right(LastUnderscoreIndex);
+        return PropertyName.RightChop(LastUnderscoreIndex + 1);
     }
 
     return PropertyName;
