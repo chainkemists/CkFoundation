@@ -261,7 +261,7 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, IsValid_Policy_OptionalEngagedOnly,
 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, std::function<T>, IsValid_Policy_Default, [=](const std::function<T>& InFunc)
 {
-    return InFunc == nullptr;
+    return InFunc != nullptr;
 });
 
 // --------------------------------------------------------------------------------------------------------------------
