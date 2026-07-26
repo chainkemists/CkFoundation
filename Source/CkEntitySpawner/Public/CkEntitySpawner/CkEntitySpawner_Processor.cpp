@@ -38,6 +38,8 @@ namespace ck
         }
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (ck::Is_NOT_Valid(World))
+        { return; }
 
         auto RelaySubsystem = World->GetSubsystem<UCk_ActorRelay_Subsystem_UE>();
         if (ck::Is_NOT_Valid(RelaySubsystem))
