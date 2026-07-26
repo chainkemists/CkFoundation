@@ -452,7 +452,7 @@ namespace ck
             }
             default:
             {
-                CK_INVALID_ENUM(InModifierOperation);
+                CK_INVALID_ENUM(InRevocablePolicy);
                 break;
             }
         }

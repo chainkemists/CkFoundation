@@ -276,7 +276,7 @@ auto
         }
         default:
         {
-            CK_INVALID_ENUM(InNewInputMode);
+            CK_INVALID_ENUM(InNewMouseVisibility);
             break;
         }
     }
