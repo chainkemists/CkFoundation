@@ -429,15 +429,13 @@ auto
     }
 
     if (InSettings.Get_Filter().IsEmpty())
-    { return Result; }
+    {
+        if (InTryDrawDebug && Result.IsEmpty())
+        { Request_DrawLineTrace(InAnyHandle, InSettings, {}); }
+        return Result;
+    }
 
     auto FilteredResult = decltype(Result){};
-
-    if (Result.IsEmpty())
-    {
-        if (InTryDrawDebug)
-        { Request_DrawLineTrace(InAnyHandle, InSettings, {}); }
-    }
 
     for (const auto& Hit : Result)
     {
@@ -453,6 +451,10 @@ auto
 
         FilteredResult.Emplace(Hit);
     }
+
+    // Post-filter, mirroring the shape twin: a trace whose every hit was filtered out is still a miss.
+    if (InTryDrawDebug && FilteredResult.IsEmpty())
+    { Request_DrawLineTrace(InAnyHandle, InSettings, {}); }
 
     if (InFireOverlaps)
     {
@@ -768,7 +770,21 @@ auto
     if (NOT HasDebugDrawTag && NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllLineTraces())
     { return; }
 
-    constexpr auto LineThickness = 0.5f;
+    // Same settings group as the line-trace twin: honor the server/client preview sub-gates and the
+    // shared thickness/duration settings (there are no shape-specific settings).
+    if (NOT HasDebugDrawTag)
+    {
+        const auto ShouldDrawServer = UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAnyHandle) &&
+            UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewServerLineTraces();
+        const auto ShouldDrawClient = UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InAnyHandle) &&
+            UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewClientLineTraces();
+
+        if (NOT (ShouldDrawServer || ShouldDrawClient))
+        { return; }
+    }
+
+    const auto LineThickness = UCk_Utils_SpatialQuery_Settings::Get_ProbeLineTraceDebugThickness();
+    const auto Duration = UCk_Utils_SpatialQuery_Settings::Get_ProbeLineTraceDebugDuration();
 
     const auto WorldContext = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyHandle);
     const auto& StartPos = InSettings.Get_StartPos();
@@ -779,11 +795,11 @@ auto
     if (InIsDisabled)
     {
         DrawShapeAtLocation(WorldContext, InSettings, StartPos, Orientation,
-            FLinearColor::Gray, 0, LineThickness);
+            FLinearColor::Gray, Duration, LineThickness);
         DrawShapeAtLocation(WorldContext, InSettings, EndPos, Orientation,
-            FLinearColor::Gray, 0, LineThickness);
+            FLinearColor::Gray, Duration, LineThickness);
         DrawShapeConnector(WorldContext, StartPos, EndPos, Shape,
-            FLinearColor::Gray, 0, LineThickness);
+            FLinearColor::Gray, Duration, LineThickness);
         return;
     }
 
@@ -792,26 +808,26 @@ auto
         const auto& HitLocation = InResult->Get_HitLocation();
 
         DrawShapeAtLocation(WorldContext, InSettings, StartPos, Orientation,
-            FLinearColor::Red, 0, LineThickness);
+            FLinearColor::Red, Duration, LineThickness);
         DrawShapeAtLocation(WorldContext, InSettings, HitLocation, Orientation,
-            FLinearColor::Yellow, 0, LineThickness);
+            FLinearColor::Yellow, Duration, LineThickness);
         DrawShapeAtLocation(WorldContext, InSettings, EndPos, Orientation,
-            FLinearColor::Green, 0, LineThickness);
+            FLinearColor::Green, Duration, LineThickness);
 
         DrawShapeConnector(WorldContext, StartPos, HitLocation, Shape,
-            FLinearColor::Red, 0, LineThickness);
+            FLinearColor::Red, Duration, LineThickness);
         DrawShapeConnector(WorldContext, HitLocation, EndPos, Shape,
-            FLinearColor::Green, 0, LineThickness);
+            FLinearColor::Green, Duration, LineThickness);
     }
     else
     {
         DrawShapeAtLocation(WorldContext, InSettings, StartPos, Orientation,
-            FLinearColor::Red, 0, LineThickness);
+            FLinearColor::Red, Duration, LineThickness);
         DrawShapeAtLocation(WorldContext, InSettings, EndPos, Orientation,
-            FLinearColor::Green, 0, LineThickness);
+            FLinearColor::Green, Duration, LineThickness);
 
         DrawShapeConnector(WorldContext, StartPos, EndPos, Shape,
-            FLinearColor::White, 0, LineThickness);
+            FLinearColor::White, Duration, LineThickness);
     }
 }
 
