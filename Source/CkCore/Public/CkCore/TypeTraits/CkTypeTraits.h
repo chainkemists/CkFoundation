@@ -98,10 +98,9 @@ namespace ck::type_traits
     template <typename T>
     struct MoveOrCopyPtr<TUniquePtr<T>>
     {
-        auto operator()(const TUniquePtr<T>& InOther) -> TUniquePtr<T>
-        {
-            return std::move(InOther);
-        }
+        // A TUniquePtr cannot be copied from a const source; reject at compile time instead of
+        // std::move-ing a const lvalue (which cannot bind the move ctor either).
+        static_assert(sizeof(T) == 0, "TPtrWrapper over a TUniquePtr is not copyable");
     };
 
     // --------------------------------------------------------------------------------------------------------------------
