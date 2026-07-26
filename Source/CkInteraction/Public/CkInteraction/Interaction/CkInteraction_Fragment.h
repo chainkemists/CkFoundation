@@ -15,6 +15,10 @@ namespace ck
 {
     CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfInteractions, FCk_Handle_Interaction);
 
+    // Set once OnInteractionFinished has been broadcast, so the EndPlay processor's destroy-mid-flight
+    // Failed broadcast never doubles up on an interaction that already finished normally.
+    CK_DEFINE_ECS_TAG(FTag_Interaction_FinishedBroadcastSent);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct CKINTERACTION_API FFragment_Interaction_Params
