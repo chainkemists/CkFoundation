@@ -98,12 +98,10 @@ namespace ck
             TEXT("Dialog StartCooldown on Emitter [{}] has an invalid line handle — dropped"), InEmitter)
         { return; }
 
-        const auto Expiry = InRequest.Get_DurationMode() == ECk_Dialog_CooldownDuration::Forever
-            ? FDialog_CooldownSentinels::Forever()
-            : InNow + InRequest.Get_Duration();
-
+        // Re-starting an already-cooling line replaces the entry, so the window restarts from zero rather than
+        // extending whatever was left — "spent again" is a fresh cooldown.
         InEmitter.Get<FFragment_DialogEmitter_Cooldowns>()._Cooldowns.Add(Line,
-            FCk_DialogEmitter_CooldownEntry{Expiry, InRequest.Get_Duration(), InRequest.Get_DurationMode()});
+            FCk_DialogEmitter_CooldownEntry{FCk_Chrono{InRequest.Get_Duration()}, InRequest.Get_DurationMode()});
 
         // The ticker's view key. Adding it per start is idempotent and cheaper than tracking emptiness here.
         InEmitter.AddOrGet<FTag_DialogEmitter_HasCooldowns>();
@@ -212,9 +210,9 @@ namespace ck
             return;
         }
 
-        // Pruning belongs to FProcessor_DialogEmitter_TickCooldowns, which runs before this one and is the only
-        // place expiry is observed. Classification compares against Now anyway, so a not-yet-pruned entry that has
-        // already lapsed still classifies correctly here.
+        // Advancing and retiring cooldowns belongs to FProcessor_DialogEmitter_TickCooldowns, which this processor
+        // declares a RunAfter on. That ordering is load-bearing now that cooldown state is ticked rather than
+        // compared against a deadline: evaluate first and a line that finished this frame still reads as cooling.
         const auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
 
         // Evaluate from a COPY: a per-request OnComplete delegate below runs caller code that may enqueue a follow-up
@@ -296,10 +294,11 @@ namespace ck
         -> ECk_DialogLine_QueryResult
     {
         // Cooldown FIRST (cheap map lookup): a cooling line reports Fail_EmitterCondition and its conditions are
-        // skipped (documented precedence). Compared against Now rather than trusting presence, so an entry the
-        // ticker has not retired yet cannot wrongly suppress a line that has in fact lapsed.
+        // skipped (documented precedence). Presence alone is not enough — TickCooldowns retires finished entries and
+        // this processor is ordered after it, but a Forever entry is never ticked and so never reports Done.
         if (const auto* Entry = InCooldowns.Get_Cooldowns().Find(InLine);
-            Entry != nullptr && FDialog_QueryHelpers::Get_WorldTimeNow(InEmitter) < Entry->Get_Expiry())
+            Entry != nullptr && (Entry->Get_DurationMode() == ECk_Dialog_CooldownDuration::Forever ||
+                                 NOT Entry->Get_Cooldown().Get_IsDone()))
         { return ECk_DialogLine_QueryResult::Fail_EmitterCondition; }
 
         auto Failed = false;
@@ -351,29 +350,29 @@ namespace ck
             FFragment_DialogEmitter_Cooldowns& InCooldowns) const
         -> void
     {
-        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InEmitter);
-        if (ck::Is_NOT_Valid(World))
-        { return; }
-
-        const auto Now = FDialog_QueryHelpers::Get_WorldTimeNow(World);
-
         // Collect before broadcasting: a handler is free to start or clear a cooldown on this same emitter, and
         // mutating the map while iterating it would be a use-after-invalidate.
         //
-        // The Forever sentinel is FCk_Time::Max, so a Forever cooldown never satisfies Now >= Expiry and is retained.
-        // A line whose entity died is retired silently — there is nothing left for an observer to act on.
+        // Forever entries are never ticked — a Chrono cannot express "no goal", so the mode is what holds them.
+        // A line whose entity died is retired silently: there is nothing left for an observer to act on.
         auto Lapsed = TArray<FCk_Handle_DialogLine>{};
         for (auto It = InCooldowns._Cooldowns.CreateIterator(); It; ++It)
         {
-            const auto LineInvalid = ck::Is_NOT_Valid(It.Key());
-            const auto Expired = NOT (Now < It.Value().Get_Expiry());
+            if (ck::Is_NOT_Valid(It.Key()))
+            {
+                It.RemoveCurrent();
+                continue;
+            }
 
-            if (NOT LineInvalid && NOT Expired)
+            auto& Entry = It.Value();
+            if (Entry.Get_DurationMode() == ECk_Dialog_CooldownDuration::Forever)
             { continue; }
 
-            if (NOT LineInvalid)
-            { Lapsed.Emplace(It.Key()); }
+            // Clamp, not Wrap: a cooldown is a one-shot countdown that latches Done, not a recurring cadence.
+            if (Entry.Get_Cooldown().Tick(InDeltaT, ECk_Chrono_OverflowPolicy::Clamp) != ECk_Chrono_TickState::Done)
+            { continue; }
 
+            Lapsed.Emplace(It.Key());
             It.RemoveCurrent();
         }
 

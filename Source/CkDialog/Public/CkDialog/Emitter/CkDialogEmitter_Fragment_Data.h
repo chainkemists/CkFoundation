@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Chrono/CkChrono.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Time/CkTime.h"
 
@@ -188,8 +189,16 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One active cooldown. _Duration is retained purely so a consumer can render progress — the gameplay check only ever
-// compares Now against _Expiry, and a Forever cooldown has no meaningful duration at all.
+// One active cooldown, held as a Chrono: goal = the duration it was started with, elapsed = how far through it is.
+// That is the whole progress story in one field — Get_TimeRemaining / Get_TimeElapsed / Get_IsDone come with it, so
+// nothing downstream has to reconstruct progress from a deadline and a separately-remembered duration.
+//
+// Deliberately advanced by FProcessor_DialogEmitter_TickCooldowns rather than compared against an absolute world
+// deadline: a paused or time-dilated world then stops burning cooldown, and the entry carries its own progress
+// instead of only being meaningful against the clock that produced it.
+//
+// _DurationMode is still needed. A Chrono whose goal is <= 0 reports Done every tick, so "Forever" cannot be
+// expressed as a goal — the ticker skips those entries entirely and this flag is what tells it to.
 USTRUCT(BlueprintType)
 struct CKDIALOG_API FCk_DialogEmitter_CooldownEntry
 {
@@ -201,23 +210,18 @@ public:
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    FCk_Time _Expiry;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-              meta = (AllowPrivateAccess = true))
-    FCk_Time _Duration;
+    FCk_Chrono _Cooldown;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     ECk_Dialog_CooldownDuration _DurationMode = ECk_Dialog_CooldownDuration::Timed;
 
 public:
-    CK_PROPERTY(_Expiry);
-    CK_PROPERTY(_Duration);
+    CK_PROPERTY(_Cooldown);
     CK_PROPERTY(_DurationMode);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_DialogEmitter_CooldownEntry, _Expiry, _Duration, _DurationMode);
+    CK_DEFINE_CONSTRUCTORS(FCk_DialogEmitter_CooldownEntry, _Cooldown, _DurationMode);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
