@@ -28,7 +28,6 @@ namespace ck
         using TProcessor_Inventory_SyncReplication_Base::TProcessor_Inventory_SyncReplication_Base;
 
     public:
-        // Per-shape hooks override the base's no-op defaults via CRTP shadowing.
         static auto OnEntryAdded(
             FCk_Handle_Inventory_Spatial& InHandle,
             const FCk_InventoryItem_Spatial_ReplicatedEntry& InEntry,
@@ -55,7 +54,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Thin derived over the shared EndPlay teardown base.
     class CKINVENTORY_API FProcessor_Inventory_Spatial_CancelOnEndPlay : public TProcessor_Inventory_CancelOnEndPlay_Base<
             FProcessor_Inventory_Spatial_CancelOnEndPlay,
             FCk_Handle_Inventory_Spatial,
@@ -81,10 +79,8 @@ namespace ck
         using Group = FGroup_Replication;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
         using MarkedDirtyBy = FTag_Inventory_MayRequireReplication;
-        // Shares MarkedDirtyBy (FTag_Inventory_MayRequireReplication) with the DataOnly sibling.
-        // The two filter to disjoint shapes (FTag_Inventory_Spatial vs FTag_Inventory_DataOnly), so
-        // ordering is immaterial for correctness — declare it explicitly to silence the scheduler's
-        // dirty-marker-conflict advisory.
+        // Shares MarkedDirtyBy with the DataOnly sibling, which filters to a disjoint shape — ordering
+        // is immaterial, declared only to silence the scheduler's dirty-marker-conflict advisory.
         using RunAfter = TDepList<FProcessor_Inventory_DataOnly_Replicate>;
         using TProcessor::TProcessor;
 

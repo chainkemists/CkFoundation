@@ -12,7 +12,7 @@
 #include "CkEcs/Net/CkNet_Fragment_Data.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
-#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h" // TryProduce resolves the registered Produce (split Phase 5)
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkNet_Utils.generated.h"
@@ -339,10 +339,8 @@ public:
         FCk_Handle& InHandle,
         TFunc InMutator) -> bool;
 
-    // Resolve the feature's registered Produce and return the typed payload — the single projection consumed
-    // by BOTH the wire (Replicate processors) and the save file. UNSET when the feature is absent on this
-    // entity (Produce's own contract). Ensures loudly if no Produce is registered for TDataStruct — calling
-    // this for a type without a save/wire projection is a programmer error.
+    // The one projection consumed by BOTH the wire and the save file. UNSET when the feature is
+    // absent on the entity; ensures loudly when TDataStruct has no registered Produce at all.
     template <typename TDataStruct>
     static auto
     TryProduce(

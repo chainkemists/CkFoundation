@@ -47,7 +47,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_BallisticMotion_ImpactOutcome);
 UENUM(BlueprintType)
 enum class ECk_BallisticMotion_LaunchTime : uint8
 {
-    // Anchor the trajectory at the current world time
     CurrentWorldTime,
 
     // Anchor the trajectory at a caller-provided world time. A time in the past launches the

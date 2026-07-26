@@ -75,6 +75,76 @@ Avoid reading `TFragment_Attribute_PreClampFinalValue<T, Dir>` directly unless y
 
 ---
 
+## Implementation notes
+
+The non-obvious constraints the code cannot state for itself (recorded 2026-07-25).
+
+### Clamping
+
+- **`TTag_Attribute_MayRequireClamping<T_AttributeHandle>` is per-FAMILY, keyed on the family's shared
+  `HandleType` — deliberately NOT one global tag.** `TProcessor_Attribute_MinMaxClamp` consumes it with a
+  registry-wide `Clear` on the transient entity; a single global marker would let one family's clamp pass
+  swallow every other family's pending clamps.
+- `Attribute_IsWithinBounds` tests "clamping is a no-op" rather than comparing with `<`: composite attribute
+  types (`FVector`, `FRotator`) have no well-defined lexicographic ordering.
+- `TFragment_Attribute_PreClampFinalValue<T, Dir>` is written by the Clamp processor **every frame**, on both
+  the normal path and the client-side-bypass path, so the clamp-signal processor can always read this frame's
+  value. When nothing clamped it equals `Current.Final`, so the overflow falls out as 0. It lingers afterwards
+  as a debug record. (The Min/Max read asymmetry is the "Pre-clamp / overflow polling" section above.)
+- Client-side clamping is bypassed for a replicated attribute whose value is awaiting replication this frame:
+  `Current` can arrive before its new bound, and clamping against the stale bound constrains it wrongly. A
+  change that needs no replication (a refill) is still clamped client-side.
+
+### Processor scheduling
+
+- **A composite processor — the thing actually registered with the scheduler — must declare its own
+  `MarkedDirtyBy` / `MarkedDirtyByAnyOf` surfacing every marker its internals consume.** The internals'
+  own declarations never reach a descriptor, so without the alias on the composite the pump loop skips it
+  entirely. Applies to `TProcessor_Attribute_FireSignals_CurrentMinMax`, `_MinMaxClamp`,
+  `_RecomputeAll_CurrentMinMax`, `TProcessor_AttributeModifier_ComputeAll_CurrentMinMax`.
+- `TProcessor_Attribute_Refill_Impl` carries `TExclude<FFragment_RefillAccumulator>` to keep the plain-refill
+  query disjoint from the accumulated-refill one. Without it both match the same entity and the refill-target
+  lookup ensures at runtime.
+- One `RecordOfAttributeModifiers` holds the modifiers of all three components (Current/Min/Max); the
+  RecomputeAll specialization must skip the entries it does not own or `Request_ComputeResult` ensures.
+
+### Modifiers
+
+- **`Request_ClearAllModifiers` preserves NotRevocable modifiers, and must keep doing so.** They are permanent
+  (set-once / accumulate). Clearing them queued the EmptyTag Override modifier for deferred destroy and let a
+  same-frame `Add_NotRevocable` coalesce into a doomed entity — the replicated-attribute alternating-override
+  stick.
+- `Add_NotRevocable` finding a **pending-destroy** coalesce target has two causes, and only one is a bug:
+  (1) entity-lifetime cascade — the owning attribute (or its owner) is being destroyed this frame, which stamps
+  the attribute and its child modifiers pending-destroy synchronously; the write is moot, drop it. (2) a
+  NotRevocable modifier removed out from under a **live** attribute, which given the rule above should be
+  impossible. The ensure discriminates on whether the attribute itself is also pending-destroy.
+- `Get_ModifierDeltaValue` returns **by value**: NotRevocable compute `Reset()`s the `TOptional`, so a reference
+  into it (or into the unset-case default temporary) dangles.
+
+### Replication and persistence
+
+- SAVE is keyed **per-attribute-entity** (the entity holding the Current component, via
+  `ck::attribute_restore::Produce`) while the net Apply stays **owner-keyed**. `HydrationApply` therefore treats
+  `InEntity` as the attribute entity itself and writes it directly; the owner-keyed net path never resolves it.
+- In the net Apply loop, an attribute entity that is not composed yet leaves the **whole** container entry
+  pending (`NotReady`) rather than aborting: siblings that already applied are skipped on the retry by the
+  value-equality check, so the retry is idempotent.
+- `ck::attribute_restore::HydrationApply` must take **all** `NotReady` exits before any mutation —
+  `ApplyReplicated*Entry`'s `Add_Revocable` creates a NEW modifier per call, so a mutate-then-NotReady retry
+  would stack a second replication modifier. A saved component the re-Constructed attribute no longer composes
+  is skipped with a Verbose log (content drift since the save).
+- **Byte diverges from Float/Integer/Vector/Rotator:** its Override delta is unsigned and the Final modifier's
+  operation tag is frozen at creation, so a sign-flipped re-apply must RECREATE the modifier rather than
+  `Override` it in place.
+- The refill **RUN-STATE** (Running/Paused) is never on the wire — it is registered `Save-Only`, keyed on the
+  refill CHILD entity, with the Current-component check scoping each per-kind instantiation to its own attribute
+  kind. The fill **RATE** already round-trips through that kind's attribute VALUE handler. Hydration is
+  authority-side and the NotReady guard precedes the only mutation; `Request_Pause`/`Request_Resume` are
+  idempotent, so a retry cannot stack state.
+
+---
+
 ## See also
 
 - `CkProvider/Claude.md` — modifier values come from providers.

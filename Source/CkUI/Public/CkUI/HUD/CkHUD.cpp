@@ -14,16 +14,12 @@
 #include <GameFramework/PlayerController.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Constructor
-// --------------------------------------------------------------------------------------------------------------------
 
 ACk_HUD_UE::ACk_HUD_UE()
 {
     PrimaryActorTick.bCanEverTick = false;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// AActor Overrides
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -45,8 +41,6 @@ auto
     Super::EndPlay(InEndPlayReason);
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Accessors
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -74,8 +68,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Internal
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     ACk_HUD_UE::
@@ -86,9 +78,6 @@ auto
         TEXT("HUD [{}] requires a LayoutConfigAsset to initialize UI"), this)
     { return; }
 
-    // Async-load the config off the game thread, then build the layout in HandleLayoutConfigLoaded. The config is a soft
-    // ref so a subclass default carries only a path — a CDO-time hard ref can't block-load safely in a packaged client
-    // (it may run on a worker thread during async load) and resolved to null.
     _LayoutConfigLoadHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
         _LayoutConfigAsset.ToSoftObjectPath(),
         FStreamableDelegate::CreateUObject(this, &ThisClass::HandleLayoutConfigLoaded));
@@ -127,12 +116,6 @@ auto
 
     if (Subsystem->Has_Layout())
     {
-        // A surviving layout means the previous world's HUD never tore it down (its DoShutdownUI ran
-        // after the PlayerController died — see the early-outs below). Returning silently here left the
-        // stale layout on screen with dead bindings AND suppressed OnLayoutReady, so game HUD subclasses
-        // never re-injected the fresh world's context ("UI not bound after a v3 load", 2026-07-14).
-        // Adopt-and-rebind is not safe (the surviving widgets hold dead entity handles) — destroy the
-        // stale layout and rebuild from this world's config, loudly.
         ck::ui::Warning(TEXT("HUD [{}] found a surviving PrimaryGameLayout [{}] from a previous world — "
             "destroying it and rebuilding so this world's HUD binds fresh"),
             this, Subsystem->Get_Layout());
@@ -161,9 +144,6 @@ auto
 
     if (ck::Is_NOT_Valid(PlayerController))
     {
-        // World-teardown ordering can destroy the PC before the HUD's EndPlay — the layout then survives
-        // into the next world (its subsystem is LocalPlayer-scoped). The next world's HUD detects and
-        // destroys it in HandleLayoutConfigLoaded; log so the leak is attributable.
         ck::ui::Verbose(TEXT("HUD [{}] shutdown: owning PlayerController already gone — layout teardown "
             "deferred to the next world's HUD"), this);
         return;

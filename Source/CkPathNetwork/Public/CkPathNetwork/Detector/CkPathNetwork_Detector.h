@@ -9,13 +9,9 @@
 #include "CkPathNetwork_Detector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-game sidewalk detection. The framework never knows HOW paths are marked in a level — a game
-// subclasses this (C++, Blueprint, or AngelScript) and rasterizes its own source of truth (e.g.
-// landscape paint-layer weights) into an occupancy mask. Everything downstream (vectorize -> build
-// -> route -> follow) is game-agnostic.
-//
-// The detector must be runtime-callable if the game wants runtime rebuilds; editor-only detectors
-// are fine for games that only bake in-editor.
+// Per-game sidewalk detection: a game subclasses this (C++/BP/AS) and rasterizes its own source of
+// truth (e.g. landscape paint weights) into an occupancy mask, keeping everything downstream
+// (vectorize -> build -> route -> follow) game-agnostic. Runtime rebuilds need a runtime-callable subclass.
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew, DefaultToInstanced)

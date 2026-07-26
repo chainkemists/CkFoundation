@@ -44,17 +44,9 @@ namespace ck_entity_script_params_generator
         if (InClass == UCk_EntityScript_UE::StaticClass())
         { return false; }
 
-        // Only generate Params accessors for entity-script classes authored in code —
-        // native C++ or AngelScript. Blueprint-asset entity scripts are excluded: their
-        // spawn params are authored in the BP editor and are never referenced by a
-        // static AS identifier, so a generated namespace block for them is dead weight.
-        // Worse, BP classes only exist in processes that happen to have the BP loaded,
-        // so emitting them makes the file's content depend on per-process load state —
-        // two editor instances of the same project then rewrite the file back and forth
-        // forever (the 2026-06-12 hot-reload ping-pong incident).
-        // NOTE: CLASS_CompiledFromBlueprint cannot be used here — the AS engine fork
-        // sets that flag on AngelScript classes too. UASClass derives directly from
-        // UClass, so only true BP assets are instances of UBlueprintGeneratedClass.
+        // Blueprint-asset entity scripts are excluded — their params are BP-authored and their
+        // visibility depends on per-process load state. CLASS_CompiledFromBlueprint cannot be
+        // used here: the AS engine fork sets that flag on AngelScript classes too.
         if (ck::IsValid(Cast<UBlueprintGeneratedClass>(InClass), ck::IsValid_Policy_NullptrOnly{}))
         { return false; }
 
@@ -64,19 +56,14 @@ namespace ck_entity_script_params_generator
         if (InClass->HasAnyClassFlags(DisqualifyingFlags))
         { return false; }
 
-        // Filter classes that have been torn down / are pending-kill. Without this, AS classes
-        // that were deleted from source linger in TObjectIterator until GC runs and keep showing
-        // up in the generated file even though the .as file no longer defines them.
-        if (InClass->IsUnreachable() ||
-            InClass->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
+        const auto ClassIsTornDownPendingGc = InClass->IsUnreachable() ||
+            InClass->HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed);
+        if (ClassIsTornDownPendingGc)
         { return false; }
 
 #if WITH_ANGELSCRIPT_CK
-        // For AS-defined classes, also check whether the source file still exists on disk.
-        // When a user deletes a class from an .as file and the file still exists, the stale
-        // UASClass hangs around; but if the whole file was deleted, that's a strong signal
-        // the class is gone. (Detecting class-removal within a still-present file would
-        // require re-parsing; leaving that to editor restart.)
+        // A deleted .as FILE is a strong signal the class is gone; a class deleted out of a
+        // still-present file would need a re-parse to detect, so that waits for editor restart.
         if (auto* ASClass = UASClass::GetFirstASClass(InClass))
         {
             if (ASClass->NewerVersion != nullptr)
@@ -111,12 +98,9 @@ namespace ck_entity_script_params_generator
         return ck::Format_UE(TEXT("{}({})"), RetainedType, InSourceExpression);
     }
 
-    // A property's emission can produce two outputs:
-    //   - DeclLine: the `UPROPERTY()\n    <Type> <Name>[ = <expr>];` field declaration.
-    //   - OverrideStatements: `<Name>.<Path> = <Value>;` lines emitted into the SpawnParams
-    //     default ctor body. Non-empty only for struct-typed properties whose CDO differs
-    //     from struct default AND whose struct contains a UObject* field (which would
-    //     otherwise trigger the positional-ctor `<null handle>` deadlock).
+    // OverrideStatements (`<Name>.<Path> = <Value>;` lines for the SpawnParams default-ctor body)
+    // are non-empty only for a struct-typed property whose CDO differs from struct default AND
+    // whose struct holds a UObject* — an inline positional ctor would emit `<null handle>` there.
     struct FPropertyEmission
     {
         FString         DeclLine;
@@ -142,10 +126,6 @@ namespace ck_entity_script_params_generator
             return Emission;
         }
 
-        // Field-assignment-style emission gate: struct-typed property whose struct contains
-        // any UObject* (recursively) AND whose CDO differs from struct default. Without this
-        // branch, the property would land as `<Type> <Name> = <Type>(arg1, ..., nullptr);`
-        // which AS rejects with `No matching signatures to '<Type>(... <null handle>)'`.
         if (const auto* StructProp = CastField<FStructProperty>(InProperty))
         {
             if (auto* Struct = StructProp->Struct.Get();
@@ -154,10 +134,8 @@ namespace ck_entity_script_params_generator
                 const auto Overrides = UCk_Utils_Reflection_UE::Get_StructFieldOverrides(StructProp, CDO);
                 if (Overrides.Num() > 0)
                 {
-                    // Declare the field with no `= <expr>`; UScriptStruct::InitializeStruct
-                    // zero-inits it (UObject* fields fall to their internal `= nullptr`
-                    // declared defaults), and the SpawnParams default ctor body applies the
-                    // diffs via dotted-path assignments below.
+                    // No initializer: InitializeStruct zero-inits the field, and the
+                    // default-ctor body applies the CDO diffs as dotted-path assignments.
                     Emission.DeclLine += TEXT(";");
                     for (const auto& Override : Overrides)
                     {
@@ -169,8 +147,6 @@ namespace ck_entity_script_params_generator
                     }
                     return Emission;
                 }
-                // No diffs: fall through to the existing single-expression default emission,
-                // which will produce `= <Type>()` (zero-arg ctor — safe).
             }
         }
 
@@ -190,15 +166,13 @@ namespace ck_entity_script_params_generator
         return Emission;
     }
 
-    // Builds a comma-separated `<Type> In<Name>` list of every valid exposed property,
-    // for use in constructor signatures and the parameterized Params() overload.
     auto Format_ParameterList(const TArray<FProperty*>& InProps) -> FString
     {
         auto Out = FString{};
         for (auto Index = int32{0}; Index < InProps.Num(); ++Index)
         {
-            // Keep the public Params(...) call shape source-compatible. Only the generated mirror field is weak;
-            // callers continue passing the original object type and the constructor converts it at admission.
+            // Reflected (not retained) type: only the mirror FIELD is weak, and the ctor converts —
+            // so the public Params(...) call shape stays source-compatible for callers.
             auto AsType = FCkAngelscriptGenerator_SharedUtils::Get_DetailedPropertyType(InProps[Index]);
             if (Is_ConstProperty(InProps[Index]) && NOT AsType.StartsWith(TEXT("const ")))
             {
@@ -239,8 +213,8 @@ namespace ck_entity_script_params_generator
 
         auto Block = FString{};
 
-        // File-scope struct with a unique USTRUCT name (avoids the "Params" name collision across
-        // namespaces that trips the Unreal naming convention check).
+        // Unique file-scope USTRUCT name — a shared `Params` name across namespaces trips
+        // the Unreal naming convention check.
         Block += TEXT("USTRUCT()\n");
         Block += ck::Format_UE(TEXT("struct {}\n"), StructName);
         Block += TEXT("{\n");
@@ -257,10 +231,8 @@ namespace ck_entity_script_params_generator
             AllOverrideStatements.Append(MoveTemp(Emission.OverrideStatements));
         }
 
-        // Default constructor — only emit a body when at least one ExposeOnSpawn property
-        // requires field-assignment-style override (struct field containing UObject* with CDO
-        // diffs). For the common case (zero overrides) we keep emission byte-stable by
-        // relying on the implicit zero-arg ctor.
+        // The zero-override case must keep relying on the implicit zero-arg ctor — emitting an
+        // empty body would churn every existing generated file for no gain.
         if (AllOverrideStatements.Num() > 0)
         {
             Block += TEXT("\n");
@@ -274,7 +246,6 @@ namespace ck_entity_script_params_generator
             Block += TEXT("    }\n");
         }
 
-        // Parameterized constructor — only when there is at least one field to set.
         if (ValidProps.Num() > 0)
         {
             Block += TEXT("\n");
@@ -293,18 +264,15 @@ namespace ck_entity_script_params_generator
 
         Block += TEXT("}\n\n");
 
-        // Namespace mirroring the class name so callers can still write
-        // `UCk_MyEntityScript::Params(...)` — resolved to free function(s) returning the struct.
+        // Namespace mirrors the class name so callers keep writing `UCk_MyEntityScript::Params(...)`.
         Block += ck::Format_UE(TEXT("namespace {}\n"), FullClassName);
         Block += TEXT("{\n");
 
-        // Default-constructed overload.
         Block += ck::Format_UE(TEXT("    {} Params()\n"), StructName);
         Block += TEXT("    {\n");
         Block += ck::Format_UE(TEXT("        return {}();\n"), StructName);
         Block += TEXT("    }\n");
 
-        // All-fields overload — forwards to the parameterized struct constructor.
         if (ValidProps.Num() > 0)
         {
             Block += TEXT("\n");
@@ -375,8 +343,7 @@ namespace ck_entity_script_params_generator
         const TMap<FString, TSharedRef<IPlugin>>& InModuleToPlugin)
         -> const IPlugin*
     {
-        // Strategy 1: C++ class package name (/Script/ModuleName).
-        // AS-defined classes all live under /Script/Angelscript so this only matches C++ classes.
+        // AS-defined classes all live under /Script/Angelscript, so this only matches C++ classes.
         const auto PackageName = InClass->GetOutermost()->GetName();
         constexpr auto ScriptPrefix = TEXT("/Script/");
         if (PackageName.StartsWith(ScriptPrefix))
@@ -387,8 +354,7 @@ namespace ck_entity_script_params_generator
         }
 
 #if WITH_ANGELSCRIPT_CK
-        // Strategy 2: AS-defined classes expose their source .as file via UASClass.
-        // GetFirstASClass walks the hierarchy and is more robust than a plain Cast.
+        // GetFirstASClass walks the hierarchy; a plain Cast<UASClass> misses derived classes.
         if (auto* ASClass = UASClass::GetFirstASClass(const_cast<UClass*>(InClass)))
         {
             if (const auto* Plugin = Find_PluginByPathPrefix(ASClass->GetSourceFilePath()))
@@ -417,7 +383,6 @@ namespace ck_entity_script_params_generator
             }
             else
             {
-                // Not in any plugin — goes to the project bucket.
                 PluginName = FApp::GetProjectName();
                 OutputDir = FPaths::ProjectDir() / TEXT("Script") / TEXT("Generated");
             }
@@ -470,10 +435,6 @@ auto
 {
 #if WITH_EDITOR
 
-    // Single-writer gate (G3): a secondary instance must not rewrite the generated file — its
-    // class set differs from the owner's (TObjectIterator only sees classes loaded in THIS
-    // process), so its write would flip-flop the file against the owner's. This is the exact
-    // site of the 2026-06-12 ping-pong.
     if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
             TEXT("ESPGenerator.GenerateAll")))
     { return; }
@@ -515,13 +476,8 @@ auto
         const auto OutputDir = FPaths::GetPath(Bucket.OutputFilePath);
         IFileManager::Get().MakeDirectory(*OutputDir, true);
 
-        // Skip writing when the content hasn't changed — otherwise our own write triggers the
-        // AngelScript PostCompile hook, which calls us again, ad infinitum.
-        // Compare in LF-normalized form: Content is LF here (literals below), but the on-disk
-        // file may be CRLF on Windows (see platform-native EOL step below), and
-        // LoadFileToString normalizes to LF. Without normalizing both sides, a hand-edited or
-        // externally-converted file (dos2unix / unix2dos / p4merge re-save) would trip an
-        // unnecessary rewrite and re-enter the PostCompile hook.
+        // Writing unchanged content re-triggers the AS PostCompile hook that called us —
+        // infinite loop. Compare LF-normalized: on-disk is CRLF (see the EOL step below).
         auto ExistingContent = FString{};
         const auto HasExisting = FFileHelper::LoadFileToString(ExistingContent, *Bucket.OutputFilePath);
 
@@ -540,10 +496,8 @@ auto
             continue;
         }
 
-        // Rewrite-reason diagnostic. A rewrite of an unchanged class set should be rare —
-        // every rewrite the AS file-watcher sees triggers a structural hot-reload and a
-        // full soft-reload sweep AFTER engine init (multi-second editor freeze), so when
-        // one happens we want the log to say exactly why.
+        // Every rewrite the AS file-watcher sees costs a structural hot-reload plus a
+        // soft-reload sweep after engine init (multi-second freeze) — so log exactly why.
         if (NOT HasExisting)
         {
             ck::angelscriptgenerator::Log(
@@ -588,10 +542,8 @@ auto
         }
 
 #if PLATFORM_WINDOWS
-        // Match project convention: .as files live as CRLF on Windows disk (checkout converts
-        // index-LF → WC-CRLF via core.autocrlf). Without this step, the generator writes LF,
-        // disagrees with every other .as file on disk, and git flags the file as modified on
-        // every editor startup even though `git diff` is empty.
+        // .as files live as CRLF on Windows disk (core.autocrlf). Writing LF makes git flag
+        // the file modified on every editor startup.
         Content.ReplaceInline(TEXT("\r\n"), TEXT("\n"));
         Content.ReplaceInline(TEXT("\n"), TEXT("\r\n"));
 #endif
@@ -643,9 +595,8 @@ auto
     if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
     { return ReflectedType; }
 
-    // Weak and soft properties already carry an explicit retention policy. FSoftClassProperty derives from
-    // FSoftObjectProperty, and both soft and weak properties ultimately share object-property ancestry, so reject
-    // those cases before handling a direct strong object property.
+    // Weak/soft properties already carry an explicit retention policy, and they share
+    // object-property ancestry — so they must be rejected before the strong-object branch.
     if (CastField<FWeakObjectProperty>(InProperty) != nullptr
         || CastField<FSoftObjectProperty>(InProperty) != nullptr)
     { return ReflectedType; }
@@ -659,8 +610,8 @@ auto
         TEXT("{}{}"),
         ObjectClass->GetPrefixCPP(),
         ObjectClass->GetName());
-    // A const AngelScript object handle must remain const through the weak wrapper. TWeakObjectPtr<const T> accepts
-    // the source handle without widening the engine's weak-pointer binding or exposing a mutable Get() result.
+    // A const AS object handle must stay const through the weak wrapper, or the mirror widens
+    // the binding and hands out a mutable Get() result.
     const auto RetainedObjectType = ReflectedType == TEXT("const ") + DirectObjectType
         ? TEXT("const ") + DirectObjectType
         : DirectObjectType;

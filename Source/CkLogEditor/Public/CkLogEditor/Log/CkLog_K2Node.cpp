@@ -48,18 +48,15 @@ auto UCk_K2Node_Log::AllocateDefaultPins() -> void
 {
     Super::AllocateDefaultPins();
 
-    // Create exec pins
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Execute);
     CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Then);
 
-    // Create log category pin with default value
     _CachedLogCategoryPin = CreatePin(
         EGPD_Input,
         UEdGraphSchema_K2::PC_Struct,
         FCk_LogCategory::StaticStruct(),
         ck_k2node_log::LogCategoryPinName);
 
-    // Set default log category to "CkCore"
     const auto TheDefaultLogCategory = FCk_LogCategory(ck_k2node_log::DefaultLogCategory);
     FString DefaultValue;
     FCk_LogCategory::StaticStruct()->ExportText(
@@ -72,7 +69,6 @@ auto UCk_K2Node_Log::AllocateDefaultPins() -> void
 
     _CachedLogCategoryPin->DefaultValue = DefaultValue;
 
-    // Create verbosity pin
     _CachedVerbosityPin = CreatePin(
         EGPD_Input,
         UEdGraphSchema_K2::PC_Byte,
@@ -81,10 +77,8 @@ auto UCk_K2Node_Log::AllocateDefaultPins() -> void
 
     _CachedVerbosityPin->DefaultValue = TEXT("Log");
 
-    // Create format pin
     _CachedFormatPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Text, ck_k2node_log::FormatPinName);
 
-    // Create argument pins
     for (const FName& PinName : _PinNames)
     {
         CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Wildcard, PinName);
@@ -121,7 +115,6 @@ auto UCk_K2Node_Log::GetNodeTitle(ENodeTitleType::Type TitleType) const -> FText
         }
     }
 
-    // Add UTF-8 icons for each verbosity level
     FString Icon;
     if (VerbosityValue == TEXT("Fatal"))
     {
@@ -166,7 +159,6 @@ auto UCk_K2Node_Log::GetNodeTitleColor() const -> FLinearColor
         VerbosityValue = VerbosityPin->DefaultValue;
     }
 
-    // Return colors based on verbosity
     if (VerbosityValue == TEXT("Fatal"))
     {
         return FLinearColor(0.4f, 0.0f, 0.0f); // Dark Red
@@ -191,7 +183,6 @@ auto UCk_K2Node_Log::GetNodeTitleColor() const -> FLinearColor
     {
         return FLinearColor(0.3f, 0.3f, 0.3f); // Dark Gray
     }
-    // Log
     {
         return FLinearColor(0.1f, 0.3f, 0.6f); // Blue
     }
@@ -208,7 +199,6 @@ auto UCk_K2Node_Log::PinConnectionListChanged(UEdGraphPin* Pin) -> void
 
     Modify();
 
-    // Clear all argument pins when format pin is connected/disconnected
     if (Pin == FormatPin && NOT FormatPin->DefaultTextValue.IsEmpty())
     {
         _PinNames.Empty();
@@ -237,7 +227,6 @@ auto UCk_K2Node_Log::PinConnectionListChanged(UEdGraphPin* Pin) -> void
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(GetBlueprint());
     }
 
-    // Potentially update an argument pin type
     SynchronizeArgumentPinType(Pin);
 }
 
@@ -294,7 +283,6 @@ auto UCk_K2Node_Log::PinDefaultValueChanged(UEdGraphPin* Pin) -> void
 
 void UCk_K2Node_Log::PinTypeChanged(UEdGraphPin* Pin)
 {
-    // Potentially update an argument pin type
     SynchronizeArgumentPinType(Pin);
     Super::PinTypeChanged(Pin);
 }
@@ -362,7 +350,6 @@ void UCk_K2Node_Log::PostReconstructNode()
                     CurrentPin != GetThenPin() && CurrentPin->Direction == EGPD_Input &&
                     CurrentPin->LinkedTo.Num() == 0 && NOT CurrentPin->DefaultTextValue.IsEmpty())
                 {
-                    // Create a new "Make Literal Text" function
                     const FVector2D SpawnLocation =
                         FVector2D(NodePosX - 300, NodePosY + (60 * (NumPinsFixedUp + 1)));
                     auto MakeLiteralText =
@@ -389,7 +376,6 @@ void UCk_K2Node_Log::PostReconstructNode()
                     ++NumPinsFixedUp;
                 }
 
-                // Potentially update an argument pin type
                 SynchronizeArgumentPinType(CurrentPin);
             }
 
@@ -407,7 +393,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
 {
     Super::ExpandNode(CompilerContext, SourceGraph);
 
-    // Create a "Make Array" node for format arguments
     const auto MakeArrayNode = CompilerContext.SpawnIntermediateNode<UK2Node_MakeArray>(this,
                                                                                   SourceGraph);
     MakeArrayNode->AllocateDefaultPins();
@@ -415,7 +400,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
 
     const auto ArrayOut = MakeArrayNode->GetOutputPin();
 
-    // Create Format function call
     const auto CallFormatFunction =
         CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
     CallFormatFunction->SetFromFunction(UKismetTextLibrary::StaticClass()->FindFunctionByName(
@@ -423,21 +407,17 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
     CallFormatFunction->AllocateDefaultPins();
     CompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallFormatFunction, this);
 
-    // Connect array to format function
     ArrayOut->MakeLinkTo(CallFormatFunction->FindPinChecked(TEXT("InArgs")));
     MakeArrayNode->PinConnectionListChanged(ArrayOut);
 
-    // Create log function call based on verbosity
     const auto CreateLogFunctionCall =
         CompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, SourceGraph);
 
-    // Determine which log function to call based on verbosity
     const auto VerbosityPin = GetVerbosityPin();
     FString VerbosityValue = VerbosityPin->DefaultValue;
     if (VerbosityPin->LinkedTo.Num() > 0)
     {
-        // If verbosity is connected, we need to use a switch statement or similar
-        // For now, we'll default to Log verbosity
+        // A dynamic verbosity would need a switch expansion; until then a connected pin means Log
         VerbosityValue = TEXT("Log");
     }
 
@@ -476,7 +456,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
     CreateLogFunctionCall->AllocateDefaultPins();
     CompilerContext.MessageLog.NotifyIntermediateObjectCreation(CreateLogFunctionCall, this);
 
-    // Process format arguments
     for (int32 ArgIdx = 0; ArgIdx < _PinNames.Num(); ++ArgIdx)
     {
         auto ArgumentPin = FindArgumentPin(_PinNames[ArgIdx]);
@@ -487,7 +466,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
                 TEXT("/Script/Engine")),
                 TEXT("FormatArgumentData"));
 
-        // Create Make Struct node
         auto MakeFormatArgumentDataStruct =
             CompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, SourceGraph);
         MakeFormatArgumentDataStruct->StructType = FormatArgumentDataStruct;
@@ -496,7 +474,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
         CompilerContext.MessageLog.NotifyIntermediateObjectCreation(MakeFormatArgumentDataStruct,
                                                                     this);
 
-        // Set argument name
         MakeFormatArgumentDataStruct->GetSchema()->TrySetDefaultValue(
             *MakeFormatArgumentDataStruct->FindPinChecked(
                 GET_MEMBER_NAME_STRING_CHECKED(FFormatArgumentData, ArgumentName)),
@@ -505,12 +482,10 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
         auto ArgumentTypePin = MakeFormatArgumentDataStruct->FindPinChecked(
             GET_MEMBER_NAME_STRING_CHECKED(FFormatArgumentData, ArgumentValueType));
 
-        // Handle argument type conversions (similar to FormatText)
         if (ArgumentPin->LinkedTo.Num() > 0)
         {
             const FName& ArgumentPinCategory = ArgumentPin->PinType.PinCategory;
 
-            // Lambda for adding conversion nodes
             auto AddConversionNode = [&](const FName FuncName, const TCHAR* PinName)
             {
                 MakeFormatArgumentDataStruct->GetSchema()->TrySetDefaultValue(*ArgumentTypePin,
@@ -653,7 +628,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
             }
             else
             {
-                // Unexpected pin type
                 CompilerContext.MessageLog.Error(
                     *FText::Format(LOCTEXT("Error_UnexpectedPinType",
                                            "Pin '{0}' has an unexpected type: {1}"),
@@ -664,7 +638,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
         }
         else
         {
-            // No connected pin - default to empty text
             MakeFormatArgumentDataStruct->GetSchema()->TrySetDefaultValue(*ArgumentTypePin,
                                                                           TEXT("Text"));
             MakeFormatArgumentDataStruct->GetSchema()->TrySetDefaultText(
@@ -673,7 +646,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
                 FText::GetEmpty());
         }
 
-        // Add pins to array
         if (ArgIdx > 0)
         {
             MakeArrayNode->AddInputPin();
@@ -682,7 +654,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
         const FString PinName = FString::Printf(TEXT("[%d]"), ArgIdx);
         const auto InputPin = MakeArrayNode->FindPinChecked(PinName);
 
-        // Connect struct output to array
         auto FindOutputStructPinChecked = [](UEdGraphNode* Node) -> UEdGraphPin*
         {
             check(Node != nullptr);
@@ -703,7 +674,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
         FindOutputStructPinChecked(MakeFormatArgumentDataStruct)->MakeLinkTo(InputPin);
     }
 
-    // Connect everything
     CompilerContext.MovePinLinksToIntermediate(*GetExecPin(), *CreateLogFunctionCall->GetExecPin());
     CompilerContext.MovePinLinksToIntermediate(*GetThenPin(), *CreateLogFunctionCall->GetThenPin());
     CompilerContext.MovePinLinksToIntermediate(*GetFormatPin(),
@@ -713,7 +683,6 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
                                                *CreateLogFunctionCall->FindPinChecked(
                                                    TEXT("InLogCategory")));
 
-    // Connect formatted text to log function
     CallFormatFunction->GetReturnValuePin()->MakeLinkTo(
         CreateLogFunctionCall->FindPinChecked(TEXT("InMsg")));
 
@@ -747,7 +716,6 @@ UK2Node::ERedirectType UCk_K2Node_Log::DoPinsMatchForReconstruction(
     }
     else
     {
-        // Check for redirects
         if (const auto Node = Cast<UK2Node>(NewPin->GetOwningNode()))
         {
             TArray<FString> OldPinNames;
@@ -845,7 +813,6 @@ int32 UCk_K2Node_Log::GetNodeRefreshPriority() const
 FNodeHandlingFunctor* UCk_K2Node_Log::CreateNodeHandler(
     FKismetCompilerContext& CompilerContext) const
 {
-    // No special handling needed
     return nullptr;
 }
 
@@ -915,7 +882,6 @@ void UCk_K2Node_Log::SynchronizeArgumentPinType(UEdGraphPin* Pin) const
                                 false,
                                 FEdGraphTerminalType());
 
-            // Ensure wildcard
             if (Pin->PinType != WildcardPinType)
             {
                 Pin->PinType = WildcardPinType;
@@ -924,7 +890,6 @@ void UCk_K2Node_Log::SynchronizeArgumentPinType(UEdGraphPin* Pin) const
         }
         else
         {
-            // Take the type of the connected pin
             if (const auto ArgumentSourcePin = Pin->LinkedTo[0];
                 Pin->PinType != ArgumentSourcePin->PinType)
             {
@@ -935,7 +900,6 @@ void UCk_K2Node_Log::SynchronizeArgumentPinType(UEdGraphPin* Pin) const
 
         if (PinTypeChanged)
         {
-            // Let the graph know to refresh
             GetGraph()->NotifyNodeChanged(this);
 
             auto Blueprint = GetBlueprint();

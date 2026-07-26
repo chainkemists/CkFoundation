@@ -8,7 +8,7 @@
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 
-#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // FTag_Snapshot_SaveTransient
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
@@ -66,26 +66,8 @@ auto
         ck::TUtils_Sm_OwningStateMachine::AddOrReplace(TransitionEntity, OwningSm);
     }
 
-    // A freshly-created transition has zero conditions — it's a vacuous
-    // transition that will Pass on first evaluation. That requires the parent
-    // state to be ticked (so State_Update adds FTag_SmState_NeedsEvaluation),
-    // which means the state must NOT be FullyEventDriven.
-    //
-    // Run AFTER the parent-state link is established above so the cascade to
-    // Request_MarkState_AsNotFullyEventDriven fires correctly.
-    //
-    // If a Polled condition is added later: state stays not-FullyEventDriven
-    // (Request_MarkTransition_AsNotFullyEventDriven runs again — idempotent).
-    // If an EventDriven condition is added later (and no Polled condition
-    // exists), CkSmCondition_Utils::Create re-marks the transition + state
-    // back to FullyEventDriven to preserve the perf optimization.
-    //
-    // The previous default of "Add FTag_SmTransition_FullyEventDriven at
-    // Create" assumed every transition would eventually get an event-driven
-    // condition. Vacuous transitions broke that assumption and starved the
-    // state of evaluation. See FProcessor_SmTransition_Evaluate's vacuous-
-    // Pass branch (CkSmTransition_Processor.cpp:49-59) — it handles the case
-    // correctly once it gets a chance to run.
+    // Must run AFTER the parent-state link above so the mark cascades to the parent state — a
+    // vacuous (zero-condition) transition needs the parent to tick to evaluate its Pass.
     Request_MarkTransition_AsNotFullyEventDriven(TransitionEntityTyped);
 
     return TransitionEntityTyped;
@@ -133,9 +115,6 @@ auto
         FCk_Handle_SmTransition& InTransition)
     -> FCk_Handle_SmTransition
 {
-    // A transition qualifies as FullyEventDriven iff it has at least one condition
-    // and every condition is EventDriven (zero Polled). Zero conditions = vacuous =
-    // NOT FullyEventDriven (the parent state must tick to evaluate the vacuous Pass).
     auto ConditionCount = int32{0};
     auto HasPolled = false;
 
@@ -207,11 +186,8 @@ auto
     if (Get_IsFullyEventDriven(InTransition))
     { return InTransition; }
 
-    // Only reset polled conditions. Event-driven conditions keep their last result:
-    // when their event fires again, Request_UpdateConditionResult directly adds
-    // FTag_SmTransition_Evaluating to re-trigger evaluation regardless of pause state.
-    // Resetting event-driven conditions to Undetermined would leave them permanently
-    // waiting if the event never fires again.
+    // Polled conditions only: an event-driven condition reset to Undetermined would wait forever
+    // if its event never fires again — it re-triggers via Request_UpdateConditionResult instead.
     for (const auto& Conditions = UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Get_ValidEntries(InTransition);
         auto Condition : Conditions)
     {

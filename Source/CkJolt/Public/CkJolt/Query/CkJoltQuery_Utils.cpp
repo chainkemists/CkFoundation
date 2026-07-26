@@ -51,17 +51,15 @@ namespace ck_jolt_query_utils
         return Context;
     }
 
-    // Mirrors the snapshot-safe resolution in the probe contact translation: registry-liveness
-    // check FIRST (no ensure on dead ids), invalid handle when the body has no live entity.
+    // Registry-liveness check FIRST — no ensure on dead ids (mirrors the probe contact translation).
     static auto TryResolve_Entity(const FQueryContext& InContext, uint64 InUserData) -> FCk_Handle
     {
         const auto* EcsWorldSubsystem = InContext._World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
         if (ck::Is_NOT_Valid(EcsWorldSubsystem, ck::IsValid_Policy_NullptrOnly{}))
         { return {}; }
 
-        // UserData 0 = NO entity. Raw entity id 0 is always the registry's live transient root — resolving it
-        // would return the transient root as a spurious result. (Baked static-world bodies now carry their
-        // source actor's attribution entity id, so a static hit resolves through this same path.)
+        // UserData 0 = NO entity. Raw entity id 0 is always the registry's live transient root — resolving
+        // it would return the transient root as a spurious result.
         if (InUserData == 0)
         { return {}; }
 
@@ -83,8 +81,6 @@ namespace ck_jolt_query_utils
     {
         const auto& BodyInterface = InContext._PhysicsSystem->GetBodyInterface();
 
-        // One resolution path for every hit body: the user-data-stamped entity id. Baked static-world bodies
-        // now carry their source actor's attribution entity, so they resolve here with no special-casing.
         InOutResult.Set_Entity(TryResolve_Entity(InContext, BodyInterface.GetUserData(InBodyId)));
     }
 
@@ -360,10 +356,6 @@ auto
 {
     auto Results = TArray<FCk_Handle>{};
 
-    // Reuse the overlap query (which already resolves each hit body's UserData into FCk_Jolt_HitResult's
-    // _Entity via the non-ensuring pattern), then keep the live, deduped entity handles. Baked static-world
-    // bodies now resolve to their source actor's attribution entity, so they appear here alongside dynamic
-    // bodies (only the transient-root id 0 is dropped).
     const auto Hits = Get_Overlap(InWorldContextObject, InLocation, InRotation, InShape, InFilter);
 
     for (const auto& Hit : Hits)

@@ -24,8 +24,8 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DrawAgentRings"), STAT_CkCrowd_DrawAgentRingsPro
 
 namespace ck_crowd_agent_draw_agent_rings_processor
 {
-    // Reads the selected agent's type-hash from the shared CVar `ck.Crowd.SelectedEntityId`
-    // (the CVar object itself lives in CkCrowdAgent_DiagDraw_Processor.cpp); -1 means "no selection".
+    // The `ck.Crowd.SelectedEntityId` CVar object lives in CkCrowdAgent_DiagDraw_Processor.cpp;
+    // -1 means "no selection".
     auto GetSelectedEntityId() -> int32
     {
         const auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.SelectedEntityId"));
@@ -36,10 +36,9 @@ namespace ck_crowd_agent_draw_agent_rings_processor
     constexpr auto Segments         = 32;
     constexpr auto Thickness        = 2.0f;
     constexpr auto DurationOneFrame = 0.0f;
-    constexpr auto MinSpeedToDraw   = 5.0f;   // cm/s — below this the agent is effectively stopped
-    constexpr auto MaxVelArrowLen   = 300.0f; // visual cap so a sprinting arrow isn't room-length
+    constexpr auto MinSpeedToDraw   = 5.0f;   // cm/s
+    constexpr auto MaxVelArrowLen   = 300.0f; // cm
 
-    // Colours mirror the debugger mockup legend.
     const auto Color_Arrival = FLinearColor{0.21f, 0.82f, 0.48f, 0.9f};  // green
     const auto Color_Orbit   = FLinearColor{1.0f,  0.36f, 0.36f, 0.9f};  // red (predicted)
     const auto Color_Turn    = FLinearColor{0.31f, 0.63f, 1.0f,  0.7f};  // blue
@@ -84,7 +83,6 @@ namespace ck
         const auto MaxTurnRate = InParams.Get_MaxTurnRate();
         const auto MaxSpeed    = InParams.Get_MaxSpeed();
 
-        // --- Goal rings (arrival + predicted orbit), only while actually heading to a goal ---------
         // A stale _ActiveGoal on an idle agent would draw a misleading ring at wherever it last went.
         if (InHandle.Has<FTag_CrowdAgent_Walking>())
         {
@@ -103,16 +101,13 @@ namespace ck
             }
         }
 
-        // --- Turn-radius circle + velocity vector, only while moving -------------------------------
         if (Speed < draw::MinSpeedToDraw)
         { return; }
 
         const auto VelDir = Velocity / Speed;
 
-        // Tightest arc the agent can currently make: r = v / MaxTurnRate, centre perpendicular-left
-        // of the velocity. Drawn tangent to the agent so you can read it against the arrival ring —
-        // when this circle can't fit inside the arrival ring, the agent orbits (fix A caps speed to
-        // shrink it). Perpendicular-left in XY = (-vy, vx).
+        // Tightest arc the agent can currently make, drawn tangent to it: when this circle cannot
+        // fit inside the arrival ring, the agent orbits its goal instead of stopping on it.
         if (MaxTurnRate > 0.0f)
         {
             const auto TurnRadius = static_cast<float>(Speed / MaxTurnRate);

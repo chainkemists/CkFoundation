@@ -10,15 +10,11 @@
 #include "CkCrowdAgent_Avoidance_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-agent avoidance-policy override + zone-tag opt-in/out for sampling.
-// --------------------------------------------------------------------------------------------------------------------
 
-// Designer-side opt-in: any agent (or any entity in the agent's lifetime-owner chain) carrying
-// this tag forces sampling on regardless of NeighborCache size.
+// Designer opt-in, honoured on the agent or anywhere in its lifetime-owner chain: forces sampling on.
 CKCROWD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_CrowdAvoidance_AlwaysSample);
 
-// Designer-side opt-out: forces force-only behaviour even when neighbor count would normally
-// trigger sampling. Use case: tutorial NPCs, scripted set-pieces.
+// Designer opt-out, same chain: forces force-only behaviour whatever the neighbor count.
 CKCROWD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_CrowdAvoidance_NeverSample);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -52,6 +48,5 @@ public:
 
 namespace ck
 {
-    // Alias so processors include this fragment alongside the others on an agent.
     using FFragment_CrowdAgent_AvoidancePolicy = FCk_Fragment_CrowdAgent_AvoidancePolicy;
 }

@@ -23,7 +23,6 @@ public:
     CK_GENERATED_BODY(UCk_SmState_EntityScript);
 
     // --------------------------------------------------------------------------------------------------------------------
-    // LIFECYCLE (EntityScript overrides)
 
 protected:
     auto
@@ -37,23 +36,18 @@ protected:
     auto
     EndPlay() -> void override;
 
-    // Always DoesNotReplicate. State/condition/task entities are never independent net objects:
-    // the SM's transition-history container fragment is the only thing on the wire, and clients
-    // rebuild the whole sub-graph locally via the replay path. Overriding the CkEntityScript
-    // Replicates default here is what stops the server from also pushing each state out as an Iris
-    // net object (which produced orphaned, fragment-less state husks on non-owning clients).
+    // Always DoesNotReplicate: state/condition/task entities are never independent net objects — the
+    // SM's transition-history container is the only thing on the wire and clients rebuild the whole
+    // sub-graph locally via the replay path.
     auto
     Get_EffectiveReplication() const -> ECk_Replication override;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // STATE LIFECYCLE (Enter/Exit)
-    //
-    // EnterState fires from BeginPlay() once the state's script is fully constructed.
-    // ExitState is invoked synchronously by the StateMachine processor — by
-    // FProcessor_Sm_HandleRequests on a transition, or by FProcessor_Sm_EndPlay when the SM
-    // itself is destroyed mid-state — with an EntityScript-EndPlay fallback for cascade-destroyed
-    // states the processors never reach (see EndPlay in the .cpp). ExitState fires at most once
-    // per state instance (dedup'd via FTag_SmState_Active).
+
+    // EnterState fires from BeginPlay() once the script is fully constructed. ExitState is invoked
+    // synchronously by the SM processors (transition, or SM EndPlay mid-state), with an
+    // EntityScript-EndPlay fallback for cascade-destroyed states the processors never reach.
+    // ExitState fires at most once per state instance (dedup'd via FTag_SmState_Active).
 
 public:
     virtual auto
@@ -67,16 +61,14 @@ public:
         ECk_Sm_NetContext InNetContext) -> void;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // VIRTUAL METHODS (user overrides)
 
 protected:
     virtual auto
     DefineState(
         FCk_Handle_SmState_UnderConstruction& InHandle) -> void;
 
-    // Returns the set of gameplay tags identifying the states this class overrides.
-    // Called on the CDO when processing Request_AddOverrideState.
-    // Default returns empty — override in subclasses that act as state overrides.
+    // Gameplay tags identifying the states this class overrides; called on the CDO when processing
+    // Request_AddOverrideState. Empty by default — override in subclasses that act as state overrides.
 public:
     auto
     Get_StatesToOverride() const -> TArray<FGameplayTag>;
@@ -114,7 +106,8 @@ protected:
         ECk_Sm_NetContext InNetContext);
 
     // --------------------------------------------------------------------------------------------------------------------
-    // BUILDER API (call from DefineState only — enforced by UnderConstruction handle)
+
+    // Builder API — callable from DefineState only; enforced by the UnderConstruction handle type.
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -180,22 +173,9 @@ public:
     Get_StateTagForClass(
         TSubclassOf<UCk_SmState_EntityScript> InClass);
 
-    // Per-class fingerprint cache (spec §9 verify path support).
-    //
-    // The structural fingerprint of a state class is computed from its DefineState output —
-    // an instance operation that has to wait for the EntityScript Construct pipeline to run.
-    // For replication publication we need the fingerprint *before* the new state's instance
-    // exists, otherwise published transition events ship with fingerprint=0 and clients can't
-    // verify determinism on commit.
-    //
-    // Resolution: cache the fingerprint per class on first compute. Every Construct's call to
-    // DoComputeFingerprint populates this cache. CommitPendingTransition's publication path
-    // reads it. The cache is class-name-keyed so hot reload + PIE-restart cycles don't dangle.
-    // First-ever instantiation of a class still publishes 0 (cache miss); the Construct
-    // backfill (DoBackfillFingerprintToRepData) cleans up that one zero asynchronously.
-    //
-    // Returns 0 when the class has never been seen — caller treats 0 as "no fingerprint, skip
-    // verify" downstream.
+    // Per-class fingerprint cache: publication needs a class's fingerprint BEFORE the new state's
+    // instance exists, and every Construct's DoComputeFingerprint populates this. Returns 0 for a
+    // class never seen — callers treat 0 as "no fingerprint, skip verify".
     static auto
     Get_CachedFingerprint(
         TSubclassOf<UCk_SmState_EntityScript> InClass) -> int32;
@@ -222,30 +202,22 @@ public:
     // --------------------------------------------------------------------------------------------------------------------
 
 private:
-    // Walks the state's records (tasks, transitions, conditions) plus the transient
-    // ComposedFromInProgress fragment, computes the structural fingerprint, stores it on
-    // FFragment_SmState_Fingerprint, and clears the transient scratch. Called by Construct
-    // immediately after DefineState returns.
+    // Walks the state's records plus the transient ComposedFromInProgress fragment, stores the
+    // structural fingerprint on FFragment_SmState_Fingerprint, and clears the scratch.
     auto
     DoComputeFingerprint(
         FCk_Handle_SmState_UnderConstruction& InStateHandle) -> void;
 
-    // On authority + Replicates SMs, patches the locally-computed fingerprint into the SM's
-    // replicated payload. Covers two cases: (1) initial-state seeds _InitialStateFingerprint
-    // when history is empty; (2) subsequent transitions patch History.Last()._NewStateFingerprint
-    // when that event's NewStateClass matches our class. WithoutHistory uses _CurrentStateFingerprint
-    // gated on _CurrentStateClass match. No-op for non-authority, local-only, or non-matching
-    // payload state (defensive against fast follow-up transitions racing past this Construct).
+    // On authority + Replicates SMs, patches the locally-computed fingerprint into the SM's rep
+    // payload: seeds _InitialStateFingerprint when history is empty, otherwise patches
+    // History.Last() (WithHistory) / _CurrentStateFingerprint (WithoutHistory) on a class match.
     auto
     DoBackfillFingerprintToRepData(
         FCk_Handle_SmState_UnderConstruction& InStateHandle) -> void;
 
-    // Spec §9 determinism verify. If FProcessor_Sm_CommitPendingTransition attached
-    // FFragment_SmState_ExpectedFingerprint to this state (meaning the commit was driven by a
-    // replicated event with a non-zero fingerprint), compare to the locally-computed hash and
-    // fault the SM on mismatch — exit the bad state and stamp FTag_Sm_DeterminismFault so no
-    // further transitions land. Authority-driven commits never carry the carrier, so this is
-    // a no-op for the authoritative machine.
+    // Determinism verify: when FFragment_SmState_ExpectedFingerprint was attached (the commit was
+    // driven by a replicated event), compare it to the local hash and on mismatch exit the state and
+    // stamp FTag_Sm_DeterminismFault. Authority commits never carry the carrier, so it no-ops there.
     auto
     DoVerifyFingerprintAgainstExpected(
         FCk_Handle_SmState_UnderConstruction& InStateHandle) -> void;

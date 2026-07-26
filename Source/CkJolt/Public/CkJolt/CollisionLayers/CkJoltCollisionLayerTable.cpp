@@ -13,8 +13,7 @@ namespace ck::jolt
     FCk_Jolt_CollisionLayerTable::
         FCk_Jolt_CollisionLayerTable()
     {
-        // Fixed capacity — Jolt filter callbacks read the array from worker threads during
-        // Update; it must NEVER reallocate after construction.
+        // Jolt filter callbacks read this from worker threads during Update — it must NEVER reallocate.
         _Signatures.Reserve(MaxLayers);
     }
 
@@ -29,8 +28,7 @@ namespace ck::jolt
             TEXT("UCollisionProfile unavailable — the Jolt layer table cannot seed from profiles"))
         { return; }
 
-        // Deterministic seed order: engine + project profiles in registration order, each
-        // registered for both domains (a profile authored for statics may be used by dynamics).
+        // Both domains per profile: a profile authored for statics may still be used by dynamics.
         for (auto ProfileIndex = 0; ProfileIndex < CollisionProfiles->GetNumOfProfiles(); ++ProfileIndex)
         {
             const auto* Template = CollisionProfiles->GetProfileByIndex(ProfileIndex);

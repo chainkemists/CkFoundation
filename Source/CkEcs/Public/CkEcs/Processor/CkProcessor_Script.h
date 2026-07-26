@@ -15,17 +15,10 @@ class UScriptStruct;
 
 // --------------------------------------------------------------------------------------------------------------------
 // Base class for AngelScript- or Blueprint-authored processors that participate in the ECS scheduler pump.
-//
-// Unlike a C++ TProcessor (which encodes its fragment query as a template parameter list), a script processor
-// declares its per-entity query via Configure(Query) and receives the natively-joined batch through ForEachBatch.
-// Authors typically write a plain `ForEachEntity(FCk_Time, [FCk_Handle,] <fragments>...)` method and let the
-// codegen emit a <Dev>_Driver subclass whose ForEachBatch loops the batch into it. The scheduler's contribution:
-//   - placing the processor into the correct execution group (_Group) + RunAfter/RunBefore ordering
-//   - conflict-ordering from the Configure query's read/write fragment sets
-//   - skipping the dispatch during a pump pass when no entity carries the _MarkedDirtyBy fragment
-//
-// Registration is automatic via class discovery (see UCk_EcsWorld_Subsystem_UE::DoBuildGraphAndSpawnActors).
-// Every concrete subclass contributes one FProcessorDescriptor at graph-build time.
+// Where a C++ TProcessor encodes its query as template parameters, a script processor declares it via
+// Configure(Query) and receives the natively-joined batch through ForEachBatch — authors usually write a plain
+// ForEachEntity and let the codegen emit a <Dev>_Driver subclass that loops the batch into it. Registration is
+// automatic via class discovery; every concrete subclass contributes one FProcessorDescriptor at graph build.
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
@@ -39,33 +32,27 @@ public:
     using TimeType = FCk_Time;
 
 private:
-    // Maps to a registered FGroup_* type by canonical name. Leaving this as NAME_None places the processor at
-    // the scheduler's default location for ungrouped entries (equivalent to "no group").
+    // Registered FGroup_* type by canonical name; NAME_None means the scheduler's ungrouped default location.
     UPROPERTY(EditDefaultsOnly,
               Category = "Ck|Processor|Scheduling",
               meta = (AllowPrivateAccess = true))
     FName _Group;
 
-    // Optional. When set, the scheduler skips this processor's Tick during a pump pass if no entity currently
-    // holds this fragment. Nullptr means Tick runs every pass.
-    //
-    // Dirty lookup is performed through the type-erased storage path (FFragment_DynamicFragment_Data keyed by
-    // StorageId), matching how AngelScript authors already query fragments via UCk_Utils_DynamicFragment_UE.
+    // Optional: when set, a pump pass skips this processor's Tick if no entity holds the fragment (nullptr =
+    // every pass). Dirty lookup goes through the type-erased storage path, keyed by StorageId.
     UPROPERTY(EditDefaultsOnly,
               Category = "Ck|Processor|Scheduling",
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UScriptStruct> _MarkedDirtyBy;
 
-    // Transient entity handle pointing into the hosted registry. Set by FProcessor_ScriptQueryHosted before
-    // BeginPlay is called. Used for registry access (e.g. resolving the world-context / transient entity).
+    // Transient entity handle into the hosted registry, set by FProcessor_ScriptQueryHosted before BeginPlay.
     UPROPERTY(BlueprintReadOnly, Transient,
               Category = "Ck|Processor",
               meta = (AllowPrivateAccess = true))
     FCk_Handle _Handle;
 
-    // Explicit scheduler ordering edges, resolved through DoResolveGroupName exactly like _Group. Reference other
-    // script processors by their dev-class path name (which is the descriptor's _Name). Sourced from the CDO by the
-    // host at descriptor-build time.
+    // Explicit ordering edges, resolved like _Group and sourced from the CDO at descriptor-build time. Name
+    // other script processors by their dev-class path name (the descriptor's _Name).
     UPROPERTY(EditDefaultsOnly,
               Category = "Ck|Processor|Scheduling",
               meta = (AllowPrivateAccess = true))
@@ -87,18 +74,15 @@ public:
               meta = (DisplayName = "[Ck][ScriptProcessor] EndPlay"))
     void EndPlay();
 
-    // Optional query customization. The generated driver (a SUBCLASS of the dev class) overrides this to add the
-    // slots inferred from the dev class's ForEachEntity signature, then calls Super::Configure when the dev class
-    // itself overrides Configure (for Require/Exclude/NoEntities). A class that overrides ForEachBatch directly
-    // declares its whole query here instead. BlueprintCallable so the C++ host can invoke it for the CDO query
-    // harvest and script Super:: calls dispatch cleanly.
+    // Optional query customization. The generated driver overrides this to add the slots inferred from the dev
+    // class's ForEachEntity signature, then calls Super::Configure for the dev class's own Require/Exclude/
+    // NoEntities. BlueprintCallable so the C++ host can drive the CDO query harvest and script Super:: calls.
     UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Ck|Processor|Events",
               meta = (DisplayName = "[Ck][ScriptProcessor] Configure"))
     void Configure(UPARAM(ref) FCk_ScriptProcessorQuery& Query);
 
-    // Invoked once per tick with the natively-joined entity batch. The generated driver (subclass of the dev class)
-    // overrides this to loop the batch and call the inherited typed ForEachEntity; a genuinely cross-entity
-    // processor overrides it directly.
+    // Invoked once per tick with the natively-joined batch. The generated driver overrides this to loop the
+    // batch into the typed ForEachEntity; a genuinely cross-entity processor overrides it directly.
     UFUNCTION(BlueprintImplementableEvent, Category = "Ck|Processor|Events",
               meta = (DisplayName = "[Ck][ScriptProcessor] ForEachBatch"))
     void ForEachBatch(FCk_ScriptQueryBatch Batch, FCk_Time InDeltaT);

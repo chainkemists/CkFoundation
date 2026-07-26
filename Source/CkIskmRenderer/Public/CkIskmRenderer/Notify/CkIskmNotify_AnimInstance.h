@@ -11,8 +11,7 @@ class CKISKMRENDERER_API UCk_IskmNotify_AnimInstance : public UAnimInstance
 {
     GENERATED_BODY()
 
-    // Reads _OwningHandle to expose the owning proxy/entity to anim code, per the
-    // utils-as-public-API standard (the accessor takes the AnimInstance).
+    // Reads _OwningHandle to expose the owning proxy/entity to anim code.
     friend class UCk_Utils_IskmNotify_UE;
 
 public:
@@ -27,10 +26,8 @@ protected:
     virtual bool
     HandleNotify(const FAnimNotifyEvent& AnimNotifyEvent) override;
 
-    // NOT a virtual override — UAnimInstance exposes montage-end via the
-    // OnMontageBlendingOut delegate (which we bind to in NativeInitializeAnimation
-    // via AddDynamic on OnMontageEndedHook). This method is a plain helper that
-    // OnMontageEndedHook forwards to.
+    // NOT a virtual override — UAnimInstance exposes montage-end via the OnMontageBlendingOut delegate.
+    // This is a plain helper that the bound OnMontageEndedHook forwards to.
     void
     NativeOnMontageBlendingOut(class UAnimMontage* InMontage, bool InInterrupted);
 

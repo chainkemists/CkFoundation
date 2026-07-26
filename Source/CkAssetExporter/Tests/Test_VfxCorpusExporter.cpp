@@ -8,16 +8,6 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 // --------------------------------------------------------------------------------------------------------------------
-// Batch-exports the VFX corpus (every Niagara + Cascade system under /Game) to Saved/CkVfxCorpus.
-//
-// Gating: this is a content-dependent, whole-project load that wipes/rewrites the corpus dir. StressFilter would
-// keep it out of default passes, but the automation commandline's "Standard" filter (Smoke|Engine|Product|Perf —
-// AutomationCommandline.cpp) makes Stress tests invisible to ListAllTests/RunTests entirely, so the toolbox could
-// never run it. It therefore ships as ProductFilter with an explicit opt-in: set CK_VFX_CORPUS_EXPORT=1 in the
-// environment to actually export; anything else (default suite passes, consumer projects) is an instant skip.
-// Per-asset export failures are DATA (recorded in index.json); the test only fails when a requested run over
-// existing content couldn't produce a corpus.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCk_AssetExporter_ExportVfxCorpus_Test,

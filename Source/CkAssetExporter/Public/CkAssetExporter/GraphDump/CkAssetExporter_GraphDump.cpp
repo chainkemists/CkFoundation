@@ -24,9 +24,7 @@
 
 namespace ck_asset_exporter_graphdump
 {
-    // Queries one dependency direction (hard vs soft) as PACKAGE names, sorted lexically (FName::LexicalLess — the
-    // same idiom the sweep uses), and emits them as a JSON string array. Deps outside the root are included on
-    // purpose: they ARE the migration-closure frontier.
+    // Deps outside the root are included on purpose: they ARE the migration-closure frontier.
     static auto
     Get_SortedDepStrings(
         const IAssetRegistry& InRegistry,
@@ -45,8 +43,7 @@ namespace ck_asset_exporter_graphdump
         return Values;
     }
 
-    // "cascade" for UParticleSystem-derived classes, "redirector" for UObjectRedirector — both resolved from the
-    // registry-reported class WITHOUT loading the asset (EResolveClass::No via FAssetData::IsInstanceOf).
+    // Resolved from the registry-reported class WITHOUT loading the asset (EResolveClass::No via IsInstanceOf).
     static auto
     Get_Flags(
         const FAssetData& InAssetData)
@@ -75,8 +72,7 @@ auto
     constexpr auto ForceRescan = true;
     AssetRegistry.ScanPathsSynchronous({ InPackageDir }, ForceRescan);
 
-    // NO class filter — the graph serves migration closure planning, so every asset under the root (art included)
-    // must appear.
+    // NO class filter: migration closure planning must see every asset under the root, art included.
     auto Filter = FARFilter{};
     Filter.bRecursivePaths = true;
     Filter.PackagePaths.Add(FName{*InPackageDir});
@@ -114,7 +110,6 @@ auto
         Row->SetArrayField(TEXT("softDeps"),
             ck_asset_exporter_graphdump::Get_SortedDepStrings(AssetRegistry, AssetData.PackageName, UE::AssetRegistry::EDependencyQuery::Soft));
 
-        // Omit the "flags" field entirely when empty (the common case).
         const auto Flags = ck_asset_exporter_graphdump::Get_Flags(AssetData);
         if (Flags.Num() > 0)
         { Row->SetArrayField(TEXT("flags"), Flags); }
@@ -145,8 +140,7 @@ auto
     const auto Writer = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(InGraph.ToSharedRef(), Writer);
 
-    // Absolute on purpose: external consumers (migration planners, agents) run with their own cwd, where the
-    // editor's relative "../../Saved/..." form would not resolve.
+    // Absolute on purpose: consumers run with their own cwd, where the editor's "../../Saved/..." would not resolve.
     const auto OutPath = FPaths::ConvertRelativePathToFull(
         FPaths::Combine(FPaths::ProjectSavedDir(), InProjectSavedSubdir, TEXT("graph.json")));
 

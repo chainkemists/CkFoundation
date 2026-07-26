@@ -12,17 +12,8 @@
 #include <Misc/Optional.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Shared Produce / hydration-apply for the attribute family (Float/Byte/Integer/Vector/Rotator), used by each kind's
-// registrar.
-//
-// v3 SAVE (Produce) is VALUE-EMITTING and keyed PER-ATTRIBUTE-ENTITY (Produce fires on the entity holding the Current
-// component). It emits this attribute's own Base/Final for each composed component (Current always; Min/Max if present)
-// byte-identically to the wire-builder TProcessor_Attribute_Replicate (CkAttribute_Processor.inl.h). On load
-// FProcessor_Hydration_Dispatch calls HydrationApply(ThisAttributeEntity, payload); the shared HydrationApply below
-// writes the value AUTHORITY-side via the kind's ApplyReplicated*Entry (the same path the client net drain uses). The
-// resulting deferred Request_* re-arm FTag_MayRequireReplication, so FProcessor_Attribute_Replicate re-publishes to
-// post-load clients — no explicit owner-container refill needed (the owner container already exists on the
-// freshly-Constructed owner). The net Apply is OWNER-keyed and untouched (byte-identical wire).
+// Shared Produce / HydrationApply for the attribute family (Float/Byte/Integer/Vector/Rotator). SAVE is keyed
+// PER-ATTRIBUTE-ENTITY while the net Apply stays OWNER-keyed — that asymmetry is documented in CkAttribute/CLAUDE.md.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::attribute_restore
@@ -61,13 +52,8 @@ namespace ck::attribute_restore
         return FInstancedStruct::Make(MoveTemp(Data));
     }
 
-    // Save-load hydration (Phase 4B) — shared load-path apply (HydrationApply) for every attribute kind. Dispatched by
-    // FProcessor_Hydration_Dispatch; InEntity IS the attribute entity (per-entity Produce keying), so write each saved
-    // component's value directly to it via the kind's ApplyReplicated*Entry (the same path the client net drain uses).
-    // ALL NotReady exits precede any mutation: ApplyReplicated*Entry's Add_Revocable creates a NEW modifier per call,
-    // so a mutate-then-NotReady retry would stack a second replication modifier. The only NotReady is the Has<Current>
-    // guard before any write; a saved component the re-Constructed attribute no longer composes is warn+skip (its
-    // Get_/Request_ would ensure on the missing component, and composition is synchronous so absence is final).
+    // ALL NotReady exits must precede any mutation: ApplyReplicated*Entry's Add_Revocable creates a NEW modifier per
+    // call, so a mutate-then-NotReady retry would stack a second replication modifier.
     template <template <ECk_MinMaxCurrent> class T_DerivedAttribute, typename T_RepDataStruct, typename T_UtilsType, typename T_ApplyEntryFn>
     auto
         HydrationApply(

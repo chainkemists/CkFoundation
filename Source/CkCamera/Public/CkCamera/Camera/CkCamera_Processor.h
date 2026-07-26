@@ -11,9 +11,6 @@
 namespace ck
 {
     // ----------------------------------------------------------------------------------------------------------------
-    // Spawns/destroys layer entities in response to Add/Remove requests. Attaches the layer EntityScript synchronously
-    // (mirroring UCk_Utils_SmState_UE::Create) — see the note in CkCamera_Fragment.h.
-    // ----------------------------------------------------------------------------------------------------------------
     class CKCAMERA_API FProcessor_Camera_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Camera_HandleRequests,
             FCk_Handle_Camera,
@@ -44,10 +41,8 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Per-frame layer lifecycle: prunes fully-blended-out layers (destroying their acquired modifiers first), dispatches
-    // Tick on tickable layers, resolves the dominant layer + its look-at, and refreshes the composed-profile cache from
-    // the tuner attributes. Does NOT advance the blend alpha — FProcessor_CameraLayer_Blend (FGroup_Gameplay_TimeDelta)
-    // owns that, running earlier in the frame so the attributes are recomputed before the POV reads them.
+    // Does NOT advance the blend alpha — FProcessor_CameraLayer_Blend (FGroup_Gameplay_TimeDelta) owns that, running
+    // earlier in the frame so the tuner attributes are recomputed before the POV reads them.
     // ----------------------------------------------------------------------------------------------------------------
     class CKCAMERA_API FProcessor_CameraLayer_Lifecycle : public ck_exp::TProcessor<
             FProcessor_CameraLayer_Lifecycle,
@@ -69,8 +64,6 @@ namespace ck
             FFragment_Camera_Current& InCurrent) -> void;
     };
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Runs the POV pipeline against the composed profile (the cached assembly) and writes the resolved FMinimalViewInfo.
     // ----------------------------------------------------------------------------------------------------------------
     class CKCAMERA_API FProcessor_Camera_UpdatePOV : public ck_exp::TProcessor<
             FProcessor_Camera_UpdatePOV,

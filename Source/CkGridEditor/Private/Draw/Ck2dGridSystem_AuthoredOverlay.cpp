@@ -16,8 +16,6 @@
 
 namespace ck::grid_editor
 {
-    // The per-cell tag-text toggle. Default off — labels are noisy on large grids. Read live by both the
-    // UEdMode (DrawHUD) and the spawner visualizer (DrawVisualizationHUD) so the two views agree.
     static TAutoConsoleVariable<bool> CVar_GridPreviewShowTags(
         TEXT("ck.Grid.PreviewShowTags"),
         false,
@@ -120,7 +118,6 @@ auto
     Resolve_TagColor_FromName(
         const FName& InName) -> FLinearColor
 {
-    // Hash the name string to a hue byte; keep saturation/value high for a bright, distinct swatch.
     const auto NameStr = InName.ToString();
     const auto Hash    = FCrc::StrCrc32(*NameStr);
     const auto Hue     = static_cast<uint8>(Hash % 256);
@@ -155,7 +152,6 @@ auto
     if (PerCell == nullptr || PerCell->IsEmpty())
     { return FGameplayTag{}; }
 
-    // First tag in the container (stable for given content) is the cell's "primary" for coloring.
     return PerCell->First();
 }
 
@@ -228,9 +224,8 @@ auto
         return InTransform.TransformPosition(FVector(InLocalX, InLocalY, 0.0));
     };
 
-    // Square outline for cell (InX,InY), inset from the cell bounds by InInsetFraction on every side
-    // (0 = full cell edges). The inset variant keeps the state marker off the green base-grid lines so a
-    // coincident-line z-fight can't hide it (that was the partial-coloring bug in the original overlay).
+    // An inset keeps a marker off the green base-grid lines — coincident SDPG_Foreground lines z-fight
+    // order-independently, which used to hide it.
     const auto DrawCellSquare = [&](int32 InX, int32 InY, const FLinearColor& InColor,
                                     double InInsetFraction, float InThickness)
     {
@@ -250,10 +245,8 @@ auto
         InPDI->DrawLine(C01, C00, InColor, SDPG_Foreground, InThickness);
     };
 
-    // Pass 1: base grid as spanning gridlines, each drawn ONCE (Dimensions+1 lines per axis) rather than
-    // a per-cell square. A per-cell square redraws every interior edge twice (once per adjacent cell);
-    // coincident PDI lines composite brighter, and that brightening grows with grid size — which read as
-    // a "different green" on larger grids. Drawing each edge exactly once removes the size dependence.
+    // Spanning gridlines, each drawn ONCE (Dimensions+1 per axis), never per-cell squares: coincident PDI
+    // lines composite brighter with grid size, which read as a "different green" on larger grids.
     if (InOptions.bDrawBaseGrid)
     {
         const auto MaxLocalX = Dimensions.X * CellSize.X;
@@ -273,8 +266,6 @@ auto
         }
     }
 
-    // Pass 2: mark each non-enabled cell. Disabled/blocker cells get the single thin state marker; per-cell
-    // TAGGED cells get a bold DOUBLE ring in the tag's distinct color so each tag reads clearly.
     if (InOptions.bDrawStateMarkers)
     {
         for (auto Y = 0; Y < Dimensions.Y; ++Y)
@@ -305,7 +296,6 @@ auto
         }
     }
 
-    // Pivot marker at the grid-local origin (cell (0,0) min corner).
     if (InOptions.bDrawPivot)
     {
         const auto PivotWorld = LocalToWorld(0.0, 0.0);
@@ -381,12 +371,10 @@ auto
             if (TagText.IsEmpty())
             { continue; }
 
-            // Cell-center in world (z=0 plane of the grid-local space).
             const auto CenterLocalX = (X + 0.5) * CellSize.X;
             const auto CenterLocalY = (Y + 0.5) * CellSize.Y;
             const auto CenterWorld  = InTransform.TransformPosition(FVector(CenterLocalX, CenterLocalY, 0.0));
 
-            // Project to screen pixels; skip cells behind the camera / off-screen.
             const auto ScreenPos = InView->WorldToScreen(CenterWorld);
             if (ScreenPos.W <= 0.0f)
             { continue; }

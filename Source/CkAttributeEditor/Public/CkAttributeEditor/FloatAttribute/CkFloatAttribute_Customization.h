@@ -18,42 +18,35 @@ class FCk_Fragment_FloatAttribute_ParamsDataCustomization : public IPropertyType
 public:
     static TSharedRef<IPropertyTypeCustomization> MakeInstance();
 
-    // IPropertyTypeCustomization interface
     virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
     virtual void CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
 
 private:
-    // Title display
     FText GetNameTitleText() const;
-    // Value getters
+
     TOptional<float> GetBaseValue() const;
     TOptional<float> GetMinValue() const;
     TOptional<float> GetMaxValue() const;
 
-    // Value setters
     void OnBaseValueCommitted(float NewValue, ETextCommit::Type CommitType);
     void OnMinValueCommitted(float NewValue, ETextCommit::Type CommitType);
     void OnMaxValueCommitted(float NewValue, ETextCommit::Type CommitType);
 
-    // Checkbox state handlers
     ECheckBoxState GetMinCheckState() const;
     ECheckBoxState GetMaxCheckState() const;
     void OnMinCheckStateChanged(ECheckBoxState NewState);
     void OnMaxCheckStateChanged(ECheckBoxState NewState);
 
-    // UI state helpers
     FSlateColor GetMinLabelColor() const;
     FSlateColor GetMaxLabelColor() const;
     bool IsMinValueEnabled() const;
     bool IsMaxValueEnabled() const;
 
-    // Base value constraints
     TOptional<float> GetBaseValueMin() const;
     TOptional<float> GetBaseValueMax() const;
     TOptional<float> GetBaseValueSliderMin() const;
     TOptional<float> GetBaseValueSliderMax() const;
 
-    // Property handles
     TSharedPtr<IPropertyHandle> NameHandle;
     TSharedPtr<IPropertyHandle> BaseValueHandle;
     TSharedPtr<IPropertyHandle> MinMaxHandle;
@@ -67,12 +60,10 @@ class FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization : public IProper
 public:
     static TSharedRef<IPropertyTypeCustomization> MakeInstance();
 
-    // IPropertyTypeCustomization interface
     virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
     virtual void CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
 
 private:
-    // Property handles
     TSharedPtr<IPropertyHandle> RefillAttributeNameHandle;
     TSharedPtr<IPropertyHandle> RefillBehaviorHandle;
     TSharedPtr<IPropertyHandle> FillRateHandle;

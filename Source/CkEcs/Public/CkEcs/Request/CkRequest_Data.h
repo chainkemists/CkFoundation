@@ -13,9 +13,8 @@
 
 namespace ck
 {
-    // Should be used as the base for all c++ only requests.
-    // One-shot: PopulateRequestHandle may be called at most once per struct (a second call returns an
-    // invalid handle), so construct a fresh request per submission rather than reusing one.
+    // Base for all C++-only requests. One-shot: PopulateRequestHandle may be called at most once
+    // per struct (a second call returns an invalid handle) — construct a fresh request per submission.
     struct CKECS_API FRequest_Base
     {
     public:
@@ -57,9 +56,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Should be used as the base for all requests that may need to be BP exposed.
-// One-shot: PopulateRequestHandle may be called at most once per struct (a second call returns an
-// invalid handle), so construct a fresh request per submission rather than reusing one.
+// Base for all requests that may need to be BP exposed. One-shot: PopulateRequestHandle may be
+// called at most once per struct — construct a fresh request per submission.
 USTRUCT(BlueprintType)
 struct CKECS_API FCk_Request_Base
 {
@@ -124,15 +122,10 @@ protected:\
 
 namespace ck
 {
-    // Fires a per-request completion signal at scope exit if the request still owns a valid request
-    // handle. The payload is rebuilt from the supplied lambda at destruction so it can capture
-    // by-reference any locals the handler mutates (typically the result enum).
-    //
-    // Captures-by-reference invariant: any reference the payload-builder closes over MUST outlive
-    // this guard. Declare the guard *after* the locals it captures and do not reorder them.
-    //
-    // TRequest must satisfy the FRequest_Base shape (`Get_IsRequestHandleValid`,
-    // `GetAndDestroyRequestHandle`); TSignal must expose a static `Broadcast(handle, payload)`.
+    // Fires TSignal at scope exit if the request still owns a valid handle, building the payload
+    // then so it can read locals the handler mutated (typically the result enum).
+    // Captures-by-reference invariant: every reference the payload-builder closes over MUST outlive
+    // this guard — declare the guard AFTER the locals it captures and do not reorder them.
     template <typename TRequest, typename TSignal, typename TPayloadBuilder>
     struct TRequestResultGuard
     {
@@ -157,9 +150,8 @@ namespace ck
         TPayloadBuilder _BuildPayload;
     };
 
-    // Factory: keeps TSignal as the leading explicit template parameter so call sites read
-    // `ck::MakeRequestResultGuard<TSignal>(InRequest, [&]{ ... })` — the signal is the part the
-    // caller cares about; the request and payload-builder types deduce.
+    // TSignal leads so call sites read `ck::MakeRequestResultGuard<TSignal>(InRequest, [&]{ ... })`
+    // and the remaining types deduce.
     template <typename TSignal, typename TRequest, typename TPayloadBuilder>
     auto MakeRequestResultGuard(const TRequest& InRequest, TPayloadBuilder InBuildPayload)
     {

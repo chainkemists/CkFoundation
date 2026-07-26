@@ -9,14 +9,6 @@
 #include "CkCameraLayer_EntityScript.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Camera layer = entity script (the camera analog of UCk_SmState_EntityScript / UCk_SmTask_EntityScript).
-//
-// A layer is a child entity of the Camera director. It acquires attribute modifiers on the director's tuner
-// attributes (via UCk_Utils_CameraLayer_UE::Acquire_CameraModifier_<Tuner>), naming each by this layer's
-// auto-generated gameplay tag (Get_LayerTag). The framework auto-blends those modifiers in/out — the layer author
-// never touches blend weights. Lifecycle: BeginPlay() -> EnterLayer(); Exit on removal (deduped by
-// FTag_CameraLayer_Active). Camera is client-local only — Get_EffectiveReplication forced to DoesNotReplicate.
-// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKCAMERA_API UCk_CameraLayer_EntityScript : public UCk_EntityScript_UE
@@ -26,9 +18,7 @@ class CKCAMERA_API UCk_CameraLayer_EntityScript : public UCk_EntityScript_UE
 public:
     CK_GENERATED_BODY(UCk_CameraLayer_EntityScript);
 
-    // ================================================================================================================
     // LIFECYCLE (EntityScript overrides)
-    // ================================================================================================================
 
 protected:
     auto
@@ -46,9 +36,7 @@ protected:
     auto
     Get_EffectiveReplication() const -> ECk_Replication override;
 
-    // ================================================================================================================
     // LAYER LIFECYCLE (Enter/Exit) — invoked by the base + the camera processors
-    // ================================================================================================================
 
 public:
     virtual auto
@@ -59,24 +47,19 @@ public:
     ExitLayer(
         FCk_Handle_CameraLayer InHandle) -> void;
 
-    // Optional per-frame stateful logic, gated by _TickMode. Dispatched by the lifecycle processor.
     virtual auto
     Tick(
         FCk_Handle_CameraLayer InHandle,
         FCk_Time InDeltaT) -> void;
 
-    // Called each frame by the blend processor with the layer's current blend alpha [0,1]. Standard tuner blending
-    // (the modifiers acquired via Acquire_CameraModifier_*) is automatic; override DoBlend only for custom per-frame
-    // logic that needs the alpha (e.g. a non-attribute effect that should fade with the layer).
+    // Tuner blending is already automatic; override only for custom per-frame logic that needs the alpha.
     virtual auto
     Blend(
         FCk_Handle_CameraLayer InHandle,
         float InAlpha) -> void;
 
-    // Fired exactly once when the layer's blend alpha reaches 1 (fully blended in) and once when it reaches 0 (fully
-    // blended out, just before prune). Standard tuner blending is automatic; these are the opt-in boundary hooks for
-    // sequencing logic on blend completion (e.g. open a panel once a focus push has fully settled). NOTE: FullyBlendedOut
-    // is best-effort — if the layer is pruned before the blend processor observes alpha 0, only ExitLayer/DoExit runs.
+    // Opt-in boundary hooks, fired once per alpha crossing. FullyBlendedOut is best-effort — if the layer is pruned
+    // before the blend processor observes alpha 0, only ExitLayer/DoExit runs.
     virtual auto
     FullyBlendedIn(
         FCk_Handle_CameraLayer InHandle) -> void;
@@ -85,17 +68,14 @@ public:
     FullyBlendedOut(
         FCk_Handle_CameraLayer InHandle) -> void;
 
-    // The layer's unique gameplay tag, derived from its class name (e.g. CameraLayer_Zoom -> "CameraLayer.Zoom").
-    // Used as the modifier NAME when acquiring attribute modifiers, so each layer's modifiers are uniquely identified.
+    // Derived from the class name (CameraLayer_Zoom -> "CameraLayer.Zoom"); names this layer's acquired modifiers.
     UFUNCTION(BlueprintPure,
         Category = "Ck|Camera|Layer",
         DisplayName = "[Ck][Camera] Get Layer Tag")
     FGameplayTag
     Get_LayerTag() const;
 
-    // ================================================================================================================
     // BLUEPRINT / ANGELSCRIPT IMPLEMENTABLE EVENTS
-    // ================================================================================================================
 
 protected:
     UFUNCTION(BlueprintImplementableEvent,
@@ -142,9 +122,7 @@ protected:
     DoFullyBlendedOut(
         FCk_Handle_CameraLayer InHandle);
 
-    // ================================================================================================================
     // HELPERS
-    // ================================================================================================================
 
 public:
     UFUNCTION(BlueprintPure,
@@ -154,9 +132,7 @@ public:
     FCk_Handle_Camera
     Get_OwningCamera() const;
 
-    // ================================================================================================================
     // MEMBERS
-    // ================================================================================================================
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
@@ -172,10 +148,7 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// The persistent base layer auto-created by UCk_Utils_Camera_UE::Add (one per director). It acquires no modifiers —
-// the resting profile lives in the director's tuner-attribute base values; this layer exists only as the always-on,
-// never-evicted floor (so feature layers blend back to the base rather than to a stale/empty stack) and as the
-// dominant fallback when no real layer is active. Not meant to be added/removed by gameplay.
+// The persistent base layer auto-created by UCk_Utils_Camera_UE::Add. Never added or removed by gameplay.
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()

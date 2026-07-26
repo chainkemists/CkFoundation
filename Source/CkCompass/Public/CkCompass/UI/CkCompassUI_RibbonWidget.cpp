@@ -46,8 +46,6 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(_Compass), TEXT("Invalid Compass Handle passed to CompassRibbon Widget [{}]"), this)
     { return; }
 
-    // Seed-then-delta contract: initial state comes from the pull API; the signals only carry future
-    // membership deltas (their replay stashes at most the LAST payload — never rely on it for seeding)
     for (const auto& Entry : UCk_Utils_Compass_UE::Get_Entries(_Compass))
     {
         OnCompassEntryAppeared(Entry);
@@ -316,8 +314,7 @@ auto
 
     DoPositionCardinals(Heading, ArcDegrees);
 
-    // ---- POI markers: index-pooled against this frame's entries (ONE loop; membership signals are for
-    //      consumers that keep per-POI widgets — this presentation re-derives from the pull API) ----
+    // ---- POI markers: index-pooled against this frame's entries ----
     const auto Entries = UCk_Utils_Compass_UE::Get_Entries(_Compass);
 
     for (auto Index = 0; Index < Entries.Num(); ++Index)
@@ -339,7 +336,6 @@ auto
         {
             MarkerWidget->InjectEntry(Entry);
 
-            // Fire the "shown" pop on the exact marker that landed on a newly-appeared POI (drains once).
             if (_PendingShownPois.Remove(Entry.Get_Poi()) > 0)
             { MarkerWidget->NotifyShown(); }
         }
@@ -395,7 +391,6 @@ auto
     if (ck::Is_NOT_Valid(CanvasSlot))
     { return; }
 
-    // Anchor-based (no geometry dependency): identical math at design time and runtime
     const auto U = InNormalizedOffset * 0.5f + 0.5f;
 
     CanvasSlot->SetAnchors(FAnchors{U, InBandNormalizedY, U, InBandNormalizedY});

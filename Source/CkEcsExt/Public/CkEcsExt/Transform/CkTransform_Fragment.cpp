@@ -20,16 +20,14 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handlers for Transform
 
 static struct FTransformRepHandlerRegistrar
 {
     FTransformRepHandlerRegistrar()
     {
-        // Transform is composed during construction proper (pre-link), so it exists by dispatch
-        // time in every healthy flow — the NotReady branches below are violation detectors (loud
-        // via the dispatcher's timeout ensure), not an expected wait. An unset Old means first
-        // application: snap directly (an interpolation offset would glide the entity in from origin).
+        // Transform is composed pre-link, so the NotReady branches below are violation detectors, not an
+        // expected wait. An unset Old means first application: snap directly (an interpolation offset
+        // would glide the entity in from origin).
 
         FCk_PersistenceHandlerRegistry::Register_NetOnly<FCk_RepData_Location>({ .NetApply =
                 [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult

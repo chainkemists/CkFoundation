@@ -98,9 +98,6 @@ public:
         const FCk_Handle_Camera& InCamera);
 
 private:
-    // Materializes every FCk_CameraProfile leaf into a (non-replicated) tuner attribute on the camera (Float / Vector
-    // / Rotator / Integer; FloatRange → Float-with-MinMax), labels each with its Camera.* native tag, fills the
-    // per-section fragments, and writes the bool/curve leaves onto FFragment_Camera_Current. Called from Add.
     static auto
     DoMaterializeAttributes(
         FCk_Handle_Camera& InCamera,
@@ -160,7 +157,7 @@ public:
         FVector InOrientationIntention);
 
     // One-shot absolute seed of the persistent boom (view) rotation — the orbit equivalent of a teleport. Unlike
-    // SetOrientationIntention (a per-frame delta) this snaps the view to a world rotation, then orientation-control
+    // SetOrientationIntention (a per-frame delta) this snaps the view to a world rotation.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Camera",
               DisplayName = "[Ck][Camera] Request Snap Boom Rotation")

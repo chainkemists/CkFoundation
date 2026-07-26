@@ -27,8 +27,8 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_Outline_EndPlay);
 
 namespace ck_ism_outline_processor
 {
-    // Same composition as FProcessor_IsmProxy_AddInstance's local lambda (post-multiplied local rotation
-    // offset — see the note there) so the shadow instance lands exactly on the main instance.
+    // Must compose identically to FProcessor_IsmProxy_AddInstance's lambda or the shadow instance
+    // drifts off the main instance.
     auto
         Get_TransformWithLocalOffset(
             const ck::FFragment_IsmProxy_Params& InParams,
@@ -47,8 +47,7 @@ namespace ck_ism_outline_processor
         return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
     }
 
-    // Remove the shadow instance + release the preset's stencil refcount. Safe when the world/subsystems
-    // are tearing down (both lookups degrade to no-ops).
+    // Safe during world/subsystem teardown — both lookups degrade to no-ops.
     auto
         DoTeardownAppliedOutline(
             const FCk_Handle& InHandle,
@@ -138,7 +137,6 @@ namespace ck
         const auto ShadowIsm = IsmSubsystem->FindOrCreate_OutlineIsmComponent(
             InParams.Get_IsmRenderer().Get(), Preset, Stencil
 #if WITH_EDITOR
-            // Editor previews mirror into a shadow on their per-owner renderer.
             , UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwnerWeak(InHandle)
 #endif
             );
@@ -153,9 +151,6 @@ namespace ck
         const auto& InstanceTransform = Get_TransformWithLocalOffset(InParams, InTransform.Get_Transform());
         const auto& ShadowInstanceId = ShadowIsm->AddInstanceById(InstanceTransform, TransformAsWorldSpace);
 
-        // Seed the shadow from the proxy's CPU-authoritative cache: a WPO-animated material (CkVat) derives
-        // its pose from these floats, so an unseeded shadow silhouettes the bind pose until the next write.
-        // FProcessor_IsmProxy_HandleRequests mirrors every subsequent write.
         if (const auto& CustomData = InCurrent.Get_CustomInstanceDataValues();
             NOT CustomData.IsEmpty() && ShadowIsm->NumCustomDataFloats == CustomData.Num())
         { ShadowIsm->SetCustomDataById(ShadowInstanceId, CustomData); }

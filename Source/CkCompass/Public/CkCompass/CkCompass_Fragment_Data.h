@@ -148,8 +148,7 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Compass_HeadingSource _HeadingSource = ECk_Compass_HeadingSource::Auto;
 
-    // Time between projection updates. Zero = every frame. The heading itself is ALWAYS refreshed every
-    // frame regardless of this interval (a throttled heading visibly stutters during camera pans).
+    // Time between projection updates. Zero = every frame. Never throttles the heading itself.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Time _UpdateInterval = FCk_Time{0.0f};

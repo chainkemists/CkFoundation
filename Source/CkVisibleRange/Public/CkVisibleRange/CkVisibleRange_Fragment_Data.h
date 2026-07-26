@@ -11,8 +11,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// A direct show/hide override, independent of range. Either source alone is enough to hide the entity — see
-// CkVisibleRange/Claude.md for the two-vote-source contract.
 UENUM(BlueprintType)
 enum class ECk_VisibleRange_ShowHide : uint8
 {
@@ -95,8 +93,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Internal — enqueued by FProcessor_VisibleRange_Update_Bucket when the own-range boundary crosses. Not part of
-// the public API (Utils exposes range/distance via Add + Update_Distance, never this request directly).
 USTRUCT()
 struct CKVISIBLERANGE_API FCk_Request_VisibleRange_ApplyRangeState : public FCk_Request_Base
 {

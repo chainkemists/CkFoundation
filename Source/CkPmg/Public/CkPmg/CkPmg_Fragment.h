@@ -53,7 +53,7 @@ namespace ck
         friend class UCk_Utils_Pmg_Donut_UE;
 
     private:
-        // WEAK — lifetime owned by the CkCore ObjectPooling subsystem (DestroyOnRelease)
+        // Lifetime owned by the CkCore ObjectPooling subsystem (DestroyOnRelease)
         TWeakObjectPtr<UProceduralMeshComponent> _MeshComponent;
 
         float _InnerRadius = 50.0f;
@@ -88,35 +88,16 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_NeedsSetup);
 
-    // Marker for debug shapes that delegate rendering to child entities
-    // instead of owning their own mesh component (icons, pivots, dashed
-    // lines). Their own FFragment_Pmg_DebugShape_Current._MeshComponent is
-    // intentionally null, so transform-update processors must skip them.
+    // Rendering is delegated to child entities, so this entity's own _MeshComponent stays null
+    // and transform-update processors must skip it.
     CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_Composite);
 
-    // One-shot bake gate for the wireframe overlay. Stamped automatically by
-    // ck::pmg::Append_Debug*_World helpers whenever lines are appended;
-    // consumed by FProcessor_Pmg_DebugShape_BakeLines, which triangulates
-    // each cached FCk_Pmg_DebugLine as a flat rectangle and appends it as
-    // a second mesh section on the entity's procmesh. The wireframe shares
-    // the filled mesh's UMaterialInstanceDynamic, so Request_SetColor
-    // updates both sections at once. After bake the tag is removed; the
-    // processor never iterates the entity again. Replaces the prior
-    // per-tick FProcessor_Pmg_DebugShape_DrawLines (which churned UE's
-    // TransientLineBatchComponent every frame via DrawDebugLine).
     CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_LinesNeedBaking);
 
-    // Opt-in (Request_ActAsEditorSelectionHandle on the Donut/DebugShape utils): this shape's
-    // mesh component hosts on the per-owner selection-proxy actor in editor previews, so a
-    // viewport click on it selects the placed actor that owns the preview (see
-    // ck::FFragment_EditorSelectionOwner). Applies to any PMG shape entity — composite shapes
-    // honor a tag stamped anywhere up the lifetime chain. Default (no tag) stays owner-less and
-    // therefore click-through, so debug overlays never eat viewport clicks.
     CK_DEFINE_ECS_TAG(FTag_Pmg_EditorSelectionHandle);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Common properties shared by all debug shapes (C++ only - not exposed to BP/AS)
     struct CKPMG_API FFragment_Pmg_DebugShape_Common
     {
     public:
@@ -175,10 +156,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // A single cached debug line, expressed in entity-local space so that
-    // FProcessor_Pmg_DebugShape_DrawLines can re-emit it each tick under the
-    // entity's live transform — keeping wireframes attached to persistent /
-    // moving shapes instead of flashing once at setup.
+    // Entity-local space, so the baked wireframe rides the entity's live transform.
     struct CKPMG_API FCk_Pmg_DebugLine
     {
         FVector _Start = FVector::ZeroVector;
@@ -189,9 +167,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Per-shape cache of wireframe segments in entity-local space. Populated
-    // by Setup processors via ck::pmg::Append_DebugLine_World (or _Box) and
-    // consumed each tick by FProcessor_Pmg_DebugShape_DrawLines.
     struct CKPMG_API FFragment_Pmg_DebugShape_Lines
     {
     public:
@@ -254,7 +229,7 @@ namespace ck
         friend class FProcessor_Pmg_Text_Setup;
 
     private:
-        // WEAK — subsystem-owned (see FFragment_Pmg_Donut_Current::_MeshComponent)
+        // Subsystem-owned (see FFragment_Pmg_Donut_Current::_MeshComponent)
         TWeakObjectPtr<UProceduralMeshComponent> _MeshComponent;
         FCk_Time _SpawnTime;
 
@@ -267,11 +242,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Per-shape pending mutation requests. Added on demand (AddOrGet) the first
-    // time a Request_* utility is called against a shape; drained each tick by
-    // FProcessor_Pmg_DebugShape_HandleRequests. Empty fragment after drain;
-    // CopyAndRemove pattern means the fragment itself is removed from the entity
-    // when there are no pending requests.
     struct CKPMG_API FFragment_Pmg_DebugShape_Requests
     {
     public:

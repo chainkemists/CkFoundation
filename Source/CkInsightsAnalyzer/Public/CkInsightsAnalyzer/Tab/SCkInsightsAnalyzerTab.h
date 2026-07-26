@@ -144,10 +144,8 @@ private:
     TSharedPtr<STextBlock> _StatusText;
     TSharedPtr<SMultiLineEditableText> _ReportText;
 
-    // Status pill tone (drives the dot color next to the status text)
     ECk_Tone _StatusTone = ECk_Tone::Neutral;
 
-    // Depth dropdown
     TArray<TSharedPtr<FString>> _DepthOptions;
     TSharedPtr<STextComboBox> _DepthCombo;
     ECkReportDepth _ReportDepth = ECkReportDepth::Standard;
@@ -157,18 +155,14 @@ private:
 
     FString _CurrentReport;
 
-    // Summary strip (rebuilt per analysis)
     TSharedPtr<SHorizontalBox> _SummaryBox;
 
-    // Results state
     EResultsMode _ResultsMode = EResultsMode::None;
     double _AnalyzedFrameMs = 0.0; // frame duration backing the hot-path %-of-frame column
 
-    // Hot-path tree
     TArray<TSharedPtr<FCk_HotPathNode>> _HotPathRoots;
     TSharedPtr<STreeView<TSharedPtr<FCk_HotPathNode>>> _HotPathTree;
 
-    // Side panel data (rebuild-on-analysis)
     TArray<FCk_CategorySummaryEntry> _Categories;
     TArray<FCk_TopTimerEntry> _TopTimers;
     TArray<FCk_FrameSummary> _WorstFrames;          // persists across single-frame drills
@@ -179,16 +173,14 @@ private:
     TOptional<FCk_FrameAnalysisResult> _LastSingleResult;
     TOptional<FCk_MultiFrameStats> _LastMultiStats;
 
-    // Side panel row containers
     TSharedPtr<SVerticalBox> _CategoryRowsBox;
     TSharedPtr<SVerticalBox> _TopTimerRowsBox;
     TSharedPtr<SVerticalBox> _WorstFrameRowsBox;
     TSharedPtr<SVerticalBox> _CategoryAvgRowsBox;
     TSharedPtr<SVerticalBox> _WaitRowsBox;
 
-    // Async loading state. Analysis is STARTED on the game thread (trace modules
-    // like ChaosVD ensure(IsInGameThread()) in OnAnalysisBegin) and processed on
-    // TraceServices' own analysis thread; the ticker polls for completion.
+    // Analysis starts on the game thread and completes on TraceServices' own thread — see
+    // DoStartAsyncOpen; the ticker polls for completion.
     ELoadingState _LoadingState = ELoadingState::Idle;
     FTSTicker::FDelegateHandle _LoadingTickerHandle;
     FString _PendingTracePath;

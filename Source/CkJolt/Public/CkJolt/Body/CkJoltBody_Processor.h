@@ -34,10 +34,8 @@ namespace ck::jolt
 
 namespace ck
 {
-    // Builds the Jolt body for each entity flagged NeedsSetup: shape, layer, mass/COM/surface, then a
-    // single batched AddBodies pass (split by initial activation). The FJoltWorld/PhysicsSystem contexts
-    // are resolved per-tick — an absent Jolt world is legal (non-Jolt worlds), so the whole tick silent-
-    // returns and the NeedsSetup entities retry once a world exists.
+    // An absent Jolt world is legal (non-Jolt worlds): the whole tick silent-returns and the NeedsSetup
+    // entities retry once a world exists.
     class CKJOLT_API FProcessor_JoltBody_Setup : public ck_exp::TProcessor<
             FProcessor_JoltBody_Setup,
             FCk_Handle_JoltBody,
@@ -48,8 +46,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        // WaitForAsync edge: CreateBody must never race an in-flight async step (the scheduler's lexical
-        // tie-break would otherwise order this BEFORE the future is consumed).
+        // WaitForAsync edge: without it the scheduler's lexical tie-break races CreateBody against the async step.
         using RunAfter = TDepList<FProcessor_Transform_HandleRequests, FProcessor_JoltWorld_WaitForAsync>;
         using MarkedDirtyBy = FTag_JoltBody_NeedsSetup;
 
@@ -67,7 +64,6 @@ namespace ck
             FFragment_JoltBody_Current& InCurrent) -> void;
 
     private:
-        // One created-but-not-yet-added body, pending the batched AddBodies pass.
         struct FPendingBody
         {
             FCk_Entity  _Entity;
@@ -81,20 +77,16 @@ namespace ck
             JPH::EActivation InActivation) -> void;
 
     private:
-        // Per-tick context, resolved in DoTick before the view iteration.
         TWeakPtr<JPH::PhysicsSystem>          _PhysicsSystem;
         ck::jolt::FCk_Jolt_CollisionLayerTable* _LayerTable = nullptr;
 
-        // Per-tick accumulators, filled by ForEachEntity and drained by DoBatchAdd. Split by initial
-        // activation because Jolt's batch AddBodiesFinalize takes ONE EActivation for the whole batch.
+        // Split by initial activation because Jolt's AddBodiesFinalize takes ONE EActivation per batch.
         TArray<FPendingBody> _PendingActivate;
         TArray<FPendingBody> _PendingDontActivate;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains the JoltBody request queue (CkTimer ritual): sleep-state, forces/impulses/torque, linear/angular
-    // velocity, and teleport. Each request type has a DoHandleRequest overload.
     class CKJOLT_API FProcessor_JoltBody_HandleRequests : public ck_exp::TProcessor<
             FProcessor_JoltBody_HandleRequests,
             FCk_Handle_JoltBody,
@@ -105,8 +97,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        // WaitForAsync edge: the handlers mutate Jolt bodies (pose/velocity/forces) and must never race an
-        // in-flight async step — without the explicit edge the scheduler's lexical tie-break runs this first.
+        // WaitForAsync edge: the handlers mutate Jolt bodies and must never race an in-flight async step.
         using RunAfter = TDepList<FProcessor_JoltBody_Setup, FProcessor_JoltWorld_WaitForAsync>;
         using MarkedDirtyBy = FFragment_JoltBody_Requests;
 
@@ -186,15 +177,12 @@ namespace ck
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
-        // Teleport must also reap the body's pose-buffer entry (see the handler) — resolved per tick.
         FJoltWorld* _JoltWorld = nullptr;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains the Jolt activation-event queue (produced off worker threads, drained game-thread), mirrors
-    // each body's awake/asleep state onto FTag_JoltBody_Sleeping, broadcasts OnJoltBodySleepStateChanged,
-    // and snaps the StepPose on the Asleep edge (a sleeping body stops interpolating).
+    // Drains the Jolt activation-event queue — produced off worker threads, drained here on the game thread.
     class CKJOLT_API FProcessor_JoltBody_SleepStateMirror : public TProcessorBase<FProcessor_JoltBody_SleepStateMirror>
     {
     public:
@@ -214,13 +202,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Pushes EVERY added ECS-driven kinematic body's Transform onto its Jolt body via MoveKinematic each
-    // stepping frame (velocity-based move over the pending sim time, so it sweeps collisions instead of
-    // teleporting). Deliberately NOT gated on FTag_Transform_Updated: Jolt's MoveKinematic sets a PERSISTENT
-    // velocity that only a subsequent MoveKinematic zeroes — pushing to the current transform every stepping
-    // frame (target == current ⇒ velocity zero) is the Jolt-idiomatic usage, and also guarantees a move
-    // landing on a zero-step frame is delivered on the next stepping frame rather than dropped with the tag.
-    // Whole-tick early-out on a zero-step frame (no sim time to move across — accepted cost).
+    // Deliberately NOT gated on FTag_Transform_Updated: Jolt's MoveKinematic sets a PERSISTENT velocity that
+    // only a subsequent MoveKinematic zeroes, so pushing every stepping frame (target == current ⇒ velocity
+    // zero) is the idiomatic usage and keeps a move landing on a zero-step frame from being dropped.
     class CKJOLT_API FProcessor_JoltBody_KinematicPush : public ck_exp::TProcessor<
             FProcessor_JoltBody_KinematicPush,
             FCk_Handle_JoltBody,
@@ -253,9 +237,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Interpolates each simulated body's Prev/Curr step pose by the world step alpha and writes it back onto
-    // the entity's Transform (parallel, direct-write). Kinematic-from-ECS bodies are excluded — they are
-    // driven by the ECS transform, not by the simulation.
+    // Kinematic-from-ECS bodies are excluded — they are driven by the ECS transform, not by the simulation.
     class CKJOLT_API FProcessor_JoltBody_WritebackInterpolated : public TParallelProcessor<
             FProcessor_JoltBody_WritebackInterpolated,
             FCk_Handle_Transform,
@@ -291,9 +273,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Frees the Jolt body slot when the entity dies: RemoveBody only if it is still added, but ALWAYS
-    // DestroyBody (mirrors the Probe leak-fix), then releases the Jolt physics-ownership claim and reaps the
-    // pose-buffer entry.
     class CKJOLT_API FProcessor_JoltBody_EndPlay : public ck_exp::TProcessor<
             FProcessor_JoltBody_EndPlay,
             FCk_Handle_JoltBody,
@@ -303,8 +282,8 @@ namespace ck
     {
     public:
         using Group = FGroup_EndPlay;
-        // Mirrors FProcessor_Probe_EndPlay: non-runtime worlds never have a Jolt subsystem, so running there
-        // would fire the teardown ensure for bodies that were never created.
+        // Non-runtime worlds never have a Jolt subsystem, so running there would fire the teardown ensure for
+        // bodies that were never created.
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     public:

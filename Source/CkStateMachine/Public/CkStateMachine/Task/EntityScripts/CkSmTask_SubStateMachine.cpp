@@ -17,9 +17,8 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
-    // Schema-only add here so siblings (e.g. UCk_SmCondition_SubSmFinished) can discover this
-    // task by fragment during their own Construct/BeginPlay. The _SubStateMachineHandle payload
-    // is populated in BeginPlay once the world context is available to spawn the sub-SM.
+    // Schema-only add so siblings (e.g. UCk_SmCondition_SubSmFinished) can discover this task by
+    // fragment during their own Construct/BeginPlay; the handle payload is filled at EnterTask.
     InHandle.AddOrGet<ck::FFragment_SmTask_SubStateMachine>();
 
     return Super::Construct(InHandle, InSpawnParams);
@@ -43,8 +42,7 @@ auto
     auto ScriptEntity = DoGet_ScriptEntity();
     auto TypeUnsafeSubSmHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(ScriptEntity);
 
-    // Sub-SM — derived graph state, save-transient: the parent's task recreates it fresh when the
-    // parent redrives on load (see FTag_Sm_IsSubMachine + FTag_Snapshot_SaveTransient).
+    // Save-transient: the parent's task recreates the sub-SM fresh when the parent redrives on load.
     TypeUnsafeSubSmHandle.Add<ck::FTag_Snapshot_SaveTransient>();
     auto SubSmParams = FCk_Fragment_StateMachine_ParamsData{_InitialStateClass};
     SubSmParams.Set_AutoStart(ECk_SmAutoStart::Disabled);
@@ -57,16 +55,15 @@ auto
         return;
     }
 
-    // Mark this as a sub-SM: a sub-SM is derived graph state, recreated fresh right here by the parent's
-    // task when the parent redrives on load, so the v3 loader never respawns it as a top-level entity.
+    // Derived graph state, recreated right here on redrive — so the v3 loader never respawns it as a
+    // top-level entity.
     _SubSmHandle.Add<ck::FTag_Sm_IsSubMachine>();
 
     if (const auto OwningStateMachine = ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
         ck::IsValid(OwningStateMachine))
     {
-        // Link the sub-SM back to its parent SM. Symmetric with how tasks/states/conditions
-        // hold OwningStateMachine; lets consumers ask "is this a sub-SM? who owns it?" without
-        // walking lifetime → task → owning-SM.
+        // Lets consumers ask "is this a sub-SM? who owns it?" without walking lifetime -> task ->
+        // owning-SM.
         ck::TUtils_Sm_OwningStateMachine::AddOrReplace(_SubSmHandle, OwningStateMachine);
 
         _SubSmHandle.Add<ck::FFragment_Sm_NetIdentity>(
@@ -93,8 +90,7 @@ auto
     auto& SubSmFragment = ScriptEntity.Get<ck::FFragment_SmTask_SubStateMachine>();
     SubSmFragment._SubStateMachineHandle = _SubSmHandle;
 
-    // Broadcast the promise signal so late subscribers (e.g. sibling conditions whose
-    // EnterCondition ran before this task's EnterTask) can discover the sub-SM handle.
+    // Promise signal for late subscribers — e.g. sibling conditions whose EnterCondition ran first.
     ck::UUtils_Signal_OnSubSmConstructed::Broadcast(InHandle,
         ck::MakePayload(InHandle, FCk_Sm_Payload_OnSubSmConstructed{_SubSmHandle}));
 
@@ -133,10 +129,9 @@ auto
             UCk_Utils_StateMachine_UE::UnbindFrom_OnStopped(_SubSmHandle, Delegate);
         }
 
-        // Recurse: synchronously exit the sub-SM's active state chain so its tasks/conditions
-        // get their DoExitTask/DoExitCondition (delegate unbinds, etc.) fired before this task
-        // and the sub-SM's eventual cascading destruction. Without this, sub-SM child entities
-        // would only have FProcessor_Sm_EndPlay run on them at end-of-frame.
+        // Synchronously exit the sub-SM's active state chain so its tasks/conditions fire their
+        // DoExitTask/DoExitCondition (delegate unbinds, etc.) before the cascading destruction —
+        // otherwise sub-SM children only get FProcessor_Sm_EndPlay at end-of-frame.
         ck::sm::VeryVerbose(TEXT("[SM Lifecycle] SubStateMachine ExitTask -> recursing into sub-SM [{}]"),
             _SubSmHandle);
         UCk_Utils_StateMachine_UE::Request_ExitStateMachine(_SubSmHandle);

@@ -9,31 +9,21 @@
 #include "CkStateMachine_TestSupport.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Test-only support hooks for CkStateMachine replication AutoTests. The §13 fingerprint-mismatch
-// tests cannot synthesize the mismatch by authoring a divergent DefineState — the determinism
-// Warning fires before tests can ack it, which escalates and fails the test even when
-// FinishSuccess was called (project memory feedback_autotest_warning_escalation). Instead, tests
-// inject a fake fingerprint on the publisher side: the wire value arriving at the non-authority
-// client is corrupted, the receive-side verify path runs unchanged, and the test asserts the
-// genuine quarantine response while _ExpectedLogErrors suppresses the Warning escalation.
-//
-// Everything in this file is WITH_DEV_AUTOMATION_TESTS-gated. Shipping builds have no fragment,
-// no utility, no production-side check.
-//
+
+// Test-only hooks for CkStateMachine replication AutoTests: fingerprint mismatches are synthesized by
+// injecting a fake fingerprint on the publisher side rather than by authoring a divergent DefineState
+// (whose determinism Warning escalates and fails the test). WITH_DEV_AUTOMATION_TESTS-gated throughout.
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM()
 enum class ECk_Sm_TestFakeFingerprintScope : uint8
 {
-    // Next transition's _NewStateFingerprint is replaced on the publisher side before the rep
-    // payload writes. Server-auth: server's CommitPendingTransition substitutes. OwningClient-
-    // auth: owning client's CommitPendingTransition substitutes (the buffered batch the relay
-    // RPC will carry).
+    // Next transition's _NewStateFingerprint is replaced on the publisher side (server for
+    // ServerAuth, owning client for OwningClientAuth) before the rep payload writes.
     NextTransition,
 
-    // The _InitialStateFingerprint stamped by DoBackfillFingerprintToRepData on first Setup is
-    // replaced. Used for test 9 (initial-state mismatch).
+    // The _InitialStateFingerprint stamped by DoBackfillFingerprintToRepData on first Setup.
     InitialState
 };
 
@@ -72,13 +62,10 @@ class CKSTATEMACHINE_API UCk_Utils_StateMachine_Test_UE : public UBlueprintFunct
     GENERATED_BODY()
 
 public:
-    // UFUNCTION declarations cannot be #if-gated (UHT only allows WITH_EDITORONLY_DATA there).
-    // Implementations are WITH_DEV_AUTOMATION_TESTS-gated in the .cpp; in non-test builds these
-    // become no-op stubs returning the input handle / 0 / false.
+    // UFUNCTION declarations cannot be #if-gated (UHT only allows WITH_EDITORONLY_DATA there), so the
+    // .cpp implementations are WITH_DEV_AUTOMATION_TESTS-gated and stub out in non-test builds.
 
-    // Arms the next-published fingerprint (or initial-state seed) to be replaced with InFakeHash.
-    // Adds ck::FFragment_Sm_TestFakeFingerprintInjection to the SM entity. Publisher path consumes
-    // the fragment by default. No-op in non-test builds.
+    // Arms the next published fingerprint (or initial-state seed) to be replaced with InFakeHash.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|StateMachine|Test",
         DisplayName = "[Ck][SM][Test] Inject Fake Fingerprint")
@@ -88,9 +75,8 @@ public:
         int32 InFakeHash,
         ECk_Sm_TestFakeFingerprintScope InScope = ECk_Sm_TestFakeFingerprintScope::NextTransition);
 
-    // Reads the published fingerprint value off the SM's rep payload — history's last
-    // _NewStateFingerprint, or _InitialStateFingerprint when history is empty, or NoHistory's
-    // _CurrentStateFingerprint. Returns 0 if the SM doesn't have a rep payload yet.
+    // Reads the published fingerprint: history's last _NewStateFingerprint, else
+    // _InitialStateFingerprint, else NoHistory's _CurrentStateFingerprint. 0 when no payload yet.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|StateMachine|Test",
         DisplayName = "[Ck][SM][Test] Get Published Fingerprint")
@@ -98,8 +84,7 @@ public:
     Test_Get_LastPublishedFingerprint(
         UPARAM(ref) FCk_Handle_StateMachine& InSm);
 
-    // Returns true iff the SM has been faulted (FTag_Sm_DeterminismFault present). The
-    // fingerprint mismatch path stamps this tag via DoVerifyFingerprintAgainstExpected.
+    // True iff FTag_Sm_DeterminismFault is present on the SM.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|StateMachine|Test",
         DisplayName = "[Ck][SM][Test] Has Determinism Fault")
@@ -107,10 +92,8 @@ public:
     Test_Get_HasDeterminismFault(
         UPARAM(ref) FCk_Handle_StateMachine& InSm);
 
-    // Directly stamps FTag_Sm_DeterminismFault on the SM, simulating a quarantine without needing
-    // the (multi-client, replication-dependent) verify path to produce it. Used to pin the
-    // Enter-despite-fault contract: a state entering while the owning SM is faulted must not run
-    // its EnterState side effects. No-op in non-test builds.
+    // Stamps FTag_Sm_DeterminismFault directly, simulating quarantine without the multi-client verify
+    // path — pins that a state entering while the SM is faulted runs no EnterState side effects.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|StateMachine|Test",
         DisplayName = "[Ck][SM][Test] Force Determinism Fault")

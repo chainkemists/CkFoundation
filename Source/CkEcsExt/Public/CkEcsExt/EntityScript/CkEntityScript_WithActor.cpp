@@ -7,7 +7,7 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
-#include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h"   // M2b-1 respawn-intent stamp
+#include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h"
 #include "CkLabel/CkLabel_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -19,18 +19,11 @@ auto
         const FInstancedStruct& InSpawnParams)
     -> ECk_EntityScript_ConstructionFlow
 {
-    // _OwningActor is injected by TryInjectEntityScriptSpawnParams before Construct is called
-
     CK_ENSURE_IF_NOT(ck::IsValid(_OwningActor),
         TEXT("EntityScript_WithActor [{}] has no valid OwningActor. "
              "Did you pass FCk_EntityScript_WithActor_SpawnParams with the Actor?"),
         GetClass()->GetName())
     { return ECk_EntityScript_ConstructionFlow::Finished; }
-
-    // NOTE (v3 rebuild+hydrate): under a save LOAD, the CkSnapshot loader spawns this bridged actor and this
-    // Construct RE-CREATES the entity (features compose) — that is the intended rebuild path, isolated by the
-    // Phase-2 LoadKernel gate rather than by spawn suppression. Get_IsSnapshotRespawnable() below opts the entity
-    // into the save (it supplies FFragment_ActorSpawnIntent, the _ActorClassPath the loader respawns from).
 
     ck::ecs::Display(TEXT("[REP_DEBUG] WithActor::Construct Actor=[{}] ActorReplicates=[{}] EffectiveReplication=[{}]"),
         _OwningActor->GetName(),
@@ -41,7 +34,6 @@ auto
     // Add it directly so Get_WorldForEntity can resolve without recursion.
     InHandle.AddOrGet<TWeakObjectPtr<UWorld>>(_OwningActor->GetWorld());
 
-    // Set up the reverse link: Actor -> Entity
     UCk_Utils_OwningActor_UE::SetupActorEntityLink(InHandle, _OwningActor);
 
     // Order matters: OwningActor MUST be added before Transform so that Transform
@@ -56,9 +48,6 @@ auto
     UCk_Utils_GameplayLabel_UE::Add(InHandle, {});
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, *_OwningActor->GetName());
 
-    // M2b-1: record how to re-spawn this bridged actor on a future load (snapshotable; raw actor ptr is never
-    // serialized — only the class path). The snapshot respawn pass reads this after restore. Opt-in only: framework
-    // infrastructure actors (relays) must NOT be entity-respawned (the framework re-acquires them on demand).
     if (Get_IsSnapshotRespawnable())
     {
         InHandle.AddOrGet<FFragment_ActorSpawnIntent>(

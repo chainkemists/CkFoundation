@@ -14,18 +14,9 @@
 
 namespace ck
 {
-    // dtCrowd-style penalty-scored velocity sampling. Runs only when triggered
-    // (project-wide trigger mode + per-agent override + zone tags), only on 1 in N frames per
-    // agent (round-robin), only on agents with at least 1 neighbor in cache. When it runs,
-    // overwrites _DesiredVelocity with the lowest-penalty candidate from a 16-sample pattern.
-    //
-    // Group: FGroup_Physics. RunAfter Steering (we override its output) + NeighborSync (we read
-    // the cache it just wrote). RunBefore AccelClamp + VelocityBridge (so the override gets ramped
-    // and shipped). RunBefore is enforced by AccelClamp's RunAfter on this processor.
-    //
-    // PARALLEL: the Samples × Neighbors scoring loop — the module's only nested-loop hot spot —
-    // is pure math over the agent's own cache; all cross-entity access is reads (zone-tag walk),
-    // the only write is the agent's OWN DesiredVelocity.
+    // dtCrowd-style penalty-scored velocity sampling; overwrites _DesiredVelocity with the
+    // lowest-penalty candidate. PARALLEL-SAFE: every cross-entity access is a read (the zone-tag
+    // walk), and the only write is the agent's own DesiredVelocity.
     class CKCROWD_API FProcessor_CrowdAgent_AvoidanceSample : public TParallelProcessor<
             FProcessor_CrowdAgent_AvoidanceSample,
             FCk_Handle_CrowdAgent,

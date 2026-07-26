@@ -1,5 +1,3 @@
-// Inspired by https://github.com/redxdev/UnrealRichTextDialogueBox
-
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
@@ -183,11 +181,9 @@ protected:
 #endif
 
 protected:
-    // Required binding to the text block that displays dialogue
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UCk_DialogueTextBlock> LineText;
 
-    // Speed presets
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue Speed")
     FCk_DialogueSpeedSettings _SlowSpeed = FCk_DialogueSpeedSettings{UCk_Utils_Time_UE::Make_FromMilliseconds(50)};
 
@@ -197,14 +193,12 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue Speed")
     FCk_DialogueSpeedSettings _FastSpeed = FCk_DialogueSpeedSettings{UCk_Utils_Time_UE::Make_FromMilliseconds(10)};
 
-    // Customizable hold time at end of line
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue Settings")
     FCk_Time _EndHoldTime = UCk_Utils_Time_UE::Make_FromMilliseconds(150);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue Settings")
     bool _AutoSkipEmptyLines = true;
 
-    // Events
     UPROPERTY(BlueprintAssignable, Category = "Dialogue Events")
     FCk_DialogueEvent OnDialogueStarted;
 
@@ -257,27 +251,21 @@ private:
     UPROPERTY()
     TArray<FCk_DialogueTextSegment> _Segments;
 
-    // Cached data for performance
     FString _CachedSegmentText;
     FString _CurrentDisplayText;
     int32 _CachedLetterIndex = 0;
 
-    // Playback state
     int32 _CurrentSegmentIndex = 0;
     int32 _CurrentLetterIndex = 0;
     int32 _MaxLetterIndex = 0;
 
-    // Current speed settings
     FCk_DialogueSpeedSettings _ActiveSpeedSettings;
 
-    // Flags
     bool _HasFinishedPlaying = true;
     bool _IsPaused = false;
 
-    // Timer
     FTimerHandle _LetterTimer;
 
-    // Line height tracking for preventing jumps
     TMap<int32, float> _LineMaxHeights;
 };
 

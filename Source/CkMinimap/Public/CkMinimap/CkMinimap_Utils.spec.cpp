@@ -1,9 +1,3 @@
-// Pure-math coverage for the minimap projection helpers — no world, no entities.
-//
-// Conventions under test (documented in CkMinimap_Utils.h): world yaw degrees with 0 = North = +X and
-// 90 = East = +Y; FRAME space is center-origin, +X = screen right, +Y = screen DOWN (UMG), visible
-// frame [-1, 1]². North-up mapping: Frame = (WorldDelta.Y / E, -WorldDelta.X / E).
-
 #include "CkMinimap/CkMinimap_Utils.h"
 
 #include "Misc/AutomationTest.h"
@@ -72,19 +66,15 @@ bool FCkTest_Minimap_WorldToFrame_RotationModes::RunTest(const FString&)
     constexpr auto Rotate = ECk_Minimap_RotationMode::RotateWithObserver;
     constexpr auto NorthLocked = ECk_Minimap_RotationMode::NorthLocked;
 
-    // Observer facing East (yaw 90): a POI dead ahead (East, +Y) renders screen-up
     TestTrue(TEXT("RotateWithObserver: yaw 90, POI East (ahead) -> (0, -1)"),
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_WorldToFrame(FVector{0, 1000, 0}, Origin, 90.0f, Extent, Rotate), FVector2D{0, -1}));
 
-    // Same observer: a POI due North is on the observer's LEFT
     TestTrue(TEXT("RotateWithObserver: yaw 90, POI North (left) -> (-1, 0)"),
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_WorldToFrame(FVector{1000, 0, 0}, Origin, 90.0f, Extent, Rotate), FVector2D{-1, 0}));
 
-    // Facing South (yaw 180): a POI North is dead behind -> screen-down
     TestTrue(TEXT("RotateWithObserver: yaw 180, POI North (behind) -> (0, 1)"),
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_WorldToFrame(FVector{1000, 0, 0}, Origin, 180.0f, Extent, Rotate), FVector2D{0, 1}));
 
-    // NorthLocked ignores the view yaw entirely
     TestTrue(TEXT("NorthLocked: yaw 90 is ignored, POI East stays (1, 0)"),
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_WorldToFrame(FVector{0, 1000, 0}, Origin, 90.0f, Extent, NorthLocked), FVector2D{1, 0}));
 
@@ -141,13 +131,11 @@ bool FCkTest_Minimap_ClampToFrame_TotalAndShapes::RunTest(const FString&)
     constexpr auto Rect = ECk_Minimap_FrameShape::Rectangle;
     constexpr auto Circle = ECk_Minimap_FrameShape::Circle;
 
-    // Boundary projection preserves direction
     TestTrue(TEXT("rect: (2, 0.5) -> (1, 0.25)"),
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_ClampToFrame(FVector2D{2, 0.5}, Rect), FVector2D{1, 0.25}));
     TestTrue(TEXT("circle: (3, 4) -> (0.6, 0.8)"),
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_ClampToFrame(FVector2D{3, 4}, Circle), FVector2D{0.6, 0.8}));
 
-    // TOTAL: inside points (and zero) return unchanged — never expanded onto the boundary
     TestTrue(TEXT("rect: inside point unchanged"),
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_ClampToFrame(FVector2D{0.5, -0.25}, Rect), FVector2D{0.5, -0.25}));
     TestTrue(TEXT("circle: inside point unchanged"),
@@ -156,7 +144,6 @@ bool FCkTest_Minimap_ClampToFrame_TotalAndShapes::RunTest(const FString&)
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_ClampToFrame(FVector2D::ZeroVector, Rect), FVector2D::ZeroVector) &&
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_ClampToFrame(FVector2D::ZeroVector, Circle), FVector2D::ZeroVector));
 
-    // Edge-inclusive membership
     TestTrue(TEXT("rect: corner (1, 1) is INSIDE (edge-inclusive)"), UCk_Utils_Minimap_UE::Get_IsInsideFrame(FVector2D{1, 1}, Rect));
     TestTrue(TEXT("circle: rim (1, 0) is INSIDE (edge-inclusive)"), UCk_Utils_Minimap_UE::Get_IsInsideFrame(FVector2D{1, 0}, Circle));
     TestFalse(TEXT("circle: rect-corner-ish (0.8, 0.8) is OUTSIDE the circle"), UCk_Utils_Minimap_UE::Get_IsInsideFrame(FVector2D{0.8, 0.8}, Circle));
@@ -197,8 +184,7 @@ bool FCkTest_Minimap_Bounds_CornersAndInverse::RunTest(const FString&)
             Get_IsNearlyEqual(RoundTripped, FramePoint, 0.001));
     }
 
-    // Invalid bounds degrade to (0, 0), no div-by-zero
-    TestTrue(TEXT("invalid bounds -> (0, 0)"),
+    TestTrue(TEXT("invalid bounds -> (0, 0), no div-by-zero"),
         Get_IsNearlyEqual(UCk_Utils_Minimap_UE::Get_BoundsToFrame(FVector{123, 456, 0}, FCk_Minimap_WorldBounds{}), FVector2D::ZeroVector));
 
     return true;

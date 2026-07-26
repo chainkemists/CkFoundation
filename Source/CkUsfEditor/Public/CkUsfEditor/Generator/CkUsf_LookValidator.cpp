@@ -11,28 +11,21 @@
 
 namespace ck_usf_look_validator
 {
-    // Custom-node input names the generator wires (a param with one of these names adds a SECOND
-    // input of the same name and mis-wires silently), the output names it declares (a param named
-    // after an output makes the generated CustomExpression signature list the name twice ->
-    // "redefinition"), and the locals the generated code declares. FName comparison is
-    // case-insensitive, matching how ConnectMaterialExpressions resolves input names.
     // KEEP IN SYNC with Build_CustomCode / Get_ExtraOutputs in CkUsf_Generator.cpp.
     static const TCHAR* kReservedParamNames[] =
     {
         // generated locals
         TEXT("In"), TEXT("O"),
-        // inputs
         TEXT("Time"), TEXT("UV"), TEXT("UV1"), TEXT("UV2"), TEXT("LocalPosition"),
         TEXT("WorldPosition"), TEXT("CameraVector"), TEXT("VertexNormal"),
         TEXT("VertexTangent"), TEXT("PixelDepth"), TEXT("VertexColor"),
         TEXT("SceneColor"), TEXT("SceneDepth"), TEXT("SceneNormal"), TEXT("CustomDepth"), TEXT("CustomStencil"),
-        // outputs
         TEXT("EmissiveColor"), TEXT("Roughness"), TEXT("Metallic"), TEXT("Specular"),
         TEXT("AmbientOcclusion"), TEXT("Normal"), TEXT("Opacity"), TEXT("OpacityMask"),
         TEXT("Refraction"), TEXT("SubsurfaceColor"), TEXT("ClearCoat"), TEXT("ClearCoatRoughness"),
     };
 
-    // HLSL keywords a param can legally never be named (lowercase set; HLSL is case-sensitive).
+    // Lowercase set — HLSL is case-sensitive, and so is the comparison against it.
     static const TCHAR* kHlslKeywords[] =
     {
         TEXT("bool"), TEXT("break"), TEXT("case"), TEXT("centroid"), TEXT("const"), TEXT("continue"),
@@ -62,15 +55,13 @@ namespace ck_usf_look_validator
         return true;
     }
 
-    // One expected/parsed HLSL parameter.
     struct FHlslParam
     {
         FString Type;
         FString Name;
     };
 
-    // The HLSL parameter list Build_CustomCode passes positionally for this definition's _Parameters.
-    // KEEP IN SYNC with the argument assembly in CkUsf_Generator.cpp.
+    // KEEP IN SYNC with the positional argument assembly in CkUsf_Generator.cpp.
     static auto Build_ExpectedParams(const UCkUsf_LookDefinition* InDef) -> TArray<FHlslParam>
     {
         TArray<FHlslParam> Expected;
@@ -111,7 +102,6 @@ namespace ck_usf_look_validator
         return Rendered + TEXT(")");
     }
 
-    // Strip // and /* */ comments so signature scanning cannot match commented-out declarations.
     static auto Strip_Comments(const FString& InSource) -> FString
     {
         FString Out;
@@ -139,8 +129,7 @@ namespace ck_usf_look_validator
         return Out;
     }
 
-    // Find `<ExpectedReturnType> <FnName> (` in comment-stripped source and extract the text between
-    // its top-level parentheses. Also reports whether the name appears at all (for error wording).
+    // OutNameAppears separates "wrong signature" from "not found" for the caller's error wording.
     static auto Find_FunctionParamList(const FString& InStripped, const FString& InFnName,
         const FString& InExpectedReturnType, FString& OutParamList, bool& OutNameAppears) -> bool
     {
@@ -154,21 +143,21 @@ namespace ck_usf_look_validator
             { return false; }
             SearchFrom = NameAt + InFnName.Len();
 
-            // Whole-identifier match only.
             const auto Before = NameAt > 0 ? InStripped[NameAt - 1] : TEXT(' ');
             const auto After = NameAt + InFnName.Len() < InStripped.Len() ? InStripped[NameAt + InFnName.Len()] : TEXT(' ');
-            if (FChar::IsAlnum(Before) || Before == TEXT('_') || FChar::IsAlnum(After) || After == TEXT('_'))
+            const auto IsPartOfALongerIdentifier =
+                FChar::IsAlnum(Before) || Before == TEXT('_') || FChar::IsAlnum(After) || After == TEXT('_');
+            if (IsPartOfALongerIdentifier)
             { continue; }
 
             OutNameAppears = true;
 
-            // Next non-whitespace must open the param list.
             auto OpenAt = NameAt + InFnName.Len();
             while (OpenAt < InStripped.Len() && FChar::IsWhitespace(InStripped[OpenAt])) { ++OpenAt; }
             if (OpenAt >= InStripped.Len() || InStripped[OpenAt] != TEXT('('))
             { continue; }
 
-            // Previous token must be the expected return type (declaration/definition, not a call).
+            // Rejects call sites: only a declaration/definition has the return type as its previous token.
             auto TokenEnd = NameAt;
             while (TokenEnd > 0 && FChar::IsWhitespace(InStripped[TokenEnd - 1])) { --TokenEnd; }
             auto TokenStart = TokenEnd;
@@ -176,7 +165,6 @@ namespace ck_usf_look_validator
             if (InStripped.Mid(TokenStart, TokenEnd - TokenStart) != InExpectedReturnType)
             { continue; }
 
-            // Extract to the matching close paren.
             auto Depth = 0;
             for (auto Index = OpenAt; Index < InStripped.Len(); ++Index)
             {
@@ -195,7 +183,6 @@ namespace ck_usf_look_validator
         }
     }
 
-    // Split a param-list string into {Type, Name} entries (top-level commas; whitespace-collapsed).
     static auto Parse_ParamList(const FString& InParamList) -> TArray<FHlslParam>
     {
         TArray<FString> Entries;
@@ -219,8 +206,6 @@ namespace ck_usf_look_validator
         return Params;
     }
 
-    // Compare a parsed entry-point param list against the expected one. Count/type/order mismatch
-    // is an ERROR (positional wiring would mis-bind); HLSL param-name drift is a WARNING.
     static auto Compare_Signature(const FName InLookName, const FString& InFnName,
         const FString& InFirstParamType, const FString& InReturnType,
         const TArray<FHlslParam>& InExpected, const FString& InFoundParamList,

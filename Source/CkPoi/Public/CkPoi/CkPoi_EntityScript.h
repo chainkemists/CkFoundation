@@ -9,9 +9,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Spawn params for UCk_Poi_EntityScript when spawned at runtime via UCk_Utils_EntityScript_UE::Request_SpawnEntity.
-// When spawned from a level spawner (ACk_EntitySpawner_UE), the CDO-set _PoiParams + the spawner-injected
-// _SpawnTransform are used instead and this struct is absent.
+// Runtime-spawn params only. Level spawners (ACk_EntitySpawner_UE) instead use the CDO-set _PoiParams
+// plus the spawner-injected _SpawnTransform, and pass no spawn params at all.
 USTRUCT(BlueprintType)
 struct CKPOI_API FCk_Poi_SpawnParams
 {
@@ -39,12 +38,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// The rebuild recipe for durable standalone POIs. Under the v3 rebuild+hydrate save model, entities only
-// round-trip a save when they have a spawn recipe — this script IS that recipe: level spawners
-// (ACk_EntitySpawner_UE) reference it for designer-placed POIs, and runtime code spawns it via
-// UCk_Utils_EntityScript_UE::Request_SpawnEntity with FCk_Poi_SpawnParams for runtime-placed durable POIs
-// (player waypoints). Its replayed Construct re-composes Transform + Poi on load; the CkPoi persistence
-// handler then hydrates enable-state and state tags.
+// The save-rebuild recipe for durable standalone POIs: under the v3 rebuild+hydrate model an entity only
+// round-trips a save when it has a spawn recipe. See CkPoi/CLAUDE.md § Recipes.
 UCLASS(Blueprintable, BlueprintType)
 class CKPOI_API UCk_Poi_EntityScript : public UCk_GenericEntityScript_UE
 {

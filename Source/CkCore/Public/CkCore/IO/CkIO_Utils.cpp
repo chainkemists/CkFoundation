@@ -13,11 +13,9 @@
 #include <Runtime/Engine/Classes/Kismet/BlueprintPathsLibrary.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Engine safety flag for blocking asset loads.
-// Set to true once FEngineLoop::Init() completes, meaning all engine subsystems
-// (including UTypedElementRegistry) are fully initialized.
-// Before this point, System::LoadAsset_Blocking / LoadClassAsset_Blocking can
-// crash when loading packages that contain UActorComponent exports.
+// The blocking-load safety flag flips once FEngineLoop::Init() completes and every subsystem
+// (UTypedElementRegistry included) exists. Before that, System::LoadAsset_Blocking can crash on
+// packages containing UActorComponent exports.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_io_utils
@@ -33,10 +31,8 @@ namespace ck_io_utils
     {
         FBlockingLoadSafetyRegistrar()
         {
-            // If this module happens to load AFTER FCoreDelegates::OnFEngineLoopInitComplete
-            // has already broadcast (late plugin load, editor hot-reload, DLL reload), the
-            // lambda below would subscribe to a delegate that will never fire again and the
-            // flag would stay false forever. Catch that case up front.
+            // A late module load (plugin load, editor hot-reload, DLL reload) can miss
+            // OnFEngineLoopInitComplete entirely, leaving the flag false forever — catch it up front.
             if (GEngine != nullptr && GIsRunning)
             {
                 GIsEngineSafeForBlockingLoads = true;
@@ -73,20 +69,14 @@ auto
     Get_IsRunningCommandlet()
     -> bool
 {
-    // IsRunningCommandlet() reads PRIVATE_GIsRunningCommandlet, which is set during PreInit —
-    // but a handful of very-early Angelscript CDO constructions fire before that point (we saw
-    // ~130 first-pass blocking-load ensures slip through during cook when relying on the flag
-    // alone). The command line is populated from process start, so also detect a commandlet run
-    // (cook etc.) directly from "-run=". This keeps the diagnostic loud in editor/PIE/game (no
-    // "-run="), while never failing a cook over the benign first-pass loads that the
-    // UCk_DeferredAssetInit_UE sweep heals at runtime.
+    // IsRunningCommandlet()'s flag is only set during PreInit, and very-early Angelscript CDO
+    // construction runs before that — so also sniff the command line, which is populated from process
+    // start. Keeps the diagnostic loud in editor/PIE/game while never failing a cook.
     if (::IsRunningCommandlet() || ::IsRunningCookCommandlet())
     { return true; }
 
-    // Re-evaluated every call (NOT cached): the very first early-init query can run before the
-    // command line is fully populated, so caching that first read would wrongly stick at false
-    // for the rest of the cook. By offender-time the editor's command line carries "-run=Cook"
-    // / "-TargetPlatform=", so a live read reliably identifies the cook.
+    // Deliberately re-read every call: the first early-init query can precede a fully populated
+    // command line, and caching that read would stick at false for the rest of the cook.
     const auto CmdLine = FString{FCommandLine::Get()};
     return CmdLine.Contains(TEXT("-run="), ESearchCase::IgnoreCase)
         || CmdLine.Contains(TEXT("-TargetPlatform="), ESearchCase::IgnoreCase);
@@ -476,28 +466,21 @@ auto
         return Results;
     }
 
-    // Get the asset registry
     auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     auto& AssetRegistry = AssetRegistryModule.Get();
 
-    // Get search paths
     const auto& SearchPaths = Get_SearchPaths(SearchScope);
 
-    // Create filter to search assets
     auto Filter = FARFilter{};
     Filter.bRecursivePaths = true;
     Filter.PackagePaths = SearchPaths;
-    // In-memory asset enumeration is game-thread-only (EnumerateMemoryAssetsHelper asserts off it).
-    // These lookups can run off the game thread — e.g. an AS class PostInit calling an asset-search
-    // util during threaded AngelScript init. Off-thread, restrict to on-disk assets (cooked assets
-    // always qualify); on the game thread keep the full search so unsaved editor assets are found.
+    // In-memory asset enumeration is game-thread-only (EnumerateMemoryAssetsHelper asserts off it), and
+    // these lookups can run off it during threaded AngelScript init.
     Filter.bIncludeOnlyOnDiskAssets = NOT IsInGameThread();
 
-    // Get assets
     auto AssetDataList = TArray<FAssetData>{};
     AssetRegistry.GetAssets(Filter, AssetDataList);
 
-    // Look for matches
     for (const auto& AssetData : AssetDataList)
     {
         if (const auto& CurrentAssetName = AssetData.AssetName.ToString();
@@ -555,13 +538,11 @@ auto
 {
     auto Result = FCk_Utils_Object_AssetSearchResult_Array{};
 
-    // Get the asset registry
     const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     const auto& AssetRegistry = AssetRegistryModule.Get();
 
     auto FoundAssets = TArray<FAssetData>{};
 
-    // Try direct path lookup first (if it looks like a path)
     if (AssetName.StartsWith(TEXT("/")))
     {
         ck::core::VeryVerbose(TEXT("DoFastExactLookup: Attempting direct path lookup for: '{}'"), AssetName);
@@ -573,8 +554,7 @@ auto
 
         if (AssetData.IsValid())
         {
-            // For exact paths, skip search scope validation - user knows where the asset is
-            // Only validate class filter if specified
+            // An exact path skips scope validation — the caller already said where the asset is.
             auto ClassMatches = true;
             if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
             {
@@ -587,7 +567,6 @@ auto
 
             if (ClassMatches)
             {
-                // FAST PATH: Load immediately and return
                 if (auto LoadedAsset = AssetData.GetAsset();
                     ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}))
                 {
@@ -610,15 +589,12 @@ auto
         }
     }
 
-    // If no path-based match, try filtering all assets by name
     if (FoundAssets.IsEmpty())
     {
-        // Create a filter to find assets by exact name
         auto NameFilter = FARFilter{};
         NameFilter.bRecursivePaths = true;
         NameFilter.PackagePaths = Get_SearchPaths(SearchScope);
-        // On-disk-only off the game thread — see note above; this is the path that crashed during
-        // threaded AS init (LoadAssetByName from an AS class PostInit).
+        // On-disk-only off the game thread — the path that crashed during threaded AS init.
         NameFilter.bIncludeOnlyOnDiskAssets = NOT IsInGameThread();
 
         if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
@@ -629,7 +605,6 @@ auto
         auto AllAssets = TArray<FAssetData>{};
         AssetRegistry.GetAssets(NameFilter, AllAssets);
 
-        // Filter by exact name match
         for (const auto& AssetData : AllAssets)
         {
             if (AssetData.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase))
@@ -641,13 +616,11 @@ auto
         ck::core::VeryVerbose(TEXT("DoFastExactLookup: Found {} assets by name lookup for '{}'"), FoundAssets.Num(), AssetName);
     }
 
-    // Filter results by search scope and class
     const auto& SearchPaths = Get_SearchPaths(SearchScope);
     auto FilteredAssets = TArray<FAssetData>{};
 
     for (const auto& AssetData : FoundAssets)
     {
-        // Check if asset is in allowed search paths
         auto AssetInScope = false;
         const auto& AssetPath = AssetData.PackageName.ToString();
 
@@ -665,7 +638,6 @@ auto
             continue;
         }
 
-        // Check class filter
         if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
         {
             if (NOT AssetData.GetClass()->IsChildOf(AssetClass))
@@ -675,7 +647,6 @@ auto
         FilteredAssets.Add(AssetData);
     }
 
-    // Load the filtered assets and build results
     for (const auto& AssetData : FilteredAssets)
     {
         if (auto LoadedAsset = AssetData.GetAsset();
@@ -712,7 +683,6 @@ auto
         ECk_AssetSearchScope SearchScope)
     -> FCk_Utils_Object_AssetSearchResult_Array
 {
-    // For fuzzy search, we need to scan all assets (can't optimize this easily)
     return DoFullAssetScan(AssetName, AssetClass, SearchScope, ECk_AssetSearchStrategy::FuzzyOnly);
 }
 
@@ -727,24 +697,20 @@ auto
 {
     auto Result = FCk_Utils_Object_AssetSearchResult_Array{};
 
-    // Get the asset registry
     auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     auto& AssetRegistry = AssetRegistryModule.Get();
 
-    // Ensure asset registry is loaded, especially for plugin content
     if (NOT AssetRegistry.IsLoadingAssets())
     {
         AssetRegistry.SearchAllAssets(true);
     }
 
-    // Get search paths
     const auto& SearchPaths = Get_SearchPaths(SearchScope);
 
-    // Create filter to search assets
     auto Filter = FARFilter{};
     Filter.bRecursivePaths = true;
     Filter.PackagePaths = SearchPaths;
-    // On-disk-only off the game thread — see note above (avoids the off-thread AssetRegistry assert).
+    // On-disk-only off the game thread avoids the AssetRegistry's game-thread assert.
     Filter.bIncludeOnlyOnDiskAssets = NOT IsInGameThread();
 
     if (ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{}))
@@ -752,11 +718,9 @@ auto
         Filter.ClassPaths.Add(AssetClass->GetClassPathName());
     }
 
-    // Get assets
     auto AssetDataList = TArray<FAssetData>{};
     AssetRegistry.GetAssets(Filter, AssetDataList);
 
-    // Debug logging for plugin search issues
     if (EnumHasAnyFlags(SearchScope, ECk_AssetSearchScope::Plugins))
     {
         ck::core::VeryVerbose(TEXT("DoFullAssetScan: Searching for '{}' in {} total assets across search paths"), AssetName, AssetDataList.Num());
@@ -778,7 +742,6 @@ auto
     auto ExactMatches = TArray<FAssetData>{};
     auto FuzzyMatches = TArray<FAssetData>{};
 
-    // Separate exact and fuzzy matches
     for (const auto& AssetData : AssetDataList)
     {
         if (const auto& CurrentAssetName = AssetData.AssetName.ToString();
@@ -792,7 +755,6 @@ auto
         }
     }
 
-    // Apply search strategy
     auto AssetsToLoad = TArray<FAssetData>{};
     auto ExactMatchesToLoad = TArray<FAssetData>{};
     auto FuzzyMatchesToLoad = TArray<FAssetData>{};
@@ -835,7 +797,6 @@ auto
         }
     }
 
-    // Handle no results
     if (AssetsToLoad.Num() == 0)
     {
         const auto& ClassFilter = ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{})
@@ -846,7 +807,6 @@ auto
         return FCk_Utils_Object_AssetSearchResult_Array{};
     }
 
-    // Load assets and populate results
     for (const auto& AssetData : AssetsToLoad)
     {
         if (auto LoadedAsset = AssetData.GetAsset();
@@ -857,7 +817,6 @@ auto
             SingleResult._AssetName = AssetData.AssetName.ToString();
             SingleResult._AssetPath = AssetData.GetSoftObjectPath().ToString();
 
-            // Determine match type
             const auto& IsExactMatch = ExactMatchesToLoad.ContainsByPredicate([&AssetData](const FAssetData& Data)
             {
                 return Data.GetSoftObjectPath() == AssetData.GetSoftObjectPath();
@@ -867,8 +826,7 @@ auto
                 ? ECk_AssetMatchType::ExactMatch
                 : ECk_AssetMatchType::FuzzyMatch;
 
-            // UniqueAsset will be set by the calling function
-            SingleResult._UniqueAsset = ECk_Unique::Unique; // Default, will be overridden
+            SingleResult._UniqueAsset = ECk_Unique::Unique; // Overridden by the calling function
 
             Result._Results.Add(SingleResult);
 
@@ -880,11 +838,9 @@ auto
         }
     }
 
-    // Set counts
     Result._ExactMatchCount = ExactMatchesToLoad.Num();
     Result._FuzzyMatchCount = FuzzyMatchesToLoad.Num();
 
-    // Log multiple matches if necessary
     if (Result._Results.Num() > 1)
     {
         const auto& ClassFilter = ck::IsValid(AssetClass, ck::IsValid_Policy_NullptrOnly{})
@@ -922,13 +878,9 @@ auto
 
     if (EnumHasAnyFlags(SearchScope, ECk_AssetSearchScope::Plugins))
     {
-        // Try both the general plugins path and more specific ones
         SearchPaths.Add(FName(TEXT("/Plugins")));
-
-        // Also try common plugin content paths
         SearchPaths.Add(FName(TEXT("/PluginContent")));
 
-        // Get all mounted plugin paths dynamically
         auto& PluginManager = IPluginManager::Get();
 
         for (const auto& EnabledPlugins = PluginManager.GetEnabledPlugins();
@@ -947,7 +899,6 @@ auto
         SearchPaths.Add(FName(TEXT("/Engine")));
     }
 
-    // Fallback to Game if no scope specified
     if (SearchPaths.IsEmpty())
     {
         SearchPaths.Add(FName(TEXT("/Game")));

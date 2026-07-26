@@ -54,8 +54,7 @@ auto
     Push_LiveInstances(TArray<FInstance>&& InInstances)
     -> void
 {
-    // Public-boundary guard for the documented invariant (count changes must go through
-    // Set_Instances) — a count change without a proxy recreate desyncs the GPUScene allocation.
+    // A count change without a proxy recreate desyncs the GPUScene allocation.
     CK_ENSURE_IF_NOT(InInstances.Num() == _Instances.Num(),
         TEXT("Push_LiveInstances count changed [{} -> {}] — count changes must go through Set_Instances"),
         _Instances.Num(), InInstances.Num())
@@ -96,7 +95,6 @@ auto
     if (_Mesh->GetResourceForRendering() == nullptr)
     { return nullptr; }
 
-    // Idempotent: CPU bake (if needed) + enqueue the GPU SRV/UB + per-mesh render-resource upload.
     _AnimCollection->EnsureRenderResources();
     if (_AnimCollection->Get_IsBaked() == false)
     { return nullptr; }
@@ -106,22 +104,16 @@ auto
 
 namespace ck_iskm_batched_cluster_component
 {
-    // Last type gate before the render path: a pointer arriving through the AS boundary can carry a
-    // wrong-typed object (LoadAsset_Blocking performs no runtime class check), and a non-material
-    // stored here AVs the base FPrimitiveSceneProxy ctor's material scan on the next proxy recreate.
-    // Cast checks the pointee's actual class; a wrong-typed pointee ensures loudly and stores null
-    // (mesh default materials take over downstream).
+    // Last type gate before the render path: a wrong-typed pointer (the AS boundary does no runtime
+    // class check) AVs the base FPrimitiveSceneProxy ctor's material scan on the next proxy recreate.
     static auto
         Get_ValidatedMaterialOrNull(UMaterialInterface* InMaterial)
         -> UMaterialInterface*
     {
         UObject* const AsObject = InMaterial;
 
-        // Validate liveness BEFORE Cast<>. A dangling/GC-collected pointer is non-null but its class
-        // pointer is null; Cast<> dereferences the class to test the type and access-violates (observed:
-        // the crowd LOD-flip passing a GC'd override material). ck::IsValid inspects only the object's
-        // flags/registry slot — safe on pooled memory — so a stale reference degrades to null instead of
-        // crashing the render path.
+        // Liveness MUST be checked before Cast<>: a GC'd pointer is non-null with a null class pointer,
+        // and Cast<> access-violates dereferencing it. ck::IsValid reads only the flags/registry slot.
         CK_ENSURE_IF_NOT(AsObject == nullptr || ck::IsValid(AsObject),
             TEXT("Dangling/invalid UObject passed as a cluster override material — storing null instead"))
         { return nullptr; }
@@ -322,10 +314,8 @@ auto
     const FBox MeshBox = ck::IsValid(_AnimCollection) ? _AnimCollection->Get_AnimatedMeshBounds()
                        : ck::IsValid(_Mesh) ? _Mesh->GetBounds().GetBox() : FBox(FVector(-1.0), FVector(1.0));
     DynData->LocalBounds = FRenderBounds(MeshBox);
-    // PRIMITIVE bounds: must cover the WHOLE instance spread. Using the single mesh box here (the old code)
-    // collapsed the primitive's scene bounds to one mesh at the component origin every animated frame —
-    // FUpdateTransformCommand then replaced the registration bounds, so everything away from the tile centre
-    // was wrongly frustum/occlusion culled ("flickers unless looking at the spawn point").
+    // PRIMITIVE bounds must cover the WHOLE instance spread — FUpdateTransformCommand replaces the
+    // registration bounds with these, so a single mesh box here culls everything off the tile centre.
     DynData->LocalBoundsSphere = (_LocalBounds.IsValid != 0) ? FBoxSphereBounds(_LocalBounds) : FBoxSphereBounds(MeshBox);
     const FTransform CompXf = GetComponentTransform();
     DynData->LocalToWorld = CompXf.ToMatrixWithScale();

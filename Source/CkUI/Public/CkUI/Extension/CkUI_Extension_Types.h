@@ -15,8 +15,6 @@ class UUserWidget;
 class UCk_UI_Extension_Subsystem_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Enums
-// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
 enum class ECk_UI_ExtensionPointMatch : uint8
@@ -39,15 +37,11 @@ enum class ECk_UI_ExtensionAction : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_ExtensionAction);
 
 // --------------------------------------------------------------------------------------------------------------------
-// Forward Declarations
-// --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_UI_Extension;
 struct FCk_UI_ExtensionPoint;
 struct FCk_UI_ExtensionRequest;
 
-// --------------------------------------------------------------------------------------------------------------------
-// Delegates
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DELEGATE_TwoParams(
@@ -55,8 +49,6 @@ DECLARE_DELEGATE_TwoParams(
     ECk_UI_ExtensionAction,
     const FCk_UI_ExtensionRequest&);
 
-// --------------------------------------------------------------------------------------------------------------------
-// FCk_UI_Extension
 // --------------------------------------------------------------------------------------------------------------------
 
 struct CKUI_API FCk_UI_Extension : TSharedFromThis<FCk_UI_Extension>
@@ -76,17 +68,13 @@ public:
     CK_PROPERTY_GET(_WidgetInstance);
     CK_PROPERTY(_Priority);
 
-    // ---- Class-based constructor
     CK_DEFINE_CONSTRUCTORS(FCk_UI_Extension, _ExtensionPointTag, _WidgetClass);
 
-    // ---- Instance-based constructor (populates _WidgetClass from instance)
     FCk_UI_Extension(
         FGameplayTag InExtensionPointTag,
         UUserWidget* InWidgetInstance);
 };
 
-// --------------------------------------------------------------------------------------------------------------------
-// FCk_UI_ExtensionPoint
 // --------------------------------------------------------------------------------------------------------------------
 
 struct CKUI_API FCk_UI_ExtensionPoint : TSharedFromThis<FCk_UI_ExtensionPoint>
@@ -109,8 +97,6 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_UI_ExtensionPoint, _ExtensionPointTag, _Callback);
 };
 
-// --------------------------------------------------------------------------------------------------------------------
-// FCk_UI_ExtensionPointHandle
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta = (HasNativeMake))
@@ -165,8 +151,6 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_UI_ExtensionPointHandle, IsValid_Policy_Def
 });
 
 // --------------------------------------------------------------------------------------------------------------------
-// FCk_UI_ExtensionHandle
-// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKUI_API FCk_UI_ExtensionHandle
@@ -218,8 +202,6 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_UI_ExtensionHandle, IsValid_Policy_Default,
 });
 
 // --------------------------------------------------------------------------------------------------------------------
-// FCk_UI_ExtensionRequest
-// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKUI_API FCk_UI_ExtensionRequest
@@ -255,8 +237,6 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_UI_ExtensionRequest, _ExtensionHandle, _ExtensionPointTag, _WidgetClass, _WidgetInstance, _Priority);
 };
 
-// --------------------------------------------------------------------------------------------------------------------
-// FCk_UI_HUDElementEntry
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)

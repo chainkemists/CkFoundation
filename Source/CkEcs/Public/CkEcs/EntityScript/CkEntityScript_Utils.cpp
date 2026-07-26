@@ -109,8 +109,7 @@ auto
         { continue; }
 
         // _AssociatedEntity is a Transient back-pointer set only at spawn; restore recreates the script
-        // UObject without it, leaving it default (tombstone). Re-derive it from the owning entity — friend
-        // access via this Utils class — mirroring FProcessor_EntityScript_SpawnEntity's assignment.
+        // UObject without it, so re-derive it here (friend access via this Utils class).
         Script->_AssociatedEntity = Handle;
         ++Count;
     }
@@ -256,14 +255,9 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(InScriptEntity, *ck::Format_UE(TEXT("{}"), InEntityScriptClassArchetype));
 
-    // Derive the new entity's Net_Params from the archetype's effective replication intent
-    // combined with the TransientEntity's NetMode / NetRole context. Get_EffectiveReplication
-    // is the virtual hook subclasses override to reconcile the CDO default with runtime state
-    // (e.g. WithActor returns DoesNotReplicate when its OwningActor isn't replicated). Handles
-    // the transient-owner case where Request_CreateEntity skips Net_Params inheritance, and
-    // also covers direct Add() callers (SM condition/state/transition attach, any non-spawn
-    // flow that attaches a script to an existing transient-owned entity). When the entity
-    // already inherited Net_Params from a non-transient lifetime owner, respect that.
+    // Derive Net_Params from the archetype's effective replication intent combined with the TransientEntity's
+    // NetMode/NetRole. Covers the transient-owner case (Request_CreateEntity skips Net_Params inheritance) and
+    // direct Add() callers. When the entity already inherited Net_Params from a non-transient owner, respect that.
     if (NOT InScriptEntity.Has<ck::FFragment_Net_Params>())
     {
         const auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InScriptEntity);
@@ -330,11 +324,9 @@ auto
 
             if (ck::Is_NOT_Valid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}))
             {
-                // BP must have all properties in struct; code-authored (C++/AS) classes may
-                // legitimately receive a shared struct and ignore extra fields.
-                // NOTE: CLASS_CompiledFromBlueprint cannot be used here — the AS engine fork
-                // sets that flag on AngelScript classes too; only true BP assets are instances
-                // of UBlueprintGeneratedClass (see CkAngelscriptEntityScriptParamsGenerator).
+                // BP must have all properties in struct; code-authored (C++/AS) classes may legitimately receive
+                // a shared struct and ignore extra fields. CLASS_CompiledFromBlueprint cannot be used to tell
+                // them apart — the AS engine fork sets that flag on AngelScript classes too.
                 CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(::Cast<UBlueprintGeneratedClass>(InEntityScript->GetClass()), ck::IsValid_Policy_NullptrOnly{}),
                     TEXT("Failed to find ExposedOnSpawn Property [{}] on BP Entity Script [{}]. Cannot inject this SpawnParam"),
                     PropertyName,
@@ -346,10 +338,9 @@ auto
             auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(InEntityScript);
             const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
 
-            // A request may safely retain a weak UObject reference even when the constructed script intentionally
-            // owns the object strongly. Resolve that weak identity only at injection time, while writing into the
-            // GC-traced EntityScript UObject. This is used by WithActor spawn params and avoids retaining a bare
-            // actor address in the EnTT request queue.
+            // A request may retain a weak UObject reference even when the constructed script owns the object
+            // strongly. Resolve the weak identity only here, while writing into the GC-traced EntityScript
+            // UObject — this avoids retaining a bare actor address in the EnTT request queue.
             if (const auto* SpawnWeakObjectProp = CastField<FWeakObjectProperty>(SpawnParamsProp))
             {
                 if (const auto* ScriptObjectProp = CastField<FObjectPropertyBase>(EntityScriptProp))
@@ -363,12 +354,9 @@ auto
 
 #if ENABLE_MT_DETECTOR
             // ---- Delegate MRSW bypass ----
-            // Delegates contain an FMRSWRecursiveAccessDetector at the start of their base class
-            // (TDelegateAccessHandlerBase). When delegate data passes through FInstancedStruct,
-            // raw memory copies can leave the detector in a stale "writer active" state, causing
-            // false-positive race-detection ensures on every subsequent access.
-            // Fix: initialize the destination (clean detector state), then memcpy only the data
-            // fields (Object, FunctionName) that live after the detector.
+            // Delegates start with an FMRSWRecursiveAccessDetector; a raw memory copy through FInstancedStruct
+            // can leave it in a stale "writer active" state, causing false-positive race ensures. Initialize the
+            // destination for a clean detector, then memcpy only the data fields that live after it.
             if (CastField<FDelegateProperty>(SpawnParamsProp))
             {
                 const auto PropertySize = SpawnParamsProp->GetSize();
@@ -454,11 +442,9 @@ auto
         const FCk_Delegate_EntityScript_Constructed& InDelegate)
     -> void
 {
-    // Request_SpawnEntity returns an INVALID pending handle when the spawn was suppressed — notably during a
-    // CkSnapshot load's world reconstitution (see Request_SpawnEntity :81-82), and after it has already ensured
-    // on a genuine bad class/owner (:71-79). In either case there is no entity-under-construction, so binding
-    // would AddOrGet the OnConstructed signal fragment on a TOMBSTONE handle and ensure (and, until the registry
-    // formatter fix, crash). No-op: the delegate simply never fires, which is correct — nothing was spawned.
+    // Request_SpawnEntity returns an INVALID pending handle when the spawn was suppressed (notably during a
+    // CkSnapshot load's world reconstitution) or after it already ensured on a bad class/owner. Binding would
+    // then AddOrGet the signal fragment on a TOMBSTONE handle and ensure; no-op is correct — nothing spawned.
     if (ck::Is_NOT_Valid(InPendingEntityScript.Get_EntityUnderConstruction()))
     { return; }
 

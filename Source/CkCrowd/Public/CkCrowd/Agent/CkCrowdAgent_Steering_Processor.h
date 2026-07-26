@@ -17,18 +17,9 @@
 
 namespace ck
 {
-    // Path follower / steering.
-    // Reads the agent's current location + path result, advances the waypoint cursor as the agent
-    // crosses each waypoint's arrival radius, and writes a desired velocity sized by:
-    //   - direction toward next waypoint
-    //   - speed ramp clamped by _MaxAcceleration
-    //   - braking ramp keyed off remaining distance to FINAL waypoint (sqrt(2 * decel * d))
-    //
-    // Output is FFragment_CrowdAgent_DesiredVelocity, which the velocity-bridge processor copies into
-    // FFragment_Velocity_Current; also observable via UCk_Utils_CrowdAgent_UE::Get_DesiredVelocity.
-    //
-    // Group: FGroup_Physics. RunBefore EulerIntegrator_Update so the velocity-bridge can write
-    // Velocity_Current before the integrator reads it.
+    // Path follower: advances the waypoint cursor and writes _DesiredVelocity (direction to the next
+    // waypoint, ramp clamped by _MaxAcceleration, braking keyed off distance to the FINAL waypoint).
+    // RunBefore EulerIntegrator_Update so the velocity-bridge writes Velocity_Current first.
     class CKCROWD_API FProcessor_CrowdAgent_Steering : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_Steering,
             FCk_Handle_CrowdAgent,

@@ -43,9 +43,6 @@ auto
     SCOPE_CYCLE_COUNTER(STAT_Nav_FindPathSync);
     INC_DWORD_STAT(STAT_Nav_PathQueries);
 
-    // Reset and seed per-query diagnostics. Captured for every attempt (success or failure)
-    // so the debugger can show a complete picture of the last path query without round-
-    // tripping through logs.
     auto& Diag = OutResult._Diagnostics;
     Diag = FCk_Nav_PathDiagnostics{};
     Diag._LastTargetLocation = InEnd;
@@ -54,16 +51,6 @@ auto
 
     OutResult._DestinationLocation = InEnd;
 
-    // Project Start/End onto the navmesh before issuing the path query. UE's internal
-    // FindPath does its own findNearestPoly using NavData's DefaultQueryExtent (derived
-    // from agent radius/height); when the caller's points are far above/below the navmesh
-    // surface, that lookup misses and FindPath returns Error with an allocated-but-empty
-    // path. Projecting up-front with a generous extent guarantees the path query receives
-    // points that lie ON the navmesh surface.
-    // Vertical (Z) reach is a separate opt-in knob: a negative InProjectionVerticalHalfExtent
-    // reproduces the uniform cube (today's behavior); a smaller value keeps the horizontal
-    // reach but stops Start/End from snapping onto a stray navmesh surface far above/below the
-    // intended floor (the checkout sink/float root cause).
     const auto VerticalHalfExtent = (InProjectionVerticalHalfExtent < 0.0f)
         ? InProjectionHalfExtent
         : InProjectionVerticalHalfExtent;
@@ -88,11 +75,6 @@ auto
         Diag._LastQueryDurationMs = static_cast<float>((FPlatformTime::Seconds() - Diag._LastQueryWallTime) * 1000.0);
     };
 
-    // When projection fails, log a diagnostic snapshot: nav bounds, the failing point,
-    // the extent we used, and a retry with a much larger extent. If the retry succeeds we
-    // know the configured extent is somehow too small (Recast<->UE axis quirk, agent params
-    // skewing the search box, etc). If it ALSO fails, projection itself is broken (NavData
-    // impl-swap, navmesh tiles in a transient state, etc).
     const auto LogProjectionFailure = [&](const FString& InWhich, const FVector& InPoint)
     {
         const auto NavBounds = InNavData.GetNavMeshBounds();
@@ -104,10 +86,6 @@ auto
 
         const auto BigOkStr = FString{bBigOk ? TEXT("OK") : TEXT("FAIL")};
 
-        // Legacy-cube probe: when the vertical clamp is active, ALSO test the pre-clamp
-        // uniform cube so the log line itself answers "would the old behavior have snapped
-        // this point?" — the decisive datum when triaging whether a NO PATH report is a
-        // clamp regression or a pre-existing content/nav defect.
         const auto LegacyCubeApplies = VerticalHalfExtent < InProjectionHalfExtent;
         auto LegacyProj = FNavLocation{};
         const auto LegacyOk = LegacyCubeApplies
@@ -150,9 +128,6 @@ auto
         return false;
     }
 
-    // The parameterized FPathFindingQuery ctor populates NavAgentProperties from
-    // InNavData.GetConfig() and derives the DefaultFilter from NavData when SourceFilter
-    // is nullptr. Passing it explicitly avoids relying on that fallback.
     auto QueryFilter = InNavData.GetDefaultQueryFilter();
     if (InFilterClass.Get() != nullptr)
     { QueryFilter = UNavigationQueryFilter::GetQueryFilter(InNavData, InFilterClass); }
@@ -174,8 +149,6 @@ auto
     };
     Query.SetAllowPartialPaths(InAllowPartial);
 
-    // ARecastNavMesh::FindPath skips the NavSys agent-dispatch step. The
-    // Query.NavAgentProperties was populated from InNavData.GetConfig() by the ctor.
     auto Result = FPathFindingResult{};
     {
         SCOPE_CYCLE_COUNTER(STAT_Nav_RecastFindPath);
@@ -207,8 +180,7 @@ auto
 
     if (NOT bSuccess || NOT InNavResult.Path.IsValid())
     {
-        // PRESERVE _Waypoints on failure so consumers can keep walking the old path while
-        // deciding what to do. Only update status + diagnostics.
+        // _Waypoints is deliberately left intact so consumers keep walking the old path.
         OutResult._Status = ECk_Nav_PathStatus::Failed;
 
         switch (InNavResult.Result)
@@ -226,12 +198,9 @@ auto
     auto NewWaypoints = TArray<FVector>{};
     NewWaypoints.Reserve(Points.Num());
 
-    // Skip-first-waypoint pass: drop the leading point if it is within ~2x agent radius
-    // of the agent's actual location. Avoids the "backtrack to start" artifact when UE
-    // includes the agent's current position as the path's starting waypoint. Disabled
-    // when InAgentRadius <= 0.
+    constexpr auto SkipFirstRadiusMultiplier = 2.0f;
     const auto SkipFirstThresholdSquared = (InAgentRadius > 0.0f)
-        ? FMath::Square(InAgentRadius * 2.0f)
+        ? FMath::Square(InAgentRadius * SkipFirstRadiusMultiplier)
         : -1.0f;
 
     for (auto i = 0; i < Points.Num(); ++i)
@@ -250,9 +219,7 @@ auto
 
     if (NewWaypoints.IsEmpty())
     {
-        // Result=Success but post-extract path has zero waypoints — degenerate (start≈end
-        // after the skip-first pass, or UE returned a 1-point path). Report as failure so
-        // listeners don't treat an empty waypoint list as Ready.
+        // Reported as a failure so listeners never see an empty waypoint list as Ready.
         OutResult._Status    = ECk_Nav_PathStatus::Failed;
         Diag._LastFailReason = ECk_Nav_PathFailReason::EmptyPath;
         return;
@@ -287,8 +254,7 @@ auto
     Result._DestinationLocation = InDestination;
     Result._Status              = ECk_Nav_PathStatus::Ready;
 
-    // Keep the debugger's picture coherent: this result did not come from a navmesh query, so
-    // only the fields an external provider can honestly report are populated.
+    // No navmesh query ran, so only the fields an external provider can honestly report are set.
     Result._Diagnostics                          = FCk_Nav_PathDiagnostics{};
     Result._Diagnostics._LastTargetLocation      = InDestination;
     Result._Diagnostics._ExtractedWaypointCount  = Result._Waypoints.Num();

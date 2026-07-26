@@ -51,12 +51,10 @@
 
 namespace ck_asset_exporter_dispatch
 {
-    // Loading a directory sweep's worth of assets in one editor/commandlet session — collect periodically so the
-    // working set stays bounded (VfxCorpus precedent).
+    // A directory sweep loads its whole asset set in one session — collect periodically to bound the working set.
     constexpr auto GcInterval = int32{100};
 
-    // Ordered friendly-name -> class table. Order is display-only; per-asset routing (Route) enforces most-derived
-    // dispatch independently.
+    // Order here is display-only; Route enforces most-derived dispatch independently.
     static auto
     Get_FriendlyClassTable()
         -> TArray<TPair<FString, UClass*>>
@@ -77,7 +75,6 @@ namespace ck_asset_exporter_dispatch
         };
     }
 
-    // Copies the common result fields (every per-type export result shares this shape) into a dispatch entry row.
     template <typename TResult>
     static auto
     Fill_Entry(
@@ -91,9 +88,8 @@ namespace ck_asset_exporter_dispatch
         InOutEntry.ErrorMessage = InResult.ErrorMessage;
     }
 
-    // DataTable result carries a CsvFilePath instead of a TextFilePath — a non-template overload (preferred over the
-    // template on exact match) maps the csv sibling into the entry's TextFilePath slot: the manifest 'txt' column
-    // carries the csv path for DataTables.
+    // DataTable carries a CsvFilePath instead of a TextFilePath; this exact-match overload beats the template and
+    // maps the csv into the TextFilePath slot, so the manifest 'txt' column carries the csv path for DataTables.
     static auto
     Fill_Entry(
         FCk_AssetExportDispatchEntryResult& InOutEntry,
@@ -106,8 +102,7 @@ namespace ck_asset_exporter_dispatch
         InOutEntry.ErrorMessage = InResult.ErrorMessage;
     }
 
-    // Material export is json-only (no .txt / .csv sibling) — a non-template overload maps the json and leaves the
-    // entry's txt slot empty.
+    // Material export is json-only (no .txt / .csv sibling), so the entry's txt slot stays empty.
     static auto
     Fill_Entry(
         FCk_AssetExportDispatchEntryResult& InOutEntry,
@@ -144,9 +139,8 @@ namespace ck_asset_exporter_dispatch
         return true;
     }
 
-    // Classify InAsset most-derived-first and export via its dedicated exporter. Mirrors the exclusion order in
-    // CkDataAssetExporter_AssetAction::DoHasDedicatedExporter — the generic UDataAsset exporter is LAST so the
-    // DataAsset-derived EQS/StateTree types reach their structure-aware exporters first.
+    // Most-derived-first, mirroring CkDataAssetExporter_AssetAction::DoHasDedicatedExporter: the generic UDataAsset
+    // exporter is LAST so the DataAsset-derived EQS/StateTree types reach their structure-aware exporters first.
     static auto
     Route(
         UObject* InAsset,
@@ -250,9 +244,7 @@ namespace ck_asset_exporter_dispatch
         InOutSummary.Entries.Add(MoveTemp(InEntry));
     }
 
-    // Definition of the shared helper declared in CkAssetExporter_DispatchInternal.h (external linkage — GraphDump
-    // reuses this one definition). Best-effort on-disk file path for a package name (list/graph display only — never
-    // loads). Prefers the .uasset, then .umap; falls back to the .uasset guess when neither exists.
+    // Declared in CkAssetExporter_DispatchInternal.h; GraphDump's TU reuses this definition.
     auto
     Get_PackageDiskPath(
         const FString& InPackageName)
@@ -273,8 +265,7 @@ namespace ck_asset_exporter_dispatch
         return AssetFile;
     }
 
-    // Resolves a friendly-filter list to concrete classes (empty list = every supported type). Returns false + sets
-    // OutError when a name is unknown.
+    // Empty list = every supported type. False + OutError when a name is unknown.
     static auto
     Resolve_ClassFilters(
         const TArray<FString>& InClassFilters,
@@ -415,7 +406,6 @@ auto
         return InPackagePath + TEXT(".") + AssetName;
     };
 
-    // Disk path? (drive-letter prefix, or an explicit .uasset/.umap extension)
     const auto LooksLikeDiskPath =
         (Normalized.Len() >= 2 && FChar::IsAlpha(Normalized[0]) && Normalized[1] == TEXT(':')) ||
         Normalized.EndsWith(TEXT(".uasset")) ||
@@ -638,8 +628,7 @@ auto
     Root->SetNumberField(TEXT("skipped"), InSummary.Skipped);
     Root->SetNumberField(TEXT("failed"), InSummary.Failed);
 
-    // Written paths are absolute: manifest consumers (agents, wrappers) run with their own cwd, where the editor's
-    // relative "../../Content/..." form would not resolve.
+    // Absolute on purpose: consumers run with their own cwd, where the editor's "../../Content/..." would not resolve.
     const auto ToFull = [](const FString& InPath) -> FString
     {
         return InPath.IsEmpty() ? InPath : FPaths::ConvertRelativePathToFull(InPath);

@@ -18,15 +18,8 @@ struct CKPMG_API FCk_Handle_Pmg_DebugShape : public FCk_Handle_TypeSafe { GENERA
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Pmg_DebugShape);
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Cone apex direction in shape-local space. The mesh + wireframe are built so the apex points
-// along the chosen axis BEFORE the per-shape ECk_Plane_Axis rotation is applied. Use this to
-// avoid the "Pitch=-90 in the SceneNode local rotation" workaround that consumers (gym agents,
-// crowd debug) had to repeat to get an apex-forward cone — set Forward and the rotation is
-// baked into the mesh.
-//
-// Default Up matches the historical behavior: apex at +Z, base on the XY plane.
-//
+// Cone apex direction in shape-local space, baked into the mesh + wireframe BEFORE the
+// per-shape ECk_Plane_Axis rotation is applied.
 UENUM(BlueprintType)
 enum class ECk_Pmg_ConeOrientation : uint8
 {
@@ -90,15 +83,6 @@ enum class ECk_Pmg_DebugShape_Type : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Pmg_DebugShape_Type);
 
-// --------------------------------------------------------------------------------------------------------------------
-// Generic mutation requests for any PMG debug shape. The
-// FFragment_Pmg_DebugShape_Common fragment is shared by every shape variant
-// (basic / angular / directional / icon / symbol), so these requests work
-// against the FCk_Handle_Pmg_DebugShape type-safe handle uniformly. Issued
-// via UCk_Utils_Pmg_DebugShape_UE::Request_*; consumed by
-// FProcessor_Pmg_DebugShape_HandleRequests, which updates the cached
-// Common-fragment field AND any side effects on the live procmesh
-// (material parameters, visibility, collision).
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)

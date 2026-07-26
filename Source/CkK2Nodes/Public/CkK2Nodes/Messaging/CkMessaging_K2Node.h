@@ -37,21 +37,15 @@ class UCk_K2Node_Message_Base : public UCk_K2Node_UFunction_Base
     GENERATED_BODY()
 
 public:
-    // UObject interface
     auto PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) -> void override;
     auto ShouldShowNodeProperties() const -> bool override;
-    // End of UObject interface
 
-    // UEdGraphNode implementation
     auto PreloadRequiredAssets() -> void override;
-    // End of UEdGraphNode implementation
 
-    // K2Node implementation
     auto IsNodePure() const -> bool override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
     auto GetJumpTargetForDoubleClick() const -> UObject* override;
     auto JumpToDefinition() const -> void;
-    // End of K2Node implementation
 
 protected:
     virtual auto DoGet_MessageDefinitionPinsDirection() const -> ECk_EditorGraph_PinDirection
@@ -85,16 +79,12 @@ public:
     friend class SCk_GraphNode_Message_Broadcast;
 
 public:
-    // UEdGraphNode implementation
     auto GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText override;
     auto GetNodeTitleColor() const -> FLinearColor override;
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
     auto CreateVisualWidget() -> TSharedPtr<SGraphNode> override;
-    // End of UEdGraphNode implementation
 
-    // K2Node implementation
     auto GetMenuCategory() const -> FText override;
-    // End of K2Node implementation
 
 protected:
     auto DoAllocate_DefaultPins() -> void override;
@@ -129,18 +119,14 @@ public:
     friend class SCk_GraphNode_Message_Listen;
 
 public:
-    // UEdGraphNode implementation
     auto GetNodeTitle(ENodeTitleType::Type InTitleType) const -> FText override;
     auto GetNodeTitleColor() const -> FLinearColor override;
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
     auto CreateVisualWidget() -> TSharedPtr<SGraphNode> override;
     auto IsCompatibleWithGraph(UEdGraph const* InGraph) const -> bool override;
-    // End of UEdGraphNode implementation
 
-    // K2Node implementation
     auto GetMenuCategory() const -> FText override;
     auto GetCornerIcon() const -> FName override;
-    // End of K2Node implementation
 
 protected:
     auto DoAllocate_DefaultPins() -> void override;

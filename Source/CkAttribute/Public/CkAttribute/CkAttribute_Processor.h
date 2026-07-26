@@ -238,15 +238,8 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // The TExclude<FFragment_RefillAccumulator> term is what keeps the regular
-    // Float-on-Float refill path from accidentally double-ticking entities that
-    // belong to the accumulated path (Integer/Byte refills, where a Float
-    // accumulator backs an integer target). Without this exclusion, both
-    // processors match the same entity and TProcessor_Attribute_Refill_Impl
-    // would try to look up TFragment_RefillAttributeTarget<FCk_Handle_FloatAttribute>
-    // on an entity that only registered the Integer/Byte target — ensuring at
-    // runtime. AccumulatedRefill_Impl already requires the accumulator
-    // fragment, so excluding it here keeps the two queries disjoint.
+    // TExclude<FFragment_RefillAccumulator> keeps this query disjoint from the accumulated-refill one.
+    // See CkAttribute/CLAUDE.md.
     template <typename T_DerivedProcessor, concepts::ValidAttributeModifierFragment T_DerivedAttributeModifier,
               ECk_Attribute_Refill_Policy T_RefillMode>
     class TProcessor_Attribute_Refill_Impl : public ck_exp::TProcessor<
@@ -603,7 +596,6 @@ namespace ck::detail
 
 namespace ck
 {
-    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_MulticastType>
     class TProcessor_Attribute_FireSignals_CurrentMinMax
     {
@@ -611,9 +603,6 @@ namespace ck
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
-        // Pump-eligibility — see TProcessor_Attribute_RecomputeAll_CurrentMinMax for why the
-        // REGISTERED composite must surface the markers its internals consume. The clamped-signal
-        // tags live on the Current component's fragment type (the clamped value is Current).
         using MarkedDirtyByAnyOf = TDepList<
             typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::FTag_FireSignals_ValueChanged,
             typename T_DerivedAttribute<ECk_MinMaxCurrent::Min>::FTag_FireSignals_ValueChanged,
@@ -695,7 +684,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute>
     class TProcessor_Attribute_MinMaxClamp
     {
@@ -703,9 +691,6 @@ namespace ck
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
-        // Pump-eligibility — see TProcessor_Attribute_RecomputeAll_CurrentMinMax. The clamp
-        // marker is family-typed (keyed on the family's HandleType), so this composite's
-        // registry-wide Clear and dirty marker are scoped to its own family.
         using MarkedDirtyBy = TTag_Attribute_MayRequireClamping<typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::HandleType>;
 
     public:
@@ -731,7 +716,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll_CurrentMinMax
     {
@@ -739,12 +723,7 @@ namespace ck
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
-        // Pump-eligibility: this composite is what gets REGISTERED with the scheduler — the
-        // internal per-component processors' MarkedDirtyBy declarations never reach a descriptor.
-        // Without this alias the pump loop skips the composite entirely and attribute folds
-        // become strictly once-per-frame (writes made during pump passes — e.g. request drains
-        // triggered by callback chains — only became readable after this composite's slot in the
-        // NEXT frame).
+        // Pump-eligibility: only the REGISTERED composite's own markers reach a descriptor. See CkAttribute/CLAUDE.md.
         using MarkedDirtyByAnyOf = TDepList<
             typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Current>::AttributeFragmentType::FTag_RecomputeFinalValue,
             typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Min>::AttributeFragmentType::FTag_RecomputeFinalValue,
@@ -783,7 +762,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_ComputeAll_CurrentMinMax
     {
@@ -791,8 +769,6 @@ namespace ck
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
-        // Pump-eligibility — see TProcessor_Attribute_RecomputeAll_CurrentMinMax for why the
-        // REGISTERED composite must surface the markers its internals consume.
         using MarkedDirtyByAnyOf = TDepList<
             typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Current>::FTag_ComputeResult,
             typename T_DerivedAttributeModifier<ECk_MinMaxCurrent::Min>::FTag_ComputeResult,
@@ -822,7 +798,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_EndPlayAll_CurrentMinMax
     {

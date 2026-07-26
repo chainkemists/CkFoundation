@@ -292,13 +292,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Empty-payload request. Causes FProcessor_Transform_HandleRequests to add
-// FTag_Transform_Updated via the framework's dirty-tracking deferred-mutation
-// path, which then triggers FProcessor_Transform_FireSignals to rebroadcast
-// UUtils_Signal_TransformUpdate next frame even though the transform value
-// is unchanged. Routing through the request queue (instead of directly calling
-// AddOrGet<FTag_Transform_Updated> from gameplay code) is the only way to
-// correctly enroll the entity in the FireSignals MarkedDirtyBy set.
+// Empty-payload request: rebroadcasts UUtils_Signal_TransformUpdate next frame even though the transform
+// value is unchanged. Routing through the request queue (rather than adding FTag_Transform_Updated from
+// gameplay code) is the only way to enroll the entity in the FireSignals MarkedDirtyBy set.
 USTRUCT(BlueprintType)
 struct CKECSEXT_API FCk_Request_Transform_ForceRefresh : public FCk_Request_Base
 {

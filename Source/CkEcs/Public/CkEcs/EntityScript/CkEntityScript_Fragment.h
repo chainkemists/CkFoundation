@@ -26,9 +26,8 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_EntityScript_PendingReplicationRetry);
 
     // Stamped by FinishConstruction the frame an entity finishes construction; the hydration dispatchers skip
-    // entities carrying it (their feature Setups are still pending — Setups drain in the pump AFTER FGroup_DeferredApply,
-    // so an apply this main-pass would be stomped) and the last dispatcher clears it registry-wide after the loop so
-    // the pump / next frame applies post-Setup (spec §4.4, Phase 2 §2.4). Transient — never snapshotted.
+    // entities carrying it (their feature Setups drain in the pump AFTER FGroup_DeferredApply, so an apply this
+    // main-pass would be stomped) and the last dispatcher clears it registry-wide. Transient — never snapshotted.
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_EntityScript_ConstructedThisFrame);
 
     // --------------------------------------------------------------------------------------------------------------------

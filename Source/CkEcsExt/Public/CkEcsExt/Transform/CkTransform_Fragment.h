@@ -27,10 +27,8 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Transform_Updated);
     CK_DEFINE_ECS_TAG(FTag_Transform_Movable);
 
-    // Set when the entity transform is being driven externally (e.g. by scene-node propagation).
-    // SyncFromActor / SyncFromMeshSocket back off so they don't pull the anchor's pose back into
-    // the entity. SyncToActor still pushes the externally-driven transform onto the anchor each
-    // tick the parent moves, giving Unreal AttachToComponent semantics for anchor-bound children.
+    // Flips an anchor-bound entity from anchor-authoritative to parent-driven (Unreal AttachToComponent
+    // semantics): SyncFrom* back off, SyncToActor still pushes. See CkEcsExt/CLAUDE.md § "SceneNode Unreal anchors".
     CK_DEFINE_ECS_TAG(FTag_Transform_ExternallyDriven);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -243,7 +241,6 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Replicated Data USTRUCTs — one per transform component for granular replication
 
 USTRUCT()
 struct CKECSEXT_API FCk_RepData_Location
@@ -294,7 +291,6 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Entity-side container entry references
 
 namespace ck
 {

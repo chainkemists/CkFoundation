@@ -246,9 +246,8 @@ auto
 
     if (ck::Is_NOT_Valid(World))
     {
-        // an already-destroyed object may resolve no world (destroy-then-release ordering) —
-        // release is fire-and-forget, so this stays benign; the subsystem's post-GC sweep
-        // reconciles any tracking the dead object left behind
+        // A destroyed object resolves no world (destroy-then-release ordering); release is
+        // fire-and-forget and the subsystem's post-GC sweep reconciles the leftover tracking.
         if (ck::Is_NOT_Valid(InObject))
         {
             ck::core::Verbose(TEXT("TryReleaseToPool: [{}] is already destroyed and resolves no World — nothing to release"), InObject);
@@ -582,12 +581,8 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// [Ck][Diag] AngelScript runtime-asset GC diagnostic.
-// Dumps every object under /Script/AngelscriptAssets with its (and its outer's) GC-relevant
-// internal-object-flag picture, forces a full GC, then dumps again. Diagnostic-only — no
-// behavior change. Drives the root-cause investigation of why `asset ... of` sub-objects
-// (item traits, PlayerMappableKeySettings) are reclaimed on the first sweep even though their
-// rooted owner references them via a UPROPERTY. Grep the log for [ASGCDIAG].
+// [Ck][Diag] Dumps every object under /Script/AngelscriptAssets with its (and its outer's)
+// GC-relevant internal-object flags, forces a full GC, then dumps again. Log key: [ASGCDIAG].
 // --------------------------------------------------------------------------------------------------------------------
 namespace ck_asgcdiag
 {
@@ -620,8 +615,6 @@ namespace ck_asgcdiag
         auto Total = 0;
         auto NotRooted = 0;
         auto Garbage = 0;
-        // Among the NotRooted (the at-risk sub-objects), tally what their OWNER looks like — this
-        // single summary instantly discriminates the leading hypotheses.
         auto NotRooted_OwnerClusterRoot = 0;
         auto NotRooted_OwnerNative = 0;
         auto NotRooted_OwnerLoaderImport = 0;
@@ -670,16 +663,9 @@ namespace ck_asgcdiag
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Phase-1 scope probe — the CDO side of the same bug.
-    //
-    // The literal-asset dump above covers Phase 2 (our minted sub-objects under disregard owners in
-    // /Script/AngelscriptAssets). Phase 1 lives in /Script/Angelscript: each AS class CDO is a
-    // disregard object, and CkDeferredAssetInit re-runs `default X = assets::load::...` on it, leaving
-    // the disregard CDO pointing at a normal-pool cooked asset. Those are the refs the GC verifier
-    // (GarbageCollectionVerification.cpp:110) flags. We enumerate them directly here: for every CDO,
-    // FindReferences with NO outer limit (LimitOuter=nullptr) so EXTERNAL asset refs are captured —
-    // unlike Phase 2's owner-scoped, direct-outer finder. A ref is a violation iff its referencing CDO
-    // is disregard AND the ref is not rooted, not disregard, not garbage, not a cluster member.
+    // For every AS class CDO in /Script/Angelscript, FindReferences with NO outer limit
+    // (LimitOuter=nullptr) so EXTERNAL asset refs are captured. A ref is a violation iff its
+    // referencing CDO is disregard AND the ref is not rooted, not disregard, not garbage, not clustered.
     // ----------------------------------------------------------------------------------------------------------------
     static auto DumpAngelscriptCDOs(const TCHAR* InLabel) -> void
     {
@@ -712,8 +698,7 @@ namespace ck_asgcdiag
             const auto bCdoDisregard = GUObjectArray.IsDisregardForGC(CDO);
             if (bCdoDisregard) { ++CdoDisregard; }
 
-            // Only disregard CDOs can trip the verifier — skip the rest (e.g. classes whose CDO landed
-            // in the normal pool would be traced normally).
+            // Only disregard CDOs can trip the verifier; normal-pool CDOs are traced normally.
             if (NOT bCdoDisregard)
             { return; }
 
@@ -764,11 +749,8 @@ namespace ck_asgcdiag
             DumpAngelscriptCDOs(TEXT("AFTER-GC"));
         }));
 
-    // The authoritative oracle: turn the engine's own disregard-for-GC verifier on, then force a
-    // full-purge GC. It logs every "Disregard for GC object X referencing Y which is not part of root
-    // set" as a Warning, then Fatals (GarbageCollectionVerification.cpp:155). All warnings flush to the
-    // log before the crash, so this enumerates the COMPLETE violation list (Phase 1 + Phase 2). Use to
-    // cross-validate the structured dumps above. Expect a Fatal on an unfixed build.
+    // Turns on the engine's own disregard-for-GC verifier, then force-purges: it Warns for every
+    // violation (flushed to the log) and then Fatals. Expect the Fatal on an unfixed build.
     static FAutoConsoleCommand GCmd_VerifyGCAssumptions(
         TEXT("Ck.Diag.VerifyGCAssumptions"),
         TEXT("[Ck][Diag] enable gc.VerifyAssumptions(+OnFullPurge), force a full-purge GC (enumerates violations as Warnings, then Fatals)"),

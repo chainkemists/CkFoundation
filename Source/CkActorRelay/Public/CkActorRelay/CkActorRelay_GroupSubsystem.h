@@ -80,11 +80,8 @@ public:
 public:
     auto DoBroadcastChannelReadyChanged() -> void;
 
-    // Synchronous, one-shot resolver for callers that want "give me a channel right now or
-    // return invalid — I'll retry next pump." The Promise/Pending pattern's async subscription
-    // path is the wrong fit when the consumer already drives its own retry loop (e.g. an ECS
-    // processor that re-evaluates every tick). Used by CkStateMachine's owning-client push
-    // path; safe to use elsewhere with the same retry-vs-subscribe trade-off in mind.
+    // Synchronous one-shot: resolves a channel right now or returns invalid; the caller retries.
+    // For callers that already drive their own retry loop — see CLAUDE.md "Channel pools".
     auto Try_ResolvePending(FCk_Handle_PendingActorRelay& InPending) -> FCk_ActorRelay_ChannelResult;
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -112,11 +109,8 @@ private:
         TArray<TObjectPtr<ACk_ActorRelay_UE>>& InPool,
         int32& InOutRoundRobinIndex) const -> FCk_ActorRelay_ChannelResult;
 
-    // Server-side, capacity-driven grow-to-cap. When every channel in the pool is ECS-ready
-    // AND at Get_MaxEntitiesPerChannel(), and the pool is under the Get_ChannelCount() cap,
-    // spawn one more channel. The new channel replicates, becomes ready, and broadcasts
-    // ChannelReadyChanged — which re-drives any pending acquire through the existing retry path.
-    // No-op for unlimited-capacity groups (Get_MaxEntitiesPerChannel() == 0, e.g. Generic).
+    // Server-side, capacity-driven grow-to-cap; no-op for unlimited-capacity groups
+    // (Get_MaxEntitiesPerChannel() == 0). Policy: CLAUDE.md "Channel pools".
     auto DoMaybeGrowPool(
         TArray<TObjectPtr<ACk_ActorRelay_UE>>& InPool,
         APlayerState* InOwnerPlayerState) -> void;

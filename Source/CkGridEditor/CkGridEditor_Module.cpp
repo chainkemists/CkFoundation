@@ -17,17 +17,12 @@
 
 void FCkGridEditorModule::StartupModule()
 {
-    // The "Grid Paint" UEdMode (UCk_2dGridSystem_EdMode) is registered by AUTO-DISCOVERY: at
-    // OnAllModuleLoadingPhasesComplete, UAssetEditorSubsystem::RegisterEditorModes() iterates every
-    // non-abstract UEdMode CDO and registers it by its FEditorModeInfo::ID. There is no explicit
-    // RegisterMode() call for UEdMode-derived modes (FEditorModeRegistry::RegisterMode is for legacy
-    // FEdMode only). This module loads at the "Default" phase — before that delegate fires — so the
-    // CDO already exists when discovery runs. We force-reference StaticClass() here so the linker
-    // cannot strip the translation unit (and thus the CDO) from this module.
+    // The UEdMode registers by AUTO-DISCOVERY (UAssetEditorSubsystem::RegisterEditorModes iterates every
+    // non-abstract UEdMode CDO at OnAllModuleLoadingPhasesComplete) — there is no RegisterMode() call for
+    // UEdMode. This StaticClass() reference exists only so the linker cannot strip the TU, and with it the CDO.
     (void)UCk_2dGridSystem_EdMode::StaticClass();
 
-    // The out-of-mode grid preview is a component visualizer registered on GUnrealEd. GUnrealEd does not
-    // exist yet at the "Default" loading phase, so defer registration to OnPostEngineInit.
+    // GUnrealEd does not exist yet at the "Default" loading phase, so defer registration when it is absent.
     if (GUnrealEd != nullptr)
     {
         RegisterSpawnerVisualizer();
@@ -71,8 +66,7 @@ void FCkGridEditorModule::ShutdownModule()
     }
     _SpawnerVisualizer.Reset();
 
-    // The auto-discovered UEdMode is torn down by UAssetEditorSubsystem on OnEnginePreExit
-    // (UnregisterEditorModes) — nothing to undo for it here.
+    // The auto-discovered UEdMode is unregistered by UAssetEditorSubsystem on OnEnginePreExit.
     UE_LOG(CkGridEditor, Log, TEXT("CkGridEditor module shut down"));
 }
 

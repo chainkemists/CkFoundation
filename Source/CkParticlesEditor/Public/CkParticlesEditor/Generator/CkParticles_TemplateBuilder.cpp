@@ -56,11 +56,10 @@
 #include "UObject/UObjectGlobals.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Builds the template Niagara Systems from C++: a GPU emitter, the tagged renderer set (camera sprite /
-// velocity sprite / smoke sprite / carrier-mesh renderer), a User.BehaviorId int, and the DI wired as a
-// User.ParticleScript parameter. The behavior-call MODULE (Particle Update calling ParticleScript.ExecuteStage
-// and writing the full stage-output attribute set) is code-built too — it needs the forked engine's exported
-// pin-authoring API (CK_WITH_PARTICLES; inert on a stock engine).
+// Builds the template Niagara Systems from C++: a GPU emitter, the tagged renderer set, a User.BehaviorId int, and
+// the DI wired as a User.ParticleScript parameter. The behavior-call module (Particle Update calling
+// ParticleScript.ExecuteStage) is code-built too — it needs the forked engine's exported pin-authoring API
+// (CK_WITH_PARTICLES; inert on a stock engine).
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::particles_editor
@@ -73,10 +72,8 @@ namespace ck::particles_editor
         static const TCHAR* BurstPkgPath   = TEXT("/CkFoundation/CkParticles/Templates/PS_CkParticles_Template_Burst");
         static const TCHAR* BurstAssetName = TEXT("PS_CkParticles_Template_Burst");
 
-        // Code-builds + saves the VFX master material: samples a baked CkParticles texture (the shape/detail) via a
-        // "BaseTexture" parameter, tints it by the per-particle Color the behaviors write, additive + unlit. The
-        // texture parameter lets per-effect material instances swap the look later (glow/smoke/electric/...).
-        // Returns nullptr on failure so the template falls back to the default sprite material. Pure UMaterial API.
+        // Samples a baked texture through a "BaseTexture" parameter that per-effect material instances swap later.
+        // Returns nullptr on failure — the template then falls back to the default sprite material.
         static auto Build_VfxMasterMaterial(UTexture2D* InBaseTexture) -> UMaterialInterface*
         {
             static const TCHAR* MatPkgPath = TEXT("/CkFoundation/CkParticles/Templates/M_CkParticles_VfxMaster");
@@ -120,8 +117,7 @@ namespace ck::particles_editor
                 TexSample->SamplerType = UMaterialExpressionTextureBase::GetSamplerTypeForTexture(InBaseTexture);
             }
 
-            // Emissive = texture (RGBA, default output) x ParticleColor ; Opacity = texture alpha (for translucent
-            // variants — additive ignores it). Default "" outputs avoid pin-name guessing on the colour chain.
+            // Default "" outputs avoid pin-name guessing; Opacity only matters for translucent variants.
             UMaterialEditingLibrary::ConnectMaterialExpressions(TexSample, TEXT(""),  MulRgb, TEXT("A"));
             UMaterialEditingLibrary::ConnectMaterialExpressions(PColor,    TEXT(""),  MulRgb, TEXT("B"));
             UMaterialEditingLibrary::ConnectMaterialProperty(MulRgb,    TEXT(""),  MP_EmissiveColor);
@@ -141,9 +137,7 @@ namespace ck::particles_editor
             return Mat;
         }
 
-        // Builds one Material Instance per baked texture (parented to the VFX master, overriding BaseTexture), saved
-        // under /CkFoundation/CkParticles/Materials/. A spawn picks one per effect via the sprite renderer's
-        // user-param binding (UNiagaraComponent::SetVariableMaterial). Null-tolerant.
+        // A spawn picks one per effect through the sprite renderer's user-param binding (SetVariableMaterial).
         static auto Build_TextureMaterialInstances(UMaterialInterface* InMaster) -> void
         {
             if (InMaster == nullptr) { return; }
@@ -199,7 +193,6 @@ namespace ck::particles_editor
         }
 
         // Writes a module input as a rapid-iteration constant: Constants.<UniqueEmitterName>.<ModuleCallName>.<Input>
-        // (the exact names the corpus exporter reads back out of marketplace assets).
         template <typename T_Value>
         static auto Set_ModuleRapidIterationValue(
             const FString&                InUniqueEmitterName,
@@ -237,18 +230,15 @@ namespace ck::particles_editor
         }
 
         // ---- Renderer set (shared by both templates) -----------------------------------------------------------
-        //
         // Every behavior writes Particles.VisibilityTag, so each renderer draws only its tagged particles:
-        //   0 camera sprite / 1 velocity-aligned sprite / 2 smoke sprite / 3 carrier meshes (Particles.MeshIndex).
-        // If the tag attribute were ever missing, Niagara renders every particle in EVERY renderer — the code-built
-        // behavior module always writes it, which is what keeps this design sound.
+        // 0 camera sprite / 1 velocity-aligned sprite / 2 smoke sprite / 3 carrier meshes (Particles.MeshIndex).
+        // Were the tag attribute ever missing, Niagara would render every particle in EVERY renderer.
         static auto Configure_Renderers(
             UNiagaraEmitter*              InEmitter,
             const FGuid&                  InVersion,
             FVersionedNiagaraEmitterData* InEmitterData,
             UMaterialInterface*           InSpriteMaterial) -> void
         {
-            // [0] Base camera-facing sprite — reuse the factory-made renderer when present (continuous template).
             auto* BaseSprite = static_cast<UNiagaraSpriteRendererProperties*>(nullptr);
             for (UNiagaraRendererProperties* Renderer : InEmitterData->GetRenderers())
             {
@@ -268,7 +258,7 @@ namespace ck::particles_editor
                     FNiagaraVariable(FNiagaraTypeDefinition::GetUMaterialDef(), ck::particles::Get_SpriteMaterialParameterName());
             }
 
-            // [1] Velocity-aligned sprite — streaks/tracers; the stretch is Particles.SpriteSize.y along motion.
+            // Streaks/tracers: the stretch is Particles.SpriteSize.y along motion.
             auto* VelocitySprite = NewObject<UNiagaraSpriteRendererProperties>(InEmitter, TEXT("SpriteRenderer_Velocity"));
             VelocitySprite->Alignment  = ENiagaraSpriteAlignment::VelocityAligned;
             VelocitySprite->FacingMode = ENiagaraSpriteFacingMode::FaceCamera;
@@ -279,7 +269,7 @@ namespace ck::particles_editor
             { VelocitySprite->Material = InSpriteMaterial; }
             InEmitter->AddRenderer(VelocitySprite, InVersion);
 
-            // [2] Smoke sprite — translucent depth-faded soft material; Particles.SpriteRotation applies.
+            // Translucent depth-faded soft material; Particles.SpriteRotation applies.
             auto* SmokeSprite = NewObject<UNiagaraSpriteRendererProperties>(InEmitter, TEXT("SpriteRenderer_Smoke"));
             SmokeSprite->RendererVisibility = 2;
             if (auto* SmokeMat = LoadObject<UMaterialInterface>(nullptr, *ck::particles::Get_VfxMasterMaterialObjectPath(TEXT("SoftSmoke"))))
@@ -288,8 +278,7 @@ namespace ck::particles_editor
             { SmokeSprite->Material = InSpriteMaterial; }
             InEmitter->AddRenderer(SmokeSprite, InVersion);
 
-            // [3] Carrier meshes — Particles.MeshIndex picks Sweep/Tube/Shell/Disc; each mesh carries its own
-            // slot material (SweepErode/FresnelShell), Particles.Scale + Particles.MeshOrientation apply.
+            // Particles.MeshIndex picks the carrier; Particles.Scale + Particles.MeshOrientation apply.
             auto* MeshRenderer = NewObject<UNiagaraMeshRendererProperties>(InEmitter, TEXT("MeshRenderer_Carriers"));
             MeshRenderer->RendererVisibility = 3;
             MeshRenderer->FacingMode = ENiagaraMeshFacingMode::Default;
@@ -312,11 +301,6 @@ namespace ck::particles_editor
         }
 
         // ---- Burst emitter stack (built from an empty emitter so no continuous SpawnRate is left behind) -------
-        //
-        // Emitter Update: EmitterState (Loop Duration written as a rapid-iteration constant; the module asset's
-        // own defaults drive the loop/lifecycle switches) + SpawnBurst_Instantaneous. Particle Spawn:
-        // SystemLocation + defaults for SpriteSize/SpriteRotation/Lifetime. Particle Update: UpdateAge (the
-        // behavior module — added later — writes everything else).
         static auto Add_BurstEmitterStack(
             UNiagaraEmitter*              InEmitter,
             FVersionedNiagaraEmitterData* InEmitterData) -> bool
@@ -366,9 +350,8 @@ namespace ck::particles_editor
         }
 
 #if CK_WITH_PARTICLES
-        // Construct a Private dynamic-pin node type (Map Get / Map Set) via reflection — its header isn't public,
-        // so we resolve the UClass by path, NewObject as the public base UNiagaraNodeWithDynamicPins, and add it
-        // to the graph manually (FGraphNodeCreator<T> needs the compile-time type).
+        // The Map Get / Map Set node types are Private (no public header), so resolve the UClass by path, NewObject
+        // as the public base, and add it to the graph manually — FGraphNodeCreator<T> needs the compile-time type.
         static auto Create_DynamicPinNode(
             UNiagaraGraph* InGraph,
             const TCHAR*   InClassPath) -> UNiagaraNodeWithDynamicPins*
@@ -414,11 +397,9 @@ namespace ck::particles_editor
             return nullptr;
         }
 
-        // Builds the per-particle behavior module ENTIRELY in C++ (no hand-authoring): a Module-usage script whose
-        // graph is Input -> Map Get (reads DI + params) -> ExecuteStage (DI member fn) -> Map Set (Particles.*) ->
-        // Output. Requires the forked-engine pin-authoring export (gated by CK_WITH_PARTICLES). Mirrors the
-        // hand-authored scratch module; the Particles.Position (LWC) vs DI Vec3 difference is auto-bridged by
-        // TryCreateConnection (same conversion the in-editor module used).
+        // A Module-usage script whose graph is Input -> Map Get (reads DI + params) -> ExecuteStage (DI member fn)
+        // -> Map Set (Particles.*) -> Output. The Particles.Position (LWC) vs DI Vec3 difference is auto-bridged
+        // by TryCreateConnection.
         static auto Build_BehaviorModuleScript(
             UObject* InOuter) -> UNiagaraScript*
         {
@@ -491,7 +472,6 @@ namespace ck::particles_editor
             UEdGraphPin* SetMeshIndex   = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetIntDef(),      TEXT("Particles.MeshIndex"));
             UEdGraphPin* SetVisTag      = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetIntDef(),      TEXT("Particles.VisibilityTag"));
 
-            // Null-tolerant connect: if a pin lookup misses (e.g. a signature name changed), skip rather than crash.
             const auto Wire = [Schema](UEdGraphPin* InFrom, UEdGraphPin* InTo)
             {
                 if (InFrom != nullptr && InTo != nullptr)
@@ -499,9 +479,9 @@ namespace ck::particles_editor
             };
 
             // ---- Thread the parameter map (matches Engine's NiagaraScriptFactory module skeleton) ----
-            // The Input map FANS OUT to both Map Get's and Map Set's Source pins; it threads to Output
-            // *through Map Set* (Source -> Dest). Map Get has NO map output pin — it only taps the map to
-            // read values, so the old MapGet-output -> MapSet-Source wire connected nothing and severed the chain.
+            // The Input map FANS OUT to both Map Get's and Map Set's Source pins; it threads to Output *through
+            // Map Set*. Map Get has NO map output pin, so wiring MapGet-output -> MapSet-Source connects nothing
+            // and severs the chain.
             Wire(InputNode->GetOutputPin(0),                        Find_ParameterMapPin(MapGet, EGPD_Input,  Schema));
             Wire(InputNode->GetOutputPin(0),                        Find_ParameterMapPin(MapSet, EGPD_Input,  Schema));
             Wire(Find_ParameterMapPin(MapSet, EGPD_Output, Schema), OutputNode->GetInputPin(0));
@@ -588,21 +568,21 @@ namespace ck::particles_editor
 
             // ---- System + GPU emitter ----
             // Continuous: factory defaults (spawn-rate 10 + init modules + a sprite renderer we then retag).
-            // Burst: an EMPTY stack (output nodes only) so no continuous SpawnRate survives; the burst stack is
-            // hand-added module-by-module below.
+            // Burst: an EMPTY stack (output nodes only) so no continuous SpawnRate survives.
+            constexpr auto CreateDefaultNodes = true;
             auto* System = NewObject<UNiagaraSystem>(Package, InAssetName, RF_Public | RF_Standalone);
-            UNiagaraSystemFactoryNew::InitializeSystem(System, /*bCreateDefaultNodes*/ true);
+            UNiagaraSystemFactoryNew::InitializeSystem(System, CreateDefaultNodes);
 
+            const auto AddDefaultModulesAndRenderers = NOT bInBurstSpawn;
             auto* Emitter = NewObject<UNiagaraEmitter>(GetTransientPackage(), TEXT("CkParticles"), RF_Transactional);
-            UNiagaraEmitterFactoryNew::InitializeEmitter(Emitter, /*bAddDefaultModulesAndRenderers*/ NOT bInBurstSpawn);
+            UNiagaraEmitterFactoryNew::InitializeEmitter(Emitter, AddDefaultModulesAndRenderers);
 
             if (auto* EmitterData = Emitter->GetLatestEmitterData())
             {
                 EmitterData->SimTarget = ENiagaraSimTarget::GPUComputeSim;
 
-                // LOCAL space: behaviors write absolute positions (e.g. the swirl helix). In world space every spawned
-                // system collapses onto world origin; in local space those positions are relative to the spawn component,
-                // so each effect renders where it is spawned.
+                // LOCAL space: behaviors write absolute positions, so in world space every spawned system would
+                // collapse onto the world origin instead of rendering where it was spawned.
                 EmitterData->bLocalSpace = true;
 
                 // GPU emitters don't auto-compute bounds cheaply; without generous fixed bounds the whole system is
@@ -611,10 +591,10 @@ namespace ck::particles_editor
                 EmitterData->FixedBounds = FBox(FVector(-3000.0), FVector(3000.0));
             }
 
-            // Use the editor utility (exported) instead of the raw runtime UNiagaraSystem::AddEmitterHandle — it
-            // rebuilds the system-script emitter nodes AND creates the System Overview node, so the emitter is both
-            // wired and visible. Copies the emitter into the System (bCreateCopy).
-            FNiagaraEditorUtilities::AddEmitterToSystem(*System, *Emitter, FGuid(), /*bCreateCopy*/ true);
+            // The editor utility, not the raw runtime UNiagaraSystem::AddEmitterHandle: it rebuilds the
+            // system-script emitter nodes AND creates the System Overview node, so the emitter is wired and visible.
+            constexpr auto CreateCopy = true;
+            FNiagaraEditorUtilities::AddEmitterToSystem(*System, *Emitter, FGuid(), CreateCopy);
 
             if (System->GetEmitterHandles().Num() == 0)
             {
@@ -689,8 +669,7 @@ namespace ck::particles_editor
     {
         using namespace TemplateBuilderLocal;
 
-        // Asset pipeline order matters: textures -> materials (sample the textures) -> meshes (slot the
-        // materials) -> templates (reference all three).
+        // Order matters: textures -> materials (sample them) -> meshes (slot them) -> templates (reference all three).
         Generate_AllVfxTextures();
 
         auto* BaseTex = LoadObject<UTexture2D>(nullptr,
@@ -701,8 +680,11 @@ namespace ck::particles_editor
         Generate_AllVfxMaterials();
         Generate_AllVfxMeshes();
 
-        auto* Continuous = DoBuild_OneTemplateSystem(PkgPath, AssetName, /*burst*/ false, VfxMaterial);
-        auto* Burst      = DoBuild_OneTemplateSystem(BurstPkgPath, BurstAssetName, /*burst*/ true, VfxMaterial);
+        constexpr auto ContinuousSpawn = false;
+        constexpr auto BurstSpawn      = true;
+
+        auto* Continuous = DoBuild_OneTemplateSystem(PkgPath, AssetName, ContinuousSpawn, VfxMaterial);
+        auto* Burst      = DoBuild_OneTemplateSystem(BurstPkgPath, BurstAssetName, BurstSpawn, VfxMaterial);
 
         return Continuous != nullptr && Burst != nullptr;
     }

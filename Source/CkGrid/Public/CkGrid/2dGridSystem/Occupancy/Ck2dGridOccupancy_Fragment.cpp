@@ -10,10 +10,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Client-side RegisterLazy registrar. The container entry lives on the GRID entity, so the
-// handler's Entity is the grid itself — apply the SyncReplication fragment to it directly
-// (no inventory-style record indirection). The ClientOnly SyncReplication processor then
-// rebuilds placement entities and the reconcile pass stamps the cells.
+// Every handler here is keyed on the GRID entity — that is where the container entry lives —
+// so there is no record indirection between the payload and the entity it applies to.
 [[maybe_unused]] static struct F2dGridOccupancy_RepHandlerRegistrar
 {
     F2dGridOccupancy_RepHandlerRegistrar()
@@ -26,9 +24,6 @@
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_2dGridPlacements>({
-                // Produce-only capture (Phase 3A.4): mirror FProcessor_2dGridOccupancy_Replicate's live-state build
-                // off the grid's placement record. Produce is capture-only. Keyed on the grid entity (which holds
-                // the placement record).
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT Entity.Has<ck::FFragment_RecordOf_GridPlacements>())
@@ -51,9 +46,8 @@
                     Data.Placements = MoveTemp(Entries);
                     return FInstancedStruct::Make(Data);
                 },
-                // Client net path stamps the sync fragment consumed by the ClientOnly Occupancy SyncReplication
-                // processor (which owns rebuild + reconcile). The authority load path takes HydrationApply instead —
-                // that processor never runs on the host, so nothing would rebuild the record.
+                // Stamps the sync fragment the ClientOnly SyncReplication processor owns. That processor
+                // never runs on the host, which is why the load path needs its own HydrationApply below.
                 .NetApply = [DoApplyPlacements](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& Old) -> ECk_Persistence_ApplyResult
                 {
                     const auto& NewPlacements = New.Get<FCk_RepData_2dGridPlacements>().Placements;
@@ -65,11 +59,9 @@
                             : TArray<FCk_2dGridPlacement_ReplicatedEntry>{});
                     return ECk_Persistence_ApplyResult::Applied;
                 },
-                // Load-path authority hydration (mirrors CkInventory [F1-D6]): the payload is keyed on the GRID
-                // entity; on the authority host the ClientOnly SyncReplication processor never runs, so re-drive
-                // the placement record directly. Request_AddPlacement re-arms MayRequireReplication, so the
-                // AuthorityOnly Replicate pass pushes the rebuilt set and clients converge via the ordinary
-                // SyncReplication path (no explicit re-arm needed).
+                // Load-path authority hydration: on the host the ClientOnly SyncReplication processor never
+                // runs, so re-drive the placement record directly. Request_AddPlacement re-arms
+                // MayRequireReplication, so clients converge via the ordinary SyncReplication path.
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     if (NOT UCk_Utils_2dGridSystem_UE::Has(Entity))
@@ -79,11 +71,8 @@
                     auto Grid = UCk_Utils_2dGridSystem_UE::Cast(Entity);
                     for (const auto& Entry : NewPlacements)
                     {
-                        // Do NOT gate on occupant validity: a restored placement's occupant is deterministically
-                        // invalid (unlabeled ConstructSpawned child → save-transient → entt::null on load), and
-                        // Request_AddPlacement adds the placement + Cells regardless (Cells are authoritative; an
-                        // invalid occupant only skips the death-watch). A NotReady gate would never flip and would
-                        // drop the whole payload past the dispatcher timeout.
+                        // Occupant validity is deliberately NOT gated here — see "Occupancy persistence"
+                        // in CkGrid/Claude.md.
                         UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement(
                             Grid, Entry.Get_Occupant(), Entry.Get_Anchor(), Entry.Get_Rotation(), Entry.Get_Cells());
                     }

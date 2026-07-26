@@ -24,8 +24,6 @@ public:
     CK_GENERATED_BODY(UCk_ActivatableWidget_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // ICk_UI_LayerParticipant Implementation
-    // ----------------------------------------------------------------------------------------------------------------
 
 public:
     auto OnPrePushToLayer_Implementation(FGameplayTag InLayerTag) -> void override;
@@ -33,8 +31,6 @@ public:
     auto OnPrePopFromLayer_Implementation(FGameplayTag InLayerTag) -> void override;
     auto OnPostPopFromLayer_Implementation(FGameplayTag InLayerTag) -> void override;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Context
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
@@ -68,8 +64,6 @@ private:
         FCk_Handle_ContextReceiver InContextReceiver);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Layer Tag Accessor
-    // ----------------------------------------------------------------------------------------------------------------
 
 public:
     UFUNCTION(BlueprintPure)
@@ -79,8 +73,6 @@ public:
     auto ValidateCompiledWidgetTree(const UWidgetTree& BlueprintWidgetTree, class IWidgetCompilerLog& CompileLog) const -> void override;
 #endif
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // UWidget Overrides
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
@@ -92,8 +84,6 @@ protected:
     auto NativeDestruct() -> void override;
     auto NativeOnDeactivated() -> void override;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Properties
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:

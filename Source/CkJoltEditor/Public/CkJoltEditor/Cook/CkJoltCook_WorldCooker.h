@@ -10,14 +10,8 @@ class UWorld;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/// The shared static-world cooker: extracts every static actor's collision (the same
-/// ck::jolt::bake extraction the live PIE path uses — one extraction path, no divergence),
-/// partitions actor groups into bake-grid cells, serializes deduped shape blobs
-/// (Shape::SaveWithChildren, one shared ShapeToIDMap per cell), and saves the per-cell +
-/// index data assets under the configured cooked-data root.
-///
-/// Consumed by UCk_JoltCook_EditorSubsystem_UE (primary: world already booted by the editor)
-/// and UCk_JoltCook_Commandlet (headless; see its header for the world-boot caveats).
+/// The shared static-world cooker, consumed by UCk_JoltCook_EditorSubsystem_UE (primary) and
+/// UCk_JoltCook_Commandlet (headless). Pipeline and invariants: CkJoltEditor/CLAUDE.md.
 class CKJOLTEDITOR_API FCk_Jolt_WorldCooker
 {
 public:
@@ -34,16 +28,14 @@ public:
     };
 
 public:
-    /// Cooks InWorld's currently-loaded static actors. For World Partition maps, unloaded
-    /// actors are visited in batches via FWorldPartitionHelpers::ForEachActorWithLoading.
-    /// Pass DryRun to extract + report without saving assets.
+    /// On World Partition maps, unloaded actors are visited in batches via
+    /// FWorldPartitionHelpers::ForEachActorWithLoading. DryRun extracts + reports, saving nothing.
     static auto
     Cook_World(
         UWorld& InWorld,
         bool InDryRun = false) -> FCookStats;
 
-    /// Recomputes every relevant actor's source hash against the existing cooked index and
-    /// reports stale/missing/up-to-date counts without writing anything.
+    /// Reports stale/missing/up-to-date counts against the existing cooked index; writes nothing.
     static auto
     Validate_World(
         UWorld& InWorld) -> FCookStats;

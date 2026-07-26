@@ -71,7 +71,6 @@ namespace ck::asset_exporter::cascade
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Public API
 
 auto
     FCk_CascadeExporter::
@@ -144,7 +143,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Distributions — where Cascade keeps the authored numbers.
 
 auto
     FCk_CascadeExporter::
@@ -238,7 +236,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Module serialization — generic reflection dump; distributions rasterized, object refs recorded as paths.
 
 auto
     FCk_CascadeExporter::
@@ -372,7 +369,7 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Plain text — rendered from the JSON so the two never diverge.
+// The text sibling is rendered FROM the JSON so the two can never diverge.
 
 namespace ck::asset_exporter::cascade
 {

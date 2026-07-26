@@ -20,17 +20,11 @@
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Camera "layer" fragments — the SmTask-style data side of UCk_CameraLayer_EntityScript. A layer is a child entity
-// of the Camera director; it acquires attribute modifiers on the director's tuner attributes (named by the layer's
-// auto-generated gameplay tag), and the framework auto-blends them in/out via FFragment_CameraLayer_Blend.
-// --------------------------------------------------------------------------------------------------------------------
 
 class UCk_CameraLayer_EntityScript;
 
 namespace ck
 {
-    // Per-layer identity/config: the script class (so RemoveLayer / OneOnly can match), the ordering group, and an
-    // optional camera target (rig re-orient or composed-POV blend, per its mode).
     struct CKCAMERA_API FFragment_CameraLayer_Params
     {
     public:
@@ -44,9 +38,6 @@ namespace ck
         int32                                     _Priority = 0;
         FCk_Camera_Target                         _CameraTarget;
 
-        // The persistent base layer created by UCk_Utils_Camera_UE::Add (one per director). It represents the
-        // resting profile, is pinned at full blend, and is never evicted (OneOnly), pruned, or removed — feature
-        // layers always blend back to it. Lives at the lowest priority so any real layer dominates it.
         bool _IsDefault = false;
 
     public:
@@ -61,9 +52,6 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Per-layer blend weight in [0,1]. _Alpha interpolates toward _TargetAlpha at _BlendRate (units/sec). Blend-in:
-    // target 1. Blend-out (removal / OneOnly eviction): target 0 → pruned when it reaches 0. The blend processor
-    // advances _Alpha and rewrites each acquired modifier's effective delta from this weight — invisible to the layer.
     struct CKCAMERA_API FFragment_CameraLayer_Blend
     {
     public:
@@ -79,9 +67,6 @@ namespace ck
         float _TargetAlpha = 1.0f;
         float _BlendRate   = 1000.0f; // ~instant unless overridden
 
-        // Edge-detect guards so the blend processor fires FullyBlendedIn / FullyBlendedOut
-        // exactly once per crossing. Each fire resets the opposite guard, so a layer that
-        // blends in, out, then in again re-fires correctly.
         bool _FiredBlendedIn  = false;
         bool _FiredBlendedOut = false;
 
@@ -95,9 +80,7 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // One acquired-modifier record: the modifier entity, the tuner attribute it modifies, the layer-authored target
-    // (the value at full blend), the user-facing operation, and the targeted component (Current for scalars; Min/Max
-    // for FloatRange tuners). The blend processor scales target→effective each frame; teardown removes the modifier.
+    // _Target is the layer-authored value at FULL blend; the blend processor scales it to the modifier's live delta.
     template <typename T_ModHandle, typename T_AttrHandle, typename T_Delta>
     struct TCk_CameraLayer_AcquiredModifier
     {
@@ -113,9 +96,8 @@ namespace ck
     using FCk_CameraLayer_RotatorModifier = TCk_CameraLayer_AcquiredModifier<FCk_Handle_RotatorAttributeModifier, FCk_Handle_RotatorAttribute, FRotator>;
     using FCk_CameraLayer_IntegerModifier = TCk_CameraLayer_AcquiredModifier<FCk_Handle_IntegerAttributeModifier, FCk_Handle_IntegerAttribute, int32>;
 
-    // The attribute modifiers this layer has acquired, kept in per-type arrays so the blend processor iterates each
-    // typed array directly (no per-entry type dispatch) and teardown removes them — they live under the tuner
-    // ATTRIBUTE, not under the layer, so they are not auto-destroyed with the layer entity.
+    // These modifiers live under the tuner ATTRIBUTE, not under the layer, so destroying the layer does NOT destroy
+    // them — teardown must go through UCk_Utils_CameraLayer_UE::Remove_AllAcquiredModifiers.
     struct CKCAMERA_API FFragment_CameraLayer_AcquiredModifiers
     {
     public:
@@ -130,9 +112,6 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Marks an active layer (admitted to the compose loop). Stamped by EnterLayer, cleared by ExitLayer. Pure runtime
-    // state — never persist it: tags round-trip by default (opt-OUT model), and a restored layer entity carrying only
-    // this tag would survive orphans() as an inert ghost while the fresh utils_camera::Add rebuilds the real layers.
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_CameraLayer_Active);
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -141,7 +120,6 @@ namespace ck
 
     CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfCameraLayers, FCk_Handle_CameraLayer);
 
-    // Shared record-of-layers utility (used by both the processors and the Utils class).
     struct CKCAMERA_API FUtils_RecordOfCameraLayers : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfCameraLayers> {};
 }
 

@@ -29,14 +29,12 @@ auto
         TEXT("Invalid Handle passed to JoltBody Add"))
     { return {}; }
 
-    // Writeback + kinematic push both operate on the entity's Transform, so a JoltBody REQUIRES the
-    // Transform feature (it composes onto the target entity directly, like a Probe).
+    // Writeback + kinematic push both operate on the entity's own Transform.
     CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InHandle),
         TEXT("Cannot Add a JoltBody to Entity [{}] because it does NOT have the Transform feature."), InHandle)
     { return {}; }
 
-    // Cross-engine ownership: a Chaos-simulated entity cannot also be Jolt-simulated. Claim fails loudly
-    // at the composing site (its own ensure) and returns an invalid handle here.
+    // Chaos XOR Jolt per entity. A failed claim already ensured inside TryClaim_Jolt.
     if (NOT ck::physics_ownership::TryClaim_Jolt(InHandle))
     { return {}; }
 
@@ -45,9 +43,8 @@ auto
     InHandle.Add<ck::FFragment_JoltBody_StepPose>();
     InHandle.Add<ck::FTag_JoltBody_NeedsSetup>();
 
-    // A body composed Asleep is batch-added DontActivate, and Jolt never fires OnBodyDeactivated for a
-    // never-activated body — mirror the intended initial state onto the tag at composition, or
-    // Get_SleepState would report Awake until the body's first activate-then-sleep cycle.
+    // Jolt never fires OnBodyDeactivated for a never-activated body, so a body composed Asleep needs the tag
+    // stamped here or Get_SleepState reports Awake until its first activate-then-sleep cycle.
     if (InParams.Get_InitialSleepState() == ECk_Jolt_SleepState::Asleep)
     { InHandle.Add<ck::FTag_JoltBody_Sleeping>(); }
 
@@ -124,8 +121,7 @@ auto
         TEXT("Invalid JoltBody Handle passed to Get_LinearVelocity"))
     { return FVector::ZeroVector; }
 
-    // Not-yet-added is a legitimate transient state (setup is deferred) — report zero, mirroring
-    // Get_SleepState's pre-setup behavior.
+    // Not-yet-added is a legitimate transient state (setup is deferred) — report zero, never ensure.
     const auto& Current = InJoltBody.Get<ck::FFragment_JoltBody_Current>();
     if (NOT Current.Get_BodyAdded())
     { return FVector::ZeroVector; }

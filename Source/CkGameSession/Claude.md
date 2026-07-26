@@ -19,6 +19,15 @@ Session state changes fire ECS signals; UI and gameplay systems listen to those 
 
 ---
 
+## Implementation notes
+
+`UCk_GameSession_Subsystem_UE` owns a private `ck::FEcsWorld` (`_InternalEcsWorld`) purely to host the
+signal entity. This used to be implicit — `FCk_Registry`'s default ctor auto-allocated an entt registry —
+but post-migration the world must be allocated explicitly in `Initialize`. `Deinitialize` clears
+`_SignalHandle` *before* resetting the world, so outstanding subscribers resolve cleanly via the slot table.
+
+---
+
 ## Anti-patterns
 
 Don't poll `AGameMode` state directly in processors — listen to session state change signals.

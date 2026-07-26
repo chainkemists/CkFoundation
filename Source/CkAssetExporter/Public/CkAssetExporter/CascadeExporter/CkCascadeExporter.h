@@ -24,16 +24,12 @@ struct CKASSETEXPORTER_API FCk_CascadeExportResult
     FString ErrorMessage;
     FString AssetName;
 
-    // Object paths of every material any emitter uses — the corpus orchestrator chains these into
-    // material (and from there texture) exports.
+    // Chained by the corpus orchestrator into material (and from there texture) exports.
     TArray<FString> ReferencedMaterials;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Exports a legacy Cascade UParticleSystem to JSON + plain text (LOD 0 only). Modules are dumped generically via
-// reflection — every UPROPERTY on every module — with UDistribution properties rasterized to their authored form
-// (constant / uniform min-max / curve keys / particle parameter), which is where Cascade keeps the recipe numbers.
-// --------------------------------------------------------------------------------------------------------------------
+
 class CKASSETEXPORTER_API FCk_CascadeExporter
 {
 public:

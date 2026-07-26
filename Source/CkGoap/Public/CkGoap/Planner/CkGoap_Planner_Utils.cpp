@@ -2,14 +2,14 @@
 
 #include "CkGoap/CkGoap_Log.h"
 #include "CkGoap/Planner/CkGoap_Planner_Fragment.h"
-#include "CkGoap/Planner/CkGoap_Planner_Processor.h"        // FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner
-#include "CkGoap/Planner/CkGoap_Planner_Record_Internal.h"  // FFragment_RecordOfGoapPlanners + utils struct
-#include "CkGoap/Planner/CkGoap_Planner_Internal.h"         // DoCreateOrFindActionEntity
+#include "CkGoap/Planner/CkGoap_Planner_Processor.h"
+#include "CkGoap/Planner/CkGoap_Planner_Record_Internal.h"
+#include "CkGoap/Planner/CkGoap_Planner_Internal.h"
 #include "CkGoap/Action/CkGoap_Action_Fragment.h"
-#include "CkGoap/Action/CkGoap_Action_Utils.h"             // Action Has() for promotion validation
-#include "CkGoap/Action/CkGoap_Action_Record_Internal.h"        // FFragment_RecordOfGoapActions + utils struct
-#include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"       // KeyRegistry — Get_LastSearchDebug tag resolution
-#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"          // Request_AddSubscriber
+#include "CkGoap/Action/CkGoap_Action_Utils.h"
+#include "CkGoap/Action/CkGoap_Action_Record_Internal.h"
+#include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"
+#include "CkGoap/WorldState/CkGoap_WorldState_Utils.h"
 #include "CkAStar/CkAStar_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -18,10 +18,6 @@
 #include "CkLabel/CkLabel_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// DoCreateOrFindActionEntity
-//
-// Single entity-creation primitive used by AddAction. Does NOT manage
-// implicit-root seeding or tree edges; callers layer that on.
 
 auto
     ck::goap::internal_planner::
@@ -37,14 +33,11 @@ auto
         TEXT("Invalid _ActionClass in DoCreateOrFindActionEntity (ActionSet [{}])"), InPlanner)
     { return {}; }
 
-    // Identity tag derived from the Action's class.
     const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InParams.Get_ActionClass());
     CK_ENSURE_IF_NOT(ActionTag.IsValid(),
         TEXT("Could not derive a valid action tag for class [{}]"), InParams.Get_ActionClass())
     { return {}; }
 
-    // Warn-and-return-existing: a given class can only be registered once per
-    // ActionSet catalog. Callers wanting reuse get the existing handle back.
     if (auto Existing = UCk_Utils_Goap_Planner_UE::Find_Action(InPlanner, ActionTag);
         ck::IsValid(Existing))
     {
@@ -56,8 +49,7 @@ auto
 
     auto ActionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Action>(InPlanner);
 
-    // Records of actions require GameplayLabels — label the action with its
-    // derived tag.
+    // Records of Actions require a GameplayLabel.
     UCk_Utils_GameplayLabel_UE::Add(ActionEntity, ActionTag);
 
     ActionEntity.Add<ck::FFragment_Goap_Action_Params>(InParams);
@@ -65,29 +57,19 @@ auto
     ActionEntity.Add<ck::FFragment_Goap_Action_Definition>();
     ActionEntity.Add<ck::FFragment_Goap_Action_Tree>();
 
-    // atomic leaf Actions are lean — they carry only Action-
-    // role fragments (_Definition, _Params, _Tree, _Current) plus
-    // _WorldStateSource (read by FProcessor_Goap_Action_Setup to resolve
-    // candidate-operator preconditions/effects against the active WS registry,
-    // and by UCk_Utils_Goap_Action_UE::Get_WorldStateSource(InAction)).
-    //
-    // Sub-Planners (composite Actions promoted via PromoteActionToPlanner)
-    // pick up the Planner-role cluster (PlanState, Goal, Activation, Requests,
-    // ReplanThrottle, SearchState, Result, PlanContext, AStar_Params,
-    // AStar_Debug) through that promotion's AddOrGet pass.
+    // Even a lean atomic Action needs this Planner-role fragment: FProcessor_Goap_Action_Setup
+    // resolves its preconditions/effects against the WS registry it points at.
     ActionEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>();
 
-    // Mark for one-shot setup.
     ActionEntity.AddOrGet<ck::FTag_Goap_Action_RequiresSetup>();
 
-    // Register in the ActionSet's catalog record + tag→action index.
     ck::goap::internal_action::FRecordOfGoapActions_Utils::AddIfMissing(InPlanner);
     ck::goap::internal_action::FRecordOfGoapActions_Utils::Request_Connect(InPlanner, ActionEntity);
 
     auto& Index = InPlanner.Get<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
     Index.AddEntry(ActionTag, ActionEntity);
 
-    // Catalog mutated → re-run ActionSet setup (cycle detection).
+    // Catalog mutated → re-run Planner setup (cycle detection).
     InPlanner.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
     return ActionEntity;
@@ -110,17 +92,9 @@ auto
 
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
 
-	// stamp the Planner's WorldStateSource at construction. Was previously
-	// supplied via SetRootAction's separate WS argument; now read off the
-	// PlannerParams' _WorldStateSource field. Top-level Planners must set this;
-	// promoted mid-tier Planners may leave it unset (inherits parent's resolved
-	// WS at activation time).
-	//
-	// also seed _Resolved with the same value for top-level
-	// Planners so the Planner-tier Setup processor (goal resolution) and
-	// HandleRequests (A* seeding) can read it without going through the
-	// implicit-root Action. Promoted mid-tier Planners go through activation
-	// (UpdateActivation::DoResolveAndAssignWorldStateSource) — same as before.
+	// A top-level Planner must supply a WS source, and _Resolved is seeded here (rather than at
+	// activation, which only ever runs for promoted mid-tier Planners) so Setup and HandleRequests
+	// can read it on the very first tick.
 	{
 		auto WSFrag = ck::FFragment_Goap_Planner_WorldStateSource{};
 		WSFrag._WorldStateSource = InParams.Get_WorldStateSource();
@@ -128,33 +102,22 @@ auto
 		InPlannerEntity.Add<ck::FFragment_Goap_Planner_WorldStateSource>(WSFrag);
 	}
 
-	// Top-level Planner is also dual-role; stamp PlanState + Goal
-	// alongside the existing Planner-role fragments.
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_PlanState>();
 	{
 		auto GoalFrag = ck::FFragment_Goap_Planner_Goal{};
-		// PlannerParams._Goal is the source-of-truth at construction.
-		// Setup resolves _GoalAuthored → _Goal at the Planner's tier; the first
-		// AddAction call on a top-level Planner propagates this same authored
-		// goal down to the implicit-root Action (the entity that actually runs
-		// A* in the transitional Path A model).
 		GoalFrag._GoalAuthored = InParams.Get_Goal();
 		InPlannerEntity.Add<ck::FFragment_Goap_Planner_Goal>(GoalFrag);
 	}
 
-	// Top-level Planners are always active by construction (no parent
-	// to activate them). Mid-tier sub-Planners are activated by their parent's
-	// UpdateActivation pass.
+	// Top-level Planners are active by construction — no parent exists to activate them.
 	{
 		auto ActivationFrag = ck::FFragment_Goap_Planner_Activation{};
 		ActivationFrag._IsActive = true;
 		InPlannerEntity.Add<ck::FFragment_Goap_Planner_Activation>(ActivationFrag);
 	}
 
-	// Dual-stamp the full Planner-role A*-pipeline cluster on the Planner entity.
-	// Seed FFragment_AStar_Params with the Planner's own budget/cost-threshold
-	// knobs; otherwise the A* budget falls back to the 500us default instead of
-	// PlannerParams' 50000us.
+	// Seeded from PlannerParams — otherwise the A* budget falls back to FFragment_AStar_Params'
+	// own 500us default instead of the Planner's 50000us.
 	{
 		auto AStarParams = ck::FFragment_AStar_Params{};
 		AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
@@ -163,9 +126,8 @@ auto
 	}
 	InPlannerEntity.Add<ck::FFragment_AStar_Debug>();
 
-	// Planner-side A* pipeline fragments. The aliases (see CkGoap_Planner_Fragment.h)
-	// resolve to the Action-side types under the hood. EnTT treats Planner vs
-	// Action as distinct entities, so each carries its own copy of these fragments.
+	// These Planner aliases resolve to the Action-side types (CkGoap_Planner_Fragment.h); a Planner
+	// and an Action are distinct entities, so each carries its own copy.
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_SearchState>();
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Result>();
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_PlanContext>();
@@ -174,15 +136,13 @@ auto
 
 	InPlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
-	// Subscribe the top-level Planner to its WS source so WS-dirty tags land on
-	// the Planner for AutoReplan to pick up.
+	// Subscribing is what makes WS-dirty tags land on the Planner for AutoReplan to pick up.
 	if (ck::IsValid(InParams.Get_WorldStateSource()))
 	{
 		auto WS = InParams.Get_WorldStateSource();
 		UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, InPlannerEntity);
 	}
 
-	// Stamp the initial-plan tag so AutoReplan fires the first plan after Setup.
 	if (InParams.Get_PlanOnStart())
 	{
 		InPlannerEntity.AddOrGet<ck::FTag_Goap_Planner_RequiresInitialPlan>();
@@ -204,14 +164,6 @@ auto
 		TEXT("Planner params has invalid _PlannerTag (owner [{}])"), InOwner)
 	{ return {}; }
 
-	// Add stamps the Planner role directly onto InOwner — the owning entity IS
-	// the Planner. One entity holds at most one Planner role, so reject if it
-	// already carries one (use Create for multiple independent Planners on the
-	// same owner). Unlike Create, Add does not create a child entity, does not
-	// add a GameplayLabel (InOwner keeps its own identity — mirrors
-	// PromoteActionToPlanner), and is not registered in a record-of-Planners
-	// (there is no separate owner to record it under; Find_Planner only resolves
-	// Create-spawned child Planners).
 	if (Has(InOwner))
 	{
 		ck::goap::Warning(
@@ -244,7 +196,6 @@ auto
 	auto ParamsCopy = InParams;
 	ParamsCopy.Set_PlannerTag(InPlannerTag);
 
-	// Diagnostic: Planner-tag uniqueness within owner (record-based lookup).
 	if (auto Existing = Find_Planner(InOwner, InPlannerTag);
 		ck::IsValid(Existing))
 	{
@@ -256,15 +207,12 @@ auto
 
 	auto PlannerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Goap_Planner>(InOwner);
 
-	// Records of Planners require GameplayLabels — label the child Planner with
-	// its declared tag. (The Add path stamps onto InOwner directly and keeps the
-	// owner's existing label, so it does not label here.)
+	// Records of Planners require a GameplayLabel. Add() keeps InOwner's own label instead.
 	UCk_Utils_GameplayLabel_UE::Add(PlannerEntity, InPlannerTag);
 
 	auto PlannerAsGeneric = static_cast<FCk_Handle>(PlannerEntity);
 	DoStampTopLevelPlannerRole(PlannerAsGeneric, ParamsCopy);
 
-	// Register the child Planner in the owner's record so Find_Planner resolves it.
 	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::AddIfMissing(InOwner);
 	ck::goap::internal_planner_record::FRecordOfGoapPlanners_Utils::Request_Connect(InOwner, PlannerEntity);
 
@@ -341,9 +289,6 @@ auto
 {
 	if (NOT ck::IsValid(InPlanner)) { return {}; }
 
-	// there is no implicit-root prefix. The chain starts
-	// with Plan[0] of the Planner's own PlanState. Subsequent entries are
-	// produced by walking Plan[0] of each composite + active sub-Planner.
 	auto Result = TArray<FCk_Handle_Goap_Action>{};
 
 	const auto& PlannerPlanState = InPlanner.Get<ck::FFragment_Goap_Planner_PlanState>();
@@ -353,9 +298,8 @@ auto
 	auto Curr = InitialPlan[0];
 	if (NOT ck::IsValid(Curr)) { return Result; }
 
-	// First chain entry: if it carries the Planner-role Activation fragment
-	// (i.e. it's a sub-Planner) it must be active. Atomic Actions (no
-	// Activation fragment) are always included as the leaf chain step.
+	// A sub-Planner first entry must be active; an atomic Action (no Activation fragment) is
+	// always included as the leaf chain step.
 	if (Curr.Has<ck::FFragment_Goap_Planner_Activation>())
 	{
 		const auto& CurrActivation = Curr.Get<ck::FFragment_Goap_Planner_Activation>();
@@ -369,7 +313,7 @@ auto
 	constexpr auto MaxDepth = 64;
 	for (auto Depth = 0; Depth < MaxDepth; ++Depth)
 	{
-		// Only composite + active sub-Planners contribute a further step.
+		// Only a composite AND active sub-Planner contributes a further step.
 		if (NOT Curr.Has<ck::FFragment_Goap_Action_Tree>()) { break; }
 		const auto& CurrTree = Curr.Get<ck::FFragment_Goap_Action_Tree>();
 		if (CurrTree.Get_ChildActions().IsEmpty()) { break; }
@@ -412,9 +356,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Planner-API getters read Planner-side fragments directly.
-// The A* pipeline now writes to the Planner entity's own PlanState/Goal/
-// WorldStateSource — no _RootAction indirection needed.
 
 auto
 	UCk_Utils_Goap_Planner_UE::
@@ -635,7 +576,6 @@ auto
 	const auto PoolSize = Graph.Get_StatePoolSize();
 	if (PoolSize <= 0) { return {}; }
 
-	// Tag names come from the resolved WS source's key registry.
 	const auto WSSource = Get_WorldStateSource(InPlanner);
 	CK_ENSURE_IF_NOT(ck::IsValid(WSSource),
 		TEXT("Planner [{}] has search state but no resolved WorldState source"), InPlanner)
@@ -690,41 +630,14 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// AddAction (the only construction verb for children)
-//
-// there is no implicit-root concept. Every AddAction creates
-// a direct child of the Planner. Two host shapes still exist:
-//
-// * Top-level Planner (no Action role on the host entity): child is parented
-//   directly to the Planner; its WS is resolved from the Planner's _Resolved
-//   (or the child's own override).
-//
-// * Promoted mid-tier Planner (host entity carries the Action role): child
-//   is parented to the host (which is also an Action entity).
-//
-// In both shapes the parent that owns the child's Tree edge is whatever
-// Action entity "owns" the operator catalog at this tier:
-//   - Top-level Planner: there's no such Action — we leave the child's
-//     _ParentAction invalid and the candidate set is read straight from the
-//     Planner's ActionCatalogIndex.
-//   - Promoted mid-tier Planner: the host-cast-to-Action is the parent.
 
-// shared helper. Declared in CkGoap_Planner_Internal.h; befriended on
-// FFragment_Goap_Planner_WorldStateSource so it can write _Resolved directly.
+// Befriended on FFragment_Goap_Planner_WorldStateSource so it can write _Resolved directly.
 auto
 	ck::goap::internal_planner::
 	DoResolveChildWorldStateFromParent(
 		FCk_Handle_Goap_Action& InChild,
 		const FCk_Handle_Goap_Action& InParentAction) -> void
 {
-	// Eagerly resolve the child's WS so its Setup processor can run
-	// (and populate _CachedActionDef) BEFORE any parent plan is requested.
-	// Resolution order:
-	//   1. Child's own override.
-	//   2. Inherit from parent's already-resolved WS (when there IS a parent
-	//      Action — i.e. promoted mid-tier).
-	//   3. Fall back to the Planner-level default WS source on the lifetime
-	//      owner (the top-level Planner entity).
 	auto& ChildWSSource = InChild.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
 	if (ck::IsValid(ChildWSSource.Get_Resolved())) { return; }
 
@@ -782,22 +695,17 @@ auto
 	if (NOT ck::IsValid(ActionEntity))
 	{ return {}; }
 
-	// Discriminate Planner host shape: promoted mid-tier Planners carry the
-	// Action role (and therefore a Tree fragment); top-level Planners don't.
 	const auto IsPromotedMidTier = InPlanner.Has<ck::FFragment_Goap_Action_Tree>();
 
 	auto& ChildTree = ActionEntity.Get<ck::FFragment_Goap_Action_Tree>();
 	if (ck::IsValid(ChildTree.Get_ParentAction()))
 	{
-		// Already parented — DoCreateOrFindActionEntity returned an existing
-		// entry. Keep existing edges intact.
+		// DoCreateOrFindActionEntity returned an existing entry — keep its edges intact.
 		return ActionEntity;
 	}
 
 	if (IsPromotedMidTier)
 	{
-		// Promoted Planner host — the host IS an Action. Wire the new child
-		// as its direct tree child.
 		auto HostAsAction = UCk_Utils_Goap_Action_UE::CastChecked(InPlanner);
 		ChildTree._ParentAction = HostAsAction;
 
@@ -808,11 +716,8 @@ auto
 		return ActionEntity;
 	}
 
-	// Top-level Planner: the host is not an Action. The child has no Action
-	// parent (its _ParentAction stays invalid); the Planner's
-	// ActionCatalogIndex IS the candidate set, populated by
-	// DoCreateOrFindActionEntity. Resolve the child's WS against the
-	// Planner's _Resolved (or override).
+	// A top-level Planner is not an Action, so the child keeps an invalid _ParentAction and the
+	// Planner's ActionCatalogIndex is the candidate set.
 	{
 		auto InvalidParent = FCk_Handle_Goap_Action{};
 		ck::goap::internal_planner::DoResolveChildWorldStateFromParent(ActionEntity, InvalidParent);
@@ -831,8 +736,6 @@ auto
 		TEXT("Invalid Action handle in PromoteActionToPlanner"))
 	{ return {}; }
 
-	// Must be an Action — Promotion takes an existing Action role and adds the
-	// Planner role on top.
 	CK_ENSURE_IF_NOT(UCk_Utils_Goap_Action_UE::Has(InAction),
 		TEXT("Handle [{}] does not have the Action role; PromoteActionToPlanner requires an Action entity."), InAction)
 	{ return {}; }
@@ -841,9 +744,7 @@ auto
 		TEXT("Promote params has invalid _PlannerTag (Action [{}])"), InAction)
 	{ return {}; }
 
-	// If already a Planner, treat as a no-op promotion: return the existing
-	// Planner-cast and warn. Re-stamping Params/Current would clobber catalog
-	// state.
+	// No-op rather than a re-stamp: re-stamping Params/Current would clobber catalog state.
 	if (UCk_Utils_Goap_Planner_UE::Has(InAction))
 	{
 		ck::goap::Warning(
@@ -851,13 +752,6 @@ auto
 		return UCk_Utils_Goap_Planner_UE::Cast(InAction);
 	}
 
-	// Stamp the Planner-role discriminator fragments + the
-	// rest of the Planner-role cluster the host now needs.
-	// DoCreateOrFindActionEntity stamps only the lean Action-role set
-	// (_Definition, _Params, _Tree, _Current, _ActionClasses, _WorldStateSource);
-	// every additional Planner-side fragment is added here via AddOrGet so the
-	// host carries the full cluster regardless of whether DoCreateOrFindActionEntity
-	// previously seeded any of them.
 	InAction.Add<ck::FFragment_Goap_Planner_Params>(InParams);
 	InAction.Add<ck::FFragment_Goap_Planner_Current>();
 	InAction.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
@@ -865,13 +759,11 @@ auto
 	auto& Current = InAction.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._EnableToggle = InParams.Get_InitialToggle();
 
-	// PlanState / Goal / Activation no longer get stamped by
-	// DoCreateOrFindActionEntity, so the promotion path must add them. _Goal
-	// is initialized from InParams.Get_Goal() to honour the invariant that the
-	// Planner's authored goal is independent of the Action role's effects.
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_PlanState>();
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_Activation>();
 
+	// _GoalAuthored comes from InParams, never from the Action role's effects — the Planner's
+	// authored goal is independent of them.
 	{
 		auto& GoalFrag = InAction.AddOrGet<ck::FFragment_Goap_Planner_Goal>();
 		GoalFrag._GoalAuthored = InParams.Get_Goal();
@@ -879,27 +771,16 @@ auto
 		GoalFrag._InvalidGoal = {};
 	}
 
-	// If the promoted Planner explicitly supplies a WS source, stamp it
-	// onto the WorldStateSource fragment. (Optional — promoted Planners may
-	// leave it unset and inherit the parent's resolved WS at activation time.)
+	// Optional: left unset, the promoted Planner inherits the parent's resolved WS at activation.
 	if (ck::IsValid(InParams.Get_WorldStateSource()))
 	{
 		auto& WSFragment = InAction.Get<ck::FFragment_Goap_Planner_WorldStateSource>();
 		WSFragment._WorldStateSource = InParams.Get_WorldStateSource();
 	}
 
-	// Dual-stamp the Planner-role A*-pipeline cluster on the promoted host. The
-	// host is already an Action and therefore already carries the Action-side
-	// copies of these fragments (stamped by DoCreateOrFindActionEntity). Because
-	// the Planner-side aliases resolve to the same underlying types, we use
-	// AddOrGet to keep the existing fragment instance — calling Add would
-	// duplicate-assert. This is a defensive guarantee that the host carries the
-	// cluster regardless of which entry point created it.
-	//
-	// Overwrite the existing AStarParams (seeded from this entity's ActionParams
-	// when it was first created) with values from the new PlannerParams. The two
-	// structs share defaults (50000us / 0.0f) so most callers won't notice;
-	// explicit overrides at promotion time win.
+	// AddOrGet, never Add, for the whole A*-pipeline cluster below: the Planner-side aliases
+	// resolve to the same types the host already carries as an Action, so Add would
+	// duplicate-assert. PlannerParams' budget/threshold overwrite the ActionParams-seeded ones.
 	{
 		auto& AStarParams = InAction.AddOrGet<ck::FFragment_AStar_Params>();
 		AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
@@ -913,8 +794,7 @@ auto
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_ReplanThrottle>();
 
-	// Re-run setup so cycle detection and goal resolution pick up the new
-	// Planner-role config.
+	// Re-run setup so cycle detection and goal resolution see the new Planner-role config.
 	InAction.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
 	return UCk_Utils_Goap_Planner_UE::Cast(InAction);
@@ -945,15 +825,10 @@ auto
 		TEXT("Invalid ActionSet handle in Request_ResetActiveChain"))
 	{ return InPlanner; }
 
-	// walk the entire active chain (Plan[0]-derived) and
-	// deactivate every entry. There's no implicit root to skip — the chain
-	// starts at Plan[0] of the Planner. DoDeactivatePlanner handles WS
-	// unsubscribe, live-state reset, _IsActive flip, OnPlannerDeactivated
-	// broadcast, and recursive descendant teardown.
 	const auto Chain = Get_ActiveChain(InPlanner);
 	if (Chain.Num() == 0) { return InPlanner; }
 
-	// Deactivate in reverse order (leaf → outermost).
+	// Leaf → outermost.
 	for (auto i = Chain.Num() - 1; i >= 0; --i)
 	{
 		auto Action = Chain[i];
@@ -961,9 +836,8 @@ auto
 		ck::FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner(Action);
 	}
 
-	// The Planner's cached _LastActivatedPlan0 still points at the old Chain[0];
-	// clear it so the next UpdateActivation tick sees this as a fresh state
-	// transition (rather than no-op'ing because OldStep0 == NewStep0).
+	// The cache still points at the old Chain[0]; leaving it would make the next UpdateActivation
+	// tick no-op on OldStep0 == NewStep0 instead of seeing a fresh transition.
 	{
 		auto& PlannerActivation = InPlanner.Get<ck::FFragment_Goap_Planner_Activation>();
 		PlannerActivation._LastActivatedPlan0 = {};
@@ -982,17 +856,12 @@ auto
 		TEXT("Invalid Planner handle in Request_SetGoal"))
 	{ return InPlanner; }
 
-	// Request_SetGoal enqueues on the Planner's own request
-	// queue. The Planner-on-Planner HandleRequests resolves the goal against
-	// the Planner's own WS source.
 	auto& Requests = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
 	Requests._Requests.Add(FCk_Request_Goap_Planner_SetGoal{InGoal});
 	return InPlanner;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Planner-API request verbs enqueue on the Planner's own
-// request queue. The Planner-on-Planner HandleRequests drains them.
 
 auto
 	UCk_Utils_Goap_Planner_UE::
@@ -1125,7 +994,6 @@ auto
 		TEXT("Invalid ChildActionClass in Request_RemoveAction (Planner [{}])"), InPlanner)
 	{ return InPlanner; }
 
-	// Catalog lookup (class → tag → action).
 	const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InChildActionClass);
 	CK_ENSURE_IF_NOT(ActionTag.IsValid(),
 		TEXT("Could not derive a valid action tag for class [{}] in Request_RemoveAction (Planner [{}])"),
@@ -1141,46 +1009,26 @@ auto
 		return InPlanner;
 	}
 
-	// Resolve the parent Action whose _ChildActions list contains this child.
-	// In the top-level case this is invalid (child has no parent Action — it's
-	// a direct child of the Planner, which is not an Action); in the
-	// promoted-mid-tier case this is the Planner host (cast to Action). Read
-	// it from the child's own Tree fragment — single source of truth populated
-	// by AddAction.
+	// Invalid for a top-level Planner's children (they have no parent Action); the promoted host
+	// otherwise. The child's own Tree fragment is the single source of truth AddAction populates.
 	auto ParentAction = FCk_Handle_Goap_Action{};
 	{
 		const auto& ChildTree = ChildAction.Get<ck::FFragment_Goap_Action_Tree>();
 		ParentAction = ChildTree.Get_ParentAction();
 	}
 
-	// Remove the catalog entry. RemoveEntry is the public mutator counterpart
-	// to AddEntry — friendship on the fragment is class-scoped and doesn't
-	// reach namespace-level free functions, but Utils is a friend so we could
-	// touch _TagToAction directly. The mutator is preferred for symmetry +
-	// future-proofing (e.g. if removal grows side effects).
 	{
 		auto& Index = InPlanner.Get<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
 		Index.RemoveEntry(ActionTag);
 	}
 
-	// Detach the child from its parent's _ChildActions list. Utils is a
-	// friend of FFragment_Goap_Action_Tree so direct access is allowed.
 	if (ck::IsValid(ParentAction))
 	{
 		auto& ParentTree = ParentAction.Get<ck::FFragment_Goap_Action_Tree>();
 		ParentTree._ChildActions.RemoveSingle(ChildAction);
 
-		// If the removed child is currently the parent's Plan[0], the
-		// activation cache (_LastActivatedPlan0) still points at it. Clear
-		// the cache so the next UpdateActivation tick sees a fresh state
-		// transition (mirrors Request_ResetActiveChain's root-clear).
-		//
-		// gate with Has<>. The parent may be the implicit-
-		// root Action of a top-level Planner — those are no longer stamped
-		// with FFragment_Goap_Planner_Activation. Only promoted sub-Planner
-		// hosts carry it (via PromoteActionToPlanner). The implicit-root
-		// branch never set _LastActivatedPlan0 anyway, so skipping the read
-		// preserves behaviour.
+		// Only promoted sub-Planner hosts carry Activation, hence the Has<> gate. A cache still
+		// pointing at the removed child would rob the next UpdateActivation tick of a transition.
 		if (ParentAction.Has<ck::FFragment_Goap_Planner_Activation>())
 		{
 			auto& ParentActivation = ParentAction.Get<ck::FFragment_Goap_Planner_Activation>();
@@ -1191,28 +1039,16 @@ auto
 		}
 	}
 
-	// Catalog mutated → re-run setup (cycle detection / dependency rebuild),
-	// then enqueue a replan so the next plan reflects the updated operator
-	// set. Mirrors AddAction's setup marker.
+	// Catalog mutated → re-run setup (cycle detection / dependency rebuild).
 	InPlanner.AddOrGet<ck::FTag_Goap_Planner_RequiresSetup>();
 
-	// Destroy the Action entity. Standard entity-lifetime path handles record
-	// cleanup (owner-cascade-destroy removes the FRecordOfGoapActions entry)
-	// and any descendant cascade (a dual-role child with its own _ChildActions
-	// gets its sub-tree cascade-destroyed via the standard owner chain — child
-	// Actions were created with InPlanner as their lifetime owner, but
-	// recursive Actions of a removed mid-tier composite are owned through the
-	// Action entity itself in the tree-edge sense; the standard cascade walks
-	// owning-entity relationships rather than tree edges, so isolated dual-role
-	// catalog entries are addressed by their own catalog-removal calls).
+	// The owner-cascade destroy removes the FRecordOfGoapActions entry. It walks owning-entity
+	// relationships, NOT tree edges, so a removed composite's own catalog entries are not cascaded.
 	{
 		auto ChildAsGeneric = static_cast<FCk_Handle>(ChildAction);
 		UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ChildAsGeneric);
 	}
 
-	// Trigger the replan after destruction is queued. Routes through the
-	// existing Request_Plan shim, which enqueues on the implicit-root
-	// Action's request queue (the entity running A*).
 	Request_Plan(InPlanner);
 
 	return InPlanner;
@@ -1243,23 +1079,11 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// per-Planner signals.
-//
-// PlanComplete / PlanFailed broadcast on the Planner entity directly
-// (FProcessor_Goap_Planner_HandleRequests and _HandleResult).
-//
-// PlannerActivated / Deactivated broadcast on the Action entity for promoted
-// mid-tier Planners (sub-Planners ARE Actions). Top-level Planners don't fire
-// Activate/Deactivate (they're always active). The bind utilities resolve
-// Planner-cast-to-Action when the entity carries the Action role; otherwise
-// they bind on the Planner directly (top-level — never fires but harmless).
 
 namespace ck::goap::internal_planner
 {
-	// Resolve a Planner handle to the entity that broadcasts activation
-	// signals. Promoted mid-tier Planner-Actions broadcast on themselves;
-	// top-level Planners don't fire activation signals — bind on the Planner
-	// itself (harmless — never fires).
+	// Activation/deactivation broadcasts land on the ACTION entity of a promoted mid-tier Planner.
+	// A top-level Planner is always active and never fires them — binding on it is harmless.
 	static auto DoResolveBroadcastEntity_ForActivation(const FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle
 	{
 		if (NOT ck::IsValid(InPlanner)) { return {}; }

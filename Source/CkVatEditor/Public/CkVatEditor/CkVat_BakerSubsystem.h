@@ -6,8 +6,7 @@
 #include "EditorSubsystem.h"
 #include "CkVat_BakerSubsystem.generated.h"
 
-// Editor entry point for the VAT baker (mirrors UCkParticles_GeneratorSubsystem). Callable from
-// Blueprint editor utilities and AngelScript editor scripts.
+// Editor entry point for the VAT baker; callable from Blueprint editor utilities and AngelScript editor scripts.
 UCLASS()
 class CKVATEDITOR_API UCkVat_BakerSubsystem : public UEditorSubsystem
 {
@@ -20,11 +19,9 @@ public:
               DisplayName = "Bake VAT Collection")
     bool Bake_VatCollection(UCk_VatCollection_Data* InCollection);
 
-    // Builds a fully-baked TRANSIENT collection: creates the asset object in the transient package,
-    // fills the bake inputs, and runs the in-memory bake — NOTHING is saved to disk, results die
-    // with the session. Gym/test entry point (zero content setup); shipped collections are authored
-    // in the details panel + Bake button instead. Returns nullptr on bake failure (the baker's
-    // ensures name the reason).
+    // Builds a fully-baked TRANSIENT collection in memory — NOTHING is saved to disk, results die with the
+    // session. Gym/test entry point; shipped collections are authored in the details panel + Bake button.
+    // Returns nullptr on bake failure (the baker's ensures name the reason).
     UFUNCTION(BlueprintCallable, Category = "CkVat",
               DisplayName = "Create and Bake Transient VAT Collection")
     UCk_VatCollection_Data* CreateAndBake_TransientCollection(

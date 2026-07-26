@@ -18,21 +18,16 @@ struct CKASSETEXPORTER_API FCk_MaterialExportResult
     FString ErrorMessage;
     FString AssetName;
 
-    // Object paths of every texture this material (or its instance chain) references — the corpus
-    // orchestrator chains these into texture exports.
+    // Chained by the corpus orchestrator into texture exports.
     TArray<FString> ReferencedTextures;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Exports a material recipe: base properties (domain, blend mode, shading model, two-sided, connected outputs),
-// effective parameter values through the instance chain, and an expression histogram of the base material graph —
-// the "material tricks" (DepthFade, Fresnel, Panner, DynamicParameter, SubUV...) a faithful recreation needs.
-// --------------------------------------------------------------------------------------------------------------------
+
 class CKASSETEXPORTER_API FCk_MaterialExporter
 {
 public:
-    // InOutputDir: when set, writes <AssetName>.json into that directory (VFX corpus mode); when empty, writes the
-    // sibling <Asset>.json next to the source .uasset (the dispatch / right-click / tab mode).
+    // Set InOutputDir for VFX-corpus mode; empty writes the sibling <Asset>.json next to the source .uasset.
     static auto ExportMaterial (UMaterialInterface* InMaterial, const FString& InOutputDir = FString{}) -> FCk_MaterialExportResult;
     static auto ExportMaterials(const TArray<UMaterialInterface*>& InMaterials) -> TArray<FCk_MaterialExportResult>;
 

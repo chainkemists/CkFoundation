@@ -17,7 +17,6 @@ auto
 
     CueListEntry = Cast<UCk_CueToolbox_CueListEntry>(ListItemObject);
 
-    // Bind button events
     if (ck::IsValid(EditButton))
     {
         EditButton->OnClicked.AddDynamic(this, &UCk_CueToolbox_ListEntryWidget::OnEditClicked);
@@ -50,7 +49,6 @@ auto
 
     MainWidget->OnCueEdit(CueListEntry->CueInfo);
 
-    // Also try to open the blueprint directly
     const auto CueClass = CueListEntry->CueInfo.CueClass;
 
     if (ck::IsValid(CueClass))
@@ -89,7 +87,6 @@ auto
 
     MainWidget->OnCueLocate(CueListEntry->CueInfo);
 
-    // Also sync Content Browser
     const auto CueClass = CueListEntry->CueInfo.CueClass;
 
     if (ck::IsValid(CueClass))
@@ -114,14 +111,12 @@ auto
 
     const auto& CueInfo = CueListEntry->CueInfo;
 
-    // Update cue name
     if (ck::IsValid(CueNameText))
     {
         const auto CueName = CueInfo.CueName.ToString();
         CueNameText->SetText(FText::FromString(CueName));
     }
 
-    // Update validation status
     if (ck::IsValid(ValidationStatusText))
     {
         if (CueInfo.IsValid)
@@ -137,7 +132,6 @@ auto
         }
     }
 
-    // Enable/disable buttons based on validity
     const auto ButtonsEnabled = CueInfo.IsValid;
 
     if (ck::IsValid(EditButton))
@@ -160,7 +154,6 @@ auto
     UCk_CueToolbox_ListEntryWidget::
     DoGetMainWidget() -> UCk_CueToolbox_EditorUtilityWidget*
 {
-    // Walk up the widget tree to find the main toolbox widget
     auto CurrentWidget = GetParent();
 
     while (ck::IsValid(CurrentWidget))
@@ -174,7 +167,6 @@ auto
             }
         }
 
-        // Walk up to the next parent
         if (const auto AsWidget = Cast<UWidget>(CurrentWidget))
         {
             CurrentWidget = AsWidget->GetParent();

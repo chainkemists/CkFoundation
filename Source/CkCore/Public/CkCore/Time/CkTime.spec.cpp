@@ -1,8 +1,5 @@
-// Pure coverage for the ck::time FCk_Time factories (Seconds / Milliseconds / Minutes / Hz).
-//
-// The MISUSE surface is compile-time by design (consteval factories) and therefore self-testing — each fails
-// the BUILD, so no runtime spec can (or needs to) exercise it: ck::time::Seconds(0) / Seconds(-1) / Hz(0) /
-// Hz(-4) reject a non-positive interval via ck::time::detail::Interval_MustBePositive.
+// Coverage for the ck::time FCk_Time factories. The MISUSE surface (a non-positive interval) is rejected at
+// compile time by ck::time::detail::Interval_MustBePositive, so no runtime spec can exercise it.
 
 #include "CkCore/Time/CkTime.h"
 
@@ -10,9 +7,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-// Compile-time facts — a broken one fails the build of this TU. Each factory is consteval and yields an
-// FCk_Time usable in a constant expression. (Interval VALUES are checked at runtime below: FCk_Time::Get_Seconds
-// is not constexpr, so a literal's value can't be static_assert'd.)
+// Interval VALUES are checked at runtime below because FCk_Time::Get_Seconds is not constexpr.
 static constexpr FCk_Time GTime_ConstexprProbe = ck::time::Hz(4);
 static_assert(std::is_same_v<std::remove_const_t<decltype(GTime_ConstexprProbe)>, FCk_Time>,
     "ck::time factories produce an FCk_Time usable in a constant expression");

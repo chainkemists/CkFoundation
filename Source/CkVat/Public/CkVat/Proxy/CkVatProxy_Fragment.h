@@ -31,10 +31,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Playback state under the GPU-time-driven model: the GPU derives the frame from
-    // (WorldTime - _PlaybackStartTime) * _PlayRate — state is written on CHANGE only, never per frame.
-    // It is packed into per-instance custom data; the crossfade pair (_PrevClip*) feeds the shader's
-    // 2-state blend.
+    // Playback state for the GPU-time-driven model (the GPU derives the frame from
+    // (WorldTime - _PlaybackStartTime) * _PlayRate) — written on CHANGE only, never per frame, and
+    // packed into per-instance custom data.
     struct CKVAT_API FFragment_VatProxy_Current
     {
     public:
@@ -49,13 +48,11 @@ namespace ck
         // Index into the collection's SERIALIZED baked clip table; INDEX_NONE = reference pose (row 0).
         int32 _ActiveClipIndex = INDEX_NONE;
         ECk_VatProxy_LoopMode _ActiveLoopMode = ECk_VatProxy_LoopMode::Loop;
-        // A rate change rebases _PlaybackStartTime so the playback position is preserved — consumers
-        // must not assume _PlaybackStartTime is the original play call's timestamp.
+        // A rate change rebases _PlaybackStartTime — it is NOT the original play call's timestamp.
         float _PlayRate = 1.0f;
         FCk_Time _PlaybackStartTime;
 
-        // Crossfade source state (valid while a transition is in flight). The source keeps playing
-        // at ITS rate/loop-mode during the fade, so those are captured alongside the start time.
+        // Crossfade source state — the source keeps playing at ITS rate/loop-mode during the fade.
         int32 _PrevClipIndex = INDEX_NONE;
         FCk_Time _PrevClipStartTime;
         float _PrevPlayRate = 1.0f;
@@ -63,12 +60,9 @@ namespace ck
         FCk_Time _TransitionStartTime;
         FCk_Time _TransitionDuration;
 
-        // The ISM instance rendering this entity (composed by Setup; per-instance custom-data
-        // pushes go through it).
         FCk_Handle_IsmProxy _IsmProxy;
 
-        // Clip-local playback position captured by Stop (meaningful only while _PlayRate == 0); the GPU
-        // packing holds the frame via this constant while the rate multiplier is zero.
+        // Clip-local playback position captured by Stop — meaningful ONLY while _PlayRate == 0.
         FCk_Time _PausedLocalTime;
 
         // OnClipFinished (Once clips) dispatched for the active clip.

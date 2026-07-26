@@ -25,14 +25,10 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Sm_NetContext);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Per-SM choice of who drives transitions. Immutable for the SM's lifetime.
-// Single-authority-per-SM rule (spec §5.6): an SM is either ServerAuth or OwningClientAuth, never mixed.
-//
-// AutoDetect is the default: the effective model is resolved on demand from the SM host's net
-// ownership (player-controlled pawn -> OwningClientAuthoritative, everything else -> ServerAuthoritative).
-// Resolve via UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel — it never returns AutoDetect.
-// Explicit ServerAuthoritative / OwningClientAuthoritative override the auto-resolution (e.g. for debugging
-// or to force server authority on a player pawn).
+// Per-SM choice of who drives transitions. Immutable for the SM's lifetime; an SM is either
+// ServerAuth or OwningClientAuth, never mixed. AutoDetect (the default) resolves from the SM host's
+// net ownership at use-time — always resolve via UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel,
+// which never returns AutoDetect.
 UENUM(BlueprintType)
 enum class ECk_Sm_AuthorityModel : uint8
 {
@@ -85,12 +81,10 @@ private:
     int32 _NewStateFingerprint = 0;
 
     // Cross-machine address of the sub-SM this event belongs to: its FFragment_Sm_ParentHierarchy
-    // (root->leaf state-tag path to its hosting state). EMPTY means a root-level event (the common
-    // case — unchanged behavior). Non-empty means the event was relayed through the root SM's
-    // transport on behalf of a non-replicated sub-SM, and the receiver must dispatch it to the local
-    // sub-SM resolved by this path (see UCk_Utils_StateMachine_UE::TryFind_ActiveSubSm_ByParentHierarchy).
-    // Not in CK_DEFINE_CONSTRUCTORS: set via Set_SubSmIdentity so the 4-arg construction sites and the
-    // root-level path stay untouched.
+    // (root->leaf state-tag path to its hosting state). EMPTY means a root-level event. Non-empty
+    // means the event was relayed through the root SM's transport on behalf of a non-replicated
+    // sub-SM, and the receiver must dispatch it to the local sub-SM resolved by this path (see
+    // UCk_Utils_StateMachine_UE::TryFind_ActiveSubSm_ByParentHierarchy). Set via Set_SubSmIdentity.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
         meta = (AllowPrivateAccess = true))
     TArray<FGameplayTag> _SubSmIdentity;

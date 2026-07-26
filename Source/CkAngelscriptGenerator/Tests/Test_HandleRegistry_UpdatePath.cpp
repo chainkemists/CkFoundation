@@ -1,16 +1,3 @@
-// Regression tests for FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle.
-//
-// The Rev 10 DynamicHandle recovery + "Force Refresh button works for UPDATE"
-// fixes both rely on the framework's register-or-update path replacing an
-// existing entry's validator + cast lambdas in place. AS-bound methods read
-// the validator via a stable raw pointer (TypeInfo*) at call time, so mutating
-// the TypeInfo in place is visible without re-registering with the AS engine.
-//
-// These tests verify the in-place mutation actually replaces what subsequent
-// callers see. If a future framework change reintroduces capture-by-value or
-// breaks the pointer-stability invariant, these go red before recovery
-// silently regresses to leaving permissive validators in flight.
-
 #include "CkEcs/Handle/CkHandle_AngelScript_Registry.h"
 
 #include "CkCore/Macros/CkMacros.h"
@@ -21,19 +8,14 @@
 
 namespace
 {
-    // Unique test-type name keyed to this test file. We can't deregister
-    // (FCkAngelScript_HandleRegistry is intentionally append-only at the
-    // public-API surface), so subsequent test runs in the same editor
-    // session re-encounter this type and skip the register step. The
-    // tests are written to handle both first-run and subsequent-run paths.
+    // The registry is intentionally append-only at its public surface — there is no
+    // deregister — so a second run in the same editor session re-encounters this type
+    // and skips the register step. Every test below handles both paths.
     constexpr auto TestTypeName  = TEXT("FCk_Handle_Rev10UpdateProbe");
     constexpr auto TestShortName = TEXT("Rev10UpdateProbe");
 
-    // Two distinct validators so we can verify which one is in effect.
-    // We use lambdas-by-pointer-equivalent (TFunction equality isn't
-    // observable directly, but the call result is) — Permissive returns
-    // true always, Strict returns false always. Calling the validator on
-    // any handle reveals which is in place.
+    // TFunction equality isn't observable — the call result is what identifies
+    // which validator is currently in place.
     auto Make_PermissiveValidator() -> TFunction<bool(const FCk_Handle&)>
     {
         return [](const FCk_Handle&) -> bool { return true; };
@@ -44,9 +26,8 @@ namespace
         return [](const FCk_Handle&) -> bool { return false; };
     }
 
-    // Ensure the test type is registered (idempotent). Returns true on
-    // first-time register, false if already present (so subsequent tests
-    // know the in-flight validator is whatever Update has left it).
+    // Idempotent. Returns true only on a first-time register — false means the
+    // in-flight validator is whatever a prior Update left behind.
     auto Ensure_TestTypeRegistered() -> bool
     {
         if (FCkAngelScript_HandleRegistry::IsHandleTypeRegistered(TestTypeName))
@@ -64,8 +45,6 @@ namespace
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// UpdateExistingDynamicHandle returns false for an unregistered type.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -87,8 +66,6 @@ bool FCkTest_HandleRegistry_Update_RejectsUnregistered::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// UpdateExistingDynamicHandle returns false for an empty TypeName.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_HandleRegistry_Update_RejectsEmptyName,
@@ -109,10 +86,6 @@ bool FCkTest_HandleRegistry_Update_RejectsEmptyName::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// End-to-end: register with permissive, update to strict, verify the validator
-// reachable via GetHandleTypeInfo reflects the update. This is the load-bearing
-// guarantee for the DynamicHandle recovery path.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_HandleRegistry_Update_ReplacesValidatorInPlace,
@@ -123,8 +96,6 @@ bool FCkTest_HandleRegistry_Update_ReplacesValidatorInPlace::RunTest(const FStri
 {
     Ensure_TestTypeRegistered();
 
-    // Step 1: install permissive validator (overwriting whatever the prior
-    // test run left in flight — idempotent).
     {
         const auto UpdatedToPermissive = FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle(
             TestTypeName,
@@ -142,9 +113,6 @@ bool FCkTest_HandleRegistry_Update_ReplacesValidatorInPlace::RunTest(const FStri
         TestEqual(TEXT("Description == 'permissive state'"), Info->Description, FString{TEXT("permissive state")});
     }
 
-    // Step 2: update to strict validator with new metadata. This is the
-    // core promise: after this call, every consumer that dereferences the
-    // type's validator sees the new function.
     {
         const auto UpdatedToStrict = FCkAngelScript_HandleRegistry::UpdateExistingDynamicHandle(
             TestTypeName,
@@ -165,15 +133,11 @@ bool FCkTest_HandleRegistry_Update_ReplacesValidatorInPlace::RunTest(const FStri
         TestEqual(TEXT("SourceAsset updated"), Info->SourceAsset, FString{TEXT("/Script/Test.Rev10UpdateProbe.Updated")});
     }
 
-    // Step 3: Cast lambdas should also reflect the new validator — they
-    // capture by value but the Update path rebuilds them with the new
-    // closure. Verify by calling Cast and CastChecked.
+    // The Cast lambdas capture the validator by value; Update rebuilds them with the new closure.
     {
         const auto* Info = FCkAngelScript_HandleRegistry::GetHandleTypeInfo(TestTypeName);
         if (Info == nullptr) { return false; }
 
-        // With the strict validator returning false, Cast should return an
-        // invalid handle (the lambda's "return FCk_Handle{}" branch).
         const auto CastResult = Info->Cast(FCk_Handle{});
         TestFalse(TEXT("strict Cast returns invalid handle"), ck::IsValid(CastResult));
     }
@@ -182,10 +146,8 @@ bool FCkTest_HandleRegistry_Update_ReplacesValidatorInPlace::RunTest(const FStri
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Pointer stability: GetHandleTypeInfo returns the same pointer across calls
-// (no entry replacement, just in-place mutation). This is what lets AS-bound
-// methods cache the TypeInfo* in userData / AuxData at binding time and
-// dereference it at call time.
+// AS-bound methods cache the TypeInfo* at binding time and dereference it at call time, so
+// Update must mutate the entry in place rather than replace it.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

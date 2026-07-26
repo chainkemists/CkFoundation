@@ -8,12 +8,10 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 // --------------------------------------------------------------------------------------------------------------------
-// Headless regeneration of every code-built CkParticles asset (textures -> master materials -> carrier meshes ->
-// both template systems). Env-gated so the default test pass never mutates plugin content: set
-// CK_PARTICLES_REBUILD_TEMPLATES=1 in the spawning shell, then run via the toolbox
-//   --test --test-pattern RebuildTemplateAssets --discover-fresh
-// (mirrors the CK_VFX_CORPUS_EXPORT gate pattern in CkAssetExporter — StressFilter is invisible to the
-// automation commandline, so ProductFilter + env gate is the sanctioned shape for opt-in heavy tests).
+// Headless regeneration of every code-built CkParticles asset. Env-gated so the default test pass never mutates
+// plugin content: set CK_PARTICLES_REBUILD_TEMPLATES=1 in the spawning shell, then run the toolbox with
+// --test --test-pattern RebuildTemplateAssets --discover-fresh. StressFilter is invisible to the automation
+// commandline, so ProductFilter + an env gate is the sanctioned shape for an opt-in heavy test.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

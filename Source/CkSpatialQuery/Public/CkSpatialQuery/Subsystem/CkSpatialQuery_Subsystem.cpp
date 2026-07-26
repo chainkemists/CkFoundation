@@ -61,8 +61,7 @@ auto
     if (ck::Is_NOT_Valid(_JoltSubsystem))
     { return; }
 
-    // Route CkJolt's drained contact events into Probe overlap requests. Weak capture so a dead
-    // subsystem is never invoked by the router registry.
+    // Weak capture: the router registry outlives this subsystem.
     const auto WeakThis = TWeakObjectPtr<UCk_SpatialQuery_Subsystem>{this};
     _JoltSubsystem->RegisterContactRouter(TEXT("SpatialQuery.ProbeBridge"),
         [WeakThis](const TArray<FCk_Jolt_ContactEvent>& InEvents)
@@ -91,9 +90,8 @@ auto
     Super::Deinitialize();
 }
 
-// Translate contact events (queued during PhysicsSystem::Update, drained by UCk_Jolt_Subsystem::Tick)
-// into Probe overlap requests. Runs on the game thread inside the drained-events broadcast, so ECS
-// mutations are safe.
+// Runs on the game thread inside UCk_Jolt_Subsystem::Tick's drained-events broadcast, so ECS
+// mutations here are safe.
 auto
     UCk_SpatialQuery_Subsystem::
     ProcessQueuedContacts(
@@ -111,11 +109,9 @@ auto
     const auto TransientEntity = _EcsWorldSubsystem->Get_TransientEntity();
     const auto RegView = TransientEntity.Get_RegistryView();
 
-    // Jolt body UserData carries a raw (versioned) entity id baked in at body registration. A snapshot load
-    // wipes/restores the registry, so a contact queued pre-load resolves to an id that is dead in the fresh
-    // registry. Get_ValidHandle ENSURES on a stale id — and that fires BEFORE the ck::IsValid(Body) guards
-    // below can absorb it. Do a non-ensuring registry-liveness check first (FCk_Registry::IsValid -> entt
-    // valid()); a dead id yields an invalid handle the existing guards already tolerate.
+    // The RegView.IsValid pre-check is load-bearing: body UserData is a raw entity id baked in at
+    // registration, a snapshot load can kill it, and Get_ValidHandle ENSURES on a stale id before
+    // the ck::IsValid(Body) guards below could absorb it.
     const auto ResolveBodyEntity = [&](uint64 InUserData) -> FCk_Handle
     {
         const auto Entity = FCk_Entity{FCk_Entity::IdType{static_cast<FCk_Entity::IdType>(InUserData)}};

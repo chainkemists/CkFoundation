@@ -52,9 +52,8 @@ public:
     FOnAssetRegistryComplete OnAssetRegistryComplete;
 
 public:
-    // --- Static utility helpers (promoted from private for the SelfHeal/AssetRegistryStub
-    // synthesizer, which reuses the same class-resolution and discovery logic the
-    // real generator uses). Safe to call from anywhere; none touch instance state. ---
+    // --- Public because the SelfHeal stub synthesizer MUST resolve through the same logic this
+    // generator does. None touch instance state. ---
 
     static auto
     Request_DiscoverAllConfigs() -> TArray<UCkAssetRegistryConfig*>;
@@ -147,12 +146,10 @@ private:
         UCkAssetRegistryConfig* InConfig,
         const FString& InRootPath) -> FString;
 
-    // Removes the active non-blocking status-bar progress notification (if any) and
-    // invalidates the handle. Safe to call when no notification is active.
+    // Both Dismiss_* are safe to call when nothing is active.
     auto
     Dismiss_ProgressNotification() -> void;
 
-    // Removes the active per-frame asset-dispatch ticker (if any). Safe when none is active.
     auto
     Dismiss_GenerationTicker() -> void;
 
@@ -161,20 +158,15 @@ private:
 private:
     // --- AngelScript asset reference tracking ---
 
-    // Map 1: Asset path → generated function name (populated during registry generation)
     TMap<FString, FString> AssetPathToFunctionName;
 
-    // Map 2: Function name → script files that reference it (populated by scanning .as files)
+    // Generated function name -> the .as files referencing it.
     TMap<FString, TArray<FString>> FunctionUsageMap;
 
-    // Delegate handles for cleanup
     FDelegateHandle PreDeleteDelegateHandle;
     FDelegateHandle PostCompileDelegateHandle;
 
-    // Cached namespaces from all active configs
     TSet<FString> ActiveNamespaces;
-
-    // --- End AngelScript asset reference tracking ---
 
     static constexpr float REGENERATION_DELAY_SECONDS = 1.0f;
     static constexpr float ASSET_LOAD_TIMEOUT_SECONDS = 30.0f;

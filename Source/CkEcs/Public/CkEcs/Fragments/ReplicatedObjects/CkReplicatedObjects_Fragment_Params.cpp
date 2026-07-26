@@ -62,10 +62,9 @@ auto
     if (World->IsNetMode(NM_Client))
     { return; }
 
-    // ---- World teardown: the engine removes registered subobjects as part of owner/world
-    // destruction. Destroy() is also reached from BeginDestroy() (GC), so on a hard map travel it
-    // would otherwise call RemoveReplicatedSubObject() mid-teardown — racing the engine's own
-    // subobject-registry teardown. Skip and let owner-teardown handle it.
+    // ---- World teardown: the engine removes registered subobjects as part of owner/world destruction,
+    // and Destroy() is also reached from BeginDestroy() (GC) — on a hard map travel this would race the
+    // engine's own subobject-registry teardown. Skip and let owner-teardown handle it.
     if (World->bIsTearingDown)
     { return; }
 
@@ -74,10 +73,9 @@ auto
 
     InRo->_ReplicatedActor->RemoveReplicatedSubObject(InRo);
 
-    // ---- Idempotency: the deferred EntityLifetime destroy path AND the GC BeginDestroy() path both
-    // call Destroy(). Null the actor so a second call early-outs above instead of issuing a double
-    // RemoveReplicatedSubObject() on an already-removed subobject (the Iris subobject-registry
-    // bookkeeping does not expect the same subobject to be removed twice).
+    // ---- Idempotency: the deferred EntityLifetime destroy path AND the GC BeginDestroy() path both call
+    // Destroy(). Null the actor so a second call early-outs above instead of issuing a double
+    // RemoveReplicatedSubObject() — the Iris registry does not expect the same subobject removed twice.
     InRo->_ReplicatedActor = nullptr;
 }
 

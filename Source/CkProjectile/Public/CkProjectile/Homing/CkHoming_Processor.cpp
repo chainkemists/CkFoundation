@@ -201,9 +201,8 @@ namespace ck
             FFragment_Acceleration_Current& InAcceleration) const
         -> void
     {
-        // Zero-dt tick = settle pass: do no time-dependent work. Early-out at the top guards the finite-difference
-        // target-velocity divide below AND keeps the pro-nav guidance (whose Compute_HomingAcceleration ensures a
-        // positive DeltaT) from firing that ensure during a settle pass.
+        // Zero-dt settle pass: skip all time-dependent work. Guards both the finite-difference
+        // target-velocity divide below and Compute_HomingAcceleration's positive-DeltaT ensure
         if (InDeltaT.Get_Seconds() <= 0.0f)
         { return; }
 

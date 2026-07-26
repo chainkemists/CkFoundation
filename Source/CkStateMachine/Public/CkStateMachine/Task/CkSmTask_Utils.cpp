@@ -70,9 +70,8 @@ auto
     ck::TUtils_Sm_OwningStateMachine::AddOrReplace(TaskEntity,
         ck::TUtils_Sm_OwningStateMachine::Get_StoredEntity(InOwnerState));
 
-    // Defer the EntityScript attach — see FProcessor_SmScript_CommitPendingAttach.
-    // This keeps the task handle usable for chaining while making a same-frame
-    // RemoveTask race-free (no script ever Construct/BeginPlay's on a torn-down task).
+    // Deferring the attach (see FProcessor_SmScript_CommitPendingAttach) keeps the task handle usable
+    // for chaining while making a same-frame RemoveTask race-free.
     TaskEntity.Add<ck::FFragment_SmScript_PendingAttach>(InTaskClass);
     TaskEntity.Add<ck::FTag_SmScript_PendingAttach>();
 
@@ -107,11 +106,10 @@ auto
     auto& Current = InTask.Get<ck::FFragment_SmTask_Current>();
     const auto PrevResult = Current.Get_LastResult();
 
-    // A terminal result that hasn't been broadcast yet (ResultDirty still pending) must not be
-    // clobbered back to Running — the Tick processor runs before FireFinishedSignal, so a
-    // same-frame Tick returning Running (e.g. an unimplemented BP DoTick, whose default is the
-    // enum's zero value) would make OnSmTaskFinished broadcast "finished: Running" and lose the
-    // completion. Post-broadcast flips remain legal: tasks may oscillate Running <-> terminal.
+    // A terminal result not yet broadcast (ResultDirty pending) must not be clobbered back to
+    // Running: Tick runs before FireFinishedSignal, so a same-frame Running (e.g. an unimplemented BP
+    // DoTick, whose default is the enum's zero value) would broadcast "finished: Running" and lose
+    // the completion. Post-broadcast flips remain legal.
     if (InResult == ECk_SmTaskResult::Running
         && PrevResult != ECk_SmTaskResult::Running
         && InTask.Has<ck::FTag_SmTask_ResultDirty>())

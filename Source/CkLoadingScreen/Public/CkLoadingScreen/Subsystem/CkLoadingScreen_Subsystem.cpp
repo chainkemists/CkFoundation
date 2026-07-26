@@ -67,10 +67,7 @@ namespace ck_loading_screen_cvars
 
 namespace ck_loading_screen_subsystem
 {
-    // Input processor registered while the loading screen is shown.
-    // Captures ALL input so menus underneath the loading screen cannot be interacted with:
-    // keyboard + gamepad buttons (FKeyEvent), gamepad sticks/triggers (FAnalogInputEvent),
-    // mouse, and motion — every IInputProcessor handler is overridden.
+    // Eats ALL input so menus underneath the loading screen cannot be interacted with
     class FLoadingScreenInputPreProcessor : public IInputProcessor
     {
     public:
@@ -117,7 +114,6 @@ auto
     FCoreUObjectDelegates::PreLoadMapWithContext.RemoveAll(this);
     FCoreUObjectDelegates::PostLoadMapWithWorld.RemoveAll(this);
 
-    // We are done, so do not attempt to tick us again
     SetTickableTickType(ETickableTickType::Never);
 }
 
@@ -127,7 +123,6 @@ auto
         UObject* InOuter) const
     -> bool
 {
-    // Only clients have loading screens
     const auto GameInstance = CastChecked<UGameInstance>(InOuter);
     return NOT GameInstance->IsDedicatedServerInstance();
 }
@@ -159,7 +154,7 @@ auto
     IsTickable() const
     -> bool
 {
-    // Don't tick if we don't have a game viewport client, this catches cases that ShouldCreateSubsystem does not
+    // Catches cases that ShouldCreateSubsystem does not
     const auto GameInstance = GetGameInstance();
     return ck::IsValid(GameInstance) && ck::IsValid(GameInstance->GetGameViewportClient());
 }
@@ -256,7 +251,6 @@ auto
 
     _CurrentlyInLoadMap = true;
 
-    // Update the loading screen immediately if the engine is initialized
     if (GEngine->IsInitialized())
     { DoUpdateLoadingScreen(); }
 }
@@ -282,8 +276,7 @@ auto
 
     if (DoShouldShowLoadingScreen())
     {
-        // If we don't make it to the specified checkpoint in the given time, trigger the hang detector
-        // so we can better determine where progress stalled.
+        // Missing the checkpoint within the window trips the hang detector, pinpointing the stall
         FThreadHeartBeat::Get().MonitorCheckpointStart(GetFName(),
             UCk_Utils_LoadingScreen_Settings_UE::Get_LoadingScreenHeartbeatHangDuration());
 
@@ -315,7 +308,6 @@ auto
     DoCheckForAnyNeedToShowLoadingScreen()
     -> bool
 {
-    // Start out with 'unknown' reason in case someone forgets to put a reason when changing this in the future.
     _DebugReason = TEXT("Reason for Showing/Hiding LoadingScreen is unknown!");
 
     const auto LocalGameInstance = GetGameInstance();
@@ -329,7 +321,6 @@ auto
     const auto Context = LocalGameInstance->GetWorldContext();
     if (ck::Is_NOT_Valid(Context, ck::IsValid_Policy_NullptrOnly{}))
     {
-        // We don't have a world context right now... better show a loading screen
         _DebugReason = TEXT("The game instance has a null WorldContext");
         return true;
     }
@@ -344,28 +335,24 @@ auto
     const auto GameState = World->GetGameState<AGameStateBase>();
     if (ck::Is_NOT_Valid(GameState))
     {
-        // The game state has not yet replicated.
         _DebugReason = TEXT("GameState hasn't yet replicated (it's null)");
         return true;
     }
 
     if (_CurrentlyInLoadMap)
     {
-        // Show a loading screen if we are in LoadMap
         _DebugReason = TEXT("_CurrentlyInLoadMap is true");
         return true;
     }
 
     if (NOT Context->TravelURL.IsEmpty())
     {
-        // Show a loading screen when pending travel
         _DebugReason = TEXT("We have pending travel (the TravelURL is not empty)");
         return true;
     }
 
     if (ck::IsValid(Context->PendingNetGame))
     {
-        // Connecting to another server
         _DebugReason = TEXT("We are connecting to another server (PendingNetGame != nullptr)");
         return true;
     }
@@ -378,13 +365,10 @@ auto
 
     if (World->IsInSeamlessTravel())
     {
-        // Show a loading screen during seamless travel
         _DebugReason = TEXT("We are in seamless travel");
         return true;
     }
 
-    // Hold while streaming sublevels that should be loaded/visible are still pending — this is
-    // the "player falls through the floor on slow machines" guard. (Ck addition; not in Lyra.)
     if (UCk_Utils_LoadingScreen_Settings_UE::Get_WaitForStreamingLevels())
     {
         auto NumPendingStreamingLevels = 0;
@@ -408,27 +392,21 @@ auto
         }
     }
 
-    // Ask the game state if it needs a loading screen
     if (ICk_LoadingProcess::Get_ShouldShowLoadingScreen(GameState, /*out*/ _DebugReason))
     { return true; }
 
-    // Ask any game state components if they need a loading screen
     for (const auto TestComponent : GameState->GetComponents())
     {
         if (ICk_LoadingProcess::Get_ShouldShowLoadingScreen(TestComponent, /*out*/ _DebugReason))
         { return true; }
     }
 
-    // Ask any of the external loading processors that may have been registered. These might be actors or
-    // components that were registered by game code to tell us to keep the loading screen up while perhaps
-    // something finishes streaming in.
     for (const auto& Processor : _ExternalLoadingProcessors)
     {
         if (ICk_LoadingProcess::Get_ShouldShowLoadingScreen(Processor.GetObject(), /*out*/ _DebugReason))
         { return true; }
     }
 
-    // Check each local player
     auto FoundAnyLocalPC = false;
     auto MissingAnyLocalPC = false;
 
@@ -446,11 +424,9 @@ auto
 
         FoundAnyLocalPC = true;
 
-        // Ask the PC itself if it needs a loading screen
         if (ICk_LoadingProcess::Get_ShouldShowLoadingScreen(PlayerController, /*out*/ _DebugReason))
         { return true; }
 
-        // Ask any PC components if they need a loading screen
         for (const auto TestComponent : PlayerController->GetComponents())
         {
             if (ICk_LoadingProcess::Get_ShouldShowLoadingScreen(TestComponent, /*out*/ _DebugReason))
@@ -461,21 +437,18 @@ auto
     const auto GameViewportClient = LocalGameInstance->GetGameViewportClient();
     const auto IsInSplitscreen = GameViewportClient->GetCurrentSplitscreenConfiguration() != ESplitScreenType::None;
 
-    // In splitscreen we need all player controllers to be present
     if (IsInSplitscreen && MissingAnyLocalPC)
     {
         _DebugReason = TEXT("At least one missing local player controller in splitscreen");
         return true;
     }
 
-    // And in non-splitscreen we need at least one player controller to be present
     if (NOT IsInSplitscreen && NOT FoundAnyLocalPC)
     {
         _DebugReason = TEXT("Need at least one local player controller");
         return true;
     }
 
-    // Victory! The loading screen can go away now
     _DebugReason = TEXT("(nothing wants to show it anymore)");
     return false;
 }
@@ -491,7 +464,6 @@ auto
         return false;
     }
 
-    // Check debugging commands that force the state one way or another
 #if NOT UE_BUILD_SHIPPING
     static const auto CmdLineNoLoadingScreen = FParse::Param(FCommandLine::Get(), TEXT("NoLoadingScreen"));
     if (CmdLineNoLoadingScreen)
@@ -501,25 +473,20 @@ auto
     }
 #endif
 
-    // Can't show a loading screen if there's no game viewport
     const auto LocalGameInstance = GetGameInstance();
     if (ck::Is_NOT_Valid(LocalGameInstance->GetGameViewportClient()))
     { return false; }
 
-    // Check for a need to show the loading screen
     const auto NeedToShowLoadingScreen = DoCheckForAnyNeedToShowLoadingScreen();
 
-    // Keep the loading screen up a bit longer if desired
     auto WantToForceShowLoadingScreen = false;
 
     if (NeedToShowLoadingScreen)
     {
-        // Still need to show it
         _TimeLoadingScreenLastDismissed = -1.0;
     }
     else
     {
-        // Don't *need* to show the screen anymore, but might still want to for a bit
         const auto CurrentTime = FPlatformTime::Seconds();
         const auto CanHoldLoadingScreen =
             NOT GIsEditor || UCk_Utils_LoadingScreen_Settings_UE::Get_HoldLoadingScreenAdditionalSecsEvenInEditor();
@@ -532,11 +499,9 @@ auto
 
         const auto TimeSinceScreenDismissed = CurrentTime - _TimeLoadingScreenLastDismissed;
 
-        // Hold for an extra X seconds, to cover up streaming
         if (HoldLoadingScreenAdditionalSecs > 0.0 && TimeSinceScreenDismissed < HoldLoadingScreenAdditionalSecs)
         {
-            // Make sure we're rendering the world at this point, so that textures will actually stream in
-            //@TODO: If NeedToShowLoadingScreen bounces back true during this window, we won't turn this off again...
+            // World rendering must be back on during the hold or textures never stream in
             const auto GameViewportClient = GetGameInstance()->GetGameViewportClient();
             GameViewportClient->bDisableWorldRendering = false;
 
@@ -568,7 +533,6 @@ auto
     if (_CurrentlyShowingLoadingScreen)
     { return; }
 
-    // Unable to show loading screen if the engine is still loading with its loading screen.
     if (const auto PreLoadScreenManager = FPreLoadScreenManager::Get();
         ck::IsValid(PreLoadScreenManager, ck::IsValid_Policy_NullptrOnly{}) &&
         PreLoadScreenManager->HasActivePreLoadScreenType(EPreLoadScreenTypes::EngineLoadingScreen))
@@ -591,12 +555,10 @@ auto
 
     const auto LocalGameInstance = GetGameInstance();
 
-    // Eat input while the loading screen is displayed
     DoStartBlockingInput();
 
     _OnVisibilityChanged.Broadcast(ECk_LoadingScreen_Visibility::Visible);
 
-    // Create the loading screen widget
     const auto LoadingScreenWidgetClass = TSubclassOf<UUserWidget>{
         UCk_Utils_LoadingScreen_Settings_UE::Get_LoadingScreenWidget().TryLoadClass<UUserWidget>()};
 
@@ -612,7 +574,6 @@ auto
         _LoadingScreenWidget = SNew(SThrobber);
     }
 
-    // Add to the viewport at a high ZOrder to make sure it is on top of most things
     const auto GameViewportClient = LocalGameInstance->GetGameViewportClient();
     GameViewportClient->AddViewportWidgetContent(_LoadingScreenWidget.ToSharedRef(),
         UCk_Utils_LoadingScreen_Settings_UE::Get_LoadingScreenZOrder());
@@ -654,7 +615,6 @@ auto
         constexpr auto EnablingLoadingScreen = false;
         DoChangePerformanceSettings(EnablingLoadingScreen);
 
-        // Let observers know that the loading screen is done
         _OnVisibilityChanged.Broadcast(ECk_LoadingScreen_Visibility::Hidden);
     }
 
@@ -723,10 +683,8 @@ auto
         ? FShaderPipelineCache::BatchMode::Fast
         : FShaderPipelineCache::BatchMode::Background);
 
-    // Don't bother drawing the 3D world while we're loading
     GameViewportClient->bDisableWorldRendering = InEnablingLoadingScreen;
 
-    // Make sure to prioritize streaming in levels if the loading screen is up
     if (const auto ViewportWorld = GameViewportClient->GetWorld();
         ck::IsValid(ViewportWorld))
     {
@@ -741,7 +699,6 @@ auto
 
     if (InEnablingLoadingScreen)
     {
-        // Set a new hang detector timeout multiplier when the loading screen is visible.
         auto HangDurationMultiplier = double{};
         if (ck::Is_NOT_Valid(GConfig, ck::IsValid_Policy_NullptrOnly{}) ||
             NOT GConfig->GetDouble(TEXT("Core.System"), TEXT("LoadingScreenHangDurationMultiplier"),
@@ -751,15 +708,12 @@ auto
         }
         FThreadHeartBeat::Get().SetDurationMultiplier(HangDurationMultiplier);
 
-        // Do not report hitches while the loading screen is up
         FGameThreadHitchHeartBeat::Get().SuspendHeartBeat();
     }
     else
     {
-        // Restore the hang detector timeout when we hide the loading screen
         FThreadHeartBeat::Get().SetDurationMultiplier(1.0);
 
-        // Resume reporting hitches now that the loading screen is down
         FGameThreadHitchHeartBeat::Get().ResumeHeartBeat();
     }
 }

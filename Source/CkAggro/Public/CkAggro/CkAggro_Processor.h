@@ -15,7 +15,6 @@ namespace ck
     class FProcessor_AggroTarget_HandleRequests;
     class FProcessor_AggroTarget_Forget;
 
-    // Arms the owner's evaluation pacer to Interval + a per-entity jitter, staggering the fleet's evaluation cohorts.
     class CKAGGRO_API FProcessor_Aggro_Setup : public ck_exp::TProcessor<
         FProcessor_Aggro_Setup,
         FCk_Handle_Aggro,
@@ -42,9 +41,6 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Drains owner-level requests: AddThreat (O(1) map lookup; create-on-miss per CreatePolicy; routes the threat to
-    // the target's request queue), RemoveTarget / ClearAllTargets (stamp PendingForget), and the taunt path
-    // SetActiveTarget / ClearActiveTarget (flip IsActive + Current, broadcast OnAggroActiveTargetChanged).
 
     class CKAGGRO_API FProcessor_Aggro_HandleRequests : public ck_exp::TProcessor<
         FProcessor_Aggro_HandleRequests,
@@ -87,9 +83,7 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // The one always-ticking processor (no MarkedDirtyBy) — empty-view-skipped when no aggro owners exist. Ticks the
-    // pacer chrono; on fire, rearms with fresh jitter, bumps the debug eval counter, and stamps EvaluationPending on
-    // every tracked target (the record's one hot use, at eval cadence) + SelectionPending on itself.
+    // The one always-ticking processor: no MarkedDirtyBy on purpose (it is empty-view-skipped when no owners exist).
 
     class CKAGGRO_API FProcessor_Aggro_EvaluationPacer : public ck_exp::TProcessor<
         FProcessor_Aggro_EvaluationPacer,
@@ -118,8 +112,6 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Argmax over the tracked-target map (eligibility + hysteresis gates); flips IsActive + Current and broadcasts
-    // OnAggroActiveTargetChanged on a switch. Cost is O(dirty-owners x cap), not O(all targets).
 
     class CKAGGRO_API FProcessor_Aggro_SelectActiveTarget : public ck_exp::TProcessor<
         FProcessor_Aggro_SelectActiveTarget,

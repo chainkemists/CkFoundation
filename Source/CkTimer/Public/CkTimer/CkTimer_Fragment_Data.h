@@ -74,17 +74,10 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Timer_JumpDirection);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Save-only persistence payload for a Timer child entity (spec Phase 3.2). The runtime position lives in the chrono's
-// _CurrentValue, which is UPROPERTY(Transient) and therefore does NOT survive the v3 rebuild+hydrate load — the entity
-// is re-Constructed from its spawn recipe (Params re-derive GoalValue/direction/behavior) but the chrono resets to its
-// start (0 for CountUp, GoalValue for CountDown-after-Setup). This payload captures the three pieces the rebuild loses:
-//   - _Elapsed        : the chrono position (Get_TimeElapsed(None) == _CurrentValue) at capture.
-//   - _CountDirection : the RUNTIME direction (the FTag_Timer_Countdown tag), which Request_ChangeCountDirection /
-//                       Request_ReverseDirection flip WITHOUT touching Params — so a runtime flip is lost on rebuild.
-//   - _RunState       : running vs paused (the FTag_Timer_NeedsUpdate tag, mirrors Get_CurrentState). Done/terminal is
-//                       NOT a distinct run-state here — it is encoded by _Elapsed reaching GoalValue.
-// FCk_SaveData_ prefix (not FCk_RepData_): this type never rides the wire (timers are unreplicated) and stays off the
-// RepData census. Handler registered in CkTimer_Fragment.cpp (Produce + HydrationApply, no net Apply).
+// Save-only persistence payload for a Timer child entity: the three pieces the v3 rebuild loses (the chrono
+// position, the RUNTIME count direction, and the run-state — all tag- or Transient-backed).
+// FCk_SaveData_ prefix (not FCk_RepData_): timers are unreplicated, so this never rides the wire.
+// Full contract and coverage limitation: Claude.md § Save/load persistence.
 USTRUCT()
 struct CKTIMER_API FCk_SaveData_Timer
 {
@@ -197,8 +190,7 @@ private:
     FCk_Time _JumpDuration;
 
     // Relative (default): _JumpDuration is a delta applied to the current elapsed. Absolute: _JumpDuration is the
-    // TARGET elapsed and the handler moves the chrono by the direction-dependent gap. Rides the request struct
-    // (addon-as-parameter) — no new UFUNCTION overload.
+    // TARGET elapsed and the handler moves the chrono by the direction-dependent gap.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_RelativeAbsolute _JumpMode = ECk_RelativeAbsolute::Relative;

@@ -211,14 +211,9 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, IsValid_Policy_NullptrOnly, [=
 
 namespace ck_details
 {
-    // This function is necessary for the TOptional Validator so that we can discard invalid
-    // template specializations for types such as `float` which matches with both `bool` and
-    // wchar_t* (not sure why). Forwarding the check to the following template function
-    // allows us to discard the rest of the statements without having the fully checked
-    // by the compiler.
-    //
-    // Ref: https://en.cppreference.com/w/cpp/language/if
-    // search for "Outside a template, a discarded statement is fully checked. if constexpr is not a substitute for the #if preprocessing directive:"
+    // Must stay a separate template: only inside one does `if constexpr` leave the discarded branch
+    // unchecked. Inlining this into the TOptional validator makes types like `float` (which match both
+    // `bool` and `wchar_t*`) fail to compile. Ref: https://en.cppreference.com/w/cpp/language/if
     template <typename T>
     constexpr auto OptionalCheck(const TOptional<T>& InOptional)
     {

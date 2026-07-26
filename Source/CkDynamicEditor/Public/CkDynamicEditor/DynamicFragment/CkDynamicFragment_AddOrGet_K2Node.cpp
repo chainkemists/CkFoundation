@@ -117,16 +117,13 @@ auto UCkDynamicFragment_AddOrGet_K2Node::ReallocatePinsDuringReconstruction(
 
 auto UCkDynamicFragment_AddOrGet_K2Node::AllocateDefaultPins() -> void
 {
-    // Create execution pins
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Execute);
     CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Then);
 
-    // Create fragment selector pin (on-node dropdown)
     ck::FStructTypeSelectorHelpers::CreateSelectorPin(
         *this,
         ck_k2_node_dynamic_fragment_addorget::PinName_FragmentSelector);
 
-    // Create Handle input pin
     CreatePin(
         EGPD_Input,
         UEdGraphSchema_K2::PC_Struct,
@@ -173,7 +170,6 @@ auto UCkDynamicFragment_AddOrGet_K2Node::DoExpandNode_Expanded(
 {
     const auto* StructType = InStructType;
 
-    // Create AddOrGet_Fragment node
     auto* AddOrGetFragment_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     AddOrGetFragment_Node->FunctionReference.SetExternalMember(
         GET_FUNCTION_NAME_CHECKED(UCk_Utils_DynamicFragment_UE, AddOrGet_Fragment_TypeUnsafe),
@@ -283,7 +279,6 @@ auto UCkDynamicFragment_AddOrGet_K2Node::DoExpandNode_Compact(
 {
     namespace ns = ck_k2_node_dynamic_fragment_addorget;
 
-    // Create AddOrGet_Fragment node
     auto* AddOrGetFragment_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     AddOrGetFragment_Node->FunctionReference.SetExternalMember(
         GET_FUNCTION_NAME_CHECKED(UCk_Utils_DynamicFragment_UE, AddOrGet_Fragment_TypeUnsafe),
@@ -298,7 +293,6 @@ auto UCkDynamicFragment_AddOrGet_K2Node::DoExpandNode_Compact(
         StructTypePin->DefaultObject = const_cast<UScriptStruct*>(InStructType);
     }
 
-    // Connect compact output pin directly
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
@@ -310,7 +304,6 @@ auto UCkDynamicFragment_AddOrGet_K2Node::DoExpandNode_Compact(
         ECk_EditorGraph_PinLinkType::Move
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // Connect execution and handle pins
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
@@ -406,7 +399,6 @@ auto UCkDynamicFragment_AddOrGet_K2Node::CreatePinsFromFragmentStruct() -> void
 
     const auto& CreatePinFromProperty = [this](const FProperty* InProperty)
     {
-        // Create as OUTPUT pins with reference flag for AddOrGet
         auto* Pin = CreatePin(EGPD_Output, NAME_None, InProperty->GetFName());
 
         if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}))

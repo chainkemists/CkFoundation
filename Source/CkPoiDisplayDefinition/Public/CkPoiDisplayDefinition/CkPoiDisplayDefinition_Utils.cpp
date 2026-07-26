@@ -77,9 +77,7 @@ auto
     RecordOfPoiDisplayDefinitions_Utils::AddIfMissing(InPoi, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfPoiDisplayDefinitions_Utils::Request_Connect(InPoi, NewDefinitionEntity, ECk_Record_LabelRequirementPolicy::Optional);
 
-    // (a) Bind the parent->child visibility cascade exactly once per owner. IgnorePayloadInFlight: the seed below reads
-    // ground truth right now, so a replay of the last hidden-payload would double-apply. The bind is entity-scoped and
-    // works whether or not the owner has composed VisibleRange yet — it just never fires until VisibleRange broadcasts.
+    // IgnorePayloadInFlight: the seed below reads ground truth now, so a replayed payload would double-apply
     if (NOT InPoi.Has<ck::FTag_PoiDisplayDefinition_CascadeBound>())
     {
         ck::UUtils_Signal_OnVisibleRange_HiddenChanged::Bind<&UCk_Utils_PoiDisplayDefinition_UE::DoOnOwnerHiddenChanged>(
@@ -88,8 +86,7 @@ auto
         InPoi.Add<ck::FTag_PoiDisplayDefinition_CascadeBound>();
     }
 
-    // (b) Seed: a child created under an already-hidden owner must not flash visible for a frame before the next
-    // hidden transition (which may never come). If the owner is hidden right now, pre-apply the tag to this child.
+    // Seed, so a child of an already-hidden owner never flashes visible awaiting a transition that may never come
     if (UCk_Utils_VisibleRange_UE::Has(InPoi) &&
         UCk_Utils_VisibleRange_UE::Get_IsHidden(UCk_Utils_VisibleRange_UE::Cast(InPoi)))
     {
@@ -197,7 +194,6 @@ auto
         FGameplayTag InConsumer)
     -> FCk_Handle_PoiDisplayDefinition
 {
-    // Direct-attach definition on the POI itself wins first.
     if (Has(InPoi))
     {
         const auto OwnerDefinition = CastChecked(InPoi);

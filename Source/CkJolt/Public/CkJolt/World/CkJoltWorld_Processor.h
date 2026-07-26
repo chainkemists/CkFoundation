@@ -11,19 +11,16 @@
 
 namespace ck
 {
-    // Defined by the JoltBody / JoltCharacter feature quartets (Body/CkJoltBody_Processor.h,
-    // Character/CkJoltCharacter_Processor.h). Forward-declared here for FProcessor_JoltWorld_Step's RunAfter
-    // edge only — the scheduler resolves the dependency by canonical type name (entt::type_name), which needs
-    // the declaration, not the definition. Including those headers here would be circular (they depend on
-    // this one).
+    // Forward-declared for FProcessor_JoltWorld_Step's RunAfter edge only: the scheduler resolves
+    // dependencies by canonical type name (entt::type_name), which needs the declaration, not the
+    // definition — and including their headers here would be circular.
     class FProcessor_JoltBody_KinematicPush;
     class FProcessor_JoltCharacter_PreStep;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Consumes the previous frame's async physics step (if any) and applies its buffered poses on the game
-    // thread. First link of the Jolt step chain, anchored after Transform request handling so this frame's
-    // transform writes are settled before physics reads them.
+    // Consumes the previous frame's async physics step and applies its buffered poses. Anchored after
+    // Transform request handling so this frame's transform writes are settled before physics reads them.
     class CKJOLT_API FProcessor_JoltWorld_WaitForAsync : public TProcessorBase<FProcessor_JoltWorld_WaitForAsync>
     {
     public:
@@ -43,8 +40,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains the contact queue produced by the last step and routes it to registered consumers (Probe
-    // overlap translation, etc.). Runs even while paused, matching the pre-split subsystem behavior.
+    // Drains the last step's contact queue to the registered routers. Runs even while paused.
     class CKJOLT_API FProcessor_JoltWorld_DrainEvents : public TProcessorBase<FProcessor_JoltWorld_DrainEvents>
     {
     public:
@@ -64,10 +60,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Fixed-timestep PLANNER: accumulates real delta, clamps the spiral-of-death budget, and computes this
+    // Fixed-timestep PLANNER: accumulates real delta, clamps the spiral-of-death budget, and writes this
     // frame's NumSteps / Alpha / PendingSimTime onto the FJoltWorld. Runs before the JoltBody kinematic
-    // push so KinematicPush can read PendingSimTime. The world-invalid / paused gate lives here — planning
-    // does not advance while paused, and the plan is zeroed so the executor (below) runs no sub-steps.
+    // push so KinematicPush can read PendingSimTime. Owns the world-invalid / paused gate.
     class CKJOLT_API FProcessor_JoltWorld_PlanStep : public TProcessorBase<FProcessor_JoltWorld_PlanStep>
     {
     public:
@@ -87,17 +82,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Fixed-timestep EXECUTOR: reads the plan (NumSteps / FixedDt) from the FJoltWorld, optimizes the
-    // broadphase if requested, then runs N fixed sub-steps (Update + pose capture) — in sync mode applying
-    // the poses immediately; in async mode dispatching the step batch to the task graph, consumed by
-    // FProcessor_JoltWorld_WaitForAsync next frame. Runs after the JoltBody kinematic push so ECS-driven
-    // kinematic targets are staged into the same step.
+    // Fixed-timestep EXECUTOR: optimizes the broadphase if requested, then runs the planned N sub-steps
+    // (Update + pose capture) — sync applies the poses immediately, async dispatches the batch to the task
+    // graph for FProcessor_JoltWorld_WaitForAsync to consume next frame.
     class CKJOLT_API FProcessor_JoltWorld_Step : public TProcessorBase<FProcessor_JoltWorld_Step>
     {
     public:
         using Group = FGroup_Transform;
-        // After BOTH the JoltBody kinematic push AND the JoltCharacter pre-step, so this frame's ECS-driven
-        // kinematic targets and character intents are staged into the same step.
+        // After BOTH, so this frame's ECS-driven kinematic targets and character intents ride the same step.
         using RunAfter = TDepList<FProcessor_JoltBody_KinematicPush, FProcessor_JoltCharacter_PreStep>;
 
     private:

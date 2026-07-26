@@ -130,10 +130,9 @@ auto
 
     auto& Current = InHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
 
-    // The wrapper (which already parents the content widget under its ScalingBox) is
-    // added to the viewport once, in Request_WrapWidget. Visibility then rides the
-    // wrapper's RenderOpacity — do NOT add/remove the content widget to the viewport
-    // here, which would re-parent it out of the wrapper and bypass scaling/tracking.
+    // Request_WrapWidget already added the wrapper (which parents the content widget under its
+    // ScalingBox) to the viewport, and visibility rides the wrapper's RenderOpacity. Do NOT
+    // add/remove the content widget here — that re-parents it out of the wrapper.
     switch (const auto& ViewportOperation = InParams.Get_InitialViewportOperation())
     {
         case ECk_UI_Widget_ViewportOperation::DoNothing:
@@ -185,10 +184,9 @@ auto
     auto ComponentOuter = static_cast<UObject*>(World);
 
 #if WITH_EDITOR
-    // Editor-preview widgets host on the per-owner proxy actor so a viewport click on the widget
-    // redirects selection to the placed actor that owns the preview (see
-    // FFragment_EditorSelectionOwner). World-outered widgets have no owner and therefore no hit
-    // proxy — click-through — which stays the behavior outside previews.
+    // Editor-preview widgets host on the per-owner proxy actor so a viewport click redirects
+    // selection to the placed actor that owns the preview (see FFragment_EditorSelectionOwner).
+    // World-outered widgets have no owner, so no hit proxy — click-through — outside previews.
     if (auto* SelectionProxyHost = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionProxyHostActor(World, InHandle);
         ck::IsValid(SelectionProxyHost))
     { ComponentOuter = SelectionProxyHost; }
@@ -221,9 +219,8 @@ auto
 
     WidgetComponent->RegisterComponentWithWorld(World);
 
-    // Assign the explicit instance — do NOT rely on the component instantiating
-    // from a class (InitWidget is unreliable for runtime-created components and
-    // leaves GetWidget() null). Must be done after registration.
+    // Explicit instance, and only after registration: the component's own InitWidget/SetWidgetClass
+    // instantiation is unreliable for runtime-created components and leaves GetWidget() null.
     WidgetComponent->SetWidget(ContentWidget);
 
     InHandle.Add<ck::FFragment_WorldSpaceWidget_Current>(WidgetComponent, ContentWidget);

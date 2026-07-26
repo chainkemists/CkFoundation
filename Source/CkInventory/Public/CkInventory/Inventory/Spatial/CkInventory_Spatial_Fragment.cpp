@@ -14,10 +14,9 @@
 {
     FInventory_Spatial_RepHandlerRegistrar()
     {
-        // Load-path authority hydration: the payload is keyed on the INVENTORY entity, but the net Apply is
-        // owner-keyed and never resolves it here. Connect each saved item into THIS inventory's item record and
-        // re-place it on the grid; the authority rebuilds its inventory graph and clients converge via the
-        // ordinary SyncReplication path. All-or-nothing: if any item handle is not yet rebuilt, retry.
+        // The payload is keyed on the INVENTORY entity, which the owner-keyed net Apply never resolves —
+        // so the load path connects and re-places the saved items on THIS inventory itself; clients still
+        // converge via SyncReplication. All-or-nothing: any unrebuilt item retries.
         const auto DoHydrateSpatialItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& NewItems) -> ECk_Persistence_ApplyResult
         {
             if (NOT UCk_Utils_Inventory_Spatial_UE::Has(Entity))
@@ -41,17 +40,14 @@
                 }
             }
 
-            // Re-arm replication so the authority pushes the rebuilt item list + placements to clients: the
-            // load-path connect/place above is server-local, and without this the fresh post-travel client's
-            // container stays at the empty Construct-time initial value (it converges via the ordinary ClientOnly
-            // SyncReplication — which carries coordinate + rotation — once pushed).
+            // The connect/place above is server-local; without re-arming, a fresh post-travel client's
+            // container stays at its empty Construct-time value forever.
             auto InventoryHandle = UCk_Utils_Inventory_UE::Cast(Entity);
             UCk_Utils_Inventory_UE::Request_TryReplicateInventory(InventoryHandle);
             return ECk_Persistence_ApplyResult::Applied;
         };
 
-        // Stamps the sync fragment consumed by the Spatial SyncReplication processor (which owns
-        // the actual diff/apply). NotReady until at least one Spatial inventory is composed.
+        // Only stamps the sync fragment — the Spatial SyncReplication processor owns the diff/apply.
         const auto DoApplySpatialItems = [](FCk_Handle& Entity, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& NewItems, const TArray<FCk_InventoryItem_Spatial_ReplicatedEntry>& OldItems) -> ECk_Persistence_ApplyResult
         {
             const auto Inventories = UCk_Utils_Inventory_UE::RecordOfInventories_Utils::Get_ValidEntries(Entity);
@@ -71,10 +67,7 @@
         };
 
         FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_Inventory_Spatial_Items>({
-                // Produce-only capture (Phase 3A.4): mirror FProcessor_Inventory_Spatial_Replicate's live-state
-                // build. Keyed on the INVENTORY entity — emits THAT inventory's own items (the Replicate build reads
-                // the inventory's item record; the container's owner-hosted storage is irrelevant to the build).
-                // Produce is capture-only.
+                // Keyed on the INVENTORY entity — emits THAT inventory's items. Capture-only, no mutation.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
                     if (NOT UCk_Utils_Inventory_Spatial_UE::Has(Entity))

@@ -262,9 +262,8 @@ auto
         const FCk_Handle_StateMachine& InStateMachine)
     -> ECk_Sm_AuthorityModel
 {
-    // Sub-SMs carry a resolved-once snapshot of the parent's effective authority (they can't
-    // resolve their owning pawn live — see FFragment_Sm_NetIdentity). It already holds a concrete
-    // model (never AutoDetect), so return it directly. Top-level SMs fall through to live resolution.
+    // Sub-SMs carry a resolved-once concrete model (never AutoDetect) because they cannot resolve
+    // their owning pawn live — see FFragment_Sm_NetIdentity.
     if (InStateMachine.Has<ck::FFragment_Sm_NetIdentity>())
     { return InStateMachine.Get<ck::FFragment_Sm_NetIdentity>().Get_EffectiveAuthority(); }
 
@@ -273,10 +272,9 @@ auto
     if (Authored != ECk_Sm_AuthorityModel::AutoDetect)
     { return Authored; }
 
-    // AutoDetect: the host's net ownership decides. A player-controlled pawn host means the owning
-    // client drives (OwningClientAuthoritative); bots, non-pawn, or non-actor-bridged hosts fall back
-    // to ServerAuthoritative. This is resolved identically on every machine because IsPlayerControlled
-    // reads the replicated PlayerState (not a per-machine "is it mine" query).
+    // AutoDetect: a player-controlled pawn host means the owning client drives; bots, non-pawn, or
+    // non-actor-bridged hosts fall back to ServerAuthoritative. Resolves identically on every machine
+    // because IsPlayerControlled reads the replicated PlayerState, not a per-machine "is it mine".
     const auto IsPlayerControlled = UCk_Utils_Net_UE::Get_IsEntityPlayerControlled(InStateMachine)
         == ECk_Utils_Net_IsPlayerControlled_Result::IsPlayerControlled;
 
@@ -328,10 +326,8 @@ auto
 
 namespace ck_state_machine_utils
 {
-    // Depth-first walk of the ACTIVE state tree under InSm: current state -> its hosted sub-SMs ->
-    // (recurse). Returns the sub-SM whose stored ParentHierarchy equals InTarget, or an invalid handle
-    // if none is active. The hierarchy path is a unique, deterministic address for a hosting state, so
-    // the first exact match is the one.
+    // Depth-first walk of the ACTIVE state tree: current state -> hosted sub-SMs -> recurse. The
+    // hierarchy path is a unique deterministic address, so the first exact match is the one.
     auto
     DoFind_ActiveSubSm(
         const FCk_Handle_StateMachine& InSm,
@@ -566,27 +562,18 @@ auto
     if (ck::Is_NOT_Valid(Subsystem, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
-    // The SM relay is a CLIENT→SERVER push path: it must go through the channel owned by the SM's
-    // OWNING player (the possessing client). On that client, that channel is the AutonomousProxy
-    // with a valid NetConnection — the only one a client is allowed to invoke Server_* RPCs on.
-    //
-    // Request_AcquireAnyChannel (used previously) returns "the first pooled channel", which in a
-    // listen-server session can be ANOTHER player's channel (e.g. the host's). On this client that
-    // is a SimulatedProxy with no NetConnection, so UE silently drops the client→server RPC and the
-    // owning-client push (run-status / transitions) is lost. Resolve the owning PlayerState and
-    // acquire ITS channel via Request_AcquireChannel_ForPlayer so we always get the owning channel.
-    //
-    // The return is sync-or-null (Try_ResolvePending): the owning-client push processor drives a
-    // per-pump retry loop, so an unresolved result simply means "retry next tick".
+    // The SM relay is a CLIENT→SERVER push: it must use the channel owned by the SM's OWNING player —
+    // on that client the AutonomousProxy with a valid NetConnection, the only actor a client may
+    // invoke Server_* RPCs on. Any other pooled channel is a SimulatedProxy there and UE silently
+    // drops the RPC. Sync-or-null: an unresolved result means "retry next pump".
     auto* OwningActor      = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor_Recursive(InStateMachine);
     auto* OwningPawn       = ::Cast<APawn>(OwningActor); // ::Cast to avoid the class's own typesafe-handle Cast
     auto* OwningPlayerState = OwningPawn != nullptr ? OwningPawn->GetPlayerState() : nullptr;
 
     if (OwningPlayerState == nullptr)
     {
-        // Owning player's PlayerState hasn't resolved yet (possession / PlayerState replication
-        // still settling). Return invalid so the push retries next pump rather than falling back to
-        // a non-owned channel the client can't Server_* RPC on.
+        // PlayerState not resolved yet — retry next pump rather than fall back to a non-owned channel
+        // the client can't Server_* RPC on.
         return {};
     }
 

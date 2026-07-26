@@ -28,10 +28,9 @@ struct CKPATHNETWORK_API FCk_PathNetwork_RibbonPoint
     CK_GENERATED_BODY(FCk_PathNetwork_RibbonPoint);
 
 private:
-    // MakeEditWidget: when this struct sits under an actor's edited properties (ACk_PathNetwork_UE
-    // stores its ribbons actor-RELATIVE), each point gets a draggable 3D translate widget in the
-    // level viewport — that widget interprets the vector in actor-local space, which is WHY the
-    // actor stores relative and converts to world at entity-construction time.
+    // MakeEditWidget draws a draggable translate widget in the level viewport and interprets the
+    // vector in ACTOR-LOCAL space — which is why ACk_PathNetwork_UE stores ribbons actor-relative
+    // and converts them to world space at entity-construction time.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, MakeEditWidget=true))
     FVector _Location = FVector::ZeroVector;
 
@@ -48,11 +47,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One sidewalk span: a centerline polyline with per-point half-widths. Hand-drawn ribbons and
-// detector-generated ribbons are the SAME type — that is what keeps auto-built results
-// hand-editable. Junctions are never authored: the builder snaps endpoints within
-// FCk_PathNetwork_BuildParams::_NodeSnapRadius and splits T-junctions (an endpoint touching
-// another ribbon's interior).
+// One sidewalk span: centerline polyline + per-point half-widths. Authored and detector-generated
+// ribbons are the SAME type, which is what keeps auto-built results hand-editable. Junctions are
+// never authored — the builder snaps endpoints (_NodeSnapRadius) and splits T-junctions.
 USTRUCT(BlueprintType)
 struct CKPATHNETWORK_API FCk_PathNetwork_Ribbon
 {
@@ -80,11 +77,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Raster occupancy produced by a per-game UCk_PathNetwork_Detector_UE (e.g. sampling landscape
-// paint weights). Row-major, _SizeX * _SizeY cells; cell (X,Y) covers the world-space square from
-// _Origin + (X,Y)*_CellSize. _Occupancy: 0 = off-path, non-zero = on-path. _Heights is optional
-// (empty = flat at _Origin.Z); when present it must be the same length as _Occupancy and carries
-// the world Z of each cell so centerlines follow sloped ground.
+// Raster occupancy from a per-game UCk_PathNetwork_Detector_UE. Row-major _SizeX * _SizeY cells;
+// cell (X,Y) covers the square at _Origin + (X,Y)*_CellSize; _Occupancy 0 = off-path. _Heights is
+// optional (empty = flat at _Origin.Z) and, when present, must match _Occupancy in length.
 USTRUCT(BlueprintType)
 struct CKPATHNETWORK_API FCk_PathNetwork_DetectionMask
 {

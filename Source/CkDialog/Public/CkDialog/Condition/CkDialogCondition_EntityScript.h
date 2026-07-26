@@ -9,13 +9,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Long-lived condition entity-script attached (as a child EntityScript entity) to a dialogue line. Spawned ONCE per
-// line at registration; the query processor calls Evaluate() synchronously per query, possibly many times per frame.
-//
-// CONTRACT: the verdict must be a PURE function of (InCondition, InLine, InEmitter) — never cache a per-caller
-// verdict on the instance. The SAME line can Pass for one emitter and Fail for another in the same frame, so a
-// cached result would corrupt sibling emitters' queries. Subclasses MAY pre-cache immutable world state in
-// BeginPlay (the entity is long-lived); they must NOT cache anything keyed to a specific querying emitter.
+// Long-lived condition child entity of a dialogue line, spawned ONCE at registration; Evaluate runs synchronously
+// per query, possibly many times per frame. CONTRACT: the verdict must be a PURE function of (InCondition, InLine,
+// InEmitter) — the SAME line can Pass for one emitter and Fail for another, so never cache a per-caller verdict.
 UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
 class CKDIALOG_API UCk_DialogCondition_EntityScript : public UCk_EntityScript_UE
 {
@@ -37,8 +33,7 @@ public:
         FCk_Handle_DialogEmitter InEmitter) const -> ECk_Dialog_ConditionResult;
 
 protected:
-    // BP/AS authoring hook. C++ subclasses override Evaluate directly; BP/AS subclasses implement this and the
-    // base Evaluate routes to it.
+    // BP/AS authoring hook that the base Evaluate routes to; C++ subclasses override Evaluate directly.
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|Dialog|Condition",
         DisplayName = "Evaluate")
@@ -51,7 +46,6 @@ protected:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// The always-passes workhorse used by tests and gyms (and as a "line has an unconditional gate" authoring sample).
 UCLASS(Blueprintable, BlueprintType, meta = (DisplayName = "Dialog Condition: Always True"))
 class CKDIALOG_API UCk_DialogCondition_AlwaysTrue : public UCk_DialogCondition_EntityScript
 {

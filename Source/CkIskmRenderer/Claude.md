@@ -17,6 +17,13 @@
 **Plan-2 module layout:** the vertex factory + render resources live in a separate engine-only module `CkIskmRendererVF`
 (LoadingPhase `PostConfigInit`) so the VF type registers before the engine seals its vertex-factory list; the rest
 (proxy, component, AnimCollection GPU upload) stays in `CkIskmRenderer` (Default).
+`CkIskm_BatchedRenderResources.*` is a port of Skelot v6 `SkelotRenderResources.h`, **GPUScene desktop path only** —
+HP float32, no manual-vertex-fetch, no legacy non-GPUScene path, no curves. Shader side:
+`Shaders/CkIskmRenderer/CkIskm_BatchedVertexFactory.ush`. The bone-weight stream is OWNED rather than borrowed from
+the source mesh specifically to drop every assumption about the source skin-weight layout (variable vs constant
+influence layout, 16-bit weights, influence counts that aren't 4/8) — those were the failure modes of the earlier
+borrowed-stream approach. `CkIskmRendererVF` ships no `Claude.md` of its own — `Source/CLAUDE.md` names this doc as
+its coverage.
 
 **Depends on:** `Core,CoreUObject,Engine,GameplayTags,AnimGraphRuntime,CkCore,CkEcs,CkEcsExt,CkLabel,CkLog,CkGraphics,CkProvider,CkRecord,CkSettings,CkAnimation,CkPhysics,CkUsf`.
 
@@ -53,6 +60,15 @@ Mirror of `CkIsmRenderer` — Renderer (shared per-AnimCollection) + Proxy (per-
 4. AnimBP authors **must** derive their AnimInstance class from `UCk_IskmNotify_AnimInstance` for `OnAnimationNotify` / `OnMontageFinished` signals to fire on those entities. The Setup processor logs a warning when it detects a non-derived class.
 5. Don't skip the unconditional Custom Depth/Stencil clear in `Release_BaseSKMC` — a pooled SKMC must never carry
    outline state to its next borrower, regardless of outline-processor bookkeeping order (see *Notes* below).
+6. Never call `SKMC->Stop()` in `Release_BaseSKMC`. On a component running an AnimBP or the notify bridge, `Stop()`
+   logs the engine's *"Currently in Animation Blueprint mode"* Warning, which the AutoTest harness escalates to a
+   failure for any proxy destroyed mid-test. `SetAnimInstanceClass(nullptr)` destroys the live instance outright
+   (single-node or AnimBP) and halts playback either way.
+7. Don't call `SetAnimInstanceClass(nullptr)` unguarded in the `PlayAnimation` handler — it is behind
+   `if (SKMC->AnimClass != nullptr)` on purpose. With `AnimClass` already null it tears down the existing
+   SingleNodeInstance that `PlayAnimation` is about to recreate; the momentary teardown leaves the render proxy
+   half-initialized and the SKMC visibly snaps to ref pose (reproduced by re-issuing `Request_PlayAnimation` from a
+   timer in the TransitionCycle gym station).
 
 ---
 
@@ -141,6 +157,116 @@ alpha + held source frame need `NumCustomDataFloats=8` or repacking), a blend-st
 and a `Lerp(CalcBoneMatrix(a), CalcBoneMatrix(b))` path in `CkIskm_BatchedVertexFactory.ush`. Close-up transition
 quality is currently covered by the SKMC flip (promoted members blend natively); distant 30Hz sequence pops are
 the standard crowd tradeoff (Skelot's transitions are likewise opt-in).
+
+---
+
+## Implementation notes
+
+**Bake provenance and gating.** The CPU bone-matrix bake is a direct port of Skelot's `FSkelotAnimationBuffer`
+(`SkelotAnimCollection.cpp` `CalcRenderMatrices`), and `FCk_Iskm_BakedSequence` mirrors `FSkelotSequenceDef`'s
+render-relevant fields. Sampling/compaction/layout/bounds were since extracted into the shared `ck::anim_bake` core
+(`CkAnimation/AnimBake`, also consumed by `CkVat`); this module keeps only the output encoding — transposed 3x4
+matrices in a flat `Buffer<float4>`-ready array. Deltas from Skelot: always float32 (Skelot defaults to float16), and
+`TotalFrameCount == FrameCountSequences` because there is no transition / dynamic-pose region yet. The output is
+asset-intrinsic, transient (rebuilt, never serialized) and CPU-only, so it runs headlessly under `-nullrhi`; the SRV
+upload is a separate step. **`Build_BakedPoseData` therefore gates on `IsRunningDedicatedServer()`, deliberately NOT
+`FApp::CanEverRender()`** — only a real dedicated server legitimately lacks the mesh render data the bake reads
+(cook-stripped, and unneeded since `AdvanceAnimation` already skips `NM_DedicatedServer`). A `-nullrhi`/headless run is
+not a dedicated server and the bake succeeds there, but `CanEverRender()` is false in both cases: gating on it silently
+starved listen-server / standalone / client-under-nullrhi callers of a bake `AdvanceAnimation` needs every tick, so its
+"no baked pose" ensure fired continuously for the rest of the run.
+
+**Processor scheduling (Plan-1).** `FProcessor_IskmRenderer_Setup` sits in `FGroup_Gameplay_Audio`, one phase EARLIER
+than `FProcessor_IskmProxy_Setup`: sharing `FGroup_Gameplay_Rendering` would leave registration order deciding, and the
+proxy registers first — it would poll `_RendererActor` before Setup assigned it. `FProcessor_IskmProxy_Setup::DoTick`
+caches the world pointer once per tick (`mutable _World`) so `ForEachEntity` doesn't re-resolve it per proxy per frame.
+
+**SocketFollower sampling.** The follower's world transform is `Offset x Socket(component-space) x
+LeaderEntityTransform`, recomputed after the Transform request pass. Sampling the SKMC's WORLD-space socket instead (as
+a `SyncFrom`-group processor would) reads the leader's previous-frame position — the SKMC only moves at PostTransform —
+so the follower trails by a frame of velocity; component-space sampling leaves only the animation pose a frame stale
+(sub-cm) while the root-motion term stays current. The ragdoll case inverts this: physics owns the SKMC,
+`UpdateTransform` is excluded, and re-anchoring the live component-space socket onto the frozen death-pose root
+produced the hair-detach bug.
+
+**SocketFollower group placement (incident).** `FProcessor_IskmProxy_SocketFollower_SyncTransform` runs in
+`FGroup_Transform_Finalize`, after the ENTIRE `FGroup_Transform` — not merely `RunAfter
+FProcessor_Transform_HandleRequests`, which was the original lag-free fix. The follower reads the leader transform
+through a runtime lookup the scheduler cannot see, so it carries no view-dependency ordering on either mover; the plain
+`RunAfter` left it racing `TProcessor_SceneNode_Update`, and a scene-node-driven leader (e.g. a promoted NPC's proxy
+inheriting the agent's per-frame movement) was read one frame stale, so the cosmetic trailed the moving body. Finalize
+still precedes `FGroup_PostTransform`, so the renderer flush picks up `FTag_Transform_Updated` the same frame.
+`..._SyncDescendants` is the companion: because SyncTransform writes AFTER `TProcessor_SceneNode_Update` has run,
+scene-node CHILDREN parented under a follower's output (a held item under a hand attach-point, plus that item's own
+probe children) would see the follower's `FTag_Transform_Updated` one group too late — `Transform_Cleanup` wipes the tag
+before the next frame's gate check, so after their construct-time one-shot they froze at the follower's equip-time pose.
+SyncDescendants recomputes the follower's scene-node descendant subtree in place (same composition + anchor-skip
+contract as `TProcessor_SceneNode_Update`) and runs before `FProcessor_Transform_SyncToActor` so the recomputed poses
+land on their actors the same frame.
+
+**Plan-1 → Plan-2 migration shape.** Two fragments look over-decomposed because of where they're going:
+`FFragment_IskmProxy_Current`'s `TWeakObjectPtr<USkeletalMeshComponent>` is slated to become
+`int32 _InstanceIndex + uint32 _InstanceVersion` — an SOA index into the renderer's instance arrays, with no per-entity
+SKMC for sequence-mode entities — hence the rule that `_BaseSKMC` access never leaves `UCk_Utils_IskmProxy_UE` and the
+proxy processors. `FFragment_IskmProxy_PoseSource` stays a separate fragment (never merged into AnimState) because it is
+slated to become a tag-per-source (`FTag_IskmProxy_PoseSource_Sequence/_AnimBP/_Ragdoll`) so the cluster-update processor
+can `TInclude`/`TExclude` by pose source without reading every entity's fragment. Unrelated: the `::` qualification on
+`::UCk_IskmNotify_AnimInstance` / `::UCk_Utils_IskmRenderer_UE` inside `ck_iskmproxy_processor` is a holdover from when
+those helpers lived in `namespace ck`, where `CkIskmProxy_Fragment.h`'s friend-class declarations inject a shadowing
+forward decl; in the file-local namespace unqualified lookup resolves fine and the qualifier is retained as harmless.
+
+**Editor-only renderer/crowd splitting.** Per-owner renderer actors exist because selection redirect
+(`IsSelectionChild`/`GetSelectionParent`) is actor-level, so one renderer per (data asset, selection owner) IS the
+instance-to-spawner mapping; the same applies to preview crowds, since a shared crowd cannot attribute tile instances to
+owners at actor level. SKMC release stays owner-derived (`SKMC->GetOwner()`), so proxies need no extra teardown
+bookkeeping, and runtime worlds always use the shared renderer. Editor worlds also freeze SKMC poses behind
+`bUpdateAnimationInEditor` (the `RefreshBoneTransforms` gate) — `VisibilityBasedAnimTickOption` does nothing there — so
+`EditorOnly_EnableAnimationTicking` must be applied to every acquired base SKMC and every leader-pose submesh child.
+
+**Plan-1 per-proxy override scope (V1).** Material overrides apply to the BASE SKMC only — submeshes keep their def-time
+override materials (`FCk_IskmRenderer_MeshDesc::_OverrideMaterials`) and static cosmetics are CkIsm-side. Morph targets
+likewise apply to the BASE body mesh only: `LeaderPoseComponent` copies bone transforms, not morph curves, so outfit
+submeshes do NOT inherit them. Both reset to mesh defaults when the proxy returns its SKMC to the pool, so nothing leaks
+across borrowers.
+
+**Plan-2 material validation (incident).** `UCk_Iskm_BatchedClusterComponent::Set_OverrideMaterial` /
+`Set_SlotOverrideMaterials` route every pointer through a validated cast, against two observed failure modes: (1) a
+wrong-typed object arriving through the AS boundary (`LoadAsset_Blocking` does no runtime class check) — a non-material
+stored here access-violates the base `FPrimitiveSceneProxy` ctor's material scan on the next proxy recreate; (2) a
+dangling/GC-collected pointer — non-null but with a null class pointer, so `Cast<>` AVs while dereferencing the class to
+test the type (seen via the crowd LOD-flip passing a GC'd override material). Hence liveness (`ck::IsValid`, which
+inspects only the flags/registry slot and is safe on pooled memory) is checked BEFORE `Cast<>`; either failure ensures
+loudly and stores null, letting mesh defaults take over.
+
+**Plan-2 bounds (incident).** In `SendRenderDynamicData_Concurrent` / `BuildDynData`, `LocalBounds` is the PER-INSTANCE
+bound (one animated-pose box the engine applies per instance transform; the shared 1-entry array is valid because
+`GetInstanceLocalBounds` clamps 1-or-N), while `LocalBoundsSphere` is the PRIMITIVE bound and must cover the WHOLE
+instance spread. Using the single mesh box for the primitive bound collapsed the primitive's scene bounds to one mesh at
+the component origin every animated frame — `FUpdateTransformCommand` then replaced the registration bounds, so
+everything away from the tile centre was wrongly frustum/occlusion culled ("flickers unless looking at the spawn point").
+
+**Plan-2 tile rebuild.** `RebuildTile` reads live `FMember` state, so a rebuild never snaps animation back — that is what
+fixed the old "whole tile resets to spawn pose on any flip" bug. Crowd `Initialize` bakes the AnimCollection up front
+(CPU-only, headless-safe, idempotent, and it rebuilds a stale bake) because tile fixed bounds derive from the baked
+ANIMATED pose extent: a tile created pre-bake freezes the smaller static mesh box.
+
+**Plan-2 ECS clock (incident).** The crowd actor no longer self-ticks (`bCanEverTick = false`). It historically advanced
+members in its own `AActor::Tick` — a second clock, unordered against the ECS world-actor tick — which left far cosmetics
+(ECS entities synced by the transform pipeline) up to a frame behind the member they follow. Now one controller entity
+per crowd carries `ck::FFragment_IskmCrowd_Controller` and `FProcessor_IskmCrowd_Advance` ticks it in
+`FGroup_Transform_SyncFrom`: AFTER the flip driver's `Gameplay_Script` member-world writes (member is current, not
+agent-lagged) and BEFORE `FGroup_Transform`'s HandleRequests (so a cosmetic's `Request_SetTransform` — the deferred
+cross-entity write, safe against scheduler write-ordering — lands the SAME tick). Member `PushTile` and cosmetic both
+reach the `FGroup_PostTransform` render flush the same frame.
+
+**Plan-2 game-side custom-data layout.** Shader per-instance floats [0]/[1] are the animation frame bits (rejected for
+game writes); [2..15] map to `FInstance::UserData[0..13]` and are owned by the game. BusterBlock's layout (see BB
+`DESIGN_IskmCosmeticParity.md`): [2..9] slot indices, [10..12] skin RGB, [13..15] spare.
+
+**Plan-2 Skelot provenance.** `UCk_Iskm_BatchedClusterComponent` is the analogue of Skelot's `USkelotClusterComponent`;
+`FCk_Iskm_BatchedClusterProxy` is a port of Skelot v6 `FSkelotClusterProxy`, single-mesh, GPUScene desktop only.
+Per-instance GPU occlusion (`AllowInstanceCullingOcclusionQueries`) is Skelot parity and feeds `FPrimitiveSceneProxy`
+scene-data flags.
 
 ---
 

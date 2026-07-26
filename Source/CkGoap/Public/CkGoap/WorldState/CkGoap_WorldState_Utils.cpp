@@ -2,7 +2,7 @@
 
 #include "CkGoap_WorldState_Fragment.h"
 
-#include "CkGoap/CkGoap_Fragment.h"      // FTag_Goap_Dirty_WorldState
+#include "CkGoap/CkGoap_Fragment.h"
 #include "CkGoap/CkGoap_Stats.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -20,13 +20,9 @@ DECLARE_CYCLE_STAT(TEXT("Goap::WS_GetValue"), STAT_Goap_WS_GetValue, STATGROUP_C
 DECLARE_DWORD_COUNTER_STAT(TEXT("Goap WS Reads"), STAT_Goap_WS_Reads, STATGROUP_CkGoap);
 
 // --------------------------------------------------------------------------------------------------------------------
-// Owner's record of WorldState children created by Create.
-//
-// Defined in this .cpp (not a public Fragment.h) for the same reason
-// FFragment_RecordOfGoapPlanners lives in CkGoap_Utils.cpp: exposing
-// CkRecord_Fragment.h in a public header would drag FCk_Handle_EntityExtension
-// into every CkGoap consumer and break link in dependents that don't list
-// CkEntityExtension. Only this translation unit ever touches the record.
+// Kept in this .cpp: exposing CkRecord_Fragment.h from a public header drags
+// FCk_Handle_EntityExtension into every CkGoap consumer and breaks link in dependents
+// that don't list CkEntityExtension.
 
 namespace ck
 {
@@ -49,11 +45,8 @@ namespace ck_goap_world_state_utils_internal
 			const FCk_Fragment_Goap_WorldState_ParamsData& /*InParams*/)
 		-> void
 	{
-		// Note: FFragment_Goap_WorldState_Params is currently empty so it isn't
-		// stamped — the registry rejects empty structs through the fragment path.
-		// When the params struct gains real configuration knobs, re-add the
-		// `InTargetEntity.Add<ck::FFragment_Goap_WorldState_Params>(InParams)`
-		// stamping here.
+		// Params is empty today and the fragment path rejects empty structs, so it is not
+		// stamped — re-add Add<FFragment_Goap_WorldState_Params>(InParams) once it gains knobs.
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_KeyRegistry>();
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_Values>();
 		InTargetEntity.Add<ck::FFragment_Goap_WorldState_OverrideStack>();
@@ -138,9 +131,6 @@ auto
 	if (NOT ck::IsValid(InWorldState)) { return false; }
 	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_KeyRegistry>()) { return false; }
 
-	// Override-stack read path: walk top-down, return first match. Layers
-	// store raw FGameplayTag keys and resolve lazily at read time so the
-	// override-push API doesn't need to be ordered against key registration.
 	if (InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>())
 	{
 		const auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
@@ -187,9 +177,6 @@ auto
 
 namespace ck_goap_world_state_utils_impl
 {
-	// Compute the effective Get_Value(WS, Tag) without going through the public
-	// API — walks the override stack top-down, falls through to the base store.
-	// Returns the effective bool for the supplied tag.
 	auto
 		DoGetEffectiveValue(
 			const FCk_Handle_Goap_WorldState& InWS,
@@ -210,8 +197,6 @@ namespace ck_goap_world_state_utils_impl
 		return Values.Get(Key);
 	}
 
-	// Snapshot the effective value for every tag in `InTags` (typically the
-	// keyset of the layer being pushed / popped). Returned in a tag-keyed map.
 	auto
 		DoSnapshotEffective(
 			const FCk_Handle_Goap_WorldState& InWS,
@@ -231,9 +216,7 @@ namespace ck_goap_world_state_utils_impl
 
 namespace ck_goap_world_state_utils_changelog
 {
-	// Record every key whose EFFECTIVE value differs between the two snapshots
-	// into the WS entity's change-log ring. Returns whether anything changed —
-	// the callers reuse that as their dirty-fire decision.
+	// Returns whether any effective value changed — callers reuse that as their dirty-fire decision.
 	auto DoRecordEffectiveDeltas(
 		FCk_Handle_Goap_WorldState& InWorldState,
 		const TArray<FGameplayTag>& InAffectedTags,
@@ -275,9 +258,7 @@ auto
 
 	auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
 
-	// Build the union of keys we may touch: keys in the new layer plus keys
-	// in the layer being REPLACED (if any) — the latter matters because keys
-	// dropped during replacement may flip their effective view back to base.
+	// Keys of the REPLACED layer count as affected too: dropping one flips its effective view to base.
 	auto AffectedTags = TArray<FGameplayTag>{};
 	AffectedTags.Reserve(InOverrideValues.Num());
 	for (const auto& Kv : InOverrideValues) { AffectedTags.AddUnique(Kv.Key); }
@@ -295,7 +276,6 @@ auto
 
 	if (ExistingIdx != INDEX_NONE)
 	{
-		// Replace contents idempotently.
 		Stack._Layers[ExistingIdx].Values = InOverrideValues;
 	}
 	else
@@ -414,7 +394,6 @@ auto
 	auto& Stack = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>();
 	if (Stack._Layers.IsEmpty()) { return InWorldState; }
 
-	// Union of every key across every layer.
 	auto AffectedTags = TArray<FGameplayTag>{};
 	for (const auto& Layer : Stack._Layers)
 	{
@@ -485,7 +464,6 @@ auto
 	if (NOT ck::IsValid(InWorldState)) { return NAME_None; }
 	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_OverrideStack>()) { return NAME_None; }
 
-	// Walk top-down: most recently pushed layer wins (matches Get_Value semantics).
 	const auto& Layers = InWorldState.Get<ck::FFragment_Goap_WorldState_OverrideStack>().Get_Layers();
 	for (auto i = Layers.Num() - 1; i >= 0; --i)
 	{
@@ -581,8 +559,6 @@ auto
 	if (NOT ck::IsValid(InWorldState)) { return 0; }
 	if (NOT InWorldState.Has<ck::FFragment_Goap_WorldState_Subscribers>()) { return 0; }
 
-	// Count only live handles — stale subscribers don't replan, so they don't
-	// belong in the blast-radius number.
 	auto Count = int32{0};
 	for (const auto& Subscriber : InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>().Get_Subscribers())
 	{

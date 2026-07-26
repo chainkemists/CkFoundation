@@ -50,13 +50,6 @@ auto UCk_K2Node_Cue_Base::PostEditChangeProperty(
 
 auto UCk_K2Node_Cue_Base::PreSave(FObjectPreSaveContext SaveContext) -> void
 {
-    // Populate _CachedSpawnParamsStruct immediately before serialisation so it is never
-    // null (or stale) in the saved asset. DoAllocate_DefaultPins handles this when the
-    // Blueprint is opened in the editor, but Unreal can save Blueprints without opening
-    // them (startup resave prompts, "Save All" dialogs, etc.) — in those cases
-    // DoAllocate_DefaultPins never runs and _CachedSpawnParamsStruct would be serialised
-    // as null, removing the struct from the Blueprint's import table and causing cook
-    // failures ("Unknown structure" errors at runtime).
     if (auto* CueClass = _CachedCueClass.Get(); ck::IsValid(CueClass))
     {
         if (auto* EntityScriptSubsystem = GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>();
@@ -94,7 +87,6 @@ auto UCk_K2Node_Cue_Base::ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*
         CueClass = DoGet_CueClass(InOldPins);
     }
 
-    // Get cue class from old pins
     if (ck::IsValid(CueClass))
     {
         DoCreatePinsFromCue(CueClass);
@@ -163,7 +155,6 @@ auto UCk_K2Node_Cue_Base::GetNodeTitle(ENodeTitleType::Type InTitleType) const -
 {
     const auto& CueName = DoGet_CueName();
 
-    // Handle empty/invalid cue name
     if (ck::Is_NOT_Valid(CueName))
     {
         return DoGet_DisplayNodeTitle();
@@ -194,14 +185,12 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
 {
     using namespace ck_k2node_cue;
 
-    // Owner entity input
     CreatePin(
         EGPD_Input,
         UEdGraphSchema_K2::PC_Struct,
         FCk_Handle::StaticStruct(),
         PinName_OwnerEntity);
 
-    // Cue name input (GameplayTag with category filter)
     auto* CueNamePin = CreatePin(
         EGPD_Input,
         UEdGraphSchema_K2::PC_Struct,
@@ -209,14 +198,12 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
         PinName_CueName);
     CueNamePin->PinToolTip = TEXT("The gameplay tag identifying which cue to execute");
 
-    // Update owner entity pin visibility based on entity mode
     if (auto* OwnerEntityPin = FindPinChecked(PinName_OwnerEntity);
         ck::IsValid(OwnerEntityPin, ck::IsValid_Policy_NullptrOnly{}))
     {
         OwnerEntityPin->bHidden = (_EntityMode == ECk_Cue_EntityMode::Transient);
     }
 
-    // Return value
     auto* ReturnValuePin = CreatePin(
         EGPD_Output,
         UEdGraphSchema_K2::PC_Struct,
@@ -224,23 +211,9 @@ auto UCk_K2Node_Cue_Base::DoAllocate_DefaultPins() -> void
         PinName_ReturnValue);
     ReturnValuePin->PinToolTip = TEXT("The handle to the newly spawned cue entity (not yet constructed)");
 
-    // Generate cue-specific pins
     DoCreatePinsFromCue(DoGet_CueClass());
 
-    // Eagerly synchronise the spawn params struct cache so it is non-null before ExpandNode
-    // runs and gets serialised into the Blueprint's import table on the next save.
-    // Comparing the fresh pointer also catches stale references when an EntityScript is
-    // renamed or recreated — in those cases _CachedSpawnParamsStruct would be non-null but
-    // wrong, and the cook would still fail.
-    //
-    // Guard: skip during async loading. GetOrCreate_SpawnParamsStructForEntity can call
-    // LoadObject internally when the struct is not yet registered in the subsystem's cache
-    // (e.g. during editor startup while UCk_EntityScript_Subsystem_UE::Initialize is still
-    // iterating assets). That LoadObject can trigger another Blueprint package load, which
-    // tries to enqueue that Blueprint for compile while FBlueprintCompilationManager is
-    // already flushing its queue — producing an ensure. The cache will be correctly
-    // populated once startup completes (via PreSave before any save, or the next time the
-    // Blueprint is opened in the editor).
+    // Async-load skip is load-bearing (nested Blueprint compile enqueue) — CkCueEditor/CLAUDE.md.
     if (!IsAsyncLoading())
     if (auto* CueClass = _CachedCueClass.Get(); ck::IsValid(CueClass))
     {
@@ -265,7 +238,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
 {
     const auto& CueName = DoGet_CueName();
 
-    // Handle empty/invalid cue name
     if (ck::Is_NOT_Valid(CueName))
     {
         InCompilerContext.MessageLog.Error(*LOCTEXT("Missing Cue Name", "No cue name specified. @@").ToString(), this);
@@ -276,7 +248,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
 
     if (ck::Is_NOT_Valid(CueClass))
     {
-        // Get subsystem info for better error message
         const auto& ExecutorClass = Get_CueExecutorSubsystemClass();
         auto SubsystemInfo = FString{TEXT("unknown subsystem")};
 
@@ -307,11 +278,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
     auto* CueSpawnParamsStruct = _CachedSpawnParamsStruct.Get();
     if (ck::Is_NOT_Valid(CueSpawnParamsStruct))
     {
-        // Cache is null — fall back to a dynamic lookup. This covers Blueprints saved before
-        // _CachedSpawnParamsStruct started being populated (any Blueprint where the cue name pin
-        // has not been changed since the node was placed). If the struct is found, we restore
-        // the reference and mark the node dirty so the Blueprint will be resaved with the
-        // struct in its import table, preventing cook failures.
         CueSpawnParamsStruct = DoGet_CueSpawnParamsStruct(CueClass, InCompilerContext);
         if (ck::IsValid(CueSpawnParamsStruct))
         {
@@ -329,12 +295,8 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         return;
     }
 
-    // The struct exists in memory but may not have been saved to disk yet — it is created via
-    // a deferred save ticker when the EntityScript is compiled. If the package file does not
-    // exist on disk, the cook's asset discovery will never find it, producing "Unknown structure"
-    // errors at cook time. Emit a hard error here so the user is told to save all assets first,
-    // then recompile and resave this Blueprint.
-    if (!FPackageName::DoesPackageExist(CueSpawnParamsStruct->GetPackage()->GetName()))
+    const auto SpawnParamsStructExistsOnDisk = FPackageName::DoesPackageExist(CueSpawnParamsStruct->GetPackage()->GetName());
+    if (NOT SpawnParamsStructExistsOnDisk)
     {
         InCompilerContext.MessageLog.Error(
             *FText::Format(
@@ -347,19 +309,7 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         return;
     }
 
-    // _CachedSpawnParamsStruct was null when DoExpandNode ran and was recovered via the
-    // fallback lookup. In the editor this is not a reliable signal of a real problem:
-    // the pointer can be transiently null during async loading (struct package not yet
-    // resolved), during startup compilation passes before the EntityScript subsystem is
-    // fully initialised, or whenever GetOrCreate returns null due to _ActiveCompilation
-    // being set. DoAllocate_DefaultPins + MarkBlueprintAsModified and PreSave are the
-    // authoritative fix path — they ensure the struct is always serialised into the
-    // Blueprint's import table on the next save regardless of how the compile ran.
-    // During cook (commandlet) DoAllocate_DefaultPins does not run, so a null cache at
-    // this point genuinely means the struct was not in the import table when the asset
-    // was last saved — warn but allow expansion to proceed since the fallback found a
-    // valid struct. Returning early here would abort node expansion, causing the compiler
-    // to emit "Unexpected node type" errors that break the cook.
+    // Warn, never return — aborting expansion breaks the cook. Rationale: CkCueEditor/CLAUDE.md.
     if (CachedStructWasNull && IsRunningCommandlet())
     {
         InCompilerContext.MessageLog.Warning(
@@ -372,20 +322,17 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
             this);
     }
 
-    // Create MakeStruct node for spawn params
     auto* MakeSpawnParamsStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
     MakeSpawnParamsStruct_Node->StructType = CueSpawnParamsStruct;
     MakeSpawnParamsStruct_Node->bMadeAfterOverridePinRemoval = true;
     MakeSpawnParamsStruct_Node->AllocateDefaultPins();
 
-    // Create MakeInstancedStruct node
     auto* MakeInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     MakeInstancedStruct_Node->SetFromFunction(
         UBlueprintInstancedStructLibrary::StaticClass()->FindFunctionByName(
             GET_FUNCTION_NAME_CHECKED(UBlueprintInstancedStructLibrary, MakeInstancedStruct)));
     MakeInstancedStruct_Node->AllocateDefaultPins();
 
-    // Copy pin values from this node to MakeStruct node
     const auto& TryCopyValueOrLinkPin = [&](UEdGraphPin* InPinToCopyOrLinkFrom)
     {
         auto* FoundMakeStructPin = MakeSpawnParamsStruct_Node->FindPinByPredicate([&](const UEdGraphPin* InPin)
@@ -431,14 +378,12 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         }
     }
 
-    // Create GetSubsystem node to get the cue executor
     auto* GetSubsystem_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     GetSubsystem_Node->FunctionReference.SetExternalMember(
         GET_FUNCTION_NAME_CHECKED(USubsystemBlueprintLibrary, GetWorldSubsystem),
         USubsystemBlueprintLibrary::StaticClass());
     GetSubsystem_Node->AllocateDefaultPins();
 
-    // Set the subsystem class
     const auto& ExecutorClass = Get_CueExecutorSubsystemClass();
     auto* SubsystemClassPin = GetSubsystem_Node->FindPinChecked(TEXT("Class"));
     SubsystemClassPin->DefaultObject = ExecutorClass;
@@ -446,7 +391,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
     auto* GetSubsystemResultPin = GetSubsystem_Node->GetReturnValuePin();
     GetSubsystemResultPin->PinType.PinSubCategoryObject = ExecutorClass;
 
-    // Create the Execute Cue function node
     auto* ExecuteCue_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
 
     const auto& EntityMode = DoGet_EntityMode();
@@ -462,7 +406,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
     ExecuteCue_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(ExecuteCue_Node, this);
 
-    // Connect everything together
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection(
         InCompilerContext,
         {
@@ -485,7 +428,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         }
     ) == ECk_SucceededFailed::Failed) { return; }
 
-    // Set the cue name as a literal
     if (auto* CueNameParamPin = ExecuteCue_Node->FindPin(ck_k2node_cue::PinName_CueName);
         ck::IsValid(CueNameParamPin, ck::IsValid_Policy_NullptrOnly{}))
     {
@@ -514,7 +456,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         }
     }
 
-    // Link the owner entity pin only if EntityMode is Owner
     if (EntityMode == ECk_Cue_EntityMode::Owner)
     {
         if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
@@ -529,7 +470,6 @@ auto UCk_K2Node_Cue_Base::DoExpandNode(
         ) == ECk_SucceededFailed::Failed) { return; }
     }
 
-    // Link exec and return value
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
@@ -651,10 +591,8 @@ auto UCk_K2Node_Cue_Base::DoOnCueNamePinChanged() -> void
         OldCuePins.Add(OldPin);
     }
 
-    // Update the cached cue class based on the new cue name
     DoUpdateCachedCueClass();
 
-    // Use the newly cached class
     if (auto* CueClass = _CachedCueClass.Get();
         ck::IsValid(CueClass))
     {
@@ -669,7 +607,6 @@ auto UCk_K2Node_Cue_Base::DoOnCueNamePinChanged() -> void
 
 auto UCk_K2Node_Cue_Base::DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsToSearch) const -> UClass*
 {
-    // First, check if we have a valid cached class that matches the current cue name
     const auto& CueName = DoGet_CueName(InPinsToSearch);
 
     if (ck::Is_NOT_Valid(CueName) || NOT CueName.IsValid())
@@ -677,13 +614,11 @@ auto UCk_K2Node_Cue_Base::DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsT
         return nullptr;
     }
 
-    // If we have a valid cached class, use it without querying the subsystem
     if (ck::IsValid(_CachedCueClass))
     {
         return _CachedCueClass;
     }
 
-    // No valid cache - query the subsystem (only during editor operations, not during cook)
 #if WITH_EDITOR
     auto* CueSubsystem = DoGet_CueSubsystem();
     if (ck::Is_NOT_Valid(CueSubsystem))
@@ -693,7 +628,6 @@ auto UCk_K2Node_Cue_Base::DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsT
 
     const auto ResolvedClass = CueSubsystem->Get_CueEntityScript(CueName);
 
-    // Update cache with newly resolved class
     if (ck::IsValid(ResolvedClass))
     {
         const_cast<UCk_K2Node_Cue_Base*>(this)->_CachedCueClass = ResolvedClass;
@@ -701,8 +635,6 @@ auto UCk_K2Node_Cue_Base::DoGet_CueClass(TOptional<TArray<UEdGraphPin*>> InPinsT
 
     return ResolvedClass;
 #else
-    // During cook/packaged builds, we should always have a cached class
-    // If we don't, something went wrong during the editor save
     return _CachedCueClass;
 #endif
 }
@@ -729,7 +661,6 @@ auto UCk_K2Node_Cue_Base::DoUpdateCachedCueClass() -> void
 
     _CachedCueClass = CueSubsystem->Get_CueEntityScript(CueName);
 
-    // Cache spawn params struct for cook-time access
     if (ck::IsValid(_CachedCueClass))
     {
         if (auto* EntityScriptSubsystem = GEngine->GetEngineSubsystem<UCk_EntityScript_Subsystem_UE>();
@@ -756,7 +687,6 @@ auto UCk_K2Node_Cue_Base::DoGet_CueName(TOptional<TArray<UEdGraphPin*>> InPinsTo
     if (ck::Is_NOT_Valid(CueNamePin))
     { return FGameplayTag{}; }
 
-    // Try to parse the gameplay tag from the pin's default value
     auto Result = FGameplayTag{};
     if (NOT (*CueNamePin)->DefaultValue.IsEmpty())
     {
@@ -894,7 +824,6 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
         [
             SNew(SHorizontalBox)
 
-            // Entity Mode indicator
             + SHorizontalBox::Slot()
             .AutoWidth()
             .VAlign(VAlign_Center)
@@ -960,7 +889,6 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                 ]
             ]
 
-            // Reliability Policy indicator (only show for Replicated execution)
             + SHorizontalBox::Slot()
             .AutoWidth()
             .VAlign(VAlign_Center)
@@ -1035,7 +963,6 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                 ]
             ]
 
-            // Multicast Policy indicator (only show for Replicated execution)
             + SHorizontalBox::Slot()
             .AutoWidth()
             .VAlign(VAlign_Center)
@@ -1064,17 +991,17 @@ auto SCk_GraphNode_Cue_Base::CreateBelowPinControls(TSharedPtr<SVerticalBox> Mai
                             switch (MulticastPolicy)
                             {
                                 case ECk_Cue_MulticastPolicy::ServerAndAllClients:
-                                    return FText::FromString(TEXT("🌐"));       // globe  = everyone, no exclusions
+                                    return FText::FromString(TEXT("🌐"));
                                 case ECk_Cue_MulticastPolicy::ServerAndOtherClients:
-                                    return FText::FromString(TEXT("🖥️👥"));    // server + peers  (caller absent)
+                                    return FText::FromString(TEXT("🖥️👥"));
                                 case ECk_Cue_MulticastPolicy::OtherClientsOnly:
-                                    return FText::FromString(TEXT("👥"));       // peers only  (server + caller absent)
+                                    return FText::FromString(TEXT("👥"));
                                 case ECk_Cue_MulticastPolicy::ServerOnly:
-                                    return FText::FromString(TEXT("🖥️"));      // server only
+                                    return FText::FromString(TEXT("🖥️"));
                                 case ECk_Cue_MulticastPolicy::ServerAndSelf:
-                                    return FText::FromString(TEXT("🖥️👤"));    // server + caller  (peers absent)
+                                    return FText::FromString(TEXT("🖥️👤"));
                                 case ECk_Cue_MulticastPolicy::LocalOnly:
-                                    return FText::FromString(TEXT("👤"));       // caller only
+                                    return FText::FromString(TEXT("👤"));
                                 default:
                                     return FText::FromString(TEXT("?"));
                             }

@@ -24,10 +24,8 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::ConstrainToNavmesh"), STAT_CkCrowd_ConstrainToNa
 
 namespace ck_crowd_agent_constrain_to_navmesh
 {
-    // An off-mesh agent (spawned off-mesh, or a pre-existing excursion) is snapped back if the
-    // mesh is within this multiple of its radius — self-healing keeps the invariant from being
-    // permanently disabled by a single bad frame. Beyond that the agent is treated as
-    // deliberately off-mesh and moves freely.
+    // An off-mesh agent snaps back if the mesh is within this multiple of its radius, so one bad
+    // frame cannot disable the constraint forever; beyond it, the agent moves freely.
     constexpr auto RECOVERY_EXTENT_RADIUS_MULTIPLIER = 4.0f;
 }
 
@@ -115,20 +113,18 @@ namespace ck
             return;
         }
 
-        // XY is constrained to the mesh surface; Z stays owned by path-follow and the integrator.
         const auto DesiredTarget = StartOnMesh.Location + FVector{Displacement.X, Displacement.Y, 0.0f};
 
         auto Constrained = FNavLocation{};
         if (NOT NavData->FindMoveAlongSurface(StartOnMesh, DesiredTarget, Constrained))
         {
-            // Valid on-mesh start but the surface walk failed: hold position rather than risk
-            // stepping off — dtCrowd's corridor simply doesn't advance in this case either.
+            // On-mesh start but the surface walk failed: hold XY rather than risk stepping off.
             EnqueueOffset(FVector{0.0f, 0.0f, Displacement.Z});
             return;
         }
 
-        // Delta against the agent's ACTUAL location (not the projected start), so a small
-        // off-mesh drift folds into the same frame's correction.
+        // Delta against the ACTUAL location, not the projected start, so a small off-mesh drift
+        // folds into this frame's correction.
         EnqueueOffset(FVector{Constrained.Location.X - From.X, Constrained.Location.Y - From.Y, Displacement.Z});
     }
 }

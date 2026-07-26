@@ -17,8 +17,6 @@
 #include <ProceduralMeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Shape Generation Functions
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_pmg_processor_directional_shapes
 {
@@ -46,7 +44,6 @@ namespace ck_pmg_processor_directional_shapes
         const auto ShaftEnd = ShaftLength;
         const auto HeadEnd = InLength;
 
-        // Shaft front face
         auto BaseIdx = Vertices.Num();
         Vertices.Add(FVector(ShaftStart, -HalfShaftWidth, 0.0f));
         Vertices.Add(FVector(ShaftEnd, -HalfShaftWidth, 0.0f));
@@ -57,7 +54,6 @@ namespace ck_pmg_processor_directional_shapes
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 1); Triangles.Add(BaseIdx + 2);
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 2); Triangles.Add(BaseIdx + 3);
 
-        // Shaft back face
         BaseIdx = Vertices.Num();
         Vertices.Add(FVector(ShaftStart, -HalfShaftWidth, 0.0f));
         Vertices.Add(FVector(ShaftEnd, -HalfShaftWidth, 0.0f));
@@ -68,7 +64,6 @@ namespace ck_pmg_processor_directional_shapes
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 2); Triangles.Add(BaseIdx + 1);
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 3); Triangles.Add(BaseIdx + 2);
 
-        // Arrow head front face (triangle)
         BaseIdx = Vertices.Num();
         Vertices.Add(FVector(ShaftEnd, -HalfHeadWidth, 0.0f));
         Vertices.Add(FVector(HeadEnd, 0.0f, 0.0f));
@@ -77,7 +72,6 @@ namespace ck_pmg_processor_directional_shapes
         UVs.Add(FVector2D(0, 0)); UVs.Add(FVector2D(0.5f, 1)); UVs.Add(FVector2D(1, 0));
         Triangles.Add(BaseIdx + 0); Triangles.Add(BaseIdx + 1); Triangles.Add(BaseIdx + 2);
 
-        // Arrow head back face (triangle)
         BaseIdx = Vertices.Num();
         Vertices.Add(FVector(ShaftEnd, -HalfHeadWidth, 0.0f));
         Vertices.Add(FVector(HeadEnd, 0.0f, 0.0f));
@@ -93,15 +87,8 @@ namespace ck_pmg_processor_directional_shapes
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{}, true);
     }
 
-    // Pivot now uses Arrow entities - no custom geometry needed
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    // DashedLine now uses Plane entities - no custom geometry needed
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Common Setup Helpers
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_pmg_processor_directional_shapes_impl
@@ -188,8 +175,6 @@ namespace ck_pmg_processor_directional_shapes_impl
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Processor Implementations
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -230,7 +215,6 @@ namespace ck
 
                 const auto FinalRotation = Rotation * AxisRotation;
 
-                // Shaft outline (4 edges of rectangle)
                 const auto P0 = Center + FinalRotation.RotateVector(FVector(0.0f, -HalfShaftWidth, 0.0f));
                 const auto P1 = Center + FinalRotation.RotateVector(FVector(ShaftLength, -HalfShaftWidth, 0.0f));
                 const auto P2 = Center + FinalRotation.RotateVector(FVector(ShaftLength, HalfShaftWidth, 0.0f));
@@ -245,7 +229,6 @@ namespace ck
                 ck::pmg::Append_DebugLine_World(InHandle,P3, P0, LineColor,
                     InCommon.Get_LineThickness());
 
-                // Arrow head outline (3 edges of triangle)
                 const auto H0 = Center + FinalRotation.RotateVector(FVector(ShaftLength, -HalfHeadWidth, 0.0f));
                 const auto H1 = Center + FinalRotation.RotateVector(FVector(InParams.Get_Length(), 0.0f, 0.0f));
                 const auto H2 = Center + FinalRotation.RotateVector(FVector(ShaftLength, HalfHeadWidth, 0.0f));
@@ -289,7 +272,6 @@ namespace ck
 
         const auto FinalRotation = Rotation * AxisRotation;
 
-        // Helper to spawn an arrow axis
         auto SpawnAxisArrow = [&](const FVector& InDirection, const FLinearColor& InColor)
         {
             const auto AxisDirection = FinalRotation.RotateVector(InDirection);
@@ -305,7 +287,6 @@ namespace ck
                 ECk_Plane_Axis::XY, InCommon.Get_Duration().Get_Seconds());
         };
 
-        // Spawn three axes with RGB colors
         SpawnAxisArrow(FVector::ForwardVector, FLinearColor(1.0f, 0.0f, 0.0f, 0.5f));  // X - Red
         SpawnAxisArrow(FVector::RightVector, FLinearColor(0.0f, 1.0f, 0.0f, 0.5f));    // Y - Green
         SpawnAxisArrow(FVector::UpVector, FLinearColor(0.0f, 0.0f, 1.0f, 0.5f));       // Z - Blue
@@ -345,13 +326,11 @@ namespace ck
 
             if (DashActualLength > 0.0f)
             {
-                // Position at center of dash segment
                 const auto DashCenter = (CurrentPos + DashEnd) * 0.5f;
                 const auto DashLocalPos = FVector(DashCenter, 0.0f, 0.0f);
                 const auto DashWorldPos = Start + FinalRotation.RotateVector(DashLocalPos);
                 const auto DashTransform = FTransform{Rotation * AxisRotation, DashWorldPos, FVector::OneVector};
 
-                // Spawn plane for this dash
                 auto NewPlane = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
                 UCk_Utils_Pmg_FlatShapes::Add_Plane(
                     NewPlane, DashTransform,

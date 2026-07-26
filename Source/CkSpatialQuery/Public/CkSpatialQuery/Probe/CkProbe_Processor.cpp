@@ -149,10 +149,8 @@ namespace ck::details
         }
 
     private:
-        // One direction of the mutual overlap: InReceiver collects a BeginOverlap naming InOther,
-        // but only when InReceiver's Silent policy, context, and tag filter allow it — mirroring
-        // the Jolt-contact path's per-direction gating (CkContactListener). Without the gate, a
-        // fast-moving probe fires overlap events into probes its filter excludes.
+        // One direction of the mutual overlap. The Get_CanOverlapWith gate is per-direction on
+        // purpose — same as the Jolt-contact path (CkContactListener).
         auto
             DoCollect_BeginOverlap_IfAllowed(
                 const FCk_Handle_Probe& InReceiver,
@@ -194,11 +192,9 @@ namespace ck::details
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Jolt's Cylinder/Capsule are Y-AXIS ALIGNED while CkSpatialQuery runs Jolt in Unreal's Z-up frame
-    // (jolt::Conv is an axis passthrough) — those two factories therefore stand their leaf shape up via
-    // a JPH::RotatedTranslatedShape (see jolt::Get_ShapeAxisCorrection_YToZ). Because that makes the
-    // resulting shape type differ per fragment, the factories hand back a created shape rather than the
-    // concrete settings struct: JPH::ShapeSettings::ShapeResult is the one type all four have in common.
+    // Capsule/Cylinder wrap their leaf in a RotatedTranslatedShape (Jolt is Y-up, we run Z-up), so the
+    // four factories produce different shape types — ShapeResult is the one return type they share.
+    // See CkSpatialQuery/CLAUDE.md § "Jolt axis convention".
     template <>
     struct TProbeShapeFactory<FFragment_ShapeBox_Current>
     {
@@ -432,9 +428,8 @@ namespace ck::details
 
         InHandle.template Add<Ref<JPH::Shape>>(Shape);
 
-        // All probes live on CkJolt's dedicated probe layer (signature-driven table): pairs with
-        // dynamic-domain WorldDynamic bodies (i.e. other probes) and never with the static world —
-        // exactly the pre-table `ObjectLayer{1}` behavior.
+        // Every probe lives on CkJolt's dedicated probe layer: pairs with other probes, never with
+        // the static world.
         const auto& LayerContext = InHandle.Get_RegistryView().template GetContext<ck::jolt::FCk_Jolt_LayerContext>();
 
         auto ShapeSettings = BodyCreationSettings{
@@ -504,11 +499,11 @@ namespace ck::details
 
         InCurrent._ShapeDimensionsChangedConnection = Factory::BindDimensionsChanged(InHandle);
 
+        // A LinearCast probe's body is never added to the broadphase: Jolt does NOT support
+        // LinearCast for sensors, so that path casts shapes by hand instead.
         if (InHandle.template Has<FTag_Probe_LinearCast>())
         { return; }
 
-        // Deactivate the body for LinearCast because we use ShapeCasts for LinearCast, since Jolt does
-        // NOT support LinearCast for sensors.
         BodyInterface.AddBody(Body->GetID(), EActivation::Activate);
     }
 
@@ -582,9 +577,8 @@ namespace ck::details
 
 namespace ck_probe
 {
-    // Relay this frame's linear-cast contacts as Begin/Update overlap requests onto each affected
-    // probe. Probes that are themselves LinearCast run their own cast — skip them so a pair of
-    // fast-moving probes doesn't double-report the same contact.
+    // A probe that is itself LinearCast runs its own cast — skipping it here is what stops a pair
+    // of fast-moving probes double-reporting the same contact.
     auto
         Request_BeginOrUpdateCollectedOverlaps(
             const FCk_Handle_Probe& InCastingProbe,
@@ -609,8 +603,6 @@ namespace ck_probe
         }
     }
 
-    // End-overlap BOTH directions for every probe we were overlapping last frame but did NOT
-    // touch in this frame's cast.
     auto
         Request_EndOverlaps_ForLostContacts(
             const FCk_Handle_Probe& InCastingProbe,
@@ -635,10 +627,8 @@ namespace ck_probe
 
             UCk_Utils_Probe_UE::Request_EndOverlap(CastingProbe, FCk_Request_Probe_EndOverlap{OtherEntity});
 
-            // Only end the reverse direction if the other probe actually tracks us — a Silent (or
-            // filtered-out) probe never received the Begin, and an unguarded EndOverlap trips the
-            // "was NOT overlapping" error in Probe_HandleRequests. Mirrors the EndPlay path's
-            // Get_IsOverlappingWith gate and the contact-listener path's per-direction gating.
+            // A Silent or filtered-out probe never received the Begin, and an unguarded EndOverlap
+            // trips the "was NOT overlapping" error in Probe_HandleRequests.
             if (UCk_Utils_Probe_UE::Get_IsOverlappingWith(MaybeOtherProbe, InCastingProbe))
             {
                 UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InCastingProbe});
@@ -740,12 +730,9 @@ namespace ck
     {
         using namespace JPH;
 
-        // WORKER THREAD: everything in this body is read-only — Jolt narrow-phase queries and
-        // the locking BodyInterface are thread-safe, and the collector performs registry READS
-        // only. Handle construction is worker-safe because the debug-mapper attach is
-        // game-thread-gated (FCk_Handle::DoUpdate_FragmentDebugInfo_Blueprints). The overlap
-        // requests + their signal broadcasts happen in the deferred command below, which the
-        // flush phase runs single-threaded.
+        // WORKER THREAD: this body must stay read-only. Jolt narrow-phase + the locking
+        // BodyInterface are thread-safe, and handle construction is worker-safe because the
+        // debug-mapper attach is game-thread-gated. Mutations belong in the DeferCustom below.
         auto Settings = ShapeCastSettings{};
         Settings.mBackFaceModeTriangles = EBackFaceMode::CollideWithBackFaces;
         Settings.mBackFaceModeConvex = EBackFaceMode::CollideWithBackFaces;
@@ -781,7 +768,6 @@ namespace ck
             PhysicsSystem->GetNarrowPhaseQuery().CastShape(ShapeCast, Settings, Vec3::sReplicate(0.0f), Collector);
         }
 
-        // Common case (no contacts this cast, none to end) defers nothing.
         if (Collector.Get_OverlappingProbes().IsEmpty() && InCurrent.Get_CurrentOverlaps().IsEmpty())
         { return; }
 
@@ -847,11 +833,9 @@ namespace ck
                 return;
             }
 
-            // Cylinder/Capsule probes wrap their leaf shape in a RotatedTranslatedShape to turn Jolt's
-            // Y-axis convention into Unreal's Z-up (see jolt::Get_ShapeAxisCorrection_YToZ). GetTriangles*
-            // is a LEAF-only API — it asserts on decorated shapes — so unwrap to the leaf and fold the
-            // wrapper's rotation into the draw rotation. The wrapper's translation is always zero and the
-            // leaf's center of mass is the origin, so the draw POSITION is unaffected.
+            // GetTriangles* is a LEAF-only API — it asserts on the RotatedTranslatedShape wrapper
+            // Capsule/Cylinder probes carry — so unwrap and fold the wrapper rotation into the draw
+            // rotation. Its translation is always zero, so the draw POSITION is unaffected.
             const JPH::Shape* DrawShape = Shape.GetPtr();
             auto DrawRotation = jolt::Conv(EntityRotation);
 
@@ -1056,12 +1040,9 @@ namespace ck
 
         if (NumRemovedItems == 0)
         {
-            // A probe destroyed mid-overlap ends its pairs twice: FProcessor_Probe_EndPlay ends them
-            // eagerly during the EndPlay window, then its RemoveBody triggers Jolt's contact-removed
-            // for the same pair, which drains a frame later against the already-emptied bookkeeping.
-            // The late duplicate is expected while the other entity is tearing down (default IsValid
-            // rejects the Teardown/Destroyed phases) — only a missing pair between two live entities
-            // is a bookkeeping error.
+            // A probe destroyed mid-overlap ends each pair twice (EndPlay eagerly, then Jolt's
+            // contact-removed a frame later). That duplicate is expected while the other entity is
+            // tearing down; only a missing pair between two LIVE entities is a bookkeeping error.
             if (ck::Is_NOT_Valid(InRequest.Get_OtherEntity()))
             {
                 ck::spatialquery::Verbose(
@@ -1200,14 +1181,8 @@ namespace ck
         if (BodyId.IsInvalid())
         { return; }
 
-        // Always free the body SLOT, not just the broadphase membership. RemoveBody only detaches
-        // from the broadphase; the slot itself must be destroyed for every probe:
-        //   - a probe destroyed while Disabled was RemoveBody'd at Disable (IsAdded == false),
-        //   - a LinearCast probe's body is created in Setup and NEVER added to the broadphase,
-        //   - and an enabled probe's body stops being "added" the moment we RemoveBody it here.
-        // The old code gated DestroyBody on IsAdded AFTER RemoveBody (and skipped LinearCast
-        // entirely), so the destroy was unreachable on every path — each probe leaked a body slot
-        // until the pool (MaxBodies) exhausted under churn.
+        // DestroyBody must run unconditionally: RemoveBody only detaches from the broadphase, and a
+        // Disabled or LinearCast probe was never added to it. Gating the destroy leaks body slots.
         if (BodyInterface.IsAdded(BodyId))
         {
             BodyInterface.RemoveBody(BodyId);

@@ -14,17 +14,8 @@
 
 namespace ck
 {
-    // Clamps the per-frame VELOCITY DELTA on FFragment_CrowdAgent_DesiredVelocity.
-    // Mirrors DetourCrowd.cpp:integrate() 53-69. Critical because Steering writes a fresh
-    // `Direction * TargetSpeed` each frame — direction can flip arbitrarily, which is the root
-    // cause of the head-on vibration mode. Capping |dv| ≤ MaxAccel × dt forces direction changes
-    // to ramp instead of snap.
-    //
-    // Group: FGroup_Physics. RunAfter Steering (and AvoidanceSample) so this processor
-    // sees whichever solver wrote last. RunBefore VelocityBridge so the bridge ships the clamped
-    // value into the physics layer.
-    //
-    // Disable for A/B comparison via UCk_Crowd_ProjectSettings_UE._AccelClampMode = Disabled.
+    // Clamps the per-frame velocity delta on FFragment_CrowdAgent_DesiredVelocity: Steering writes a
+    // fresh Direction * TargetSpeed each frame, so capping |dv| forces direction flips to ramp.
     class CKCROWD_API FProcessor_CrowdAgent_AccelClamp : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_AccelClamp,
             FCk_Handle_CrowdAgent,

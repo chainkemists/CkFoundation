@@ -18,15 +18,11 @@
 #include <Misc/DateTime.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Internal helpers
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_user_defined_enum_exporter_internal
 {
-    // UUserDefinedEnum always appends an implicit, hidden <EnumName>_MAX entry as the
-    // final enumerator. NumEnums() counts it; the canonical engine idiom (mirrored by
-    // FEnumEditorUtils) is to iterate [0, NumEnums()-1) so the authored entries are
-    // exported and the auto-generated MAX is skipped.
+    // UUserDefinedEnum appends an implicit, hidden <EnumName>_MAX that NumEnums() counts; the engine idiom
+    // (mirrored by FEnumEditorUtils) is to iterate [0, NumEnums()-1).
     static auto
         DoGetAuthoredEnumeratorCount(
             const UUserDefinedEnum* InEnum)
@@ -37,8 +33,6 @@ namespace ck_user_defined_enum_exporter_internal
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Public API
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -57,7 +51,6 @@ auto
 
     Result.AssetName = InEnum->GetName();
 
-    // Serialize to JSON
     const auto JsonObject = DoSerializeToJson(InEnum);
     if (NOT JsonObject.IsValid())
     {
@@ -69,10 +62,8 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    // Serialize to plain text
     const auto TextString = DoSerializeToText(InEnum);
 
-    // Resolve output paths
     const auto JsonPath = DoResolveOutputPath(InEnum, TEXT(".json"));
     const auto TextPath = DoResolveOutputPath(InEnum, TEXT(".txt"));
 
@@ -82,7 +73,6 @@ auto
         return Result;
     }
 
-    // Write files
     const auto JsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     const auto TextWritten = FFileHelper::SaveStringToFile(
@@ -120,8 +110,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// JSON Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_UserDefinedEnumExporter::
@@ -152,8 +140,6 @@ auto
     {
         auto EnumeratorObject = MakeShared<FJsonObject>();
 
-        // DisplayName is the friendly authored label (UDE's DisplayNameMap); falls back
-        // to the internal name when the designer never set one.
         EnumeratorObject->SetStringField(TEXT("displayName"), InEnum->GetDisplayNameTextByIndex(Index).ToString());
         EnumeratorObject->SetStringField(TEXT("internalName"), InEnum->GetNameStringByIndex(Index));
         EnumeratorObject->SetStringField(TEXT("fullName"), InEnum->GetNameByIndex(Index).ToString());
@@ -173,8 +159,6 @@ auto
     return RootObject;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Plain-Text Serialization
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -220,8 +204,6 @@ auto
     return Text;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Helpers
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

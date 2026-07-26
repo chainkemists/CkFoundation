@@ -11,11 +11,6 @@
 
 namespace ck
 {
-    // Bucketed per-entity cadence (the reference consumer of CkProcessor_CadenceBuckets.h): each entity's
-    // _UpdateInterval quantizes toward FASTER into cadence::BucketIntervalsSeconds at Add, and each bucket
-    // runs as one sub-processor instantiation carrying the bucket's compile-time TickRate trait. Due-ness
-    // is bucket-tag view membership — no per-entity chrono poll. The immediate first evaluation after Add
-    // rides bucket 0 transiently (TryConsume_FirstEval at the top of the eval body strips it).
     template <int32 T_BucketIndex>
     class FProcessor_VisibleRange_Update_Bucket : public TCadenceBucketProcessor<
         FProcessor_VisibleRange_Update_Bucket<T_BucketIndex>,

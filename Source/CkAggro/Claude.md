@@ -148,6 +148,20 @@ the call — no framework veto machinery).
 
 ---
 
+## Implementation notes
+
+- **The AggroTargets record is defined on the AggroTarget side, not in CkAggro.** That is what lets
+  `AggroTarget::Create` connect a new target to *any* owner's record without the AggroTarget half
+  depending on the Aggro feature at all. (What the record is *for* is anti-pattern 2 above.)
+- **Each owner param piece is copied onto the owner as its own fragment** (`FFragment_Aggro_*`
+  bridge aliases) rather than one aggregate. Processors then declare `TReadOnly` on exactly the
+  pieces they read, which is what keeps the parallel Evaluate stage's access set honest.
+- **The processors are deliberately comment-light** (2026-07-25 comment sweep) — the model of record
+  for decay/scoring/selection, the parallel-safety contract, and the self-sufficient-target design
+  all live in this file, not in the source.
+
+---
+
 ## See also
 
 - `Source/CLAUDE.md` — module topology + composition ritual.

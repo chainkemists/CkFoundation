@@ -46,8 +46,7 @@ auto
     const auto RequiredTags  = UCk_Utils_2dGridObject_UE::Get_RequiredCellTags(InObject);
     const auto ForbiddenTags = UCk_Utils_2dGridObject_UE::Get_ForbiddenCellTags(InObject);
 
-    // The GridObject whose placement we are testing — cells already occupied by THIS object
-    // (e.g. a re-validate / move-in-place) are not treated as a collision.
+    // Cells already held by THIS object (a re-validate / move-in-place) are not a collision.
     const auto SelfOccupant = FCk_Handle{InObject};
 
     auto FailedCells = TArray<FIntPoint>{};
@@ -56,7 +55,6 @@ auto
     const auto RecordFailure = [&](const FIntPoint& InCoord, ECk_2dGridPlacement_Failure InReason)
     {
         FailedCells.Add(InCoord);
-        // First failure wins as the headline reason (we still collect every failing cell).
         if (Reason == ECk_2dGridPlacement_Failure::None)
         { Reason = InReason; }
     };
@@ -76,10 +74,8 @@ auto
             continue;
         }
 
-        // Occupied check via the pending-destroy-aware occupant query — NOT the raw Occupied tag,
-        // which lags one reconcile tick and would falsely reject a same-tick remove+re-place (the
-        // dying placement's stamp lingers a tick). A cell counts as occupied only if a VALID
-        // occupant other than this object holds it.
+        // Must be the pending-destroy-aware occupant query, NOT the raw Occupied tag: the tag lags
+        // one reconcile tick and would falsely reject a same-tick remove+re-place.
         const auto OccupantThere = UCk_Utils_2dGridOccupancy_UE::Get_OccupantAt(InGrid, Coord);
         if (ck::IsValid(OccupantThere) && OccupantThere != SelfOccupant)
         {
@@ -87,8 +83,6 @@ auto
             continue;
         }
 
-        // Tag-gating: the effective tag set for a cell is the grid's default tags unioned with
-        // the cell's own tags.
         auto EffectiveTags = DefaultCellTags;
         EffectiveTags.AppendTags(UCk_Utils_2dGridCell_UE::Get_Tags(Cell));
 
@@ -105,16 +99,13 @@ auto
         }
     }
 
-    // Connectivity: a multi-cell footprint must form a single 4-connected component, treating
-    // disabled / out-of-bounds footprint cells as walls (impassable). Occupied cells are passable
-    // (occupancy is a soft constraint for connectivity, not a topological cut). A single-cell
-    // footprint is trivially connected, so there is nothing to validate there.
+    // A multi-cell footprint must form one 4-connected component; disabled / out-of-bounds cells
+    // are walls, occupied cells are passable (occupancy is not a topological cut).
     if (InConnectivity == ECk_GridConnectivity::RequireConnected && Cells.Num() > 1)
     {
         const auto IsWall = [&](const FIntPoint& InCoord) -> bool
         {
             const auto Cell = UCk_Utils_2dGridSystem_UE::Get_CellAt(InGrid, InCoord);
-            // Out-of-bounds (invalid cell) and disabled cells are both walls.
             return ck::Is_NOT_Valid(Cell) || UCk_Utils_2dGridCell_UE::Get_IsDisabled(Cell);
         };
 
@@ -123,8 +114,6 @@ auto
         for (const auto& Coord : Cells)
         { FootprintSet.Add(Coord); }
 
-        // Start the flood from the anchor cell if it is part of the footprint and not a wall;
-        // otherwise from the first non-wall footprint cell.
         auto StartCoord = FIntPoint{};
         auto FoundStart = false;
         if (FootprintSet.Contains(InAnchor) && NOT IsWall(InAnchor))
@@ -168,7 +157,6 @@ auto
                 for (const auto& Delta : Neighbours)
                 {
                     const auto Next = Current + Delta;
-                    // Only traverse to footprint cells that are not walls and not yet reached.
                     if (FootprintSet.Contains(Next) && NOT Reached.Contains(Next) && NOT IsWall(Next))
                     {
                         Reached.Add(Next);
@@ -178,10 +166,8 @@ auto
             }
         }
 
-        // Any non-wall footprint cell the flood did not reach is disconnected from the start
-        // component. Wall cells are unreachable by definition AND already produced their own
-        // per-cell failure above (Disabled / OutOfBounds), so we skip them here to avoid a
-        // duplicate / mis-reasoned entry in _FailedCells.
+        // Wall cells already produced their own Disabled / OutOfBounds failure above — skipping
+        // them here avoids a duplicate, mis-reasoned entry in _FailedCells.
         for (const auto& Coord : Cells)
         {
             if (NOT Reached.Contains(Coord) && NOT IsWall(Coord))
@@ -261,10 +247,8 @@ auto
 
     const auto Cells = UCk_Utils_2dGridObject_UE::Get_ResolvedCells(Object, InAnchor, InRotation);
 
-    // Auto-replace: if this occupant already holds a placement, remove it first so its old cells
-    // free before we add the new one. Lets a re-place at a different anchor/rotation reconcile
-    // cleanly instead of leaving the old footprint stamped. Get_CanPlace above already treats the
-    // occupant's own cells as non-colliding (SelfOccupant), so an in-place move still validates.
+    // Auto-replace: free this occupant's existing placement first so a re-place at a different
+    // anchor/rotation reconciles cleanly instead of leaving the old footprint stamped.
     if (auto Existing = UCk_Utils_2dGridOccupancy_UE::Get_PlacementForOccupant(InOccupant);
         ck::IsValid(Existing))
     {

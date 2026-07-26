@@ -37,8 +37,7 @@ auto
     Init(bool InWithPerInstanceLocalBounds)
     -> void
 {
-    // No buffer-level init required on this fork — per-instance data flags are written through the FWriteView
-    // (see FCk_Iskm_BatchedClusterProxy::WriteInstanceBuffer).
+    // Nothing to do on this fork — the per-instance data flags are written through the FWriteView instead.
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -50,12 +49,9 @@ namespace ck_iskm_proxy
         const TArray<UCk_Iskm_BatchedClusterComponent::FInstance>& Instances = InComponent->Get_Instances();
         const int32 N = Instances.Num();
 
-        // Seed PER-INSTANCE custom data from the start (not per-component CustomPrimitiveData[0]) so a static cluster
-        // with distinct per-instance frames renders correctly, and there's no per-component->per-instance pop on the
-        // first animated frame. [asfloat(Cur), asfloat(Pre), UserData[0..13]] per instance, matching SendRenderDynamicData.
+        // Seeded PER-INSTANCE from the start (not per-component CustomPrimitiveData[0]) so a static cluster with
+        // distinct per-instance frames renders right, with no per-component->per-instance pop on the first frame.
         constexpr int32 NumFloats = UCk_Iskm_BatchedClusterComponent::NumCustomDataFloats;
-        // Pin the custom-data layout invariant at compile time: the frame fields are bit-cast into one
-        // float each, and [Cur, Pre, UserData[0..N]] must fit the per-instance slot.
         static_assert(sizeof(UCk_Iskm_BatchedClusterComponent::FInstance::CurFrame) == sizeof(float) &&
                       sizeof(UCk_Iskm_BatchedClusterComponent::FInstance::PrevFrame) == sizeof(float),
             "CurFrame/PrevFrame are bit-cast into single custom-data floats");
@@ -106,8 +102,8 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
     AnimCollection = InComponent->Get_AnimCollection();
     Mesh = InComponent->Get_Mesh();
 
-    // A cluster proxy without its collection/mesh is a composition bug. Recovery: leave the proxy half-built
-    // (no DynData, no materials) — the DrawStaticElements/WriteInstanceBuffer early-outs are the silent path.
+    // Recovery is a half-built proxy (no DynData, no materials) — the DrawStaticElements /
+    // WriteInstanceBuffer early-outs are the silent path.
     CK_ENSURE_IF_NOT(ck::IsValid(AnimCollection) && ck::IsValid(Mesh),
         TEXT("[CkIskm] Batched cluster proxy created without AnimCollection [{}] / Mesh [{}] — cluster will render NOTHING"),
         AnimCollection, Mesh)
@@ -119,8 +115,6 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
     bHasWorldPositionOffsetVelocity = true;
     bVFRequiresPrimitiveUniformBuffer = false;
 
-    // Materials + relevance. A component override material replaces EVERY slot (far-LOD whole-body look).
-    // Per-slot overrides fill remaining slots; mesh defaults last.
     Materials.Reset();
     if (ck::IsValid(Mesh))
     {
@@ -150,12 +144,10 @@ FCk_Iskm_BatchedClusterProxy::FCk_Iskm_BatchedClusterProxy(UCk_Iskm_BatchedClust
 
     GPULODRadius = ck::IsValid(Mesh) ? static_cast<float>(Mesh->GetBounds().SphereRadius) : 1.0f;
 
-    // Initial instance payload (consumed by CreateRenderThreadResources / DrawStaticElements).
     DynData = MakeUnique<FCk_Iskm_CompDynData>();
     ck_iskm_proxy::BuildDynData(InComponent, Mesh, *DynData);
 
-    // Seed the STABLE instance-run storage once — a single contiguous run [0, N-1] over all instances. See the
-    // StableInstanceRuns comment in the header: this backs the cached RunArray that the renderer derefs every frame.
+    // One contiguous run [0, N-1] over all instances, seeded once — see StableInstanceRuns in the header.
     if (const int32 NumInstances = DynData->Transforms.Num(); NumInstances > 0)
     {
         FCk_Iskm_InstanceRun Run;
@@ -203,7 +195,6 @@ auto
     CreateRenderThreadResources(FRHICommandListBase& RHICmdList)
     -> void
 {
-    // Populate the GPUScene instance buffer once, before the scene first reads it.
     WriteInstanceBuffer();
 }
 

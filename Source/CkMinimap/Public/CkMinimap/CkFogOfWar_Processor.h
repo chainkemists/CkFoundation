@@ -11,15 +11,8 @@
 
 namespace ck
 {
-    // ALL FogOfWar processors run in FGroup_Gameplay, which provably PRECEDES FGroup_PostTransform
-    // (CkProcessorGroups.h: FGroup_Gameplay RunAfters Gameplay_TimeDelta; PostTransform RunAfters
-    // Gameplay_Camera, whose RunAfter chain descends through Transform/Physics/Script back to FGroup_Gameplay).
-    // The Minimap projector (FGroup_PostTransform) reads fog state cross-feature the SAME frame — same-group
-    // registration order is not a safe ordering guarantee, the group split is. Consequence: revealer transforms
-    // are sampled one frame stale (finalized later in FGroup_Transform*) — irrelevant at reveal-radius scale.
-    //
-    // NetModeRequirement is EXPLICITLY All: exploration is gameplay state — the authority accumulates it for
-    // save (and phase-4 co-op sharing); clients accumulate locally with the same code.
+    // The FGroup_Gameplay placement and the explicit NetModeRequirement::All below are both load-bearing —
+    // rationale (and the one-frame-stale revealer-transform consequence) in CkMinimap/CLAUDE.md.
 
     class CKMINIMAP_API FProcessor_FogOfWar_Setup : public ck_exp::TProcessor<
         FProcessor_FogOfWar_Setup,

@@ -108,17 +108,14 @@ namespace ck_asset_exporter_commandlet
 
 UCkAssetExporterCommandlet::UCkAssetExporterCommandlet()
 {
-    // Loading assets + walking reflection needs an editor-capable context so every contributing UClass is registered
-    // (mirrors CkAngelscriptGenerator_DriftCommandlet). IsEditor=true makes UCommandletHelpers spin up GEditor.
+    // IsEditor=true makes UCommandletHelpers spin up GEditor — reflection walks need every contributing UClass.
     IsClient       = false;
     IsServer       = false;
     IsEditor       = true;
     LogToConsole   = true;
     ShowErrorCount = true;
-    // Without this, LaunchEngineLoop promotes ANY logged Error to process exit 1 (LaunchEngineLoop.cpp:4160-4167) —
-    // and this project's editor boot always logs pre-existing plugin errors (e.g. AdvancedCommenting CDO textures),
-    // which would make the exit code permanently red regardless of export outcome. Main()'s manifest-backed return
-    // IS the verdict.
+    // Without this, LaunchEngineLoop promotes ANY logged Error to exit 1, and this project's editor boot always logs
+    // pre-existing plugin errors. Main()'s manifest-backed return IS the verdict.
     UseCommandletResultAsExitCode = true;
 }
 
@@ -128,8 +125,7 @@ int32 UCkAssetExporterCommandlet::Main(const FString& InParams)
 {
     using namespace ck_asset_exporter_commandlet;
 
-    // NOT "-Server": that token is a reserved engine switch (dedicated-server mode) — passing it hijacks the launch
-    // into a ticking headless session and the commandlet never runs.
+    // NOT "-Server": reserved engine switch — it hijacks the launch into a headless session, commandlet never runs.
     if (FParse::Param(*InParams, TEXT("ExportServer")))
     { return FCk_AssetExporter_RequestLoop::Run(); }
 

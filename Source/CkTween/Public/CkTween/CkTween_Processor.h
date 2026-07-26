@@ -140,12 +140,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        // Must run before Transform_HandleRequests so the SetLocation/Rotation/Scale
-        // requests this processor enqueues are applied the same frame. Without this
-        // ordering, the request sits until the next frame's HandleRequests sweep —
-        // but by then the FTag_Transform_Updated from HandleRequests has already
-        // been cleared, so scene-node descendants never observe the parent update
-        // and the tween appears to move only the root.
+        // Must run before Transform_HandleRequests so the enqueued Set* requests apply the same
+        // frame. A frame late, the FTag_Transform_Updated has already been cleared, scene-node
+        // descendants never observe the parent update, and the tween appears to move only the root.
         using RunBefore = TDepList<FProcessor_Transform_HandleRequests>;
         using TProcessor::TProcessor;
 
@@ -173,9 +170,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        // Same ordering rationale as FProcessor_Tween_ApplyToTransform: must run before
-        // Transform_HandleRequests so the SetLocation/SetRotation requests are applied
-        // the same frame and scene-node descendants observe the parent update.
+        // Same ordering rationale as FProcessor_Tween_ApplyToTransform.
         using RunBefore = TDepList<FProcessor_Transform_HandleRequests>;
         using TProcessor::TProcessor;
 

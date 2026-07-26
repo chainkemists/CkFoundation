@@ -20,6 +20,15 @@ Interactable entities have an Interaction fragment; interactor entities hold a r
 
 ---
 
+## Implementation notes
+
+- **InteractTarget owns interaction-entity lifetime.** It creates the Interaction entity in
+  `FCk_Try_InteractTarget_StartInteraction`, so it is also the one that destroys it in
+  `OnInteractionFinished`.
+- **InteractTarget calls into InteractSource** (`Request_StartInteraction` on the resolved source
+  handle) after creating the interaction. That dependency direction is not ideal but is accepted,
+  and it matches the pattern already used by the Resolver.
+
 ## Anti-patterns
 
 Don't poll for nearby interactables every frame in a Processor — use the spatial query (`CkSpatialQuery`) results as the input to the interaction system.

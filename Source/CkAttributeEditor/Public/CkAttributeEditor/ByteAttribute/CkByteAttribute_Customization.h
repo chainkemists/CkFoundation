@@ -18,42 +18,35 @@ class FCk_Fragment_ByteAttribute_ParamsDataCustomization : public IPropertyTypeC
 public:
     static TSharedRef<IPropertyTypeCustomization> MakeInstance();
 
-    // IPropertyTypeCustomization interface
     virtual void CustomizeHeader(TSharedRef<IPropertyHandle> StructPropertyHandle, FDetailWidgetRow& HeaderRow, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
     virtual void CustomizeChildren(TSharedRef<IPropertyHandle> StructPropertyHandle, IDetailChildrenBuilder& StructBuilder, IPropertyTypeCustomizationUtils& StructCustomizationUtils) override;
 
 private:
-    // Title display
     FText GetNameTitleText() const;
-    // Value getters
+
     uint8 GetBaseValue() const;
     uint8 GetMinValue() const;
     uint8 GetMaxValue() const;
 
-    // Value setters
     void OnBaseValueCommitted(uint8 NewValue, ETextCommit::Type CommitType);
     void OnMinValueCommitted(uint8 NewValue, ETextCommit::Type CommitType);
     void OnMaxValueCommitted(uint8 NewValue, ETextCommit::Type CommitType);
 
-    // Checkbox state handlers
     ECheckBoxState GetMinCheckState() const;
     ECheckBoxState GetMaxCheckState() const;
     void OnMinCheckStateChanged(ECheckBoxState NewState);
     void OnMaxCheckStateChanged(ECheckBoxState NewState);
 
-    // UI state helpers
     FSlateColor GetMinLabelColor() const;
     FSlateColor GetMaxLabelColor() const;
     bool IsMinValueEnabled() const;
     bool IsMaxValueEnabled() const;
 
-    // Base value constraints
     TOptional<uint8> GetBaseValueMin() const;
     TOptional<uint8> GetBaseValueMax() const;
     TOptional<uint8> GetBaseValueSliderMin() const;
     TOptional<uint8> GetBaseValueSliderMax() const;
 
-    // Property handles
     TSharedPtr<IPropertyHandle> NameHandle;
     TSharedPtr<IPropertyHandle> BaseValueHandle;
     TSharedPtr<IPropertyHandle> MinMaxHandle;

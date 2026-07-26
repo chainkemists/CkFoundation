@@ -116,19 +116,16 @@ auto
 {
     const auto IsCommand = _CVarType == ECk_CVarType::Command;
 
-    // Input pins
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Name, CVar_Register_Pins::Name_Pin);
 
-    // Typed default value pin (not applicable for commands)
     if (NOT IsCommand)
     {
         CreateValuePinForType(EGPD_Input);
     }
 
-    // Help text pin
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_String, CVar_Register_Pins::Help_Pin);
 
-    // Callback policy enum pin (not applicable for commands — they always fire on invoke)
+    // Commands have no callback policy — they always fire on invoke.
     if (NOT IsCommand)
     {
         auto* PolicyPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Byte,
@@ -136,11 +133,10 @@ auto
         PolicyPin->DefaultValue = TEXT("FireImmediately");
     }
 
-    // Output: callback handle (belongs to main exec flow, so above On Changed)
+    // Created before the On Changed exec pin so it displays above it, with the main exec flow.
     CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Struct,
         FCk_CVarCallbackHandle::StaticStruct(), CVar_Register_Pins::Handle_Pin);
 
-    // Output: "On Changed" / "On Executed" exec pin
     {
         auto* OnChangedPin = CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, CVar_Register_Pins::OnChanged_Pin);
         OnChangedPin->PinFriendlyName = IsCommand
@@ -148,7 +144,6 @@ auto
             : FText::FromString(TEXT("On Changed"));
     }
 
-    // Output: typed "New Value" pin (not applicable for commands)
     if (NOT IsCommand)
     {
         switch (_CVarType)
@@ -197,13 +192,11 @@ auto
 
     const auto IsCommand = _CVarType == ECk_CVarType::Command;
 
-    // 1. Create internal CustomEvent
     auto* CustomEventNode = InCompilerContext.SpawnIntermediateNode<UK2Node_CustomEvent>(this, InSourceGraph);
     CustomEventNode->CustomFunctionName = *InCompilerContext.GetGuid(CustomEventNode);
     CustomEventNode->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(CustomEventNode, this);
 
-    // Add a typed "NewValue" output pin on the CustomEvent (not for commands)
     UEdGraphPin* CustomEventNewValuePin = nullptr;
     if (NOT IsCommand)
     {
@@ -229,7 +222,6 @@ auto
             TEXT("NewValue"), NewValuePinType, EGPD_Output);
     }
 
-    // 2. Create CallFunction node for INTERNAL_Register_[Type] or INTERNAL_Register_Command
     auto* CallNode = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     CallNode->FunctionReference.SetExternalMember(
         GetInternalFunctionNameForType(),
@@ -237,7 +229,6 @@ auto
     CallNode->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallNode, this);
 
-    // 3. Connect CustomEvent's output delegate → CallFunction's InCallback delegate input
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection(
         InCompilerContext,
         {
@@ -250,7 +241,6 @@ auto
         return;
     }
 
-    // 4. Wire our "On Changed"/"On Executed" exec output → CustomEvent's Then exec
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
@@ -264,7 +254,6 @@ auto
         return;
     }
 
-    // 5. Wire our "New Value" output → CustomEvent's NewValue output (not for commands)
     if (NOT IsCommand && CustomEventNewValuePin != nullptr)
     {
         if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
@@ -281,7 +270,6 @@ auto
         }
     }
 
-    // 6. Wire main exec flow
     InCompilerContext.MovePinLinksToIntermediate(
         *FindPinChecked(UEdGraphSchema_K2::PN_Execute),
         *CallNode->FindPinChecked(UEdGraphSchema_K2::PN_Execute));
@@ -289,7 +277,6 @@ auto
         *FindPinChecked(UEdGraphSchema_K2::PN_Then),
         *CallNode->FindPinChecked(UEdGraphSchema_K2::PN_Then));
 
-    // 7. Wire input pins
     auto* MyNamePin = FindPinChecked(CVar_Register_Pins::Name_Pin);
     auto* CallNamePin = CallNode->FindPin(TEXT("InName"));
     if (CallNamePin != nullptr)
@@ -301,7 +288,6 @@ auto
         }
     }
 
-    // DefaultValue pin (not for commands)
     if (NOT IsCommand)
     {
         auto* MyDefaultPin = FindPin(CVar_Register_Pins::Default_Pin);
@@ -327,7 +313,6 @@ auto
         }
     }
 
-    // Policy pin (not for commands)
     if (NOT IsCommand)
     {
         auto* MyPolicyPin = FindPin(CVar_Register_Pins::Policy_Pin);
@@ -342,7 +327,6 @@ auto
         }
     }
 
-    // 8. Wire output: callback handle
     auto* MyHandlePin = FindPinChecked(CVar_Register_Pins::Handle_Pin);
     auto* CallReturnPin = CallNode->FindPin(UEdGraphSchema_K2::PN_ReturnValue);
     if (CallReturnPin != nullptr)

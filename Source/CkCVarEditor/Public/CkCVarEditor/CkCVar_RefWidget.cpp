@@ -18,8 +18,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Use FString instead of FName for CVar names — console variable names from
-// IConsoleManager can exceed FName length limits or contain edge-case characters.
+// FString, not FName: IConsoleManager names can exceed FName length limits or hold edge-case characters.
 DECLARE_DELEGATE_OneParam(FOnCVarPicked, const FString&);
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
@@ -263,10 +262,8 @@ namespace ck::layout
     {
         _PropertyOptions.Empty();
 
-        // Gather all CVar names as FStrings (not FNames — CVar names can exceed FName limits)
         auto AllNames = TSet<FString>{};
 
-        // 1. From IConsoleManager (engine + all registered CVars)
         IConsoleManager::Get().ForEachConsoleObjectThatStartsWith(
             FConsoleObjectVisitor::CreateLambda(
                 [&AllNames](const TCHAR* InName, IConsoleObject* InObj)
@@ -276,7 +273,6 @@ namespace ck::layout
                         return;
                     }
 
-                    // Include both console variables and console commands
                     if (InObj->AsVariable() == nullptr && InObj->AsCommand() == nullptr)
                     {
                         return;
@@ -286,23 +282,20 @@ namespace ck::layout
                 }),
             TEXT(""));
 
-        // 2. From our persistent settings
         for (const auto& Name : UCk_CVar_Settings_UE::Get()->GetAllRegisteredNames())
         {
             AllNames.Add(Name.ToString());
         }
 
-        // Sort
         auto SortedNames = AllNames.Array();
         SortedNames.Sort([](const FString& InA, const FString& InB)
         {
             return InA < InB;
         });
 
-        // Add empty entry at the top for "None" selection
+        // The leading empty-name entry is the "None" selection.
         _PropertyOptions.Add(MakeShareable(new FCVarViewerNode(FString{})));
 
-        // Filter and add
         for (const auto& Name : SortedNames)
         {
             if (_CVarTextFilter.IsValid() && NOT _CVarTextFilter->PassesFilter(Name))

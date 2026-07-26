@@ -13,8 +13,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Define a callstack fragment type for a tracked fragment type
-// This creates both the fragment struct and the trait specialization
 #define CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FragmentType) \
 	struct FragmentType##_Callstack : public ck::TFragment_Debug_Callstack<FragmentType> \
 	{ \
@@ -31,11 +29,9 @@
 
 #if !UE_BUILD_SHIPPING
 
-	// Record callstack entry without message
 	#define CK_CALLSTACK_RECORD(FragmentType, Entity) \
 		ck::TCk_Utils_Debug_Callstack<FragmentType>::Add(Entity, __FUNCTION__, __LINE__)
 
-	// Record callstack entry with formatted message
 	#define CK_CALLSTACK_RECORD_MSG(FragmentType, Entity, _Format_, ...) \
 		ck::TCk_Utils_Debug_Callstack<FragmentType>::Add( \
 			Entity, \
@@ -43,13 +39,11 @@
 			__LINE__, \
 			ck::Format_UE(_Format_, ##__VA_ARGS__))
 
-	// Clear all callstack entries for entity
 	#define CK_CALLSTACK_CLEAR(FragmentType, Entity) \
 		ck::TCk_Utils_Debug_Callstack<FragmentType>::Clear(Entity)
 
 #else
 
-	// No-op in shipping builds
 	#define CK_CALLSTACK_RECORD(FragmentType, Entity)
 	#define CK_CALLSTACK_RECORD_MSG(FragmentType, Entity, Format, ...)
 	#define CK_CALLSTACK_CLEAR(FragmentType, Entity)
@@ -60,21 +54,9 @@
 
 #if WITH_ANGELSCRIPT_CK && !UE_BUILD_SHIPPING
 
-// Define Angelscript bindings for callstack utils
-// Creates namespace utils_{feature}_debug_callstack with Record and Clear functions
-//
-// Parameters:
-//   _API_         - Module API macro (e.g., CKTIMER_API)
-//   _feature_     - Feature name in lowercase (e.g., timer) - used in namespace name
-//   _FragmentType_ - The fragment type being tracked (e.g., ck::FFragment_Timer_Current)
-//
-// Usage:
-//   CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKTIMER_API, timer, ck::FFragment_Timer_Current);
-//
-// Angelscript:
-//   utils_timer_debug_callstack::Record(MyTimer, "Message");
-//   utils_timer_debug_callstack::Clear(MyTimer);
-//
+// Generates the AngelScript namespace utils_<_feature_>_debug_callstack with Record and Clear.
+// _feature_ is an unquoted lowercase token pasted into that namespace name (e.g. timer).
+// Usage: CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKTIMER_API, timer, ck::FFragment_Timer_Current);
 #define CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(_API_, _feature_, _FragmentType_) \
 	AS_FORCE_LINK const FAngelscriptBinds::FBind _API_ CK_UNIQUE_NAME(Bind_Callstack_##_feature_)( \
 		FAngelscriptBinds::EOrder::Late, \

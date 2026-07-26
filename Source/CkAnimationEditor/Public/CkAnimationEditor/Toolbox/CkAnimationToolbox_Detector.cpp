@@ -109,7 +109,6 @@ auto
         }
     }
 
-    // Deduplicate by package name.
     TSet<FName> Seen;
     Candidates.RemoveAll([&Seen](const FAssetData& AD)
     {
@@ -146,7 +145,6 @@ auto
     // an FMemMark on the stack. Without it, SetBoneContainer crashes on the first allocation.
     FMemMark MemMark(FMemStack::Get());
 
-    // Required-bones list = every skeleton bone in order.
     TArray<FBoneIndexType> RequiredBones;
     RequiredBones.Reserve(NumBones);
     for (int32 i = 0; i < NumBones; ++i)
@@ -164,7 +162,6 @@ auto
     UE::Anim::FStackAttributeContainer Attributes;
     FAnimationPoseData PoseData(CompactPose, Curve, Attributes);
 
-    // Seconds for this frame from the asset's frame rate.
     const FFrameRate FrameRate = Model->GetFrameRate();
     const double TimeSeconds = FrameRate.AsSeconds(FFrameTime(FFrameNumber(FrameIndex)));
 
@@ -172,11 +169,10 @@ auto
     Ctx.CurrentTime = TimeSeconds;
     Ctx.bLooping    = false;
 
-    // bForceUseRawData = false — go through the compressed path (same as cook/runtime).
-    // The scrunch is a compressed-data artifact; raw DataModel can't see it.
+    // The scrunch is a compressed-data artifact that raw DataModel cannot see, so this must go
+    // through the compressed path (same as cook/runtime).
     Anim->GetBonePose(PoseData, Ctx, /*bForceUseRawData=*/false);
 
-    // Read local transforms from the pose and accumulate component-space.
     OutTransforms.SetNum(NumBones);
     const TArray<FMeshBoneInfo>& BoneInfo = RefSkel.GetRefBoneInfo();
     for (int32 b = 0; b < NumBones; ++b)
@@ -285,15 +281,14 @@ auto
     const int32 NumKeys = Model->GetNumberOfKeys();
     OutInfo.NumFrames = NumKeys;
 
-    // Need at least 4 frames so we have a baseline of >= 2 transition deltas after excluding the 0->1 one.
-    if (NumKeys < 4)
+    constexpr auto MinKeysForDeltaBaseline = 4;
+    if (NumKeys < MinKeysForDeltaBaseline)
     {
         OutInfo.Status = ECk_AnimationToolbox_Status::Skipped;
         OutInfo.StatusMessage = FString::Printf(TEXT("Too few keys (%d) — need at least 4"), NumKeys);
         return;
     }
 
-    // Build all per-frame component-space poses, then diff adjacent pairs.
     // Component space is what the viewer renders; a local change on the root bone propagates
     // through every downstream bone here, which is the signature of the walk-cycle scrunch.
     TArray<TArray<FTransform>> Frames;
@@ -324,8 +319,7 @@ auto
     const bool bHeadOutlier  = OutInfo.Ratio > OutlierMultiplier;
     const bool bBoundaryOutlier = OutInfo.LoopBoundaryRatio > OutlierMultiplier;
 
-    // If the loop-boundary requirement is on, both deltas must be outliers (skips non-looping
-    // anims whose abrupt opening isn't a true scrunch). If off, frame 0→1 alone is enough.
+    // Requiring both outliers skips non-looping anims whose abrupt opening isn't a true scrunch.
     const bool bAffected = bRequireLoopBoundaryMismatch
         ? (bHeadOutlier && bBoundaryOutlier)
         : bHeadOutlier;
@@ -340,7 +334,6 @@ auto
     }
     else if (bHeadOutlier && !bBoundaryOutlier && bRequireLoopBoundaryMismatch)
     {
-        // Caught head-outlier but the loop boundary is clean → likely a legitimate non-loop anim.
         OutInfo.Status = ECk_AnimationToolbox_Status::Clean;
         Msg = FString::Printf(TEXT("non-loop? 0→1: %.1fx but last→0: %.1fx"),
             OutInfo.Ratio, OutInfo.LoopBoundaryRatio);
@@ -462,7 +455,7 @@ auto
     TArray<FName> TrackNames;
     Model->GetBoneTrackNames(TrackNames);
 
-    // Source-frame index for copy strategies; -1 means "trim".
+    // INDEX_NONE means "trim", not "copy from".
     const int32 SourceIdx = [&]() -> int32
     {
         switch (Strategy)
@@ -474,7 +467,6 @@ auto
         return INDEX_NONE;
     }();
 
-    // All frame numbers we need to sample for the full-track readback.
     TArray<FFrameNumber> AllFrames;
     AllFrames.Reserve(NumKeys);
     for (int32 f = 0; f < NumKeys; ++f)
@@ -490,12 +482,10 @@ auto
 
         if (Strategy == ECk_AnimationToolbox_RewriteStrategy::TrimFirstFrame)
         {
-            // Drop the leading frame, shrinking the track by one.
             Transforms.RemoveAt(0);
         }
         else if (Transforms.IsValidIndex(SourceIdx))
         {
-            // Overwrite frame 0 with the source frame (preserves length).
             Transforms[0] = Transforms[SourceIdx];
         }
         else
@@ -520,7 +510,6 @@ auto
         AnyTrackMutated = true;
     }
 
-    // For the trim strategy, shrink the overall frame count by one.
     if (Strategy == ECk_AnimationToolbox_RewriteStrategy::TrimFirstFrame && AnyTrackMutated)
     {
         Controller.SetNumberOfFrames(FFrameNumber(NumKeys - 1));
@@ -528,11 +517,8 @@ auto
 
     Controller.CloseBracket();
 
-    // Force the compressed blob to regenerate from the just-mutated raw data,
-    // synchronously on the current platform. Without this the .uasset will save
-    // with new raw data + stale compressed data — cook then ships the stale blob
-    // and the scrunch persists even though the editor (which previews from raw)
-    // looks clean.
+    // Without this the .uasset saves new raw data + a stale compressed blob; cook ships the stale
+    // blob and the scrunch persists even though the editor (previewing from raw) looks clean.
     Anim->CacheDerivedDataForCurrentPlatform();
 
     Anim->GetPackage()->MarkPackageDirty();

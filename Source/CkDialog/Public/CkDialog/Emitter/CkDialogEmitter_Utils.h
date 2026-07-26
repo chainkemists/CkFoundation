@@ -36,7 +36,6 @@ public:
         const FCk_Fragment_DialogEmitter_ParamsData& InParams);
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -169,7 +168,7 @@ public:
         UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
         const FCk_Delegate_DialogEmitter_OnQueryCompleted& InDelegate);
 
-    // Fires when a line STARTS cooling on this emitter — including a re-start that extends an already-cooling line.
+    // Fires when a line STARTS cooling on this emitter — including a re-start, which replaces the existing entry.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Dialog|Emitter",
               DisplayName = "[Ck][Dialog][Emitter] Bind To OnCooldownStarted")

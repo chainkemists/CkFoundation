@@ -1,16 +1,14 @@
 #pragma once
 
-// Net WIRE plumbing for replicated fragment containers — the FastArray + entry types + the net-side pending tag.
-// The transport-neutral persistence machinery (registry, hydration) moved to CkEcs/Persistence/ (saveload-v3-
-// ergonomics Phase 5); this header #includes the registry because its FastArray callbacks Resolve handlers.
-// Net -> Persistence is the only allowed direction.
+// Net WIRE plumbing only: the FastArray, its entry type, and the net-side pending tag. Transport-neutral
+// persistence lives in CkEcs/Persistence/, and Net -> Persistence is the only allowed direction.
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Enums/CkEnums.h" // ECk_AddedOrNot
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Tag/CkTag.h"
-#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h" // FastArray callbacks Resolve handlers (split Phase 5)
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h" // FastArray callbacks Resolve handlers
 
 #include <InstancedStruct.h>
 #include <Net/Serialization/FastArraySerializer.h>
@@ -26,8 +24,7 @@ class UCk_Fragment_EntityReplicationDriver_Rep;
 
 namespace ck
 {
-    // Set on the associated entity whenever its replication driver holds container entries (or
-    // removals) that have not been applied yet. Drained by FProcessor_ReplicatedFragments_Dispatch.
+    // On the entity while its driver holds unapplied entries or removals; FProcessor_ReplicatedFragments_Dispatch drains it
     CK_DEFINE_ECS_TAG(FTag_RepFragments_PendingApply);
 }
 
@@ -53,8 +50,7 @@ public:
     // Accumulated while Apply keeps returning NotReady; past the timeout the entry is dropped LOUDLY.
     float _PendingForSeconds = 0.0f;
 
-    // Last data successfully applied on this client — the Old side of the next Apply. Coalesced
-    // receives diff against what was actually applied, not the last received snapshot.
+    // The Old side of the next Apply: coalesced receives diff against what was APPLIED, not last received
     UPROPERTY(Transient, NotReplicated)
     FInstancedStruct _LastAppliedData;
     bool _WasEverApplied = false;
@@ -98,9 +94,8 @@ public:
     UPROPERTY(NotReplicated)
     TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep> _OwningDriver = nullptr;
 
-    // Client-local: last data of entries removed by replication whose handler speaks the new
-    // contract. FProcessor_ReplicatedFragments_Dispatch resolves Remove by the stored type and
-    // drains this — removal is never dispatched inline during net receive.
+    // Client-local last data of replication-removed entries: removal is never dispatched inline during
+    // net receive, so FProcessor_ReplicatedFragments_Dispatch resolves Remove by stored type and drains this.
     UPROPERTY(NotReplicated)
     TArray<FInstancedStruct> _PendingRemovals;
 };

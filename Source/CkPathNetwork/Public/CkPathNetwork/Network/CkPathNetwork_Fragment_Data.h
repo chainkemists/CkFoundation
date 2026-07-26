@@ -109,10 +109,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// The routing output stored on the follower entity. _CompiledWaypoints is the ready-to-walk
-// polyline: on-ribbon legs sampled along the centerline WITH the side-keeping lateral offset
-// already applied, off-path legs appended verbatim. Consumers that just want to move follow
-// _CompiledWaypoints; consumers that want semantics read _Legs.
+// Routing output on the follower. _CompiledWaypoints is the ready-to-walk polyline (on-ribbon legs
+// sampled along the centerline WITH the side-keeping offset applied, off-path legs verbatim):
+// consumers that only need to move follow it, consumers that need semantics read _Legs.
 USTRUCT(BlueprintType)
 struct CKPATHNETWORK_API FCk_PathNetwork_RouteResult
 {
@@ -215,9 +214,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Replace the network's ribbons and rebuild the graph. The runtime-rebuild entrypoint: a game
-// re-runs its detector (or edits ribbons procedurally) and submits the new set. Every follower
-// corridor on this network is invalidated (epoch bump) and replans.
+// Replace the network's ribbons and rebuild the graph — the runtime-rebuild entrypoint. Every
+// follower corridor on this network is invalidated (epoch bump) and replans.
 USTRUCT(BlueprintType)
 struct CKPATHNETWORK_API FCk_Request_PathNetwork_Rebuild : public FCk_Request_Base
 {

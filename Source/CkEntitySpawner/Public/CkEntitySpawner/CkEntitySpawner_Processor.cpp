@@ -55,18 +55,14 @@ namespace ck
                 auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
                     LifetimeOwner, EntityScript, FInstancedStruct{});
 
-                // The lifetime owner is the ActorRelay channel; without this the spawned entity would
-                // inherit the channel as its ContextOwner (server) and replicate that to clients. Retarget
-                // the ContextOwner to the entity itself — the spawn pipeline carries this through replication
-                // so the client copy resolves to self rather than the channel.
+                // Without this the entity inherits the ActorRelay channel as its ContextOwner and replicates
+                // that; the spawn pipeline carries the override through so the client copy resolves to self.
                 auto EntityUnderConstruction = Pending.Get_EntityUnderConstruction();
                 if (ck::IsValid(EntityUnderConstruction))
                 { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(EntityUnderConstruction); }
             });
 
-        // The lambda above carries the entity-script class forward. The
-        // fragment-bearing entity has served its purpose — destroy it so we
-        // don't re-enter this processor next tick.
+        // The lambda carries the entity-script class forward; destroying the queue entity is what stops re-entry.
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 }

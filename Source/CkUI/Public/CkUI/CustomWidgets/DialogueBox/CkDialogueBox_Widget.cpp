@@ -58,7 +58,6 @@ auto
     RebuildWidget()
     -> TSharedRef<SWidget>
 {
-    // Based on URichTextBlock::RebuildWidget
     UpdateStyleData();
 
     TArray<TSharedRef<class ITextDecorator>> CreatedDecorators;
@@ -190,20 +189,16 @@ auto
     if (_HasFinishedPlaying || _CurrentLine.IsEmpty())
     { return; }
 
-    // Store current progress
     const auto CurrentProgress = Get_TypewriterProgress();
 
-    // Clear cached data
     _Segments.Empty();
     _CachedSegmentText.Empty();
     _CachedLetterIndex = 0;
     _CurrentSegmentIndex = 0;
     _LineMaxHeights.Empty();
 
-    // Recalculate
     CalculateWrappedString();
 
-    // Restore progress
     _CurrentLetterIndex = FMath::RoundToInt(CurrentProgress * _MaxLetterIndex);
     _CurrentDisplayText = BuildSegmentString();
 
@@ -303,7 +298,6 @@ auto
 
         ++_CurrentLetterIndex;
 
-        // Schedule next letter with appropriate delay
         const auto NextDelay = CalculateNextLetterDelay();
 
         FTimerDelegate Delegate;
@@ -313,7 +307,6 @@ auto
     }
     else
     {
-        // Ensure final text is displayed
         _CurrentDisplayText = BuildSegmentString();
 
         if (ck::IsValid(LineText))
@@ -321,17 +314,13 @@ auto
             LineText->SetText(FText::FromString(_CurrentDisplayText));
         }
 
-        // Check if we should hold at end or complete immediately
-
         if (const auto HoldTime = _EndHoldTime.Get_Seconds();
             HoldTime <= 0.0f)
         {
-            // Complete immediately if no hold time
             SkipToLineEnd();
         }
         else
         {
-            // Hold at end before marking complete
             FTimerDelegate Delegate;
             Delegate.BindUObject(this, &ThisClass::SkipToLineEnd);
 
@@ -351,7 +340,6 @@ auto
 {
     if (ck::Is_NOT_Valid(LineText) || ck::Is_NOT_Valid(LineText->Get_TextLayout()))
     {
-        // Fallback for simple text
         FCk_DialogueTextSegment Segment;
         Segment.Set_Text(_CurrentLine.ToString());
         _Segments.Add(Segment);
@@ -388,7 +376,6 @@ auto
             FCk_DialogueTextSegment Segment;
             Run->AppendTextTo(Segment.Get_Text(), Block->GetTextRange());
 
-            // Handle zero-width space from decorators
             if (Segment.Get_Text().Len() == 1 &&
                 Segment.Get_Text()[0] == ck::dialogue::ZERO_WIDTH_SPACE)
             {
@@ -397,14 +384,13 @@ auto
 
             Segment.Set_RunInfo(Run->GetRunInfo());
 
-            // Track line height
             const auto BlockHeight = Block->GetSize().Y;
             MaxHeightForLine = FMath::Max(MaxHeightForLine, BlockHeight);
             Segment.Set_LineHeight(BlockHeight);
 
             _Segments.Add(Segment);
 
-            // Count letters (including decorators without text)
+            // A decorator with no text still occupies one letter index.
             _MaxLetterIndex += FMath::Max(
                 Segment.Get_Text().Len(),
                 Segment.Get_RunInfo().Name.IsEmpty() ? 0 : 1);
@@ -416,13 +402,11 @@ auto
             }
         }
 
-        // Store max height for this line
         if (MaxHeightForLine > 0.0f)
         {
             _LineMaxHeights.Add(CurrentLineIndex, MaxHeightForLine);
         }
 
-        // Only add newline if we're not on the last line
         if (HasWrittenText && LineViewIndex < NumLines - 1)
         {
             FCk_DialogueTextSegment NewlineSegment;
@@ -433,7 +417,6 @@ auto
         }
     }
 
-    // Reset layout
     Layout->SetWrappingWidth(0);
     LineText->SetText(LineText->GetText());
 }
@@ -515,7 +498,6 @@ auto
 {
     auto BaseDelay = _ActiveSpeedSettings.Get_BaseLetterTime().Get_Seconds();
 
-    // Check current character for punctuation
     if (const auto CurrentChar = Get_CurrentCharacter(); CurrentChar.IsSet())
     {
         if (ck::dialogue::IsCharacterPunctuation(CurrentChar.GetValue()))

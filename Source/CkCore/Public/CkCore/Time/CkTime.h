@@ -79,9 +79,8 @@ public:
     CK_PROPERTY_GET(_Seconds);
 
 public:
-    // Hand-written (not CK_DEFINE_CONSTRUCTORS) so the constructors are constexpr — FCk_Time is then a
-    // literal type usable in compile-time contexts (e.g. a processor's `static constexpr FCk_Time TickRate`).
-    // Additive: a constexpr constructor is still runtime-callable, so every existing FCk_Time{...} is unaffected.
+    // Hand-written (not CK_DEFINE_CONSTRUCTORS) so they are constexpr — FCk_Time is then a literal type usable
+    // in compile-time contexts (e.g. a processor's `static constexpr FCk_Time TickRate`).
     constexpr FCk_Time() = default;
     constexpr explicit FCk_Time(double InSeconds) : _Seconds(InSeconds) {}
     CK_ANGELSCRIPT_CTOR_REGISTRATION(FCk_Time, _Seconds);
@@ -99,14 +98,9 @@ namespace ck::time
         auto Interval_MustBePositive() -> void;
     }
 
-    // Compile-time FCk_Time interval literals (consteval — FCk_Time's constructor is constexpr, so FCk_Time is
-    // itself the compile-time artifact). A processor spells its fixed cadence directly in the house time type:
-    //
-    //     static constexpr FCk_Time TickRate = ck::time::Hz(4);          // 4 evaluations per second
-    //     static constexpr FCk_Time TickRate = ck::time::Seconds(0.25);  // the same rate, interval spelling
-    //
-    // A non-positive interval is a compile error (an interval or rate of zero or below is nonsense — for an
-    // every-tick processor declare no TickRate at all). Runtime FCk_Time construction is FCk_Time{Seconds}.
+    // Compile-time FCk_Time interval literals, e.g. `static constexpr FCk_Time TickRate = ck::time::Hz(4);`
+    // (== ck::time::Seconds(0.25)). For an every-tick processor declare no TickRate at all rather than reaching
+    // for a zero interval. Runtime construction stays FCk_Time{Seconds}.
 
     consteval auto
     Seconds(

@@ -1,20 +1,8 @@
 // Pure coverage for the cadence-bucket quantization and the per-bucket TickRate traits — no world, no
-// entities, no scheduler. The RUNTIME semantics (a rated processor firing at its declared rate, the
-// immediate first eval, the empty-view accumulator freeze) are pinned hermetically in CkTests
-// (Test_Processor_TickRateTrait.cpp) and at the PIE level by Ck_AutoTest_VisibleRange_CadenceGatesUpdates.
-// The ck::time factories themselves are covered in CkCore (CkTime.spec.cpp).
-//
-// The MISUSE surface is compile-time by design and therefore self-testing — each of these fails the BUILD,
-// so no runtime spec can (or needs to) exercise them:
-//   - ck::time::Seconds(0) / Seconds(-1) / Hz(0) / Hz(-4)        -> consteval factory rejects a non-positive
-//     interval via ck::time::detail::Interval_MustBePositive (declared, never defined, not constexpr).
-//   - TickRate as a raw double or any non-FCk_Time type          -> static_assert in
-//     TProcessorBase::Get_TickRate ("must be an FCk_Time").
-//   - TickRate as a non-static (instance) member                 -> static_assert ("instance member").
-//   - TickRate as a type alias                                   -> static_assert ("declared as a TYPE").
-//   - TickRate as a non-constexpr static                         -> fails to initialize the constexpr
-//     TraitValue read in Get_TickRate.
-//   - TickCatchUpPolicy as an instance member / wrong type        -> static_asserts in Get_TickCatchUpPolicy.
+// entities, no scheduler. RUNTIME semantics are pinned in CkTests (Test_Processor_TickRateTrait.cpp) and by
+// Ck_AutoTest_VisibleRange_CadenceGatesUpdates; the ck::time factories in CkCore (CkTime.spec.cpp). The
+// MISUSE surface is compile-time by design — every misspelling of TickRate fails the BUILD, so no runtime
+// spec can exercise it (consteval factory + the static_asserts in TProcessorBase::Get_TickRate).
 
 #include "CkEcs/Processor/CkProcessor_CadenceBuckets.h"
 
@@ -31,8 +19,7 @@ namespace ck_cadence_buckets_spec
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Compile-time facts — a broken one fails the build of this TU. (Interval VALUES are checked at runtime below:
-// FCk_Time::Get_Seconds is not constexpr, so a literal's value can't be static_assert'd.)
+// Interval VALUES are checked at runtime below — FCk_Time::Get_Seconds is not constexpr.
 
 static_assert(std::is_same_v<std::remove_const_t<decltype(ck::detail::TCadenceBucketRateTraits<1>::TickRate)>, FCk_Time>,
     "a nonzero bucket's TickRate trait is an FCk_Time");
@@ -50,7 +37,6 @@ bool FCkTest_CadenceBuckets_QuantizeTowardFaster::RunTest(const FString&)
 {
     using namespace ck::cadence;
 
-    // Exact bucket matches land on their own bucket.
     TestEqual(TEXT("0 -> bucket 0 (every tick)"), Get_QuantizedBucketIndex(FCk_Time{0.0}), 0);
     TestEqual(TEXT("0.1 exact -> bucket 1"), Get_QuantizedBucketIndex(FCk_Time{0.1}), 1);
     TestEqual(TEXT("0.25 exact -> bucket 2"), Get_QuantizedBucketIndex(FCk_Time{0.25}), 2);
@@ -59,19 +45,14 @@ bool FCkTest_CadenceBuckets_QuantizeTowardFaster::RunTest(const FString&)
     TestEqual(TEXT("2.0 exact -> bucket 5"), Get_QuantizedBucketIndex(FCk_Time{2.0}), 5);
     TestEqual(TEXT("4.0 exact -> bucket 6"), Get_QuantizedBucketIndex(FCk_Time{4.0}), 6);
 
-    // Between two buckets rounds toward FASTER (the smaller interval) — an entity never updates
-    // slower than it requested.
     TestEqual(TEXT("0.3 -> bucket 2 (0.25s), not bucket 3 (0.5s)"), Get_QuantizedBucketIndex(FCk_Time{0.3}), 2);
     TestEqual(TEXT("0.7 -> bucket 3 (0.5s)"), Get_QuantizedBucketIndex(FCk_Time{0.7}), 3);
     TestEqual(TEXT("1.5 -> bucket 4 (1s)"), Get_QuantizedBucketIndex(FCk_Time{1.5}), 4);
     TestEqual(TEXT("3.999 -> bucket 5 (2s)"), Get_QuantizedBucketIndex(FCk_Time{3.999}), 5);
 
-    // Below the smallest nonzero bucket (and any non-positive request) -> bucket 0, every tick.
     TestEqual(TEXT("0.05 (below smallest nonzero) -> bucket 0"), Get_QuantizedBucketIndex(FCk_Time{0.05}), 0);
     TestEqual(TEXT("negative -> bucket 0"), Get_QuantizedBucketIndex(FCk_Time{-1.0}), 0);
 
-    // Above the largest bucket clamps to the largest (never slower than the set offers, but the
-    // set's slowest is the floor).
     TestEqual(TEXT("100 -> bucket 6 (the slowest bucket)"), Get_QuantizedBucketIndex(FCk_Time{100.0}), 6);
 
     return true;
@@ -86,8 +67,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_CadenceBuckets_BucketTraitMatchesIntervalTable::RunTest(const FString&)
 {
-    // Every nonzero bucket's TickRate trait is exactly its interval-table FCk_Time (value check — the type is
-    // pinned at compile time by the static_assert above; FCk_Time::Get_Seconds is not constexpr).
+    // Value check only — the trait's TYPE is pinned by the static_assert above.
     TestTrue(TEXT("bucket 3 trait == interval table"),
         ck::detail::TCadenceBucketRateTraits<3>::TickRate == FCk_Time{ck::cadence::BucketIntervalsSeconds[3]});
 

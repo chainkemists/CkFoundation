@@ -40,17 +40,14 @@ public:
         const FTransform& InInitialTransform,
         const FCk_Fragment_2dGridSystem_ParamsData& InParams);
 
-    // Re-composes the LIVE half of a grid (pivot SceneNode + FFragment_2dGridSystem_Current's
-    // private cell registry + the cell entities) on an entity whose FFragment_2dGridSystem_Params
-    // were restored by a snapshot load — the live half can never round-trip. Requires Params
-    // present and Current absent; ensures otherwise. C++-only (snapshot restore processors);
-    // regular composition goes through Add.
+    // Re-composes the LIVE half of a grid (pivot SceneNode, cell registry, cell entities) after a
+    // snapshot load restored only its Params — the live half can never round-trip. Requires Params
+    // present and Current absent; ensures otherwise. Regular composition goes through Add.
     static auto
     Request_RecomposeFromSnapshot(
         FCk_Handle_Transform& InHandle) -> FCk_Handle_2dGridSystem;
 
 private:
-    // Shared composition body for Add (fresh) and Request_RecomposeFromSnapshot (post-restore).
     // Member (not file-static) so cell creation can reach the private UCk_Utils_2dGridCell_UE::Create.
     static auto
     DoCompose_PivotCurrentAndCells(

@@ -6,22 +6,15 @@ namespace ck::goap
 {
 
 // --------------------------------------------------------------------------------------------------------------------
-// Effect / constraint interaction for boolean-only GOAP
 
 namespace detail
 {
-	// Does this effect satisfy this constraint in a regressive sense?
-	// For bool-only GOAP this is simply: same key AND effect value matches
-	// required value.
 	static auto
 	EffectHelpsConstraint(const FWorldStateEffect& InEffect, const FWorldStateCondition& InC) -> bool
 	{
 		return InEffect.Key == InC.Key && InEffect.Value == InC.Value;
 	}
 
-	// Does this effect conflict with this constraint? Only meaningful on a
-	// shared key: if the effect forces the opposite value of what the
-	// constraint requires, it's a conflict.
 	static auto
 	EffectConflictsWithConstraint(const FWorldStateEffect& InEffect, const FWorldStateCondition& InC) -> bool
 	{
@@ -30,7 +23,6 @@ namespace detail
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Regressive expansion
 
 inline auto
 	FGoapGraph::
@@ -48,7 +40,6 @@ inline auto
 
 	for (const auto& Action : _Actions)
 	{
-		// Classify this action against the current constraint set.
 		auto Helps    = false;  // at least one effect satisfies a constraint
 		auto Conflict = false;  // at least one effect violates a constraint
 
@@ -64,16 +55,13 @@ inline auto
 		if (Conflict) { continue; }
 		if (NOT Helps) { continue; }
 
-		// Build the predecessor constraint set.
 		auto New = Current;
 
-		// Apply every effect's regressive transform to any matching constraint.
 		for (const auto& Effect : Action.Effects)
 		{
 			New.RegressThroughEffect(Effect);
 		}
 
-		// Add the action's preconditions as new constraints on the predecessor.
 		for (const auto& Pre : Action.Preconditions)
 		{
 			New.Add(Pre);
@@ -123,7 +111,6 @@ inline auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Lookup the action cost for an edge
 
 inline auto
 	FGoapGraph::
@@ -144,15 +131,9 @@ inline auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Sum of min-cost actions that could satisfy each unsatisfied constraint
-//
-// For each unsatisfied constraint, the cheapest action whose Set effect
-// produces the required value is a lower bound on the cost to satisfy it.
-// Summing across independent constraints (h^add) is admissible for most
-// GOAP domains and tightly informs A* so it moves directly toward the goal
-// rather than sprawling in uniform-cost mode. Falls back to CountUnsatisfied
-// if no action can produce a given key (unreachable — the search will just
-// never find a goal state, which IsGoal correctly signals).
+// h^add: sum, over each unsatisfied constraint, of the cheapest action whose
+// effect produces the required value. Admissible for most GOAP domains and far
+// tighter than uniform cost. An unproducible key contributes 1.0e6f.
 
 inline auto
 	FGoapGraph::
@@ -173,7 +154,6 @@ inline auto
 		const auto Required = (C == EConstraint::MustBeTrue);
 		if (_CurrentWorldState.Get(Key) == Required) { continue; }  // already satisfied
 
-		// Cheapest action whose Set effect matches the required value.
 		auto Best = TNumericLimits<float>::Max();
 		for (const auto& Action : _Actions)
 		{
@@ -192,7 +172,6 @@ inline auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// All constraints in this state are satisfied by the current world state
 
 inline auto
 	FGoapGraph::

@@ -9,17 +9,6 @@
 class STextBlock;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Horizontal activity bar rendered in the watermark stats group.
-//
-// Displays a row of signal chips:  [ W ] [ A ] [ SPACE ] [ LMB ]
-//
-// Active signals render in the ActiveColor.
-// Held signals (active for more than 1 frame) render in the HeldAccentColor
-// and show a colored underline accent bar.
-// Inactive (released) signals render in InactiveColor and appear on the left.
-//
-// Chip widgets are pre-allocated and updated in place (SetText / SetVisibility)
-// to avoid layout flash from destroying and recreating STextBlock widgets.
 
 class CKWATERMARK_API SCkWatermarkActivityBar : public SCompoundWidget
 {
@@ -38,7 +27,7 @@ public:
         , _ShadowOffset(FVector2D::ZeroVector)
         , _ShadowColorAndOpacity(FLinearColor::Black)
     {}
-        // Callable that returns (version, activity array ptr). Called each Tick.
+        // Polled every Tick; the chips rebuild only when the returned version changes.
         SLATE_ARGUMENT(FActivityGetter, ActivityGetter)
 
         SLATE_ATTRIBUTE(FSlateFontInfo, Font)
@@ -47,10 +36,8 @@ public:
         SLATE_ARGUMENT(FText, BracketClose)
         SLATE_ARGUMENT(float, BracketInnerPadding)
 
-        // Horizontal spacing between adjacent chips.
         SLATE_ARGUMENT(float, ChipSpacing)
 
-        // Height of the accent underline bar shown under held signals.
         SLATE_ARGUMENT(float, HeldAccentHeight)
 
         SLATE_ATTRIBUTE(FSlateColor,   ActiveColor)
@@ -67,7 +54,6 @@ private:
     auto DoUpdateChips(const TArray<FCkWatermarkActivityState>& InStates) -> void;
     auto DoEnsurePoolSize(int32 InRequired) -> void;
 
-    // One pre-allocated chip entry in the pool.
     struct FChipSlot
     {
         TSharedPtr<SWidget>    Root;         // SVerticalBox — visibility for pool management.
@@ -83,7 +69,6 @@ private:
 
     TArray<FChipSlot>            _ChipPool;
 
-    // Captured from Construct.
     TAttribute<FSlateFontInfo> _Font;
     FText                      _BracketOpen;
     FText                      _BracketClose;

@@ -61,9 +61,8 @@ auto
     GenerateHandleTypeRegistry()
     -> void
 {
-    // Single-writer gate (G7): the DynamicHandleTypes.json write is a Script/Generated mutation.
-    // This is also a CallInEditor button, so a secondary logs a clear Warning (not a silent skip)
-    // and broadcasts a "did nothing" completion so Blueprint/editor listeners aren't left hanging.
+    // Also a CallInEditor button, so a secondary must Warn rather than skip silently, and must
+    // still broadcast completion or editor listeners hang.
     if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
             TEXT("DynamicHandleSubsystem.GenerateHandleTypeRegistry")))
     {
@@ -134,20 +133,14 @@ auto
 #if WITH_ANGELSCRIPT_CK
     auto TotalNewTypes = int32{ 0 };
 
-    // First, generate/update the JSON registry for persistence
     GenerateHandleTypeRegistry();
 
-    // Reset flags to allow re-processing
     FCkDynamic_HandleTypeRegistry::ResetJsonRegistryLoadedFlag();
     FCkAngelScript_HandleRegistry::ResetBindingsCompleteFlag();
 
-    // Load any new entries from JSON
     FCkDynamic_HandleTypeRegistry::LoadFromJsonRegistry();
 
-    // Discover and register new data asset definitions
     TotalNewTypes += FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterNewDefinitionsIncremental();
-
-    // Process pending registrations and create bindings
     TotalNewTypes += FCkAngelScript_HandleRegistry::RegisterNewTypesIncremental();
 
     if (TotalNewTypes > 0)

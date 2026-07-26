@@ -45,20 +45,12 @@ namespace ck
         ck::crowd::VeryVerbose(TEXT("CrowdAgent setup: [{}] (radius={}, height={}, probe_radius={})"),
             InHandle, Radius, Height, ProbeRadius);
 
-        // ---- Spawn the probe child entity ----
-        // Owned by the agent so it cascade-destroys with the agent. The probe child carries its own
-        // Transform (offset Z=+HalfHeight so the cylinder is centered on the agent's center, not its
-        // feet); SceneNode-parented to the agent so apply-offset moves propagate without per-tick sync.
-        // Mirror the Steering pattern: take an explicit non-const copy of InHandle for mutating ops
-        // (Add/Try_Remove tag stamps below). The framework hands InHandle in a way the per-call
-        // Steering body treats as const-by-convention; explicit copy keeps that convention.
         auto AgentNonConst = InHandle;
 
+        // Owned by the agent so it cascade-destroys with it.
         auto ProbeChildEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(AgentNonConst);
 
-        // Initial transform = agent's location + Z offset (HalfHeight). SceneNode propagation will
-        // overwrite this each tick from the agent's current Transform; this is just so the first
-        // frame before SceneNode runs has a sensible position.
+        // Overwritten by SceneNode propagation every tick — this only covers the first frame.
         const auto& AgentXform = InTransform.Get_Transform();
         const auto InitialChildXform = FTransform{
             AgentXform.GetRotation(),
@@ -68,17 +60,13 @@ namespace ck
         auto ProbeChildTransform = UCk_Utils_Transform_UE::Add(
             ProbeChildEntity, InitialChildXform, ECk_Replication::DoesNotReplicate);
 
-        // Cylinder shape — the probe asks Jolt for overlaps within this volume. ConvexRadius=0 is fine
-        // for an agent-sized cylinder; the +SeparationLookahead reach gives the steering layer time to
-        // start nudging before agents are physically touching.
+        // The +SeparationLookahead reach gives steering time to nudge before agents actually touch.
         const auto CylinderDimensions = FCk_ShapeCylinder_Dimensions{HalfHeight, ProbeRadius};
         const auto CylinderParams = FCk_Fragment_ShapeCylinder_ParamsData{CylinderDimensions};
         UCk_Utils_ShapeCylinder_UE::Add(ProbeChildEntity, CylinderParams);
 
-        // Probe filter: name AND filter both set to TAG_Crowd_Agent so any two crowd probes mutually
-        // overlap. ContextOverlapPolicy=Any so probes from any context owner can match (different
-        // gym stations, different lifetime owners). MotionType=Kinematic so Jolt allows the probe to
-        // move every frame without the static-not-moved ensure firing.
+        // Name AND filter are TAG_Crowd_Agent so any two crowd probes mutually overlap; Kinematic
+        // so Jolt lets the probe move every frame without the static-not-moved ensure firing.
         auto ProbeParams = FCk_Fragment_Probe_ParamsData{TAG_Crowd_Agent};
         ProbeParams.Set_Filter(FGameplayTagContainer{TAG_Crowd_Agent});
         ProbeParams.Set_ContextOverlapPolicy(ECk_Probe_ContextOverlapPolicy::Any);
@@ -86,9 +74,8 @@ namespace ck
 
         auto ProbeHandle = UCk_Utils_Probe_UE::Add(ProbeChildTransform, ProbeParams, FCk_Probe_DebugInfo{});
 
-        // SceneNode-parent the probe child Transform to the agent's Transform so apply-offset moves
-        // propagate. Local offset = +HalfHeight on Z; agent Transform is at FEET, probe shape is
-        // centered, so this puts the cylinder's mid-height at agent.center.
+        // The agent Transform sits at its FEET and the probe shape is centered, so the parented
+        // child needs +HalfHeight on Z to put the cylinder's mid-height at the agent's center.
         auto AgentTransform = UCk_Utils_Transform_UE::Cast(InHandle);
         const auto LocalOffset = FTransform{
             FRotator::ZeroRotator,
@@ -96,11 +83,10 @@ namespace ck
             FVector::OneVector};
         UCk_Utils_SceneNode_UE::Add(ProbeChildTransform, AgentTransform, LocalOffset);
 
-        // Store probe handle for the NeighborSync processor's per-frame lookup.
         InProbeRef._ProbeChild = ProbeHandle;
 
-        // Stamp HasProbe (excludes this view next tick) + clear NeedsSetup (other Setup-marked
-        // processors may also depend on this tag; remove only after our work is done).
+        // NeedsSetup is shared with other Setup-marked processors — clear it only once our own
+        // work is done.
         AgentNonConst.Add<FTag_CrowdAgent_HasProbe>();
         AgentNonConst.Try_Remove<FTag_CrowdAgent_NeedsSetup>();
     }

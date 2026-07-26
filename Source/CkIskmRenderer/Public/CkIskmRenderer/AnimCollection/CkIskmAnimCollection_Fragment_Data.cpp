@@ -42,10 +42,7 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Plan-2 CPU bone-matrix bake. Sampling/compaction/layout/bounds live in the shared ck::anim_bake core
-// (CkAnimation/AnimBake — extracted from this function's original Skelot port, also consumed by CkVat);
-// this function keeps only the Iskm-specific OUTPUT ENCODING: transposed 3x4 bone matrices in a flat
-// Buffer<float4>-ready array. CPU-only, no RHI.
+
 auto
     UCk_IskmAnimCollection_Data::
     Get_EffectiveSkeleton() const
@@ -63,20 +60,13 @@ auto
     Build_BakedPoseData()
     -> bool
 {
-    // The bake itself is CPU-only (no RHI — see the file-level comment above). Only a REAL dedicated
-    // server legitimately lacks the mesh render data it reads (cook-stripped there, and unneeded:
-    // AdvanceAnimation already skips NM_DedicatedServer). -nullrhi/headless test runs are NOT dedicated
-    // servers — mesh data is present and the bake still succeeds — but FApp::CanEverRender() is false
-    // in both cases; gating on it here silently starved non-dedicated-server callers (listen server /
-    // standalone / client under -nullrhi) of a bake AdvanceAnimation still requires every tick, so its
-    // "no baked pose" ensure fired continuously for the rest of the run.
+    // NOT FApp::CanEverRender(): a -nullrhi run is not a dedicated server, still has mesh render data,
+    // and still needs this CPU-only bake every tick.
     if (IsRunningDedicatedServer())
     { return false; }
 
-    // A re-bake changes the frame layout, so previously materialized render data must not survive:
-    // tear down the proxies of every live cluster using this collection, drain the render thread,
-    // release the old buffers, and let the scoped contexts recreate the proxies on function exit —
-    // CreateSceneProxy re-enters EnsureRenderResources against the fresh bake.
+    // A re-bake changes the frame layout, so previously materialized render data must not survive. The
+    // scoped contexts recreate the proxies on function exit, re-entering EnsureRenderResources.
     TIndirectArray<FComponentRecreateRenderStateContext> RecreateContexts;
     if (ck::IsValid(_RenderData.Get(), ck::IsValid_Policy_NullptrOnly{}))
     {
@@ -101,8 +91,7 @@ auto
     FCk_AnimBake_SampleParams SampleParams;
     SampleParams.ExtractRootMotion = _ExtractRootMotion;
     SampleParams.DisableRetargeting = _DisableRetargeting;
-    // Batched crowd skins to match the promoted SKMC path — invert the mesh bind pose, not the skeleton ref pose
-    // (fixes members facing -Y while moving +X). See FCk_AnimBake_SampleParams::UseMeshBindRefPose.
+    // Batched crowd must skin like the promoted SKMC path: invert the mesh bind pose, not the skeleton ref pose.
     SampleParams.UseMeshBindRefPose = true;
 
     const auto SkeletonData = ck::anim_bake::BuildSkeletonData(*Skeleton, *_DefaultMesh, SampleParams);
@@ -137,18 +126,14 @@ auto
         Baked->Sequences.Add(BakedSeq);
     }
     Baked->FrameCountSequences = Layout.TotalFrameCount;
-    Baked->TotalFrameCount = Layout.TotalFrameCount; // MVP: no transition / dynamic-pose region
+    Baked->TotalFrameCount = Layout.TotalFrameCount;
 
     const int32 RenderBoneCount = Baked->RenderBoneCount;
     Baked->Matrices.SetNumUninitialized(RenderBoneCount * Baked->TotalFrameCount);
 
-    // Per-frame culling bounds. MVP: the mesh's static bound, identical for every frame.
     const FBox3f MeshBound = static_cast<FBox3f>(_DefaultMesh->GetBounds().GetBox());
     Baked->FrameBounds.Init(MeshBound, Baked->FrameCountSequences);
 
-    // resolve the configured socket list against the mesh/skeleton. Per-frame fill happens
-    // inside the sampling callback below. Misses are content errors — loud, then skipped (the
-    // design fallback for a missing table entry is "far cosmetics hidden", never a crash).
     struct FSocketResolve { int32 SocketSlot = INDEX_NONE; int32 BoneIndex = INDEX_NONE; FTransform LocalOffset; };
     TArray<FSocketResolve> ResolvedSockets;
     const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
@@ -175,7 +160,8 @@ auto
         ResolvedSockets.Add(FSocketResolve{ Baked->Sockets.Num() - 1, BoneIndex, LocalOffset });
     }
 
-    // ShaderMatrix[bone] = RefPoseInverse[bone] * ComponentSpaceBoneMatrix[bone], stored transposed 3x4.
+    // ShaderMatrix[bone] = RefPoseInverse[bone] * ComponentSpaceBoneMatrix[bone], stored transposed 3x4
+    // because the shader does mul(Matrix, Vector).
     const auto CalcRenderMatrices = [&Baked, RenderBoneCount](TArrayView<const FTransform> InPoseComponentSpace, int32 InFrameIndex)
     {
         FCk_Iskm_BoneMatrix3x4* const Out = Baked->Matrices.GetData() + (InFrameIndex * RenderBoneCount);
@@ -185,7 +171,6 @@ auto
             const FMatrix44f BoneMatrix = static_cast<FTransform3f>(InPoseComponentSpace[CompactBoneIdx]).ToMatrixWithScale();
             const FMatrix44f ShaderMatrix = Baked->RefPoseInverse[CompactBoneIdx] * BoneMatrix;
 
-            // transposed 3x4 store (matches SkelotSetMatrix3x4Transpose; shader uses mul(Matrix, Vector)).
             const float* RESTRICT Src = &ShaderMatrix.M[0][0];
             float* RESTRICT Dst = Out[i].M;
             Dst[0] = Src[0]; Dst[1] = Src[4]; Dst[2]  = Src[8];  Dst[3]  = Src[12];
@@ -194,9 +179,7 @@ auto
         }
     };
 
-    // Frame 0 (reference pose, yielding identity matrices) + every sequence frame; render-bone translations
-    // accumulate inside the core and feed the conservative animated bounds. The pose view is indexed by
-    // SKELETON bone (CkAnimBake contract), so socket bones need no remap.
+    // The pose view is indexed by SKELETON bone (CkAnimBake contract), so socket bones need no remap.
     const auto PerFramePose = [&](TArrayView<const FTransform> InPoseComponentSpace, int32 InFrameIndex)
     {
         CalcRenderMatrices(InPoseComponentSpace, InFrameIndex);
@@ -261,7 +244,7 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Plan-2 GPU render resources
+
 auto
     UCk_IskmAnimCollection_Data::
     EnsureRenderResources()
@@ -285,10 +268,9 @@ auto
         this)
     { return; }
 
-    // Pre-flight the default mesh BEFORE standing up render resources. The bake can be cached from an earlier
-    // call and _DefaultMesh is script-mutable, so the mesh/skeleton can go missing after a successful bake.
-    // Validation policy lives here — the CkCore-linked module — because the engine-only VF module
-    // (PostConfigInit, no Ck deps) can't CK_ENSURE and silently no-ops on bad input.
+    // Pre-flight BEFORE standing up render resources: the bake can be cached and _DefaultMesh is
+    // script-mutable. Validation lives in this module because the engine-only VF module (no Ck deps)
+    // cannot CK_ENSURE and silently no-ops on bad input.
     USkeleton* const EffectiveSkeleton = Get_EffectiveSkeleton();
     CK_ENSURE_IF_NOT(ck::IsValid(_DefaultMesh) && ck::IsValid(EffectiveSkeleton),
         TEXT("[CkIskm] AnimCollection [{}] lost its DefaultMesh/Skeleton after bake — batched clusters will render NOTHING"),
@@ -301,9 +283,6 @@ auto
         _DefaultMesh)
     { return; }
 
-    // Bone-influence guard. The batched path skins up to 8 influences (4- and 8-influence vertex factories,
-    // weights renormalized into an owned buffer); beyond 8 the strongest 8 are kept and renormalized —
-    // visually close, but flag the content.
     for (const FSkeletalMeshLODRenderData& LODData : MeshRenderData->LODRenderData)
     {
         for (const FSkelMeshRenderSection& Section : LODData.RenderSections)
@@ -314,10 +293,8 @@ auto
             { }
         }
 
-        // The bone-index/weight build reads skin weights on the CPU (FSkinWeightVertexBuffer accessors).
-        // Cooked builds discard that CPU copy unless the mesh keeps CPU access — those reads would hit
-        // freed/garbage data. Flag the content so BusterBlock crowd meshes get bNeedsCPUAccess set, and skip
-        // the resource build entirely: no render resources beats reading a discarded buffer.
+        // The bone-index/weight build reads skin weights on the CPU; cooked builds discard that copy
+        // unless the mesh keeps CPU access, and those reads would hit freed memory.
         CK_ENSURE_IF_NOT(GIsEditor || LODData.GetSkinWeightVertexBuffer()->GetNeedsCPUAccess(),
             TEXT("[CkIskm] Batched renderer requires CPU-accessible skin weights in cooked builds — set bNeedsCPUAccess on mesh [{}]"),
             _DefaultMesh)
@@ -327,13 +304,11 @@ auto
     _RenderData = MakePimpl<FCk_Iskm_BatchedRenderData>();
     FCk_Iskm_BatchedRenderData* RD = _RenderData.Get();
 
-    // CPU: copy the baked matrices into the SRV-backing resource array.
     RD->AnimationBuffer.Matrices.SetNumUninitialized(Baked->Matrices.Num());
     FMemory::Memcpy(RD->AnimationBuffer.Matrices.GetData(), Baked->Matrices.GetData(),
         Baked->Matrices.Num() * sizeof(FCk_Iskm_BoneMatrix3x4));
 
-    // CPU: build the default mesh's render data (render-bone remap + vertex factories). Pass the skeleton +
-    // remap table directly so the engine-only VF module stays decoupled from this asset type.
+    // Skeleton + remap table are passed explicitly so the engine-only VF module stays decoupled from this asset type.
     RD->DefaultMeshData.InitFromMesh(_DefaultMesh, EffectiveSkeleton, Baked->SkeletonBoneToRenderBone, GMaxRHIFeatureLevel);
 
     CK_ENSURE_IF_NOT(RD->DefaultMeshData.NumBoneRemapMisses == 0,

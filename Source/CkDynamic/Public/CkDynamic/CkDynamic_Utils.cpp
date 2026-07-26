@@ -101,8 +101,7 @@ auto
     Storage.emplace(Entity, MoveTemp(Fragment));
     InHandle.Get_RegistryView().BumpDirtyMarkerVersion(Get_DirtyMarkerHash(InFragmentData.GetScriptStruct()));
 
-    // The default-storage fragment is only a presence marker (Has<>/removal) —
-    // the real data lives in the named storage. Keep it default-constructed.
+    // Presence marker only (Has<>/removal) — the real data lives in the named storage.
     if (NOT InHandle.Has<ck::FFragment_DynamicFragment_Data>())
     {
         InHandle.Add<ck::FFragment_DynamicFragment_Data>(ck::FFragment_DynamicFragment_Data{});
@@ -171,8 +170,8 @@ auto
     }
     else
     {
-        // Callers of AddOrGet intend to mutate the returned struct in place. Mirror FCk_Registry::AddOrGet's contract:
-        // bump so the scheduler's pump short-circuit sees the change even though membership didn't move.
+        // Callers mutate the returned struct in place, so mirror FCk_Registry::AddOrGet: bump anyway, or the
+        // scheduler's pump short-circuit misses a change that never moved membership.
         InHandle.Get_RegistryView().BumpDirtyMarkerVersion(Get_DirtyMarkerHash(InStructType));
     }
 
@@ -439,10 +438,8 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InStructType), TEXT("Invalid struct type"))
     { return entt::id_type{}; }
 
-    // Hot path: called per-fragment-access from script and once per declared storage per tick from the
-    // script-processor join. The legacy computation allocated an FString (GetPathName) on every call.
-    // Keyed by weak pointer so an AS live-reload (which replaces UScriptStruct objects, potentially at a
-    // recycled address) re-computes instead of serving a stale id. Game-thread-only, matching every caller.
+    // Keyed by weak pointer so an AS live-reload — which replaces UScriptStruct objects, potentially at a
+    // recycled address — re-computes instead of serving a stale id. Game-thread-only, matching every caller.
     check(IsInGameThread());
 
     static TMap<TWeakObjectPtr<const UScriptStruct>, entt::id_type> Cache;
@@ -534,8 +531,7 @@ auto
 {
     const auto* StructType = InStructData.GetScriptStruct();
 
-    // Validate replication eligibility before Add_Fragment performs its first mutation. A rejected replicated tag
-    // must not leave local-only named storage or the default-storage presence marker behind.
+    // Runs before Add_Fragment's first mutation: a rejected request must leave no storage behind.
     const auto HasReplicableData = static_cast<bool>(TFieldIterator<FProperty>{StructType});
     CK_ENSURE_IF_NOT(HasReplicableData,
         TEXT("Dynamic Fragment [{}] on Entity [{}] was requested to replicate, but the struct has no ")

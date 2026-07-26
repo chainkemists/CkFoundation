@@ -161,11 +161,9 @@ auto
 {
     const auto IsCommand = _DetectedType.IsSet() && _DetectedType.GetValue() == ECk_CVarType::Command;
 
-    // Input: CVarRef with dropdown
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Struct,
         FCk_CVarRef::StaticStruct(), CVar_Bind_Pins::CVarRef_Pin);
 
-    // Input: callback policy (not applicable for commands)
     if (NOT IsCommand)
     {
         auto* PolicyPin = CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Byte,
@@ -173,11 +171,10 @@ auto
         PolicyPin->DefaultValue = TEXT("FireImmediately");
     }
 
-    // Output: callback handle (belongs to main exec flow, so above On Changed)
+    // Created before the On Changed exec pin so it displays above it, with the main exec flow.
     CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Struct,
         FCk_CVarCallbackHandle::StaticStruct(), CVar_Bind_Pins::Handle_Pin);
 
-    // Output: "On Changed" / "On Executed" exec pin
     {
         auto* OnChangedPin = CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, CVar_Bind_Pins::OnChanged_Pin);
         OnChangedPin->PinFriendlyName = IsCommand
@@ -185,7 +182,6 @@ auto
             : FText::FromString(TEXT("On Changed"));
     }
 
-    // Output: typed "New Value" pin (not applicable for commands)
     if (IsCommand)
     {
         // No value pin for commands
@@ -259,13 +255,11 @@ auto
 
     const auto IsCommand = _DetectedType.GetValue() == ECk_CVarType::Command;
 
-    // 1. Create internal CustomEvent
     auto* CustomEventNode = InCompilerContext.SpawnIntermediateNode<UK2Node_CustomEvent>(this, InSourceGraph);
     CustomEventNode->CustomFunctionName = *InCompilerContext.GetGuid(CustomEventNode);
     CustomEventNode->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(CustomEventNode, this);
 
-    // Add typed "NewValue" output on CustomEvent (not for commands)
     UEdGraphPin* CustomEventNewValuePin = nullptr;
     if (NOT IsCommand)
     {
@@ -291,7 +285,6 @@ auto
             TEXT("NewValue"), NewValuePinType, EGPD_Output);
     }
 
-    // 2. Create CallFunction node for INTERNAL_Bind_[Type]
     auto* CallNode = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     CallNode->FunctionReference.SetExternalMember(
         GetInternalFunctionNameForType(),
@@ -299,7 +292,6 @@ auto
     CallNode->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallNode, this);
 
-    // 3. Connect CustomEvent delegate → CallFunction delegate input
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection(
         InCompilerContext,
         {
@@ -312,7 +304,6 @@ auto
         return;
     }
 
-    // 4. Wire "On Changed" exec → CustomEvent exec
     if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
         InCompilerContext,
         {
@@ -326,7 +317,6 @@ auto
         return;
     }
 
-    // 5. Wire "New Value" output → CustomEvent output (not for commands)
     if (NOT IsCommand && CustomEventNewValuePin != nullptr)
     {
         if (UCk_Utils_EditorGraph_UE::Request_LinkPins(
@@ -343,7 +333,6 @@ auto
         }
     }
 
-    // 6. Wire exec flow
     InCompilerContext.MovePinLinksToIntermediate(
         *FindPinChecked(UEdGraphSchema_K2::PN_Execute),
         *CallNode->FindPinChecked(UEdGraphSchema_K2::PN_Execute));
@@ -351,7 +340,6 @@ auto
         *FindPinChecked(UEdGraphSchema_K2::PN_Then),
         *CallNode->FindPinChecked(UEdGraphSchema_K2::PN_Then));
 
-    // 7. Wire CVarRef input
     auto* MyCVarPin = FindPinChecked(CVar_Bind_Pins::CVarRef_Pin);
     auto* CallCVarPin = CallNode->FindPin(TEXT("InRef"));
     if (CallCVarPin != nullptr)
@@ -363,7 +351,6 @@ auto
         }
     }
 
-    // 8. Wire Policy input (not for commands)
     if (NOT IsCommand)
     {
         auto* MyPolicyPin = FindPin(CVar_Bind_Pins::Policy_Pin);
@@ -378,7 +365,6 @@ auto
         }
     }
 
-    // 9. Wire output handle
     auto* MyHandlePin = FindPinChecked(CVar_Bind_Pins::Handle_Pin);
     auto* CallReturnPin = CallNode->FindPin(UEdGraphSchema_K2::PN_ReturnValue);
     if (CallReturnPin != nullptr)

@@ -39,14 +39,11 @@ auto
     _ResourceLoaderProcessor = ck::FProcessor_ResourceLoader_HandleRequests{_World.Get_Registry()};
     _AssetLoaderEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_World.Get_Registry());
 
-    // When changing the map, clean up and refresh the toolbar appropriately
     auto& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>(TEXT("LevelEditor"));
     LevelEditorModule.OnMapChanged().AddUObject(this, &ThisType::OnMapChanged);
 
-    // Clean up and refresh the toolbar when Blueprints are recompiled
     GEditor->OnBlueprintReinstanced().AddUObject(this, &ThisType::OnBlueprintReinstanced);
 
-    // Clean up and refresh the toolbar when the config is changed
     GetMutableDefault<UCk_EditorToolbar_UserSettings_UE>()->OnSettingChanged().AddUObject(this, &ThisType::OnSettingChanged);
 }
 
@@ -94,10 +91,10 @@ auto
         if (ck::Is_NOT_Valid(CreatedUmgWidget))
         { return SNullWidget::NullWidget; }
 
-        // Editor Utility is flagged as transient to prevent from dirty the World it's created in when a property added to the Utility Widget is changed
+        // Transient so a property change on the Utility Widget doesn't dirty the World it was created in
         CreatedUmgWidget->SetFlags(RF_Transient);
 
-        // Mark nested utility widgets as transient to prevent them from dirtying the world (since they'll be created via CreateWidget and not CreateUtilityWidget)
+        // Nested utility widgets come from CreateWidget (not CreateUtilityWidget), so they need the flag too
         UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(CreatedUmgWidget, [&](UWidget* InWidget) -> ECk_UI_ForEachWidgetResult
         {
             if (ck::Is_NOT_Valid(InWidget))

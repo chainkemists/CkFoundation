@@ -1,10 +1,8 @@
 #pragma once
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Placeholder header for CkStateMachine_Replication.cpp. The replication-handler registrar is a
-// static at namespace scope in the .cpp — it runs at module load. No declarations are required
-// in this header; it exists for symmetry with other Net/*.h files and as a future expansion point
-// for public helpers for the replay engine.
-//
+
+// Placeholder for CkStateMachine_Replication.cpp — its handler registrar is a namespace-scope static
+// that runs at module load, so no declarations are required here.
+
 // --------------------------------------------------------------------------------------------------------------------

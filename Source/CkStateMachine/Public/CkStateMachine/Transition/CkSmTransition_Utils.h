@@ -37,9 +37,8 @@ public:
 public:
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Adds FTag_SmTransition_PendingExit and requests entity destruction. Called by
-    // FProcessor_SmState_Exit when cascading exit. FProcessor_SmTransition_Exit (EndPlay group,
-    // RunAfter SmTask_Exit) picks up the tag and cascades exit to conditions.
+    // FProcessor_SmTransition_Exit (EndPlay group, RunAfter SmTask_Exit) consumes the
+    // PendingExit tag left here and cascades exit to the transition's conditions.
     static auto
     Request_Exit(
         FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
@@ -56,26 +55,19 @@ public:
         FCk_Handle_SmTransition& InTransition,
         ECk_SmTransitionResult InResult) -> FCk_Handle_SmTransition;
 
-    // Resets a failed transition to Undetermined and unpauses its polled conditions
-    // so they can re-evaluate on the next cycle. Event-driven conditions are left
-    // unchanged — they re-trigger via Request_UpdateConditionResult when their event
-    // fires again. Does NOT add FTag_SmTransition_Evaluating.
+    // Resets polled conditions only; event-driven ones keep their result and re-trigger via
+    // Request_UpdateConditionResult. Does NOT add FTag_SmTransition_Evaluating.
     static auto
     Request_ResetTransition(
         FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
 
     // Internal — called by UCk_Utils_SmCondition_UE::Create when a Polled condition is added.
-    // Removes FTag_SmTransition_FullyEventDriven and cascades to the parent state.
     static auto
     Request_MarkTransition_AsNotFullyEventDriven(
         FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;
 
-    // Internal — called by UCk_Utils_SmCondition_UE::Create after a condition is connected
-    // to the transition's record. Walks the transition's conditions; if all are EventDriven
-    // AND at least one exists, marks the transition FullyEventDriven and asks the parent
-    // state to recompute its own tag. Necessary because transitions default to NOT
-    // FullyEventDriven at Create (to handle vacuous transitions correctly) — this restores
-    // the optimization for transitions whose final composition is all-event-driven.
+    // Internal — called by UCk_Utils_SmCondition_UE::Create after a condition is connected to
+    // the transition's record; restores the tag transitions deliberately lack at Create.
     static auto
     Request_RecomputeFullyEventDrivenStatus(
         FCk_Handle_SmTransition& InTransition) -> FCk_Handle_SmTransition;

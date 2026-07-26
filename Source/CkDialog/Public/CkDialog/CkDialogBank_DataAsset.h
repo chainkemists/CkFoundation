@@ -12,8 +12,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// One authored dialogue line inside a bank. The module's only payload is _Text; everything else is
-// identity / event routing / tag filtering / condition gating.
 USTRUCT(BlueprintType)
 struct CKDIALOG_API FCk_DialogBank_LineData
 {
@@ -45,8 +43,8 @@ private:
               meta = (AllowPrivateAccess = true))
     FGameplayTagContainer _ExtraTags;
 
-    // Instanced per-line condition archetypes (e.g. RandomChance(0.3)); spawned once as long-lived child
-    // condition entities of the line at registration. Works because UCk_EntityScript_UE is EditInlineNew.
+    // Spawned once at registration as long-lived child condition entities of the line. Instanced authoring works
+    // because UCk_EntityScript_UE is EditInlineNew.
     UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     TArray<TObjectPtr<UCk_DialogCondition_EntityScript>> _Conditions;
@@ -65,8 +63,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// A hand-authored (or AS-authored via `asset MyBank of UCk_DialogBank_DataAsset`) set of dialogue lines that share
-// a common tag set. Registered into the world's Dialog registry either from project settings or at runtime.
+// A set of dialogue lines sharing a common tag set. Registered into the world's Dialog registry either from
+// project settings or at runtime.
 UCLASS(BlueprintType)
 class CKDIALOG_API UCk_DialogBank_DataAsset : public UDataAsset
 {

@@ -20,8 +20,7 @@ auto
     Get_CanRasterizeOnThisProcess()
     -> bool
 {
-    // FWidgetRenderer needs a real Slate renderer + RHI; -nullrhi / dedicated
-    // server / commandlet have none.
+    // FWidgetRenderer needs a real Slate renderer + RHI; -nullrhi / dedicated server / commandlet have none.
     return FApp::CanEverRender() && NOT IsRunningDedicatedServer() && FSlateApplication::IsInitialized();
 }
 
@@ -69,9 +68,8 @@ auto
 
     const TSharedRef<FHittestGrid> HitTestGrid = MakeShared<FHittestGrid>();
 
-    // Pass 1 — prepass: AutoWrapText / justification reference the arranged
-    // geometry cached during Arrange, so text needs a layout pass before the
-    // real draw or it renders unwrapped / mis-justified.
+    // Pass 1 — prepass: AutoWrapText / justification reference the geometry cached during Arrange, so text
+    // renders unwrapped / mis-justified without a layout pass before the real draw.
     WidgetRenderer->SetIsPrepassNeeded(true);
     WidgetRenderer->DrawWindow(RenderTarget, HitTestGrid.Get(), VirtualWindow, 1.0f, DrawSize, 0.0f);
 

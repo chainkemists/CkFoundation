@@ -76,9 +76,8 @@ public:
         T_MarkerOrSensorPhysicsParams InMarkerOrSensorPhysicsParams,
         ECk_EnableDisable InEnableGenerateOverlapEvents) -> void;
 
-    // Shared by the Marker and Sensor UpdateTransform processors — computes the
-    // bone-following world transform per the attachment params' policy flags.
-    // Returns an unset optional if the bone does not exist on the attached actor.
+    // Shared by the Marker and Sensor UpdateTransform processors. Returns an unset optional when the
+    // bone does not exist on the attached actor.
     template <typename T_HandleType, typename T_AttachmentParams>
     static auto
     Get_MarkerOrSensor_BoneFollowTransform(

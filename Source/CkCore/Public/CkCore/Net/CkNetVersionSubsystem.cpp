@@ -18,12 +18,10 @@ auto
 {
     Super::OnWorldBeginPlay(InWorld);
 
-    // Clients receive report actors via replication; only the server spawns and manages them.
     if (NOT Get_IsServer())
     { return; }
 
-    // Cover any controllers that already exist (e.g. the listen-host's own player, which may have logged in
-    // before we subscribed below).
+    // Covers controllers that logged in before we subscribed below (e.g. the listen-host's own player).
     for (auto It = InWorld.GetPlayerControllerIterator(); It; ++It)
     {
         if (auto* Controller = It->Get())

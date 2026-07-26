@@ -6,8 +6,6 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// FCk_FrameAnalysisResult
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_FrameAnalysisResult::
@@ -28,7 +26,6 @@ auto
         }
     }
 
-    // Sort by inclusive time descending
     Result.Sort([](const TPair<uint32, double>& A, const TPair<uint32, double>& B)
     {
         return A.Value > B.Value;
@@ -37,8 +34,6 @@ auto
     return Result;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// FCk_FrameAnalyzer
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -123,7 +118,6 @@ auto
         return Result;
     }
 
-    // Extract events
     Result.Events = ExtractEvents(Session, TimelineIndex, StartTime, EndTime);
 
     if (Result.Events.Num() == 0)
@@ -134,7 +128,6 @@ auto
         return Result;
     }
 
-    // Find root timer (minimum depth event)
     uint32 MinDepth = MAX_uint32;
     for (const FCk_TimingEvent& Evt : Result.Events)
     {
@@ -145,7 +138,6 @@ auto
         }
     }
 
-    // Compute exclusive times
     ComputeExclusiveTimes(Result.Events, Result);
 
     return Result;
@@ -169,7 +161,6 @@ auto
         return FCk_FrameAnalysisResult{};
     }
 
-    // Use full timeline range
     double StartTime = 0.0;
     double EndTime = Session.GetDurationSeconds() + 1.0;
 
@@ -195,8 +186,7 @@ auto
                           const TraceServices::FTimingProfilerEvent& Event)
                     -> TraceServices::EEventEnumerate
                 {
-                    // Events still open when the capture stopped report EndTime = +inf;
-                    // clamp to the query window so durations stay finite.
+                    // Events still open at capture stop report EndTime = +inf — clamp to the window.
                     Events.Add(FCk_TimingEvent{
                         Event.TimerIndex,
                         EvtStartTime,
@@ -220,9 +210,7 @@ auto
 {
     if (Events.Num() == 0) return;
 
-    // CRITICAL: Sort by (start, depth) so parents are processed before children
-    // when they share the same start time. This ensures the parent is on the
-    // stack when we process the child, so we can subtract the child's time.
+    // (start, depth) order puts a parent on the stack before a child sharing its start time.
     TArray<int32> SortedIndices;
     SortedIndices.SetNum(Events.Num());
     for (int32 i = 0; i < Events.Num(); ++i)
@@ -239,17 +227,15 @@ auto
         return EA.Depth < EB.Depth;
     });
 
-    // Per-event remaining exclusive time (starts at inclusive, children subtracted)
-    TArray<double> EventExcl;
-    EventExcl.SetNum(SortedIndices.Num());
+    TArray<double> RemainingExclusiveSeconds;
+    RemainingExclusiveSeconds.SetNum(SortedIndices.Num());
 
     for (int32 i = 0; i < SortedIndices.Num(); ++i)
     {
         const FCk_TimingEvent& Evt = Events[SortedIndices[i]];
-        EventExcl[i] = Evt.EndTime - Evt.StartTime;
+        RemainingExclusiveSeconds[i] = Evt.EndTime - Evt.StartTime;
     }
 
-    // Stack: (Depth, EndTime, SortedIndex, TimerIndex)
     struct FStackEntry
     {
         uint32 Depth;
@@ -260,36 +246,29 @@ auto
     TArray<FStackEntry> Stack;
     Stack.Reserve(64);
 
-    // Process each event
     for (int32 i = 0; i < SortedIndices.Num(); ++i)
     {
         const FCk_TimingEvent& Evt = Events[SortedIndices[i]];
         const double Inclusive = Evt.EndTime - Evt.StartTime;
 
-        // Accumulate inclusive time and count
         double& InclAccum = Result.TimerInclusive.FindOrAdd(Evt.TimerIndex, 0.0);
         InclAccum += Inclusive;
 
         uint32& CountAccum = Result.TimerCount.FindOrAdd(Evt.TimerIndex, 0);
         CountAccum += 1;
 
-        // Pop events that have ended
         while (Stack.Num() > 0 && Stack.Last().EndTime <= Evt.StartTime)
         {
             Stack.Pop(EAllowShrinking::No);
         }
 
-        // Find direct parent: nearest ancestor on stack whose depth < ours
-        // and whose time range contains us
         for (int32 j = Stack.Num() - 1; j >= 0; --j)
         {
             const FStackEntry& Parent = Stack[j];
             if (Parent.Depth < Evt.Depth && Parent.EndTime >= Evt.EndTime)
             {
-                // This is our direct parent — subtract child inclusive from parent exclusive
-                EventExcl[Parent.SortedIndex] -= Inclusive;
+                RemainingExclusiveSeconds[Parent.SortedIndex] -= Inclusive;
 
-                // Record parent→child relationship
                 TMap<uint32, double>& ChildMap =
                     Result.ChildrenOf.FindOrAdd(Parent.TimerIndex);
                 double& ChildIncl = ChildMap.FindOrAdd(Evt.TimerIndex, 0.0);
@@ -301,11 +280,10 @@ auto
         Stack.Push(FStackEntry{ Evt.Depth, Evt.EndTime, i, Evt.TimerIndex });
     }
 
-    // Aggregate exclusive times per timer (clamp negatives to zero)
     for (int32 i = 0; i < SortedIndices.Num(); ++i)
     {
         const FCk_TimingEvent& Evt = Events[SortedIndices[i]];
-        const double Excl = FMath::Max(0.0, EventExcl[i]);
+        const double Excl = FMath::Max(0.0, RemainingExclusiveSeconds[i]);
 
         double& ExclAccum = Result.TimerExclusive.FindOrAdd(Evt.TimerIndex, 0.0);
         ExclAccum += Excl;

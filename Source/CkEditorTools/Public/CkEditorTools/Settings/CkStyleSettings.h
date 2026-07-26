@@ -5,13 +5,8 @@
 #include "CkStyleSettings.generated.h"
 
 // ====================================================================================================================
-// Editor-time tunables for Ck editor tooling UIs (debuggers, analyzers, future
-// Slate tools). Displayed in Editor Preferences under "Ck → Style".
-// All values are read live via GetDefault<UCk_Style_UserSettings_UE>(),
-// normally through the CkStyle:: accessors in CkEditorTools/Style/CkStyle.h.
-//
-// Defaults are set inline on each UPROPERTY below — do NOT add a constructor;
-// the inherited UCk_Plugin_UserSettings_UE only accepts FObjectInitializer.
+// Editor-time tunables for Ck editor tooling UIs — Editor Preferences → Ck → Style. Read live via
+// GetDefault<UCk_Style_UserSettings_UE>(), normally through CkEditorTools/Style/CkStyle.h. See CLAUDE.md.
 // ====================================================================================================================
 
 UCLASS(meta = (DisplayName = "Style"))
@@ -24,9 +19,7 @@ public:
 	virtual auto GetSectionName()  const -> FName override { return TEXT("Style"); }
 
 	// ----- Palette: Backgrounds — each tier slightly lighter than the last --
-	// Defaults follow the Mission Control mockup family
-	// (CkGoapDebugger/Mockups/mockup_d_mission_control.html): inset → bg →
-	// panel2 → panel.
+	// Defaults follow CkGoapDebugger/Mockups/mockup_d_mission_control.html: inset → bg → panel2 → panel
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Backgrounds")
 	FLinearColor BgRoot = FLinearColor(FColor(0x10, 0x14, 0x1b, 255));
 
@@ -171,8 +164,7 @@ public:
 	FLinearColor Graph_Node_Border_Center = FLinearColor(FColor(0x4C, 0xAF, 0x50));
 
 	// ----- Palette: Semantic -------------------------------------------------
-	// Mission Control accent: telemetry cyan. Warn stays amber-family so
-	// fallback/warning surfaces keep their meaning next to the accent.
+	// Mission Control accent is telemetry cyan; Warn stays amber-family so warnings keep meaning beside it
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic")
 	FLinearColor Accent = FLinearColor(FColor(0x54, 0xc6, 0xff, 255));
 
@@ -189,8 +181,7 @@ public:
 	FLinearColor Info = FLinearColor(FColor(0x5f, 0xb3, 0xd4, 255));
 
 	// ----- Palette: Semantic dim backgrounds ---------------------------------
-	// Chip/pill fills — the tone's "dim" surface (mockup: *-dim tokens). Keep
-	// them dark enough that tone-colored text on top passes contrast.
+	// Chip/pill fills (mockup *-dim tokens) — dark enough that tone-colored text on top passes contrast
 	UPROPERTY(Config, EditAnywhere, Category = "Palette|Semantic Dim")
 	FLinearColor AccentDim = FLinearColor(FColor(0x1b, 0x34, 0x48, 255));
 
@@ -249,8 +240,7 @@ public:
 	int32 FontSizeMicro = 8;
 
 	// ----- Pane Headings -----------------------------------------------------
-	// Every pane header is a separate tunable so nothing sneaks through with a
-	// hardcoded size/color.
+	// Every pane header is a separate tunable so nothing sneaks through with a hardcoded size/color
 	UPROPERTY(Config, EditAnywhere, Category = "Pane Headings", meta = (ClampMin = 6, ClampMax = 24))
 	int32 PaneHeadingFontSize = 9;
 
@@ -279,8 +269,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Plan Strip", meta = (ClampMin = 6, ClampMax = 24))
 	int32 PlanStrip_StepStateFontSize = 7;
 
-	// Step pill color trios. Opaque fills, not tints — flat translucent
-	// overlays read as a saturated wash, opaque gives depth.
+	// Step pills use opaque fills, not tints — a translucent overlay reads as a saturated wash
 	UPROPERTY(Config, EditAnywhere, Category = "Plan Strip|Pending Step")
 	FLinearColor PlanStep_Fill_Pending = FLinearColor(FColor(0x16, 0x1b, 0x24, 255));
 
@@ -290,8 +279,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Plan Strip|Pending Step")
 	FLinearColor PlanStep_Badge_Pending = FLinearColor(FColor(0x1b, 0x22, 0x30, 255));
 
-	// Active (currently-executing) step uses a teal family so it reads as
-	// distinct from goals (amber Accent) and the rest of the plan (Info blue).
+	// Active step uses a teal family so it reads distinct from goals (amber Accent) and plan (Info blue)
 	UPROPERTY(Config, EditAnywhere, Category = "Plan Strip|Active Step")
 	FLinearColor PlanStep_Fill_Active = FLinearColor(FColor(0x0a, 0x28, 0x22, 255));
 

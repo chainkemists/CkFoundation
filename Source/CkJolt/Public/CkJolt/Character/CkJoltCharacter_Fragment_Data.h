@@ -12,8 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// How a JoltCharacter interacts with rigid bodies it touches: whether a body may push the character, and
-// whether the character may impulse (push) a body. Maps to Jolt's CharacterContactSettings per contact.
+// Two independent axes: whether a body may push the character, and whether the character may push a body.
 UENUM(BlueprintType)
 enum class ECk_JoltCharacter_PushPolicy : uint8
 {
@@ -27,9 +26,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_JoltCharacter_PushPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// The character's relationship to the ground beneath it, mirrored from Jolt's EGroundState onto the entity
-// (BP/AS-readable). OnSteepSlope == Jolt's OnSteepGround (touching too-steep ground, will slide);
-// NotSupported == touching an object that cannot support it (will fall).
+// Mirrors Jolt's EGroundState. OnSteepSlope == OnSteepGround (touching too-steep ground, will slide);
+// NotSupported == touching an object that cannot support the character (will fall).
 UENUM(BlueprintType)
 enum class ECk_JoltCharacter_GroundState : uint8
 {
@@ -49,8 +47,7 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_JoltCharacter)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Config for a Jolt CharacterVirtual added onto an entity. Essentials = the capsule dimensions. Everything
-// else is an optional fluent knob mirroring JPH::CharacterVirtualSettings / CharacterBaseSettings defaults.
+// Config for a Jolt CharacterVirtual; optional knobs mirror JPH::CharacterVirtualSettings defaults.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Fragment_JoltCharacter_ParamsData
 {
@@ -65,8 +62,8 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 0.1))
     float _CapsuleRadius = 34.0f;
 
-    // Capsule cylinder-section half-height (UE units) — the straight section only, matching UE's FKSphylElem
-    // and FCk_Jolt_ShapeDimensions._HalfHeight. Total capsule half-height is _CapsuleHalfHeight + _CapsuleRadius.
+    // Cylinder-section half-height (UE units) — the straight section only, matching UE's FKSphylElem. Total
+    // capsule half-height is _CapsuleHalfHeight + _CapsuleRadius.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 0.1))
     float _CapsuleHalfHeight = 56.0f;
@@ -76,12 +73,10 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 0.001))
     float _MassKg = 70.0f;
 
-    // Maximum angle of slope the character can still walk on (degrees).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 0.0, ClampMax = 90.0))
     float _MaxSlopeAngleDegrees = 50.0f;
 
-    // Maximum force (Newtons) with which the character can push other bodies.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 0.0))
     float _MaxStrengthNewtons = 100.0f;
@@ -90,8 +85,7 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_JoltCharacter_PushPolicy _PushPolicy = ECk_JoltCharacter_PushPolicy::PushAndBePushed;
 
-    // The collision profile that seeds this character's Jolt object layer (v1 is profile-only), resolved
-    // against UCollisionProfile at setup — the signature mirrors CkJolt's layer-table seeding.
+    // Resolved against UCollisionProfile at setup to seed this character's Jolt object layer.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FName _CollisionProfileName = TEXT("Pawn");
@@ -111,9 +105,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Set the character's desired world-space velocity (UE units/s). Applied each stepping frame: on the ground
-// it drives horizontal movement (combined with ground velocity); in the air the character retains momentum.
-// This is a CONTINUOUS intent — the last set value persists until changed (set to zero to stop).
+// Desired world-space velocity (UE units/s), applied each stepping frame. A CONTINUOUS intent — the last set
+// value persists until changed (set to zero to stop).
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltCharacter_Move : public FCk_Request_Base
 {
@@ -137,8 +130,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Add an upward jump velocity (UE units/s, +Z) the next time the character is supported. One-shot: consumed
-// by the first stepping frame in which the character is on/against supporting ground; ignored while airborne.
+// Upward jump velocity (UE units/s, +Z). One-shot, consumed by the first stepping frame in which the
+// character is supported; it stays armed while airborne.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltCharacter_Jump : public FCk_Request_Base
 {
@@ -162,9 +155,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Instantly move the character to a world-space location, snapping the entity's Transform and step pose too
-// (no interpolation across the jump). _AlsoSetRotation gates whether _Rotation is applied (enum-mode + value
-// optionality, house rule). Ignored while the character has not finished setup.
+// Instantly move to a world-space location, snapping the entity's Transform and step pose too (no
+// interpolation across the jump).
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltCharacter_Teleport : public FCk_Request_Base
 {
@@ -199,7 +191,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Fired when the character's ground state changes (e.g. OnGround -> InAir when walking off a ledge).
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_JoltCharacter_OnGroundStateChanged,
     FCk_Handle_JoltCharacter, InHandle,

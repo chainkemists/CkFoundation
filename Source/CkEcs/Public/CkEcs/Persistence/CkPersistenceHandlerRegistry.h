@@ -1,9 +1,8 @@
 #pragma once
 
-// Transport-neutral persistence handler registry — split out of Net/ReplicatedFragmentContainer/ (saveload-v3-
-// ergonomics Phase 5). The SAME registered projection (Produce + Apply handlers) serves the net wire
-// (Net/ReplicatedFragmentContainer, which #includes this) and the save/load path (CkSnapshot). Net -> Persistence
-// is the only allowed dependency direction; nothing here includes Net/.
+// Transport-neutral persistence handler registry: the SAME registered projection (Produce + Apply handlers) serves
+// the net wire and the save/load path. Net -> Persistence is the only allowed dependency direction — nothing here
+// may include Net/.
 
 #include "CkEcs/Handle/CkHandle.h"
 
@@ -14,9 +13,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Result of FHandler::NetApply / HydrationApply. NotReady means the feature the data targets is not composed on
-// this entity yet — the entry stays pending and the dispatcher retries next tick. Rejected means the payload is
-// permanently invalid and must be dropped immediately; it is never a retry state.
+// Result of FHandler::NetApply / HydrationApply. NotReady = the targeted feature is not composed on this entity
+// yet; the entry stays pending and the dispatcher retries next tick. Rejected = permanently invalid, dropped
+// immediately; never a retry state.
 enum class ECk_Persistence_ApplyResult : uint8
 {
     Applied,
@@ -26,38 +25,30 @@ enum class ECk_Persistence_ApplyResult : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Handler Registry — generic callback dispatch by UScriptStruct* type
-
 class CKECS_API FCk_PersistenceHandlerRegistry
 {
 public:
     struct FHandler
     {
         // NET-receive apply, dispatched deferred by FProcessor_ReplicatedFragments_Dispatch after
-        // OnConstructed-driven composition — NEVER runs on the loading authority (that path uses
-        // HydrationApply). OldData unset on first application, else the last APPLIED data. Return
-        // NotReady to retry next tick; return Rejected for permanent payload/schema invalidity. Never compose the feature
-        // from inside NetApply. Absent on
-        // Save-only handlers (their type is never placed in a replicated container).
+        // OnConstructed-driven composition — NEVER runs on the loading authority, and must never compose the
+        // feature itself. OldData is unset on first application, else the last APPLIED data.
         TFunction<ECk_Persistence_ApplyResult(FCk_Handle& Entity,
                         const FInstancedStruct& NewData,
                         const TOptional<FInstancedStruct>& OldData)> NetApply;
 
-        // Optional — dispatched (deferred) when the entry is NET-removed by replication. Like NetApply,
-        // never runs on the loading authority.
+        // Optional — dispatched (deferred) on NET removal. Like NetApply, never on the loading authority.
         TFunction<void(FCk_Handle& Entity)> NetRemove;
 
-        // LOAD-PATH apply (authority-side hydration), dispatched by FProcessor_Hydration_Dispatch.
-        // OldData is always unset (no per-entry coalescing on the load path). REQUIRED whenever
-        // Produce is set — assign the same lambda as NetApply when the net path is authority-safe.
+        // LOAD-PATH apply (authority-side hydration) via FProcessor_Hydration_Dispatch; OldData is always
+        // unset (no coalescing). REQUIRED whenever Produce is set — reuse NetApply when it is authority-safe.
         TFunction<ECk_Persistence_ApplyResult(FCk_Handle& Entity,
                         const FInstancedStruct& NewData,
                         const TOptional<FInstancedStruct>& OldData)> HydrationApply;
 
-        // Save-capture emitter: this feature's current payload for the entity, or unset when the
-        // feature is absent on it. A SET-but-empty payload is meaningful (seeds an empty container);
-        // only UNSET means "feature absent, do not emit". READ-ONLY by contract. Presence of Produce
-        // IS save participation — there is no separate opt-in flag. Authoring recipe: CkSnapshot/Claude.md.
+        // Save-capture emitter, READ-ONLY by contract: the feature's payload, or unset when the feature is
+        // absent. A SET-but-empty payload is meaningful (seeds an empty container); only UNSET means "absent".
+        // Presence of Produce IS save participation. Authoring recipe: CkSnapshot/Claude.md.
         TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)> Produce;
     };
 
@@ -85,23 +76,17 @@ public:
         FHandler InHandler) -> void;
 
     // ---- Named participation shapes (compile-visible intent) --------------------------------------------------------
-    // Prefer these over hand-building an FHandler: the shape name states the transport choice the author made, and
-    // each shape takes a designated-init args struct so every lambda is LABELED at the call site (.Produce = ...,
-    // .NetApply = ..., .HydrationApply = ...) instead of being positional. Required slots are compile-enforced
-    // (see FRequired* below) — a Produce-without-HydrationApply, or a missing NetApply, does NOT compile.
-    // Two distinct names (SharedApply/SplitApply) rather than an overload set — the variants differ only by which
-    // lambdas they carry, which would make overload resolution on the args struct fragile.
+    // Prefer these over hand-building an FHandler: each takes a designated-init args struct, so every lambda is
+    // LABELED at the call site and required slots are compile-enforced (see FRequired* below).
 
     using FApplyFn   = TFunction<ECk_Persistence_ApplyResult(FCk_Handle& Entity,
                             const FInstancedStruct& NewData, const TOptional<FInstancedStruct>& OldData)>;
     using FRemoveFn  = TFunction<void(FCk_Handle& Entity)>;
     using FProduceFn = TFunction<TOptional<FInstancedStruct>(FCk_Handle& Entity)>;
 
-    // Required-slot wrappers: a designated-init field of one of these has NO default constructor, so OMITTING it in
-    // the braced args below is a COMPILE ERROR (not a runtime ensure) — the enforcement that makes these shapes worth
-    // preferring over a raw FHandler. Implicitly constructible from any compatible callable (raw lambda, FProduceFn/
-    // FApplyFn, or a named local) as a single user-defined conversion; the is_constructible constraint naturally
-    // excludes the wrapper type itself, so the implicit copy/move constructors still apply when the args struct is moved.
+    // Required-slot wrappers: no default constructor, so OMITTING one of these in the braced args below is a COMPILE
+    // ERROR rather than a runtime ensure. The is_constructible constraint excludes the wrapper type itself, so the
+    // implicit copy/move constructors still apply when the args struct is moved.
     struct FRequiredProduce
     {
         FProduceFn Value;
@@ -117,10 +102,8 @@ public:
         FRequiredApply(T&& InFn) : Value(Forward<T>(InFn)) {}
     };
 
-    // Per-shape designated-init args. Field order = the order designated initializers must be written (C++ requires
-    // aggregate designators in declaration order). Required fields use the wrappers above; optional NetRemove defaults
-    // to an empty TFunction. Each args struct exposes ONLY the slots its shape allows (a save-only handler cannot even
-    // name .NetApply).
+    // Per-shape designated-init args. Field order = the order designators must be written (C++ requires aggregate
+    // designators in declaration order). Each struct exposes ONLY the slots its shape allows.
     struct FArgs_NetOnly
     {
         FRequiredApply NetApply;
@@ -149,8 +132,7 @@ public:
     template <typename T_RepData>
     static auto Register_NetOnly(FArgs_NetOnly InArgs) -> void;
 
-    // Save-only participation (never rides a replicated container). Produce AND HydrationApply are both required by
-    // the args struct — the Produce-without-HydrationApply invalid shape is uncompilable, not just ensured.
+    // Save-only participation (never rides a replicated container); Produce AND HydrationApply both required.
     template <typename T_RepData>
     static auto Register_SaveOnly(FArgs_SaveOnly InArgs) -> void;
 

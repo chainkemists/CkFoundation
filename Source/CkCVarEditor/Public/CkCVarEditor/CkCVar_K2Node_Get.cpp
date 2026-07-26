@@ -154,11 +154,10 @@ auto
     DoAllocate_DefaultPins()
     -> void
 {
-    // CVarRef input pin (gets the dropdown via pin factory)
+    // The dropdown comes from the CVarRef pin factory, not from here.
     CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Struct,
         FCk_CVarRef::StaticStruct(), CVar_Get_Pins::CVarRef_Pin);
 
-    // Value output pin (typed based on detection)
     CreateValuePinForType();
 }
 
@@ -220,7 +219,6 @@ auto
     CallNode->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(CallNode, this);
 
-    // Wire CVarRef input
     auto* MyCVarPin = FindPinChecked(CVar_Get_Pins::CVarRef_Pin);
     auto* CallCVarPin = CallNode->FindPin(TEXT("InRef"));
     if (CallCVarPin != nullptr)
@@ -232,7 +230,6 @@ auto
         }
     }
 
-    // Wire Value output
     auto* MyValuePin = FindPinChecked(CVar_Get_Pins::Value_Pin);
     auto* CallReturnPin = CallNode->FindPin(UEdGraphSchema_K2::PN_ReturnValue);
     if (CallReturnPin != nullptr)
@@ -286,7 +283,6 @@ auto
 
     _IsRuntimeCVar = false;
 
-    // Parse CVarRef from pin default
     const auto& DefaultString = CVarPin->GetDefaultAsString();
     if (DefaultString.IsEmpty())
     {

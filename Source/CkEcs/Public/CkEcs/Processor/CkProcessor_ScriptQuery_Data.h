@@ -11,16 +11,13 @@
 
 class UScriptStruct;
 
-// FCk_ScriptQueryBatchState lives in CkDynamic (it holds entt-storage pointers CkEcs must not see). CkEcs holds only
-// an opaque pointer to it inside FCk_ScriptQueryBatch, so the base-class ForEachBatch event can pass the batch by
-// value into script; the mixin methods that dereference the state are bound in CkDynamic. This keeps the dependency
-// direction CkEcs -/-> CkDynamic intact (mirroring how FProcessorDescriptor lives here but is populated by CkDynamic).
+// FCk_ScriptQueryBatchState lives in CkDynamic (it holds entt-storage pointers CkEcs must not see); CkEcs keeps
+// only an opaque pointer to it, so the dependency direction CkEcs -/-> CkDynamic stays intact.
 struct FCk_ScriptQueryBatchState;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Access intent a script processor declares for a fragment slot. ReadWrite/ReadOnly feed the descriptor's RW/RO
-// fragment sets (write-conflict detection + auto-ordering); Require is presence-only (matched but no data param);
-// Exclude rejects entities that carry the fragment.
+// ReadWrite/ReadOnly feed the descriptor's RW/RO fragment sets (write-conflict detection + auto-ordering);
+// Require is presence-only (no data param); Exclude rejects entities carrying the fragment.
 UENUM(BlueprintType)
 enum class ECk_ScriptQueryAccess : uint8
 {
@@ -45,9 +42,8 @@ struct CKECS_API FCk_ScriptQuerySlot
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// The query a script processor declares: its fragment slots plus the NoEntities escape (a processor that wants to run
-// every tick with no entity join). Built by the generated driver's Configure (slots inferred from the ForEachEntity
-// signature) merged with the dev class's optional Configure (Require/Exclude/NoEntities).
+// A script processor's fragment slots plus the NoEntities escape (run every tick with no entity join). Built by
+// the generated driver's Configure merged with the dev class's optional one.
 USTRUCT(BlueprintType)
 struct CKECS_API FCk_ScriptProcessorQuery
 {
@@ -59,17 +55,15 @@ struct CKECS_API FCk_ScriptProcessorQuery
     UPROPERTY()
     bool _NoEntities = false;
 
-    // Sticky fail-closed state. Configure is an imperative sequence of calls, so rejecting one slot must invalidate
-    // the complete query rather than silently leaving the successfully-added subset eligible for descriptor harvest
-    // or runtime dispatch. Internal host plumbing only; authors receive the specific ensure at the rejected call.
+    // Sticky fail-closed state: Configure is an imperative sequence, so one rejected slot must invalidate the
+    // WHOLE query rather than leave the added subset eligible for harvest or dispatch. Host plumbing only.
     bool _AdmissionFailed = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Opaque, by-value handle to the host wrapper's per-tick native join state. Passed into the generated driver's
-// ForEachBatch. _State outlives the call by construction (owned by the wrapper). _Generation is captured at hand-off
-// and compared against the live state on every accessor, so a batch stashed and used past the call ensures+sentinels
-// instead of reading freed slots. Non-UPROPERTY members: transient plumbing, never reflected/serialized/GC-tracked.
+// Opaque by-value handle to the host wrapper's per-tick join state, which outlives the ForEachBatch call by
+// construction. _Generation is compared on every accessor, so a batch stashed past the call ensures+sentinels
+// instead of reading freed slots. Non-UPROPERTY: transient plumbing, never reflected/serialized/GC-tracked.
 USTRUCT(BlueprintType)
 struct CKECS_API FCk_ScriptQueryBatch
 {

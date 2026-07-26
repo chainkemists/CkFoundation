@@ -56,10 +56,8 @@ namespace ck_ism_proxy_processor
         { return {}; }
 
 #if WITH_EDITOR
-        // Editor previews resolve their per-owner ISM component. The fragment's weak owner stays
-        // a valid cache key after the owner actor is destroyed (index + serial comparison), so
-        // teardown removes the instance from the component that actually holds it (see
-        // FFragment_EditorSelectionOwner).
+        // The weak owner stays a valid cache key after the owner actor is destroyed, so teardown
+        // removes the instance from the component that actually holds it.
         return IsmRendererSubsystem->FindOrCache_IsmComponent(InRendererData, UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwnerWeak(InProxyHandle));
 #else
         return IsmRendererSubsystem->FindOrCache_IsmComponent(InRendererData);
@@ -115,9 +113,7 @@ namespace ck_ism_proxy_processor
         }
     }
 
-    // An outlined proxy's shadow instance renders through the same material as its main instance, so it needs
-    // the same per-instance custom data: a WPO-animated material (CkVat) derives the pose it silhouettes from
-    // those floats. Returns nullptr when the proxy carries no outline, or its shadow instance is gone.
+    // Returns nullptr when the proxy carries no outline, or its shadow instance is gone.
     auto
         TryGet_OutlineShadowInstance(
             const FCk_Handle_IsmProxy& InHandle,
@@ -244,10 +240,7 @@ namespace ck
         const auto& Get_TransformWithLocalOffset = [&](const FTransform& InTransform) -> FTransform
         {
             const auto& CombinedLocation = InTransform.GetLocation() + InParams.Get_LocalLocationOffset();
-            // Post-multiply: the offset composes in the entity's LOCAL frame, like an Unreal relative
-            // transform (childWorldRot = parentRot * relativeRot). Pre-multiplying instead conjugates
-            // any pitch/roll the entity picks up by the offset — a 180-degree yaw offset would mirror
-            // the entity's rock relative to true child entities (e.g. SceneNode-parented doors).
+            // Post-multiply, never pre-multiply — see CkIsmRenderer/CLAUDE.md.
             const auto& CombinedRotation = InTransform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion();
 
             CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InParams.Get_ScaleMultiplier()),
@@ -332,7 +325,7 @@ namespace ck
         const auto& Get_TransformWithLocalOffset = [&](const FTransform& Transform) -> FTransform
         {
             const auto& CombinedLocation = Transform.GetLocation() + InParams.Get_LocalLocationOffset();
-            // Post-multiply — see the matching note in FProcessor_IsmProxy_AddInstance.
+            // Post-multiply, never pre-multiply — see CkIsmRenderer/CLAUDE.md.
             const auto& CombinedRotation = Transform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion();
             const auto& CombinedScale = Transform.GetScale3D() * InParams.Get_ScaleMultiplier();
 
@@ -340,17 +333,6 @@ namespace ck
         };
 
         constexpr auto TransformAsWorldSpace = false;
-
-        // TODO: this does not seem to do anything and just costs us CPU cycles. We thought it might help with TSR dithering
-        // See more explanation in IsmProxyRenderer_Processor. NOTE that you have to enable 'SetHasPerInstancePrevTransform'
-        // to `true` (which should probably be a Renderer Params field)
-        //if (InHandle.Has<ck::FFragment_Transform_Previous>())
-        //{
-        //    const auto& PreviousTransform = InHandle.Get<ck::FFragment_Transform_Previous>();
-        //    const auto& PreviousTransformWithLocalOffset = PreviousTransform.Get_Transform();// Get_TransformWithLocalOffset(PreviousTransform.Get_Transform());
-
-        //    IsmComp->SetPreviousTransformById(InstanceId, PreviousTransformWithLocalOffset, TransformAsWorldSpace);
-        //}
 
         const auto& NewInstanceTransform = Get_TransformWithLocalOffset(InTransform.Get_Transform());
 
@@ -421,9 +403,8 @@ namespace ck
             NOT IsmComp->GetInstanceTransform(InstanceIndex, InstanceTransform, TransformAsWorldSpace))
         { return; }
 
-        // FTag_Transform_Updated also represents force-refreshes used to initialize and
-        // rebroadcast transforms. Compare against the rendered static instance itself so
-        // the diagnostic is independent of transient dirty-flag ordering.
+        // FTag_Transform_Updated also fires on force-refreshes, so compare against the rendered
+        // instance itself to keep the diagnostic independent of dirty-flag ordering.
         if (NOT DidTransformChange(InTransform, InParams, InstanceTransform))
         { return; }
 
@@ -538,7 +519,6 @@ namespace ck
 
         InCurrent._CustomInstanceDataValues = NewCustomData;
 
-        // TEMP: only movable ISM instances are updated again (every tick)
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
             Mobility == ECk_Mobility::Movable)
         {
@@ -590,7 +570,6 @@ namespace ck
 
         InCurrent._CustomInstanceDataValues[NewCustomDataIndex] = NewCustomDataValue;
 
-        // TEMP: only movable ISM instances are updated again (every tick)
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
             Mobility == ECk_Mobility::Movable)
         {

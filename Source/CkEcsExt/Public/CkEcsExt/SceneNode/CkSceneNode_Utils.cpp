@@ -10,9 +10,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Compact label for scene-node debug names: the anchor's own debug name when set,
-// else its entity number. The full detailed handle format ("37|0(37)(Default__...)")
-// made these names unreadable on every debugger surface that displays them.
 static auto
 Get_SceneNodeAnchorLabel(
     const FCk_Handle& InHandle) -> FString
@@ -34,9 +31,7 @@ auto
         FTransform InLocalTransform)
     -> FCk_Handle_SceneNode
 {
-    // Public Add: anchor-bound (WithActor / MeshSocket) children become parent-driven so
-    // they follow the scene-node parent like Unreal AttachToComponent. Bare ECS children
-    // are unaffected by the tag (the SyncFrom* processors require anchor fragments).
+    // Parent-driven: anchor-bound children follow the scene-node parent like Unreal AttachToComponent.
     return DoAdd(InHandle, InAttachTo, InLocalTransform, ECk_SceneNode_DrivenBy::Parent);
 }
 
@@ -72,10 +67,8 @@ auto
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
     UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SceneNode({} > {})"), Get_SceneNodeAnchorLabel(InAttachTo), GetNameSafe(InSceneComponent)));
 
-    // Read-only follower: the node tracks the foreign component at InLocalTransform via
-    // FProcessor_SceneNode_FollowUnrealAnchor. It gets a plain Transform (seeded at the composed world) plus
-    // the SceneNode-owned anchor fragment — NOT the Transform module's FFragment_Transform_RootComponent, so
-    // SyncFromActor / SyncToActor never engage and a Movable component is never dragged.
+    // Read-only follower: a plain Transform seeded at the composed world plus the SceneNode-owned anchor
+    // fragment — NOT FFragment_Transform_RootComponent, so SyncFromActor / SyncToActor never engage.
     auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, InLocalTransform * InSceneComponent->GetComponentTransform(), ECk_Replication::DoesNotReplicate);
     SceneNodeWithTransform.Add<ck::FFragment_SceneNode_UnrealAnchor>(InSceneComponent, NAME_None);
 
@@ -95,8 +88,6 @@ auto
         TEXT("Unable to attach SceneNode to [{}]: the Unreal MeshComponent is INVALID"), InAttachTo)
     { return {}; }
 
-    // Loud-failure on missing socket (matching AddAndAttachToUnrealMesh): a typo silently anchoring to
-    // component-world is a QA-difficult bug. If you want component-world, use CreateAndAttachToUnrealComponent.
     CK_ENSURE_IF_NOT(InMeshComponent->DoesSocketExist(InSocketName),
         TEXT("Socket [{}] does NOT exist on MeshComponent [{}]. If you wanted the component's world transform "
              "(no socket), use CreateAndAttachToUnrealComponent instead; otherwise check the name for typos."),
@@ -106,7 +97,7 @@ auto
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttachTo);
     UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SceneNode({} > {}:{})"), Get_SceneNodeAnchorLabel(InAttachTo), GetNameSafe(InMeshComponent), InSocketName));
 
-    // Read-only follower of the mesh socket (see CreateAndAttachToUnrealComponent for the fragment rationale).
+    // Read-only follower (see CreateAndAttachToUnrealComponent for the fragment rationale).
     auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, InLocalTransform * InMeshComponent->GetSocketTransform(InSocketName), ECk_Replication::DoesNotReplicate);
     SceneNodeWithTransform.Add<ck::FFragment_SceneNode_UnrealAnchor>(InMeshComponent, InSocketName);
 
@@ -136,8 +127,6 @@ auto
     if (NOT AssignLayerByIndex(InHandle, MyLayerIndex))
     { return {}; }
 
-    // If this entity already has children attached to it, their layers need to be updated
-    // to maintain proper hierarchy ordering
     PropagateLayerToChildren(InHandle, MyLayerIndex);
 
     InHandle.Add<ck::FFragment_SceneNode_Current>(InLocalTransform);
@@ -216,10 +205,8 @@ auto
         TEXT("InSceneNode [{}] is INVALID. Unable to detach"), InSceneNode)
     { return InSceneNode; }
 
-    // The Transform fragment already holds the composed world pose from the last
-    // SceneNode_Update tick. Removing parent / current / layer below stops further
-    // composition; the world transform stays put without an explicit write.
-
+    // The Transform fragment already holds the composed world pose, so removing parent / current / layer
+    // below stops further composition and the world transform stays put without an explicit write.
     auto NodeAsTransform = UCk_Utils_Transform_UE::Cast(InSceneNode);
 
     auto Parent = ck::USceneNodeParent_Utils::Get_StoredEntity_AsTypeSafe<FCk_Handle_Transform>(InSceneNode);

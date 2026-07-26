@@ -14,11 +14,9 @@ class IDetailLayoutBuilder;
 
 namespace ck::layout
 {
-    // Authoring toolbar for ACk_PathNetwork_UE: a button row in the details panel driving the
-    // manual + automatic workflows — add a ribbon (then drag its MakeEditWidget point handles in
-    // the viewport), run the assigned detector over the detection bounds, promote generated
-    // ribbons to authored (so a re-detect can't clobber hand edits), clear generated, and
-    // validate ribbon points against the navmesh.
+    // Details-panel authoring button row for ACk_PathNetwork_UE. Added ribbons are then edited by dragging
+    // their MakeEditWidget point handles in the viewport; promoting generated ribbons to authored is what
+    // stops a later re-detect from clobbering hand edits.
     class FCk_PathNetwork_Details : public IDetailCustomization
     {
     public:

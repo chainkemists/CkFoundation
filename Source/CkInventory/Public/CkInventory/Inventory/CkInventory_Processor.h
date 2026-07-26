@@ -41,14 +41,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Templated SyncReplication processor base. Diffs the incoming replicated entries against
-    // the previous snapshot and applies the per-shape OnEntryAdded / OnEntryRemoved hooks.
-    // Defaults are no-op (DataOnly); per-shape concrete derived classes override (CRTP) to
-    // perform shape-specific work — Spatial places/removes from grid.
-    //
-    // Per-entry order is load-bearing for replication correctness: removes happen first
-    // (per-shape cleanup → record disconnect → parent ref clear), then adds (record connect
-    // → parent ref → per-shape setup).
+    // Per-entry order is load-bearing for replication correctness: removes happen first (per-shape
+    // cleanup → record disconnect → parent ref clear), then adds (connect → parent ref → setup).
     template <typename T_Derived, typename TInventoryHandle, typename TSyncFragment, typename TInventoryTypeTag, typename TEntry>
     class TProcessor_Inventory_SyncReplication_Base : public ck_exp::TProcessor<
             T_Derived,
@@ -71,8 +65,7 @@ namespace ck
         using ParentProcessor::ParentProcessor;
 
     public:
-        // Per-shape hooks. Default no-op; CRTP derived class shadows with its own static
-        // method to override.
+        // Default no-op; the CRTP derived class shadows these with its own statics to override.
         static auto OnEntryAdded(TInventoryHandle&, const TEntry&, FCk_Handle_Item&) -> void {}
         static auto OnEntryRemoved(TInventoryHandle&, FCk_Handle_Item&) -> void {}
 
@@ -144,9 +137,6 @@ namespace ck
         }
     };
 
-    // Templated request-handling processor base. Each typed inventory's TInventoryRequestTraits<>
-    // specialization supplies the per-operation handler bundle; the visitor dispatches via
-    // inventory_handlers::DispatchToHandler.
     template <typename T_Derived, typename TInventoryHandle, typename TRequestsFragment, typename TInventoryTypeTag>
     class TProcessor_Inventory_HandleRequests_Base : public ck_exp::TProcessor<
             T_Derived,
@@ -170,10 +160,8 @@ namespace ck
         using ParentProcessor::ParentProcessor;
 
     public:
-        // Drain one request per pump pass (not the whole queue at once) so a request's deferred,
-        // attribute-backed writes fold before the next request reads them — same-pass requests would
-        // otherwise read each other's un-settled state. The Requests fragment is the dirty marker
-        // (every enqueue path touches it); FFragment_PacedWork bounds the per-frame count internally.
+        // One request per pump pass so a request's deferred, attribute-backed writes fold before the
+        // next request reads them — same-pass requests would otherwise read un-settled state.
         auto
         ForEachEntity(
             TimeType InDeltaT,
@@ -184,8 +172,8 @@ namespace ck
             FCk_Handle Base  = InHandle;
             auto&      Pacer = Base.AddOrGet<FFragment_PacedWork>(1, 8);
 
-            // RunPacedSteps removes TRequestsFragment (the marker) once the step reports Done, so
-            // InRequestsComp must not be read after this returns true — drive teardown off Done.
+            // RunPacedSteps removes TRequestsFragment once the step reports Done, so InRequestsComp
+            // must not be read after this returns true — drive teardown off Done.
             const auto Done = ck::RunPacedSteps<TRequestsFragment>(Base, Pacer, InDeltaT, [&]() -> ck::EPacedStepResult
             {
                 auto& Requests = InRequestsComp.Get_RequestsMutable();
@@ -213,8 +201,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // HandleRequests carries CK_IGNORE_PENDING_KILL, so a destroyed inventory's still-queued requests
-    // are never drained. This EndPlay processor fires each with Failed_OperationCancelled via
-    // DispatchCancel so callers awaiting completion don't hang.
+    // are never drained — fire each with Failed_OperationCancelled so callers don't hang.
     template <typename T_Derived, typename TInventoryHandle, typename TRequestsFragment, typename TInventoryTypeTag>
     class TProcessor_Inventory_CancelOnEndPlay_Base : public ck_exp::TProcessor<
             T_Derived,
@@ -253,17 +240,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Forward decls — the churn's RunAfter references both shapes' HandleRequests, which are defined in
-    // the shape processor headers (those include THIS header). TDepList is a pure type list, so forward
-    // decls suffice; CkInventory_Processor.cpp includes the shape headers for registration.
+    // The shape processor headers include THIS header, and TDepList is a pure type list, so forward
+    // decls suffice here; CkInventory_Processor.cpp includes them for registration.
     class FProcessor_Inventory_Spatial_HandleRequests;
     class FProcessor_Inventory_DataOnly_HandleRequests;
 
-    // Drains a standalone mass-transfer op ONE item per pump pass (paced) so each transfer's deferred,
-    // attribute-backed stack writes fold before the next item resolves its target — coherent capacity
-    // reads, same hazard the paced HandleRequests fix addressed. Runs AFTER both shapes' HandleRequests
-    // so a step reads the prior step's folded writes. The op is a plain FCk_Handle discriminated by
-    // FFragment_Inventory_MassTransfer_InFlight (NOT a typesafe handle, NOT scoped to an inventory).
+    // One item per pump pass so each transfer's deferred stack writes fold before the next item
+    // resolves its target; RunAfter both shapes' HandleRequests for the same reason.
     class CKINVENTORY_API FProcessor_Inventory_MassTransfer_Churn : public ck_exp::TProcessor<
             FProcessor_Inventory_MassTransfer_Churn,
             FCk_Handle,
@@ -284,8 +267,6 @@ namespace ck
             FFragment_Inventory_MassTransfer_InFlight& InFlight) -> void;
 
     private:
-        // Captured INSIDE the completing step (before RunPacedSteps removes the in-flight marker), so
-        // the finish broadcast never reads the freed fragment.
         struct FFinishSnapshot
         {
             ECk_Inventory_MassTransfer_Result Result = ECk_Inventory_MassTransfer_Result::Failed_NothingToTransfer;
@@ -306,10 +287,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // The churn carries CK_IGNORE_PENDING_KILL, so an op destroyed mid-flight (world teardown) never
-    // finishes its drain. This fires the completion signal with Failed_OperationCancelled so a caller
-    // awaiting OnComplete doesn't hang. Normal completion removes the in-flight fragment first, so a
-    // completed op no longer matches this view — no double-fire.
+    // The churn carries CK_IGNORE_PENDING_KILL, so an op destroyed mid-flight never finishes its drain.
+    // Normal completion removes the in-flight fragment first, so a completed op cannot double-fire here.
     class CKINVENTORY_API FProcessor_Inventory_MassTransfer_CancelOnEndPlay : public ck_exp::TProcessor<
             FProcessor_Inventory_MassTransfer_CancelOnEndPlay,
             FCk_Handle,

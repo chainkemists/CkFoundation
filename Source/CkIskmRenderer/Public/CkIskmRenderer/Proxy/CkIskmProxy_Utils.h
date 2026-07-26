@@ -216,11 +216,6 @@ public:
         float InValue);
 
     // ---- per-proxy material overrides ----
-    //
-    // V1 scope: overrides apply to the BASE SKMC only. Submeshes keep their
-    // def-time override materials (FCk_IskmRenderer_MeshDesc::_OverrideMaterials);
-    // static cosmetics are CkIsm-side. Overrides are reset to mesh defaults when
-    // the proxy returns its SKMC to the renderer pool (no leak across borrowers).
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Request Set Material Override")
@@ -235,11 +230,6 @@ public:
     Request_ClearMaterialOverrides(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
 
     // ---- per-proxy morph targets ----
-    //
-    // V1 scope: morphs apply to the BASE body mesh only. LeaderPoseComponent
-    // copies bone transforms, not morph curves, so outfit submeshes do NOT
-    // inherit these. Morph state is cleared when the proxy returns its SKMC to
-    // the renderer pool (no leak across borrowers).
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Request Set Morph Target")

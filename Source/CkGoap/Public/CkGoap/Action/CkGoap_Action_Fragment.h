@@ -20,13 +20,11 @@ namespace ck
 {
 	class FProcessor_Goap_Action_Setup;
 	class FProcessor_Goap_Planner_UpdateActivation;
-	// Planner-side A*-pipeline processors.
 	class FProcessor_Goap_Planner_AutoReplan;
 	class FProcessor_Goap_Planner_HandleRequests;
 	class FProcessor_Goap_Planner_HandleResult;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Action-scoped lifecycle
 
 	CK_DEFINE_ECS_TAG(FTag_Goap_Action_RequiresSetup);
 
@@ -36,17 +34,10 @@ namespace ck
 	CK_DEFINE_ECS_TAG(FTag_Goap_Action_HasCostProvider);
 
 // --------------------------------------------------------------------------------------------------------------------
-// Alias to BlueprintType data
 
 	using FFragment_Goap_Action_Params = FCk_Fragment_Goap_ActionParamsData;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Residual Action-role state. _Plan / _PlanCost /
-// _PlanStatus / _PlanAttemptCount moved to FFragment_Goap_Planner_PlanState;
-// _Goal / _InvalidGoal moved to FFragment_Goap_Planner_Goal;
-// _WorldStateSource_Resolved moved to FFragment_Goap_Planner_WorldStateSource
-// (as its new _Resolved field). What remains: the "active parent" record —
-// the class of the parent Action that injected this Action's current goal.
 
 	struct CKGOAP_API FFragment_Goap_Action_Current
 	{
@@ -58,8 +49,7 @@ namespace ck
 		friend class FProcessor_Goap_Planner_UpdateActivation;
 
 	private:
-		// The action class on the PARENT action that injected this action's
-		// current goal. nullptr for the root.
+		// nullptr for the root.
 		TSubclassOf<UCk_GoapAction_EntityScript>         _ActiveParentAction;
 
 	public:
@@ -67,10 +57,6 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// This Action's own def, CDO-extracted at Setup time.
-// In the unified model, every Action entity carries its OWN def (one def per
-// Action). The parent's planner consumes its children's defs as candidate
-// operators.
 
 	struct CKGOAP_API FFragment_Goap_Action_Definition
 	{
@@ -80,8 +66,7 @@ namespace ck
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class FProcessor_Goap_Action_Setup;
 		friend class FProcessor_Goap_Planner_UpdateActivation;
-		// SetActionCost mutates child Action's _CachedActionDef
-		// from the Planner-on-Planner HandleRequests processor.
+		// SetActionCost mutates a child Action's _CachedActionDef.
 		friend class FProcessor_Goap_Planner_HandleRequests;
 
 	private:
@@ -90,16 +75,13 @@ namespace ck
 		TArray<ck::goap::FWorldStateEffect_Raw>    _Effects;
 		float _Cost = 1.0f;
 
-		// Pre-resolved form of _Effects as the Action's _Goal when active.
-		// Populated at Setup; read at chain extension. (Will be filled by U3.)
+		// Pre-resolved form of _Effects, used as this Action's goal when active.
 		TArray<FCk_GoapWS_Condition_Authored> _GoalFromEffects;
 
-		// Effect keys not registered in the resolved WS — populated at Setup,
-		// surfaced via Get_InvalidGoal. (Will be filled by U5.)
+		// Effect keys not registered in the resolved WS; surfaced via Get_InvalidGoal.
 		TArray<FCk_GoapWS_Condition_Authored> _InvalidGoal;
 
-		// Pre-built FActionDef cache used by parent's planner as a candidate
-		// operator. Built once at Setup time. (Will be filled by U3.)
+		// Cached candidate operator consumed by the parent Planner's A* search.
 		ck::goap::FActionDef _CachedActionDef;
 
 	public:
@@ -113,8 +95,6 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// Parent/child relationships between Action entities. Populated by
-// AddAction and at ChainUpdate time.
 
 	struct CKGOAP_API FFragment_Goap_Action_Tree
 	{

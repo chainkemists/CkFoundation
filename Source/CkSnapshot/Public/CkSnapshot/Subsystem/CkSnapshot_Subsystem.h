@@ -98,7 +98,6 @@ protected:
 
 #if WITH_AUTOMATION_TESTS
 public:
-    // Test hook: the pump-pass count Request_Save observed on its last invocation.
     auto TestOnly_LastPumpCount() const -> int32 { return _LastPumpCount; }
 #endif
 
@@ -106,16 +105,9 @@ private:
     auto DoGet_SnapshotSource() const -> FCk_Handle;
 
     // ---- v3 rebuild+hydrate load orchestration ------------------------------------------------------------------
-    // v3 works WITH the freshly level-reloaded world: teardown + travel give a pristine world (GameMode default
-    // pawn + level actors already re-created normally); then, under the load gate, overlay saved state — spawn
-    // RuntimeSpawned from recipes, adopt EngineOwned/ConstructSpawned by identity, hydrate saved payloads,
-    // reconcile absent children, settle, open the gate.
     // Hydrating is ATOMIC (one ticker callback): enqueue payloads + queue reconcile-destroys + open the gate, so no
-    // gated world-tick ever sees pending payloads. That is load-bearing — the hydration dispatcher is load-kernel, so
-    // draining it UNDER the gate (kernel-only pump, feature Setups frozen) would let a gate-open Setup stomp a
-    // recompute-from-Params value (Velocity/Acceleration). Enqueuing then opening the gate in one callback forces
-    // hydration to drain only in post-gate FULL passes, where each feature Setup precedes the late FGroup_DeferredApply
-    // dispatch. Settling then lets the parked reconcile-destroys + residual requests drain over frames.
+    // gated world-tick ever sees pending payloads and hydration can only drain in post-gate FULL passes. Why that is
+    // load-bearing, and the whole phase walkthrough: CkSnapshot/CLAUDE.md § "The v3 load machine".
     enum class ELoadPhase : uint8 { Idle, TearingDown, AwaitingWorld, Rebuilding, Hydrating, Settling };
 
     auto DoInitiate_Teardown() -> void;                  // Request_DestroyEntity all gameplay roots; record them
@@ -125,7 +117,6 @@ private:
     auto DoTick_Load(float InDeltaSeconds) -> bool;      // FTSTicker callback; advances the machine
     auto DoFinish_Load(const FCk_Snapshot_LoadReport& InReport) -> void; // clear flag, fire delegate/signal, reset
 
-    // v3 load helpers
     auto DoGet_LoadWorldEcs() const -> class UCk_EcsWorld_Subsystem_UE*;   // post-travel world's EcsWorld subsystem
     auto DoRehydrate_SaveKeyResolver() -> void;          // repopulate _SaveKeyResolverMap from LIVE FFragment_SaveKey entities
     auto DoDeserialize_V3Blob(const TArray<uint8>& InBytes) const -> FInstancedStruct; // saved-id map-backed handle remap
@@ -143,7 +134,6 @@ private:
     bool _SnapshotInProgress = false;
     int32 _LastPumpCount = 0;
 
-    // load state
     bool _LoadInProgress = false;
     ELoadPhase _LoadPhase = ELoadPhase::Idle;
     FCk_Delegate_OnLoadComplete _PendingLoadDelegate;
@@ -166,7 +156,6 @@ private:
     int32 _RebuildLastMappedCount = 0;                 // progress tracking: mapped count at the previous rebuild tick
     int32 _RebuildStallTicks = 0;                      // consecutive rebuild ticks with no NEW mapping (early-exit gate)
 
-    // travel state
     TWeakObjectPtr<UWorld> _PreTravelWorld;  // captured before OpenLevel; AwaitingWorld waits for a different world
     FString _TravelMapName;                  // resolved from the pre-travel world (RemovePIEPrefix)
 

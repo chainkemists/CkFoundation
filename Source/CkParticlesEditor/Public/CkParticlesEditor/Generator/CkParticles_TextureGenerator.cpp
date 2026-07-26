@@ -11,9 +11,8 @@
 #include "UObject/SavePackage.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Procedural VFX texture baker. Everything here is plain math sampled per-pixel into a UTexture2D asset — the textures
-// a VFX artist would paint (soft glow, star flare, smoke, electric crackle, spark streak, SDF ring), generated in code
-// so they stay deterministic, art-free, and resolution-independent. The master materials combine these channels.
+// Procedural VFX texture baker: plain math sampled per-pixel into UTexture2D assets — deterministic, art-free and
+// resolution-independent stand-ins for the textures a VFX artist would paint. The master materials combine them.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::particles_editor::TexGenLocal
@@ -91,7 +90,6 @@ namespace ck::particles_editor::TexGenLocal
 
     // ---- Per-pixel look functions. (u,v) in [0,1]; return packed FLinearColor (channels documented per texture). ---
 
-    // Soft glow (grayscale): wide soft body + a brighter hotspot core. RGB == A so it tints cleanly with ParticleColor.
     static auto Px_Glow(float U, float V) -> FLinearColor
     {
         const float Dx = U - 0.5f, Dy = V - 0.5f;
@@ -102,7 +100,6 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
-    // Star flare: 6 sharp spikes + bright core. R/A = intensity.
     static auto Px_Flare(float U, float V) -> FLinearColor
     {
         const float Dx = U - 0.5f, Dy = V - 0.5f;
@@ -115,8 +112,7 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
-    // Smoke puff: grayscale wispy density in RGB (radial-masked FBM + finer detail), erosion mask in A for
-    // dissolve-over-life in the material.
+    // Density in RGB, erosion mask in A — the SoftSmoke material dissolves along the mask over life.
     static auto Px_Smoke(float U, float V) -> FLinearColor
     {
         const float Dx = U - 0.5f, Dy = V - 0.5f;
@@ -130,7 +126,6 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(Smoke, Smoke, Smoke, Erode);
     }
 
-    // Electric/energy ball: ridged FBM filaments + hot core, radial-masked. R/A = intensity.
     static auto Px_Electric(float U, float V) -> FLinearColor
     {
         const float Dx = U - 0.5f, Dy = V - 0.5f;
@@ -143,7 +138,7 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
-    // Spark streak: thin bright horizontal gradient with noise breakup (for velocity-stretched sparks / ribbons).
+    // For the velocity-aligned sprite renderer: a thin bright streak along U with noise breakup.
     static auto Px_Streak(float U, float V) -> FLinearColor
     {
         const float Yd  = FMath::Abs(V - 0.5f) * 2.0f;
@@ -154,9 +149,8 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
-    // Sweep streak (grayscale): the anime-slash carrier texture — bright leading head near V=0, wispy turbulent
-    // body, fading tail (modeled on marketplace T_VFX_Slash_01). Panned along V over a sweep mesh by the
-    // SweepErode master material, the head appears to travel along the arc. RGB == A.
+    // Slash carrier: bright leading head near V=0, wispy body, fading tail. The SweepErode material pans it
+    // along V over a sweep mesh, so the head appears to travel along the arc.
     static auto Px_SweepStreak(float U, float V) -> FLinearColor
     {
         const float Hx   = FMath::Pow(Saturate(1.0f - FMath::Abs(U - 0.5f) * 1.9f), 1.1f);
@@ -167,8 +161,7 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
-    // Tileable soft noise (grayscale): smooth billow/cell blend for dissolve thresholds and UV distortion
-    // (modeled on marketplace T_VFX_Noise_02). Wraps seamlessly. RGB == A.
+    // Dissolve-threshold and UV-distortion source: a billow/cell blend that wraps seamlessly.
     static auto Px_TileNoise(float U, float V) -> FLinearColor
     {
         const float Billow = Fbm(U * 5.0f, V * 5.0f, 4, 5);
@@ -177,7 +170,6 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
-    // SDF magic ring (grayscale): crisp anti-aliased ring + faint inner glow. RGB == A.
     static auto Px_Ring(float U, float V) -> FLinearColor
     {
         const float Dx = U - 0.5f, Dy = V - 0.5f;
@@ -212,8 +204,10 @@ namespace ck::particles_editor::TexGenLocal
         auto* Texture = NewObject<UTexture2D>(Package, InName, RF_Public | RF_Standalone);
         if (Texture == nullptr) { return false; }
 
-        // FColor is laid out B,G,R,A in memory, matching TSF_BGRA8. ToFColor(false) quantizes the linear value with no
-        // sRGB encode, which is what we want since the texture is linear data (SRGB = false).
+        // FColor is laid out B,G,R,A in memory, matching TSF_BGRA8. The texture holds linear data (SRGB = false),
+        // so quantize without an sRGB encode.
+        constexpr auto EncodeSrgb = false;
+
         TArray<FColor> Pixels;
         Pixels.SetNumUninitialized(InSize * InSize);
         for (int32 Y = 0; Y < InSize; ++Y)
@@ -221,11 +215,14 @@ namespace ck::particles_editor::TexGenLocal
         {
             const float U = (X + 0.5f) / InSize;
             const float V = (Y + 0.5f) / InSize;
-            Pixels[Y * InSize + X] = InFn(U, V).ToFColor(/*bSRGB*/ false);
+            Pixels[Y * InSize + X] = InFn(U, V).ToFColor(EncodeSrgb);
         }
 
+        constexpr auto Slices = 1;
+        constexpr auto Mips   = 1;
+
         Texture->PreEditChange(nullptr);
-        Texture->Source.Init(InSize, InSize, /*Slices*/ 1, /*Mips*/ 1, TSF_BGRA8, reinterpret_cast<const uint8*>(Pixels.GetData()));
+        Texture->Source.Init(InSize, InSize, Slices, Mips, TSF_BGRA8, reinterpret_cast<const uint8*>(Pixels.GetData()));
         Texture->SRGB               = false;
         Texture->CompressionSettings = TC_VectorDisplacementmap; // uncompressed RGBA8 — crisp SDF edges, linear data
         Texture->MipGenSettings      = TMGS_FromTextureGroup;

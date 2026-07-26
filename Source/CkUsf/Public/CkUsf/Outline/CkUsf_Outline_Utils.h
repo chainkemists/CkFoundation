@@ -21,9 +21,8 @@ enum class ECk_Usf_OutlineScope : uint8
     // Outline only the requested entity's renderables (its owning-actor primitives / IsmProxy / IskmProxy).
     EntityOnly,
 
-    // Also stamp cascade-derived outline targets on the entity's lifetime dependents, recursively.
-    // Dependents spawned AFTER the request are NOT retro-outlined. Request_RemoveOutline strips the
-    // derived targets; dependents outlined explicitly keep theirs.
+    // Also stamp cascade-derived outline targets on the entity's lifetime dependents, recursively. Dependents
+    // spawned AFTER the request are NOT retro-outlined; Request_RemoveOutline strips derived targets only.
     EntityAndDependents
 };
 
@@ -32,9 +31,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Usf_OutlineScope);
 // --------------------------------------------------------------------------------------------------------------------
 
 // Entity-level outline API. Writes a declarative ck::FFragment_Usf_OutlineTarget on the entity; per-renderer
-// sync processors (actor path here in CkUsf, shadow ISM in CkIsmRenderer, SKMC path in CkIskmRenderer) pick
-// it up and apply the outline via their own mechanism. Batched Plan-2 crowd members are NOT entities — use
-// UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline for those.
+// sync processors (actor path here, shadow ISM in CkIsmRenderer, SKMC in CkIskmRenderer) apply it. Batched
+// crowd members are NOT entities — use UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline for those.
 UCLASS(NotBlueprintable)
 class CKUSF_API UCk_Utils_Usf_Outline_UE : public UBlueprintFunctionLibrary
 {

@@ -69,14 +69,11 @@ namespace ck
 
         InHandle.Remove<FTag_Sm_RequiresSetup>();
 
-        // Attach the replicated payload fragment on authority. Gated on both the per-SM
-        // replication intent (so local-only SMs are unaffected) and Get_IsEntityNetMode_Host
-        // (so clients don't try to drive the payload — they receive it via the rep handler).
-        // TryAddContainerFragment is itself a no-op when entity replication is DoesNotReplicate
-        // or no replication driver is present, but gating here makes the intent explicit and
-        // avoids the driver lookup in the local-only fast path.
-        if (InParams.Get_Replication() == ECk_Replication::Replicates
-            && UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
+        const auto ShouldAttachReplicatedPayload =
+            InParams.Get_Replication() == ECk_Replication::Replicates
+            && UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle);
+
+        if (ShouldAttachReplicatedPayload)
         {
             switch (InParams.Get_ReplicationModel())
             {
@@ -116,20 +113,9 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Sm_HandleRequests);
 
-        // Authority gating: mutating requests (Start/Stop/Pause/Resume/Transition/
-        // AddOverrideState) may only originate on the authority for this SM. Non-authority
-        // machines receive state changes via replication and bypass this processor entirely
-        // through FProcessor_Sm_ApplyReplicatedHistory. DoesNotReplicate SMs are
-        // self-authoritative on every machine — no gating needed.
-        //
-        // OwningClientAuthoritative authority = "the machine that locally controls the owning
-        // actor". On a remote client that resolves to NetContext == OwningClient. On a LISTEN
-        // SERVER, the host is both the server (ComputeNetContext short-circuits to Server before
-        // the locally-controlled check) AND the owning client for its own pawn — so it is the
-        // authority too. We detect that explicitly: Server context + OwningClientAuth + the host
-        // locally controls this SM's owning actor. A dedicated server controls no player pawn, so
-        // this stays false there (the remote owning client remains the sole authority), and it
-        // stays false for the host's view of OTHER players' pawns.
+        // OwningClientAuthoritative authority = "the machine that locally controls the owning actor".
+        // On a LISTEN SERVER the host is both Server (ComputeNetContext short-circuits) and the owning
+        // client of its own pawn, so it is the authority too; a dedicated server controls no pawn.
         const auto NetContext    = ck::statemachine::ComputeNetContext(InHandle);
         const auto EffectiveAuth = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InHandle);
         const auto IsListenServerHostOwningClient =
@@ -148,18 +134,13 @@ namespace ck
 
         if (NOT IsRequestAuthority)
         {
-            // Every branch below drops the whole batch. Dropped requests may include Transitions
-            // whose enqueue-side added FTag_Sm_TransitionQueued — clear it up front so the
-            // evaluator isn't blocked forever.
+            // Every branch below drops the whole batch; a dropped Transition would leave
+            // FTag_Sm_TransitionQueued behind and block the evaluator forever.
             InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
 
-            // AutoStart (FProcessor_Sm_Setup) enqueues a Start on EVERY machine, including
-            // non-authority ones. On a non-authority copy of a Replicates SM that Start is
-            // expected to be dropped here — the SM reaches Running via the replicated run-status
-            // (server relay / rep mirror), not its local AutoStart — so it is NOT misuse. Only the
-            // authority-only mutations (Stop/Pause/Resume/Transition/AddOverrideState), which can
-            // only originate from an explicit Request_*, signal a programming error on a
-            // non-authority machine. Scope the ensure to those; a pure-Start batch drops silently.
+            // AutoStart enqueues a Start on EVERY machine, so a dropped Start on a non-authority
+            // copy is expected, not misuse — it reaches Running via the replicated run-status. Only
+            // the authority-only mutations signal a programming error, so scope the ensure to those.
             const auto NonStartRequestCount = algo::CountIf(InRequests.Get_Requests(),
                 [](const FFragment_Sm_Requests::RequestType& InRequest) -> bool
                 {
@@ -176,8 +157,6 @@ namespace ck
                 return;
             }
 
-            // Pure AutoStart echo on a non-authority machine — drop silently; the SM reaches
-            // Running via the replicated run-status.
             InHandle.Try_Remove<FFragment_Sm_Requests>();
             return;
         }
@@ -198,11 +177,8 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Helper — write the SM's current run-status into the replicated payload when the local
-    // machine is the authority for this SM. Used by Start/Stop/Pause/Resume handlers to mirror
-    // run-status across the wire. Local-only and non-authority machines silently skip
-    // (TryUpdateContainerFragment is itself a no-op without an active rep driver, but checking
-    // params explicitly keeps the intent visible).
+    // Mirrors the SM's run-status into the replicated payload when the local machine is this SM's
+    // authority. Local-only and non-authority machines skip.
     static auto
         DoPublishRunStatus(
             FCk_Handle_StateMachine& InSm,
@@ -216,13 +192,9 @@ namespace ck
         const auto NetContext = ck::statemachine::ComputeNetContext(InSm);
         const auto AuthModel  = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InSm);
 
-        // Mirror the transition-publish split (FProcessor_Sm_CommitPendingTransition): the server
-        // is the canonical rep publisher regardless of authority model. This is what carries the
-        // listen-server host's OwningClientAuth run-status to other clients — the host commits
-        // locally as the owning client (see the gating in ForEachEntity), then publishes here as
-        // the server. A REMOTE owning client (NetContext == OwningClient) instead buffers for the
-        // relay so the server can republish. A dedicated server reaches this only via the relay
-        // handler, not here, since it never locally drives an owning-client SM's run-status.
+        // The server is the canonical rep publisher regardless of authority model — this is what
+        // carries the listen-server host's OwningClientAuth run-status to other clients. A REMOTE
+        // owning client buffers for the relay instead so the server can republish.
         const auto IsRepPublisher = NetContext == ECk_Sm_NetContext::Server;
 
         const auto IsOwningClientOriginator =
@@ -232,12 +204,8 @@ namespace ck
         if (NOT IsRepPublisher && NOT IsOwningClientOriginator)
         { return; }
 
-        // Owning-client run-status changes can't be published through the server→client rep
-        // container (the client doesn't own it — TryUpdateContainerFragment would no-op). Buffer
-        // the run-status for FProcessor_Sm_PushOwningClientBatch to relay via Server_PushRunStatus,
-        // mirroring how owning-client transitions buffer for Server_PushTransitionBatch. Without
-        // this the server's OwningClientAuth SM never reaches Running and ApplyReplicatedHistory
-        // drops every relayed transition.
+        // The client doesn't own the server→client rep container (TryUpdateContainerFragment would
+        // no-op), so buffer for FProcessor_Sm_PushOwningClientBatch to relay via Server_PushRunStatus.
         if (IsOwningClientOriginator)
         {
             auto& Batch = InSm.AddOrGet<FFragment_Sm_PendingClientBatch>();
@@ -246,8 +214,6 @@ namespace ck
             return;
         }
 
-        // IsRepPublisher (server, including the listen-server host): write the rep container so
-        // non-owning clients pick up the change.
         switch (InParams.Get_ReplicationModel())
         {
             case ECk_Sm_ReplicationModel::WithHistory:
@@ -284,9 +250,8 @@ namespace ck
     {
         if (InCurrent._RunStatus != ECk_SmRunStatus::Stopped)
         {
-            // Paused is rejected too, not just Running: falling through would Add a duplicate
-            // FTag_Sm_Running (ensure) and DoEnterState would stack a fresh initial state on top
-            // of the still-alive paused current state. Resume is the way back from Paused.
+            // Paused is rejected too: falling through would Add a duplicate FTag_Sm_Running and stack
+            // a fresh initial state on top of the still-alive paused one. Resume is the way back.
             if (InCurrent._RunStatus == ECk_SmRunStatus::Paused)
             {
                 ck::sm::Warning(
@@ -306,11 +271,6 @@ namespace ck
         UUtils_Signal_OnSmStarted::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStarted{}));
 
-        // Broadcast OnSmStateChanged for the initial state entry too —
-        // PreviousStateClass=null signals "no prior state; this is the SM's
-        // first state." Without this fire, a sink-state (zero-transition)
-        // SM never produces OnSmStateChanged at all, and consumers binding
-        // to react per-state-entry miss the initial entry forever.
         UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
                 TSubclassOf<UCk_SmState_EntityScript>{},
@@ -321,11 +281,9 @@ namespace ck
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, InParams.Get_InitialStateClass());
 
 #if !UE_BUILD_SHIPPING
-        // If this SM has an owning SM, it's a sub-SM — surface its initial-state entry in the
-        // parent SM's history. Otherwise a sub-SM that enters its initial state and dies in the
-        // same frame (e.g. an entry task that immediately finishes the sub-SM) leaves no trace
-        // in the debugger because sub-SM history is only synthesized from transitions, and its
-        // own fragment is destroyed before the polling debug processor can snapshot it.
+        // A sub-SM's initial-state entry must be surfaced in the PARENT's history: sub-SM history is
+        // only synthesized from transitions, so one that enters and dies in the same frame would
+        // otherwise leave no trace in the debugger.
         if (TUtils_Sm_OwningStateMachine::Has(InHandle))
         {
             auto ParentSm = TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
@@ -340,10 +298,8 @@ namespace ck
                 }
             }
 
-            // Use _CurrentStateClass (already override-resolved by DoEnterState above) rather
-            // than InParams.Get_InitialStateClass(), which is the pre-resolution request.
-            // Otherwise overridden sub-SMs would display the base class name instead of the
-            // actual running class.
+            // _CurrentStateClass is already override-resolved by DoEnterState; the params' initial
+            // state class is the pre-resolution request and would display the base class.
             auto SubSmStartRequest = FCk_Request_SmDebug_RecordTransition{
                 TSubclassOf<UCk_SmState_EntityScript>{}, InCurrent._CurrentStateClass};
             SubSmStartRequest.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
@@ -374,9 +330,9 @@ namespace ck
         InHandle.Try_Remove<FTag_Sm_Paused>();
         InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
 
-        // A transition can be mid-flight (exit cascade ran, commit hasn't) — discard it here, or
-        // its kept-alive previous state leaks: HandleRequests runs before CommitPendingTransition,
-        // so the commit's own not-Running cleanup never sees the fragment once Stop removes it.
+        // A transition can be mid-flight (exit cascade ran, commit hasn't). HandleRequests runs before
+        // CommitPendingTransition, so discarding here is the only chance — otherwise the kept-alive
+        // previous state leaks.
         UCk_Utils_StateMachine_UE::Request_TryDiscardPendingTransition(InHandle);
 
         DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Stopped);
@@ -432,9 +388,8 @@ namespace ck
     {
         if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
         {
-            // The enqueue side unconditionally added FTag_Sm_TransitionQueued; a dropped request
-            // must clear it or FProcessor_SmState_Evaluate blocks forever (Pause →
-            // Request_Transition → Resume left the SM permanently unable to evaluate).
+            // The enqueue side unconditionally added FTag_Sm_TransitionQueued; a dropped request must
+            // clear it or FProcessor_SmState_Evaluate blocks forever.
             InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
             return;
         }
@@ -444,23 +399,16 @@ namespace ck
 
         UCk_Utils_StateMachine_UE::TryCheckExitBreakpoint(InHandle, PreviousStateClass);
 
-        // Run the exit cascade but DO NOT destroy the previous state yet — its handle is stashed
-        // into FFragment_Sm_PendingTransition below and read by FProcessor_Sm_CommitPendingTransition
-        // (Get_IsPendingExit). Destroying it here (deferred to end-of-frame) can win the race
-        // against the commit when the exit cascade straddles a frame boundary, leaving the commit
-        // to query a tombstone handle. CommitPendingTransition destroys it after the new state is
-        // entered.
+        // The previous state must stay alive until FProcessor_Sm_CommitPendingTransition reads its
+        // handle: destroying here (deferred to end-of-frame) can win the race against a commit whose
+        // exit cascade straddles a frame boundary, leaving the commit querying a tombstone.
         constexpr auto ScheduleDestroyNow = false;
         DoExitCurrentState(InHandle, InCurrent, ScheduleDestroyNow);
 
-        // The actual entry happens in FProcessor_Sm_CommitPendingTransition, after the
-        // exit cascade (state -> task -> transition -> condition) has fully drained.
-        //
-        // A second Request_Transition can land before the first commits (same drain batch, or an
-        // exit cascade straddling frames). Coalesce: keep the ORIGINAL previous-state stash — it
-        // holds the only reference to the kept-alive exited state (overwriting it leaked the
-        // entity and published a null PreviousStateClass) — and only retarget. The never-entered
-        // intermediate target is skipped entirely (observers see one A→C transition).
+        // The entry itself happens in FProcessor_Sm_CommitPendingTransition. A second
+        // Request_Transition can land before the first commits: keep the ORIGINAL previous-state
+        // stash (the only reference to the kept-alive exited state) and only retarget, so the
+        // never-entered intermediate target is skipped and observers see one A→C transition.
         const auto HadPendingTransition = InHandle.Has<FFragment_Sm_PendingTransition>();
         auto& Pending = InHandle.AddOrGet<FFragment_Sm_PendingTransition>();
         if (NOT HadPendingTransition)
@@ -556,11 +504,9 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Sm_CommitPendingTransition);
 
-        // The transition path keeps the previous state ALIVE until here (DoExitCurrentState was
-        // called with ScheduleDestroyNow=false), so its handle is still valid and we destroy it
-        // below, after the new state is entered. We still wait while it is mid-exit
-        // (FProcessor_SmState_Exit hasn't cleared FTag_SmState_PendingExit yet). The validity
-        // guard covers the initial transition (no previous state) and any caller that released it.
+        // The previous state was kept ALIVE by DoExitCurrentState(ScheduleDestroyNow=false) and is
+        // destroyed below, after the new state is entered. Wait while it is still mid-exit; the
+        // validity guard covers the initial transition and any caller that released it.
         if (ck::IsValid(InPending._PreviousStateHandle)
             && UCk_Utils_SmState_UE::Get_IsPendingExit(InPending._PreviousStateHandle))
         { return; }
@@ -580,21 +526,17 @@ namespace ck
 
         FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InCurrent, TargetStateClass);
 
-        // New state is now committed — it is safe to destroy the previous state entity that the
-        // transition path deliberately kept alive (see DoHandleRequest(Transition)). Its exit
-        // lifecycle already ran via FProcessor_SmState_Exit; EndPlay's ExitState is a no-op
-        // (FTag_SmState_Active dedup).
+        // Safe to destroy the state the transition path deliberately kept alive: its exit lifecycle
+        // already ran via FProcessor_SmState_Exit, and EndPlay's ExitState is a no-op (Active dedup).
         if (ck::IsValid(PreviousStateHandle))
         {
             auto PreviousToDestroy = FCk_Handle{PreviousStateHandle};
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PreviousToDestroy);
         }
 
-        // Pass the replicated fingerprint expectation to the new state entity so that its
-        // Construct/DoComputeFingerprint cycle can verify against it. Authority-
-        // driven commits (server's own transitions, owning client's own) leave
-        // _NewStateFingerprint at 0 — no carrier, no verify on the local instance.
-        // The fragment lives just long enough for Construct's deferred verify pass.
+        // Pass the replicated fingerprint expectation to the new state so its Construct /
+        // DoComputeFingerprint cycle can verify against it. Authority-driven commits leave it at 0 —
+        // no carrier, no verify. The fragment lives just long enough for the deferred verify pass.
         if (IncomingNewFingerprint != 0 && ck::IsValid(InCurrent._CurrentStateHandle))
         {
             auto& Expected = InCurrent._CurrentStateHandle.AddOrGet<FFragment_SmState_ExpectedFingerprint>();
@@ -635,23 +577,7 @@ namespace ck
 
         UCk_Utils_StateMachine_UE::TryCheckEntryBreakpoint(InHandle, TargetStateClass);
 
-        // Replication publication and client-batch buffering. Two disjoint paths:
-        //
-        // 1. IsRepPublisher: NetContext == Server. The server is the canonical publisher for
-        //    Replicates SMs regardless of authority model. For ServerAuth SMs the server is
-        //    both originator and publisher; for OwningClientAuth SMs the server commits via
-        //    RPC and republishes via the same write path. Non-owning clients receive RepData
-        //    deltas from this write and replay through ApplyReplicatedHistory.
-        //
-        // 2. IsOwningClientOriginator: NetContext == OwningClient && AuthorityModel ==
-        //    OwningClientAuthoritative. The owning client commits locally for zero latency
-        //    and buffers the event into FFragment_Sm_PendingClientBatch for the
-        //    FProcessor_Sm_PushOwningClientBatch processor to flush via RPC. The server's
-        //    handler (Server_PushTransitionBatch) replays into the server's own pipeline,
-        //    eventually hitting branch (1) to broadcast to other clients.
-        //
-        // Non-owning clients (NetContext == NonOwningClient) hit neither branch — they don't
-        // publish or buffer, they only consume rep deltas from OnChange/OnAdd.
+        // Two disjoint publish paths; a non-owning client hits neither and only consumes rep deltas.
         if (InParams.Get_Replication() == ECk_Replication::Replicates)
         {
             const auto NetContext = ck::statemachine::ComputeNetContext(InHandle);
@@ -668,20 +594,15 @@ namespace ck
                 const auto SeqValue = NextSeq.Get_Next();
                 NextSeq.Set_Next(SeqValue + 1);
 
-                // Per-class fingerprint cache lookup. Populated by UCk_SmState_EntityScript::
-                // DoComputeFingerprint after every state's first Construct anywhere — server,
-                // client, any SM instance. After warm-up the cache returns the real hash here
-                // and clients can verify on commit. On the very first instantiation of a class
-                // anywhere in this process, the lookup returns 0; the Construct backfill path
-                // (DoBackfillFingerprintToRepData) cleans up that single zero asynchronously.
+                // Populated by UCk_SmState_EntityScript::DoComputeFingerprint after a state class's
+                // first Construct anywhere in this process. The very first instantiation reads 0;
+                // DoBackfillFingerprintToRepData cleans up that single zero asynchronously.
                 auto NewStateFingerprint =
                     UCk_SmState_EntityScript::Get_CachedFingerprint(TargetStateClass);
 
 #if WITH_DEV_AUTOMATION_TESTS
-                // Test-only fake-fingerprint injection. When armed via
-                // UCk_Utils_StateMachine_Test_UE::Test_InjectFakeFingerprint, replace the cached
-                // value with the test-supplied fake before it reaches the wire. Receive side
-                // runs the genuine verify path; tests assert the determinism fault response.
+                // Armed via UCk_Utils_StateMachine_Test_UE::Test_InjectFakeFingerprint: replaces the
+                // cached value before it reaches the wire, so the receive side runs the genuine verify.
                 if (InHandle.Has<FFragment_Sm_TestFakeFingerprintInjection>())
                 {
                     auto& Injection = InHandle.Get<FFragment_Sm_TestFakeFingerprintInjection>();
@@ -741,14 +662,10 @@ namespace ck
             }
         }
 
-        // Sub-SM transition relay. A sub-SM created by UCk_SmTask_SubStateMachine is DoesNotReplicate
-        // (no transport of its own), so the Replicates publish block above is skipped for it entirely.
-        // On the OWNING CLIENT of a replicated OwningClientAuthoritative root, route the sub-SM's
-        // transition through the ROOT's client->server batch (the root rides the pawn entity's
-        // replication driver), tagged with the sub-SM's parent-hierarchy identity so the server /
-        // non-owning clients dispatch it to the matching local sub-SM. The server & non-owning copies
-        // of the sub-SM commit via that relayed replay — they are not the owning client, so they don't
-        // re-originate here.
+        // Sub-SM transition relay: a sub-SM is DoesNotReplicate, so it has no transport of its own and
+        // the publish block above is skipped for it. Its transitions ride the ROOT's client->server
+        // batch / rep container, tagged with the sub-SM's parent-hierarchy identity so peers dispatch
+        // to the matching local sub-SM.
         if (InParams.Get_Replication() != ECk_Replication::Replicates)
         {
             const auto SubSmIdentity = UCk_Utils_StateMachine_UE::Get_SubSmParentHierarchy(InHandle);
@@ -759,10 +676,8 @@ namespace ck
                 const auto IsOwningClientOriginator =
                     NetContext == ECk_Sm_NetContext::OwningClient
                     && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
-                // Leg 2 (server -> non-owning clients): the server commits this sub-SM transition only
-                // via the relayed replay queue (it is not the transition authority for an OwningClientAuth
-                // sub-SM — see Get_IsTransitionAuthority), so every sub-SM transition it commits is a
-                // relayed one that must be republished to observers.
+                // Leg 2 (server -> non-owning clients): the server is never the transition authority for
+                // an OwningClientAuth sub-SM, so every sub-SM transition it commits is a relayed one.
                 const auto IsServerRepublisher =
                     NetContext == ECk_Sm_NetContext::Server
                     && AuthModel == ECk_Sm_AuthorityModel::OwningClientAuthoritative;
@@ -787,19 +702,16 @@ namespace ck
 
                         if (IsOwningClientOriginator)
                         {
-                            // Leg 1 (owning client -> server): buffer onto the root's client batch for
-                            // FProcessor_Sm_PushOwningClientBatch to RPC via Server_PushTransitionBatch.
+                            // Leg 1 (owning client -> server): buffer onto the root's batch for the push
+                            // processor to RPC via Server_PushTransitionBatch.
                             auto& Batch = Root.AddOrGet<FFragment_Sm_PendingClientBatch>();
                             Batch.Get_PendingEvents().Add(Event);
                         }
                         else // IsServerRepublisher
                         {
-                            // Republish the identity-tagged event onto the ROOT's WithHistory container
-                            // (the root rides the pawn entity's replication driver) so non-owning observers
-                            // dispatch it to their local sub-SM by identity. The owning client echo-
-                            // suppresses this delta (it already applied the transition locally). NoHistory
-                            // roots have no field to carry the identity, so the relay is WithHistory-only —
-                            // mirrors leg 1's Server_PushTransitionBatch (WithHistory) vs Server_PushCurrentState.
+                            // Republish onto the ROOT's WithHistory container so non-owning observers
+                            // dispatch by identity; the owning client echo-suppresses it. NoHistory roots
+                            // have no field to carry the identity, so the relay is WithHistory-only.
                             if (UCk_Utils_StateMachine_UE::Get_ReplicationModel(Root) == ECk_Sm_ReplicationModel::WithHistory)
                             {
                                 UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_StateMachine_WithHistory>(
@@ -823,11 +735,8 @@ namespace ck
 
         InHandle.Try_Remove<FFragment_Sm_PendingTransition>();
 
-        // Apply a parked run-status mirror once the replay pipeline is drained — preserves the
-        // authority's transitions-then-status ordering. See FFragment_Sm_DeferredRunStatusMirror
-        // for why Paused/Stopped mirrors must not jump ahead of queued replayed transitions.
-        // (The pending-transition fragment was removed just above, so in-flight here means
-        // "replay queue still holds events".)
+        // Apply a parked run-status mirror once the replay pipeline drains — preserves the authority's
+        // transitions-then-status ordering (see FFragment_Sm_DeferredRunStatusMirror).
         if (InHandle.Has<FFragment_Sm_DeferredRunStatusMirror>()
             && NOT UCk_Utils_StateMachine_UE::Get_HasReplayTransitionsInFlight(InHandle))
         {
@@ -838,7 +747,6 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-    // FLUSH PENDING REPLICATION — DRAIN
 
     auto
         FProcessor_Sm_FlushPendingReplication_Drain::
@@ -853,17 +761,15 @@ namespace ck
 
         auto& StashedEntries = InStash.Get_StashedEntries();
 
-        // Capture pending run-status before we tear the stash fragment down — applying after
-        // events drain preserves the on-the-wire ordering (transitions then status).
+        // Captured before the stash fragment is torn down; applied after events drain so the
+        // on-the-wire ordering (transitions then status) is preserved.
         const auto HasPendingRunStatus = InStash.Get_HasPendingRunStatus();
         const auto PendingRunStatus    = InStash.Get_PendingRunStatus();
 
         if (StashedEntries.IsEmpty() && NOT HasPendingRunStatus)
         {
-            // Remove the empty fragment so future deliveries don't re-enter stash mode unless
-            // explicitly required (the stash-precedence check treats a non-empty stash as
-            // "keep stashing"). An empty stash with the fragment still present would force
-            // unnecessary stashing on the next OnChange.
+            // The stash-precedence check treats a present fragment as "keep stashing", so an empty
+            // one left behind would force unnecessary stashing on the next OnChange.
             InHandle.Try_Remove<FFragment_Sm_PendingReplicationEntries>();
             return;
         }
@@ -884,21 +790,19 @@ namespace ck
             StashedEntries.Reset();
         }
 
-        // Stash teardown precedes mirror so MirrorRunStatus's Has<FFragment_Sm_Current> check
-        // is the only gate — the now-empty stash fragment is gone.
+        // Teardown precedes the mirror so MirrorRunStatus's Has<FFragment_Sm_Current> check is the
+        // only gate.
         InHandle.Try_Remove<FFragment_Sm_PendingReplicationEntries>();
 
         if (HasPendingRunStatus)
         {
-            // The stashed events were only MOVED to the replay queue above — they haven't
-            // committed yet. A non-Running status must therefore park until the queue drains
-            // (defer-while-replaying), or it would make the commit discard every stashed event.
+            // The stashed events were only MOVED to the replay queue, not committed, so a non-Running
+            // status must park until the queue drains or the commit would discard every one of them.
             ck::statemachine::MirrorRunStatus_OrDeferWhileReplaying(InHandle, PendingRunStatus);
         }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-    // APPLY REPLICATED HISTORY (non-owning client replay path)
 
     auto
         FProcessor_Sm_ApplyReplicatedHistory::
@@ -916,11 +820,9 @@ namespace ck
         if (Queue.IsEmpty())
         { return; }
 
-        // Drain one event per tick. The TExclude<FFragment_Sm_PendingTransition> on this
-        // processor means the next entry won't drain until the current transition lands via
-        // FProcessor_Sm_CommitPendingTransition (which removes the PendingTransition fragment).
-        // That gives the exit/enter cascade time to flush between transitions and matches the
-        // server-side per-tick pace.
+        // One event per tick: TExclude<FFragment_Sm_PendingTransition> keeps the next entry from
+        // draining until the current transition lands, giving the exit/enter cascade time to flush
+        // and matching the server-side per-tick pace.
         const auto Event = Queue[0];
         Queue.RemoveAt(0);
 
@@ -930,10 +832,8 @@ namespace ck
         Pending._TargetStateClass    = Event.Get_NewStateClass();
         Pending._NewStateFingerprint = Event.Get_NewStateFingerprint();
 
-        // Watermark the highest seq we've applied. The OnChange handler uses this to filter
-        // future delta payloads down to only seqs we haven't yet processed. Max-guarded: a
-        // duplicate or out-of-order event must never move the watermark BACKWARD — a regressed
-        // watermark re-admits already-applied seqs from the next ring delivery.
+        // Max-guarded: a duplicate or out-of-order event must never move the watermark BACKWARD, or
+        // the next ring delivery re-admits already-applied seqs.
         auto& ReplayState = InHandle.AddOrGet<FFragment_Sm_ClientReplayState>();
         ReplayState.Set_ClientLastAppliedSeq(
             FMath::Max(ReplayState.Get_ClientLastAppliedSeq(), Event.Get_Seq()));
@@ -959,22 +859,18 @@ namespace ck
         if (InParams.Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithHistory)
         { return; }
 
-        // Idempotence guards: only enter when the SM is actually Running and hasn't already
-        // acquired a state via the replay path (RunBefore ApplyReplicatedHistory +
-        // TExclude<PendingTransition> normally prevent the race, but stay defensive).
+        // Idempotence guards: only enter when the SM is actually Running and hasn't already acquired
+        // a state via the replay path.
         if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Running)
         { return; }
 
         if (ck::IsValid(InCurrent.Get_CurrentStateHandle()))
         { return; }
 
-        // Enter the locally-known initial state (DoEnterState resolves it through the override
-        // map). No publish: this is a local reconstruction on a non-authority machine, mirroring
-        // how the replay path reconstructs transitions.
+        // No publish: a local reconstruction on a non-authority machine, mirroring the replay path.
         FProcessor_Sm_HandleRequests::DoEnterState(InHandle, InCurrent, InParams.Get_InitialStateClass());
 
-        // Initial-entry fire with PreviousStateClass=null, matching the authority's DoStart so
-        // non-owning consumers (visuals, per-state logic) get the same clean initial pulse.
+        // Initial-entry fire with PreviousStateClass=null, matching the authority's DoStart.
         UUtils_Signal_OnSmStateChanged::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStateChanged{
                 TSubclassOf<UCk_SmState_EntityScript>{},
@@ -984,7 +880,6 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-    // HYDRATION RESUME (authority-side, save-load)
 
     auto
         FProcessor_Sm_HydrationResume::
@@ -998,10 +893,8 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Sm_HydrationResume);
 
-        // The SM's save-transport Apply (CkStateMachine_Replication.cpp) already stashed InResume with the saved
-        // {RunStatus, CurrentStateClass}, and only did so once FFragment_Sm_Current existed — so the fresh SM is
-        // normal-boot-composed and there is NO virgin reset. Setup may still have
-        // AutoStart's Start enqueued behind FTag_Sm_RequiresSetup in the same pump — wait for it to drain first.
+        // Setup may still have AutoStart's Start enqueued behind FTag_Sm_RequiresSetup in the same
+        // pump — wait for it to drain first.
         if (InHandle.Has<FTag_Sm_RequiresSetup>())
         { return; }
 
@@ -1020,10 +913,8 @@ namespace ck
             MutableHandle.Remove<FFragment_Sm_HydrationResume>();
         };
 
-        // Scope: only re-drive where THIS machine passes the same request-authority gate
-        // FProcessor_Sm_HandleRequests enforces — otherwise every Request_* below would be ensure-dropped.
-        // Non-authority hydrations (OwningClientAuth on a dedicated server / non-owning listen host) come back
-        // composed-but-Stopped; authority-side resume is a follow-up design.
+        // Only re-drive where THIS machine passes the same request-authority gate
+        // FProcessor_Sm_HandleRequests enforces; otherwise every Request_* below is ensure-dropped.
         const auto NetContext    = ck::statemachine::ComputeNetContext(InHandle);
         const auto EffectiveAuth = UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InHandle);
         const auto IsListenServerHostOwningClient =
@@ -1057,8 +948,7 @@ namespace ck
             {
                 if (Pending.Get_DesiredRunStatus() == ECk_SmRunStatus::Stopped)
                 {
-                    // Saved Stopped, but AutoStart=OnSetup started the fresh machine — converge back to Stopped
-                    // (re-runs InitialState's exit side effects; accepted noise).
+                    // AutoStart=OnSetup may have started the fresh machine — converge back to Stopped.
                     if (InCurrent.Get_RunStatus() != ECk_SmRunStatus::Stopped)
                     {
                         if (NOT Pending.Get_StopEnqueued())
@@ -1077,8 +967,8 @@ namespace ck
                 {
                     if (NOT Pending.Get_StartEnqueued())
                     {
-                        // Idempotent overlap with AutoStart=OnSetup's own Start — HandleRequests drops
-                        // a Start on an already-Running machine.
+                        // Idempotent against AutoStart's own Start — HandleRequests drops a Start on an
+                        // already-Running machine.
                         ck::sm::Display(TEXT("[SM HydrationResume] [{}] Start phase: enqueueing Request_Start"), InHandle);
                         UCk_Utils_StateMachine_UE::Request_Start(Sm);
                         Pending._StartEnqueued = true;
@@ -1092,16 +982,14 @@ namespace ck
             }
             case FFragment_Sm_HydrationResume::EPhase::Transition:
             {
-                // An in-flight transition (the restore transition, or AutoStart racing a gameplay
-                // request) must commit before the ladder advances.
+                // An in-flight transition must commit before the ladder advances.
                 if (InHandle.Has<FFragment_Sm_PendingTransition>())
                 { return; }
 
                 const auto& DesiredClass = Pending.Get_DesiredStateClass();
 
-                // A null desired class means the SM was saved mid-transition (an in-flight transition
-                // target is not persisted) or before any state entry; staying in InitialState is the
-                // contract for both.
+                // A null desired class means the SM was saved mid-transition or before any state
+                // entry; staying in InitialState is the contract for both.
                 if (ck::IsValid(DesiredClass) && InCurrent.Get_CurrentStateClass() != DesiredClass)
                 {
                     if (NOT Pending.Get_TransitionEnqueued())
@@ -1143,7 +1031,6 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-    // PUSH OWNING-CLIENT BATCH (client→server RPC of locally-buffered transitions)
 
     auto
         FProcessor_Sm_PushOwningClientBatch::
@@ -1162,11 +1049,9 @@ namespace ck
         if (Events.IsEmpty() && NOT HasRunStatus)
         { return; }
 
-        // Only owning-client-authoritative SMs route through this push, and
-        // only on the machine that actually owns the SM's actor. Other machines never accumulate
-        // into this batch (the commit + run-status publication paths gate the same way), but the
-        // check here is defence in depth — if a misconfigured SM somehow seeded the batch on the
-        // wrong machine, we silently clear it rather than emit RPCs that the server would reject.
+        // Defence in depth: the commit + run-status publication paths already gate the same way, so a
+        // batch on the wrong machine means a misconfigured SM — clear it rather than emit RPCs the
+        // server would reject.
         if (UCk_Utils_StateMachine_UE::Get_EffectiveAuthorityModel(InHandle) != ECk_Sm_AuthorityModel::OwningClientAuthoritative)
         {
             Events.Reset();
@@ -1185,12 +1070,10 @@ namespace ck
         const auto ChannelResult = UCk_Utils_StateMachine_UE::Acquire_RelayChannel(InHandle);
         auto* RelayActor = Cast<ACk_StateMachineRelay_UE>(ChannelResult.Get_ChannelActor().Get());
 
-        // The relay must be RPC-callable from THIS client to push: a client may only invoke a
-        // Server_* RPC on an actor it owns (NetConnection resolved → AutonomousProxy). Right after
-        // Start the owning channel can still be a SimulatedProxy with no NetConnection (ownership not
-        // yet replicated); flushing onto it would have UE silently DROP the RPC, and since we'd then
-        // clear the batch the run-status/transition would be lost. Treat "not RPC-ready" exactly like
-        // "no relay yet" — defer and retry next pump (the batch is retained).
+        // A client may only invoke a Server_* RPC on an actor it owns (NetConnection resolved →
+        // AutonomousProxy). Right after Start the channel can still be a SimulatedProxy and UE would
+        // silently DROP the RPC, so treat "not RPC-ready" like "no relay yet" and retry with the
+        // batch retained.
         if (ck::Is_NOT_Valid(RelayActor, ck::IsValid_Policy_NullptrOnly{})
             || RelayActor->GetNetConnection() == nullptr)
         {
@@ -1199,9 +1082,8 @@ namespace ck
             return;
         }
 
-        // Run-status FIRST: Start must reach the server before any transition so the server's SM is
-        // Running by the time the transition batch lands (ApplyReplicatedHistory drops transitions
-        // on a non-Running SM). Wires up Server_PushRunStatus, which was previously never called.
+        // Run-status FIRST: Start must reach the server before any transition, since
+        // ApplyReplicatedHistory drops transitions on a non-Running SM.
         if (HasRunStatus)
         {
             RelayActor->Server_PushRunStatus(InHandle, InBatch.Get_PendingRunStatus());
@@ -1214,7 +1096,6 @@ namespace ck
             {
                 case ECk_Sm_ReplicationModel::WithHistory:
                 {
-                    // One RPC carries the whole batch — server replays them in order.
                     RelayActor->Server_PushTransitionBatch(InHandle, Events);
                     break;
                 }
@@ -1256,8 +1137,8 @@ namespace ck
             UCk_Utils_SmState_UE::Request_Exit(InCurrent._CurrentStateHandle);
         }
 
-        // The lifetime cascade destroys the kept-alive previous state with the SM anyway; the
-        // shared discard keeps the "abandoning a mid-flight transition" contract uniform.
+        // Redundant with the lifetime cascade, but keeps the "abandon a mid-flight transition"
+        // contract uniform across every abandoning path.
         UCk_Utils_StateMachine_UE::Request_TryDiscardPendingTransition(InHandle);
 
         InCurrent._RunStatus = ECk_SmRunStatus::Stopped;

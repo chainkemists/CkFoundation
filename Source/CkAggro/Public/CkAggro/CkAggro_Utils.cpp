@@ -10,8 +10,7 @@
 
 namespace ck_aggro_utils
 {
-    // Stamp the lowest-threat tracked target PendingForget and drop it from the map to make room for a newcomer.
-    // The Forget processor completes the eviction (record disconnect + destroy + OnAggroTargetForgotten/Evicted).
+    // Only stamps the victim — the Forget processor completes the eviction (record disconnect, destroy, signal).
     auto
     Evict_LowestThreat(
         TMap<FCk_Handle, FCk_Handle_AggroTarget>& InTargetMap)
@@ -60,7 +59,7 @@ auto
     if (NOT HasTransform)
     { return {}; }
 
-    // Clamp the default-target template's retention >= acquisition (AggroTarget::Add re-clamps per target too).
+    // Clamps the TEMPLATE only; AggroTarget::Add re-clamps per target, so this is not the sole guard.
     auto DefaultTargetParams = InParams.Get_DefaultTargetParams();
     {
         auto SpatialParams = DefaultTargetParams.Get_SpatialParams();
@@ -122,8 +121,6 @@ auto
         ck_aggro_utils::Evict_LowestThreat(TargetMap);
     }
 
-    // AggroTarget::Create takes a generic owner (it knows nothing of the Aggro type) — it builds the child, Adds the
-    // feature, and connects it to the owner's record. We only own the O(1) dedupe map here.
     auto OwnerHandle = FCk_Handle{InOwner};
     auto NewTarget   = UCk_Utils_AggroTarget_UE::Create(OwnerHandle, InParams);
     if (ck::Is_NOT_Valid(NewTarget))
@@ -364,7 +361,6 @@ auto
     {
         case ECk_EnableDisable::Enable:
         {
-            // Counted decrement — one Enable cancels one Disable. A no-op when not disabled.
             if (InAggro.Has<ck::FTag_Aggro_Disabled>())
             { InAggro.Remove<ck::FTag_Aggro_Disabled>(); }
             break;

@@ -25,19 +25,12 @@
 #include <StructUtils/InstancedStruct.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Internal recursion bookkeeping
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_data_asset_exporter_internal
 {
-    // Cap recursion depth as a defensive secondary guard, plus per-export visited
-    // sets so DAG-shaped reference graphs (e.g. multiple Instanced UItemTrait
-    // subobjects sharing a referenced UObject, or fragments that back-reference
-    // the owning DataAsset) don't re-serialize the same subtree at every encounter.
-    // Once an object or FInstancedStruct payload has been exported, subsequent
-    // encounters emit a path reference with "alreadyExported": true instead of
-    // descending again. Thread-local so it's safe under any caller threading model.
-    // Reset at the top of each ExportDataAsset call.
+    // Per-export visited sets so a DAG-shaped reference graph (shared referenced UObjects, fragments that
+    // back-reference the owning DataAsset) emits "alreadyExported": true instead of re-descending. The depth caps are
+    // a secondary guard. Thread-local, so any caller threading model is safe; reset per ExportDataAsset call.
     static constexpr int32 GMaxObjectRecursionDepth   = 24;
     static constexpr int32 GMaxPropertyRecursionDepth = 128;
     thread_local int32 GObjectRecursionDepth   = 0;
@@ -46,8 +39,6 @@ namespace ck_data_asset_exporter_internal
     thread_local TSet<const void*>    GStructMemoryAlreadyExported;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Public API
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -66,14 +57,12 @@ auto
         return Result;
     }
 
-    // Reset per-export bookkeeping. Thread-locals persist for the thread's lifetime,
-    // so stale entries from a previous export would otherwise leak in and mark
-    // everything as "already exported" on the second call.
+    // Thread-locals persist for the thread's lifetime: without this, the second export sees the first export's
+    // entries and marks everything "alreadyExported".
     ResetSharedRecursionState();
 
     Result.AssetName = InDataAsset->GetName();
 
-    // Serialize to JSON
     const auto JsonObject = DoSerializeToJson(InDataAsset);
     if (NOT JsonObject.IsValid())
     {
@@ -85,10 +74,8 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    // Serialize to plain text
     const auto TextString = DoSerializeToText(InDataAsset);
 
-    // Resolve output paths
     const auto JsonPath = DoResolveOutputPath(InDataAsset, TEXT(".json"));
     const auto TextPath = DoResolveOutputPath(InDataAsset, TEXT(".txt"));
 
@@ -98,7 +85,6 @@ auto
         return Result;
     }
 
-    // Write files
     const auto JsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     const auto TextWritten = FFileHelper::SaveStringToFile(
@@ -136,8 +122,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// JSON Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_DataAssetExporter::
@@ -152,7 +136,6 @@ auto
     RootObject->SetStringField(TEXT("assetClass"), InDataAsset->GetClass()->GetName());
     RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InDataAsset, ck::asset_exporter::version::DataAsset));
 
-    // Parent class chain
     auto ParentChain = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto* Class = InDataAsset->GetClass()->GetSuperClass();
          Class != nullptr && Class != UObject::StaticClass();
@@ -162,7 +145,6 @@ auto
     }
     RootObject->SetArrayField(TEXT("parentClasses"), ParentChain);
 
-    // Properties — stop at UDataAsset base (don't serialize UObject internals)
     RootObject->SetArrayField(TEXT("properties"),
         DoSerializeProperties_Json(InDataAsset, UDataAsset::StaticClass()));
 
@@ -188,9 +170,8 @@ auto
         if (NOT DoShouldIncludeProperty(Property))
         { continue; }
 
-        // Skip properties owned by the stop class itself (but keep ones owned by
-        // child classes of the stop class — that's how we exclude UObject/UDataAsset
-        // internals while including PDA-hierarchy declared members).
+        // Only the stop class ITSELF is excluded — members declared by its child classes are still exported, which
+        // is how UObject/UDataAsset internals drop out while PDA-hierarchy members survive.
         if (Property->GetOwnerClass() == InStopAtClass)
         { continue; }
 
@@ -198,14 +179,12 @@ auto
         PropObject->SetStringField(TEXT("name"), Property->GetName());
         PropObject->SetStringField(TEXT("type"), Property->GetCPPType());
 
-        // Category
         const auto Category = Property->GetMetaData(TEXT("Category"));
         if (NOT Category.IsEmpty())
         {
             PropObject->SetStringField(TEXT("category"), Category);
         }
 
-        // Value — recursive typed JSON value
         const auto* ValuePtr = Property->ContainerPtrToValuePtr<void>(InObject);
         const auto JsonValue = DoSerializePropertyValue_Json(Property, ValuePtr);
         if (JsonValue.IsValid())
@@ -217,7 +196,6 @@ auto
             PropObject->SetField(TEXT("value"), MakeShared<FJsonValueNull>());
         }
 
-        // Tooltip/description
         const auto Tooltip = Property->GetMetaData(TEXT("ToolTip"));
         if (NOT Tooltip.IsEmpty())
         {
@@ -242,25 +220,20 @@ auto
     if (InProperty == nullptr || InValuePtr == nullptr)
     { return MakeShared<FJsonValueNull>(); }
 
-    // Single shared depth budget across every recursive descent (struct member,
-    // FInstancedStruct payload, array/set/map element, instanced object).
-    // Without this, cyclic / pathologically deep property graphs (e.g.
-    // DA_CoreItem with TInstancedStruct<FCoreFragment> + Instanced UItemTrait
-    // arrays) blow the stack — the UObject-only guard below isn't reached
-    // because recursion can wander through structs and arrays indefinitely.
+    // ONE budget shared by every kind of descent (struct member, FInstancedStruct payload, container element,
+    // instanced object): recursion can wander through structs and arrays indefinitely without ever reaching the
+    // UObject-only guard below, and a pathologically deep property graph then blows the stack.
     if (GPropertyRecursionDepth >= GMaxPropertyRecursionDepth)
     { return MakeShared<FJsonValueString>(TEXT("<truncated: max property depth>")); }
 
     ++GPropertyRecursionDepth;
     ON_SCOPE_EXIT { --GPropertyRecursionDepth; };
 
-    // Bool
     if (const auto* BoolProp = CastField<FBoolProperty>(InProperty))
     {
         return MakeShared<FJsonValueBoolean>(BoolProp->GetPropertyValue(InValuePtr));
     }
 
-    // Enum (FEnumProperty — strongly-typed enum class)
     if (const auto* EnumProp = CastField<FEnumProperty>(InProperty))
     {
         const auto* UnderlyingProp = EnumProp->GetUnderlyingProperty();
@@ -272,7 +245,6 @@ auto
         return MakeShared<FJsonValueNumber>(static_cast<double>(Value));
     }
 
-    // Byte / TEnumAsByte
     if (const auto* ByteProp = CastField<FByteProperty>(InProperty))
     {
         const auto Value = ByteProp->GetSignedIntPropertyValue(InValuePtr);
@@ -283,7 +255,6 @@ auto
         return MakeShared<FJsonValueNumber>(static_cast<double>(Value));
     }
 
-    // Numeric (int/float)
     if (const auto* NumericProp = CastField<FNumericProperty>(InProperty))
     {
         if (NumericProp->IsFloatingPoint())
@@ -293,7 +264,6 @@ auto
         return MakeShared<FJsonValueNumber>(static_cast<double>(NumericProp->GetSignedIntPropertyValue(InValuePtr)));
     }
 
-    // String / Name / Text
     if (const auto* StrProp = CastField<FStrProperty>(InProperty))
     {
         return MakeShared<FJsonValueString>(StrProp->GetPropertyValue(InValuePtr));
@@ -307,7 +277,6 @@ auto
         return MakeShared<FJsonValueString>(TextProp->GetPropertyValue(InValuePtr).ToString());
     }
 
-    // Struct — recurse into inner properties (special-case FGameplayTag for readability)
     if (const auto* StructProp = CastField<FStructProperty>(InProperty))
     {
         if (StructProp->Struct == TBaseStructure<FGameplayTag>::Get())
@@ -322,10 +291,8 @@ auto
             return MakeShared<FJsonValueString>(Container.ToString());
         }
 
-        // FInstancedStruct wraps a separately-allocated USTRUCT payload. The
-        // outer FInstancedStruct has no reflected fields of its own — iterating
-        // TFieldIterator over its struct yields nothing — so without this branch
-        // every entry of a TArray<FInstancedStruct> exports as an empty {}.
+        // FInstancedStruct has no reflected fields of its own (TFieldIterator over it yields nothing), so without
+        // this branch every entry of a TArray<FInstancedStruct> exports as an empty {}.
         if (StructProp->Struct == FInstancedStruct::StaticStruct())
         {
             const auto& Instanced = *static_cast<const FInstancedStruct*>(InValuePtr);
@@ -370,16 +337,9 @@ auto
             return MakeShared<FJsonValueObject>(WrapperObject);
         }
 
-        // No address-based dedup for plain inline structs. Such structs are
-        // embedded by value (never heap-shared, never cyclic — a struct cannot
-        // contain itself by value), so an address can only "repeat" when a
-        // nested member lives at offset 0 of its parent: e.g. FTransform's first
-        // reflected member Rotation (FQuat) has the SAME address as the owning
-        // FTransform. Deduping by address there falsely collapses the member to
-        // an "alreadyExported" stub and the real data is lost. The genuine
-        // shared-reference cases (FInstancedStruct payloads, back-referencing
-        // UObjects) are deduped by their own dedicated guards; the property-depth
-        // budget above is the backstop against pathological nesting.
+        // NEVER address-dedup plain inline structs: embedded by value, an address only "repeats" for a member at
+        // offset 0 of its parent (FTransform's first reflected member shares the FTransform's address), and deduping
+        // there silently loses real data. FInstancedStruct payloads and UObjects have their own guards.
         auto StructObject = MakeShared<FJsonObject>();
 
         for (TFieldIterator<FProperty> It(StructProp->Struct); It; ++It)
@@ -388,9 +348,8 @@ auto
             if (InnerProp == nullptr)
             { continue; }
 
-            // Struct members are owned by a UScriptStruct, not a UClass, so
-            // DoShouldIncludeProperty's UClass-based filter rejects them all.
-            // Apply a lighter filter appropriate for struct fields.
+            // Struct members are owned by a UScriptStruct, not a UClass, so DoShouldIncludeProperty's UClass-based
+            // filter would reject every one of them — hence this lighter filter.
             if (InnerProp->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated | CPF_DuplicateTransient))
             { continue; }
 
@@ -403,7 +362,6 @@ auto
         return MakeShared<FJsonValueObject>(StructObject);
     }
 
-    // Array
     if (const auto* ArrayProp = CastField<FArrayProperty>(InProperty))
     {
         FScriptArrayHelper Helper(ArrayProp, InValuePtr);
@@ -419,7 +377,6 @@ auto
         return MakeShared<FJsonValueArray>(Elements);
     }
 
-    // Set
     if (const auto* SetProp = CastField<FSetProperty>(InProperty))
     {
         FScriptSetHelper Helper(SetProp, InValuePtr);
@@ -436,7 +393,6 @@ auto
         return MakeShared<FJsonValueArray>(Elements);
     }
 
-    // Map
     if (const auto* MapProp = CastField<FMapProperty>(InProperty))
     {
         FScriptMapHelper Helper(MapProp, InValuePtr);
@@ -457,14 +413,12 @@ auto
         return MakeShared<FJsonValueArray>(Entries);
     }
 
-    // Class reference (UClass*)
     if (const auto* ClassProp = CastField<FClassProperty>(InProperty))
     {
         const auto* ClassPtr = ClassProp->GetPropertyValue(InValuePtr).Get();
         return MakeShared<FJsonValueString>(ClassPtr != nullptr ? ClassPtr->GetPathName() : TEXT("None"));
     }
 
-    // Object reference — recurse for instanced, otherwise emit path
     if (const auto* ObjectProp = CastField<FObjectProperty>(InProperty))
     {
         auto* Obj = ObjectProp->GetObjectPropertyValue(InValuePtr);
@@ -483,7 +437,6 @@ auto
         return MakeShared<FJsonValueString>(Obj != nullptr ? Obj->GetPathName() : TEXT("None"));
     }
 
-    // Soft references / interface — path string
     if (const auto* SoftObjectProp = CastField<FSoftObjectProperty>(InProperty))
     {
         const auto& SoftObj = SoftObjectProp->GetPropertyValue(InValuePtr);
@@ -495,7 +448,6 @@ auto
         return MakeShared<FJsonValueString>(SoftClass.ToString());
     }
 
-    // Fallback — ExportTextItem_Direct
     auto FallbackStr = FString{};
     InProperty->ExportTextItem_Direct(FallbackStr, InValuePtr, nullptr, nullptr, PPF_None);
     return MakeShared<FJsonValueString>(FallbackStr);
@@ -546,8 +498,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Plain-Text Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_DataAssetExporter::
@@ -561,7 +511,6 @@ auto
     Text += ck::Format_UE(TEXT("Path: {}\n"), InDataAsset->GetPathName());
     Text += ck::Format_UE(TEXT("Class: {}\n"), InDataAsset->GetClass()->GetName());
 
-    // Parent class chain
     auto ParentNames = TArray<FString>{};
     for (const auto* Class = InDataAsset->GetClass()->GetSuperClass();
          Class != nullptr && Class != UObject::StaticClass();
@@ -571,7 +520,6 @@ auto
     }
     Text += ck::Format_UE(TEXT("Parent Classes: {}\n"), FString::Join(ParentNames, TEXT(" -> ")));
 
-    // Properties
     DoSerializeProperties_Text(InDataAsset, UDataAsset::StaticClass(), Text, 0);
 
     return Text;
@@ -591,7 +539,6 @@ auto
 
     const auto Indent = DoGetIndent(InDepth);
 
-    // Group properties by category
     auto CategoryProperties = TMap<FString, TArray<const FProperty*>>{};
     auto PropertyOrder = TArray<const FProperty*>{};
 
@@ -619,7 +566,6 @@ auto
 
     OutText += ck::Format_UE(TEXT("{}--- Properties ({}) ---\n"), Indent, PropertyOrder.Num());
 
-    // Output grouped by category
     for (const auto& [Category, Props] : CategoryProperties)
     {
         OutText += ck::Format_UE(TEXT("{}  [{}]\n"), Indent, Category);
@@ -637,8 +583,6 @@ auto
     OutText += TEXT("\n");
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Helpers
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -682,11 +626,9 @@ auto
     if (InProperty == nullptr)
     { return false; }
 
-    // Skip transient and deprecated properties
     if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated | CPF_DuplicateTransient))
     { return false; }
 
-    // Skip properties owned by UObject itself
     const auto* OwnerClass = InProperty->GetOwnerClass();
     if (OwnerClass == nullptr)
     { return false; }
@@ -694,7 +636,6 @@ auto
     if (OwnerClass == UObject::StaticClass())
     { return false; }
 
-    // Include if the property is EditAnywhere, VisibleAnywhere, or BlueprintVisible
     if (InProperty->HasAnyPropertyFlags(CPF_Edit | CPF_BlueprintVisible))
     { return true; }
 

@@ -47,12 +47,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drives a scene-node that follows a foreign Unreal anchor (a USceneComponent or a mesh socket) at the
-    // authored FFragment_SceneNode_Current offset: entity.world = offset * anchor.world, every tick, so the node
-    // tracks the moving anchor. Read-only w.r.t. the anchor (never writes back — that's why these nodes do NOT
-    // carry the Transform module's FFragment_Transform_RootComponent / _MeshSocket, which would engage
-    // SyncFromActor/SyncToActor). Runs in the SyncFrom group so descendant TProcessor_SceneNode_Update layers
-    // (Transform group) see this node's updated world + FTag_Transform_Updated.
+    // entity.world = offset * anchor.world, every tick. Read-only w.r.t. the anchor (never writes back).
+    // Runs in the SyncFrom group so descendant TProcessor_SceneNode_Update layers (Transform group) see this
+    // node's updated world + FTag_Transform_Updated.
     class CKECSEXT_API FProcessor_SceneNode_FollowUnrealAnchor : public TParallelProcessor<
             FProcessor_SceneNode_FollowUnrealAnchor,
             FCk_Handle_SceneNode,
@@ -84,16 +81,9 @@ namespace ck
     template <typename T_Layer>
     class TProcessor_SceneNode_Update;
 
-    // Per-layer RunAfter list. Each layer depends on the anchor-follow processor,
-    // FProcessor_Transform_HandleRequests, AND on the previous layer, so that
-    // when a parent's transform changes (e.g. via a tween writing world on the
-    // root) the FTag_Transform_Updated added by Transform_HandleRequests is
-    // visible to layer 0's gate check, and the deferred tag added by layer N is
-    // visible to layer N+1's gate check. Without Transform_HandleRequests in the
-    // chain, layer 0 can run in parallel with request handling and miss the tag
-    // on the root; without the layer-to-layer chain, descendants miss the tag
-    // their parent just deferred. Either gap stops motion from propagating past
-    // the first scene-node link.
+    // Per-layer RunAfter list. Dropping either dependency — Transform_HandleRequests for layer 0, or the
+    // layer N-1 chain for the rest — stops motion propagating past the first scene-node link.
+    // Full rationale: CkEcsExt/CLAUDE.md § "SceneNode layer ordering".
     template <typename T_Layer>
     struct TSceneNode_Update_RunAfter
     {

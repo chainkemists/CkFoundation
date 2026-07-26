@@ -34,13 +34,6 @@ namespace ck
 {
     namespace ck_crowdagent_blockdetect
     {
-        // Is the agent's FINAL destination occupied by a neighbour that has settled on it?
-        //
-        // The closest an agent can physically get to a point occupied by another agent is
-        // (SelfRadius + NbrRadius) from that neighbour's centre. If that exceeds the agent's arrival
-        // tolerance, the goal is UNREACHABLE — not "hard", not "slow": unreachable. This is geometry,
-        // not a heuristic, which is why it needs no timeout and never has to guess.
-        //
         // Returns the blocking neighbour, or an invalid handle when the goal is clear.
         auto Get_GoalBlocker(
             const FVector& InSelfLoc,
@@ -53,10 +46,9 @@ namespace ck
         {
             for (const auto& Nbr : InNeighborCache.Get_Neighbors())
             {
-                // A neighbour merely PASSING THROUGH the goal is not blocking it — it will be gone by
-                // the time we arrive. Only one that has settled there is an obstruction.
                 const auto NbrAbsVel = Nbr.Get_RelativeVelocity() + InSelfVel;
-                if (NbrAbsVel.Size2D() >= InStationarySpeedThreshold)
+                const auto NeighbourHasSettled = NbrAbsVel.Size2D() < InStationarySpeedThreshold;
+                if (NOT NeighbourHasSettled)
                 { continue; }
 
                 const auto NbrCentre = InSelfLoc + Nbr.Get_RelativeOffset();
@@ -102,8 +94,7 @@ namespace ck
 
         const auto SelfLoc = InTransform.Get_Transform().GetLocation();
 
-        // The point Steering actually latches on. NOT _ActiveGoal: for a Partial path the two differ,
-        // and it is the path's end the agent is really trying to stand on.
+        // The path's END, not _ActiveGoal — for a Partial path the two differ.
         const auto& FinalWaypoint = Waypoints.Last();
         const auto DistanceToFinal = static_cast<float>(FVector::Dist(SelfLoc, FinalWaypoint));
 
@@ -117,11 +108,7 @@ namespace ck
         const auto ArrivalRadius = InPathFollow.Get_ActiveArrivalRadius();
 
         // ---- Geometric detector (primary) --------------------------------------------------------
-        //
-        // Only meaningful near the destination: a neighbour parked on a goal 30m away is not blocking
-        // anything yet, and it may well have moved by the time we get there. Engage once the agent is
-        // within its own braking distance of the end — the last moment it could still stop cleanly —
-        // plus the body it would have to fit through. Derived from existing constants; no new knob.
+        // Only meaningful near the destination — a neighbour parked on a goal 30m away blocks nothing yet.
         const auto BrakingDistance = MaxAccel > 0.0f
             ? (MaxSpeed * MaxSpeed) / (2.0f * MaxAccel)
             : 0.0f;
@@ -154,10 +141,6 @@ namespace ck
         }
 
         // ---- No-progress detector (safety net) ---------------------------------------------------
-        //
-        // Everything the geometric test cannot see: a plug of several agents, a dynamic prop, a
-        // corridor the agent physically cannot walk. Mirrors UPathFollowingComponent's block detection
-        // (PathFollowingComponent.cpp:1556-1608).
         const auto SampleCount = Settings->Get_BlockDetectionSampleCount();
         const auto SampleInterval = Settings->Get_BlockDetectionInterval();
 
@@ -208,10 +191,8 @@ namespace ck
     {
         auto NonConstHandle = InHandle;
 
-        // Stop. Walking → Idle + GoalBlocked. Idle is what makes the agent actually halt (AccelClamp's
-        // Idle branch ramps the velocity down, so it decelerates rather than snapping to a stop), and
-        // it preserves the documented Idle/PathPending/Walking exclusivity. GoalBlocked records that
-        // the agent still WANTS the goal — which is what lets BlockedRecheck resume it later.
+        // Idle is what actually halts the agent (AccelClamp's Idle branch ramps its velocity down);
+        // GoalBlocked records that it still WANTS the goal, which is what lets BlockedRecheck resume it.
         NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
         NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
         NonConstHandle.AddOrGet<FTag_CrowdAgent_GoalBlocked>();
@@ -222,8 +203,7 @@ namespace ck
         InBlockDetect._SampleAccumulatorSec = 0.0f;
         InBlockDetect._RecheckAccumulatorSec = 0.0f;
 
-        // Once per blocked EPISODE, not once per re-check — otherwise an agent that holds, retries and
-        // re-blocks would spam its listener every cadence.
+        // Once per blocked EPISODE, not once per re-check — a holding agent re-blocks every cadence.
         if (NOT InBlockDetect._BlockedSignalSent)
         {
             InBlockDetect._BlockedSignalSent = true;
@@ -237,8 +217,6 @@ namespace ck
                 InHandle, InReason, InDistanceToGoal, InBlocker);
         }
 
-        // FailMove hands recovery to the caller, UE-style: the move is over, and gameplay decides what
-        // to do. HoldAndRetry (the default) leaves GoalBlocked in place for BlockedRecheck to resume.
         if (InParams.Get_BlockedPolicy() == ECk_CrowdAgent_BlockedPolicy::FailMove)
         {
             NonConstHandle.Try_Remove<FTag_CrowdAgent_GoalBlocked>();
@@ -277,8 +255,8 @@ namespace ck
 
         const auto SelfLoc = InTransform.Get_Transform().GetLocation();
 
-        // Is the goal still taken? A held agent is stationary, so its own velocity is ~zero and the
-        // neighbour's relative velocity IS its absolute velocity.
+        // A held agent is stationary, so neighbour relative velocity IS absolute velocity — hence
+        // the zero self-velocity argument.
         const auto Blocker = ck_crowdagent_blockdetect::Get_GoalBlocker(
             SelfLoc,
             FVector::ZeroVector,
@@ -291,12 +269,8 @@ namespace ck
         if (ck::IsValid(Blocker))
         { return; }  // still taken — keep holding
 
-        // The goal is free. Resume.
-        //
-        // A FULL RE-PATH, not a resumption of the stale cursor: the agent may have been shoved around
-        // while it held, and a no-progress-blocked agent wants a fresh chance at a different corridor
-        // anyway. This is the mechanism that makes "blocked" recoverable rather than terminal — the
-        // reason we refused to fake an arrival at a widened radius.
+        // The goal is free: a FULL re-path, not a resumed cursor — the agent may have been shoved
+        // around while it held.
         auto NonConstHandle = InHandle;
 
         NonConstHandle.Try_Remove<FTag_CrowdAgent_GoalBlocked>();
@@ -310,9 +284,8 @@ namespace ck
         InBlockDetect._NextSampleIdx = 0;
         InBlockDetect._SampleAccumulatorSec = 0.0f;
 
-        // NOT resetting _BlockedSignalSent: the agent is still working on the SAME goal, so a
-        // re-block is the same episode and must not re-fire the signal. Only an external MoveTo/Stop
-        // starts a new episode.
+        // _BlockedSignalSent is deliberately NOT reset: same goal means same episode. Only an
+        // external MoveTo/Stop starts a new one.
 
         const auto Goal = InPathFollow.Get_ActiveGoal();
 
@@ -327,15 +300,14 @@ namespace ck
         }
         else
         {
-            // Park the slot at Pending so OnPathResolved can't consume the PREVIOUS Ready corridor
-            // as this resume's answer — same stale-result race the MoveTo handler guards against.
+            // Park the slot at Pending so OnPathResolved can't consume the PREVIOUS Ready corridor.
             FCk_Nav_Algorithm::MarkPathPending(NonConstHandle);
 
             auto Request = FCk_Request_Nav_FindPath{Goal};
             Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
 
-            // A held agent may have been shoved inside painted stationary markup while it waited;
-            // resuming from inside the band would pick "through" — see Get_EscapedQueryStart.
+            // A held agent may have been shoved inside painted stationary markup — resuming from
+            // inside the band would pick "through". See Get_EscapedQueryStart.
             const auto Escaped = FProcessor_CrowdAgent_PathRefresh::Get_EscapedQueryStart(
                 NonConstHandle, InHandle.Get_Entity(), SelfLoc, Goal, InParams.Get_Radius());
             if (Escaped.IsSet())

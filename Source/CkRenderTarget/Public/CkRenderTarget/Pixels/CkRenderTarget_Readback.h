@@ -20,20 +20,17 @@ class UTextureRenderTarget2D;
 enum class ECk_RenderTarget_ReadbackState : uint8
 {
     Idle,
-    // Copy command enqueued, waiting for the GPU fence
     AwaitingGpu,
-    // Fence signaled, render-thread lock+copy into the CPU buffer is in flight
     CopyInFlight,
-    // CPU buffer is populated — TakePixels may be called
     Complete,
     Failed
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Non-blocking GPU readback of an RGBA8 render target. Lifecycle (all game-thread except where
-// noted): Request_EnqueueCopy → Tick() until Complete/Failed → TakePixels. Never flushes
-// rendering commands; the fence is polled and the staging-lock copy runs on the render thread.
+// Non-blocking GPU readback of an RGBA8 render target. Game-thread lifecycle:
+// Request_EnqueueCopy → Tick() until Complete/Failed → TakePixels. Never flushes rendering
+// commands; the fence is polled and the staging-lock copy runs on the render thread.
 class CKRENDERTARGET_API FCk_RenderTarget_Readback
 {
 public:
@@ -46,8 +43,7 @@ public:
     Request_EnqueueCopy(
         UTextureRenderTarget2D* InTarget) -> bool;
 
-    // Advances AwaitingGpu → CopyInFlight when the fence is ready, and CopyInFlight →
-    // Complete/Failed when the render-thread copy lands. Returns the post-advance state.
+    // Returns the POST-advance state.
     auto
     Tick() -> ECk_RenderTarget_ReadbackState;
 
@@ -78,20 +74,17 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Output of one background diff+compress pass. Owned via thread-safe shared ptr — the game
-// thread polls _Done while the UE::Tasks worker fills the rest.
+// Output of one background diff+compress pass. The game thread polls _Done while the UE::Tasks
+// worker fills the rest.
 struct CKRENDERTARGET_API FCk_RenderTarget_PixelJobResult
 {
     std::atomic<bool> _Done{false};
-
-    // Identical to the previous snapshot — nothing to send, snapshot unchanged
     bool _ZeroDiff = false;
 
     ECk_RenderTarget_PixelPayloadKind _Kind = ECk_RenderTarget_PixelPayloadKind::FullSync;
     TArray<uint8> _CompressedBytes;
     int32 _UncompressedSize = 0;
 
-    // The captured pixels — becomes the new _LastSyncedSnapshot
     TArray<uint8> _NewSnapshot;
     FIntPoint _Size = FIntPoint::ZeroValue;
 };

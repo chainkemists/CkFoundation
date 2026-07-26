@@ -7,14 +7,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Reflected save-only mirror of ck::FFragment_Sm_StateOverrides::FEntry, carried inside both SM RepData
-// shapes so runtime-installed state overrides survive save/load. Fields mirror FEntry exactly:
-// _OverrideStateClass is the class swapped in, _CachedStatesToOverride are the state tags it overrides
-// (cached from the override class CDO's Get_StatesToOverride() at add time). Not on the wire — the net
-// receive path never reads it; only Produce fills it and only HydrationApply consumes it.
-// BlueprintType is required even though nothing scripts this directly: the parent RepData shapes'
-// generated Set_/Get_SavedStateOverrides accessors are AS-registered and reference this type — a bare
-// USTRUCT left it unregistered and broke the whole AS compile at PIE start (asINVALID_DECLARATION).
+// Reflected save-only mirror of ck::FFragment_Sm_StateOverrides::FEntry — never on the wire; only
+// Produce fills it and only HydrationApply consumes it. BlueprintType is load-bearing: the parent
+// RepData shapes' generated accessors are AS-registered and reference this type, and a bare USTRUCT
+// leaves it unregistered and breaks the whole AS compile at PIE start.
 USTRUCT(BlueprintType)
 struct CKSTATEMACHINE_API FCk_Sm_SavedStateOverride
 {
@@ -40,10 +36,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Replication payload for SMs in WithHistory mode. Carries a rolling window of transition events
-// (size 64), the current run status, and the initial-state fingerprint. NOTE: the spec §9.5
-// Setup-time check that would consume _InitialStateFingerprint was never implemented — the field
-// is stamped by the publisher backfill and is currently informational (read only by test support).
+// Replication payload for SMs in WithHistory mode: rolling window of transition events (RingSize),
+// current run status, initial-state fingerprint. _InitialStateFingerprint is stamped by the publisher
+// backfill but never consumed by a receive path — informational only (read by test support).
 USTRUCT(BlueprintType)
 struct CKSTATEMACHINE_API FCk_RepData_StateMachine_WithHistory
 {
@@ -67,10 +62,8 @@ private:
         meta = (AllowPrivateAccess = true))
     int32 _InitialStateFingerprint = 0;
 
-    // Save-only: filled by the save-transport Produce handler from the entity's
-    // ck::FFragment_Sm_StateOverrides, consumed by HydrationApply on load. NEVER filled by the wire
-    // publish paths (the TryUpdateContainerFragment sites in DoPublishRunStatus /
-    // FProcessor_Sm_CommitPendingTransition) — stays an empty array on every replicated delta.
+    // Save-only: filled by the save-transport Produce handler, consumed by HydrationApply on load.
+    // NEVER filled by the wire publish paths — stays an empty array on every replicated delta.
     UPROPERTY()
     TArray<FCk_Sm_SavedStateOverride> _SavedStateOverrides;
 
@@ -110,10 +103,8 @@ private:
         meta = (AllowPrivateAccess = true))
     ECk_SmRunStatus _RunStatus = ECk_SmRunStatus::Stopped;
 
-    // Save-only: filled by the save-transport Produce handler from the entity's
-    // ck::FFragment_Sm_StateOverrides, consumed by HydrationApply on load. NEVER filled by the wire
-    // publish paths (the TryUpdateContainerFragment sites in DoPublishRunStatus /
-    // FProcessor_Sm_CommitPendingTransition) — stays an empty array on every replicated delta.
+    // Save-only: filled by the save-transport Produce handler, consumed by HydrationApply on load.
+    // NEVER filled by the wire publish paths — stays an empty array on every replicated delta.
     UPROPERTY()
     TArray<FCk_Sm_SavedStateOverride> _SavedStateOverrides;
 

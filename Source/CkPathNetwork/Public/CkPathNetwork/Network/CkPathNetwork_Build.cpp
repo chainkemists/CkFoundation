@@ -8,8 +8,8 @@
 
 namespace ck_pathnetwork_build
 {
-    // Working copy of one ribbon during the build. Points/HalfWidths are parallel;
-    // CumulativeLengths is derived and kept in sync after every geometry change.
+    // _Points/_HalfWidths are parallel; _CumulativeLengths is derived and must be recomputed after
+    // every geometry change.
     struct FWorkingPolyline
     {
         TArray<FVector> _Points;
@@ -70,7 +70,6 @@ namespace ck_pathnetwork_build
         return Result;
     }
 
-    // Interpolated point/half-width at a distance along the polyline.
     auto
     Sample_Polyline(const FWorkingPolyline& InPolyline, float InDistAlong, FVector& OutLocation, float& OutHalfWidth) -> void
     {
@@ -96,8 +95,8 @@ namespace ck_pathnetwork_build
         OutHalfWidth = FMath::Lerp(InPolyline._HalfWidths[SegmentIndex], InPolyline._HalfWidths[SegmentIndex + 1], Alpha);
     }
 
-    // Split one polyline at the given sorted, deduped distances. Cut points are interpolated;
-    // each cut distance produces two coincident endpoints (end of one piece, start of the next).
+    // Cuts must arrive sorted and deduped; each one yields two coincident endpoints (end of one
+    // piece, start of the next) for the node clustering to fuse.
     auto
     Split_Polyline(const FWorkingPolyline& InPolyline, const TArray<float>& InSortedCutDistances) -> TArray<FWorkingPolyline>
     {
@@ -194,10 +193,6 @@ namespace ck::pathnetwork
 
         const auto SnapRadius = InParams.Get_NodeSnapRadius();
 
-        // ------------------------------------------------------------------------------------------------------------
-        // Working copies. Ribbons with fewer than 2 points or near-zero length are authoring noise.
-        // ------------------------------------------------------------------------------------------------------------
-
         auto Polylines = TArray<FWorkingPolyline>{};
 
         for (const auto& Ribbon : InRibbons)
@@ -225,12 +220,7 @@ namespace ck::pathnetwork
         if (Polylines.IsEmpty())
         { return Network; }
 
-        // ------------------------------------------------------------------------------------------------------------
-        // T-junction split pass. Every polyline endpoint is tested against every polyline's
-        // interior (including its own, for P-shaped self-touches); hits record a cut distance.
-        // All cuts are collected first, then applied once per polyline.
-        // ------------------------------------------------------------------------------------------------------------
-
+        // T-junction split — every endpoint is tested against every polyline's interior, its own included (P-shaped self-touches).
         auto CutsPerPolyline = TArray<TArray<float>>{};
         CutsPerPolyline.SetNum(Polylines.Num());
 
@@ -251,15 +241,15 @@ namespace ck::pathnetwork
                     if (Projection._Distance > SnapRadius)
                     { continue; }
 
-                    // Interior only — projections near the target's own ends are endpoint fusion,
-                    // handled by node clustering below.
+                    // Interior only — near-end projections are endpoint fusion, done by node clustering.
                     if (Projection._DistAlong < SnapRadius || Projection._DistAlong > Target.Get_Length() - SnapRadius)
                     { continue; }
 
-                    // Self-touch: ignore projections near the endpoint's own polyline parameter
-                    // (every endpoint trivially projects onto itself).
-                    if (TargetIndex == SourceIndex &&
-                        FMath::Abs(Projection._DistAlong - EndpointParams[EndpointIndex]) < 2.0f * SnapRadius)
+                    const auto SelfProjectionTolerance = 2.0f * SnapRadius;
+                    const auto IsOwnEndpointProjection = TargetIndex == SourceIndex &&
+                        FMath::Abs(Projection._DistAlong - EndpointParams[EndpointIndex]) < SelfProjectionTolerance;
+
+                    if (IsOwnEndpointProjection)
                     { continue; }
 
                     CutsPerPolyline[TargetIndex].Add(Projection._DistAlong);
@@ -281,8 +271,6 @@ namespace ck::pathnetwork
 
             Cuts.Sort();
 
-            // Dedupe cuts closer than the snap radius along the polyline (multiple endpoints
-            // touching the same spot become one junction).
             auto DedupedCuts = TArray<float>{};
             for (const auto Cut : Cuts)
             {
@@ -293,13 +281,8 @@ namespace ck::pathnetwork
             SplitPolylines.Append(Split_Polyline(Polylines[Index], DedupedCuts));
         }
 
-        // Degenerate pieces (a cut landing within float noise of an end) have near-zero length.
         SplitPolylines.RemoveAll([](const FWorkingPolyline& InPolyline)
         { return InPolyline.Get_Length() < UE_KINDA_SMALL_NUMBER; });
-
-        // ------------------------------------------------------------------------------------------------------------
-        // Node clustering: union-find over all endpoints within SnapRadius of each other.
-        // ------------------------------------------------------------------------------------------------------------
 
         struct FEndpoint
         {
@@ -338,7 +321,6 @@ namespace ck::pathnetwork
             Network._Nodes.Add(FBuiltNode{});
         }
 
-        // Centroids.
         auto ClusterCounts = TArray<int32>{};
         ClusterCounts.SetNumZeroed(Network._Nodes.Num());
 
@@ -352,10 +334,6 @@ namespace ck::pathnetwork
         for (auto NodeId = 0; NodeId < Network._Nodes.Num(); ++NodeId)
         { Network._Nodes[NodeId]._Location /= static_cast<double>(ClusterCounts[NodeId]); }
 
-        // ------------------------------------------------------------------------------------------------------------
-        // Edges: snap end points to node centroids, finalize geometry.
-        // ------------------------------------------------------------------------------------------------------------
-
         for (auto Index = 0; Index < SplitPolylines.Num(); ++Index)
         {
             auto& Polyline = SplitPolylines[Index];
@@ -367,8 +345,9 @@ namespace ck::pathnetwork
             Polyline._Points.Last() = Network._Nodes[EndNodeId]._Location;
             Recompute_CumulativeLengths(Polyline);
 
-            // Self-loop noise: both ends fused into one node and barely any geometry between.
-            if (StartNodeId == EndNodeId && Polyline.Get_Length() < 2.0f * SnapRadius)
+            const auto IsDegenerateSelfLoop = StartNodeId == EndNodeId && Polyline.Get_Length() < 2.0f * SnapRadius;
+
+            if (IsDegenerateSelfLoop)
             { continue; }
 
             if (Polyline.Get_Length() < UE_KINDA_SMALL_NUMBER)
@@ -392,11 +371,6 @@ namespace ck::pathnetwork
             { Network._Nodes[EndNodeId]._EdgeIds.Add(EdgeId); }
         }
 
-        // ------------------------------------------------------------------------------------------------------------
-        // Chunk grid. Cells cover the network bounds inflated by the widest half-width, so
-        // Query_EdgesNear from just off the network still lands in populated cells.
-        // ------------------------------------------------------------------------------------------------------------
-
         if (Network._Edges.IsEmpty())
         {
             pathnetwork::Warning(TEXT("Build_NetworkFromRibbons: [{}] input ribbons produced an empty network"), InRibbons.Num());
@@ -415,6 +389,7 @@ namespace ck::pathnetwork
             { MaxHalfWidth = FMath::Max(MaxHalfWidth, HalfWidth); }
         }
 
+        // Pad the chunk grid so Query_EdgesNear from just OFF the network still lands in populated cells.
         const auto Pad = MaxHalfWidth + Network._ChunkSize;
         Bounds = Bounds.ExpandBy(FVector{Pad, Pad, 0.0});
 

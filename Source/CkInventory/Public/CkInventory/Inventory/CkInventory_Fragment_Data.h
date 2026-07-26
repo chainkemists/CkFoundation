@@ -33,7 +33,6 @@ namespace ck::Inventory
     inline constexpr int32 AllAvailableCount = -1;
 }
 
-// Gameplay tag for the internal bound max integer attribute on DataOnly inventories.
 CKINVENTORY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_IntegerAttribute_InventoryBoundMax);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -73,10 +72,8 @@ UENUM(BlueprintType)
 enum class ECk_Inventory_DataOnly_BoundMode : uint8
 {
     Unbounded,
-    // Limit counts unique item entries (record entries). Stack counts are invisible to the bound.
     BoundedByUniqueEntries,
-    // Limit counts total units (sum of stack counts; a non-stackable item is 1 unit).
-    // Entry count is unconstrained.
+    // Sum of stack counts; a non-stackable item is 1 unit. Entry count is unconstrained.
     BoundedByTotalUnits
 };
 
@@ -87,12 +84,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_DataOnly_BoundMode);
 UENUM(BlueprintType)
 enum class ECk_Inventory_StackingPolicy : uint8
 {
-    // Stack sizes are governed solely by each item definition's Stackable trait.
     UseItemDefinition,
-    // Stacks in this inventory may not exceed MaxStackSizeClamp (effective max =
-    // min(item definition max, clamp)). The item's definition-level max still applies elsewhere.
+    // Effective max = min(item definition max, MaxStackSizeClamp); the definition max still applies elsewhere.
     ClampMaxStackSize,
-    // No stack in this inventory may exceed 1 unit (sugar for a clamp of 1; reads as intent).
     NoStacking
 };
 
@@ -103,9 +97,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_StackingPolicy);
 UENUM(BlueprintType)
 enum class ECk_Inventory_AddPolicy : uint8
 {
-    // Fill existing compatible stacks first, then create new items for the remainder
     PreferStacking,
-    // Always create fresh items, never merge into existing stacks
     ForceNewItem
 };
 
@@ -116,12 +108,11 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inventory_AddPolicy);
 UENUM(BlueprintType)
 enum class ECk_ItemResolution_StackingPreference : uint8
 {
-    // Existing partial stack of the same definition wins over emptier inventories.
-    // Falls back to capacity-based ranking when no stackable target exists.
+    // Stackable target wins; falls back to capacity ranking when none exists.
     Prefer,
-    // Only return a candidate that can merge into an existing stack. Invalid handle otherwise.
+    // Only a candidate that can merge into an existing stack qualifies; invalid handle otherwise.
     Require,
-    // Ignore stacking. Rank purely by remaining capacity (free slots / cells).
+    // Rank purely by remaining capacity (free slots / cells).
     Ignore
 };
 
@@ -132,17 +123,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ItemResolution_StackingPreference);
 UENUM(BlueprintType)
 enum class ECk_Inventory_MassTransfer_Result : uint8
 {
-    // Every gathered item was fully moved.
     Success,
-    // Some items moved, some could not be placed in any candidate.
     Success_Partial,
-    // Gather produced zero items (empty sources, or a filter that matched nothing).
     Failed_NothingToTransfer,
-    // Items existed but NOT ONE unit could be placed in any candidate.
     Failed_NoCandidateAccepts,
     // Synchronous reject at the Utils boundary (no authority, or no valid sources / candidates).
     Failed_NotEnqueued,
-    // Op entity destroyed before completion (cancel / teardown drain).
     Failed_OperationCancelled
 };
 
@@ -317,14 +303,6 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     bool&, OutCanStack);
 
 // --------------------------------------------------------------------------------------------------------------------
-// Quantitative acceptance quota: "how many MORE units of this definition can this inventory absorb
-// under your custom rule (weight, volume, ...)?". MAX_int32 = unconstrained. Composes by min() with
-// the built-in capacity metrics — it can only tighten, never widen. Distinct from the bool
-// CustomCanAcceptItem predicate: the predicate is CATEGORICAL (permanent rejection — retry loops
-// give up), the quota is QUANTITATIVE (transient "full" — retryable, partial amounts meaningful).
-// Must be a pure function of committed state (same plan-time vs drain-time constraints as the
-// built-in metrics). InItem may be invalid for definition-level planning queries.
-// --------------------------------------------------------------------------------------------------------------------
 
 class UCk_InventoryItem_Definition;
 
@@ -344,8 +322,7 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Sort comparator for inventory candidates: returns true if InCandidateA should rank ahead of InCandidateB
-// when picking a transfer target for InItem. Same shape as a TArray::Sort predicate.
+// Returns true if InCandidateA should rank ahead of InCandidateB as the transfer target for InItem.
 DECLARE_DELEGATE_RetVal_ThreeParams(
     bool,
     FCk_Delegate_ItemResolution_CustomSort,
@@ -360,10 +337,6 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Handle_Item, InItem,
     bool&, OutAIsBetter);
 
-// --------------------------------------------------------------------------------------------------------------------
-// Reusable {coordinate, rotation} pair for spatial placement. Used by AddItem/SplitStack as the
-// addon carrier on Spatial inventories, and embedded in TransferItem_ToSpatial / RelocateItem
-// requests. Default-constructed = AutoPlace + None rotation ("let the system pick").
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -524,10 +497,9 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Inventory_AddPolicy _AddPolicy = ECk_Inventory_AddPolicy::PreferStacking;
 
-    // Native C++ sort comparator. When bound, replaces the built-in policy comparator.
+    // A bound comparator replaces the built-in policy ranking; _CustomSort wins over _CustomSortDynamic.
     FCk_Delegate_ItemResolution_CustomSort _CustomSort;
 
-    // Blueprint sort comparator. When bound (and _CustomSort is not), replaces the built-in policy comparator.
     UPROPERTY(BlueprintReadWrite, DisplayName = "Custom Sort",
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_ItemResolution_CustomSort_Dynamic _CustomSortDynamic;
@@ -623,12 +595,8 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Whether an AddItem request re-runs the inventory's acceptance check (Get_CanAcceptItem) before
-// placing the item. AlreadyValidated is an internal flag for a caller that already proved acceptance
-// against an equivalent item in the same synchronous pass: ExecuteTransfer's split branch validates
-// the SOURCE (whose runtime tags are committed) before minting the split-off copy, whose OnSplit tag
-// copy is a deferred request that has not drained when the add's check runs. It skips ONLY the
-// categorical acceptance recheck; placement / grid-space / dimensions checks still run.
+// AlreadyValidated is internal: it skips ONLY the categorical acceptance recheck (placement /
+// grid-space / dimensions still run). Rationale in CkInventory's CLAUDE.md.
 UENUM(BlueprintType)
 enum class ECk_AddAcceptance : uint8
 {
@@ -652,8 +620,6 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle_Item _ItemToAdd;
 
-    // Internal: AlreadyValidated lets ExecuteTransfer's split branch skip the redundant categorical
-    // acceptance recheck after it has validated the source item. Defaults to Validate; not editable.
     UPROPERTY()
     ECk_AddAcceptance _Acceptance = ECk_AddAcceptance::Validate;
 
@@ -890,11 +856,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Bulk move of every (filtered) item out of a set of source inventories into the best-fitting member
-// of the embedded candidate set, paced over multiple pump passes so deferred stack-count writes fold
-// between transfers (coherent capacity reads). Self-owned: Request_MassTransfer spawns a transient-
-// owned op entity (a plain FCk_Handle, discriminated by FFragment_Inventory_MassTransfer_InFlight)
-// and returns it; the request struct itself is just the input bundle, NOT scoped to any one inventory.
 USTRUCT(BlueprintType)
 struct CKINVENTORY_API FCk_Request_Inventory_MassTransfer : public FCk_Request_Base
 {
@@ -905,34 +866,26 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Inventory_MassTransfer);
 
 private:
-    // Essential — pull items FROM these.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     TArray<FCk_Handle_Inventory> _SourceInventories;
 
-    // Essential — candidates + stacking preference + add policy + custom sort. Passed straight to
-    // ResolveBestTransferTarget per item; no duplication.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_BestTransferTargetParams _TargetResolution;
 
-    // Optional — empty query accepts every item in the sources.
+    // An empty query accepts every item in the sources.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FGameplayTagQuery _ItemFilter;
 
-    // Optional — items moved per pump pass. MUST stay 1 for coherent capacity reads (one item's
-    // deferred stack writes fold before the next item resolves its target).
+    // MUST stay 1 for coherent capacity reads: one item's deferred stack writes fold before the
+    // next item resolves its target.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1))
     int32 _StepsPerPass = 1;
 
-    // Optional — per-frame step cap. Each merge-step's transfer cascades extra pump passes (deferred
-    // stack-count fold + inventory signal), and >1 step/frame also forces a churn re-bump pass — at
-    // 2 steps/frame the worst case (every item merges into one bounded stack) measured 8 passes, which
-    // trips the scheduler's pump-count warn (>=8). Default 1 keeps even that worst case warn-free;
-    // larger batches spread across frames. Relocate-heavy (non-merging) transfers can raise it (the
-    // caller re-verifies zero pump warns), but the default must be safe for the merge case.
+    // Default 1: >1 merge-step per frame trips the scheduler's pump-count warn (CkInventory CLAUDE.md).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1))
     int32 _MaxStepsPerFrame = 1;

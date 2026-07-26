@@ -9,23 +9,18 @@
 
 auto SCkWatermarkStat::Construct(const FArguments& InArgs) -> void
 {
-    // Font attributes (input) — evaluated each paint pass so outline settings are always live.
     const TAttribute<FSlateFontInfo> ValueFont_In   = InArgs._ValueFont;
     const TAttribute<FSlateFontInfo> LabelFont_In   = InArgs._LabelFont;
     const TAttribute<FSlateFontInfo> BracketFont_In = InArgs._BracketFont;
     const float InnerPad = InArgs._BracketInnerPadding;
 
-    // Color attributes — evaluated each paint pass so settings changes are live.
     const TAttribute<FSlateColor> ValueColor = InArgs._ValueColor;
     const TAttribute<FSlateColor> LabelColor = InArgs._LabelColor;
 
-    // Shadow — evaluated each paint pass so settings changes are live.
     const TAttribute<FVector2D>    ShadowOff   = InArgs._ShadowOffset;
     const TAttribute<FLinearColor> ShadowColor = InArgs._ShadowColorAndOpacity;
 
-    // Wrap each font so its outline alpha tracks the paired text color's alpha.
-    // The outline then fades consistently whenever the text color has alpha < 1.
-    auto WithTextAlpha = [](TAttribute<FSlateFontInfo> InFont, TAttribute<FSlateColor> InColor) -> TAttribute<FSlateFontInfo>
+    auto WithTextAlpha =[](TAttribute<FSlateFontInfo> InFont, TAttribute<FSlateColor> InColor) -> TAttribute<FSlateFontInfo>
     {
         return TAttribute<FSlateFontInfo>::CreateLambda([InFont, InColor]() -> FSlateFontInfo
         {
@@ -47,7 +42,6 @@ auto SCkWatermarkStat::Construct(const FArguments& InArgs) -> void
     [
         SNew(SHorizontalBox)
 
-        // Left bracket — size, type, and inner padding from project settings
         + SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
@@ -61,14 +55,12 @@ auto SCkWatermarkStat::Construct(const FArguments& InArgs) -> void
             .ShadowColorAndOpacity(ShadowColor)
         ]
 
-        // Value + name column
         + SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
         [
             SNew(SVerticalBox)
 
-            // Stat value — colored, driven by TAttribute
             + SVerticalBox::Slot()
             .AutoHeight()
             .HAlign(HAlign_Center)
@@ -81,7 +73,6 @@ auto SCkWatermarkStat::Construct(const FArguments& InArgs) -> void
                 .ShadowColorAndOpacity(ShadowColor)
             ]
 
-            // Stat name — color and outline from project settings
             + SVerticalBox::Slot()
             .AutoHeight()
             .HAlign(HAlign_Center)
@@ -95,7 +86,6 @@ auto SCkWatermarkStat::Construct(const FArguments& InArgs) -> void
             ]
         ]
 
-        // Right bracket — size, type, and inner padding from project settings
         + SHorizontalBox::Slot()
         .AutoWidth()
         .VAlign(VAlign_Center)
@@ -124,8 +114,7 @@ auto
     RebuildWidget()
     -> TSharedRef<SWidget>
 {
-    // Build font attributes — lambdas re-read outline settings each paint pass.
-    auto MakeFont = [](const char* InFace, int32 InSize) -> TAttribute<FSlateFontInfo>
+    auto MakeFont =[](const char* InFace, int32 InSize) -> TAttribute<FSlateFontInfo>
     {
         return TAttribute<FSlateFontInfo>::CreateLambda([InFace, InSize]() -> FSlateFontInfo
         {
@@ -159,7 +148,6 @@ auto
         return UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_TextShadowColor();
     });
 
-    // TAttribute lambdas — evaluated each Slate paint pass, no tick required
     const TAttribute<FText> ValueAttr = TAttribute<FText>::CreateWeakLambda(
         this,
         [this]() -> FText

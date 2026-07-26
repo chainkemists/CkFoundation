@@ -11,15 +11,8 @@
 
 namespace ck
 {
-    // Immediate-mode breadcrumb draw for diagnostic-tracked agents. Each frame, walks the
-    // recorder's sample buffer and draws an orange polyline at agent body height connecting
-    // consecutive samples. Gated by the `ck.Crowd.DiagDrawBreadcrumb` CVar; defaults off so
-    // there's zero cost outside the diag debugging loop.
-    //
-    // Group: default. Runs alongside the recorder; uses TReadOnly on the recorder fragment so
-    // it doesn't conflict with FProcessor_CrowdAgent_DiagRecorder writing samples in the same
-    // frame. View-membership-keyed on FTag_CrowdDiag_Tracked, so untagged agents are invisible
-    // to this processor — the gym opts each spawned agent in via Track().
+    // Immediate-mode breadcrumb polyline over the recorder's sample buffer, off by default. Opt-in
+    // per agent: FTag_CrowdDiag_Tracked is stamped by Track(), so untagged agents pay nothing.
     class CKCROWD_API FProcessor_CrowdAgent_DiagDrawBreadcrumb : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_DiagDrawBreadcrumb,
             FCk_Handle_CrowdAgent,

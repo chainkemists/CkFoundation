@@ -11,8 +11,6 @@
 
 namespace ck
 {
-    // Validates the collection, resolves the initial clip into playback state, and composes the
-    // rendering hookup (IsmProxy + look MID + per-instance custom data).
     class CKVAT_API FProcessor_VatProxy_Setup : public ck_exp::TProcessor<
             FProcessor_VatProxy_Setup,
             FCk_Handle_VatProxy,
@@ -90,10 +88,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // CPU mirror of the GPU playback clock for play-once clips: fires OnClipFinished exactly once when
-    // the clip-local time passes the baked play length. Uses absolute world time (no dt accumulation),
-    // so re-execution within a tick is idempotent. Reverse (negative-rate) once-completion is not
-    // detected — recorded follow-up.
+    // CPU mirror of the GPU playback clock for Once clips: absolute world time, no dt accumulation,
+    // so re-execution within a tick is idempotent.
     class CKVAT_API FProcessor_VatProxy_FireSignals : public ck_exp::TProcessor<
             FProcessor_VatProxy_FireSignals,
             FCk_Handle_VatProxy,

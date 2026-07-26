@@ -34,16 +34,12 @@ public:
     CK_GENERATED_BODY(UCk_UI_LayerStack_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Layer Configuration
-    // ----------------------------------------------------------------------------------------------------------------
 
 public:
     auto SetLayerTag(FGameplayTag InTag) -> void;
     auto SetPriority(int32 InPriority) -> void;
     auto SetDefaultInputMode(ECk_UI_InputMode InMode) -> void;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // UCk_Stack_UserWidget_UE Overrides
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
@@ -53,8 +49,6 @@ protected:
     auto OnPostWidgetPop(UCommonActivatableWidget* InWidget) -> void override;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Internal - Lifecycle Notifications
-    // ----------------------------------------------------------------------------------------------------------------
 
 private:
     auto DoNotifyParticipantPrePush(UCommonActivatableWidget* InWidget) const -> void;
@@ -62,8 +56,6 @@ private:
     auto DoNotifyParticipantPrePop(UCommonActivatableWidget* InWidget) const -> void;
     auto DoNotifyParticipantPostPop(UCommonActivatableWidget* InWidget) const -> void;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Properties
     // ----------------------------------------------------------------------------------------------------------------
 
 private:

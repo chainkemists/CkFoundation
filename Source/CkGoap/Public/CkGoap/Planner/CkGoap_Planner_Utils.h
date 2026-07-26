@@ -1,9 +1,9 @@
 #pragma once
 
 #include "CkGoap/Planner/CkGoap_Planner_Fragment_Data.h"
-#include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"   // FCk_Fragment_Goap_ActionParamsData, FCk_Handle_Goap_Action
-#include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"  // FCk_Handle_Goap_WorldState
-#include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"     // UCk_GoapAction_EntityScript
+#include "CkGoap/Action/CkGoap_Action_Fragment_Data.h"
+#include "CkGoap/WorldState/CkGoap_WorldState_Fragment_Data.h"
+#include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
 #include "CkGoap/CkGoap_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -25,14 +25,8 @@ public:
 public:
 // --------------------------------------------------------------------------------------------------------------------
 
-	// Add — stamp the Planner role directly onto InOwner. InOwner itself becomes
-	// the Planner (no child entity is created). Use this for the single-Planner-
-	// per-owner case where the owning entity IS the planner. Rejected (returns
-	// invalid) if InOwner already carries the Planner role — one entity holds at
-	// most one Planner role; use Create for multiple independent Planners on the
-	// same owner. The PlannerParams' tag is required (stored on the Params
-	// fragment as this Planner's identity). Mirrors PromoteActionToPlanner in
-	// that it stamps onto an existing entity without adding a GameplayLabel.
+	// Stamps the Planner role onto InOwner itself — no child entity, no GameplayLabel. Returns an
+	// invalid handle if InOwner already carries the Planner role; use Create for a second one.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Add")
 	static FCk_Handle_Goap_Planner
@@ -40,11 +34,8 @@ public:
 		UPARAM(ref) FCk_Handle& InOwner,
 		const FCk_Fragment_Goap_PlannerParamsData& InParams);
 
-	// Create — spawn a NEW child Planner entity off InOwner, label it with the
-	// tag, register it in the Owner's record of Planners, and stamp the Planner
-	// role onto the child. Use when one owner needs multiple independent
-	// Planners (e.g. combat + dialogue); look them up afterwards via Find_Planner.
-	// Writes InPlannerTag into a copy of InParams (tag = the entry's identity).
+	// Spawns a NEW child Planner entity off InOwner, labelled and recorded under InPlannerTag (the
+	// entry's identity, also written into the params copy). For multiple Planners on one owner.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Create")
 	static FCk_Handle_Goap_Planner
@@ -53,7 +44,7 @@ public:
 		FGameplayTag InPlannerTag,
 		const FCk_Fragment_Goap_PlannerParamsData& InParams);
 
-	// Find_Planner — lookup a named planner on the Owner.
+	// Resolves Create-spawned child Planners only — an Add-stamped Planner is not recorded.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Find Planner")
 	static FCk_Handle_Goap_Planner
@@ -61,23 +52,8 @@ public:
 		const FCk_Handle& InOwner,
 		FGameplayTag InPlannerTag);
 
-	// AddAction — register a child Action under this Planner.
-	//
-	// Semantics depend on whether the Planner is top-level or a promoted mid-tier:
-	//
-	// * Top-level Planner (no Action role on the host entity): the first
-	//   AddAction call creates the implicit-root Action — the entity that
-	//   actually runs A* for this Planner. Subsequent AddAction calls become
-	//   tree children of that implicit root (they are the planner's candidate
-	//   operators). WS source for the implicit root falls back to the
-	//   Planner's _WorldStateSource (set on PlannerParams) when the Action's
-	//   own _WorldStateSource_Override is unset.
-	//
-	// * Promoted mid-tier Planner (host entity carries the Action role): every
-	//   AddAction call registers a direct tree child of the host. The host
-	//   itself is the Action that runs A*; its children are the candidate
-	//   operators consumed by the planner. New children inherit the host's
-	//   resolved WS at activation time (no implicit-root indirection).
+	// Registers a direct child Action of this Planner — a candidate operator in its catalog.
+	// Re-adding a class already in the catalog warns and returns the existing handle.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Add Action")
 	static FCk_Handle_Goap_Action
@@ -85,22 +61,8 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Fragment_Goap_ActionParamsData& InParams);
 
-	// Promote an existing Action entity to be ALSO a Planner.
-	//
-	// Path A (transitional): every Action entity already carries the planner-role
-	// fragment cluster (PlanState, Goal, WorldStateSource, Activation) — the
-	// only fragments missing from an Action to act as a Planner are the Planner
-	// *identity / discriminator* fragments (Params + Current + ActionCatalogIndex).
-	// Promotion stamps those, copies InParams values onto the entity, and
-	// returns the Planner-cast handle.
-	//
-	// After promotion, both casts succeed on the same entity:
-	//   * UCk_Utils_Goap_Action_UE::Cast(handle) → action handle (preserved)
-	//   * UCk_Utils_Goap_Planner_UE::Cast(handle) → planner handle (new role)
-	//
-	// The promoted Planner has its own goal (independent of the Action role's
-	// effects) and can have children added under it via subsequent AddAction
-	// calls passing the Planner-cast handle.
+	// Adds the Planner role to an existing Action entity; both casts then succeed on it. The
+	// promoted Planner's own goal is independent of the Action role's effects.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Promote Action To Planner")
 	static FCk_Handle_Goap_Planner
@@ -216,9 +178,8 @@ public:
 	static bool
 	Get_AllowPlanFailed(const FCk_Handle_Goap_Planner& InPlanner);
 
-	// Cached result of the Setup-time fallback-guarantee check ("always-valid-
-	// plan" tenet): true iff some registered Action has no preconditions and
-	// effects covering every goal condition.
+	// True iff some registered Action has no preconditions AND effects covering every goal
+	// condition — the always-valid-plan tenet, checked once at Setup.
 	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Get Has Unconditional Fallback")
 	static bool
@@ -226,26 +187,20 @@ public:
 
 	// ---- Last-replan diagnostics (the debugger's timeline + diff card) -------
 
-	// Why the last replan fired: origin, the world-state changes recorded since
-	// the previous replan (ChangedKeys.Num() > 1 ⇒ the throttle window
-	// coalesced), attempt number, frame. Default-constructed if never planned.
+	// Why the last replan fired. ChangedKeys.Num() > 1 means the throttle window coalesced several.
+	// Default-constructed if this Planner has never planned.
 	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Get Last Replan Cause")
 	static FCk_Goap_ReplanCauseInfo
 	Get_LastReplanCause(const FCk_Handle_Goap_Planner& InPlanner);
 
-	// Post-search statistics of the most recent A* run: status, expanded
-	// iterations, elapsed active-time µs, discovered-constraint-set pool size,
-	// plan length + cost.
 	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Get Last Search Stats")
 	static FCk_Goap_SearchStats
 	Get_LastSearchStats(const FCk_Handle_Goap_Planner& InPlanner);
 
-	// The last completed regressive search, one row per discovered constraint
-	// set (discovery order; row 0 = the goal). Each row: the constraints, the
-	// action whose reverse application produced it, and how the seed-time world
-	// state scored it. Empty before the first search.
+	// One row per constraint set discovered by the last regressive search, in discovery order —
+	// row 0 is the goal. Empty before the first search.
 	UFUNCTION(BlueprintPure, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Get Last Search Debug")
 	static TArray<FCk_Goap_SearchDebugRow>
@@ -266,18 +221,13 @@ public:
 	Request_ResetActiveChain(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner);
 
-	// Set the Planner's goal at runtime. Triggers a replan. Every Planner has
-	// its own goal, completely independent from any Action-role effects this
-	// entity may carry. The request is routed onto the Planner's root Action's
-	// request queue (the entity that runs A* today).
+	// Triggers a replan. This goal is independent of any Action-role effects the entity carries.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Request Set Goal")
 	static FCk_Handle_Goap_Planner
 	Request_SetGoal(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const TArray<FCk_GoapWS_Condition_Authored>& InGoal);
-
-	// Planner-API request verbs. Enqueue on the Planner's own request queue.
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Request Plan")
@@ -332,25 +282,8 @@ public:
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass);
 
-	// Request_RemoveAction — runtime catalog mutation: remove a previously-
-	// registered child Action from this Planner. Inverse of AddAction.
-	//
-	// Steps performed:
-	//   1. Resolve the child Action handle via the class-derived tag (catalog
-	//      lookup — same path AddAction uses).
-	//   2. Remove the catalog entry from _TagToAction.
-	//   3. Remove the handle from the parent's _ChildActions tree (parent =
-	//      the Action's recorded _ParentAction — implicit root for top-level
-	//      Planners, the promoted host for mid-tier Planners).
-	//   4. Destroy the Action entity via the standard entity-lifetime path.
-	//      The record-of-actions entry is removed by the entity's EndPlay
-	//      cleanup (owner-cascade-destroy).
-	//   5. Mark the Planner for re-setup (cycle detection / catalog rebuild)
-	//      and enqueue a Request_Plan so the next plan reflects the updated
-	//      operator set.
-	//
-	// If the class is not registered on this Planner, emits a warning and
-	// returns the Planner unchanged.
+	// Inverse of AddAction: unregisters the child Action, destroys its entity, and replans. Warns
+	// and leaves the Planner unchanged when the class is not registered on it.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Request Remove Action")
 	static FCk_Handle_Goap_Planner
@@ -375,11 +308,6 @@ public:
 	UnbindFrom_OnActiveChainChanged(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		const FCk_Delegate_Goap_OnActiveChainChanged& InDelegate);
-
-	// Per-Planner signals. Bind/Unbind resolve the Planner to the entity that
-	// actually broadcasts under Path A (the implicit-root Action for top-level
-	// Planners; the host entity itself for promoted mid-tier Planners) and bind
-	// delegates there.
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
 		DisplayName = "[Ck][Goap|Planner] Bind To OnPlanComplete")
@@ -446,11 +374,8 @@ public:
 		const FCk_Delegate_Goap_OnPlannerDeactivated& InDelegate);
 
 private:
-	// Shared stamping core for Add (onto InOwner) and Create (onto a fresh child).
-	// Stamps the full top-level Planner-role fragment cluster onto InPlannerEntity,
-	// subscribes it to the Params' WorldStateSource, and arms the initial-plan tag.
-	// Not a UFUNCTION — a private static member so it retains the friend access to
-	// the Planner-role fragments that direct `_Member` writes require.
+	// A private static member rather than a free helper: direct `_Member` writes need the friend
+	// access the Planner-role fragments grant this class.
 	static auto
 	DoStampTopLevelPlannerRole(
 		FCk_Handle& InPlannerEntity,

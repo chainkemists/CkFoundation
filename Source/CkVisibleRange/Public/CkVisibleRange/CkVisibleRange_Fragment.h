@@ -23,10 +23,6 @@ namespace ck
     class FProcessor_VisibleRange_Update_Bucket;
     class FProcessor_VisibleRange_HandleRequests;
 
-    // Reference-counted: an entity's own out-of-range state and an explicit SetVisibility(Hide) request are two
-    // INDEPENDENT votes toward "hidden" — either alone is enough, and both must clear before the entity is visible
-    // again. A plain tag cannot express this (one source's clear would silently wipe the other source's still-active
-    // vote) — see CkVisibleRange/Claude.md.
     CK_DEFINE_ECS_TAG_COUNTED(FTag_VisibleRange_Hidden);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -47,14 +43,10 @@ namespace ck
         friend class ::UCk_Utils_VisibleRange_UE;
 
     private:
-        // Last distance supplied via UCk_Utils_VisibleRange_UE::Update_Distance. Viewer resolution (which camera,
-        // which local player) is entirely the caller's concern — this fragment only ever sees a plain float.
         float _Distance = 0.0f;
 
         float _FadeAlpha = 1.0f;
 
-        // Per-source bookkeeping so each vote source adds/removes the counted tag exactly once, never leaking an
-        // extra increment on a repeated identical call.
         bool _IsOutOfRange = false;
         bool _IsExplicitlyHidden = false;
 

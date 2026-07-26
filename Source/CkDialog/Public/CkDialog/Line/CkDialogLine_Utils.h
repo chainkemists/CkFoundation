@@ -30,7 +30,6 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -125,10 +124,8 @@ public:
         const TFunction<void(FCk_Handle)>& InFunc) -> void;
 
     // C++-only, subsystem-internal. Builds one line entity under InRegistryRoot (Params + FTag_DialogLine + debug
-    // name + ENTER-tag registration into per-tag storage) and spawns one long-lived condition child entity per valid
-    // archetype (each connected into the line's condition record on post-construction, then InOnConditionConstructed
-    // fires). Returns the line handle; OutNumConditionsQueued receives the count of condition children queued (the
-    // caller uses it to gate registry readiness on all conditions having constructed).
+    // name + ENTER-tag registration) and spawns one long-lived condition child per valid archetype, each connected
+    // into the line's record on post-construction. OutNumConditionsQueued gates registry readiness on those spawns.
     static auto
     Create(
         const FCk_Handle& InRegistryRoot,

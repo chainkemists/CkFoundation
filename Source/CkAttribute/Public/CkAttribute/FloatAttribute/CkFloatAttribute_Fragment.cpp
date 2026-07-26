@@ -59,7 +59,6 @@ static auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handler for Float Attributes
 
 static struct FFloatAttributeRepHandlerRegistrar
 {
@@ -83,8 +82,6 @@ static struct FFloatAttributeRepHandlerRegistrar
                         auto AttributeEntity = UCk_Utils_FloatAttribute_UE::TryGet(Entity, Entry.Get_AttributeName());
                         if (ck::Is_NOT_Valid(AttributeEntity))
                         {
-                            // Not composed yet — keep the whole container entry pending. Siblings
-                            // that did apply are skipped on the retry by the value check below.
                             Result = ECk_Persistence_ApplyResult::NotReady;
                             continue;
                         }
@@ -112,9 +109,6 @@ static struct FFloatAttributeRepHandlerRegistrar
 
                     return Result;
                 },
-                // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-attribute-entity
-                // Produce), so Entity IS the attribute entity — write its value directly via ApplyReplicatedFloatAttributeEntry.
-                // The OWNER-keyed net Apply above never resolves it.
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_restore::HydrationApply<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes, UCk_Utils_FloatAttribute_UE>(
@@ -124,9 +118,6 @@ static struct FFloatAttributeRepHandlerRegistrar
 } GFloatAttributeRepHandlerRegistrar;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Save-only handler for the Float attribute REFILL run-state (Running/Paused). Distinct from the VALUE handler above:
-// the run-state is never on the wire, so this handler has NO net Apply — Produce + HydrationApply only. Both fire on
-// the refill CHILD entity (per-attribute-entity keying). See CkAttribute_RefillPersistence.h.
 
 static struct FFloatAttributeRefillRepHandlerRegistrar
 {

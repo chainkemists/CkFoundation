@@ -164,8 +164,6 @@ void
 
     const bool bExtra = Data.MaxBoneInfluence > 4;
 
-    // Bone weights — OUR renormalized 8-bit unorm buffer, exactly MaxBoneInfluence per vertex (no assumptions
-    // about the source mesh's skin-weight layout).
     {
         const uint32 Stride = InBoneWeightBuffer->MaxBoneInfluences;
         Data.BoneWeights = FVertexStreamComponent(InBoneWeightBuffer, 0, Stride, VET_UByte4N);
@@ -180,7 +178,6 @@ void
         }
     }
 
-    // Bone indices — the custom remapped (render-bone space) buffer.
     {
         const uint32 BytesPerIndex = InBoneIndexBuffer->bIs16BitBoneIndex ? 2 : 1;
         const uint32 Stride = BytesPerIndex * InBoneIndexBuffer->MaxBoneInfluences;
@@ -198,8 +195,6 @@ void
     }
 }
 
-// ----------------------------------------------------------------------------------------------------------------
-//  Shader parameters — binds the AnimCollection uniform buffer (baked SRV + bone count) per draw.
 // ----------------------------------------------------------------------------------------------------------------
 class FCk_Iskm_BatchedShaderParameters : public FVertexFactoryShaderParameters
 {
@@ -226,8 +221,6 @@ public:
 
 IMPLEMENT_TYPE_LAYOUT(FCk_Iskm_BatchedShaderParameters);
 
-// ----------------------------------------------------------------------------------------------------------------
-//  Permutation methods + type registration.
 // ----------------------------------------------------------------------------------------------------------------
 template<int MBI>
 bool
@@ -323,7 +316,6 @@ void
 
             const int32 NumInf = FMath::Min(MBI, static_cast<int32>(VertexInfluenceCount));
 
-            // Pass 1: gather raw 16-bit-scale weights of the kept influences for renormalization.
             uint16 RawWeights[8] = { 0 };
             uint32 WeightSum = 0;
             for (int32 InfluenceIndex = 0; InfluenceIndex < NumInf; ++InfluenceIndex)
@@ -332,10 +324,9 @@ void
                 WeightSum += RawWeights[InfluenceIndex];
             }
 
-            // Pass 2: write remapped indices + renormalized 8-bit weights that sum EXACTLY to 255 (residual goes
-            // to the strongest influence — avoids sub-unit weight sums that visibly shrink verts). Remap misses
-            // are aggregated into NumBoneRemapMisses (no per-vertex logging — hot loop, and this engine-only
-            // module can't ensure); the boundary (EnsureRenderResources) ensures loudly when non-zero.
+            // Weights must sum to EXACTLY 255 — a sub-unit sum visibly shrinks verts — so the residual is
+            // handed to the strongest influence below. Remap misses only aggregate into NumBoneRemapMisses
+            // (hot loop, and this engine-only module can't ensure); EnsureRenderResources ensures on them.
             int32 StrongestSlot = INDEX_NONE;
             int32 QuantizedSum = 0;
             for (int32 InfluenceIndex = 0; InfluenceIndex < NumInf; ++InfluenceIndex)
@@ -391,8 +382,7 @@ void
     FCk_Iskm_BatchedMeshData::
     InitResources(FRHICommandListBase& RHICmdList, FRHIUniformBuffer* InAnimCollectionUB)
 {
-    // Game-thread snapshot from InitFromMesh — no UObject deref on the render thread (see the member's
-    // lifetime contract in the header).
+    // Game-thread snapshot — never deref a UObject here (lifetime contract on the member in the header)
     const FSkeletalMeshRenderData* RenderData = SourceRenderData;
     if (RenderData == nullptr)
     { return; }

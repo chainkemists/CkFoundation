@@ -11,21 +11,7 @@
 #include <Misc/Optional.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Shared save-only Produce / HydrationApply for the attribute-refill RUN-STATE (Running/Paused), used by the Float and
-// Integer refill registrars. This is a SAVE-ONLY handler (Produce + HydrationApply, no net Apply) — the run-state is
-// NOT a replicated container value; each world sets its own via the entity script's Construct StartingState + runtime
-// Request_Pause/Resume. It therefore has no Replicate pass to re-arm on load (see CkSnapshot/Claude.md §4, the
-// unreplicated case, mirrored on the Timer parity handler).
-//
-// The refill VALUE (fill rate) already round-trips via the attribute VALUE handler keyed on the same refill child
-// entity (ck::attribute_restore::Produce/HydrationApply). Only the run-state is missing from a plain rebuild — Construct
-// resurrects it to the StartingState param, discarding a runtime Pause/Resume — so this handler captures JUST the
-// run-state on a distinct save-only payload keyed on the SAME refill child entity.
-//
-// Keyed PER-ATTRIBUTE-ENTITY: Produce/HydrationApply fire on the refill CHILD entity, which carries both the attribute
-// kind's Current component AND ck::FTag_IsRefillAttribute. The Current-component check scopes the handler to its own
-// attribute kind (a Float refill entity has TFragment_FloatAttribute<Current>, an Integer one does not), so the two
-// per-kind instantiations never cross-fire on the same entity.
+// Shared save-only refill RUN-STATE (Running/Paused) handlers, keyed on the refill CHILD entity. See CkAttribute/CLAUDE.md.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::attribute_refill_restore
@@ -37,8 +23,7 @@ namespace ck::attribute_refill_restore
     {
         using Current = T_DerivedAttribute<ECk_MinMaxCurrent::Current>;
 
-        // UNSET unless this is a refill child entity of THIS attribute kind — a plain (non-refill) attribute of the
-        // same kind, or a refill entity of the OTHER kind, both fall through to "feature absent".
+        // UNSET ("feature absent") unless this is a refill child entity of THIS attribute kind.
         if (NOT InEntity.Has<Current>() || NOT InEntity.Has<ck::FTag_IsRefillAttribute>())
         { return {}; }
 
@@ -49,10 +34,7 @@ namespace ck::attribute_refill_restore
         return FInstancedStruct::Make(MoveTemp(Data));
     }
 
-    // Authority-side load apply, dispatched by FProcessor_Hydration_Dispatch. NotReady until Construct has re-composed
-    // the refill child (FTag_IsRefillAttribute present) — that guard PRECEDES the only mutation, and Request_Pause/Resume
-    // are idempotent (Try_Remove / AddOrGet of the run tag), so a NotReady-retry can never stack state. Re-drive is via
-    // the public Request_* surface only (no friend-gated fragment writes). Nothing to re-arm: the run-state is unreplicated.
+    // Authority-side: the NotReady guard PRECEDES the only mutation and Pause/Resume are idempotent, so a retry cannot stack.
     template <template <ECk_MinMaxCurrent> class T_DerivedAttribute, typename T_RefillHandle, typename T_RefillUtils, typename T_SaveData>
     auto
         HydrationApply(

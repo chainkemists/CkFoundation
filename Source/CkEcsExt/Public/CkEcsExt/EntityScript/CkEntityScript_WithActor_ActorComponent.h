@@ -12,12 +12,9 @@ class UCk_EntityScript_WithActor_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Add this component to any Actor to make it ECS-ready without writing spawn code: pick an
-// EntityScript class and the component requests the WithActor spawn on BeginPlay (authority-gated;
-// clients receive the Entity through the EntityScript replication pipeline and link up in
-// Construct). With no class set it is just the passive link holder the runtime auto-adds at link
-// time. Non-replicated — the Entity itself carries all replication. Do NOT pair this with a manual
-// Request_SpawnEntityScript_OnActor call on the same Actor; that would link two Entities to one Actor.
+// Makes an Actor ECS-ready without spawn code: the component requests the WithActor spawn of
+// _EntityScript on BeginPlay (authority-gated). With no class set it is just the passive link holder
+// the runtime auto-adds. Do NOT also call Request_SpawnEntityScript_OnActor on the same Actor.
 UCLASS(BlueprintType, ClassGroup = "Ck",
        meta = (BlueprintSpawnableComponent, DisplayName = "Ck Entity Script (With Actor)"))
 class CKECSEXT_API UCk_EntityScript_WithActor_ActorComponent_UE

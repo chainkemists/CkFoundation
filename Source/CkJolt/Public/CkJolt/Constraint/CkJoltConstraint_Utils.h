@@ -38,7 +38,6 @@ public:
         const FCk_Fragment_JoltConstraint_ParamsData& InParams);
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);

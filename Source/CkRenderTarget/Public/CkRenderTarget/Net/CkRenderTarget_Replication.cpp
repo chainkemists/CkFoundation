@@ -11,26 +11,9 @@
 #include "CkRenderTarget/RenderTarget/CkRenderTarget_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Replication-handler registration for the RenderTarget instruction channel (channel A).
-//
-// The container fragment lives on the OWNER entity (the one with the replication driver) and
-// carries one ChannelState per RenderTarget sync child. The handler resolves each channel's sync
-// child by sync name (NotReady until the symmetric client-side composition has created them all),
-// then routes new batches to either the child's stash (Setup not done / stash already in flight —
-// CkStateMachine precedence) or its replay queue.
-// FProcessor_RenderTarget_ApplyReplicatedBatches commits.
-//
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_render_target_replication
 {
-    // NOTE on echo suppression: a client that authored a batch applied it locally at request
-    // time, so the server's republication must not apply it a second time there. That filter
-    // lives in FProcessor_RenderTarget_ApplyReplicatedBatches as skip-but-advance-watermark —
-    // NOT here — because with multiple authoring clients a handler-side filter would leave seq
-    // holes at a client's own batches and falsely trip the ring-wrap gap recovery.
-
     auto
     RenderTarget_ShouldStash(
         const FCk_Handle_RenderTarget& InSyncEntity) -> bool
@@ -86,13 +69,7 @@ namespace ck_render_target_replication
         FCk_RenderTargetRepHandlerRegistrar()
         {
             FCk_PersistenceHandlerRegistry::Register_NetAndSave_SplitApply<FCk_RepData_RenderTarget>({
-                    // Produce-only capture: the sync-child's persistent instruction ring lives in
-                    // FFragment_RenderTarget_AuthoredLog. Builds the channel-slice consumed on load by
-                    // HydrateFromSavedChannel — a single-channel FCk_RepData_RenderTarget keyed by
-                    // this child's SyncName. Keyed on the sync-child entity; Produce is capture-only.
-                    // Not gated on Replicates: the AuthoredLog persistence half is mode-agnostic (drawn state of a
-                    // DoesNotReplicate target is still save-worthy). A Replicates gate could be added here if load
-                    // ever routes only replicated targets — that is the single line that would change.
+                    // Deliberately not gated on Replicates — CkRenderTarget/Claude.md.
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
                         if (NOT Entity.Has<ck::FFragment_RenderTarget_Params>()
@@ -118,9 +95,8 @@ namespace ck_render_target_replication
                     {
                         const auto& Payload = New.Get<FCk_RepData_RenderTarget>();
 
-                        // All channels must resolve before ANY applies — otherwise a partial apply
-                        // would advance some channels and starve the unresolved ones on the retry
-                        // (the dispatcher retries the whole entry).
+                        // All channels must resolve before ANY applies: the dispatcher retries the
+                        // whole entry, so a partial apply would starve the unresolved channels.
                         for (const auto& Channel : Payload.Get_Channels())
                         {
                             if (ck::Is_NOT_Valid(UCk_Utils_RenderTarget_UE::TryGet_RenderTarget(Entity, Channel.Get_SyncName())))
@@ -138,11 +114,8 @@ namespace ck_render_target_replication
 
                         return ECk_Persistence_ApplyResult::Applied;
                     },
-                    // Save-load hydration (authority-side): the v3 payload is CHILD-keyed (Produce
-                    // reads this sync child's own AuthoredLog), so Entity IS the sync child here — the
-                    // owner-keyed net Apply (TryGet_RenderTarget on Entity-as-owner) never resolves it,
-                    // and the hydration entry is dropped after the 5s timeout. Route to the child-direct
-                    // restore instead (refill ring + repaint + re-publish to a fresh owner container).
+                    // Authority-side, and Entity is the sync CHILD here (child-keyed payload) —
+                    // not the owner NetApply resolves against. Why: CkRenderTarget/Claude.md.
                     .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                     {
                         const auto& Payload  = New.Get<FCk_RepData_RenderTarget>();

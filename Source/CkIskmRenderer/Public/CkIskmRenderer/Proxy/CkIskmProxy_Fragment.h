@@ -22,10 +22,8 @@ namespace ck
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_PendingAsyncLoad);
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_HasActiveMontage);
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_Ragdolling);
-    // Movable proxies have this tag set at Setup based on ParamsData._IsMovable.
-    // The UpdateTransform processor includes FTag_IskmProxy_Movable AND
-    // FTag_Transform_Updated (a CkEcsExt convention set when the entity transform
-    // changes); static proxies are skipped entirely each frame.
+    // Set at Setup from ParamsData._IsMovable. UpdateTransform requires it alongside
+    // FTag_Transform_Updated, so a static proxy is skipped entirely each frame.
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_Movable);
 
     // ---- params (non-reflected ECS-side alias) ----
@@ -34,17 +32,9 @@ namespace ck
 
     // ---- current ----
 
-    // Plan-1 → Plan-2 migration — load-bearing fragment.
-    //
-    // Plan-1 stores a `TWeakObjectPtr<USkeletalMeshComponent>` per entity. Plan-2 will
-    // replace this with `int32 _InstanceIndex + uint32 _InstanceVersion` — an SOA index
-    // into the renderer's instance arrays, no per-entity SKMC for sequence-mode entities.
-    //
-    // **Do not leak `_BaseSKMC` access outside `UCk_Utils_IskmProxy_UE` and the proxy
-    // processors below.** Public API methods (`Get_SocketTransform`, `LineTrace_Instance`,
-    // `Get_PlayingAnimation`, etc.) must be implementable from either shape. Reaching
-    // into `_BaseSKMC` from a different module, fragment, or external processor would
-    // multiply the Plan-2 migration cost.
+    // Do NOT leak `_BaseSKMC` access outside `UCk_Utils_IskmProxy_UE` and the proxy processors below:
+    // the public API (Get_SocketTransform, LineTrace_Instance, ...) must stay implementable from the
+    // Plan-2 SOA shape (instance index + version) that eventually replaces the per-entity SKMC.
     struct CKISKMRENDERER_API FFragment_IskmProxy_Current
     {
     public:
@@ -57,7 +47,6 @@ namespace ck
         friend class UCk_Utils_IskmProxy_UE;
 
     private:
-        // Plan-1 implementation; replaced in Plan-2 by InstanceIndex + InstanceVersion.
         TWeakObjectPtr<USkeletalMeshComponent> _BaseSKMC;
 
         // child SKMCs that follow BaseSKMC's pose via LeaderPoseComponent
@@ -66,10 +55,9 @@ namespace ck
         // index into AnimCollection->Submeshes; parallel to _SubmeshSKMCs
         TArray<int32> _AttachedSubmeshIndices;
 
-        // Per-instance local render offset (entity-space), cached from ParamsData at Setup and composed
-        // into the SKMC world transform each frame (Setup + UpdateTransform). Lets a proxy render off
-        // its entity origin — e.g. a Character-actor entity whose transform is the capsule CENTER drops
-        // by the half-height so the feet land on the ground. Zero for the common case (entity at feet).
+        // Entity-space render offset, composed into the SKMC world transform every frame so a proxy can
+        // render off its entity origin — e.g. a Character entity whose transform is the capsule CENTER
+        // drops by the half-height to land its feet. Zero for the common case (entity at feet).
         FVector _LocalLocationOffset = FVector::ZeroVector;
 
     public:
@@ -81,20 +69,17 @@ namespace ck
 
     // ---- entity outline (see CkUsf/DESIGN_EntityOutlines.md) ----
     //
-    // Applied-state for ck::FFragment_Usf_OutlineTarget on Plan-1 proxies: the outline Sync processor set
-    // Custom Depth + the preset's stencil on the BaseSKMC (and outfit submeshes, re-asserted per frame so
-    // late-attached submeshes inherit it). Undo path clears the flags + releases the stencil refcount;
-    // Release_BaseSKMC additionally strips custom depth unconditionally (pool hygiene).
+    // Applied-state for ck::FFragment_Usf_OutlineTarget on Plan-1 proxies: the Sync processor set Custom
+    // Depth + the preset's stencil on the BaseSKMC and its submeshes; removing the fragment undoes both.
     struct CKISKMRENDERER_API FFragment_IskmProxy_OutlineApplied
     {
     public:
         CK_GENERATED_BODY(FFragment_IskmProxy_OutlineApplied);
 
     private:
-        // Strong: this fragment holds a live stencil refcount keyed by the preset in the outline
-        // subsystem's weak-keyed _ActivePresets map. If the preset died while claimed, the stale
-        // weak key could never be found again and the stencil slot would leak until world teardown —
-        // pin the preset for exactly as long as the claim is held (fragment removal releases both).
+        // Strong: this fragment holds a stencil refcount keyed by the preset in the outline subsystem's
+        // WEAK-keyed _ActivePresets map. A preset that died while claimed would leave a stale key that
+        // can never be found again, leaking the stencil slot until world teardown.
         TStrongObjectPtr<UCkUsf_OutlinePreset> _Preset;
         uint8 _StencilValue = 0;
 
@@ -113,9 +98,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_IskmProxy_AnimState);
         friend class FProcessor_IskmProxy_HandleRequests;
         friend class FProcessor_IskmProxy_EmitFinishedEvents;
-        // UCk_IskmNotify_AnimInstance::NativeOnMontageBlendingOut clears
-        // _CurrentMontage when the bridged anim's montage ends, before broadcasting
-        // OnMontageFinished. Friend access required for the private-member reset.
+        // Clears _CurrentMontage when the bridged anim's montage ends, before broadcasting OnMontageFinished.
         friend class UCk_IskmNotify_AnimInstance;
 
     private:
@@ -129,12 +112,8 @@ namespace ck
 
     // ---- pose source ----
     //
-    // Plan-1 stores the pose source as a single enum on a dedicated fragment. Plan-2 will
-    // promote this to a tag-per-source (FTag_IskmProxy_PoseSource_Sequence / _AnimBP /
-    // _Ragdoll) so that the cluster-update processor can include sequence-mode entities and
-    // exclude AnimBP/Ragdoll entities via TInclude/TExclude without reading every entity's
-    // fragment. Keeping it as a separate fragment now makes that promotion a localized
-    // change. Don't merge into AnimState.
+    // Do NOT merge into AnimState: staying a separate fragment keeps the eventual promotion to a
+    // tag-per-source (which lets views TInclude/TExclude by pose source) a localized change.
     struct CKISKMRENDERER_API FFragment_IskmProxy_PoseSource
     {
     public:
@@ -150,23 +129,11 @@ namespace ck
 
     // ---- socket follower ----
     //
-    // Lives on a FOLLOWER entity (e.g. a hair/hat cosmetic rendered via CkIsm)
-    // whose Transform must track a socket on an IskmProxy LEADER. The follower's
-    // world transform is recomputed by FProcessor_IskmProxy_SocketFollower_SyncTransform
-    // AFTER the Transform request pass as:
-    //     Offset × Socket(Component-space) × LeaderEntityTransform
-    // Sampling the SKMC's WORLD-space socket instead (as a SyncFrom-group
-    // processor would) reads the leader's previous-frame position — the SKMC is
-    // only moved at PostTransform — and the follower trails by one frame of
-    // velocity. Component-space sampling keeps only the animation pose a frame
-    // stale (sub-cm) while the root-motion term is always current.
-    //
-    // EXCEPTION — ragdoll: the entity-transform root is only valid while UpdateTransform
-    // keeps the SKMC at the entity transform. During ragdoll physics owns the SKMC and
-    // UpdateTransform is excluded (TExclude<FTag_IskmProxy_Ragdolling>), so the entity
-    // transform is frozen at the death pose. SyncTransform then reads the WORLD-space
-    // socket directly (no entity root, no _LocalLocationOffset) so the follower stays on
-    // the physics pose. See FProcessor_IskmProxy_SocketFollower_SyncTransform.
+    // Lives on a FOLLOWER entity whose Transform tracks a socket on an IskmProxy LEADER, recomputed
+    // AFTER the Transform pass as: Offset × Socket(component-space) × LeaderEntityTransform. The
+    // WORLD-space socket is deliberately NOT sampled — the SKMC only moves at PostTransform, so it
+    // trails a frame. EXCEPTION — ragdoll: physics owns the SKMC and the leader's entity transform is
+    // frozen at the death pose, so SyncTransform reads the world socket instead.
     struct CKISKMRENDERER_API FFragment_IskmProxy_SocketFollower
     {
     public:
@@ -203,17 +170,9 @@ namespace ck
 
     // ---- per-proxy material overrides ----
     //
-    // V1 scope: overrides apply to the BASE SKMC only — submeshes carry their own
-    // def-time override materials (FCk_IskmRenderer_MeshDesc::_OverrideMaterials).
-    // Sparse: only overridden slots are stored. TStrongObjectPtr pins the material
-    // so an applied override can't be GC'd out from under the pooled SKMC.
-    //
-    // Pooling discipline (load-bearing): the SKMC is borrowed from the renderer
-    // pool and OverrideMaterials is a component-level array that survives
-    // Release_BaseSKMC's SetSkeletalMesh(nullptr). EndPlay calls
-    // EmptyOverrideMaterials() on release so the next borrower sees mesh-default
-    // materials; Setup re-applies this map in case the SKMC is (re)acquired after
-    // overrides were recorded.
+    // Overrides apply to the BASE SKMC only — submeshes carry their own def-time override materials.
+    // Pooling discipline (load-bearing): OverrideMaterials is component-level state that survives
+    // Release_BaseSKMC, so EndPlay must EmptyOverrideMaterials() and Setup must re-apply this map.
     struct CKISKMRENDERER_API FFragment_IskmProxy_MaterialOverrides
     {
     public:
@@ -231,15 +190,9 @@ namespace ck
 
     // ---- per-proxy morph targets ----
     //
-    // V1 scope: morphs apply to the BASE body mesh only — LeaderPoseComponent
-    // copies bone transforms, not morph curves, so outfit submeshes do NOT
-    // inherit these. If future modular skeletal clothing needs shared morphs,
-    // that's a separate change (per-submesh curve propagation).
-    //
-    // Pooling discipline (load-bearing): MorphTargetCurves is component-level
-    // state that survives Release_BaseSKMC. EndPlay calls ClearMorphTargets()
-    // on release so the next borrower starts clean; Setup re-applies this map
-    // in case the SKMC is (re)acquired after morphs were recorded.
+    // Morphs apply to the BASE body mesh only — LeaderPoseComponent copies bone transforms, not morph
+    // curves, so submeshes do NOT inherit them. Pooling discipline (load-bearing): MorphTargetCurves
+    // survives Release_BaseSKMC, so EndPlay must ClearMorphTargets() and Setup must re-apply this map.
     struct CKISKMRENDERER_API FFragment_IskmProxy_MorphTargets
     {
     public:

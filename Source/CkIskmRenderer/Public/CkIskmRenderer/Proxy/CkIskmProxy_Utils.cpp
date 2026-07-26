@@ -250,9 +250,6 @@ auto
     if (ck::Is_NOT_Valid(SKMC))
     { return nullptr; }
 
-    // Returning null here is legitimate: the SKMC may be in single-node mode
-    // with no AnimInstance class set (PlayAnimation's transient state between
-    // SetAnimInstanceClass(nullptr) and PlayAnimation completing).
     return SKMC->GetAnimInstance();
 }
 

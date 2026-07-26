@@ -25,14 +25,12 @@ class UCk_CameraComponent;
 // TYPE-SAFE HANDLES
 // --------------------------------------------------------------------------------------------------------------------
 
-// The "director"/stack owner — one per local viewer. Owns the per-section tuner attributes, the active-layer
-// Record, and the composed view info. Every profile field lives as a (non-replicated) attribute on this entity.
+// The "director"/stack owner — one per local viewer. Every profile field lives as a non-replicated attribute on it.
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKCAMERA_API FCk_Handle_Camera : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Camera); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Camera);
 
-// A single camera "layer" — a child entity of the director, driven by a UCk_CameraLayer_EntityScript. A layer
-// acquires attribute modifiers on the director's tuner attributes; the framework auto-blends them in/out.
+// A single camera "layer" — a child entity of the director, driven by a UCk_CameraLayer_EntityScript.
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKCAMERA_API FCk_Handle_CameraLayer : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_CameraLayer); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CameraLayer);
@@ -41,7 +39,7 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CameraLayer);
 // ENUMS
 // --------------------------------------------------------------------------------------------------------------------
 
-// Whether a layer's per-frame DoTick is invoked (mirrors ECk_SmTaskMode).
+// Whether a layer's per-frame DoTick is invoked.
 UENUM(BlueprintType)
 enum class ECk_Camera_TickMode : uint8
 {
@@ -65,9 +63,8 @@ enum class ECk_Camera_StackingBehavior : uint8
 // CAMERA TARGET
 // --------------------------------------------------------------------------------------------------------------------
 
-// How a layer's camera target is applied. LookAt re-orients the rig toward the target's location (the rig stays
-// anchored to the camera entity). ViewTarget blends the final composed POV to the target's full transform — a
-// position+rotation move like UE's SetViewTargetWithBlend — easing on the layer's own blend alpha.
+// LookAt re-orients the rig toward the target's location (the rig stays anchored to the camera entity). ViewTarget
+// blends the final composed POV to the target's full transform, easing on the layer's own blend alpha.
 UENUM(BlueprintType)
 enum class ECk_Camera_TargetMode : uint8
 {
@@ -75,9 +72,8 @@ enum class ECk_Camera_TargetMode : uint8
     ViewTarget
 };
 
-// A camera layer's optional target. An invalid _Target means the layer contributes no target. _Mode selects how a
-// valid target is consumed (re-orient the rig vs. blend the composed POV); the two modes are mutually exclusive by
-// construction, so a single field replaces a parallel look-at/view-target pair.
+// A camera layer's optional target. An invalid _Target means the layer contributes no target; the two _Mode
+// branches are mutually exclusive by construction.
 USTRUCT(BlueprintType)
 struct CKCAMERA_API FCk_Camera_Target
 {
@@ -130,8 +126,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Time _BlendInTime = FCk_Time{0.25};
 
-    // Optional camera target for this layer: re-orient the rig toward it (LookAt) or blend the composed POV to it
-    // (ViewTarget). Invalid target = this layer contributes none.
+    // Optional camera target for this layer; an invalid target means this layer contributes none.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Camera_Target _CameraTarget;
 
@@ -192,10 +187,8 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_CameraProfile _Profile;
 
-    // When true and the director's owning actor is a pawn possessed by a LOCAL APlayerController, the UpdatePOV
-    // processor publishes the resolved view rotation back to that controller each frame (SetControlRotation) so
-    // control-rotation consumers (facing / aim / movement) follow the camera. For a player view; leave false for
-    // non-player viewers.
+    // Publishes the resolved view rotation back to the owning pawn's LOCAL APlayerController each frame, so
+    // control-rotation consumers (facing / aim / movement) follow the camera. Leave false for non-player viewers.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _DriveControllerControlRotation = false;
 

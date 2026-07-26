@@ -56,7 +56,6 @@ namespace ck
         const auto Now   = ck_aggro_target_processor::Get_Now(InTarget);
         auto       Owner = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
 
-        // Seed threat from the target's OWN params — clamp into its range, then honor an optional per-target maximum.
         auto InitialThreat = InThreatParams.Get_ThreatClampRange().Get_ClampedValue(InThreatParams.Get_InitialThreat());
         if (InThreatParams.Get_MaximumThreatOverrideMode() == ECk_EnableDisable::Enable)
         { InitialThreat = FMath::Min(InitialThreat, InThreatParams.Get_MaximumThreatOverride()); }
@@ -123,7 +122,6 @@ namespace ck
         auto       Owner     = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto OldThreat = InThreat._Threat;
 
-        // Self-sufficient: decay + clamp from the target's OWN params (serial processor — read the extra pieces direct).
         const auto& SpatialP = InTarget.Get<ck::FFragment_AggroTarget_SpatialParams>();
         const auto& ForgetP  = InTarget.Get<ck::FFragment_AggroTarget_ForgetParams>();
 
@@ -133,7 +131,6 @@ namespace ck
             ? FMath::Min<double>(ClampMaxBase, InThreatParams.Get_MaximumThreatOverride())
             : ClampMaxBase;
 
-        // Advance the analytic decay anchor up to Now before adding the delta.
         const auto Elapsed      = (Now - InThreat._LastDecayTime).Get_Seconds();
         const auto SecsSincePer = (Now - InPerception._LastPerceivedTime).Get_Seconds();
         const auto PerceptK     = UCk_Utils_Aggro_UE::Compute_PerceptionDecayMultiplier(
@@ -174,7 +171,6 @@ namespace ck
         auto       Owner     = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto OldThreat = InThreat._Threat;
 
-        // Clamp into the target's OWN range, honoring an optional per-target maximum.
         const auto ClampMin     = InThreatParams.Get_ThreatClampRange().Get_Min();
         const auto ClampMaxBase = InThreatParams.Get_ThreatClampRange().Get_Max();
         const auto ClampMax     = InThreatParams.Get_MaximumThreatOverrideMode() == ECk_EnableDisable::Enable
@@ -183,7 +179,6 @@ namespace ck
 
         InThreat._Threat = static_cast<float>(FMath::Clamp<double>(InRequest.Get_Threat(), ClampMin, ClampMax));
 
-        // Absolute set — reset the decay anchor to Now.
         InThreat._LastDecayTime  = Now;
         InThreat._LastThreatTime = Now;
 
@@ -206,7 +201,6 @@ namespace ck
             const FCk_Request_AggroTarget_MarkPerceived& InRequest)
         -> void
     {
-        // Counted increment — one sense reports this target perceived.
         InTarget.Add<ck::FTag_AggroTarget_Perceived>();
         InPerception._LastPerceivedTime = ck_aggro_target_processor::Get_Now(InTarget);
 
@@ -233,7 +227,6 @@ namespace ck
             const FCk_Request_AggroTarget_MarkUnperceived& InRequest)
         -> void
     {
-        // Counted decrement; a no-op at count 0. On the last release, stamp the grace-window anchor.
         if (NOT InTarget.Has<ck::FTag_AggroTarget_Perceived>())
         { return; }
 
@@ -254,7 +247,6 @@ namespace ck
             const FCk_Request_AggroTarget_ResetPerception& InRequest)
         -> void
     {
-        // Clear the perception count outright regardless of how many senses had voted.
         if (NOT InTarget.Has<ck::FTag_AggroTarget_Perceived>())
         { return; }
 
@@ -273,7 +265,6 @@ namespace ck
             const FCk_Request_AggroTarget_Forget& InRequest)
         -> void
     {
-        // Explicit forget — always honored (bypasses CannotBeForgotten). The Forget processor completes it.
         InTarget.AddOrGet<ck::FTag_AggroTarget_PendingForget>();
     }
 
@@ -285,7 +276,7 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        // Game-thread hoist: one world-time read per tick, shared by every worker (one world per registry).
+        // Game-thread hoist — a worker-thread UWorld time read is neither safe nor needed (one world per registry).
         _Now = ck_aggro_target_processor::Get_Now(this->_TransientEntity);
         TParallelProcessor::DoTick(InDeltaT);
     }
@@ -308,16 +299,14 @@ namespace ck
     {
         const auto Now = _Now;
 
-        // Worker thread: reconstruct the full self handle for the holder read below (reads only; the handle debug-info
-        // attach self-skips inside the parallel region). The target is SELF-SUFFICIENT — all params come from its own
-        // fragments (the view); the owner is touched ONLY for its transform (distance) and the deferred re-select stamp.
-        // Every structural mutation is DEFERRED through InTarget's per-task command buffer.
+        // Worker thread — registry reads only; every structural mutation below is DEFERRED through InTarget's per-task
+        // command buffer. Rationale and full contract: CkAggro/CLAUDE.md.
         const auto SelfHandle = ck::MakeHandle(InTarget.Get_Entity(), _TransientEntity);
         auto       Owner      = UCk_Utils_Aggro_UE::Cast(InTargetInfo.Get_AggroOwner());
         const auto Tracked    = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(SelfHandle);
         const auto OwnerValid = ck::IsValid(Owner);
 
-        // Invalid tracked -> forget (bypasses CannotBeForgotten), stop. A missing owner is fine (standalone target).
+        // Deliberately bypasses CannotBeForgotten. A missing owner is fine (standalone target); an invalid tracked is not.
         if (ck::Is_NOT_Valid(Tracked))
         {
             InTarget.DeferAddOrGet<ck::FTag_AggroTarget_PendingForget>();
@@ -325,21 +314,20 @@ namespace ck
             return;
         }
 
-        // Distance owner<->tracked. No owner (standalone) or a transformless owner/tracked -> co-located (in range).
+        // A standalone or transformless pair reads as co-located (0.0) — deliberately in range, not out of it.
         const auto Distance = (OwnerValid && UCk_Utils_Transform_UE::Has(Owner) && UCk_Utils_Transform_UE::Has(Tracked))
             ? FVector::Dist(UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(Owner),
                             UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(Tracked))
             : 0.0;
 
-        // Retention-band tag (churn bounded to eval cadence at band crossings). Has() reads pre-flush state; the
-        // flip is deferred — consistent with the serial read-then-mutate since each target is a single task.
+        // Has() reads pre-flush state and the flip is deferred — equivalent to the serial read-then-mutate only
+        // because each target is a single task.
         const auto IsWithinRetention = Distance <= InSpatialParams.Get_RetentionDistance();
         if (IsWithinRetention && NOT InTarget.Has<ck::FTag_AggroTarget_WithinRetention>())
         { InTarget.DeferAdd<ck::FTag_AggroTarget_WithinRetention>(); }
         else if (NOT IsWithinRetention && InTarget.Has<ck::FTag_AggroTarget_WithinRetention>())
         { InTarget.DeferTry_Remove<ck::FTag_AggroTarget_WithinRetention>(); }
 
-        // Analytic decay from the target's own params -> advance the anchor.
         const auto ClampMin     = InThreatParams.Get_ThreatClampRange().Get_Min();
         const auto ClampMaxBase = InThreatParams.Get_ThreatClampRange().Get_Max();
         const auto ClampMax     = InThreatParams.Get_MaximumThreatOverrideMode() == ECk_EnableDisable::Enable
@@ -357,7 +345,6 @@ namespace ck
             InThreat._Threat, Elapsed, InThreatParams.Get_ThreatDecayRate(), PerceptK, RangeK, ClampMin, ClampMax);
         InThreat._LastDecayTime = Now;
 
-        // Score (raw; no incumbent bias baked in).
         const auto DistFactor   = UCk_Utils_Aggro_UE::Compute_DistanceFactor(
             Distance, InSpatialParams.Get_DistanceFalloffHalfDistance(), InSpatialParams.Get_DistanceFalloffExponent());
         const auto NearbyFactor = UCk_Utils_Aggro_UE::Compute_NearbyFactor(
@@ -368,7 +355,6 @@ namespace ck
             InThreat._Threat, DistFactor, NearbyFactor, InScoreParams.Get_ScoreMultiplier(), InScoreParams.Get_ScoreBias()));
         InScore._Distance = static_cast<float>(Distance);
 
-        // Forget checks (skip if CannotBeForgotten — invalid-tracked handled above).
         if (NOT InTarget.Has<ck::FTag_AggroTarget_CannotBeForgotten>())
         {
             const auto Age           = (Now - InTargetInfo.Get_CreationTime()).Get_Seconds();
@@ -385,7 +371,7 @@ namespace ck
             { InTarget.DeferAddOrGet<ck::FTag_AggroTarget_PendingForget>(); }
         }
 
-        // Score changed -> the owner should re-select (deferred; N idempotent adds of a plain tag flush to one).
+        // Deferred, and safe to spam: N idempotent adds of a plain tag flush to one.
         if (OwnerValid)
         { InTarget.ReadEntity(Owner.Get_Entity()).DeferAddOrGet<ck::FTag_Aggro_SelectionPending>(); }
 
@@ -412,7 +398,6 @@ namespace ck
         const auto FinalThreat = InThreat.Get_Threat();
         const auto OwnerValid  = ck::IsValid(Owner);
 
-        // Derive the reason from the target's OWN params + state (+ the Evicted tag) — no stored reason field.
         auto Reason = ECk_Aggro_ForgetReason::Requested;
         if (InTarget.Has<ck::FTag_AggroTarget_Evicted>())
         { Reason = ECk_Aggro_ForgetReason::Evicted; }

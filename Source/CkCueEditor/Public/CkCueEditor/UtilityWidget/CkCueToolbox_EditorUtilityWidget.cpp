@@ -18,7 +18,6 @@ auto
 {
     Super::NativeConstruct();
 
-    // Bind button events
     if (ck::IsValid(RefreshButton))
     {
         RefreshButton->OnClicked.AddDynamic(this, &UCk_CueToolbox_EditorUtilityWidget::OnRefreshClicked);
@@ -49,19 +48,16 @@ auto
         ExecuteLocalButton->OnClicked.AddDynamic(this, &UCk_CueToolbox_EditorUtilityWidget::OnExecuteLocalClicked);
     }
 
-    // Bind subsystem combo box
     if (ck::IsValid(SubsystemComboBox))
     {
         SubsystemComboBox->OnSelectionChanged.AddDynamic(this, &UCk_CueToolbox_EditorUtilityWidget::OnSubsystemChanged);
     }
 
-    // Bind search text box
     if (ck::IsValid(SearchTextBox))
     {
         SearchTextBox->OnTextChanged.AddDynamic(this, &UCk_CueToolbox_EditorUtilityWidget::OnSearchTextChanged);
     }
 
-    // Initial setup
     DoDiscoverSubsystems();
 }
 
@@ -92,7 +88,6 @@ auto
     UCk_CueToolbox_EditorUtilityWidget::
     OnCreateCueClicked() -> void
 {
-    // Blueprint implementable - open class creation dialog
 }
 
 auto
@@ -107,21 +102,18 @@ auto
     UCk_CueToolbox_EditorUtilityWidget::
     OnExecuteContextClicked() -> void
 {
-    // Blueprint implementable - execute selected cue with context entity
 }
 
 auto
     UCk_CueToolbox_EditorUtilityWidget::
     OnExecuteGlobalClicked() -> void
 {
-    // Blueprint implementable - execute selected cue globally
 }
 
 auto
     UCk_CueToolbox_EditorUtilityWidget::
     OnExecuteLocalClicked() -> void
 {
-    // Blueprint implementable - execute selected cue locally
 }
 
 auto
@@ -135,7 +127,6 @@ auto
 
     SubsystemComboBox->ClearOptions();
 
-    // Find all subsystem classes that inherit from UCk_CueSubsystem_Base_UE
     for (TObjectIterator<UClass> ClassIterator; ClassIterator; ++ClassIterator)
     {
         const auto Class = *ClassIterator;
@@ -152,7 +143,6 @@ auto
         if (Class == UCk_CueSubsystem_Base_UE::StaticClass())
         { continue; }
 
-        // Skip if this isn't actually a cue subsystem class
         const auto CueSubsystemClass = Cast<UClass>(Class);
         if (ck::Is_NOT_Valid(CueSubsystemClass))
         { continue; }
@@ -171,7 +161,6 @@ auto
         SubsystemComboBox->AddOption(SubsystemName);
     }
 
-    // Select first option if available
     if (SubsystemComboBox->GetOptionCount() > 0)
     {
         SubsystemComboBox->SetSelectedIndex(0);
@@ -190,7 +179,6 @@ auto
     if (ck::Is_NOT_Valid(CurrentSubsystem))
     { return; }
 
-    // Force refresh of the subsystem's cue discovery
     CurrentSubsystem->Request_PopulateAllCues();
 
     const auto& DiscoveredCues = CurrentSubsystem->Get_DiscoveredCues();
@@ -216,7 +204,6 @@ auto
     DuplicateCuesCount = 0;
     InvalidCuesCount = 0;
 
-    // Check for duplicate names
     TMap<FGameplayTag, int32> CueNameCounts;
 
     for (const auto& CueEntry : AllCueEntries)
@@ -228,7 +215,6 @@ auto
         CueInfo.IsValid = true;
         CueInfo.ValidationMessage.Empty();
 
-        // Check if cue class is valid
         if (ck::Is_NOT_Valid(CueInfo.CueClass))
         {
             CueInfo.IsValid = false;
@@ -236,11 +222,9 @@ auto
             InvalidCuesCount++;
         }
 
-        // Count occurrences of cue names
         CueNameCounts.FindOrAdd(CueInfo.CueName, 0)++;
     }
 
-    // Mark duplicates
     for (const auto& CueEntry : AllCueEntries)
     {
         if (ck::Is_NOT_Valid(CueEntry))
@@ -263,7 +247,6 @@ auto
         }
     }
 
-    // Update validation status text
     if (ck::IsValid(ValidationStatusText))
     {
         FString ValidationMessage = FString::Printf(TEXT("✓ %d cues discovered"), TotalCuesCount);
@@ -309,7 +292,6 @@ auto
         });
     }
 
-    // Update list view
     if (ck::IsValid(CueListView))
     {
         CueListView->ClearListItems();

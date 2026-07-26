@@ -101,7 +101,6 @@ namespace ck
         if (InTransform.Get_Transform().Equals(NewTransform))
         { return; }
 
-        // PARALLEL-SAFE: direct data write to owned fragments (no structural mutations)
         const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
             InTransform, InPrevTransform, NewTransform);
 
@@ -144,20 +143,15 @@ namespace ck
         if (NOT (ParentHasTransformUpdated || HadRelativeTransformUpdatedTag))
         { return; }
 
-        // Clean up the relative-transform-updated tag before the early return below,
-        // so root-component/mesh-socket entities don't keep it permanently (which would block probe setup)
+        // Cleared BEFORE the early return below, so root-component/mesh-socket entities don't keep it
+        // permanently (which would block probe setup)
         if (HadRelativeTransformUpdatedTag)
         {
             InHandle.template DeferRemove<FTag_SceneNode_RelativeTransformUpdated>();
         }
 
-        // SceneNodes attached to MeshSockets or RootComponents normally have their transforms managed
-        // directly by those anchors (the SyncFromActor / SyncFromMeshSocket processors). The
-        // FTag_Transform_ExternallyDriven tag flips that contract: the scene-node parent drives the
-        // transform, and SyncToActor pushes it back onto the anchor. Without the tag we still skip,
-        // preserving the original anchor-authoritative behavior for the Create*-attached paths.
-        // Note: this AND-OR condition can't be expressed as a pure include/exclude on the EnTT view
-        // because we still want bare entities (no anchor, no tag) to be processed here.
+        // Anchored nodes are anchor-authoritative unless FTag_Transform_ExternallyDriven flips the contract.
+        // Not expressible as a view include/exclude: bare entities (no anchor, no tag) must still process.
         if (InHandle.template Has_Any<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>() &&
             NOT InHandle.template Has<FTag_Transform_ExternallyDriven>())
         { return; }
@@ -165,11 +159,9 @@ namespace ck
         const auto& ParentTransform = ReadOnlyParent.template Get<FFragment_Transform>().Get_Transform();
         const auto NewTransform = InCurrent.Get_RelativeTransform() * ParentTransform;
 
-        // PARALLEL-SAFE: direct data write to owned fragments (no structural mutations)
         const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
             InTransform, InPrevTransform, NewTransform);
 
-        // Only the tag addition needs deferring (lightweight — empty tag, no data capture)
         if (EnumHasAnyFlags(ComponentsModified,
             ECk_TransformComponents::Location |
             ECk_TransformComponents::Rotation |

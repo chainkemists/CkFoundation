@@ -49,13 +49,12 @@ public:
         const FCk_Fragment_AggroTarget_ParamsData& InParams);
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);
 
 private:
-    // Shared fragment attach for Add/Create. InOwner is the record/scoring owner, or invalid for a standalone Add.
+    // InOwner is the record/scoring owner, or an invalid handle for a standalone Add.
     static void
     DoAdd_Fragments(
         FCk_Handle& InHandle,

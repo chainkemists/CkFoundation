@@ -38,10 +38,9 @@ public:
         UPARAM(ref) FCk_Handle& InOwner,
         const FCk_Fragment_Pmg_Donut_ParamsData& InParams);
 
-    // Opt this shape in as a click-selection handle for its editor preview's placed actor
-    // (see ck::FTag_Pmg_EditorSelectionHandle). Call right after Add/Create — the mesh
-    // component's outer is chosen once, when the shape's setup processor runs. No-op outside
-    // editor-preview worlds.
+    // Opt this shape in as a click-selection handle for its editor preview's placed actor.
+    // Call right after Add/Create — the mesh component's outer is chosen once, when the setup
+    // processor runs. Editor previews only.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|Donut",
               DisplayName="[Ck][Pmg][Donut] Request Act As Editor Selection Handle")
@@ -50,10 +49,8 @@ public:
         UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut);
 
 public:
-    // Component outer for a PMG Donut's UProceduralMeshComponent: the per-owner selection-proxy
-    // host when the donut opted in via ck::FTag_Pmg_EditorSelectionHandle (checked directly on
-    // the entity — donuts are standalone, no composite children; editor previews only), the
-    // World otherwise — owner-less and therefore click-through, the default.
+    // Returns the selection-proxy host when FTag_Pmg_EditorSelectionHandle is on the entity (donuts
+    // are standalone — no composite children); the World otherwise.
     static auto
     Get_MeshComponentOuter(
         UWorld* InWorld,

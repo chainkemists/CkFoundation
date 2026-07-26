@@ -1,16 +1,9 @@
 #pragma once
 
 // --------------------------------------------------------------------------------------------------------------------
-// PRIVATE: record-of-actionsets fragment + utils struct.
-//
-// Included by CkGoap_Utils.cpp (the Goap-root creation entry) and by
-// CkGoap_Planner_Utils.cpp (which adds entries to the record at AddActionSet time).
-//
-// Lives in a header — not declared inline in either .cpp — so the two
-// translation units see the SAME fragment type (one ODR), but it's NOT in
-// any public header so consumers don't transitively depend on CkRecord.
-//
-// Do not include from anywhere except those two .cpp files.
+// PRIVATE despite living under Public/: a header so both including .cpp files see the SAME
+// fragment type (one ODR) while consumers avoid a transitive CkRecord dependency.
+// Include only from CkGoap_Utils.cpp and CkGoap_Planner_Utils.cpp.
 
 #include "CkGoap/Planner/CkGoap_Planner_Fragment_Data.h"
 

@@ -7,15 +7,9 @@
 
 #include "CkSmCondition_EntityScript.generated.h"
 
-// IMPORTANT NOTE:
-// Conditions are split into two intermediate classes to minimize interface
-// pollution in the Blueprint/AngelScript editor and avoid polymorphic calls:
-//   - UCk_SmCondition_Polled        → Evaluate() / DoEvaluate()
-//   - UCk_SmCondition_EventDriven   → MarkSatisfied() / MarkUnsatisfied()
-//
-// EventDriven conditions don't use Evaluate(), so it won't appear in the
-// editor. Polled conditions don't use MarkSatisfied/MarkUnsatisfied.
-// Inherit from the appropriate intermediate class, not from this base.
+// Inherit from UCk_SmCondition_Polled (Evaluate / DoEvaluate) or UCk_SmCondition_EventDriven
+// (MarkSatisfied / MarkUnsatisfied), never from this base — the split keeps each mode's interface
+// out of the other's Blueprint/AngelScript editor surface.
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -28,7 +22,6 @@ public:
     CK_GENERATED_BODY(UCk_SmCondition_EntityScript);
 
     // --------------------------------------------------------------------------------------------------------------------
-    // LIFECYCLE (EntityScript overrides)
 
 protected:
     auto
@@ -48,13 +41,9 @@ protected:
     Get_EffectiveReplication() const -> ECk_Replication override;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // CONDITION LIFECYCLE (Enter/Exit)
-    //
-    // EnterCondition fires from BeginPlay() once the condition entity is fully constructed.
-    // EventDriven conditions typically bind external delegates here (and unbind in ExitCondition).
-    // ExitCondition is called by FProcessor_SmCondition_Exit (EndPlay group, RunAfter SmTransition_Exit)
-    // when FTag_SmCondition_PendingExit is present. The tag is cascaded from FProcessor_SmTransition_Exit,
-    // which is in turn cascaded from FProcessor_SmState_Exit. The ECS lifecycle guarantees one-shot.
+    // EnterCondition fires from BeginPlay once the condition entity is fully constructed; EventDriven
+    // conditions typically bind external delegates here and unbind in ExitCondition. ExitCondition is
+    // driven by FProcessor_SmCondition_Exit off FTag_SmCondition_PendingExit, cascaded State→Transition.
 
 public:
     virtual auto

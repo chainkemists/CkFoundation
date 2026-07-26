@@ -68,10 +68,6 @@ auto
 
 namespace ck_crowd_agent_diag_utils
 {
-    // RDP epsilon — perpendicular-distance tolerance in cm for path simplification. Lower =
-    // more keypoints retained (more detail in the digest); higher = more aggressive collapse.
-    // 8cm chosen so a straight head-on test produces ~2-3 keypoints and a curving cluster path
-    // produces ~10-20 — enough to read the shape, light enough to grep without paging.
     static TAutoConsoleVariable<float> CVarRDPEpsilon(
         TEXT("ck.Crowd.RDPEpsilon"),
         8.0f,
@@ -79,11 +75,6 @@ namespace ck_crowd_agent_diag_utils
         TEXT("Lower = more keypoints kept; higher = more aggressive collapse. Default 8cm."),
         ECVF_Default);
 
-    // Perpendicular distance from Point to the segment defined by LineStart..LineEnd, clamped
-    // so degenerate segments (near-zero length) fall back to point-to-point distance. Operates
-    // in the XY plane for the recorder's path samples — Z is preserved in the kept samples but
-    // ignored for the simplification distance metric (Z bugs are visualised separately, not
-    // digested out).
     auto PerpendicularDistanceXY(const FVector& Point, const FVector& LineStart, const FVector& LineEnd) -> float
     {
         const auto Line = FVector(LineEnd.X - LineStart.X, LineEnd.Y - LineStart.Y, 0.0);
@@ -102,9 +93,7 @@ namespace ck_crowd_agent_diag_utils
         return static_cast<float>(FMath::Sqrt(Dx * Dx + Dy * Dy));
     }
 
-    // Recursive RDP. Marks indices that should be kept by setting OutKeep[i] = true. Caller
-    // pre-marks endpoints; this only fills the interior. Iterative form would be marginally
-    // faster but at our sample counts (≤90 per agent per cycle) the recursion is irrelevant.
+    // Caller pre-marks the endpoints in OutKeep; this only fills the interior.
     auto RDP_Recursive(
         const TArray<FCk_CrowdDiag_PathSample>& InSamples,
         int32 InStartIdx,
@@ -159,9 +148,6 @@ auto
     const auto Prefix = FString::Printf(TEXT("[CrowdDiag][C%d][%s][A%d]"),
         InCycleNumber, *InStationName, InAgentIndex);
 
-    // Path length: sum of consecutive sample-to-sample distances (XY). Straight: euclidean
-    // distance from spawn to goal. Efficiency = straight / path_len; 1.0 = perfect line, lower
-    // values = the agent took a detour.
     auto PathLen = 0.0;
     for (auto i = 1; i < Samples.Num(); ++i)
     {
@@ -174,8 +160,6 @@ auto
     const auto Straight = FVector::Dist(Recorder.Get_StartPos(), Recorder.Get_GoalPos());
     const auto Efficiency = (PathLen > KINDA_SMALL_NUMBER) ? (Straight / PathLen) : 0.0;
 
-    // Emit the header lines. ck::crowd::Display routes through LogCk_Crowd at Display verbosity
-    // (visible by default in Saved/Logs/CkTests.log without bumping LogCk_Crowd to Verbose).
     ck::crowd::Display(TEXT("{} start=({:.1f}, {:.1f}, {:.1f}) goal=({:.1f}, {:.1f}, {:.1f})"),
         Prefix,
         Recorder.Get_StartPos().X, Recorder.Get_StartPos().Y, Recorder.Get_StartPos().Z,
@@ -189,8 +173,9 @@ auto
     ck::crowd::Display(TEXT("{} path_len={:.1f} straight={:.1f} efficiency={:.3f}"),
         Prefix, PathLen, Straight, Efficiency);
 
+    constexpr auto NoNeighboursObservedSentinel = -1.0f;
     const auto MinSep = (Recorder.Get_MinSepAcrossCycle() == TNumericLimits<float>::Max())
-        ? -1.0f  // sentinel: no neighbours observed during the window
+        ? NoNeighboursObservedSentinel
         : Recorder.Get_MinSepAcrossCycle();
     ck::crowd::Display(TEXT("{} min_sep_to_neighbors={:.1f} at t={:.2f}"),
         Prefix, MinSep, Recorder.Get_MinSepTime());
@@ -198,7 +183,6 @@ auto
     ck::crowd::Display(TEXT("{} dir_reversals={} max_angular_delta={:.1f}"),
         Prefix, Recorder.Get_DirReversalCount(), Recorder.Get_MaxAngularDeltaDeg());
 
-    // RDP-simplified path. Always keep first + last; recursion fills interior keypoints.
     if (Samples.Num() == 0)
     { return; }
 
@@ -213,9 +197,6 @@ auto
         ck_crowd_agent_diag_utils::RDP_Recursive(Samples, 0, Samples.Num() - 1, Epsilon, Keep);
     }
 
-    // Z is included so floor-clip bugs (agent's root drops below the floor surface) show up
-    // in the digest, not just visually. Useful when grep-comparing cycles for "did this agent
-    // dip below z=100" without having to scrub the recorder data manually.
     for (auto i = 0; i < Samples.Num(); ++i)
     {
         if (NOT Keep[i])

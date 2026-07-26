@@ -265,42 +265,27 @@ public:
     static bool
     IsEngineSafeForBlockingLoads();
 
-    // True when running inside a commandlet (e.g. the cook commandlet). The generated
-    // assets::load::* helpers use this to downgrade the "called before engine init" ensure:
-    // those first-pass loads are expected and self-heal via UCk_DeferredAssetInit_UE's
-    // post-engine-init re-run, so failing a cook over them is wrong. The ensure stays loud
-    // in editor/PIE/game (where IsRunningCommandlet() is false) to catch genuine misuse.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IO",
               DisplayName = "[Ck] Is Running Commandlet")
     static bool
     Get_IsRunningCommandlet();
 
-    // Force the blocking-load safety flag to true. Intended for callers that know they run
-    // at or after FCoreDelegates::OnFEngineLoopInitComplete but may fire earlier in that
-    // delegate's add-order than the internal registrar that sets the flag. Normally the
-    // flag is set automatically by CkCore's own registrar — do not call this elsewhere.
+    // Only for callers running at/after OnFEngineLoopInitComplete but ahead of CkCore's own
+    // registrar in that delegate's add-order. Do not call this elsewhere.
     static void
     MarkEngineSafeForBlockingLoads();
 
-    // Returns true if any caller invoked IsEngineSafeForBlockingLoads() while the flag was
-    // still false. In practice this means something tried a blocking asset load during
-    // pre-engine-init — the DeferredAssetInit sweep uses this as a cheap short-circuit to
-    // skip re-init work entirely when nothing was deferred this boot.
+    // True if anything queried IsEngineSafeForBlockingLoads() while the flag was still false.
     static bool
     WasBlockingLoadQueriedWhileUnsafe();
 
-    // Side-effect-free read of the blocking-load safety flag. Unlike IsEngineSafeForBlockingLoads(),
-    // this does NOT set the "queried while unsafe" flag — use it for guard checks that must not
-    // perturb the DeferredAssetInit short-circuit (e.g. skipping the pre-engine-safe post-reload).
+    // Unlike IsEngineSafeForBlockingLoads(), does NOT set the "queried while unsafe" flag.
     static bool
     Get_IsEngineSafeForBlockingLoads_Peek();
 
 public:
     // ---- Premature-load diagnostic aggregator (cheap; zero stack walks) ----
-    // Replaces a per-call ck::EnsureIfNot in the generated assets::load::* accessors (each ensure
-    // captures three stack traces, ~15ms). Records a count + the first message only. The
-    // DeferredAssetInit sweep emits a single summary and resets via Reset_PrematureAssetLoadReport.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IO",
               DisplayName = "[Ck] Report Premature Asset Load")
@@ -351,7 +336,6 @@ public:
         ECk_AssetSearchScope SearchScope = ECk_AssetSearchScope::Game,
         ECk_AssetSearchStrategy SearchStrategy = ECk_AssetSearchStrategy::ExactThenFuzzy);
 
-    // Find all assets matching a name without loading them
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Find Assets By Name",
               Category = "Ck|Utils|Object|Assets")
@@ -454,7 +438,6 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// char to wchar_t trick taken from: https://stackoverflow.com/a/14421702
 #define CK_WIDE2(x) L##x
 #define CK_WIDE1(x) CK_WIDE2(x)
 #define WFILE CK_WIDE1(__FILE__)

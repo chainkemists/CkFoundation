@@ -1,7 +1,4 @@
-// Tests for the script-processor query mixin (UCk_ScriptProcessorQuery_Mixin_UE over FCk_ScriptProcessorQuery).
-//
-// Coverage: slot admission, all-or-nothing slot validation, and the process-lifetime generation resolver used by
-// FCk_ScriptQueryBatch accessors. A stale batch must not dereference destroyed host state or alias a reopened state.
+// Tests for the script-processor query mixin: slot admission, all-or-nothing validation, generation resolver.
 
 #include "CkDynamic/CkDynamic_ScriptQuery.h"
 #include "CkDynamic/CkDynamic_ScriptQueryBatch.h"
@@ -38,9 +35,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_ScriptQuery_SlotAccumulationAndAccess::RunTest(const FString&)
 {
-    // Four distinct GC-independent reflected structs to fill four slots. Identity/order is what matters here, but
-    // query registration now also enforces the real dynamic-storage schema contract, so metadata carrier structs
-    // containing strong UObject references are intentionally not valid stand-ins.
+    // GC-independent reflected structs: slot admission rejects a struct holding strong UObject references.
     const auto* StructA = FCk_FloatRange::StaticStruct();
     const auto* StructB = FCk_IntRange::StaticStruct();
     const auto* StructC = FCk_FloatRange_0to1::StaticStruct();
@@ -80,9 +75,7 @@ bool FCkTest_ScriptQuery_RejectedSlotFailsWholeQuery::RunTest(const FString&)
     auto Query = FCk_ScriptProcessorQuery{};
     UCk_ScriptProcessorQuery_Mixin_UE::ReadOnly(Query, FCk_FloatRange::StaticStruct());
 
-    // The query carrier itself owns a reflected TObjectPtr array, so it is deliberately unsafe for untraced
-    // dynamic storage. The accepted first slot models the exact SmallLoop failure shape: one rejected predicate
-    // must poison the complete declaration rather than leave the earlier subset runnable.
+    // The query carrier itself owns a reflected TObjectPtr array — deliberately unsafe for untraced storage.
     AddExpectedError(TEXT("Unsafe Dynamic Fragment schema"), EAutomationExpectedErrorFlags::Contains, 0);
     UCk_ScriptProcessorQuery_Mixin_UE::Require(Query, FCk_ScriptProcessorQuery::StaticStruct());
 
@@ -104,8 +97,7 @@ bool FCkTest_ScriptQuery_SafeThenInvalidValidationIsAtomic::RunTest(const FStrin
     TestTrue(TEXT("safe query validates before invalid slot is added"),
         ck::dynamic::Validate_ScriptQuerySlots(Query, TEXT("automation-safe")));
 
-    // Model a reflected type invalidating after Configure. Descriptor harvest and runtime resolution both call the
-    // same preflight and must reject the complete list before publishing a hash or resolving the first storage.
+    // Models a reflected type invalidating after Configure — descriptor harvest and runtime share this preflight.
     auto InvalidSlot = FCk_ScriptQuerySlot{};
     InvalidSlot._Access = ECk_ScriptQueryAccess::Require;
     Query._Slots.Add(InvalidSlot);
@@ -138,7 +130,6 @@ bool FCkTest_ScriptQueryBatch_StaleGenerationNeverResolves::RunTest(const FStrin
     TestNull(TEXT("closed generation no longer resolves"),
         ck::dynamic::Resolve_ScriptQueryBatchState(FirstBatch));
 
-    // Reopen the exact same state address. A process-unique generation prevents the old batch from aliasing it.
     const auto SecondGeneration = ck::dynamic::Open_ScriptQueryBatchState(State);
     auto SecondBatch = FCk_ScriptQueryBatch{};
     SecondBatch._State = &State;
@@ -152,7 +143,6 @@ bool FCkTest_ScriptQueryBatch_StaleGenerationNeverResolves::RunTest(const FStrin
 
     ck::dynamic::Close_ScriptQueryBatchState(State, SecondGeneration);
 
-    // Explicit accessor diagnostics also resolve through the table; they never touch the stale raw address.
     AddExpectedErrorPlain(
         TEXT("used past its ForEachBatch call (stale generation)"),
         EAutomationExpectedErrorFlags::Contains,

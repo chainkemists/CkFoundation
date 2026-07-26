@@ -12,10 +12,8 @@
 
 namespace ck
 {
-    // Has/Cast key for a dialogue line entity.
     CK_DEFINE_ECS_TAG(FTag_DialogLine);
 
-    // Marks a child entity as one of a line's condition-evaluation entities.
     CK_DEFINE_ECS_TAG(FTag_DialogCondition);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -24,9 +22,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // A line's condition-evaluation child entities. TRANSIENT: registry content is rebuilt from banks on load, never
-    // round-tripped through a save. Entries are plain FCk_Handle (the condition entity is an EntityScript entity read
-    // through FFragment_EntityScript_Current, not a typesafe-handle feature).
+    // TRANSIENT: registry content is rebuilt from banks on load, never round-tripped through a save. Entries are
+    // plain FCk_Handle — a condition is an EntityScript entity, not a typesafe-handle feature.
     CK_DEFINE_RECORD_OF_ENTITIES_TRANSIENT(FFragment_RecordOfDialogConditions, FCk_Handle);
 }
 

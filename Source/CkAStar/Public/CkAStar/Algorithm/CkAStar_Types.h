@@ -27,12 +27,10 @@ struct FSearchParams
 	// Max A* iterations per tick. 0 = unlimited (rely on time budget).
 	int32 MaxIterationsPerTick = 0;
 
-	// If > 0, the search returns CostThresholdReached when the best available
-	// node's FScore exceeds this value. Useful for "good enough" early termination.
+	// 0 = off; otherwise the search returns CostThresholdReached once the best FScore exceeds this.
 	float CostThreshold = 0.0f;
 
-	// How often to check FPlatformTime during the search loop.
-	// Higher values reduce measurement overhead but decrease budget precision.
+	// Iterations between FPlatformTime samples: higher trades budget precision for less overhead.
 	int32 TimecheckInterval = 16;
 };
 

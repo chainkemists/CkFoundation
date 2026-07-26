@@ -371,12 +371,10 @@ auto
     const auto& Origin = InTransform.GetLocation();
     const auto& Rotation = InTransform.GetRotation();
 
-    // Get axis vectors
     const auto XAxis = Rotation.GetAxisX();
     const auto YAxis = Rotation.GetAxisY();
     const auto ZAxis = Rotation.GetAxisZ();
 
-    // Draw X axis (Red)
     const auto XEnd = Origin + XAxis * InAxisLength;
     DrawDebugLine(InWorldContextObject, Origin, XEnd, FLinearColor::Red, InDuration, InAxisThickness);
 
@@ -389,7 +387,6 @@ auto
             XEnd, -XAxis, InConeSize, DebugConeAngleRadians, DebugConeAngleRadians, 8, FLinearColor::Red, InDuration, InAxisThickness * 0.5f);
     }
 
-    // Draw Y axis (Green)
     const auto YEnd = Origin + YAxis * InAxisLength;
     DrawDebugLine(InWorldContextObject, Origin, YEnd, FLinearColor::Green, InDuration, InAxisThickness);
 
@@ -399,7 +396,6 @@ auto
             YEnd, -YAxis, InConeSize, DebugConeAngleRadians, DebugConeAngleRadians, 8, FLinearColor::Green, InDuration, InAxisThickness * 0.5f);
     }
 
-    // Draw Z axis (Blue)
     const auto ZEnd = Origin + ZAxis * InAxisLength;
     DrawDebugLine(InWorldContextObject, Origin, ZEnd, FLinearColor::Blue, InDuration, InAxisThickness);
 
@@ -530,7 +526,6 @@ auto
     const auto HalfGridSize = InGridSize * 0.5f;
     const auto LineSpacing = InGridSize / InGridLines;
 
-    // Draw grid lines along forward direction
     for (int32 I = 0; I <= InGridLines; ++I)
     {
         const auto Offset = (I * LineSpacing) - HalfGridSize;
@@ -540,7 +535,6 @@ auto
         DrawDebugLine(InWorldContextObject, LineStart, LineEnd, InGridColor, InDuration, InThickness);
     }
 
-    // Draw grid lines along right direction
     for (int32 i = 0; i <= InGridLines; ++i)
     {
         const auto Offset = (i * LineSpacing) - HalfGridSize;
@@ -566,17 +560,14 @@ auto
 #if ENABLE_DRAW_DEBUG
     const auto HalfSize = InSize * 0.5f;
 
-    // Draw X axis line
     DrawDebugLine(InWorldContextObject,
                  InCenter + FVector(-HalfSize, 0, 0), InCenter + FVector(HalfSize, 0, 0),
                  InColor, InDuration, InThickness);
 
-    // Draw Y axis line
     DrawDebugLine(InWorldContextObject,
                  InCenter + FVector(0, -HalfSize, 0), InCenter + FVector(0, HalfSize, 0),
                  InColor, InDuration, InThickness);
 
-    // Draw Z axis line
     DrawDebugLine(InWorldContextObject,
                  InCenter + FVector(0, 0, -HalfSize), InCenter + FVector(0, 0, HalfSize),
                  InColor, InDuration, InThickness);
@@ -631,7 +622,6 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    // Draw horizontal rings
     for (int32 Ring = 0; Ring <= InRings; ++Ring)
     {
         const auto Angle = PI * Ring / InRings - PI * 0.5f;
@@ -644,7 +634,6 @@ auto
                         FVector(1, 0, 0), FVector(0, 1, 0), false);
     }
 
-    // Draw vertical meridians
     for (int32 Meridian = 0; Meridian < InSegments; ++Meridian)
     {
         const auto MeridianAngle = 2 * PI * Meridian / InSegments;
@@ -695,14 +684,12 @@ auto
     if (InVertices.Num() < 2)
     { return; }
 
-    // Draw lines between consecutive vertices
     for (int32 I = 0; I < InVertices.Num() - 1; ++I)
     {
         DrawDebugLine(InWorldContextObject,
                      InVertices[I], InVertices[I + 1], InLineColor, InDuration, InThickness);
     }
 
-    // Close the loop if requested
     if (InClosedLoop && InVertices.Num() > 2)
     {
         DrawDebugLine(InWorldContextObject,
@@ -724,11 +711,9 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    // Calculate box vertices
     const auto Transform = FTransform(InRotation, InCenter);
     const auto HalfExtent = InExtent;
 
-    // Define the 8 corners of a box relative to center
     const TArray LocalVertices = {
         FVector(-HalfExtent.X, -HalfExtent.Y, -HalfExtent.Z), // 0: Front-Bottom-Left
         FVector( HalfExtent.X, -HalfExtent.Y, -HalfExtent.Z), // 1: Front-Bottom-Right
@@ -740,7 +725,6 @@ auto
         FVector(-HalfExtent.X,  HalfExtent.Y,  HalfExtent.Z)  // 7: Back-Top-Left
     };
 
-    // Transform vertices to world space
     auto WorldVertices = TArray<FVector>{};
     WorldVertices.Reserve(8);
     for (const auto& LocalVertex : LocalVertices)
@@ -748,7 +732,6 @@ auto
         WorldVertices.Add(Transform.TransformPosition(LocalVertex));
     }
 
-    // Draw bottom face
     DrawDebugLine(InWorldContextObject,
                  WorldVertices[0], WorldVertices[1], InLineColor, InDuration, InThickness);
     DrawDebugLine(InWorldContextObject,
@@ -758,7 +741,6 @@ auto
     DrawDebugLine(InWorldContextObject,
                  WorldVertices[3], WorldVertices[0], InLineColor, InDuration, InThickness);
 
-    // Draw top face
     DrawDebugLine(InWorldContextObject,
                  WorldVertices[4], WorldVertices[5], InLineColor, InDuration, InThickness);
     DrawDebugLine(InWorldContextObject,
@@ -768,7 +750,6 @@ auto
     DrawDebugLine(InWorldContextObject,
                  WorldVertices[7], WorldVertices[4], InLineColor, InDuration, InThickness);
 
-    // Draw vertical edges
     DrawDebugLine(InWorldContextObject,
                  WorldVertices[0], WorldVertices[4], InLineColor, InDuration, InThickness);
     DrawDebugLine(InWorldContextObject,
@@ -843,19 +824,16 @@ auto
     auto Vertices = TArray<FVector>{};
     Vertices.Reserve(InNumPoints * 2);
 
-    // Generate alternating outer and inner vertices
     for (int32 I = 0; I < InNumPoints; ++I)
     {
         const auto Angle = I * AngleStep - PI * 0.5f; // Start at top
 
-        // Outer point
         Vertices.Add(InCenter + FVector(
             FMath::Cos(Angle) * OuterRadius,
             FMath::Sin(Angle) * OuterRadius,
             0.0f
         ));
 
-        // Inner point
         const auto InnerAngle = Angle + AngleStep * 0.5f;
         Vertices.Add(InCenter + FVector(
             FMath::Cos(InnerAngle) * InnerRadius,
@@ -864,7 +842,6 @@ auto
         ));
     }
 
-    // Draw lines between vertices
     for (int32 I = 0; I < Vertices.Num(); ++I)
     {
         const auto NextIndex = (I + 1) % Vertices.Num();
@@ -891,16 +868,13 @@ auto
     -> void
 {
 #if ENABLE_DRAW_DEBUG
-    // Draw the circle
     DrawDebugCircle_PlaneAxis(InWorldContextObject, InCenter, InRadius, InPlaneAxis,
                              InNumSegments, InCircleColor, InDuration, InThickness);
 
-    // Draw direction line from center
     if (InDirection.IsNearlyZero() == false)
     {
         const auto NormalizedDirection = InDirection.GetSafeNormal();
 
-        // Project direction onto the circle plane
         const auto ProjectedDirection = [&]
         {
             switch (InPlaneAxis)
@@ -931,7 +905,6 @@ auto
             DrawDebugLine(InWorldContextObject, InCenter, DirectionEnd,
                          InDirectionColor, InDuration, InDirectionLineThickness);
 
-            // Draw small arrow head at the end
             const auto ArrowSize = InRadius * 0.15f;
             DrawDebugArrow(InWorldContextObject, InCenter, DirectionEnd, ArrowSize,
                           InDirectionColor, InDuration, InDirectionLineThickness);

@@ -6,14 +6,12 @@
 
 namespace ck
 {
-	// Forward declarations
 	template<typename TTrackedFragment>
 	struct TCallstackFragmentTrait;
 
 	template<typename TTrackedFragment>
 	class TCk_Utils_Debug_Callstack;
 
-	// Template base fragment for debug callstack tracking
 	template<typename TTrackedFragment>
 	struct TFragment_Debug_Callstack
 	{
@@ -24,18 +22,14 @@ namespace ck
 		struct FCallEntry
 		{
 			uint64 FrameNumber = 0;
-			const char* FunctionName = nullptr;  // Compile-time __FUNCTION__
-			int32 LineNumber = 0;                // Compile-time __LINE__
+			const char* FunctionName = nullptr;
+			int32 LineNumber = 0;
 			FString Message;
 
-			// C++ callstack: Pointers to global symbol cache
-			// Background thread resolves addresses asynchronously
-			// VS Debugger: Just expand this array to see symbols!
-			// Initially shows "<resolving...>", updates to actual symbols automatically
+			// Pointers into the global symbol cache: a background thread resolves each address in
+			// place, so a live entry reads "<resolving...>" until it flips to the real symbol.
 			TArray<const FString*> CppCallstackAddresses;
 
-			// Blueprint/Angelscript callstacks: Resolved (expensive)
-			// Only populated if corresponding CVars are enabled
 			TArray<FString> BlueprintCallstack;
 			TArray<FString> AngelscriptCallstack;
 		};
@@ -47,11 +41,10 @@ namespace ck
 		CK_PROPERTY_GET(_Entries);
 	};
 
-	// Trait for mapping tracked fragment type to callstack fragment type
 	template<typename TTrackedFragment>
 	struct TCallstackFragmentTrait
 	{
-		// Specializations defined via CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR macro
+		// Specialized only by CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR
 	};
 
 } // namespace ck

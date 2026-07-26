@@ -15,15 +15,9 @@ class UScriptStruct;
 
 namespace ck::snapshot
 {
-    // Route every FCk_Handle-DERIVED field inside InStruct (top-level, nested structs, and inside TArray/TSet/TMap,
-    // with load-side rehash) through FSnapshotContext::Snapshot_Handle. Save writes each handle's entity id; load
-    // reads it back through the continuous-loader remap. Save and load MUST visit the same handles in the same order
-    // -- a single deterministic TFieldIterator walk guarantees that, and the container element counts/order are
-    // materialized by the preceding data pass before this runs on load. Handle detection is IsChildOf (not exact),
-    // so C++-native typed handles (FCk_Handle_Item, ...) are covered as well as AngelScript dynamic handles.
-    //
-    // Lifted verbatim (behavior-identical) from ck_dynamic_snapshot::RemapHandles so both the dynamic-fragment
-    // serialize path AND the v3 save capture share one incident-hardened walker (the typed-handle tombstone fix).
+    // Routes every FCk_Handle-DERIVED field inside InStruct — top-level, nested, and inside TArray/TSet/TMap
+    // with load-side rehash — through FSnapshotContext::Snapshot_Handle. Save and load MUST visit the same
+    // handles in the same order; the single deterministic TFieldIterator walk is what guarantees that.
     CKECS_API auto
     RemapHandles(
         const UScriptStruct* InStruct,
@@ -31,9 +25,8 @@ namespace ck::snapshot
         FArchive& InAr,
         ck::FSnapshotContext& InCtx) -> void;
 
-    // Visit-only counterpart: invoke InVisitor on every FCk_Handle-derived field (same walk order as RemapHandles),
-    // serializing nothing and mutating nothing. Used by the v3 capture's forward-reference guard — each handle a
-    // recipe's spawn params carry must reference an entity already written to the save's entity table.
+    // Visit-only counterpart — same walk order as RemapHandles, serializing and mutating nothing. Backs the
+    // capture's forward-reference guard: a recipe's spawn-params handles must already be in the entity table.
     CKECS_API auto
     ForEachHandle(
         const UScriptStruct* InStruct,

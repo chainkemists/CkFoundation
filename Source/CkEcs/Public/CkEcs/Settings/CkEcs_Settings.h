@@ -39,9 +39,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_EntityMap_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// How the slot-table soft-warning surfaces when the active-registry count crosses a configured threshold.
-// The hard cap (kRegistryTable_MaxSlots) is a compile-time invariant and always uses CK_ENSURE_IF_NOT;
-// this only controls the soft-warning layer.
+// How the slot-table SOFT-warning surfaces. The hard cap (kRegistryTable_MaxSlots) is a compile-time
+// invariant and always uses CK_ENSURE_IF_NOT regardless of this setting.
 UENUM(BlueprintType)
 enum class ECk_Ecs_RegistrySlot_Reporting : uint8
 {
@@ -71,43 +70,20 @@ private:
               meta = (ToolTip = "Property names to hide from Cue K2Node pins and SpawnParams Toolbox comparisons (e.g. 'Dummy', 'Placeholder'). 'MemberVar_0' (bool) is always ignored as it is the dummy variable required by empty Blueprint structs."))
     TArray<FString> _IgnoredSpawnParamsPropertyNames;
 
-    // When enabled, the scheduler's pump pass short-circuits dirty-marker checks by comparing a per-fragment
-    // version counter (bumped on every registry mutation) against a per-node cache that persists across
-    // frames. Nodes whose marker has not changed since the last observation skip the Has_AnyEntityWith scan
-    // entirely — load-bearing because that scan reports a tombstone-only (in_place_delete) marker pool as
-    // non-empty forever after first use, which would otherwise phantom-pump every ever-used marker processor
-    // every frame.
-    //
-    // Independent of this setting, a pump that provably visited zero entities does not count as work when
-    // scheduling further pump passes (see FProcessorScheduler::DoPump).
-    //
-    // Cached at FProcessorScheduler construction — changing this requires a graph rebuild (PIE restart) to
-    // take effect.
+    // Lets the pump pass skip the Has_AnyEntityWith scan for nodes whose dirty marker has not changed since
+    // the last observation. Cached at FProcessorScheduler construction — changing it needs a PIE restart.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Scheduler")
     bool _EnableDirtyMarkerPumpShortCircuit = true;
 
-    // When enabled, the scheduler's MAIN pass skips dispatching any eligible processor whose view is provably
-    // empty — some required (include) fragment/tag type of its view has zero live entities — bypassing the
-    // Tick call, view construction, tombstone walk, and per-processor trace/stat/debug overhead entirely.
-    // Emptiness is tracked with the same per-fragment version counters the pump short-circuit uses: the
-    // (tombstone-aware) storage scan re-runs only when some include type mutated since the last observation.
-    //
-    // Eligibility is conservative and automatic — only processors whose DoTick is the template-generated view
-    // iteration participate; custom-DoTick processors, composites, parallel processors, and script processors
-    // always tick. Per-processor opt-out: ECk_ProcessorEmptyViewPolicy::AlwaysTick. Dev-build cross-check:
-    // `ck.Scheduler.VerifyEmptyViewSkip 1` re-scans every skipped node and ensures the verdict still holds.
-    //
-    // Cached at FProcessorScheduler construction — changing this requires a graph rebuild (PIE restart) to
-    // take effect.
+    // Lets the MAIN pass skip dispatching an eligible processor whose view is provably empty. Only
+    // template-generated-DoTick processors participate; opt out with ECk_ProcessorEmptyViewPolicy::AlwaysTick.
+    // Cached at FProcessorScheduler construction — changing it needs a PIE restart.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Scheduler")
     bool _EnableEmptyViewMainPassSkip = true;
 
-    // Active-registry count at which the slot table fires a soft-warning. Fires once at this threshold,
-    // then again at each new ascending multiple (2x, 3x, ...). Never re-fires for a multiple already
-    // reported in this process lifetime. 0 disables the soft-warning entirely (hard cap still applies).
-    //
-    // If you have tests or gyms that intentionally exceed this number, either raise the threshold or
-    // set Reporting to Log/Silent so the AutoTest harness doesn't escalate the signal to a test failure.
+    // Active-registry count at which the slot table fires a soft-warning; re-fires at each new ascending
+    // multiple, never twice for the same one. 0 disables it (the hard cap still applies). Tests or gyms that
+    // intentionally exceed it should raise this or set Reporting to Log/Silent.
     UPROPERTY(Config, EditDefaultsOnly, Category = "Registry Slot Table",
               meta = (ClampMin = "0"))
     int32 _RegistrySlot_WarnThreshold = 1024;
@@ -116,10 +92,7 @@ private:
               meta = (EditCondition = "_RegistrySlot_WarnThreshold > 0"))
     ECk_Ecs_RegistrySlot_Reporting _RegistrySlot_WarnReporting = ECk_Ecs_RegistrySlot_Reporting::Ensure;
 
-    // Read-only display of the compile-time hard cap. Editing this in the .ini does nothing —
-    // the canonical value is ck::registry_table::kRegistryTable_MaxSlots in
-    // CkRegistry_SlotTable.h. Exposed here so it's discoverable from Project Settings and
-    // queryable at runtime (e.g. by CkWatermark) via Get_RegistrySlot_HardCap().
+    // Read-only mirror of ck::registry_table::kRegistryTable_MaxSlots; editing it in the .ini does nothing.
     UPROPERTY(VisibleAnywhere, Category = "Registry Slot Table",
               meta = (DisplayName = "Hard Cap (read-only)"))
     int32 _RegistrySlot_HardCap = ck::registry_table::kRegistryTable_MaxSlots;
@@ -155,7 +128,6 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Ecs_EntityMap_Policy _EntityMapPolicy = ECk_Ecs_EntityMap_Policy::DoNotLog;
 
-    // Debug Callstack Capture Settings
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug Callstack",
               meta = (AllowPrivateAccess = true))
     bool _CaptureCallstack_Cpp = false;

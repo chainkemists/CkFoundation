@@ -31,9 +31,8 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // Composes the Compass feature directly onto the given entity (typically the local player's pawn or
-    // controller entity — one compass per local player). The observer defaults to this same entity;
-    // redirect it via Request_SetObserver (e.g. onto a camera-rig entity).
+    // Composes the Compass feature directly onto the given entity — one compass per entity. The observer
+    // defaults to this same entity; redirect it via Request_SetObserver.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Compass",
               DisplayName="[Ck][Compass] Add Feature")
@@ -110,9 +109,8 @@ public:
         const FCk_Handle_Compass& InCompass);
 
     // The per-frame pull surface: every projected POI as a self-contained value snapshot, sorted
-    // priority-desc then distance-asc. Consumers seed their pooled widgets from this at bind time and
-    // track membership deltas via the Appeared/Disappeared signals afterward — the signals never replay
-    // more than the LAST payload, so initial population must come from here, never from signal replay.
+    // priority-desc then distance-asc. Signal replay never carries more than the LAST payload, so a
+    // consumer's initial population must come from here and only then track Appeared/Disappeared deltas.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Compass",
               DisplayName="[Ck][Compass] Get Entries")
@@ -130,8 +128,6 @@ public:
         float InHeadingDegrees);
 
 public:
-    // Pure arc math — no entities, no world (unit-tested in CkCompass_Utils.spec.cpp).
-
     // bearing / (arc/2), clamped to [-1, 1]. An unclamped |result| > 1 means the bearing is outside the arc.
     static auto
     Get_NormalizedArcOffset(
@@ -144,10 +140,9 @@ public:
         float InSignedBearingDegrees,
         float InArcDegrees) -> bool;
 
-    // Distance-based opacity for a projected POI: 1 inside the visible band, ramping to 0 across
-    // InFadeBandCm INSIDE each active boundary (a range of 0 = that boundary is off; a band of
-    // 0 = hard 1 everywhere). Callers cull out-of-range distances before calling — values outside
-    // the band clamp to [0, 1].
+    // Distance-based opacity: 1 inside the visible band, ramping to 0 across InFadeBandCm INSIDE each
+    // active boundary (a range of 0 = that boundary is off; a band of 0 = hard 1 everywhere). Callers
+    // cull out-of-range distances first — values outside the band clamp to [0, 1].
     static auto
     Get_RangeFadeAlpha(
         float InDistance,

@@ -7,7 +7,7 @@
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_BuildRecipe.h" // FFragment_BuildRecipe retention (definition-built entity recipe)
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h" // FTag_RepFragments_PendingApply
-#include "CkEcs/Persistence/CkPersistenceHydration.h" // FFragment_PendingHydration (split Phase 5)
+#include "CkEcs/Persistence/CkPersistenceHydration.h" // FFragment_PendingHydration
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h" // Get_WorldForEntity (recipe holder outer)
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h" // FTag_DefinitionBuild_InProgress (construction-window stamp for labeled children)
 
@@ -52,12 +52,9 @@ auto
     return AddedOrNot;
 }
 
-// Cycle-safe DFS over the lifetime-dependents subtree counting replication drivers. Lifetime ownership
-// is a TREE, so a revisit means the dependents graph is cyclic — a corruption that must never happen in
-// steady state. Truncating at the revisit keeps an unbounded recursion from overflowing the stack (which
-// terminates the process with NO crash dump), and the ensure names the offending entity so the underlying
-// data bug can be found instead of silently crashing. In an acyclic graph the visited set never triggers,
-// so the count is identical to the naive recursion.
+// Cycle-safe DFS over the lifetime-dependents subtree. Lifetime ownership is a TREE, so a revisit means
+// the graph is corrupt: truncating there keeps the recursion from overflowing the stack (which kills the
+// process with NO crash dump) and the ensure names the entity. An acyclic graph never hits the visited set.
 static auto
     DoCount_ReplicationDriversIncludingDependents(
         const FCk_Handle& InHandle,
@@ -96,13 +93,8 @@ auto
     return DoCount_ReplicationDriversIncludingDependents(InHandle, Visited);
 }
 
-// Cycle-safe DFS mirroring DoCount above: does this entity — or any lifetime-dependent — still hold undrained
-// replicated fragments? FTag_RepFragments_PendingApply subsumes queued removals (PreReplicatedRemove sets it when
-// queueing — CkReplicatedFragmentContainer.cpp), so a direct _PendingRemovals probe (private on the Rep object,
-// Utils is not a friend) is unnecessary. FFragment_PendingHydration presence is checked directly — it is removed
-// only once its entry queue empties, so it is ground truth even during a Phase-3B load. Unlike DoCount this does
-// NOT prune at non-driver entities: hydration runs on every net mode, so a non-replicated dependent's queued
-// hydration should still block the aggregate fire during a restore. Bounded by the dispatcher's 5s/2s timeouts.
+// Cycle-safe DFS mirroring DoCount above, except it does NOT prune at non-driver entities: hydration runs
+// on every net mode, so a non-replicated dependent's queued hydration must still block the aggregate fire.
 static auto
     DoGet_HasUndrainedReplicatedFragments_Recursive(
         const FCk_Handle& InHandle,
@@ -138,9 +130,8 @@ auto
     return DoGet_HasUndrainedReplicatedFragments_Recursive(InHandle, Visited);
 }
 
-// Diagnostic twin of the DFS above — returns the FIRST offender instead of a bool, so the fire
-// processor's stall report can name the blocking entity. Cycle truncation is silent here (the bool
-// twin already ensures on cycles).
+// Diagnostic twin of the DFS above: returns the FIRST offender instead of a bool. Cycle truncation is
+// silent here because the bool twin already ensures on cycles.
 static auto
     DoGet_FirstUndrainedEntity_Recursive(
         const FCk_Handle& InHandle,
@@ -242,14 +233,9 @@ auto
     UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
     TryAdd(NewEntity);
 
-    // Mark the built entity as its own construction window for the SYNCHRONOUS span of ConstructionInfo execution
-    // below. Construct -> DoConstruct runs user composition inline (BP/AS/C++), so every child a construction script
-    // composes onto NewEntity — a Stackable trait's stack-count IntegerAttribute, etc. — reaches
-    // Request_SetupEntityWithLifetimeOwner while this tag is live, and is stamped ConstructSpawned (persisted +
-    // adopted by (owner, label) on load). A definition-built entity has no EntityScript fragment, so without this
-    // tag those labeled children fall to rule-5 anonymous-skip and revert to definition defaults. The scope guard
-    // removes the tag at block exit — strictly AFTER the last construction script completes and before any later
-    // runtime child could be composed onto NewEntity (which must NOT be stamped) — and is early-return-safe.
+    // The tag marks the SYNCHRONOUS construction window: children composed inline by the scripts below get
+    // stamped ConstructSpawned (and so persist), while any child composed later at runtime must NOT be. A
+    // definition-built entity has no EntityScript fragment, so without this its labeled children lose their state.
     {
         NewEntity.Add<ck::FTag_DefinitionBuild_InProgress>();
         ON_SCOPE_EXIT { NewEntity.Remove<ck::FTag_DefinitionBuild_InProgress>(); };
@@ -268,9 +254,8 @@ auto
         }
     }
 
-    // Retain the construction recipe so a save capture can re-create this definition-built entity on load: the
-    // ConstructionInfo (class + archetype) is consumed by Construct above and not otherwise retained on the entity.
-    // Stamped before the DoesNotReplicate early-return so non-replicated definition-built entities are captured too.
+    // Construct consumes the ConstructionInfos, so retain them for save capture. Stamped BEFORE the
+    // DoesNotReplicate early-return so non-replicated definition-built entities are captured too.
     if (const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
         ck::IsValid(World))
     {

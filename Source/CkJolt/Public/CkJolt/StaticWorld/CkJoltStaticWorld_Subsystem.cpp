@@ -77,8 +77,7 @@ auto
 
     _JoltSubsystem = InCollection.InitializeDependency<UCk_Jolt_Subsystem>();
 
-    // The attribution entities live in the ECS registry — depend on the ECS world subsystem so it outlives us
-    // and Deinitialize can still read their fragments while we free the Jolt bodies.
+    // Depend on the ECS world subsystem so it outlives us: Deinitialize still reads attribution fragments.
     _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>();
 
     _LevelAddedHandle = FWorldDelegates::LevelAddedToWorld.AddUObject(
@@ -95,10 +94,8 @@ auto
     FWorldDelegates::LevelAddedToWorld.Remove(_LevelAddedHandle);
     FWorldDelegates::LevelRemovedFromWorld.Remove(_LevelRemovedHandle);
 
-    // Levels do not reliably fire LevelRemovedFromWorld during world teardown — free every remaining source
-    // actor's bodies (and destroy its attribution entity) while both the Jolt world and the ECS registry
-    // (which we InitializeDependency on, so they outlive us) are still alive. Dead handles are tolerated (an
-    // entity destroyed first already routed through the funnel via its EndPlay processor).
+    // Levels do not reliably fire LevelRemovedFromWorld during world teardown — free everything remaining
+    // while the Jolt world and the ECS registry are both still alive. Dead handles are tolerated.
     for (auto& [Level, LevelBodies] : _LevelBodies)
     {
         for (auto& ActorEntity : LevelBodies._ActorEntities)
@@ -202,8 +199,6 @@ auto
     Result._HasHit = true;
     Result._Position = ck::jolt::Conv(Ray.GetPointOnRay(RayResult.mFraction));
 
-    // Attribution now flows through the body's Jolt user-data (the source actor's entity id), exactly like a
-    // dynamic JoltBody hit — no separate FName table.
     const auto& BodyInterface = PhysicsSystem->GetBodyInterface();
     Result._Entity = DoResolve_EntityFromUserData(BodyInterface.GetUserData(RayResult.mBodyID));
 
@@ -232,9 +227,8 @@ auto
              "world is not ready."), InActor.GetFName())
     { return 0; }
 
-    // Re-baking an already-baked actor REPLACES its attribution: free the previous bake's bodies and
-    // entity first — overwriting the map entry would orphan them (unreachable by Request_RemoveActor
-    // AND by Deinitialize).
+    // Re-baking REPLACES the previous attribution: overwriting the map entry would orphan its bodies
+    // (unreachable by Request_RemoveActor AND by Deinitialize).
     if (auto* ExistingEntity = _ManualActorEntities.Find(&InActor))
     {
         if (ck::IsValid(*ExistingEntity))
@@ -287,8 +281,7 @@ auto
         FCk_Handle_JoltStaticActor& InActorEntity)
         -> void
 {
-    // IncludePendingKill so this works from FProcessor_JoltStaticActor_EndPlay (the entity is pending-destroy
-    // there) as well as the fully-alive subsystem-driven paths.
+    // IncludePendingKill so this also works from FProcessor_JoltStaticActor_EndPlay.
     if (ck::Is_NOT_Valid(InActorEntity, ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
@@ -297,8 +290,7 @@ auto
 
     auto& Fragment = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>();
 
-    // Empty body-id array = already freed. This is the idempotence guard that makes the bidirectional
-    // lifecycle safe (whichever removal path runs first empties it; the other no-ops here).
+    // Empty body-id array = already freed: the idempotence guard of the bidirectional lifecycle.
     if (Fragment.Get_BodyIds().IsEmpty())
     { return; }
 
@@ -371,9 +363,8 @@ auto
     if (_LevelBodies.Contains(&InLevel))
     { return; }
 
-    // Every contributing actor needs a live transient entity to parent its attribution entity. If the ECS
-    // world is not ready yet (a level can be added before BeginPlay), SKIP — the OnWorldBeginPlay sweep
-    // re-attempts (this level is not recorded, so the _LevelBodies.Contains guard above lets it retry).
+    // A level can be added before BeginPlay: with no transient entity to parent attribution entities under,
+    // SKIP — the level is not recorded, so the OnWorldBeginPlay sweep re-attempts it.
     const auto TransientEntity = DoGet_TransientEntity();
     if (ck::Is_NOT_Valid(TransientEntity))
     {
@@ -393,8 +384,7 @@ auto
 
     if (ActorEntities.IsEmpty())
     {
-        // Cells may have been loaded even when every actor's bodies were skipped (stale hashes) —
-        // release them so the assets can GC.
+        // Cells can be loaded even when every actor was skipped (stale hashes) — release so they GC.
         for (const auto& CellIndex : CellIndices)
         { DoRelease_Cell(CellIndex); }
         return;
@@ -429,8 +419,7 @@ auto
 
     for (auto& ActorEntity : LevelBodies._ActorEntities)
     {
-        // Tolerate dead handles: an attribution entity destroyed first already freed its bodies through the
-        // funnel (its EndPlay processor).
+        // Tolerate dead handles: an entity destroyed first already freed its bodies through the funnel.
         if (ck::Is_NOT_Valid(ActorEntity))
         { continue; }
 
@@ -440,8 +429,7 @@ auto
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(GenericHandle);
     }
 
-    // Cooked-cell refcounts stay level-scoped: releasing here (not on an early entity destroy) keeps a cell
-    // pinned for as long as its level is loaded.
+    // Cooked-cell refcounts are level-scoped: releasing here keeps a cell pinned while its level is loaded.
     for (const auto& CellIndex : LevelBodies._CellIndices)
     { DoRelease_Cell(CellIndex); }
 
@@ -468,7 +456,6 @@ auto
         auto Extracted = TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>{};
         ck::jolt::bake::ExtractActor(*Actor, _LiveShapeCache, Extracted);
 
-        // No contribution => no attribution entity (D1).
         if (Extracted.IsEmpty())
         { continue; }
 
@@ -537,7 +524,6 @@ auto
             Actor->GetFName(), CurrentHash, Group.Get_RuntimeCheckHash())
         { continue; }
 
-        // No cooked bodies => no attribution entity (D1) and no cell ref.
         if (Group.Get_Bodies().IsEmpty())
         { continue; }
 
@@ -567,8 +553,7 @@ auto
 
             const auto& Shape = LoadedCell->_Shapes[Record.Get_ShapeIndex()];
 
-            // The stored signature resolves to a live layer id at load — layer indices are
-            // per-session and are never serialized.
+            // Layer indices are per-session and never serialized — the signature resolves one at load.
             const auto Layer = _JoltSubsystem->Get_LayerTable().Get_OrRegisterLayer(Record.Get_Signature());
             if (Layer == JPH::cObjectLayerInvalid)
             { continue; }
@@ -760,8 +745,7 @@ auto
         uint64 InUserData) const
     -> FCk_Handle
 {
-    // UserData 0 = NO entity: baked bodies always carry a non-zero source-actor entity id now, and raw entity
-    // id 0 is always the registry's live transient root (resolving it would mis-attribute).
+    // UserData 0 = NO entity — raw entity id 0 is always the registry's live transient root.
     if (InUserData == 0)
     { return {}; }
 
@@ -839,8 +823,7 @@ auto
     const auto& Cells = _CookedIndex->Get_Cells();
     const auto& CellRef = Cells[InCellIndex];
 
-    // Synchronous on purpose: this is the same moment Chaos pays for level add — collision must
-    // exist the frame the level is visible.
+    // Synchronous on purpose — collision must exist the frame the level is visible (as it does for Chaos).
     const auto* CellAsset = CellRef.Get_CellAsset().LoadSynchronous();
 
     CK_ENSURE_IF_NOT(ck::IsValid(CellAsset, ck::IsValid_Policy_NullptrOnly{}),

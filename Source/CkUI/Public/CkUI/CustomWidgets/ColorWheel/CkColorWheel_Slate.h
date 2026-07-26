@@ -1,11 +1,3 @@
-// Inspired by OmegaGameFramework's SWColorWheel (itself derived from the engine's SColorWheel):
-// https://github.com/StudioSyndiCatCaius/OmegaGameFramework
-//
-// Improvements over the source (per CkFoundation conventions): engine-correct selector
-// placement math (the source dropped the half-selector offset, leaving the pin off-center),
-// removal of dead tint attributes (tinting goes through the brushes the UMG wrapper owns),
-// self-invalidation on value changes, and ck::IsValid guards with core-style brush fallbacks.
-
 #pragma once
 
 #include <CoreMinimal.h>
@@ -51,16 +43,12 @@ public:
         // Brush drawn as the draggable selector pin. Falls back to the core-style selector when unset.
         SLATE_ARGUMENT(const FSlateBrush*, SelectorPinBrush)
 
-        // The currently selected color, in HSV space (see class comment).
         SLATE_ATTRIBUTE(FLinearColor, SelectedColorHSV)
 
-        // Invoked when the left mouse button is pressed inside the wheel and a drag begins.
         SLATE_EVENT(FSimpleDelegate, OnDragStarted)
 
-        // Invoked when the mouse is released and the drag ends.
         SLATE_EVENT(FSimpleDelegate, OnDragFinished)
 
-        // Invoked with the new HSV color whenever the selection changes.
         SLATE_EVENT(FOnLinearColorValueChanged, OnValueChanged)
 
         // Invoked with the selector position relative to the wheel center, X/Y in [-1..1], Y up.
@@ -87,10 +75,9 @@ public:
         bool bParentEnabled) const -> int32 override;
 
 private:
-    // Selector position relative to the wheel center, derived from hue (angle) and saturation (radius).
     auto Get_RelativePositionFromCenter() const -> FVector2D;
 
-    // Updates the selection from a mouse press/move. Returns whether the cursor was inside the wheel.
+    // Returns whether the cursor was inside the wheel.
     auto ProcessMouseAction(
         const FGeometry& InMyGeometry,
         const FPointerEvent& InMouseEvent,

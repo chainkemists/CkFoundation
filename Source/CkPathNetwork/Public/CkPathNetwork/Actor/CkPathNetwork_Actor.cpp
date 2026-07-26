@@ -21,8 +21,7 @@
 ACk_PathNetwork_UE::
     ACk_PathNetwork_UE()
 {
-    // AInfo has no root component; one is required for the actor to be placeable/movable and for
-    // the relative-ribbon storage (+ MakeEditWidget point widgets) to have a meaningful frame.
+    // AInfo has no root component; the relative-ribbon storage (+ MakeEditWidget point widgets) needs one for its frame.
     RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
     RootComponent->SetMobility(EComponentMobility::Static);
 
@@ -94,9 +93,7 @@ auto
 {
     Super::Tick(InDeltaSeconds);
 
-    // Editor-viewport visualization only. Runtime worlds have the debug-draw processor
-    // (ck.PathNetwork.DebugDraw) for the BUILT graph; this draws the AUTHORED ribbons so
-    // designers see what they're editing without PIE.
+    // Draws the AUTHORED ribbons; the BUILT graph is drawn in game worlds by ck.PathNetwork.DebugDraw.
     const auto* World = GetWorld();
 
     if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}) || World->IsGameWorld())
@@ -123,8 +120,6 @@ auto
             const auto& Prev = Points[PointIndex - 1];
             DrawDebugLine(World, Prev.Get_Location(), Point.Get_Location(), Color, false, -1.0f, SDPG_World, 3.0f);
 
-            // Width edges: offset the segment sideways by each end's half-width so designers see
-            // the walkable band, not just the centerline.
             const auto Tangent = (Point.Get_Location() - Prev.Get_Location()).GetSafeNormal2D();
 
             if (Tangent.IsNearlyZero())

@@ -58,9 +58,6 @@ auto
     if (ck::IsValid(InCollection->Get_BaseColorTexture()))
     { UCk_Utils_Usf_UE::Set_Texture(Mid, TEXT("BaseColorTex"), InCollection->Get_BaseColorTexture()); }
 
-    // Texture dims come from the SERIALIZED bake results, never GetSizeX/Y: those read platform
-    // data and return 0 while a freshly-baked texture is still async-compiling — which seeded
-    // BoneCount/TotalRows = 0 and collapsed every lookup onto one texel (Ck_Vat_DebugVerifyBake).
     CK_ENSURE_IF_NOT(InCollection->Get_BakedData().Get_TextureWidth() > 0 && InCollection->Get_BakedData().Get_TextureRows() > 0,
         TEXT("VatCollection [{}] has no serialized texture dimensions — rebake with the current baker"), InCollection)
     { return {}; }
@@ -125,7 +122,7 @@ auto
     { Overrides.Emplace(Slot, Mid); }
 
     // Movable is load-bearing: the ISM proxy pushes per-instance custom data to the GPU only on
-    // the Movable path — and VAT entities generally move anyway.
+    // the Movable path.
     auto* RendererData = UCk_Utils_IsmRenderer_TransientFactory_UE::GetOrCreate_ForMeshWithMaterialsAndCustomData(
         GetWorld(), BakedMesh, Overrides, NumPerInstanceFloats, ECk_Mobility::Movable);
     CK_ENSURE_IF_NOT(ck::IsValid(RendererData),

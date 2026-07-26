@@ -2,29 +2,16 @@
 
 #include "CoreMinimal.h"
 
-// FCk_Iskm_BoneMatrix3x4 lives in the engine-only PostConfigInit VF module (shared by the baker + the GPU upload).
 #include "CkIskmRendererVF/CkIskm_BoneMatrix.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// CkIskmRenderer Plan-2 — CPU bone-matrix bake output
-//
-// The bake (UCk_IskmAnimCollection_Data::Build_BakedPoseData) samples every sequence at a fixed frequency and
-// stores, per (frame x render-bone), the transposed 3x4 component-space pose relative to the reference pose:
-//
-//     ShaderMatrix[bone] = RefPoseInverse[bone] * ComponentSpaceBoneMatrix[bone]   (stored transposed, 3 rows of float4)
-//
-// Flat layout, GPU-upload-ready as a Buffer<float4> SRV:
-//     matrixIndex = frameIndex * RenderBoneCount + boneIndex      (each entry = 3 x float4 = 12 floats)
-//
-// Frame 0 is the reference pose (identity matrices). Sequences occupy contiguous frame ranges starting at frame 1.
-// This is a direct port of Skelot's FSkelotAnimationBuffer bake (SkelotAnimCollection.cpp CalcRenderMatrices).
-//
-// This data is asset-intrinsic (world-independent), transient (rebuilt, never serialized), and CPU-only — the bake
-// touches no RHI, so it runs headlessly under -nullrhi (the SRV upload is a separate step).
+// Transposed 3x4 component-space pose per (frame x render-bone), GPU-upload-ready as a Buffer<float4> SRV:
+//     ShaderMatrix[bone] = RefPoseInverse[bone] * ComponentSpaceBoneMatrix[bone]
+//     matrixIndex = frameIndex * RenderBoneCount + boneIndex        (each entry = 3 x float4)
+// Frame 0 is the reference pose (identity); sequences occupy contiguous frame ranges from frame 1 on.
 
 class UAnimSequenceBase;
 
-// Per-sequence offset table entry (mirrors Skelot FSkelotSequenceDef's render-relevant fields).
 struct FCk_Iskm_BakedSequence
 {
     // Base frame offset into the flat matrix buffer for this sequence's frame 0.
@@ -35,7 +22,6 @@ struct FCk_Iskm_BakedSequence
     TWeakObjectPtr<UAnimSequenceBase> Sequence;
 };
 
-// Per-frame component-space transforms for one baked socket (far cosmetics).
 struct FCk_Iskm_BakedSocket
 {
     FName Name;
@@ -47,27 +33,22 @@ struct FCk_Iskm_BakedSocket
     TArray<FTransform3f> FrameTransforms;
 };
 
-// Full CPU bake for one AnimCollection.
 struct FCk_Iskm_BakedPose
 {
     // Number of bones written per frame (the skinned subset of skeleton bones).
     int32 RenderBoneCount = 0;
     // 1 (identity frame 0) + sum of per-sequence frame counts.
     int32 FrameCountSequences = 0;
-    // MVP: == FrameCountSequences (no transition / dynamic-pose region yet).
     int32 TotalFrameCount = 0;
-    // MVP: always high-precision float32. (Skelot defaults to float16; HP is strictly higher quality.)
     bool HighPrecision = true;
 
     // [TotalFrameCount * RenderBoneCount], index = frame * RenderBoneCount + bone.
     TArray<FCk_Iskm_BoneMatrix3x4> Matrices;
-    // [FrameCountSequences] per-frame local-space AABB for culling. MVP: mesh static bound per frame.
+    // [FrameCountSequences] per-frame local-space AABB for culling.
     TArray<FBox3f> FrameBounds;
 
-    // Conservative ANIMATED bounds: union of component-space bone positions across every baked frame, expanded
-    // by the ref-pose skin pad (how far the mesh box extends beyond the ref-pose bones), unioned with the mesh
-    // box. Animated poses (walk/jog arm swings, jumps) can exceed the static mesh box — culling with the raw
-    // mesh box clips silhouettes at bound edges.
+    // Bone-position union across every baked frame + ref-pose skin pad, unioned with the mesh box: an
+    // animated pose (arm swings, jumps) can exceed the static mesh box, which clips silhouettes when culled.
     FBox AnimatedBounds = FBox(ForceInit);
 
     // render-bone index -> skeleton-bone index.
@@ -79,7 +60,7 @@ struct FCk_Iskm_BakedPose
     // per-sequence offset table, parallel to the asset's _Sequences array.
     TArray<FCk_Iskm_BakedSequence> Sequences;
 
-    // Baked socket table (far cosmetics) — one entry per resolvable _BakedSockets name.
+    // one entry per RESOLVABLE _BakedSockets name (unresolvable ones are skipped at bake).
     TArray<FCk_Iskm_BakedSocket> Sockets;
 
     bool IsBaked = false;
@@ -90,9 +71,8 @@ struct FCk_Iskm_BakedPose
     auto
     Get_GlobalFrame(int32 InSequenceIndex, int32 InLocalFrame) const -> int32;
 
-    // Per-instance frame advance for a LOOPING sequence: GlobalFrame = AnimationFrameIndex + (trunc(time*rate) mod count).
-    // This is the CPU-side of Skelot's UpdateAnimation (LocalFrame = trunc(time*SampleFrequency)); the batched sync
-    // uploads the result as the per-instance frame index. Negative wrap handled for safety.
+    // LOOPING advance: GlobalFrame = AnimationFrameIndex + (trunc(time * SampleFrequency) mod AnimationFrameCount),
+    // negative time wrapped. The batched sync uploads the result as the per-instance frame index.
     auto
     Get_LoopedFrameAtTime(int32 InSequenceIndex, float InTimeSeconds) const -> int32;
 

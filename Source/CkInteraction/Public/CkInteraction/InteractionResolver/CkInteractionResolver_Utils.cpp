@@ -183,7 +183,6 @@ auto
     const auto& Params = InResolver.Get<ck::FFragment_InteractionResolver_Params>();
     const auto& Mappings = Params.Get_IntentChannelMappings();
 
-    // Find the mapping for this intent
     const auto* IntentMapping = Mappings.FindByPredicate([&](const FCk_InteractionResolver_IntentChannelMapping& InMapping)
     {
         return InMapping.Get_Intent().MatchesTagExact(InIntent);
@@ -204,22 +203,20 @@ auto
 
     auto ValidTargets = TArray<FCk_Handle_InteractTarget>{};
 
-    // Iterate through channels in priority order
+    // The mapping's channel order IS the priority order.
     for (const auto& Channel : IntentMapping->Get_Channels())
     {
-        // Find targets that match this channel from the provided available targets
         for (const auto& Target : InAvailableTargets)
         {
-            // Skip invalid targets
             if (NOT ck::IsValid(Target))
             { continue; }
 
             if (NOT UCk_Utils_InteractTarget_UE::Get_InteractionChannel(Target).MatchesTagExact(Channel))
             { continue; }
 
-            // Allow targets that already have an active interaction to remain in the resolved set.
-            // Without this, re-evaluation triggered by an unrelated intent stopping would drop
-            // targets with active interactions, causing the bridge code to cancel those interactions.
+            // The three non-CanInteractWith results below are accepted so a target with an ACTIVE
+            // interaction stays in the resolved set — otherwise re-evaluation caused by an unrelated
+            // intent stopping drops it, and the bridge code cancels its live interaction.
             INC_DWORD_STAT(STAT_Interaction_CanInteractWithCalls);
             const auto CanInteractResult = UCk_Utils_InteractTarget_UE::Get_CanInteractWith(Target, InResolver);
             if (CanInteractResult != ECk_CanInteractWithResult::CanInteractWith &&

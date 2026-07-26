@@ -23,11 +23,9 @@ namespace ck
         { return Safety == ECk_UntracedStructSafety::GcIndependent; }
     };
 
-    // Recursively classifies whether a reflected struct value may be retained in memory that Unreal's GC does not
-    // visit. The analysis is deliberately fail-closed: reflected strong UObject/interface leaves require tracing,
-    // while native carriers whose reference semantics reflection cannot prove are reported as UnprovenOpaque.
-    // Empty AngelScript-generated structs are GC-independent marker/tag values when both their reflected property
-    // graph and complete AngelScript value-storage size are empty.
+    // Recursively classifies whether a reflected struct value may be retained in memory Unreal's GC does not visit.
+    // Deliberately fail-closed: strong UObject/interface leaves require tracing, and native carriers whose reference
+    // semantics reflection cannot prove are reported as UnprovenOpaque rather than accepted.
     CKCORE_API auto
     Analyze_UntracedStructSafety(
         const UScriptStruct* InStructType) -> FCk_UntracedStructSafetyResult;

@@ -33,8 +33,7 @@ auto
     auto NewLayer = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InCamera);
     UCk_Utils_Handle_UE::Set_DebugName(NewLayer, InLayerClass->GetFName());
 
-    // Owning camera back-ref (typed) — Acquire derives the camera from the layer via this holder; it MUST be set
-    // before the EntityScript is attached so the layer's DoEnter (which acquires modifiers) can resolve the camera.
+    // MUST precede the EntityScript attach below: the layer's DoEnter acquires modifiers through this back-ref.
     ck::TUtils_CameraLayer_OwningCamera::AddOrReplace(NewLayer, InCamera);
 
     NewLayer.Add<ck::FFragment_CameraLayer_Params>(InLayerClass);
@@ -47,8 +46,7 @@ auto
     ck::FUtils_RecordOfCameraLayers::Request_Connect(
         InCamera, TypedLayer, ECk_Record_LabelRequirementPolicy::Optional);
 
-    // Attach the layer EntityScript synchronously (after the back-ref/params/record are in place, so Construct sees
-    // them) — mirrors UCk_Utils_SmState_UE::Create.
+    // Synchronous, and last: Construct must see the back-ref, params and record entry already in place.
     UCk_Utils_EntityScript_UE::Add(NewLayer, InLayerClass, FInstancedStruct{});
 
     return TypedLayer;
@@ -305,7 +303,7 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// ACQUIRE WRAPPERS — resolve the tuner attribute from the owning camera's section fragment, then dispatch to the core.
+// ACQUIRE WRAPPERS
 // --------------------------------------------------------------------------------------------------------------------
 
 // ---- Rig ----

@@ -18,9 +18,8 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Per-tag storage marker placed in the hashed EnTT storage view used by ForEach_Entity.
-    // The presence (or absence) of this storage entry mirrors whether the entity currently
-    // "Has" the tag — the count itself lives in FFragment_EntityTag_Current._Tags.
+    // Presence in the per-tag hashed EnTT storage (the view behind ForEach_Entity) IS the entity's
+    // "Has" answer for that tag; the count itself lives in FFragment_EntityTag_Current._Tags.
     using FFragment_EntityTag_StorageParams = FCk_Fragment_EntityTag_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -74,14 +73,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Per-tag subscription marker. The presence of this fragment in the EnTT
-    // per-tag-keyed storage (keyed by entt::id_type{GetTypeHash(Tag)}, mirroring
-    // FFragment_EntityTag_StorageParams) marks the listener entity as interested
-    // in mutations to that tag. NAME_None storage is the wildcard ("any tag").
-    //
-    // Carries a refcount because the same entity may bind multiple delegates for
-    // the same tag — we only want one marker per (entity, tag) pair, removed when
-    // all delegates unbind.
+    // Presence in the per-tag-keyed storage (entt::id_type{GetTypeHash(Tag)}, mirroring
+    // FFragment_EntityTag_StorageParams) marks the listener as interested in that tag; NAME_None
+    // is the wildcard. Refcounted so multiple delegates on one (entity, tag) pair share a marker.
     struct CKENTITYTAG_API FFragment_EntityTag_AnyEntitySubscription
     {
     public:

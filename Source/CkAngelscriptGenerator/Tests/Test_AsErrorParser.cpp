@@ -1,9 +1,5 @@
-// Snapshot tests for the AS error parser (Rev 10 dispatcher input layer).
-//
-// Inputs are verbatim from the 2026-05-11 corruption probes. These tests
-// are the engine-upgrade canary — if they go red after a Hazelight upgrade,
-// the AS compile-error format has changed and the parser must be updated
-// before the dispatcher can resume working.
+// Snapshot tests pinning Hazelight's AS compile-error formats verbatim — the
+// engine-upgrade canary (CkAngelscriptGenerator/CLAUDE.md § Error-format stability).
 
 #include "CkAngelscriptGenerator/SelfHeal/CkAngelscriptGenerator_AsErrorParser.h"
 
@@ -15,8 +11,6 @@
 
 using namespace ck::angelscriptgenerator::self_heal;
 
-// --------------------------------------------------------------------------------------------------------------------
-// Probe 1: EntitySpawnParams drift — single "No matching signatures" with typed arg.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -49,8 +43,6 @@ bool FCkTest_AsErrorParser_EntitySpawnParamsProbe::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Probe 2: AssetRegistry drift — single "No matching signatures" with empty args.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AsErrorParser_AssetRegistryProbe,
@@ -82,9 +74,6 @@ bool FCkTest_AsErrorParser_AssetRegistryProbe::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Probe 3: DynamicHandle drift — "Identifier not a data type" with both namespace
-// and global-namespace scopes, plus cascade noise that must be dropped.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AsErrorParser_DynamicHandleProbe,
@@ -104,12 +93,11 @@ bool FCkTest_AsErrorParser_DynamicHandleProbe::RunTest(const FString&)
 
     const auto Errors = FCkAsErrorParser::ParseErrors(Input);
 
-    // Two recognized roots; everything else (Compiling context, "_Iterator not declared",
-    // "Illegal operation on Unknown") is cascade noise and must be dropped.
+    // Two recognized roots; the Compiling context and the Unknown/_Iterator lines
+    // are cascade noise the parser must drop.
     TestEqual(TEXT("error count"), Errors.Num(), 2);
     if (Errors.Num() < 2) { return false; }
 
-    // First: namespace-scoped lookup failure in DebugCheats.as
     {
         const auto& E = Errors[0];
         TestEqual(TEXT("[0] Kind"),              static_cast<int32>(E.Kind), static_cast<int32>(ECk_AsParsedError_Kind::IdentifierNotADataType));
@@ -120,7 +108,6 @@ bool FCkTest_AsErrorParser_DynamicHandleProbe::RunTest(const FString&)
         TestEqual(TEXT("[0] LookupScope"),       E.LookupScope,               FString{TEXT("bb_checkout_cheats")});
     }
 
-    // Second: global-namespace lookup failure in Feature.as — LookupScope must be empty.
     {
         const auto& E = Errors[1];
         TestEqual(TEXT("[1] Kind"),              static_cast<int32>(E.Kind), static_cast<int32>(ECk_AsParsedError_Kind::IdentifierNotADataType));
@@ -135,8 +122,8 @@ bool FCkTest_AsErrorParser_DynamicHandleProbe::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Multi-arg "No matching signatures" — confirms the args-list regex tolerates
-// commas and template angle brackets without prematurely terminating.
+// The args-list regex must tolerate commas and template angle brackets without
+// terminating early.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -162,7 +149,6 @@ bool FCkTest_AsErrorParser_NoMatchingSignatures_MultiArg::RunTest(const FString&
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Dedup: same root cause across multiple cascade sites collapses to one entry.
 // Source file/line/column are intentionally NOT part of the dedup key.
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -173,8 +159,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_AsErrorParser_DeduplicateRoots::RunTest(const FString&)
 {
-    // Same missing identifier referenced from three different sites + one
-    // distinct "No matching signatures" error. Expect 2 unique roots.
     const auto Input = FString{TEXT(
         "D:/Repos/BusterBlock/Script/A.as:\n"
         "(10:5) Identifier 'FCk_Handle_X' is not a data type in global namespace\n"
@@ -199,15 +183,8 @@ bool FCkTest_AsErrorParser_DeduplicateRoots::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Adjacent string-literal splice — Hazelight emits as a TWO-line pair:
-//   (L:C) Expected ')' or ','
-//   (L:C) Instead found '<string constant>'
-// The "Expected ')' or ','" line is generic (any parse error of that shape
-// fires it), so the parser keys on the unique second line.
-//
-// Captured 2026-05-17 from a CkAggro AS test that broke a string across lines
-// C-style; recognized so the dispatcher's actionable banner replaces the
-// generic "no recognized roots" terminal that wedges headless test runs.
+// Adjacent string-literal splice — Hazelight emits a TWO-line pair; the parser
+// keys on the unique `Instead found '<string constant>'` line.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -225,9 +202,8 @@ bool FCkTest_AsErrorParser_AdjacentStringLiteralProbe::RunTest(const FString&)
 
     const auto Errors = FCkAsErrorParser::ParseErrors(Input);
 
-    // Exactly one parsed root: the "Instead found '<string constant>'" line.
-    // The generic "Expected ')' or ','" companion is intentionally dropped —
-    // it isn't a unique enough signature to act on.
+    // The generic "Expected ')' or ','" companion is dropped — not a unique
+    // enough signature to act on.
     TestEqual(TEXT("error count"), Errors.Num(), 1);
     if (Errors.Num() < 1) { return false; }
 
@@ -241,8 +217,8 @@ bool FCkTest_AsErrorParser_AdjacentStringLiteralProbe::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Cascade-only input (no recognized roots) yields an empty result. This is the
-// signal the dispatcher uses to show a terminal banner instead of looping.
+// An empty result is the signal the dispatcher uses to show a terminal banner
+// instead of looping.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -266,8 +242,6 @@ bool FCkTest_AsErrorParser_UnrecognizedNoise::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Empty / whitespace-only input yields empty result without crashing.
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_AsErrorParser_EmptyInput,
@@ -282,11 +256,8 @@ bool FCkTest_AsErrorParser_EmptyInput::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Cascade filter: AS errors whose argument list contains "Unknown" are
-// downstream of a real root cause (typically a missing handle type the
-// IdentifierNotADataType path will catch). The parser drops them so the
-// dispatcher doesn't classify them as Unrecognized and emit terminal-banner
-// warnings for symptoms rather than the root.
+// Errors whose argument list contains "Unknown" are downstream of a real root;
+// dropping them keeps the dispatcher from banner-ing symptoms instead of causes.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -296,9 +267,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_AsErrorParser_CascadeUnknownFilter::RunTest(const FString&)
 {
-    // Same shape as the handle-drift probe cascade: the IdentifierNotADataType
-    // is the root (FCk_Handle_CheckoutCounter missing); the As_X / ck::IsValid
-    // calls are downstream symptoms with "Unknown" in their args.
     const auto Input = FString{TEXT(
         "D:/Repos/BusterBlock/Script/Sample.as:\n"
         "(10:5) Identifier 'FCk_Handle_X' is not a data type in global namespace\n"
@@ -309,8 +277,6 @@ bool FCkTest_AsErrorParser_CascadeUnknownFilter::RunTest(const FString&)
 
     const auto Errors = FCkAsErrorParser::ParseErrors(Input);
 
-    // Only the IdentifierNotADataType root should survive. All four
-    // NoMatchingSignatures entries have "Unknown" in their args -> filtered.
     TestEqual(TEXT("filtered to root only"), Errors.Num(), 1);
     if (Errors.Num() != 1) { return false; }
 
@@ -325,11 +291,8 @@ bool FCkTest_AsErrorParser_CascadeUnknownFilter::RunTest(const FString&)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Probe: bare constructor-style call — `No matching signatures to '<Ident>(<args>)'`
-// with NO namespace qualifier. The direct-construction shape from the 2026-06
-// fresh-clone ESP boot test: a caller constructs a generated F<X>_SpawnParams
-// whose canonical file is missing; the subsequent field accesses cascade as
-// "'<Field>' is not a member of 'Unknown'" lines that must be dropped.
+// Bare constructor-style call — `No matching signatures to '<Ident>(<args>)'` with
+// NO namespace qualifier: the direct-construction shape of a missing canonical.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -349,8 +312,7 @@ bool FCkTest_AsErrorParser_BareCtorProbe::RunTest(const FString&)
 
     const auto Errors = FCkAsErrorParser::ParseErrors(Input);
 
-    // Two bare-ctor roots; the Compiling context and the 'not a member of
-    // Unknown' cascade are dropped.
+    // The Compiling context and the 'not a member of Unknown' cascade are dropped.
     TestEqual(TEXT("error count"), Errors.Num(), 2);
     if (Errors.Num() < 2) { return false; }
 
@@ -375,9 +337,6 @@ bool FCkTest_AsErrorParser_BareCtorProbe::RunTest(const FString&)
     return true;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Bare-ctor cascade filter + dedup: 'Unknown' args are dropped; identical
-// roots across cascade sites collapse to one.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

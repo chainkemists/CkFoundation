@@ -8,12 +8,10 @@
 
 namespace ck_state_machine_debug_utils
 {
-    // GFrameCounter stamp of the most recent debugger read of FFragment_Sm_Debug data.
-    // Written/read on the game thread only (Slate debugger ticks + the ECS scheduler).
+    // GFrameCounter stamp of the last debugger read. Game thread only (Slate ticks + ECS scheduler).
     static uint64 LastConsumedFrame = 0;
 
-    // Keep polling for this many frames after the last read — comfortably above the
-    // debugger windows' refresh-gate interval so the gate doesn't flap between reads.
+    // Above the debugger windows' refresh-gate interval so the poll gate doesn't flap between reads.
     constexpr uint64 ConsumedGraceFrames = 300;
 }
 
@@ -65,9 +63,8 @@ auto
     if (LastConsumed != 0 && GFrameCounter - LastConsumed <= ck_state_machine_debug_utils::ConsumedGraceFrames)
     { return true; }
 
-    // The on-screen entity debug overlay reads SM debug data every overlay tick while
-    // enabled — its master toggle is the ck.DebugOverlay cvar. Resolved by name (and
-    // re-probed until found, since the debugger plugin may load after this module) so
+    // The on-screen entity debug overlay reads SM debug data every tick while enabled. Resolved by
+    // name — and re-probed until found, since the debugger plugin may load after this module — so
     // CkStateMachine takes no dependency on the debugger modules.
     static IConsoleVariable* OverlayCVar = nullptr;
 

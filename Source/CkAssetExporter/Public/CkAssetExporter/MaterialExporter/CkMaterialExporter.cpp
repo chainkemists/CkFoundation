@@ -48,8 +48,7 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    // Corpus mode writes into a passed directory; dispatch / right-click / tab mode writes the sibling json next to
-    // the source .uasset (empty InOutputDir).
+    // Corpus mode writes into InOutputDir; empty means sibling-json mode (dispatch / right-click / tab).
     auto JsonPath = FString{};
     if (NOT InOutputDir.IsEmpty())
     {
@@ -146,7 +145,6 @@ auto
             Root->SetArrayField(TEXT("connectedOutputs"), Connected);
         }
 
-        // Expression histogram — the "tricks list". Full counts by class plus dynamic-parameter names.
         auto Histogram = TMap<FString, int32>{};
         auto DynamicParamNames = TSet<FString>{};
         for (const auto& Expression : BaseMaterial->GetExpressions())
@@ -237,8 +235,7 @@ auto
     Root->SetArrayField(TEXT("textureParams"), TextureArr);
 
     // ---- Every texture the material uses (parameters + hard-wired samples) ----
-    // NOTE: the old 5-arg GetUsedTextures overload is a UE_DEPRECATED(5.7) empty-body no-op on this
-    // engine — the TOptional overload with defaults (= all quality levels / platforms) is the live one.
+    // The 5-arg GetUsedTextures overload is a UE_DEPRECATED(5.7) empty-body no-op; this TOptional one is live.
     auto UsedTextures = TArray<UTexture*>{};
     InMaterial->GetUsedTextures(UsedTextures);
 

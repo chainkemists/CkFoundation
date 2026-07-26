@@ -85,8 +85,8 @@ auto
     const auto Index = static_cast<int32>(EntityId) - 1;
     const auto LocalCoord = UCk_Utils_Grid2D_UE::Get_IndexAsCoordinate(Index, Dimensions);
 
-    // For now, always return local coordinates
-    // The Parent Entity transform handles all visual rotation
+    // InCoordinateType is deliberately ignored: the parent entity transform carries all rotation,
+    // so cell coordinates are always local.
     return LocalCoord;
 }
 
@@ -184,20 +184,16 @@ auto
     const auto CellSize = UCk_Utils_2dGridSystem_UE::Get_CellSize(ParentGrid);
     const auto LocalCoord = Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
 
-    // Calculate local cell bounds (relative to grid origin)
     const auto Min = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(LocalCoord, CellSize);
     const auto Max = Min + CellSize;
 
     if (InLocalWorld == ECk_LocalWorld::Local)
     {
-        // For local space, just return the bounds relative to grid origin
         return FBox2D(Min, Max);
     }
 
-    // For world space, use the pivot's world transform
     const auto PivotWorldTransform = UCk_Utils_2dGridSystem_UE::Get_Pivot(ParentGrid, ECk_LocalWorld::World);
 
-    // Transform all 4 corners to handle rotation properly
     const auto Corners = TArray
     {
         Min,
@@ -236,7 +232,6 @@ auto
     const auto CellSize = UCk_Utils_2dGridSystem_UE::Get_CellSize(ParentGrid);
     const auto LocalCoord = Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
 
-    // Calculate local cell center
     const auto LocalMin = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(LocalCoord, CellSize);
     const auto LocalCenter = LocalMin + (CellSize * 0.5f);
 
@@ -245,7 +240,6 @@ auto
         return UCk_Utils_OrientedBox2D_UE::Request_Create(LocalCenter, CellSize * 0.5f);
     }
 
-    // For world space, use the pivot's world transform
     const auto PivotWorldTransform = UCk_Utils_2dGridSystem_UE::Get_Pivot(ParentGrid, ECk_LocalWorld::World);
     const auto WorldCenter = FVector2D(PivotWorldTransform.TransformPosition(FVector(LocalCenter.X, LocalCenter.Y, 0.0f)));
     const auto WorldRotation = PivotWorldTransform.GetRotation().Rotator().Yaw;
@@ -267,28 +261,26 @@ auto
     const auto CellSize = UCk_Utils_2dGridSystem_UE::Get_CellSize(ParentGrid);
     const auto LocalCoord = Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
 
-    // Calculate local cell center
     const auto LocalMin = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(LocalCoord, CellSize);
     const auto LocalCenter = LocalMin + (CellSize * 0.5f);
+
+    constexpr auto VisualizationZExtent = 1.0f;
 
     if (InLocalWorld == ECk_LocalWorld::Local)
     {
         const auto Center3D = FVector(LocalCenter.X, LocalCenter.Y, 0.0f);
-        const auto Extents3D = FVector(CellSize.X * 0.5f, CellSize.Y * 0.5f, 1.0f); // Small Z extent for visualization
+        const auto Extents3D = FVector(CellSize.X * 0.5f, CellSize.Y * 0.5f, VisualizationZExtent);
         return UCk_Utils_OrientedBox3D_UE::Request_Create(Center3D, Extents3D);
     }
 
-    // For world space, use the pivot's world transform
     const auto PivotWorldTransform = UCk_Utils_2dGridSystem_UE::Get_Pivot(ParentGrid, ECk_LocalWorld::World);
     const auto WorldCenter3D = PivotWorldTransform.TransformPosition(FVector(LocalCenter.X, LocalCenter.Y, 0.0f));
 
-    // Create frame from pivot transform
     const auto Frame3D = UCk_Utils_Frame3D_UE::Request_CreateFromTransform(PivotWorldTransform);
-    const auto Extents3D = FVector(CellSize.X * 0.5f, CellSize.Y * 0.5f, 1.0f); // Small Z extent for visualization
+    const auto Extents3D = FVector(CellSize.X * 0.5f, CellSize.Y * 0.5f, VisualizationZExtent);
 
     auto OrientedBox = UCk_Utils_OrientedBox3D_UE::Request_CreateWithFrame(Frame3D, Extents3D);
 
-    // Update the center to the actual cell world position
     auto BoxFrame = UCk_Utils_OrientedBox3D_UE::Get_Frame(OrientedBox);
     UCk_Utils_Frame3D_UE::Request_SetOrigin(BoxFrame, WorldCenter3D);
     UCk_Utils_OrientedBox3D_UE::Request_SetFrame(OrientedBox, BoxFrame);

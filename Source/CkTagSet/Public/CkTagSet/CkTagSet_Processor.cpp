@@ -121,10 +121,6 @@ namespace ck
             const FFragment_TagSet& InTagSet)
         -> void
     {
-        // Container lives on InHandle (co-located with FFragment_TagSet, which carries the
-        // replication driver) — see UCk_Utils_TagSet_UE::Add. Consume the registered Produce (the value
-        // overload's SetFragmentData find-or-adds the entry — same net effect as the mutator; the entry
-        // always exists post-Add). Byte-identical wire content.
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_TagSet>(InHandle);
         if (Produced.IsSet())
         { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_TagSet>(InHandle, *Produced); }
@@ -144,21 +140,17 @@ namespace ck
         const auto& ReplicatedTags = InSync.Get_ReplicatedTags();
         const auto& CurrentTags    = InTagSet.Get_Tags();
 
-        // No change
         if (ReplicatedTags == CurrentTags)
         {
             InHandle.Remove<MarkedDirtyBy>();
             return;
         }
 
-        // Compute diff
         const auto TagsAdded   = UCk_Utils_GameplayTag_UE::Get_Difference(ReplicatedTags, CurrentTags);
         const auto TagsRemoved = UCk_Utils_GameplayTag_UE::Get_Difference(CurrentTags, ReplicatedTags);
 
-        // Apply replicated state
         InTagSet.Set_Tags(ReplicatedTags);
 
-        // Broadcast signal if any tags changed
         if (TagsAdded.Num() > 0 || TagsRemoved.Num() > 0)
         {
             UUtils_Signal_TagSet_OnTagsChanged::Broadcast(

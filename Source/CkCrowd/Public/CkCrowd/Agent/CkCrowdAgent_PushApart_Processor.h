@@ -12,20 +12,10 @@
 
 namespace ck
 {
-    // Post-hoc physical-resolution pass. Direct port of DetourCrowd.cpp:updateStepMove
-    // 1601-1662. Iterates 1 or 4 times (project-controlled) over each agent's neighbor cache,
-    // accumulating a displacement vector, and stages it into
-    // FFragment_CrowdAgent_PendingDisplacement. It does NOT write the Transform — the single
-    // Transform writer for a crowd agent is FProcessor_CrowdAgent_ConstrainToNavmesh, which walks
-    // the accumulated displacement along the navmesh surface before applying it. Resolves residual
-    // overlap that the sampler couldn't prevent (cluster pile-up, fast closing, sampler latency,
-    // anything else).
-    //
-    // No FTag_CrowdAgent_Walking requirement — push-apart fires on idle agents too. That's what
-    // handles cluster-at-goal overlap: 5 agents converge to centre, transition Idle, push-apart
-    // physically separates them.
-    //
-    // Group: FGroup_Physics. RunAfter ApplyOffset (shared PendingDisplacement staging).
+    // Stages into FFragment_CrowdAgent_PendingDisplacement and never writes the Transform — the
+    // single Transform writer is FProcessor_CrowdAgent_ConstrainToNavmesh.
+    // No FTag_CrowdAgent_Walking requirement, deliberately: idle agents must separate too, which
+    // is what resolves a cluster that converged on one goal and went Idle.
     class CKCROWD_API FProcessor_CrowdAgent_PushApart : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_PushApart,
             FCk_Handle_CrowdAgent,

@@ -22,14 +22,14 @@ class FArchive;
 
 namespace ck
 {
-    // Defined in CkHandle.h (and commented out in CkNet_Fragment) to avoid circular dependency since it's needed for debugging purposes
+    // Declared here rather than in CkNet_Fragment: handle debugging needs them, and that would be circular
     CK_DEFINE_ECS_TAG(FTag_NetMode_IsHost);
     CK_DEFINE_ECS_TAG(FTag_NetMode_IsClient);
 }
 
 namespace ck
 {
-    // Defined in CkHandle.h (and commented out in CkEntityLifetime_Fragment) to avoid circular dependency since it's needed for debugging purposes
+    // Declared here rather than in CkEntityLifetime_Fragment: handle debugging needs them, and that would be circular
     CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate);
     CK_DEFINE_ECS_TAG(FTag_DestroyEntity_EndPlay);
     CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Teardown);
@@ -41,7 +41,7 @@ namespace ck
     auto
     Get_LifetimeTagString()
     {
-        // reverse order since all tags are kept on an Entity
+        // Reverse phase order: an Entity keeps every lifetime tag it was ever given, so the latest must win
 
         if constexpr (std::is_same_v<T, FTag_DestroyEntity_Finalize>)
         { return TEXT("D_Final"); }
@@ -158,7 +158,6 @@ public:
     auto Swap(ThisType& InOther) -> void;
 
 public:
-    // this is a special hard-coded function that expects the type-safe handle to have a particular function
     template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<struct FCk_Handle_TypeSafe, T_WrappedHandle>>>
     auto operator==(const T_WrappedHandle& InOther) const -> bool;
 
@@ -238,13 +237,8 @@ public:
     auto Get() const -> const T_Fragment&;
 
 public:
-    // FCk_Handle is a core concept of this architecture, we are taking some liberties
-    // with the operator overloading for the sake of improving readability. Overloading
-    // operators like this for non-core types is generally forbidden.
-    //
-    // Returns FCk_Registry by value: the underlying type is now a non-owning view
-    // (slot-handle + transient entity) and is trivially copyable. Do NOT bind the
-    // result to a reference — the return is a temporary.
+    // Returns FCk_Registry BY VALUE (a trivially copyable non-owning view) — do NOT bind
+    // the result to a reference, it is a temporary.
     auto operator*()       -> FCk_Registry;
     auto operator*() const -> const FCk_Registry;
 
@@ -260,10 +254,8 @@ public:
     auto Orphan() const -> bool;
     auto Get_ValidHandle(EntityType::IdType InEntity) const -> ThisType;
 
-    // Renamed from Get_Registry. The "View" suffix signals "non-owning, returned
-    // by value — do NOT bind to a reference." The handle does not carry the
-    // registry's transient entity; if you need that, get the registry view from
-    // the subsystem (UCk_EcsWorld_Subsystem_UE::Get_Registry()) instead.
+    // Non-owning, returned by value — do NOT bind to a reference. Carries no transient
+    // entity; for that use UCk_EcsWorld_Subsystem_UE::Get_Registry() instead.
     auto Get_RegistryView()       -> FCk_Registry;
     auto Get_RegistryView() const -> const FCk_Registry;
 
@@ -294,9 +286,8 @@ private:
     template <typename T_Fragment>
     auto DoClear() -> void;
 
-    // WARNING: NOT thread-safe. This method mutates registry debug state.
-    // FCk_Handle must only be constructed on the game thread or during
-    // single-threaded flush phases. Parallel processors use FCk_Handle_ReadOnly.
+    // Mutates registry debug state and is NOT thread-safe — no-ops off the game thread and
+    // inside a parallel region; parallel processors use FCk_Handle_ReadOnly.
     auto DoUpdate_FragmentDebugInfo_Blueprints() -> void;
 
     template <typename T_Fragment>
@@ -306,18 +297,13 @@ private:
     auto DoRemove_FragmentDebugInfo() -> void;
 
 protected:
-    // Transient: a handle's raw entity-id + registry slot are RUNTIME, session-specific values -- meaningless across
-    // a save/load, so they must NEVER persist as raw bytes. The snapshot is the only system that persists a handle,
-    // and it does so by REMAPPING the entity id through FSnapshotContext::Snapshot_Handle (entt continuous-loader),
-    // never by serializing these fields. Transient keeps them out of CkSnapshot's whole-fragment data pass (which is
-    // non-SaveGame-gated -- see CkSnapshot_Archive_Writer.h) so a handle inside a dynamic fragment is round-tripped
-    // by the remap path, not double-serialized. Does not affect runtime copy/duplication (non-persistent archives)
-    // or replication (FCk_HandleNetSerializer, a separate path).
+    // Transient: entity-id + registry slot are session-specific RUNTIME values and must never persist as raw
+    // bytes. CkSnapshot persists a handle only by REMAPPING the id through FSnapshotContext::Snapshot_Handle;
+    // Transient keeps these fields out of its whole-fragment data pass. See CkEcs/CLAUDE.md.
     UPROPERTY(BlueprintReadOnly, NotReplicated, Transient)
     FCk_Entity _Entity;
 
-    // Replaces TOptional<FCk_Registry>. Trivially copyable POD (slot-index + generation).
-    // Resolved to the live entt::registry on demand via ck::registry_table::Resolve.
+    // Trivially copyable POD (slot-index + generation), resolved to the live entt::registry on demand.
     // Transient (see _Entity): re-homed onto the live registry by Snapshot_Handle on load, never persisted raw.
     UPROPERTY(Transient)
     FCk_RegistryHandle _RegistryHandle;
@@ -334,10 +320,8 @@ private:
 public:
     CK_PROPERTY(_Entity);
 
-    // Re-home this handle onto a different registry slot. Needed by the snapshot loader: on a
-    // cross-world (seamless-travel) restore, a deserialized handle's entity-id is remapped but its
-    // _RegistryHandle still points at the saving world's (now-freed) slot. Snapshot_Handle calls this
-    // to re-point it at the live load-target registry. Typesafe handles inherit it via FCk_Handle.
+    // Re-home onto a different registry slot: after a cross-world restore a deserialized handle's
+    // id is remapped but its slot still points at the saving world's, so Snapshot_Handle calls this.
     auto Set_Registry(FCk_RegistryHandle InRegistryHandle) -> void;
 
 #if WITH_EDITORONLY_DATA
@@ -391,9 +375,7 @@ auto CKECS_API GetTypeHash(const FCk_Handle& InHandle) -> uint32;
 
 namespace ck
 {
-    // Having an overload with FCK_Handle helps usages where a type T that could be an Entity or Handle is used and the code
-    // does not know or care. Another case is when we use FCk_Entity in debug builds and FCk_Handle in release
-    // builds but the code that uses the handle (or entity) does not care and wants a handle back
+    // Entity and Handle overloads exist in pairs so generic call sites never care which one they hold
 
     auto CKECS_API
     MakeHandle(
@@ -561,8 +543,8 @@ auto
 
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {
-        // only add the debug IFF the tag was never added
-        if (NewFragment.Get_Count() > 1)
+        const auto TagWasAlreadyPresent = NewFragment.Get_Count() > 1;
+        if (TagWasAlreadyPresent)
         {
             return NewFragment;
         }
@@ -602,7 +584,6 @@ auto
 
     auto& NewOrExistingFragment = [&]() -> T_Fragment&
     {
-        // only add it ONCE in the debugger
         const auto AddDebugInfo = NOT Has<T_Fragment>();
 
         auto& Fragment = Get_RegistryView().AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
@@ -611,8 +592,8 @@ auto
         {
             if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
             {
-                // only add the debug IFF the tag was never added
-                if (Fragment.Get_Count() > 1)
+                const auto TagWasAlreadyPresent = Fragment.Get_Count() > 1;
+                if (TagWasAlreadyPresent)
                 {
                     return Fragment;
                 }
@@ -657,7 +638,6 @@ auto
 
     auto& NewOrExistingFragment = [&]() -> T_Fragment&
     {
-        // only add it ONCE in the debugger
         const auto AddDebugInfo = NOT Has<T_Fragment>();
 
         auto& Fragment = Get_RegistryView().AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
@@ -797,8 +777,8 @@ auto
 
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {
-        // only remove from Debug IFF the counted tag no longer exists
-        if (Has<T_Fragment>())
+        const auto TagIsStillPresent = Has<T_Fragment>();
+        if (TagIsStillPresent)
         {
             return;
         }
@@ -875,8 +855,8 @@ auto
 
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {
-        // only remove from Debug IFF the counted tag no longer exists
-        if (Has<T_Fragment>())
+        const auto TagIsStillPresent = Has<T_Fragment>();
+        if (TagIsStillPresent)
         {
             return true;
         }
@@ -897,7 +877,7 @@ auto
         TEXT("Unable to Clear<...> Fragments. Handle [{}] does NOT have a valid Registry."), *this)
     { return; }
 
-    // we need to do this to allow Entity debugging to properly clear the debug mapping
+    // The per-fragment pass is what lets Entity debugging clear its debug mapping
 #if CK_DISABLE_ECS_HANDLE_DEBUGGING == 0
     (DoClear<T_Fragments>(), ...);
 #endif
@@ -991,8 +971,7 @@ auto
     Get() const
     -> const T_Fragment&
 {
-    // const & getter is allowed to get Fragments even if Entity is PendingKill because the Fragment
-    // returned is immutable
+    // const& access is allowed on a PendingKill Entity because the returned Fragment is immutable
     return Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>();
 }
 
@@ -1184,8 +1163,7 @@ auto
     {
         _Context = &InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>();
 
-        // The wrapper is not stored for ContextOwner (only the fragment pointer is) — free it,
-        // or it leaks once per context-owner assignment.
+        // ContextOwner stores only the fragment pointer, so the wrapper leaks unless freed here
         delete FragmentInfo;
     }
     else
@@ -1194,8 +1172,7 @@ auto
         _FragmentNames.Emplace(FragmentInfo->Get_FragmentName(InHandle));
     }
 
-    // We want these tags to also end up in the _AllTags section. Why? In case
-    // we have 2 tags in flight (which is a bug) which the debugger might hide
+    // Lifetime tags stay in _AllTags too, so the debugger still shows two in flight at once (a bug)
     if constexpr (std::is_same_v<ck::FTag_DestroyEntity_Initiate, T_Fragment> ||
         std::is_same_v<ck::FTag_DestroyEntity_Teardown, T_Fragment> ||
         std::is_same_v<ck::FTag_DestroyEntity_Await, T_Fragment> ||

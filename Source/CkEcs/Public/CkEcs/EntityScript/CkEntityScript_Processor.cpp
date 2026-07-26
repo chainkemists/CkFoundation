@@ -43,14 +43,10 @@ namespace ck
             const FFragment_EntityScript_RequestSpawnEntity& InRequestFragment)
         -> void
     {
-        // A destroyed or dying owner means this spawn lost the race with its owner's destroy cascade —
-        // the cascade marks lifetime dependents that EXIST at destroy time, so a child materializing
-        // after it would be a zombie that outlives its owner (e.g. an SmTask ticking against a destroyed
-        // StateMachine, 2026-07-14). Cancel the spawn: this is the owner's cascade applied late, not an
-        // error — had the child materialized a tick earlier, the same cascade would have destroyed it.
-        // Checked BEFORE the mid-construction defer below, or a request whose owner dies while still
-        // constructing would defer forever. Is_NOT_Valid short-circuits first — a finalized owner is a
-        // tombstone handle and any Has query on it would itself ensure.
+        // A dying owner means this spawn lost the race with its owner's destroy cascade; cancel rather than
+        // materialize a zombie child that outlives its owner. Must run BEFORE the mid-construction defer below
+        // (else an owner dying mid-construction defers forever), and Is_NOT_Valid must short-circuit the Has
+        // queries — a finalized owner is a tombstone handle and any Has query on it would itself ensure.
         if (const auto& LifetimeOwner = InRequestFragment.Get_Owner();
             ck::Is_NOT_Valid(LifetimeOwner) ||
             LifetimeOwner.Has_Any<FTag_DestroyEntity_Initiate, FTag_DestroyEntity_EndPlay,
@@ -69,10 +65,8 @@ namespace ck
             return;
         }
 
-        // Gate child spawns on the parent being fully constructed. ContinueConstruction and
-        // FinishConstruction are true "construction in progress" markers — a child EntityScript
-        // spawned from inside a parent's Construct callback must wait for the parent to finish
-        // its own pipeline before we create it.
+        // A child EntityScript spawned from inside a parent's Construct callback must wait for the parent to
+        // finish its own pipeline — these two tags are the true "construction in progress" markers.
         if (const auto& LifetimeOwner = InRequestFragment.Get_Owner();
             LifetimeOwner.Has_Any<FTag_EntityScript_ContinueConstruction, FTag_EntityScript_FinishConstruction>())
         { return; }
@@ -93,13 +87,9 @@ namespace ck
         const auto EntityScriptClassArchetype = InRequest.Get_EntityScriptClassArchetype();
 
 #if WITH_EDITOR
-        // Editor-preview spawns (ACk_EntitySpawner_UE) pass the spawner's INSTANCED script as the
-        // archetype — runtime spawns pass a CDO, which cannot die. Drag-drop destroys the preview
-        // actor on drop, taking its instanced script with it AFTER the request was enqueued; the
-        // entity-destroy cascade races this processor and loses. That staleness is expected churn
-        // (the dropped actor enqueues its own fresh request), not an error — drop silently and
-        // clean up the orphaned entity-under-construction. Editor-only entities never reach this
-        // processor with a CDO archetype that legitimately died, so the runtime ensure is preserved.
+        // Editor-preview spawns pass the spawner's INSTANCED script as the archetype (runtime spawns pass a CDO,
+        // which cannot die), and drag-drop destroys the preview actor — taking its script — after the request was
+        // enqueued. Expected churn, not an error: drop silently. The runtime ensure below stays reachable.
         if (ck::Is_NOT_Valid(EntityScriptClassArchetype) && InHandle.Has<FTag_EditorOnlyEntity>())
         {
             ck::ecs::Verbose(TEXT("Dropping editor-only spawn request [{}] — instanced archetype died before processing (drag-drop preview churn)"), InHandle);
@@ -181,10 +171,8 @@ namespace ck
             TEXT("EntityScript created: {}"), EntityScriptClassArchetype);
 
         // ---- Retain the construction recipe (save/load rebuild+hydrate, RuntimeSpawned) ----------
-        // The recipe (script class + spawn params) is kept on a GC-safe holder UObject pinned by a fragment
-        // (fragments are not GC-traced); the v3 save capture reads it to respawn RuntimeSpawned
-        // entities. Always stamped (cheap); the capture filters by provenance, so ConstructSpawned/EngineOwned
-        // entities that also carry a recipe simply never consult it.
+        // The recipe is pinned by a GC-safe holder UObject because fragments are not GC-traced. Always stamped;
+        // the save capture filters by provenance, so entities that carry one needlessly never consult it.
         if (const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(NewEntity);
             ck::IsValid(World))
         {
@@ -196,10 +184,8 @@ namespace ck
         ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] SpawnProcessor — Entity=[{}] Replication=[{}]"),
             NewEntity, NewEntityScript->Get_EffectiveReplication());
 
-        // Net_Params is established upstream in UCk_Utils_EntityScript_UE::Add — every code
-        // path that reaches this processor (both Request_SpawnEntity* wrappers and direct Add
-        // callers) guarantees the fragment is present. The ensure below catches any future
-        // caller that bypasses Add when enqueuing a spawn request.
+        // Net_Params is established upstream in UCk_Utils_EntityScript_UE::Add; this ensure catches a future
+        // caller that enqueues a spawn request while bypassing Add.
         CK_ENSURE_IF_NOT(NewEntity.Has<ck::FFragment_Net_Params>(),
             TEXT("Entity [{}] is missing NetParams before construction. EntityScript: [{}]. "
                  "Did a caller enqueue FFragment_EntityScript_RequestSpawnEntity directly instead "
@@ -207,17 +193,9 @@ namespace ck
             NewEntity, EntityScriptClassArchetype) {}
 
         // ---- Replication Driver (before Construct) ----------------------------------------
-        // Non-actor-bearing replicated entities (e.g. children spawned under a replicated
-        // parent) need their driver present before Construct so that utilities called during
-        // Construct — e.g. attribute Add that registers a container fragment — find it.
-        //
-        // TryAddReplicatedFragment walks the lifetime chain for an OwningActor and uses that
-        // actor as the driver UObject's Outer. For entities whose chain already contains a
-        // replicated actor (the common non-actor-bearing case), this succeeds. For entities
-        // that will receive their own OwningActor later during Construct (WithActor and
-        // similar), the chain has no actor yet — TryAddReplicatedFragment fails gracefully
-        // (returns NotAdded) and the driver is added by UCk_Utils_OwningActor_UE::Add at the
-        // moment the actor is linked. One add site per entity, keyed on entity shape.
+        // Non-actor-bearing replicated entities need their driver present BEFORE Construct so utilities called
+        // during Construct find it. Entities that receive their own OwningActor later during Construct (WithActor)
+        // have no actor in the chain yet — TryAdd fails gracefully and OwningActor::Add supplies the driver.
         UCk_Utils_EntityReplicationDriver_UE::TryAdd(NewEntity);
 
         // ---- Construct --------------------------------------------------------------------
@@ -246,17 +224,12 @@ namespace ck
         }
 
         // ---- Replication Infrastructure (after Construct) ---------------------------------
-        // Driver was already added — either pre-Construct (chain had an actor) or during
-        // Construct via UCk_Utils_OwningActor_UE::Add (entities that get their own actor,
-        // e.g. WithActor). Here we enable actor-side replication and enqueue the replicate
-        // request.
+        // The driver already exists — added pre-Construct, or during Construct via UCk_Utils_OwningActor_UE::Add.
         if (NewEntityScript->Get_EffectiveReplication() == ECk_Replication::Replicates)
         {
-            // Resolve the ContextOwner the client copy must adopt. The entity's live ContextOwner
-            // fragment is authoritative here: it reflects both the inherited value AND any retarget
-            // the spawner applied (e.g. Request_OverrideToSelf on the entity-under-construction). When
-            // the entity is its own ContextOwner we leave the override unset — OnRep then maps it back
-            // to self on the client rather than to the replicated lifetime-owner (the ActorRelay channel).
+            // The entity's live ContextOwner fragment is authoritative: it reflects the inherited value AND any
+            // retarget the spawner applied. Leave the override unset when the entity is its own ContextOwner —
+            // OnRep then maps it back to self on the client rather than to the replicated lifetime-owner.
             auto ContextOwnerOverride = TOptional<FCk_Handle>{};
             if (UCk_Utils_ContextOwner_UE::Has(NewEntity))
             {
@@ -279,9 +252,8 @@ namespace ck
                 ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] SpawnProcessor — WithActor path, IsNetworkedAuthority=[{}]"),
                     IsNetworkedAuthority);
 
-                // Only enqueue replication on a networked authority. In NM_Standalone there
-                // is no net driver. On NM_Client, authority-side replication is not our
-                // concern.
+                // Only on a networked authority: NM_Standalone has no net driver, and on NM_Client
+                // authority-side replication is not our concern.
                 if (IsNetworkedAuthority)
                 {
                     NewEntity.Add<ck::FRequest_EntityScript_Replicate>(
@@ -361,9 +333,8 @@ namespace ck
         ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Handle=[{}] Owner=[{}] IsSelfOwned=[{}]"),
             InHandle, ReplicatedOwner, IsSelfOwned);
 
-        // Defer (retry next frame, KEEP the dirty marker) until the ReplicationDriver exists. Entities that acquire
-        // their OwningActor during Construct (WithActor) get their driver via OwningActor::Add slightly after this
-        // request lands. This retry bookkeeping is processor-specific, so it stays here, not in the shared helper.
+        // Defer (retry next frame, KEEP the dirty marker) until the ReplicationDriver exists: WithActor entities
+        // acquire theirs via OwningActor::Add slightly after this request lands.
         if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
         {
             ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Handle [{}] does NOT have ReplicationDriver yet, deferring"), InHandle);
@@ -375,8 +346,6 @@ namespace ck
 
         ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Calling Request_ReplicateEntityScript for [{}] with owner [{}]"), InHandle, ReplicatedOwner);
 
-        // Single establishment path (validation, dependent-count accounting, Request_Replicate, and FireOnDependent tag
-        // all live in one place). The ContextOwnerOverride is threaded through so spawn-time context-owner preservation survives.
         UCk_Utils_EntityScript_UE::Request_ReplicateEntityScript(InHandle, ReplicatedOwner, EntityScript.Get(), SpawnParamsCopy,
             InRequest.Get_ContextOwnerOverride());
 

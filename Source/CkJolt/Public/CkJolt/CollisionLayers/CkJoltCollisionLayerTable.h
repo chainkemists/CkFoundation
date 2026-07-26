@@ -14,18 +14,12 @@
 
 namespace ck::jolt
 {
-    /// One Jolt ObjectLayer per unique collision signature, seeded from UCollisionProfile at
-    /// subsystem init (never hand-authored) and grown on demand when bodies with per-component
-    /// custom responses register. Index == JPH::ObjectLayer.
+    /// One Jolt ObjectLayer per unique collision signature, seeded from UCollisionProfile at subsystem init
+    /// and grown on demand. Index == JPH::ObjectLayer.
     ///
-    /// Thread contract: registration is GAME THREAD only (bake, cell load, body spawn); Jolt's
-    /// filter callbacks read from worker threads DURING PhysicsSystem::Update. The signature
-    /// array is reserved to fixed capacity up front (never reallocates) and the visible count is
-    /// published through an atomic — readers are lock-free and always see fully-written entries.
-    ///
-    /// Pair semantics == UE's touch resolution: min(A.Response[B.Channel], B.Response[A.Channel]).
-    /// Jolt's binary pair filter treats anything != Ignore as "interact"; Block-vs-Overlap is
-    /// resolved at query/contact sites via the query filters below.
+    /// THREAD CONTRACT: registration is GAME THREAD only; Jolt's filter callbacks read from worker threads
+    /// DURING PhysicsSystem::Update. The signature array is reserved to fixed capacity up front (never
+    /// reallocates) and the visible count is published through an atomic, so readers are lock-free.
     class CKJOLT_API FCk_Jolt_CollisionLayerTable
     {
     public:
@@ -36,9 +30,8 @@ namespace ck::jolt
     public:
         FCk_Jolt_CollisionLayerTable();
 
-        /// Seeds (profile x {Static, Dynamic}) signatures for every engine + project collision
-        /// profile with collision enabled, in deterministic profile order, then appends the
-        /// fixed probe signature. Game thread, once, before the PhysicsSystem exists.
+        /// Seeds (profile x {Static, Dynamic}) signatures in deterministic profile order, then appends the
+        /// fixed probe signature. Game thread, ONCE, before the PhysicsSystem exists.
         auto Build_FromCollisionProfiles() -> void;
 
         /// Resolve-or-register (game thread only). Returns JPH::cObjectLayerInvalid (and ensures)
@@ -46,10 +39,8 @@ namespace ck::jolt
         auto Get_OrRegisterLayer(
             const FCk_Jolt_CollisionSignature& InSignature) -> uint16;
 
-        /// The one layer every Probe body lives on: WorldDynamic, Overlap ONLY vs WorldDynamic,
-        /// Domain Dynamic. Preserves the pre-table behavior exactly — probes pair with probes
-        /// (and other dynamic-domain WorldDynamic bodies) and NEVER with the static world (also
-        /// enforced at the broadphase level by FObjectVsBroadPhaseLayerFilter_Table).
+        /// The one layer every Probe body lives on: WorldDynamic, Overlap ONLY vs WorldDynamic, Domain
+        /// Dynamic — so probes pair with probes and NEVER with the static world.
         auto Get_ProbeLayer() const -> uint16;
 
         static auto Get_ProbeSignature() -> FCk_Jolt_CollisionSignature;
@@ -121,9 +112,8 @@ namespace ck::jolt
 
         auto ShouldCollide(JPH::ObjectLayer inLayer1, JPH::BroadPhaseLayer inLayer2) const -> bool override
         {
-            // Statics never pair with the static tree (statics don't move), and probes never
-            // pair with it either (pre-table behavior: the static world is query-only for
-            // probes — overlap semantics vs statics is a deliberate future opt-in).
+            // Statics never pair with the static tree (statics don't move), and the static world is
+            // query-only for probes — overlap semantics vs statics is a deliberate future opt-in.
             if (inLayer2 == broadphase_layers::Static)
             {
                 if (_Table.Get_Domain(inLayer1) == ECk_Jolt_BodyDomain::Static)
@@ -160,9 +150,8 @@ namespace ck::jolt
         const FCk_Jolt_CollisionLayerTable& _Table;
     };
 
-    /// Query-side filter carrying a channel: a body passes when its authored response to the
-    /// query channel is at least InMinResponse (Block for trace-like queries, Overlap for
-    /// overlap-like ones) — matching UKismetSystemLibrary trace semantics.
+    /// A body passes when its authored response to the query channel is at least InMinResponse (Block for
+    /// trace-like queries, Overlap for overlap-like ones) — matching UKismetSystemLibrary trace semantics.
     class CKJOLT_API FCk_Jolt_ChannelQueryFilter final : public JPH::ObjectLayerFilter
     {
     public:
@@ -204,10 +193,8 @@ namespace ck::jolt
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    /// Published into the ECS registry context alongside the PhysicsSystem so consumers can place
-    /// bodies on table layers without a subsystem ref. Non-const: registration is game-thread only
-    /// and body-spawn (JoltBody setup) is a sanctioned registration site — it resolves-or-registers
-    /// a body's profile-derived signature via Get_OrRegisterLayer. Probe setup only reads _ProbeLayer.
+    /// Published into the ECS registry context alongside the PhysicsSystem. Non-const because body spawn is a
+    /// sanctioned (game-thread) registration site; Probe setup only reads _ProbeLayer.
     struct CKJOLT_API FCk_Jolt_LayerContext
     {
         FCk_Jolt_CollisionLayerTable* _Table = nullptr;

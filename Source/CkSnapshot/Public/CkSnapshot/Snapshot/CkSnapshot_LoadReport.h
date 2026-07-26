@@ -18,10 +18,6 @@ enum class ECk_SnapshotResult : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SnapshotResult);
 
-// One record per orphaned entity: a saved entity that never mapped to a live handle AND was not deliberately
-// skipped (boot-infra / unloadable). Its payloads drop. Populated by DoHydrate_Enqueue's per-orphan walk so
-// tools/tests can inspect WHY a load lost state (the log line carries the same fields). Diagnostics only — the
-// loader does not act on these.
 USTRUCT(BlueprintType)
 struct CKSNAPSHOT_API FCk_Snapshot_OrphanRecord
 {
@@ -36,8 +32,7 @@ private:
     // label / script-or-actor class path / save-key / player id — whichever the provenance carries.
     UPROPERTY() FString                    _Identity;
     UPROPERTY() uint32                     _OwnerSavedId = 0xFFFFFFFFu;
-    // Reason bucket string (owner-orphaned / owner-mapped-label-miss / savekey-miss / player-miss /
-    // bridge-never-linked / unresolved-other) — see DoHydrate_Enqueue.
+    // Reason bucket string — the set is enumerated in CkSnapshot/CLAUDE.md.
     UPROPERTY() FString                    _Reason;
 
 public:
@@ -61,12 +56,11 @@ private:
     UPROPERTY() int32              _EntitiesRestored = 0;
     UPROPERTY() int32              _EntitiesOrphaned = 0;
     UPROPERTY() int32              _EntitiesPartiallyRestored = 0;
-    // Hydration payloads that failed to deserialize (empty bytes, or a type absent since the save — content drift).
+    // Payloads that failed to deserialize: empty bytes, or a type absent since the save (content drift).
     UPROPERTY() int32              _PayloadsDropped = 0;
     UPROPERTY() TArray<FString>    _SkippedFragmentTypes;
     UPROPERTY() TArray<FString>    _SkippedDynamicTypes;
     UPROPERTY() TArray<FString>    _SkippedScriptClasses;
-    // Per-orphan diagnostics (one entry per _EntitiesOrphaned). Filled by DoHydrate_Enqueue.
     UPROPERTY() TArray<FCk_Snapshot_OrphanRecord> _Orphans;
     UPROPERTY() FCk_Snapshot_Header _LoadedHeader;
 

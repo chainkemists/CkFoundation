@@ -88,9 +88,7 @@ namespace ck
             -> void
     {
         auto MeshComponent = InCurrent._MeshComponent.Get();
-        // Tolerate a torn-down mesh: the EndPlay processor resets _MeshComponent during teardown,
-        // and a transform tick can race that window. Nothing to update if the procmesh is gone —
-        // skip gracefully (matches FProcessor_Pmg_DebugShape_BakeLines' guard) rather than ensure.
+        // EndPlay resets _MeshComponent and a transform tick can race that window — skip, don't ensure.
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
@@ -101,23 +99,9 @@ namespace ck
 
     namespace pmg_bake_lines_helpers
     {
-        // Section index of the baked wireframe boxes on the procmesh.
-        // Section 0 is the filled shape (see CkPmg_Processor_BasicShapes.cpp
-        // FinalizeMeshComponent_Basic). Section 1 hosts the wireframe overlay
-        // and gets its own UMID (spawned lazily by BakeLines from the same
-        // parent material as slot 0) with alpha forced to 1, so wireframes
-        // stay opaque regardless of fill transparency. Request_SetColor
-        // mirrors RGB updates to both MIDs.
+        constexpr int32 FilledSectionIndex = 0;
         constexpr int32 WireframeSectionIndex = 1;
 
-        // Triangulate a single FCk_Pmg_DebugLine as a stretched box (8 verts,
-        // 12 triangles). Cross-section is Thickness × Thickness, length is the
-        // line length. The box is in entity-local space — the procmesh's
-        // SetWorldTransform handles world placement. Stretched-box geometry
-        // (vs the earlier flat-quad approach) closes corner gaps where
-        // adjacent lines meet, because each box extends Thickness/2 in both
-        // perpendicular directions at every endpoint, overlapping the
-        // neighbouring box's endpoint at the join.
         auto
             BuildBoxForLine(
                 const FCk_Pmg_DebugLine& InLine,
@@ -131,11 +115,7 @@ namespace ck
             if (LineDir.IsNearlyZero())
             { return; }
 
-            // Build an orthonormal basis perpendicular to the line. Perp1
-            // prefers a horizontal axis (CrossProduct with WorldUp) so most
-            // line orientations get visually consistent "width vs height" of
-            // the box cross-section. Vertical lines (Perp1 collapses to zero)
-            // fall back to world-X.
+            // Crossing with world-up keeps box cross-sections consistent across line orientations.
             const auto WorldUp = FVector::UpVector;
             auto Perp1 = FVector::CrossProduct(LineDir, WorldUp).GetSafeNormal();
             if (Perp1.IsNearlyZero())
@@ -144,12 +124,8 @@ namespace ck
             }
             const auto Perp2 = FVector::CrossProduct(LineDir, Perp1).GetSafeNormal();
 
-            // Bias the box slightly outward from the entity local origin so it
-            // doesn't sit fully embedded in the filled Section-0 mesh (which
-            // causes Z-fighting / visual camouflage). All basic PMG shapes are
-            // centered at the entity local origin, so the line midpoint's
-            // direction from origin is a usable "outward" vector. Lines that
-            // happen to pass through the origin fall back to no bias.
+            // Lifts the box clear of the filled section-0 mesh; every basic PMG shape is centred
+            // on the entity local origin, which is what makes the midpoint direction "outward".
             const auto LineMid = (InLine._Start + InLine._End) * 0.5f;
             const auto Outward = LineMid.GetSafeNormal();
             const auto OutwardBias = Outward * (InLine._Thickness * 0.5f);
@@ -160,9 +136,6 @@ namespace ck
 
             const auto BaseIndex = OutVertices.Num();
 
-            // 8 corners of the stretched box. Convention at each end:
-            // (0,4): -P1 -P2  (1,5): +P1 -P2  (2,6): +P1 +P2  (3,7): -P1 +P2
-            // Verts 0-3 are at Start; 4-7 are at End.
             OutVertices.Add(InLine._Start - P1 - P2 + OutwardBias);
             OutVertices.Add(InLine._Start + P1 - P2 + OutwardBias);
             OutVertices.Add(InLine._Start + P1 + P2 + OutwardBias);
@@ -172,19 +145,15 @@ namespace ck
             OutVertices.Add(InLine._End   + P1 + P2 + OutwardBias);
             OutVertices.Add(InLine._End   - P1 + P2 + OutwardBias);
 
-            // Material is unlit so per-face normals don't affect shading;
-            // populate with a placeholder so the array sizes match the
-            // procmesh API expectations.
-            for (auto i = 0; i < 8; ++i)
+            // The material is unlit, so these normals are placeholders sized to the procmesh API.
+            constexpr auto BoxVertexCount = 8;
+            for (auto i = 0; i < BoxVertexCount; ++i)
             {
                 OutNormals.Add(FVector::UpVector);
                 OutUVs.Add(FVector2D::ZeroVector);
             }
 
-            // 6 faces × 2 triangles. Winding is CCW from the OUTSIDE of each
-            // face so default backface culling renders the box as a closed
-            // solid. No double-winding needed (the box is closed; the inside
-            // is never directly viewed at typical camera angles).
+            // Winding is CCW from the OUTSIDE of each face, so backface culling leaves a closed solid.
             const auto AddQuad =
                 [&](int32 A, int32 B, int32 C, int32 D)
                 {
@@ -218,21 +187,15 @@ namespace ck
         SCOPE_CYCLE_COUNTER(STAT_Pmg_DebugDrawLines);
         INC_DWORD_STAT_BY(STAT_Pmg_DebugLines, InLines.Get_Lines().Num());
 
-        // Consume the gate immediately — even if we early-out below (no
-        // valid mesh, no lines), the entity shouldn't keep re-firing this
-        // processor every tick. A fresh stamp (via Append_Debug*_World) will
-        // re-stamp the tag and we'll re-bake then.
+        // Consumed BEFORE the early-outs below, or a shape with no mesh or no lines re-fires forever.
         InHandle.Remove<MarkedDirtyBy>();
 
         auto MeshComponent = InCurrent._MeshComponent.Get();
         if (ck::Is_NOT_Valid(MeshComponent, ck::IsValid_Policy_NullptrOnly{}))
         { return; }
 
-        // Always clear any prior wireframe section before re-baking so the
-        // geometry stays in sync with the current _Lines content.
         MeshComponent->ClearMeshSection(pmg_bake_lines_helpers::WireframeSectionIndex);
 
-        // DrawLines=false or empty cache → leave the section cleared.
         if (NOT InCommon.Get_DrawLines() || InLines.Get_Lines().IsEmpty())
         { return; }
 
@@ -257,14 +220,9 @@ namespace ck
             TArray<FLinearColor>{}, TArray<FProcMeshTangent>{},
             bCreateCollision);
 
-        // The wireframe needs its own MID — sharing slot 0's MID makes the
-        // wireframe inherit the fill's alpha, which produces a translucent
-        // outline that visually camouflages with the fill. Instead, spawn a
-        // sibling MID from the same parent material on first bake and force
-        // its alpha to 1 so wireframes stay opaque regardless of fill
-        // transparency. Request_SetColor mirrors RGB updates to both MIDs.
-        auto* Slot0Mat = MeshComponent->GetMaterial(0);
-        auto* FillMID = Cast<UMaterialInstanceDynamic>(Slot0Mat);
+        // Its OWN MID: sharing the fill's would inherit the fill alpha and camouflage the outline.
+        auto* FilledMat = MeshComponent->GetMaterial(pmg_bake_lines_helpers::FilledSectionIndex);
+        auto* FillMID = Cast<UMaterialInstanceDynamic>(FilledMat);
         auto* WireframeMID = Cast<UMaterialInstanceDynamic>(
             MeshComponent->GetMaterial(pmg_bake_lines_helpers::WireframeSectionIndex));
 
@@ -281,11 +239,6 @@ namespace ck
             WireframeMID->SetVectorParameterValue(FName(TEXT("Color")), WireframeColor);
         }
 
-        // Mirror the filled mesh's visibility on Section 1 so an entity that
-        // was set to Hidden before lines were ever appended doesn't suddenly
-        // show wireframes when the bake runs. The handle for runtime
-        // visibility flips lives in DoHandleRequest(SetRenderMode), which
-        // toggles the whole component (Sections 0 + 1 ride together).
         const auto bShouldShow = InCommon.Get_RenderMode() != ECk_Pmg_RenderMode::Hidden;
         MeshComponent->SetMeshSectionVisible(pmg_bake_lines_helpers::WireframeSectionIndex, bShouldShow);
     }
@@ -339,22 +292,17 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-    // FProcessor_Pmg_DebugShape_HandleRequests
-    // --------------------------------------------------------------------------------------------------------------------
 
     namespace pmg_debug_shape_helpers
     {
-        // Pulls the procmesh's element-0 dynamic material instance, if one exists.
-        // FinalizeMeshComponent_Basic in CkPmg_Processor_BasicShapes.cpp creates a
-        // UMaterialInstanceDynamic on the procmesh's slot 0 during Setup, so this
-        // is the canonical color hook for live mutations.
+        // The filled section's MID is created by FinalizeMeshComponent_Basic during Setup.
         auto Get_DynamicMaterial(
             UProceduralMeshComponent* InMesh)
             -> UMaterialInstanceDynamic*
         {
             if (ck::Is_NOT_Valid(InMesh, ck::IsValid_Policy_NullptrOnly{}))
             { return nullptr; }
-            return Cast<UMaterialInstanceDynamic>(InMesh->GetMaterial(0));
+            return Cast<UMaterialInstanceDynamic>(InMesh->GetMaterial(pmg_bake_lines_helpers::FilledSectionIndex));
         }
     }
 
@@ -389,21 +337,13 @@ namespace ck
     {
         const auto NewColor = InRequest.Get_NewColor();
 
-        // Cache on Common so DrawLines (per-tick wireframe re-emit) picks the
-        // new color too — the wireframe processor reads from Common._Color.
         InCommon._Color = NewColor;
 
-        // Push to the procmesh's MID Color parameter — this changes the filled
-        // mesh's appearance immediately. No mesh rebuild required.
         if (auto* MID = pmg_debug_shape_helpers::Get_DynamicMaterial(InCurrent._MeshComponent.Get()))
         {
             MID->SetVectorParameterValue(FName(TEXT("Color")), NewColor);
         }
 
-        // Mirror the RGB to the wireframe MID at slot 1 (created lazily by
-        // BakeLines). Force alpha to 1 so the wireframe stays opaque even
-        // when the fill is translucent — otherwise the outline visually
-        // blends into the fill.
         if (auto* MeshComponent = InCurrent._MeshComponent.Get();
             ck::IsValid(MeshComponent, ck::IsValid_Policy_NullptrOnly{}))
         {
@@ -427,12 +367,7 @@ namespace ck
         -> void
     {
         InCommon._LineThickness = InRequest.Get_NewLineThickness();
-        // Per-line thickness is baked into the rectangle geometry, so any
-        // change here requires re-running BakeLines. The Append_Debug*_World
-        // helpers also write thickness into each FCk_Pmg_DebugLine — Common's
-        // cached value is the "uniform override" semantically, but the bake
-        // currently reads per-line. Stamp the tag so a future change-on-rebake
-        // path can pick this up.
+        // Re-bakes existing geometry only — the bake reads per-line thickness (known gap, CkPmg/Claude.md).
         InHandle.AddOrGet<FTag_Pmg_DebugShape_LinesNeedBaking>();
     }
 
@@ -446,8 +381,6 @@ namespace ck
         -> void
     {
         InCommon._DrawLines = InRequest.Get_NewDrawLines();
-        // BakeLines respects Common._DrawLines: when re-run it either rebuilds
-        // Section 1 or clears it. Re-stamping the tag triggers exactly that.
         InHandle.AddOrGet<FTag_Pmg_DebugShape_LinesNeedBaking>();
     }
 
@@ -460,9 +393,6 @@ namespace ck
             const FCk_Request_Pmg_DebugShape_SetDuration& InRequest)
         -> void
     {
-        // CheckDuration processor compares against Common._Duration each tick.
-        // Bumping it grants the shape additional time before auto-destroy;
-        // setting it negative makes the shape persistent.
         InCommon._Duration = InRequest.Get_NewDuration();
     }
 
@@ -478,8 +408,7 @@ namespace ck
         const auto NewMode = InRequest.Get_NewRenderMode();
         InCommon._RenderMode = NewMode;
 
-        // Mirror the visibility logic from FinalizeMeshComponent_Basic so this
-        // immediately reflects on the live procmesh — no waiting for re-setup.
+        // Mirrors the visibility logic in FinalizeMeshComponent_Basic.
         if (auto* Mesh = InCurrent._MeshComponent.Get())
         {
             const auto ShouldBeVisible = NewMode != ECk_Pmg_RenderMode::Hidden;

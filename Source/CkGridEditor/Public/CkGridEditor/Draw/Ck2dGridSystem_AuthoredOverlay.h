@@ -18,20 +18,13 @@ class FSceneView;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Shared authored-state grid overlay draw. Factored out of the Grid Paint UEdMode (::Render) so the
-// SAME wireframe + per-cell state colors are used both IN the paint mode (UEdMode::Render) and OUT of
-// it (the spawner component visualizer). Previously the out-of-mode preview used a different path (the
-// runtime OBB DebugDraw), which could not tell a blocker-disabled cell from a shape-disabled one and
-// drew none of the tag-blue / authored colors — so the two views disagreed. Everything here reads the
-// authoring Spec directly (the single source of truth for authored state).
-//
+// Shared authored-state grid overlay, drawn identically by the Grid Paint UEdMode and the out-of-mode
+// spawner visualizer, and read straight off the authoring Spec (the source of truth for authored state).
 // Coordinate convention matches the runtime grid (UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation): cell
 // (x,y)'s MIN corner is at grid-local (x*CellSize.X, y*CellSize.Y, 0); InTransform maps local to world.
 namespace ck::grid_editor
 {
-    // Authored-state color convention for the cell overlay. Priority is disabled > blocker > tagged >
-    // enabled (a cell that is both disabled and inside a blocker reads as disabled). Mirrored by
-    // Resolve_CellColor below and by the toolkit Details-panel state readout.
+    // Priority: disabled > blocker > tagged > enabled. Mirrored by Resolve_CellColor and the Details readout.
     constexpr auto ColorEnabled  = FLinearColor(0.0f, 1.0f, 0.0f); // green
     constexpr auto ColorDisabled = FLinearColor(1.0f, 0.0f, 0.0f); // red
     constexpr auto ColorBlocker  = FLinearColor(1.0f, 0.5f, 0.0f); // orange
@@ -44,14 +37,12 @@ namespace ck::grid_editor
     constexpr auto PivotMarkerSize     = 20.0f;
     constexpr auto PivotLineThickness  = 3.0f;
 
-    // Tagged-cell marker: a bold DOUBLE inset ring in the tag's per-tag color, far more visible than the
-    // thin single state marker (the old ColorTagged 2px outline read as "barely visible").
+    // A DOUBLE inset ring, because a single thin state marker in the tag color read as barely visible.
     constexpr auto TaggedMarkerInsetOuter = 0.06;
     constexpr auto TaggedMarkerInsetInner = 0.22;
     constexpr auto TaggedMarkerThickness  = 3.0f;
 
-    // What the shared overlay draws. The interaction overlays (hover/select/blocker-drag/blocker-group)
-    // are NOT here — they are paint-mode-only and stay in the UEdMode.
+    // The interaction overlays (hover/select/blocker) are NOT here — they are paint-mode-only.
     struct FAuthoredOverlayOptions
     {
         bool bDrawBaseGrid     = true;
@@ -59,10 +50,8 @@ namespace ck::grid_editor
         bool bDrawPivot        = true;
     };
 
-    // Resolves the grid authoring Spec hosted by InSpawner's entity script, or nullptr when the spawner
-    // is null / does not host a UCk_2dGridSystem_EntityScript / has no Spec assigned. The Spec is a
-    // private UPROPERTY on the grid script (no public getter), so this reads it reflectively — the single
-    // place that reflective read lives, shared by the UEdMode selection resolve and the visualizer.
+    // nullptr when the spawner is null, hosts no UCk_2dGridSystem_EntityScript, or has no Spec assigned.
+    // Spec is a private UPROPERTY with no getter, so this is the ONE place that reflective read lives.
     CKGRIDEDITOR_API auto
     Resolve_SpecFromSpawner(
         const ACk_EntitySpawner_UE* InSpawner) -> UCk_2dGridSystem_Spec*;
@@ -79,34 +68,30 @@ namespace ck::grid_editor
         const UCk_2dGridSystem_Spec* InSpec,
         const FIntPoint&             InCoordinate) -> bool;
 
-    // Authored color for a single cell, applying the disabled > blocker > tagged > enabled priority.
     CKGRIDEDITOR_API auto
     Resolve_CellColor(
         const UCk_2dGridSystem_Spec* InSpec,
         const FIntPoint&             InCoordinate) -> FLinearColor;
 
-    // Deterministic distinct color for a tag, hashed from InName -> hue (fixed high saturation/value).
-    // Stable across sessions and independent of tag order/count. The testable core of Resolve_TagColor.
+    // Hue hashed from InName — stable across sessions, independent of tag order/count.
     CKGRIDEDITOR_API auto
     Resolve_TagColor_FromName(
         const FName& InName) -> FLinearColor;
 
-    // Distinct color for a gameplay tag (delegates to Resolve_TagColor_FromName). Invalid tag -> ColorTagged.
+    // Invalid tag -> ColorTagged.
     CKGRIDEDITOR_API auto
     Resolve_TagColor(
         const FGameplayTag& InTag) -> FLinearColor;
 
-    // The cell's PRIMARY per-cell tag (first tag of its PerCellTags entry), or an invalid tag when the cell
-    // has no per-cell tag override. DefaultCellTags are intentionally NOT considered here — grid-wide defaults
-    // do not recolor cells (they would flood the whole grid); they appear only in the legend.
+    // First tag of the cell's PerCellTags entry; invalid when it has no override. DefaultCellTags are
+    // deliberately NOT considered — grid-wide defaults would recolor the whole grid; they only reach the legend.
     CKGRIDEDITOR_API auto
     Resolve_PrimaryCellTag(
         const UCk_2dGridSystem_Spec* InSpec,
         const FIntPoint&             InCoordinate) -> FGameplayTag;
 
-    // All distinct PER-CELL tags authored on the Spec, paired with how many cells carry each (a cell with
-    // N tags counts once per tag). Sorted by tag name for stable list ordering. Grid-wide DefaultCellTags
-    // are NOT included here (the toolkit lists them separately as grid-wide).
+    // A cell with N tags counts once per tag. Sorted by tag name for stable list ordering. Grid-wide
+    // DefaultCellTags are NOT included (the toolkit lists those separately).
     CKGRIDEDITOR_API auto
     Collect_PerCellTagsWithCounts(
         const UCk_2dGridSystem_Spec* InSpec) -> TArray<TPair<FGameplayTag, int32>>;
@@ -117,9 +102,7 @@ namespace ck::grid_editor
         const UCk_2dGridSystem_Spec* InSpec,
         const FGameplayTag&          InTag) -> TArray<FIntPoint>;
 
-    // Draws the authored-state PDI overlay for InSpec at InTransform: the green base-grid wireframe, an
-    // inset state-color marker on every non-enabled cell, and the pivot gizmo (gated by InOptions). No-op
-    // on an invalid Spec or non-positive CellSize/Dimensions.
+    // No-op on an invalid Spec or non-positive CellSize/Dimensions.
     CKGRIDEDITOR_API auto
     Draw_GridAuthoredOverlay(
         FPrimitiveDrawInterface*       InPDI,
@@ -127,22 +110,17 @@ namespace ck::grid_editor
         const FTransform&              InTransform,
         const FAuthoredOverlayOptions& InOptions = FAuthoredOverlayOptions{}) -> void;
 
-    // The per-cell tag-text toggle (cvar ck.Grid.PreviewShowTags). Read by BOTH the UEdMode (DrawHUD) and
-    // the spawner visualizer (DrawVisualizationHUD) so the in/out-of-mode tag labels match. Default off
-    // (text is noisy on large grids).
+    // Cvar ck.Grid.PreviewShowTags, default off (text is noisy on large grids).
     CKGRIDEDITOR_API auto
     Should_ShowCellTags() -> bool;
 
-    // The effective tag text for a cell: grid-wide DefaultCellTags unioned with the cell's PerCellTags
-    // override. Empty string when the cell carries no tags. Used for the world-space tag labels.
+    // Grid-wide DefaultCellTags unioned with the cell's PerCellTags override; empty when it carries none.
     CKGRIDEDITOR_API auto
     Get_CellTagText(
         const UCk_2dGridSystem_Spec* InSpec,
         const FIntPoint&             InCoordinate) -> FString;
 
-    // Draws per-cell tag TEXT labels onto the HUD canvas (world cell-center projected to screen). No-op
-    // when Should_ShowCellTags() is false or the Spec/view is invalid. Shared by the UEdMode DrawHUD and
-    // the visualizer DrawVisualizationHUD.
+    // No-op when Should_ShowCellTags() is false or the Spec/view is invalid.
     CKGRIDEDITOR_API auto
     Draw_GridTagLabels(
         FCanvas*                     InCanvas,

@@ -104,9 +104,7 @@ namespace ck::detail
         if (AreAllComponentsUnchanged)
         { return; }
 
-        // Invariant: TProcessor_Attribute_Clamp is scheduled before this processor, so Current.Final
-        // must already be on the correct side of the bound. If this ensure fires, the clamp step
-        // did not run or was bypassed and we'd silently drop the clamp signal otherwise.
+        // TProcessor_Attribute_Clamp is scheduled before this one: a fire here means clamping never ran.
         CK_ENSURE_IF_NOT
         (
             (Attribute_IsWithinBounds<T_Direction>(InAttribute_Current.Get_Final(), InAttribute_Bound.Get_Final())),
@@ -129,11 +127,7 @@ namespace ck::detail
                 InHandle
             );
 
-            // The Clamp processor writes InPreClamp every frame it runs, so it's
-            // guaranteed to hold this frame's pre-clamp value. When no clamping
-            // occurred it equals Current.Final, so overflow is naturally 0.
-            // Explicit cast is needed because arithmetic on narrow types (uint8)
-            // promotes to int, and aggregate initialization below forbids narrowing.
+            // Explicit cast: arithmetic on narrow types (uint8) promotes to int and the aggregate init below forbids narrowing.
             const auto PreClamp = InPreClamp.Get_Final();
             const auto Clamped  = InAttribute_Current.Get_Final();
             const auto Overflow = static_cast<AttributeDataType>(PreClamp - Clamped);
@@ -174,28 +168,19 @@ namespace ck::detail
         const auto BaseValue  = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
-        // If the Current has not been changed yet, but the bound was, then this processor will run without a PreviousValue existing for Current.
         if (NOT InHandle.template Has<Current_AttributePreviousType>())
         { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
 
         const auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
         const auto ValueChanged = PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue;
 
-        // Clamping on the client side is bypassed because the server might update both the bound and Current values.
-        // If the client receives 'Current' before the new bound and clamps it, the value could be incorrectly constrained
-        // to the previous bound when the new bound is replicated after clamping.
-        // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
+        // 'Current' can arrive before its new bound, and clamping against the stale bound constrains it wrongly.
         const auto ShouldBypassClientSideClamp =
             InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
             NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle) &&
             TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle);
 
-        // Record the final value before clamping, in both the bypass and
-        // normal paths, so DetectClamp can always view the fragment directly
-        // and compute overflow = pre-clamp - final. When no clamping occurs
-        // this frame the stored value equals Current.Final, yielding overflow
-        // of 0 naturally. When the attribute is ever clamped, the stored
-        // value persists as a debug record of the most recent overflow.
+        // Recorded before the bypass return so the clamp-signal processor always sees this frame's value.
         using PreClampType = ck::TFragment_Attribute_PreClampFinalValue<T_DerivedAttributeCurrent, T_Direction>;
         InHandle.template AddOrGet<PreClampType>() = PreClampType{FinalValue};
 
@@ -229,10 +214,7 @@ namespace ck::detail
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        // One projection: the registered child-keyed Produce emits ALL composed components (Current + Min/Max)
-        // of this attribute entity with the same EntryType shape the wire uses. Fold each into the owner
-        // container by (name, component) — identical content to the per-component hand-build this replaces;
-        // sibling components refresh with their identical live values (equality is nearly-equal, harmless).
+        // Produce emits ALL composed components (Current + Min/Max); siblings refresh to identical values.
         const auto Produced = UCk_Utils_Net_UE::TryProduce<T_RepDataStruct>(InHandle);
         if (Produced.IsSet())
         {
@@ -398,9 +380,7 @@ namespace ck::detail
             InHandle,
             [&](auto InAttributeModifier) -> void
             {
-                // This is necessary since all 3 types of attribute components (Min/Max/Current) are stored in the same Record.
-                // Since this processor is specialized for one of them, we need to skip over the modifiers that does NOT match it
-                // to avoid triggering an ensure.
+                // One Record holds all 3 components' modifiers; skipping foreign ones keeps the Request from ensuring.
                 if (NOT TUtils_AttributeModifier<AttributeModifierFragmentType>::Has(InAttributeModifier))
                 { return; }
 
@@ -416,8 +396,7 @@ namespace ck::detail
 
     namespace modifier_detail
     {
-        // Dependent-false idiom so the static_assert only fires on the unhandled branch
-        // (an unmapped enum value) rather than at template definition time.
+        // Dependent-false so the static_assert fires only on the unhandled branch, not at definition time.
         template <typename>
         inline constexpr auto Attribute_DependentFalse = false;
 
@@ -485,8 +464,7 @@ namespace ck::detail
                 AttributeComp._Base = modifier_detail::ApplyOperation<AttributeDataType, T_Operation>(AttributeComp._Base, *ModifierDelta);
             }
 
-            // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
-            // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
+            // TODO: move this reset to TProcessor_AttributeModifier_RevocableAdditive_Compute::Tick()
             AttributeComp._Final = AttributeComp._Base;
 
             InAttributeModifier._ModifierDelta.Reset();
@@ -547,7 +525,6 @@ namespace ck::detail
             const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
-        // even though WE as a Modifier are dying, our Owner may not be
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle, ECk_PendingKill_Policy::IncludePendingKill);
 
         if (ck::Is_NOT_Valid(TargetEntity))
@@ -677,7 +654,6 @@ namespace ck
         _MinClamp.Tick(InDeltaT);
         _MaxClamp.Tick(InDeltaT);
 
-        // Family-typed marker: this Clear only consumes THIS family's pending clamps.
         using ClampMarkerType = TTag_Attribute_MayRequireClamping<typename T_DerivedAttribute<ECk_MinMaxCurrent::Current>::HandleType>;
         UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry).template Clear<ClampMarkerType>();
     }

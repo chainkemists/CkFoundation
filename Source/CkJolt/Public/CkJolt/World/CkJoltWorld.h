@@ -37,8 +37,7 @@ namespace ck
 
 namespace ck::jolt
 {
-    // One frame's fixed-timestep plan, derived purely from the accumulator + frame delta. Extracted from
-    // FProcessor_JoltWorld_PlanStep so the math is pinnable by tests without a physics world.
+    // One frame's fixed-timestep plan — pure math over accumulator + frame delta, so tests can pin it.
     struct CKJOLT_API FCk_Jolt_StepPlan
     {
         float NewAccumulator = 0.0f;
@@ -65,9 +64,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Per-active-body interpolation state captured off the simulated Jolt world (UE-space). Prev holds
-    // last frame's pose, Curr this frame's; DirtyThisFrame gates the game-thread apply pass so a
-    // body untouched this frame is not re-applied.
+    // Per-active-body interpolation state captured off the simulated Jolt world (UE-space).
     struct FCk_Jolt_StepPoseEntry
     {
         uint64  UserData = 0;
@@ -81,13 +78,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Per-registered-CharacterVirtual state. Character is a NON-owning raw pointer (the entity's
-    // FFragment_JoltCharacter_Current holds the owning JPH::Ref). Registration is game-thread only.
-    //
-    // in-fields are written by the game thread (FProcessor_JoltCharacter_PreStep) BEFORE the step is kicked;
-    // out-fields are written by the step loop (DoStepCharacters_AnyThread — may run on the task graph) and
-    // read by the game thread (DoApplyCharacterPoses_GameThread) AFTER the async step is waited. HasJump is an
-    // in-field ARMED by the game thread and CONSUMED (cleared) by the step loop — both accesses are serialized
-    // by the WaitForAsync gate, so it is never touched concurrently.
+    // FFragment_JoltCharacter_Current holds the owning JPH::Ref). Registration is game-thread only; the
+    // in/out split below is serialized by the WaitForAsync gate, so nothing here is touched concurrently.
     struct FCk_Jolt_CharacterEntry
     {
         JPH::CharacterVirtual* Character = nullptr;
@@ -111,26 +103,16 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Runtime-internal Jolt-world step engine, owned by UCk_Jolt_Subsystem and published to the ECS
-    // registry as a TSharedPtr<ck::FJoltWorld> context. The three FGroup_Transform step processors read
-    // that context and drive it. Non-owning: every Jolt pointer below is owned by the subsystem, which
-    // nulls them (Shutdown) before destroying the pointed-at objects.
-    //
-    // THREADING CONTRACT: the step while-loop (DoStepCharacters_AnyThread + DoPhysicsUpdate +
-    // DoCapturePoses_AnyThread) may run on the task graph in async mode; it touches ONLY Jolt objects +
-    // _PoseBuffer + the character registry's Character pointers and out-fields (plus the HasJump in-field it
-    // consumes). The game thread never touches those while _AsyncFuture is pending
-    // (FProcessor_JoltWorld_WaitForAsync consumes it first) — it writes character in-fields only before the
-    // kick and reads out-fields only after the wait. DoApplyPoseBuffer_GameThread,
-    // DoApplyCharacterPoses_GameThread, character registration, the contact routers, and the accumulator math
-    // are game-thread only.
+    // Runtime-internal Jolt-world step engine, owned by UCk_Jolt_Subsystem and published to the ECS registry
+    // as a TSharedPtr<ck::FJoltWorld> context that the FGroup_Transform step processors drive. Every Jolt
+    // pointer below is NON-owning (the subsystem nulls them in Shutdown before destroying them). The
+    // _AnyThread/_GameThread suffixes are the threading contract; rationale: CkJolt/CLAUDE.md § Threading model.
     struct CKJOLT_API FJoltWorld
     {
     public:
         CK_GENERATED_BODY(FJoltWorld);
 
-        // Out-of-line so the TUniquePtr<CkJoltCharacterContactListener> member can hold an incomplete type in
-        // this header (destroyed in the .cpp where the listener is complete).
+        // Out-of-line so the TUniquePtr<CkJoltCharacterContactListener> member can hold an incomplete type here.
         ~FJoltWorld();
 
     public:
@@ -150,9 +132,8 @@ namespace ck
     public:
         explicit FJoltWorld(FInitParams InParams);
 
-        // Waits any in-flight async step, then nulls the non-owning Jolt pointers so a processor that
-        // reads a still-live context after teardown resolves them as null and returns silently. Called by
-        // the subsystem's Deinitialize BEFORE it destroys the pointed-at objects.
+        // Waits any in-flight async step, then nulls the Jolt pointers so a processor reading a still-live
+        // context after teardown resolves them as null and returns silently.
         auto Shutdown() -> void;
 
     public:
@@ -162,13 +143,10 @@ namespace ck
         auto DrainEventsAndRoute() -> void;
 
         // ---- Activation events (game-thread only) ----
-        // Drains the body activation/deactivation queue produced by the last step. The JoltBody
-        // sleep-state mirror processor resolves entities and toggles FTag_JoltBody_Sleeping itself,
-        // so — unlike contacts — these are handed back rather than routed.
+        // Handed back rather than routed: FProcessor_JoltBody_SleepStateMirror resolves the entities and
+        // toggles FTag_JoltBody_Sleeping itself.
         auto DrainActivationEvents(TArray<FCk_Jolt_ActivationEvent>& OutEvents) -> void;
 
-        // Reaps a pose-buffer entry when its body is torn down (JoltBody EndPlay), keyed by the
-        // body's index+sequence number (BodyID::GetIndexAndSequenceNumber).
         auto Remove_PoseBufferEntry(uint32 InBodyIndexAndSeq) -> void;
 
         // ---- Broadphase (game-thread only; safe once the async future is consumed upstream) ----
@@ -178,16 +156,12 @@ namespace ck
         // ---- Step primitives ----
         // Advances the simulation one fixed sub-step. Jolt-only; task-graph safe.
         auto DoPhysicsUpdate(float InFixedDt) -> void;
-        // Snapshots every active rigid body's pose into _PoseBuffer. NO registry/UObject access — may run
-        // on the task graph.
+        // Snapshots every active rigid body's pose into _PoseBuffer. NO registry/UObject access.
         auto DoCapturePoses_AnyThread() -> void;
-        // Writes buffered dirty poses onto their entity's FFragment_JoltBody_StepPose (adding the dirty tag)
-        // and reaps dead-entity entries. Game-thread only.
         auto DoApplyPoseBuffer_GameThread(const FCk_Handle& InTransientEntity) -> void;
 
         // ---- Character registry (game-thread only for register/unregister/intent/apply) ----
-        // Registers a CharacterVirtual (non-owning pointer) so the step loop drives it and the apply pass
-        // pushes its pose onto the entity. Keyed by UserData (the versioned entity id).
+        // Non-owning pointer, keyed by UserData (the versioned entity id).
         auto Register_Character(const FCk_Jolt_CharacterEntry& InEntry) -> void;
         auto Unregister_Character(uint64 InUserData) -> void;
 
@@ -200,25 +174,19 @@ namespace ck
             bool InArmJump,
             float InJumpVelocity) -> void;
 
-        // Teleport-equivalent of the body's pose-buffer reap: aligns the character entry's out-pose to the
-        // teleport target and clears its dirty flag so a stale post-step out-pose cannot revert the teleport.
-        // (Unlike a body, the whole registry entry is NOT removed — it holds the live Character pointer.)
+        // Teleport-equivalent of the body's pose-buffer reap, except the entry is NOT removed (it holds the
+        // live Character pointer): the dirty flag is cleared so a stale out-pose cannot revert the teleport.
         auto Snap_CharacterOutPose(uint64 InUserData, const FVector& InLocation, const FQuat& InRotation) -> void;
 
-        // Resolves a registered character's authored PushPolicy by its CharacterVirtual pointer, for the
-        // shared contact listener (called on the step thread; the registry is stable during the step).
+        // For the shared contact listener: called on the step thread, where the registry is stable.
         auto Get_CharacterPushPolicy(const JPH::CharacterVirtual* InCharacter) const -> ECk_JoltCharacter_PushPolicy;
 
         // The shared listener every CharacterVirtual is pointed at via SetListener during setup.
         auto Get_CharacterContactListener() const -> JPH::CharacterContactListener*;
 
-        // Writes each dirty character entry's out-pose onto its entity's shared FFragment_JoltBody_StepPose
-        // (adding FTag_JoltBody_TransformDirty), mirrors ground state/normal/velocity onto Current, and
-        // broadcasts OnJoltCharacterGroundStateChanged on the ground-state edge. Game-thread only.
         auto DoApplyCharacterPoses_GameThread(const FCk_Handle& InTransientEntity) -> void;
 
-        // Advances every registered character one fixed sub-step (ExtendedUpdate) and captures its out-fields.
-        // NO registry/UObject access — may run on the task graph inside the step loop.
+        // Advances every registered character one fixed sub-step (ExtendedUpdate). NO registry/UObject access.
         auto DoStepCharacters_AnyThread(float InFixedDt) -> void;
 
         // ---- Async future (game-thread only) ----

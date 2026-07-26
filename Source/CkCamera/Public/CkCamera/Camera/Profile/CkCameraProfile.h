@@ -10,12 +10,6 @@
 #include "CkCameraProfile.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// The composed camera profile — the accumulated result of every active modifier's contribution. The bone-name field
-// is intentionally absent: the anchor is a FCk_Handle_Transform set up by the caller (socket-following transform
-// entity), so the camera module never needs a bone name.
-//
-// Each leaf uses CK_PROPERTY (get + set) so BlendInto / modifiers can mutate the running profile.
-// --------------------------------------------------------------------------------------------------------------------
 
 // Generic rotation tuning (speed + limits + out-of-range behaviour). Reused by OrientationControl/AutoReorient/Noise.
 USTRUCT(BlueprintType)

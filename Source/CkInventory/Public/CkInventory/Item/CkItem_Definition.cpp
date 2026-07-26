@@ -27,10 +27,8 @@ auto
             TEXT("DoConstruct: Invalid ItemTrait on Definition [{}]."), this->GetFName())
         { continue; }
 
-        // One-trait-per-class is invariant — Get_ItemTrait<T> returns the first match and
-        // PostEditChangeProperty rejects designer-authored duplicates. Catch runtime breaches
-        // (e.g. AS asset-init bug) here instead of letting them cascade into RecordEntry /
-        // Fragment-already-exists ensures downstream.
+        // One-trait-per-class is invariant (Get_ItemTrait<T> returns the first match). Caught here so
+        // a runtime breach doesn't cascade into Fragment-already-exists ensures downstream.
         bool AlreadySeen = false;
         SeenTraitClasses.Add(ItemTrait->GetClass(), &AlreadySeen);
         CK_ENSURE_IF_NOT(NOT AlreadySeen,
@@ -273,7 +271,6 @@ auto
 
     const auto* ChangedClass = ChangedTrait->GetClass();
 
-    // Check if the changed element's type already exists at another index
     const auto IsDuplicate = ck::algo::AnyOf(_ItemTraits,
         [&, Idx = 0](const TObjectPtr<const UCk_ItemTrait>& InTrait) mutable
     {
@@ -285,7 +282,6 @@ auto
 
     if (IsDuplicate)
     {
-        // Restore the previous class that was at this index before the edit
         const auto PreviousClass = _CachedTraitClasses.IsValidIndex(ChangedIndex)
             ? _CachedTraitClasses[ChangedIndex]
             : TSubclassOf<UCk_ItemTrait>{};

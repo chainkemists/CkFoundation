@@ -9,8 +9,6 @@ FCk_TimerCategorizer::FCk_TimerCategorizer()
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Category Matching
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_TimerCategorizer::
@@ -57,15 +55,12 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Name Simplification
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_TimerCategorizer::
     SimplifyName(const FString& TimerName)
     -> FString
 {
-    // Exact replacements (static map, initialized once)
     static const TMap<FString, FString> Replacements = []()
     {
         TMap<FString, FString> Map;
@@ -93,13 +88,11 @@ auto
         return Map;
     }();
 
-    // Check exact match
     if (const FString* Replacement = Replacements.Find(TimerName))
     {
         return *Replacement;
     }
 
-    // Strip known prefixes
     static const TArray<FString> Prefixes = { TEXT("STAT_") };
     FString Result = TimerName;
     for (const FString& Prefix : Prefixes)
@@ -114,8 +107,6 @@ auto
     return Result;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Formatting Utilities
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -142,27 +133,27 @@ auto
     SeverityIcon(double Ms)
     -> FString
 {
-    // Geometric shapes from Unicode block U+25A0–U+25FF.
-    // These are present in Roboto (Slate's default font), unlike emoji circles.
+    // Geometric shapes (U+25A0..U+25FF) exist in Roboto, Slate's default font; emoji circles do not.
+    constexpr auto BlackSquare_Critical = TEXT("\u25A0");
+    constexpr auto BlackDiamond_Warning = TEXT("\u25C6");
+    constexpr auto BlackCircle_Moderate = TEXT("\u25CF");
+    constexpr auto WhiteCircle_Normal   = TEXT("\u25CB");
+
     if (Ms >= 5.0)
     {
-        // Black square U+25A0 — critical
-        return FString(TEXT("\u25A0"));
+        return FString(BlackSquare_Critical);
     }
     else if (Ms >= 2.0)
     {
-        // Black diamond U+25C6 — warning
-        return FString(TEXT("\u25C6"));
+        return FString(BlackDiamond_Warning);
     }
     else if (Ms >= 1.0)
     {
-        // Black circle U+25CF — moderate
-        return FString(TEXT("\u25CF"));
+        return FString(BlackCircle_Moderate);
     }
     else
     {
-        // White circle U+25CB — normal
-        return FString(TEXT("\u25CB"));
+        return FString(WhiteCircle_Normal);
     }
 }
 
@@ -173,7 +164,6 @@ auto
 {
     if (Count >= 1000)
     {
-        // Insert comma separators
         return FString::Printf(TEXT("%u,%03ux"), Count / 1000, Count % 1000);
     }
     return FString::Printf(TEXT("%ux"), Count);
@@ -184,7 +174,6 @@ auto
     IsWaitTimer(const FString& TimerName)
     -> bool
 {
-    // Names observed in real captures plus the "Waiting/Blocking" category keywords.
     // "WaitForTask" (singular) also covers WaitForTasks and GameThreadWaitForTask.
     static const TArray<FString> WaitKeywords = {
         TEXT("WaitForTask"),
@@ -207,8 +196,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Category Initialization (ported from Python CATEGORY_KEYWORDS)
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_TimerCategorizer::
@@ -226,7 +213,6 @@ auto
         _Categories.Add(MoveTemp(Cat));
     };
 
-    // Order matches Python CATEGORY_ORDER for display priority
     AddCategory(TEXT("Waiting/Blocking"), {
         TEXT("GameThreadWaitForTask"), TEXT("Game thread idle time"),
         TEXT("FAsyncTask::SyncCompletion"), TEXT("TaskWorkerIsLookingForWork"),

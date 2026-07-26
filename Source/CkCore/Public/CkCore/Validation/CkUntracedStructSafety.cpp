@@ -12,10 +12,9 @@ namespace ck_untraced_struct_safety
 
     auto IsAngelScriptStruct(const UScriptStruct* InStruct) -> bool
     {
-        // UASStruct is supplied by the optional AngelscriptCode module. Do not make foundational CkCore link against
-        // that module solely for a Cast<UASStruct>: Unreal's generated runtime class path is the stable identity of
-        // the same type. Some script fields need not be exported as FProperty, so runtime class identity alone is
-        // insufficient: GetPropertiesSize() is the complete AngelScript value size and must also prove zero storage.
+        // Path-matched rather than Cast<UASStruct> so foundational CkCore need not link the optional AngelscriptCode
+        // module. Class identity alone is insufficient — script fields need not be exported as FProperty, so the
+        // complete AngelScript value size must also prove zero storage.
         static const auto AngelScriptStructClassPath = FString{TEXT("/Script/AngelscriptCode.ASStruct")};
         return InStruct != nullptr &&
             InStruct->GetClass() != nullptr &&
@@ -25,13 +24,10 @@ namespace ck_untraced_struct_safety
 
     auto IsApprovedGcIndependentStruct(const UScriptStruct* InStruct) -> bool
     {
-        // Allowlist of native structs certified to retain no untraced UObject reference, matched by reflected path so
-        // foundational CkCore need not link against the modules that declare them (same rationale as IsAngelScriptStruct).
-        //
-        // FCk_Entity holds only an entt::entity integer id; its int32 mirror fields exist solely for the editor debugger
-        // and are compiled out under WITH_EDITORONLY_DATA. A cooked build therefore sees zero reflected fields, so the
-        // field-less-struct heuristic below would otherwise reject every dynamic fragment / EntityScript spawn-param that
-        // embeds an FCk_Handle (its _Entity member is an FCk_Entity). The type is provably GC-independent, not opaque.
+        // Native structs certified to retain no untraced UObject reference, matched by reflected path (same
+        // link-avoidance rationale as IsAngelScriptStruct). FCk_Entity is provably GC-independent yet has zero
+        // reflected fields in a cooked build, so the field-less-struct heuristic below would otherwise reject
+        // every dynamic fragment / spawn-param embedding an FCk_Handle.
         static const auto ApprovedPaths = TSet<FString>{TEXT("/Script/CkEcs.Ck_Entity")};
         return InStruct != nullptr && ApprovedPaths.Contains(InStruct->GetPathName());
     }
@@ -63,8 +59,8 @@ namespace ck_untraced_struct_safety
         if (InProperty == nullptr)
         { return Reject(EResult::UnprovenOpaque, InPath, TEXT("property metadata is missing")); }
 
-        // Check these before FObjectPropertyBase: weak and soft property classes derive from it but do not retain a
-        // bare object address. Their serial/generation identity remains safe when the object is collected.
+        // Must precede FObjectPropertyBase: weak and soft property classes derive from it but retain a
+        // serial/generation identity rather than a bare object address, so they survive collection.
         if (CastField<const FWeakObjectProperty>(InProperty) != nullptr ||
             CastField<const FSoftObjectProperty>(InProperty) != nullptr)
         { return Accept(); }
@@ -75,8 +71,7 @@ namespace ck_untraced_struct_safety
                 TEXT("deprecated lazy UObject references are not an approved untraced-storage contract"));
         }
 
-        // Unreal script delegates retain their target through FWeakObjectPtr. Payload-carrying custom carriers are
-        // still analyzed through their reflected struct/property graph and do not reach this case.
+        // Unreal script delegates retain their target through FWeakObjectPtr.
         if (CastField<const FDelegateProperty>(InProperty) != nullptr ||
             CastField<const FMulticastDelegateProperty>(InProperty) != nullptr)
         { return Accept(); }
@@ -126,8 +121,7 @@ namespace ck_untraced_struct_safety
         if (ck::Is_NOT_Valid(InStruct))
         { return Reject(EResult::UnprovenOpaque, InPath, TEXT("nested struct type is invalid")); }
 
-        // Custom reference collectors are proof that reflection alone does not describe ownership. An untraced sink
-        // cannot invoke that collector, so retaining this value requires a traced holder.
+        // An untraced sink cannot invoke a custom reference collector, so retaining this value needs a traced holder.
         if (InStruct->StructFlags & STRUCT_AddStructReferencedObjects)
         {
             return Reject(EResult::RequiresGcTracing, InPath,

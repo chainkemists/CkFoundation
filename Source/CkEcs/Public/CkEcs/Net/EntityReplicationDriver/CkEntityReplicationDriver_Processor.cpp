@@ -25,14 +25,9 @@ namespace ck
             HandleType InHandle)
         -> void
     {
-        // Fire-gating (spec §4.4, CTO note N2): do not fire until every replicated-fragment / hydration payload on
-        // this entity AND its lifetime-dependents has drained — otherwise an OnReplicationComplete /
-        // OnDependentsReplicationComplete consumer reads pre-apply state (esp. the §2.4 ConstructedThisFrame defer
-        // window on initial subtree replication). Leave the fire tag (also MarkedDirtyBy) so the same-frame pump /
-        // next tick retries. The dispatcher's 5s/2s timeout bounds entries a dispatcher on this net mode actually
-        // drains — an entry NOTHING drains (e.g. PendingApply stamped on a world whose ClientOnly dispatcher never
-        // runs) held the gate FOREVER and silently hung every OnReplicationComplete consumer (the post-v3-load HUD
-        // hang, 2026-07-14). The stall report below makes that state loud and names the blocker.
+        // Do not fire until every replicated-fragment / hydration payload on this entity AND its
+        // lifetime-dependents has drained, or a consumer reads pre-apply state. The fire tag stays set
+        // (it is also MarkedDirtyBy) so the same-frame pump and the next tick retry.
         if (UCk_Utils_EntityReplicationDriver_UE::Get_HasUndrainedReplicatedFragments_IncludingDependents(InHandle))
         {
             auto& Stall = InHandle.AddOrGet<FFragment_RepDriver_FireGateStall>();

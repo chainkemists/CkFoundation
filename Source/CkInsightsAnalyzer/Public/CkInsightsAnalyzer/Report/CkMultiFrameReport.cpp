@@ -75,14 +75,10 @@ auto
 
     TraceServices::FAnalysisSessionReadScope ReadScope = Session.CreateReadScope();
 
-    // Build timer name map once
     const auto TimerNames = FCk_FrameReport::BuildTimerNameMap(Session);
 
-    // Per-category, per-frame exclusive time accumulation
-    // CategoryName → array of per-frame exclusive ms
     TMap<FString, TArray<double>> CategoryPerFrame;
 
-    // Analyze each frame
     const auto FrameCount = EndFrame - StartFrame;
     _Stats.FrameCount = FrameCount;
     _Stats.FrameDurationsMs.Reserve(FrameCount);
@@ -91,7 +87,6 @@ auto
         TEXT("MultiFrameReport: Analyzing frames {}-{} ({} frames)"),
         StartFrame, EndFrame - 1, FrameCount);
 
-    // Track all frame summaries for worst-frame identification
     TArray<FCk_FrameSummary> AllSummaries;
     AllSummaries.Reserve(FrameCount);
 
@@ -103,7 +98,6 @@ auto
         const double DurationMs = Result.FrameDurationMs;
         _Stats.FrameDurationsMs.Add(DurationMs);
 
-        // Identify dominant cost
         auto [DomCost, DomMs] = IdentifyDominantCost(Result, TimerNames);
 
         FCk_FrameSummary Summary;
@@ -113,7 +107,6 @@ auto
         Summary.DominantCostMs = DomMs;
         AllSummaries.Add(MoveTemp(Summary));
 
-        // Accumulate per-category exclusive time for this frame
         TMap<FString, double> FrameCatExcl;
         for (const auto& [TimerIndex, ExclSec] : Result.TimerExclusive)
         {
@@ -139,7 +132,6 @@ auto
         return false;
     }
 
-    // Sort durations for percentile calculations
     ck::algo::Sort(_Stats.FrameDurationsMs);
 
     _Stats.MinFrameMs = _Stats.FrameDurationsMs[0];
@@ -151,7 +143,6 @@ auto
     for (double D : _Stats.FrameDurationsMs) Sum += D;
     _Stats.AvgFrameMs = Sum / _Stats.FrameDurationsMs.Num();
 
-    // Worst frames
     ck::algo::Sort(AllSummaries, [](const FCk_FrameSummary& A, const FCk_FrameSummary& B)
     {
         return A.DurationMs > B.DurationMs;
@@ -167,7 +158,6 @@ auto
         _Stats.WorstFrameIndex = AllSummaries[0].FrameIndex;
     }
 
-    // Category averages and P95
     for (auto& [CatName, PerFrame] : CategoryPerFrame)
     {
         if (PerFrame.Num() == 0) continue;
@@ -194,7 +184,6 @@ auto
         });
     }
 
-    // Sort by average exclusive time descending
     ck::algo::Sort(_Stats.CategoryAverages,
         [](const FCk_MultiFrameStats::FCategoryStats& A,
            const FCk_MultiFrameStats::FCategoryStats& B)
@@ -211,7 +200,6 @@ auto
                          const TMap<uint32, FString>& TimerNames) const
     -> TPair<FString, double>
 {
-    // Find the timer with the highest exclusive time
     uint32 MaxTimerIndex = 0;
     double MaxExclMs = 0.0;
 
@@ -262,8 +250,9 @@ auto
 {
     _Config.WorstFrameCount = Count;
 
-    // Analyze all frames to find the worst ones
-    if (NOT DoAnalyzeFrameRange(Session, 0, 0))
+    constexpr uint64 FromFirstFrame = 0;
+    constexpr uint64 ToEndOfTrace = 0;
+    if (NOT DoAnalyzeFrameRange(Session, FromFirstFrame, ToEndOfTrace))
     {
         return TEXT("(No frame data to analyze)");
     }
@@ -287,7 +276,6 @@ auto
     const double OverBudget = _Stats.AvgFrameMs / _Config.TargetFrameMs;
     const FString Icon = FCk_TimerCategorizer::SeverityIcon(_Stats.AvgFrameMs);
 
-    // Header
     Lines.Add(FString::Printf(
         TEXT("%s *Trace Analysis: %llu frames, avg %.1fms (%.1fx budget)*"),
         *Icon, _Stats.FrameCount, _Stats.AvgFrameMs, OverBudget));
@@ -299,7 +287,6 @@ auto
         *FCk_TimerCategorizer::FormatMs(_Stats.MaxFrameMs),
         _Stats.WorstFrameIndex));
 
-    // Top Worst Frames
     if (_Stats.WorstFrames.Num() > 0)
     {
         Lines.Add(TEXT(""));
@@ -317,7 +304,6 @@ auto
         }
     }
 
-    // Category Averages
     if (_Config.ShowCategoryAverages && _Stats.CategoryAverages.Num() > 0)
     {
         Lines.Add(TEXT(""));

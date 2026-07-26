@@ -38,7 +38,6 @@ auto
     if (SpatialParams.Get_RetentionDistance() < SpatialParams.Get_AcquisitionDistance())
     { SpatialParams.Set_RetentionDistance(SpatialParams.Get_AcquisitionDistance()); }
 
-    // Track the named subject, or the entity the feature is added to when unset (standalone Add).
     const auto Tracked = ck::IsValid(InParams.Get_TrackedEntity()) ? InParams.Get_TrackedEntity() : InHandle;
 
     InHandle.Add<ck::FTag_AggroTarget>();
@@ -97,7 +96,6 @@ auto
 
     auto NewTarget = CastChecked(NewEntity);
 
-    // Connect to the owner's AggroTargets record (add the record to the owner if it is missing).
     ck::FUtils_RecordOfAggroTargets::AddIfMissing(InOwner);
     ck::FUtils_RecordOfAggroTargets::Request_Connect(InOwner, NewTarget, ECk_Record_LabelRequirementPolicy::Optional);
 
@@ -152,8 +150,7 @@ auto
         const FCk_Handle_AggroTarget& InTarget)
     -> float
 {
-    // Analytic decay applied as-of-now from the target's OWN (self-sufficient) params, WITHOUT advancing the stored
-    // anchor (a pure read).
+    // A pure read: decay is applied as-of-now WITHOUT advancing the stored anchor.
     const auto& Threat     = InTarget.Get<ck::FFragment_AggroTarget_Threat>();
     const auto& ThreatP    = InTarget.Get<ck::FFragment_AggroTarget_ThreatParams>();
     const auto& SpatialP   = InTarget.Get<ck::FFragment_AggroTarget_SpatialParams>();

@@ -66,8 +66,7 @@ namespace ck
                 {
                     InHandle.Add<ck::FFragment_MovementComponent>(MovementComponent);
                 }
-                // If there isn't a movement component, use predicted velocity feature to track velocity
-                // Since velocity is replicated, we only need predicted velocity on auth
+                // Velocity replicates, so the fallback tracker is only needed on auth.
                 else if (UCk_Utils_Net_UE::Get_EntityNetMode(InHandle) == ECk_Net_NetModeType::Host)
                 {
                     UCk_Utils_PredictedVelocity_UE::Add(InHandle, {});
@@ -75,8 +74,8 @@ namespace ck
             }
         }
 
-        // We continue adding the regular Velocity Fragments even if they are not applicable anymore IF we
-        // have the MovementComponent. This is mainly for us to be able to debug (and add gameplay debugger breadcrumbs)
+        // The regular Velocity fragments are still added even when a MovementComponent makes them
+        // inapplicable — they are what the gameplay debugger reads.
 
         const auto& Params = InParams.Get_Params();
 
@@ -326,8 +325,6 @@ namespace ck
             const FFragment_ContainerRef_Velocity& InContainerRef) const
         -> void
     {
-        // One projection, shared by the wire and the save file: consume the registered Produce (byte-identical
-        // to the old inline build). Produced is always set here (the processor's view guarantees the fragment).
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Velocity>(InHandle);
         if (Produced.IsSet())
         { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Velocity>(InHandle, *Produced); }

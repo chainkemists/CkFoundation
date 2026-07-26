@@ -3,7 +3,6 @@
 #include "CkCore/Ensure/CkEnsure.h" // registration-time Produce-without-HydrationApply enforcement
 
 // --------------------------------------------------------------------------------------------------------------------
-// Handler Registry
 
 TMap<const UScriptStruct*, FCk_PersistenceHandlerRegistry::FHandler>
     FCk_PersistenceHandlerRegistry::_Handlers;
@@ -83,16 +82,12 @@ auto
     auto Types = TArray<const UScriptStruct*>{};
     for (const auto& Pair : _Handlers)
     {
-        // Save-participating handlers only: a Produce (the payload emitter) paired with a HydrationApply (its
-        // load-path applier). The v3 capture writes one payload per (entity, type) for these. A Produce with no
-        // HydrationApply is excluded — the registration ensure already fired for it; excluding it keeps the save
-        // free of state that could never load back.
-        if (Pair.Value.Produce && Pair.Value.HydrationApply)
+        const auto ParticipatesInSave = Pair.Value.Produce && Pair.Value.HydrationApply;
+        if (ParticipatesInSave)
         { Types.Add(Pair.Key); }
     }
 
-    // Deterministic save files + deterministic per-entity hydration order (payload apply order follows the sorted
-    // type-path order). TArray::Sort dereferences the pointers before calling the predicate.
+    // Sorted for deterministic save files + per-entity hydration order. TArray::Sort dereferences first.
     Types.Sort([](const UScriptStruct& InA, const UScriptStruct& InB)
     { return InA.GetPathName() < InB.GetPathName(); });
 

@@ -45,13 +45,12 @@
 #include <Misc/PackageName.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// The four authoring scripts of an emitter, in editor display order. Walking each gives the ordered module stack the
-// VFX artist sees in the System Overview — the "recipe".
+
 namespace ck::asset_exporter::niagara
 {
     struct FStage { const TCHAR* Name; FNiagaraEmitterScriptProperties FVersionedNiagaraEmitterData::* Member; };
 
-    static auto Get_Stages() -> TArray<FStage>
+    static auto Get_Stages_InEditorDisplayOrder() -> TArray<FStage>
     {
         return {
             { TEXT("Emitter Spawn"),  &FVersionedNiagaraEmitterData::EmitterSpawnScriptProps },
@@ -75,9 +74,8 @@ namespace ck::asset_exporter::niagara
         }
     }
 
-    // Formats a single Rapid Iteration Parameter value (the authored constant a module input pin hides) for the
-    // common POD/vector/color types. Returns unset for anything else (data interfaces, UObjects, structs we don't
-    // decode) so the caller skips it without ever reading bytes at a non-ParameterData offset.
+    // Unset for anything not decoded here (data interfaces, UObjects, other structs) — the caller must skip those
+    // rather than read bytes at a non-ParameterData offset.
     static auto FormatStoreValue(
         const FNiagaraParameterStore& InStore,
         const FNiagaraVariableWithOffset& InVar)
@@ -105,8 +103,6 @@ namespace ck::asset_exporter::niagara
         return {};
     }
 
-    // Enum static-switch pins carry internal enumerator names ("NewEnumerator3") that mean nothing in a recipe;
-    // append the authored display name when the pin's type is an enum and the two differ.
     static auto FormatPinDefault(const UEdGraphPin* InPin) -> FString
     {
         if (InPin->DefaultObject != nullptr)
@@ -138,9 +134,8 @@ namespace ck::asset_exporter::niagara
         return Schema->PinToTypeDefinition(InPin) == FNiagaraTypeDefinition::GetParameterMapDef();
     }
 
-    // UNiagaraNodeInput is UCLASS(MinimalAPI) — its GetDataInterface()/GetObjectAsset() accessors are NOT
-    // exported from NiagaraEditor and would fail to link from this module. Read the UPROPERTYs by reflection
-    // instead (MinimalAPI still exports StaticClass).
+    // UNiagaraNodeInput is UCLASS(MinimalAPI): its GetDataInterface()/GetObjectAsset() accessors are unexported and
+    // will not link from this module, so the UPROPERTYs are read by reflection instead.
     static auto Get_NodeObjectProperty(const UNiagaraNodeInput* InNode, const TCHAR* InPropertyName) -> UObject*
     {
         const auto* Property = FindFProperty<FObjectProperty>(UNiagaraNodeInput::StaticClass(), InPropertyName);
@@ -149,8 +144,6 @@ namespace ck::asset_exporter::niagara
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Public API (mirrors the other CkAssetExporter exporters: JSON + text written next to the asset, or into an
-// explicit output directory when the corpus orchestrator drives the export).
 
 auto
     FCk_NiagaraExporter::
@@ -222,7 +215,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Stack walking
 
 auto
     FCk_NiagaraExporter::
@@ -247,13 +239,12 @@ auto
     if (Schema == nullptr)
     { return false; }
 
-    // Replicate FNiagaraStackGraphUtilities::GetOrderedModuleNodes (which isn't exported) with public symbols: the
-    // stack threads a single parameter map Input -> module -> module -> Output; walk that chain backward from the
-    // Output node, collecting the function-call (module) nodes in order. The Override Map-Set nodes between modules
-    // carry the authored dynamic inputs / data interfaces / attribute links as dotted-path pins — collect those too.
+    // FNiagaraStackGraphUtilities::GetOrderedModuleNodes is unexported; this walks the same single parameter-map
+    // chain (Input -> module -> module -> Output) backward using public symbols only.
+    constexpr auto MaxChainLength = 512;
     const UEdGraphNode* Current = OutputNode;
     auto Guard = int32{0};
-    while (Current != nullptr && Guard++ < 512)
+    while (Current != nullptr && Guard++ < MaxChainLength)
     {
         const UEdGraphPin* MapIn = nullptr;
         for (const UEdGraphPin* Pin : Current->Pins)
@@ -360,8 +351,6 @@ auto
 
     if (const auto* DynInput = Cast<UNiagaraNodeFunctionCall>(SrcNode))
     {
-        // A dynamic input — its own authored parameters arrive separately: constants via the Rapid Iteration
-        // store, deeper overrides via longer dotted pins on the same override node.
         Obj->SetStringField(TEXT("kind"), TEXT("dynamicInput"));
         Obj->SetStringField(TEXT("value"), DynInput->GetNodeTitle(ENodeTitleType::ListView).ToString());
         Obj->SetStringField(TEXT("id"), DynInput->GetFunctionName());
@@ -514,7 +503,6 @@ auto
     {
         if (Pin == nullptr || Pin->Direction != EGPD_Input)
         { continue; }
-        // Skip the parameter-map plumbing pins (they carry the stack, not authored values).
         if (Pin->PinName == NAME_None || ck::asset_exporter::niagara::IsParameterMapPin(Pin))
         { continue; }
 
@@ -525,8 +513,6 @@ auto
         auto Value = FString{};
         if (Pin->LinkedTo.Num() > 0)
         {
-            // A linked pin is driven by an upstream node. If that's a function-call node it's a dynamic input —
-            // name it (its title is the DI's shape, e.g. "Float from Curve"). Otherwise just mark it linked.
             const auto* Source = Pin->LinkedTo[0] != nullptr ? Pin->LinkedTo[0]->GetOwningNode() : nullptr;
             if (const auto* DynInput = Cast<UNiagaraNodeFunctionCall>(Source))
             { Value = ck::Format_UE(TEXT("[dynamic input: {}]"), DynInput->GetNodeTitle(ENodeTitleType::ListView).ToString()); }
@@ -625,7 +611,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Plain text (the human-readable recipe)
 
 auto
     FCk_NiagaraExporter::
@@ -686,8 +671,7 @@ auto
                 ? *ck::Format_UE(TEXT("  {} to {}"), Data->FixedBounds.Min.ToString(), Data->FixedBounds.Max.ToString())
                 : TEXT(""));
 
-        // Module stacks (the layering recipe).
-        for (const auto& Stage : ck::asset_exporter::niagara::Get_Stages())
+        for (const auto& Stage : ck::asset_exporter::niagara::Get_Stages_InEditorDisplayOrder())
         {
             UNiagaraScript* Script = (Data->*(Stage.Member)).Script;
             auto Modules = TArray<UNiagaraNodeFunctionCall*>{};
@@ -712,9 +696,6 @@ auto
                     Out += ck::Format_UE(TEXT("         {} = {}\n"), Input.Key, Input.Value);
                 }
 
-                // The authored overrides for this module — dynamic inputs, curves, attribute links.
-                // Overrides authored on the module's dynamic inputs are keyed by the dyn node's call
-                // name; expansion re-attaches them (nested) so curve keys land in the recipe.
                 auto ModuleOverrides = TArray<TSharedPtr<FJsonObject>>{};
                 constexpr auto MaintainOrder = true;
                 Overrides.MultiFind(Module->GetFunctionName(), ModuleOverrides, MaintainOrder);
@@ -726,8 +707,7 @@ auto
                 }
             }
 
-            // Never drop data silently: surface overrides keyed to a node no module (or reachable
-            // dynamic input) claimed.
+            // Never drop data silently: overrides keyed to a node no module or dynamic input claimed.
             auto bWroteUnattachedHeader = false;
             for (auto It = Overrides.CreateConstIterator(); It; ++It)
             {
@@ -737,9 +717,6 @@ auto
                 Out += ck::Format_UE(TEXT("       {}: {}\n"), It.Key(), DoFormatOverride_Text(It.Value()));
             }
 
-            // The authored constant values for this stage's modules (sizes, colors, counts, lifetimes) live in the
-            // script's Rapid Iteration Parameter store, keyed Constants.[Emitter].[Module].[Input]. The module graph
-            // pins only expose the static-switch selectors, so this is where the real "recipe numbers" are.
             const auto& Rip = Script->RapidIterationParameters;
             auto bWroteValuesHeader = false;
             for (const auto& Var : Rip.ReadParameterVariables())
@@ -754,7 +731,6 @@ auto
             }
         }
 
-        // Renderers (how it's drawn).
         const auto& Renderers = Data->GetRenderers();
         if (Renderers.Num() > 0)
         {
@@ -779,8 +755,6 @@ auto
                 }
                 else if (const auto* Mesh = Cast<UNiagaraMeshRendererProperties>(Renderer))
                 {
-                    // The shaped elements (slashes, spikes, strips) are oriented stretched meshes — name the mesh(es),
-                    // non-unit scale, facing, and override materials so the recipe is reproducible.
                     Out += ck::Format_UE(TEXT("  Facing: {}  Sort: {}"),
                         StaticEnum<ENiagaraMeshFacingMode>()->GetNameStringByValue((int64)Mesh->FacingMode),
                         StaticEnum<ENiagaraSortMode>()->GetNameStringByValue((int64)Mesh->SortMode));
@@ -812,7 +786,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// JSON (structured mirror)
 
 auto
     FCk_NiagaraExporter::
@@ -891,7 +864,6 @@ auto
     if (Unattached.Num() > 0)
     { Obj->SetArrayField(TEXT("unattachedOverrides"), Unattached); }
 
-    // The authored constant values (sizes, colors, counts, lifetimes) from the script's Rapid Iteration store.
     auto ValuesArr = TArray<TSharedPtr<FJsonValue>>{};
     const auto& Rip = InScript->RapidIterationParameters;
     for (const auto& Var : Rip.ReadParameterVariables())
@@ -986,7 +958,7 @@ auto
     { Obj->SetStringField(TEXT("fixedBounds"), ck::Format_UE(TEXT("{} to {}"), InData->FixedBounds.Min.ToString(), InData->FixedBounds.Max.ToString())); }
 
     auto Stacks = TArray<TSharedPtr<FJsonValue>>{};
-    for (const auto& Stage : ck::asset_exporter::niagara::Get_Stages())
+    for (const auto& Stage : ck::asset_exporter::niagara::Get_Stages_InEditorDisplayOrder())
     {
         UNiagaraScript* Script = (InData->*(Stage.Member)).Script;
         if (auto Stack = DoSerializeStack_Json(Script, Stage.Name))

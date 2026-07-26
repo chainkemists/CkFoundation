@@ -71,8 +71,7 @@ namespace ck_watermark_panel_widget
 
 UCkWatermark_Panel_UWidget_UE::UCkWatermark_Panel_UWidget_UE()
 {
-    // Prevent the overlay from intercepting game input; SynchronizeProperties()
-    // propagates this UMG-level property to the Slate widget on every sync.
+    // SynchronizeProperties() re-propagates this UMG-level property to Slate on every sync.
     SetVisibility(ESlateVisibility::HitTestInvisible);
 
     _StatsGroupPlacement.Anchor      = ECk_Watermark_GroupAnchor::BottomRight;
@@ -111,8 +110,7 @@ auto
     -> TSharedRef<SWidget>
 {
     // ---- Fonts + layout from project settings --------------------------------
-    // Font override is read once at rebuild — changing the typeface still needs a
-    // rebuild, but outline size/color are re-read live inside each lambda.
+    // Typeface is read once at rebuild; outline size/color are re-read live inside each lambda.
     const FSlateFontInfo FontOverride = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_FontOverride();
     const bool           bHasFont     = FontOverride.HasValidFont();
 
@@ -176,7 +174,6 @@ auto
             .ShadowColorAndOpacity(ShadowColorAttr);
     };
 
-    // Color for stats that have no good/bad meaning — read from Project Settings.
     const auto UncoloredAttr = TAttribute<FSlateColor>::CreateWeakLambda(this, []() -> FSlateColor
     {
         return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_UncoloredStat_Color());
@@ -193,8 +190,6 @@ auto
     };
 
     // ---- Visibility attributes ----------------------------------------------
-    // Helper: visibility attribute that shows an element only when the current
-    // display policy meets or exceeds InMinPolicy.
     auto MakeVisForMinPolicy = [this](ECk_Watermark_DisplayPolicy InMinPolicy) -> TAttribute<EVisibility>
     {
         return TAttribute<EVisibility>::CreateWeakLambda(this, [this, InMinPolicy]() -> EVisibility
@@ -254,7 +249,6 @@ auto
     }
 
     // ---- Info group (bottom-center, pre-built to avoid MSVC attribute-specifier ambiguity) --
-    // Info bar appearance from project settings
     const TAttribute<FSlateFontInfo> IBFont = MakeFont("Regular", UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_FontSize());
 
     const FText        IBSep    = FText::FromString(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_Separator());
@@ -272,7 +266,6 @@ auto
         return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_InfoBar_SeparatorColor());
     });
 
-    // Helper: visibility attribute from a static MinPolicy getter.
     auto MakeInfoVis = [this](ECk_Watermark_DisplayPolicy (*Getter)()) -> TAttribute<EVisibility>
     {
         return TAttribute<EVisibility>::CreateWeakLambda(this, [this, Getter]() -> EVisibility
@@ -285,10 +278,9 @@ auto
         });
     };
 
-    // Row A — Device Info entries
-    TArray<FCkWatermarkInfoBarEntry> InfoRowA;
+    TArray<FCkWatermarkInfoBarEntry> DeviceInfoRow;
 
-    InfoRowA.Add({
+    DeviceInfoRow.Add({
         FText::FromString(TEXT("CPU")),
         TAttribute<FText>::CreateLambda([]() -> FText
         {
@@ -298,7 +290,7 @@ auto
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CpuBrand)
     });
 
-    InfoRowA.Add({
+    DeviceInfoRow.Add({
         FText::FromString(TEXT("OS")),
         TAttribute<FText>::CreateLambda([]() -> FText
         {
@@ -308,7 +300,7 @@ auto
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_OsVersion)
     });
 
-    InfoRowA.Add({
+    DeviceInfoRow.Add({
         FText::FromString(TEXT("Cores")),
         TAttribute<FText>::CreateLambda([]() -> FText
         {
@@ -319,7 +311,7 @@ auto
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CpuCores)
     });
 
-    InfoRowA.Add({
+    DeviceInfoRow.Add({
         FText::FromString(TEXT("Net")),
         TAttribute<FText>::CreateLambda([]() -> FText
         {
@@ -338,8 +330,7 @@ auto
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_NetworkType)
     });
 
-    // Row B — Role + ECS Debug entries
-    TArray<FCkWatermarkInfoBarEntry> InfoRowB;
+    TArray<FCkWatermarkInfoBarEntry> RoleEcsAndJoltRow;
     {
         FCkWatermarkInfoBarEntry RoleEntry;
         RoleEntry.Key = FText::FromString(TEXT("Role"));
@@ -374,10 +365,10 @@ auto
             return FSlateColor(FLinearColor(0.55f, 0.55f, 0.55f, 1.f));
         });
         RoleEntry.Visibility = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_NetMode);
-        InfoRowB.Add(MoveTemp(RoleEntry));
+        RoleEcsAndJoltRow.Add(MoveTemp(RoleEntry));
     }
 
-    InfoRowB.Add({
+    RoleEcsAndJoltRow.Add({
         FText::FromString(TEXT("ECS DBG")),
         TAttribute<FText>::CreateLambda([]() -> FText
         {
@@ -392,7 +383,7 @@ auto
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsDebugger)
     });
 
-    InfoRowB.Add({
+    RoleEcsAndJoltRow.Add({
         FText::FromString(TEXT("EntityMap")),
         TAttribute<FText>::CreateLambda([]() -> FText
         {
@@ -406,7 +397,7 @@ auto
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsEntityMap)
     });
 
-    InfoRowB.Add({
+    RoleEcsAndJoltRow.Add({
         FText::FromString(TEXT("CS")),
         TAttribute<FText>::CreateLambda([]() -> FText
         {
@@ -423,8 +414,6 @@ auto
         MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_EcsCallstacks)
     });
 
-    // Jolt physics threading mode: "MT(7t) Async", "MT(7t)", "ST Async", or "ST".
-    // Green when both parallel + async are enabled (optimal configuration).
     {
         FCkWatermarkInfoBarEntry JoltEntry;
         JoltEntry.Key = FText::FromString(TEXT("Jolt"));
@@ -459,18 +448,15 @@ auto
             return FSlateColor(FLinearColor::White);
         });
         JoltEntry.Visibility = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Jolt);
-        InfoRowB.Add(MoveTemp(JoltEntry));
+        RoleEcsAndJoltRow.Add(MoveTemp(JoltEntry));
     }
 
-    // Helper: true when a given min-policy is met by the current display policy.
-    // Hidden means "never shown", so it never contributes.
     auto PolicyMet = [](ECk_Watermark_DisplayPolicy P, ECk_Watermark_DisplayPolicy MinPolicy) -> bool
     {
         return MinPolicy != ECk_Watermark_DisplayPolicy::Hidden && P >= MinPolicy;
     };
 
-    // Row-level visibility — collapse each row if no entry meets the current policy
-    const auto VisInfoRowA = TAttribute<EVisibility>::CreateWeakLambda(this, [this, PolicyMet]() -> EVisibility
+    const auto VisDeviceInfoRow = TAttribute<EVisibility>::CreateWeakLambda(this, [this, PolicyMet]() -> EVisibility
     {
         const auto P = _CurrentDisplayPolicy;
         const bool bAny =
@@ -481,8 +467,7 @@ auto
         return bAny ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
     });
 
-    // Row B — collapse if no entry meets the current policy
-    const auto VisInfoRowB = TAttribute<EVisibility>::CreateWeakLambda(this, [this, PolicyMet]() -> EVisibility
+    const auto VisRoleEcsAndJoltRow = TAttribute<EVisibility>::CreateWeakLambda(this, [this, PolicyMet]() -> EVisibility
     {
         const auto P = _CurrentDisplayPolicy;
         const bool bAny =
@@ -494,8 +479,7 @@ auto
         return bAny ? EVisibility::SelfHitTestInvisible : EVisibility::Collapsed;
     });
 
-    // Row C — collapse if BuildId policy is not met
-    const auto VisInfoRowC = TAttribute<EVisibility>::CreateWeakLambda(this, [this, PolicyMet]() -> EVisibility
+    const auto VisBuildInfoRow = TAttribute<EVisibility>::CreateWeakLambda(this, [this, PolicyMet]() -> EVisibility
     {
         const auto P = _CurrentDisplayPolicy;
         const bool bAny =
@@ -530,21 +514,16 @@ auto
     });
 #endif
 
-    // Row C — Build Config (all entries respect _Watermark_MinPolicy_BuildId)
     const auto BuildIdVis = MakeInfoVis(&UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_BuildId);
 
-    TArray<FCkWatermarkInfoBarEntry> InfoRowC;
+    TArray<FCkWatermarkInfoBarEntry> BuildInfoRow;
     FCkWatermarkInfoBarEntry BuildEntry;
     BuildEntry.Key   = FText::FromString(TEXT("Build"));
     BuildEntry.Value = TAttribute<FText>(BuildLabel);
     BuildEntry.Visibility = BuildIdVis;
     BuildEntry.ValueColorOverride = BuildColorAttr;
-    InfoRowC.Add(MoveTemp(BuildEntry));
+    BuildInfoRow.Add(MoveTemp(BuildEntry));
 
-    // Build ID entries — one per reference branch baked in at compile time.
-    // Entries where the merge-base equals HEAD are shown with the active color
-    // (we are at that branch's tip). Diverged entries use the inactive color.
-    // If HEAD does not match any branch a final "HEAD" entry is appended.
     {
         static const FString BakedHead(UTF8_TO_TCHAR(CkCoreBuildId::HeadHash));
 
@@ -575,11 +554,10 @@ auto
                     ? UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Active_Color()
                     : UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Inactive_Color());
             });
-            InfoRowC.Add(MoveTemp(BranchEntry));
+            BuildInfoRow.Add(MoveTemp(BranchEntry));
         }
 
-        // On a feature branch, HEAD is ahead of all reference merge-bases —
-        // show it explicitly so the current commit is always visible.
+        // On a feature branch HEAD is ahead of every reference merge-base, so nothing else shows it.
         if (!HeadMatchesAny)
         {
             FCkWatermarkInfoBarEntry HeadEntry;
@@ -590,12 +568,11 @@ auto
             {
                 return FSlateColor(UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_BuildId_Active_Color());
             });
-            InfoRowC.Add(MoveTemp(HeadEntry));
+            BuildInfoRow.Add(MoveTemp(HeadEntry));
         }
     }
 
-    // ── Row D — Custom Field (game-populated, hidden unless set) ──────────
-    TArray<FCkWatermarkInfoBarEntry> InfoRowD;
+    TArray<FCkWatermarkInfoBarEntry> CustomFieldRow;
     {
         TWeakObjectPtr<const UCkWatermark_Panel_UWidget_UE> WeakSelf(this);
 
@@ -609,7 +586,6 @@ auto
 
         FCkWatermarkInfoBarEntry CustomEntry;
 
-        // Key — TAttribute reads from subsystem each paint pass.
         CustomEntry.Key = TAttribute<FText>::CreateWeakLambda(this,
             [GetSubsystem]() -> FText
             {
@@ -619,7 +595,6 @@ auto
                 return FText::GetEmpty();
             });
 
-        // Value — same pattern.
         CustomEntry.Value = TAttribute<FText>::CreateWeakLambda(this,
             [GetSubsystem]() -> FText
             {
@@ -629,7 +604,6 @@ auto
                 return FText::GetEmpty();
             });
 
-        // Visibility — custom field set AND display policy meets MinPolicy.
         const auto CustomFieldMinPolicy =
             UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_CustomField();
         CustomEntry.Visibility = TAttribute<EVisibility>::CreateWeakLambda(this,
@@ -644,7 +618,6 @@ auto
                     : EVisibility::Collapsed;
             });
 
-        // Key color — runtime override from subsystem, fallback to project settings.
         CustomEntry.KeyColorOverride = TAttribute<FSlateColor>::CreateWeakLambda(this,
             [GetSubsystem]() -> FSlateColor
             {
@@ -658,7 +631,6 @@ auto
                     ::Get_Watermark_CustomField_DefaultKeyColor());
             });
 
-        // Value color — same pattern.
         CustomEntry.ValueColorOverride = TAttribute<FSlateColor>::CreateWeakLambda(this,
             [GetSubsystem]() -> FSlateColor
             {
@@ -672,18 +644,17 @@ auto
                     ::Get_Watermark_CustomField_DefaultValueColor());
             });
 
-        InfoRowD.Add(MoveTemp(CustomEntry));
+        CustomFieldRow.Add(MoveTemp(CustomEntry));
     }
 
     TSharedRef<SVerticalBox> InfoGroupBox = SNew(SVerticalBox)
 
-        // Row A — Device Info
         + SVerticalBox::Slot()
         .AutoHeight()
         .Padding(0.f, RowVPad)
         [
             SNew(SCkWatermarkInfoBar)
-            .Entries(MoveTemp(InfoRowA))
+            .Entries(MoveTemp(DeviceInfoRow))
             .Font(IBFont)
             .Separator(IBSep)
             .KeyValueSeparator(IBKVSep)
@@ -692,16 +663,15 @@ auto
             .SeparatorColor(IBSepCol)
             .ShadowOffset(ShadowOffsetAttr)
             .ShadowColorAndOpacity(ShadowColorAttr)
-            .Visibility(VisInfoRowA)
+            .Visibility(VisDeviceInfoRow)
         ]
 
-        // Row B — Role + ECS Debug
         + SVerticalBox::Slot()
         .AutoHeight()
         .Padding(0.f, RowVPad)
         [
             SNew(SCkWatermarkInfoBar)
-            .Entries(MoveTemp(InfoRowB))
+            .Entries(MoveTemp(RoleEcsAndJoltRow))
             .Font(IBFont)
             .Separator(IBSep)
             .KeyValueSeparator(IBKVSep)
@@ -710,16 +680,15 @@ auto
             .SeparatorColor(IBSepCol)
             .ShadowOffset(ShadowOffsetAttr)
             .ShadowColorAndOpacity(ShadowColorAttr)
-            .Visibility(VisInfoRowB)
+            .Visibility(VisRoleEcsAndJoltRow)
         ]
 
-        // Row C — Build Config
         + SVerticalBox::Slot()
         .AutoHeight()
         .Padding(0.f, RowVPad)
         [
             SNew(SCkWatermarkInfoBar)
-            .Entries(MoveTemp(InfoRowC))
+            .Entries(MoveTemp(BuildInfoRow))
             .Font(IBFont)
             .Separator(IBSep)
             .KeyValueSeparator(IBKVSep)
@@ -728,16 +697,15 @@ auto
             .SeparatorColor(IBSepCol)
             .ShadowOffset(ShadowOffsetAttr)
             .ShadowColorAndOpacity(ShadowColorAttr)
-            .Visibility(VisInfoRowC)
+            .Visibility(VisBuildInfoRow)
         ]
 
-        // Row D — Custom Field (game-populated)
         + SVerticalBox::Slot()
         .AutoHeight()
         .Padding(0.f, RowVPad)
         [
             SNew(SCkWatermarkInfoBar)
-            .Entries(MoveTemp(InfoRowD))
+            .Entries(MoveTemp(CustomFieldRow))
             .Font(IBFont)
             .Separator(IBSep)
             .KeyValueSeparator(IBKVSep)
@@ -760,7 +728,6 @@ auto
     TArray<FStatEntry> StatEntries;
     StatEntries.Reserve(10);
 
-    // Ensures
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -795,7 +762,6 @@ auto
         {}
     });
 
-    // Unique Ensures
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -830,7 +796,6 @@ auto
         {}
     });
 
-    // RAM
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -853,7 +818,6 @@ auto
         {}
     });
 
-    // VRAM
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -874,7 +838,6 @@ auto
         {}
     });
 
-    // Memory Pressure
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -906,7 +869,6 @@ auto
         {}
     });
 
-    // Ping
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -958,7 +920,6 @@ auto
         {}
     });
 
-    // Server FPS
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -995,7 +956,6 @@ auto
         {}
     });
 
-    // FPS
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -1018,7 +978,6 @@ auto
         {}
     });
 
-    // Time
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -1051,7 +1010,6 @@ auto
         {}
     });
 
-    // Frame
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -1076,7 +1034,6 @@ auto
             : EVisibility::Collapsed;
     });
 
-    // Rep Actors
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -1095,7 +1052,6 @@ auto
         RepVisOverride
     });
 
-    // Rep Components
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -1114,7 +1070,6 @@ auto
         RepVisOverride
     });
 
-    // Rep Objects
     StatEntries.Add({
         [&]() -> TSharedRef<SCkWatermarkStat>
         {
@@ -1133,7 +1088,6 @@ auto
         RepVisOverride
     });
 
-    // Collect unique row indices, sort ascending, then emit one SHorizontalBox per row.
     TArray<int32> RowIndices;
     for (const FStatEntry& E : StatEntries)
     {
@@ -1153,7 +1107,6 @@ auto
 
             if (E.VisOverride.IsSet())
             {
-                // Outer SBox gates on display-policy level, inner SBox gates on per-stat condition (e.g. CVar).
                 HBox->AddSlot()
                     .AutoWidth()
                     .Padding(CellHPad, 0.f)
@@ -1189,7 +1142,6 @@ auto
 
     // ---- Activity bar (above stat rows in the stats group) ------------------
     {
-        // Capture a weak reference to this widget for the activity getter lambda.
         TWeakObjectPtr<const UCkWatermark_Panel_UWidget_UE> WeakThis(this);
 
         const TAttribute<FSlateColor> ActiveColorAttr = TAttribute<FSlateColor>::CreateLambda([]() -> FSlateColor
@@ -1242,13 +1194,8 @@ auto
     }
 
     // ---- Center group (bottom-center) — ECS pump pressure -------------------
-    // This frame's worst-case scheduler pump count vs the budget, color-banded like the other perf
-    // stats (lower is better), plus a red "PUMP LIMIT EXCEEDED" banner when the budget is reached.
-    // Replaces the per-frame log spam the scheduler used to emit. This group is also the reserved
-    // home for upcoming Server/Client connection + version-mismatch info — add rows below the warning.
     const auto PumpMinPolicy = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_PumpCount();
 
-    // Worst-case pump count + budget across this world's per-ticking-group schedulers.
     // {0, 0} when there is no ECS world (e.g. front-end menu) — the stat then renders "---".
     auto QueryPumps = [](const UWorld* InWorld) -> TPair<int32, int32>
     {
@@ -1276,7 +1223,6 @@ auto
 
     TSharedRef<SVerticalBox> CenterGroupBox = SNew(SVerticalBox)
 
-        // Pump count stat — [ N / Max ] with "Pumps" label.
         + SVerticalBox::Slot()
         .AutoHeight()
         .Padding(0.f, RowVPad)
@@ -1303,7 +1249,6 @@ auto
             ]
         ]
 
-        // Over-budget warning banner — collapsed unless this frame's pump count reaches the budget.
         + SVerticalBox::Slot()
         .AutoHeight()
         .Padding(0.f, RowVPad)
@@ -1319,11 +1264,6 @@ auto
         ];
 
     // ---- Connection rows (Server/Client build-version) — appended to the center group ----
-    // Decoupled from the project's GameState/PlayerState class: all data comes from
-    // UCk_NetVersion_WorldSubsystem_UE (one ACk_NetVersionReport_UE per player, server-spawned).
-    //   Client (NM_Client):    one row "Server <hash> [OK|VERSION MISMATCH]".
-    //   Host (NM_ListenServer): "Clients (N)" header + up to MaxClientRows fixed per-client rows.
-    //   Dedicated server:       no watermark; its surface is the server-side log in ACk_NetVersionReport_UE.
     const auto ConnMinPolicy  = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_MinPolicy_Connection();
     const int32 MaxClientRows = UCk_Utils_Watermark_ProjectSettings_UE::Get_Watermark_Connection_MaxClientRows();
 
@@ -1334,7 +1274,6 @@ auto
 
     const auto PendingColor = FSlateColor(FLinearColor(0.55f, 0.55f, 0.55f, 1.f));
 
-    // Client row — the server we're connected to + whether our build matches it.
     CenterGroupBox->AddSlot()
         .AutoHeight()
         .Padding(0.f, RowVPad)
@@ -1373,7 +1312,6 @@ auto
             }))
         ];
 
-    // Host header — "Clients (N)".
     CenterGroupBox->AddSlot()
         .AutoHeight()
         .Padding(0.f, RowVPad)
@@ -1401,7 +1339,6 @@ auto
             }))
         ];
 
-    // Host per-client rows — fixed slots; each reads the i-th remote client report, collapses when unused.
     for (int32 RowIdx = 0; RowIdx < MaxClientRows; ++RowIdx)
     {
         CenterGroupBox->AddSlot()
@@ -1458,10 +1395,8 @@ auto
 
     // ---- Full layout --------------------------------------------------------
     TSharedRef<SOverlay> Panel = SNew(SOverlay)
-        // The watermark is a non-interactive debug overlay — never steal input.
         .Visibility(EVisibility::HitTestInvisible)
 
-        // ── Stats group (bottom-right by default) ───────────────────────────
         + SOverlay::Slot()
         .HAlign(ck_watermark_panel_widget::GetHAlign(_StatsGroupPlacement.Anchor))
         .VAlign(ck_watermark_panel_widget::GetVAlign(_StatsGroupPlacement.Anchor))
@@ -1470,7 +1405,6 @@ auto
             StatsGroupBox
         ]
 
-        // ── Info group (bottom-left by default, Minimal+) ─────────────────
         + SOverlay::Slot()
         .HAlign(ck_watermark_panel_widget::GetHAlign(_InfoGroupPlacement.Anchor))
         .VAlign(ck_watermark_panel_widget::GetVAlign(_InfoGroupPlacement.Anchor))
@@ -1483,7 +1417,6 @@ auto
             ]
         ]
 
-        // ── Center group (bottom-center by default) — pump pressure ─────────
         // Per-element visibility (MinPolicy + over-budget) is handled inside CenterGroupBox.
         + SOverlay::Slot()
         .HAlign(ck_watermark_panel_widget::GetHAlign(_CenterGroupPlacement.Anchor))
@@ -1493,7 +1426,6 @@ auto
             CenterGroupBox
         ]
 
-        // ── ECS groups (top-right by default, Detailed only) ────────────────
         + SOverlay::Slot()
         .HAlign(ck_watermark_panel_widget::GetHAlign(_EcsGroupsPlacement.Anchor))
         .VAlign(ck_watermark_panel_widget::GetVAlign(_EcsGroupsPlacement.Anchor))
@@ -1548,8 +1480,7 @@ auto
     -> void
 {
     Super::SynchronizeProperties();
-    // Placement, font, and ECS tag changes all affect the static Slate layout —
-    // force a full rebuild so the new values take effect.
+    // Placement, font, and ECS tag changes all affect the static Slate layout — force a full rebuild.
     TakeWidget();
 }
 

@@ -89,7 +89,6 @@ auto
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID Mesh"))
     { return nullptr; }
 
-    // Build the cache key
     FMeshMaterialKey CacheKey;
     CacheKey.Mesh = InMesh;
     CacheKey.MaterialSlots.Reserve(InMaterialOverrides.Num());
@@ -192,12 +191,11 @@ auto
         TEXT("Failed to create transient IsmRenderer_Data for Mesh [{}]"), InMesh)
     { return nullptr; }
 
-    // Set _CurrentWorld so GetWorld() works for transient package objects.
-    // const_cast is safe: _CurrentWorld is mutable and TWeakObjectPtr is a non-owning reference.
+    // Needed for GetWorld() on a transient-package object. const_cast is safe: the destination is a
+    // non-owning TWeakObjectPtr.
     NewData->Set_CurrentWorld(const_cast<UWorld*>(InWorld));
 
-    // Prevent GC from collecting the transient data asset before the ISM renderer actor
-    // (which holds the UPROPERTY strong reference) is created during the setup processor tick.
+    // Nothing holds a strong ref until the setup processor tick creates the renderer actor.
     NewData->AddToRoot();
 
     ck::ismrenderer::Verbose(TEXT("Created new Transient ISM Renderer for Mesh [{}]..."), InMesh);

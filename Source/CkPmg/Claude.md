@@ -110,6 +110,81 @@ Arbitrary live UTF-8 strings — including CJK — rendered as debug geometry in
 
 ---
 
+## Implementation notes
+
+**Wireframe is BAKED, not re-emitted.** `ck::pmg::Append_Debug*_World` caches entity-local
+segments on `FFragment_Pmg_DebugShape_Lines` and stamps the one-shot gate
+`FTag_Pmg_DebugShape_LinesNeedBaking`; `FProcessor_Pmg_DebugShape_BakeLines` then triangulates
+each segment as a stretched box and writes them as **mesh section 1** on the entity's procmesh
+(section 0 is the filled shape). This replaced a per-tick `FProcessor_Pmg_DebugShape_DrawLines`
+that re-emitted every line every frame through UE's `TransientLineBatchComponent` and tanked
+perf in scenes with many wireframe shapes — **any doc or comment still describing a per-tick
+DrawLines processor is stale.** Detail worth knowing before touching the bake:
+
+- Section 1 gets its **own** `UMaterialInstanceDynamic`, spawned lazily off slot 0's parent
+  material with alpha forced to 1. Sharing slot 0's MID makes the outline inherit the fill's
+  alpha and visually camouflage against it. `Request_SetColor` mirrors RGB to both MIDs.
+- Line geometry is a stretched box (8 verts / 12 tris, `Thickness × Thickness` cross-section),
+  not a flat quad: the box extends `Thickness/2` in both perpendicular directions at each
+  endpoint, so adjacent segments overlap at the join and corner gaps close.
+- Each box is biased outward from the entity local origin by `Thickness/2` so it does not sit
+  embedded in the filled section-0 mesh and Z-fight it. All basic PMG shapes are centred on that
+  origin, which is what makes the midpoint direction a usable "outward".
+- Section 1's visibility is set from `Common._RenderMode` at the end of the bake, so an entity
+  hidden before any lines were appended does not start showing wireframes when the bake runs.
+- **Known gap:** `Request_SetLineThickness` updates the cached `Common._LineThickness` and
+  re-stamps the bake gate, but the bake reads the per-line thickness written into each
+  `FCk_Pmg_DebugLine` by the `Append_*` call. The uniform override therefore does not take
+  effect until the lines are re-appended.
+
+**Setup runs in its own scheduler group.** `FGroup_Pmg_DebugShape_Setup` (`CkPmg_ProcessorGroups.h`)
+runs every per-shape Setup ahead of `FGroup_Gameplay_Rendering`. Without that barrier,
+`FProcessor_Pmg_DebugShape_UpdateTransform` (and the duration/lifetime processors) can iterate an
+entity whose `FTag_Pmg_DebugShape_NeedsSetup` a Setup has already stripped but whose mesh
+component that Setup has not yet assigned.
+
+**Circle wireframes must compose the ENTITY rotation.**
+`Append_DebugCircle_PlaneAxis_World` applies `EntityRot * AxisRot`, matching the hand-authored
+wireframes' `FinalRotation = Rotation * AxisRotation`. It once applied the plane-axis rotation
+only — identical for an identity entity rotation (the world→local round trip divides the entity
+transform back out either way), but on a **rotated** entity it left the baked wireframe in the
+wrong plane while the filled mesh, which gets the entity rotation via the procmesh
+`SetWorldTransform`, rotated correctly.
+
+**`Append_Debug*_World` are drop-in replacements for `UCk_Utils_DebugDraw_UE::DrawDebug*`** inside
+Setup processors — same world-space endpoint math at the call site. The triangle and polygon
+variants append the **outline only**: unlike the debug-draw originals there is no fill, because in
+PMG the fill is the procedural mesh section.
+
+**Cone apex orientation is baked into the mesh.** `ECk_Pmg_ConeOrientation` rotates vertices and
+normals *before* the per-shape `ECk_Plane_Axis` rotation, so callers no longer need the
+"Pitch=-90 in the SceneNode local rotation" workaround that gym agents and crowd debug used to
+repeat for an apex-forward cone. `Up` (apex +Z, base on XY) is the default and is unchanged.
+
+**Editor click-selection is opt-in.** `FTag_Pmg_EditorSelectionHandle`, stamped via
+`Request_ActAsEditorSelectionHandle`, hosts the shape's mesh component on the per-owner
+selection-proxy actor (`ck::FFragment_EditorSelectionOwner`) in editor previews, so a viewport
+click on the shape selects the placed actor that owns the preview. Composite shapes honor a tag
+stamped anywhere up the lifetime chain. Without the tag the component is owner-less and therefore
+click-through — debug overlays never eat viewport clicks.
+
+**Live mutation requests are shape-agnostic.** Every variant (basic / angular / directional /
+icon / symbol) shares `FFragment_Pmg_DebugShape_Common`, so the `UCk_Utils_Pmg_DebugShape_UE::Request_*`
+family works uniformly against `FCk_Handle_Pmg_DebugShape`.
+
+**Icon shapes are composites of flat shapes**, each Setup spawning child entities via
+`UCk_Utils_Pmg_FlatShapes` rather than generating its own procmesh — which is what earns them
+`FTag_Pmg_DebugShape_Composite`. What each one draws:
+
+| Icon | Composition |
+|---|---|
+| `Warning` | Triangle + exclamation bar + dot. Its bar/dot ratios are keyed off the Triangle shape's own vertex centring (top `0.211 × Size`, bottom `-0.539 × Size`), so re-centring Triangle moves them. |
+| `Prohibition` | Circle + two diagonal X bars |
+| `NoEntry` | Circle + one horizontal bar |
+| `InfoCircle` | Circle + "i" (dot on top, bar on bottom) |
+
+---
+
 ## See also
 
 - `CkVfx/Claude.md` — Niagara-based VFX on entities.

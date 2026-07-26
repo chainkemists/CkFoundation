@@ -42,14 +42,12 @@ namespace ck
         const auto& TargetPoint = Request.Get_TargetPoint();
         if (ck::Is_NOT_Valid(TargetPoint))
         {
-            // Target died — the follow ends; the agent keeps behaving like a plain MoveTo toward
-            // the last resolved goal.
+            // The agent keeps walking to its last resolved goal, as if it were a plain MoveTo.
             InHandle.Try_Remove<FFragment_CrowdAgent_FollowTarget>();
             ck::crowd::Verbose(TEXT("CrowdAgent [{}] follow target died — follow ended"), InHandle);
             return;
         }
 
-        // A path is being computed for the current goal — let it land first.
         if (InHandle.Has<FTag_CrowdAgent_PathPending>())
         { return; }
 
@@ -58,15 +56,13 @@ namespace ck
         auto ShouldRepath = false;
         if (InHandle.Has<FTag_CrowdAgent_Walking>() || InHandle.Has<FTag_CrowdAgent_GoalBlocked>())
         {
-            // Mid-walk (or holding a blocked goal): re-path once the target has genuinely moved.
-            // For the blocked case this also fixes BlockedRecheck resuming toward a stale spot the
-            // target has since vacated — the fresh request resets the blocked episode.
+            // GoalBlocked is included so BlockedRecheck cannot resume toward a spot the target has
+            // since vacated — the fresh request resets the blocked episode.
             ShouldRepath = FVector::Dist(LiveTargetLoc, InPathFollow.Get_ActiveGoal())
                 > Request.Get_RepathThresholdCm();
         }
         else if (InHandle.Has<FTag_CrowdAgent_Idle>())
         {
-            // Arrived earlier — re-engage when the target has walked back out of reach.
             const auto SelfLoc = InTransform.Get_Transform().GetLocation();
             ShouldRepath = FVector::Dist(SelfLoc, LiveTargetLoc)
                 > InPathFollow.Get_ActiveArrivalRadius() + Request.Get_ResumeSlackCm();
@@ -75,8 +71,8 @@ namespace ck
         if (NOT ShouldRepath)
         { return; }
 
-        // Re-issue the stored request — HandleRequests re-resolves the live goal and re-arms this
-        // fragment (accumulator resets with it; the cadence continues from the repath).
+        // HandleRequests re-resolves the live goal and re-arms this fragment, so the cadence
+        // continues from the repath.
         UCk_Utils_CrowdAgent_UE::Request_FollowTarget(InHandle, Request);
     }
 }

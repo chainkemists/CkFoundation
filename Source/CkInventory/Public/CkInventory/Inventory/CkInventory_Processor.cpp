@@ -6,8 +6,7 @@
 
 #include "CkInventory/Inventory/CkInventory_RequestHandlers.h"
 #include "CkInventory/Inventory/CkInventory_Utils.h"
-// Shape processor headers — full defs of the HandleRequests processors the churn's RunAfter references
-// (forward-declared in CkInventory_Processor.h), needed here for registration ordering.
+// Full defs for the churn's RunAfter (forward-declared in the header) — registration ordering needs them.
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_Processor.h"
 #include "CkInventory/Inventory/DataOnly/CkInventory_DataOnly_Processor.h"
 
@@ -108,9 +107,8 @@ namespace ck
             ? TUtils_Item_ParentInventory::Get_StoredEntity(Item)
             : FCk_Handle_Inventory{};
 
-        // Committed-state read. Get_CanAcceptItem rejects the item's own current inventory
-        // (Failed_ItemAlreadyInInventory), so a candidate that is also a source never resolves as
-        // the target for an item it already holds.
+        // Get_CanAcceptItem rejects the item's own current inventory, so a candidate that is also a
+        // source never resolves as the target for an item it already holds.
         auto Target = UCk_Utils_ItemResolution_UE::ResolveBestTransferTarget(Item, InFlight._TargetResolution);
 
         if (ck::Is_NOT_Valid(Target))
@@ -156,7 +154,6 @@ namespace ck
         Out.Fully  = InFlight._ItemsFullyMoved;
         Out.Failed = InFlight._ItemsFailed;
 
-        // _Pending is never resized after kickoff, so empty here == nothing gathered.
         if (InFlight._Pending.IsEmpty())
         { Out.Result = ECk_Inventory_MassTransfer_Result::Failed_NothingToTransfer; }
         else if (NOT InFlight._AnyUnitMoved)

@@ -14,9 +14,8 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_DialogEmitter_UE, FCk_Handle_D
 
 namespace ck_dialog_emitter_utils
 {
-    // FProcessor_DialogEmitter_TickCooldowns retires finished entries, so in a ticking world presence is very nearly
-    // the answer — but a Forever entry is never ticked and so never reports Done, and an entry can be read in the
-    // same frame it was started. Both are covered here rather than at each call site.
+    // Presence is nearly the answer once TickCooldowns has retired finished entries — but a Forever entry is never
+    // ticked and so never reports Done, and an entry can be read in the same frame it was started.
     auto Is_EntryActive(const FCk_DialogEmitter_CooldownEntry& InEntry) -> bool
     {
         return InEntry.Get_DurationMode() == ECk_Dialog_CooldownDuration::Forever ||
@@ -109,10 +108,9 @@ auto
     if (Entry == nullptr)
     { return FCk_Time::ZeroSecond(); }
 
-    // A Forever cooldown has no meaningful countdown; it reports whatever goal it was constructed with (usually
-    // zero) and callers are expected to branch on Get_CooldownEntry(...).Get_DurationMode() instead of reading a
-    // magic value out of this. Deliberately not a sentinel — a caller comparing magnitudes cannot tell a sentinel
-    // from a genuinely long Timed window.
+    // A Forever cooldown reports whatever goal it was constructed with (usually zero) — deliberately not a sentinel,
+    // which a caller comparing magnitudes could not tell from a genuinely long Timed window. Branch on
+    // Get_CooldownEntry(...).Get_DurationMode() instead.
     return Entry->Get_Cooldown().Get_TimeRemaining();
 }
 
@@ -154,8 +152,7 @@ auto
         FCk_Handle_DialogLine InPlayedLine)
     -> FCk_Handle_DialogEmitter
 {
-    // A missing exit link (or an already-invalid played line) is a NORMAL end-of-chain state, not a validation
-    // failure — Display + no-op, not an ensure.
+    // A missing exit link (or an already-invalid played line) is a NORMAL end-of-chain state, not a failure.
     if (ck::Is_NOT_Valid(InPlayedLine))
     {
         ck::dialog::Display(TEXT("Dialog QueryFollowUp on Emitter [{}]: invalid played line — no-op"), InEmitter);

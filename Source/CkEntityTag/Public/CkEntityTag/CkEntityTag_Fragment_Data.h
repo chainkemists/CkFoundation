@@ -22,22 +22,10 @@ enum class ECk_EntityTagUpdate : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityTagUpdate);
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Save-transport payload for an entity's FName EntityTag set (v3 rebuild+hydrate, Phase 3.1).
-//
-// The runtime store (ck::FFragment_EntityTag_Current._Tags) holds TArray<FEntityTagCount>, and FEntityTagCount is a
-// plain (non-USTRUCT) struct — it cannot ride a reflected UPROPERTY directly. So the counted FName set is flattened
-// into two parallel reflected arrays. Save-only (Transport = Save): it never rides the wire, so the FCk_SaveData_
-// prefix (deliberately NOT FCk_RepData_) keeps it off the RepData census ratchet (Ck.Snapshot.Meta.RepDataRestoreCoverage,
-// which enumerates FCk_RepData_* only).
-//
-// SCOPE: only the FName _Tags set is persisted. The parallel FGameplayTag _GameplayTagCounts view is NOT captured —
-// on restore each name is re-Added, which rebuilds _Tags, the per-tag EnTT storage (ForEach_Entity), and
-// Has()/Has_UsingGameplayTag() (both read _Tags), but Get_AllTagsAsContainer() (which reads _GameplayTagCounts) will
-// not reflect gameplay-tag-only state.
-//
-// --------------------------------------------------------------------------------------------------------------------
 
+// Save-only transport for an entity's counted FName tag set, flattened into parallel reflected arrays because
+// ck::FEntityTagCount is not a USTRUCT. Only the FName set is persisted — the FGameplayTag view is not, so
+// Get_AllTagsAsContainer() does not survive a save/load. See CkEntityTag/CLAUDE.md § "Save/load restore".
 USTRUCT()
 struct CKENTITYTAG_API FCk_SaveData_EntityTags
 {
@@ -47,11 +35,10 @@ public:
     CK_GENERATED_BODY(FCk_SaveData_EntityTags);
 
 private:
-    // Distinct tag names — one entry per unique FName tag.
     UPROPERTY()
     TArray<FName> _TagNames;
 
-    // Per-name reference counts, parallel to _TagNames (a tag Added N times needs N removes to disappear).
+    // Reference counts, parallel to _TagNames.
     UPROPERTY()
     TArray<int32> _Counts;
 
@@ -166,20 +153,10 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Save/load reconstitution request — enqueued ONLY by the EntityTag persistence handler's HydrationApply (v3 load
-// path), never built from Blueprint/AngelScript, hence a plain USTRUCT() kept off the request palette (mirrors
-// FCk_SaveData_EntityTags above).
-//
-// It carries the WHOLE saved counted FName set as two parallel arrays and is a COMPOSITE restore-set request: at
-// drain time the handler (FProcessor_EntityTag_HandleRequests::DoHandleRequest) SETs the live tag set to EXACTLY this
-// {name -> count} map, diffing against whatever is live AT DRAIN TIME. Diffing at drain — not at HydrationApply time —
-// is the whole point. A rebuilt entity's Construct/BeginPlay may seed EntityTag tags through the same deferred Add
-// requests, and those seeds are enqueued-but-not-yet-drained (FProcessor_EntityTag_HandleRequests is GatedDuringLoad)
-// at the moment HydrationApply runs — so any Has<>/Get_ read of the "current" set then would be a lie. Because this
-// request is enqueued AFTER those seeds onto the SAME FIFO request array, its handler runs once the seeds have
-// materialised, and it reconstitutes exactly the saved set instead of MERGING onto the construct-seeds. Idempotent.
-//
+
+// Composite restore-set request carrying a whole saved {name -> count} map: at drain time the live tag set is SET to
+// exactly this map, diffing against whatever is live THEN. Enqueued only by the persistence handler's HydrationApply,
+// never from Blueprint/AngelScript. See CkEntityTag/CLAUDE.md § "Save/load restore".
 USTRUCT()
 struct CKENTITYTAG_API FCk_Request_EntityTag_RestoreSet : public FCk_Request_Base
 {
@@ -190,11 +167,10 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_EntityTag_RestoreSet);
 
 private:
-    // Distinct saved tag names — one entry per unique FName tag.
     UPROPERTY()
     TArray<FName> _TagNames;
 
-    // Per-name saved reference counts, parallel to _TagNames (a tag Added N times needs N removes to disappear).
+    // Reference counts, parallel to _TagNames.
     UPROPERTY()
     TArray<int32> _Counts;
 

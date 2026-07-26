@@ -21,8 +21,8 @@
 
 namespace ck_anim_bake
 {
-    // Full-skeleton bone container (compact-pose-bone-index == skeleton-bone-index), configured identically for
-    // the reference-pose computation and the sampling pass — retargeting/raw-data flags affect both.
+    // Full-skeleton container guarantees compact-pose-bone-index == skeleton-bone-index. Must be configured
+    // identically for the reference-pose computation and the sampling pass — the flags affect both.
     auto
     MakeFullSkeletonBoneContainer(
         USkeleton& InSkeleton,
@@ -103,9 +103,7 @@ auto
     ck_anim_bake::MakeFullSkeletonBoneContainer(InSkeleton, InParams, BoneContainer);
     const int32 NumContainerBones = BoneContainer.GetNumBones();
 
-    // Local ref transform per (full-skeleton) bone. With UseMeshBindRefPose, invert the mesh bind pose (by bone
-    // name, skeleton fallback) instead of the skeleton ref pose — see FCk_AnimBake_SampleParams::UseMeshBindRefPose.
-    // The full-skeleton container guarantees compact-pose-bone-index == skeleton-bone-index.
+    // UseMeshBindRefPose resolves through the mesh bind pose by bone name, with a skeleton fallback.
     const FReferenceSkeleton& MeshRefSkel = InMesh.GetRefSkeleton();
     const FReferenceSkeleton& SkelRefSkel = InSkeleton.GetReferenceSkeleton();
     const auto Get_RefLocal = [&](FCompactPoseBoneIndex InBoneIdx) -> FTransform
@@ -180,7 +178,6 @@ auto
         const TFunctionRef<void(TArrayView<const FTransform> InPoseComponentSpace, int32 InGlobalFrame)>& InPerFramePose)
     -> FBox
 {
-    // Union of component-space render-bone positions across all sampled frames — feeds ComputeAnimatedBounds.
     FBox BoneBoundsAllFrames(ForceInit);
 
     CK_ENSURE_IF_NOT(InSkeletonData.RefPoseComponentSpace.Num() > 0,
@@ -202,8 +199,7 @@ auto
     FBoneContainer BoneContainer;
     ck_anim_bake::MakeFullSkeletonBoneContainer(InSkeleton, InParams, BoneContainer);
 
-    // One hoisted consistency check bounds every RenderRequiredBones index against both pose arrays
-    // (entries are < RefPoseComponentSpace.Num() by construction in BuildSkeletonData).
+    // This one hoisted check bounds every RenderRequiredBones index against both pose arrays.
     CK_ENSURE_IF_NOT(BoneContainer.GetCompactPoseNumBones() == InSkeletonData.RefPoseComponentSpace.Num(),
         TEXT("Skeleton [{}] does not match the FCk_AnimBake_SkeletonData it is being sampled with (container bones [{}] vs skeleton-data bones [{}])"),
         InSkeleton.GetName(), BoneContainer.GetCompactPoseNumBones(), InSkeletonData.RefPoseComponentSpace.Num())
@@ -230,9 +226,8 @@ auto
 
         const double FrameTime = 1.0 / SeqLayout.SampleFrequency;
 
-        // FCompactPose/FStackAttributeContainer allocate on the mem stack — pose evaluation asserts
-        // (MemStack.h NumMarks > 0) without an enclosing mark. Engine-tick callers get one for free;
-        // standalone callers (bakers, automation tests) do not, so the core owns its own.
+        // FCompactPose/FStackAttributeContainer allocate on the mem stack and pose evaluation asserts without an
+        // enclosing mark. Engine-tick callers get one for free; bakers and automation tests do not.
         FMemMark Mark(FMemStack::Get());
 
         FCompactPose CompactPose;
@@ -250,7 +245,6 @@ auto
             CompactPose.ResetToRefPose();
             Seq->GetAnimationPose(PoseData, FAnimExtractContext(SampleTime, InParams.ExtractRootMotion));
 
-            // local (parent-relative) -> component space
             PoseComponentSpace[0] = CompactPose[FCompactPoseBoneIndex(0)];
             for (FCompactPoseBoneIndex BoneIdx(1); BoneIdx < CompactPose.GetNumBones(); ++BoneIdx)
             {
@@ -276,8 +270,7 @@ auto
         const USkeletalMesh& InMesh)
     -> FBox
 {
-    // Ref-pose skin pad: how far the mesh box extends beyond the ref-pose BONES — a measure of skin/cloth
-    // offset from the skeleton, without touching vertex data.
+    // SkinPad below measures skin/cloth offset from the skeleton without touching vertex data.
     FBox RefBoneBounds(ForceInit);
     for (int32 i = 0; i < InSkeletonData.RenderBoneCount; ++i)
     { RefBoneBounds += InSkeletonData.RefPoseComponentSpace[InSkeletonData.RenderRequiredBones[i]].GetTranslation(); }

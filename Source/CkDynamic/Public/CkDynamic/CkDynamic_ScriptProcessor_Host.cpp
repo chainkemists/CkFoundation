@@ -31,21 +31,13 @@ namespace ck
 {
     namespace ck_dynamic_script_processor_host
     {
-        // Delegate handle returned by UCk_EcsWorld_Subsystem_UE::Get_OnPreBuildProcessorGraph().Add — retained so
-        // ShutdownModule can remove the binding. Static because the registration happens at module scope.
         FDelegateHandle GOnPreBuildHandle;
-
-        // Delegate handle for FAngelscriptCodeModule::GetPostCompile() — retained for unsubscription.
         FDelegateHandle GPostCompileHandle;
+        TArray<FName>   GRegisteredDescriptorNames;
 
-        // Names of descriptors we've pushed into the FProcessorRegistry on behalf of script classes. Tracked
-        // so the stale set can be deregistered before each re-registration pass.
-        TArray<FName> GRegisteredDescriptorNames;
-
-        // Resolves a friendly group name (e.g. "FGroup_Gameplay_Script") to the canonical FName the
-        // graph builder actually knows (entt::type_name gives "struct ck::FGroup_Gameplay_Script" on
-        // MSVC, "ck::FGroup_Gameplay_Script" on Clang). Matches only at a type-name boundary so
-        // "Gameplay_Script" does not collide with "MetaGameplay_Script".
+        // entt::type_name yields "struct ck::FGroup_X" on MSVC and "ck::FGroup_X" on Clang, so the canonical
+        // FName is matched by suffix — at a type-name boundary, or "Gameplay_Script" collides with
+        // "MetaGameplay_Script".
         auto
         DoResolveGroupName(
             FName InFriendlyName)
@@ -80,9 +72,8 @@ namespace ck
             return InFriendlyName;
         }
 
-        // True iff InClass (or an intermediate script class) overrides the named base BlueprintImplementableEvent.
-        // Script overrides of BIEs materialize as UFunctions on the script class, so a non-override resolves to the
-        // base's UFunction (outer == base) while an override resolves to one whose outer is the script class.
+        // Script overrides of a BlueprintImplementableEvent materialize as UFunctions on the script class, so a
+        // non-override resolves to the base's UFunction while an override's outer is the script class.
         auto
         DoOverridesEvent(
             UClass* InClass,
@@ -93,10 +84,6 @@ namespace ck
             return Fn != nullptr && Fn->GetOuterUClass() != UCk_Processor_Script_Base_UE::StaticClass();
         }
 
-        // Fill the fields common to both hosting paths: name (always the DEV class path name so RunAfter references
-        // between processors keep working), group, RunAfter/RunBefore ordering edges, and the MarkedDirtyBy pump
-        // gate. Ordering lives here (not on the typed path only) so a processor keeps the same scheduler edges
-        // whether it routes legacy or typed — including the two-pass window where its driver is not generated yet.
         auto
         DoFillCommon(
             FProcessorDescriptor& OutDescriptor,
@@ -106,8 +93,7 @@ namespace ck
         {
             OutDescriptor._Name = FName{*InDevClass->GetPathName()};
 
-            // Short identity for the per-processor trace scope — mirrors the `script::<DevClass>` stat
-            // row the hosted wrapper registers. _Name stays the full path so RunAfter references resolve.
+            // _Name stays the full path so RunAfter references resolve; this is the short trace identity.
             OutDescriptor._DisplayName = FName{*ck::Format_UE(TEXT("script::{}"), InDevClass->GetName())};
 
             OutDescriptor._GroupName = DoResolveGroupName(InCDO->Get_Group());
@@ -127,10 +113,6 @@ namespace ck
                 const auto DirtyMarkerName = FName{*MarkedDirtyBy->GetPathName()};
                 OutDescriptor._DirtyMarkerNames.Add(DirtyMarkerName);
 
-                // MUST be the hash the dynamic-fragment mutation paths bump (both sides share this
-                // helper) — the scheduler's persistent version short-circuit compares the two. A
-                // divergent hash domain here means Get_DirtyMarkerVersion never advances and the
-                // node goes pump-deaf after its first evaluation.
                 OutDescriptor._DirtyMarkerHashes.Add(UCk_Utils_DynamicFragment_UE::Get_DirtyMarkerHash(MarkedDirtyBy));
 
                 OutDescriptor._IsDirtyChecker =
@@ -141,8 +123,7 @@ namespace ck
                         if (Struct == nullptr)
                         { return false; }
 
-                        // Reach the ECS storage through the registry's transient entity — any handle from the
-                        // same registry resolves to the same underlying entt storage pool.
+                        // Any handle from the same registry resolves to the same underlying entt storage pool.
                         const auto TransientHandle =
                             UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InRegistry);
 
@@ -151,12 +132,8 @@ namespace ck
             }
         }
 
-        // Typed hosting path (FProcessor_ScriptQueryHosted): a native join drives one ForEachBatch call. InDriverClass
-        // is the generated <Dev>_Driver (a SUBCLASS of the dev class), or nullptr for direct mode (the dev class
-        // overrides ForEachBatch itself). The read/write fragment sets that feed scheduler conflict-detection +
-        // auto-ordering come from the query, obtained by calling Configure on the batch class's CDO — the generated
-        // override adds the inferred slots and (when the dev overrides Configure) Super::Configure contributes the
-        // dev's Require/Exclude, so the harvest sees the full query.
+        // InDriverClass is the generated <Dev>_Driver (a SUBCLASS of the dev class), or nullptr for direct mode.
+        // Configure MUST run on the BATCH class's CDO for the harvest to see the full query.
         auto
         DoBuildQueryDescriptor(
             UClass* InDevClass,
@@ -184,8 +161,6 @@ namespace ck
                     return FProcessor_ScriptQueryHosted{InRegistry, DevClass, DriverClass};
                 };
 
-            // Configure is an imperative sequence. If any call failed, none of the surviving slots describe the
-            // author's intended query, so publishing their hashes would advertise a weakened scheduler contract.
             const auto AdmissionSucceeded = NOT Query._AdmissionFailed;
             CK_ENSURE_IF_NOT(AdmissionSucceeded,
                 TEXT("Script processor descriptor [{}] rejected a partially admitted query"), InDevClass)
@@ -233,8 +208,6 @@ namespace ck
         DoRegisterAllScriptProcessors()
             -> void
         {
-            // Deregister the previous pass before re-discovering — makes this call idempotent and safe
-            // to call repeatedly (initial build, live rebuild after AS reload, etc.).
             for (const auto& Name : GRegisteredDescriptorNames)
             {
                 FProcessorRegistry::Get().Deregister(Name);
@@ -244,8 +217,7 @@ namespace ck
             auto DiscoveredClasses = TArray<UClass*>{};
             GetDerivedClasses(UCk_Processor_Script_Base_UE::StaticClass(), DiscoveredClasses, /*bRecursive=*/true);
 
-            // Name -> class lookup for driver resolution: a typed processor's driver is a sibling subclass named
-            // <Dev>_Driver, discovered in the same set and never registered on its own.
+            // A typed processor's driver is a sibling subclass named <Dev>_Driver, discovered in this same set.
             auto ClassByName = TMap<FString, UClass*>{};
             for (auto* Class : DiscoveredClasses)
             {
@@ -264,9 +236,8 @@ namespace ck
                 if (Class->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
                 { continue; }
 
-                // Drivers are registered via their dev class, never standalone. Only a class whose dev sibling
-                // actually exists is a driver — an ordinary processor whose name merely ends in _Driver falls
-                // through and registers normally.
+                // Drivers register via their dev class, never standalone. The sibling-exists half of the test is
+                // what lets an ordinary processor whose name merely ends in _Driver fall through and register.
                 if (Class->GetName().EndsWith(DriverSuffix) &&
                     ClassByName.Contains(Class->GetName().LeftChop(DriverSuffix.Len())))
                 { continue; }
@@ -279,23 +250,15 @@ namespace ck
 
                 if (auto DriverEntry = ClassByName.Find(Class->GetName() + DriverSuffix))
                 {
-                    // Typed processor with a generated (or hand-written) driver.
                     Descriptor = DoBuildQueryDescriptor(Class, CDO, *DriverEntry);
                 }
                 else if (DoOverridesEvent(Class, ForEachBatchName))
                 {
-                    // Direct mode: the class overrides ForEachBatch itself (no separate driver class).
-                    Descriptor = DoBuildQueryDescriptor(Class, CDO, nullptr);
+                    constexpr UClass* DirectMode_NoDriverClass = nullptr;
+                    Descriptor = DoBuildQueryDescriptor(Class, CDO, DirectMode_NoDriverClass);
                 }
                 else
                 {
-                    // Neither a generated <Dev>_Driver nor a ForEachBatch override exists yet. Two cases, both
-                    // "nothing to register now":
-                    //   - a typed processor authored THIS compile whose driver has not been generated yet — the
-                    //     driver generator runs in the same PostCompile and its file-write triggers a re-compile +
-                    //     re-registration, at which point the driver is found above (one-compile window).
-                    //   - a lifecycle-only processor that never declared a dispatch (no ForEachBatch / NoEntities) —
-                    //     there is no iteration surface to host.
                     ck::ecs::Verbose(TEXT("Script processor [{}] has no generated driver and no ForEachBatch override "
                         "yet — skipped (typed processor pending driver generation, or a lifecycle-only class with no "
                         "dispatch)."), Class->GetName());

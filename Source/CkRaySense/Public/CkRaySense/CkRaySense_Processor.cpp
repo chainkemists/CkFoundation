@@ -53,9 +53,6 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("RaySense Traces Issued"), STAT_RaySense_TracesI
 
 namespace ck_raysense
 {
-    // Shared tail for every RaySense trace/sweep: filter the hit through the entity's
-    // ignore-list, convert to FCk_RaySense_HitResult (resolving the hit actor's ECS handle),
-    // apply the configured collision response, then broadcast OnRaySenseTraceHit.
     template<typename T_Handle>
     auto Request_ProcessTraceHit(
         T_Handle& InHandle,
@@ -129,9 +126,8 @@ namespace ck_raysense
         if (NOT Hit)
         { return; }
 
-        // NOTE (preserved behavior): the Discrete path's OverlapAnyTest does NOT fill HitResult —
-        // a discrete hit broadcasts a zeroed FCk_RaySense_HitResult (and Collide would snap to
-        // the origin). Pre-existing quirk, kept as-is.
+        // Discrete's OverlapAnyTest does NOT fill HitResult, so a discrete hit broadcasts a zeroed
+        // FCk_RaySense_HitResult (and Collide snaps to the origin) — pre-existing, deliberate.
         Request_ProcessTraceHit(InHandle, InParams, HitResult);
     }
 }
@@ -183,9 +179,6 @@ namespace ck
         if (NOT Hit)
         { return; }
 
-        // Shared tail with the sweep processors — this also gives line traces the configured
-        // CollisionResponse (Collide previously only worked for sweeps; the params field was
-        // silently ignored on the line-trace path).
         ck_raysense::Request_ProcessTraceHit(InHandle, InParams, HitResult);
     }
 

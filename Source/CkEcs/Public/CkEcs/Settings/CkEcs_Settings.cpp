@@ -36,8 +36,8 @@ auto
     Is_IgnoredSpawnParamsProperty(const FString& InPropertyName)
     -> bool
 {
-    // Always ignore the dummy variable that Blueprint structs require when they have no real members
-    if (InPropertyName == TEXT("MemberVar_0"))
+    constexpr auto BlueprintEmptyStructDummyMember = TEXT("MemberVar_0");
+    if (InPropertyName == BlueprintEmptyStructDummyMember)
     { return true; }
 
     const auto& IgnoredNames = Get_IgnoredSpawnParamsPropertyNames();
@@ -110,9 +110,7 @@ auto
     Get_RegistrySlot_HardCap()
     -> int32
 {
-    // Returns the compile-time constant directly. The _RegistrySlot_HardCap UPROPERTY on
-    // UCk_Ecs_ProjectSettings_UE is a display mirror only — anyone hacking the CDO at
-    // runtime would otherwise read a wrong value. The constant in the header is the truth.
+    // The _RegistrySlot_HardCap UPROPERTY is a display mirror only; this constant is the truth.
     return ck::registry_table::kRegistryTable_MaxSlots;
 }
 

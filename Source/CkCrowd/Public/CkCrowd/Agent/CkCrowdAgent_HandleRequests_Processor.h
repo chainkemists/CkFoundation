@@ -10,20 +10,12 @@
 
 namespace ck
 {
-    // Drains move-related requests from FFragment_CrowdAgent_MoveRequests
-    // and dispatches them.
+    // Drains and dispatches FFragment_CrowdAgent_MoveRequests. MoveTo arms PathFollow and fires a
+    // CkNavigation FindPath, leaving PathPending for OnPathResolved to finish; Stop returns the
+    // agent to Idle; SetMaxSpeed rewrites the params the steering chain reads each frame.
     //
-    // - MoveTo: cache the per-request _ActiveArrivalRadius on PathFollow (params default OR override),
-    //   reset _WaypointIndex, transition Idle/Walking → PathPending, fire CkNavigation FindPath. The
-    //   downstream OnPathResolved processor flips PathPending → Walking (or Idle + OnGoalFailed) once
-    //   CkNavigation lands the FFragment_Nav_PathResult.
-    // - Stop: zero _DesiredVelocity, transition Walking/PathPending → Idle. Steering's view filter
-    //   (which also requires Walking) stops firing; bridge writes zero velocity → agent halts.
-    // - SetMaxSpeed: write the params fragment's _MaxSpeed (read per-frame by the steering chain),
-    //   so gait changes (sprint/flee) apply from the next tick without disturbing the active path.
-    //
-    // Group: FGroup_Gameplay (early in the frame so the path request is enqueued before
-    // FProcessor_Nav_HandleRequests runs in FGroup_Gameplay's downstream group).
+    // Group FGroup_Gameplay, early enough that the path request is enqueued before
+    // FProcessor_Nav_HandleRequests runs downstream.
     class CKCROWD_API FProcessor_CrowdAgent_HandleRequests : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_HandleRequests,
             FCk_Handle_CrowdAgent,
@@ -75,9 +67,8 @@ namespace ck
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_Stop& InRequest) -> void;
 
-        // A new order from gameplay ends any blocked episode: drop GoalBlocked and reset the detector,
-        // so OnGoalBlocked can fire again for the new goal and BlockedRecheck cannot resume a goal the
-        // caller has abandoned.
+        // Ends any blocked episode: OnGoalBlocked may fire again for the new goal, and BlockedRecheck
+        // can no longer resume the goal the caller abandoned.
         static auto
         DoClearBlockedState(
             FCk_Handle_CrowdAgent& InAgent) -> void;

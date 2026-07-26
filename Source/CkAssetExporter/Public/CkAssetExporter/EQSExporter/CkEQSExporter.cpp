@@ -21,8 +21,6 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Helpers (internal)
-// --------------------------------------------------------------------------------------------------------------------
 
 // UEnvQuery::Options is protected, so we access it via the UProperty reflection system.
 static auto
@@ -60,8 +58,6 @@ static auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Public API
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_EQSExporter::
@@ -79,7 +75,6 @@ auto
 
     Result.AssetName = InQuery->GetName();
 
-    // Serialize to JSON
     const auto JsonObject = DoSerializeToJson(InQuery);
     if (!JsonObject.IsValid())
     {
@@ -91,10 +86,8 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    // Serialize to plain text
     const auto TextString = DoSerializeToText(InQuery);
 
-    // Resolve output paths
     const auto JsonPath = DoResolveOutputPath(InQuery, TEXT(".json"));
     const auto TextPath = DoResolveOutputPath(InQuery, TEXT(".txt"));
 
@@ -104,7 +97,6 @@ auto
         return Result;
     }
 
-    // Write files
     const auto bJsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     const auto bTextWritten = FFileHelper::SaveStringToFile(
@@ -142,8 +134,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// JSON Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_EQSExporter::
@@ -157,7 +147,6 @@ auto
     RootObject->SetStringField(TEXT("assetPath"), InQuery->GetPathName());
     RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InQuery, ck::asset_exporter::version::EQS));
 
-    // Options (accessed via reflection since UEnvQuery::Options is protected)
     auto OptionsArray = TArray<TSharedPtr<FJsonValue>>{};
     const auto Options = DoGetQueryOptions(InQuery);
 
@@ -190,14 +179,12 @@ auto
 
     OptionObject->SetNumberField(TEXT("optionIndex"), InOptionIndex);
 
-    // Generator
     UEnvQueryGenerator* Generator = InOption->Generator;
     if (IsValid(Generator))
     {
         OptionObject->SetObjectField(TEXT("generator"), DoSerializeGenerator_Json(Generator));
     }
 
-    // Tests
     auto TestsArray = TArray<TSharedPtr<FJsonValue>>{};
 
     for (int32 TestIdx = 0; TestIdx < InOption->Tests.Num(); ++TestIdx)
@@ -296,8 +283,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Plain-Text Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_EQSExporter::
@@ -337,14 +322,12 @@ auto
 
     OutText += FString::Printf(TEXT("--- Option %d ---\n"), InOptionIndex);
 
-    // Generator
     UEnvQueryGenerator* Generator = InOption->Generator;
     if (IsValid(Generator))
     {
         DoSerializeGenerator_Text(Generator, OutText, 1);
     }
 
-    // Tests
     for (int32 TestIdx = 0; TestIdx < InOption->Tests.Num(); ++TestIdx)
     {
         UEnvQueryTest* Test = InOption->Tests[TestIdx];
@@ -451,8 +434,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Helpers
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_EQSExporter::
@@ -469,7 +450,6 @@ auto
         return FString{};
     }
 
-    // The conversion gives us the path without extension, append our extension
     DiskPath += InExtension;
 
     return DiskPath;
@@ -486,8 +466,8 @@ auto
     const auto* ValuePtr = InProperty->ContainerPtrToValuePtr<void>(InContainer);
     InProperty->ExportTextItem_Direct(Value, ValuePtr, nullptr, nullptr, PPF_None);
 
-    // If a struct property exported as "()", expand its sub-fields individually
-    if (Value == TEXT("()"))
+    const auto ExportedAsEmptyStruct = Value == TEXT("()");
+    if (ExportedAsEmptyStruct)
     {
         const auto* StructProperty = CastField<FStructProperty>(InProperty);
         if (StructProperty != nullptr)
@@ -519,11 +499,9 @@ auto
     if (InProperty == nullptr)
     { return false; }
 
-    // Skip transient and deprecated properties
     if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated | CPF_DuplicateTransient))
     { return false; }
 
-    // Skip properties from base engine classes (UObject, UEnvQueryNode)
     const auto* OwnerClass = InProperty->GetOwnerClass();
     if (OwnerClass == nullptr)
     { return false; }
@@ -536,7 +514,6 @@ auto
     if (SkipClasses.Contains(OwnerClass->GetFName()))
     { return false; }
 
-    // Include if the property is EditAnywhere, VisibleAnywhere, or BlueprintVisible
     if (InProperty->HasAnyPropertyFlags(CPF_Edit | CPF_BlueprintVisible))
     { return true; }
 
@@ -574,8 +551,6 @@ auto
 
     OutClassName = InNode->GetClass()->GetName();
 
-    // UEnvQueryGenerator and UEnvQueryTest both have GetDescriptionTitle()
-    // We use the option description if available
     const auto* Generator = Cast<UEnvQueryGenerator>(InNode);
     const auto* Test = Cast<UEnvQueryTest>(InNode);
 
@@ -592,7 +567,6 @@ auto
         OutDescription = FString{};
     }
 
-    // Clean up description - remove line terminators for single-line display
     OutDescription.ReplaceInline(LINE_TERMINATOR, TEXT(" | "));
 }
 

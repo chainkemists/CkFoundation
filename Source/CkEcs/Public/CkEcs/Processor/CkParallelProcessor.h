@@ -30,9 +30,8 @@ namespace ck
             "in ck::TReadOnly<T> or ck::TReadWrite<T> for explicit access intent.");
 
     public:
-        // STAT_ForEachEntity runs on worker threads — visible in Unreal Insights
-        // but not in the flat stat overlay. Use STAT_ParallelDispatch for
-        // game-thread wall-clock time of the parallel phase.
+        // STAT_ForEachEntity runs on worker threads — visible in Unreal Insights but not in the flat stat
+        // overlay. Use STAT_ParallelDispatch for game-thread wall-clock time of the parallel phase.
         CK_DEFINE_PHASE_STAT(STAT_ForEachEntity, T_DerivedProcessor, ck::FStatPhase_ForEachEntity, FStatGroup_STATGROUP_CkProcessors_Details);
         CK_DEFINE_STAT(STAT_Tick, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors);
         CK_DEFINE_PHASE_STAT(STAT_CollectEntities, T_DerivedProcessor, ck::FStatPhase_CollectEntities, FStatGroup_STATGROUP_CkProcessors_Details);
@@ -110,8 +109,6 @@ namespace ck
     {
         CK_STAT(STAT_Tick);
 
-        // Phase 1: Collect matching entities (single-threaded)
-        // _CachedEntities is reused across ticks — Reset() preserves allocated capacity.
         _CachedEntities.Reset();
         {
             CK_STAT(STAT_CollectEntities);
@@ -128,7 +125,6 @@ namespace ck
         if (_CachedEntities.IsEmpty())
         { return; }
 
-        // Phase 2: Parallel iteration with per-task command buffers
         auto Registry = this->_TransientEntity.Get_RegistryView();
         auto TaskCommandBuffers = TArray<FDeferredCommandBuffer>{};
 
@@ -151,9 +147,8 @@ namespace ck
                         Registry.template Get<T_ComponentsOnly>(Entity))...);
             };
 
-            // Named per processor so the worker-thread task scopes in Unreal Insights are attributable
-            // (the unnamed overload labels every task "ParallelFor Task"). Reuses the ` [ForEachEntity]`
-            // phase stat identity; one FString conversion per template instantiation.
+            // Named per processor so worker-thread task scopes in Unreal Insights are attributable (the
+            // unnamed overload labels every task "ParallelFor Task"). One FString per instantiation.
             static const auto TaskDebugName = FString{FStat_STAT_ForEachEntity::GetStatName()};
 
             if constexpr (detail::THasMinBatchSize<DerivedType>::value)
@@ -184,7 +179,6 @@ namespace ck
 #endif
         }
 
-        // Phase 3: Flush all per-task command buffers (single-threaded)
         {
             CK_STAT(STAT_FlushCommands);
 

@@ -36,12 +36,8 @@ namespace ck
 
 namespace ck
 {
-    // Context-key type for the registry's transient entity. Stored in
-    // entt::registry::ctx() so any FCk_Registry view bound to the same slot
-    // sees the same transient entity, regardless of how the view was
-    // constructed. Pre-#6 this lived as a per-view _TransientEntity field
-    // which made *Handle return a view with no transient entity (footgun);
-    // moving to ctx makes the registry the single source of truth.
+    // Context-key type for the registry's transient entity. Lives in entt::registry::ctx() so every
+    // FCk_Registry view bound to the same slot sees it, however that view was constructed.
     struct FCtx_TransientEntity
     {
         FCk_Entity Entity;
@@ -50,8 +46,7 @@ namespace ck
 
 namespace ck
 {
-    // this is equivalent to entt::exclude for use with FRegistry::TView<...>
-    // usage: Registry.View<CompA, CompB, TExclude<CompC>>().ForEach(...)
+    // entt::exclude for FCk_Registry::View: View<CompA, CompB, TExclude<CompC>>().ForEach(...)
     template <typename... T_Args>
     struct TExclude { using ValueType = entt::type_list<T_Args...>; };
 
@@ -96,9 +91,7 @@ public:
 public:
     using EntityType = FCk_Entity;
 
-    // The single source of truth for the entt registry type now lives in the
-    // slot-table namespace; alias it here for backwards-compatibility with
-    // existing callers that reference FCk_Registry::InternalRegistryType.
+    // ck::registry_table owns the entt registry type; this alias is for callers that already name it here.
     using InternalRegistryType = ck::registry_table::EnttRegistryType;
 
 public:
@@ -153,8 +146,7 @@ public:
         template <typename T_Func>
         auto ForEach(T_Func InFunc)
         {
-            // A registry view is allowed to represent an unset or stale registry handle. The pointer check is the
-            // load-bearing guard; any diagnostic emitted while constructing the view remains supplementary.
+            // A view may legitimately represent an unset or stale handle — this check is the load-bearing guard.
             if (_Registry == nullptr)
             { return; }
 
@@ -184,8 +176,7 @@ public:
     using ConstRegistryViewType = TView<const InternalRegistryType, T_Fragments...>;
 
 public:
-    // FCk_Registry is now a non-owning view. Trivially copyable / movable.
-    // Default-constructed views resolve to nullptr.
+    // A non-owning view: trivially copyable/movable, and default-constructed ones resolve to nullptr.
     FCk_Registry() = default;
 
     explicit FCk_Registry(FCk_RegistryHandle InHandle)
@@ -194,11 +185,8 @@ public:
 
     CK_PROPERTY_GET(_RegistryHandle);
 
-    // Transient entity is stored in the underlying registry's ctx (see
-    // ck::FCtx_TransientEntity). Silent for unset/stale handles — returns a
-    // default FCk_Entity rather than firing ensure, because a view that hasn't
-    // been bound legitimately has no transient. The owner pushes the entity
-    // into ctx via SetContext<ck::FCtx_TransientEntity>(...) on Initialize.
+    // Silent for unset/stale handles — an unbound view legitimately has no transient, so this returns a
+    // default FCk_Entity rather than firing an ensure. The owner pushes it into ctx on Initialize.
     auto Get_TransientEntity() const -> EntityType;
 
 public:
@@ -240,26 +228,18 @@ public:
     template <typename T_Fragment>
     auto Has_AnyEntityWith() const -> bool;
 
-    // Tombstone-aware variant: true only if some LIVE entity currently has the fragment. Every Ck
-    // fragment pool is in_place_delete (CkHandle.h's component_traits), so after churn the packed
-    // array retains tombstones and Has_AnyEntityWith (storage empty()) reports non-empty forever.
-    // This walks past tombstones via a single-storage view — O(leading holes) worst case, so prefer
-    // it for change-gated checks (the scheduler's empty-view skip), not per-entity hot paths.
+    // Tombstone-aware variant: true only if some LIVE entity has the fragment. Every Ck fragment pool is
+    // in_place_delete, so after churn Has_AnyEntityWith (storage empty()) reports non-empty forever. This
+    // walks past tombstones — O(leading holes), so use it for change-gated checks, not hot paths.
     template <typename T_Fragment>
     auto Has_AnyLiveEntityWith() const -> bool;
 
-    // Per-fragment-type version counter used by the scheduler's pump pass to short-circuit
-    // dirty-marker checks when nothing has changed since the last read. The counter is
-    // incremented by every Add/Replace/AddOrReplace/Remove/Try_Remove/Clear for that type.
-    // Storage lives in the slot table keyed by the registry handle so all FCk_Registry views
-    // resolved from the same handle observe the same versions.
-    // Returns 0 for any hash that has never been mutated (or for an unset/stale handle).
+    // Per-fragment-type counter the scheduler's pump pass uses to short-circuit dirty-marker checks; every
+    // Add/Replace/AddOrReplace/Remove/Try_Remove/Clear bumps it. Returns 0 for a never-mutated hash.
     auto Get_DirtyMarkerVersion(uint32 InFragmentTypeHash) const -> uint64;
 
-    // Runtime-hash counterpart of DoBumpDirtyMarkerVersion<T> for storages the typed mutation
-    // paths do not mediate (dynamic script-struct fragments). The hash domain is the caller's —
-    // it must match what the consumer registered with the scheduler (see
-    // UCk_Utils_DynamicFragment_UE::Get_DirtyMarkerHash for the CkDynamic pairing).
+    // Runtime-hash counterpart for storages the typed mutation paths do not mediate (dynamic script-struct
+    // fragments). The hash domain is the caller's — see UCk_Utils_DynamicFragment_UE::Get_DirtyMarkerHash.
     auto BumpDirtyMarkerVersion(uint32 InFragmentTypeHash) -> void;
 
     template <typename T_Context, typename... T_Args>
@@ -272,10 +252,7 @@ public:
     auto TryGetContext() const -> const T_Context*;
 
 private:
-    // Increments the version counter for T_Fragment in the slot-table side-channel
-    // keyed by _RegistryHandle. Called from every mutation path (Add/Replace/
-    // AddOrReplace/Remove/Try_Remove/Clear) so the scheduler can detect changes
-    // without scanning the storage.
+    // Called from every mutation path so the scheduler can detect changes without scanning the storage.
     template <typename T_Fragment>
     auto DoBumpDirtyMarkerVersion() -> void;
 
@@ -323,11 +300,8 @@ private:
     }
 
 private:
-    // Resolve the underlying entt registry on demand from the slot table. Returns
-    // nullptr for unset or stale handles; strict variant fires a non-shipping
-    // ensure when stale (programmer-error path), the silent variant is unused
-    // here because every FCk_Registry method body either guards with the strict
-    // resolve or already implicitly assumed validity (e.g. processor bodies).
+    // Resolves the entt registry on demand from the slot table; nullptr for unset or stale handles. This
+    // strict variant fires a non-shipping ensure when stale (programmer error) — TryResolve is the quiet one.
     auto Resolve() -> ck::registry_table::EnttRegistryType*
     {
         return ck::registry_table::Resolve(_RegistryHandle);
@@ -354,10 +328,8 @@ auto CKECS_API GetTypeHash(const FCk_Registry& InRegistry) -> uint32;
 
 CK_DEFINE_CUSTOM_FORMATTER_INLINE(FCk_Registry, [](const FCk_Registry& InObj)
 {
-    // Escape the literal braces: {{ -> '{', }} -> '}', and {} are the two positional args. The former
-    // TEXT("{slot={},gen={}}") made fmt parse "{slot=...}" as a NAMED field 'slot' it couldn't resolve,
-    // throwing fmt::format_error — which crashed every ensure that formats a registry (e.g. the tombstone-
-    // handle ensures fired during a CkSnapshot load).
+    // The literal braces MUST stay escaped ({{ -> '{'): unescaped, fmt parses "{slot=...}" as a named field
+    // it cannot resolve and throws, crashing every ensure that formats a registry.
     return ck::Format
     (
         TEXT("{{slot={},gen={}}}"),
@@ -399,9 +371,8 @@ auto
     const auto* Reg = Resolve();
     if (Reg == nullptr) { return false; }
 
-    // The const view overload does not create a missing pool — a never-touched type iterates empty.
-    // Single-storage views skip in_place tombstones during iteration, so begin() == end() means
-    // zero LIVE entities regardless of tombstone residue in the packed array.
+    // The const view overload does not create a missing pool, and single-storage views skip in_place
+    // tombstones — so begin() == end() means zero LIVE entities regardless of tombstone residue.
     const auto View = Reg->template view<T_Fragment>();
     return View.begin() != View.end();
 }
@@ -443,9 +414,7 @@ auto
     TryGetContext() const
     -> const T_Context*
 {
-    // Silent path — uses TryResolve so an unset/stale FCk_Registry returns
-    // nullptr without firing ensure. "Try" in the name; callers (including
-    // Get_TransientEntity) rely on this being non-noisy.
+    // TryResolve, not Resolve: callers (including Get_TransientEntity) rely on this staying non-noisy.
     const auto* Reg = ck::registry_table::TryResolve(_RegistryHandle);
     if (Reg == nullptr) { return nullptr; }
     return Reg->ctx().find<const T_Context>();
@@ -538,11 +507,9 @@ auto
 
     if (Has<T_FragmentType>(InEntity))
     {
-        // Callers of AddOrGet intend to mutate the fragment in-place (e.g. appending to a
-        // request TArray). In-place mutations on an already-present fragment don't otherwise
-        // touch the registry, so the scheduler's dirty-marker version would not advance and
-        // pump short-circuit would gate out a legitimately dirty processor. Bumping here
-        // ensures request-queueing patterns like DoAddRequest propagate the same frame.
+        // AddOrGet callers mutate the fragment in place (appending to a request TArray), which never
+        // touches the registry — without this bump the pump short-circuit gates out a legitimately dirty
+        // processor and request-queueing stops propagating the same frame.
         DoBumpDirtyMarkerVersion<T_FragmentType>();
         return Get<T_FragmentType>(InEntity);
     }
@@ -695,11 +662,9 @@ auto
     ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Clear"));
 #endif
 
-    // Per-type: skip pools with no packed entries (live OR tombstoned). End-of-frame cleanup
-    // processors call Clear unconditionally every frame, and bumping the version of a pool that
-    // provably had nothing to remove would re-dirty the scheduler's persistent pump short-circuit
-    // for that marker every frame. A tombstone-only pool still clears (and bumps one last time) so
-    // its packed array — and Has_AnyEntityWith's view of it — resets to truly empty.
+    // Skip pools with no packed entries (live OR tombstoned): end-of-frame processors Clear every frame,
+    // and bumping a pool that had nothing to remove would re-dirty the pump short-circuit forever. A
+    // tombstone-only pool still clears (and bumps once more) so its packed array resets to truly empty.
     ([&]
     {
         if (Has_AnyEntityWith<T_Fragments>())
@@ -718,8 +683,7 @@ auto
 {
     auto* Registry = ck::registry_table::TryResolve(_RegistryHandle);
 #if CK_DISABLE_ENSURE_CHECKS == 0
-    // Preserve the strict Resolve diagnostic in configurations that retain it. The silent probe is the
-    // load-bearing validity check in every configuration.
+    // Keeps the strict Resolve diagnostic where it exists; the silent probe above is the real guard.
     if (Registry == nullptr)
     { Registry = Resolve(); }
 #endif

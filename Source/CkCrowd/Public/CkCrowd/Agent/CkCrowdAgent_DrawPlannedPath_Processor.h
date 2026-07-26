@@ -13,14 +13,9 @@
 
 namespace ck
 {
-    // Per-frame planned-path overlay. Reads FFragment_Nav_PathResult (the waypoints CkNavigation
-    // resolved for the agent's current goal) and draws them as a polyline at agent body height.
-    // Per-agent colour comes from UCk_Utils_CrowdAgent_UE::Get_DebugColor — coordinated with the
-    // breadcrumb processor so planned-vs-actual visually link to the same agent identity.
-    //
-    // Gating mirrors the breadcrumb processor: draws if `ck.Crowd.DrawPlannedPaths` is on OR the
-    // agent matches `ck.Crowd.SelectedEntityId`. Only crowd agents that have a path result fragment
-    // satisfy the view (i.e. agents that have been issued at least one MoveTo).
+    // Draws the agent's resolved nav waypoints as a dashed polyline at body height, in the same
+    // per-agent Get_DebugColor identity the breadcrumb overlay uses.
+    // Draws when `ck.Crowd.DrawPlannedPaths` is on OR the agent is `ck.Crowd.SelectedEntityId`.
     class CKCROWD_API FProcessor_CrowdAgent_DrawPlannedPath : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_DrawPlannedPath,
             FCk_Handle_CrowdAgent,

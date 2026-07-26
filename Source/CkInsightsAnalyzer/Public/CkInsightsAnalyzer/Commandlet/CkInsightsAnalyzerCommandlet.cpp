@@ -53,7 +53,6 @@ int32
     UCkInsightsAnalyzerCommandlet::
     Main(const FString& Params)
 {
-    // Parse command line
     TArray<FString> Tokens;
     TArray<FString> Switches;
     TMap<FString, FString> ParsedParams;
@@ -121,7 +120,6 @@ int32
 
     if (const auto FrameStr = ParsedParams.Find(TEXT("frame")))
     {
-        // Single frame mode
         const auto FrameIndex = FCString::Strtoui64(**FrameStr, nullptr, 10);
 
         if (FrameIndex >= TotalFrames)
@@ -158,15 +156,12 @@ int32
     }
     else if (const auto FramesStr = ParsedParams.Find(TEXT("frames")))
     {
-        // Frame range mode (e.g., "100-200")
         FString StartStr, EndStr;
         if (FramesStr->Split(TEXT("-"), &StartStr, &EndStr))
         {
             const auto StartFrame = FCString::Strtoui64(*StartStr, nullptr, 10);
-            uint64 EndFrame = FCString::Strtoui64(*EndStr, nullptr, 10);
-
-            // EndFrame is inclusive in user input, exclusive in API
-            EndFrame = FMath::Min(EndFrame + 1, TotalFrames);
+            const auto EndFrameInclusive = FCString::Strtoui64(*EndStr, nullptr, 10);
+            const auto EndFrame = FMath::Min(EndFrameInclusive + 1, TotalFrames);
 
             if (StartFrame >= EndFrame)
             {
@@ -201,7 +196,6 @@ int32
     }
     else if (const auto WorstStr = ParsedParams.Find(TEXT("worst")))
     {
-        // Worst N frames mode
         int32 WorstCount = FCString::Atoi(**WorstStr);
         if (WorstCount <= 0) WorstCount = 10;
 
@@ -224,7 +218,6 @@ int32
     }
     else if (AllFrames)
     {
-        // All frames mode
         ck::insights_analyzer::Display(
             TEXT("Analyzing all {} frames..."), TotalFrames);
 
@@ -243,7 +236,6 @@ int32
     }
     else
     {
-        // Default: worst 10 frames
         ck::insights_analyzer::Display(
             TEXT("No mode specified, defaulting to -worst=10..."));
 
@@ -269,7 +261,6 @@ int32
         return 1;
     }
 
-    // Print to stdout (via Display log)
     // Split by line to avoid log truncation
     TArray<FString> ReportLines;
     Report.ParseIntoArrayLines(ReportLines);
@@ -278,9 +269,8 @@ int32
         ck::insights_analyzer::Display(TEXT("{}"), Line);
     }
 
-    // Write to file if requested. Relative paths resolve against the project dir — the process
-    // CWD is Binaries/Win64 by the time a commandlet runs, which is where a raw relative path
-    // would otherwise silently land.
+    // A commandlet's CWD is Binaries/Win64, so a raw relative output path would silently land
+    // there — resolve relative paths against the project dir instead.
     if (OutputPath && NOT OutputPath->IsEmpty())
     {
         const auto ResolvedOutputPath = FPaths::IsRelative(**OutputPath)
@@ -297,7 +287,6 @@ int32
         }
     }
 
-    // Copy to clipboard if requested
     if (Clipboard)
     {
         if (CopyToClipboard(Report))

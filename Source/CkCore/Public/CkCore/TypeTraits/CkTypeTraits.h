@@ -76,8 +76,7 @@ namespace ck::type_traits
     {
         auto operator()(const TSharedPtr<T>& InPtr) -> TSharedPtr<T>
         {
-            // Safety check: if the TSharedPtr is null, return null instead of copying.
-            // This prevents crashes when the debugger copies handles with invalid/freed registries.
+            // Copying a null ptr crashes when the debugger copies handles with freed registries.
             if (NOT InPtr.IsValid())
             { return nullptr; }
             return InPtr;
@@ -89,8 +88,7 @@ namespace ck::type_traits
     {
         auto operator()(const TSharedPtr<T, ESPMode::NotThreadSafe>& InPtr) -> TSharedPtr<T, ESPMode::NotThreadSafe>
         {
-            // Safety check: if the TSharedPtr is null, return null instead of copying.
-            // This prevents crashes when the debugger copies handles with invalid/freed registries.
+            // Copying a null ptr crashes when the debugger copies handles with freed registries.
             if (NOT InPtr.IsValid())
             { return nullptr; }
             return InPtr;
@@ -118,15 +116,13 @@ namespace ck::type_traits
     template<typename T>
     using Binding_Param_T = std::conditional_t<
         std::is_copy_constructible_v<T> && std::is_trivially_copyable_v<T>,
-        T,           // Pass by value if copyable
-        const T&     // Pass by const reference if not copyable
+        T,
+        const T&
     >;
 
-    // Helper trait to check if a single type is acceptable
     template<typename T>
     struct TIsRefOrPointerOrSmallTrivial
     {
-        // Remove any const qualifiers for size checking
         using DecayedType = std::remove_const<T>::type;
 
         enum { Value =
@@ -136,18 +132,15 @@ namespace ck::type_traits
         };
     };
 
-    // Primary template for function signature checking
     template<typename Signature>
     struct TFuncArgsAreAllRefOrPointerOrSmallTrivial;
 
-    // Specialization for no arguments
     template<typename RetType>
     struct TFuncArgsAreAllRefOrPointerOrSmallTrivial<RetType()>
     {
         enum { Value = true };
     };
 
-    // Specialization for one or more arguments (recursive)
     template<typename RetType, typename FirstArg, typename... RestArgs>
     struct TFuncArgsAreAllRefOrPointerOrSmallTrivial<RetType(FirstArg, RestArgs...)>
     {
@@ -157,14 +150,12 @@ namespace ck::type_traits
         };
     };
 
-    // Support for const member functions
     template<typename RetType, typename... Args>
     struct TFuncArgsAreAllRefOrPointerOrSmallTrivial<RetType(Args...) const>
         : TFuncArgsAreAllRefOrPointerOrSmallTrivial<RetType(Args...)>
     {
     };
 
-    // Support for member function pointers
     template<typename Class, typename RetType, typename... Args>
     struct TFuncArgsAreAllRefOrPointerOrSmallTrivial<RetType(Class::*)(Args...)>
         : TFuncArgsAreAllRefOrPointerOrSmallTrivial<RetType(Args...)>

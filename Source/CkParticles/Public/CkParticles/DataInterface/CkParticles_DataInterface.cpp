@@ -13,10 +13,8 @@ namespace NDICkParticlesLocal
 {
     static const FName NAME_ExecuteStage(TEXT("ExecuteStage"));
 
-    // GPU: this template defines ExecuteStage_<symbol> and #includes the behavior .ush files.
     static const TCHAR* TemplateShaderFile = TEXT("/CkParticles/CkParticles_DataInterfaceTemplate.ush");
 
-    // Every .ush the GPU function transitively depends on, so editing any of them busts the shader cache.
     static const TCHAR* DependentShaderFiles[] =
     {
         TEXT("/CkParticles/CkParticles_DataInterfaceTemplate.ush"),
@@ -43,8 +41,7 @@ namespace NDICkParticlesLocal
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Trivial render-thread proxy. The DI is stateless (pure function of its pins) so the proxy carries no data;
-// it exists only because a GPU-capable DI requires one.
+// The DI is stateless, so this proxy carries no data — it exists only because a GPU-capable DI requires one.
 struct FNiagaraDataInterfaceProxyCkParticles : public FNiagaraDataInterfaceProxy
 {
     virtual void ConsumePerInstanceDataFromGameThread(void* PerInstanceData, const FNiagaraSystemInstanceID& Instance) override { check(false); }
@@ -52,8 +49,7 @@ struct FNiagaraDataInterfaceProxyCkParticles : public FNiagaraDataInterfaceProxy
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// CPU mirror of /CkParticles/CkParticles_Behaviors.ush. The GPU (USF) and CPU (here) implementations of each
-// behavior MUST stay in lockstep — same BehaviorId, same math — otherwise CPU and GPU emitters diverge.
+// CPU mirror of /CkParticles/CkParticles_Behaviors.ush — same BehaviorId, same math, or the two diverge.
 namespace NDICkParticlesLocal
 {
     struct FStageIO
@@ -70,8 +66,7 @@ namespace NDICkParticlesLocal
         int32        VisTag      = 0;
     };
 
-    // CPU mirrors of CkParticles_Rand / CkParticles_RandDir (Common.ush). 24-bit normalization keeps these
-    // bit-identical to the GPU path.
+    // Mirrors CkParticles_Rand / CkParticles_RandDir (Common.ush); 24-bit normalization keeps it bit-identical.
     static auto Rand(int32 InSeed, int32 InSalt) -> float
     {
         uint32 n = uint32(InSeed) * 747796405u + uint32(InSalt) * 2891336453u + 1u;
@@ -91,8 +86,7 @@ namespace NDICkParticlesLocal
         return FVector3f(r * FMath::Cos(t), r * FMath::Sin(t), z);
     }
 
-    // CPU mirrors of the HLSL intrinsics the newer behaviors lean on — keeps the C++ expressions textually
-    // parallel to their .ush counterparts so lockstep review is a line-by-line diff.
+    // HLSL intrinsic mirrors: keeps the C++ textually parallel to the .ush so review is a line-by-line diff.
     static auto Saturate(float InX) -> float { return FMath::Clamp(InX, 0.0f, 1.0f); }
     static auto Frac(float InX) -> float { return FMath::Frac(InX); }
     static auto Step(float InEdge, float InX) -> float { return InX >= InEdge ? 1.0f : 0.0f; }
@@ -102,8 +96,7 @@ namespace NDICkParticlesLocal
         return S * S * (3.0f - 2.0f * S);
     }
 
-    // CPU mirrors of CkParticles_QuatFromAxisAngle / CkParticles_QuatMul (Common.ush) — component-wise on purpose;
-    // engine quat helpers could reorder the float math and break GPU/CPU lockstep.
+    // Component-wise on purpose: engine quat helpers could reorder the float math and break GPU/CPU lockstep.
     static auto QuatFromAxisAngle(FVector3f InAxis, float InAngle) -> FQuat4f
     {
         const float H = 0.5f * InAngle;
@@ -130,7 +123,6 @@ namespace NDICkParticlesLocal
 
         const float NormalizedAge = InLifetime > 0.0f ? FMath::Clamp(InAge / InLifetime, 0.0f, 1.0f) : 0.0f;
 
-        // Default size mirrors CkParticles_DefaultOutput (Common.ush): per-Seed varied, shrinking over life.
         const float SizeBase = FMath::Lerp(18.0f, 8.0f, NormalizedAge) * FMath::Lerp(0.65f, 1.35f, Rand(InSeed, 7));
         Out.Size = FVector2f(SizeBase, SizeBase);
 

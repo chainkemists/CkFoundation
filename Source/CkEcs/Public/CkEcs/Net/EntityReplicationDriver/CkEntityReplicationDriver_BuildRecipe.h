@@ -11,12 +11,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// GC-safe holder for a definition-built entity's construction recipe. An entity built via Request_BuildAndReplicate
-// is constructed from ConstructionInfo(s) (a construction-script class + an optional archetype asset) that are
-// consumed at build time and NOT retained on the entity. This holder pins them so a later save capture can read the
-// recipe and re-create the entity on load. The archetype is a UObject ref a non-GC-traced fragment cannot hold
-// directly; a UObject's UPROPERTYs ARE traced, so the fragment pins THIS holder via a TStrongObjectPtr. Mirrors
-// UCk_EntityScript_SpawnRecipe_UE (the EntityScript-spawn equivalent).
+// GC-safe holder for the ConstructionInfo(s) a Request_BuildAndReplicate entity was built from, kept so a later
+// save capture can re-create it. A UObject exists here because fragments are NOT GC-traced while a UObject's
+// UPROPERTYs are, so the fragment pins this holder instead. Mirrors UCk_EntityScript_SpawnRecipe_UE.
 UCLASS()
 class CKECS_API UCk_BuildRecipe_UE : public UObject
 {
@@ -42,9 +39,7 @@ public:
 
 namespace ck
 {
-    // Retained construction recipe for a definition-built (Request_BuildAndReplicate) entity, read live at save
-    // capture. Read-live-only — never serialized as a fragment. GC storage lives on the holder UObject above; this
-    // fragment only pins it.
+    // Read live at save capture and NEVER serialized as a fragment — it only pins the holder above
     struct CKECS_API FFragment_BuildRecipe
     {
         CK_GENERATED_BODY(FFragment_BuildRecipe);
@@ -58,7 +53,7 @@ namespace ck
         CK_DEFINE_CONSTRUCTORS(FFragment_BuildRecipe, _Recipe);
 
     public:
-        // Convenience read forwarding to the holder (the capture reads through this). Empty when unpopulated.
+        // Forwards to the holder; empty when unpopulated
         auto Get_ConstructionInfos() const -> const TArray<FCk_EntityReplicationDriver_ConstructionInfo>&;
     };
 }

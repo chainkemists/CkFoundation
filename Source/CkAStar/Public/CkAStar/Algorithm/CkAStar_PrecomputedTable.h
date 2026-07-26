@@ -9,10 +9,6 @@ namespace ck::astar
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Build-time: runs full A* for each start-goal pair, stops when memory cap is reached.
-// Query-time: hash lookup — instant.
-// Serializable for cook-time precomputation.
-
 template <AStarNodeId T_NodeId>
 struct TPrecomputedTable
 {
@@ -35,8 +31,7 @@ public:
 
 	// ----------------------------------------------------------------------------------------------------------------
 
-	// Iterates InStartGoalPairs in order, runs full A* (unlimited budget) for each,
-	// stops when cumulative memory exceeds InMaxKB * 1024.
+	// Full A* (unlimited budget) per pair, in order; stops once cumulative memory exceeds InMaxKB.
 	template <typename T_Graph>
 		requires AStarGraph<T_Graph, T_NodeId>
 	auto
@@ -47,7 +42,7 @@ public:
 
 	// ----------------------------------------------------------------------------------------------------------------
 
-	// Hash lookup. Returns nullptr on miss.
+	// Returns nullptr on miss.
 	auto
 	Find(const T_NodeId& InStart, const T_NodeId& InGoal) const -> const FPrecomputedPath*;
 

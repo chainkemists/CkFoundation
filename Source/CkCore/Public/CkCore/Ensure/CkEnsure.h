@@ -16,10 +16,8 @@ namespace ck::ensure
         bool& OutBreakInCode,
         bool& OutBreakInScript) -> void;
 
-    // Wraps Ensure_Impl for use in the CK_ENSURE macro. Returns true if the caller
-    // should trigger a debug break at the callsite (so the break lands in the user's
-    // frame, not inside a wrapper lambda). Script break, if requested, is handled
-    // internally before returning.
+    // Returns true when the CALLER must trigger the debug break itself; a script break, if requested,
+    // is handled internally before returning.
     CKCORE_API auto Do_HandleFail(
         const FString& InMessage,
         const FString& InExpressionText,
@@ -31,8 +29,8 @@ namespace ck::ensure
     CKCORE_API auto Do_Pop_EnsureIsFromScript() -> void;
 }
 
-// Note: PLATFORM_BREAK is expanded textually at the callsite (not inside a lambda or
-// ensureAlwaysMsgf wrapper) so the debugger lands directly in the user's function.
+// PLATFORM_BREAK expands textually here rather than inside a lambda or an ensureAlwaysMsgf wrapper,
+// so the debugger lands directly in the user's function.
 #define CK_ENSURE(InExpression, InString, ...)                                                                                             \
 (LIKELY(static_cast<bool>(InExpression))                                                                                                   \
     ? true                                                                                                                                 \
@@ -71,8 +69,7 @@ NOT [InWorldContextObject]()\
 #define CK_TRIGGER_ENSURE(InString, ...)\
 CK_ENSURE(false, InString, ##__VA_ARGS__)
 
-// Technically, the same as CK_ENSURE(...), but semantically it's different i.e. we WANT the ensure to be triggered by
-// an expression that is not really part of the ensure itself
+// Same expansion as CK_ENSURE, but semantically the trigger expression is NOT part of the ensure itself.
 #define CK_TRIGGER_ENSURE_IF(InExpression, InString, ...)\
 if(InExpression) { CK_TRIGGER_ENSURE(InString, ##__VA_ARGS__); }
 

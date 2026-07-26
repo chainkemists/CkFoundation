@@ -20,8 +20,7 @@ enum class ECk_Watermark_StatQuality : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Watermark_StatQuality);
 
 // --------------------------------------------------------------------------------------------------------------------
-// For "higher is better" stats: FPS, ServerFPS
-// Evaluated as: value >= threshold → quality band
+// "Higher is better" bands (FPS, ServerFPS): value >= threshold → quality band.
 
 USTRUCT(BlueprintType)
 struct CKWATERMARK_API FCk_Watermark_ColorBands_HigherIsBetter
@@ -60,8 +59,7 @@ struct CKWATERMARK_API FCk_Watermark_ColorBands_HigherIsBetter
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// For "lower is better" stats: Ping, EnsureCount
-// Evaluated as: value <= threshold → quality band
+// "Lower is better" bands (Ping, EnsureCount): value <= threshold → quality band.
 
 USTRUCT(BlueprintType)
 struct CKWATERMARK_API FCk_Watermark_ColorBands_LowerIsBetter

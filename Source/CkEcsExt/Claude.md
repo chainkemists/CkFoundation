@@ -65,6 +65,77 @@ auto FoundHandle = UCk_Utils_Ecs_Base_UE::Get_EntityOrRecordEntry_WithFragmentAn
 
 ---
 
+## Implementation notes
+
+### SceneNode layer ordering
+
+Every `TProcessor_SceneNode_Update<FTag_SceneNode_LayerN>` declares a `RunAfter` list holding
+`FProcessor_SceneNode_FollowUnrealAnchor`, plus `FProcessor_Transform_HandleRequests` for layer 0 and
+`TProcessor_SceneNode_Update<Layer N-1>` for the rest. Both dependencies are load-bearing:
+
+- Without `Transform_HandleRequests` in layer 0's list, layer 0 can run in parallel with request handling
+  and miss the `FTag_Transform_Updated` that handling just added to the root (e.g. a tween writing world
+  onto the root), so the gate check fails and nothing propagates.
+- Without the layer-to-layer chain, descendants run before the tag their parent DEFERRED becomes visible.
+
+Either gap stops motion from propagating past the first scene-node link, silently.
+
+### SceneNode Unreal anchors
+
+`FFragment_SceneNode_UnrealAnchor` is a scene-node's foreign Unreal anchor: a `USceneComponent`
+(`Socket == None`) or a mesh socket. `FProcessor_SceneNode_FollowUnrealAnchor` composes
+`entity.world = offset * anchor.world` every tick, read-only w.r.t. the anchor.
+
+It is deliberately NOT the Transform module's `FFragment_Transform_RootComponent` / `_MeshSocket`: those
+pair with `SyncFromActor`/`SyncToActor`, a bidirectional actor bridge that would drag a Movable anchor
+around. Keeping a separate fragment makes anchor-follow a read-only SceneNode concern and leaves the
+Transform feature untouched. The anchor fragment is not snapshotable (a live component ref can't be
+remapped — parity with the Transform anchor fragments); the composed world pose is restored via
+`FFragment_Transform`.
+
+`FTag_Transform_ExternallyDriven` is the inverse switch on the Transform side: an anchor-bound child that
+should instead follow its scene-node parent (Unreal `AttachToComponent` semantics) carries the tag, and
+`SyncFromActor`/`SyncFromMeshSocket` back off while `SyncToActor` keeps pushing the parent-driven pose onto
+the anchor.
+
+### Physics ownership
+
+An entity is EITHER Chaos-simulated (CkOverlapBody's `UShapeComponent` path, CkRaySense's engine-trace
+path) OR Jolt-simulated (CkSpatialQuery's Probe, CkJolt's bodies/characters) — never both; the two engines
+maintain independent, non-interacting world representations. Composing both onto one entity is a design
+error surfaced at COMPOSITION time by `ck::physics_ownership::TryClaim_Chaos` / `TryClaim_Jolt`
+(`CK_ENSURE` at the composing call site + `false` return, so the caller returns an invalid handle), never a
+runtime log.
+
+The two tags are COUNTED because multiple SAME-world features may legitimately stack on one entity (a Probe
+and a JoltBody both claim Jolt; two Sensors both claim Chaos) — only the cross-world claim is a conflict.
+`Release_*` drops one claim; EndPlay teardown does not need to release (the entity is dying).
+
+### Actor rebind after a snapshot restore
+
+A snapshot restore severs the actor↔entity bridge: `Run_Restore`'s `clear()` drops the non-snapshotable
+OwningActor + Transform-root links, so a restored bridged entity comes back with no live actor. After the
+snapshot respawn pass spawns a fresh actor of `FFragment_ActorSpawnIntent`'s class,
+`UCk_Utils_ActorRebind_UE::Request_RebindActor` re-links the two WITHOUT re-running
+`WithActor::Construct` — the gameplay fragments already round-tripped. It re-adds the actor→entity
+reverse-lookup component, the entity→actor OwningActor fragment, and the Transform bound to the actor's
+root component (OwningActor first, so `Transform::Add` routes to `AddAndAttachToUnrealComponent` and
+PRESERVES the restored world transform rather than seeding from the actor's spawn transform).
+
+Because Construct does not re-run, any ACTOR-SIDE wiring the original construction did (cached entity
+handles on the actor, `NewObject` components, camera directors, …) is dead on the respawned actor. Game
+code keys a processor on `ck::FTag_ActorJustRebound` to run its own idempotent reattach, then REMOVES the
+tag as its done-guard. The tag is TRANSIENT — one-shot post-restore bookkeeping, never captured into a save.
+
+`FFragment_ActorSpawnIntent` stores the class as a plain `FString` (`UClass::GetPathName`), NOT a
+`TSoftClassPtr`: a soft-object path does not survive the snapshot's SaveGame memory-archive
+`SerializeItem` round-trip (it comes back empty), whereas a plain FString round-trips reliably — the same
+value path `FFragment_SaveKey`'s FGuid uses. Resolved at respawn via `FSoftClassPath::TryLoadClass`. The
+raw `AActor` pointer is never serialized; the spawn transform comes from the restored Transform fragment,
+not from this fragment.
+
+---
+
 ## See also
 - `CkEcs/Claude.md` — the handle, processor, signal, and EntityScript primitives.
 - `CkRecord/Claude.md` — the Record system that Meta Fragments are stored in.

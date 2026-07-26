@@ -16,8 +16,7 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
     const TAttribute<FVector2D>    ShadowOff     = InArgs._ShadowOffset;
     const TAttribute<FLinearColor> ShadowColor   = InArgs._ShadowColorAndOpacity;
 
-    // Wrap each font so its outline alpha tracks the paired text color's alpha.
-    auto WithTextAlpha = [](TAttribute<FSlateFontInfo> InFont, TAttribute<FSlateColor> InColor) -> TAttribute<FSlateFontInfo>
+    auto WithTextAlpha =[](TAttribute<FSlateFontInfo> InFont, TAttribute<FSlateColor> InColor) -> TAttribute<FSlateFontInfo>
     {
         return TAttribute<FSlateFontInfo>::CreateLambda([InFont, InColor]() -> FSlateFontInfo
         {
@@ -42,8 +41,6 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
     {
         const TAttribute<EVisibility> EntryVis = Entry.Visibility;
 
-        // Inter-item separator — shares the visibility of the entry it precedes.
-        // Omitted before the first entry.
         if (!IsFirst)
         {
             Box->AddSlot()
@@ -61,7 +58,6 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
         }
         IsFirst = false;
 
-        // Key:Value pair — collapses as a unit.
         Box->AddSlot()
             .AutoWidth()
             .VAlign(VAlign_Center)
@@ -69,7 +65,6 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
                 SNew(SHorizontalBox)
                 .Visibility(EntryVis)
 
-                // Key — uses per-entry color override if set, else bar default.
                 + SHorizontalBox::Slot().AutoWidth()
                 [
                     SNew(STextBlock)
@@ -84,7 +79,6 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
                     .ShadowColorAndOpacity(ShadowColor)
                 ]
 
-                // Key:Value separator
                 + SHorizontalBox::Slot().AutoWidth()
                 [
                     SNew(STextBlock)
@@ -95,8 +89,6 @@ auto SCkWatermarkInfoBar::Construct(const FArguments& InArgs) -> void
                     .ShadowColorAndOpacity(ShadowColor)
                 ]
 
-                // Value — uses per-entry color override if set, else bar default.
-                // For override colors, derive a font with the override's alpha applied to outline.
                 + SHorizontalBox::Slot().AutoWidth()
                 [
                     SNew(STextBlock)

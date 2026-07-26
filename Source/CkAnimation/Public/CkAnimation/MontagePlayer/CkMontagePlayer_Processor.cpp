@@ -114,7 +114,6 @@ namespace ck
 
         const auto FromReplication = InRequest.Get_FromReplication();
 
-        // Stop any previously-active montage and broadcast its terminal interrupt before we replace state.
         const auto PreviousMontage = InCurrent._ActiveMontage.Get();
         if (ck::IsValid(PreviousMontage) && PreviousMontage != Montage)
         {
@@ -124,7 +123,6 @@ namespace ck
                 InHandle, ck::MakePayload(InHandle, PreviousState, ECk_MontagePlayer_FinishReason::Interrupted));
         }
 
-        // Build the new state row.
         auto NewState = FCk_MontagePlayer_State{Montage};
         NewState
             .Set_SectionName(InRequest.Get_SectionName())
@@ -147,7 +145,6 @@ namespace ck
                 .Set_ServerStartTime(Get_NowFor(InHandle));
         }
 
-        // Late-join catch-up on replicated plays: advance start position, optionally adjust playrate.
         auto StartPos = NewState.Get_StartPosition();
         auto CatchUpRate = 1.0f;
         auto BurnCatchUp = false;
@@ -183,7 +180,6 @@ namespace ck
             }
         }
 
-        // Drive the AnimInstance.
         const auto PlayRate = NewState.Get_PlayRate() * CatchUpRate;
         const auto Length = InAnimInstance->Montage_Play(
             Montage, PlayRate, EMontagePlayReturnType::MontageLength, static_cast<float>(StartPos.Get_Seconds()));
@@ -203,10 +199,8 @@ namespace ck
             InAnimInstance->Montage_JumpToSection(NewState.Get_SectionName(), Montage);
         }
 
-        // cancel-on-replace: overwrite remaining catch-up seconds.
         InCurrent._CatchUpRemaining = BurnCatchUp ? _SyncTargetTime : FCk_Time::ZeroSecond();
 
-        // Bind end-delegate per-instance.
         const auto Snapshot = NewState;
         auto HandleCopy = InHandle;
         auto Lambda = FOnMontageEnded::CreateLambda(
@@ -220,7 +214,6 @@ namespace ck
             });
         InAnimInstance->Montage_SetEndDelegate(Lambda, Montage);
 
-        // Commit state and announce.
         InCurrent._State = NewState;
         InCurrent._ActiveMontage = Montage;
         InHandle.AddOrGet<FTag_MontagePlayer_HasActiveMontage>();
@@ -429,8 +422,6 @@ namespace ck
         if (ck::Is_NOT_Valid(Driver))
         { return; }
 
-        // Keep the FFragment_ContainerRef_MontagePlayer driver resolution above; only the payload build is
-        // unified — consume the registered Produce (byte-identical to the old inline FCk_RepData_MontagePlayer).
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_MontagePlayer>(InHandle);
         if (Produced.IsSet())
         { Driver->SetFragmentData<FCk_RepData_MontagePlayer>(*Produced); }

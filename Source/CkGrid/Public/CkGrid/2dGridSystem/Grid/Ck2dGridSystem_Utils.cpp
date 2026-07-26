@@ -26,9 +26,6 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Grid Cell Pairs Tested"), STAT_Grid_CellPairsTe
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Composes the LIVE half of the grid (pivot SceneNode + Current's private cell registry + the cell
-// entities) from the Params fragment ALREADY present on the entity. Shared by Add (fresh composition)
-// and Request_RecomposeFromSnapshot (Params restored by a snapshot load; the live half never round-trips).
 auto
     UCk_Utils_2dGridSystem_UE::
     DoCompose_PivotCurrentAndCells(
@@ -73,7 +70,6 @@ auto
         const FCk_Fragment_2dGridSystem_ParamsData& InParams)
     -> FCk_Handle_2dGridSystem
 {
-    // Validate all active coordinates are within grid dimensions
     for (const auto& ResolvedActiveCoords = InParams.Get_ResolvedActiveCoordinates();
         const auto& Coordinate : ResolvedActiveCoords)
     {
@@ -247,11 +243,9 @@ auto
         }
     }
 
-    // Get current pivot transform to preserve rotation and scale
     auto Pivot = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
     auto NewTransform = UCk_Utils_SceneNode_UE::Get_Offset(Pivot);
 
-    // Apply the calculated offset
     NewTransform.SetLocation(FVector(-PivotOffset.X, -PivotOffset.Y, NewTransform.GetLocation().Z));
 
     return NewTransform;
@@ -287,18 +281,16 @@ auto
 {
     const auto& Dimensions = Get_Dimensions(InGrid);
 
-    // Out-of-bounds is a valid query RESULT, not an error: callers like Get_CanPlace and the
-    // connectivity flood deliberately probe coordinates outside the grid (e.g. a footprint that
-    // straddles an edge) and rely on an invalid handle coming back. Return invalid silently — per
-    // the Get_CellAt contract — rather than ensuring, so an edge query doesn't spam errors.
+    // Out-of-bounds is a valid query RESULT, not an error: callers deliberately probe coordinates
+    // outside the grid (e.g. a footprint straddling an edge) and rely on an invalid handle back.
     if (NOT UCk_Utils_Grid2D_UE::Get_IsValidCoordinate(Dimensions, InCoordinate))
     { return {}; }
 
     const auto Index = UCk_Utils_Grid2D_UE::Get_CoordinateAsIndex(InCoordinate, Dimensions);
     const auto& CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
 
-    // Index + 1 because of our transient entity
-    const auto Entity = FCk_Entity{static_cast<FCk_Entity::IdType>(Index + 1)};
+    constexpr auto TransientEntityOffset = 1;
+    const auto Entity = FCk_Entity{static_cast<FCk_Entity::IdType>(Index + TransientEntityOffset)};
     auto CellHandle = ck::MakeHandle(Entity, CellRegistry);
 
     return UCk_Utils_2dGridCell_UE::Cast(CellHandle);
@@ -366,8 +358,8 @@ auto
         MaxCoord.Y = FMath::Max(MaxCoord.Y, Coord.Y);
     });
 
-    // Calculate dimensions (add 1 because coordinates are 0-based)
-    return FIntPoint(MaxCoord.X - MinCoord.X + 1, MaxCoord.Y - MinCoord.Y + 1);
+    constexpr auto InclusiveSpan = 1;
+    return FIntPoint(MaxCoord.X - MinCoord.X + InclusiveSpan, MaxCoord.Y - MinCoord.Y + InclusiveSpan);
 }
 
 auto
@@ -445,10 +437,8 @@ auto
     if (NOT Get_IntersectsWith(InGridA, InGridB, InFilterA, InFilterB))
     { return {}; }
 
-    // Fast path: Check if grids are aligned and have same cell size
     if (Get_IsAlignedWith(InGridA, InGridB))
     {
-        // Check if cell sizes are compatible for the aligned optimization
         const auto& CellSizeA = Get_CellSize(InGridA);
         const auto& CellSizeB = Get_CellSize(InGridB);
 
@@ -496,13 +486,10 @@ auto
 
     const auto CellSize = Get_CellSize(InGrid);
 
-    // Calculate the local position of the desired anchor coordinate
     const auto AnchorLocalPos = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(InDesiredAnchorCoordinate, CellSize);
-
-    // Add half cell size to get the center of the cell
     const auto AnchorCenterPos = AnchorLocalPos + (CellSize * 0.5f);
 
-    // Return the negative offset - this positions the grid so the anchor becomes the rotation origin
+    // Negated: this offset positions the grid so the anchor becomes the rotation origin.
     return FVector(-AnchorCenterPos.X, -AnchorCenterPos.Y, 0.0f);
 }
 
@@ -517,7 +504,6 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot get bounds for invalid grid"))
     { return {}; }
 
-    // Fast path for NoFilter - calculate directly from grid dimensions
     if (InCellFilter == ECk_2dGridSystem_CellFilter::NoFilter)
     {
         const auto Dimensions = Get_Dimensions(InGrid);
@@ -526,14 +512,11 @@ auto
 
         if (InLocalOrWorld == ECk_LocalWorld::Local)
         {
-            // For local space, return bounds relative to grid origin
             return FBox2D(FVector2D::ZeroVector, GridSize);
         }
 
-        // For world space, use the pivot's world transform
         const auto PivotWorldTransform = Get_Pivot(InGrid, ECk_LocalWorld::World);
 
-        // Transform all 4 corners to handle rotation properly
         const auto Corners = TArray{
             FVector2D::ZeroVector,
             FVector2D(GridSize.X, 0.0f),
@@ -557,7 +540,6 @@ auto
         return FBox2D(BoundsMin, BoundsMax);
     }
 
-    // Filtered cells path - calculate bounds in a single pass
     auto TotalBounds = FBox2D{};
     auto FirstCell = true;
 
@@ -607,7 +589,6 @@ auto
     const auto CellSize = Get_CellSize(InGrid);
     const auto Dimensions = Get_Dimensions(InGrid);
 
-    // Draw cells
     if (CellVisualization != ECk_2dGridSystem_DebugDraw_CellVisualization::None)
     {
         ForEach_Cell(InGrid, ECk_2dGridSystem_CellFilter::NoFilter, [&](const FCk_Handle_2dGridCell& InCell)
@@ -617,7 +598,6 @@ auto
 
             if (CellVisualization == ECk_2dGridSystem_DebugDraw_CellVisualization::AABB)
             {
-                // Draw axis-aligned box (legacy method)
                 const auto CellBounds = UCk_Utils_2dGridCell_UE::Get_Bounds(InCell, ECk_LocalWorld::World);
                 const auto CellCenter = UCk_Utils_Geometry2D_UE::Get_Box_Center(CellBounds);
                 const auto CellExtent = UCk_Utils_Geometry2D_UE::Get_Box_Size(CellBounds) * 0.5f;
@@ -625,7 +605,6 @@ auto
                 const auto CellCenter3D = FVector(CellCenter.X, CellCenter.Y, PivotTransform.GetLocation().Z);
                 const auto CellExtent3D = FVector(CellExtent.X, CellExtent.Y, 0.0f);
 
-                // Draw wireframe box
                 UCk_Utils_DebugDraw_UE::DrawDebugWireframeBox(
                     InWorldContextObject,
                     CellCenter3D,
@@ -637,7 +616,6 @@ auto
             }
             else if (CellVisualization == ECk_2dGridSystem_DebugDraw_CellVisualization::OBB)
             {
-                // Draw oriented box
                 const auto OrientedCellBounds = UCk_Utils_2dGridCell_UE::Get_OrientedBounds3D(InCell, ECk_LocalWorld::World);
 
                 UCk_Utils_OrientedBox3D_UE::DebugDraw_OrientedBox3D(
@@ -648,13 +626,11 @@ auto
                     Options.Get_CellThickness());
             }
 
-            // Draw coordinates if enabled
             if (Options.Get_ShowCoordinates())
             {
                 const auto Coord = UCk_Utils_2dGridCell_UE::Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
                 const auto CoordText = ck::Format_UE(TEXT("[{}]"), Coord);
 
-                // Get cell center for text positioning
                 FVector TextLocation;
                 if (CellVisualization == ECk_2dGridSystem_DebugDraw_CellVisualization::OBB)
                 {
@@ -680,7 +656,6 @@ auto
 
     const auto& GridTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InGrid);
 
-    // Draw transform gizmo at pivot
     constexpr auto AxisLength = 100.0f;
     constexpr auto AxisThickness = 10.0f;
     constexpr auto DrawAxisCones = true;
@@ -694,12 +669,10 @@ auto
         ConeSize,
         Options.Get_Duration());
 
-    // Draw pivot marker
     if (Options.Get_ShowPivot())
     {
         const auto PivotLocation = PivotTransform.GetLocation();
 
-        // Draw cross at pivot location
         UCk_Utils_DebugDraw_UE::DrawDebugCross(
             InWorldContextObject,
             PivotLocation,
@@ -709,7 +682,6 @@ auto
             Options.Get_CellThickness());
     }
 
-    // Draw cell size info
     if (Options.Get_ShowCellSizeInfo())
     {
         const auto GridCenterLocal = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(
@@ -919,18 +891,13 @@ auto
     auto BestIntersection = FCk_GridCellIntersection{};
     auto HighestOverlap = 0.0f;
 
-    // Track total cell counts for percentage calculations
     auto TotalCellsA = 0;
     auto TotalCellsB = 0;
-
-    // Instrumentation-only: counts every CellA×CellB pair the inner loop actually overlap-tests.
     auto NumCellPairsTested = int32{0};
 
-    // Build spatial index for GridB cells for faster lookups
     TMap<FIntPoint, FCk_Handle_2dGridCell> GridBCellMap;
     TMap<FCk_Handle_2dGridCell, FBox2D> GridBBoundsCache;
 
-    // First pass: Index GridB cells and cache their bounds
     ForEach_Cell(InGridB, InFilterB, [&](const FCk_Handle_2dGridCell& CellB)
     {
         ++TotalCellsB;
@@ -941,21 +908,17 @@ auto
         GridBBoundsCache.Add(CellB, BoundsB);
     });
 
-    // Build a spatial acceleration structure for GridB bounds
     const auto& GridBWorldBounds = Get_Bounds(InGridB, ECk_LocalWorld::World, InFilterB);
 
-    // Second pass: Check GridA cells against GridB
     ForEach_Cell(InGridA, InFilterA, [&](const FCk_Handle_2dGridCell& CellA)
     {
         ++TotalCellsA;
         const auto& CoordA = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellA, ECk_2dGridSystem_CoordinateType::Local);
         const auto& BoundsA = UCk_Utils_2dGridCell_UE::Get_Bounds(CellA, ECk_LocalWorld::World);
 
-        // Early out if this cell is completely outside GridB's bounds
         if (NOT BoundsA.Intersect(GridBWorldBounds))
         { return; }
 
-        // Only check cells in GridB that could potentially overlap
         for (const auto& [CoordB, CellB] : GridBCellMap)
         {
             ++NumCellPairsTested;
@@ -982,14 +945,12 @@ auto
                 IntersectingCellsA.Add(CellA);
                 IntersectingCellsB.Add(CellB);
 
-                // Track the best intersection for snapping
                 if (OverlapPercent > HighestOverlap)
                 {
                     HighestOverlap = OverlapPercent;
                     BestIntersection = Intersection;
                 }
 
-                // Update total bounds
                 if (FirstIntersection)
                 {
                     TotalBounds = IntersectionBounds;
@@ -1003,7 +964,6 @@ auto
         }
     });
 
-    // Calculate summary statistics
     Result.Set_IntersectingCells(IntersectingCells);
     Result.Set_TotalIntersections(IntersectingCells.Num());
     Result.Set_TotalIntersectionBounds(TotalBounds);
@@ -1018,7 +978,6 @@ auto
         Result.Set_GridAFullyContainedInGridB(GridAOverlap >= 1.0f);
         Result.Set_GridBFullyContainedInGridA(GridBOverlap >= 1.0f);
 
-        // Calculate snap position using the best overlapping cells
         if (HighestOverlap > 0.0f)
         {
             const auto GridBTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(
@@ -1059,7 +1018,6 @@ auto
 
     auto Result = FCk_GridIntersectionResult{};
 
-    // Instrumentation-only: counts every CellA×CellB candidate the clamped inner loop overlap-tests.
     auto NumCellPairsTested = int32{0};
 
     const auto& PivotA = Get_Pivot(InGridA, ECk_LocalWorld::World);
@@ -1077,12 +1035,10 @@ auto
     int32 TotalCellsA = 0;
     int32 TotalCellsB = 0;
 
-    // Pre-calculate the transformation matrix from GridA to GridB space
     const auto TransformAToWorld = PivotA;
     const auto TransformWorldToB = PivotB.Inverse();
     const auto TransformAToB = TransformAToWorld * TransformWorldToB;
 
-    // Build a set of active cells in GridB for O(1) lookup
     TSet<FIntPoint> ActiveCellsB;
     ForEach_Cell(InGridB, InFilterB, [&](const FCk_Handle_2dGridCell& CellB)
     {
@@ -1091,27 +1047,22 @@ auto
         ActiveCellsB.Add(CoordB);
     });
 
-    // Cache for bounds calculations
     auto BoundsCache = TMap<FIntPoint, FBox2D>{};
 
-    // Process each cell in GridA
     ForEach_Cell(InGridA, InFilterA, [&](const FCk_Handle_2dGridCell& CellA)
     {
         ++TotalCellsA;
         const auto& CoordA = UCk_Utils_2dGridCell_UE::Get_Coordinate(CellA, ECk_2dGridSystem_CoordinateType::Local);
 
-        // Calculate the cell's position in GridA's local space
         const auto CellMinA = UCk_Utils_Grid2D_UE::Get_CoordinateAsLocation(CoordA, CellSize);
         const auto CellMaxA = CellMinA + CellSize;
 
-        // Transform cell corners to GridB's local space
         const auto Corners = TArray{
             FVector(CellMinA.X, CellMinA.Y, 0.0f),
             FVector(CellMaxA.X, CellMinA.Y, 0.0f),
             FVector(CellMaxA.X, CellMaxA.Y, 0.0f),
             FVector(CellMinA.X, CellMaxA.Y, 0.0f)};
 
-        // Find bounding box in GridB's coordinate space
         auto MinCoordB = FIntPoint(INT_MAX, INT_MAX);
         auto MaxCoordB = FIntPoint(INT_MIN, INT_MIN);
 
@@ -1128,31 +1079,25 @@ auto
             MaxCoordB.Y = FMath::Max(MaxCoordB.Y, CellCoordB.Y);
         }
 
-        // Clamp to valid GridB dimensions
         MinCoordB.X = FMath::Max(0, MinCoordB.X);
         MinCoordB.Y = FMath::Max(0, MinCoordB.Y);
         MaxCoordB.X = FMath::Min(DimensionsB.X - 1, MaxCoordB.X);
         MaxCoordB.Y = FMath::Min(DimensionsB.Y - 1, MaxCoordB.Y);
 
-        // Early out if no valid cells in range
         if (MinCoordB.X > MaxCoordB.X || MinCoordB.Y > MaxCoordB.Y)
         { return; }
 
-        // Only calculate bounds once for CellA
         const auto& BoundsA = UCk_Utils_2dGridCell_UE::Get_Bounds(CellA, ECk_LocalWorld::World);
 
-        // Check only the cells that could potentially overlap
         for (auto Y = MinCoordB.Y; Y <= MaxCoordB.Y; ++Y)
         {
             for (auto X = MinCoordB.X; X <= MaxCoordB.X; ++X)
             {
                 const auto CoordB = FIntPoint(X, Y);
 
-                // Skip if cell is not active
                 if (NOT ActiveCellsB.Contains(CoordB))
                 { continue; }
 
-                // Get or calculate bounds for CellB
                 FBox2D BoundsB;
                 if (auto* CachedBounds = BoundsCache.Find(CoordB))
                 {
@@ -1165,17 +1110,14 @@ auto
                     BoundsCache.Add(CoordB, BoundsB);
                 }
 
-                // Calculate actual overlap
                 ++NumCellPairsTested;
                 const auto& OverlapPercent = UCk_Utils_Geometry2D_UE::Calculate_OverlapPercent(BoundsA, BoundsB);
 
                 if (OverlapPercent < InCellOverlapThreshold0to1)
                 { continue; }
 
-                // Get the actual cell handle
                 const auto CellB = Get_CellAt(InGridB, CoordB);
 
-                // Calculate intersection bounds
                 const auto& IntersectionBounds = UCk_Utils_Geometry2D_UE::Get_Box_Overlap(BoundsA, BoundsB);
 
                 const auto Intersection = FCk_GridCellIntersection{}
@@ -1190,14 +1132,12 @@ auto
                 IntersectingCellsA.Add(CellA);
                 IntersectingCellsB.Add(CellB);
 
-                // Track the best intersection for snapping
                 if (OverlapPercent > HighestOverlap)
                 {
                     HighestOverlap = OverlapPercent;
                     BestIntersection = Intersection;
                 }
 
-                // Update total bounds
                 TotalBounds = FirstIntersection ? IntersectionBounds : (TotalBounds + IntersectionBounds);
                 FirstIntersection = false;
             }
@@ -1206,7 +1146,6 @@ auto
 
     INC_DWORD_STAT_BY(STAT_Grid_CellPairsTested, NumCellPairsTested);
 
-    // Populate result
     Result.Set_IntersectingCells(IntersectingCells);
     Result.Set_TotalIntersections(IntersectingCells.Num());
     Result.Set_TotalIntersectionBounds(TotalBounds);
@@ -1214,7 +1153,6 @@ auto
     if (Result.Get_TotalIntersections() == 0)
     { return Result; }
 
-    // Calculate overlap statistics
     const auto GridAOverlap = static_cast<float>(IntersectingCellsA.Num()) / static_cast<float>(TotalCellsA);
     const auto GridBOverlap = static_cast<float>(IntersectingCellsB.Num()) / static_cast<float>(TotalCellsB);
 
@@ -1223,13 +1161,11 @@ auto
     Result.Set_GridAFullyContainedInGridB(GridAOverlap >= 1.0f);
     Result.Set_GridBFullyContainedInGridA(GridBOverlap >= 1.0f);
 
-    // Calculate snap position using the best overlapping cells
     if (HighestOverlap > 0.0f)
     {
         const auto GridBTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(
             UCk_Utils_Transform_UE::CastChecked(InGridB));
 
-        // Reuse cached bounds if available
         FBox2D CellBWorldBounds;
         if (auto* CachedBounds = BoundsCache.Find(BestIntersection.Get_CoordinateB()))
         {

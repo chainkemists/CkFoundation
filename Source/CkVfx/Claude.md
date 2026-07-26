@@ -30,7 +30,12 @@ Signal fires → EntityScript receives `OnFinished` → EntityScript may destroy
 ## Anti-patterns
 
 1. Never call `DestroyComponent()` in the LifetimeMonitor — only in EndPlay.
-2. Don't use `AutoDestroy=true` on the Niagara component — the ECS owns the lifetime.
+2. Don't use `AutoDestroy=true` on the Niagara component — the ECS owns the lifetime. Niagara auto-destroying
+   the component leaves `FProcessor_VfxCue_EffectLifetimeMonitor`'s `IsActive()` check and
+   `FProcessor_VfxCue_EndPlay`'s `DestroyComponent()` operating on a dangling pointer.
+3. Don't use `AutoActivate=true` either, not even for AutoPlay mode. Activation is driven by
+   `FCk_Request_VfxCue_Play` through the request queue; bypassing it skips the `OnStarted` signal and the
+   effect start-time bookkeeping in `FProcessor_VfxCue_HandleRequests`.
 
 ---
 

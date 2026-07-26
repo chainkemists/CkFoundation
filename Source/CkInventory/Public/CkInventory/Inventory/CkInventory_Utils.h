@@ -25,9 +25,6 @@ namespace ck
 {
     class FProcessor_Inventory_FireSignals;
 
-    // Templated inventory factory — instantiated by each typed Utils' Add() forwarder with that
-    // shape's TInventoryRequestTraits specialization. Performs shape-neutral entity creation +
-    // delegates to Traits::Setup_PerShape for the shape-specific bits + finalizes the connection.
     template <typename TraitsType>
     auto CreateInventory(
         FCk_Handle& InOwnerEntity,

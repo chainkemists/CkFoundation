@@ -9,8 +9,6 @@
 #include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Pmg DebugShape Utils - Generic Infrastructure
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Pmg_DebugShape_UE::
@@ -34,8 +32,7 @@ auto
 #if WITH_EDITOR
     if (ck::IsValid(InWorld) && InWorld->WorldType == EWorldType::Editor)
     {
-        // Composite shapes (icons, dashed lines, text glyph runs) render through child
-        // entities — honor an opt-in stamped anywhere up the lifetime chain.
+        // Composite shapes render through child entities, so honor a tag anywhere up the chain.
         const auto TaggedEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InShape,
             [](const FCk_Handle& InEntityInChain)
             {
@@ -139,11 +136,6 @@ auto
         bool InIsVisible)
     -> FCk_Handle_Pmg_DebugShape
 {
-    // Routes through Request_SetRenderMode so the existing handler in
-    // FProcessor_Pmg_DebugShape_HandleRequests does the procmesh visibility flip; the
-    // DrawLines processor reads RenderMode == Hidden to skip wireframe re-emission.
-    // Visible callers fall back to DoubleSided (the framework's default visible mode); a
-    // caller that wants SingleSided specifically should use Request_SetRenderMode directly.
     const auto NewMode = InIsVisible
         ? ECk_Pmg_RenderMode::DoubleSided
         : ECk_Pmg_RenderMode::Hidden;

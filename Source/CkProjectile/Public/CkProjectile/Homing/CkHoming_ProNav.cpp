@@ -6,8 +6,7 @@
 
 namespace ck::pronav_detail
 {
-    // The component of InAcceleration that would push the pursuer off the InPreservedDirection axis.
-    // Guidance counters it so gravity/wind do not bend the intercept course
+    // Countered by the guidance so gravity/wind do not bend the intercept course
     static auto
     Get_PerpendicularComponent(
         const FVector& InAcceleration,
@@ -27,9 +26,10 @@ namespace ck::pronav_detail
         const auto& LineOfSightDirection = InState.Get_LineOfSightDirection();
         const auto MaxAcceleration = InSettings.Get_MaxAcceleration();
 
-        if (InState.Get_ClosingSpeed() <= 0.0)
+        const auto IsReceding = InState.Get_ClosingSpeed() <= 0.0;
+
+        if (IsReceding)
         {
-            // Receding — turn the velocity around toward the target instead of fighting the LOS rate
             if (InSettings.Get_MaxSpeed() > 0.0f)
             {
                 const auto VelocityTarget = InSettings.Get_MaxSpeed() * LineOfSightDirection;
@@ -51,7 +51,6 @@ namespace ck::pronav_detail
         if (SteeringSizeSquared >= MaxAccelerationSquared)
         { return Steering.GetClampedToMaxSize(MaxAcceleration); }
 
-        // Steering left budget to spare — spend it closing the distance
         const auto RemainingAcceleration = FMath::Sqrt(MaxAccelerationSquared - SteeringSizeSquared);
 
         const auto DesiredTimeToImpact = InSettings.Get_DesiredTimeToImpact();
@@ -202,7 +201,6 @@ namespace ck::pronav
         if (LineOfSight.IsNearlyZero())
         { return MakeSolutionAtTime(0.0); }
 
-        // The projectile inherits the shooter's velocity — only the relative motion matters
         const auto RelativeVelocity = InTargetVelocity - InShooterVelocity;
 
         if (RelativeVelocity.IsNearlyZero())
@@ -215,7 +213,6 @@ namespace ck::pronav
 
         if (FMath::IsNearlyZero(InProjectileSpeed))
         {
-            // The projectile cannot move — a hit requires the target's path to pass through the shooter
             const auto RelativeSpeed = RelativeVelocity.Size();
             const auto RelativeDirection = RelativeVelocity / RelativeSpeed;
             const auto ProjectionTowardShooter = (-LineOfSight).Dot(RelativeDirection);
@@ -223,7 +220,10 @@ namespace ck::pronav
 
             constexpr auto MissToleranceSquared = 1.0e-8;
 
-            if (ProjectionTowardShooter >= 0.0 && MissDistanceSquared <= MissToleranceSquared)
+            const auto TargetMovesTowardShooter = ProjectionTowardShooter >= 0.0;
+            const auto TargetPathCrossesShooter = MissDistanceSquared <= MissToleranceSquared;
+
+            if (TargetMovesTowardShooter && TargetPathCrossesShooter)
             { return MakeSolutionAtTime(ProjectionTowardShooter / RelativeSpeed); }
 
             return FCk_Homing_FiringSolution{};
@@ -234,9 +234,10 @@ namespace ck::pronav
         const auto B = 2.0 * LineOfSight.Dot(RelativeVelocity);
         const auto C = LineOfSight.SizeSquared();
 
-        if (FMath::IsNearlyZero(A))
+        const auto QuadraticCollapsesToLinear = FMath::IsNearlyZero(A);
+
+        if (QuadraticCollapsesToLinear)
         {
-            // Relative speed equals projectile speed — the quadratic collapses to B·t + C = 0
             if (FMath::IsNearlyZero(B))
             { return FCk_Homing_FiringSolution{}; }
 

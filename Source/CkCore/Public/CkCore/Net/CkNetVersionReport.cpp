@@ -98,9 +98,7 @@ auto
 {
     Super::Tick(InDeltaSeconds);
 
-    // Live re-stamp / re-report so the dev-only ck.Net.BuildIdOverride takes effect at runtime — otherwise
-    // the ids are captured once at BeginPlay and a console-set mid-PIE would never propagate. Both branches
-    // are cheap no-ops when the override is unset (values already equal).
+    // Both branches are cheap no-ops when the override is unset (values already equal).
     if (HasAuthority())
     {
         if (const auto Reported = ck::Get_ReportedBuildId();
@@ -120,8 +118,6 @@ auto
     DoReportFromOwningClient()
     -> void
 {
-    // Only the owning client reports. On the server's copies of remote players' reports, GetOwner() is a
-    // non-local controller, so this no-ops there.
     const auto* OwnerController = Cast<APlayerController>(GetOwner());
     if (ck::Is_NOT_Valid(OwnerController) || NOT OwnerController->IsLocalController())
     { return; }
@@ -133,7 +129,6 @@ auto
 
     if (HasAuthority())
     {
-        // Listen-host's own player (or standalone) — set directly; no RPC needed. Server-only state.
         _ClientBuildId = LocalBuildId;
     }
     else
@@ -157,8 +152,7 @@ void
 {
     _ClientBuildId = InClientBuildId;
 
-    // Server-authoritative comparison against the REAL local build id (not Get_ReportedBuildId — the override
-    // forces a mismatch for testing, so comparisons keep using the genuine id). Event-driven, never spams.
+    // Compares the REAL id, not Get_ReportedBuildId — the dev override deliberately fakes a mismatch.
     const auto ServerBuildId = ck::Get_BuildId();
     if (InClientBuildId == ServerBuildId)
     { return; }

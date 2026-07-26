@@ -13,14 +13,9 @@
 
 namespace ck
 {
-    // Always-on path-failure marker. For every crowd agent whose nav request resolved to Failed,
-    // draws a red X above the capsule and a fail-reason text label. NOT gated by any debug CVar
-    // — this is critical visibility: an agent that can't path is broken, and "I clicked PIE and
-    // nothing's moving" should produce an immediate visual hint pointing at why.
-    //
-    // The marker complements the debugger's Agent List status pill. World view says WHICH agent
-    // is broken; debugger says WHY (full reason + diagnostics). Together they remove "agent's
-    // not moving and I have no idea what happened" from the dev experience.
+    // Draws an X + fail-reason label above any agent whose nav request resolved to Failed or is
+    // stuck Pending. Deliberately NOT CVar-gated: an agent that cannot path is broken, and that
+    // must be visible the moment PIE starts.
     class CKCROWD_API FProcessor_CrowdAgent_DrawNavStatus : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_DrawNavStatus,
             FCk_Handle_CrowdAgent,

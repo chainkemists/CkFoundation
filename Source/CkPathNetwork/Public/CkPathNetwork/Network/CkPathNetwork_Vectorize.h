@@ -5,11 +5,9 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Mask -> ribbons. Pure math, runtime-callable, no ECS/world dependency.
-//
-// Pipeline: chamfer distance transform (half-width estimation) -> Zhang-Suen thinning (skeleton)
-// -> chain tracing between junction/end pixels -> Douglas-Peucker simplification -> ribbons.
-// Output ribbons are marked ECk_PathNetwork_RibbonSource::Generated and get fresh ids.
+// Mask -> ribbons. Pure math, runtime-callable, no ECS/world dependency. Pipeline: chamfer distance
+// transform (half-width estimation) -> Zhang-Suen thinning -> chain tracing between junction/end
+// pixels -> Douglas-Peucker. Output ribbons are Generated-sourced and get fresh ids.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::pathnetwork

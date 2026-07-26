@@ -14,10 +14,7 @@
 
 namespace ck_jolt_utils
 {
-    // Reference count for global Jolt initialization (RegisterDefaultAllocator, Factory,
-    // RegisterTypes). These are process-global and must only be called once, but multiple world
-    // subsystem instances (PIE with multiple clients) and standalone unit tests may
-    // init/deinit independently.
+    // Jolt's global registration is process-wide, but PIE clients and unit tests init/deinit independently.
     static int32 GJoltRefCount = 0;
 
     auto

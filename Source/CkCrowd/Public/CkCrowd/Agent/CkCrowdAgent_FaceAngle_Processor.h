@@ -12,18 +12,13 @@
 
 namespace ck
 {
-    // Reads the steering processor's _DesiredVelocity, derives a target yaw from its XY heading,
-    // and lerps the agent's SceneNode rotation toward it at _MaxTurnRate rad/sec (clamped per-frame
-    // by InDeltaT). Decoupled from movement direction — the agent can briefly walk sideways while
-    // turning, which is the natural look during sharp waypoint corners.
+    // Turns the agent toward its desired-velocity heading at _MaxTurnRate. Facing is decoupled from
+    // travel direction, so the agent may briefly walk sideways through a sharp corner.
     //
-    // Group: FGroup_Transform_SyncFrom — runs AFTER FGroup_Physics so all steering / velocity-bridge
-    // / integrator pumping has settled, and BEFORE FGroup_Transform so the Request_AddRotationOffset
-    // enqueued here is drained by FProcessor_Transform_HandleRequests in the same frame.
-    //
-    // PumpPolicy::SkipPump — the processor enqueues a fixed-value rotation request from cached
-    // SceneNode state; pumping with DeltaT=0 would re-enqueue the same delta and double the applied
-    // rotation per frame. Same pattern as FProcessor_CrowdAgent_ApplyOffset.
+    // Group FGroup_Transform_SyncFrom: after FGroup_Physics so steering/integrator state has settled,
+    // before FGroup_Transform so the rotation request drains in the same frame.
+    // PumpPolicy::SkipPump: the enqueued delta is a fixed value, so a DeltaT=0 pump would re-enqueue
+    // it and double the applied rotation.
     class CKCROWD_API FProcessor_CrowdAgent_FaceAngle : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_FaceAngle,
             FCk_Handle_CrowdAgent,

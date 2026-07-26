@@ -55,17 +55,14 @@ auto
     else if (InConditionClass->IsChildOf(UCk_SmCondition_EventDriven::StaticClass()))
     {
         ConditionEntity.Add<ck::FTag_SmCondition_EventDriven>();
-        // Tag-level recompute is deferred to after the Connect call below so the
-        // newly-added condition is visible to the walk in
-        // Request_RecomputeFullyEventDrivenStatus.
+        // Recompute is deferred to after the Connect below, where the walk can see this condition.
     }
     else
     {
         CK_TRIGGER_ENSURE(TEXT("Attempting to create an HFSM Condition with class [{}] that is neither Polled or EventDriven"), InConditionClass);
 
-        // Do NOT fall through: a mode-less condition is never evaluated, its result stays
-        // Undetermined forever, and the owning state's evaluate walk waits on it — the SM
-        // silently deadlocks after this one-shot ensure. Abort the half-created entity.
+        // Do NOT fall through: a mode-less condition is never evaluated, stays Undetermined forever,
+        // and the owning state's evaluate walk waits on it — the SM silently deadlocks.
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ConditionEntity);
         return {};
     }
@@ -82,12 +79,9 @@ auto
     UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::Request_Connect(
         InOwnerTransition, ConditionEntityTyped, ECk_Record_LabelRequirementPolicy::Optional);
 
-    // Recompute FullyEventDriven status after the new condition is in the record.
-    // Required because transitions default to NOT FullyEventDriven at Create (to
-    // handle the vacuous-transition case correctly); adding an EventDriven condition
-    // when no Polled conditions exist restores the FullyEventDriven optimization.
-    // The Polled branch above also benefits — the recompute is idempotent with
-    // Request_MarkTransition_AsNotFullyEventDriven and confirms the cascade.
+    // Transitions default to NOT FullyEventDriven at Create (for the vacuous-transition case), so
+    // adding an EventDriven condition with no Polled siblings restores the optimization. Idempotent
+    // with Request_MarkTransition_AsNotFullyEventDriven, so the Polled branch above benefits too.
     UCk_Utils_SmTransition_UE::Request_RecomputeFullyEventDrivenStatus(InOwnerTransition);
 
     ck::TUtils_Sm_ParentTransition::AddOrReplace(ConditionEntity, InOwnerTransition);
@@ -98,9 +92,8 @@ auto
         ck::TUtils_Sm_OwningStateMachine::AddOrReplace(ConditionEntity, OwningSm);
     }
 
-    // Defer the EntityScript attach — see FProcessor_SmScript_CommitPendingAttach.
-    // Lets a condition added during DefineState be safely removed in the same frame
-    // without its script ever reaching Construct/BeginPlay.
+    // Deferred attach (FProcessor_SmScript_CommitPendingAttach) lets a condition added during
+    // DefineState be removed in the same frame without its script reaching Construct/BeginPlay.
     ConditionEntity.Add<ck::FFragment_SmScript_PendingAttach>(InConditionClass);
     ConditionEntity.Add<ck::FTag_SmScript_PendingAttach>();
 

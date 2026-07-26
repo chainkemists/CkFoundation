@@ -112,19 +112,14 @@ auto
         return;
     }
 
-    // ---- Create drag operation ----
-
     auto* const Operation = NewObject<UCk_InventoryUI_DragDropOperation>();
     Operation->Set_SourceItem(_ItemHandle);
     Operation->Set_SourceInventory(_InventoryHandle);
     Operation->Set_DropOperation(ECk_InventoryUI_DropOperation::MoveItem);
 
-    // ---- Create drag visual ----
-
     if (ck::IsValid(_DragWidgetClass))
     {
-        // The dragged slot's geometry gives the drag visual its size — so a
-        // rectangular slot produces a rectangular drag visual, not a square.
+        // Slot geometry sizes the drag visual, so a rectangular slot doesn't drag as a square.
         const auto SlotSize = InGeometry.GetLocalSize();
 
         auto* const DragVisual = UCk_InventoryUI_DragWidget::CreateDragWidget(
@@ -189,15 +184,10 @@ auto
     if (NOT CanAcceptDrop(InventoryOp))
     { return false; }
 
-    // ---- Don't drop onto self ----
-
     if (InventoryOp->Get_SourceItem() == _ItemHandle)
     { return false; }
 
-    // ---- Delegate to Blueprint ----
-    // Slot-level drop semantics (swap, stack, merge) depend on game logic.
-    // Blueprint handles the operation via OnDropReceived.
-
+    // Slot-level drop semantics (swap, stack, merge) are game logic — Blueprint owns them.
     return OnDropReceived(InventoryOp);
 }
 
@@ -267,11 +257,9 @@ auto
     if (ck::Is_NOT_Valid(InOperation->Get_SourceItem()))
     { return false; }
 
-    // Same-inventory drops (rearrange / stack within this container) are always allowed.
     if (InOperation->Get_SourceInventory() == _InventoryHandle)
     { return true; }
 
-    // Cross-inventory drop == "drop in" — gated by the panel-propagated policy.
     return _DragDropPolicy.Get_AllowDropIn();
 }
 
@@ -283,7 +271,6 @@ auto
         FCk_Handle_Item InItem)
     -> void
 {
-    // Default: no-op. Override in Blueprint or C++ subclass.
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -294,7 +281,6 @@ auto
         FCk_Handle_Item InItem)
     -> void
 {
-    // Default: no-op. Override in Blueprint or C++ subclass.
 }
 
 // --------------------------------------------------------------------------------------------------------------------

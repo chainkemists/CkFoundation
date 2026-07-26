@@ -19,8 +19,7 @@ public:
     CK_GENERATED_BODY(UCk_Utils_ObjectPoolingParticipant_UE);
 
 public:
-    // Binds are idempotent per (object, function) — safe to call from Construct, which re-runs on
-    // every acquire of a recycled instance
+    // Binds are idempotent per (object, function), so Construct may re-bind on every acquire.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectPooling",
               DisplayName = "[Ck][ObjectPooling] Bind To OnAcquiredFromPool")
@@ -64,9 +63,8 @@ public:
         UObject* InBoundObject);
 
 public:
-    // Subsystem-side plumbing (not UFUNCTIONs): reflection-scan InObject for
-    // FCk_Handle_ObjectPoolingParticipant properties (IncludeSuper) and fire the hook on each.
-    // Objects without a participant no-op
+    // Subsystem-side plumbing: reflection-scans InObject for FCk_Handle_ObjectPoolingParticipant
+    // properties (IncludeSuper) and fires on each. Objects without a participant no-op.
 
     static auto
     Broadcast_AcquiredFromPool_OnObject(

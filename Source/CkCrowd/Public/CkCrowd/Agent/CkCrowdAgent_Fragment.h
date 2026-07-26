@@ -13,7 +13,6 @@
 
 namespace ck
 {
-    // Reflected params alias — entity-side fragment is the same struct as the BP-visible data.
     using FFragment_CrowdAgent_Params         = FCk_Fragment_CrowdAgent_ParamsData;
     using FFragment_CrowdAgent_PathFollow     = FCk_Fragment_CrowdAgent_PathFollowData;
     using FFragment_CrowdAgent_DesiredVelocity = FCk_Fragment_CrowdAgent_DesiredVelocityData;
@@ -21,8 +20,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drained by FProcessor_CrowdAgent_HandleRequests. Variant request type so MoveTo + Stop share
-    // a single per-frame queue (no separate fragment per request kind).
     struct CKCROWD_API FFragment_CrowdAgent_MoveRequests
     {
     public:
@@ -44,11 +41,8 @@ namespace ck
         CK_PROPERTY_GET(_Requests);
     };
 
-    // Follow-mode state: present while the agent's active goal is a LIVE target point
-    // (FCk_Request_CrowdAgent_FollowTarget). Carries the originating request (target handle +
-    // tuners) and the repath-cadence accumulator. Added by HandleRequests when a FollowTarget
-    // request lands; removed by a plain MoveTo, by Stop, or when the target handle dies.
-    // Fragment presence IS the FollowTarget processor's view filter.
+    // Added by HandleRequests when a FollowTarget request lands; removed by a plain MoveTo, by
+    // Stop, or when the target handle dies. Presence IS the FollowTarget processor's view filter.
     struct CKCROWD_API FFragment_CrowdAgent_FollowTarget
     {
     public:
@@ -64,12 +58,8 @@ namespace ck
         CK_PROPERTY_GET(_Request);
     };
 
-    // Identity of the last path-network corridor installed into this agent's nav-path slot, so the
-    // OnRouteResolved bridge can distinguish "fresh plan to consume" from "corridor I already
-    // installed" — the corridor fragment persists across MoveTos and network rebuilds. Goal pins
-    // which MoveTo the corridor answered; epoch pins which build of the network it was planned
-    // against (a rebuild replans the same goal at a new epoch → re-install). Cleared by
-    // HandleRequests on every network-routed MoveTo.
+    // Identity of the last path-network corridor installed into this agent's nav-path slot: goal
+    // pins which MoveTo it answered, epoch pins which build of the network it was planned against.
     struct CKCROWD_API FFragment_CrowdAgent_InstalledRoute
     {
     public:
@@ -86,12 +76,9 @@ namespace ck
         CK_PROPERTY_GET(_NetworkEpoch);
     };
 
-    // Per-frame displacement staging. The integrator delta (ApplyOffset) and the de-overlap shove
-    // (PushApart) both accumulate here instead of writing the Transform directly; the single
-    // consumer is FProcessor_CrowdAgent_ConstrainToNavmesh, which walks the accumulated
-    // displacement along the navmesh surface (dtCrowd's corridor movePosition — the stage the
-    // original port dropped) and enqueues ONE Transform offset. Nothing else may write the
-    // Transform of a crowd agent; a second writer would bypass the navmesh constraint.
+    // Per-frame displacement staging, consumed solely by FProcessor_CrowdAgent_ConstrainToNavmesh.
+    // Nothing else may write a crowd agent's Transform — a second writer bypasses the navmesh
+    // constraint, so every new displacement source accumulates here instead.
     struct CKCROWD_API FFragment_CrowdAgent_PendingDisplacement
     {
     public:
@@ -108,11 +95,8 @@ namespace ck
         CK_PROPERTY_GET(_Displacement);
     };
 
-    // Stationary-agent nav markup: after an agent has held still for the configured delay, a
-    // cost-area disc (UCk_NavArea_CrowdAgent) is painted under it so pathfinding routes AROUND
-    // standing crowds instead of through them. The strong ptr owns the painter object's lifetime
-    // (UE GC does not trace fragment members); FProcessor_CrowdAgent_NavMarkup_EndPlay
-    // unregisters it on entity teardown.
+    // Stationary-agent nav markup (see CkCrowd/CLAUDE.md). The strong ptr owns the painter
+    // object's lifetime — UE GC does not trace fragment members.
     struct CKCROWD_API FFragment_CrowdAgent_NavMarkup
     {
     public:
@@ -127,29 +111,22 @@ namespace ck
         FVector _MarkupLocation = FVector::ZeroVector;
         TStrongObjectPtr<UCk_NavAreaMarkup_UE> _Markup;
 
-        // Windowed-displacement stillness sampling. "Stationary" is PHYSICAL, not the Idle tag:
-        // a blocked/pressing WALKER plugs a corridor exactly like an idle agent, and mutual
-        // pressers never go Idle — they must become obstacles too or a congealed clump never
-        // dissolves. Windowed (not instantaneous) so a push-apart shove spike doesn't unpaint a
-        // standing queue.
+        // Stillness is sampled over a window, not instantaneously, so a push-apart shove spike
+        // cannot unpaint a standing queue.
         FVector _StillnessSampleLoc = FVector::ZeroVector;
         float _StillnessSampleAccumSec = 0.0f;
 
-        // PathRefresh trigger data: painted XY half-extent, a monotonic paint serial (compared
-        // against each walking agent's path serial — only a disc NEWER than the path triggers a
-        // refresh), and seconds since paint (dynamic navmesh tiles rebuild asynchronously; the
-        // disc must settle before a re-path would actually see it).
+        // PathRefresh trigger data. Only a disc whose _PaintSerial is NEWER than a walking agent's
+        // path serial can trigger that agent's re-path.
         float _MarkupRadiusUu = 0.0f;
-        // Painted vertical half-extent — the confirm query below must reach the floor polys the
-        // box painted, and the disc centre rides at capsule height (same Z trap as the paint fix).
+        // The confirm query must reach the floor polys the paint box covered, and the disc centre
+        // rides at capsule height.
         float _MarkupVerticalHalfExtentUu = 0.0f;
         float _SecondsSincePaint = 0.0f;
         uint64 _PaintSerial = 0;
 
-        // Set once the rebuilt navmesh actually REPORTS the cost area at the disc's location.
-        // Tile rebuild latency is unbounded under churn — a fixed settle timer alone let the
-        // one-shot re-path fire against the pre-rebuild mesh, return the same straight path,
-        // and burn the serial. Reset on every (re)paint.
+        // Set once the rebuilt navmesh actually REPORTS the cost area at the disc's location; tile
+        // rebuild latency is unbounded, so the settle timer alone is not proof. Reset on every (re)paint.
         bool _ConfirmedOnMesh = false;
 
     public:
@@ -162,40 +139,29 @@ namespace ck
         CK_PROPERTY_GET(_ConfirmedOnMesh);
     };
 
-    // Marks an agent as needing one-time setup: stamped by Add(), consumed by FProcessor_CrowdAgent_Setup
-    // on the next tick, which spawns the agent's probe child entity.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_NeedsSetup);
 
-    // Agent state tags. Mutually exclusive: an agent is either Idle (no goal), PathPending
-    // (FindPath enqueued, awaiting result), or Walking (path-ready, steering active). Set by the
-    // move-request handler and the path-ready signal handler; consumed as an exclude on steering
-    // view membership.
+    // Mutually exclusive: an agent is either Idle (no goal), PathPending (FindPath enqueued), or
+    // Walking (path-ready, steering active).
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Idle);
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_PathPending);
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Walking);
 
-    // Forward-compatible exclude tag — not currently stamped anywhere. Steering / separation /
-    // apply-offset processors carry TExclude<FTag_CrowdAgent_Asleep> so a future sleep optimization
-    // that stamps it on idle agents is wire-compatible without retro-fitting every view.
+    // Nothing stamps this today; the steering views carry TExclude<> for it so a future sleep pass
+    // is wire-compatible without retro-fitting every view.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Asleep);
 
-    // Debugger "take control" marker. While present, gameplay code (e.g. the NPC SM) must NOT issue
-    // its own MoveTo for this agent, so the debugger's manually-issued goal isn't immediately fought.
-    // Set/cleared via UCk_Utils_CrowdAgent_UE::Request_SetDebugOverride; checked via Get_HasDebugOverride.
+    // While present, gameplay code must NOT issue its own MoveTo for this agent, or it fights the
+    // goal the debugger took control to issue.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_DebugOverride);
 
-    // The agent has a goal it CANNOT reach — something is standing on it, or the agent has made no
-    // progress for a while. Always co-resident with FTag_CrowdAgent_Idle: the agent has stopped
-    // (so the Idle/PathPending/Walking exclusivity above still holds, and AccelClamp's Idle branch
-    // ramps it to a halt), and GoalBlocked merely records WHY it stopped and that it still wants the
-    // goal. FProcessor_CrowdAgent_BlockedRecheck watches these agents and resumes them when the goal
-    // clears. Cleared by any external MoveTo or Stop.
+    // The agent has a goal it CANNOT reach. Always co-resident with FTag_CrowdAgent_Idle — the agent
+    // HAS stopped, and GoalBlocked only records why and that it still wants the goal.
+    // Cleared by any external MoveTo or Stop.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_GoalBlocked);
 
-    // Per-agent state for block detection. The feet-sample ring mirrors UPathFollowingComponent's
-    // block detection (PathFollowingComponent.cpp:1556-1608): sample the agent's position on a fixed
-    // cadence into a small ring buffer, and if every sample sits within a small radius of their
-    // centroid, the agent is going nowhere.
+    // Feet-sample ring mirroring UPathFollowingComponent's block detection
+    // (PathFollowingComponent.cpp:1556-1608).
     struct CKCROWD_API FFragment_CrowdAgent_BlockDetect
     {
         friend class FProcessor_CrowdAgent_BlockDetect;
@@ -213,8 +179,7 @@ namespace ck
         float _SampleAccumulatorSec = 0.0f;
         float _RecheckAccumulatorSec = 0.0f;
 
-        // OnGoalBlocked fires ONCE per blocked episode, not once per re-check. Without this an agent
-        // that holds, retries, and re-blocks would spam the signal every cadence.
+        // OnGoalBlocked fires ONCE per blocked episode, not once per re-check.
         bool _BlockedSignalSent = false;
 
         FCk_Handle _BlockedBy;
@@ -224,10 +189,9 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // Lifecycle signals fired by the steering chain. OnGoalReached fires once when the agent's
-    // path-follow cursor crosses the final waypoint within _ActiveArrivalRadius (Walking → Idle).
-    // OnGoalFailed fires once when CkNavigation reports Failed status on the path query
-    // (PathPending → Idle). Both are bind-rebindable via UCk_Utils_CrowdAgent_UE::BindTo_OnGoal*.
+    // OnGoalReached fires once when the path-follow cursor crosses the final waypoint within
+    // _ActiveArrivalRadius (Walking → Idle); OnGoalFailed once when CkNavigation reports Failed
+    // on the path query (PathPending → Idle).
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKCROWD_API,
         CrowdAgent_OnGoalReached,
@@ -240,13 +204,9 @@ namespace ck
         FCk_Delegate_CrowdAgent_OnGoalFailed,
         FCk_Handle_CrowdAgent);
 
-    // OnGoalBlocked fires ONCE when the agent discovers its goal is unreachable — something is standing
-    // on it, or the agent has stopped making progress. It is NOT a failure: under the default
-    // HoldAndRetry policy the agent stops, waits, and resumes on its own when the goal clears. Under
-    // FailMove, OnGoalFailed follows immediately after and the caller owns recovery.
-    //
-    // The payload names the blocker, which is what a gameplay-side queue manager needs to reassign the
-    // NPC somewhere else rather than have it stand and wait.
+    // OnGoalBlocked fires ONCE when the agent discovers its goal is unreachable. It is NOT a failure:
+    // under the default HoldAndRetry policy the agent resumes on its own when the goal clears. The
+    // payload names the blocker so gameplay can reassign the NPC instead.
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKCROWD_API,
         CrowdAgent_OnGoalBlocked,

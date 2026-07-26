@@ -10,23 +10,9 @@
 namespace ck { class FProcessor_Goap_Setup; class FProcessor_Goap_Action_Setup; }
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// GOAP Action definition class.
-//
-// Subclass and override DefineAction (C++) or DoDefineAction (BP / AS). The
-// builder API records preconditions and effects on the CDO. The Setup
-// processor reads those out once per entity, resolves tag→FCk_GoapKey via
-// the per-entity key registry, and feeds the planner.
-//
-// Classical (boolean) GOAP: preconditions and effects are (tag, bool) pairs.
-// Gameplay code that wants to reason about numerics / enums must project
-// those down to booleans before writing to WorldState (e.g. set a
-// `HasEnoughFood` tag based on `ActualFood >= Threshold`).
-//
-// Example:
-//     AddPrecondition(Tag_HasKey,      true);
-//     AddEffect      (Tag_DoorUnlocked, true);
-//     SetCost(1.0f);
+// Subclass and override DefineAction (C++) or DoDefineAction (BP / AS); the builder
+// API records (tag, bool) preconditions and effects on the CDO, which Setup reads
+// once per entity. Authoring guide: CkGoap CLAUDE.md.
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -72,11 +58,8 @@ protected:
 	// ----------------------------------------------------------------------------------------------------------------
 
 public:
-	// The action's identity tag, derived from its class name via
-	// UCk_Utils_Object_UE::Get_TagFromClassName. Mirrors SM's pattern
-	// (UCk_SmState_EntityScript::Get_StateTagForClass). Used for debug
-	// identification and not for chain matching — chain extension in the
-	// unified model reads Plan[0] handles directly.
+	// Identity tag derived from the class name. Debug identification only — chain
+	// extension matches on Plan[0] handles, not on this tag.
 	UFUNCTION(BlueprintPure,
 		Category = "Ck|GOAP|Action",
 		DisplayName = "[Ck][GOAP] Get Action Tag For Class")
@@ -91,7 +74,6 @@ public:
 	Get_ActionTag() const;
 
 	// ----------------------------------------------------------------------------------------------------------------
-	// Populated by the builder API, read by FProcessor_Goap_Setup
 	// ----------------------------------------------------------------------------------------------------------------
 
 private:

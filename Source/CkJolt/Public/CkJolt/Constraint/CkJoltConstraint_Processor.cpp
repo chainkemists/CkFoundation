@@ -67,8 +67,7 @@ namespace ck_jolt_constraint_processor
         }
     }
 
-    // A referenced body entity that died (or is dying this frame). NOT triggered by the world-anchor
-    // sentinel — callers exclude that case first.
+    // NOT triggered by the world-anchor sentinel — callers exclude that case first.
     auto
         Get_IsBodyEntityGone(
             const FCk_Handle& InBodyEntity)
@@ -78,8 +77,6 @@ namespace ck_jolt_constraint_processor
                UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InBodyEntity, ECk_EntityLifetime_DestructionPhase::BeginDestroy);
     }
 
-    // Resolves a constrained body entity to its added JPH body id. Outcomes: Ready (id valid), Retry (the
-    // body exists but is not batch-added yet), Failed (configuration error — already ensured).
     enum class EResolveOutcome : uint8 { Ready, Retry, Failed };
 
     struct FResolvedBody
@@ -144,7 +141,6 @@ namespace ck
 
         InHandle.Remove<MarkedDirtyBy>();
 
-        // ---- Resolve both bodies (B may be the world) ----
         const auto ResolvedA = Resolve_BodyId(InHandle, InCurrent.Get_BodyA(), TEXT("A"));
         if (ResolvedA._Outcome == EResolveOutcome::Failed)
         { return; }
@@ -164,7 +160,6 @@ namespace ck
             return;
         }
 
-        // ---- Build the typed settings ----
         auto Settings = Ref<TwoBodyConstraintSettings>{};
 
         switch (InParams.Get_ConstraintType())
@@ -240,7 +235,7 @@ namespace ck
             InHandle, InParams.Get_ConstraintType())
         { return; }
 
-        // ---- Create + add (Jolt asserts body1 != body2; identical bodies were rejected at Create) ----
+        // Jolt asserts body1 != body2; identical bodies were rejected at Create.
         const auto PhysicsSystem = _PhysicsSystem.Pin();
         if (ck::Is_NOT_Valid(PhysicsSystem))
         { return; }
@@ -255,8 +250,7 @@ namespace ck
 
         PhysicsSystem->AddConstraint(Constraint);
 
-        // Wake the constrained bodies so the new constraint takes effect immediately (a sleeping body
-        // would otherwise hang mid-air until something else wakes it).
+        // Wake the bodies or a sleeping one hangs mid-air until something else wakes it.
         BodyInterface.ActivateConstraint(Constraint);
 
         InCurrent._Constraint = Constraint;
@@ -477,7 +471,6 @@ namespace ck
             FFragment_JoltConstraint_Current& InCurrent) const
         -> void
     {
-        // Setup never created a constraint (ensure-skip, reaped, or a world with no Jolt subsystem).
         if (InCurrent._Constraint.GetPtr() == nullptr)
         { return; }
 

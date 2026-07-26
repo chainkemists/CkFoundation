@@ -34,6 +34,10 @@ static bool MatchesAny     (const FCk_Handle& InHandle, const FGameplayTagContai
 static bool MatchesAnyExact(const FCk_Handle& InHandle, const FGameplayTagContainer& InTagsToMatch);
 ```
 
+The mismatched-`Add` rejection is a **Display-level log and deliberately not a `CK_ENSURE_IF_NOT`**: AutoTests
+pin the set-once rejection contract, and the AutoTest harness escalates error-level logs into test failures.
+Don't "upgrade" it to an ensure.
+
 ---
 
 ## Concept: label vs. tag

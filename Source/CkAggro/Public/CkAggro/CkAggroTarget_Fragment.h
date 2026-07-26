@@ -28,7 +28,6 @@ class UCk_Utils_AggroTarget_UE;
 namespace ck
 {
     // ----------------------------------------------------------------------------------------------------------------
-    // Bridge aliases — the target's reflected param pieces, viewed as runtime fragments by the processors.
 
     using FFragment_AggroTarget_ThreatParams   = FCk_AggroTarget_ThreatParams;
     using FFragment_AggroTarget_SpatialParams  = FCk_AggroTarget_SpatialParams;
@@ -37,28 +36,24 @@ namespace ck
     using FFragment_AggroTarget_LifetimeParams = FCk_AggroTarget_LifetimeParams;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // The entity this target represents (the thing being aggroed).
 
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS_TRANSIENT(UAggroTarget_TrackedEntity_Utils, AggroTarget_TrackedEntity, FCk_Handle);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Tags.
 
     CK_DEFINE_ECS_TAG(FTag_AggroTarget);
     CK_DEFINE_ECS_TAG(FTag_AggroTarget_NeedsSetup);
-    // COUNTED — N independent senses each vote "perceived"; N MarkUnperceived (or one ResetPerception) clears it.
     CK_DEFINE_ECS_TAG_COUNTED(FTag_AggroTarget_Perceived);
     CK_DEFINE_ECS_TAG(FTag_AggroTarget_WithinRetention);
     CK_DEFINE_ECS_TAG(FTag_AggroTarget_IsActive);
     CK_DEFINE_ECS_TAG(FTag_AggroTarget_PendingForget);
-    // Marks a target dropped by cap eviction, so the Forget processor reports ECk_Aggro_ForgetReason::Evicted.
+    // Read by the Forget processor to report ECk_Aggro_ForgetReason::Evicted — there is no stored reason field.
     CK_DEFINE_ECS_TAG(FTag_AggroTarget_Evicted);
     CK_DEFINE_ECS_TAG(FTag_AggroTarget_EvaluationPending);
     CK_DEFINE_ECS_TAG(FTag_AggroTarget_CannotBecomeActive);
     CK_DEFINE_ECS_TAG(FTag_AggroTarget_CannotBeForgotten);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Write-once identity. _AggroOwner / _Instigator / _Source are set at Create; _CreationTime is stamped by Setup.
 
     struct CKAGGRO_API FFragment_AggroTarget_TargetInfo
     {
@@ -85,7 +80,6 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Analytic-decay threat state. _LastDecayTime is the anchor the decay integrates from.
 
     struct CKAGGRO_API FFragment_AggroTarget_Threat
     {
@@ -109,7 +103,6 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Perception state (memory only — never scored directly).
 
     struct CKAGGRO_API FFragment_AggroTarget_Perception
     {
@@ -130,7 +123,7 @@ namespace ck
     };
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Evaluate output. Raw score (no incumbent bias baked in); linear distance in cm.
+    // Raw score — no incumbent bias baked in (selection applies that); _Distance is linear, in cm.
 
     struct CKAGGRO_API FFragment_AggroTarget_Score
     {
@@ -180,8 +173,6 @@ namespace ck
     // ----------------------------------------------------------------------------------------------------------------
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Owner -> AggroTarget child record. Lives on the AggroTarget side (not CkAggro) so AggroTarget::Create can connect
-    // a target to any owner's record without depending on the Aggro feature. Ownership/teardown/enumeration only.
 
     CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(FUtils_RecordOfAggroTargets, FFragment_RecordOfAggroTargets, FCk_Handle_AggroTarget);
 

@@ -6,12 +6,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Editor-world host for loose preview components created on behalf of a placed actor (see
-// ck::FFragment_EditorSelectionOwner). One is spawned per selection owner by
-// UCk_EditorEcsWorld_Subsystem_UE::Get_SelectionProxyHostActor and shared by every module that
-// creates preview visuals (hosted UActorComponents, world-space widgets, ...), so a viewport
-// click on any hosted primitive redirects selection to the owner via the engine's
-// selection-parent mechanism.
+// Editor-world host for preview components created on behalf of a placed actor: a viewport click on any
+// hosted primitive redirects selection to the owner (see ck::FFragment_EditorSelectionOwner).
 UCLASS(NotBlueprintable, NotPlaceable)
 class CKECS_API ACk_EditorSelectionProxyHost_Actor_UE : public AActor
 {

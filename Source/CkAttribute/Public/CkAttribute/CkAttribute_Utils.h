@@ -55,19 +55,14 @@ namespace ck
         Get_FinalValue(
             const AttributeHandleType& InHandle) -> AttributeDataType;
 
-        // Reads both direction's PreClamp fragments and returns the one that
-        // captured the true raw pre-any-clamp value (i.e. the one whose value
-        // differs from Current.Final). Returns Current.Final if nothing was
-        // clamped this frame. See the module notes on the Min/Max pre-clamp
-        // asymmetry this accessor abstracts over.
+        // Returns whichever direction's PreClamp fragment captured the raw pre-any-clamp value, or
+        // Current.Final if nothing clamped this frame. Abstracts the Min/Max asymmetry — CkAttribute/CLAUDE.md.
         static auto
         Get_PreClampFinalValue(
             const AttributeHandleType& InHandle) -> AttributeDataType;
 
-        // Signed delta between Get_PreClampFinalValue and Current.Final.
-        // Positive = value tried to exceed Max, negative = value tried to go
-        // below Min, zero = no clamping this frame. For unsigned types (Byte)
-        // underflow will wrap.
+        // Signed Get_PreClampFinalValue - Current.Final: positive = over Max, negative = under Min, zero = unclamped.
+        // Unsigned types (Byte) wrap on underflow.
         static auto
         Get_ClampOverflow(
             const AttributeHandleType& InHandle) -> AttributeDataType;
@@ -158,8 +153,7 @@ namespace ck
         Has(
             const FCk_Handle& InHandle) -> bool;
 
-        // By value: the delta is a TOptional that NotRevocable compute consumes (Reset), so a
-        // reference into it (or into the unset-case default temporary) dangles.
+        // By value: NotRevocable compute Resets the TOptional, so a reference into it would dangle.
         static auto
         Get_ModifierDeltaValue(
             const AttributeModifierHandleType& InHandle) -> AttributeDataType;

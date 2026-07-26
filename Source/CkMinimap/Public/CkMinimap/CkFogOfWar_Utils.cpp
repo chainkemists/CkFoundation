@@ -52,10 +52,8 @@ auto
 {
     const auto& Current = InFogOfWar.Get<ck::FFragment_FogOfWar_Current>();
 
-    // An unallocated grid is a LEGITIMATE transient, not an error: a fog composed mid-frame is queried by
-    // same-frame projections (e.g. the minimap's PostTransform update) before its Setup pump runs. Until the
-    // grid exists the fog gates nothing — everything reads explored (unfogged). A PERMANENTLY unallocated
-    // grid (invalid bounds / blown cell budget) is already reported loudly by the Setup processor's ensures.
+    // An unallocated grid is a LEGITIMATE transient (composed mid-frame, queried before its Setup pump), so
+    // it gates nothing rather than ensuring — a PERMANENT one is already reported by Setup's own ensures.
     if (Current.Get_Explored().IsEmpty())
     { return true; }
 
@@ -303,7 +301,6 @@ auto
     const auto MinX = Center.X - HalfExtents.X;
     const auto MinY = Center.Y - HalfExtents.Y;
 
-    // Inclusive on BOTH edges — max-edge positions belong to the last cell (clamped floor below)
     if (InWorldPos.X < MinX || InWorldPos.X > Center.X + HalfExtents.X ||
         InWorldPos.Y < MinY || InWorldPos.Y > Center.Y + HalfExtents.Y)
     { return INDEX_NONE; }
@@ -354,8 +351,6 @@ auto
     const auto ExtentX = 2.0 * HalfExtents.X;
     const auto ExtentY = 2.0 * HalfExtents.Y;
 
-    // U spans world +Y (map right), V spans world -X (map down) — UV = (Frame + 1) / 2 of Get_BoundsToFrame.
-    // Normalized over the BOUNDS extent and clamped so overshooting edge cells never seam past the texture
     const auto UMin = FMath::Clamp(CellY * InCellSize / ExtentY, 0.0, 1.0);
     const auto UMax = FMath::Clamp((CellY + 1) * InCellSize / ExtentY, 0.0, 1.0);
     const auto VMin = FMath::Clamp(1.0 - ((CellX + 1) * InCellSize / ExtentX), 0.0, 1.0);

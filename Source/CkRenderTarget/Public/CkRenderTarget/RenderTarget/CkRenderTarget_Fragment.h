@@ -32,15 +32,13 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_RenderTarget_NeedsSetup);
 
-    // A SyncPixels request was accepted and waits for capture to start
     CK_DEFINE_ECS_TAG(FTag_RenderTarget_PixelCapturePending);
 
-    // A capture → diff → compress pass is running (readback or background job)
+    // Spans the whole capture → diff → compress pass (readback and background job)
     CK_DEFINE_ECS_TAG(FTag_RenderTarget_PixelSyncInFlight);
 
-    // Client lost instructions to ring wrap (gap in the replicated batch seqs) — needs a pixel
-    // baseline before further instructions are trustworthy. Turned into a Server_RequestFullSync
-    // on the relay by FProcessor_RenderTarget_ClientNetMaintenance.
+    // Gap in the replicated batch seqs — instructions are untrustworthy until a pixel baseline
+    // lands. ClientNetMaintenance turns this into a Server_RequestFullSync.
     CK_DEFINE_ECS_TAG(FTag_RenderTarget_NeedsBaseline);
 
     // A baseline request is already on the wire — don't re-send every tick. Cleared (with
@@ -69,8 +67,7 @@ namespace ck
         // caller's object, pinned so it can't be GC'd out from under the feature.
         TStrongObjectPtr<UTextureRenderTarget2D> _Target;
 
-        // Sequence assigned to the next applied instruction batch. Monotonic per sync entity;
-        // doubles as the replicated batch seq on replicating targets.
+        // Monotonic per sync entity; doubles as the replicated batch seq on replicating targets.
         int32 _NextBatchSeq = 1;
 
     public:
@@ -112,9 +109,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Author-side pixel pipeline state. _LastSyncedSnapshot is the CPU baseline the next delta
-    // diffs against; the shared ptrs hold the async readback / background-job state polled by
-    // FProcessor_RenderTarget_PixelSyncPump.
+    // _LastSyncedSnapshot is the CPU baseline the next delta diffs against; the shared ptrs are
+    // polled by FProcessor_RenderTarget_PixelSyncPump.
     struct CKRENDERTARGET_API FFragment_RenderTarget_PixelSync
     {
     public:
@@ -137,17 +133,13 @@ namespace ck
         TSharedPtr<FCk_RenderTarget_Readback> _Readback;
         TSharedPtr<FCk_RenderTarget_PixelJobResult, ESPMode::ThreadSafe> _JobResult;
 
-        // Instruction seq baked into the pixels being captured — carried on the payload so
-        // receivers can drop instruction batches the baseline already contains
+        // Instruction seq baked into the pixels being captured — receivers drop batches at or below it
         int32 _PendingInstructionWatermark = 0;
 
-        // The watermark recorded when _LastSyncedSnapshot was captured — on-demand FullSync
-        // baselines built from the snapshot carry this value
+        // On-demand FullSync baselines built from _LastSyncedSnapshot carry this value
         int32 _SnapshotInstructionWatermark = 0;
 
-        // Drives the Interval pixel-sync policy (seeded by Setup; ticked by IntervalSync).
-        // FCk_Chrono rather than a CkTimer entity: no delegate UObject is needed for a
-        // processor-internal countdown
+        // FCk_Chrono rather than a CkTimer entity: a processor-internal countdown needs no delegate UObject
         FCk_Chrono _IntervalChrono;
 
     public:
@@ -158,8 +150,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // The latest produced (not yet dispatched) compressed pixel payload. DispatchPixelPayload
-    // consumes this into per-client chunk streams; each newer payload replaces an unconsumed one.
+    // The latest produced (not yet dispatched) compressed pixel payload — a newer one replaces it.
     struct CKRENDERTARGET_API FFragment_RenderTarget_PendingPixelPayload
     {
     public:
@@ -178,8 +169,8 @@ namespace ck
         TArray<uint8> _Bytes;
         int32 _InstructionWatermark = 0;
 
-        // Set when the payload re-broadcasts a client upload — the uploader already has these
-        // pixels (it authored them); dispatch skips it and promotes its baseline instead
+        // Set when the payload re-broadcasts a client upload — dispatch skips that player (it
+        // authored these pixels) and promotes its baseline instead
         TWeakObjectPtr<APlayerState> _ExcludePlayer;
 
     public:
@@ -194,9 +185,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Receive-side watermark on the sync child: the last instruction batch seq this world has
-    // applied, plus the instruction watermark of the last pixel baseline (batches at or below it
-    // are already baked into the pixels and must be dropped).
+    // Receive-side watermarks on the sync child. Batches at or below _BaselineInstructionWatermark
+    // are already baked into the last pixel baseline and must be dropped.
     struct CKRENDERTARGET_API FFragment_RenderTarget_ClientReplayState
     {
     public:
@@ -218,8 +208,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Replicated instruction batches awaiting apply on this world (client-side). Enqueued by the
-    // rep handler, drained by FProcessor_RenderTarget_ApplyReplicatedBatches.
+    // Client-side: replicated batches enqueued by the rep handler, drained by ApplyReplicatedBatches.
     struct CKRENDERTARGET_API FFragment_RenderTarget_ReplayQueue
     {
     public:
@@ -238,10 +227,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Stash for batches that arrive before the sync child's Setup has run (CkStateMachine's
-    // stash-and-flush precedence): route here while NeedsSetup is present OR the stash
-    // is non-empty (preserves arrival order under back-to-back deliveries), then
-    // FlushPendingReplication drains in order.
+    // Stash for batches that arrive before the sync child's Setup has run. Routing rules and why
+    // they are shaped that way: CkRenderTarget/Claude.md.
     struct CKRENDERTARGET_API FFragment_RenderTarget_PendingReplicationBatches
     {
     public:
@@ -259,9 +246,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // One chunk of a compressed pixel payload — the unit both the host's per-player send queues
-    // and the client's reassembly inbox carry. Self-contained (payload meta on every chunk) so
-    // queues need no side tables.
+    // The unit both the host's per-player send queues and the client's reassembly inbox carry.
+    // Payload meta rides on every chunk so those queues need no side tables.
     struct CKRENDERTARGET_API FCk_RenderTarget_PixelChunk
     {
     public:
@@ -290,8 +276,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Host-side per-player stream: baseline status + the pending chunk queue the pacing
-    // processor drains within the per-tick byte budget.
+    // Host-side per-player stream; PaceStreams drains _Chunks within the per-tick byte budget.
     struct CKRENDERTARGET_API FCk_RenderTarget_PlayerStream
     {
     public:
@@ -306,9 +291,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Host-side stream state on the sync entity. _BaselineJob is the on-demand FullSync compress
-    // of _LastSyncedSnapshot kicked when a baseline-less player needs a stream but the produced
-    // payload was a delta.
+    // Host-side stream state on the sync entity. _BaselineJob is the on-demand FullSync compress of
+    // _LastSyncedSnapshot, kicked when a baseline-less player needs a stream but the payload was a delta.
     struct CKRENDERTARGET_API FFragment_RenderTarget_HostStreams
     {
     public:
@@ -336,8 +320,7 @@ namespace ck
         RequestFullSync
     };
 
-    // A client→server stream request (ack or baseline request), enqueued by the relay RPC
-    // handlers and drained by the pacing processor.
+    // Enqueued by the relay RPC handlers, drained by PaceStreams.
     struct CKRENDERTARGET_API FCk_RenderTarget_StreamRequest
     {
     public:
@@ -374,8 +357,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Client-side: chunks received for this sync entity, awaiting reassembly (relay RPC enqueues,
-    // FProcessor_RenderTarget_ReceivePixels drains).
+    // Client-side: relay RPC enqueues, FProcessor_RenderTarget_ReceivePixels drains.
     struct CKRENDERTARGET_API FFragment_RenderTarget_ChunkInbox
     {
     public:
@@ -429,9 +411,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Client-side authoritative CPU mirror of the target's pixels plus the in-flight
-    // reassembly/apply state. _Pixels is what headless tests hash; _UploadTexture is the
-    // transient GPU staging used to draw the mirror into the local render target.
+    // Client-side authoritative CPU mirror of the target's pixels: _Pixels is what headless tests
+    // hash; _UploadTexture is the transient GPU staging.
     struct CKRENDERTARGET_API FFragment_RenderTarget_ClientStaging
     {
     public:
@@ -448,8 +429,7 @@ namespace ck
 
         TArray<FCk_RenderTarget_PixelChunk> _Assembling;
 
-        // Authoring client: chunks of a locally-produced pixel payload awaiting their
-        // Server_PushPixelChunk sends (paced by ClientNetMaintenance)
+        // Authoring client: locally-produced payload awaiting its paced Server_PushPixelChunk sends
         TArray<FCk_RenderTarget_PixelChunk> _UploadChunks;
 
         TSharedPtr<FCk_RenderTarget_PixelApplyJobResult, ESPMode::ThreadSafe> _ApplyJob;
@@ -471,9 +451,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Client-side: a FullSync apply that still needs its Server_AckFullSync sent (retried each
-    // tick until the local player's relay channel resolves — without the ack the server never
-    // promotes the baseline).
+    // Client-side: a FullSync apply whose Server_AckFullSync is retried each tick until the local
+    // player's relay channel resolves — without the ack the server never promotes the baseline.
     struct CKRENDERTARGET_API FFragment_RenderTarget_PendingAck
     {
     public:
@@ -492,9 +471,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Authoring client: predicted (locally-applied) draw batches awaiting their relay push.
-    // FProcessor_RenderTarget_PushClientBatches flushes via Server_PushDrawBatch, retrying until
-    // the local player's channel resolves (the fragment is only removed on a successful push).
+    // Authoring client: predicted (locally-applied) draw batches awaiting their relay push. Removed
+    // only on a successful push — that is what terminates the retry.
     struct CKRENDERTARGET_API FFragment_RenderTarget_PendingClientBatches
     {
     public:
@@ -513,8 +491,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Host: client-pushed draw batches awaiting the authoring gate + apply + republish
-    // (FProcessor_RenderTarget_ApplyClientBatches). Sender is stamped server-side by the relay.
+    // Host: client-pushed batches awaiting ApplyClientBatches. Sender is stamped server-side by the relay.
     struct CKRENDERTARGET_API FFragment_RenderTarget_ServerIngressBatches
     {
     public:
@@ -550,8 +527,8 @@ namespace ck
         CK_DEFINE_CONSTRUCTORS(FCk_RenderTarget_UploadChunk, _Sender, _Chunk);
     };
 
-    // Host: upload reassembly + apply state. One upload applies at a time; chunks of other
-    // senders queue behind it (per-sender prefix collection mirrors the client receive path).
+    // Host: upload reassembly + apply state. One upload applies at a time; chunks of other senders
+    // queue behind it.
     struct CKRENDERTARGET_API FFragment_RenderTarget_UploadAssembly
     {
     public:

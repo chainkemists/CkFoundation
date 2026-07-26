@@ -14,13 +14,10 @@ struct FSlateBrush;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Lightweight, local mirror of the shared Ck tooling visual language (section headers, labeled-group cards,
-// key/value rows, count badges, color swatches) for the Grid Paint editor-mode toolkit. Historically we could
-// not depend on the debugger plugin's style (circular plugin dependency), so these helpers reproduce the same
-// look using only engine FAppStyle / FCoreStyle brushes and the hardcoded palette below (copied from the style
-// settings defaults — FLinearColor(FColor(hex)) so the sRGB->linear conversion matches the debugger exactly).
-// NOTE: the canonical tokens now live in CkFoundation's CkEditorTools module (CkStyle:: +
-// UCk_Style_UserSettings_UE), so this mirror could be replaced by a direct CkEditorTools dependency.
+// Local mirror of the shared Ck tooling visual language, built on engine FAppStyle/FCoreStyle brushes only
+// because depending on the debugger plugin's style would have been circular. The palette is hardcoded as
+// FLinearColor(FColor(hex)) so its sRGB->linear conversion matches the debugger exactly. The canonical
+// tokens now live in CkEditorTools (CkStyle::), which could replace this mirror.
 namespace ck::grid_paint_style
 {
     // ----- Palette (sRGB hex -> linear, matching the debugger) ------------------------------------------------

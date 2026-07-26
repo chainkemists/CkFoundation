@@ -9,15 +9,8 @@
 struct FNiagaraDataInterfaceGeneratedFunction;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Stateless Niagara Data Interface that exposes a single generic, pure function `ExecuteStage`.
-//
-// The particle/system LOGIC is authored entirely in HLSL (USF/USH) and C++:
-//   - GPU: /CkParticles/CkParticles_DataInterfaceTemplate.ush -> #includes /CkParticles/CkParticles_Behaviors.ush
-//          which switches on BehaviorId and dispatches into /CkParticles/Behaviors/<Name>.ush.
-//   - CPU: VMExecuteStage mirrors the same switch in C++ (see .cpp). The two paths MUST stay in sync.
-//
-// A new particle behavior is added by editing the .ush (GPU) + the C++ switch (CPU) — never the Niagara asset.
-// The asset is a thin template that calls ExecuteStage with a per-asset BehaviorId (see CkParticlesEditor).
+// Stateless Niagara DI exposing one pure `ExecuteStage`; the behavior logic lives in /CkParticles/*.ush (GPU)
+// and its C++ mirror (CPU), which must stay in lockstep. See CkParticles/CLAUDE.md.
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(EditInlineNew, Category = "CkParticles", CollapseCategories, meta = (DisplayName = "Ck Particle Script"))
@@ -26,12 +19,9 @@ class CKPARTICLES_API UCkParticles_DataInterface : public UNiagaraDataInterface
     GENERATED_UCLASS_BODY()
 
 public:
-    // UObject Interface
     virtual void
     PostInitProperties() override;
-    // UObject Interface End
 
-    // UNiagaraDataInterface Interface
     virtual bool
     CanExecuteOnTarget(
         ENiagaraSimTarget Target) const override { return true; }
@@ -59,7 +49,6 @@ public:
         int FunctionInstanceIndex,
         FString& OutHLSL) override;
 #endif
-    // UNiagaraDataInterface Interface End
 
     // CPU VM implementation of ExecuteStage. Mirrors the HLSL behavior switch.
     void

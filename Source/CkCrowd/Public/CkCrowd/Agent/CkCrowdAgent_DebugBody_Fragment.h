@@ -8,22 +8,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// FCk_Handle_Pmg_DebugShape comes from CkPmg/CkPmg_Fragment_Data_DebugShapes.h (above) — it's a stored
-// member, not a forward-declarable pointer.
+// FCk_Handle_Pmg_DebugShape is a stored member, so the CkPmg header above cannot be a forward decl.
 
 namespace ck
 {
-    // Per-agent storage for the DrawBody visualization. Stamped by FProcessor_CrowdAgent_DrawBody_Setup
-    // once the agent's HasProbe tag lands. Holds typed handles to two PMG child entities (body
-    // capsule + forward-facing cone), both SceneNode-parented to the agent's transform so they
-    // follow the integrator's per-tick position updates with no per-frame sync code.
-    //
-    // Lifetime — both child entities are created with PMG `InDuration = -1.0f` so they persist
-    // until the agent (their parent) is destroyed; cascade cleanup is automatic.
-    //
-    // _LastAppliedColor is a small optimization: the Update processor recomputes the state-tinted
-    // color each tick but only writes it to the PMG handles when it changes. Avoids spamming
-    // Set_Color requests when the agent is in a steady state.
+    // Handles to the two PMG child entities (body capsule + forward cone) backing the DrawBody
+    // visualization. Both are created with PMG `InDuration = -1.0f` and SceneNode-parented to the
+    // agent, so they follow it and cascade-destroy with it.
     struct CKCROWD_API FFragment_CrowdAgent_DebugBody
     {
     public:
@@ -45,8 +36,7 @@ namespace ck
         CK_PROPERTY_GET(_LastAppliedVisible);
     };
 
-    // Tag stamped alongside FFragment_CrowdAgent_DebugBody by the Setup processor. The Setup
-    // processor's view excludes this tag so it runs exactly once per agent.
+    // Excluded by the Setup processor's own view, which is what makes it run exactly once per agent.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_DebugBody_Setup);
 }
 

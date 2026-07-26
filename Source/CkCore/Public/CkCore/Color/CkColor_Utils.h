@@ -15,22 +15,13 @@ class CKCORE_API UCk_Utils_LinearColor : public UBlueprintFunctionLibrary
 
 public:
 	// ----------------------------------------------------------------------------------------------------------------
-	// Hash-derived stable color
-	//
-	// Returns a deterministic, distinct-per-hash color. Hue derives from the low byte of the
-	// hash; saturation and value are caller-tunable but default to legible debug viz settings.
-	// Use cases: stable per-entity color for diagnostic overlays, breadcrumbs, planned-path
-	// markers — anywhere two different runs of the same entity should produce the same color.
-	//
-	// Equivalent to:  FLinearColor::MakeFromHSV8(uint8(Hash & 0xFF), Saturation, Value);
-	// Promoted from a private inline in UCk_Utils_CrowdAgent_UE::Get_DebugColor so any
-	// debug subsystem can produce matching colors.
+	// Hue derives from the low byte of the hash, so the same hash always yields the same color across runs
+	// and across debug subsystems; saturation/value default to legible debug-viz settings.
 	// ----------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Hash"))
 	static FLinearColor Get_StableColorFromHash(int32 InHash, uint8 InSaturation = 200, uint8 InValue = 220);
 
-	// Basic Colors
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "White"))
 	static FLinearColor Get_White(float Alpha = 1.0f);
 
@@ -61,7 +52,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Purple"))
 	static FLinearColor Get_Purple(float Alpha = 1.0f);
 
-	// Grayscale
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Gray100"))
 	static FLinearColor Get_Gray100(float Alpha = 1.0f);
 
@@ -89,7 +79,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Gray900"))
 	static FLinearColor Get_Gray900(float Alpha = 1.0f);
 
-	// Material Design Red
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Red50"))
 	static FLinearColor Get_Red50(float Alpha = 1.0f);
 
@@ -120,7 +109,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Red900"))
 	static FLinearColor Get_Red900(float Alpha = 1.0f);
 
-	// Material Design Blue
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Blue50"))
 	static FLinearColor Get_Blue50(float Alpha = 1.0f);
 
@@ -151,7 +139,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Blue900"))
 	static FLinearColor Get_Blue900(float Alpha = 1.0f);
 
-	// Material Design Green
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Green50"))
 	static FLinearColor Get_Green50(float Alpha = 1.0f);
 
@@ -182,7 +169,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Green900"))
 	static FLinearColor Get_Green900(float Alpha = 1.0f);
 
-	// Named Web Colors
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "AliceBlue"))
 	static FLinearColor Get_AliceBlue(float Alpha = 1.0f);
 
@@ -570,12 +556,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "YellowGreen"))
 	static FLinearColor Get_YellowGreen(float Alpha = 1.0f);
 
-	// Transparent
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Transparent"))
 	static FLinearColor Get_Transparent(float Alpha = 1.0f);
 
 public:
-	// Static color constants for performance
 	static const FLinearColor White;
 	static const FLinearColor Black;
 	static const FLinearColor Red;
@@ -587,7 +571,6 @@ public:
 	static const FLinearColor Orange;
 	static const FLinearColor Purple;
 
-	// Grayscale
 	static const FLinearColor Gray100;
 	static const FLinearColor Gray200;
 	static const FLinearColor Gray300;
@@ -598,7 +581,6 @@ public:
 	static const FLinearColor Gray800;
 	static const FLinearColor Gray900;
 
-	// Material Design Red
 	static const FLinearColor Red50;
 	static const FLinearColor Red100;
 	static const FLinearColor Red200;
@@ -610,7 +592,6 @@ public:
 	static const FLinearColor Red800;
 	static const FLinearColor Red900;
 
-	// Material Design Blue
 	static const FLinearColor Blue50;
 	static const FLinearColor Blue100;
 	static const FLinearColor Blue200;
@@ -622,7 +603,6 @@ public:
 	static const FLinearColor Blue800;
 	static const FLinearColor Blue900;
 
-	// Material Design Green
 	static const FLinearColor Green50;
 	static const FLinearColor Green100;
 	static const FLinearColor Green200;
@@ -634,7 +614,6 @@ public:
 	static const FLinearColor Green800;
 	static const FLinearColor Green900;
 
-	// Named Web Colors (constants - abbreviated for brevity)
 	static const FLinearColor AliceBlue;
 	static const FLinearColor AntiqueWhite;
 	static const FLinearColor Aqua;
@@ -776,7 +755,6 @@ class CKCORE_API UCk_Utils_Color : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	// Basic Colors
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "White"))
 	static FColor Get_White(float Alpha = 1.0f);
 
@@ -807,7 +785,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Purple"))
 	static FColor Get_Purple(float Alpha = 1.0f);
 
-	// Grayscale
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Gray100"))
 	static FColor Get_Gray100(float Alpha = 1.0f);
 
@@ -835,7 +812,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Gray900"))
 	static FColor Get_Gray900(float Alpha = 1.0f);
 
-	// Material Design Red
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Red50"))
 	static FColor Get_Red50(float Alpha = 1.0f);
 
@@ -866,7 +842,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Red900"))
 	static FColor Get_Red900(float Alpha = 1.0f);
 
-	// Material Design Blue
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Blue50"))
 	static FColor Get_Blue50(float Alpha = 1.0f);
 
@@ -897,7 +872,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Blue900"))
 	static FColor Get_Blue900(float Alpha = 1.0f);
 
-	// Material Design Green
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Green50"))
 	static FColor Get_Green50(float Alpha = 1.0f);
 
@@ -928,7 +902,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Green900"))
 	static FColor Get_Green900(float Alpha = 1.0f);
 
-	// Named Web Colors
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "AliceBlue"))
 	static FColor Get_AliceBlue(float Alpha = 1.0f);
 
@@ -1316,12 +1289,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "YellowGreen"))
 	static FColor Get_YellowGreen(float Alpha = 1.0f);
 
-	// Transparent
 	UFUNCTION(BlueprintPure, Category = "Ck|Color", meta = (CompactNodeTitle = "Transparent"))
 	static FColor Get_Transparent(float Alpha = 1.0f);
 
 public:
-	// Static color constants for performance
 	static const FColor White;
 	static const FColor Black;
 	static const FColor Red;
@@ -1333,7 +1304,6 @@ public:
 	static const FColor Orange;
 	static const FColor Purple;
 
-	// Grayscale
 	static const FColor Gray100;
 	static const FColor Gray200;
 	static const FColor Gray300;
@@ -1344,7 +1314,6 @@ public:
 	static const FColor Gray800;
 	static const FColor Gray900;
 
-	// Material Design Red
 	static const FColor Red50;
 	static const FColor Red100;
 	static const FColor Red200;
@@ -1356,7 +1325,6 @@ public:
 	static const FColor Red800;
 	static const FColor Red900;
 
-	// Material Design Blue
 	static const FColor Blue50;
 	static const FColor Blue100;
 	static const FColor Blue200;
@@ -1368,7 +1336,6 @@ public:
 	static const FColor Blue800;
 	static const FColor Blue900;
 
-	// Material Design Green
 	static const FColor Green50;
 	static const FColor Green100;
 	static const FColor Green200;
@@ -1380,7 +1347,6 @@ public:
 	static const FColor Green800;
 	static const FColor Green900;
 
-	// Named Web Colors (constants - abbreviated for brevity)
 	static const FColor AliceBlue;
 	static const FColor AntiqueWhite;
 	static const FColor Aqua;

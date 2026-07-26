@@ -53,8 +53,7 @@ namespace ck_snapshot_subsystem
     constexpr auto UserIndex = 0;
     constexpr auto k_NoEntity = 0xFFFFFFFFu; // mirrors ck::snapshot's k_NoEntity sentinel
 
-    // Enumerator name for the orphan diagnostic log line. ECk_Snapshot_V3_Provenance carries no fmt formatter,
-    // so the enum cannot be printed via {} directly (the rebuild-stall diag casts it to int32 instead).
+    // ECk_Snapshot_V3_Provenance carries no fmt formatter, so it cannot be printed via {} directly.
     auto
         DoProvenance_ToString(
             ECk_Snapshot_V3_Provenance InProvenance)
@@ -81,8 +80,7 @@ namespace ck_snapshot_subsystem
         return InWorld->GetNetMode() != ENetMode::NM_Client;
     }
 
-    // Resolve a player-owned entity in InWorld matching InPlayerId (PlayerState unique-id string; empty == standalone
-    // player 0). Mirrors the capture-side TryResolve_PlayerRendezvous identity. Returns invalid if unresolved.
+    // Mirrors the capture-side TryResolve_PlayerRendezvous identity; invalid handle when unresolved.
     auto
         DoResolve_PlayerEntity(
             UWorld* InWorld,
@@ -163,7 +161,6 @@ auto
     Deinitialize()
     -> void
 {
-    // The world/game-instance is going away mid-load: drop the ticker so the callback never fires into a dead subsystem.
     if (_LoadTickerHandle.IsValid())
     {
         FTSTicker::GetCoreTicker().RemoveTicker(_LoadTickerHandle);
@@ -211,8 +208,6 @@ void
     auto Source = DoGet_SnapshotSource();
     ck::UUtils_Signal_Snapshot_OnPreSave::Broadcast(Source, ck::MakePayload(Source));
 
-    // Settle the world so the capture reflects a consistent, quiescent state. The scheduler already loops
-    // its own DoPump to quiescence; we just drive a DeltaTime=0 pass across every ticking group.
     if (auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
         ck::IsValid(EcsWorld))
     {
@@ -220,7 +215,6 @@ void
         ck::snapshot::Verbose(TEXT("Request_Save: pumped world to quiescence in [{}] pump passes"), _LastPumpCount);
     }
 
-    // v3 capture (rebuild+hydrate). v3 is the SOLE save format.
     auto ByteWriterV3 = FBufferArchive{};
     auto HeaderV3 = FCk_Snapshot_HeaderV3{};
     const auto CaptureResultV3 = ck::snapshot::Run_CaptureV3(*World, ByteWriterV3, HeaderV3);
@@ -301,8 +295,6 @@ void
         return;
     }
 
-    // v3-only HARD BREAK: the load path consumes v3 exclusively. A v2-only save (no v3 bytes /
-    // wrong version) is rejected.
     if (SaveGame->_HeaderV3.Get_FormatVersion() != FCk_Snapshot_HeaderV3::CurrentFormatVersion ||
         SaveGame->_SnapshotBytesV3.IsEmpty())
     {
@@ -313,7 +305,7 @@ void
         return;
     }
 
-    // Deserialize the v3 tables NOW (before teardown) — a corrupt stream must abort while the world is still alive.
+    // Before teardown — a corrupt stream must abort while the world is still alive.
     _V3Tables = FCk_Snapshot_V3_Tables{};
     _V3Header = SaveGame->_HeaderV3;
     {
@@ -350,7 +342,6 @@ void
     _RebuildLastMappedCount = 0;
     _RebuildStallTicks = 0;
 
-    // Provenance breakdown (DIAG) — helps triage a stalled rebuild.
     {
         auto EngineOwned = 0, ConstructSpawned = 0, RuntimeSpawned = 0, Bridged = 0;
         for (const auto& Entry : _V3Tables.Get_Entities())
@@ -368,11 +359,6 @@ void
         ck::snapshot::Display(TEXT("DIAG: v3 table provenance — EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}] (of which bridged [{}])"),
             EngineOwned, ConstructSpawned, RuntimeSpawned, Bridged);
     }
-
-    // NOTE: v3 does NOT stamp any reconstitution phase. The LoadKernel gate is the isolation mechanism, and
-    // the loader RELIES on the post-travel world's normal spawn path running (the GameMode rebuilds EngineOwned
-    // entities; the loader spawns actors whose BeginPlay re-creates bridged entities). Stamping a reconstitution
-    // phase would suppress exactly those spawns (Request_SpawnEntity abstains while a phase is set).
 
     auto Source = DoGet_SnapshotSource();
     ck::UUtils_Signal_Snapshot_OnPreLoad::Broadcast(Source, ck::MakePayload(Source));
@@ -419,8 +405,7 @@ auto
     DoIs_TeardownComplete() const
     -> bool
 {
-    // Complete when every gameplay root we requested destroyed has finalized (handle now invalid). The root
-    // finalizes only AFTER its whole subtree's cascade — incl. EndPlay — has run, so this also covers children.
+    // A root's handle goes invalid only AFTER its whole subtree's cascade (incl. EndPlay) ran, so this covers children.
     return ck::algo::NoneOf(_PendingTeardownRoots,
         [](const auto& InRoot) { return ck::IsValid(InRoot); });
 }
@@ -441,8 +426,7 @@ auto
 
     constexpr auto AbsoluteTravel = true;
 
-    // Decide the travel mechanism by whether there are connected clients to carry across the reload. Seamless
-    // ServerTravel is connection-preserving but heavier; with NO remote clients a plain OpenLevel reload is correct.
+    // Seamless ServerTravel is connection-preserving but heavier — with no remote clients, OpenLevel is correct.
     auto* NetDriver = World->GetNetDriver();
     const auto HasConnectedClients =
         ck::IsValid(NetDriver, ck::IsValid_Policy_NullptrOnly{}) && NetDriver->ClientConnections.Num() > 0;
@@ -515,8 +499,7 @@ auto
     if (RawRegistry == nullptr)
     { return; }
 
-    // Read the LIVE world-side SaveKey fragments (level actors re-created by the normal world build), NOT restored
-    // ones — v3 adopts EngineOwned level actors by rendezvous key against the freshly-built world.
+    // The LIVE world-side SaveKey fragments (level actors the normal world build re-created), never restored ones.
     auto PublishedCount = 0;
     for (const auto Entity : RawRegistry->view<FFragment_SaveKey>())
     {
@@ -550,7 +533,6 @@ auto
     Proxy.ArIsSaveGame = false;      // symmetric with ck::snapshot::SerializeInstancedStruct
     Proxy.SetIsPersistent(true);
 
-    // v3 map-backed handle remap: rewrite each raw saved id in the blob to its live handle in the reloaded world.
     const auto World = GetWorld();
     auto* EcsWorld = ck::IsValid(World) ? World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>() : nullptr;
     const auto LoadRegistryHandle = ck::IsValid(EcsWorld)
@@ -594,7 +576,6 @@ auto
         {
             case ECk_Snapshot_V3_Provenance::EngineOwned:
             {
-                // Adopt the naturally re-created engine entity by rendezvous key.
                 if (Entry.Get_SaveKey().IsValid())
                 {
                     auto Found = FCk_Handle{};
@@ -609,8 +590,7 @@ auto
             }
             case ECk_Snapshot_V3_Provenance::ConstructSpawned:
             {
-                // Adopt by (owner, label): the owner's replayed Construct re-created the labeled child. Wait for the
-                // owner to be mapped first (owners precede dependents in the table).
+                // Adopt by (owner, label) — needs the owner mapped first (owners precede dependents in the table).
                 const auto* Owner = _SavedIdMap.Find(Entry.Get_LifetimeOwnerSavedId());
                 if (Owner != nullptr && ck::IsValid(*Owner) && Owner->Has<ck::FFragment_LifetimeDependents>())
                 {
@@ -674,10 +654,6 @@ auto
                 }
                 else
                 {
-                    // Pure ECS RuntimeSpawned: Request_SpawnEntity under the mapped lifetime owner. A top-level
-                    // entity whose owner is the non-persisted transient is restored only when its script explicitly
-                    // opts into snapshot respawn; boot infrastructure keeps the default false and is recreated by
-                    // normal world startup.
                     if (NOT _SpawnedRuntimeIds.Contains(SavedId))
                     {
                         auto* ScriptClass = FSoftClassPath{Entry.Get_ScriptClassPath()}.TryLoadClass<UCk_EntityScript_UE>();
@@ -697,9 +673,8 @@ auto
                         auto Owner = TransientEntity;
                         if (OwnerSavedId != ck_snapshot_subsystem::k_NoEntity)
                         {
-                            // The owner is NOT in the saved table => it is normally the world root/transient (never
-                            // persisted). Opted-in gameplay entities respawn there; default-false boot infrastructure
-                            // is deliberately skipped to avoid duplicating the fresh world's copy.
+                            // Owner absent from the saved table ⇒ the world root/transient (never persisted). Opted-in
+                            // entities respawn there; boot infra is skipped so the fresh world's copy is not duplicated.
                             if (NOT _PersistedIds.Contains(OwnerSavedId))
                             {
                                 if (NOT bSnapshotRespawnable)
@@ -713,8 +688,7 @@ auto
                                 const auto* MappedOwner = _SavedIdMap.Find(OwnerSavedId);
                                 if (MappedOwner == nullptr || ck::Is_NOT_Valid(*MappedOwner))
                                 {
-                                    // Persisted owner not mapped yet — defer this entry to a later tick.
-                                    AnyUnresolved = true;
+                                    AnyUnresolved = true; // persisted owner not mapped yet — retry next tick
                                     break;
                                 }
                                 Owner = *MappedOwner;
@@ -733,16 +707,11 @@ auto
             }
             case ECk_Snapshot_V3_Provenance::DefinitionBuilt:
             {
-                // Re-create via Request_BuildAndReplicate under the driver-bearing subject production built it under
-                // (Create(Get_ContextOwner(inventory), def)). The inventory/grid hydration Apply then connects it into
-                // the owner's record + transfers its lifetime owner.
                 if (NOT _SpawnedRuntimeIds.Contains(SavedId))
                 {
-                    // Resolve the rebuild owner. Prefer the captured CONTEXT owner — the driver-bearing subject that
-                    // production built the item under (Create(Get_ContextOwner(inventory), def)). It is a persisted +
-                    // mapped RuntimeSpawned entity even when the item's LIFETIME owner (its inventory) is an unnamed
-                    // (and therefore unpersisted) entity. Fall back to the lifetime owner for items with no persisted
-                    // context owner.
+                    // Prefer the captured CONTEXT owner — the driver-bearing subject production built the item under
+                    // (Create(Get_ContextOwner(inventory), def)). It is persisted + mapped even when the item's
+                    // LIFETIME owner (its inventory) is unnamed and therefore unpersisted.
                     auto bBuildViaContextOwner = false;
                     auto OwnerSavedId = Entry.Get_ContextOwnerSavedId();
                     if (OwnerSavedId != ck_snapshot_subsystem::k_NoEntity && _PersistedIds.Contains(OwnerSavedId))
@@ -758,9 +727,8 @@ auto
                     }
                     if (NOT _PersistedIds.Contains(OwnerSavedId))
                     {
-                        // A definition-built entity under an unpersisted owner is data loss (the item is dropped), NOT
-                        // boot-infra — flag it loudly rather than silently skipping. Its owner must persist (a named
-                        // inventory, or a persisted context owner).
+                        // Data loss (the item is dropped), NOT boot-infra — flag it loudly rather than skip silently.
+                        // The owner must persist: a named inventory, or a persisted context owner.
                         ck::snapshot::Warning(
                             TEXT("v3 load: DefinitionBuilt entity [{}] owner saved-id [{}] was not persisted — item dropped."),
                             SavedId, OwnerSavedId);
@@ -799,9 +767,7 @@ auto
                         break;
                     }
 
-                    // Build under the resolved owner. Resolved via the context owner ⇒ that mapped entity IS the
-                    // driver-bearing subject; build directly under it. Resolved via the lifetime owner ⇒ mirror
-                    // production by building under the lifetime owner's context owner.
+                    // Via the lifetime owner ⇒ mirror production by building under ITS context owner.
                     auto BuildOwner = bBuildViaContextOwner
                         ? *MappedOwner
                         : UCk_Utils_ContextOwner_UE::Get_ContextOwner(*MappedOwner);
@@ -849,12 +815,6 @@ auto
     DoRestore_SavedOwnership()
     -> void
 {
-    // Rebuild APIs establish a valid temporary ownership chain so Construct can run, but that chain is not
-    // necessarily the one captured in the save:
-    //   - RuntimeSpawned scripts can override ContextOwner after spawn.
-    //   - DefinitionBuilt items are rebuilt under a driver-bearing context owner and historically waited for a
-    //     feature payload (for example Inventory) to transfer LifetimeOwner later.
-    // Restore every resolvable hard link now, after rebuild mapping has settled and before any hydration payload applies.
     // Endpoints absent from _SavedIdMap retain their valid rebuild-time relationship.
     for (const auto& Entry : _V3Tables.Get_Entities())
     {
@@ -904,15 +864,10 @@ auto
     DoApply_SavedTransforms()
     -> void
 {
-    // G1 Transform parity: restore each MAPPED entity's saved WORLD transform. The transform rides the entity table
-    // (not a Produce payload) by design — a Produce handler would race FProcessor_Transform_SyncFromActor's per-tick
-    // stomp on actor-backed entities. Called once from DoHydrate_Enqueue, BEFORE payloads are enqueued; the deferred
-    // Transform requests / actor SetActorTransform land in the load-kernel settle pumps.
     for (const auto& Entry : _V3Tables.Get_Entities())
     {
-        // Bridged RuntimeSpawned actors already respawn AT their saved transform (via _ActorSpawnTransform seeding the
-        // actor spawn). Re-applying would be redundant and could fight the spawn — skip. This is the ONLY guard that
-        // keeps bridged actors from being double-applied.
+        // Bridged actors already respawn AT their saved transform (_ActorSpawnTransform seeds the actor spawn) and
+        // re-applying would fight it. This is the ONLY guard against double-applying them.
         if (NOT Entry.Get_ActorClassPath().IsEmpty())
         { continue; }
 
@@ -937,15 +892,13 @@ auto
             continue;
         }
 
-        // Pure-ECS mover (no owning actor): re-drive through the Transform request surface. Request_SetTransform is the
-        // atomic set — it decomposes into World location + rotation + scale requests internally — and drains in the
-        // load-kernel pumps AFTER any Construct-seeded transform requests (FIFO), so the saved value wins.
+        // Pure-ECS mover (no owning actor): Request_SetTransform drains in the load-kernel pumps AFTER any
+        // Construct-seeded transform requests (FIFO), so the saved value wins.
         if (UCk_Utils_Transform_UE::Has(Entity))
         {
             UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(
                 Entity, FCk_Request_Transform_SetTransform{Saved});
         }
-        // else: no owning actor and no Transform fragment — nothing to restore.
     }
 }
 
@@ -960,18 +913,11 @@ auto
     { return; }
     _HydrationEnqueued = true;
 
-    // Restore mapped hard ownership links before feature payloads run. This closes the DefinitionBuilt lifetime
-    // transfer window when both endpoints survived and preserves mapped RuntimeSpawned ContextOwner overrides.
     DoRestore_SavedOwnership();
-
-    // G1 Transform parity — restore saved world transforms BEFORE enqueuing payloads (and well before the Phase 0
-    // orphan walk below), so a restored entity is at its saved position by the time its payloads hydrate.
     DoApply_SavedTransforms();
 
-    // Mark every restored (saved-id-mapped) entity as just-restored. Game-side rebind processors key off this
-    // marker to re-resolve handles their persisted fragments carry (BB's Bb_SnapshotRestore rebind fleet) — the
-    // Model-A purge deleted the old stamp site and silently killed every consumer; v3 restores the semantic here,
-    // before the gate opens, so the full post-gate pump sees it.
+    // Game-side rebind processors key off FTag_Snapshot_JustRestored to re-resolve handles their persisted fragments
+    // carry; stamp it before the gate opens so the full post-gate pump sees it.
     for (const auto& Pair : _SavedIdMap)
     {
         if (auto Restored = Pair.Value;
@@ -987,8 +933,7 @@ auto
         if (Owner == nullptr || ck::Is_NOT_Valid(*Owner))
         { continue; } // owner unmapped (orphan/skipped) — its payloads drop
 
-        // A payload that fails to deserialize is lost state, not a no-op — surface it loudly (silent in Test/Shipping,
-        // but counted in the load report either way) rather than dropping it invisibly.
+        // A failed deserialize is lost state, not a no-op — counted in the load report even where the ensure is out.
         auto Data = DoDeserialize_V3Blob(Payload.Get_PayloadBytes());
         CK_ENSURE_IF_NOT(Data.IsValid(),
             TEXT("v3 load: hydration payload for type [{}] (owner saved-id [{}]) failed to deserialize — dropped "
@@ -1003,12 +948,8 @@ auto
         ++EnqueuedCount;
     }
 
-    // Per-orphan accounting: a saved entity that never mapped AND was not deliberately skipped (boot-infra /
-    // unloadable) is an orphan — its payloads drop (content no longer creates a labeled child, or a missing owner).
-    // Skipped entities are intentional (the fresh world's boot owns them), NOT orphans. Walk every entry, classify
-    // each orphan into a reason bucket, and emit ONE Warning + one report record per orphan so a lossy load is
-    // self-explaining (was: a bare N - mapped - skipped count). The enumerated set is identical to that subtraction
-    // (_SavedIdMap / _SkippedIds are disjoint subsets of the entity table), so _EntitiesOrphaned is unchanged.
+    // An orphan is a saved entity that never mapped AND was not deliberately skipped — skips are intentional (the
+    // fresh world's boot owns them). Each orphan's payloads drop, and gets one Warning + one report record.
     auto OrphanIds = TSet<uint32>{};
     for (const auto& Entry : _V3Tables.Get_Entities())
     {
@@ -1034,7 +975,6 @@ auto
         {
             case ECk_Snapshot_V3_Provenance::EngineOwned:
             {
-                // EngineOwned rendezvous never resolved (the naturally-recreated engine entity was not found).
                 const auto bHasSaveKey = Entry.Get_SaveKey().IsValid();
                 Identity = bHasSaveKey ? Entry.Get_SaveKey().ToString() : Entry.Get_PlayerId();
                 Reason   = bHasSaveKey ? TEXT("savekey-miss") : TEXT("player-miss");
@@ -1124,16 +1064,14 @@ auto
     DoReconcile_Queue()
     -> void
 {
-    // Build (owner saved-id) -> set of SAVED labeled ConstructSpawned child labels.
-    auto SavedChildLabels = TMap<uint32, TSet<FString>>{};
+    auto SavedChildLabelsByOwnerId = TMap<uint32, TSet<FString>>{};
     for (const auto& Entry : _V3Tables.Get_Entities())
     {
         if (Entry.Get_Provenance() != ECk_Snapshot_V3_Provenance::ConstructSpawned)
         { continue; }
-        SavedChildLabels.FindOrAdd(Entry.Get_LifetimeOwnerSavedId()).Add(Entry.Get_Label());
+        SavedChildLabelsByOwnerId.FindOrAdd(Entry.Get_LifetimeOwnerSavedId()).Add(Entry.Get_Label());
     }
 
-    // Payload-bearing probe (mirrors CaptureV3's DoAnyProduce; Produce is READ-ONLY by contract).
     const auto SaveTypes = FCk_PersistenceHandlerRegistry::Get_SaveHandlerTypes();
     const auto DoAnyProduce = [&](FCk_Handle& InEntity) -> bool
     {
@@ -1156,7 +1094,7 @@ auto
         if (ck::Is_NOT_Valid(Owner) || NOT Owner.Has<ck::FFragment_LifetimeDependents>())
         { continue; }
 
-        const auto* SavedLabels = SavedChildLabels.Find(OwnerSavedId);
+        const auto* SavedLabels = SavedChildLabelsByOwnerId.Find(OwnerSavedId);
 
         // Copy — Request_DestroyEntity mutates the dependents list.
         auto Children = Owner.Get<ck::FFragment_LifetimeDependents>().Get_Entities();
@@ -1164,12 +1102,8 @@ auto
         {
             if (ck::Is_NOT_Valid(Child) || NOT Child.Has<ck::FTag_ConstructSpawned>())
             { continue; }
-            // Save-transient children are payload-persisted derived state (attributes, SM graph, ...) —
-            // never captured as rows, so "absent from the save" is their NORMAL state, not a revoked
-            // grant. Without this skip, reconcile destroyed the loaded pawn's live intent/camera/movement
-            // attribute children every load (the ConstructSpawned stamp is timing-dependent: possession-
-            // driven composition lands inside the construct window only under the load gate's stretched
-            // construction, so the loaded world stamps children the save world never captured).
+            // Save-transient children are payload-persisted derived state (attributes, SM graph, ...) — never
+            // captured as rows, so "absent from the save" is their NORMAL state, not a revoked grant.
             if (Child.Has<ck::FTag_Snapshot_SaveTransient>())
             { continue; }
             if (NOT UCk_Utils_GameplayLabel_UE::Has(Child) || UCk_Utils_GameplayLabel_UE::Get_IsUnnamedLabel(Child))
@@ -1179,11 +1113,9 @@ auto
             const auto bSaved = SavedLabels != nullptr && SavedLabels->Contains(ChildLabel);
             if (NOT bSaved)
             {
-                // Payload-bearing children are feature STATE, not grants — the capture may have skipped
-                // them (composed post-construct in the save world, so never ConstructSpawned there) even
-                // though this world composed them in-construct. Subtracting them destroys live feature
-                // state the save cannot even express (the QuickUse-containers-destroyed-on-load incident,
-                // 2026-07-14); leaving them keeps boot defaults, which is strictly better.
+                // Payload-bearing children are feature STATE, not grants — the capture may have skipped them
+                // (composed post-construct in the save world) even though this world composed them in-construct.
+                // Subtracting them would destroy live feature state the save cannot express.
                 if (DoAnyProduce(Child))
                 {
                     ck::snapshot::Verbose(TEXT("v3 reconcile: keeping payload-bearing ConstructSpawned child [{}] "
@@ -1191,9 +1123,8 @@ auto
                         Child, ChildLabel, Owner);
                     continue;
                 }
-                // Subtractive reconciliation: a labeled child rebuilt by Construct but ABSENT from the
-                // save is a grant the player lost. Queue the normal deferred teardown — it PARKS under the gate and
-                // completes on the first post-gate frames; we only queue here, never wait.
+                // A labeled child rebuilt by Construct but ABSENT from the save is a grant the player lost. The
+                // deferred teardown PARKS under the gate and completes post-gate; we only queue here, never wait.
                 ck::snapshot::Verbose(TEXT("v3 reconcile: destroying stray ConstructSpawned child [{}] label [{}] "
                     "of owner [{}] (saved-id [{}]) — absent from the save"),
                     Child, ChildLabel, Owner, OwnerSavedId);
@@ -1265,7 +1196,6 @@ auto
                 ck::IsValid(EcsWorld))
             { EcsWorld->Set_IsLoadGateActive(true); }
 
-            // The EngineOwned rendezvous resolver reads the fresh world's live SaveKey fragments.
             DoRehydrate_SaveKeyResolver();
 
             _LoadFrameCount = 0;
@@ -1277,9 +1207,8 @@ auto
         {
             const auto Complete = DoRebuild_Tick();
 
-            // Progress-based early-exit: some saved entities may never resolve (content changed, infrastructure the
-            // fresh world owns). Rather than always burn kLoad_RebuildFrameCap, proceed once no NEW entity has mapped
-            // for kLoad_RebuildStallTicks consecutive ticks — the load stays fast even with orphans.
+            // Some saved entities may never resolve (content drift, infra the fresh world owns). Rather than always
+            // burn kLoad_RebuildFrameCap, proceed once no NEW entity maps for kLoad_RebuildStallTicks ticks.
             if (_SavedIdMap.Num() > _RebuildLastMappedCount)
             { _RebuildLastMappedCount = _SavedIdMap.Num(); _RebuildStallTicks = 0; }
             else
@@ -1292,7 +1221,6 @@ auto
 
             if (NOT Complete)
             {
-                // DIAG: dump the still-unresolved entries by provenance so a stall is triage-able.
                 auto UnEngine = 0, UnConstruct = 0, UnRuntime = 0, UnDefinitionBuilt = 0;
                 for (const auto& Entry : _V3Tables.Get_Entities())
                 {
@@ -1326,9 +1254,6 @@ auto
 
         case ELoadPhase::Hydrating:
         {
-            // ATOMIC: enqueue payloads + queue reconcile-destroys + OPEN THE GATE, all in this single
-            // callback, so no gated world-tick ever applies a payload before its feature Setup. Then a FULL pump
-            // drains Setup-then-hydration (late group) with no stomp; Settling lets the parked destroys finish.
             DoHydrate_Enqueue();
             DoReconcile_Queue();
 
@@ -1348,10 +1273,8 @@ auto
 
         case ELoadPhase::Settling:
         {
-            // Finish only once hydration has fully drained (no payloads pending apply) AND the parked reconcile-destroys
-            // + residual requests have had their minimum settle frames. Previously this finished on a bare frame
-            // countdown, so OnLoadComplete could fire with hydration still in flight. The frame-cap is now a LOUD abort
-            // backstop — reaching it with hydration still pending means some payloads never applied.
+            // Finish only once hydration has fully drained AND the parked reconcile-destroys have had their minimum
+            // settle frames. The frame cap is a LOUD abort backstop — reaching it means some payloads never applied.
             if (_SettleFramesRemaining > 0)
             { --_SettleFramesRemaining; }
 
@@ -1428,10 +1351,8 @@ FCk_Snapshot_Header
     if (ck::Is_NOT_Valid(SaveGame) || SaveGame->_SnapshotBytesV3.Num() == 0)
     { return {}; } // invalid slot, or a pre-v3 slot with no v3 header of record
 
-    // The SaveGame stores only the v3 header now. This BP/subsystem accessor keeps its frozen
-    // FCk_Snapshot_Header return type by synthesizing the legacy-shaped view from the v3 metadata —
-    // the six overlapping fields; the legacy-only stream fields (manifest, transient id, tag offset)
-    // have no v3 source and stay at their defaults. FormatVersion mirrors the v3 header (now 4).
+    // The SaveGame stores only the v3 header; this frozen BP return type is synthesized from the six overlapping
+    // fields. The legacy-only stream fields (manifest, transient id, tag offset) have no v3 source and stay default.
     const auto& HeaderV3 = SaveGame->_HeaderV3;
     auto Header = FCk_Snapshot_Header{};
     Header.Set_FormatVersion(HeaderV3.Get_FormatVersion())

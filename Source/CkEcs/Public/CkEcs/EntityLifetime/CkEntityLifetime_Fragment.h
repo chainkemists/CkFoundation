@@ -8,20 +8,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Destruction pipeline documentation lives in the .cpp.
-
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck
 {
-    // Defined in CkHandle.h to avoid circular dependency since it's needed for debugging purposes
-
-    //CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate);
-    //CK_DEFINE_ECS_TAG(FTag_DestroyEntity_EndPlay);
-    //CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Teardown);
-    //CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Await);
-    //CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Finalize);
-    //CK_DEFINE_ECS_TAG(FTag_EntityJustCreated);
+    // The FTag_DestroyEntity_* and FTag_EntityJustCreated tags are defined in CkHandle.h to avoid a circular
+    // dependency, since they are needed there for debugging purposes.
 
     // 'Initialize' phase NOT part of Pending Kill as all regular Processors should still be able to complete their work
     // before the end of the frame
@@ -42,23 +32,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Provenance marker (save/load rebuild+hydrate, spec §4.2). Stamped on an entity created while its lifetime
-    // owner is a still-constructing EntityScript (owner has FFragment_EntityScript_Current but has NOT begun play):
-    // such a child is re-created by the owner's replayed Construct/BeginPlay on load, so the save ADOPTS it by
-    // identity (owner + label) rather than respawning a recipe (RuntimeSpawned). Stamped at create time in
-    // Request_SetupEntityWithLifetimeOwner — the owner's live construction state is frozen here since it has long
-    // begun play by capture time. TRANSIENT is deliberate: the v3 writer reads the LIVE tag at capture and records
-    // provenance as entity-table metadata, so the tag itself must never round-trip through Model A's tag capture.
+    // Provenance marker stamped on an entity created while its lifetime owner is still constructing: such a child
+    // is re-created by the owner's replayed construction on load, so the save ADOPTS it by identity (owner + label)
+    // rather than respawning a recipe. TRANSIENT is deliberate — the tag must never round-trip through a save.
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_ConstructSpawned);
 
-    // Construction-window marker for a definition-built entity (Request_BuildAndReplicate). Unlike an EntityScript,
-    // such an entity carries NO FFragment_EntityScript_Current, so the ConstructSpawned stamp above would miss its
-    // labeled children — e.g. a Stackable item trait's stack-count IntegerAttribute — and those children would revert
-    // to their definition defaults on load. Request_TryBuildAndReplicate adds this tag on the built entity for the
-    // SYNCHRONOUS span of ConstructionInfo execution (before the first construction script runs, removed after the
-    // last completes), so children composed during that span classify as ConstructSpawned via
-    // Request_SetupEntityWithLifetimeOwner. TRANSIENT is mandatory: this is a live construction marker only and must
-    // never round-trip through a save — it is not a persistent property of the built entity.
+    // Construction-window marker for a definition-built entity, which carries NO FFragment_EntityScript_Current and
+    // so would be missed by the ConstructSpawned stamp above. Held for the SYNCHRONOUS span of ConstructionInfo
+    // execution only. TRANSIENT is mandatory: a live construction marker is not a persistent property.
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_DefinitionBuild_InProgress);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -105,7 +86,6 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Algos
 
 namespace ck::algo
 {

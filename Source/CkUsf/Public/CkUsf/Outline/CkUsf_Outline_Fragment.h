@@ -11,12 +11,9 @@ class AActor;
 
 namespace ck
 {
-    // Declarative "outline this entity" marker, written by UCk_Utils_Usf_Outline_UE. Each renderer module
-    // (CkUsf's actor path below, CkIsmRenderer's shadow ISM, CkIskmRenderer's SKMC path) owns a sync
-    // processor that reacts to (OutlineTarget + its own proxy fragment) and applies the outline via its
-    // mechanism, recording what it applied in a module-local `...OutlineApplied` fragment. Cascade-derived
-    // targets (stamped on lifetime dependents by ECk_Usf_OutlineScope::EntityAndDependents) are removed by
-    // Request_RemoveOutline on the parent; explicit targets never are.
+    // Declarative "outline this entity" marker, written by UCk_Utils_Usf_Outline_UE; each renderer module
+    // owns a sync processor that applies it via its own mechanism (see CkUsf/CLAUDE.md). Cascade-derived
+    // targets are removed by Request_RemoveOutline on the parent; explicit targets never are.
     struct CKUSF_API FFragment_Usf_OutlineTarget
     {
     public:

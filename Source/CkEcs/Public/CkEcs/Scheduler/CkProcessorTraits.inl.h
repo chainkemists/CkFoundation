@@ -42,8 +42,6 @@ namespace ck
         }
 
         // ----------------------------------------------------------------------------------------------------------------
-        // Multi-marker extraction for `MarkedDirtyByAnyOf = TDepList<FTag_A, FTag_B, ...>`. Fills the
-        // descriptor's index-aligned hash/name arrays and installs a combined any-of dirty checker.
         template <typename... T_Markers>
         auto
         ExtractDirtyMarkers(
@@ -62,19 +60,8 @@ namespace ck
         }
 
         // ----------------------------------------------------------------------------------------------------------------
-        // Fragment access extraction — walks a processor's FragmentList (the pack of T_Fragments in the CRTP base) and
-        // sorts each entry into either the read-only or read-write hash bucket on the descriptor. Excluded filter
-        // wrappers (TExclude<X>) and empty tag types are skipped because they do not participate in data access.
-        //
-        // Relies on the static_assert on ck::TProcessor / ck_exp::TProcessor: every non-excluded, non-empty fragment is
-        // wrapped in TReadOnly<T> or TReadWrite<T>. The FragmentList contract is: entries are ordered exactly as declared
-        // on the processor template, and each non-skipped entry is one of:
-        //     - ck::TReadOnly<F>    → hash(F) added to OutRO
-        //     - ck::TReadWrite<F>   → hash(F) added to OutRW
-        //
-        // Hashes use entt::type_hash so they agree with any downstream consumer that speaks EnTT hashes.
-        // ----------------------------------------------------------------------------------------------------------------
-
+        // ck::TProcessor / ck_exp::TProcessor static_assert that every non-excluded, non-empty fragment is
+        // wrapped in TReadOnly<T> or TReadWrite<T>, which is what makes the else-branch below exhaustive.
         template <typename T_Fragment>
         auto
         ExtractSingleFragmentAccess(
@@ -122,14 +109,9 @@ namespace ck
         }
 
         // ----------------------------------------------------------------------------------------------------------------
-        // Empty-view skip metadata — the view's INCLUDE types: access-wrapped data fragments (unwrapped) and filter
-        // tags. TExclude<...> entries are stripped (an exclude only shrinks a view; it cannot make an empty
-        // intersection non-empty, so it never participates in proving emptiness). TIgnoreInEditor<...> entries are
-        // stripped too: their participation depends on which world variant the view runs in, so they are
-        // conservatively not part of the provable-empty set — a skip may only fire when BOTH variants' views are
-        // guaranteed empty. See ECk_ProcessorEmptyViewPolicy in CkProcessorDescriptor.h.
-        // ----------------------------------------------------------------------------------------------------------------
-
+        // An exclude only shrinks a view, so it can never make an empty intersection non-empty and cannot
+        // help prove emptiness. TIgnoreInEditor is stripped too: its participation depends on which world
+        // variant the view runs in, so a skip may only fire when BOTH variants' views are guaranteed empty.
         template <typename T_Fragment>
         using ViewIncludeOf = std::conditional_t<
             TIsExcludedPolicy<T_Fragment>::value || TIsIgnoreInEditor<T_Fragment>::value,
@@ -157,10 +139,8 @@ namespace ck
                 (OutDescriptor._ViewIncludeNames.Add(Get_ProcessorCanonicalName<T_Includes>()), ...);
                 OutDescriptor._IsViewProvablyEmpty = [](const FCk_Registry& InRegistry) -> bool
                 {
-                    // "Some include has zero live entities" — expressed as !(all non-empty) because
-                    // MSVC mis-parses a parenthesized unary operand inside a pack fold in a lambda
-                    // (the bare-operand fold shape below matches the dirty checker above, which
-                    // compiles everywhere).
+                    // "Some include has zero live entities", spelled NOT(all non-empty) because MSVC
+                    // mis-parses a parenthesized unary operand inside a pack fold in a lambda.
                     return NOT (InRegistry.Has_AnyLiveEntityWith<T_Includes>() && ...);
                 };
                 OutDescriptor._CanSkipWhenViewEmpty = true;
@@ -169,16 +149,9 @@ namespace ck
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // True when T_Processor's DoTick is the template-generated view iteration inherited from its CRTP base
-    // (ck::TProcessor / ck_exp::TProcessor) rather than a custom body. Only unshadowed processors are eligible
-    // for the main pass' empty-view skip — a custom DoTick may do work that is not gated on the view (drain
-    // external queues, poll UE state), which a skip would silently drop.
-    //
-    // Mechanism: name lookup on &T_Processor::DoTick resolves to the DERIVED declaration when one exists (name
-    // hiding), and a pointer-to-member-of-derived does not IMPLICITLY convert to pointer-to-member-of-base — so
-    // target-typed direct-initialization against the base's member-pointer type compiles only when the name still
-    // means the inherited (generated) DoTick. TProcessorBase types without the GeneratedDoTickHost alias
-    // (TParallelProcessor, fully custom processors) are ineligible outright.
+    // Only a processor whose DoTick is the inherited, template-generated view iteration may be empty-view
+    // skipped — a custom DoTick may do work that is not gated on the view, which a skip would silently drop.
+    // Detection leans on name hiding: a pointer-to-member-of-derived will not convert to the base's type.
 
     template <typename T_Processor>
     constexpr auto
@@ -259,17 +232,11 @@ namespace ck
         }
         else if constexpr (requires { typename T_Processor::MarkedDirtyByAnyOf; })
         {
-            // Multi-marker form for composite processors whose internal sub-processors consume
-            // several distinct markers (e.g. the attribute pipeline composites: one tag per
-            // Min/Max/Current component). Pump-eligible when ANY of the markers has entities.
             detail::ExtractDirtyMarkers(
                 typename T_Processor::MarkedDirtyByAnyOf::Types{},
                 Descriptor);
         }
 
-        // ---- Extract fragment access metadata from the processor's FragmentList ----
-        // The FragmentList alias is exposed by ck::TProcessor and ck_exp::TProcessor and holds the raw T_Fragments
-        // template pack including TReadOnly<>/TReadWrite<> wrappers, TExclude<> filters, and empty tag types.
         if constexpr (requires { typename T_Processor::FragmentList; })
         {
             detail::ExtractFragmentAccessHashes(
@@ -280,10 +247,6 @@ namespace ck
                 Descriptor._RW_FragmentNames);
         }
 
-        // ---- Empty-view skip metadata (main pass) ----
-        // Eligible only when the processor's DoTick is the template-generated view iteration (see
-        // Get_HasGeneratedViewDoTick above) and the processor doesn't opt out via
-        // `static constexpr auto EmptyViewPolicy = ECk_ProcessorEmptyViewPolicy::AlwaysTick;`.
         if constexpr (Get_HasGeneratedViewDoTick<T_Processor>() && Get_EmptyViewPolicyAllowsSkip<T_Processor>())
         {
             detail::ExtractViewIncludeMetadata(

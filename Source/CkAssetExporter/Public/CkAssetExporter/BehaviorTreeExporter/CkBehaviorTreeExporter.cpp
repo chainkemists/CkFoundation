@@ -23,8 +23,6 @@
 #include <UObject/FieldIterator.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Public API
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_BehaviorTreeExporter::
@@ -42,7 +40,6 @@ auto
 
     Result.AssetName = InBehaviorTree->GetName();
 
-    // Serialize to JSON
     const auto JsonObject = DoSerializeToJson(InBehaviorTree);
     if (!JsonObject.IsValid())
     {
@@ -54,10 +51,8 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    // Serialize to plain text
     const auto TextString = DoSerializeToText(InBehaviorTree);
 
-    // Resolve output paths
     const auto JsonPath = DoResolveOutputPath(InBehaviorTree, TEXT(".json"));
     const auto TextPath = DoResolveOutputPath(InBehaviorTree, TEXT(".txt"));
 
@@ -67,7 +62,6 @@ auto
         return Result;
     }
 
-    // Write files
     const auto bJsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     const auto bTextWritten = FFileHelper::SaveStringToFile(
@@ -105,8 +99,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// JSON Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_BehaviorTreeExporter::
@@ -120,11 +112,9 @@ auto
     RootObject->SetStringField(TEXT("assetPath"), InBehaviorTree->GetPathName());
     RootObject->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(InBehaviorTree, ck::asset_exporter::version::BehaviorTree));
 
-    // Blackboard
     RootObject->SetObjectField(TEXT("blackboard"),
         DoSerializeBlackboard_Json(InBehaviorTree->BlackboardAsset));
 
-    // Root node
     if (IsValid(InBehaviorTree->RootNode))
     {
         RootObject->SetObjectField(TEXT("rootNode"),
@@ -159,10 +149,8 @@ auto
         NodeObject->SetStringField(TEXT("description"), Description);
     }
 
-    // Properties
     NodeObject->SetObjectField(TEXT("properties"), DoSerializeNodeProperties_Json(InNode));
 
-    // Services on this composite node
     auto ServicesArray = TArray<UBTService*>{};
     for (int32 i = 0; i < InNode->Services.Num(); ++i)
     {
@@ -173,7 +161,6 @@ auto
     }
     NodeObject->SetArrayField(TEXT("services"), DoSerializeServices_Json(ServicesArray));
 
-    // Children
     auto ChildrenArray = TArray<TSharedPtr<FJsonValue>>{};
     for (int32 ChildIdx = 0; ChildIdx < InNode->Children.Num(); ++ChildIdx)
     {
@@ -181,7 +168,6 @@ auto
 
         auto ChildWrapper = MakeShared<FJsonObject>();
 
-        // Decorators on this child slot
         auto ChildDecorators = TArray<UBTDecorator*>{};
         for (int32 i = 0; i < Child.Decorators.Num(); ++i)
         {
@@ -192,7 +178,6 @@ auto
         }
         ChildWrapper->SetArrayField(TEXT("decorators"), DoSerializeDecorators_Json(ChildDecorators));
 
-        // The actual child node
         if (IsValid(Child.ChildComposite))
         {
             ChildWrapper->SetObjectField(TEXT("node"),
@@ -239,7 +224,6 @@ auto
 
     NodeObject->SetObjectField(TEXT("properties"), DoSerializeNodeProperties_Json(InNode));
 
-    // Services on this task node
     auto ServicesArray = TArray<UBTService*>{};
     for (int32 i = 0; i < InNode->Services.Num(); ++i)
     {
@@ -381,7 +365,6 @@ auto
     BlackboardObj->SetStringField(TEXT("assetName"), InBlackboardData->GetName());
     BlackboardObj->SetStringField(TEXT("assetPath"), InBlackboardData->GetPathName());
 
-    // Parent blackboard
     if (IsValid(InBlackboardData->Parent))
     {
         BlackboardObj->SetStringField(TEXT("parentBlackboard"), InBlackboardData->Parent->GetPathName());
@@ -413,7 +396,6 @@ auto
         KeysArray.Add(MakeShared<FJsonValueObject>(KeyObj));
     }
 
-    // Also include parent keys if there's a parent blackboard
     if (IsValid(InBlackboardData->Parent))
     {
         auto ParentKeysArray = TArray<TSharedPtr<FJsonValue>>{};
@@ -446,8 +428,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Plain-Text Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_BehaviorTreeExporter::
@@ -461,10 +441,8 @@ auto
     Text += FString::Printf(TEXT("Path: %s\n"), *InBehaviorTree->GetPathName());
     Text += TEXT("\n");
 
-    // Blackboard
     DoSerializeBlackboard_Text(InBehaviorTree->BlackboardAsset, Text);
 
-    // Tree structure
     Text += TEXT("--- Tree Structure ---\n");
 
     if (IsValid(InBehaviorTree->RootNode))
@@ -497,7 +475,6 @@ auto
     auto Description = FString{};
     DoGetNodeDisplayInfo(InNode, ClassName, NodeName, Description);
 
-    // Node header
     OutText += FString::Printf(TEXT("%s[Composite] %s: \"%s\"\n"), *Indent, *ClassName, *NodeName);
 
     if (!Description.IsEmpty())
@@ -505,10 +482,8 @@ auto
         OutText += FString::Printf(TEXT("%s  Description: %s\n"), *Indent, *Description);
     }
 
-    // Properties
     DoSerializeNodeProperties_Text(InNode, OutText, InDepth + 1);
 
-    // Services on this composite
     auto ServicesArray = TArray<UBTService*>{};
     for (int32 i = 0; i < InNode->Services.Num(); ++i)
     {
@@ -519,12 +494,10 @@ auto
     }
     DoSerializeServices_Text(ServicesArray, OutText, InDepth + 1);
 
-    // Children
     for (int32 ChildIdx = 0; ChildIdx < InNode->Children.Num(); ++ChildIdx)
     {
         const auto& Child = InNode->Children[ChildIdx];
 
-        // Decorators on this child slot
         auto ChildDecorators = TArray<UBTDecorator*>{};
         for (int32 i = 0; i < Child.Decorators.Num(); ++i)
         {
@@ -539,7 +512,6 @@ auto
             DoSerializeDecorators_Text(ChildDecorators, OutText, InDepth + 1);
         }
 
-        // Recurse into child node
         if (IsValid(Child.ChildComposite))
         {
             DoSerializeCompositeNode_Text(Child.ChildComposite, OutText, InDepth + 1);
@@ -578,7 +550,6 @@ auto
 
     DoSerializeNodeProperties_Text(InNode, OutText, InDepth + 1);
 
-    // Services on this task
     auto ServicesArray = TArray<UBTService*>{};
     for (int32 i = 0; i < InNode->Services.Num(); ++i)
     {
@@ -705,7 +676,6 @@ auto
     OutText += FString::Printf(TEXT("--- Blackboard: %s ---\n"), *InBlackboardData->GetName());
     OutText += FString::Printf(TEXT("  Path: %s\n"), *InBlackboardData->GetPathName());
 
-    // Parent blackboard keys
     if (IsValid(InBlackboardData->Parent))
     {
         OutText += FString::Printf(TEXT("  Parent: %s\n"), *InBlackboardData->Parent->GetName());
@@ -736,8 +706,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Helpers
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_BehaviorTreeExporter::
@@ -754,7 +722,6 @@ auto
         return FString{};
     }
 
-    // The conversion gives us the path without extension, append our extension
     DiskPath += InExtension;
 
     return DiskPath;
@@ -771,8 +738,8 @@ auto
     const auto* ValuePtr = InProperty->ContainerPtrToValuePtr<void>(InContainer);
     InProperty->ExportTextItem_Direct(Value, ValuePtr, nullptr, nullptr, PPF_None);
 
-    // If a struct property exported as "()", expand its sub-fields individually
-    if (Value == TEXT("()"))
+    const auto ExportedAsEmptyStruct = Value == TEXT("()");
+    if (ExportedAsEmptyStruct)
     {
         const auto* StructProperty = CastField<FStructProperty>(InProperty);
         if (StructProperty != nullptr)
@@ -818,11 +785,9 @@ auto
     if (InProperty == nullptr)
     { return false; }
 
-    // Skip transient and deprecated properties
     if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated | CPF_DuplicateTransient))
     { return false; }
 
-    // Skip properties from base engine classes (UBTNode, UObject, UBTAuxiliaryNode, UBTCompositeNode base, UBTTaskNode base)
     const auto* OwnerClass = InProperty->GetOwnerClass();
     if (OwnerClass == nullptr)
     { return false; }
@@ -836,7 +801,6 @@ auto
     if (SkipClasses.Contains(OwnerClass->GetFName()))
     { return false; }
 
-    // Include if the property is EditAnywhere, VisibleAnywhere, or BlueprintVisible
     if (InProperty->HasAnyPropertyFlags(CPF_Edit | CPF_BlueprintVisible))
     { return true; }
 
@@ -878,7 +842,6 @@ auto
     OutNodeName = InNode->GetNodeName();
     OutDescription = InNode->GetStaticDescription();
 
-    // Clean up description - remove line terminators for single-line display
     OutDescription.ReplaceInline(LINE_TERMINATOR, TEXT(" | "));
 }
 

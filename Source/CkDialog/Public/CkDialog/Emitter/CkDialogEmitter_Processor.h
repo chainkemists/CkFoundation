@@ -15,8 +15,7 @@ class UCk_DialogRegistry_Subsystem_UE;
 
 namespace ck
 {
-    // Drains the emitter's request queue: enqueues queries (adding the PendingQueries marker) and mutates the
-    // always-present cooldown fragment.
+    // Drains the emitter's request queue: enqueues queries and mutates the always-present cooldown fragment.
     class CKDIALOG_API FProcessor_DialogEmitter_HandleRequests : public ck_exp::TProcessor<
         FProcessor_DialogEmitter_HandleRequests,
         FCk_Handle_DialogEmitter,
@@ -68,16 +67,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Advances every active cooldown and retires the ones that finish, broadcasting OnDialogCooldownEnded for each.
-    //
-    // This exists as its own processor because expiry has to be noticed even when nobody is querying. Pruning used to
-    // ride along inside EvaluateQueries, whose view is gated on pending queries — so on a silent emitter a lapsed
-    // cooldown simply sat in the map. That was invisible while the only consumers compared against a deadline; the
-    // moment an "ended" signal exists, something has to actually observe the transition.
-    //
-    // Declared before EvaluateQueries because that processor names this one in its RunAfter list.
-    //
-    // The HasCooldowns marker keeps the view to emitters that are genuinely cooling, and is dropped with the last
-    // entry so a quiet emitter costs nothing.
+    // Its own processor because expiry must be noticed even when nobody is querying (EvaluateQueries' view is gated
+    // on pending queries). Declared first because EvaluateQueries names this one in its RunAfter list.
     class CKDIALOG_API FProcessor_DialogEmitter_TickCooldowns : public ck_exp::TProcessor<
         FProcessor_DialogEmitter_TickCooldowns,
         FCk_Handle_DialogEmitter,
@@ -112,9 +103,8 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_TimeDelta;
-        // TickCooldowns must land first. Cooldown state is now advanced by that processor rather than compared
-        // against an absolute deadline, so classification reads whatever it last wrote — evaluate before it and a
-        // line that expired this frame is still treated as cooling.
+        // TickCooldowns must land first: it advances cooldown state rather than comparing against an absolute
+        // deadline, so evaluating before it would still treat a line that expired this frame as cooling.
         using RunAfter = TDepList<FProcessor_DialogEmitter_HandleRequests, FProcessor_DialogEmitter_TickCooldowns>;
         using MarkedDirtyBy = FFragment_DialogEmitter_PendingQueries;
 

@@ -38,9 +38,8 @@ public:
 
 public:
     // Compose the Minimap feature DIRECTLY onto InHandle (no child entity). An entity hosts at most ONE direct
-    // minimap; compose additional minimaps (a HUD minimap AND a fullscreen world map) as child entities via Create.
-    // The observer defaults to InHandle's lifetime owner; redirect it via Request_SetObserver. InHandle does NOT
-    // need a Transform — only the observer does.
+    // minimap; compose additional ones (HUD minimap AND fullscreen world map) as child entities via Create. The
+    // observer defaults to InHandle's lifetime owner. InHandle does NOT need a Transform — only the observer does.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Minimap",
               DisplayName="[Ck][Minimap] Add Feature")
@@ -60,7 +59,6 @@ public:
         const FCk_Fragment_Minimap_ParamsData& InParams);
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -113,10 +111,9 @@ public:
         const TFunction<void(FCk_Handle_Minimap)>& InFunc) -> void;
 
 public:
-    // The per-frame pull surface: every projected POI as a self-contained value snapshot, sorted
-    // priority-desc then distance-asc. Consumers seed their pooled widgets from this at bind time and
-    // track membership deltas via the Appeared/Disappeared signals afterward — the signals never replay
-    // more than the LAST payload, so initial population must come from here, never from signal replay.
+    // The per-frame pull surface: every projected POI as a self-contained value snapshot, sorted priority-desc
+    // then distance-asc. Consumers SEED from this at bind time, then track deltas via the Appeared/Disappeared
+    // signals — those never replay more than the LAST payload, so initial population must come from here.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Minimap",
               DisplayName="[Ck][Minimap] Get Entries")
@@ -279,8 +276,7 @@ public:
 public:
     // Pure projection math — no entities, no world (unit-tested in CkMinimap_Utils.spec.cpp).
     // FRAME space is center-origin, +X = screen right, +Y = screen DOWN (UMG), visible frame [-1, 1]².
-    // North-up mapping: Frame = (WorldDelta.Y / Extent, -WorldDelta.X / Extent) — North projects to
-    // (0, -1) (screen up), East to (1, 0) (screen right).
+    // North-up mapping: Frame = (WorldDelta.Y / Extent, -WorldDelta.X / Extent).
 
     // NorthLocked ignores InViewYawDegrees; RotateWithObserver rotates by -InViewYawDegrees first.
     // Non-positive InViewExtent returns (0, 0).

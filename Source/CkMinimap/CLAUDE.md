@@ -92,7 +92,10 @@ phase 4 flips to net+save for co-op shared maps), accumulates on the authority t
   `Get_ExploredData` (pull-seed for painters).
 - Signals: `BindTo_OnCellsRevealed` (BATCHED cell indices per update — payload struct
   `FCk_FogOfWar_RevealedCells`), `BindTo_OnReset`. Painters seed from `Get_ExploredData`, then apply
-  deltas — same last-payload-replay caveat as every Ck signal.
+  deltas — same last-payload-replay caveat as every Ck signal. A `Request_Reset` handled in the same
+  drain DISCARDS the reveals batched before it: those cells are void, and painters re-seed off `OnReset`
+  instead of receiving a CellsRevealed batch the grid no longer backs. A no-op reset (empty or
+  fully-unexplored grid) never broadcasts.
 - Fog processors run in a group BEFORE `FGroup_PostTransform` so the minimap's fog cull never reads a
   same-frame half-written grid. Only recipe-rebuildable fog persists (same coverage contract as CkPoi —
   fog composed on a bare-created entity orphans its payload on load).
@@ -104,6 +107,27 @@ phase 4 flips to net+save for co-op shared maps), accumulates on the authority t
 `UCk_Minimap_MapLayer_PDA` — `_Bounds` (DATA: feeds FixedBounds projection + fog grids) + `_MapTexture`
 (OPAQUE to the data layer, presentation resolves it — same doctrine as CkPoi's `_DisplayAsset`). A baker
 editor module (scene capture → these assets) is planned, not shipped.
+
+---
+
+## Reference widget (`UCk_MinimapFrame_Widget`)
+
+Shipped as the worked example of the delivery contract, not as production HUD furniture. Design notes
+that used to live in its class comment:
+
+- **Pull-in-NativeTick is the documented exception.** CkUI doctrine routes per-frame widget updates
+  through processors (see WorldSpaceWidget). This widget is the edge-consumer of the minimap PULL API —
+  all math is precomputed by `FProcessor_Minimap_Update`, and the tick only writes UMG layout for its own
+  pooled children. Games wanting processor-pushed HUDs consume the same API from their own processor.
+- Appeared/Disappeared are bound (`IgnorePayloadInFlight`) and re-surfaced as Blueprint events purely to
+  demonstrate the membership-delta contract; positioning never depends on them (blips are index-pooled
+  against `Get_Entries` every frame).
+- **Rectangle frames only.** A circular mask is presentation polish (material or retainer box); the DATA
+  layer's clamp math already supports `ECk_Minimap_FrameShape::Circle`. Fog is likewise not painted here —
+  real games seed from `Get_ExploredData`, apply `OnCellsRevealed` deltas, and composite via CkRenderTarget.
+- **[EDITOR-VERIFY]** The base widget class carries `meta=(DisableNativeTick)`; class metadata is not
+  inherited and is editor-only, so this subclass is expected to tick. Verify `NativeTick` actually runs in
+  PIE on first integration; if it does not, drive the refresh from a timer or drop the base meta expectation.
 
 ---
 

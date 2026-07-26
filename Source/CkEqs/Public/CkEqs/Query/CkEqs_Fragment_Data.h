@@ -15,13 +15,8 @@
 #include "CkEqs_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// CkEqs — Environmental Query System (v1.1)
-//
-// All reflected USTRUCTs for the EQS module live here. Tags, signals, and non-reflected
-// fragments live in CkEqs_Fragment.h. Algorithm helpers in CkEqs_Algorithm.h.
-//
-// v1.1 ships: OnCircle generator, VolumeCheck + Random tests, _ProjectOntoNav generator flag.
-// PathCost and Reachability (async fan-out) remain deferred.
+// CkEqs — Environmental Query System. Every reflected USTRUCT lives here; tags, signals and
+// non-reflected fragments in CkEqs_Fragment.h, the math in CkEqs_Algorithm.h.
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_Eqs_Algorithm;
@@ -74,9 +69,8 @@ enum class ECk_Eqs_TestType : uint8
     Overlap,        // Point-overlap count at candidate position via CkSpatialQuery shape cast
     VolumeCheck,    // AABB containment filter — pass/fail based on world-space box
     Random          // Assigns FMath::FRand() score; useful for random tie-breaking
-    // v1.2: PathCost / Reachability — needs CkEqs<->CkNav async fan-out design (N candidates ->
-    // N async Request_FindPath -> aggregate completions -> continue scoring). Do NOT add as
-    // direct FindPathSync calls; the CkNavigation module notes flag the synchronous shortcut as an anti-pattern.
+    // PathCost / Reachability would need an async CkEqs<->CkNav fan-out. Never add them as direct
+    // FindPathSync calls — CkNavigation flags the synchronous shortcut as an anti-pattern.
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Eqs_TestType);
 
@@ -92,8 +86,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Eqs_TestPurpose);
 UENUM(BlueprintType)
 enum class ECk_Eqs_ScoringEquation : uint8
 {
-    // Verified against UE EnvQueryTest.cpp:119-151. UE's "Sine" does NOT exist. Final set
-    // matches UE parity:
+    // UE parity (EnvQueryTest.cpp:119-151) — UE has no "Sine" equation despite the folklore.
     Linear,         // y = x
     Square,         // y = x * x  (emphasises high values)
     SquareRoot,     // y = sqrt(x)  (diminishing-returns scoring)
@@ -102,7 +95,6 @@ enum class ECk_Eqs_ScoringEquation : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Eqs_ScoringEquation);
 
-// ECk_Eqs_ClampType drives WHERE the clamp threshold comes from.
 UENUM(BlueprintType)
 enum class ECk_Eqs_ClampType : uint8
 {
@@ -112,7 +104,6 @@ enum class ECk_Eqs_ClampType : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Eqs_ClampType);
 
-// ECk_Eqs_NormalizationType drives the normalization baseline.
 UENUM(BlueprintType)
 enum class ECk_Eqs_NormalizationType : uint8
 {
@@ -207,7 +198,6 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _ScoringFactor = 1.0f;
 
-    // Split from prior monolithic _NormalizationMode/_ClampMode.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_Eqs_NormalizationType _NormalizationType = ECk_Eqs_NormalizationType::Absolute;
 
@@ -225,7 +215,6 @@ private:
               EditCondition = "_ClampMaxType == ECk_Eqs_ClampType::SpecifiedValue"))
     float _ClampMax = 1.0f;
 
-    // RESERVED for v1.1: reference-value scoring. v1 IGNORES this field.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true,
               ToolTip = "Reserved for v1.1 reference-value scoring. Ignored in v1."))
     float _ReferenceValue = 0.0f;
@@ -320,7 +309,6 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _UseSpiralPattern = false;
 
-    // Cone (UE-parity parameterization).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true,
               ClampMin = "0.0", ClampMax = "359.0"))
     float _ConeDegrees = 90.0f;
@@ -335,11 +323,9 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
     float _ConePointSpacing = 100.0f;
 
-    // EntitiesWithTag
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "EntityTag"))
     FGameplayTag _RequiredEntityTag;
 
-    // OnCircle
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
     float _CircleRadius = 300.0f;
 
@@ -350,9 +336,7 @@ private:
               ClampMin = "1.0", ClampMax = "360.0"))
     float _CircleArcAngle = 360.0f;
 
-    // NavProjection — applies after any generator emits candidates; EntitiesWithTag is exempt.
-    // When true, each candidate is snapped to the navmesh within _NavProjectionSearchHalfExtentUu.
-    // Candidates that fail projection are dropped before tests run.
+    // Every generator except EntitiesWithTag; candidates that fail to project are dropped.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _ProjectOntoNav = false;
 
@@ -449,8 +433,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "Probe"))
     FGameplayTagContainer _OverlapFilter;
 
-    // VolumeCheck test — oriented-box containment in world space (zero rotation = AABB).
-    // When Inverted=false, candidates INSIDE the box pass; when true, candidates OUTSIDE pass.
+    // VolumeCheck test — world-space oriented-box containment; zero rotation = AABB.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _VolumeCheck_WorldCenter = FVector::ZeroVector;
 
@@ -462,8 +445,6 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _VolumeCheck_Inverted = false;
-
-    // v1.2 reserved: _PathCostAllowPartial (async fan-out design required).
 
 public:
     CK_PROPERTY(_TestType);
@@ -524,12 +505,8 @@ public:
     CK_PROPERTY(_Context);
 
 public:
-    // _GeneratorParams and _Tests are essential. Single-arg
-    // construction silently produced a default-SimpleGrid, zero-test query that returned
-    // a candidate at index 0 with score 1.0 - silently-wrong consumer behavior. Tests is
-    // mandatory at construction; pass {} only if you know you want a generator-only
-    // candidate dump (rare; almost certainly a bug - HandleRequests logs a Warning if
-    // _Tests.IsEmpty() at runtime).
+    // _Tests is essential on purpose: single-arg construction used to yield a silently-wrong
+    // zero-test query. Pass {} only for a deliberate generator-only dump (HandleRequests warns).
     CK_DEFINE_CONSTRUCTORS(FCk_Eqs_QueryParams, _Querier, _GeneratorParams, _Tests);
 };
 
@@ -603,11 +580,8 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-Test Debug Info — captured per (test, candidate) during DoRunTests so the
-// debugger can show why a candidate scored where it did. Always-on (no project-setting gate)
-// because EQS is server-only with bounded query counts; ~12 bytes/test/candidate is negligible.
-// Mirrors CkCrowd's FCk_Fragment_CrowdAgent_DiagRecorderData — additional-fragment-for-debug
-// is the canonical CkFoundation pattern.
+// Captured per (test, candidate) during DoRunTests so the debugger can show why a candidate scored
+// where it did. Always-on: EQS is server-only and ~12 bytes/test/candidate is negligible.
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -620,26 +594,20 @@ struct CKEQS_API FCk_Eqs_PerTestDebugInfo
     friend class  UCk_Utils_Eqs_UE;
 
 private:
-    // Raw value the test produced for this candidate (distance in cm, dot in [-1,1] / [0,1],
-    // 0 or 1 for trace LOS, hit-count for overlap, etc.). Test-type-specific units; debugger
-    // displays as float without interpretation.
+    // Test-type-specific units (cm, dot, 0/1 LOS, overlap hit-count); displayed raw, uninterpreted.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _RawValue = 0.0f;
 
-    // NormalizeAndScore output (post-equation, post-clamp, post-_ScoringFactor). Range
-    // depends on _ScoringFactor; nominally [0, _ScoringFactor]. Zero for non-Score-purpose
-    // tests and for tests skipped via the degenerate-min-equals-max path.
+    // NormalizeAndScore output, nominally [0, _ScoringFactor]. Zero for non-Score-purpose tests
+    // and for tests skipped via the degenerate-min-equals-max path.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _NormalizedScore = 0.0f;
 
-    // What this test actually multiplied into _Score (= _NormalizedScore * _Weight). 1.0f
-    // for tests that didn't contribute to score (Filter-only purpose, or skipped).
+    // _NormalizedScore * _Weight; 1.0f when this test contributed no score at all.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _WeightedContribution = 1.0f;
 
-    // false if this test's filter rejected this candidate. Tests that are Score-only never
-    // set this to false. Filter failure does NOT short-circuit later tests — the candidate
-    // continues to be tested and scored, and Finalize drops it.
+    // Filter failure does NOT short-circuit later tests; Finalize is what drops the candidate.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     bool _PassedThisTest = true;
 
@@ -650,9 +618,7 @@ public:
     CK_PROPERTY_GET(_PassedThisTest);
 };
 
-// Per-candidate row of test results. `_PerTest` is parallel-indexed to InParams._Tests:
-// `_PerTest[TestIndex]` is the breakdown for test N on this candidate. Sized once at the
-// start of DoRunTests; entries are written in place as tests run.
+// `_PerTest` is parallel-indexed to InParams._Tests; sized once at the start of DoRunTests.
 USTRUCT(BlueprintType)
 struct CKEQS_API FCk_Eqs_DebugInfo_PerCandidate
 {
@@ -670,11 +636,8 @@ public:
     CK_PROPERTY_GET(_PerTest);
 };
 
-// Top-level debug fragment data. Lives on the query entity alongside Params/State/Results.
-// Pre-Finalize: indexed in original generation order matching FFragment_EqsQuery_State._Candidates.
-// Post-Finalize: parallel-indexed to FFragment_EqsQuery_Results._Candidates (DoFinalize reorders
-// _PerCandidate in lockstep with the candidate drop/sort/truncate so debugger lookup by results
-// index Just Works).
+// Pre-Finalize this is indexed in generation order (FFragment_EqsQuery_State._Candidates);
+// DoFinalize reorders it in lockstep with FFragment_EqsQuery_Results._Candidates.
 USTRUCT(BlueprintType)
 struct CKEQS_API FCk_Fragment_EqsQuery_DebugInfoData
 {
@@ -724,8 +687,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _AutoDestroy = true;
 
-    // Optional completion delegate; bound on entity creation via CK_SIGNAL_BIND_REQUEST_FULFILLED
-    // (auto-unbind after first fire). Invalid/unbound delegate is fine - no binding happens.
+    // Optional; bound at query-entity creation via CK_SIGNAL_BIND_REQUEST_FULFILLED. Unbound is fine.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Delegate_EqsQuery_OnComplete _OnComplete;
 

@@ -28,11 +28,9 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_UnrealComponent_TickViaProcessor);
     CK_DEFINE_ECS_TAG(FTag_UnrealComponent_IsScene);
 
-    // Opt-out for FProcessor_UnrealComponent_PushTransform. When set, the processor skips
-    // this entity and its USceneComponent's world transform is left to whoever owns it
-    // (typically Unreal physics after SetSimulatePhysics + K2_DetachFromComponent). Used by
-    // the Rentnet Kiosk Film death path so physics isn't overwritten every tick by the
-    // ECS-driven owning entity transform.
+    // Opt-out for FProcessor_UnrealComponent_PushTransform: the USceneComponent's world transform
+    // is left to whoever owns it instead (typically Unreal physics after SetSimulatePhysics +
+    // K2_DetachFromComponent, which the per-tick ECS push would otherwise overwrite).
     CK_DEFINE_ECS_TAG(FTag_UnrealComponent_TransformPushDisabled);
 
     // --------------------------------------------------------------------------------------------------------------------

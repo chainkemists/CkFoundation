@@ -19,16 +19,6 @@
 class UCk_CameraLayer_EntityScript;
 
 // --------------------------------------------------------------------------------------------------------------------
-// UCk_Utils_CameraLayer_UE — the SmTask-style utils for camera layers.
-//
-//  - Create(camera, layerClass): spawns the layer entity under a camera (stores the owning camera, attaches the
-//    layer EntityScript). Mirrors UCk_Utils_SmTask_UE::Create. A layer is always created from a camera handle.
-//  - Acquire_CameraModifier_<Tuner>(layer, op, target[, component]): lazily creates (once per tuner per layer) an
-//    attribute modifier on the owning camera's tuner attribute, records its TARGET (the value at full blend) + op,
-//    and returns the typed modifier handle. The camera is derived from the layer (no camera param). The framework
-//    auto-blends the modifier in/out (FProcessor_CameraLayer_Blend scales target→effective by the layer's alpha).
-//    Re-acquiring the same tuner updates the target (ensuring the operation matches).
-// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_CameraLayer"))
 class CKCAMERA_API UCk_Utils_CameraLayer_UE : public UCk_Utils_Ecs_Base_UE
@@ -49,15 +39,12 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    // Destroys every attribute modifier this layer acquired (they live under the tuner attributes, not the layer).
-    // Called on layer teardown (ExitLayer) so removing a layer cleanly removes its contributions.
+    // Required on layer teardown: the acquired modifiers live under the tuner attributes, not under the layer entity.
     static auto
     Remove_AllAcquiredModifiers(
         FCk_Handle_CameraLayer& InLayer) -> void;
 
-    // ================================================================================================================
     // ACQUIRE — Rig
-    // ================================================================================================================
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier BoomArmPivotOffset")
     static FCk_Handle_VectorAttributeModifier
@@ -83,9 +70,7 @@ public:
     static FCk_Handle_RotatorAttributeModifier
     Acquire_CameraModifier_FixedBoomRotation(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, FRotator InTarget);
 
-    // ================================================================================================================
     // ACQUIRE — Springs
-    // ================================================================================================================
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier GroupBaseLocationInterpSpeed")
     static FCk_Handle_FloatAttributeModifier
@@ -95,9 +80,7 @@ public:
     static FCk_Handle_FloatAttributeModifier
     Acquire_CameraModifier_LookAtLocationInterpSpeed(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, float InTarget);
 
-    // ================================================================================================================
     // ACQUIRE — Sensor
-    // ================================================================================================================
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier FOV")
     static FCk_Handle_FloatAttributeModifier
@@ -107,9 +90,7 @@ public:
     static FCk_Handle_FloatAttributeModifier
     Acquire_CameraModifier_AspectRatio(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, float InTarget);
 
-    // ================================================================================================================
     // ACQUIRE — Noise
-    // ================================================================================================================
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier NoisePitchSpeed")
     static FCk_Handle_FloatAttributeModifier
@@ -159,9 +140,7 @@ public:
     static FCk_Handle_FloatAttributeModifier
     Acquire_CameraModifier_NoiseRollOutOfRangeMultiplier(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, float InTarget);
 
-    // ================================================================================================================
     // ACQUIRE — Orientation Control
-    // ================================================================================================================
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier OrientationControlPitchSpeed")
     static FCk_Handle_FloatAttributeModifier
@@ -195,9 +174,7 @@ public:
     static FCk_Handle_FloatAttributeModifier
     Acquire_CameraModifier_OrientationControlYawOutOfRangeMultiplier(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, float InTarget);
 
-    // ================================================================================================================
     // ACQUIRE — Auto Reorient
-    // ================================================================================================================
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier AutoReorientPitchSpeed")
     static FCk_Handle_FloatAttributeModifier
@@ -247,9 +224,7 @@ public:
     static FCk_Handle_FloatAttributeModifier
     Acquire_CameraModifier_LookAtCameraLocationYawOffset(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, float InTarget);
 
-    // ================================================================================================================
     // ACQUIRE — Collision
-    // ================================================================================================================
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier NumPredictionWhiskers")
     static FCk_Handle_IntegerAttributeModifier
@@ -271,9 +246,7 @@ public:
     static FCk_Handle_FloatAttributeModifier
     Acquire_CameraModifier_ReturningSpeed(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, float InTarget);
 
-    // ================================================================================================================
     // ACQUIRE — Depth Of Field
-    // ================================================================================================================
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][Camera] Acquire Modifier Fstop")
     static FCk_Handle_FloatAttributeModifier
@@ -287,9 +260,7 @@ public:
     static FCk_Handle_FloatAttributeModifier
     Acquire_CameraModifier_SensorWidth(UPARAM(ref) FCk_Handle_CameraLayer& InLayer, ECk_AttributeModifier_Operation InOperation, float InTarget);
 
-    // ================================================================================================================
     // INTERNAL
-    // ================================================================================================================
 private:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|CameraLayer", DisplayName = "[Ck][CameraLayer] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))

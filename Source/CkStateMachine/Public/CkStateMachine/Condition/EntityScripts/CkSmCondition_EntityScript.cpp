@@ -42,16 +42,13 @@ auto
 {
     Super::BeginPlay();
 
-    // See UCk_SmState_EntityScript::BeginPlay for rationale. Graph-walk temp conditions
-    // must not activate — their DoEnterCondition can have observable side effects
-    // (e.g. capturing world time for a dwell timer) and FTag_SmCondition_Active would
-    // admit them to the polled evaluation loop.
+    // Graph-walk temp conditions must not activate: DoEnterCondition can have observable side
+    // effects and FTag_SmCondition_Active would admit them to the polled evaluation loop.
     if (_AssociatedEntity.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
     { return; }
 
-    // Has-guard mirror of EndPlay below: a snapshot-restored SM-graph entity keeps its EntityScript
-    // but not its SmCondition feature fragment (the redrive rebuilds the real graph fresh), so this
-    // BeginPlay runs on a husk with nothing to enter.
+    // A snapshot-restored SM-graph entity keeps its EntityScript but not its SmCondition fragment
+    // (the redrive rebuilds the real graph fresh), so this can run on a husk with nothing to enter.
     if (NOT UCk_Utils_SmCondition_UE::Has(_AssociatedEntity))
     { return; }
 
@@ -59,12 +56,9 @@ auto
     const auto SmHandle = UCk_Utils_SmCondition_UE::Get_OwningStateMachine(Self);
     const auto NetContext = ck::statemachine::ComputeNetContext(SmHandle);
 
-    // Transition-authority gate: only the machine that decides this SM's transitions evaluates
-    // conditions. Non-authority machines (the server of an OwningClientAuth SM, non-owning clients)
-    // follow the relay; entering here would bind signals and run DoEnterCondition's initial evaluation
-    // (which can have observable side effects) and feed a decision the machine must not make. Skipping
-    // enter leaves FTag_SmCondition_Active unset, so ExitCondition is a clean no-op — the whole
-    // condition lifecycle is suppressed on non-authority.
+    // Non-authority machines follow the relay; entering here would bind signals, run
+    // DoEnterCondition's side effects, and feed a decision they must not make. Skipping enter leaves
+    // FTag_SmCondition_Active unset, so ExitCondition stays a clean no-op.
     if (NOT ck::statemachine::Get_IsTransitionAuthority(SmHandle))
     { return; }
 
@@ -76,14 +70,9 @@ auto
     EndPlay()
     -> void
 {
-    // Fallback for cascade-destroyed conditions whose FProcessor_SmCondition_Exit never runs
-    // (e.g. conditions in a sub-SM destroyed via parent state cascade). Dedup'd via
-    // FTag_SmCondition_Active inside ExitCondition — if the processor already handled this
-    // condition, the tag is gone and ExitCondition is a no-op.
-    //
-    // Has-guard (not CastChecked) because a snapshot-restored SM-graph entity is an orphan: its
-    // EntityScript is captured but the SmCondition feature fragment is not (the redrive rebuilds the
-    // real graph fresh), so CastChecked would ensure. No fragment -> nothing to exit; skip.
+    // Fallback for cascade-destroyed conditions whose FProcessor_SmCondition_Exit never runs;
+    // dedup'd via FTag_SmCondition_Active inside ExitCondition. Has-guard (not CastChecked) because
+    // a snapshot-restored SM-graph entity is a script-only husk that would ensure on CastChecked.
     if (UCk_Utils_SmCondition_UE::Has(_AssociatedEntity))
     {
         auto Self = UCk_Utils_SmCondition_UE::CastChecked(_AssociatedEntity);

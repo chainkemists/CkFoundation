@@ -38,9 +38,8 @@ public:
 public:
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Adds FTag_SmCondition_PendingExit and requests entity destruction. Called by
-    // FProcessor_SmTransition_Exit when cascading exit. FProcessor_SmCondition_Exit (EndPlay
-    // group, RunAfter SmTransition_Exit) picks up the tag and calls ExitCondition on the script.
+    // Adds FTag_SmCondition_PendingExit and requests destruction; FProcessor_SmCondition_Exit
+    // (EndPlay group, RunAfter SmTransition_Exit) picks up the tag and calls ExitCondition.
     static auto
     Request_Exit(
         FCk_Handle_SmCondition& InCondition) -> FCk_Handle_SmCondition;
@@ -66,12 +65,9 @@ public:
         FCk_Handle_SmCondition& InCondition,
         ECk_SmConditionResult InResult) -> FCk_Handle_SmCondition;
 
-    // Sets the condition's resting Result without bumping the parent transition's
-    // Evaluating tag. Use ONLY for the initial / resting-state write at construction
-    // time, where waking the parent is unnecessary (the state evaluator's normal
-    // cascade will reach this transition lazily). For any value-changed-mid-state
-    // path (event fires, MarkSatisfied/MarkUnsatisfied), use Request_UpdateConditionResult,
-    // which correctly wakes the parent.
+    // Sets the resting Result WITHOUT waking the parent transition. Use ONLY for the initial /
+    // resting-state write at construction time (the state evaluator's cascade reaches the transition
+    // lazily). Value-changed-mid-state paths must use Request_UpdateConditionResult instead.
     static auto
     Request_SetInitialResult(
         FCk_Handle_SmCondition& InCondition,

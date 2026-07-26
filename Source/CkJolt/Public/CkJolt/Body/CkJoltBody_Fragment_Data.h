@@ -20,7 +20,6 @@ class UPhysicalMaterial;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Where a JoltBody's collision shape comes from.
 UENUM(BlueprintType)
 enum class ECk_JoltBody_ShapeSource : uint8
 {
@@ -32,7 +31,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_JoltBody_ShapeSource);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// How a JoltBody's mass is determined.
 UENUM(BlueprintType)
 enum class ECk_JoltBody_MassSource : uint8
 {
@@ -45,7 +43,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_JoltBody_MassSource);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// How a JoltBody's center of mass is determined.
 UENUM(BlueprintType)
 enum class ECk_JoltBody_ComSource : uint8
 {
@@ -57,7 +54,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_JoltBody_ComSource);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// How a JoltBody's surface (friction/restitution) is determined.
 UENUM(BlueprintType)
 enum class ECk_JoltBody_SurfaceSource : uint8
 {
@@ -69,8 +65,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_JoltBody_SurfaceSource);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Awake / asleep state of a simulated Jolt body. Jolt puts settled dynamic bodies to sleep to save
-// CPU; a kinematic/static body is always considered Awake.
+// Jolt sleeps settled DYNAMIC bodies to save CPU; a kinematic/static body is always considered Awake.
 UENUM(BlueprintType)
 enum class ECk_Jolt_SleepState : uint8
 {
@@ -82,8 +77,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_SleepState);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// How a Teleport request treats the body's existing velocity: KeepVelocity leaves linear/angular velocity
-// intact (the body keeps its momentum through the jump); ResetVelocity zeroes both (a clean respawn).
 UENUM(BlueprintType)
 enum class ECk_Jolt_TeleportVelocityPolicy : uint8
 {
@@ -101,8 +94,7 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_JoltBody);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Config for a Jolt-simulated rigid body added onto an entity. Essentials = the shape source (+ its
-// payload). Everything else is an optional fluent knob mirroring JPH::BodyCreationSettings defaults.
+// Config for a Jolt-simulated rigid body; every optional knob mirrors its JPH::BodyCreationSettings default.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Fragment_JoltBody_ParamsData
 {
@@ -175,7 +167,6 @@ private:
                       EditCondition = "_SurfaceSource == ECk_JoltBody_SurfaceSource::Explicit"))
     float _Restitution = 0.0f;
 
-    // Defaults mirror JPH::BodyCreationSettings (GravityFactor 1.0, Linear/AngularDamping 0.05).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     float _GravityFactor = 1.0f;
@@ -188,8 +179,7 @@ private:
               meta = (AllowPrivateAccess = true))
     float _AngularDamping = 0.05f;
 
-    // The collision profile that seeds this body's Jolt object layer (v1 is profile-only). Resolved
-    // against UCollisionProfile at setup — the signature mirrors CkJolt's layer-table seeding.
+    // Resolved against UCollisionProfile at setup to seed this body's Jolt object layer (v1 is profile-only).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FName _CollisionProfileName = TEXT("PhysicsActor");
@@ -225,7 +215,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Toggle a JoltBody between Awake and Asleep.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_SetSleepState : public FCk_Request_Base
 {
@@ -249,8 +238,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Apply a continuous force (UE units, Newton-equivalent) to a JoltBody's center of mass for the next
-// sub-step. Activates the body; ignored while the body has not finished setup.
+// Continuous force (UE units, Newton-equivalent) at the center of mass for the next sub-step. Activates the body.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_AddForce : public FCk_Request_Base
 {
@@ -274,8 +262,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Apply a continuous force at a world-space point (produces torque about the center of mass) for the
-// next sub-step. Activates the body; ignored while the body has not finished setup.
+// Continuous force at a world-space point (produces torque about the center of mass) for the next sub-step.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_AddForceAtLocation : public FCk_Request_Base
 {
@@ -304,8 +291,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Apply a continuous torque (UE units) to a JoltBody for the next sub-step. Activates the body; ignored
-// while the body has not finished setup.
+// Continuous torque (UE units) for the next sub-step. Activates the body.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_AddTorque : public FCk_Request_Base
 {
@@ -329,8 +315,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Apply an instantaneous impulse (UE units) at a JoltBody's center of mass. Activates the body; ignored
-// while the body has not finished setup.
+// Instantaneous impulse (UE units) at the center of mass. Activates the body.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_AddImpulse : public FCk_Request_Base
 {
@@ -354,8 +339,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Apply an instantaneous impulse at a world-space point (produces angular impulse about the center of
-// mass). Activates the body; ignored while the body has not finished setup.
+// Instantaneous impulse at a world-space point (produces angular impulse about the center of mass).
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_AddImpulseAtLocation : public FCk_Request_Base
 {
@@ -384,8 +368,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Apply an instantaneous angular impulse (UE units) to a JoltBody. Activates the body; ignored while
-// the body has not finished setup.
+// Instantaneous angular impulse (UE units). Activates the body.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_AddAngularImpulse : public FCk_Request_Base
 {
@@ -409,8 +392,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Directly set a JoltBody's linear velocity (UE units/s) of the center of mass. Activates the body;
-// ignored while the body has not finished setup.
+// Linear velocity (UE units/s) of the center of mass, set directly. Activates the body.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_SetLinearVelocity : public FCk_Request_Base
 {
@@ -434,8 +416,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Directly set a JoltBody's angular velocity (UE units/s). Activates the body; ignored while the body
-// has not finished setup.
+// Angular velocity (UE units/s), set directly. Activates the body.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_SetAngularVelocity : public FCk_Request_Base
 {
@@ -459,9 +440,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Instantly move a JoltBody to a world-space pose (position + rotation), snapping the entity's Transform
-// and step pose too (no interpolation across the jump). _VelocityPolicy decides whether the pre-teleport
-// velocity survives. Ignored while the body has not finished setup.
+// Instantly move to a world-space pose, snapping the entity's Transform and step pose too (no interpolation
+// across the jump). KeepVelocity preserves the pre-teleport momentum; ResetVelocity zeroes linear + angular.
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Request_JoltBody_Teleport : public FCk_Request_Base
 {
@@ -495,12 +475,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Payload for a JoltBody contact begin/persist signal. _OtherEntity is the other body's entity (may be an
-// INVALID handle when the other body has no live entity, e.g. a baked static-world body). _ContactPoints
-// and _ContactNormal are on THIS body's surface; _RelativeNormalSpeed is the closing speed along the
-// contact normal in UE units/s, POSITIVE when the bodies are approaching (impact hardness thresholds work
-// as "> X"; the raw event keeps Jolt's negative-when-closing convention — the router negates it here);
-// _OtherIsSensor reports whether the other body is a Jolt sensor.
+// Payload for a JoltBody contact begin/persist signal. _OtherEntity may be INVALID (the other body has no
+// live entity). _ContactPoints/_ContactNormal are on THIS body's surface; _RelativeNormalSpeed is the closing
+// speed along that normal in UE units/s, POSITIVE when approaching (Jolt's raw sign is the opposite).
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_JoltBody_Payload_OnContact
 {
@@ -543,8 +520,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Payload for a JoltBody contact-removed signal. _OtherEntity is the other body's entity (may be an
-// INVALID handle when the other body has no live entity).
+// Payload for a JoltBody contact-removed signal. _OtherEntity may be INVALID (the other body has no live entity).
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_JoltBody_Payload_OnContactRemoved
 {
@@ -567,8 +543,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// OnContactAdded and OnContactPersisted share the contact payload; the removed signal carries its own
-// minimal payload. SleepStateChanged carries the body's new sleep state directly.
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_JoltBody_OnContact,
     FCk_Handle_JoltBody, InHandle,

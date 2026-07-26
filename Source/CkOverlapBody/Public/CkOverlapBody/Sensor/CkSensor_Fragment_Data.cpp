@@ -529,8 +529,7 @@ auto
 {
     Super::InitializeComponent();
 
-    // If this component is ever cloned/duplicated, InitializeComponent could run on the cloned object if RegisterComponentWithWorld is called
-    // In this case, the delegates are already bound, because the duplication process also copies the bindings from the original component
+    // A cloned/duplicated component arrives with the original's bindings already copied in.
     if (NOT this->OnComponentBeginOverlap.IsAlreadyBound(this, &ThisType::OnBeginOverlap))
     {
         this->OnComponentBeginOverlap.AddDynamic(this, &ThisType::OnBeginOverlap);
@@ -607,8 +606,7 @@ auto
 {
     Super::InitializeComponent();
 
-    // If this component is ever cloned/duplicated, InitializeComponent could run on the cloned object if RegisterComponentWithWorld is called
-    // In this case, the delegates are already bound, because the duplication process also copies the bindings from the original component
+    // A cloned/duplicated component arrives with the original's bindings already copied in.
     if (NOT this->OnComponentBeginOverlap.IsAlreadyBound(this, &ThisType::OnBeginOverlap))
     {
         this->OnComponentBeginOverlap.AddDynamic(this, &ThisType::OnBeginOverlap);
@@ -685,8 +683,7 @@ auto
 {
     Super::InitializeComponent();
 
-    // If this component is ever cloned/duplicated, InitializeComponent could run on the cloned object if RegisterComponentWithWorld is called
-    // In this case, the delegates are already bound, because the duplication process also copies the bindings from the original component
+    // A cloned/duplicated component arrives with the original's bindings already copied in.
     if (NOT this->OnComponentBeginOverlap.IsAlreadyBound(this, &ThisType::OnBeginOverlap))
     {
         this->OnComponentBeginOverlap.AddDynamic(this, &ThisType::OnBeginOverlap);

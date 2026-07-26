@@ -46,8 +46,7 @@ auto
 
     const auto TickStatCounter = FScopeCycleCounter{_TickStatId};
 
-    // While the load gate is active, tick only the RunsDuringLoad kernel (spec §4.3) so feature processors stay
-    // frozen against the half-rebuilt world; normal frames tick the whole graph.
+    // The load kernel keeps feature processors frozen against the half-rebuilt world.
     auto Scope = ck::ECk_SchedulerTickScope::Full;
     if (const auto* Subsystem = DoGet_OwningSubsystem();
         Subsystem != nullptr and Subsystem->Get_IsLoadGateActive())
@@ -102,33 +101,21 @@ auto
 {
     Super::Initialize(Collection);
 
-    // 1. Create the underlying entt registry; we own its lifetime.
     _OwnedRegistry = MakeUnique<ck::registry_table::EnttRegistryType>();
 
-    // 2. Register it with the slot table — this gives us a (slot, gen) handle
-    //    that will be embedded in every FCk_Handle/FCk_Registry view.
     const auto RegistryHandle = ck::registry_table::Allocate(_OwnedRegistry.Get());
 
-    // 3. Create the per-world transient entity inside the entt registry.
     const auto TransientEntityId = FCk_Entity{_OwnedRegistry->create()};
 
-    // 4. Bind the registry view to the slot, then push the transient entity
-    //    into the registry's ctx. Storing in ctx (rather than as a per-view
-    //    field) means any FCk_Registry resolved from the same slot — including
-    //    via *Handle — sees the same transient entity.
     _Registry = FCk_Registry{RegistryHandle};
     _Registry.SetContext<ck::FCtx_TransientEntity>(ck::FCtx_TransientEntity{TransientEntityId});
 
-    // 5. Wrap it in an FCk_Handle (uses the existing pre-Phase-3 ctor that
-    //    takes FCk_Registry&; Phase 3 will swap this for the slot+gen ctor).
     _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
     UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity"));
 
-    // 6. Bind the world to the transient up front so the "transient always has a valid world"
-    //    invariant (asserted by Get_WorldForEntity) holds from creation, not only from
-    //    OnWorldBeginPlay. Actor construction at PIE start (e.g. the default pawn's
-    //    ConstructionScript) can call Request_SpawnEntity in the Initialize→OnWorldBeginPlay
-    //    window; without this the transient is world-less there and the spawn guard ensures.
+    // Bind the world here, not at OnWorldBeginPlay: actor construction at PIE start can call
+    // Request_SpawnEntity in the Initialize→OnWorldBeginPlay window, and a world-less transient
+    // trips Get_WorldForEntity's "transient always has a valid world" invariant there.
     if (auto* World = GetWorld(); ck::IsValid(World))
     {
         _TransientEntity.Add<TWeakObjectPtr<UWorld>>(World);
@@ -152,8 +139,7 @@ auto
     _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
     UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity (restored)"));
 
-    // Re-attach the world-fragment (non-snapshotable TWeakObjectPtr<UWorld>). The restored transient never carries
-    // it (it is not captured), but guard anyway — EnTT emplace asserts if already present.
+    // Guarded because EnTT emplace asserts if the fragment is already present.
     if (NOT _TransientEntity.Has<TWeakObjectPtr<UWorld>>())
     {
         _TransientEntity.Add<TWeakObjectPtr<UWorld>>(GetWorld());
@@ -192,10 +178,8 @@ auto
 
     _WorldActors.Reset();
 
-    // Free the slot FIRST so any outstanding handle resolves to nullptr from
-    // here on. Then destroy the entt registry. Order matters: between these
-    // two calls, ghost-handle access fails safe (resolve -> null), not access
-    // freed memory.
+    // Free the slot BEFORE destroying the registry: in between, a ghost handle resolves to null
+    // rather than reaching freed memory.
     ck::registry_table::Free(_Registry.Get_RegistryHandle());
 
     _Registry        = FCk_Registry{};
@@ -212,9 +196,8 @@ auto
 {
     Super::OnWorldBeginPlay(InWorld);
 
-    // The world is normally bound in Initialize; backfill only if that ran before GetWorld() was
-    // valid. Guarded because EnTT emplace asserts on double-add (also covers OnWorldBeginPlay
-    // re-entry on seamless travel). DoBuildGraphAndSpawnActors reads the fragment back.
+    // Backfill for the case where Initialize ran before GetWorld() was valid. Guarded because EnTT
+    // emplace asserts on double-add (which also covers OnWorldBeginPlay re-entry on seamless travel).
     if (NOT _TransientEntity.Has<TWeakObjectPtr<UWorld>>())
     {
         _TransientEntity.Add<TWeakObjectPtr<UWorld>>(&InWorld);
@@ -351,7 +334,6 @@ auto
         }
     }
 
-    // Destroy the world actors and clear the map (registry + entities are untouched).
     for (auto& [TickGroup, Actor] : _WorldActors)
     {
         if (ck::IsValid(Actor))
@@ -361,8 +343,6 @@ auto
     }
     _WorldActors.Reset();
 
-    // Rebuild — FOnPreBuildProcessorGraph fires inside, giving CkDynamic a chance to
-    // re-discover script processor classes before the graph builder snapshots descriptors.
     DoBuildGraphAndSpawnActors(InWorld);
 
     ck::ecs::Verbose(TEXT("ECS processor graph rebuilt."));
@@ -374,8 +354,8 @@ auto
         UWorld& InWorld)
     -> void
 {
-    // Give external modules (notably CkDynamic) a chance to inject script-defined processor descriptors
-    // into FProcessorRegistry before the graph builder snapshots the descriptor list.
+    // Last chance for external modules (notably CkDynamic) to inject script-defined descriptors before
+    // the graph builder snapshots the list.
     Get_OnPreBuildProcessorGraph().Broadcast(InWorld);
 
     const auto& Descriptors = ck::FProcessorRegistry::Get().Get_AllDescriptors();
@@ -481,13 +461,7 @@ auto
 
 #if !UE_BUILD_SHIPPING
 
-// Console command: Ck.Ecs.Scheduler.ExportGraph [path]
-//
-// Dumps the current ECS processor graph (one subgraph cluster per tick group) as Graphviz DOT.
-// If a path argument is supplied it's written relative to the project root (or treated as absolute
-// if already absolute). When omitted, the file is written to <ProjectSaved>/CkEcs/SchedulerGraph.dot.
-//
-// Render with: `dot -Tsvg SchedulerGraph.dot -o SchedulerGraph.svg`
+// Render the output with: `dot -Tsvg SchedulerGraph.dot -o SchedulerGraph.svg`
 static auto
 DoHandleExportSchedulerGraphCommand(
     const TArray<FString>& InArgs,
@@ -507,9 +481,8 @@ DoHandleExportSchedulerGraphCommand(
         return;
     }
 
-    // Reconstruct a partition map keyed by tick group from each world actor's scheduler. The
-    // serializer expects the same container shape FProcessorGraph uses internally, so we copy
-    // each live partition out of its owning scheduler into a temporary map.
+    // The serializer expects the container shape FProcessorGraph uses internally, so copy each live
+    // partition out of its owning scheduler.
     auto Partitions = TMap<TEnumAsByte<ETickingGroup>, ck::FProcessorGraphPartition>{};
 
     for (const auto& [TickGroup, ActorPtr] : Subsystem->Get_WorldActors())
@@ -568,12 +541,6 @@ static FAutoConsoleCommandWithWorldAndArgs GCk_ExportSchedulerGraphCommand(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Console command: Ck.Ecs.Scheduler.ExportOrder [path]
-//
-// Dumps the final topologically-sorted processor execution order (one section per tick group)
-// as a plain-text list. Uses the same path rules as ExportGraph — argument is treated as
-// absolute if absolute, relative-to-project-root otherwise; defaults to
-// <ProjectSaved>/CkEcs/SchedulerOrder.txt.
 static auto
 DoHandleExportSchedulerOrderCommand(
     const TArray<FString>& InArgs,

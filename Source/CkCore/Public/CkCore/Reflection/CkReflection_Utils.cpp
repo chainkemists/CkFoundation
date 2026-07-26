@@ -64,7 +64,6 @@ auto
 
     const UClass* ObjectClass = InObject->GetClass();
 
-    // Iterate through all properties in the class hierarchy
     for (TFieldIterator<FProperty> PropertyIt(ObjectClass, EFieldIteratorFlags::IncludeSuper); PropertyIt; ++PropertyIt)
     {
         FProperty* Property = *PropertyIt;
@@ -72,7 +71,6 @@ auto
         if (ck::Is_NOT_Valid(Property, ck::IsValid_Policy_NullptrOnly{}))
         { continue; }
 
-        // Compare the sanitized version of this property's name with the target
         const FString SanitizedCurrentPropertyName = Get_SanitizedUserDefinedPropertyName(Property);
 
         if (SanitizedCurrentPropertyName.Equals(InSanitizedPropertyName, ESearchCase::IgnoreCase))
@@ -286,9 +284,6 @@ auto
     auto ExposedProperties = TArray<FProperty*>{};
 
 #if WITH_EDITOR
-    // Walk the class chain base -> derived so the output reads Parent -> Child. A flat
-    // Algo::Reverse on an IncludeSuper iteration would also flip the within-class declaration
-    // order, which is wrong; iterating per-class with ExcludeSuper preserves it.
     auto ClassChain = TArray<const UClass*>{};
     for (const auto* Current = InClass; Current != nullptr; Current = Current->GetSuperClass())
     { ClassChain.Add(Current); }
@@ -337,9 +332,6 @@ auto
     if (ck::Is_NOT_Valid(InProperty, ck::IsValid_Policy_NullptrOnly{}))
     { return false; }
 
-    // FDelegateProperty covers single-cast delegates.
-    // FMulticastDelegateProperty covers all multicast variants
-    //   (FMulticastInlineDelegateProperty, FMulticastSparseDelegateProperty).
     return CastField<FDelegateProperty>(InProperty) != nullptr
         || CastField<FMulticastDelegateProperty>(InProperty) != nullptr;
 }
@@ -379,8 +371,6 @@ auto
 
     const auto ModuleName = FPackageName::GetShortFName(Package->GetFName());
 
-    // Plugin module host type is authoritative when the module is described
-    // by a plugin descriptor.
     for (const auto& Plugin : IPluginManager::Get().GetEnabledPlugins())
     {
         for (const auto& Module : Plugin->GetDescriptor().Modules)
@@ -401,8 +391,7 @@ auto
         }
     }
 
-    // Engine editor modules whose names don't carry "Editor".
-    static const auto EditorModules = TSet<FName>{
+    static const auto EditorModulesNotNamedEditor = TSet<FName>{
         TEXT("UnrealEd"),
         TEXT("ViewportInteraction"),
         TEXT("VREditor"),
@@ -414,11 +403,9 @@ auto
         TEXT("LandscapeEditor"),
     };
 
-    if (EditorModules.Contains(ModuleName))
+    if (EditorModulesNotNamedEditor.Contains(ModuleName))
     { return true; }
 
-    // Name heuristic LAST — only consulted for modules no plugin descriptor
-    // describes (engine/native modules outside the known set).
     return ModuleName.ToString().Contains(TEXT("Editor"));
 }
 
@@ -484,10 +471,6 @@ namespace ck_reflection_detail
         { return {}; }
 
         // ---- Named constants and early-exit types --------------------------------
-        // Types listed here either have idiomatic named constants or have a constructor
-        // argument order that differs from TFieldIterator order — making the general
-        // decomposition below unsafe for them. Return {} for non-constant values to
-        // signal "no initializer" rather than emit a wrong expression.
 
         if (Struct == TBaseStructure<FTransform>::Get())
         {
@@ -505,8 +488,6 @@ namespace ck_reflection_detail
             return {}; // Valid tag: can't express as a constructor literal
         }
 
-        // Named constants for types that DO fall through to general decomposition
-        // for non-constant values — emitting a readable alias when available.
         if (Struct == TBaseStructure<FVector>::Get())
         {
             const auto& Value = *static_cast<const FVector*>(InValuePtr);
@@ -525,10 +506,6 @@ namespace ck_reflection_detail
         }
 
         // ---- General field-by-field decomposition --------------------------------
-        // For any struct whose every non-parm UPROPERTY field produces a representable
-        // literal, emit StructName(expr1, expr2, ...).  If every field equals its
-        // InitializeStruct default, emit StructName() instead.
-        // Returns {} if any field type is not representable — no partial expressions.
 
         const auto StructName = ck::Format_UE(TEXT("{}{}"), Struct->GetPrefixCPP(), Struct->GetName());
 
@@ -692,23 +669,7 @@ auto
         || CastField<FClassProperty>(InProperty) != nullptr
         || CastField<FInterfaceProperty>(InProperty) != nullptr)
     {
-        // Earlier attempts emitted a typed-null cast (`<Class>(nullptr)`) here to
-        // disambiguate positional-ctor overload resolution for plain UObject*
-        // fields (the OpenSign-class deadlock — bare `nullptr` reports as
-        // `<null handle>` and AS can't bind it). That fix has been reverted:
-        // AngelScript rejects `<UClass>(nullptr)` in struct field-default
-        // declarations with "Data type can't be '<Class>'" — UObject types
-        // cannot be constructed via type-constructor syntax at all, not just
-        // AActor/UActorComponent. The same emit path serves both field-default
-        // and positional-ctor-arg contexts, so there's no way to apply the
-        // typed cast only in the safe context without splitting the literal
-        // representation. A proper fix lives in Fix #2 from
-        // `codegen-bug-positional-ctor-null-uobject.md` (field-assignment-
-        // style emit instead of positional ctor for structs with UObject*
-        // fields); until that lands we accept the latent risk that adding
-        // a `default Params.X = Y` override on an entity-script subclass
-        // whose Params struct contains a UObject* field will bring the
-        // OpenSign deadlock back.
+        // Bare `nullptr` is deliberate; a typed-null cast is NOT a valid alternative here.
         return ck_reflection_detail::MakeRaw(TEXT("nullptr"));
     }
 
@@ -717,8 +678,7 @@ auto
         return ck_reflection_detail::Get_StructLiteral(StructProp, ValuePtr);
     }
 
-    // Containers (FArrayProperty / FMapProperty / FSetProperty / FOptionalProperty) and anything
-    // else we don't explicitly handle -> no literal. Caller will omit the initializer.
+    // Containers and anything else unhandled -> no literal; the caller omits the initializer.
     return {};
 }
 
@@ -781,9 +741,6 @@ namespace ck_reflection_detail
                 ? FieldName
                 : (InPathPrefix + TEXT(".") + FieldName);
 
-            // Recurse into nested structs that themselves contain UObject* fields — their
-            // positional ctor would carry the same `<null handle>` hazard, so we keep
-            // emitting dotted-path assignments instead.
             if (const auto* NestedStructProp = CastField<FStructProperty>(Field))
             {
                 if (auto* NestedStruct = NestedStructProp->Struct.Get();
@@ -792,8 +749,6 @@ namespace ck_reflection_detail
                     Collect_StructFieldOverrides(NestedStruct, FieldValuePtr, NextPath, OutOverrides);
                     continue;
                 }
-                // Falls through: nested struct has diffs but no UObject* — emit its
-                // positional ctor expression at this path; safe in statement context.
             }
 
             const auto MaybeLiteral = UCk_Utils_Reflection_UE::Get_PropertyDefaultValueLiteral(Field, InValuePtr);

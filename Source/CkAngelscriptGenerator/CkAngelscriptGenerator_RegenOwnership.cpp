@@ -16,7 +16,6 @@
 
 namespace ck_angelscript_generator_regen_ownership
 {
-    // Session-static ownership state (mirrors the dispatcher's sCyclesRun style).
     // The held handle IS the lock — closing it (or the process dying) releases ownership.
     TUniquePtr<IFileHandle> sLockHandle;
     bool sWarnedSecondaryOnce = false;
@@ -36,12 +35,8 @@ auto
         TEXT("RegenOwnership gate [{}] called off the game thread"), FString{InGateSite})
     { return false; }
 
-    // Read-only boots (the toolbox's `Automation List; Quit` inline-discovery editor) pass
-    // -CkAsDeclineRegenOwnership: they only enumerate tests, so they must NEVER take the regen
-    // lock. If they did, a REAL test editor booting concurrently (the `--build --test`
-    // inline-discovery race) loses the lock, runs as SECONDARY with self-heal DISABLED, and can
-    // silently run stale bytecode ("Keeping all old script code") — the toolbox false-green.
-    // Declining here leaves the lock free for the test editor to own and self-heal as PRIMARY.
+    // A read-only boot must NEVER take the lock: it would force a concurrently-booting real test
+    // editor into SECONDARY (self-heal inert), which can silently run stale bytecode.
     static const auto DeclineRegenOwnership =
         FParse::Param(FCommandLine::Get(), TEXT("CkAsDeclineRegenOwnership"));
     if (DeclineRegenOwnership)
@@ -66,8 +61,8 @@ auto
 
     if (ck_angelscript_generator_regen_ownership::sLockHandle.IsValid())
     {
-        // Advisory breadcrumb for humans/tools inspecting the lock — never parsed, never
-        // subject to the generators' determinism rules (this is not generator output).
+        // Advisory breadcrumb for humans inspecting the lock — never parsed, and not subject to
+        // the generators' determinism rules (this is not generator output).
         const auto Breadcrumb = FString::Format(TEXT("pid={0}\ncmdline={1}\n"),
             {FPlatformProcess::GetCurrentProcessId(), FCommandLine::Get()});
         const auto Utf8 = FTCHARToUTF8{*Breadcrumb};
@@ -151,9 +146,9 @@ auto
     // Defensive: Saved/ exists by module-load time in practice, but commandlet boot orders vary.
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(InLockFilePath), /*Tree=*/true);
 
-    // bAllowRead=true → GENERIC_WRITE + FILE_SHARE_READ on Windows: readers (humans, tools) are
-    // fine, but a second writer — even in the same process, which is what makes the unit test a
-    // valid proxy — fails with a sharing violation and returns null.
+    // AllowRead → GENERIC_WRITE + FILE_SHARE_READ on Windows: readers are fine, but a second
+    // writer — even in the same process, which is what makes the unit test a valid proxy —
+    // fails with a sharing violation and returns null.
     constexpr auto Append    = false;
     constexpr auto AllowRead = true;
     return TUniquePtr<IFileHandle>{

@@ -29,18 +29,12 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::DrawBody_Update"), STAT_CkCrowd_DrawBody_UpdateP
 
 namespace ck_crowd_agent_draw_body_processor
 {
-    // PathPending blend — visually communicates "agent is waiting on a path query, can't move
-    // yet". Lerp factor picked for legibility against varied background colors.
     constexpr auto PathPending_BlendT      = 0.55f;
     const auto     PathPending_BlendColor   = FLinearColor(1.0f, 0.92f, 0.20f, 1.0f);
 
-    // Asleep desaturate — agent is excluded from steering / separation; visually distinguish
-    // sleeping agents from active ones without hiding them entirely.
     constexpr auto Asleep_DesaturateT      = 0.65f;
     const auto     Asleep_BlendColor        = FLinearColor(0.45f, 0.45f, 0.45f, 1.0f);
 
-    // Visual sizing — derived from agent radius/height at setup time so any agent sizing
-    // flows through naturally. Same proportions as the inline gym viz that this replaces.
     constexpr auto Cone_RadiusFraction      = 0.36f;
     constexpr auto Cone_LengthFraction      = 0.625f;  // of HalfHeight
     constexpr auto Cone_ForwardLiftFraction = 1.4f;    // of Radius — apex sits forward of body
@@ -50,12 +44,10 @@ namespace ck_crowd_agent_draw_body_processor
     constexpr auto LineThickness            = 2.0f;
     constexpr auto Cone_LineThickness       = 1.5f;
 
-    // Persistent: live until the agent (parent) is destroyed. PMG's Duration sentinel is
-    // -1 = persist; 0 = single-tick (the PMG Duration-sentinel gotcha).
+    // PMG Duration sentinel: -1 = persist until the parent dies; 0 = single-tick.
     constexpr auto Persist                  = -1.0f;
 
-    // Color modulation per state. PathPending wins over Asleep visually — pending is transient
-    // and important; sleep is steady-state.
+    // PathPending wins over Asleep: pending is transient and actionable, sleep is steady-state.
     auto ResolveTintedColor(
         const FCk_Handle_CrowdAgent& InAgent,
         const FLinearColor& InBaseColor) -> FLinearColor
@@ -92,16 +84,12 @@ namespace ck
         if (Radius <= 0.0f || HalfHeight <= 0.0f)
         { return; }
 
-        // Initial color from the agent's debug-color (per-agent override if Set_DebugColor was
-        // called, hash-derived fallback otherwise). The Update processor refreshes this each
-        // tick if state tags change, but spawning with the right color avoids one frame of
-        // flicker between Setup and the first Update.
+        // Spawning with the resolved color avoids one frame of flicker before the first Update.
         const auto BaseColor = UCk_Utils_CrowdAgent_UE::Get_DebugColor(InHandle);
 
         // ---- Body capsule ----------------------------------------------------------
-        // Local transform identity — the SceneNode parent applies the agent's world position;
-        // local offset on the SceneNode lifts the capsule center up by HalfHeight so its
-        // bottom rests at the agent's feet (bottom-anchor convention).
+        // The SceneNode local offset lifts the capsule centre by HalfHeight so its bottom rests
+        // at the agent's feet (bottom-anchor convention).
         auto AgentGeneric = static_cast<FCk_Handle>(InHandle);
         auto CapsuleHandle = UCk_Utils_Pmg_BasicShapes::Create_Capsule(
             AgentGeneric,
@@ -125,8 +113,6 @@ namespace ck
         UCk_Utils_SceneNode_UE::Add(CapsuleTransform, AgentTransform, CapsuleLocalOffset);
 
         // ---- Forward-facing cone --------------------------------------------------
-        // Use ECk_Pmg_ConeOrientation::Forward so the apex is baked along +X (agent's forward).
-        // No more Pitch=-90 SceneNode workaround needed — the orientation is in the mesh.
         const auto ConeRadius        = Radius * ck_crowd_agent_draw_body_processor::Cone_RadiusFraction;
         const auto ConeLength        = HalfHeight * ck_crowd_agent_draw_body_processor::Cone_LengthFraction;
         const auto ConeForwardOffset = Radius * ck_crowd_agent_draw_body_processor::Cone_ForwardLiftFraction;
@@ -153,8 +139,7 @@ namespace ck
         UCk_Utils_SceneNode_UE::Add(ConeTransform, AgentTransform, ConeLocalOffset);
 
         // ---- Stamp fragment + setup tag ------------------------------------------
-        // Copy the handle so we have a non-const reference; mutates the registry, not the
-        // local copy. Same idiom as FProcessor_CrowdAgent_Setup uses.
+        // Handle copies alias the same registry state — the copy only buys a mutable handle.
         auto AgentMutable = InHandle;
         auto& DebugBody = AgentMutable.AddOrGet<FFragment_CrowdAgent_DebugBody>();
         DebugBody._CapsuleHandle     = CapsuleHandle;
@@ -163,8 +148,8 @@ namespace ck
 
         AgentMutable.Add<FTag_CrowdAgent_DebugBody_Setup>();
 
-        // First-tick visibility honors the current toggle. Single Request_SetVisible covers
-        // both the procmesh and the wireframe — the DrawLines processor honors RenderMode==Hidden.
+        // One Request_SetVisible covers the procmesh AND its wireframe overlay — the DrawLines
+        // processor honours RenderMode==Hidden.
         const auto WantVisible = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawAgentBody();
         UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(CapsuleHandle, WantVisible);
         UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(ConeHandle,    WantVisible);
@@ -181,9 +166,7 @@ namespace ck
     {
         const auto CurrentToggleOn = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawAgentBody();
 
-        // Skip the view iteration entirely when the toggle was off both this tick and last —
-        // there's nothing to update and shapes are already Hidden from the prior pass. The
-        // on→off transition still iterates one final time below to flip every shape Hidden.
+        // The on→off transition still iterates one final time below to flip every shape Hidden.
         if (NOT CurrentToggleOn && NOT _LastTickToggleOn)
         { return; }
 
@@ -203,8 +186,6 @@ namespace ck
 
         const auto WantVisible = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawAgentBody();
 
-        // Visibility flip — only request when changing. The single Request_SetVisible call
-        // covers both the procmesh AND the wireframe overlay.
         if (WantVisible != InDebugBody._LastAppliedVisible)
         {
             UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(InDebugBody._CapsuleHandle, WantVisible);
@@ -212,8 +193,6 @@ namespace ck
             InDebugBody._LastAppliedVisible = WantVisible;
         }
 
-        // Color update — only when visible AND the resolved color actually changed. Avoids
-        // spamming Set_Color requests every frame for steady-state agents.
         if (NOT WantVisible)
         { return; }
 

@@ -4,37 +4,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Parses Hazelight's AS compile-error output into typed root-cause records.
-// Four patterns recognized. The first three correspond to drift classes the
-// dispatcher can auto-fix; the fourth is an author-side authoring bug the
-// dispatcher only diagnoses (no auto-fix — modifying user source code is
-// out of contract):
-//   * `No matching signatures to '<NS>::<func>(<args>)'`  — stale EntitySpawn-
-//     Params stub OR missing asset registry accessor (auto-fix).
-//   * `No matching signatures to '<Ident>(<args>)'`       — bare constructor-
-//     style call on an unregistered type. Observed when a caller directly
-//     constructs a generated `F<X>_SpawnParams` whose canonical file is
-//     missing (gitignored ESP / fresh clone) — the dispatcher routes the
-//     `*_SpawnParams` shapes to ESP synthesis (auto-fix); anything else is
-//     an authoring error left to the terminal banner.
-//   * `Identifier '<X>' is not a data type`               — missing
-//     dynamic-handle JSON entry, or a `F<X>_SpawnParams` used as a declared
-//     type while its canonical file is missing (auto-fix).
-//   * `Instead found '<string constant>'`                 — adjacent string
-//     literals in author source (`"foo " "bar"` C-style splice). AS rejects;
-//     the dispatcher recognizes the pattern but only surfaces a clear
-//     "join into one literal" banner.
-//
-// Cascade noise ("Unknown", "<X> is not declared", etc.) is dropped. The
-// dispatcher treats "compile failed but parser returned 0 roots" as an
-// unrecognized-failure case and surfaces a terminal banner.
-//
-// Error format is NOT a stable Hazelight public API contract. The unit tests
-// under Tests/Test_AsErrorParser.cpp snapshot the known-good formats
-// (captured 2026-05-11 via the corruption probes; bare-ctor form derived
-// from the 2026-06 fresh-clone ESP boot test) — engine-upgrade canary.
-// If they go red, fix the parser regex against the new format before the
-// dispatcher can resume working.
+// Parses Hazelight's AS compile-error output into typed root-cause records;
+// cascade noise is dropped. The error format is NOT a stable Hazelight API:
+// Tests/Test_AsErrorParser.cpp snapshots the known-good formats and is the
+// engine-upgrade canary. Recognized patterns and the strategy each maps to:
+// CkAngelscriptGenerator/CLAUDE.md.
 
 namespace ck::angelscriptgenerator::self_heal
 {
@@ -42,8 +16,8 @@ namespace ck::angelscriptgenerator::self_heal
     {
         NoMatchingSignatures,
         IdentifierNotADataType,
-        AdjacentStringLiteral,  // Hazelight emits "Expected ')' or ','" + "Instead found '<string constant>'" — `"foo " "bar"` C-style splice.
-        BareCtorNoMatchingSignatures,  // `No matching signatures to '<Ident>(<args>)'` — no `::`; constructor-style call on an unregistered type.
+        AdjacentStringLiteral,         // "Instead found '<string constant>'" — `"foo " "bar"` C-style splice.
+        BareCtorNoMatchingSignatures,  // `No matching signatures to '<Ident>(<args>)'` — no `::`.
     };
 
     struct CKANGELSCRIPTGENERATOR_API FCk_AsParsedError
@@ -56,7 +30,7 @@ namespace ck::angelscriptgenerator::self_heal
         // Populated for Kind == NoMatchingSignatures.
         FString TargetNamespace;
         FString FunctionName;
-        FString ArgsList;          // e.g. "const FTransform"; empty for no-arg. Also populated for BareCtorNoMatchingSignatures (the ctor args).
+        FString ArgsList;          // empty for no-arg; also carries the ctor args for BareCtorNoMatchingSignatures
 
         // Populated for Kind == IdentifierNotADataType (the missing type) and
         // BareCtorNoMatchingSignatures (the constructed type).
@@ -72,14 +46,13 @@ namespace ck::angelscriptgenerator::self_heal
     class CKANGELSCRIPTGENERATOR_API FCkAsErrorParser
     {
     public:
-        // Lines that don't match a recognized pattern are silently dropped —
-        // dispatcher uses the count to decide "I can act" vs "terminal banner".
+        // Unrecognized lines are silently dropped — the dispatcher uses the
+        // returned count to decide "I can act" vs "terminal banner".
         static auto ParseErrors      (const FString& InRawErrorOutput)      -> TArray<FCk_AsParsedError>;
 
-        // Dedup key: actionable content (qualified identifier + args, or
-        // missing identifier). Source file/line/column NOT in the key — the
-        // same root appears across many cascade sites and the dispatcher
-        // only needs one strategy invocation per unique root.
+        // Dedup key is actionable content only (qualified identifier + args, or
+        // missing identifier) — file/line/column are deliberately excluded, since
+        // one root appears across many cascade sites and needs one strategy run.
         static auto DeduplicateRoots(const TArray<FCk_AsParsedError>& InErrors) -> TArray<FCk_AsParsedError>;
     };
 }

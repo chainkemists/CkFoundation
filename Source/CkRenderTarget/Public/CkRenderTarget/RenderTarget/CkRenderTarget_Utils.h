@@ -44,7 +44,6 @@ public:
         const FCk_Fragment_RenderTarget_ParamsData& InParams);
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -98,10 +97,9 @@ public:
     Get_SyncName(
         const FCk_Handle_RenderTarget& InRenderTargetEntity);
 
-    // The drawable target object. Invalid until the Setup processor has run (one tick after
-    // Add). NOTE: the object EXISTS even on processes that cannot render (Setup resolves it
-    // unconditionally so the CPU-staging/replication paths have its identity) — use
-    // Get_CanRenderOnThisProcess to detect render capability, not this object's validity.
+    // Invalid until the Setup processor has run (one tick after Add). The object EXISTS even on
+    // processes that cannot render, so test render capability with Get_CanRenderOnThisProcess —
+    // never with this object's validity.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RenderTarget",
               DisplayName="[Ck][RenderTarget] Get Target")
@@ -139,9 +137,7 @@ public:
     Get_PixelStateHash(
         const FCk_Handle_RenderTarget& InRenderTargetEntity);
 
-    // Receive-side observability: seq / kind of the last pixel payload applied in this world
-    // (0 / FullSync before any payload applied), and the instruction watermark carried by the
-    // last applied baseline.
+    // Receive-side observability: 0 / FullSync before any payload has applied in this world.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RenderTarget",
               DisplayName="[Ck][RenderTarget] Get Latest Applied Pixel Payload Seq")
@@ -268,10 +264,8 @@ public:
         const TArray<uint8>& InPixels,
         FIntPoint InSize);
 
-    // Test seam companion to Debug_InjectCapturedPixels: redraws the local target from the
-    // last captured snapshot through the same transient-upload-texture path the pixel-apply
-    // processors use. Paired with a follow-up capture, this pins the GPU round trip as
-    // byte-preserving — a gamma/format mismatch in the redraw produces a spurious diff.
+    // Test seam: redraws the local target from the last captured snapshot through the same path the
+    // pixel-apply processors use, so a follow-up capture pins the GPU round trip as byte-preserving.
     // Requires a prior capture and a real RHI; no-ops in Shipping builds.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",

@@ -25,11 +25,6 @@ CKSPATIALQUERY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Probe);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// ECk_MotionType / ECk_MotionQuality / ECk_BackFaceMode migrated to CkJolt/CkJolt_Common.h
-// (generic Jolt vocabulary; CoreRedirects cover serialized BP references).
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UENUM(BlueprintType)
 enum class ECk_ProbeTrace_Policy : uint8
 {

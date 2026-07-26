@@ -23,12 +23,10 @@ class UCk_Utils_DialogEmitter_UE;
 
 namespace ck
 {
-    // Has/Cast key for a dialog emitter.
     CK_DEFINE_ECS_TAG(FTag_DialogEmitter);
 
-    // On-demand marker: present iff this emitter has at least one cooldown recorded. It is what gives the
-    // cooldown ticker a view — the Cooldowns fragment itself is always present, so keying off that would tick
-    // every emitter in the world every frame just to find the few that are actually cooling.
+    // Present iff this emitter has at least one cooldown recorded — it is what gives the cooldown ticker a view.
+    // The Cooldowns fragment is always present, so keying the ticker off that would visit every emitter every frame.
     CK_DEFINE_ECS_TAG(FTag_DialogEmitter_HasCooldowns);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -37,11 +35,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Always present on an emitter (added by Add). Line ENTITY handle -> the cooldown record, which is a Chrono
-    // (goal = the duration it was started with) plus the mode. A "Forever" entry is flagged by its mode and simply
-    // never ticked, rather than carrying a deadline no clock reaches.
-    // Keyed by handle (not LineID) by design: a re-registered bank makes new entities, so cooldowns do not survive
-    // re-registration — the accepted consequence of handle keying.
+    // Always present on an emitter (added by Add). Keyed by line ENTITY handle rather than LineID by design: a
+    // re-registered bank makes new entities, so cooldowns deliberately do not survive re-registration.
     struct CKDIALOG_API FFragment_DialogEmitter_Cooldowns
     {
     public:
@@ -62,10 +57,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // On-demand marker fragment: present iff the emitter has queries waiting to be evaluated. Added by HandleRequests
-    // when a Query request arrives; drained and removed by EvaluateQueries. Its presence IS the EvaluateQueries view
-    // filter + dirty marker (this replaces the old FTag_DialogEmitter_HasPendingQuery). Carries the readiness-defer
-    // bookkeeping so a query waiting on a not-yet-ready registry retries across ticks and times out loudly.
+    // Present iff the emitter has queries waiting: added by HandleRequests, drained and removed by EvaluateQueries.
+    // Its presence IS the EvaluateQueries view filter + dirty marker.
     struct CKDIALOG_API FFragment_DialogEmitter_PendingQueries
     {
     public:
@@ -78,10 +71,8 @@ namespace ck
     private:
         TArray<FCk_Request_DialogEmitter_Query> _Queries;
 
-        // One-shot "registry not ready" Display log guard (avoids per-tick spam while a query waits on the registry).
         bool _LoggedNotReadyOnce = false;
 
-        // World time at which the FIRST still-pending query was enqueued; used to fire the readiness-timeout ensure.
         FCk_Time _OldestPendingQueryTime;
         bool _HasOldestPendingQueryTime = false;
 
@@ -117,7 +108,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // One retained query result for the graph-debugger live overlay + history list.
     struct CKDIALOG_API FDialogEmitter_DebugEntry
     {
     public:
@@ -136,8 +126,8 @@ namespace ck
         CK_PROPERTY_GET(_Timestamp);
     };
 
-    // Ring buffer of the last N query results, written by the EvaluateQueries processor. Only present once the
-    // emitter has completed at least one query. Cap comes from UCk_Utils_Dialog_Settings_UE::Get_DebugHistorySize.
+    // Newest-last ring of retained query results for the graph debugger, written by the EvaluateQueries processor.
+    // Cap comes from UCk_Utils_Dialog_Settings_UE::Get_DebugHistorySize.
     struct CKDIALOG_API FFragment_DialogEmitter_Debug
     {
     public:
@@ -148,7 +138,6 @@ namespace ck
         friend class ::UCk_Utils_DialogEmitter_UE;
 
     private:
-        // Newest-last ring of retained query results.
         TArray<FDialogEmitter_DebugEntry> _History;
 
     public:

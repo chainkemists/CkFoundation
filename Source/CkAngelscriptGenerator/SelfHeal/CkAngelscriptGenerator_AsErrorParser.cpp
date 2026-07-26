@@ -31,9 +31,8 @@ namespace ck::angelscriptgenerator::self_heal
     {
         // ---- Line classifiers ------------------------------------------------------
 
-        // A standalone "<path>.as:" line establishes file context for subsequent
-        // "(L:C) ..." error lines. Hazelight emits these as a banner before each
-        // file's errors.
+        // Hazelight banners each file's errors with a standalone "<path>.as:" line, which
+        // establishes the file context for every following "(L:C) ..." line.
         auto Try_MatchFileHeader(
             const FString& InLine,
             FString&       OutFile) -> bool
@@ -47,20 +46,8 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         // "(L:C) No matching signatures to '<NS>::<func>(<args>)'"
-        //
-        // Captures the *last* "::" as the namespace/function separator: greedy
-        // (.+) eats any nested namespace prefix, and the function-name class
-        // [^':(]+ explicitly excludes ':' so the greedy match stops at the
-        // correct boundary.
-        //
-        // Cascade filter: AS prints "Unknown" for any argument whose type
-        // couldn't be resolved earlier in the same compile. Those errors are
-        // downstream of a real root cause (typically a missing
-        // FCk_Handle_<X> identifier the dispatcher's IdentifierNotADataType
-        // path will pick up) — the cast/call site is symptomatic, not the
-        // actual root. Filtering them at the parser keeps the dispatcher's
-        // "Recognized N actionable roots" count honest and removes the
-        // misleading "no strategy applies" terminal-banner warnings.
+        // The LAST "::" is the separator: greedy (.+) eats any nested namespace prefix, and the
+        // function-name class excludes ':' so the greedy match stops at the right boundary.
         auto Try_MatchNoMatchingSignatures(
             const FString&    InLine,
             const FString&    InCurrentFile,
@@ -75,8 +62,9 @@ namespace ck::angelscriptgenerator::self_heal
 
             const auto ArgsList = Matcher.GetCaptureGroup(5);
 
-            // Drop cascade-only matches — AS uses "Unknown" verbatim for
-            // unresolved types. Real signatures never contain this token.
+            // Cascade-only match: AS prints "Unknown" verbatim for a type an EARLIER error left
+            // unresolved, so this call site is symptomatic, not a root. Real signatures never
+            // contain the token.
             if (ArgsList.Contains(TEXT("Unknown")))
             { return false; }
 
@@ -91,19 +79,9 @@ namespace ck::angelscriptgenerator::self_heal
             return true;
         }
 
-        // "(L:C) No matching signatures to '<Ident>(<args>)'" — no `::`.
-        //
-        // A constructor-style call on a type AS couldn't register. Observed
-        // (2026-06 fresh-clone ESP boot test) when a caller directly
-        // constructs a generated `F<X>_SpawnParams` whose canonical file is
-        // missing: `auto P = FBb_X_SpawnParams();` errors with this form,
-        // while the subsequent `P.Field = ...` lines cascade as
-        // "'Field' is not a member of 'Unknown'" (dropped as noise — fixing
-        // the root type fixes them).
-        //
-        // The identifier class [A-Za-z_][A-Za-z0-9_]* forbids ':' so this
-        // can never shadow the namespace-qualified form above; matcher order
-        // in ParseErrors is belt-and-braces only.
+        // "(L:C) No matching signatures to '<Ident>(<args>)'" — no `::`; a constructor-style call
+        // on a type AS could not register. The identifier class forbids ':', so this can never
+        // shadow the namespace-qualified form above and matcher order is belt-and-braces.
         auto Try_MatchBareCtorNoMatchingSignatures(
             const FString&    InLine,
             const FString&    InCurrentFile,
@@ -133,11 +111,8 @@ namespace ck::angelscriptgenerator::self_heal
         }
 
         // "(L:C) Identifier '<X>' is not a data type [in namespace '<N>' or parent | in global namespace]"
-        //
-        // The in-clause is optional in the regex so we tolerate the (rare) case
-        // where the error has no scope suffix. When present and naming a
-        // namespace, group 4 captures the namespace name; "global namespace"
-        // matches the second alternation and leaves group 4 empty.
+        // The in-clause is optional so a suffix-less error still matches; "global namespace" hits
+        // the second alternation and leaves the scope capture empty.
         auto Try_MatchIdentifierNotADataType(
             const FString&    InLine,
             const FString&    InCurrentFile,
@@ -160,24 +135,10 @@ namespace ck::angelscriptgenerator::self_heal
             return true;
         }
 
-        // "(L:C) Instead found '<string constant>'"
-        //
         // Hazelight emits adjacent-string-literal errors as a TWO-line pair:
-        //   (L:C) Expected ')' or ','
-        //   (L:C) Instead found '<string constant>'
-        // The first line's "Expected ')' or ','" is generic — it fires for many
-        // parse errors (missing comma in arg list, unclosed paren, etc.). The
-        // SECOND line's "Instead found '<string constant>'" is the unique
-        // signature for the adjacent-literal splice case: AS expected a
-        // separator and got the opening quote of a second literal.
-        //
-        // Matching only the second line keeps the regex unambiguous. Caller
-        // source is left untouched (no auto-fix — that's user code, not
-        // generated). The dispatcher classifies this as Author_FixupRequired_
-        // AdjacentStringLiteral and logs an actionable "join the literals into
-        // one string" banner instead of the generic "no recognized roots"
-        // terminal that leaves headless test runs hanging without an
-        // actionable diagnostic.
+        //   (L:C) Expected ')' or ','          <- generic, fires for many parse errors
+        //   (L:C) Instead found '<string constant>'   <- unique to the splice case
+        // Only the second line is matched; the first would be ambiguous.
         auto Try_MatchAdjacentStringLiteral(
             const FString&    InLine,
             const FString&    InCurrentFile,
@@ -231,9 +192,8 @@ namespace ck::angelscriptgenerator::self_heal
             {
                 Results.Add(MoveTemp(Error));
             }
-            // Unrecognized lines (cascade noise, "Compiling ..." context, candidate
-            // signature lists, blank lines, etc.) are intentionally dropped — see
-            // header docstring for rationale.
+            // Unrecognized lines (cascade noise, "Compiling ..." context, candidate signature
+            // lists, blanks) are intentionally dropped — see the header docstring.
         }
 
         return Results;
@@ -263,9 +223,8 @@ namespace ck::angelscriptgenerator::self_heal
                     Key = FString::Printf(TEXT("id|%s"), *Err.MissingIdentifier);
                     break;
                 case ECk_AsParsedError_Kind::AdjacentStringLiteral:
-                    // No qualified identifier — dedup by location instead. Two
-                    // separate splices on different lines are distinct
-                    // diagnostics; a re-emit of the same line is one.
+                    // No qualified identifier — dedup by location: two splices on different lines
+                    // are distinct diagnostics, a re-emit of the same line is one.
                     Key = FString::Printf(TEXT("adj|%s:%d:%d"),
                         *Err.FilePath, Err.Line, Err.Column);
                     break;

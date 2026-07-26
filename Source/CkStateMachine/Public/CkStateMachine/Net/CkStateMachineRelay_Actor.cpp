@@ -12,41 +12,19 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 //
-// Server-side handlers for owning-client → server RPCs. Cross-machine handle resolution is
-// transparent: FCk_Handle::NetSerialize (CkHandle.cpp) serializes the entity's ReplicationDriver
-// UObject pointer; on the receive side it dereferences the driver and reads back the local
-// AssociatedEntity, so InSMHandle arrives already pointing at the server's local SM entity.
-//
-// The three handlers route incoming intent into the same pipeline the server's own commits use:
-//
-//   PushTransitionBatch  → ReplayQueue → ApplyReplicatedHistory → CommitPendingTransition →
-//                          publication path (1) above broadcasts to non-owning clients
-//
-//   PushCurrentState     → synthesize a single event from server's local current → incoming
-//                          target class, same pipeline
-//
-//   PushRunStatus        → MirrorRunStatus locally + republish RunStatus into RepData. Doesn't
-//                          go through HandleRequests because the single-authority gate would
-//                          drop the request (server isn't the originator for OwningClientAuth SMs)
-//
-// Every handler is gated by DoGet_IsAuthorizedOwningClientPush below — the handle argument can
-// point at ANY replicated entity, so resolution alone is not authorization.
+// Server-side handlers for owning-client → server RPCs. Handle resolution is transparent
+// (FCk_Handle::NetSerialize round-trips through the ReplicationDriver), so InSMHandle arrives
+// pointing at the server's local SM entity — but resolution alone is NOT authorization: the
+// argument can name ANY replicated entity, hence DoGet_IsAuthorizedOwningClientPush on every path.
 //
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_state_machine_relay_actor
 {
-    // Server-side authorization for owning-client relay pushes. UE only routes Server RPCs from
-    // the relay actor's OWNING connection, so the caller's identity is this relay's connection —
-    // but the SM-handle argument is attacker-controlled and can resolve to any replicated entity.
-    // A push is authorized only when ALL hold:
-    //   1. the handle is actually a StateMachine entity,
-    //   2. its root SM Replicates (the relay is the leg-1 transport of a replicated root),
-    //   3. its root's effective authority model is OwningClientAuthoritative (a client must never
-    //      drive a ServerAuthoritative SM — that bypasses FProcessor_Sm_HandleRequests' gate),
-    //   4. the root's owning actor belongs to this relay's connection (a client must not drive
-    //      another player's SM; a forged fingerprint would otherwise let one RPC stamp
-    //      FTag_Sm_DeterminismFault on a victim's SM and permanently quiesce it).
+    // The SM-handle argument is attacker-controlled, so a push is authorized only when all four
+    // checks below hold. Dropping check 3 would let a client drive a ServerAuthoritative SM past
+    // FProcessor_Sm_HandleRequests' gate; dropping check 4 would let one player's forged fingerprint
+    // stamp FTag_Sm_DeterminismFault on a victim's SM and permanently quiesce it.
     auto
     DoGet_IsAuthorizedOwningClientPush(
         const AActor* InRelay,
@@ -121,17 +99,9 @@ auto
     ck::sm::Verbose(TEXT("Server_PushTransitionBatch: enqueuing [{}] events on SM [{}]"),
         InBatch.Num(), InSMHandle);
 
-    // Push events onto the appropriate replay queue. ApplyReplicatedHistory drains one per tick
-    // into PendingTransition; CommitPendingTransition then lands the transition and republishes
-    // via the IsRepPublisher branch in CkStateMachine_Processor.cpp. NextSeq on the server
-    // assigns its own monotonic sequence — non-owning clients see server-side seqs (consistent
-    // within the server's history), and the owning client's echo suppression prevents it from
-    // ever interpreting the server's seqs (its own _ClientLastAppliedSeq is its own bookkeeping).
-    //
-    // Identity routing: a root-level event (empty _SubSmIdentity) enqueues on InSMHandle (the root).
-    // An event tagged with a sub-SM parent-hierarchy path was relayed through the root on behalf of a
-    // non-replicated sub-SM — resolve the server's matching local sub-SM and enqueue onto ITS replay
-    // queue so the transition lands on the right SM, not the root.
+    // Identity routing: an empty _SubSmIdentity is a root-level event and enqueues on InSMHandle.
+    // A parent-hierarchy path means the event was relayed through the root on behalf of a
+    // non-replicated sub-SM, so it must land on the server's matching local sub-SM, not the root.
     const auto RootHandle = UCk_Utils_StateMachine_UE::CastChecked(InSMHandle);
 
     for (const auto& Event : InBatch)
@@ -147,9 +117,8 @@ auto
         auto TargetSubSm = UCk_Utils_StateMachine_UE::TryFind_ActiveSubSm_ByParentHierarchy(RootHandle, SubSmIdentity);
         if (ck::Is_NOT_Valid(TargetSubSm))
         {
-            // The hosting parent state isn't active yet (the sub-SM doesn't exist on this machine).
-            // P4 will stash-and-defer for the parent-then-child ordering case; for now log + drop so a
-            // mis-timed event can't land on the wrong SM.
+            // The hosting parent state isn't active yet, so the sub-SM doesn't exist here. Log and
+            // drop rather than stash — a mis-timed event must not land on the wrong SM.
             ck::sm::Warning(TEXT("Server_PushTransitionBatch: sub-SM for identity-path [{}] not active under root [{}]; dropping event (seq [{}])"),
                 SubSmIdentity.Num(), InSMHandle, Event.Get_Seq());
             continue;
@@ -186,9 +155,8 @@ auto
     if (NOT ck_state_machine_relay_actor::DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushCurrentState")))
     { return; }
 
-    // Synthesize a single transition event from the server's local current state → the
-    // incoming target. The replay queue path then drives the transition through the standard
-    // commit pipeline (which publishes a NoHistory rep delta to non-owning clients).
+    // A single synthesized event (server's local current → incoming target) drives the transition
+    // through the standard commit pipeline, which publishes a NoHistory delta to non-owning clients.
     const auto LocalCurrentClass = InSMHandle.Has<ck::FFragment_Sm_Current>()
         ? InSMHandle.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass()
         : TSubclassOf<UCk_SmState_EntityScript>{};
@@ -227,17 +195,13 @@ auto
     if (NOT ck_state_machine_relay_actor::DoGet_IsAuthorizedOwningClientPush(this, InSMHandle, TEXT("Server_PushRunStatus")))
     { return; }
 
-    // Apply the run-status to the server's local SM, mirroring the same lifecycle bookkeeping
-    // and signal broadcast that authority's Start/Stop/Pause/Resume handlers do. We skip the
-    // request pipeline because the HandleRequests single-authority gate would drop a
-    // server-originated request on an OwningClientAuth SM (owning client is the request
-    // authority, not the server). Routed through the defer-while-replaying wrapper so a
-    // non-Running status cannot jump ahead of relayed transitions still in this SM's queue.
+    // The request pipeline is bypassed because HandleRequests' single-authority gate would drop a
+    // server-originated request on an OwningClientAuth SM. The defer-while-replaying wrapper keeps a
+    // non-Running status from jumping ahead of relayed transitions still queued on this SM.
     ck::statemachine::MirrorRunStatus_OrDeferWhileReplaying(InSMHandle, InRunStatus);
 
-    // Republish into RepData so non-owning clients pick up the run-status change. Best-effort:
-    // TryUpdateContainerFragment silently no-ops if the entity doesn't have a rep driver yet,
-    // which can happen during early startup races.
+    // Republish for non-owning clients. Best-effort: TryUpdateContainerFragment no-ops when the
+    // entity has no rep driver yet, which happens during early startup races.
     if (NOT InSMHandle.Has<ck::FFragment_Sm_Params>())
     { return; }
 

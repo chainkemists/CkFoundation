@@ -25,8 +25,6 @@
 #include <UObject/StructOnScope.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Public API
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_StateTreeExporter::
@@ -51,7 +49,6 @@ auto
         return Result;
     }
 
-    // Serialize to JSON
     const auto JsonObject = DoSerializeToJson(InStateTree);
     if (!JsonObject.IsValid())
     {
@@ -63,10 +60,8 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    // Serialize to plain text
     const auto TextString = DoSerializeToText(InStateTree);
 
-    // Resolve output paths
     const auto JsonPath = DoResolveOutputPath(InStateTree, TEXT(".json"));
     const auto TextPath = DoResolveOutputPath(InStateTree, TEXT(".txt"));
 
@@ -76,7 +71,6 @@ auto
         return Result;
     }
 
-    // Write files
     const auto bJsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     const auto bTextWritten = FFileHelper::SaveStringToFile(
@@ -114,8 +108,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// JSON Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_StateTreeExporter::
@@ -143,7 +135,6 @@ auto
     if (!IsValid(EditorData))
     { return RootObject; }
 
-    // Root parameters
     const auto& RootParameterBag = EditorData->GetRootParametersPropertyBag();
     if (const auto* BagStruct = RootParameterBag.GetPropertyBagStruct())
     {
@@ -151,7 +142,6 @@ auto
             DoSerializeProperties_Json(BagStruct, RootParameterBag.GetValue().GetMemory(), nullptr));
     }
 
-    // Global evaluators
     auto EvaluatorsArray = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto& Eval : EditorData->Evaluators)
     {
@@ -159,7 +149,6 @@ auto
     }
     RootObject->SetArrayField(TEXT("globalEvaluators"), EvaluatorsArray);
 
-    // Global tasks
     auto GlobalTasksArray = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto& Task : EditorData->GlobalTasks)
     {
@@ -167,7 +156,6 @@ auto
     }
     RootObject->SetArrayField(TEXT("globalTasks"), GlobalTasksArray);
 
-    // Sub-trees (root states)
     auto SubTreesArray = TArray<TSharedPtr<FJsonValue>>{};
     for (const UStateTreeState* State : EditorData->SubTrees)
     {
@@ -213,7 +201,6 @@ auto
         StateObject->SetStringField(TEXT("linkedAsset"), InState->LinkedAsset->GetPathName());
     }
 
-    // Enter conditions
     auto EnterConditionsArray = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto& Cond : InState->EnterConditions)
     {
@@ -221,7 +208,6 @@ auto
     }
     StateObject->SetArrayField(TEXT("enterConditions"), EnterConditionsArray);
 
-    // Tasks (+ single task)
     auto TasksArray = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto& Task : InState->Tasks)
     {
@@ -233,7 +219,6 @@ auto
     }
     StateObject->SetArrayField(TEXT("tasks"), TasksArray);
 
-    // Transitions
     auto TransitionsArray = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto& Transition : InState->Transitions)
     {
@@ -241,7 +226,6 @@ auto
     }
     StateObject->SetArrayField(TEXT("transitions"), TransitionsArray);
 
-    // Children
     auto ChildrenArray = TArray<TSharedPtr<FJsonValue>>{};
     for (const UStateTreeState* Child : InState->Children)
     {
@@ -281,12 +265,10 @@ auto
     NodeObject->SetStringField(TEXT("nodeName"), NodeName);
     NodeObject->SetStringField(TEXT("id"), InNode.ID.ToString());
 
-    // Config stored on the node struct itself
     const auto NodeStructDefault = FStructOnScope{NodeStruct};
     NodeObject->SetObjectField(TEXT("nodeProperties"),
         DoSerializeProperties_Json(NodeStruct, InNode.Node.GetMemory(), NodeStructDefault.GetStructMemory()));
 
-    // Per-instance editable data (object form takes priority over struct form)
     if (IsValid(InNode.InstanceObject))
     {
         const auto* InstanceClass = InNode.InstanceObject->GetClass();
@@ -330,7 +312,6 @@ auto
         TransitionObject->SetNumberField(TEXT("delayDuration"), InTransition.DelayDuration);
     }
 
-    // Transition conditions
     auto ConditionsArray = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto& Cond : InTransition.Conditions)
     {
@@ -381,8 +362,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Plain-Text Serialization
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_StateTreeExporter::
@@ -407,7 +386,6 @@ auto
         return Text;
     }
 
-    // Root parameters
     const auto& RootParameterBag = EditorData->GetRootParametersPropertyBag();
     if (const auto* BagStruct = RootParameterBag.GetPropertyBagStruct())
     {
@@ -416,7 +394,6 @@ auto
         Text += TEXT("\n");
     }
 
-    // Global evaluators
     if (EditorData->Evaluators.Num() > 0)
     {
         Text += TEXT("--- Global Evaluators ---\n");
@@ -427,7 +404,6 @@ auto
         Text += TEXT("\n");
     }
 
-    // Global tasks
     if (EditorData->GlobalTasks.Num() > 0)
     {
         Text += TEXT("--- Global Tasks ---\n");
@@ -438,7 +414,6 @@ auto
         Text += TEXT("\n");
     }
 
-    // Tree structure
     Text += TEXT("--- Tree Structure ---\n");
 
     if (EditorData->SubTrees.Num() == 0)
@@ -489,13 +464,11 @@ auto
         OutText += FString::Printf(TEXT("%s  LinkedAsset: %s\n"), *Indent, *InState->LinkedAsset->GetPathName());
     }
 
-    // Enter conditions
     for (const auto& Cond : InState->EnterConditions)
     {
         DoSerializeEditorNode_Text(Cond, TEXT("EnterCondition"), OutText, InDepth + 1);
     }
 
-    // Tasks (+ single task)
     for (const auto& Task : InState->Tasks)
     {
         DoSerializeEditorNode_Text(Task, TEXT("Task"), OutText, InDepth + 1);
@@ -505,13 +478,11 @@ auto
         DoSerializeEditorNode_Text(InState->SingleTask, TEXT("Task"), OutText, InDepth + 1);
     }
 
-    // Transitions
     for (const auto& Transition : InState->Transitions)
     {
         DoSerializeTransition_Text(Transition, OutText, InDepth + 1);
     }
 
-    // Children
     for (const UStateTreeState* Child : InState->Children)
     {
         DoSerializeState_Text(Child, OutText, InDepth + 1);
@@ -539,11 +510,9 @@ auto
 
     OutText += FString::Printf(TEXT("%s{%s} %s: \"%s\"\n"), *Indent, *InNodeType, *ClassName, *NodeName);
 
-    // Config stored on the node struct itself
     const auto NodeStructDefault = FStructOnScope{NodeStruct};
     DoSerializeProperties_Text(NodeStruct, InNode.Node.GetMemory(), NodeStructDefault.GetStructMemory(), OutText, InDepth + 1);
 
-    // Per-instance editable data
     if (IsValid(InNode.InstanceObject))
     {
         const auto* InstanceClass = InNode.InstanceObject->GetClass();
@@ -630,8 +599,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Helpers
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_StateTreeExporter::
@@ -663,8 +630,8 @@ auto
     const auto* ValuePtr = InProperty->ContainerPtrToValuePtr<void>(InContainer);
     InProperty->ExportTextItem_Direct(Value, ValuePtr, nullptr, nullptr, PPF_None);
 
-    // If a struct property exported as "()", expand its sub-fields individually
-    if (Value == TEXT("()"))
+    const auto ExportedAsEmptyStruct = Value == TEXT("()");
+    if (ExportedAsEmptyStruct)
     {
         const auto* StructProperty = CastField<FStructProperty>(InProperty);
         if (StructProperty != nullptr)
@@ -696,11 +663,9 @@ auto
     if (InProperty == nullptr)
     { return false; }
 
-    // Skip transient and deprecated properties
     if (InProperty->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated | CPF_DuplicateTransient))
     { return false; }
 
-    // Skip plumbing properties from the base node struct / UObject
     const auto* OwnerStruct = InProperty->GetOwnerStruct();
     if (OwnerStruct == nullptr)
     { return false; }
@@ -713,7 +678,6 @@ auto
     if (SkipStructs.Contains(OwnerStruct->GetFName()))
     { return false; }
 
-    // Include if the property is EditAnywhere, VisibleAnywhere, or BlueprintVisible
     if (InProperty->HasAnyPropertyFlags(CPF_Edit | CPF_BlueprintVisible))
     { return true; }
 

@@ -56,9 +56,7 @@ auto
     auto Base = ck::CreateInventory<ck::TInventoryRequestTraits<FCk_Handle_Inventory_Spatial>>(
         InOwnerEntity, FCk_Fragment_Inventory_ParamsData{InParams}, InReplicates, InWorldContextObject);
 
-    // Auto-name the new inventory entity from the Params' name tag so the ECS
-    // Debugger shows a meaningful identifier instead of NONAME. Callers can
-    // still call Set_DebugName afterward to override.
+    // Without this the ECS Debugger shows NONAME; a caller's later Set_DebugName still overrides it.
     UCk_Utils_Handle_UE::Set_DebugName(Base, InParams.Get_Name().GetTagName());
 
     return Cast(Base);
@@ -183,11 +181,9 @@ namespace ck_inventory
 
     auto YawToCardinalRotation(float InYaw) -> ECk_CardinalRotation
     {
-        // Normalize to [0, 360)
         auto Yaw = FMath::Fmod(InYaw, 360.0f);
         if (Yaw < 0.0f) { Yaw += 360.0f; }
 
-        // Quantize to nearest 90°
         const auto Quantized = FMath::RoundToInt(Yaw / 90.0f) % 4;
 
         switch (Quantized)
@@ -246,8 +242,7 @@ auto
         const FCk_Handle_Item& InItem)
     -> ECk_CardinalRotation
 {
-    // Placement decision record (written by Request_PlaceItemOnGrid) — O(1) and snapshot-stable.
-    // The Transform-yaw derivation remains the fallback for items placed before the fragment existed.
+    // Transform-yaw derivation below is the fallback for items placed before this fragment existed.
     if (auto Item = InItem;
         Item.Has<ck::FFragment_Item_SpatialPlacement>())
     { return Item.Get<ck::FFragment_Item_SpatialPlacement>().Get_Rotation(); }
@@ -279,8 +274,7 @@ auto
         const FCk_Handle_Item& InItem)
     -> FIntPoint
 {
-    // Placement decision record (written by Request_PlaceItemOnGrid) — O(1) and snapshot-stable.
-    // The cell scan below remains the fallback for items placed before the fragment existed.
+    // The cell scan below is the fallback for items placed before this fragment existed.
     if (auto Item = InItem;
         Item.Has<ck::FFragment_Item_SpatialPlacement>())
     { return Item.Get<ck::FFragment_Item_SpatialPlacement>().Get_Anchor(); }
@@ -302,10 +296,9 @@ auto
 
         const auto Local = UCk_Utils_2dGridCell_UE::Get_Coordinate(InCell, ECk_2dGridSystem_CoordinateType::Local);
 
-        // Multi-cell items mark every occupied cell with the same item ref. ForEach_Cell
-        // iteration order is not guaranteed to hit the anchor first, so reduce to the
-        // lexicographic minimum (Y then X) — which equals the placement anchor because
-        // Get_RotatedShape normalizes rotated shapes so MinX=MinY=0.
+        // Multi-cell items mark every occupied cell and ForEach_Cell may not hit the anchor first,
+        // so reduce to the lexicographic minimum (Y then X) — which IS the anchor, because
+        // Get_RotatedShape normalizes rotated shapes to MinX = MinY = 0.
         if (Coordinate.X < 0 ||
             Local.Y < Coordinate.Y ||
             (Local.Y == Coordinate.Y && Local.X < Coordinate.X))
@@ -466,8 +459,8 @@ auto
     });
 
     // ---- Store the placement decision record on the item ----
-    // The cell ItemRefs above are DERIVED state in the grid's private cell registry (invisible to
-    // snapshots); this fragment is the persistent + O(1)-readable home for the placement.
+    // The cell ItemRefs above are DERIVED state in the grid's private cell registry, invisible to
+    // snapshots; this fragment is the persistent, O(1)-readable home for the placement.
 
     {
         auto Item = InItem;

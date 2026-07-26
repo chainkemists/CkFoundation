@@ -7,16 +7,8 @@
 #include "CkGoap_WorldState_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// A FCk_Handle_Goap_WorldState identifies an entity that holds a shared
-// boolean world state used by one or more GOAP planners. Planners reference
-// a WorldState entity via FCk_Fragment_Goap_ParamsData::_WorldStateSource;
-// reads, writes, and replan-trigger subscriptions all route through the
-// referenced WorldState. Multiple planners pointing at the same WorldState
-// observe each other's writes through the OnValueChanged signal.
-//
-// Lifetime: caller-owned. Create explicitly with utils_goap_world_state::Create
-// under any owner entity. Destruction cascades from the owner via CkRecord.
+// Planners reference one via FCk_Fragment_Goap_ParamsData::_WorldStateSource; several planners may
+// share it. Lifetime is caller-owned: destruction cascades from the owner via CkRecord.
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKGOAP_API FCk_Handle_Goap_WorldState : public FCk_Handle_TypeSafe
@@ -28,10 +20,7 @@ struct CKGOAP_API FCk_Handle_Goap_WorldState : public FCk_Handle_TypeSafe
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_WorldState);
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Placeholder for per-WorldState configuration. Empty today — added now so
-// the Create signature stays stable when future knobs land (e.g. max-keys
-// override, replication policy, debug-name).
+// Deliberately empty — reserved so the Add/Create signatures stay stable when knobs land.
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Fragment_Goap_WorldState_ParamsData
@@ -43,9 +32,7 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Fired by the WorldState's request processor whenever a Set request actually
-// changes a key's value. Same-value writes are coalesced and do not fire.
+// Fires only when a Set actually changes the value — same-value writes are coalesced and do not fire.
 
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Goap_WorldState_Payload_OnValueChanged
@@ -113,10 +100,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Pre-registers a key with the registry so subsequent Set/Get on it route to
-// a stable slot. Normally callers don't need this — Setup-time scanning of
-// GOAP actions/goals registers keys automatically, and Set_Value also lazily
-// registers. Useful when seeding values before any planner is attached.
+// Rarely needed — Setup-time scanning of actions/goals and Set_Value both register keys already.
 USTRUCT(BlueprintType)
 struct CKGOAP_API FCk_Request_Goap_WorldState_RegisterKey
 {

@@ -17,9 +17,6 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 // --------------------------------------------------------------------------------------------------------------------
-// Pure-logic coverage for the dispatch layer + export-meta round-trip. No content dependencies and no env gating — the
-// three cases exercise string/JSON logic only (path resolution, the friendly-class map, and sibling-meta read/write).
-// --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCk_AssetExporter_Dispatch_ResolveInput_Test,
@@ -104,7 +101,6 @@ bool FCk_AssetExporter_Dispatch_ExportMetaRoundTrip_Test::RunTest(const FString&
         FFileHelper::SaveStringToFile(JsonString, *InPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     };
 
-    // A json carrying a "_meta" object.
     {
         auto Root = MakeShared<FJsonObject>();
         auto Meta = MakeShared<FJsonObject>();
@@ -115,14 +111,12 @@ bool FCk_AssetExporter_Dispatch_ExportMetaRoundTrip_Test::RunTest(const FString&
         SerializeToFile(Root, GoodPath);
     }
 
-    // A json with NO "_meta".
     {
         auto Root = MakeShared<FJsonObject>();
         Root->SetStringField(TEXT("assetName"), TEXT("NoMeta"));
         SerializeToFile(Root, NoMetaPath);
     }
 
-    // Present + well-formed -> reads its stored values.
     {
         auto Hash = FString{};
         auto Version = int32{0};
@@ -132,14 +126,12 @@ bool FCk_AssetExporter_Dispatch_ExportMetaRoundTrip_Test::RunTest(const FString&
         TestEqual(TEXT("exporterVersion round-trips"), Version, 7);
     }
 
-    // Missing file -> false.
     {
         auto Hash = FString{};
         auto Version = int32{0};
         TestFalse(TEXT("missing file returns false"), FCk_AssetExportMeta::TryRead_SiblingMeta(MissingPath, Hash, Version));
     }
 
-    // Meta-less json -> false.
     {
         auto Hash = FString{};
         auto Version = int32{0};
@@ -169,14 +161,13 @@ bool FCk_AssetExporter_Dispatch_SummaryTextBanner_Test::RunTest(const FString& I
     TestTrue(TEXT("banner points at _meta"), Banner.Contains(TEXT("\"_meta\"")));
     TestTrue(TEXT("banner ends with a blank separator line"), Banner.EndsWith(TEXT("\n\n")));
 
-    // Deterministic — same input, byte-identical output (no timestamps), like every other export output.
     TestEqual(TEXT("banner is deterministic"), Banner, FCk_AssetExportMeta::Get_SummaryTextBanner(TEXT("MyAsset")));
 
     return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Graph-dump shape check against a tiny real content dir. No env gating — MembershipBoard is small and always present.
+// Needs no env gating: /Game/BusterBlock/MembershipBoard is a tiny content dir that is always present.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -218,12 +209,9 @@ bool FCk_AssetExporter_Dispatch_GraphDumpShape_Test::RunTest(const FString& InPa
         const auto HasDisk = Row->TryGetStringField(TEXT("diskPath"), DiskPath);
         TestTrue(TEXT("row has diskPath"), HasDisk);
 
-        // Absolute: a Windows drive-letter prefix (e.g. "D:/...").
-        const auto IsAbsolute = DiskPath.Len() >= 2 && FChar::IsAlpha(DiskPath[0]) && DiskPath[1] == TEXT(':');
-        TestTrue(TEXT("diskPath is absolute (drive-letter prefixed)"), IsAbsolute);
+        const auto HasDriveLetterPrefix = DiskPath.Len() >= 2 && FChar::IsAlpha(DiskPath[0]) && DiskPath[1] == TEXT(':');
+        TestTrue(TEXT("diskPath is absolute (drive-letter prefixed)"), HasDriveLetterPrefix);
 
-        // hardDeps, when present, must be lexically sorted (re-sort a copy with the same FName::LexicalLess order the
-        // dumper uses and compare).
         const TArray<TSharedPtr<FJsonValue>>* HardDeps = nullptr;
         if (Row->TryGetArrayField(TEXT("hardDeps"), HardDeps) && HardDeps != nullptr)
         {

@@ -102,7 +102,6 @@ namespace ck
 
 
     // --------------------------------------------------------------------------------------------------------------------
-    // ITERATE — Runs each frame while walk is in progress
 
     auto
         FProcessor_Sm_Debug_GraphWalk_Iterate::
@@ -119,14 +118,13 @@ namespace ck
         if (Progress._PendingEntities.IsEmpty())
         { return; }
 
-        // Check if ALL pending entities have been constructed (script attached)
         for (const auto& Pending : Progress._PendingEntities)
         {
             if (NOT Pending.EntityHandle.Has<FFragment_EntityScript_Current>())
             { return; }
         }
 
-        // All state scripts constructed — DefineState has run, children are readable
+        // Every state script is attached, so DefineState has run and children are readable.
 
         for (const auto& Pending : Progress._PendingEntities)
         {
@@ -151,9 +149,8 @@ namespace ck
                 auto TransDef = FCk_SmDebug_StateDefinition::FTransitionDef{};
                 TransDef.TargetStateClass = ResolvedTarget;
 
-                // Capture each condition's static definition (class + mode) so the
-                // debugger can show event-driven vs polled on transitions whose
-                // source state hasn't become current yet.
+                // Static condition definitions let the debugger show event-driven vs polled on
+                // transitions whose source state hasn't become current yet.
                 UCk_Utils_StateMachine_UE::RecordOfSmConditions_Utils::ForEach_ValidEntry(InTransition,
                 [&](FCk_Handle_SmCondition InCondition)
                 {
@@ -189,9 +186,8 @@ namespace ck
                     TaskDef.Mode = ECk_SmTaskMode::Tick;
                 }
 
-                // Read the task's script class directly — same path the live cache uses.
-                // Relying on the RequestSpawnEntity child fragment leaves ClassName empty
-                // once the spawn request has been consumed.
+                // Read directly (same path the live cache uses): the RequestSpawnEntity child
+                // fragment leaves ClassName empty once the spawn request has been consumed.
                 TaskDef.ScriptClass = UCk_Utils_SmTask_UE::Get_ScriptClass(InTask);
                 if (ck::IsValid(TaskDef.ScriptClass))
                 {
@@ -232,7 +228,6 @@ namespace ck
 
         Progress._PendingEntities.Reset();
 
-        // Process sub-SM walk queue
         for (const auto& [ParentClass, SubSmInitial] : Progress._PendingSubSmWalks)
         {
             if (Progress._SubSmDefinitions.Contains(ParentClass))
@@ -248,10 +243,8 @@ namespace ck
 
         Progress._PendingSubSmWalks.Reset();
 
-        // Create next batch of temp entities for newly discovered states
         CreateBatch(Progress, InHandle);
 
-        // If no more pending entities, walk is complete
         if (Progress._PendingEntities.IsEmpty())
         {
             AssignSubSmStateDefinitions(Progress);
@@ -285,10 +278,8 @@ namespace ck
             FFragment_Sm_Debug_GraphWalk_Progress& InOutProgress)
         -> void
     {
-        // For each sub-SM definition, find all states reachable from its initial state
-        // via BFS on transitions, and assign them to the sub-SM's StateDefinitions map.
-        // States assigned to a sub-SM are removed from the top-level _StateDefinitions
-        // so the parent SM only contains its own states.
+        // States claimed by a sub-SM are removed from the top-level map, so the parent SM ends up
+        // holding only its own states.
 
         for (auto& [ParentClass, SubSmDef] : InOutProgress._SubSmDefinitions)
         {
@@ -324,7 +315,6 @@ namespace ck
                 }
             }
 
-            // Remove sub-SM states from the top-level definitions
             for (const auto& [StateClass, _] : SubSmDef.StateDefinitions)
             {
                 InOutProgress._StateDefinitions.Remove(StateClass);

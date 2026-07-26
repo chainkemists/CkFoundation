@@ -35,8 +35,6 @@ public:
     UCk_UI_ExtensionPoint_Widget_UE(const FObjectInitializer& ObjectInitializer);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // UWidget Overrides
-    // ----------------------------------------------------------------------------------------------------------------
 
 public:
     virtual auto ReleaseSlateResources(bool InReleaseChildren) -> void override;
@@ -47,8 +45,6 @@ public:
 #endif
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Configuration
-    // ----------------------------------------------------------------------------------------------------------------
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Extension",
@@ -58,8 +54,6 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Extension")
     ECk_UI_ExtensionPointMatch _MatchType = ECk_UI_ExtensionPointMatch::ExactMatch;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Context
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
@@ -72,8 +66,6 @@ protected:
               meta = (DisplayName = "Context Injection Mode"))
     ECk_ContextInjectionMode _InjectionMode = ECk_ContextInjectionMode::OnlyIfMissing;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Internal
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
@@ -95,8 +87,6 @@ private:
         FCk_Handle_ContextReceiver InContextReceiver,
         FCk_Handle InContextEntity);
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Runtime State
     // ----------------------------------------------------------------------------------------------------------------
 
 private:

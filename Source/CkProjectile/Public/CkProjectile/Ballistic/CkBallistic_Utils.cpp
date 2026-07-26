@@ -6,8 +6,7 @@
 
 namespace ck::ballistics_detail
 {
-    // Index of the component best conditioned for the 1D time-of-flight solve.
-    // Prefer the displacement axis, then initial velocity, then the terminal velocity
+    // Index of the component best conditioned for the 1D time-of-flight solve
     static auto
     Get_DominantAxisIndex(
         const FVector& InDeltaLocation,
@@ -123,11 +122,9 @@ namespace ck::ballistics
         if (Root2 < 0.0)
         { return FCk_Time{Root1}; }
 
-        // Both roots are in positive time — the trajectory crosses this axis value twice (apex
-        // in-between). The current velocity tells us which side of the apex we are on
-        const auto CurrentDirection = InCurrentVelocity[AxisIndex];
+        const auto ApexIsAhead = InCurrentVelocity[AxisIndex] * VinfPart < 0.0;
 
-        if (CurrentDirection * VinfPart < 0.0)
+        if (ApexIsAhead)
         { return FCk_Time{FMath::Min(Root1, Root2)}; }
 
         return FCk_Time{FMath::Max(Root1, Root2)};

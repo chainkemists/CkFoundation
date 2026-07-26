@@ -26,8 +26,7 @@ public:
 public:
     ACk_IsmRenderer_Actor_UE();
 
-    // Idempotent. Called by UCk_IsmRenderer_Subsystem_UE::GetOrCreate_IsmRenderer post-spawn so
-    // the EntityScript is created in both runtime (BeginPlay) and editor (no BeginPlay) worlds.
+    // Idempotent — also called post-spawn so editor worlds (no BeginPlay) get the EntityScript.
     auto
     DoInitialize() -> void;
 
@@ -37,9 +36,8 @@ protected:
 
 #if WITH_EDITOR
 public:
-    // Editor-world per-owner renderers redirect viewport clicks on their instances to the placed
-    // actor whose preview they render (see ck::FFragment_EditorSelectionOwner) — clicking the
-    // preview mesh then selects/moves/deletes that actor like clicking its billboard.
+    // Redirects viewport clicks on this renderer's instances to the placed actor whose preview it
+    // renders (see ck::FFragment_EditorSelectionOwner).
     auto
     IsSelectionChild() const -> bool override;
 
@@ -87,11 +85,8 @@ protected:
     auto DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool override;
 
 private:
-    // Destroys any ACk_IsmRenderer_Actor_UE instances that were previously baked into the level
-    // package by a prior version that didn't mark them transient. Runs once on subsystem init in
-    // both editor and runtime worlds. In the editor, marks the level dirty so the user can save
-    // out a clean copy. The cache is empty at this point, so subsequent GetOrCreate calls from
-    // the entity-spawner rebuild path will spawn fresh (now-transient) replacements.
+    // Destroys renderer actors baked into the level package by a pre-RF_Transient version, and
+    // dirties editor levels so a clean copy can be saved. See CkIsmRenderer/CLAUDE.md.
     auto DoSweepLeakedRenderers() -> void;
 
 public:
@@ -101,33 +96,25 @@ public:
         const UCk_IsmRenderer_Data* InDataAsset);
 
 #if WITH_EDITOR
-    // Editor-world variant: one renderer per (data asset, selection owner), so a viewport click
-    // on any of its instances can redirect selection to the owner. A shared renderer would make
-    // every preview mesh select the same meaningless transient actor — per-instance mapping is
-    // impossible at the actor level, so the split IS the mapping. Editor previews are small, so
-    // the lost batching is irrelevant; runtime worlds always use the shared renderer above.
+    // Editor-world variant: one renderer per (data asset, selection owner) — the split IS the
+    // per-instance selection mapping. See CkIsmRenderer/CLAUDE.md.
     auto
     GetOrCreate_IsmRenderer_ForEditorSelectionOwner(
         const UCk_IsmRenderer_Data* InDataAsset,
         AActor* InSelectionOwner) -> ACk_IsmRenderer_Actor_UE*;
 #endif
 
-    // Finds or caches the ISM component for a given renderer data asset.
-    // Used by the ISM proxy processors to resolve data assets to their ISM components.
-    // InEditorSelectionOwner (editor previews only, explicitly-null otherwise) selects the
-    // per-owner renderer's component; TWeakObjectPtr keys compare by object index + serial, so
-    // the lookup keeps resolving the SAME component even after the owner actor is destroyed —
-    // teardown removes instances from the component that actually holds them (never silently
-    // falls back to the shared component).
+    // InEditorSelectionOwner (editor previews only, explicitly-null otherwise) selects the per-owner
+    // renderer's component. Weak keys compare by index + serial, so the lookup keeps resolving the
+    // SAME component after the owner is destroyed — teardown never falls back to the shared one.
     auto
     FindOrCache_IsmComponent(
         const UCk_IsmRenderer_Data* InRendererData,
         const TWeakObjectPtr<AActor>& InEditorSelectionOwner = {}) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
 
-    // Finds or creates the "shadow ISM" for (renderer data, outline preset): a custom-depth-only twin of
-    // the renderer's ISM (same mesh/mobility/cull distances, no main pass, no shadows, no collision) whose
-    // Custom-Stencil value is the preset's allocated value. The outline processors mirror outlined proxies'
-    // instances into it — custom depth is per-component, so per-instance outlines need a second component.
+    // The "shadow ISM" for (renderer data, outline preset): a custom-depth-only twin of the renderer's
+    // ISM carrying the preset's stencil value. Custom depth is per-component, so per-instance outlines
+    // need this second component. See CkIsmRenderer/CLAUDE.md.
     auto
     FindOrCreate_OutlineIsmComponent(
         const UCk_IsmRenderer_Data* InRendererData,
@@ -153,15 +140,13 @@ private:
     UPROPERTY()
     TMap<const UCk_IsmRenderer_Data*, TWeakObjectPtr<UInstancedStaticMeshComponent>> _IsmComponentCache;
 
-    // {DataAsset, Preset, EditorSelectionOwner (explicitly-null outside editor previews)}
     using FOutlineIsmKey = TTuple<TWeakObjectPtr<const UCk_IsmRenderer_Data>, TWeakObjectPtr<const UCkUsf_OutlinePreset>, TWeakObjectPtr<AActor>>;
     TMap<FOutlineIsmKey, TWeakObjectPtr<UInstancedStaticMeshComponent>> _OutlineIsmComponentCache;
 
 #if WITH_EDITORONLY_DATA
 private:
-    // Weak on both sides: the actors/components are owned by the world; entries self-heal via
-    // validity checks. TWeakObjectPtr keys compare by object index + serial, so lookups keep
-    // working after the owner actor is destroyed.
+    // Weak on both sides: the world owns the actors/components and entries self-heal on lookup;
+    // weak keys compare by index + serial, so lookups survive the owner actor's destruction.
     using FPerOwnerRendererKey = TPair<TWeakObjectPtr<const UCk_IsmRenderer_Data>, TWeakObjectPtr<AActor>>; // {DataAsset, SelectionOwner}
     TMap<FPerOwnerRendererKey, TWeakObjectPtr<ACk_IsmRenderer_Actor_UE>> _PerOwnerIsmRenderers;
     TMap<FPerOwnerRendererKey, TWeakObjectPtr<UInstancedStaticMeshComponent>> _PerOwnerIsmComponentCache;

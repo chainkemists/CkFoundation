@@ -44,8 +44,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(_Minimap), TEXT("Invalid Minimap Handle passed to MinimapFrame Widget [{}]"), this)
     { return; }
 
-    // Seed-then-delta contract: initial state comes from the pull API; the signals only carry future
-    // membership deltas (their replay stashes at most the LAST payload — never rely on it for seeding)
+    // Seed-then-delta: signal replay stashes at most the LAST payload, so seeding must come from the pull API
     for (const auto& Entry : UCk_Utils_Minimap_UE::Get_Entries(_Minimap))
     {
         OnMinimapEntryAppeared(Entry);
@@ -161,9 +160,9 @@ auto
 {
     using namespace ck_minimap_frame_widget;
 
-    // Only build the code-authored tree when no designer tree exists (pure-code usage). A UMG subclass
-    // that authors its own hierarchy owns its layout entirely and skips the built-in presentation.
-    if (ck::IsValid(WidgetTree->RootWidget))
+    const auto HasDesignerAuthoredTree = ck::IsValid(WidgetTree->RootWidget);
+
+    if (HasDesignerAuthoredTree)
     { return; }
 
     _RootCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("MinimapFrame_RootCanvas"));
@@ -205,8 +204,9 @@ auto
         const FGeometry& InGeometry)
     -> void
 {
-    // The widget may be a designer-authored subclass with its own tree — nothing to lay out then
-    if (ck::Is_NOT_Valid(_RootCanvas))
+    const auto OwnsBuiltInTree = ck::IsValid(_RootCanvas);
+
+    if (NOT OwnsBuiltInTree)
     { return; }
 
     const auto MinimapIsValid = ck::IsValid(_Minimap);
@@ -255,8 +255,6 @@ auto
 
     DoRefreshBackground(PanelCenter, FrameSize, ViewYaw, RotateWithObserver);
 
-    // ---- Observer marker: frame center; rotates by the view yaw when the map is north-locked, and
-    //      points screen-up when the map itself rotates under it ----
     if (ck::IsValid(_ObserverArrow))
     {
         _ObserverArrow->SetVisibility(ESlateVisibility::HitTestInvisible);
@@ -264,8 +262,6 @@ auto
         DoPositionChildAt(_ObserverArrow, PanelCenter);
     }
 
-    // ---- POI blips: index-pooled against this frame's entries (ONE loop; membership signals are for
-    //      consumers that keep per-POI widgets — this reference presentation re-derives from the pull API) ----
     const auto Entries = UCk_Utils_Minimap_UE::Get_Entries(_Minimap);
 
     for (auto Index = _BlipPool.Num(); Index < Entries.Num(); ++Index)

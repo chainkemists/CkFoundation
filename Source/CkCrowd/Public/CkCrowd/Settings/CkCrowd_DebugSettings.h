@@ -9,22 +9,9 @@
 #include "CkCrowd_DebugSettings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-//
-// Per-user debug visualization toggles for CkCrowd. Persisted to EditorPerProjectUserSettings.ini
-// (via Config UPROPERTY) and shown in Editor Preferences → Crowd Debug.
-//
-// Each toggle is mirrored to a console variable (declared in the .cpp at file scope so the static
-// initializer runs at DLL load — before any CDO construction). Sync is bidirectional:
-//
-//   - Editor Preferences edit  → PostEditChangeProperty pushes the new value to the CVar.
-//   - Console `ck.Crowd.X 1`   → CVar callback writes the UPROPERTY back to the CDO + SaveConfig.
-//
-// CVar names match the historical declarations so existing console muscle memory keeps working
-// (`ck.Crowd.Debug`, `ck.Crowd.DrawBreadcrumbs`, `ck.Crowd.DrawPlannedPaths`, plus the new
-// `ck.Crowd.Debug.AgentBody`). The CrowdDebugger toolbar checkboxes resolve the same CVars via
-// IConsoleManager::FindConsoleVariable, so flipping a checkbox flows through the CVar callback
-// into the settings — checkbox state and persisted state stay aligned.
-//
+// Per-user debug visualization toggles for CkCrowd: persisted to EditorPerProjectUserSettings.ini and
+// shown in Editor Preferences -> Crowd Debug. Each toggle is mirrored BIDIRECTIONALLY to a console
+// variable declared at file scope in the .cpp (Editor edit -> CVar; console set -> UPROPERTY + save).
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "Crowd Debug"))
@@ -35,15 +22,13 @@ class CKCROWD_API UCk_Crowd_DebugSettings_UE : public UCk_Plugin_UserSettings_UE
 public:
     CK_GENERATED_BODY(UCk_Crowd_DebugSettings_UE);
 
-    // PostInitProperties pushes the persisted UPROPERTY values into the static CVars on
-    // CDO construction (load-time hydration). Without this, a freshly-launched editor would
-    // keep the CVar default and ignore the previous session's saved value.
+    // Hydrates the CVars from the persisted UPROPERTY values at CDO construction; without it a
+    // freshly-launched editor keeps the CVar defaults and ignores the previous session's values.
     virtual void PostInitProperties() override;
 
 #if WITH_EDITOR
-    // PostEditChangeProperty fires when the user edits a value in Editor Preferences. We push
-    // the new value into the CVar so processors that read via the CVar (and the debugger
-    // checkboxes that resolve through IConsoleManager) see the change immediately.
+    // Pushes an Editor Preferences edit into the CVar so CVar readers (draw processors, debugger
+    // checkboxes resolving through IConsoleManager) see the change immediately.
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
@@ -98,8 +83,7 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Crowd_DebugSettings_UE);
 
 public:
-    // Read paths — used by the per-tick draw processors. Reads the UPROPERTY (which is kept
-    // in sync with the CVar via the callback in the .cpp).
+    // Read paths for the per-tick draw processors — the UPROPERTY, kept in sync with the CVar.
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|DebugSettings")
     static bool
     Get_DrawAgentBody();

@@ -24,10 +24,7 @@
 
 namespace ck::pmg
 {
-    // Resolve raw font bytes: explicit override -> bundled Noto asset ->
-    // engine Roboto from disk (always present, keeps the feature working before the bundled
-    // CJK font is imported). The returned pointer is only used synchronously by EnsureFace,
-    // which copies the bytes immediately.
+    // The returned pointer is only valid synchronously — EnsureFace copies the bytes immediately.
     auto ResolveTextFontBytes(UFontFace* InOverride) -> const TArray<uint8>*
     {
         if (ck::IsValid(InOverride))
@@ -58,8 +55,7 @@ namespace ck::pmg
 
     namespace ck_pmg_processor_text_shapes
     {
-        // Loads raw font bytes from a file under the CkFoundation plugin's CkPmg Resources dir.
-        // Tried once (the tried flag avoids re-hitting the filesystem every frame when absent).
+        // InOutTried keeps a missing file from re-hitting the filesystem every frame.
         const TArray<uint8>* LoadResourceFontBytes_Cached(const TCHAR* InFileName, TArray<uint8>& InOutBytes, bool& InOutTried)
         {
             if (InOutTried == false)
@@ -75,8 +71,6 @@ namespace ck::pmg
         }
     }
 
-    // Ordered glyph-fallback chain: primary text font, then bundled Noto Emoji, then Noto Sans Symbols 2.
-    // The fallbacks ship as raw .ttf under Source/CkPmg/Resources (staged for packaged builds).
     auto ResolveTextFontChain(UFontFace* InOverride, TArray<const TArray<uint8>*>& OutChain) -> void
     {
         if (const auto* Primary = ResolveTextFontBytes(InOverride)) { OutChain.Add(Primary); }
@@ -176,9 +170,7 @@ namespace ck_pmg_processor_text_shapes_impl
 
     struct FPlacedGlyph_Text { const ck::pmg::FCachedGlyph* Glyph; float PenX; float PenY; };
 
-    // Glyphs are authored in the local XY plane (glyph x -> +X right, glyph y -> +Y up, Z=0),
-    // matching the magnifying-glass authoring so the filled mesh (ApplyPlaneAxisRotation) and
-    // the wireframe (axis quat below) align. Rows descend in -Y.
+    // Local XY plane: x -> +X right, y -> +Y up, Z=0, rows descending in -Y.
     auto LayoutText(
         const FString& InText,
         const TArray<int32>& InFaceChain,
@@ -210,7 +202,6 @@ namespace ck_pmg_processor_text_shapes_impl
 
             if (Codepoint == static_cast<uint32>('\n')) { Lines.AddDefaulted(); LineWidths.Add(0.0f); continue; }
 
-            // Font fallback: first face in the chain that has this codepoint; else the primary (.notdef).
             int32 ChosenFace = PrimaryFace;
             for (int32 Fk : InFaceChain)
             {
@@ -247,9 +238,8 @@ namespace ck
         FFragment_Pmg_DebugShape_Current& InCurrent)
         -> void
     {
-        // Ensure a procmesh exists FIRST (reuse on rebuild) so Current is always valid once
-        // NeedsSetup is cleared. Otherwise a no-font early-out would clear NeedsSetup while leaving
-        // an invalid mesh, which FProcessor_Pmg_DebugShape_UpdateTransform then ensures on.
+        // The procmesh must exist BEFORE any early-out below: a no-font return would otherwise clear
+        // NeedsSetup with an invalid mesh, which FProcessor_Pmg_DebugShape_UpdateTransform ensures on.
         auto* Mesh = InCurrent._MeshComponent.Get();
         if (ck::Is_NOT_Valid(Mesh))
         {
@@ -280,8 +270,7 @@ namespace ck
         ck_pmg_processor_text_shapes_impl::LayoutText(InParams.Get_Text(), FaceChain, InParams.Get_Size(), InParams.Get_LineSpacing(),
             InParams.Get_Align(), InParams.Get_MaxGlyphs(), Placed);
 
-        // Orientation applied to BOTH the filled mesh and the wireframe so they stay aligned.
-        // Keyed on _Axis (default YZ = upright, facing the play camera; see Get_PlaneAxisRotation).
+        // Applied to BOTH the filled mesh and the wireframe below, or the two tiers drift apart.
         const FQuat OrientQuat = UCk_Utils_Vector3_UE::Get_PlaneAxisRotation(InParams.Get_Axis());
 
         // ---- Filled tier (local XY plane, Z=0) ----
@@ -302,14 +291,12 @@ namespace ck
                 { Triangles.Add(Base + T.X); Triangles.Add(Base + T.Y); Triangles.Add(Base + T.Z); }
             }
 
-            // Double-sided fill: the constrained-Delaunay winding isn't guaranteed to face the
-            // camera and the glyph quad is flat, so add reversed triangles — otherwise the fill is
-            // backface-culled and only the wireframe outline shows.
+            // Delaunay winding isn't guaranteed camera-facing; without the reversed copies the
+            // fill is backface-culled and only the outline shows.
             const int32 ForwardTriCount = Triangles.Num();
             for (int32 t = 0; t + 2 < ForwardTriCount; t += 3)
             {
-                // Copy to locals first — Triangles.Add(Triangles[i]) aliases into the array and
-                // asserts when the Add reallocates (Array.h "adding element from same array").
+                // Copy to locals — Triangles.Add(Triangles[i]) aliases and asserts on reallocation.
                 const int32 I0 = Triangles[t];
                 const int32 I1 = Triangles[t + 1];
                 const int32 I2 = Triangles[t + 2];

@@ -28,10 +28,8 @@ namespace ck::jolt
 
 namespace ck
 {
-    // Builds the CharacterVirtual for each entity flagged NeedsSetup: capsule shape, profile-derived layer,
-    // Z-up settings, then registers it with the FJoltWorld and points it at the shared contact listener. The
-    // FJoltWorld / PhysicsSystem / layer-table contexts are resolved per-tick — an absent Jolt world is legal
-    // (non-Jolt worlds), so the whole tick silent-returns and the NeedsSetup entities retry once a world exists.
+    // An absent Jolt world is legal (non-Jolt worlds): the whole tick silent-returns and the NeedsSetup
+    // entities retry once a world exists.
     class CKJOLT_API FProcessor_JoltCharacter_Setup : public ck_exp::TProcessor<
             FProcessor_JoltCharacter_Setup,
             FCk_Handle_JoltCharacter,
@@ -42,8 +40,8 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        // WaitForAsync edge: creating a CharacterVirtual mutates Jolt state on the game thread and must never
-        // race an in-flight async step (the scheduler's lexical tie-break would otherwise order this first).
+        // WaitForAsync edge: without it the scheduler's lexical tie-break races CharacterVirtual creation
+        // against the async step.
         using RunAfter = TDepList<FProcessor_Transform_HandleRequests, FProcessor_JoltWorld_WaitForAsync>;
         using MarkedDirtyBy = FTag_JoltCharacter_NeedsSetup;
 
@@ -68,9 +66,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains the JoltCharacter request queue (CkTimer ritual): Move / Jump write the pending intent onto
-    // Current (drained into the FJoltWorld entry by PreStep); Teleport snaps the CharacterVirtual, the ECS
-    // transform, and the step pose (mirrors the JoltBody Teleport handler).
     class CKJOLT_API FProcessor_JoltCharacter_HandleRequests : public ck_exp::TProcessor<
             FProcessor_JoltCharacter_HandleRequests,
             FCk_Handle_JoltCharacter,
@@ -81,8 +76,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        // WaitForAsync edge: the Teleport handler mutates the CharacterVirtual (SetPosition/SetRotation) and
-        // must never race an in-flight async step — without the explicit edge the lexical tie-break runs first.
+        // WaitForAsync edge: the Teleport handler mutates the CharacterVirtual and must never race the async step.
         using RunAfter = TDepList<FProcessor_JoltCharacter_Setup, FProcessor_JoltWorld_WaitForAsync>;
         using MarkedDirtyBy = FFragment_JoltCharacter_Requests;
 
@@ -119,15 +113,13 @@ namespace ck
             const FCk_Request_JoltCharacter_Teleport& InRequest) const -> void;
 
     private:
-        // Teleport must also snap the character's FJoltWorld out-pose entry (see the handler) — resolved per tick.
         FJoltWorld* _JoltWorld = nullptr;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Drains each set-up character's pending intents + push policy into its FJoltWorld entry in-fields on the
-    // game thread, BEFORE the step is kicked. Runs after HandleRequests (intents settled) and PlanStep (so the
-    // step order is fixed); FProcessor_JoltWorld_Step lists it in RunAfter so intents land in the same step.
+    // Runs after HandleRequests (intents settled) and PlanStep (step order fixed); FProcessor_JoltWorld_Step
+    // lists this in its RunAfter so the intents land in the SAME step they were pushed for.
     class CKJOLT_API FProcessor_JoltCharacter_PreStep : public ck_exp::TProcessor<
             FProcessor_JoltCharacter_PreStep,
             FCk_Handle_JoltCharacter,
@@ -162,9 +154,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Frees the character when the entity dies: releases the Jolt physics-ownership claim, unregisters from the
-    // FJoltWorld registry, then drops the owning Ref (which destroys the CharacterVirtual). A CharacterVirtual
-    // is NOT in the body interface, so there is no body to Remove/Destroy.
     class CKJOLT_API FProcessor_JoltCharacter_EndPlay : public ck_exp::TProcessor<
             FProcessor_JoltCharacter_EndPlay,
             FCk_Handle_JoltCharacter,
@@ -174,7 +163,7 @@ namespace ck
     {
     public:
         using Group = FGroup_EndPlay;
-        // Mirrors FProcessor_JoltBody_EndPlay: non-runtime worlds never have a Jolt subsystem.
+        // Non-runtime worlds never have a Jolt subsystem.
         static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     public:

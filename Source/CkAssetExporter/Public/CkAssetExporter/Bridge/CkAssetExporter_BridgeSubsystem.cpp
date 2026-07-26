@@ -22,7 +22,7 @@ namespace ck_asset_exporter_bridge
 {
     constexpr auto PollSeconds = float{0.5f};
 
-    // The pid a server.json publishes, or unset if the file is missing / malformed / lacks the field.
+    // Unset if server.json is missing / malformed / lacks the field.
     static auto
     Read_ServerPid(
         const FString& InServerStatusPath)
@@ -55,8 +55,7 @@ auto
 {
     Super::Initialize(InCollection);
 
-    // NEVER activate under a commandlet: the -ExportServer commandlet and one-shot export commandlet runs own the
-    // queue themselves — a bridge claiming alongside them would double-serve the same files.
+    // NEVER activate under a commandlet: those runs own the queue themselves, and two servers would double-serve.
     if (IsRunningCommandlet())
     { return; }
 
@@ -100,7 +99,6 @@ auto
     if (NOT _IsServing)
     { DoTryClaimServing(); }
 
-    // Claiming above may have flipped _IsServing this same tick — serve the triggering request without a poll's delay.
     if (_IsServing)
     {
         const auto PollResult = _Processor.ProcessPending();
@@ -121,13 +119,11 @@ auto
 {
     using namespace ck_asset_exporter_bridge;
 
-    // After a quit handoff, stay released until a new request actually arrives (see _AwaitingRequestToReclaim).
     if (_AwaitingRequestToReclaim && NOT _Processor.Has_PendingRequests())
     { return; }
 
-    // The registry must be fully scanned before we serve — dispatch resolves asset tokens through it, and Startup's
-    // WaitForCompletion would otherwise BLOCK the editor game thread (freezing the UI during the post-boot scan).
-    // Defer claiming until the scan is done; once it is, that WaitForCompletion inside Startup returns immediately.
+    // Defer claiming until the registry scan finishes: Startup's WaitForCompletion would otherwise BLOCK the editor
+    // game thread and freeze the UI for the whole post-boot scan.
     const auto* AssetRegistryModule = FModuleManager::GetModulePtr<FAssetRegistryModule>(TEXT("AssetRegistry"));
     if (AssetRegistryModule == nullptr || AssetRegistryModule->Get().IsLoadingAssets())
     { return; }
@@ -147,9 +143,8 @@ auto
 
         if (IsOwnedByLiveOther)
         {
-            // Defer to a live owner that looks like an editor / commandlet (its image name carries "Editor"), or
-            // whose name we cannot read (conservative: never risk two servers writing the same Results). Reclaim
-            // ONLY when the live owner is demonstrably an unrelated process that inherited the recorded pid.
+            // An unreadable name defers too: never risk two servers writing the same Results. Reclaiming is only for
+            // a live owner that is demonstrably an unrelated process which inherited the recorded pid.
             const auto OwnerName    = FPlatformProcess::GetApplicationName(OwnerPid.GetValue());
             const auto DeferToOwner = OwnerName.IsEmpty() || OwnerName.Contains(TEXT("Editor"));
 
@@ -164,7 +159,7 @@ auto
         // (re)claim. Startup rewrites server.json, so the stale file needs no explicit delete.
     }
 
-    // PreserveExisting: the bridge must never discard queued work, and a re-claim is TRIGGERED by a pending request.
+    // PreserveExisting: a re-claim is TRIGGERED by a pending request, so startup must never discard queued work.
     if (NOT _Processor.Startup(ECk_AssetExporter_StaleRequestPolicy::PreserveExisting))
     {
         ck::asset_exporter::Warning(TEXT("[Bridge] could not start serving (request dirs unavailable) — will retry"));

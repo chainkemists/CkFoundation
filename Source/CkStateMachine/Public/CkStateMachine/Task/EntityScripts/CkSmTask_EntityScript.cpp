@@ -30,16 +30,14 @@ auto
 {
     Super::BeginPlay();
 
-    // See UCk_SmState_EntityScript::BeginPlay for rationale. Skipping EnterTask here
-    // is the critical guard — tasks like UBb_Hfsm_Task_TerminateOwningSm issue
-    // Request_Stop on the owning SM during DoEnterTask, which would kill the real
-    // sub-SM when the graph-walk temp-entity reaches the terminal state.
+    // Skipping EnterTask on the graph-walk temp entity is the critical guard: tasks like
+    // UBb_Hfsm_Task_TerminateOwningSm issue Request_Stop on the owning SM during DoEnterTask, which
+    // would kill the real sub-SM when the temp entity reaches the terminal state.
     if (_AssociatedEntity.Has<ck::FTag_Sm_Debug_GraphWalkEntity>())
     { return; }
 
-    // Has-guard mirror of EndPlay below: a snapshot-restored SM-graph entity keeps its EntityScript
-    // but not its SmTask feature fragment (the redrive rebuilds the real graph fresh), so this
-    // BeginPlay runs on a husk with nothing to enter.
+    // A snapshot-restored SM-graph entity keeps its EntityScript but not its SmTask fragment (the
+    // redrive rebuilds the real graph fresh), so this BeginPlay can run on a husk.
     if (NOT UCk_Utils_SmTask_UE::Has(_AssociatedEntity))
     { return; }
 
@@ -54,14 +52,9 @@ auto
     EndPlay()
     -> void
 {
-    // Fallback for cascade-destroyed tasks whose FProcessor_SmTask_Exit never runs
-    // (e.g. sub-SM tasks destroyed via parent state cascade). Dedup'd via FTag_SmTask_Active
-    // inside ExitTask — if the processor already handled this task, the tag is gone and
-    // ExitTask is a no-op.
-    //
-    // Has-guard (not CastChecked) because a snapshot-restored SM-graph entity keeps its EntityScript
-    // but not its SmTask feature fragment (the redrive rebuilds the real graph fresh), so CastChecked
-    // would ensure. No fragment -> nothing to exit; skip.
+    // Fallback for cascade-destroyed tasks whose FProcessor_SmTask_Exit never runs; dedup'd via
+    // FTag_SmTask_Active inside ExitTask. Has-guard rather than CastChecked because a
+    // snapshot-restored SM-graph entity keeps its EntityScript but not its SmTask fragment.
     if (UCk_Utils_SmTask_UE::Has(_AssociatedEntity))
     {
         auto Self = UCk_Utils_SmTask_UE::CastChecked(_AssociatedEntity);
@@ -79,8 +72,7 @@ auto
     Get_EffectiveReplication() const
     -> ECk_Replication
 {
-    // See UCk_SmState_EntityScript::Get_EffectiveReplication — the state sub-graph is never
-    // independently replicated; clients rebuild it via the SM replay path.
+    // The state sub-graph is never independently replicated; clients rebuild it via the replay path.
     return ECk_Replication::DoesNotReplicate;
 }
 
@@ -141,8 +133,8 @@ auto
     if (NOT ScriptEntity.Has<ck::FFragment_SmTask_Current>())
     { return; }
 
-    // Single write path: the util owns the unbroadcast-terminal-result latch and the
-    // Running→terminal dirty edge — duplicating that logic here is how the two once drifted.
+    // Single write path: the util owns the unbroadcast-terminal-result latch and the Running→terminal
+    // dirty edge.
     auto TaskHandle = UCk_Utils_SmTask_UE::CastChecked(ScriptEntity);
     UCk_Utils_SmTask_UE::Request_UpdateTaskResult(TaskHandle, InResult);
 }

@@ -7,7 +7,6 @@
 
 #include "CkGeometry_Types.generated.h"
 
-// Forward declarations
 DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_Vector2D, FVector2D, Corner);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FCk_Delegate_Vector, FVector, Corner);
 DECLARE_DYNAMIC_DELEGATE_RetVal_OneParam(bool, FCk_Delegate_Vector2D_Predicate, FVector2D, Corner);
@@ -81,7 +80,6 @@ private:
     InternalFrameType _Frame;
 
 public:
-    // Constructors
     FCk_Frame3D();
 
     FCk_Frame3D(
@@ -94,14 +92,12 @@ public:
     FCk_Frame3D(
         const FTransform& InTransform);
 
-    // Access to internal frame
     auto
     Get_InternalFrame() const -> const InternalFrameType&;
 
     auto
     Get_InternalFrame() -> InternalFrameType&;
 
-    // Basic properties
     auto
     Get_Origin() const -> FVector;
 
@@ -116,7 +112,6 @@ public:
     Request_SetRotation(
         const FQuat& InRotation) -> void;
 
-    // Axis access
     auto
     Get_X() const -> FVector;
 
@@ -130,14 +125,12 @@ public:
     Get_Axis(
         int32 InAxisIndex) const -> FVector;
 
-    // Conversions
     auto
     Get_Transform() const -> FTransform;
 
     auto
     Get_InverseTransform() const -> FTransform;
 
-    // Point/Vector transformations
     auto
     Get_PointAt(
         float InX,
@@ -164,7 +157,6 @@ public:
     Get_FromFrameVector(
         const FVector& InVector) const -> FVector;
 
-    // Plane operations
     auto
     Get_ToPlaneUV(
         const FVector& InPos,
@@ -180,7 +172,6 @@ public:
         const FVector& InPos,
         int32 InPlaneNormalAxis = 2) const -> FVector;
 
-    // Transformations
     auto
     Request_Rotate(
         const FQuat& InQuat) -> void;
@@ -214,11 +205,9 @@ public:
 private:
     using InternalBox2Type = UE::Geometry::FOrientedBox2d;
 
-    // Internal UE::Geometry::FOrientedBox2d
     InternalBox2Type _OrientedBox;
 
 public:
-    // Constructors
     FCk_OrientedBox2D();
 
     FCk_OrientedBox2D(
@@ -238,14 +227,12 @@ public:
     FCk_OrientedBox2D(
         const FBox2D& InAxisBox);
 
-    // Access to internal box
     auto
     Get_InternalBox() const -> const InternalBox2Type&;
 
     auto
     Get_InternalBox() -> InternalBox2Type&;
 
-    // Basic properties
     auto
     Get_Origin() const -> FVector2D;
 
@@ -267,7 +254,6 @@ public:
     Request_SetAngleRadians(
         float InAngleRadians) -> void;
 
-    // Derived properties
     auto
     Get_Center() const -> FVector2D;
 
@@ -337,11 +323,9 @@ public:
 private:
     using InternalBox3Type = UE::Geometry::FOrientedBox3d;
 
-    // Internal UE::Geometry::FOrientedBox3d
     InternalBox3Type _OrientedBox;
 
 public:
-    // Constructors
     FCk_OrientedBox3D();
 
     FCk_OrientedBox3D(

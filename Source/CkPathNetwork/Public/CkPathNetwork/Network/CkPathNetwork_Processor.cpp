@@ -47,11 +47,13 @@ namespace ck_pathnetwork_processor
     constexpr auto CompiledWaypointMergeDistance = 1.0f;
     constexpr auto SideOffsetClampMarginCm = 30.0f;
 
+    // Outcome drives repricing: PathFailed prices the hop out, NoNavmesh legs are never repriced
+    // (they fall back to a straight line).
     enum class EOffPathResolve : uint8
     {
-        NoNavmesh,   // No nav system/data in this world — straight-line fallback, never repriced
-        PathFailed,  // Navmesh exists but no path — the hop is blocked; reprice to unwalkable
-        Resolved     // Real navmesh path found
+        NoNavmesh,
+        PathFailed,
+        Resolved
     };
 
     struct FOffPathLegResolution
@@ -61,9 +63,8 @@ namespace ck_pathnetwork_processor
         EOffPathResolve _Outcome = EOffPathResolve::NoNavmesh;
     };
 
-    // Framework-internal direct FindPathSync use: this call sits under the route processor's own
-    // per-frame budget (_MaxRouteQueriesPerFrame), which is the same protection the CkNavigation
-    // request path provides.
+    // Direct FindPathSync (bypassing the CkNavigation request path) is safe here: every caller drains
+    // under the route processor's per-frame budget (_MaxRouteQueriesPerFrame).
     auto
     Resolve_OffPathLeg(UWorld* InWorld, const FVector& InFrom, const FVector& InTo) -> FOffPathLegResolution
     {
@@ -103,9 +104,10 @@ namespace ck_pathnetwork_processor
 
         const auto& Waypoints = NavResult.Get_Waypoints();
 
-        if (Waypoints.Num() < 2)
+        const auto StartIsEffectivelyTheEnd = Waypoints.Num() < 2;
+
+        if (StartIsEffectivelyTheEnd)
         {
-            // Degenerate start≈end — the straight line IS the path.
             Result._Outcome = EOffPathResolve::Resolved;
             return Result;
         }
@@ -209,9 +211,8 @@ namespace ck_pathnetwork_processor
         InOutWaypoints.Add(InPoint);
     }
 
-    // Sample an on-ribbon span into compiled waypoints, applying the signed side-keeping offset.
-    // Right-hand walking: offset points to the right of the travel direction, so opposing agents
-    // naturally occupy opposite sides of the centerline.
+    // Right-hand walking: the side-keeping offset points to the right of the TRAVEL direction, so
+    // opposing agents naturally occupy opposite sides of the centerline.
     auto
     Compile_OnRibbonSpan(
         const FBuiltNetwork& InNetwork,
@@ -345,8 +346,7 @@ namespace ck
             {
                 if (_BudgetRemainingThisTick <= 0)
                 {
-                    // Out of budget: re-queue verbatim; the fragment re-add marks the entity dirty
-                    // so the drain resumes next tick.
+                    // Re-queue verbatim: the fragment re-add marks the entity dirty, resuming the drain next tick.
                     auto NonConstHandle = InHandle;
                     NonConstHandle.AddOrGet<FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(InRequest);
                     return;
@@ -386,10 +386,6 @@ namespace ck
                 InHandle, GoalLocation, InReason);
         };
 
-        // ------------------------------------------------------------------------------------------------------------
-        // Resolve the network.
-        // ------------------------------------------------------------------------------------------------------------
-
         auto Network = ck::IsValid(InRequest.Get_Network()) ? InRequest.Get_Network() : InParams.Get_Network();
 
         if (ck::Is_NOT_Valid(Network) || NOT UCk_Utils_PathNetwork_UE::Has(Network))
@@ -407,10 +403,6 @@ namespace ck
             return;
         }
 
-        // ------------------------------------------------------------------------------------------------------------
-        // Start location from the follower's Transform.
-        // ------------------------------------------------------------------------------------------------------------
-
         auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
 
         CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
@@ -422,17 +414,9 @@ namespace ck
 
         const auto StartLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
 
-        // ------------------------------------------------------------------------------------------------------------
-        // Overlay candidates around both terminals.
-        // ------------------------------------------------------------------------------------------------------------
-
         auto Shared = MakeShared<FRouteGraphSharedData>();
         Merge_CandidatesIntoOverlay(*Shared, Gather_Candidates(BuiltNetwork, StartLocation));
         Merge_CandidatesIntoOverlay(*Shared, Gather_Candidates(BuiltNetwork, GoalLocation));
-
-        // ------------------------------------------------------------------------------------------------------------
-        // Search + navmesh validation/reprice loop.
-        // ------------------------------------------------------------------------------------------------------------
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
@@ -485,9 +469,8 @@ namespace ck
                 {
                     case EOffPathResolve::PathFailed:
                     {
-                        // The hop is blocked (wall/void). Price it out entirely so the next
-                        // iteration promotes a different exit.
-                        Shared->_RepricedOffPathCosts.Add(Key, TNumericLimits<float>::Max() / 8.0f);
+                        const auto PriceOutBlockedHop = TNumericLimits<float>::Max() / 8.0f;
+                        Shared->_RepricedOffPathCosts.Add(Key, PriceOutBlockedHop);
                         NeedsReprice = true;
                         break;
                     }
@@ -521,10 +504,6 @@ namespace ck
             FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
             return;
         }
-
-        // ------------------------------------------------------------------------------------------------------------
-        // Compile corridor legs + walkable waypoints.
-        // ------------------------------------------------------------------------------------------------------------
 
         auto Result = FCk_PathNetwork_RouteResult{};
         Result._Status = ECk_PathNetwork_RouteStatus::Ready;
@@ -563,21 +542,15 @@ namespace ck
             Result._Legs.Add(MoveTemp(Leg));
         }
 
-        // The agent stands at the first waypoint already — drop it so movement consumers don't
-        // backtrack (same artifact CkNavigation's first-waypoint skip addresses).
-        if (Result._CompiledWaypoints.Num() > 1 &&
-            FVector::Dist(Result._CompiledWaypoints[0], StartLocation) < InParams.Get_CorridorWaypointSpacing() * 0.5f)
+        const auto FirstWaypointIsUnderTheAgent = Result._CompiledWaypoints.Num() > 1 &&
+            FVector::Dist(Result._CompiledWaypoints[0], StartLocation) < InParams.Get_CorridorWaypointSpacing() * 0.5f;
+
+        if (FirstWaypointIsUnderTheAgent)
         { Result._CompiledWaypoints.RemoveAt(0); }
 
-        // Enforce minimum spacing between consecutive compiled waypoints. Leg seams can emit
-        // near-coincident points with almost no forward progress — the off-path entry ends at the
-        // centerline projection while the first ribbon sample sits at the SAME arc-length but
-        // laterally offset (side-keeping), and junction offset-flips do the same mid-route. An
-        // agent approaching such a lateral micro-hop at speed orbits it forever (its turn radius,
-        // MaxSpeed/MaxTurnRate — 60cm for default crowd agents — exceeds the typical waypoint
-        // arrival radius), so the corridor guarantees consecutive waypoints at least 0.75x spacing
-        // apart. The final waypoint (the exact goal) always survives; a crowding predecessor gives
-        // way to it.
+        // Leg seams emit near-coincident waypoints (an off-path leg ends at the centerline projection,
+        // the next ribbon sample sits at the same arc-length but laterally offset). An agent whose turn
+        // radius exceeds its arrival radius orbits such a lateral micro-hop forever.
         if (Result._CompiledWaypoints.Num() > 2)
         {
             const auto MinSeparation = InParams.Get_CorridorWaypointSpacing() * 0.75f;
@@ -602,7 +575,6 @@ namespace ck
             Result._CompiledWaypoints = MoveTemp(Filtered);
         }
 
-        // Land exactly on the goal.
         if (Result._CompiledWaypoints.IsEmpty())
         { Result._CompiledWaypoints.Add(GoalLocation); }
         else

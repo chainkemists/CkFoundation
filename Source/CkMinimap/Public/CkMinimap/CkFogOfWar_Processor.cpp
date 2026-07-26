@@ -25,14 +25,8 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_FogOfWar_Update);
 
 namespace ck_fog_of_war_processor
 {
-    // Fog grids are bounded by the Setup cell-budget ensure — a 512km² map at 5m cells stays inside this.
     constexpr int64 MaxTotalCells = 1048576;
 
-    // Stamps a reveal circle: a cell is revealed iff its CENTER lies within InRadius of InCenter (2D), scanning
-    // only the cell AABB of InCenter ± InRadius. The cell CONTAINING InCenter is ALWAYS revealed — a radius
-    // smaller than half the cell diagonal would otherwise reveal nothing when the point sits near a cell corner
-    // (revealing a location must never be a no-op inside the bounds). Newly-set indices are appended to
-    // InOutNewlyRevealed.
     auto
         DoStampCircle(
             const FCk_Minimap_WorldBounds& InBounds,
@@ -85,8 +79,7 @@ namespace ck_fog_of_war_processor
         }
     }
 
-    // Takes the scratch array (not the fragment) — this file-local helper is not a friend of the fragment;
-    // the calling processors are, and pass the member through.
+    // Takes the scratch array, not the fragment: this file-local helper is not a friend of it — its callers are.
     auto
         DoFlushRevealedBatch(
             FCk_Handle_FogOfWar& InFogEntity,
@@ -135,8 +128,8 @@ namespace ck
         InCurrent._Explored.Init(false, static_cast<int32>(TotalCells));
         InCurrent._CellCounts = CellCounts;
 
-        // Force the first revealer-sampling pass to run immediately regardless of the update interval
-        InCurrent._TimeSinceUpdate = FCk_Time{TNumericLimits<double>::Max()};
+        const auto RunUpdateImmediately = FCk_Time{TNumericLimits<double>::Max()};
+        InCurrent._TimeSinceUpdate = RunUpdateImmediately;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -261,15 +254,15 @@ namespace ck
             const FCk_Request_FogOfWar_Reset& InRequest)
         -> void
     {
-        // No-op requests must NOT broadcast.
-        if (InCurrent._Explored.IsEmpty() || InCurrent._Explored.CountSetBits() == 0)
+        const auto NothingToReset = InCurrent._Explored.IsEmpty() || InCurrent._Explored.CountSetBits() == 0;
+
+        if (NothingToReset)
         { return; }
 
         minimap::VeryVerbose(TEXT("Handling Reset Request for FogOfWar with Entity [{}]"), InFogEntity);
 
         InCurrent._Explored.Init(false, InCurrent._Explored.Num());
 
-        // Reveals batched earlier in THIS drain are now void — painters get OnReset and re-seed instead
         InCurrent._NewlyRevealedScratch.Reset();
 
         UUtils_Signal_OnFogOfWarReset::Broadcast(InFogEntity, MakePayload(InFogEntity));

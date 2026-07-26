@@ -31,7 +31,6 @@ namespace JPH
 
 namespace ck::jolt
 {
-    // Type aliases for common Jolt types
     using JoltMatrix = JPH::Mat44;
     using JoltFloat3 = JPH::Float3;
     using JoltVec3 = JPH::Vec3;
@@ -61,14 +60,9 @@ namespace ck::jolt
     // Shape Axis Correction
     // ----------------------------------------------------------------------------------------------------------------
 
-    /// Jolt's Cylinder and Capsule shapes are Y-AXIS ALIGNED by convention — their caps sit at
-    /// (0, -HalfHeight, 0) and (0, +HalfHeight, 0) (see Jolt's CylinderShape.h / CapsuleShape.h).
-    /// CkJolt runs Jolt directly in Unreal's Z-up frame, however: Conv(FVector) is a straight
-    /// X->X, Y->Y, Z->Z passthrough with NO axis swap. Uncorrected, every Jolt cylinder/capsule we build
-    /// lies on its side with its axis along world Y — an anisotropic query volume, not just a bad visual.
-    /// This quat is a +90 degree rotation about X, mapping the shape's local +Y to +Z: the top cap moves
-    /// from (0, +HalfHeight, 0) to (0, 0, +HalfHeight), so the shape stands UP instead of upside-down.
-    /// Wrap the shape in a JPH::RotatedTranslatedShapeSettings with this rotation (and zero translation).
+    /// Jolt's Cylinder/Capsule shapes are Y-AXIS ALIGNED, and Conv() is a Z-up passthrough with no axis swap,
+    /// so uncorrected they lie on their side — an anisotropic query volume, not just a bad visual. This +90
+    /// degree rotation about X maps local +Y to +Z; wrap the shape in a RotatedTranslatedShapeSettings with it.
     CKJOLT_API auto Get_ShapeAxisCorrection_YToZ() -> JoltQuat;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -87,18 +81,14 @@ namespace ck::jolt
     // Global Jolt init (ref-counted)
     // ----------------------------------------------------------------------------------------------------------------
 
-    /// Process-global Jolt initialization (RegisterDefaultAllocator, Factory, RegisterTypes,
-    /// Trace/AssertFailed hooks) — ref-counted because multiple worlds (PIE clients) and
-    /// standalone unit tests may init/deinit independently. UCk_Jolt_Subsystem uses these;
-    /// tests that create JPH shapes WITHOUT a world must call them too.
+    /// Ref-counted because multiple worlds (PIE clients) and standalone unit tests may init/deinit
+    /// independently. Tests that create JPH shapes WITHOUT a world must call these too.
     CKJOLT_API auto Request_GlobalJoltInit() -> void;
     CKJOLT_API auto Request_GlobalJoltShutdown() -> void;
 
-    /// Resolves the entity a Jolt query hit refers to (via the body's UserData).
-    /// Returns an INVALID handle when the hit is InSelf itself, or when the body's entity is no
-    /// longer alive (a body can briefly outlive its owning entity — deferred end-of-frame
-    /// destroy, or a snapshot restore that wipes the registry before physics tears the body
-    /// down). Callers treat both as "skip this hit".
+    /// Returns an INVALID handle when the hit is InSelf itself, or when the body's entity is no longer alive
+    /// (a body can briefly outlive its entity — deferred end-of-frame destroy, or a snapshot restore that
+    /// wipes the registry first). Callers treat both as "skip this hit".
     CKJOLT_API auto TryGet_EntityFromBody(
         const FCk_Handle& InSelf,
         const JPH::BodyInterface& InBodyInterface,

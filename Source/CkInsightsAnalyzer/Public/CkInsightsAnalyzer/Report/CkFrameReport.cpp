@@ -6,8 +6,6 @@
 #include "CkCore/Macros/CkMacros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Tree-drawing characters (Unicode box-drawing)
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_frame_report
 {
@@ -17,7 +15,6 @@ namespace ck_frame_report
     const FString Space = TEXT("   ");           //    (after last child)
     const FString HRule = TEXT("\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500");
 
-    // Frame wrapper timer names to skip when finding root timers
     const TSet<FString> FrameWrapperNames = {
         TEXT("FEngineLoop::Tick"),
         TEXT("FrameTime"),
@@ -27,10 +24,27 @@ namespace ck_frame_report
         TEXT("FStats::AdvanceFrame"),
         TEXT("FRHIBreadcrumbEvent_GameThread_Begin"),
     };
+
+    auto Get_WallMsAtMinDepth(const TArray<FCk_TimingEvent>& InEvents) -> double
+    {
+        uint32 MinDepth = MAX_uint32;
+        for (const FCk_TimingEvent& Evt : InEvents)
+        {
+            MinDepth = FMath::Min(MinDepth, Evt.Depth);
+        }
+
+        double WallMs = 0.0;
+        for (const FCk_TimingEvent& Evt : InEvents)
+        {
+            if (Evt.Depth == MinDepth)
+            {
+                WallMs += (Evt.EndTime - Evt.StartTime) * 1000.0;
+            }
+        }
+        return WallMs;
+    }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Construction
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_FrameReport::FCk_FrameReport() = default;
@@ -40,8 +54,6 @@ FCk_FrameReport::FCk_FrameReport(const FCk_FrameReportConfig& Config)
 {
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Timer Name Resolution
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -82,8 +94,6 @@ auto
     return FString::Printf(TEXT("UNKNOWN_%u"), TimerIndex);
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Main Generate
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -134,8 +144,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Header
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_FrameReport::
@@ -172,8 +180,6 @@ auto
         *Icon, *FrameStr, OverBudget, _Config.TargetFrameMs));
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Hot Path Tree
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -214,12 +220,11 @@ auto
 
         if ((IsFrameWrapper(ChildName) || IsUnnamed) && Depth < 5)
         {
-            // Drill deeper through wrapper
             TMap<uint32, double> Deeper = UnwrapRoots(ChildIndex, Result, TimerNames, Depth + 1);
 
-            if (Deeper.Num() == 0 && IsUnnamed)
+            const bool IsUnnamedLeaf = Deeper.Num() == 0 && IsUnnamed;
+            if (IsUnnamedLeaf)
             {
-                // Unnamed LEAF — keep it rather than silently dropping its time
                 double& Existing = Roots.FindOrAdd(ChildIndex, 0.0);
                 Existing += ChildInclSec;
                 continue;
@@ -292,19 +297,19 @@ auto
     double CurrentIncl = InclMs;
     double CurrentExcl = ExclMs;
 
-    for (int32 Iter = 0; Iter < 10; ++Iter) // max collapse depth
+    constexpr auto MaxCollapseDepth = 10;
+    for (int32 Iter = 0; Iter < MaxCollapseDepth; ++Iter)
     {
-        // Never collapse a script-processor scope into its dispatch child: `script::<Class>` IS
-        // the attribution the tree exists to show. Without this guard, every script processor
-        // (near-zero self-time, one dominant VM child) collapses into the same anonymous
-        // "ForEachBatch" timer and dedup merges them all into one unattributable row.
-        if (GetTimerName(TimerNames, CurrentIndex).StartsWith(TEXT("script::")))
+        // `script::<Class>` IS the attribution the tree exists to show — see CkInsightsAnalyzer/Claude.md.
+        const bool IsScriptProcessorScope =
+            GetTimerName(TimerNames, CurrentIndex).StartsWith(TEXT("script::"));
+        if (IsScriptProcessorScope)
         {
             break;
         }
 
-        // If this timer does significant self-work, stop collapsing
-        if (CurrentExcl > CurrentIncl * 0.05 && CurrentExcl > 0.3)
+        const bool DoesSignificantSelfWork = CurrentExcl > CurrentIncl * 0.05 && CurrentExcl > 0.3;
+        if (DoesSignificantSelfWork)
         {
             break;
         }
@@ -317,14 +322,12 @@ auto
 
         const FChildInfo& TopChild = Children[0];
 
-        // Cap child inclusive at parent inclusive to prevent inflation
         const double ChildIncl = FMath::Min(TopChild.InclusiveMs, CurrentIncl);
 
-        // Only collapse when there's essentially one path through.
-        // Use 20% threshold so branches with meaningful secondary paths are preserved.
+        constexpr auto SecondaryPathMaxPctOfParent = 0.20;
         const bool SinglePath =
             (Children.Num() == 1) ||
-            (Children.Num() >= 2 && Children[1].InclusiveMs < CurrentIncl * 0.20);
+            (Children.Num() >= 2 && Children[1].InclusiveMs < CurrentIncl * SecondaryPathMaxPctOfParent);
 
         if (SinglePath && ChildIncl > CurrentIncl * 0.7)
         {
@@ -393,18 +396,15 @@ auto
 {
     TArray<FString> Lines;
 
-    // Collapse wrapper chain for this node
     FCollapsedTimer Collapsed = CollapseWrappers(
         TimerIndex, InclMs, ExclMs, Count, Result, TimerNames);
 
-    // If already shown by a sibling's subtree, skip
     if (ShownTimers.Contains(Collapsed.TimerIndex))
     {
         return Lines;
     }
     ShownTimers.Add(Collapsed.TimerIndex);
 
-    // Merge breadcrumbs from parent-level pre-collapse
     TArray<FString> AllBreadcrumbs;
     if (PreBreadcrumbs)
     {
@@ -412,7 +412,6 @@ auto
     }
     AllBreadcrumbs.Append(Collapsed.Breadcrumbs);
 
-    // Build the display line
     const FString RawName = GetTimerName(TimerNames, Collapsed.TimerIndex);
     FString DisplayName = FCk_TimerCategorizer::SimplifyName(RawName);
     if (DisplayName.Len() > 50)
@@ -423,10 +422,8 @@ auto
     const FString Prefix = MakeTreePrefix(Depth, IsLastAtDepth);
     const FString Icon = FCk_TimerCategorizer::SeverityIcon(Collapsed.InclusiveMs);
 
-    // Only show self-time when meaningfully different from inclusive
     const bool ShowSelf = Collapsed.ExclusiveMs > 0.3
                        && Collapsed.ExclusiveMs > Collapsed.InclusiveMs * 0.08;
-    // Only show count when it suggests per-actor work
     const bool ShowCount = Collapsed.Count > 1;
 
     FString Line = FString::Printf(TEXT("%s%s `%s`  *%s*"),
@@ -444,7 +441,6 @@ auto
             *FCk_TimerCategorizer::FormatCount(Collapsed.Count));
     }
 
-    // Inline breadcrumb trail
     if (AllBreadcrumbs.Num() > 0)
     {
         TArray<FString> BcNames;
@@ -459,7 +455,6 @@ auto
         }
         if (BcNames.Num() > 0)
         {
-            // Join with → arrow
             Line += TEXT("  _(");
             for (int32 i = 0; i < BcNames.Num(); ++i)
             {
@@ -477,15 +472,12 @@ auto
         return Lines;
     }
 
-    // Get children with adaptive threshold (config: pct of parent with an absolute floor);
-    // ShowAllChildren bypasses it entirely.
     const double MinChildMs = _Config.ShowAllChildren
         ? 0.0
         : FMath::Max(_Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
     TArray<FChildInfo> Children = GetSignificantChildren(
         Collapsed.TimerIndex, Result, MinChildMs);
 
-    // Pre-collapse each child and deduplicate by collapsed timer_id
     struct FDedupedChild
     {
         uint32 TimerIndex;
@@ -502,12 +494,9 @@ auto
             Child.TimerIndex, Child.InclusiveMs, Child.ExclusiveMs, Child.Count,
             Result, TimerNames);
 
-        // Use global stats for display consistency
         const double GlobalIncl = FMath::Min(
             Result.GetInclusiveMs(CC.TimerIndex), Collapsed.InclusiveMs);
-        // Clamped to the (already parent-clamped) inclusive — global exclusive can exceed this
-        // parent's slice when the timer also runs under other parents, and "6.8ms self" inside a
-        // "5.4ms incl" row reads as nonsense.
+        // Global exclusive can exceed this parent's slice, which would print "self" larger than "incl".
         const double GlobalExcl = FMath::Min(Result.GetExclusiveMs(CC.TimerIndex), GlobalIncl);
         const uint32 GlobalCount = Result.GetCount(CC.TimerIndex);
 
@@ -520,7 +509,6 @@ auto
         }
     }
 
-    // Sort deduped children by inclusive time, filter
     TArray<FDedupedChild> Deduped;
     for (auto& [Key, Val] : Seen)
     {
@@ -531,10 +519,8 @@ auto
         return A.InclusiveMs > B.InclusiveMs;
     });
 
-    // Limit to the configured child cap, filter out self-references.
-    // Don't filter by ShownTimers here — let each branch show its full subtree
-    // even if the timer appeared in a sibling's subtree. The ShownTimers check
-    // at the top of BuildTreeLines prevents infinite recursion.
+    // Deliberately NOT filtered by ShownTimers — each branch shows its full subtree; the check at
+    // the top of BuildTreeLines is what prevents infinite recursion.
     const int32 MaxVisible = _Config.ShowAllChildren ? MAX_int32 : _Config.MaxVisibleChildren;
     TArray<FDedupedChild> Visible;
     for (int32 i = 0; i < Deduped.Num() && Visible.Num() < MaxVisible; ++i)
@@ -594,7 +580,6 @@ auto
 {
     Lines.Add(TEXT("*Game Thread Hot Paths*\n"));
 
-    // Find root-level timers by unwrapping frame wrappers
     if (Result.FrameRootTimerIndex == static_cast<uint32>(INDEX_NONE))
     {
         Lines.Add(TEXT("(No frame root found)"));
@@ -604,7 +589,6 @@ auto
     TMap<uint32, double> RootChildren = UnwrapRoots(
         Result.FrameRootTimerIndex, Result, TimerNames);
 
-    // Build sorted root list (above threshold)
     struct FRootEntry
     {
         uint32 TimerIndex;
@@ -633,10 +617,6 @@ auto
         return A.InclusiveMs > B.InclusiveMs;
     });
 
-    // Build tree lines for each root timer
-    // Use per-root ShownTimers so each root tree can independently show its full call hierarchy.
-    // A global set was too aggressive — timers appearing in one root's subtree would be hidden
-    // from all subsequent roots, even when they represent different call paths.
     const int32 MaxRoots = FMath::Min(RootList.Num(), _Config.MaxRootTimers);
     for (int32 i = 0; i < MaxRoots; ++i)
     {
@@ -650,12 +630,10 @@ auto
             Result, TimerNames, ShownTimers, IsLastAtDepth);
 
         Lines.Append(MoveTemp(TreeLines));
-        Lines.Add(TEXT("")); // blank line between root trees
+        Lines.Add(TEXT(""));
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-// Structured Hot Path Tree
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -668,18 +646,16 @@ auto
                     const TArray<FString>* PreBreadcrumbs) const
     -> TSharedPtr<FCk_HotPathNode>
 {
-    // Collapse wrapper chain for this node
     FCollapsedTimer Collapsed = CollapseWrappers(
         TimerIndex, InclMs, ExclMs, Count, Result, TimerNames);
 
-    // If already shown by a sibling's subtree, skip (prevents infinite recursion)
+    // Skipping an already-shown timer is what prevents infinite recursion.
     if (ShownTimers.Contains(Collapsed.TimerIndex))
     {
         return nullptr;
     }
     ShownTimers.Add(Collapsed.TimerIndex);
 
-    // Merge breadcrumbs from parent-level pre-collapse
     TArray<FString> AllBreadcrumbs;
     if (PreBreadcrumbs)
     {
@@ -700,15 +676,12 @@ auto
         return Node;
     }
 
-    // Get children with adaptive threshold (config: pct of parent with an absolute floor);
-    // ShowAllChildren bypasses it entirely.
     const double MinChildMs = _Config.ShowAllChildren
         ? 0.0
         : FMath::Max(_Config.MinChildMs, Collapsed.InclusiveMs * _Config.MinChildPctOfParent);
     TArray<FChildInfo> Children = GetSignificantChildren(
         Collapsed.TimerIndex, Result, MinChildMs);
 
-    // Pre-collapse each child and deduplicate by collapsed timer_id
     struct FDedupedChild
     {
         uint32 TimerIndex;
@@ -725,12 +698,9 @@ auto
             Child.TimerIndex, Child.InclusiveMs, Child.ExclusiveMs, Child.Count,
             Result, TimerNames);
 
-        // Use global stats for display consistency
         const double GlobalIncl = FMath::Min(
             Result.GetInclusiveMs(CC.TimerIndex), Collapsed.InclusiveMs);
-        // Clamped to the (already parent-clamped) inclusive — global exclusive can exceed this
-        // parent's slice when the timer also runs under other parents, and "6.8ms self" inside a
-        // "5.4ms incl" row reads as nonsense.
+        // Global exclusive can exceed this parent's slice, which would print "self" larger than "incl".
         const double GlobalExcl = FMath::Min(Result.GetExclusiveMs(CC.TimerIndex), GlobalIncl);
         const uint32 GlobalCount = Result.GetCount(CC.TimerIndex);
 
@@ -743,7 +713,6 @@ auto
         }
     }
 
-    // Sort deduped children by inclusive time, filter self-references, cap at the configured limit
     TArray<FDedupedChild> Deduped;
     for (auto& [Key, Val] : Seen)
     {
@@ -777,10 +746,8 @@ auto
     }
 
     // Reconciliation row — makes the sums visibly add up (self + shown children + this row ≈
-    // inclusive). Children are dropped by the 3%/0.3ms threshold, the 8-child cap, and the
-    // sibling-subtree dedup above; without this row the dropped mass reads as a mysterious gap
-    // under the parent. Deliberately also emitted when EVERY child was pruned (the node would
-    // otherwise render as a leaf whose self-time doesn't explain its inclusive time).
+    // inclusive) for children dropped by the threshold, the child cap, or the dedup above.
+    // Deliberately also emitted when EVERY child was pruned.
     if (const auto ChildMap = Result.ChildrenOf.Find(Collapsed.TimerIndex))
     {
         double ShownChildrenMs = 0.0;
@@ -789,8 +756,8 @@ auto
             ShownChildrenMs += Child->InclusiveMs;
         }
 
-        // Displayed child values use global (frame-wide) stats, so this remainder can go slightly
-        // negative when a child also appears under another parent — clamp via the threshold below.
+        // Global child stats make this remainder go slightly negative when a child also appears
+        // under another parent — the threshold below is what clamps it.
         const double HiddenMs = Node->InclusiveMs - Node->ExclusiveMs - ShownChildrenMs;
         const int32 HiddenChildCount = ChildMap->Num() - Node->Children.Num();
 
@@ -879,8 +846,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Category Summary
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_FrameReport::
@@ -888,7 +853,6 @@ auto
                            const FTimerNameMap& TimerNames) const
     -> TArray<FCk_CategorySummaryEntry>
 {
-    // Accumulate exclusive time per category
     TMap<FString, double> CategoryExclMs;
 
     for (const auto& [TimerIndex, ExclSeconds] : Result.TimerExclusive)
@@ -917,7 +881,6 @@ auto
         }
     }
 
-    // Sort by exclusive time descending (matching Python behavior)
     ck::algo::Sort(Entries, [](const FCk_CategorySummaryEntry& A, const FCk_CategorySummaryEntry& B)
     {
         return A.ExclusiveMs > B.ExclusiveMs;
@@ -991,8 +954,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Worker Threads
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_FrameReport::
@@ -1012,27 +973,13 @@ auto
     {
         if (Info.Id == GameThreadId) continue;
 
-        // Analyze this thread for the same time range as the game thread frame
         FCk_FrameAnalysisResult ThreadResult = FCk_FrameAnalyzer::AnalyzeTimeRange(
             Session, Info.Id,
             GameThreadResult.FrameStartTime, GameThreadResult.FrameEndTime);
 
         if (NOT ThreadResult.IsValid()) continue;
 
-        // Compute wall time from depth-0 events
-        double WallMs = 0.0;
-        uint32 MinDepth = MAX_uint32;
-        for (const FCk_TimingEvent& Evt : ThreadResult.Events)
-        {
-            MinDepth = FMath::Min(MinDepth, Evt.Depth);
-        }
-        for (const FCk_TimingEvent& Evt : ThreadResult.Events)
-        {
-            if (Evt.Depth == MinDepth)
-            {
-                WallMs += (Evt.EndTime - Evt.StartTime) * 1000.0;
-            }
-        }
+        const double WallMs = ck_frame_report::Get_WallMsAtMinDepth(ThreadResult.Events);
 
         if (WallMs < MinWorkerThreadMs) continue;
 
@@ -1043,7 +990,6 @@ auto
         Summary.WallTimeMs = WallMs;
         Summary.EventCount = ThreadResult.Events.Num();
 
-        // Top 3 by exclusive time
         TArray<TPair<uint32, double>> ExclSorted;
         for (const auto& [TimerIndex, ExclSec] : ThreadResult.TimerExclusive)
         {
@@ -1054,7 +1000,8 @@ auto
             return A.Value > B.Value;
         });
 
-        for (int32 i = 0; i < FMath::Min(ExclSorted.Num(), 3); ++i)
+        constexpr auto TopTimersPerThread = 3;
+        for (int32 i = 0; i < FMath::Min(ExclSorted.Num(), TopTimersPerThread); ++i)
         {
             const FString Name = GetTimerName(TimerNames, ExclSorted[i].Key);
             Summary.TopTimers.Add(FCk_WorkerThreadSummary::FTopTimer{
@@ -1067,7 +1014,6 @@ auto
         Workers.Add(MoveTemp(Summary));
     }
 
-    // Sort by wall time descending
     ck::algo::Sort(Workers, [](const FCk_WorkerThreadSummary& A, const FCk_WorkerThreadSummary& B)
     {
         return A.WallTimeMs > B.WallTimeMs;
@@ -1128,8 +1074,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Wait/Stall Breakdown
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_FrameReport::
@@ -1141,7 +1085,7 @@ auto
     const FTimerNameMap TimerNames = BuildTimerNameMap(Session);
     const uint32 GameThreadId = GameThreadResult.ThreadId;
 
-    // Aggregates a thread's wait scopes (exclusive time, so nested waits never double count)
+    // Exclusive time, so nested waits never double count.
     auto MakeSummary = [&TimerNames, MinWaitMs](
         const FCk_FrameAnalysisResult& ThreadResult, uint32 ThreadId, const FString& ThreadName,
         bool bIsGameThread, double WallMs)
@@ -1215,20 +1159,7 @@ auto
             continue;
         }
 
-        // Wall time from depth-0 events (same computation as ComputeWorkerThreadSummaries)
-        uint32 MinDepth = MAX_uint32;
-        for (const FCk_TimingEvent& Evt : ThreadResult.Events)
-        {
-            MinDepth = FMath::Min(MinDepth, Evt.Depth);
-        }
-        double WallMs = 0.0;
-        for (const FCk_TimingEvent& Evt : ThreadResult.Events)
-        {
-            if (Evt.Depth == MinDepth)
-            {
-                WallMs += (Evt.EndTime - Evt.StartTime) * 1000.0;
-            }
-        }
+        const double WallMs = ck_frame_report::Get_WallMsAtMinDepth(ThreadResult.Events);
 
         constexpr auto IsGameThread = false;
         if (auto Summary = MakeSummary(ThreadResult, Info.Id, ThreadName, IsGameThread, WallMs))
@@ -1237,7 +1168,6 @@ auto
         }
     }
 
-    // Game thread pinned first, then by wait time descending
     ck::algo::Sort(Waits, [](const FCk_WaitThreadSummary& A, const FCk_WaitThreadSummary& B)
     {
         if (A.bIsGameThread != B.bIsGameThread)
@@ -1291,8 +1221,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Raw Timer List
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_FrameReport::
@@ -1304,7 +1232,6 @@ auto
     Lines.Add(FString::Printf(TEXT("*Top %d Game Thread Timers by Exclusive Time*\n"),
         _Config.RawTimerCount));
 
-    // Sort by exclusive time
     TArray<TPair<uint32, double>> Sorted;
     for (const auto& [TimerIndex, ExclSec] : Result.TimerExclusive)
     {

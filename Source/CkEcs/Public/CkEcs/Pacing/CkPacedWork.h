@@ -8,15 +8,9 @@
 #include "Math/UnrealMathUtility.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Spread a pump-eligible processor's work over multiple pump passes (and, for large batches, multiple
+// Spreads a pump-eligible processor's work over multiple pump passes (and, for large batches, multiple
 // frames) instead of draining it in one pass. Drive it from ForEachEntity with RunPacedSteps, which
 // AddOrGets/Removes the dirty marker between passes to keep the scheduler pumping until the work drains.
-//
-// The marker is whatever fragment the consumer declares as MarkedDirtyBy (no SkipPump):
-//   - Simple case: the marker IS FFragment_PacedWork — Add it to the work entity to start.
-//   - Existing-queue case: the marker is a work-queue fragment every enqueue path already touches
-//     (so each enqueue re-marks dirty); pass that type to RunPacedSteps<TMarkerFragment> and keep the
-//     FFragment_PacedWork pacer fragment separate (AddOrGet it internally for budget only).
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -50,15 +44,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Runs InStepFn up to StepsPerPass times this pass, bounded by the per-frame budget (refilled on
-    // the main Tick, DeltaT > 0). Returns true once InStepFn first reports Done, having removed
-    // TMarkerFragment.
-    //
-    // TMarkerFragment is the dirty marker the consuming processor declares as MarkedDirtyBy — removed
-    // on Done (ending pump-eligibility) and re-bumped between passes. It defaults to FFragment_PacedWork
-    // (the simple case: the pacer fragment is also the marker). A processor that must stay dirty-marked
-    // on a different fragment — e.g. an existing work queue that every enqueue path already touches —
-    // passes that type and keeps the pacer fragment separate.
+    // Runs InStepFn up to StepsPerPass times this pass, bounded by the per-frame budget (refilled on the
+    // main Tick, DeltaT > 0). Returns true once InStepFn first reports Done, having removed
+    // TMarkerFragment — the dirty marker the consuming processor declares as MarkedDirtyBy.
     template <typename TMarkerFragment = FFragment_PacedWork, typename TStepFn>
     auto RunPacedSteps(
         FCk_Handle& InHandle,
@@ -84,9 +72,8 @@ namespace ck
 
         InPacer.Set_StepsRemainingThisFrame(Budget - StepsDone);
 
-        // A bare ref mutation doesn't bump the dirty-marker version, so AddOrGet re-bumps it to keep
-        // the scheduler pumping us; skipping it once the frame budget is spent lets the processor
-        // quiesce until the next frame's main Tick.
+        // A bare ref mutation doesn't bump the dirty-marker version, so AddOrGet re-bumps it to keep the
+        // scheduler pumping; skipping it once the budget is spent quiesces us until the next main Tick.
         if (StepsDone > 0 && (Budget - StepsDone) > 0)
         { InHandle.AddOrGet<TMarkerFragment>(); }
 

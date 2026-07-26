@@ -49,8 +49,6 @@ namespace ck
             const FFragment_WorldSpaceWidget_Current& InCurrent)
         -> void
     {
-        // WorldComponent mode: the widget IS a 3D component — drive its world
-        // transform from the entity (no screen projection / billboarding).
         if (InParams.Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::WorldComponent)
         {
             const auto WidgetComponent = InCurrent.Get_WidgetComponent().Get();
@@ -90,8 +88,6 @@ namespace ck
             : AnchorWorldLocation;
         const auto DistanceToCamera = FVector::Dist(CameraLocation, AnchorWorldLocation);
 
-        // ---- Occlusion (anchor trace; independent of screen projection). The policy
-        // gate short-circuits the trace so Get_IsAnchorOccluded only runs when needed.
         const auto& OcclusionInfo = InParams.Get_OcclusionInfo();
         auto IsOccluded = false;
         {
@@ -101,7 +97,6 @@ namespace ck
                 UCk_Utils_WorldSpaceWidget_UE::Get_IsAnchorOccluded(InHandle);
         }
 
-        // ---- Distance fade factor (multiplier on the enabled-state) ----
         const auto& FadingInfo = InParams.Get_FadingInfo();
         const auto FadeFactor = FadingInfo.Get_FadingPolicy() == ECk_WorldSpaceWidget_Fading_Policy::FadeWithDistance
             ? FMath::GetMappedRangeValueClamped(
@@ -110,7 +105,6 @@ namespace ck
                 static_cast<float>(DistanceToCamera))
             : 1.0f;
 
-        // ---- Project world -> screen ----
         auto ProjectedScreenPosition = FVector2D{};
         auto ProjectionSuccess = false;
         auto ViewportSize = FVector2D::ZeroVector;
@@ -123,12 +117,10 @@ namespace ck
                 AnchorWorldLocation,
                 ProjectedScreenPosition);
 
-            // ---- Viewport size (needed for off-screen test, clamping, aspect scaling) ----
             if (HasViewport)
             { GEngine->GameViewport->GetViewportSize(ViewportSize); }
         }
 
-        // ---- Screen-space offset (+ optional aspect / distance scaling) ----
         auto AppliedScreenOffset = LocationInfo.Get_ScreenSpaceOffset();
         {
             const auto& OffsetScaling = LocationInfo.Get_ScreenOffsetScaling();
@@ -162,7 +154,6 @@ namespace ck
 
         auto ScreenPosition = ProjectedScreenPosition + AppliedScreenOffset;
 
-        // ---- Clamp rect (optionally shrunk by the widget's bounds) ----
         const auto ClampingPolicy = LocationInfo.Get_ClampingPolicy();
         const auto ShouldClamp = ClampingPolicy != ECk_WorldSpaceWidget_Clamping_Policy::None;
 
@@ -180,9 +171,6 @@ namespace ck
             (ScreenPosition.X < ViewportRect.X || ScreenPosition.Y < ViewportRect.Y ||
              ScreenPosition.X >= ViewportRect.Z || ScreenPosition.Y >= ViewportRect.W);
 
-        // ---- Resolve a single opacity. Enabled gates everything; fade is a
-        // multiplier; occlusion and (when not clamping) the off-screen / failed-
-        // projection hide each force it to zero. One write, no frame-to-frame fight.
         auto TargetOpacity = InCurrent.Get_Enabled() ? FadeFactor : 0.0f;
         if (IsOccluded)
         { TargetOpacity = 0.0f; }
@@ -195,7 +183,6 @@ namespace ck
             if (WrapperWidget->GetRenderOpacity() != TargetOpacity)
             { WrapperWidget->SetRenderOpacity(TargetOpacity); }
 
-            // ---- Position (clamp the pivot into the rect when a clamping policy is set) ----
             if (ShouldClamp)
             {
                 ScreenPosition.X = FMath::Clamp(ScreenPosition.X, ViewportRect.X, ViewportRect.Z);
@@ -303,10 +290,6 @@ namespace ck
     {
         InParams.Set_ScalingInfo(InRequest.Get_ScalingInfo());
 
-        // Distance-scaling only applies to ScreenOverlay (WorldComponent scales in 3D
-        // natively). Flip the per-frame NeedsUpdateScaling tag so the scaling can be
-        // toggled at runtime — the legacy parity gap was that this was granted only at
-        // creation, making it impossible to enable later.
         const auto ScalingEnabled =
             InParams.Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::ScreenOverlay &&
             InRequest.Get_ScalingInfo().Get_ScalingPolicy() == ECk_WorldSpaceWidget_Scaling_Policy::ScaleWithDistance;
@@ -319,8 +302,7 @@ namespace ck
 
         InHandle.Remove<FTag_WorldSpaceWidget_NeedsUpdateScaling>();
 
-        // Scaling just turned off — reset the scale box so it doesn't stay stuck at
-        // the last distance-driven scale.
+        // Reset the scale box so it does not stay stuck at the last distance-driven scale.
         if (const auto WrapperWidget = InCurrent.Get_WrapperWidget().Get();
             ck::IsValid(WrapperWidget))
         { WrapperWidget->Request_SetWidgetScale(FVector2D{1.0, 1.0}); }
@@ -369,10 +351,8 @@ namespace ck
             WidgetComponent->DestroyComponent();
         }
 
-        // ScreenOverlay: the WRAPPER (not the content widget) was added to the
-        // viewport in Request_WrapWidget, so the wrapper is what must be removed.
-        // Removing it takes its content child with it; removing only the content
-        // (the previous behaviour) leaked the wrapper into the viewport forever.
+        // The WRAPPER, not the content widget, is what Request_WrapWidget added to the viewport;
+        // removing it takes its content child with it.
         if (const auto WrapperWidget = InCurrent.Get_WrapperWidget().Get();
             ck::IsValid(WrapperWidget))
         {

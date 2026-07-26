@@ -14,14 +14,10 @@ auto
         FCk_Handle_Inventory InInventory)
     -> void
 {
-    // ---- Unbind previous ----
-
     if (_IsBound)
     {
         DoUnbindSignal();
     }
-
-    // ---- Bind new ----
 
     _InventoryHandle = InInventory;
 
@@ -49,11 +45,7 @@ auto
         return;
     }
 
-    // ---- Get current items ----
-
     const auto Items = UCk_Utils_Inventory_UE::Get_Items(_InventoryHandle);
-
-    // ---- Build list view objects ----
 
     TArray<UObject*> ListItems;
     ListItems.Reserve(Items.Num());
@@ -65,8 +57,6 @@ auto
         ListObj->Set_InventoryHandle(_InventoryHandle);
         ListItems.Add(ListObj);
     }
-
-    // ---- Update list view ----
 
     _ItemListView->SetListItems(ListItems);
 
@@ -98,7 +88,6 @@ auto
         UDragDropOperation* InOperation)
     -> bool
 {
-    // Accept drag-over if the operation is our inventory drag type
     auto* const InventoryOp = Cast<UCk_InventoryUI_DragDropOperation>(InOperation);
     return IsValid(InventoryOp);
 }
@@ -118,12 +107,8 @@ auto
     if (ck::Is_NOT_Valid(InventoryOp))
     { return false; }
 
-    // ---- Let Blueprint handle first ----
-
     if (OnDropReceived(InventoryOp))
     { return true; }
-
-    // ---- Default handling: transfer between inventories ----
 
     if (ck::Is_NOT_Valid(_InventoryHandle))
     { return false; }
@@ -134,14 +119,12 @@ auto
     if (ck::Is_NOT_Valid(SourceItem))
     { return false; }
 
-    // Only handle cross-inventory transfers in the default implementation.
-    // Same-inventory moves (reorder, stack) are better handled in Blueprint
-    // at the slot level where the target item is known.
+    // Same-inventory moves (reorder, stack) belong in Blueprint at the slot level,
+    // where the target item is known.
     if (SourceInventory == _InventoryHandle)
     { return false; }
 
-    // Source / target inventories are base-typed in the UI layer. Source dispatch is handled by
-    // the base Utils internally; target type still drives which Transfer variant we call.
+    // Target shape decides the Transfer variant; source dispatch is internal to the base Utils.
     auto SourceMutable = const_cast<FCk_Handle_Inventory&>(SourceInventory);
     auto TargetMutable = _InventoryHandle;
     const auto Callback = FCk_Delegate_Inventory_OnOperationResult_Transfer{};

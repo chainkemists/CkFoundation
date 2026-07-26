@@ -25,9 +25,7 @@ public:
 
 public:
     // Compose a FogOfWar exploration grid DIRECTLY onto InHandle (no child entity). An entity hosts at most ONE
-    // grid — cover multiple map areas with one fog entity each. Exploration is GAMEPLAY state: it persists via
-    // the v3 save pipeline (only when the entity is recipe-rebuildable) and is projector-agnostic — the Minimap
-    // culls unexplored POIs through Request_SetFogOfWar, painters seed from Get_ExploredData + CellsRevealed.
+    // grid — cover multiple map areas with one fog entity each. Exploration is persisted GAMEPLAY state.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|FogOfWar",
               DisplayName="[Ck][FogOfWar] Add Feature")
@@ -37,7 +35,6 @@ public:
         const FCk_Fragment_FogOfWar_ParamsData& InParams);
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);

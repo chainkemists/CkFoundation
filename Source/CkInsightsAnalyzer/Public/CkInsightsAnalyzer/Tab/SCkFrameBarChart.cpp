@@ -43,6 +43,36 @@ namespace FrameBarChart
     auto ColorBackground() -> FLinearColor { return CkStyle::BgRoot(); }
     auto ColorGridLine()   -> FLinearColor { return CkStyle::OverlayOf(CkStyle::BorderStrong(), 0.25f); }
 
+    auto Get_DisplayMaxMs(const TArray<double>& InDurationsMs) -> double
+    {
+        if (InDurationsMs.Num() == 0)
+        { return MinDisplayMaxMs; }
+
+        TArray<double> Sorted = InDurationsMs;
+        Sorted.Sort();
+        const int32 P95Index = FMath::Min(
+            FMath::FloorToInt32(static_cast<float>(Sorted.Num()) * 0.95f),
+            Sorted.Num() - 1);
+
+        constexpr double HeadroomAboveP95 = 1.3;
+        return FMath::Max(Sorted[P95Index] * HeadroomAboveP95, MinDisplayMaxMs);
+    }
+
+    auto Get_FramesPerPixel_FitAll(int32 InFrameCount) -> double
+    {
+        // The real geometry isn't available when frame data arrives; assume a typical tab width.
+        constexpr double AssumedWidgetWidthPx = 1000.0;
+
+        const double NumFrames = FMath::Max(1.0, static_cast<double>(InFrameCount));
+        const double DesiredBarStep = AssumedWidgetWidthPx / NumFrames;
+        const double DesiredBarWidth = FMath::Clamp(
+            DesiredBarStep - ((DesiredBarStep >= 3.0) ? 1.0 : 0.0),
+            static_cast<double>(MinBarWidth),
+            static_cast<double>(MaxBarWidth));
+
+        return FMath::Clamp(1.0 / DesiredBarWidth, MinFramesPerPixel, MaxFramesPerPixel);
+    }
+
     /** Format an integer with comma separators (e.g. 4160 → "4,160"). */
     auto FormatWithCommas(int64 Value) -> FString
     {
@@ -71,7 +101,6 @@ auto
     _TargetFrameMs = InArgs._TargetFrameMs;
     _OnFrameSelectionChanged = InArgs._OnFrameSelectionChanged;
 
-    // Create hover tooltip
     _FrameTooltip = SNew(SToolTip)
         .TextMargin(FMargin(4.0f))
         [
@@ -81,11 +110,10 @@ auto
 
     SetToolTip(_FrameTooltip);
 
-    // Ensure this widget is hit-testable everywhere (not just over children).
+    // Both must be Visible for the whole chart area to be hit-testable, not just over
+    // children — SBox defaults to SelfHitTestInvisible.
     SetVisibility(EVisibility::Visible);
 
-    // Child fills the entire widget area for reliable hit-testing.
-    // SBox defaults to SelfHitTestInvisible, so we must override to Visible.
     ChildSlot
     [
         SNew(SBox)
@@ -105,40 +133,8 @@ auto
     _FrameDurationsMs = MoveTemp(InFrameDurationsMs);
     _ViewOffset = 0.0;
 
-    // Compute display max using P95 so outlier frames don't squish normal bars.
-    // Bars above this value simply clamp to full height.
-    if (_FrameDurationsMs.Num() > 0)
-    {
-        TArray<double> Sorted = _FrameDurationsMs;
-        Sorted.Sort();
-        const int32 P95Index = FMath::Min(
-            FMath::FloorToInt32(static_cast<float>(Sorted.Num()) * 0.95f),
-            Sorted.Num() - 1);
-        const double P95 = Sorted[P95Index];
-        // Use P95 * 1.3 with a floor ensuring the 100ms threshold line is always visible
-        _DisplayMaxMs = FMath::Max(P95 * 1.3, FrameBarChart::MinDisplayMaxMs);
-    }
-    else
-    {
-        _DisplayMaxMs = FrameBarChart::MinDisplayMaxMs;
-    }
-
-    // Compute initial zoom to fit all frames in the widget.
-    // Estimate width; when the actual geometry isn't available yet, use 1000px.
-    const double EstWidgetWidth = 1000.0;
-    const double NumFrames = FMath::Max(1.0, static_cast<double>(_FrameDurationsMs.Num()));
-    // Target: NumFrames * (BarWidth + Spacing) <= EstWidgetWidth
-    // At MinBarWidth=1 with no spacing: each frame takes 1px.
-    // FramesPerPixel = 1/BarWidth, so BarWidth = 1/FramesPerPixel.
-    const double DesiredBarStep = EstWidgetWidth / NumFrames;
-    const double DesiredBarWidth = FMath::Clamp(
-        DesiredBarStep - ((DesiredBarStep >= 3.0) ? 1.0 : 0.0),
-        static_cast<double>(FrameBarChart::MinBarWidth),
-        static_cast<double>(FrameBarChart::MaxBarWidth));
-    _FramesPerPixel = FMath::Clamp(
-        1.0 / DesiredBarWidth,
-        FrameBarChart::MinFramesPerPixel,
-        FrameBarChart::MaxFramesPerPixel);
+    _DisplayMaxMs = FrameBarChart::Get_DisplayMaxMs(_FrameDurationsMs);
+    _FramesPerPixel = FrameBarChart::Get_FramesPerPixel_FitAll(_FrameDurationsMs.Num());
 
     ClearSelection();
     Invalidate(EInvalidateWidgetReason::Paint);
@@ -153,25 +149,11 @@ auto
 
     _FrameDurationsMs.Append(NewDurationsMs);
 
-    // During progressive loading, keep _DisplayMaxMs at MinDisplayMaxMs (120ms).
-    // Outlier frames (startup/shutdown with 10s+ durations) would blow up a max-based
-    // heuristic, making normal bars invisible. RecalculateDisplayMax() is called after
-    // all data is loaded to apply proper P95-based scaling.
-
-    // Auto-fit zoom: adjust so all loaded frames fill the widget width.
-    // This makes bars grow from left to right during loading (like Insights).
+    // _DisplayMaxMs deliberately stays at its floor while loading — startup/shutdown outliers
+    // would flatten every normal bar; DoFinishLoading calls RecalculateDisplayMax once all
+    // frames are in. Re-fitting the zoom each chunk grows the bars left-to-right, like Insights.
     _ViewOffset = 0.0;
-    const double EstWidgetWidth = 1000.0;
-    const double NumFrames = FMath::Max(1.0, static_cast<double>(_FrameDurationsMs.Num()));
-    const double DesiredBarStep = EstWidgetWidth / NumFrames;
-    const double DesiredBarWidth = FMath::Clamp(
-        DesiredBarStep - ((DesiredBarStep >= 3.0) ? 1.0 : 0.0),
-        static_cast<double>(FrameBarChart::MinBarWidth),
-        static_cast<double>(FrameBarChart::MaxBarWidth));
-    _FramesPerPixel = FMath::Clamp(
-        1.0 / DesiredBarWidth,
-        FrameBarChart::MinFramesPerPixel,
-        FrameBarChart::MaxFramesPerPixel);
+    _FramesPerPixel = FrameBarChart::Get_FramesPerPixel_FitAll(_FrameDurationsMs.Num());
 
     Invalidate(EInvalidateWidgetReason::Paint);
 }
@@ -194,20 +176,7 @@ auto
     RecalculateDisplayMax()
     -> void
 {
-    if (_FrameDurationsMs.Num() > 0)
-    {
-        TArray<double> Sorted = _FrameDurationsMs;
-        Sorted.Sort();
-        const int32 P95Index = FMath::Min(
-            FMath::FloorToInt32(static_cast<float>(Sorted.Num()) * 0.95f),
-            Sorted.Num() - 1);
-        const double P95 = Sorted[P95Index];
-        _DisplayMaxMs = FMath::Max(P95 * 1.3, FrameBarChart::MinDisplayMaxMs);
-    }
-    else
-    {
-        _DisplayMaxMs = FrameBarChart::MinDisplayMaxMs;
-    }
+    _DisplayMaxMs = FrameBarChart::Get_DisplayMaxMs(_FrameDurationsMs);
     Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -274,7 +243,6 @@ auto
         return LayerId;
     }
 
-    // Background
     FSlateDrawElement::MakeBox(
         OutDrawElements, LayerId,
         AllottedGeometry.ToPaintGeometry(),
@@ -282,14 +250,11 @@ auto
         ESlateDrawEffect::None,
         FrameBarChart::ColorBackground());
 
-    // Use P95-based display max so outlier frames don't squish normal bars.
-    // Bars exceeding this value clamp to full height.
     const double MaxMs = _DisplayMaxMs;
 
     const float BarW = GetBarWidth(AllottedGeometry);
     const float BarStep = GetBarStep(AllottedGeometry);
 
-    // Draw threshold lines with labels (matching Insights style)
     const FSlateFontInfo LabelFont = FCoreStyle::GetDefaultFontStyle("Regular", 8);
     const float BarAreaRight = Width - FrameBarChart::LabelRightMargin;
 
@@ -306,7 +271,6 @@ auto
                 AllottedGeometry.ToPaintGeometry(),
                 LinePoints, ESlateDrawEffect::None, LineColor, true, 1.0f);
 
-            // Label on the right: "16.7 ms (60 fps)"
             FSlateDrawElement::MakeText(
                 OutDrawElements, LayerId + 1,
                 AllottedGeometry.ToPaintGeometry(
@@ -323,12 +287,10 @@ auto
     DrawThresholdLine(66.67,  FrameBarChart::ColorThresholdRed(),    TEXT("66.7 ms (15 fps)"));
     DrawThresholdLine(100.0,  FrameBarChart::ColorThresholdRed(),    TEXT("100 ms (10 fps)"));
 
-    // Draw frame number axis along the top with vertical grid lines
     {
         const FSlateFontInfo AxisFont = FCoreStyle::GetDefaultFontStyle("Regular", 8);
         const FLinearColor GridLineColor = FrameBarChart::ColorGridLine();
 
-        // Compute nice label interval so labels don't overlap (1-2-5 sequence)
         constexpr float MinLabelSpacing = 80.0f;
         const int32 FramesPerLabel = FMath::Max(1, FMath::CeilToInt32(MinLabelSpacing / BarStep));
 
@@ -354,7 +316,6 @@ auto
             if (LabelX < -30.0f) continue;
             if (LabelX > BarAreaRight) break;
 
-            // Vertical grid line from top of chart area to bottom
             TArray<FVector2D> GridPoints;
             GridPoints.Add(FVector2D(LabelX, FrameBarChart::TopPadding));
             GridPoints.Add(FVector2D(LabelX, Height - FrameBarChart::BottomPadding));
@@ -363,7 +324,6 @@ auto
                 AllottedGeometry.ToPaintGeometry(),
                 GridPoints, ESlateDrawEffect::None, GridLineColor, true, 1.0f);
 
-            // Frame number label at the top
             FSlateDrawElement::MakeText(
                 OutDrawElements, LayerId + 1,
                 AllottedGeometry.ToPaintGeometry(
@@ -376,7 +336,6 @@ auto
         }
     }
 
-    // Draw bars
     const int32 FirstFrame = FMath::Max(0, FMath::FloorToInt32(_ViewOffset));
     const int32 VisibleBars = FMath::CeilToInt32(Width / BarStep) + 2;
     const int32 LastFrame = FMath::Min(FirstFrame + VisibleBars, _FrameDurationsMs.Num());
@@ -402,7 +361,6 @@ auto
             ESlateDrawEffect::None, Color);
     }
 
-    // Draw selection highlight
     if (_bHasSelection)
     {
         const float SelX1 = (static_cast<float>(_SelectionStart) - static_cast<float>(_ViewOffset)) * BarStep;
@@ -422,7 +380,6 @@ auto
         }
     }
 
-    // Draw hover highlight
     if (_HoveredFrame >= 0 && _HoveredFrame < _FrameDurationsMs.Num())
     {
         const float HoverX = (static_cast<float>(_HoveredFrame) - static_cast<float>(_ViewOffset)) * BarStep;
@@ -511,7 +468,6 @@ auto
 
     if (_bIsDragging)
     {
-        // Update visual selection during drag
         const int64 CurrentFrame = XToFrame(MyGeometry, LocalPos.X);
         const uint64 Start = static_cast<uint64>(FMath::Min(_DragStartFrame, CurrentFrame));
         const uint64 End = static_cast<uint64>(FMath::Max(_DragStartFrame, CurrentFrame));
@@ -530,11 +486,9 @@ auto
         return FReply::Handled();
     }
 
-    // Hover tracking
     const int64 NewHoveredFrame = XToFrame(MyGeometry, LocalPos.X);
     const_cast<SCkFrameBarChart*>(this)->_HoveredFrame = NewHoveredFrame;
 
-    // Update tooltip text
     if (NewHoveredFrame >= 0 && NewHoveredFrame < _FrameDurationsMs.Num() && ck::IsValid(_TooltipTextBlock))
     {
         const double Ms = _FrameDurationsMs[NewHoveredFrame];
@@ -557,8 +511,7 @@ auto
 
     Invalidate(EInvalidateWidgetReason::Paint);
 
-    // Return Unhandled for hover-only so Slate continues to deliver OnMouseWheel events.
-    // Returning Handled here can prevent mouse wheel routing in some UE5 Slate configurations.
+    // Unhandled on hover-only: returning Handled can stop Slate routing OnMouseWheel here.
     return FReply::Unhandled();
 }
 
@@ -583,10 +536,8 @@ auto
 
     const FKey Key = InKeyEvent.GetKey();
 
-    // +/= to zoom in, -/_ to zoom out (numpad and regular keys)
     if (Key == EKeys::Add || Key == EKeys::Equals)
     {
-        // Zoom centered on widget midpoint
         ApplyZoom(MyGeometry, MyGeometry.GetLocalSize().X * 0.5f, 1.0f);
         return FReply::Handled();
     }
@@ -667,7 +618,6 @@ auto
     GetBarWidth(const FGeometry& Geometry) const
     -> float
 {
-    // Bar width inversely proportional to frames-per-pixel
     const float Width = static_cast<float>(1.0 / _FramesPerPixel);
     return FMath::Clamp(Width, FrameBarChart::MinBarWidth, FrameBarChart::MaxBarWidth);
 }
@@ -678,7 +628,6 @@ auto
     -> float
 {
     const float BarWidth = GetBarWidth(Geometry);
-    // Drop spacing when bars are very thin (zoomed out) to fit more frames
     const float Spacing = (BarWidth >= 2.0f) ? 1.0f : 0.0f;
     return FMath::Max(BarWidth + Spacing, 0.5f); // minimum step to avoid division by zero
 }
@@ -688,11 +637,9 @@ auto
     ApplyZoom(const FGeometry& Geometry, float LocalX, float Delta)
     -> void
 {
-    // Frame under cursor before zoom
     const float BarStep = GetBarStep(Geometry);
     const double FrameUnderCursor = _ViewOffset + static_cast<double>(LocalX) / static_cast<double>(BarStep);
 
-    // Adjust zoom
     const double ZoomFactor = (Delta > 0) ? 0.8 : 1.25;
     _FramesPerPixel = FMath::Clamp(
         _FramesPerPixel * ZoomFactor,

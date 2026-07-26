@@ -77,11 +77,10 @@ namespace ck::ensure
                 Result += TEXT("\n");
             }
 
-            // Sanitize the line content
             auto SanitizedLine = Lines[i];
-            SanitizedLine = SanitizedLine.Replace(TEXT("`"), TEXT("'"));  // Replace backticks
-            SanitizedLine = SanitizedLine.Replace(TEXT("<"), TEXT("&lt;")); // Escape < characters
-            SanitizedLine = SanitizedLine.Replace(TEXT(">"), TEXT("&gt;")); // Escape > characters
+            SanitizedLine = SanitizedLine.Replace(TEXT("`"), TEXT("'"));
+            SanitizedLine = SanitizedLine.Replace(TEXT("<"), TEXT("&lt;"));
+            SanitizedLine = SanitizedLine.Replace(TEXT(">"), TEXT("&gt;"));
 
             Result += ck::Format_UE(TEXT("<{}>{}</>"), InTagName, SanitizedLine);
         }
@@ -113,11 +112,10 @@ namespace ck::ensure
         const auto IsMessageOnly = UCk_Utils_Core_UserSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;
 
         const auto& Title = ck::Format_UE(TEXT("Frame#[{}] PIE-ID[{}]"), GFrameCounter, UCk_Utils_EditorOnly_UE::Get_DebugStringForWorld());
-        // Skip 3: Get_StackTrace + Ensure_Impl + Do_HandleFail (the macro's wrapper) —
-        // so the top frame is the caller of CK_ENSURE_IF_NOT.
-        const auto& StackTraceWith2Skips = IsMessageOnly ?
+        constexpr auto FramesToSkip_GetStackTrace_EnsureImpl_HandleFail = 3;
+        const auto& StackTraceFromEnsureCaller = IsMessageOnly ?
             TEXT("[StackTrace DISABLED]") :
-            UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(3);
+            UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(FramesToSkip_GetStackTrace_EnsureImpl_HandleFail);
         const auto& BpStackTrace = IsMessageOnly ?
             TEXT("[BP StackTrace DISABLED]") :
             UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});
@@ -125,14 +123,9 @@ namespace ck::ensure
             TEXT("[AS StackTrace DISABLED]") :
             UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(ck::type_traits::AsString{});
 
-        // UE::GetPlayInEditorID() has checkf(Value != -2), which is FATAL on the async loading
-        // thread: the engine keeps a separate PIE-ID slot per thread (CoreGlobals.cpp), and the
-        // loading-thread slots default to the -2 sentinel until a FPlayInEditorLoadingScope
-        // forwards a value. Only the pure game-thread slot is provably never -2 (inits to -1,
-        // only ever set to -1 or a real PIE id). The non-asserting PRIVATE_GetGPlayInEditorID()
-        // is not CORE_API-exported, so query the asserting accessor only when provably safe;
-        // otherwise feed -1, which flows through the same `- 1 < 0` test to "Server" (exactly
-        // what UE itself returns for worker threads). Used only for the [Server]/[Client] prefix.
+        // UE::GetPlayInEditorID() checkf's (FATAL) on the -2 sentinel that non-game-thread PIE-ID slots
+        // hold, and the non-asserting accessor is not CORE_API-exported — so query it only when provably
+        // safe. -1 flows to "Server", exactly what UE itself reports for worker threads.
         const auto CanQueryPieId = IsInGameThread() && NOT IsInAsyncLoadingThread();
         const auto PieId = CanQueryPieId ? UE::GetPlayInEditorID() : -1;
         const auto* const ServerClientText = PieId - 1 < 0 ? TEXT("Server") : TEXT("Client");
@@ -145,8 +138,6 @@ namespace ck::ensure
             BpStackTrace,
             AsStackTrace);
 
-        // Clean variant: empty BP/AS sections stripped entirely. Used for dialog popups
-        // and script-break messages. The log keeps the full MessagePlusBpCallStack above.
         auto CleanScriptSections = FString{};
         if (NOT BpStackTrace.IsEmpty())
         {
@@ -179,16 +170,14 @@ namespace ck::ensure
         }
 
     #if WITH_EDITOR
-        // Always log the full callstack for Editor reference
         ck::ensure::Error(TEXT("{}"), MessagePlusBpCallStack);
 
-        // Determine if we should show Editor notification
         const auto IsInPIE = GIsPlayInEditorWorld;
         const auto ShouldShowEditorNotification = GIsEditor && NOT IsInPIE;
 
         if (ShouldShowEditorNotification)
         {
-            // Show simplified notification without callstack (to avoid UI bugs)
+            // The callstack is omitted deliberately — it triggers UI bugs in the notification widget.
             const auto& SimpleMessage = ck::Format_UE(
                 TEXT("[{}] {}\n{}"),
                 ServerClientText,
@@ -213,20 +202,16 @@ namespace ck::ensure
             );
         }
 
-        // -unattended / commandlet contexts share the LogOnly fate: the full Error log already
-        // ran above (matching stock UE ensure severity, respects core.EnsuresAreErrors), but
-        // FSlateApplication::AddModalWindow would spin on Sleep with no UI to dismiss. Same
-        // exit ACk_AutoTestRunner forces via Set_EnsureDisplayPolicy(LogOnly).
+        // -unattended / commandlet contexts share the LogOnly fate: the Error log already ran above, but
+        // FSlateApplication::AddModalWindow would spin on Sleep with no UI to dismiss it.
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly
             || FApp::IsUnattended()
             || IsRunningCommandlet())
         { return; }
 
-        // If we showed an Editor notification, don't also show the dialog
         if (ShouldShowEditorNotification)
         { return; }
     #else
-        // Non-editor build - just log
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)
         {
             if (NOT EnsureIsFromScript)
@@ -240,7 +225,6 @@ namespace ck::ensure
 
         if (UCk_Utils_Core_UserSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::MessageLog)
         {
-            // Try Blueprint first, then Angelscript
             UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr, MessagePlusBpCallStackStr);
             if (BpStackTrace.IsEmpty() && NOT AsStackTrace.IsEmpty())
             {
@@ -253,11 +237,8 @@ namespace ck::ensure
             return;
         }
 
-        // Tail-trim engine boilerplate frames from the C++ stack for user-facing surfaces
-        // (dialog + clipboard). The log above keeps the full trace.
-        const auto& TrimmedCppStack = Request_TrimEngineBoilerplateFrames(StackTraceWith2Skips);
+        const auto& TrimmedCppStack = Request_TrimEngineBoilerplateFrames(StackTraceFromEnsureCaller);
 
-        // Build dialog sections conditionally so empty BP/AS/C++ stacks don't show headers.
         auto DialogSections = FString{};
         if (NOT BpStackTrace.IsEmpty())
         {
@@ -293,8 +274,6 @@ namespace ck::ensure
             DialogSections);
         const auto& DialogMessage = FText::FromString(CallstackPlusMessage);
 
-        // Build clipboard sections conditionally — empty BP/AS stacks are skipped entirely
-        // rather than printing "(empty)".
         auto ClipboardSections = FString{};
         if (NOT BpStackTrace.IsEmpty())
         {
@@ -321,7 +300,6 @@ namespace ck::ensure
             ClipboardSections);
         const auto& ClipboardMessage = FText::FromString(ClipboardText);
 
-        // Check stack availability
         const auto HasBpStack = NOT BpStackTrace.IsEmpty();
         const auto HasAsStack = NOT AsStackTrace.IsEmpty();
 
@@ -354,18 +332,16 @@ namespace ck::ensure
 
         Buttons.Add(DialogButton{FText::FromString(TEXT("Break")), {}}
         .Set_Color(FLinearColor{0.22f, 0.22f, 0.22f, 1.0f})
-        .Set_EnableDisable(StackTraceWith2Skips.IsEmpty() ? ECk_EnableDisable::Disable : ECk_EnableDisable::Enable));
+        .Set_EnableDisable(StackTraceFromEnsureCaller.IsEmpty() ? ECk_EnableDisable::Disable : ECk_EnableDisable::Enable));
 
         if (GIsEditor)
         {
-            // Add Break in BP button
             Buttons.Add(DialogButton{FText::FromString(TEXT("Break in BP")), FSimpleDelegate::CreateLambda([&]()
             {
                 UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);
             })}.Set_Color(FLinearColor{0.34f, 0.34f, 0.59f, 1.0f})
             .Set_EnableDisable(HasBpStack ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable));
 
-            // Add Break in AS button
             Buttons.Add(DialogButton{FText::FromString(TEXT("Break in AS")), FSimpleDelegate::CreateLambda([&]()
             {
                 UCk_Utils_Debug_StackTrace_UE::Try_BreakInAngelscript(nullptr);
@@ -412,7 +388,6 @@ namespace ck::ensure
       Do_BreakInScript()
       -> void
     {
-      // Try Blueprint first
       const auto BpStackTrace =
           UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(
               ck::type_traits::AsString{});
@@ -421,7 +396,6 @@ namespace ck::ensure
         return;
       }
 
-      // If no BP stack, try Angelscript
       const auto AsStackTrace =
           UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Angelscript(
               ck::type_traits::AsString{});

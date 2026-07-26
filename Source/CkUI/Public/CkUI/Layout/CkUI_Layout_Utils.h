@@ -32,8 +32,6 @@ public:
     CK_GENERATED_BODY(UCk_Utils_UI_Layout_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Subsystem Access
-    // ----------------------------------------------------------------------------------------------------------------
 
 public:
     UFUNCTION(BlueprintPure, Category = "Ck|UI|Layout", BlueprintCosmetic,
@@ -43,8 +41,6 @@ public:
 
     static UCk_UI_Layout_Subsystem_UE* Get_LayoutSubsystem(const ULocalPlayer* InLocalPlayer);
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Layout Access
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
@@ -58,8 +54,6 @@ public:
         meta = (DefaultToSelf = "InPlayerController", Categories = "UI.Layer"))
     static UCk_UI_LayerStack_UE* Get_Layer(const APlayerController* InPlayerController, FGameplayTag InLayerTag);
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Widget Operations
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
@@ -115,8 +109,6 @@ public:
         meta = (DefaultToSelf = "InWidget"))
     static bool RemoveWidgetSelf(UCommonActivatableWidget* InWidget);
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Input Mode
     // ----------------------------------------------------------------------------------------------------------------
 
 public:

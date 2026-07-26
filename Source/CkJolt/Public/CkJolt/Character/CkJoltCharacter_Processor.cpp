@@ -36,8 +36,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_JoltCharacter_EndPlay);
 
 namespace ck_jolt_character_processor
 {
-    // Resolves the registry's Jolt-world context. A world with no Jolt subsystem never publishes it — an
-    // absent/null context is legal, so callers return silently (correct silent path, not an error).
+    // A world with no Jolt subsystem never publishes the context — absent/null is legal, never an error.
     auto
         TryResolve_JoltWorld(
             const FCk_Handle& InTransientEntity)
@@ -124,34 +123,30 @@ namespace ck
 
         const auto Layer = _LayerTable->Get_OrRegisterLayer(*MaybeSignature);
 
-        // Table exhaustion already fired Get_OrRegisterLayer's own ensure — an invalid layer must not reach the
-        // character (it would sweep against nothing). Mirror the JoltBody setup guard and skip the entity.
+        // Table exhaustion already fired Get_OrRegisterLayer's own ensure; an invalid layer reaching the
+        // character would make it sweep against nothing.
         if (Layer == JPH::cObjectLayerInvalid)
         { return; }
 
         // ---- CharacterVirtualSettings ----
-        // Z-UP CORRECTIONS: Jolt character defaults are Y-up METRES; this world is Z-up passthrough CENTIMETRES.
-        //   mUp                       default Vec3::sAxisY() (Y-up)  ->  (0,0,1) Z-up
-        //   mSupportingVolume         our capsule is CENTERED at the character position (zero-translation
-        //                             wrapper — CkJoltShapeFactory), NOT the Jolt-sample base-at-origin shape,
-        //                             so the sample's -radius constant would accept "support" contacts up to
-        //                             +radius ABOVE the capsule center (waist-height ledge lips read as ground).
-        //                             Plane(sAxisZ(), +HalfHeight) restricts support to the bottom sphere.
-        //   mMaxSlopeAngle            radians (converted from the authored degrees)
-        //   mPredictiveContactDistance 0.1 m -> 10 uu   (unconverted it is 1 mm: characters find contacts only
-        //   mCharacterPadding          0.02 m -> 2 uu    after penetrating, jitter, and stick on wall slides)
-        //   mCollisionTolerance        0.001 m -> 0.1 uu
-        //   mMaxStrength              authored Newtons (kg·m/s²) -> kg·uu/s² (×100), else pushes cap at 1% intent
+        // Jolt's CharacterVirtual defaults are Y-up METRES; this world is Z-up passthrough CENTIMETRES. The
+        // support plane is measured from our CENTERED capsule, not the Jolt sample's base-at-origin shape —
+        // the sample's -radius constant would let waist-height ledge lips read as ground.
+        constexpr auto PredictiveContactDistance_Uu = 10.0f;
+        constexpr auto CharacterPadding_Uu          = 2.0f;
+        constexpr auto CollisionTolerance_Uu        = 0.1f;
+        constexpr auto NewtonsToKgUuPerSecondSq     = 100.0f;
+
         auto Settings = CharacterVirtualSettings{};
         Settings.mShape = Shape;
         Settings.mUp = Vec3(0.0f, 0.0f, 1.0f);
         Settings.mSupportingVolume = Plane(Vec3::sAxisZ(), InParams.Get_CapsuleHalfHeight());
         Settings.mMaxSlopeAngle = DegreesToRadians(InParams.Get_MaxSlopeAngleDegrees());
         Settings.mMass = InParams.Get_MassKg();
-        Settings.mMaxStrength = InParams.Get_MaxStrengthNewtons() * 100.0f;
-        Settings.mPredictiveContactDistance = 10.0f;
-        Settings.mCharacterPadding = 2.0f;
-        Settings.mCollisionTolerance = 0.1f;
+        Settings.mMaxStrength = InParams.Get_MaxStrengthNewtons() * NewtonsToKgUuPerSecondSq;
+        Settings.mPredictiveContactDistance = PredictiveContactDistance_Uu;
+        Settings.mCharacterPadding = CharacterPadding_Uu;
+        Settings.mCollisionTolerance = CollisionTolerance_Uu;
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
         if (ck::Is_NOT_Valid(PhysicsSystem))
@@ -167,7 +162,6 @@ namespace ck
         InCurrent._Character = Character;
         InCurrent._ObjectLayer = Layer;
 
-        // Register with the FJoltWorld so the step loop drives it (non-owning pointer; Current owns the Ref).
         auto Entry = FCk_Jolt_CharacterEntry{};
         Entry.Character = Character.GetPtr();
         Entry.UserData = EntityId;
@@ -177,8 +171,7 @@ namespace ck
         Entry.OutRotation = EntityRotation;
         _JoltWorld->Register_Character(Entry);
 
-        // Seed the SHARED step-pose buffer prev==curr==spawn so the first interpolation reads a valid pose
-        // (a character rides the JoltBody StepPose + WritebackInterpolated path).
+        // Seed prev==curr==spawn so the first interpolation reads a valid pose.
         auto& StepPose = InHandle.Get<ck::FFragment_JoltBody_StepPose>();
         StepPose.Set_PrevLocation(EntityLocation)
                 .Set_PrevRotation(EntityRotation)
@@ -268,7 +261,6 @@ namespace ck
         const auto NewLocation = InRequest.Get_Location();
         Character->SetPosition(ck::jolt::Conv(NewLocation));
 
-        // Rotation is optional (enum-mode + value pair): keep the character's own rotation unless overridden.
         auto NewRotation = ck::jolt::Conv(Character->GetRotation());
         if (InRequest.Get_AlsoSetRotation() == ECk_EnableDisable::Enable)
         {
@@ -276,8 +268,6 @@ namespace ck
             Character->SetRotation(ck::jolt::Conv(NewRotation));
         }
 
-        // Direct-write the ECS transform (preserve scale) + snap the step pose prev==curr==target so the
-        // interpolator does not blend a path across the discontinuity (mirrors the JoltBody Teleport handler).
         auto& TransformFragment = InHandle.Get<ck::FFragment_Transform>();
         auto& PrevTransformFragment = InHandle.Get<ck::FFragment_Transform_Previous>();
 
@@ -300,10 +290,9 @@ namespace ck
                 .Set_CurrLocation(NewLocation)
                 .Set_CurrRotation(NewRotation);
 
-        // The fragment snap alone is not enough: the FJoltWorld character entry still holds the PRE-teleport
-        // out-pose (dirty), so the next apply would overwrite the snap and sweep the character across the map
-        // for a frame. Snap the entry's out-pose to the target and clear its dirty flag (character equivalent
-        // of the JoltBody pose-buffer reap; the entry itself must survive — it holds the live Character).
+        // The step-pose snap alone is not enough: the FJoltWorld entry still holds the PRE-teleport out-pose,
+        // which the next apply would sweep the character back across. The entry itself must survive (it holds
+        // the live Character), so its out-pose is snapped rather than reaped.
         if (_JoltWorld != nullptr)
         {
             const auto EntityId = static_cast<uint64>(InHandle.Get_Entity().Get_ID());
@@ -344,8 +333,7 @@ namespace ck
             InCurrent._HasPendingJump,
             InCurrent._PendingJumpVelocity);
 
-        // The jump is now armed on the entry (or was already armed on a prior zero-step frame) — clear the
-        // Current inbox flag so it is transferred exactly once, not re-armed every frame.
+        // The jump is armed on the entry now, so clear the inbox flag: transferred exactly once, never re-armed.
         InCurrent._HasPendingJump = false;
     }
 
@@ -371,11 +359,9 @@ namespace ck
             FFragment_JoltCharacter_Current& InCurrent) const
         -> void
     {
-        // ASYNC GUARD: FGroup_EndPlay runs later in the SAME tick that kicked this frame's async step —
-        // the future is only consumed by NEXT frame's WaitForAsync. Unregistering (registry mutation) and
-        // dropping the Ref (CharacterVirtual destruction) while the task-graph step loop iterates that
-        // registry is a data race + use-after-free. Wait the in-flight step out first; self-guarded on
-        // future validity, so this is free in sync mode and after the first dying entity.
+        // ASYNC GUARD: FGroup_EndPlay runs later in the SAME tick that kicked this frame's async step, and
+        // unregistering + dropping the Ref while the task-graph loop iterates the registry is a data race and
+        // use-after-free. Self-guarded on future validity, so this is free in sync mode.
         if (_JoltWorld != nullptr && _JoltWorld->Get_AsyncFuture().IsValid())
         { _JoltWorld->WaitForAsyncStep(); }
 
@@ -383,16 +369,15 @@ namespace ck
         auto ReleaseHandle = InHandle;
         ck::physics_ownership::Release_Jolt(ReleaseHandle);
 
-        // Unregister BEFORE dropping the Ref so the step loop / contact listener never sees a dangling
-        // Character pointer.
+        // Unregister BEFORE dropping the Ref, else the step loop / contact listener sees a dangling pointer.
         if (_JoltWorld != nullptr)
         {
             const auto EntityId = static_cast<uint64>(InHandle.Get_Entity().Get_ID());
             _JoltWorld->Unregister_Character(EntityId);
         }
 
-        // Dropping the owning Ref destroys the CharacterVirtual. A CharacterVirtual is NOT in the body
-        // interface, so — unlike a JoltBody — there is no body to Remove/Destroy.
+        // Dropping the owning Ref destroys the CharacterVirtual; it is NOT in the body interface, so unlike a
+        // JoltBody there is no body to Remove/Destroy.
         InCurrent._Character = nullptr;
     }
 }

@@ -58,7 +58,6 @@ static auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Container-based replication handler for Vector Attributes
 
 static struct FVectorAttributeRepHandlerRegistrar
 {
@@ -82,8 +81,6 @@ static struct FVectorAttributeRepHandlerRegistrar
                         auto AttributeEntity = UCk_Utils_VectorAttribute_UE::TryGet(Entity, Entry.Get_AttributeName());
                         if (ck::Is_NOT_Valid(AttributeEntity))
                         {
-                            // Not composed yet — keep the whole container entry pending. Siblings
-                            // that did apply are skipped on the retry by the value check below.
                             Result = ECk_Persistence_ApplyResult::NotReady;
                             continue;
                         }
@@ -111,9 +108,6 @@ static struct FVectorAttributeRepHandlerRegistrar
 
                     return Result;
                 },
-                // Save-load hydration (authority-side, Phase 4B): the v3 payload is CHILD-keyed (per-attribute-entity
-                // Produce), so Entity IS the attribute entity — write its value directly via ApplyReplicatedVectorAttributeEntry.
-                // The OWNER-keyed net Apply above never resolves it.
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
                     return ck::attribute_restore::HydrationApply<ck::TFragment_VectorAttribute, FCk_RepData_VectorAttributes, UCk_Utils_VectorAttribute_UE>(

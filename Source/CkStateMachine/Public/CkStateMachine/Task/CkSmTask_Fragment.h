@@ -23,9 +23,8 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_SmTask_EnterExit);
     CK_DEFINE_ECS_TAG(FTag_SmTask_ResultDirty);
 
-    // Marks a task as currently active (between EnterTask and ExitTask). Set in EnterTask,
-    // cleared in ExitTask. Tick / completion processors gate on this so an exited task stops
-    // ticking immediately, before its deferred destroy completes. Mirrors FTag_SmState_Active.
+    // Marks a task active (between EnterTask and ExitTask). Tick / completion processors gate on it
+    // so an exited task stops ticking before its deferred destroy lands. Mirrors FTag_SmState_Active.
     CK_DEFINE_ECS_TAG(FTag_SmTask_Active);
 
     // Set by FProcessor_SmState_Exit when cascading exit to children. Picked up by

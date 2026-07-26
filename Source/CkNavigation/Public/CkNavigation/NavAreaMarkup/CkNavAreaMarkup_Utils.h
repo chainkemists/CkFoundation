@@ -13,11 +13,9 @@
 
 class UNavArea;
 
-// Pure-UObject nav-area painter: registers an oriented box of the given UNavArea
-// class with the nav octree (RegisterNavRelevantObjectStatic — no Actor involved).
-// With dynamic runtime navmesh generation the affected tiles rebuild on
-// register/unregister. Lifetime: the caller owns it (keep a UPROPERTY ref so GC
-// doesn't collect it); call Request_Destroy to unpaint.
+// Pure-UObject nav-area painter (no Actor): registers an oriented box with the nav octree, so
+// dynamic navmesh generation rebuilds the affected tiles on register/unregister. The CALLER owns
+// the lifetime — keep a UPROPERTY ref so GC doesn't collect it; Request_Destroy unpaints.
 UCLASS()
 class CKNAVIGATION_API UCk_NavAreaMarkup_UE : public UObject, public INavRelevantInterface
 {

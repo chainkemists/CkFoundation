@@ -1,7 +1,5 @@
-// Unit test for ck::grid_editor::Resolve_CellFromRay — verifies the pure ray->cell hit math used by
-// the Grid Paint editor mode. Corner-origin convention: cell (x,y) spans local
-// [x*CellSize, (x+1)*CellSize); a world ray is intersected with the grid's local z=0 plane and the
-// hit is floored into a cell coordinate, or rejected if outside [0, Dimensions).
+// Corner-origin convention: cell (x,y) spans local [x*CellSize, (x+1)*CellSize); a world ray is
+// intersected with the grid's local z=0 plane and floored into a cell, or rejected outside [0, Dimensions).
 
 #include "CkGridEditor/EdMode/Ck2dGridSystem_EdMode_Hit.h"
 #include "CkGridEditor/Draw/Ck2dGridSystem_AuthoredOverlay.h"
@@ -26,8 +24,6 @@ bool FCkTest_GridEdMode_RayToCell::RunTest(const FString&)
     const auto Dimensions    = FIntPoint(10, 10);
     const auto RayDown       = FVector(0.0, 0.0, -1.0);
 
-    // A ray straight down through world (550,250) lands inside cell (5,2):
-    // 550/100 -> 5, 250/100 -> 2.
     {
         const auto Hit = ck::grid_editor::Resolve_CellFromRay(
             GridTransform, CellSize, Dimensions, FVector(550.0, 250.0, 1000.0), RayDown);
@@ -38,7 +34,6 @@ bool FCkTest_GridEdMode_RayToCell::RunTest(const FString&)
         TestEqual(TEXT("In-bounds ray resolves to cell (5,2)"), Hit.GetValue(), FIntPoint(5, 2));
     }
 
-    // A ray straight down at world (-50,-50) is outside the grid (negative coordinates) -> unset.
     {
         const auto Hit = ck::grid_editor::Resolve_CellFromRay(
             GridTransform, CellSize, Dimensions, FVector(-50.0, -50.0, 1000.0), RayDown);
@@ -46,7 +41,6 @@ bool FCkTest_GridEdMode_RayToCell::RunTest(const FString&)
         TestFalse(TEXT("Out-of-bounds ray resolves to no cell"), Hit.IsSet());
     }
 
-    // A ray parallel to the grid plane never intersects -> unset.
     {
         const auto Hit = ck::grid_editor::Resolve_CellFromRay(
             GridTransform, CellSize, Dimensions, FVector(550.0, 250.0, 1000.0), FVector(1.0, 0.0, 0.0));
@@ -78,14 +72,12 @@ bool FCkTest_GridEdMode_RectCells::RunTest(const FString&)
         TestTrue(TEXT("contains (2,2)"), Cells.Contains(FIntPoint(2, 2)));
     }
 
-    // A single-cell rect (click case) yields exactly that cell.
     {
         const auto Cells = ck::grid_editor::Compute_RectCells(FIntPoint(5, 5), FIntPoint(5, 5), Dimensions);
         TestEqual(TEXT("1x1 rect has 1 cell"), Cells.Num(), 1);
         TestEqual(TEXT("1x1 rect is the clicked cell"), Cells[0], FIntPoint(5, 5));
     }
 
-    // Out-of-bounds corners are clamped to [0, Dimensions); fully-out rects are empty.
     {
         const auto Cells = ck::grid_editor::Compute_RectCells(FIntPoint(-3, -3), FIntPoint(1, 1), Dimensions);
         TestEqual(TEXT("clamped rect drops negative coords"), Cells.Num(), 4); // (0..1, 0..1)
@@ -107,19 +99,16 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_GridEdMode_TagColor::RunTest(const FString&)
 {
-    // Deterministic: the same name always maps to the same color.
     const auto A1 = ck::grid_editor::Resolve_TagColor_FromName(FName(TEXT("Grid.Cell.Spawn")));
     const auto A2 = ck::grid_editor::Resolve_TagColor_FromName(FName(TEXT("Grid.Cell.Spawn")));
     TestEqual(TEXT("same name -> same color"), A1, A2);
 
-    // Distinct names map to distinct colors (these two are known to differ under the hash).
+    // These two names are known to differ under the hash.
     const auto B = ck::grid_editor::Resolve_TagColor_FromName(FName(TEXT("Grid.Cell.Cover")));
     TestNotEqual(TEXT("different names -> different colors"), A1, B);
 
-    // Colors are bright (not near-black, not the dim legacy blue).
     TestTrue(TEXT("color is bright"), A1.GetLuminance() > 0.05f);
 
-    // Invalid tag falls back to the legacy ColorTagged.
     const auto Fallback = ck::grid_editor::Resolve_TagColor(FGameplayTag{});
     TestEqual(TEXT("invalid tag -> legacy ColorTagged"), Fallback, ck::grid_editor::ColorTagged);
 

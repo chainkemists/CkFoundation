@@ -82,7 +82,6 @@ namespace ck::Private
 {
     auto IsValid_CompileTest() -> void
     {
-        // AActor Validation
         AActor* Actor = nullptr;
         ck::IsValid(Actor);
         ck::IsValid(Actor, ck::IsValid_Policy_IncludePendingKill{});
@@ -91,27 +90,22 @@ namespace ck::Private
         ck::Is_NOT_Valid(Actor, ck::IsValid_Policy_IncludePendingKill{});
         ck::Is_NOT_Valid(Actor, ck::IsValid_Policy_NullptrOnly{});
 
-        // Double pointer
         AActor** ActorDblPtr = nullptr;
         ck::IsValid(ActorDblPtr, ck::IsValid_Policy_NullptrOnly{});
         ck::Is_NOT_Valid(ActorDblPtr, ck::IsValid_Policy_NullptrOnly{});
 
-        // FField Validation
         FField* Field = nullptr;
         ck::IsValid(Field);
         ck::Is_NOT_Valid(Field);
 
-        // UObject Validation
         UObject* Object = nullptr;
         ck::IsValid(Object);
         ck::Is_NOT_Valid(Object);
 
-        // TSubclassOf Validation
         const auto SubclassOfActor = TSubclassOf<AActor>{};
         ck::IsValid(SubclassOfActor);
         ck::Is_NOT_Valid(SubclassOfActor);
 
-        // TSharedPtr Validation
         {
             const TSharedPtr<AActor> SharedPtrOfActor = nullptr;
             ck::IsValid(SharedPtrOfActor);
@@ -123,7 +117,6 @@ namespace ck::Private
             ck::Is_NOT_Valid(SharedPtrOfActor);
         }
 
-        // TWeakPtr Validation
         {
             const TWeakPtr<AActor> WeakPtrOfActor = nullptr;
             ck::IsValid(WeakPtrOfActor);
@@ -135,32 +128,26 @@ namespace ck::Private
             ck::Is_NOT_Valid(WeakPtrOfActor);
         }
 
-        // TOptional Validation
         const TOptional<AActor*> OptionalOfActor = nullptr;
         ck::IsValid(OptionalOfActor);
         ck::Is_NOT_Valid(OptionalOfActor);
 
-        // FName Validation
         const FName Name = NAME_None;
         ck::IsValid(Name);
         ck::Is_NOT_Valid(Name);
 
-        // FName Validation
         const FSoftObjectPath SoftObjPath;
         ck::IsValid(SoftObjPath);
         ck::Is_NOT_Valid(SoftObjPath);
 
-        // FGameplayTag Validation
         const FGameplayTag GameplayTag = FGameplayTag::EmptyTag;
         ck::IsValid(GameplayTag);
         ck::Is_NOT_Valid(GameplayTag);
 
-        // FGuid Validation
         const FGuid GUID;
         ck::IsValid(GUID);
         ck::Is_NOT_Valid(GUID);
 
-        // Custom Data Type Validation
         const auto DummyData = FDummyData{Actor};
         const auto DummyStruct = FDummyStruct{DummyData};
         ck::IsValid(DummyData);
@@ -168,7 +155,6 @@ namespace ck::Private
         ck::IsValid(DummyStruct);
         ck::Is_NOT_Valid(DummyStruct);
 
-        // Custom Templated Data Type Validation
         const auto DummyTemplatedData = FDummyTemplatedData{Actor};
         ck::IsValid(DummyTemplatedData);
         ck::Is_NOT_Valid(DummyTemplatedData);

@@ -28,7 +28,6 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);

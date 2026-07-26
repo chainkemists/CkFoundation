@@ -30,8 +30,7 @@ auto
     _FrameIndex = _StartKeyFrame;
     SetBrushAtFrame(_StartKeyFrame);
 
-    // Runtime autoplay kicks the world timer; design-time preview uses a Slate active
-    // timer (the designer preview world does not tick FTimerManager).
+    // The designer preview world does not tick FTimerManager, hence the separate Slate active timer.
     if (NOT IsDesignTime())
     {
         if (_Autoplay)
@@ -101,8 +100,7 @@ auto
 
     const auto NumFrames = _SourceFlipbook->GetNumKeyFrames();
 
-    // Equivalent to UPaperSpriteBlueprintLibrary::MakeBrushFromSprite (which is
-    // not DLL-exported): point the brush resource at the sprite and tint it.
+    // Hand-rolled because UPaperSpriteBlueprintLibrary::MakeBrushFromSprite is not DLL-exported.
     for (auto Frame = 0; Frame < NumFrames; ++Frame)
     {
         const auto Sprite = _SourceFlipbook->GetSpriteAtFrame(Frame);
@@ -129,9 +127,6 @@ auto
     const auto Rows    = FMath::Max(1, _SpriteSheet.Get_Rows());
     const auto Columns = FMath::Max(1, _SpriteSheet.Get_Columns());
 
-    // Slice the sheet into Rows x Columns cells, row-major (left-to-right,
-    // top-to-bottom). Every brush shares the same texture; only its UVRegion
-    // differs, so the existing brush-swap loop drives playback unchanged.
     const auto CellU = 1.0f / static_cast<float>(Columns);
     const auto CellV = 1.0f / static_cast<float>(Rows);
 
@@ -329,7 +324,6 @@ auto
         return;
     }
 
-    // Non-looping: hold on the last frame and stop.
     if (const auto World = GetWorld();
         ck::IsValid(World))
     {
@@ -392,7 +386,6 @@ auto
         return EActiveTimerReturnType::Continue;
     }
 
-    // Non-looping: hold on the last frame.
     return EActiveTimerReturnType::Stop;
 }
 

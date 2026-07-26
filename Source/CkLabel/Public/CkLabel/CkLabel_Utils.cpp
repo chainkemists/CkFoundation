@@ -47,11 +47,8 @@ auto
         FGameplayTag InLabel)
     -> void
 {
-    // Label is set-once. Second Add with the same tag is a silent no-op;
-    // second Add with a different tag is a caller-attributable rejection
-    // (the original label survives) and is reported as a Display-level
-    // log rather than an ensure — so AutoTests pinning the rejection
-    // contract don't fail on the harness's error-log escalation.
+    // Set-once. The mismatched-Add rejection is Display-level and NOT an ensure on purpose: AutoTests pin
+    // this contract, and the harness escalates error-level logs into test failures.
     if (Has(InHandle))
     {
         if (NOT MatchesExact(InHandle, InLabel))

@@ -1,8 +1,3 @@
-// Pure-math coverage for the heading helpers.
-//
-// Convention under test (documented in CkVector_Utils.h): headings are world yaws in degrees,
-// 0 = North = +X, 90 = East = +Y; cardinal buckets are 45 degrees wide, centered on each direction.
-
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 
 #include "Misc/AutomationTest.h"
@@ -29,7 +24,6 @@ bool FCkTest_Vector_HeadingAngleBetweenLocations_Cardinals::RunTest(const FStrin
     TestTrue(TEXT("target -X (South) -> |180|"),
         FMath::IsNearlyEqual(FMath::Abs(UCk_Utils_Vector3_UE::Get_HeadingAngleBetweenLocations(Observer, FVector{-100, 0, 0})), 180.0f, 0.01f));
 
-    // Z is ignored — the heading is the XY-plane yaw
     TestTrue(TEXT("target +X with Z offset -> still 0"),
         FMath::IsNearlyEqual(UCk_Utils_Vector3_UE::Get_HeadingAngleBetweenLocations(Observer, FVector{100, 0, 500}), 0.0f, 0.01f));
 

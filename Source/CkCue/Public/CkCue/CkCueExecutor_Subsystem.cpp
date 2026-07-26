@@ -1,11 +1,3 @@
-// CkCueExecutor_Subsystem.cpp
-//
-// UCk_CueExecutor_Subsystem_Base_UE implementation:
-//   - Initialize / Deinitialize
-//   - Request_ExecuteCue* methods (transient, local, replicated)
-//   - Pending cue queue and timeout handling
-//   - ActorRelay integration
-
 #include "CkCueSubsystem_Base.h"
 
 #include "CkActorRelay/CkActorRelay_Utils.h"
@@ -255,9 +247,6 @@ auto
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
-        // On client: optionally execute locally on Self path, then defer the
-        // RPC until a CueRelay channel is ready. The lambda captures the
-        // dispatch payload so the relay can come up after the cue is queued.
         if (InMulticastPolicy == ECk_Cue_MulticastPolicy::ServerAndSelf)
         { ck_cue_subsystem_base::DoExecuteLocal(this, InOwnerEntity, InCueName, InSpawnParams); }
 
@@ -324,8 +313,7 @@ auto
                 if (ck::Is_NOT_Valid(CueRelay))
                 { return; }
 
-                // Same as the client path — the owner may have been destroyed while
-                // waiting for a channel. Don't multicast a dead handle.
+                // As on the client path — never multicast a handle whose owner died while waiting.
                 if (ck::Is_NOT_Valid(OwnerEntity))
                 { return; }
 

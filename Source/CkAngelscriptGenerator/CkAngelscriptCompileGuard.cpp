@@ -26,9 +26,8 @@ namespace ck::angelscriptgenerator
                 ELogVerbosity::Type InVerbosity,
                 const FName& InCategory) -> void override
             {
-                // NOTE: AngelScript's log category is declared without the "Log" prefix:
-                //   DECLARE_LOG_CATEGORY_EXTERN(Angelscript, Log, All)
-                // so the FName is "Angelscript", not "LogAngelscript".
+                // AS declares its category without the "Log" prefix
+                // (DECLARE_LOG_CATEGORY_EXTERN(Angelscript, ...)), so the FName is NOT "LogAngelscript".
                 static const auto AngelscriptCategory = FName{TEXT("Angelscript")};
 
                 if (InCategory != AngelscriptCategory)
@@ -37,15 +36,12 @@ namespace ck::angelscriptgenerator
                 if (InVerbosity > ELogVerbosity::Error)
                 { return; }
 
-                // Dedupe: AS retries previously-failed files on every save, so when the failure
-                // is preprocessor-stage (which never broadcasts PreCompile to reset our buffer),
-                // the same error lines re-log on every retry. AddUnique keeps the toast clean.
+                // Preprocessor-stage failures never broadcast PreCompile, so the buffer is never
+                // reset and AS re-logs identical lines on every retry — AddUnique keeps the toast clean.
                 _CapturedLines.AddUnique(FString{InMessage});
 
-                // Belt-and-suspenders: the dedicated GetReloadHadErrors() delegate only fires
-                // from CompileModules(); preprocessor-stage failures in PerformHotReload() never
-                // reach CompileModules and only show up as a UE_LOG(Angelscript, Error, ...) line.
-                // Capturing here covers that path too.
+                // GetReloadHadErrors() only fires from CompileModules(); preprocessor-stage failures
+                // in PerformHotReload() surface ONLY as this log line, so the flag must be set here.
                 _bHasOutstandingErrors = true;
             }
 
@@ -58,8 +54,7 @@ namespace ck::angelscriptgenerator
             bool            _bHasOutstandingErrors = false;
         };
 
-        // Module-static state. All access happens on the game thread (compile delegates +
-        // PreBeginPIE all fire there), so no synchronization needed.
+        // Game-thread only (compile delegates + PreBeginPIE all fire there) — no synchronization.
         FCk_AngelscriptErrorCapture _LogCapture;
         FDelegateHandle             _PreCompileHandle;
         FDelegateHandle             _PreBeginPIEHandle;

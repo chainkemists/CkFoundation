@@ -47,19 +47,16 @@ public:
 
     auto Construct(const FArguments& InArgs) -> void;
 
-    // Accessors for row widgets
     auto Get_Infos() const -> const TArray<TSharedPtr<FCk_AnimationToolbox_AnimInfo>>& { return _Infos; }
     auto Request_RefreshListView() -> void;
 
 private:
-    // Panel builders
     auto DoCreateOptionsPanel() -> TSharedRef<SWidget>;
     auto DoCreateActionsPanel() -> TSharedRef<SWidget>;
     auto DoCreateListPanel() -> TSharedRef<SWidget>;
     auto DoCreateStatusPanel() -> TSharedRef<SWidget>;
     auto DoCreateLogPanel() -> TSharedRef<SWidget>;
 
-    // Event handlers
     auto DoOnScopeChanged(ECk_AnimationToolbox_ScanScope NewScope) -> void;
     auto DoOnAnimBlueprintChanged(const FAssetData& NewAsset) -> void;
     auto DoOnPathChanged(const FString& NewPath) -> void;
@@ -69,10 +66,8 @@ private:
     auto DoOnApplySelectedClicked() -> FReply;
     auto DoOnApplyAllAffectedClicked() -> FReply;
 
-    // List support
     auto DoOnGenerateRow(TSharedPtr<FCk_AnimationToolbox_AnimInfo> Item, const TSharedRef<STableViewBase>& Owner) -> TSharedRef<ITableRow>;
 
-    // Utilities
     auto DoLoadSettings() -> void;
     auto DoSaveSettings() const -> void;
     auto DoAppendLog(const FString& InLevel, const FString& InMessage) -> void;
@@ -81,20 +76,17 @@ private:
     auto DoApplyFixToList(const TArray<TSharedPtr<FCk_AnimationToolbox_AnimInfo>>& ToFix) -> void;
 
 private:
-    // State
     FCk_AnimationToolbox_ScanOptions _Options;
     ECk_AnimationToolbox_RewriteStrategy _Strategy = ECk_AnimationToolbox_RewriteStrategy::CopyFromLastFrame;
 
     TArray<TSharedPtr<FCk_AnimationToolbox_AnimInfo>> _Infos;
 
-    // Widgets
     TSharedPtr<SListView<TSharedPtr<FCk_AnimationToolbox_AnimInfo>>> _ListView;
     TSharedPtr<STextBlock> _StatusText;
 
     TArray<TSharedPtr<ECk_AnimationToolbox_RewriteStrategy>> _StrategyOptions;
     TSharedPtr<SComboBox<TSharedPtr<ECk_AnimationToolbox_RewriteStrategy>>> _StrategyCombo;
 
-    // Log buffer (last 50 lines).
     struct FLogEntry
     {
         FString Level;

@@ -35,15 +35,11 @@ public:
     CK_GENERATED_BODY(UCk_UI_Extension_Subsystem_UE);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Subsystem Lifecycle
-    // ----------------------------------------------------------------------------------------------------------------
 
 public:
     virtual auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
     virtual auto Deinitialize() -> void override;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Extension Point Registration
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
@@ -56,8 +52,6 @@ public:
         DisplayName = "[Ck][UI] Unregister Extension Point")
     void UnregisterExtensionPoint(const FCk_UI_ExtensionPointHandle& InHandle);
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Extension Registration
     // ----------------------------------------------------------------------------------------------------------------
 
 public:
@@ -90,15 +84,11 @@ public:
     void ClearExtensionsAtPoint(FGameplayTag InExtensionPointTag);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Widget ↔ Extension Mapping
-    // ----------------------------------------------------------------------------------------------------------------
 
 public:
     auto NotifyWidgetCreatedForExtension(UUserWidget* InWidget, const FCk_UI_ExtensionHandle& InHandle) -> void;
     auto NotifyWidgetRemovedForExtension(UUserWidget* InWidget) -> void;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Blueprint Registration Functions
     // ----------------------------------------------------------------------------------------------------------------
 
 protected:
@@ -127,8 +117,6 @@ protected:
         int32 InPriority = -1);
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Internal
-    // ----------------------------------------------------------------------------------------------------------------
 
 private:
     auto DoNotifyExtensionPointOfExtensions(
@@ -137,8 +125,6 @@ const TSharedPtr<FCk_UI_ExtensionPoint>& InExtensionPoint) -> void;
  const TSharedPtr<FCk_UI_Extension>& InExtension) -> void;
     auto DoCreateExtensionRequest(const TSharedPtr<FCk_UI_Extension>& InExtension) -> FCk_UI_ExtensionRequest;
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Properties
     // ----------------------------------------------------------------------------------------------------------------
 
 private:

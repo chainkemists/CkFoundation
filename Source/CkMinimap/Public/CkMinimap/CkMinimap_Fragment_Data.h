@@ -116,7 +116,7 @@ private:
               meta = (AllowPrivateAccess = true))
     float _Distance = 0.0f;
 
-    // PoiZ - ObserverZ, cm (above/below indicators, interior floors later)
+    // PoiZ - ObserverZ, cm
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     float _ElevationDelta = 0.0f;
@@ -150,8 +150,7 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_Minimap_ParamsData);
 
 private:
-    // World cm from the frame center to the frame edge (the zoom). Runtime changes go through
-    // Request_SetViewExtent — this is the STARTING value
+    // World cm from the frame center to the frame edge (the zoom). STARTING value — Request_SetViewExtent after
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
     float _ViewExtent = 5000.0f;
@@ -184,9 +183,8 @@ private:
               meta = (AllowPrivateAccess = true))
     FGameplayTagQuery _CategoryFilter;
 
-    // Time between projection updates. Zero = every frame. UNLIKE the compass there is no unthrottled
-    // channel: view origin/yaw AND all entry positions go stale together between updates (> 0 trades
-    // blip smoothness for cost)
+    // Time between projection updates. Zero = every frame. There is no unthrottled channel: view origin/yaw
+    // AND all entry positions go stale together between updates
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Time _UpdateInterval = FCk_Time{0.0f};
@@ -265,9 +263,8 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Minimap_SetObserver);
 
 private:
-    // The entity whose position (Transform) and view (Camera/Transform yaw) drive the projection.
-    // Pass an invalid handle to reset to the default observer (the minimap child's LIFETIME OWNER —
-    // the entity Add was called on)
+    // The entity whose position (Transform) and view (Camera/Transform yaw) drive the projection. An
+    // invalid handle resets to the default observer (the minimap child's LIFETIME OWNER)
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle _Observer;
@@ -314,8 +311,7 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Minimap_SetFogOfWar);
 
 private:
-    // POIs on unexplored fog cells are culled from the projection. Pass an invalid handle to disable
-    // fog culling
+    // POIs on unexplored fog cells are culled from the projection. Invalid handle = no fog culling
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle_FogOfWar _FogOfWar;

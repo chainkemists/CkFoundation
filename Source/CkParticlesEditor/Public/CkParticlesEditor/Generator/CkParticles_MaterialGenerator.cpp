@@ -35,7 +35,6 @@ namespace ck::particles_editor::MatGenLocal
 {
     static const TCHAR* MatDir = TEXT("/CkFoundation/CkParticles/Materials");
 
-    // Same idempotent package refresh the texture baker uses: displace any prior object, build fresh, save.
     static auto Begin_Material(const TCHAR* InName) -> UMaterial*
     {
         const FString PkgPath = FString::Printf(TEXT("%s/%s"), MatDir, InName);
@@ -96,8 +95,8 @@ namespace ck::particles_editor::MatGenLocal
         return Sample;
     }
 
-    // The behavior-driven float4 (Particles.DynamicMaterialParameter). Default MUST be zero: a behavior that
-    // writes nothing gets no dissolve, no pan, no boost — never an invisible or fully-eroded particle.
+    // The default MUST be zero: a behavior that writes nothing gets no dissolve, no pan and no boost — never
+    // an invisible or fully-eroded particle.
     static auto New_DynamicParams(UMaterial* InMaterial, int32 InX, int32 InY) -> UMaterialExpressionDynamicParameter*
     {
         auto* Dyn = New_Expression<UMaterialExpressionDynamicParameter>(InMaterial, InX, InY);
@@ -106,10 +105,9 @@ namespace ck::particles_editor::MatGenLocal
         Dyn->ParamNames = { TEXT("Dissolve"), TEXT("Distortion"), TEXT("PanOffset"), TEXT("Boost") };
         Dyn->DefaultValue = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-        // ConnectMaterialExpressions matches against the RAW Outputs array (MaterialEditingLibrary.cpp:98) which
-        // still holds the CDO's "Param1..4" names — GetOutputs() is the engine's own sync of Outputs from
-        // ParamNames (MaterialExpressions.cpp:9965). Without this, every by-name connect off this node misses:
-        // inputs with const fallbacks (SmoothStep/Add) degrade silently, AppendVector hard-fails the material.
+        // ConnectMaterialExpressions matches the RAW Outputs array (MaterialEditingLibrary.cpp:98), which still holds
+        // the CDO's "Param1..4" names — GetOutputs() is the engine's own sync of Outputs from ParamNames. Without it
+        // every by-name connect here misses: const-fallback inputs degrade silently, AppendVector hard-fails.
         Dyn->GetOutputs();
         return Dyn;
     }
@@ -124,7 +122,7 @@ namespace ck::particles_editor::MatGenLocal
         InMaterial->bUsedWithNiagaraMeshParticles = true;
     }
 
-    // Dissolve = smoothstep(Threshold, Threshold + Softness, NoiseOrMask) — the marketplace erosion idiom.
+    // Dissolve = smoothstep(Threshold, Threshold + Softness, Mask).
     static auto Build_ErodeChain(
         UMaterial*                             InMaterial,
         UMaterialExpression*                   InThreshold,
@@ -152,19 +150,19 @@ namespace ck::particles_editor::MatGenLocal
     {
         auto* Mat = Begin_Material(TEXT("M_CkParticles_SweepErode"));
         if (Mat == nullptr) { return false; }
-        Setup_TranslucentUnlit(Mat, /*two-sided*/ true);
+
+        constexpr auto TwoSided = true;
+        Setup_TranslucentUnlit(Mat, TwoSided);
 
         auto* Uv     = New_Expression<UMaterialExpressionTextureCoordinate>(Mat, -1500, 0);
         auto* Dyn    = New_DynamicParams(Mat, -1500, 260);
         auto* PColor = New_Expression<UMaterialExpressionParticleColor>(Mat, -1500, 560);
 
-        // Pan the main texture along V by Dynamic.PanOffset (the sweep meshes author V along the arc/length,
-        // so panning V is the "texture travels along the sweep" motion the marketplace slashes use).
+        // Pan V by Dynamic.PanOffset — the sweep meshes author V along the arc, so the texture travels along it.
         auto* PanZero = New_Expression<UMaterialExpressionConstant>(Mat, -1320, 60);
         auto* PanVec  = New_Expression<UMaterialExpressionAppendVector>(Mat, -1180, 80);
         auto* PannedUv = New_Expression<UMaterialExpressionAdd>(Mat, -1040, 20);
 
-        // UV distortion: tileable noise auto-scrolled by a Panner, recentered, scaled by Dynamic.Distortion.
         auto* NoisePan   = New_Expression<UMaterialExpressionPanner>(Mat, -1320, -260);
         auto* NoiseTex   = New_TextureParam(Mat, TEXT("NoiseTexture"), TEXT("TileNoise"), -1180, -260);
         auto* Recenter   = New_Expression<UMaterialExpressionAdd>(Mat, -1000, -260);
@@ -252,7 +250,9 @@ namespace ck::particles_editor::MatGenLocal
     {
         auto* Mat = Begin_Material(TEXT("M_CkParticles_SoftSmoke"));
         if (Mat == nullptr) { return false; }
-        Setup_TranslucentUnlit(Mat, /*two-sided*/ false);
+
+        constexpr auto TwoSided = false;
+        Setup_TranslucentUnlit(Mat, TwoSided);
 
         auto* Dyn     = New_DynamicParams(Mat, -1200, 300);
         auto* PColor  = New_Expression<UMaterialExpressionParticleColor>(Mat, -1200, 560);

@@ -16,14 +16,9 @@ class UCk_EntityScript_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// GC-safe holder for a RuntimeSpawned entity's construction recipe (save/load rebuild+hydrate). The
-// recipe (EntityScript class + spawn params) is retained from spawn until the v3 save capture reads it. It CANNOT
+// GC-safe holder for a RuntimeSpawned entity's construction recipe (EntityScript class + spawn params). It CANNOT
 // live directly in the plain ck::FFragment_SpawnRecipe: CkFoundation fragments are not GC-traced, so a bare
-// FInstancedStruct member (and its UScriptStruct type ptr) would dangle — worst for NotInstanced scripts (no
-// per-entity object exists) and AS-defined params structs (reinstanced on script reload). A UObject's UPROPERTYs
-// ARE traced (FInstancedStruct traces its inner refs via AddStructReferencedObjects), so the fragment pins THIS
-// holder via a TStrongObjectPtr. The UPROPERTY-carrier half mirrors FCk_EntityReplicationDriver_ReplicationData_EntityScript
-// (same TSubclassOf + FInstancedStruct traced-UPROPERTY shape).
+// FInstancedStruct member would dangle. A UObject's UPROPERTYs ARE traced, so the fragment pins this holder instead.
 UCLASS()
 class CKECS_API UCk_EntityScript_SpawnRecipe_UE : public UObject
 {
@@ -54,9 +49,8 @@ public:
 
 namespace ck
 {
-    // Retained construction recipe for save-file capture (RuntimeSpawned). Stamped at spawn by the
-    // EntityScript spawn pipeline; the params are serialized with handle-remap at v3 capture time. NOT
-    // snapshotable — read live at capture. GC storage lives on the holder UObject above; this fragment only pins it.
+    // Retained construction recipe, stamped at spawn and read live at capture. GC storage lives on the
+    // holder UObject above; this fragment only pins it.
     struct CKECS_API FFragment_SpawnRecipe
     {
         CK_GENERATED_BODY(FFragment_SpawnRecipe);
@@ -70,7 +64,6 @@ namespace ck
         CK_DEFINE_CONSTRUCTORS(FFragment_SpawnRecipe, _Recipe);
 
     public:
-        // Convenience reads forwarding to the holder (the v3 writer reads through these).
         auto Get_ScriptClass() const -> TSubclassOf<UCk_EntityScript_UE>;
         auto Get_SpawnParams() const -> const FInstancedStruct&;
     };

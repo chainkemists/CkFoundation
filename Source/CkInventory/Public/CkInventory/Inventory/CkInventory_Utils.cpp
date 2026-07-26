@@ -43,8 +43,8 @@ namespace ck_inventory_utils
         return EDispatchValidity::UnknownShape;
     }
 
-    // NoAuthority is a legitimate client-side outcome (Display, so AutoTests don't escalate it);
-    // UnknownShape is a composition bug (ensure).
+    // NoAuthority is a legitimate client-side outcome (Display keeps AutoTests from escalating it);
+    // UnknownShape is a composition bug.
     auto LogDispatchRejection(
         EDispatchValidity InValidity,
         const TCHAR* InContext,
@@ -65,9 +65,8 @@ namespace ck_inventory_utils
         }
     }
 
-    // Returns true when the request may be bound + enqueued. On failure (reused request, no authority,
-    // or unknown shape) it invokes InReject once — which fires the completion delegate with
-    // Failed_NotEnqueued — and returns false without populating or binding.
+    // True when the request may be bound + enqueued. On failure it invokes InReject exactly once and
+    // returns false WITHOUT populating or binding the request.
     template <typename TRequest, typename TReject>
     auto ValidateRequestForDispatch(
         const FCk_Handle_Inventory& InInventory,
@@ -94,8 +93,7 @@ namespace ck_inventory_utils
         return true;
     }
 
-    // Shape-branches once (the only such branch at the public Utils boundary) and hands the typed
-    // handle to the enqueue lambda. Precondition: Get_DispatchValidity(InInventory) == Valid.
+    // Precondition: Get_DispatchValidity(InInventory) == Valid.
     template <typename TEnqueueFn>
     auto DispatchEnqueue_Checked(
         FCk_Handle_Inventory& InInventory,
@@ -157,7 +155,6 @@ namespace ck
         NewInventoryEntity.Add<ck::FFragment_Inventory_Params>(FixedParams);
         UCk_Utils_GameplayLabel_UE::Add(NewInventoryEntity, InParams.Get_Name());
 
-        // Per-shape setup (Spatial: GridSystem; DataOnly: IntegerAttribute for bound max).
         TraitsType::Setup_PerShape(NewInventoryEntity, FixedParams, InReplicates);
 
         UCk_Utils_Inventory_UE::RecordOfInventoryItems_Utils::AddIfMissing(NewInventoryEntity);
@@ -432,7 +429,6 @@ auto
         const FCk_Delegate_Inventory_MassTransfer_OnComplete& InDelegate)
     -> FCk_Handle
 {
-    // Boundary reject — fire the delegate once with Failed_NotEnqueued, no op entity.
     const auto RejectNotEnqueued = [&]() -> FCk_Handle
     {
         InDelegate.ExecuteIfBound(FCk_Handle{},
@@ -447,8 +443,8 @@ auto
         return RejectNotEnqueued();
     }
 
-    // Need at least one valid candidate AND one valid source. An EMPTY-but-valid source is NOT a
-    // sync reject — that resolves to Failed_NothingToTransfer asynchronously on the same channel.
+    // An EMPTY-but-valid source is NOT a sync reject — it resolves to Failed_NothingToTransfer
+    // asynchronously on the same channel.
     const auto HasValidCandidate = ck::algo::AnyOf(
         InRequest.Get_TargetResolution().Get_Candidates(), ck::algo::IsValidEntityHandle{});
     const auto HasValidSource = ck::algo::AnyOf(
@@ -462,8 +458,7 @@ auto
         return RejectNotEnqueued();
     }
 
-    // Gather the work list once (committed read), deduped. An item lives in exactly one inventory, so
-    // item-level dups only arise from a source listed twice — dedup the source list, then the items.
+    // An item lives in exactly one inventory, so item-level dups only arise from a source listed twice.
     const auto& Filter        = InRequest.Get_ItemFilter();
     const auto  FilterIsEmpty = Filter.IsEmpty();
 
@@ -477,9 +472,6 @@ auto
     auto Pending = TArray<FCk_Handle_Item>{};
     for (const auto& Source : SeenSources)
     {
-        // §4.3 caveat: into >=2 candidate inventories that share one lifetime-owner AND shape, the
-        // multi-same-owner replicated-container clobber (deferred to Adam's pass) still applies on
-        // clients. MVP is correct for distinct-owner targets (the common case).
         for (const auto& Item : UCk_Utils_Inventory_UE::Get_Items(Source))
         {
             if (ck::Is_NOT_Valid(Item))
@@ -492,8 +484,7 @@ auto
         }
     }
 
-    // Self-owned op entity from the transient owner — survives independent of any inventory. A plain
-    // FCk_Handle (NOT a typesafe handle); FFragment_Inventory_MassTransfer_InFlight discriminates it.
+    // Transient-owned so the op survives independent of any inventory.
     auto Transient = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InAnyHandle);
     auto Op = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Transient);
 
@@ -642,9 +633,8 @@ auto
 
     for (const auto& ExistingItem : Get_Items(InInventory))
     {
-        // Pass invalid inventory to bypass the "both items must be in same inventory" containment
-        // check inside Get_CanStackItems — InItem is the source we're querying for, not necessarily
-        // a member of InInventory. Definition / fragment / custom-stack-validation checks still run.
+        // Deliberately invalid: InItem need not be a member of InInventory, so Get_CanStackItems'
+        // containment check must be bypassed. Definition / fragment / custom checks still run.
         const auto NoContainmentCheck = FCk_Handle_Inventory{};
 
         if (UCk_Utils_ItemTrait_Stackable_UE::Get_CanStackItems(NoContainmentCheck, InItem, ExistingItem)
@@ -654,12 +644,10 @@ auto
         const auto Remaining = UCk_Utils_ItemTrait_Stackable_UE::Get_RemainingStackCapacity_InInventory(
             InInventory, ExistingItem);
 
-        // Remaining capacity is MAX_int32 when neither the definition nor the inventory caps the
-        // stack. Any single such match means the inventory has effectively unbounded stack room.
+        // MAX_int32 means an uncapped stack, so one such match makes the whole inventory unbounded.
         if (Remaining == TNumericLimits<int32>::Max())
         { return TNumericLimits<int32>::Max(); }
 
-        // Saturating add to avoid overflow if many large stacks accumulate.
         StackRoom = (Remaining > TNumericLimits<int32>::Max() - StackRoom)
             ? TNumericLimits<int32>::Max()
             : StackRoom + Remaining;
@@ -741,19 +729,16 @@ auto
         ? InIncomingUnits
         : (IsStackable ? FMath::Max(1, UCk_Utils_ItemTrait_Stackable_UE::Get_StackCount(InItem)) : 1);
 
-    // PreferStacking lets the soft "no room as a new entry" failures (entry bound full, per-entry
-    // stack clamp exceeded, Spatial no fit) pass when existing stacks in this inventory can absorb
-    // the item's FULL unit count. Count-aware on purpose: room for 1 unit must not green-light a
-    // 99-unit item. Computed lazily — Get_StackRoomFor walks the item list, so we only call it on
-    // a soft-failure path.
+    // Rescues the soft "no room as a new entry" failures when existing stacks can absorb the item's
+    // FULL unit count — room for 1 unit must not green-light a 99-unit item. Lazy: Get_StackRoomFor
+    // walks the item list, so it is only called on a soft-failure path.
     const auto CanFallBackToStacking = [&]() -> bool
     {
         return InPolicy == ECk_Inventory_AddPolicy::PreferStacking
             && Get_StackRoomFor(InInventory, InItem) >= IncomingUnits;
     };
 
-    // ---- Per-entry stacking clamp: a whole-item add lands as ONE entry, which may not exceed the
-    //      inventory's effective max stack size ----
+    // ---- Per-entry stacking clamp: a whole-item add lands as ONE entry ----
 
     if (IsStackable
         && IncomingUnits > UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize(InInventory, InItem))
@@ -786,8 +771,7 @@ auto
                 }
                 case ECk_Inventory_DataOnly_BoundMode::BoundedByTotalUnits:
                 {
-                    // No stacking fallback: units consume the bound no matter which route they
-                    // enter through, so a units-full inventory cannot be rescued by merging.
+                    // No stacking fallback: units consume the bound whichever route they enter by.
                     if (UCk_Utils_Inventory_DataOnly_UE::Get_RemainingCapacity(DataOnlyHandle) < IncomingUnits)
                     { return ECk_Inventory_OperationResult_Add::Failed_NoSpaceAvailable; }
                     break;
@@ -820,8 +804,7 @@ auto
         }
     }
 
-    // ---- Custom quantitative quota (weight-style rules). No stacking fallback — absorbed units
-    //      count against the quota no matter which route they enter through ----
+    // ---- Custom quantitative quota (weight-style rules); no stacking fallback ----
 
     if (const auto Quota = Get_CustomAbsorbableUnits(InInventory, UCk_Utils_Item_UE::Get_Definition(InItem), InItem);
         Quota < IncomingUnits)
@@ -944,9 +927,7 @@ auto
     const auto EffectiveMaxPerEntry = UCk_Utils_ItemTrait_Stackable_UE::Get_EffectiveMaxStackSize_ByDefinition(
         InInventory, InDefinition);
 
-    // ---- Room in existing same-definition stacks (mirrors Request_FillExistingStacks: definition
-    //      match + custom stack validation with no source item, since this is a definition-level
-    //      planning query) ----
+    // ---- Room in existing same-definition stacks (mirrors Request_FillExistingStacks) ----
 
     auto StackRoom = 0;
 
@@ -992,8 +973,7 @@ auto
         { NewEntryUnits = 0; }
         else
         {
-            // Free cells / footprint area is an UPPER BOUND on placements — it ignores
-            // fragmentation. Good enough for planning; placement still gates at execution time.
+            // An UPPER BOUND on placements — it ignores fragmentation; placement gates at execution time.
             const auto Footprint = DimensionsTrait->Get_Dimensions();
             const auto FootprintArea = FMath::Max(1, Footprint.X * Footprint.Y);
             const auto MaxPlacements = UCk_Utils_Inventory_Spatial_UE::Get_NumFreeCells(SpatialHandle) / FootprintArea;
@@ -1003,8 +983,7 @@ auto
 
     auto Total = SaturatingAdd(StackRoom, NewEntryUnits);
 
-    // ---- Metric ceiling: under BoundedByTotalUnits every absorbed unit consumes the bound,
-    //      regardless of whether it enters via stacking or a new entry ----
+    // ---- Metric ceiling: under BoundedByTotalUnits every absorbed unit consumes the bound ----
 
     if (Get_IsDataOnly(InInventory))
     {
@@ -1153,10 +1132,8 @@ namespace ck_item_resolution
         int32 RemainingCapacity = 0;
     };
 
-    // Maps each inventory subtype to its remaining-capacity metric.
-    // DataOnly: Get_RemainingCapacity (metric-aware: entries or units left; MAX_int32 for unbounded).
-    // Spatial:  Get_NumFreeCells  (active unoccupied cells; ignores item footprints, but exact for cells).
-    // Unknown subtype: MAX_int32 so it doesn't bias ordering against typed inventories.
+    // Spatial's cell count ignores item footprints. An unknown subtype yields MAX_int32 so it does
+    // not bias ordering against typed inventories.
     auto Compute_RemainingCapacity(const FCk_Handle_Inventory& InCandidate) -> int32
     {
         if (UCk_Utils_Inventory_UE::Get_IsDataOnly(InCandidate))
@@ -1215,8 +1192,7 @@ auto
     const auto& CustomSort = InRequest.Get_CustomSort();
     const auto& CustomSortDynamic = InRequest.Get_CustomSortDynamic();
 
-    // Within-tier comparator: custom sort if bound, otherwise built-in (stack room → capacity for
-    // Prefer/Require, capacity only for Ignore). Returns true if A should rank ahead of B.
+    // Returns true if A should rank ahead of B.
     const auto WithinTierCompare = [&](const ck_item_resolution::FCandidateScore& InA,
                                        const ck_item_resolution::FCandidateScore& InB) -> bool
     {
@@ -1237,11 +1213,8 @@ auto
         return InA.RemainingCapacity > InB.RemainingCapacity;
     };
 
-    // Layered comparator: stacking preference defines tier boundaries; custom sort orders within a tier.
-    // - Prefer:  has-stack-room is the primary tier boundary; tiebreaker = WithinTierCompare.
-    // - Require: filter pass already dropped zero-stack candidates → single tier; defer entirely to WithinTierCompare.
-    // - Ignore:  no tiering; defer entirely to WithinTierCompare.
-    // StableSort preserves input order for fully-tied candidates so callers see deterministic results.
+    // Only Prefer tiers: Require's filter pass already dropped zero-stack candidates, and Ignore does
+    // not tier. StableSort keeps fully-tied candidates in input order so callers see stable results.
     Survivors.StableSort([&](const ck_item_resolution::FCandidateScore& InA, const ck_item_resolution::FCandidateScore& InB)
     {
         if (StackingPreference == ECk_ItemResolution_StackingPreference::Prefer)

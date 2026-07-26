@@ -48,7 +48,6 @@ private:
               meta = (AllowPrivateAccess = true))
     FText _Text;
 
-    // The event this line answers to.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "Ck.Dialog.Event"))
     FGameplayTag _EventTag;

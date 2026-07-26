@@ -11,11 +11,9 @@
 
 namespace ck
 {
-    // Forward declaration for RunAfter dependency
     class FProcessor_SmTask_FireFinishedSignal;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // DEBUG — Accumulate observed states/transitions, track history
 
     class CKSTATEMACHINE_API FProcessor_Sm_Debug : public ck_exp::TProcessor<
         FProcessor_Sm_Debug,
@@ -32,10 +30,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        // DoTick gates: the poll walks every SM entity every frame but its output only feeds
-        // debugger UI. Skip the view iteration entirely unless a debugger consumed the data
-        // recently or the on-screen debug overlay (ck.DebugOverlay) is on — see
-        // UCk_Utils_StateMachineDebug_UE::Get_IsDebugDataDesired. The on→off transition still
+        // Gate: the poll walks every SM entity every frame but only feeds debugger UI, so the view
+        // iteration is skipped unless Get_IsDebugDataDesired holds. The on→off transition still
         // iterates one final time so consumers see a coherent last snapshot.
         auto
         DoTick(
@@ -56,13 +52,10 @@ namespace ck
             const FFragment_Sm_Current& InCurrent) -> void;
 
     private:
-        // Tracks the previous tick's toggle state so an on→off transition can fire one final
-        // pass, without iterating every subsequent tick while no debugger is watching.
         bool _LastTickToggleOn = false;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // DEBUG HANDLE REQUESTS — Drains FFragment_SmDebug_Requests
 
     class CKSTATEMACHINE_API FProcessor_SmDebug_HandleRequests : public ck_exp::TProcessor<
         FProcessor_SmDebug_HandleRequests,

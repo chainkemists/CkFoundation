@@ -24,11 +24,8 @@ struct FCk_PieLayout_WindowRestoreEntry
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Editor subsystem that arranges Play-In-Editor windows into a monitor-aware grid.
-//
-// On PostPIEStarted it (optionally) runs an initial arrange pass after a short delay, then keeps a brief
-// retry window alive so client windows created shortly after Play are also placed. The arrange logic itself
-// lives in the ck::pie_layout namespace in the .cpp.
+// Editor subsystem that arranges Play-In-Editor windows into a monitor-aware grid. The retry window after
+// the initial arrange pass exists because client windows can be created shortly after Play starts.
 UCLASS()
 class CKPIELAYOUTEDITOR_API UCk_PieLayout_Subsystem_UE : public UEditorSubsystem
 {

@@ -73,20 +73,14 @@ namespace ck
             { return; }
         }
 
-        // Scene components must be owned by an Actor or they can never register with the
-        // navigation octree (UNavigationSystemV1::RegisterComponentToNavOctree early-outs
-        // when GetOwner() is null), so collidable fixtures hosted this way would never cut
-        // the navmesh. Parent scene components under the per-world ComponentHost actor; the
-        // engine still gates geometry export on collision, so cosmetic NoCollision meshes
-        // stay inert. Non-scene components have no nav relevance and remain World-hosted.
+        // Non-scene components have no nav relevance and stay World-hosted; scene components need an
+        // owning Actor — see UCk_ComponentHost_Subsystem_UE::Get_HostActor.
         UObject* ComponentOuter = World;
         if (IsSceneComponent)
         {
             auto HostActor = static_cast<AActor*>(nullptr);
 
 #if WITH_EDITOR
-            // Editor-preview components host on a per-owner actor so a viewport click on the
-            // mesh selects the placed actor that owns the preview (see FFragment_EditorSelectionOwner).
             HostActor = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionProxyHostActor(World, InHandle);
 #endif
 

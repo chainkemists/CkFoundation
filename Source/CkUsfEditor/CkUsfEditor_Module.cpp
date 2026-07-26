@@ -16,9 +16,7 @@
 
 void FCkUsfEditorModule::StartupModule()
 {
-    // Auto-regen on asset save: saving a LookDefinition refreshes its master, so the authoring loop
-    // is "save asset → master regens" with no manual step. Interactive editor only — commandlets
-    // (cook, resave) must not churn generated masters as a save side-effect.
+    // Interactive editor only — commandlets (cook, resave) must not churn generated masters.
     if (NOT IsRunningCommandlet())
     {
         _PackageSavedHandle = UPackage::PackageSavedWithContextEvent.AddRaw(
@@ -43,7 +41,6 @@ void FCkUsfEditorModule::ShutdownModule()
 void FCkUsfEditorModule::OnPackageSaved(
     const FString& InFilename, UPackage* InPackage, FObjectPostSaveContext InContext)
 {
-    // Procedural saves (cook, bulk resave) are not authoring; regenerating there would churn assets.
     if (InContext.IsProceduralSave() || InPackage == nullptr)
     { return; }
 
@@ -62,8 +59,7 @@ void FCkUsfEditorModule::OnPackageSaved(
         QueuedAny = true;
     }
 
-    // Defer to the next tick: regeneration saves the master package, and saving from inside another
-    // package's save callback is asking for reentrancy trouble.
+    // Deferred a tick: regeneration saves a package, and saving inside a save callback reenters.
     if (QueuedAny && NOT _PendingTicker.IsValid())
     {
         _PendingTicker = FTSTicker::GetCoreTicker().AddTicker(

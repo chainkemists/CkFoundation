@@ -57,13 +57,21 @@ namespace ck::entityspawner
         if (auto* Private = TryFind(FName{TEXT("_SpawnTransform")}); ck::IsValid(Private, ck::IsValid_Policy_NullptrOnly{}))
         { return Private; }
 
-        // The CkIskmRenderer/CkTests gym scripts (and scripts authored from them) name the
-        // property InitialTransform — without resolving it, editor previews compose at world
-        // origin and rebuild-on-drop can't re-anchor them.
+        // Gym-authored scripts name it InitialTransform; unresolved, editor previews compose at world origin.
         if (auto* PublicInitial = TryFind(FName{TEXT("InitialTransform")}); ck::IsValid(PublicInitial, ck::IsValid_Policy_NullptrOnly{}))
         { return PublicInitial; }
 
         return TryFind(FName{TEXT("_InitialTransform")});
+    }
+
+    auto
+        Get_IsDestroyInFlight(
+            const FCk_Handle& InEntity)
+        -> bool
+    {
+        return UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InEntity, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
+               UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InEntity, ECk_EntityLifetime_DestructionPhase::Teardown) ||
+               UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InEntity, ECk_EntityLifetime_DestructionPhase::Destroyed);
     }
 }
 
@@ -136,19 +144,12 @@ auto
 
     if (InIsFinished)
     {
-        // Drag-release / drop: full rebuild, not an in-place root write. Scripts that compose
-        // child entities with world-space transforms at construct time (the army/agent pattern —
-        // every CkIskmRenderer gym station) have no scene-node link to the root, so pushing the
-        // root transform can never reach them; only a re-construct at the new injected transform
-        // re-anchors the whole composition. Per-frame rebuilds during the drag are what corrupted
-        // registry pools historically — one rebuild on release is the safe middle.
+        // Scripts that compose child entities at construct time have no scene-node link to the root,
+        // so only a re-construct at the new injected transform re-anchors them.
         EditorOnly_RebuildEntity();
         return;
     }
 
-    // Interactive drag (fires every frame): push the actor transform onto the existing editor
-    // entity in place. Root-attached previews track live; child-entity compositions snap on
-    // release via the rebuild above.
     EditorOnly_PushActorTransformToEntity();
 }
 
@@ -157,16 +158,8 @@ auto
     PreEditUndo()
     -> void
 {
-    // Ctrl+Z of a placement runs here BEFORE the transaction system invalidates the actor's
-    // subobject chain (the EntityScript and any UStaticMeshComponents created with the
-    // EntityScript as Outer). If we wait until Destroyed() or PostEditUndo() to enqueue the
-    // editor-entity destroy, the components are already marked-pending-kill — the cascade's
-    // UnrealComponent_EndPlay processor finds an INVALID UObject and UnregisterComponent()
-    // never runs, leaving a dead render proxy in the world (the visual remnant).
-    //
-    // Enqueuing the destroy here gives the EndPlay processors a window where components are
-    // still valid. The Delete path doesn't need this hook because Delete fires Destroyed()
-    // while components are still valid.
+    // Runs BEFORE the transaction system invalidates the actor's subobject chain, so the EndPlay
+    // processors still see valid components. Destroyed()/PostEditUndo() would leave a dead render proxy.
     EditorOnly_DestroyEntity();
 
     Super::PreEditUndo();
@@ -179,17 +172,8 @@ auto
 {
     Super::PostEditUndo();
 
-    // PostEditUndo fires twice per Ctrl+Z/Ctrl+Y round trip:
-    //   (a) on the now-pending-kill actor right after a placement-undo, and
-    //   (b) on the restored actor after a placement-redo.
-    //
-    // Case (a) queues an OnEndFrame weak lambda that becomes a no-op when it fires
-    // (because the actor is pending-kill). The lambda expires itself, but our
-    // _EditorRebuildPending flag stays true with no one to clear it. Then on Ctrl+Y
-    // case (b) fires, but RebuildEntity's "is rebuild already pending?" early-out
-    // sees the stale true and bails — the redo never spawns a fresh entity.
-    //
-    // Reset the pending state here so case (b) starts clean.
+    // Fires on the pending-kill actor after a placement-undo AND on the restored actor after the redo;
+    // the first leaves _EditorRebuildPending stuck true, which would early-out the redo's rebuild.
     if (_EditorRebuildEndFrameHandle.IsValid())
     {
         FCoreDelegates::OnEndFrame.Remove(_EditorRebuildEndFrameHandle);
@@ -205,11 +189,8 @@ auto
     Destroyed()
     -> void
 {
-    // Delete / level-unload path. At this point the EntityScript and its created components
-    // are still valid, so enqueuing the destroy lets the EndPlay processors clean them up on
-    // subsequent scheduler ticks. The Ctrl+Z path goes through PreEditUndo() instead because
-    // by the time Destroyed() fires on a placement-undo the transaction has already
-    // invalidated the actor's subobjects.
+    // Delete / level-unload: the EntityScript and its components are still valid here, so the EndPlay
+    // processors can clean them up on later scheduler ticks. Placement-undo cannot — see PreEditUndo.
     EditorOnly_DestroyEntity();
     Super::Destroyed();
 }
@@ -241,10 +222,8 @@ auto
     EditorOnly_RebuildEntity()
     -> void
 {
-    // Defer to end-of-frame so rapid event chains (drag-preview PostEditMove, factory
-    // OnLevelActorAdded, PECP on inline Instanced subobject edits) coalesce into a single
-    // destroy+respawn pass. Running synchronously was racing the subsystem's scheduler tick
-    // and corrupting registry component pools mid-iteration.
+    // Deferred to end-of-frame so rapid event chains (drag PostEditMove, OnLevelActorAdded, PECP on inline
+    // Instanced edits) coalesce into one pass; running synchronously races the subsystem's scheduler tick.
     if (_EditorRebuildPending)
     { return; }
 
@@ -282,26 +261,17 @@ auto
     if (ck::Is_NOT_Valid(EditorSubsystem))
     { return; }
 
-    // PIE start/stop briefly tears down the editor ECS registry. Touching it now — the destroy
-    // below (a deferred lifetime request), the in-flight-destroy handle queries, or the spawn —
-    // resolves stale handles against a freed registry and floods the MessageLog with INVALID
-    // REGISTRY DEBUG_NAME has-queries and INVALID archetype spawn ensures. Re-arm for the next
-    // safe end-of-frame; mirrors the scheduler-tick guard in UCk_EditorEcsWorld_Subsystem_UE::Tick.
+    // PIE start/stop briefly tears down the editor ECS registry; touching it now resolves stale handles
+    // against a freed registry. Re-arm for the next safe end-of-frame.
     if (NOT EditorSubsystem->Get_IsEditorEcsMutationSafe())
     {
         EditorOnly_RebuildEntity();
         return;
     }
 
-    // If a previous rebuild's destroy hasn't finished walking the entity-lifetime phase
-    // chain (Initiate -> EndPlay -> Teardown -> Await -> Finalize), don't pile a synchronous
-    // spawn on top of it — re-arm for the next end-of-frame and let the destroy complete.
-    // IncludePendingKill so the guard still trips during the Finalize tick (default IsValid
-    // returns false there).
+    // IncludePendingKill so the guard still trips during the Finalize tick, where the default policy reports false.
     if (ck::IsValid(_EditorEntityHandle, ck::IsValid_Policy_IncludePendingKill{}) &&
-        (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
-         UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::Teardown) ||
-         UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::Destroyed)))
+        ck::entityspawner::Get_IsDestroyInFlight(_EditorEntityHandle))
     {
         EditorOnly_RebuildEntity();
         return;
@@ -312,11 +282,8 @@ auto
     if (ck::Is_NOT_Valid(_EntityScript))
     { return; }
 
-    // During drag-drop and reinstancing the script's class can briefly be a UE placeholder
-    // (SKEL_/REINST_/TRASHCLASS_/HOTRELOADED_) before the real class is rebound. Spawning
-    // from a placeholder yields an INVALID archetype and spams
-    // "EntityScriptArchetype is INVALID. Cannot Spawn Entity". Silently skip — the next
-    // end-of-frame pass runs with the real class.
+    // During drag-drop and reinstancing the class is briefly a UE placeholder and spawning from one ensures
+    // on an INVALID archetype. Skipping is safe — the next end-of-frame pass runs with the real class.
     if (UCk_Utils_Reflection_UE::Is_PlaceholderClass(_EntityScript->GetClass()))
     { return; }
 
@@ -324,10 +291,8 @@ auto
 
     _EditorEntityHandle = EditorSubsystem->Request_SpawnEditorEntity(_EntityScript);
 
-    // Stamp this spawner as the preview entity's selection owner: editor-world visuals created for
-    // the entity (ISM instances, hosted scene components) host themselves on per-owner proxy actors
-    // whose viewport clicks redirect selection to this actor — clicking the preview mesh then
-    // selects/moves/deletes the spawner exactly like clicking its billboard.
+    // Editor-world visuals live on per-owner proxy actors; owning their selection makes a viewport
+    // click on the preview mesh act on this spawner.
     if (ck::IsValid(_EditorEntityHandle))
     { UCk_Utils_EditorSelectionOwner_UE::Request_SetupEntityWithEditorSelectionOwner(_EditorEntityHandle, this); }
 }
@@ -360,11 +325,8 @@ auto
         EditorSubsystem->Request_DestroyEditorEntity(_EditorEntityHandle);
     }
 
-    // Intentionally do NOT clear _EditorEntityHandle — the entity isn't actually erased from the
-    // registry until its destruction phase chain completes (~4 ticks). EditorOnly_DoRebuildEntity
-    // relies on this to detect "previous destroy still in flight" and re-arm rather than piling
-    // a synchronous spawn on top. The handle becomes ck::Is_NOT_Valid naturally once the registry
-    // erases the entity, and the next spawn overwrites it.
+    // Deliberately NOT clearing _EditorEntityHandle: the entity survives its destruction-phase chain
+    // (~4 ticks) and EditorOnly_DoRebuildEntity relies on the still-set handle to detect that.
 }
 
 auto
@@ -375,11 +337,8 @@ auto
     if (ck::Is_NOT_Valid(_EditorEntityHandle))
     { return; }
 
-    // Mid-destruction entities are excluded from the Transform processor's view; pushing a
-    // transform request onto one would be wasted work. The InIsFinished=true call will rebuild.
-    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::BeginDestroy) ||
-        UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::Teardown) ||
-        UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(_EditorEntityHandle, ECk_EntityLifetime_DestructionPhase::Destroyed))
+    // Mid-destruction entities are excluded from the Transform processor's view; the InIsFinished=true call rebuilds.
+    if (ck::entityspawner::Get_IsDestroyInFlight(_EditorEntityHandle))
     { return; }
 
     if (NOT UCk_Utils_Transform_UE::Has(_EditorEntityHandle))
@@ -446,10 +405,8 @@ auto
             TEXT("EntitySpawner [{}] has an invalid ReplicatedChannelGroup tag."), this)
         { return; }
 
-        // Defer the acquire-and-spawn via FProcessor_EntitySpawner_Spawn. The processor retries
-        // each tick until the group pool has a ready channel (pool populated AND its companion
-        // entity is ECS-ready). Keeps us off the synchronous acquire path that would ensure on
-        // a same-frame race between the channel actor's BeginPlay and this one.
+        // FProcessor_EntitySpawner_Spawn retries each tick until the group pool has a ready channel; the
+        // synchronous acquire path ensures on a same-frame race with the channel actor's BeginPlay.
         auto PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(this);
 
         CK_ENSURE_IF_NOT(ck::IsValid(PendingEntity),
@@ -458,11 +415,8 @@ auto
 
         PendingEntity.Add<ck::FFragment_EntitySpawner_PendingSpawn>(_EntityScript, _ReplicatedChannelGroup);
 
-        // Track the queue entity, not the payload: if this spawner is destroyed before the
-        // processor runs, destroying the queue cancels the pending spawn. Once the processor
-        // has spawned the payload (under the channel's lifetime) and destroyed the queue, the
-        // handle becomes invalid and DoDestroyRuntimeEntity is a no-op — the payload correctly
-        // outlives this spawner because it belongs to the channel's lifetime chain.
+        // Track the queue entity, not the payload: destroying this spawner beforehand cancels the pending
+        // spawn, and once the payload is spawned under the channel's lifetime this handle goes invalid.
         _RuntimeEntityHandle = PendingEntity;
         return;
     }

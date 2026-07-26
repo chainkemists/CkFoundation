@@ -13,13 +13,11 @@
 
 namespace ck
 {
-    // Forward declarations for RunAfter dependencies
     class FProcessor_Sm_HandleRequests;
     class FProcessor_Sm_CommitPendingTransition;
     class FProcessor_SmCondition_Exit;
 
     // --------------------------------------------------------------------------------------------------------------------
-    // STATE UPDATE — Add NeedsEvaluation every frame for Ticking (non-EventDriven) states
 
     class CKSTATEMACHINE_API FProcessor_SmState_Update : public ck_exp::TProcessor<
         FProcessor_SmState_Update,
@@ -31,8 +29,8 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        // Update gates the active phase: it RunAfter the exit cascade + commit, so the rest
-        // of the active chain (Evaluate / Tick / FireFinishedSignal) follows downstream.
+        // Gates the active phase: runs after the exit cascade + commit, so the rest of the active
+        // chain (Evaluate / Tick / FireFinishedSignal) follows downstream.
         using RunAfter = TDepList<FProcessor_Sm_CommitPendingTransition>;
 
     public:
@@ -46,7 +44,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // STATE EVALUATE — Walk the active state's transitions in priority order and fire the first that passes
 
     class CKSTATEMACHINE_API FProcessor_SmState_Evaluate : public ck_exp::TProcessor<
         FProcessor_SmState_Evaluate,
@@ -58,11 +55,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_AI;
-        // FProcessor_SmState_Update is the producer of FTag_SmState_NeedsEvaluation (it calls
-        // Request_Evaluate every frame for ticking / non-event-driven states). Evaluate must run AFTER
-        // Update so the tag added this frame is consumed this frame instead of next frame — otherwise
-        // polled-condition transitions react to state with a 1-frame lag and the first frame after a
-        // state becomes Active runs no Evaluate at all.
+        // Must run AFTER Update, the producer of FTag_SmState_NeedsEvaluation, so the tag added this
+        // frame is consumed this frame — otherwise polled transitions react with a 1-frame lag and the
+        // first frame after a state becomes Active runs no Evaluate at all.
         using RunAfter = TDepList<FProcessor_Sm_HandleRequests, FProcessor_SmState_Update>;
         using MarkedDirtyBy = FTag_SmState_NeedsEvaluation;
 
@@ -77,7 +72,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-    // STATE EXIT — Cascade PendingExit to tasks + transitions, then call ExitState
 
     class CKSTATEMACHINE_API FProcessor_SmState_Exit : public ck_exp::TProcessor<
         FProcessor_SmState_Exit,
@@ -88,8 +82,8 @@ namespace ck
     {
     public:
         using Group         = FGroup_Gameplay_AI;
-        // Exit cascade is the first phase of an SM tick (state -> task -> transition ->
-        // condition -> commit), all running before any active processor.
+        // First phase of an SM tick (state -> task -> transition -> condition -> commit), all of
+        // which run before any active processor.
         using RunAfter      = TDepList<FProcessor_Sm_HandleRequests>;
         using MarkedDirtyBy = FTag_SmState_PendingExit;
 

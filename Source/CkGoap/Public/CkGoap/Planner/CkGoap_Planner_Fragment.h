@@ -20,9 +20,7 @@ class UCk_Utils_Goap_Planner_UE;
 class UCk_Utils_Goap_Action_UE;
 class UCk_GoapAction_EntityScript;
 
-// Forward decl for the internal_planner helper befriended on
-// FFragment_Goap_Planner_WorldStateSource below. Defined in
-// CkGoap_Planner_Internal.h / CkGoap_Planner_Utils.cpp.
+// Befriended below on FFragment_Goap_Planner_WorldStateSource.
 namespace ck::goap::internal_planner
 {
 	CKGOAP_API auto DoResolveChildWorldStateFromParent(
@@ -36,7 +34,6 @@ namespace ck
 {
 	class FProcessor_Goap_Planner_Setup;
 	class FProcessor_Goap_Planner_UpdateActivation;
-	// Planner-side A*-pipeline processors.
 	class FProcessor_Goap_Planner_AutoReplan;
 	class FProcessor_Goap_Planner_HandleRequests;
 	class FProcessor_Goap_Planner_HandleResult;
@@ -57,21 +54,16 @@ namespace ck
 	// Request-flow gate — set when a Plan request lands on the queue.
 	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_PlanRequested);
 
-	// Set on a Planner while it is actively planning — added by HandleRequests
-	// when a Plan request begins processing (AStar seeded), removed by
-	// HandleResult on terminal status (PlanFound / PlanFailed /
-	// CostThresholdReached) or by Request_CancelPlan. Used to gate child
-	// Planners from draining their own Plan requests while the parent's plan
-	// is in flight.
+	// Added by HandleRequests when A* is seeded; removed by HandleResult on any
+	// terminal status or by Request_CancelPlan. Gates child Planners from draining
+	// their own Plan requests while the parent's plan is in flight.
 	CK_DEFINE_ECS_TAG(FTag_Goap_Planner_PlanInFlight);
 
 // --------------------------------------------------------------------------------------------------------------------
-// Alias to the BlueprintType data shape
 
 	using FFragment_Goap_Planner_Params = FCk_Fragment_Goap_PlannerParamsData;
 
 // --------------------------------------------------------------------------------------------------------------------
-// Runtime ActionSet state (enable toggle, diagnostics)
 
 	struct CKGOAP_API FFragment_Goap_Planner_Current
 	{
@@ -88,13 +80,9 @@ namespace ck
 		ECk_EnableDisable _EnableToggle = ECk_EnableDisable::Enable;
 		TArray<FCk_GoapDiagnostic_DependencyCycle> _DependencyCycles;
 
-		// "Always-valid-plan" tenet — Setup-time cached result. True iff the
-		// Planner's catalog contains at least one Action with no preconditions
-		// whose effects cover every goal condition. Read by HandleResult /
-		// HandleRequests at the PlanFailed branches to gate the runtime ensure
-		// (when combined with PlannerParams._AllowPlanFailed=false). See
-		// FProcessor_Goap_Planner_Setup for the static check and the module's
-		// design tenets for the rationale.
+		// True iff the catalog holds an Action with no preconditions whose effects
+		// cover every goal condition. Gates the PlanFailed runtime ensure; computed
+		// once by FProcessor_Goap_Planner_Setup.
 		bool _HasUnconditionalFallback = false;
 
 	public:
@@ -104,17 +92,6 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// Per-Planner activation state. Used by UpdateActivation to
-// detect Plan[0] changes frame-over-frame and drive sub-Planner
-// activate/deactivate transitions.
-//
-// _LastActivatedPlan0 — the Plan[0] handle this Planner saw on its previous
-// tick. Compared against the current Plan[0] to detect changes.
-//
-// _IsActive — whether this Planner has been activated by a parent (or, for
-// top-level Planners, by virtue of being top-level). Inactive Planners do not
-// participate in the activation walk; they are mid-tier Planners awaiting
-// their parent to select them as Plan[0].
 
 	struct CKGOAP_API FFragment_Goap_Planner_Activation
 	{
@@ -135,8 +112,7 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// O(1) tag-to-action lookup. Populated at AddAction
-// time; read by lookup helpers (Find_Action, etc.).
+// O(1) tag-to-action lookup, populated at AddAction time.
 
 	struct CKGOAP_API FFragment_Goap_Planner_ActionCatalogIndex
 	{
@@ -152,18 +128,14 @@ namespace ck
 	public:
 		CK_PROPERTY_GET(_TagToAction);
 
-		// Public mutator used by the shared entity-creation helper
-		// ck::goap::internal_planner::DoCreateOrFindActionEntity. Private-
-		// field-access via friendship is class-scoped and doesn't reach
-		// namespace-level free functions, so the helper goes through this.
+		// Friendship is class-scoped and doesn't reach namespace-level free
+		// functions, so ck::goap::internal_planner goes through this.
 		auto AddEntry(FGameplayTag InTag, FCk_Handle_Goap_Action InAction) -> void
 		{
 			_TagToAction.Add(InTag, InAction);
 		}
 
-		// Public mutator counterpart for runtime catalog removal — used by
-		// UCk_Utils_Goap_Planner_UE::Request_RemoveAction. Returns the number
-		// of removed entries (0 if the tag was not registered).
+		// Returns the number of removed entries (0 if the tag was not registered).
 		auto RemoveEntry(FGameplayTag InTag) -> int32
 		{
 			return _TagToAction.Remove(InTag);
@@ -171,8 +143,6 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// ActionSet-level default WS source. Used by the unified
-// ChainUpdate logic when an Action does not provide its own override.
 
 	struct CKGOAP_API FFragment_Goap_Planner_WorldStateSource
 	{
@@ -186,23 +156,17 @@ namespace ck
 		friend class FProcessor_Goap_Planner_HandleRequests;
 		friend class FProcessor_Goap_Action_Setup;
 
-		// shared internal helper for AddAction's child-WS resolution.
 		friend auto goap::internal_planner::DoResolveChildWorldStateFromParent(
 			FCk_Handle_Goap_Action& InChild,
 			const FCk_Handle_Goap_Action& InParentAction) -> void;
 
 	private:
-		// Planner-level default WS source. On top-level Planners, set by Add
-		// from FCk_Fragment_Goap_PlannerParamsData._WorldStateSource. Falls
-		// through to children when their own _WorldStateSource_Override is
-		// unset. For the unified split model, Action entities carry this
-		// fragment alongside their PlanState / Goal; on Actions _Resolved is
-		// the per-Action eager-resolved source and _WorldStateSource is unused
-		// (the override lives on Params).
+		// Planner-level default; falls through to children whose own
+		// _WorldStateSource_Override is unset. On Action entities this field is
+		// unused (their override lives on Params) — only _Resolved is meaningful.
 		FCk_Handle_Goap_WorldState _WorldStateSource;
 
-		// Resolved at activation: override-if-set, else parent's resolved, else
-		// ActionSet WS. Lives here so the Action-role fragments need not duplicate.
+		// Resolved at activation: override, else parent's resolved, else Planner WS.
 		FCk_Handle_Goap_WorldState _Resolved;
 
 	public:
@@ -212,10 +176,6 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// Planner-role fragment: live plan + status + cost + attempt count
-// for the planner running on this entity. Lives on every Action entity (because
-// every Action runs its own planner in the unified model) and on the top-level
-// Planner entity.
 
 	struct CKGOAP_API FFragment_Goap_Planner_PlanState
 	{
@@ -232,8 +192,7 @@ namespace ck
 	private:
 		ECk_GoapPlanStatus                               _PlanStatus = ECk_GoapPlanStatus::Idle;
 
-		// The planner emits a sequence of Action *entities*. Get_PlanClasses() is
-		// a convenience mapping each entity back to its EntityScript class.
+		// Action *entities*; Get_PlanClasses() maps them back to EntityScript classes.
 		TArray<FCk_Handle_Goap_Action>                   _Plan;
 
 		float                                            _PlanCost = 0.0f;
@@ -245,24 +204,13 @@ namespace ck
 		CK_PROPERTY_GET(_PlanCost);
 		CK_PROPERTY_GET(_PlanAttemptCount);
 
-		// Map each Action entity in the plan back to its EntityScript class.
-		// Defined here (inline) to avoid creating a CkGoap_Planner_Fragment.cpp
-		// just for one helper. Depends on FFragment_Goap_Action_Params so the
-		// declaration lives in the .h that already includes that header.
 		auto Get_PlanClasses() const -> TArray<TSubclassOf<UCk_GoapAction_EntityScript>>;
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// Planner-role fragment: effective goal world state for this Planner.
-//
-// Every Planner has its own _Goal, set at construction via
-// FCk_Fragment_Goap_PlannerParamsData._Goal and mutable via Request_SetGoal.
-// _GoalAuthored is the source-of-truth (authored, tag-keyed). _Goal is the
-// resolved form (registry-keyed) used by the A* planner. Setup resolves
-// _GoalAuthored → _Goal; ChainUpdate re-resolves on activation when the WS
-// source may differ. There is no longer any implicit "goal = effects" rule —
-// a Planner with an empty _GoalAuthored has an empty _Goal (planner emits an
-// empty plan / PlanFound immediately).
+// _GoalAuthored (tag-keyed) is the source of truth; _Goal is its registry-keyed
+// resolution used by A*. Setup resolves it; ChainUpdate re-resolves on activation
+// when the WS source may differ. An empty _GoalAuthored means PlanFound + empty plan.
 
 	struct CKGOAP_API FFragment_Goap_Planner_Goal
 	{
@@ -277,11 +225,8 @@ namespace ck
 		friend class FProcessor_Goap_Action_Setup;
 
 	private:
-		// Authored (tag-keyed) goal — source of truth, settable at construction
-		// (PlannerParams._Goal) and at runtime (Request_SetGoal). Persists
-		// across chain (de)activations of the owning Planner —
-		// DoInjectGoalSynchronous re-resolves from this field, never from any
-		// Action's effects.
+		// Persists across chain (de)activations: re-resolution reads this field,
+		// never any Action's effects.
 		TArray<FCk_GoapWS_Condition_Authored>            _GoalAuthored;
 
 		TArray<goap::FWorldStateCondition>               _Goal;
@@ -294,14 +239,8 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// Planner-scoped signals.
-//
-// Per-Planner signals have source type FCk_Handle_Goap_Planner. Under Path A
-// the broadcast still happens on the underlying Action entity that runs A*
-// (the implicit-root Action for top-level Planners, or the promoted host for
-// mid-tier Planners) — the Bind/Unbind utilities resolve Planner → underlying
-// entity so storage stays on the broadcasting entity. The payload's source
-// handle is the Planner.
+// Source type is FCk_Handle_Goap_Planner, but signal storage lives on the
+// underlying entity that runs A* — Bind/Unbind resolve Planner → that entity.
 
 	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
 		CKGOAP_API,
@@ -339,7 +278,6 @@ namespace ck
 		FCk_Goap_Payload_OnPlannerDeactivated);
 
 // --------------------------------------------------------------------------------------------------------------------
-// Planner-side request queue (Plan / CancelPlan / SetGoal / etc.)
 
 	struct CKGOAP_API FFragment_Goap_Planner_Requests
 	{
@@ -370,8 +308,7 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// Why the last replan fired — stamped by HandleRequests when it consumes a
-// Plan request; read by the debugger via Get_LastReplanCause.
+// Stamped by HandleRequests; read by the debugger via Get_LastReplanCause.
 
 	struct CKGOAP_API FFragment_Goap_Planner_ReplanCause
 	{
@@ -427,8 +364,6 @@ namespace ck
 	};
 
 // --------------------------------------------------------------------------------------------------------------------
-// A* FRAGMENT ALIASES — concrete CkAStar SearchState / Result types parameterised
-// over goap::FGoapGraph. Each Planner entity carries one instance of each.
 
 	using FFragment_Goap_Planner_SearchState = TFragment_AStar_SearchState<int32, goap::FGoapGraph>;
 	using FFragment_Goap_Planner_Result      = TFragment_AStar_Result<int32>;

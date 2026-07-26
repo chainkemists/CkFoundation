@@ -14,16 +14,9 @@ namespace ck::pmg
                 FCk_Handle& InHandle)
             -> ck::FFragment_Pmg_DebugShape_Lines&
         {
-            // FProcessor_Pmg_DebugShape_BakeLines requires Common + Lines +
-            // Current (mesh component). Shape Setup processors already
-            // provide Common via their params; for debug-only consumers
-            // (no procedural mesh, just wireframe overlays) we ensure Common
-            // exists with defaults so the bake processor matches.
+            // Line-only consumers never run a shape Setup, so the bake view needs Common defaulted here.
             InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Common>();
 
-            // Stamp the one-shot bake gate. Idempotent — each Append_* call
-            // re-stamps it, but the bake processor only consumes it once
-            // and runs once per "lines changed" event.
             InHandle.AddOrGet<ck::FTag_Pmg_DebugShape_LinesNeedBaking>();
 
             return InHandle.AddOrGet<ck::FFragment_Pmg_DebugShape_Lines>();
@@ -71,7 +64,6 @@ namespace ck::pmg
             float InThickness)
         -> void
     {
-        // Generate the 8 corners of the oriented box, then push the 12 edges.
         const auto Quat = InRotation.Quaternion();
         const FVector Corners[8] = {
             InCenter + Quat.RotateVector(FVector(-InExtent.X, -InExtent.Y, -InExtent.Z)),
@@ -83,7 +75,6 @@ namespace ck::pmg
             InCenter + Quat.RotateVector(FVector( InExtent.X,  InExtent.Y,  InExtent.Z)),
             InCenter + Quat.RotateVector(FVector(-InExtent.X,  InExtent.Y,  InExtent.Z))};
 
-        // Bottom face (0-1-2-3), top face (4-5-6-7), 4 vertical edges.
         const int32 Edges[12][2] = {
             {0, 1}, {1, 2}, {2, 3}, {3, 0},
             {4, 5}, {5, 6}, {6, 7}, {7, 4},
@@ -106,10 +97,7 @@ namespace ck::pmg
             float InThickness)
         -> void
     {
-        // UE's DrawDebugCapsule draws the capsule along its Z axis. We mirror
-        // that: 4 longitudinal lines down the cylinder body, plus a top and
-        // bottom ring, plus 2 vertical half-rings (one along X, one along Y)
-        // tying the hemispherical caps together.
+        // Capsule axis is Z, mirroring UE's DrawDebugCapsule.
         const auto Quat = InRotation.Quaternion();
         const auto CylHalf = FMath::Max(0.0f, InHalfHeight - InRadius);
 
@@ -149,12 +137,9 @@ namespace ck::pmg
         const auto AxisY = FVector::RightVector;
         const auto AxisZ = FVector::UpVector;
 
-        // Top + bottom equator rings.
         AppendArc(AxisX, AxisY, 0.0f, 2.0f * PI,  CylHalf);
         AppendArc(AxisX, AxisY, 0.0f, 2.0f * PI, -CylHalf);
 
-        // Top hemisphere half-rings: XZ goes from +X up to -X, YZ from +Y up to -Y.
-        // Implemented by rotating an upward arc around X axis with U=Z, V=X then U=Z, V=Y.
         for (auto i = 0; i < Segments; ++i)
         {
             const auto T1 = 0.0f + PI * (float(i)     / Segments);
@@ -197,17 +182,7 @@ namespace ck::pmg
             float InThickness)
         -> void
     {
-        // Compose the entity's world rotation with the plane-axis rotation, mirroring
-        // the hand-authored wireframes (Triangle/Plane/etc. use FinalRotation = Rotation
-        // * AxisRotation). This helper previously applied ONLY the plane-axis rotation.
-        // For an IDENTITY entity rotation (the common case) that is identical — the
-        // round-trip Append_DebugLine_World -> WorldToLocal divides the entity transform
-        // back out either way. But for a circle/ring drawn on a ROTATED entity, omitting
-        // the entity rotation here leaves the baked wireframe in the wrong plane while the
-        // filled mesh (which receives the entity rotation via the procmesh
-        // SetWorldTransform) rotates correctly. Composing it makes the circle path
-        // identical to the non-circle path, so both resolve to EntityRot * AxisRot * local
-        // under any entity rotation.
+        // The entity rotation MUST be composed in here — see CkPmg/Claude.md.
         auto EntityRotation = FQuat::Identity;
         if (InHandle.Has<ck::FFragment_Transform>())
         { EntityRotation = InHandle.Get<ck::FFragment_Transform>().Get_Transform().GetRotation(); }

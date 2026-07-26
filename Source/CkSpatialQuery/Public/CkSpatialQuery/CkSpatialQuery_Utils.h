@@ -2,9 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-// The generic UE<->Jolt conversion layer (Conv overloads, axis correction, body-UserData resolvers)
-// moved to CkJolt with the world-ownership split. Re-exported here so existing consumers of
-// ck::jolt::* through this header keep compiling unchanged.
+// Re-export, not a use: consumers reach the whole of ck::jolt::* through this header.
 #include "CkJolt/CkJolt_Utils.h"
 
 #include "CkShapes/Box/CkShapeBox_Fragment_Data.h"
@@ -25,10 +23,8 @@ namespace ck::jolt
 {
     // ----------------------------------------------------------------------------------------------------------------
     // Probe Body User Data
-    // (Enum Conv overloads migrated to CkJolt with the enums themselves — campaign Phase 3.)
     // ----------------------------------------------------------------------------------------------------------------
 
-    /// Kept for API stability across the CkJolt split — thin wrappers over ck::jolt::Get_BodyUserData.
     CKSPATIALQUERY_API auto Get_ProbeBodyUserData(
         const JPH::Body& InBody) -> uint64;
 

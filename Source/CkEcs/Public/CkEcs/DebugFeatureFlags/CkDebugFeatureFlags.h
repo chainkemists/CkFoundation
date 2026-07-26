@@ -6,31 +6,17 @@
 #include <CoreMinimal.h>
 
 // --------------------------------------------------------------------------------------------------------------------
-// Debug feature-flag cache (ECS debugger redesign, CkGameplayDebugger docs/specs/2026-07-10 §5).
-//
-// A per-registry bit table — one uint64 row per entity index — maintained by EnTT
-// on_construct/on_destroy sinks on each registered feature's MARKER fragment (the stable
-// Params/Current fragment, never request/transient tags). Rows self-correct on entity
-// destruction because each feature's on_destroy fires for fragment removal AND entity
-// destruction alike.
-//
-// Zero cost until Enable() connects the sinks (the debugger opening); consumers get O(1)
-// per-entity feature queries, and archetype matching compiles to
-// (bits & required) == required.
-//
-// Feature→fragment registration is intentionally NOT in this module: CkEcs is
-// feature-agnostic and must not see T4 feature modules. Consumers that link the fragment
-// types (the ECS debugger links every feature module) call
-// RegisterFlag<TFragment>(FeatureId) at startup, BEFORE Enable().
+// Per-registry feature bit table; zero cost until Enable() connects the EnTT sinks. Registration is NOT in this
+// module (CkEcs is feature-agnostic): consumers that link the fragment types call RegisterFlag<TFragment>(FeatureId)
+// at startup, BEFORE Enable(). Design notes in CkEcs/CLAUDE.md.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::debug_feature_flags
 {
     static constexpr int32 MaxFlags = 64;
 
-    // Sink payload. EnTT sinks cannot take capturing lambdas — each registered flag gets
-    // one heap-stable listener instance (owned by the registry's ctx payload) whose bit
-    // index routes the callback to the right column.
+    // EnTT sinks cannot take capturing lambdas — each registered flag gets one heap-stable listener
+    // instance (owned by the registry's ctx payload) whose bit index routes the callback.
     struct CKECS_API FBitListener
     {
         int32 _Bit = INDEX_NONE;
@@ -39,7 +25,6 @@ namespace ck::debug_feature_flags
         auto OnRemoved(registry_table::EnttRegistryType& InRegistry, FCk_Entity::IdType InEntity) -> void;
     };
 
-    // Type-erased per-flag hookup, captured at RegisterFlag<T> instantiation.
     struct FConnector
     {
         FName _FeatureId;
@@ -58,7 +43,7 @@ namespace ck::debug_feature_flags
     // Connect sinks + one O(n) seed scan per registered flag. No-op when already enabled.
     CKECS_API auto Enable(const FCk_Registry& InRegistry) -> void;
 
-    // Disconnect sinks and drop the bit table. No-op when not enabled.
+    // No-op when not enabled.
     CKECS_API auto Disable(const FCk_Registry& InRegistry) -> void;
 
     CKECS_API auto Get_IsEnabled(const FCk_Registry& InRegistry) -> bool;
@@ -66,10 +51,8 @@ namespace ck::debug_feature_flags
     // All-zero when disabled or the entity has no registered features.
     CKECS_API auto Get_Flags(const FCk_Registry& InRegistry, FCk_Entity InEntity) -> uint64;
 
-    // Monotonic change counter, bumped by every sink fire (marker fragment added or
-    // removed — which includes entity spawn/destroy for flagged features). Consumers
-    // poll it O(1) to detect churn without any O(n) scan: unchanged revision at steady
-    // state = provably no membership change since the last poll. 0 when disabled.
+    // Monotonic change counter bumped by every sink fire: an unchanged revision at steady state is
+    // provably no membership change since the last poll (O(1), no scan). 0 when disabled.
     CKECS_API auto Get_Revision(const FCk_Registry& InRegistry) -> uint64;
 
     template <typename T_Fragment>
@@ -96,9 +79,8 @@ namespace ck::debug_feature_flags
 
 namespace ck
 {
-    // Registry-ctx payload (see FCtx_TransientEntity for the pattern). entt::any (the
-    // ctx backing store) requires copy-constructible payloads, so the move-only innards
-    // (listeners are live sink payloads, connections are scoped) sit behind a shared ptr.
+    // entt::any (the ctx backing store) requires copy-constructible payloads, so the move-only innards
+    // (live sink payloads, scoped connections) sit behind a shared ptr.
     struct FCtx_DebugFeatureFlags
     {
         struct FImpl

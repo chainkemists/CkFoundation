@@ -14,14 +14,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Persistence payload for a FogOfWar grid (v3 rebuild+hydrate: Produce on save, HydrationApply on load).
-// NAMING DEVIATION (deliberate): save-only payloads are normally FCk_SaveData_<Feature>, but persistence handlers
-// key payloads by type path — renaming the struct later breaks old saves' payload mapping. This type is intended to
-// also go on the net wire later (co-op shared exploration via Register_NetAndSave_*), so it carries the
-// FCk_RepData_ name from day one.
-//
-// BlueprintType (unusual for a persistence payload): this payload doubles as the PULL-SEED for fog painters
-// (Get_ExploredData) and as the FCk_Request_FogOfWar_SetExplored payload, so BP/AS must be able to hold it.
+// Persistence payload for a FogOfWar grid; doubles as the pull-seed for fog painters (Get_ExploredData)
+// and as the FCk_Request_FogOfWar_SetExplored payload.
 USTRUCT(BlueprintType)
 struct CKMINIMAP_API FCk_RepData_FogOfWar
 {
@@ -60,7 +54,6 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FogOfWar);
 // --------------------------------------------------------------------------------------------------------------------
 
 // Batched payload for the OnCellsRevealed signal — one broadcast per fog entity per update, never per cell.
-// A USTRUCT wrapper (not a bare TArray delegate param) because struct payloads are the proven delegate shape.
 // Cell index = CellY * CellCountX + CellX; painters map indices to UVs via UCk_Utils_FogOfWar_UE::Get_CellUVRect.
 USTRUCT(BlueprintType)
 struct CKMINIMAP_API FCk_FogOfWar_RevealedCells
@@ -93,8 +86,7 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_FogOfWar_ParamsData);
 
 private:
-    // World area the grid covers. The grid's max edges may overshoot the bounds by up to one cell
-    // (cell counts are ceil(extent / cell size)) — Get_CellUVRect normalizes over the BOUNDS, not the grid.
+    // World area the grid covers (the grid's max edges may overshoot it by up to one cell)
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Minimap_WorldBounds _Bounds;

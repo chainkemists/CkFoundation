@@ -26,14 +26,13 @@ namespace JPH
 
 namespace ck::jolt
 {
-    /// Simple ray hit against the static world (Phase-1 test/introspection surface — the general
-    /// channel-filtered query API arrives with the Phase-2 layer table).
+    /// Simple ray hit against the static world (test/introspection surface; the channel-filtered query
+    /// API is UCk_Utils_JoltQuery_UE).
     struct CKJOLT_API FCk_Jolt_StaticWorldRayHit
     {
         bool _HasHit = false;
         FVector _Position = FVector::ZeroVector;
-        // The hit body's source-actor attribution entity (FCk_Handle_JoltStaticActor), resolved from the
-        // body's Jolt user-data; INVALID when the body has no live entity.
+        // The hit body's source-actor attribution entity; INVALID when the body has no live entity.
         FCk_Handle _Entity;
     };
 
@@ -52,22 +51,10 @@ namespace ck::jolt
 // --------------------------------------------------------------------------------------------------------------------
 
 /*
- * Owns the baked static-world bodies with ECS-first attribution: ONE entity per source actor that
- * contributes at least one baked body (ck::FFragment_JoltStaticActor_Current), tracked per-ULevel so bodies
- * add/remove in exact lockstep with level streaming (World Partition runtime cells stream as ULevels, so one
- * delegate pair covers WP and legacy sublevels uniformly). Each body is stamped with its source actor's
- * entity id as Jolt user-data, so a static-world hit resolves back to the entity through the same path a
- * dynamic JoltBody hit uses — there is no separate FName attribution table.
- *
- * Lifecycle is bidirectional: the level-streaming / Request_RemoveActor / Deinitialize paths remove bodies
- * AND destroy the attribution entities; and if an attribution entity is destroyed first,
- * FProcessor_JoltStaticActor_EndPlay removes its bodies through the same idempotent funnel
- * (Request_RemoveBodiesForEntity).
- *
- * Sources: live extraction from level actors (PIE default — stale cooked data can never silently
- * affect PIE) or cooked per-cell data assets (packaged builds always; PIE opt-in via settings).
- * Stale cooked data (version or per-actor hash mismatch) is ENSURED loudly and skipped — never
- * silently used, never re-extracted at runtime.
+ * Owns the baked static-world bodies, tracked per-ULevel so they add/remove in lockstep with level
+ * streaming (World Partition runtime cells stream as ULevels, so one delegate pair covers WP and legacy
+ * sublevels uniformly). Stale cooked data (version or per-actor hash mismatch) is ENSURED loudly and
+ * skipped — never silently used, never re-extracted at runtime. See CkJolt/CLAUDE.md § Static world.
  */
 UCLASS(DisplayName = "CkSubsystem_JoltStaticWorld")
 class CKJOLT_API UCk_JoltStaticWorld_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
@@ -96,15 +83,13 @@ public:
     auto
     Get_NumUniqueShapes() const -> int32;
 
-    /// Ray against static-world bodies only (Static body domain). Test/introspection surface;
-    /// the channel-filtered query API is UCk_Utils_JoltQuery_UE.
+    /// Ray against static-world bodies only (Static body domain).
     auto
     Get_RayCastStaticWorld(
         const FVector& InStart,
         const FVector& InEnd) const -> ck::jolt::FCk_Jolt_StaticWorldRayHit;
 
-    /// Extracts and adds static bodies for a single actor at runtime (also the AS test surface).
-    /// Returns the number of bodies added.
+    /// Extracts and adds static bodies for a single actor at runtime; returns the number added.
     auto
     Request_BakeActor(
         const AActor& InActor) -> int32;
@@ -114,11 +99,9 @@ public:
     Request_RemoveActor(
         const AActor& InActor) -> void;
 
-    /// The single idempotent funnel for freeing a source actor's bodies: reads the entity's fragment body
-    /// ids, removes/destroys them via the BodyInterface, decrements the body count + broadphase churn, then
-    /// EMPTIES the fragment's body-id array (that emptiness is the idempotence guard). Called by every
-    /// removal path AND by FProcessor_JoltStaticActor_EndPlay when the entity is destroyed first — whichever
-    /// runs first frees the bodies; the other sees an empty array and no-ops. Does NOT destroy the entity.
+    /// The single idempotent funnel for freeing a source actor's bodies, ending in EMPTYING the fragment's
+    /// body-id array (that emptiness is the idempotence guard, since both the removal paths and
+    /// FProcessor_JoltStaticActor_EndPlay call it). Does NOT destroy the entity.
     auto
     Request_RemoveBodiesForEntity(
         FCk_Handle_JoltStaticActor& InActorEntity) -> void;
@@ -157,15 +140,13 @@ private:
         TArray<uint32>& OutBodyIdsForBatch,
         TArray<int32>& OutCellIndices) -> void;
 
-    // Creates the attribution entity for a contributing actor (transient-owned), adds the fragment, caches
-    // the source actor + name, and stamps its DebugName. Invalid return = the transient entity was not ready.
+    // Invalid return = the transient entity was not ready.
     auto
     DoCreate_ActorEntity(
         const FCk_Handle& InTransientEntity,
         const AActor& InSourceActor) -> FCk_Handle_JoltStaticActor;
 
-    // Creates the extracted bodies, stamps each with InActorEntity's id as Jolt user-data, and appends the
-    // raw body ids to BOTH the entity's fragment and the batch-add accumulator.
+    // Appends the raw body ids to BOTH the entity's fragment and the batch-add accumulator.
     auto
     DoCreate_BodiesFromExtracted(
         const TArray<ck::jolt::bake::FCk_Jolt_ExtractedBody>& InExtracted,
@@ -189,13 +170,11 @@ private:
     auto
     DoEnsure_IndexLoaded() -> bool;
 
-    // The registry's transient entity (attribution entities are parented under it). Invalid until the ECS
-    // world is ready — the caller SKIPS the level and the OnWorldBeginPlay sweep re-attempts it.
+    // Invalid until the ECS world is ready — the caller SKIPS the level for the OnWorldBeginPlay sweep.
     auto
     DoGet_TransientEntity() const -> FCk_Handle;
 
-    // Resolves a body's Jolt user-data into a live handle, registry-liveness-check FIRST (no ensure on dead
-    // ids) — mirrors CkJoltQuery_Utils::TryResolve_Entity. Invalid when the id is 0 or dead.
+    // Registry-liveness check FIRST, no ensure on dead ids. Invalid when the id is 0 or dead.
     auto
     DoResolve_EntityFromUserData(
         uint64 InUserData) const -> FCk_Handle;

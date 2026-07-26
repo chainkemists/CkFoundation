@@ -21,9 +21,8 @@
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
-// Registrar — bind both the boot-complete and AS-hot-reload entry points. The hot-reload bind
-// is essential: the AS plugin re-runs __Init_<Name> on cached instances without resetting,
-// so `_Arr.Add(...)` in asset bodies would accumulate across reloads.
+// The hot-reload bind is essential: the AS plugin re-runs __Init_<Name> on cached instances without
+// resetting, so `_Arr.Add(...)` in asset bodies would accumulate across reloads.
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_deferred_asset_init_angelscript_registrar
@@ -40,8 +39,7 @@ namespace ck_deferred_asset_init_angelscript_registrar
                 &UCk_DeferredAssetInit_UE::OnAngelscriptPostReload);
 
 #if !WITH_EDITOR
-            // Root the disregard-for-GC violation targets right before each collection. See
-            // OnPreGarbageCollect / RootAngelscriptDisregardViolations for the why.
+            // Why this must run before EVERY collection: see RootAngelscriptDisregardViolations.
             FCoreUObjectDelegates::GetPreGarbageCollectDelegate().AddStatic(
                 &UCk_DeferredAssetInit_UE::OnPreGarbageCollect);
 #endif
@@ -59,14 +57,9 @@ namespace ck_deferred_asset_init_angelscript_registrar
 namespace ck_deferred_asset_init_angelscript
 {
     // ----------------------------------------------------------------------------------------------------------------
-    // Phase 2 instance reset — copy CDO defaults over the cached instance before re-running
-    // __Init_, so `_Arr.Add(...)` style body statements don't double-apply.
-    //
-    // Skip-list nuance: bare Instanced object refs (`UPROPERTY(Instanced) UMyComp*`) must be
-    // preserved — orphaning the subobject would break any `default _Comp.Foo = ...;` writes.
-    // But Instanced *containers* (`UPROPERTY(Instanced) TArray<TObjectPtr<UFoo>>`) MUST reset:
-    // asset bodies recreate their contents via NewObject, so without the reset the array
-    // accumulates new subobjects every reload. Orphans from prior runs are GC'd.
+    // Phase 2 copies CDO defaults over the cached instance before re-running __Init_, so `_Arr.Add(...)`
+    // bodies don't double-apply. Bare Instanced object refs must be PRESERVED (orphaning the subobject
+    // breaks `default _Comp.Foo = ...`), but Instanced CONTAINERS must reset — bodies recreate contents.
     // ----------------------------------------------------------------------------------------------------------------
 
     constexpr auto ShouldCreateCDO = false;
@@ -114,12 +107,8 @@ namespace ck_deferred_asset_init_angelscript
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Execution helpers
-    // ----------------------------------------------------------------------------------------------------------------
 
-    // Build a name→function map once per module instead of linear-scanning globalFunctionList
-    // for every getter/init pair. For M literal assets and N total globals this replaces
-    // O(M·N) per module with O(N) build + O(1) lookups.
+    // One build per module replaces an O(M·N) linear scan of globalFunctionList per getter/init pair.
     auto BuildFunctionMap(asCModule* InScriptModule) -> TMap<FString, asCScriptFunction*>
     {
         const auto Count = static_cast<int32>(InScriptModule->globalFunctionList.GetLength());
@@ -147,24 +136,9 @@ namespace ck_deferred_asset_init_angelscript
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Surgical-heal attribution.
-    //
-    // The full sweep re-runs ALL ~1200 CDO DefaultsFunctions (Phase 1) and ALL literal __Inits
-    // (Phase 2) just to heal the handful that actually deferred a (null) asset load during first-pass
-    // — and measurement showed the sweep is dominated by that AS execution, not the IO. So we record
-    // the EXACT entities that deferred and re-run only those: CDOs in GDeferredLoadCDOs (Phase 1),
-    // literal asset names in GDeferredLiteralNames (Phase 2).
-    //
-    // Attribution is captured in Note_DeferredAssetLoad_FromActiveContext (called from the AS
-    // premature-load helper, ungated so it also runs during cook) via CaptureDeferredAttribution,
-    // which walks the active AS call stack ONCE. It mirrors the engine's own GetASConstructionScriptObject
-    // (Bind_UObject.cpp): a frame whose `this` class chain owns the executing DefaultsFunction is a
-    // CDO default; a frame running a __Init_<Name> global function is a literal asset body.
-    //
-    // Safety: a load that maps to neither (some other first-pass AS code) was never healed by the
-    // original sweep either, so ignoring it is not a regression. If we cannot read the active context
-    // at all, GAttributionUncertain forces BOTH phases to the full sweep. The
-    // ck.DeferredAssetInit.ForceFullHeal CVar is a manual escape hatch. We NEVER under-heal.
+    // Surgical-heal attribution: re-running ALL ~1200 CDO defaults and literal __Inits to heal the
+    // handful that actually deferred is AS-execution bound, so we record exactly which deferred and
+    // re-run only those. An unreadable AS context sets GAttributionUncertain → full sweep; never under-heal.
     // ----------------------------------------------------------------------------------------------------------------
 
     TSet<TWeakObjectPtr<UObject>> GDeferredLoadCDOs;     // Phase 1: CDOs whose defaults deferred a load
@@ -179,19 +153,13 @@ namespace ck_deferred_asset_init_angelscript
              "those with deferred loads. Safety fallback if a startup asset ever comes up null."),
         ECVF_Default);
 
-    // Walk the active AS call stack ONCE and attribute the deferred load to (a) the CDO whose
-    // DefaultsFunction is running [Phase 1] and/or (b) the literal __Init_<Name> running [Phase 2].
-    // Either, both, or neither may be present in a given stack:
-    //   - direct CDO default load        → DefaultsFunction frame (this == CDO)
-    //   - literal referenced by a CDO     → both the CDO frame AND the __Init_<Name> frame
-    //   - standalone literal init         → __Init_<Name> frame only (global function, no `this`)
-    //   - anything else (not a default/literal) → neither; the original sweep never healed those.
-    // We only flag uncertainty (→ full fallback) when the active context can't be read at all.
+    // Attributes the deferred load to the CDO whose DefaultsFunction is running [Phase 1] and/or the
+    // literal __Init_<Name> running [Phase 2]. Either, both or neither may appear in a given stack;
+    // "neither" is safe, since the original full sweep never healed those cases either.
     auto CaptureDeferredAttribution() -> void
     {
-        // FAngelscriptManager::GetCurrentScriptContext() is Hazelight's exported wrapper over
-        // asGetActiveContext() — the raw library free function isn't exported to CkCore, but this
-        // member is (same path as FAngelscriptManager::Get()/GetActiveModules() used here already).
+        // Hazelight's exported wrapper over asGetActiveContext() — the raw library free function is not
+        // exported to CkCore.
         auto* Context = FAngelscriptManager::GetCurrentScriptContext();
         if (Context == nullptr)
         {
@@ -233,21 +201,12 @@ namespace ck_deferred_asset_init_angelscript
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Phase 1: re-run DefaultsFunction on every AS class CDO.
-    //
-    // Matches the engine's ExecuteDefaultsFunctions pattern in ASClass.cpp — walk the super chain
-    // collecting DefaultsFunctions child→parent, then execute in reverse so parents run first.
-    // No CDO pre-reset: first-pass init already populated the CDO, and re-running over the top
-    // is idempotent for scalar/object-ref assignments (which is what AS class defaults almost
-    // always are). Array/Map/Set `default _X.Add(...)` patterns on class defaults would double
-    // here — that's a known limitation; users should prefer container assignment if needed.
-    //
-    // Scope: we iterate AS classes via FAngelscriptManager::GetActiveModules() → Module->Classes
-    // (FAngelscriptClassDesc::Class) instead of TObjectIterator<UClass>, which would also scan
-    // every non-AS UClass in the process (thousands) just to Cast<UASClass> them away.
+    // Phase 1 matches the engine's ExecuteDefaultsFunctions (ASClass.cpp): collect DefaultsFunctions
+    // child→parent up the super chain, execute in reverse so parents run first. No CDO pre-reset —
+    // re-running over the top is idempotent for the scalar/object-ref assignments AS defaults almost are.
     // ----------------------------------------------------------------------------------------------------------------
 
-    // Re-run one class's DefaultsFunction super-chain on its CDO. Returns true if all ran cleanly.
+    // True only when EVERY DefaultsFunction in the chain ran cleanly.
     auto ReRunClassDefaultsFor(UASClass* InASClass) -> bool
     {
         if (ck::Is_NOT_Valid(InASClass, ck::IsValid_Policy_NullptrOnly{}))
@@ -270,10 +229,8 @@ namespace ck_deferred_asset_init_angelscript
             { DefaultsFunctions.Add(WalkClass->DefaultsFunction); }
         }
 
-        // Each DefaultsFunction in the super chain is invoked independently — a failure
-        // in one does NOT skip the rest. Mirrors the engine's ExecuteDefaultsFunctions
-        // (ASClass.cpp:1070-1077) where every function gets its own context and is
-        // executed regardless of sibling success.
+        // Deliberately invoked independently — a failure in one must NOT skip the rest, matching the
+        // engine's ExecuteDefaultsFunctions (ASClass.cpp).
         auto AllOk = true;
         for (auto i = DefaultsFunctions.Num() - 1; i >= 0; --i)
         {
@@ -290,8 +247,7 @@ namespace ck_deferred_asset_init_angelscript
         return AllOk;
     }
 
-    // Full sweep: re-run every AS class's DefaultsFunction. Used when surgical attribution is
-    // unavailable/uncertain (safe fallback — never under-heals).
+    // Safe fallback when surgical attribution is unavailable or uncertain.
     auto ReRunAllClassDefaults() -> int32
     {
         auto SucceededCount = int32{0};
@@ -310,8 +266,7 @@ namespace ck_deferred_asset_init_angelscript
         return SucceededCount;
     }
 
-    // Surgical sweep: re-run ONLY the CDOs whose DefaultsFunction actually deferred a load during
-    // first-pass (captured in GDeferredLoadCDOs). Returns the number of distinct CDOs re-run.
+    // Returns the number of distinct CDOs re-run.
     auto ReRunDeferredClassDefaults() -> int32
     {
         auto SucceededCount = int32{0};
@@ -322,7 +277,6 @@ namespace ck_deferred_asset_init_angelscript
             if (ck::Is_NOT_Valid(CDO, ck::IsValid_Policy_NullptrOnly{}))
             { continue; }
 
-            // Only objects that are genuinely a class CDO (the `this` of a DefaultsFunction).
             if (NOT CDO->HasAnyFlags(RF_ClassDefaultObject))
             { continue; }
 
@@ -334,21 +288,9 @@ namespace ck_deferred_asset_init_angelscript
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Phase 2: re-run __Init_<AssetName> on every literal asset.
-    //
-    // Literal asset preprocessor generates (from AngelscriptPreprocessor.cpp ~4003):
-    //     {Type} __Asset_{Name};
-    //     {Type} Get{Name}() property       // creates on first call, caches, returns cached thereafter
-    //     void __Init_{Name}({Type} {Name}) // the user-written asset block body
-    //
-    // The getter caches on first call, so calling it again doesn't re-run __Init_. We call
-    // __Init_ directly to force re-execution on the existing cached instance, having first
-    // reset the instance from its CDO (so `.Add()`-style statements in the body don't double).
-    //
-    // For the init function name we use the engine's public PostInitFunctions list as a sanity
-    // check (each entry is `Get<Name>` — getter names, not init names, per the preprocessor).
-    // The `__Init_` prefix is a stable preprocessor convention; if it ever changes, the sanity
-    // check will log the drift so we find out loudly rather than silently failing.
+    // The literal-asset preprocessor emits `__Asset_{Name}`, a CACHING `Get{Name}()` property, and
+    // `void __Init_{Name}({Type})` holding the user's asset body. Because the getter caches on first
+    // call, Phase 2 calls __Init_ directly on the CDO-reset instance to force re-execution.
     // ----------------------------------------------------------------------------------------------------------------
 
     struct FPhase2Stats
@@ -357,9 +299,7 @@ namespace ck_deferred_asset_init_angelscript
         int32 Declared  = 0;
     };
 
-    // Phase 2 sweep. When InFullHeal is false, re-run ONLY the literals whose __Init deferred a load
-    // during first-pass (GDeferredLiteralNames) — the rest had nothing to heal. Full heal is used as
-    // the safety fallback and for hot-reloads (where first-pass attribution doesn't apply).
+    // Full heal is the safety fallback and the hot-reload path, where first-pass attribution never applied.
     auto ReRunLiteralAssetInits(bool InFullHeal) -> FPhase2Stats
     {
         auto Stats = FPhase2Stats{};
@@ -374,15 +314,13 @@ namespace ck_deferred_asset_init_angelscript
             if (Module->DeclaredLiteralAssets.IsEmpty())
             { return; }
 
-            // Cross-validate against the engine's PostInitFunctions list (these are the
-            // Get<Name> getter names, per AngelscriptPreprocessor.cpp:4027). If Get<AssetName>
-            // is missing from it, the preprocessor's naming convention has drifted.
+            // PostInitFunctions holds Get<Name> GETTER names; a missing entry means the preprocessor's
+            // naming convention drifted, which the check below logs loudly rather than failing silently.
             const auto PostInitFunctionSet = TSet<FString>{Module->PostInitFunctions};
             const auto FunctionMap         = BuildFunctionMap(Module->ScriptModule);
 
             ck::algo::ForEach(Module->DeclaredLiteralAssets, [&](const FString& AssetName)
             {
-                // Surgical: skip literals that never deferred a load during first-pass.
                 if (NOT InFullHeal && NOT GDeferredLiteralNames.Contains(AssetName))
                 { return; }
 
@@ -410,7 +348,6 @@ namespace ck_deferred_asset_init_angelscript
                     return;
                 }
 
-                // Retrieve the existing cached instance via the getter
                 UObject* AssetInstance = nullptr;
                 {
                     auto Context = FAngelscriptContext{};
@@ -429,7 +366,6 @@ namespace ck_deferred_asset_init_angelscript
 
                 ResetInstanceFromCDO(AssetInstance);
 
-                // Re-run __Init_<AssetName>(AssetInstance) on the existing instance
                 {
                     auto Context = FAngelscriptContext{};
                     Context->Prepare(InitFunction);
@@ -446,34 +382,18 @@ namespace ck_deferred_asset_init_angelscript
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Disregard-for-GC retention (the fix).
-    //
-    // Bug: AS `asset … of …` owners + AS CDOs are created during AS InitialCompile, BEFORE FEngineLoop closes the
-    //   disregard-for-GC set, so they land in the permanent pool — which GC never traverses (it assumes disregard
-    //   objects only reference other permanent objects). The refresh above then attaches normal-pool objects under
-    //   them (minted item-trait/key-settings sub-objects, and `assets::load::`'d cooked assets on owners/CDO
-    //   components), so the first GC reclaims them out from under the untraversed owner → dangling ptr → crash.
-    // Fix: AddToRoot those targets so IsRooted() is true — the engine verifier's accept-test
-    //   (GarbageCollectionVerification.cpp:110: IsRooted || IsDisregardForGC || OwnerIndex>0 || ClusterRoot).
-    // Via the GC reference collector, NOT FReferenceFinder: the AS runtime GC-tracks script-class UObject members
-    //   (incl. non-UPROPERTY resolved-hard-ref config fields like `UStaticMesh StandBodyMeshAsset;`) only through
-    //   the autogenerated schema the real GC + verifier use; FReferenceFinder's legacy token-stream walk misses
-    //   them. CollectReferences over the AS disregard objects enumerates exactly what the verifier checks.
-    // Pre-GC (not boot/reload only): some refs resolve lazily as actors stream in, after any boot sweep — re-rooting
-    //   right before each collection catches whatever is referenced when the GC that would reclaim it runs.
-    // Root-only, never unroot: AddToRoot is a boolean flag (not refcounted), so unrooting could clear a root another
-    //   system set on a shared asset. We only root not-already-rooted targets. (Cost: sub-objects orphaned by a
-    //   packaged -as-development-mode hot-reload stay rooted — dev-only; shipping bakes AS so there's no reload.)
-    // !WITH_EDITOR: the bug doesn't manifest in-editor (asset registry/Content Browser keep things alive), verifiers
-    //   are off there, and rooting cooked assets every GC could interfere with editor asset GC.
+    // AS asset owners and CDOs are created before FEngineLoop closes the disregard-for-GC set, so GC never
+    // traverses them and reclaims the normal-pool objects the sweep attached under them → dangling ptr →
+    // crash. AddToRoot on those targets satisfies the verifier's accept-test; it must go through the GC
+    // reference collector (FReferenceFinder's token-stream walk misses AS script-class members), must run
+    // pre-GC (some refs resolve lazily), and must never unroot (AddToRoot is a flag, not a refcount).
     // ----------------------------------------------------------------------------------------------------------------
 
 #if !WITH_EDITOR
-    // Count of distinct targets we've rooted this process — for the log line / diagnostics only. We
-    // never unroot (see the design note above), so a running total is all this needs to be.
+    // Diagnostics only; we never unroot, so a running total is all this needs to be.
     int32 GTotalRooted = 0;
 
-    // Roots normal-pool objects referenced by a disregard-for-GC object — exactly the edges the engine's
+    // Roots the normal-pool objects referenced by a disregard-for-GC object — exactly the edges the engine's
     // disregard verifier flags. Runs single-threaded (DefaultOptions is not parallel), so AddToRoot is safe.
     class FCkAsDisregardRootingProcessor : public FSimpleReferenceProcessorBase
     {
@@ -491,8 +411,7 @@ namespace ck_deferred_asset_init_angelscript
             if (InObject == nullptr || InReferencingObject == nullptr)
             { return; }
 
-            // Only references emanating FROM a disregard object break the invariant; everything else is traced
-            // normally by GC. (Guards correctness even if the collector ever visits non-disregard referencers.)
+            // Only references emanating FROM a disregard object break the invariant; GC traces the rest.
             if (NOT GUObjectArray.IsDisregardForGC(InReferencingObject))
             { return; }
 
@@ -515,9 +434,8 @@ namespace ck_deferred_asset_init_angelscript
 
     auto RootAngelscriptDisregardViolations() -> void
     {
-        // The single-context collector below runs synchronously on the calling thread, and AddToRoot
-        // (in the processor) is not thread-safe. The pre-GC delegate is game-thread — assert it so a
-        // future move off-thread (or to a parallel collector) trips loudly instead of racing silently.
+        // AddToRoot in the processor is not thread-safe and the collector below runs on the calling
+        // thread, so a future move off the game thread must trip loudly instead of racing silently.
         CK_ENSURE_IF_NOT(IsInGameThread(),
             TEXT("[DeferredAssetInit] disregard-for-GC rooting must run on the game thread"))
         { return; }
@@ -528,9 +446,8 @@ namespace ck_deferred_asset_init_angelscript
             TEXT("/Script/Angelscript"),
         };
 
-        // Initial set = the AS disregard objects (owners, CDOs, and their disregard sub-components). With
-        // FSimpleReferenceProcessorBase the collector reports only the DIRECT references of these objects (same
-        // usage as the engine's VerifyGCAssumptions), so every edge handled is a disregard→X edge.
+        // With FSimpleReferenceProcessorBase the collector reports only the DIRECT references of these objects
+        // (same usage as the engine's VerifyGCAssumptions), so every edge handled is a disregard→X edge.
         auto InitialObjects = TArray<UObject*>{};
         for (const auto* PackageName : AsPackageNames)
         {
@@ -590,18 +507,12 @@ auto
 {
 #if WITH_ANGELSCRIPT_CK
 
-    // Force the blocking-load safety flag true before Phase 2 runs. Both this callback and
-    // the flag-setting lambda in CkIO_Utils.cpp bind to OnFEngineLoopInitComplete; delegates
-    // fire in add-order, and cross-TU static init order is unspecified. If the flag-setter
-    // happens to fire after us, assets::load:: would return nullptr during Phase 2 — defeating
-    // the entire point of the re-run. We know blocking-loads are safe at this point, so just
-    // ensure the flag reflects that before we proceed.
+    // This callback and CkIO_Utils' flag-setting lambda both bind to OnFEngineLoopInitComplete, and
+    // cross-TU static init order is unspecified — if the setter fires after us, assets::load:: returns
+    // nullptr through all of Phase 2. Blocking loads ARE safe here, so make the flag say so.
     UCk_Utils_IO_UE::MarkEngineSafeForBlockingLoads();
 
-    // Short-circuit: if no caller ever queried IsEngineSafeForBlockingLoads() while the flag
-    // was still false, nothing was deferred this boot — skip the entire sweep. This is the
-    // common case for projects that don't use assets::load:: directly in class defaults or
-    // literal-asset bodies, and keeps startup cost near zero when there's no work to do.
+    // Nobody queried the flag while it was false ⇒ nothing was deferred this boot ⇒ no sweep needed.
     if (NOT UCk_Utils_IO_UE::WasBlockingLoadQueriedWhileUnsafe())
     {
         ck::core::Verbose(TEXT("[DeferredAssetInit] No blocking loads were deferred — skipping re-init"));
@@ -614,11 +525,6 @@ auto
     ck::core::Verbose(TEXT("[DeferredAssetInit] Engine init complete — re-running Angelscript default inits"));
 #endif
 
-    // Phase 1: re-run AS class CDO DefaultsFunctions. The full sweep re-runs all ~1200 CDOs just to
-    // heal the handful that deferred a load — and measurement showed the sweep is AS-EXECUTION bound,
-    // not IO bound. So by default we re-run ONLY the CDOs that actually deferred a load during
-    // first-pass (GDeferredLoadCDOs). Fall back to the full sweep if attribution was uncertain or the
-    // CVar forces it — Phase 2 below is always full, and this never leaves a CDO asset null.
     const auto UseFullHeal = ck_deferred_asset_init_angelscript::GForceFullAssetHeal || ck_deferred_asset_init_angelscript::GAttributionUncertain;
     const auto HealMode    = UseFullHeal ? FString(TEXT("full")) : FString(TEXT("surgical"));
     const auto CdoCount    = UseFullHeal ? ck_deferred_asset_init_angelscript::ReRunAllClassDefaults() : ck_deferred_asset_init_angelscript::ReRunDeferredClassDefaults();
@@ -629,12 +535,10 @@ auto
     ck::core::Verbose(TEXT("[DeferredAssetInit] Phase 1: re-initialized {} Angelscript CDO(s) [{}]"), CdoCount, HealMode);
 #endif
 
-    // Phase 2: same surgical/full choice as Phase 1. Surgical re-runs only literals whose __Init
-    // deferred during first-pass (GDeferredLiteralNames); full is the fallback.
     const auto LiteralAssetStats = ck_deferred_asset_init_angelscript::ReRunLiteralAssetInits(UseFullHeal);
     if (LiteralAssetStats.Succeeded < LiteralAssetStats.Declared)
     {
-        // Always Warning — a discrepancy here is a real signal worth surfacing in every config.
+        // Warning in EVERY config — a discrepancy here is a real signal.
         ck::core::Warning(TEXT("[DeferredAssetInit] Phase 2: re-initialized {}/{} literal asset(s) [{}] — missing entries indicate AS preprocessor drift"),
                           LiteralAssetStats.Succeeded, LiteralAssetStats.Declared, HealMode);
     }
@@ -649,10 +553,8 @@ auto
 #endif
     }
 
-    // ONE aggregated line for assets::load::* calls that ran before engine-safe (first-pass CDO/
-    // literal init), instead of a per-call stack-walking ensure (the old ~15ms-each storm). These
-    // are expected and healed by this sweep, so it's informational — a non-zero count that surprises
-    // you points at a soft-ref candidate. The cheap counter still catches genuine early misuse.
+    // ONE aggregated line instead of the old per-call stack-walking ensure storm: these deferrals are
+    // expected and healed by this sweep, so a surprising count just points at a soft-ref candidate.
     if (const auto PrematureCount = UCk_Utils_IO_UE::Get_PrematureAssetLoadCount();
         PrematureCount > 0)
     {
@@ -671,9 +573,6 @@ auto
     ck_deferred_asset_init_angelscript::GDeferredLiteralNames.Reset();
     ck_deferred_asset_init_angelscript::GAttributionUncertain = false;
 
-    // Rooting of the resulting disregard→normal-pool refs happens in OnPreGarbageCollect (pre-GC), which
-    // also catches refs that resolve lazily later in the session.
-
 #endif // WITH_ANGELSCRIPT_CK
 }
 
@@ -687,11 +586,9 @@ auto
 {
 #if WITH_ANGELSCRIPT_CK
 
-    // The initial-compile post-reload fires BEFORE OnFEngineLoopInitComplete (blocking loads still
-    // unsafe). Running the sweep here heals nothing — every assets::load::* returns null — and would
-    // fire a stack-walking ensure per call (the measured ~2.7s startup ensure storm). ResolveAllPending
-    // (also bound to OnFEngineLoopInitComplete) is a strict superset and does the real heal. Use the
-    // side-effect-free peek so this guard never trips the WasBlockingLoadQueriedWhileUnsafe short-circuit.
+    // The initial-compile post-reload fires BEFORE OnFEngineLoopInitComplete, where the sweep would heal
+    // nothing and storm ensures; ResolveAllPending is a strict superset of it. The peek is deliberate —
+    // the querying getter would trip the WasBlockingLoadQueriedWhileUnsafe short-circuit.
     if (NOT UCk_Utils_IO_UE::Get_IsEngineSafeForBlockingLoads_Peek())
     {
         ck::core::Verbose(TEXT("[DeferredAssetInit] Post-reload before engine-safe — skipping (ResolveAllPending heals)"));
@@ -706,9 +603,8 @@ auto
                       InFullReload);
 #endif
 
-    // Hot-reload always re-runs ALL literals: first-pass attribution doesn't apply here (the reload
-    // happens engine-safe, so accessors load directly and Note never fires), and the full re-run is
-    // what fixes the `_Arr.Add(...)` doubling the reload would otherwise cause.
+    // Always ALL literals: the reload happens engine-safe so first-pass attribution never fired, and the
+    // full re-run is what undoes the `_Arr.Add(...)` doubling the reload causes.
     constexpr auto FullHeal = true;
     const auto Stats = ck_deferred_asset_init_angelscript::ReRunLiteralAssetInits(FullHeal);
     if (Stats.Succeeded < Stats.Declared)
@@ -726,8 +622,6 @@ auto
                           Stats.Succeeded, Stats.Declared);
 #endif
     }
-
-    // Rooting happens in OnPreGarbageCollect (pre-GC), not here.
 
 #endif // WITH_ANGELSCRIPT_CK
 }

@@ -30,12 +30,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Write only when content differs from what's on disk (LF-normalized compare).
-// These files are regenerated on every editor boot BEFORE the initial AS compile, but the AS
-// hot-reload checker baselines file mtimes from its initial script scan — an unchanged file
-// freshly rewritten still reads as "modified" and triggers a code-only reload of every wrapper
-// module AFTER engine init: a multi-second soft-reload sweep on the game thread while the editor
-// window is visible but unresponsive. Skipping identical writes keeps mtimes stable.
+// Identical writes must be skipped: the AS hot-reload checker baselines mtimes, so rewriting
+// unchanged bytes costs a soft-reload sweep of every wrapper module after engine init.
 static auto
 SaveWrapperFile_IfChanged(
     const FString& InContent,
@@ -62,31 +58,22 @@ auto
     GenerateAllWrappers()
     -> void
 {
-    // Single-writer gate (G6): a secondary instance must not rewrite the ~250 wrapper files or
-    // run their manifest-based stale-delete pass — both churn mtimes the owner's watcher reacts to.
     if (NOT FCkAngelscriptGenerator_RegenOwnership::Try_AcquireOrGet_IsOwner(
             TEXT("WrapperGenerator.GenerateAllWrappers")))
     { return; }
 
     ck::angelscriptgenerator::Log(TEXT("=== Generating Angelscript Wrappers from Reflection ==="));
 
-    // Get plugin directory
     auto PluginDir = FPaths::ProjectPluginsDir() / TEXT("CkFoundation");
     auto ScriptDir = PluginDir / TEXT("Script");
     auto GeneratedDir = ScriptDir / TEXT("Generated");
 
-    // Create directories
     IFileManager::Get().MakeDirectory(*ScriptDir, true);
     IFileManager::Get().MakeDirectory(*GeneratedDir, true);
 
-    // Stale-wrapper cleanup happens AFTER generation, and only for files THIS generator wrote
-    // on a previous run — recorded in the `_index.as` manifest. This directory is shared with
-    // other generators' canonical outputs (<Plugin>_EntitySpawnParams.as, _StubRecovery_*, ...)
-    // which do not exist yet / must not be touched at this point: we run BEFORE the initial AS
-    // compile, while those generators run AFTER it. Deleting a foreign canonical here forces its
-    // owner to rewrite it post-compile, which the AS file-watcher then hot-reloads as a NEW
-    // module — a full structural reload + soft-reload sweep on the game thread right as the
-    // editor window becomes visible (a multi-second freeze, reproduced on every launch).
+    // The `_index.as` manifest scopes stale-cleanup to files THIS generator wrote, and that
+    // scoping is load-bearing: this directory is shared with other generators' canonicals, which
+    // run AFTER the initial AS compile while we run before it. Never blanket-delete here.
     const auto PreviouslyGeneratedFiles = [&GeneratedDir]() -> TArray<FString>
     {
         auto Result = TArray<FString>{};
@@ -109,7 +96,6 @@ auto
 
     auto GeneratedFiles = TArray<FString>{};
 
-    // Iterate through all Blueprint Function Library classes
     auto ProcessedCount = int32{0};
     auto SkippedCount = int32{0};
 
@@ -117,14 +103,12 @@ auto
     {
         auto Class = *ClassIterator;
 
-        // Debug: Log all Blueprint Function Libraries we find
         if (Class->IsChildOf(UBlueprintFunctionLibrary::StaticClass()) &&
             NOT Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
         {
             auto PluginName = Get_PluginNameForClass(Class);
             if (Request_ShouldGenerateWrapperForClass(Class))
             {
-                // Debug editor detection here
                 auto PackageName = Class->GetOutermost()->GetName();
                 auto ModuleName = FString{};
                 if (PackageName.StartsWith(TEXT("/Script/")))
@@ -147,30 +131,24 @@ auto
         if (NOT Request_ShouldGenerateWrapperForClass(Class))
         { continue; }
 
-        // Generate wrapper for this class
         Request_GenerateWrapperForClass(Class);
 
-        // Add to generated files list
         auto NamespaceName = Get_ConvertedClassNameToNamespace(Class->GetName());
         GeneratedFiles.Add(NamespaceName + TEXT(".as"));
     }
 
     ck::angelscriptgenerator::Log(TEXT("Processed {} classes, skipped {} classes"), ProcessedCount, SkippedCount);
 
-    // Generate CVar constants
     Request_GenerateCVarConstants(GeneratedDir);
     GeneratedFiles.Add(TEXT("cvar.as"));
 
-    // Generate collision constants
     Request_GenerateCollisionConstants(GeneratedDir);
     GeneratedFiles.Add(TEXT("collision.as"));
 
-    // Generate physical surface constants
     Request_GeneratePhysicalSurfaceConstants(GeneratedDir);
     GeneratedFiles.Add(TEXT("physicalsurface.as"));
 
-    // Generate master index. Sorted — TObjectIterator order varies per boot, and an
-    // order-churned _index.as is an mtime change the AS hot-reload checker acts on post-init.
+    // TObjectIterator order varies per boot; an order-churned _index.as is an mtime change.
     GeneratedFiles.Sort();
 
     if (GeneratedFiles.Num() > 0)
@@ -197,9 +175,8 @@ auto
         ck::angelscriptgenerator::Warning(TEXT("No Blueprint Function Libraries found to wrap"));
     }
 
-    // Delete stale wrappers: files the previous run's manifest claims we own but that this run
-    // no longer produced (their BPFL was deleted/renamed). Foreign generators' files are never
-    // in the manifest, so they are structurally unreachable here — see the comment at the top.
+    // Files the previous run's manifest claims we own but this run no longer produced. Foreign
+    // generators' files never enter the manifest, so they are structurally unreachable here.
     for (const auto& StaleFile : PreviouslyGeneratedFiles)
     {
         if (GeneratedFiles.Contains(StaleFile))
@@ -223,23 +200,18 @@ auto
     if (ck::Is_NOT_Valid(Class))
     { return false; }
 
-    // Must be a Blueprint Function Library
     if (NOT Class->IsChildOf(UBlueprintFunctionLibrary::StaticClass()))
     { return false; }
 
-    // Skip Blueprint-generated classes - use class flags instead
     if (Class->HasAnyClassFlags(CLASS_CompiledFromBlueprint))
     { return false; }
 
-    // Skip abstract classes
     if (Class->HasAnyClassFlags(CLASS_Abstract))
     { return false; }
 
-    // Only process classes from our CkFoundation plugin
     if (NOT Request_IsClassInCkFoundationPlugin(Class))
     { return false; }
 
-    // Check if this class has any static UFUNCTIONs eligible for generated wrappers.
     auto HasIncludedStaticUFunctions = false;
     for (TFieldIterator<UFunction> FunctionIterator(Class); FunctionIterator; ++FunctionIterator)
     {
@@ -294,10 +266,8 @@ auto
     if (ck::Is_NOT_Valid(Class))
     { return false; }
 
-    // Get the package name (e.g., "/Script/CkECS" or "/Script/CkFoundation")
     auto PackageName = Class->GetOutermost()->GetName();
 
-    // Extract module name from package path
     auto ModuleName = FString{};
     if (PackageName.StartsWith(TEXT("/Script/")))
     {
@@ -308,11 +278,9 @@ auto
         return false; // Not a script package
     }
 
-    // Check if this module belongs to CkFoundation plugin
     auto Plugin = IPluginManager::Get().FindPlugin(TEXT("CkFoundation"));
     if (Plugin.IsValid())
     {
-        // Get all modules in the CkFoundation plugin
         const auto& Descriptor = Plugin->GetDescriptor();
         for (const auto& ModuleDesc : Descriptor.Modules)
         {
@@ -337,10 +305,8 @@ auto
     if (ck::Is_NOT_Valid(Class))
     { return TEXT("Unknown"); }
 
-    // Get the package name (e.g., "/Script/CkECS" or "/Script/Engine")
     auto PackageName = Class->GetOutermost()->GetName();
 
-    // Extract module name from package path
     auto ModuleName = FString{};
     if (PackageName.StartsWith(TEXT("/Script/")))
     {
@@ -351,7 +317,6 @@ auto
         return TEXT("Unknown"); // Not a script package
     }
 
-    // Check all plugins to find which one contains this module
     auto AllPlugins = IPluginManager::Get().GetDiscoveredPlugins();
     for (const auto& Plugin : AllPlugins)
     {
@@ -379,10 +344,8 @@ auto
     if (ck::Is_NOT_Valid(Class))
     { return false; }
 
-    // Get the package name (e.g., "/Script/CkEditorGraph")
     auto PackageName = Class->GetOutermost()->GetName();
 
-    // Extract module name from package path
     auto ModuleName = FString{};
     if (PackageName.StartsWith(TEXT("/Script/")))
     {
@@ -393,11 +356,8 @@ auto
         return false;
     }
 
-    // Resolve the module's host type from its owning plugin descriptor. A module whose Type is editor-only
-    // (Editor / UncookedOnly / DeveloperTool / etc.) is not compiled into a cooked game, so any AngelScript
-    // wrapper for its functions must be guarded with #if EDITOR. Relying on the module NAME containing the
-    // substring "Editor" (the previous heuristic) silently missed editor-only modules named otherwise (e.g.
-    // a module typed "Editor" but called "CkPieLayoutEditor" is caught either way, but "CkFooTooling" was not).
+    // A module whose descriptor Type is editor-only is absent from a cooked game, so its wrappers
+    // must be `#if EDITOR`-guarded. The name-substring heuristic below misses e.g. "CkFooTooling".
     const auto IsEditorOnlyHostType = [](EHostType::Type InType) -> bool
     {
         switch (InType)
@@ -424,8 +384,7 @@ auto
         }
     }
 
-    // Fallback to the historical name-substring heuristic for classes whose module isn't found in any
-    // plugin descriptor (e.g. a game/engine module class).
+    // Fallback for a class whose module is in no plugin descriptor (game/engine module).
     return ModuleName.Contains(TEXT("Editor"));
 }
 
@@ -440,7 +399,6 @@ auto
     auto ClassName = Class->GetName();
     auto NamespaceName = Get_ConvertedClassNameToNamespace(ClassName);
 
-    // Get plugin directory
     auto PluginDir = FPaths::ProjectPluginsDir() / TEXT("CkFoundation");
     auto GeneratedDir = PluginDir / TEXT("Script") / TEXT("Generated");
     auto OutputPath = GeneratedDir / (NamespaceName + TEXT(".as"));
@@ -457,7 +415,6 @@ auto
 
     const auto& ScriptMixinMetaData = Class->GetMetaData(TEXT("ScriptMixin"));
 
-    // Iterate through all functions in the class
     for (TFieldIterator<UFunction> FunctionIterator(Class); FunctionIterator; ++FunctionIterator)
     {
         auto Function = *FunctionIterator;
@@ -469,7 +426,6 @@ auto
             continue;
         }
 
-        // Check if this function is editor-only
         auto IsEditorOnly = Request_IsEditorOnlyFunction(Function);
         if (IsEditorOnly)
         {
@@ -488,7 +444,6 @@ auto
             FunctionCount++;
         }
 
-        // c++ operator name to Angelscript operator function name (ex. ++ to opPostInc)
         auto OperatorAlias = TMap<FString, FString>{};
     }
 
@@ -524,12 +479,10 @@ auto
 
     auto FunctionName = Function->GetName();
 
-    // Build parameter list
     auto Parameters = TArray<FString>{};
     auto CallParameters = TArray<FString>{};
     auto LocalVariableDeclarations = TArray<FString>{};
 
-    // Check if this function has a WorldContext parameter that should be omitted
     auto HasWorldContextParam = Function->HasMetaData(TEXT("WorldContext"));
     auto WorldContextParamName = FString{};
     if (HasWorldContextParam)
@@ -554,22 +507,18 @@ auto
 
         auto ParamName = Property->GetName();
 
-        // Skip return property
         if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
         { continue; }
 
-        // Skip WorldContext parameter in Angelscript wrapper
+        // Dropped entirely, not forwarded — AngelScript supplies world context automatically.
         if (HasWorldContextParam && ParamName == WorldContextParamName)
         {
-            // Do NOT add to call parameters - Angelscript handles this automatically
             continue;
         }
 
-        // Check if this is a handle parameter that needs special handling
         auto PropertyType = Get_DetailedPropertyType(Property);
         auto IsNonConstHandleReference = false;
 
-        // Check if this is ANY FCk_Handle type that is a non-const reference
         if (PropertyType.StartsWith(TEXT("FCk_Handle")) &&
             Property->HasAnyPropertyFlags(CPF_ReferenceParm) &&
             NOT Property->HasAnyPropertyFlags(CPF_ConstParm))
@@ -577,7 +526,7 @@ auto
             IsNonConstHandleReference = true;
         }
 
-        // Check if this uses ExpandEnumAsExecs of type ECk_SucceededFailed, which we can return as a TOptional instead
+        // An ECk_SucceededFailed exec-expansion becomes a TOptional return on the AS side.
         auto IsSucceededFailedEnumExpanded =
             PropertyType == TEXT("ECk_SucceededFailed") &&
             ParamName == ExpandAsEnumsName &&
@@ -585,10 +534,10 @@ auto
 
         if (IsNonConstHandleReference)
         {
-            // For non-const handle references, pass by value in Angelscript
+            // Taken by value on the AS side, then re-bound to a local so the C++ call has an
+            // lvalue for its non-const reference parameter.
             auto LocalVarName = TEXT("_") + ParamName;
 
-            // Get default value if present
             auto DefaultValue = Get_DefaultValueForProperty(Property);
             auto ParamDeclaration = FString::Printf(TEXT("%s %s"), *PropertyType, *ParamName);
             if (NOT DefaultValue.IsEmpty())
@@ -596,13 +545,8 @@ auto
                 ParamDeclaration += TEXT(" = ") + DefaultValue;
             }
 
-            // Angelscript parameter (by value)
             Parameters.Add(ParamDeclaration);
-
-            // Local variable declaration
             LocalVariableDeclarations.Add(FString::Printf(TEXT("        auto %s = %s;"), *LocalVarName, *ParamName));
-
-            // Use local variable in C++ call
             CallParameters.Add(LocalVarName);
         }
         else if (IsSucceededFailedEnumExpanded)
@@ -613,7 +557,6 @@ auto
         }
         else
         {
-            // Normal parameter handling
             auto ParamDeclaration = Get_AngelscriptParameterDeclaration(Property);
             if (NOT ParamDeclaration.IsEmpty())
             {
@@ -623,7 +566,6 @@ auto
         }
     }
 
-    // Get return type - use more detailed type extraction
     auto ReturnProperty = Function->GetReturnProperty();
     auto ReturnType = FString{TEXT("void")};
     if (ck::IsValid(ReturnProperty))
@@ -637,7 +579,6 @@ auto
         }
         else if (ReturnProperty->HasAnyPropertyFlags(CPF_ReferenceParm))
         {
-            // Add const if it's a const reference
             if (ReturnProperty->HasAnyPropertyFlags(CPF_ConstParm))
             {
                 ReturnType = TEXT("const ") + ReturnType + TEXT("&");
@@ -653,7 +594,6 @@ auto
         }
     }
 
-    // Generate the wrapper function
     auto Result = FString{};
 
     if (IsEditorOnly)
@@ -671,13 +611,11 @@ auto
 
     Result += TEXT(")\n    {\n");
 
-    // Add local variable declarations for handle conversions
     for (const auto& LocalVar : LocalVariableDeclarations)
     {
         Result += LocalVar + TEXT("\n");
     }
 
-    // Function body
     Result += TEXT("        ");
     if (UsingSucceededFailedEnumExpanded)
     {
@@ -688,7 +626,6 @@ auto
         Result += TEXT("return ");
     }
 
-    // Ensure class name starts with U for the C++ call
     auto CppClassName = ClassName;
     if (NOT CppClassName.StartsWith(TEXT("U")))
     {
@@ -702,10 +639,8 @@ auto
             Function)
         { return {}; }
 
-        // The AS-side mixin method may be renamed via UFUNCTION meta = (ScriptName = "...").
-        // Hazelight's binder uses ScriptName (falling back to ScriptMethod) for the bound AS
-        // method name, so the wrapper's call expression has to match — otherwise the generated
-        // .as file references a method that no longer exists.
+        // Hazelight's binder names the bound AS method from ScriptName, falling back to
+        // ScriptMethod — the call expression must match or the emitted .as references nothing.
         auto MixinCallName = FunctionName;
         if (const auto* ScriptName = Function->FindMetaData(TEXT("ScriptName"));
             ScriptName != nullptr && NOT ScriptName->IsEmpty())
@@ -778,17 +713,14 @@ auto
 
     auto Result = FString{};
 
-    // Handle const
     if (Property->HasAnyPropertyFlags(CPF_ConstParm))
     {
         Result += TEXT("const ");
     }
 
-    // Get detailed type
     auto AsType = Get_DetailedPropertyType(Property);
     Result += AsType;
 
-    // Handle references (UPARAM(ref) or reference parameters)
     if (Property->HasAnyPropertyFlags(CPF_ReferenceParm | CPF_OutParm))
     {
         Result += TEXT(" &in ");
@@ -800,7 +732,6 @@ auto
 
     Result += Property->GetName();
 
-    // Add default value if present
     auto DefaultValue = Get_DefaultValueForProperty(Property);
     if (NOT DefaultValue.IsEmpty())
     {
@@ -843,19 +774,16 @@ auto
     if (ck::Is_NOT_Valid(Function))
     { return false; }
 
-    // Check return type
     if (auto ReturnProp = Function->GetReturnProperty())
     {
         if (Request_IsInterfaceProperty(ReturnProp))
         { return true; }
     }
 
-    // Check all parameters
     for (TFieldIterator<FProperty> PropertyIterator(Function); PropertyIterator; ++PropertyIterator)
     {
         auto Property = *PropertyIterator;
 
-        // Skip return property (already checked)
         if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
         { continue; }
 
@@ -877,13 +805,11 @@ auto
     if (ck::Is_NOT_Valid(Property))
     { return false; }
 
-    // Check for interface property
     if (auto InterfaceProp = CastField<FInterfaceProperty>(Property))
     {
         return true;
     }
 
-    // Check for object property that references an interface
     if (auto ObjectProp = CastField<FObjectProperty>(Property))
     {
         if (ck::IsValid(ObjectProp->PropertyClass) && ObjectProp->PropertyClass->HasAnyClassFlags(CLASS_Interface))
@@ -892,19 +818,16 @@ auto
         }
     }
 
-    // Check array inner properties
     if (auto ArrayProp = CastField<FArrayProperty>(Property))
     {
         return Request_IsInterfaceProperty(ArrayProp->Inner);
     }
 
-    // Check map key/value properties
     if (auto MapProp = CastField<FMapProperty>(Property))
     {
         return Request_IsInterfaceProperty(MapProp->KeyProp) || Request_IsInterfaceProperty(MapProp->ValueProp);
     }
 
-    // Check set element properties
     if (auto SetProp = CastField<FSetProperty>(Property))
     {
         return Request_IsInterfaceProperty(SetProp->ElementProp);
@@ -946,7 +869,6 @@ auto
         if (Param->HasAnyPropertyFlags(CPF_Parm) &&
             NOT Param->HasAnyPropertyFlags(CPF_ReturnParm))
         {
-            // Check for struct type
             if (auto StructProp = CastField<FStructProperty>(Param))
             {
                 const auto& PropertyName = StructProp->Struct->GetFName();
@@ -956,7 +878,6 @@ auto
                 }
             }
 
-            // Check for class type (UObject-derived)
             if (auto ObjectProp = CastField<FObjectPropertyBase>(Param))
             {
                 const auto& PropertyName = ObjectProp->PropertyClass->GetFName();
@@ -966,7 +887,6 @@ auto
                 }
             }
 
-            // FString check
             if (auto StrProp = CastField<FStrProperty>(Param))
             {
                 const auto& PropertyName = TEXT("String");
@@ -995,19 +915,16 @@ auto
     if (ck::Is_NOT_Valid(Function))
     { return false; }
 
-    // Check various metadata that might indicate editor-only functions
     if (Function->HasMetaData(TEXT("EditorOnly")))
     { return true; }
 
     if (Function->HasMetaData(TEXT("WithEditor")))
     { return true; }
 
-    // Check function flags for editor-specific flags
     if (Function->HasAnyFunctionFlags(FUNC_EditorOnly))
     { return true; }
 
-    // Check if any parameter or return type contains "Editor" in the name
-    // This is a heuristic - editor types often have "Editor" in their name
+    // Heuristic: editor types conventionally carry "Editor" in their type name.
     if (auto ReturnProp = Function->GetReturnProperty())
     {
         auto ReturnType = ReturnProp->GetCPPType();
@@ -1026,7 +943,6 @@ auto
         { return true; }
     }
 
-    // Check if the function is in an editor module as a fallback
     return Request_IsClassInEditorModule(Function->GetOwnerClass());
 }
 
@@ -1041,13 +957,11 @@ auto
     if (ck::Is_NOT_Valid(Property))
     { return FString{}; }
 
-    // Get the function that owns this property
     auto OwnerStruct = Property->GetOwnerStruct();
     auto OwnerFunction = Cast<UFunction>(OwnerStruct);
     if (ck::Is_NOT_Valid(OwnerFunction))
     { return FString{}; }
 
-    // Check if this property has a default value in the function metadata
     auto MetaKey = ck::Format_UE(TEXT("CPP_Default_{}"), Property->GetName());
     if (OwnerFunction->HasMetaData(*MetaKey))
     {
@@ -1072,13 +986,11 @@ auto
 
     auto Result = CppDefaultValue;
 
-    // Handle nullptr/NULL -> nullptr
     if (Result == TEXT("nullptr") || Result == TEXT("NULL"))
     {
         return TEXT("nullptr");
     }
 
-    // Handle "None" for object types -> nullptr
     if (Result == TEXT("None"))
     {
         if (CastField<FObjectPropertyBase>(Property) ||
@@ -1090,7 +1002,6 @@ auto
         }
     }
 
-    // Handle empty struct construction () -> StructType()
     if (Result == TEXT("()"))
     {
         if (CastField<FStructProperty>(Property))
@@ -1100,45 +1011,38 @@ auto
         }
     }
 
-    // Handle boolean values
     if (Result == TEXT("true") || Result == TEXT("false"))
     {
         return Result;
     }
 
-    // Handle FName properties - must use n"string" syntax in AngelScript
     if (CastField<FNameProperty>(Property))
     {
-        // "None" for FName should be NAME_None
         if (Result == TEXT("None") || Result == TEXT("\"None\""))
         {
             return TEXT("NAME_None");
         }
 
-        // Remove existing quotes if present
         if (Result.StartsWith(TEXT("\"")) && Result.EndsWith(TEXT("\"")))
         {
             Result = Result.Mid(1, Result.Len() - 2);
         }
 
-        // FName literals in AngelScript use n"string" syntax
+        // FName literals in AngelScript use n"string" syntax.
         return ck::Format_UE(TEXT("n\"{}\""), Result);
     }
 
-    // Handle TEXT() macro wrapper for strings
     if (Result.StartsWith(TEXT("TEXT(\"")) && Result.EndsWith(TEXT("\")")))
     {
         auto StringContent = Result.Mid(6, Result.Len() - 8);
         return ck::Format_UE(TEXT("\"{}\""), StringContent);
     }
 
-    // Handle string literals that already have quotes
     if (Result.StartsWith(TEXT("\"")) && Result.EndsWith(TEXT("\"")))
     {
         return Result;
     }
 
-    // Handle string properties that don't have quotes but should
     if (CastField<FStrProperty>(Property))
     {
         if (NOT Result.StartsWith(TEXT("\"")))
@@ -1147,7 +1051,6 @@ auto
         }
     }
 
-    // Handle FText properties
     if (CastField<FTextProperty>(Property))
     {
         if (NOT Result.StartsWith(TEXT("\"")))
@@ -1156,7 +1059,7 @@ auto
         }
     }
 
-    // Handle enum values - need to keep full type name for Angelscript
+    // AngelScript needs the full enum type name on every enumerator.
     if (const auto EnumProp = CastField<FEnumProperty>(Property))
     {
         const auto& EnumTypeName = EnumProp->GetEnum()->GetName();
@@ -1176,7 +1079,6 @@ auto
         }
     }
 
-    // Handle byte enum values
     if (const auto ByteProp = CastField<FByteProperty>(Property))
     {
         if (ck::IsValid(ByteProp->Enum))
@@ -1199,7 +1101,7 @@ auto
         }
     }
 
-    // Handle float values - ensure they have 'f' suffix for float32
+    // float32 literals need the 'f' suffix in AngelScript.
     if (CastField<FFloatProperty>(Property))
     {
         if (NOT Result.EndsWith(TEXT("f")) && NOT Result.EndsWith(TEXT("F")))
@@ -1209,7 +1111,7 @@ auto
         return Result;
     }
 
-    // Handle struct default values with named parameters like (R=1.0,G=1.0,B=1.0,A=1.0)
+    // UHT named-parameter struct defaults, e.g. "(R=1.0,G=1.0,B=1.0,A=1.0)".
     if (Result.StartsWith(TEXT("(")) && Result.EndsWith(TEXT(")")) && Result.Contains(TEXT("=")))
     {
         const auto& PropertyTypeName = Get_DetailedPropertyType(Property);
@@ -1237,25 +1139,24 @@ auto
         }
     }
 
-    // Handle struct constructors like FVector(1,2,3) or FVector::ZeroVector
+    // Struct constructors and static members alike (FVector(1,2,3), FVector::ZeroVector) are
+    // already valid AngelScript.
     if (Result.StartsWith(TEXT("F")) && Result.Contains(TEXT("(")))
     {
         return Result;
     }
 
-    // Handle static members like FVector::ZeroVector
     if (Result.Contains(TEXT("::")))
     {
         return Result;
     }
 
-    // Handle numeric values
     if (Result.IsNumeric() || (Result.StartsWith(TEXT("-")) && Result.Mid(1).IsNumeric()))
     {
         return Result;
     }
 
-    // Handle simple comma-separated values like "0.000000,1.000000,0.000000"
+    // Bare component lists, e.g. "0.000000,1.000000,0.000000".
     if (Result.Contains(TEXT(",")) && NOT Result.Contains(TEXT("(")) && NOT Result.Contains(TEXT("=")))
     {
         const auto& PropertyTypeName = Get_DetailedPropertyType(Property);
@@ -1277,7 +1178,6 @@ auto
 
     auto AllNames = TSet<FString>{};
 
-    // 1. From IConsoleManager (engine + all registered CVars)
     IConsoleManager::Get().ForEachConsoleObjectThatStartsWith(
         FConsoleObjectVisitor::CreateLambda(
             [&AllNames](const TCHAR* InName, IConsoleObject* InObj)
@@ -1296,7 +1196,6 @@ auto
             }),
         TEXT(""));
 
-    // 2. From our persistent settings
     auto* Settings = UCk_CVar_Settings_UE::Get();
     if (ck::IsValid(Settings, ck::IsValid_Policy_NullptrOnly{}))
     {
@@ -1326,7 +1225,6 @@ auto
 
     for (const auto& OriginalName : SortedNames)
     {
-        // Skip deprecated CVars (name contains "deprecated" regardless of case)
         if (OriginalName.Contains(TEXT("deprecated"), ESearchCase::IgnoreCase))
         { continue; }
 
@@ -1334,11 +1232,10 @@ auto
         if (NOT DetectedType.IsSet())
         { continue; }
 
-        // Skip unsupported types (commands have no value to read/write)
+        // A command has no value to read or write, so there is nothing to emit a CVarRef for.
         if (DetectedType.GetValue() == ECk_CVarType::Command)
         { continue; }
 
-        // Build a valid identifier from the CVar name
         auto Identifier = OriginalName;
         for (auto& Char : Identifier)
         {
@@ -1348,7 +1245,6 @@ auto
             }
         }
 
-        // Skip if the identifier starts with a digit
         if (Identifier.Len() > 0 && FChar::IsDigit(Identifier[0]))
         { continue; }
 
@@ -1454,11 +1350,11 @@ auto
 
     auto TraceChannelIndices = TSet<int32>{};
 
-    // Engine defaults: Visibility (3) and Camera (4) are trace channels
-    TraceChannelIndices.Add(3);
-    TraceChannelIndices.Add(4);
+    constexpr auto VisibilityChannelIndex = 3;
+    constexpr auto CameraChannelIndex     = 4;
+    TraceChannelIndices.Add(VisibilityChannelIndex);
+    TraceChannelIndices.Add(CameraChannelIndex);
 
-    // Custom channels: check bTraceType
     for (const auto& CustomChannel : CollisionProfile->DefaultChannelResponses)
     {
         if (CustomChannel.bTraceType)
@@ -1638,8 +1534,8 @@ auto
 
     auto Surfaces = TArray<FSurfaceEntry>{};
 
-    // Engine default: SurfaceType_Default (index 0) is always available
-    Surfaces.Add(FSurfaceEntry{TEXT("Default"), 0});
+    constexpr auto DefaultSurfaceIndex = 0;
+    Surfaces.Add(FSurfaceEntry{TEXT("Default"), DefaultSurfaceIndex});
 
     for (const auto& ConfiguredSurface : PhysicsSettings->PhysicalSurfaces)
     {

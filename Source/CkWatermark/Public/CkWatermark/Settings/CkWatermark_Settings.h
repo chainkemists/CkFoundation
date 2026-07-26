@@ -22,8 +22,7 @@ public:
     explicit UCk_Watermark_ProjectSettings_UE(
         const FObjectInitializer& InObjectInitializer);
 
-    // Forces a full Slate rebuild of all active watermark widgets.
-    // Use this after changing settings that require a rebuild (font size, font family, layout).
+    // Forces a full Slate rebuild of active watermark widgets, as font family/size and layout need.
     UFUNCTION(CallInEditor, Category = "Watermark")
     void ForceRebuildWatermark();
 
@@ -72,9 +71,8 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 4, ClampMax = 72))
     int32 _Watermark_BuildType_FontSize = 8;
 
-    // Custom font asset. When set, replaces the engine default (Roboto) for all watermark text.
+    // Custom font asset; empty falls back to the Slate Core Style default (Roboto).
     // Size and outline are still driven by the settings below.
-    // Leave empty to use the Slate Core Style default font.
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Fonts",
               meta = (AllowPrivateAccess = true))
     FSlateFontInfo _Watermark_FontOverride;
@@ -217,8 +215,7 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Watermark_DisplayPolicy _Watermark_MinPolicy_Connection = ECk_Watermark_DisplayPolicy::Regular;
 
-    // Max number of client rows the host renders (fixed slots; unused ones collapse). 4-player co-op
-    // needs few — default 8.
+    // Max client rows the host renders — fixed slots, unused ones collapse.
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Connection",
               meta = (AllowPrivateAccess = true, ClampMin = 1, ClampMax = 64))
     int32 _Watermark_Connection_MaxClientRows = 8;
@@ -336,8 +333,7 @@ private:
               meta = (AllowPrivateAccess = true))
     FLinearColor _Watermark_BuildId_Inactive_Color = FLinearColor(0.4f, 0.4f, 0.4f, 1.0f);
 
-    // Branches to show in the info bar. Any branch not listed here is hidden.
-    // Add branch names (e.g. "dev", "main") to opt-in to displaying them.
+    // Branches to show in the info bar (e.g. "dev", "main"). Anything unlisted is hidden.
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Visibility|Build Info",
               meta = (AllowPrivateAccess = true))
     TArray<FString> _Watermark_BuildId_EnabledBranches;
@@ -359,9 +355,8 @@ private:
     FLinearColor _Watermark_CustomField_DefaultValueColor = FLinearColor(1.f, 1.f, 1.f, 1.f);
 
     // ---- Widget Setup --------------------------------------------------------
-    // Default display policy used in Shipping builds when no -CkWatermark
-    // command-line argument is provided. Set to Minimal or Regular to show
-    // the watermark in shipping by default. Hidden disables it (original behavior).
+    // Default display policy in Shipping builds when no -CkWatermark argument is provided.
+    // Minimal or Regular shows the watermark in shipping; Hidden disables it.
     UPROPERTY(Config, EditAnywhere, Category = "Watermark",
               meta = (AllowPrivateAccess = true))
     ECk_Watermark_DisplayPolicy _Watermark_DefaultDisplayPolicy_Shipping = ECk_Watermark_DisplayPolicy::Hidden;
@@ -373,7 +368,6 @@ private:
 
     // ---- Stat Row Assignments ------------------------------------------------
     // Each setting controls which row (0-based) a stat appears in.
-    // Default values preserve the original two-row layout.
 
     UPROPERTY(Config, EditAnywhere, Category = "Watermark|Stat Rows",
               meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 8))

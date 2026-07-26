@@ -6,36 +6,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Emergency stub synthesizer for AssetRegistry accessor drift (Rev 10 strategy #3).
-//
-// Drift: a teammate's regen of `Script/Generated/*Assets.as` doesn't get
-// committed alongside the AS callers that reference the new accessors. AS
-// compile fails (`No matching signatures to 'assets::MALE_SKEL_NEW()'`),
-// editor wedges on the Hazelight modal.
-//
-// Recovery (sibling-file model): synthesize the stub into a sibling
-// `_StubRecovery_<MatchedAssetsFile>.as` next to the canonical, gitignored,
-// deleted by PostCompile after a successful compile. AS namespace-merge
-// across files satisfies compile. Canonical files are never touched.
-//
-// Class resolution:
-//   * Tiers 2/2.5/2.6 — FCkAssetRegistry_ClassResolver
-//     (Assets/CkAssetRegistry_ClassResolver.h), shared with the canonical
-//     generator's sync-resolve path.
-//   * Tier 3 — REFUSED for all flavors as of 2026-05-13 (probe_a2.log).
-//
-//     The original 2026-05-12 policy emitted `TSoftObjectPtr<UObject>` stubs
-//     on the assumption that the caller's typed-conversion error would point
-//     at the right line. Probe a2 disproved that: the typed-conversion error
-//     doesn't match either of FCkAsErrorParser's two recognized patterns, so
-//     cycle 2 parses zero actionable roots and the editor wedges on the
-//     terminal banner. Refusing keeps Hazelight's original `No matching
-//     signatures` error visible — actionable for the user.
-//
-// Discovery is AR-free — at modal-tick during initial-compile-failure, AR's
-// SearchAllAssets/GetAssetsByClass exit early on
-// IsEngineStartupModuleLoadingComplete() == FALSE. We file-scan
-// `Script/Generated/*Assets.as` for `// Discovery root:` headers instead.
+// Emergency stub synthesizer for AssetRegistry accessor drift: emits the
+// missing `assets::*` accessor into a sibling `_StubRecovery_<MatchedAssetsFile>.as`
+// (canonicals are never touched; AS namespace-merge satisfies the compile).
+// Discovery is deliberately AssetRegistry-free and class resolution is shared
+// with the canonical generator — see CkAngelscriptGenerator/CLAUDE.md.
 
 namespace ck::angelscriptgenerator::self_heal
 {
@@ -47,7 +22,7 @@ namespace ck::angelscriptgenerator::self_heal
         FString ResolvedAssetClass;   // e.g. "USkeletalMesh" (empty on failure)
         FString ResolvedAssetPath;    // e.g. "/Game/Raw/SKM/MALE_SKEL_NEW.MALE_SKEL_NEW"
         FString ErrorMessage;         // populated on failure
-        bool    UsedTier3Fallback = false; // dead since 2026-05-13; field retained for source compat
+        bool    UsedTier3Fallback = false; // dead — Tier 3 is refused; retained for source compat
     };
 
     // `assets::FOO()`              -> SoftRef
@@ -62,7 +37,6 @@ namespace ck::angelscriptgenerator::self_heal
         BlockingLoadClass,
     };
 
-    // (file path, discovery root) pair parsed from a *Assets.as header.
     struct CKANGELSCRIPTGENERATOR_API FCk_AssetConfigSiteInfo
     {
         FString OutputPath;
@@ -90,14 +64,13 @@ namespace ck::angelscriptgenerator::self_heal
             const FString& InResolvedClassName,
             const FString& InAssetPath) -> FString;
 
-        // Ensure-guarded LoadAsset_Blocking that delegates to the soft-ref.
+        // Emits an ensure-guarded LoadAsset_Blocking delegating to the soft-ref.
         static auto Build_BlockingLoadAccessor(
             const FString& InFunctionName,
             const FString& InResolvedClassName,
             const FString& InSoftNamespace) -> FString;
 
-        // BP _Class blocking variant. InFunctionName carries the `_Class`
-        // suffix; the emitted body returns TSubclassOf<Class>.
+        // BP _Class blocking variant; InFunctionName carries the `_Class` suffix.
         static auto Build_BlockingLoadClassAccessor(
             const FString& InFunctionName,
             const FString& InResolvedClassName,
@@ -112,10 +85,8 @@ namespace ck::angelscriptgenerator::self_heal
         static auto Get_StubFileHeader   () -> FString;
         static auto Derive_StubSiblingPath(const FString& InCanonicalFilePath) -> FString;
 
-        // Reads `// Discovery root:` for the root (canonical source — the
-        // `// Source config:` line was malformed by a U+2192 arrow concat
-        // bug before commit c408ee8be). Returns false if header isn't
-        // present in the first ~10 lines.
+        // The root comes from `// Discovery root:`, NOT from the malformed path
+        // token on `// Source config:`. False if absent in the first ~10 lines.
         static auto Try_ParseConfigSiteHeader(
             const FString&            InFilePath,
             FCk_AssetConfigSiteInfo&  OutSite,
@@ -126,23 +97,16 @@ namespace ck::angelscriptgenerator::self_heal
             const TArray<FString>& InDirs,
             const FString&         InNamespace) -> TArray<FCk_AssetConfigSiteInfo>;
 
-        // Longest-prefix match wins ("/Game/Raw/" beats "/Game/" for an
-        // asset under "/Game/Raw/SKM/"). INDEX_NONE if no candidate root
-        // prefixes the asset path.
+        // Longest-prefix match wins ("/Game/Raw/" beats "/Game/"). INDEX_NONE
+        // when no candidate root prefixes the asset path.
         static auto Pick_BestSite_ByAssetPath(
             const TArray<FCk_AssetConfigSiteInfo>& InCandidates,
             const FString&                         InAssetPackagePath) -> int32;
 
         // ---- Live entry point (requires engine state) -----------------------------
 
-        // Returns Success=false with a populated ErrorMessage on any failure
-        // path. Tier 3 is REFUSED (see file-header rationale); the dispatcher
-        // logs the message and Hazelight's modal keeps showing the original
-        // actionable AS error.
-        //
-        // Class resolution (Tiers 2/2.5/2.6) is delegated to
-        // FCkAssetRegistry_ClassResolver (Assets/CkAssetRegistry_ClassResolver.h),
-        // shared with the canonical generator's sync-resolve path.
+        // Returns Success=false with a populated ErrorMessage on every failure
+        // path — including an unresolvable class, where refusing is deliberate.
         static auto Inject_AssetRegistryStub(const FCk_AsParsedError& InError) -> FCk_AssetStubInjectionResult;
     };
 }

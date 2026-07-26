@@ -25,18 +25,14 @@ auto
     InHandle.Add<ck::FFragment_2dGridBlocker_Current>();
     InHandle.Add<ck::FTag_2dGridBlocker_NeedsSetup>();
 
-    // Death-watch: decrement the counted Disabled tag on stamped cells when the
-    // blocker entity is destroyed (so a bare-spawned blocker releases its block).
     auto DeathWatch = FCk_Delegate_OnBeginDestroy{};
     DeathWatch.BindUFunction(GetMutableDefault<UCk_Utils_2dGridBlocker_UE>(), GET_FUNCTION_NAME_CHECKED(UCk_Utils_2dGridBlocker_UE, OnBlockerBeginDestroy));
     UCk_Utils_EntityLifetime_UE::BindTo_OnBeginDestroy(InHandle, DeathWatch);
 
     auto Blocker = Cast(InHandle);
 
-    // Register the blocker into the grid's blocker record so gameplay can enumerate / look it up.
-    // When _Name is set, stamp the GameplayLabel on the blocker entity first: Request_Connect reads
-    // the entry's label and indexes it under that tag name, which is what Get_BlockerWithTag queries.
-    // CkRecord's reverse-link auto-prunes the entry when the blocker entity dies.
+    // The GameplayLabel must be stamped BEFORE Request_Connect: the record indexes the entry under
+    // the label it reads at connect time, and that index is what Get_BlockerWithTag queries.
     if (const auto Grid = InParams.Get_Grid();
         ck::IsValid(Grid))
     {

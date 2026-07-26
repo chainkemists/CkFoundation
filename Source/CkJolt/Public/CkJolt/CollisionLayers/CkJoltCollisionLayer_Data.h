@@ -8,8 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/// Which broadphase tree a body lives in. Jolt's broadphase keeps one bounding-volume tree per
-/// layer; Static-vs-Static pairs are filtered out entirely (statics never pair with each other).
+/// Which broadphase tree a body lives in. Static-vs-Static pairs are filtered out entirely.
 UENUM(BlueprintType)
 enum class ECk_Jolt_BodyDomain : uint8
 {
@@ -21,9 +20,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_BodyDomain);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/// UE's touch-resolution outcome for a body pair or a query-vs-body test:
-/// min(A.Response[B.Channel], B.Response[A.Channel]). Jolt's binary pair filter treats
-/// anything != Ignore as "interact"; Block-vs-Overlap is resolved at query/contact sites.
+/// UE's touch resolution: min(A.Response[B.Channel], B.Response[A.Channel]). Jolt's binary pair filter
+/// treats anything != Ignore as "interact"; Block-vs-Overlap is resolved at query/contact sites.
 UENUM(BlueprintType)
 enum class ECk_Jolt_PairInteraction : uint8
 {
@@ -36,11 +34,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Jolt_PairInteraction);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-/// The complete set of inputs UE/Chaos uses to decide whether two bodies interact, captured
-/// per-body: object channel, the full 32-channel response array (2 bits per channel), collision
-/// enabled mode, and the Static/Dynamic domain. One Jolt ObjectLayer is allocated per unique
-/// signature (Phase 2) — per-channel or per-profile layers both lose information (profiles differ
-/// in response arrays; components can carry custom per-channel edits).
+/// The complete set of inputs UE/Chaos uses to decide whether two bodies interact, captured per-body. One
+/// Jolt ObjectLayer is allocated per unique signature — per-channel or per-profile layers both lose
+/// information (profiles differ in response arrays; components carry custom per-channel edits).
 USTRUCT(BlueprintType)
 struct CKJOLT_API FCk_Jolt_CollisionSignature
 {
@@ -74,8 +70,7 @@ public:
     auto Get_ResponseToChannel(ECollisionChannel InChannel) const -> ECk_Jolt_PairInteraction;
     auto Set_ResponseToChannel(ECollisionChannel InChannel, ECk_Jolt_PairInteraction InResponse) -> void;
 
-    /// Builds the signature from a component's effective collision setup (object type, the
-    /// component's response container including per-component custom edits, collision enabled).
+    /// Built from the component's EFFECTIVE collision setup, including per-component custom response edits.
     static auto Make_FromComponent(
         const class UPrimitiveComponent& InComponent,
         ECk_Jolt_BodyDomain InDomain) -> FCk_Jolt_CollisionSignature;
