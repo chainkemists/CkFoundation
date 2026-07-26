@@ -129,7 +129,7 @@ auto
     }
 
     CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()->GetFirstPlayerController()),
-        TEXT("World [{}] first player controller is INVALID"))
+        TEXT("World [{}] first player controller is INVALID"), GetWorld())
     {
         ck::console_commands::Warning(
             TEXT("Could NOT run console command [{}] because the World [{}] FIRST PlayerController is INVALID"),
@@ -272,7 +272,7 @@ auto
         { return; }
 
         CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()->GetFirstPlayerController()),
-            TEXT("World [{}] first player controller is INVALID"))
+            TEXT("World [{}] first player controller is INVALID"), GetWorld())
         { return; }
 
         const auto& Output = GetWorld()->GetFirstPlayerController()->ConsoleCommand(InCommand, WriteToConsole);

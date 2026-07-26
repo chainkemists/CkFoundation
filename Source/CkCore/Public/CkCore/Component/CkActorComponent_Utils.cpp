@@ -25,7 +25,7 @@ auto
         const auto Current = Stack.Pop();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Current),
-            TEXT("Current component [{}] was expected to be valid during hierarchical traversal of Actor [{}]"),
+            TEXT("Current component was expected to be valid during hierarchical traversal of Actor [{}]"),
             InActor)
         { continue; }
 
