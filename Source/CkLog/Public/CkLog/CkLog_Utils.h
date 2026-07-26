@@ -519,6 +519,15 @@ public:
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
+              DisplayName = "[Ck] Log (Dynamic Verbosity)",
+              Category = "Ck|Utils|Log")
+    static void
+    Log_WithVerbosity(
+        FText InMsg,
+        ECk_LogVerbosity InVerbosity,
+        FCk_LogCategory InLogCategory);
+
 public:
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
               DisplayName = "[Ck] Log If (Fatal)",

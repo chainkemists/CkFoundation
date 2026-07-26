@@ -415,14 +415,14 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
 
     const auto VerbosityPin = GetVerbosityPin();
     FString VerbosityValue = VerbosityPin->DefaultValue;
-    if (VerbosityPin->LinkedTo.Num() > 0)
-    {
-        // A dynamic verbosity would need a switch expansion; until then a connected pin means Log
-        VerbosityValue = TEXT("Log");
-    }
+    const auto VerbosityIsDynamic = VerbosityPin->LinkedTo.Num() > 0;
 
     FName LogFunctionName;
-    if (VerbosityValue == TEXT("Fatal"))
+    if (VerbosityIsDynamic)
+    {
+        LogFunctionName = GET_MEMBER_NAME_CHECKED(UCk_Utils_Log_UE, Log_WithVerbosity);
+    }
+    else if (VerbosityValue == TEXT("Fatal"))
     {
         LogFunctionName = GET_MEMBER_NAME_CHECKED(UCk_Utils_Log_UE, Log_Fatal);
     }
@@ -682,6 +682,13 @@ void UCk_K2Node_Log::ExpandNode(FKismetCompilerContext& CompilerContext,
     CompilerContext.MovePinLinksToIntermediate(*GetLogCategoryPin(),
                                                *CreateLogFunctionCall->FindPinChecked(
                                                    TEXT("InLogCategory")));
+
+    if (VerbosityIsDynamic)
+    {
+        CompilerContext.MovePinLinksToIntermediate(*VerbosityPin,
+                                                   *CreateLogFunctionCall->FindPinChecked(
+                                                       TEXT("InVerbosity")));
+    }
 
     CallFormatFunction->GetReturnValuePin()->MakeLinkTo(
         CreateLogFunctionCall->FindPinChecked(TEXT("InMsg")));
