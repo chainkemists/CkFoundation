@@ -260,7 +260,7 @@ namespace ck
             HandleType InHandle) const
         -> void
     {
-        auto QueryEntity = static_cast<FCk_Handle&>(InHandle);
+        auto QueryEntity = InHandle.ConvertToHandle();
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(QueryEntity);
     }
 }
