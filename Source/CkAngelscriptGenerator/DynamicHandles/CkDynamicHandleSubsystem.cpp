@@ -91,14 +91,14 @@ auto
     {
         LastGeneratedHash = ComputeDefinitionsHash(Definitions);
 
-        ck::angelscriptgenerator::Log(TEXT("[DynamicHandleSubsystem] Generated registry: %s (%d types)"),
-            *OutputPath, Definitions.Num());
+        ck::angelscriptgenerator::Log(TEXT("[DynamicHandleSubsystem] Generated registry: {} ({} types)"),
+            OutputPath, Definitions.Num());
 
         OnGenerationComplete.Broadcast(Definitions.Num(), true);
     }
     else
     {
-        ck::angelscriptgenerator::Log(TEXT("[DynamicHandleSubsystem] Failed to write registry: %s"), *OutputPath);
+        ck::angelscriptgenerator::Log(TEXT("[DynamicHandleSubsystem] Failed to write registry: {}"), OutputPath);
         OnGenerationComplete.Broadcast(0, false);
     }
 }
@@ -146,7 +146,7 @@ auto
     if (TotalNewTypes > 0)
     {
         ck::angelscriptgenerator::Log(
-            TEXT("[DynamicHandleSubsystem] Registered %d new handle types at runtime"),
+            TEXT("[DynamicHandleSubsystem] Registered {} new handle types at runtime"),
             TotalNewTypes);
     }
     else
@@ -230,7 +230,6 @@ auto
     }
 
     RootObject->SetArrayField(TEXT("HandleTypes"), HandleTypesArray);
-    RootObject->SetStringField(TEXT("GeneratedAt"), FDateTime::Now().ToString());
     RootObject->SetNumberField(TEXT("Version"), 1);
 
     auto OutputString = FString{};

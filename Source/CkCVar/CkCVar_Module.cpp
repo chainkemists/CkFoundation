@@ -70,7 +70,7 @@ void FCkCVarModule::StartupModule()
 			}
 		}
 
-		ck::cvar::Verbose(TEXT("Registered persisted CVar [%s]"), *Name.ToString());
+		ck::cvar::Verbose(TEXT("Registered persisted CVar [{}]"), Name);
 	}
 }
 
