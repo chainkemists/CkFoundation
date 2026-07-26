@@ -122,12 +122,12 @@ auto
     {
         case ECk_EnableDisable::Disable:
         {
-            InCell.Add<ck::FTag_2dGridCell_Disabled>();
+            InCell.AddOrGet<ck::FTag_2dGridCell_Disabled>();
             break;
         }
         case ECk_EnableDisable::Enable:
         {
-            InCell.Remove<ck::FTag_2dGridCell_Disabled>();
+            InCell.Try_Remove<ck::FTag_2dGridCell_Disabled>();
             break;
         }
         default:
