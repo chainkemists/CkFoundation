@@ -3,13 +3,26 @@
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
 #include "CkDialog/CkDialog_Log.h"
-#include "CkDialog/Common/CkDialog_QueryHelpers.h"
 #include "CkDialog/Line/CkDialogLine_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_DialogEmitter_UE, FCk_Handle_DialogEmitter,
     ck::FFragment_DialogEmitter_Params, ck::FTag_DialogEmitter);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_dialog_emitter_utils
+{
+    // FProcessor_DialogEmitter_TickCooldowns retires finished entries, so in a ticking world presence is very nearly
+    // the answer — but a Forever entry is never ticked and so never reports Done, and an entry can be read in the
+    // same frame it was started. Both are covered here rather than at each call site.
+    auto Is_EntryActive(const FCk_DialogEmitter_CooldownEntry& InEntry) -> bool
+    {
+        return InEntry.Get_DurationMode() == ECk_Dialog_CooldownDuration::Forever ||
+               NOT InEntry.Get_Cooldown().Get_IsDone();
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -64,7 +77,7 @@ auto
     if (Entry == nullptr)
     { return false; }
 
-    return ck::FDialog_QueryHelpers::Get_WorldTimeNow(InEmitter) < Entry->Get_Expiry();
+    return ck_dialog_emitter_utils::Is_EntryActive(*Entry);
 }
 
 auto
@@ -73,13 +86,12 @@ auto
         const FCk_Handle_DialogEmitter& InEmitter)
     -> TArray<FCk_Handle_DialogLine>
 {
-    const auto Now = ck::FDialog_QueryHelpers::Get_WorldTimeNow(InEmitter);
     const auto& Cooldowns = InEmitter.Get<ck::FFragment_DialogEmitter_Cooldowns>().Get_Cooldowns();
 
     auto Result = TArray<FCk_Handle_DialogLine>{};
     for (const auto& Cooldown : Cooldowns)
     {
-        if (Now < Cooldown.Value.Get_Expiry())
+        if (ck_dialog_emitter_utils::Is_EntryActive(Cooldown.Value))
         { Result.Emplace(Cooldown.Key); }
     }
     return Result;
@@ -97,18 +109,11 @@ auto
     if (Entry == nullptr)
     { return FCk_Time::ZeroSecond(); }
 
-    // Forever reports its own sentinel expiry rather than a countdown — there is nothing to count down to.
-    // Read the recorded mode instead of comparing against the sentinel value, so a caller cannot mistake a
-    // very-long Timed cooldown for a Forever one.
-    const auto Expiry = Entry->Get_Expiry();
-    if (Entry->Get_DurationMode() == ECk_Dialog_CooldownDuration::Forever)
-    { return Expiry; }
-
-    const auto Now = ck::FDialog_QueryHelpers::Get_WorldTimeNow(InEmitter);
-    if (NOT (Now < Expiry))
-    { return FCk_Time::ZeroSecond(); }
-
-    return Expiry - Now;
+    // A Forever cooldown has no meaningful countdown; it reports whatever goal it was constructed with (usually
+    // zero) and callers are expected to branch on Get_CooldownEntry(...).Get_DurationMode() instead of reading a
+    // magic value out of this. Deliberately not a sentinel — a caller comparing magnitudes cannot tell a sentinel
+    // from a genuinely long Timed window.
+    return Entry->Get_Cooldown().Get_TimeRemaining();
 }
 
 auto

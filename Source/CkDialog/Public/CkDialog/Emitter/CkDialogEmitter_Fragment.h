@@ -37,18 +37,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Sentinel expiry for a "Forever" (play-once-ever) cooldown: an expiry no world-time ever reaches, so the
-    // Now < Expiry active test always holds.
-    struct CKDIALOG_API FDialog_CooldownSentinels
-    {
-        static auto Forever() -> const FCk_Time&;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    // Always present on an emitter (added by Add). Line ENTITY handle -> the cooldown record (expiry, the duration it
-    // was started with, and the mode); Forever cooldowns store FDialog_CooldownSentinels::Forever() as the expiry.
-    // The started-with duration is retained so an observer can express progress, which expiry alone cannot give.
+    // Always present on an emitter (added by Add). Line ENTITY handle -> the cooldown record, which is a Chrono
+    // (goal = the duration it was started with) plus the mode. A "Forever" entry is flagged by its mode and simply
+    // never ticked, rather than carrying a deadline no clock reaches.
     // Keyed by handle (not LineID) by design: a re-registered bank makes new entities, so cooldowns do not survive
     // re-registration — the accepted consequence of handle keying.
     struct CKDIALOG_API FFragment_DialogEmitter_Cooldowns
