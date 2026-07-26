@@ -64,6 +64,7 @@ namespace ck
         ck::interaction::VeryVerbose(TEXT("Interaction [{}] EndInteraction with [{}]. Channel: [{}], Source: [{}], Target: [{}]"),
             InHandle, InRequest.Get_SuccessFail(), InParams.Get_Params().Get_InteractionChannel(),
             InParams.Get_Params().Get_Source(), InParams.Get_Params().Get_Target());
+        InHandle.AddOrGet<FTag_Interaction_FinishedBroadcastSent>();
         UUtils_Signal_Interaction_OnInteractionFinished::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_SuccessFail()));
     }
 
@@ -77,6 +78,18 @@ namespace ck
             const FFragment_Interaction_Params& InParams)
         -> void
     {
+        // A destroyed-mid-flight interaction never reaches the request handler (it excludes
+        // pending-kill), so the Failed outcome must be broadcast from here — the one window where
+        // both parties' listeners are still bound and handles still resolve.
+        if (InHandle.Has<FTag_Interaction_FinishedBroadcastSent>())
+        { return; }
+
+        InHandle.AddOrGet<FTag_Interaction_FinishedBroadcastSent>();
+
+        ck::interaction::VeryVerbose(TEXT("Interaction [{}] destroyed mid-flight — broadcasting [{}] from EndPlay. Channel: [{}], Source: [{}], Target: [{}]"),
+            InHandle, ECk_SucceededFailed::Failed, InParams.Get_Params().Get_InteractionChannel(),
+            InParams.Get_Params().Get_Source(), InParams.Get_Params().Get_Target());
+        UUtils_Signal_Interaction_OnInteractionFinished::Broadcast(InHandle, ck::MakePayload(InHandle, ECk_SucceededFailed::Failed));
     }
 }
 
