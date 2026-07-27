@@ -40,7 +40,7 @@ namespace ck
     class CKTIMER_API FProcessor_Timer_HandleRequests
         : public ck_exp::TProcessor<FProcessor_Timer_HandleRequests, FCk_Handle_Timer,
             ck::TReadWrite<FFragment_Timer_Current>, ck::TReadOnly<FFragment_Timer_Params>, ck::TReadWrite<FFragment_Timer_Requests>,
-            TExclude<FTag_Timer_NeedsSetup>, CK_IGNORE_PENDING_KILL>
+            TExclude<FTag_Timer_NeedsSetup>, TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_TimeDelta;
@@ -83,6 +83,32 @@ namespace ck
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
             const FCk_Request_Timer_Consume& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed timer's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKTIMER_API FProcessor_Timer_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Timer_CancelPendingRequests,
+        FCk_Handle_Timer,
+        ck::TReadOnly<FFragment_Timer_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InTimerEntity,
+            const FFragment_Timer_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
