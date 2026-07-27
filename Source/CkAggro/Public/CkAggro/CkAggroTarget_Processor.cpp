@@ -433,7 +433,22 @@ namespace ck
                 auto& Current = Owner.Get<ck::FFragment_Aggro_Current>();
                 if (Current.Get_ActiveTarget() == InTarget)
                 {
-                    Current._ActiveTarget = FCk_Handle_AggroTarget{};
+                    // Deliberately do NOT clear _ActiveTarget here — only stamp for re-selection.
+                    //
+                    // Clearing it silently swallowed the end-of-encounter edge: Selection reads
+                    // Incumbent, finds it already empty, computes Changed = (Best != Incumbent),
+                    // and when the forgotten target was the LAST one Best is also empty — so
+                    // Changed is false and OnAggroActiveTargetChanged never fires. A consumer
+                    // driving state off that signal could therefore learn about every switch but
+                    // never learn the encounter ended, and would stay latched on a dead target.
+                    //
+                    // Leaving the (ineligible, about-to-die) handle in place lets Selection see a
+                    // genuine transition and broadcast exactly ONCE with the correct old value:
+                    // as a clean switch when another target remains, and as old -> invalid when
+                    // the table empties. Broadcasting the clear here instead would double-fire on
+                    // a switch (calm, then re-engage). Consumers are unaffected by the brief
+                    // dangling handle: Get_ActiveTarget already returns something that fails
+                    // ck::IsValid either way.
                     Owner.AddOrGet<ck::FTag_Aggro_SelectionPending>();
                 }
             }
