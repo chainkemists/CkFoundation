@@ -56,8 +56,8 @@ auto
         case ECk_Cue_LifetimeBehavior::Timed:
         {
             auto LifetimeTimer = UCk_Utils_Timer_UE::TryGet_Timer(_AssociatedEntity, TAG_Label_Timer_CueLifetime);
-            UCk_Utils_Timer_UE::Request_Reset(LifetimeTimer);
-            UCk_Utils_Timer_UE::Request_Resume(LifetimeTimer);
+            UCk_Utils_Timer_UE::Request_Reset(LifetimeTimer, {});
+            UCk_Utils_Timer_UE::Request_Resume(LifetimeTimer, {});
             break;
         }
         default:
