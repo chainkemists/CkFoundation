@@ -51,6 +51,13 @@ auto
 
 auto
 	UCk_Utils_Goap_Action_UE::
+	Get_IsSetupComplete(const FCk_Handle_Goap_Action& InAction) -> bool
+{
+	return ck::IsValid(InAction) && NOT InAction.Has<ck::FTag_Goap_Action_RequiresSetup>();
+}
+
+auto
+	UCk_Utils_Goap_Action_UE::
 	Get_PlanStatus(const FCk_Handle_Goap_Action& InAction) -> ECk_GoapPlanStatus
 {
 	if (NOT ck::IsValid(InAction)) { return ECk_GoapPlanStatus::Idle; }
