@@ -26,6 +26,39 @@ UCk_Utils_Timer_UE::BindTo_OnFinished(TimerHandle, MyDelegate,
 
 ---
 
+## Request completion — the reference implementation
+
+CkTimer is the pilot for the framework-wide request-completion contract (root
+[CLAUDE.md](../../CLAUDE.md) § Requests; mechanism in
+[CkEcs/CLAUDE.md](../CkEcs/CLAUDE.md) § Signals). The delegate is carried ON the request struct —
+no request entity, no signal. Copy these four sites when rolling it out:
+
+- **`CkTimer_Utils.cpp`** — each deferred `Request_*` builds a named request local, stores the
+  delegate on it under `if (InDelegate.IsBound()) { Request.Set_CompletionDelegate(InDelegate); }`,
+  then enqueues that same local.
+- **`FProcessor_Timer_HandleRequests`** — the drain lambda declares
+  `auto Result = ECk_Request_OperationResult::Failed;`, then
+  `const auto Guard = ck::MakeCompletionGuard(InRequest, InTimerEntity, Result);` (guard AFTER the
+  local it references), and sets `Succeeded` after `DoHandleRequest` returns. CkTimer's handlers are
+  `void` with no rejection path, so reaching that line IS the success condition; a feature whose
+  handlers can fail must thread the result out. The drain iterates a COPY of the queue — the
+  delegate rides the copy, which is why firing from there is correct.
+- **`FProcessor_Timer_HandleRequests`'s view** — `TExclude<FTag_DestroyEntity_Initiate>` alongside
+  `CK_IGNORE_PENDING_KILL`. `Request_DestroyEntity` adds Initiate synchronously, so a timer
+  destroyed on the same stack that enqueued a request is already excluded when the drain runs that
+  frame: the request deterministically reaches the cancel processor instead of racing it.
+- **`FProcessor_Timer_CancelPendingRequests`** (`FGroup_EndPlay`, `CK_IF_END_PLAY`) — calls
+  `ck::request::FireCancelledForPending` so a destroyed timer's undrained queue completes with
+  `Failed_Cancelled` instead of hanging its caller.
+
+- **Immediate mutators** — `Request_ChangeCountDirection` and `Request_ReverseDirection` flip tags
+  inline and enqueue nothing, so there is no request struct and no handler. They take the same
+  trailing delegate and fire it synchronously on the caller's stack after the mutation:
+  `InDelegate.ExecuteIfBound(InTimerEntity, ECk_Request_OperationResult::Succeeded);`. This is the
+  house shape for every trivial setter that mutates at the Utils boundary.
+
+---
+
 ## Anti-patterns
 
 1. Don't use UE's `GetWorldTimerManager().SetTimer` for ECS-related delays — they're not tied to entity lifetime.

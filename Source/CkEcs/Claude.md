@@ -413,6 +413,43 @@ Post-fire behaviors:
 ### Per-listener profiling
 
 `ck.Signal.StatListeners 1` times each bound delegate invoked during a broadcast under `stat CkSignals_Listeners`, named `"ClassName::FunctionName"` — answers "WHICH listener of a hot signal (e.g. OnTimerUpdate) is expensive", which the per-signal-TYPE stat cannot. Off by default because the dynamic stat-id construction is not free.
+### Request completion — NOT a signal
+
+`Request/CkRequest_Completion.h` defines the ONE result enum and delegate type every feature uses to
+report a deferred request's outcome, so features don't each grow a signal/delegate/enum triplet:
+
+```cpp
+enum class ECk_Request_OperationResult : uint8 { Succeeded, Failed, Failed_NotEnqueued, Failed_Cancelled };
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FCk_Delegate_Request_OnCompleted, FCk_Handle, InRequestOwner, ECk_Request_OperationResult, InResult);
+```
+
+**The transport is the request struct, not the signal system.** `FCk_Request_Base` carries a
+non-reflected `mutable FCk_Delegate_Request_OnCompleted _CompletionDelegate` plus
+`Set_CompletionDelegate` / `TryFireCompletion` / `Get_HasCompletionDelegate`. The Utils boundary
+stores the caller's delegate on the request; the delegate then rides the queued struct (and any copy
+of it the drain takes) to whichever site completes it. No request entity is created, nothing is bound,
+and collisions are impossible because each request owns its own delegate. `TryFireCompletion` unbinds
+after executing — that unbind is the exactly-once guarantee, so completion paths fire unconditionally
+rather than testing whether some earlier path already did.
+
+`ck::TCompletionGuard` / `ck::MakeCompletionGuard(InRequest, InOwner, InResult)` (same header) is the
+handler-side RAII form: it holds the result BY REFERENCE and fires at scope exit, so it must be
+declared after the result local and never reordered.
+
+`ck::request::FireCancelledForPending(InOwner, InRequests)` (same header) is the teardown counterpart:
+it fires `Failed_Cancelled` for every queued request, unconditionally. Every feature with requests
+needs an `FGroup_EndPlay` processor (view: `TReadOnly<FFragment_X_Requests>` + `CK_IF_END_PLAY`)
+calling it, and its `HandleRequests` view must exclude `FTag_DestroyEntity_Initiate` on top of
+`CK_IGNORE_PENDING_KILL` — the Initiate tag is applied synchronously inside `Request_DestroyEntity`,
+so excluding it makes destroy-before-drain deterministic instead of a same-frame race between
+`Succeeded` and `Failed_Cancelled`. Reference: `ck::FProcessor_Timer_CancelPendingRequests`.
+
+The signal-based path (`PopulateRequestHandle` + `CK_SIGNAL_BIND_REQUEST_FULFILLED` +
+`ck::MakeRequestResultGuard`) remains for features with bespoke per-operation result signals —
+`CkInventory` is the reference. New features should not reach for it.
+
+Full call-site contract (Utils boundary, handler guard, the four results): root
+[CLAUDE.md](../../CLAUDE.md) § Requests.
 
 ---
 
