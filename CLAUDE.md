@@ -234,6 +234,39 @@ optionals via the fluent `Set_*` setters; `CK_REQUEST_DEFINE_DEBUG_NAME` on ever
 UFUNCTION surface takes `UPARAM(ref) FCk_Handle_X&` + the request struct and returns the handle
 (chainable). Trivial single-datum mutations may take the value directly (`Request_ChangeCountDirection`).
 
+**Request completion.** Every deferred `Request_*` ends with a trailing
+`const FCk_Delegate_Request_OnCompleted& InDelegate` (`CkEcs/Request/CkRequest_Completion.h`)
+carrying `meta = (AutoCreateRefTerm = "InDelegate")` and **no C++ default** — UHT cannot parse a
+delegate default value (`"C++ Default parameter not parsed"`). Optionality per environment:
+Blueprint gets it from `AutoCreateRefTerm`; AngelScript gets an emitted `= FCk_Delegate_Request_OnCompleted()`
+default in the generated `utils_*.as` wrapper (CkAngelscriptGenerator emits defaults for
+AutoCreateRefTerm delegate params); C++ callers that don't want completion pass `{}`.
+A bound delegate is GUARANTEED to fire exactly once with
+one of `ECk_Request_OperationResult::{Succeeded, Failed, Failed_NotEnqueued, Failed_Cancelled}`.
+The transport is the request struct itself — `FCk_Request_Base` carries a non-reflected
+`_CompletionDelegate`, so the delegate rides the queued request and there is no request entity and
+no signal in the default case:
+- **Utils boundary** — `if (InDelegate.IsBound()) { Request.Set_CompletionDelegate(InDelegate); }`
+  on a named request local, then enqueue that same local. A caller that passes nothing pays one
+  `IsBound()` check. Synchronous rejection before enqueue fires `Failed_NotEnqueued` directly via
+  `InDelegate.ExecuteIfBound`.
+- **Handler** — `ck::MakeCompletionGuard(InRequest, InOwner, Result)` declared AFTER the `Result`
+  local it holds by reference; the drain sets `Succeeded` on the success path. The guard's
+  destructor calls `TryFireCompletion`, which unbinds after executing — that unbind IS the
+  exactly-once guarantee, so every completion path may fire unconditionally.
+- **Immediate mutators** — a `Request_*` that mutates inline and enqueues nothing has no request
+  struct and no handler; it fires `InDelegate.ExecuteIfBound(Owner, Succeeded)` synchronously after
+  the mutation, so the caller contract never depends on a feature's internal deferral shape.
+- **Teardown** — a converted feature's request-drain view excludes owners already tagged
+  `ck::FTag_DestroyEntity_Initiate` (added synchronously by `Request_DestroyEntity`) on top of
+  `CK_IGNORE_PENDING_KILL`, so destroy-then-drain is never a race: the queue survives to the
+  feature's `FGroup_EndPlay` processor, which calls `ck::request::FireCancelledForPending` over its
+  `_Requests` fragment and completes every entry with `Failed_Cancelled`.
+Completion is LOCAL-machine: it reports the outcome of local processing, never a remote peer's.
+Canonical pilot: `CkTimer`. Features with richer failure modes keep bespoke result enums and
+per-operation signals (`CkInventory`, which still uses `PopulateRequestHandle` +
+`CK_SIGNAL_BIND_REQUEST_FULFILLED` + `ck::MakeRequestResultGuard`).
+
 **UObject refs in fragments — ownership split:** `TStrongObjectPtr` when the entity owns the
 object's lifetime (spawned components, render targets); `TWeakObjectPtr` for non-owning
 observation. Both are correct; pick by ownership. `TObjectPtr` only in UPROPERTY/reflected
