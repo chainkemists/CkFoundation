@@ -54,21 +54,21 @@ namespace ck_timer_fragment
 
                     // 1. Restore the RUNTIME direction if it drifted from the rebuilt (Params-derived) one.
                     if (UCk_Utils_Timer_UE::Get_CountDirection(TimerHandle) != Payload.Get_CountDirection())
-                    { UCk_Utils_Timer_UE::Request_ChangeCountDirection(TimerHandle, Payload.Get_CountDirection()); }
+                    { UCk_Utils_Timer_UE::Request_ChangeCountDirection(TimerHandle, Payload.Get_CountDirection(), {}); }
 
                     // 2. Reposition via an ABSOLUTE Jump — the Jump handler owns the direction-dependent delta math
                     //    and never broadcasts OnTimerDone.
                     UCk_Utils_Timer_UE::Request_Jump(TimerHandle,
-                        FCk_Request_Timer_Jump{Payload.Get_Elapsed()}.Set_JumpMode(ECk_RelativeAbsolute::Absolute));
+                        FCk_Request_Timer_Jump{Payload.Get_Elapsed()}.Set_JumpMode(ECk_RelativeAbsolute::Absolute), {});
 
                     // 3. Restore run-state. NEVER Request_Complete — it is the only request that re-broadcasts
                     //    OnTimerDone, and a restored terminal timer must not re-fire completion on load.
                     if (UCk_Utils_Timer_UE::Get_CurrentState(TimerHandle) != Payload.Get_RunState())
                     {
                         if (Payload.Get_RunState() == ECk_Timer_State::Running)
-                        { UCk_Utils_Timer_UE::Request_Resume(TimerHandle); }
+                        { UCk_Utils_Timer_UE::Request_Resume(TimerHandle, {}); }
                         else
-                        { UCk_Utils_Timer_UE::Request_Pause(TimerHandle); }
+                        { UCk_Utils_Timer_UE::Request_Pause(TimerHandle, {}); }
                     }
 
                     return ECk_Persistence_ApplyResult::Applied;

@@ -5,6 +5,7 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkTimer/CkTimer_Fragment.h"
 
@@ -174,69 +175,90 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Request Reset")
+              DisplayName="[Ck][Timer] Request Reset",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Timer
     Request_Reset(
-        UPARAM(ref) FCk_Handle_Timer& InTimer);
+        UPARAM(ref) FCk_Handle_Timer& InTimer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Request Complete")
+              DisplayName="[Ck][Timer] Request Complete",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Timer
     Request_Complete(
-        UPARAM(ref) FCk_Handle_Timer& InTimer);
+        UPARAM(ref) FCk_Handle_Timer& InTimer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Request Stop")
+              DisplayName="[Ck][Timer] Request Stop",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Timer
     Request_Stop(
-        UPARAM(ref) FCk_Handle_Timer& InTimer);
+        UPARAM(ref) FCk_Handle_Timer& InTimer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Request Pause")
+              DisplayName="[Ck][Timer] Request Pause",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Timer
     Request_Pause(
-        UPARAM(ref) FCk_Handle_Timer& InTimer);
+        UPARAM(ref) FCk_Handle_Timer& InTimer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Request Resume")
+              DisplayName="[Ck][Timer] Request Resume",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Timer
     Request_Resume(
-        UPARAM(ref) FCk_Handle_Timer& InTimer);
+        UPARAM(ref) FCk_Handle_Timer& InTimer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Request Jump")
+              DisplayName="[Ck][Timer] Request Jump",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Timer
     Request_Jump(
         UPARAM(ref) FCk_Handle_Timer& InTimer,
-        FCk_Request_Timer_Jump InRequest);
+        FCk_Request_Timer_Jump InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Request Consume")
+              DisplayName="[Ck][Timer] Request Consume",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Timer
     Request_Consume(
         UPARAM(ref) FCk_Handle_Timer& InTimer,
-        FCk_Request_Timer_Consume InRequest);
+        FCk_Request_Timer_Consume InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Immediate mutator: flips the FTag_Timer_Countdown tag inline and enqueues nothing, so the
+    // completion delegate fires synchronously with Succeeded on the caller's own stack.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Request Change Count Direction")
+              DisplayName="[Ck][Timer] Request Change Count Direction",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Timer
     Request_ChangeCountDirection(
         UPARAM(ref) FCk_Handle_Timer& InTimer,
-        ECk_Timer_CountDirection InCountDirection);
+        ECk_Timer_CountDirection InCountDirection,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Immediate mutator — see Request_ChangeCountDirection.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Request Reverse Direction")
+              DisplayName="[Ck][Timer] Request Reverse Direction",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Timer
     Request_ReverseDirection(
-        UPARAM(ref) FCk_Handle_Timer& InTimer);
+        UPARAM(ref) FCk_Handle_Timer& InTimer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,
