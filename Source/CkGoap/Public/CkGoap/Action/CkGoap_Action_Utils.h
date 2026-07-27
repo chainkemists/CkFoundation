@@ -64,6 +64,18 @@ public:
 	static bool
 	Get_HasCostProvider(const FCk_Handle_Goap_Action& InAction);
 
+	/**
+	 * True once FProcessor_Goap_Action_Setup has extracted this Action's CDO
+	 * definition (preconditions/effects/cost) into its cached operator def.
+	 * A Request_Plan issued before this returns true sees a default-constructed
+	 * candidate and silently ignores the new Action — wait on this after a
+	 * runtime AddAction before forcing a replan.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
+		DisplayName = "[Ck][Goap|Action] Get Is Setup Complete")
+	static bool
+	Get_IsSetupComplete(const FCk_Handle_Goap_Action& InAction);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
