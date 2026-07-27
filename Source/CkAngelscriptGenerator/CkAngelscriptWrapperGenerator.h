@@ -106,6 +106,12 @@ private:
         -> FString;
 
     static auto
+        Get_IsOptionalDelegateParameter(
+            UFunction* Function,
+            FProperty* Property)
+        -> bool;
+
+    static auto
         Request_GenerateCVarConstants(
             const FString& GeneratedDir)
         -> void;
