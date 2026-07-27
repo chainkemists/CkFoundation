@@ -390,6 +390,34 @@ auto
     return InAggro;
 }
 
+auto
+    UCk_Utils_Aggro_UE::
+    Request_MarkUnperceived_ByTrackedEntity(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Handle& InTrackedEntity)
+    -> FCk_Handle_Aggro
+{
+    auto Target = TryGet_Target_ByTrackedEntity(InAggro, InTrackedEntity);
+    if (ck::IsValid(Target))
+    { UCk_Utils_AggroTarget_UE::Request_MarkUnperceived(Target); }
+
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    Request_ResetPerception_ByTrackedEntity(
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Handle& InTrackedEntity)
+    -> FCk_Handle_Aggro
+{
+    auto Target = TryGet_Target_ByTrackedEntity(InAggro, InTrackedEntity);
+    if (ck::IsValid(Target))
+    { UCk_Utils_AggroTarget_UE::Request_ResetPerception(Target); }
+
+    return InAggro;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

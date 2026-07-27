@@ -219,6 +219,25 @@ public:
         const FCk_Handle& InTrackedEntity,
         FCk_Request_AggroTarget_MarkPerceived InRequest);
 
+    // Perceived is a COUNTED tag, so a feeder that can only mark perceived pins its targets
+    // perceived forever — they never decay at the unperceived rate nor reach the lost-sight
+    // grace. A feeder addressing targets by tracked entity needs the balancing half here.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Aggro",
+              DisplayName="[Ck][Aggro] Request Mark Unperceived By Tracked Entity")
+    static FCk_Handle_Aggro
+    Request_MarkUnperceived_ByTrackedEntity(
+        UPARAM(ref) FCk_Handle_Aggro& InAggro,
+        const FCk_Handle& InTrackedEntity);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Aggro",
+              DisplayName="[Ck][Aggro] Request Reset Perception By Tracked Entity")
+    static FCk_Handle_Aggro
+    Request_ResetPerception_ByTrackedEntity(
+        UPARAM(ref) FCk_Handle_Aggro& InAggro,
+        const FCk_Handle& InTrackedEntity);
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Aggro",
