@@ -196,6 +196,7 @@ The Action utility class is intentionally thin. Most planner-tier verbs (Plan / 
 | | `Get_WorldStateSource(Action)` | The resolved WS handle this Action consumes (`FFragment_Goap_Planner_WorldStateSource._Resolved`). |
 | | `Get_ActiveParentAction(Action)` | Class of the parent Action that injected the current goal; null for top-level / dormant. |
 | | `Get_InvalidGoal(Action)` | Effects referencing unregistered WS keys (populated at Setup time); read from the owning Planner. |
+| | `Get_IsSetupComplete(Action)` | True once `FProcessor_Goap_Action_Setup` has cached this Action's operator def. Wait on this between a runtime `AddAction` and `Request_Plan`. |
 | **Requests** | `Request_Plan(Action)` | Delegates to the owning Planner — enqueues a Plan request on its queue. |
 | | `Request_CancelPlan(Action)` | Delegates to the owning Planner. |
 | | `Request_SetActionCost(Action, ChildClass, Cost)` | Delegates: routes to the owning Planner's `Request_SetChildActionCost`. |
@@ -438,7 +439,7 @@ Real-game examples: a combat NPC's `WaitForEnemy` (satisfies `EnemyNeutralized` 
 - **Skipping `CK_REGISTER_PROCESSOR` when adding a new GOAP processor.** An unregistered processor compiles silently and is never scheduled.
 - **Writing to override layers.** `Set_Value(WS, Key, NewValue)` always mutates the base store, never an override layer. There is no API to write into a layer directly. To express a transient "what if" mutation push an override layer; for a permanent change write to the base. Trying to use override layers as a write target produces the wrong semantics — the base store will be stale relative to the layer until the layer is popped.
 - **Numeric world state.** Classical boolean GOAP only. Project to booleans (`HasEnoughX`, `IsAtY`, `IsLowZ`).
-- **Calling `Request_Plan` immediately after a runtime `AddAction`.** The new child Action's `_CachedActionDef` (Preconditions/Effects/Cost extracted from the CDO) is populated by `FProcessor_Goap_Action_Setup` on the next group tick, and the Planner's catalog rebuild runs in `FProcessor_Goap_Planner_Setup` after that. A `Request_Plan` issued in the same frame sees a default-constructed candidate (zero cost, empty effects) and the planner silently sticks with the pre-existing operator set. Symptom: tests that mutate the operator catalog at runtime appear to ignore the new Action. Fix: wait 1-3 frames between `AddAction` and `Request_Plan`, or until `OnGoapAction_SetupComplete` fires on the new child.
+- **Calling `Request_Plan` immediately after a runtime `AddAction`.** The new child Action's `_CachedActionDef` (Preconditions/Effects/Cost extracted from the CDO) is populated by `FProcessor_Goap_Action_Setup` on the next group tick, and the Planner's catalog rebuild runs in `FProcessor_Goap_Planner_Setup` after that. A `Request_Plan` issued in the same frame sees a default-constructed candidate (zero cost, empty effects) and the planner silently sticks with the pre-existing operator set. Symptom: tests that mutate the operator catalog at runtime appear to ignore the new Action. Fix: poll `UCk_Utils_Goap_Action_UE::Get_IsSetupComplete(NewChild)` and issue the `Request_Plan` once it returns true. (An earlier revision of this doc referenced an `OnGoapAction_SetupComplete` signal that was never implemented; the query is the real mechanism.)
 
 ---
 
