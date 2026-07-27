@@ -967,7 +967,59 @@ auto
         return Get_ConvertedDefaultValueToAngelscript(DefaultValue, Property);
     }
 
+    // UHT refuses to parse a C++ default value for a dynamic-delegate parameter (it errors with
+    // "C++ Default parameter not parsed"), so a delegate the caller may omit can only be marked
+    // optional through AutoCreateRefTerm — which Blueprint honors but leaves no CPP_Default_*
+    // metadata for script. Emit the default the C++ declaration is forbidden from carrying so
+    // AngelScript callers can omit the argument exactly like Blueprint does.
+    if (Get_IsOptionalDelegateParameter(OwnerFunction, Property))
+    { return ck::Format_UE(TEXT("{}()"), Get_DetailedPropertyType(Property)); }
+
     return FString{};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCkAngelscriptWrapperGenerator::
+    Get_IsOptionalDelegateParameter(
+        UFunction* Function,
+        FProperty* Property)
+    -> bool
+{
+    if (NOT CastField<FDelegateProperty>(Property))
+    { return false; }
+
+    // AngelScript requires every parameter after the first defaulted one to also carry a default,
+    // so this default is only safe to emit on the TRAILING parameter. Mid-signature delegates
+    // (e.g. a delegate followed by a predicate) must stay mandatory or the generated wrapper fails
+    // to compile with "All subsequent parameters after the first default value must have default
+    // values". The house shape puts the optional delegate last for exactly this reason.
+    auto LastParam = static_cast<FProperty*>(nullptr);
+    for (TFieldIterator<FProperty> ParamIterator{Function}; ParamIterator; ++ParamIterator)
+    {
+        if (NOT ParamIterator->HasAnyPropertyFlags(CPF_Parm) ||
+            ParamIterator->HasAnyPropertyFlags(CPF_ReturnParm))
+        { continue; }
+
+        LastParam = *ParamIterator;
+    }
+
+    if (LastParam != Property)
+    { return false; }
+
+    static const auto AutoCreateRefTermKey = FName{TEXT("AutoCreateRefTerm")};
+
+    if (NOT Function->HasMetaData(AutoCreateRefTermKey))
+    { return false; }
+
+    auto OptionalParamNames = TArray<FString>{};
+    Function->GetMetaData(AutoCreateRefTermKey).ParseIntoArray(OptionalParamNames, TEXT(","));
+
+    const auto& PropertyName = Property->GetName();
+
+    return OptionalParamNames.ContainsByPredicate([&](const FString& InOptionalParamName)
+    { return InOptionalParamName.TrimStartAndEnd() == PropertyName; });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
