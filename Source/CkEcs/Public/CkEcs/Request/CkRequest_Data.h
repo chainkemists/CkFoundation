@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -90,6 +91,23 @@ public:
             const ThisType& InOther) const
             -> void;
 
+    auto
+        Set_CompletionDelegate(
+            const FCk_Delegate_Request_OnCompleted& InDelegate) const
+            -> void;
+
+    // Unbinds after executing: the unbind IS the exactly-once guarantee, so every path that can
+    // complete a request may call this unconditionally.
+    auto
+        TryFireCompletion(
+            const FCk_Handle& InOwner,
+            ECk_Request_OperationResult InResult) const
+            -> void;
+
+    auto
+        Get_HasCompletionDelegate() const
+            -> bool;
+
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
 protected:
     virtual auto
@@ -102,6 +120,8 @@ public:
 
 private:
     ck::FRequest_Base _RequestBase;
+
+    mutable FCk_Delegate_Request_OnCompleted _CompletionDelegate;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

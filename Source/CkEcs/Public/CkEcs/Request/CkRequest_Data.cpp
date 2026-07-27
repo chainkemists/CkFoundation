@@ -131,6 +131,34 @@ auto
     _RequestBase.Request_TransferHandleToOther(InOther._RequestBase);
 }
 
+auto
+    FCk_Request_Base::
+    Set_CompletionDelegate(
+        const FCk_Delegate_Request_OnCompleted& InDelegate) const
+        -> void
+{
+    _CompletionDelegate = InDelegate;
+}
+
+auto
+    FCk_Request_Base::
+    TryFireCompletion(
+        const FCk_Handle& InOwner,
+        ECk_Request_OperationResult InResult) const
+        -> void
+{
+    _CompletionDelegate.ExecuteIfBound(InOwner, InResult);
+    _CompletionDelegate.Unbind();
+}
+
+auto
+    FCk_Request_Base::
+    Get_HasCompletionDelegate() const
+        -> bool
+{
+    return _CompletionDelegate.IsBound();
+}
+
 #if NOT CK_DISABLE_ECS_HANDLE_DEBUGGING
 auto
     FCk_Request_Base::
