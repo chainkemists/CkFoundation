@@ -297,7 +297,7 @@ namespace ck
         { return; }
 
         UCk_Utils_Timer_UE::ForEach_Timer(NextTween, [](FCk_Handle_Timer Timer) {
-            UCk_Utils_Timer_UE::Request_Resume(Timer);
+            UCk_Utils_Timer_UE::Request_Resume(Timer, {});
         });
     }
 
