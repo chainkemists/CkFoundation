@@ -5,10 +5,12 @@
 #include "CkTimer/CkTimer_Log.h"
 #include "CkTimer/CkTimer_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Timer_Update_Countdown);
 
@@ -51,12 +53,14 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
+            // Every DoHandleRequest overload below is void and has no rejection path, so reaching the
+            // line after the call IS the success condition.
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InTimerEntity, Result);
+
             DoHandleRequest(InDeltaT, InTimerEntity, InCurrentComp, InParamsComp, InRequest);
 
-            if (InRequest.Get_IsRequestHandleValid())
-            {
-                InRequest.GetAndDestroyRequestHandle();
-            }
+            Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
         if (InRequestsComp._Requests.IsEmpty())
@@ -320,6 +324,19 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_Timer_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InTimerEntity,
+            const FFragment_Timer_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InTimerEntity, InRequestsComp.Get_Requests());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_Timer_Update::
         ForEachEntity(
             TimeType InDeltaT,
@@ -360,7 +377,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Stop(InTimerEntity);
+                UCk_Utils_Timer_UE::Request_Stop(InTimerEntity, {});
                 break;
             }
             case ECk_Timer_Behavior::ResetOnDone:
@@ -373,7 +390,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Reset(InTimerEntity);
+                UCk_Utils_Timer_UE::Request_Reset(InTimerEntity, {});
                 break;
             }
             case ECk_Timer_Behavior::PauseOnDone:
@@ -386,7 +403,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Pause(InTimerEntity);
+                UCk_Utils_Timer_UE::Request_Pause(InTimerEntity, {});
                 break;
             }
             default:
@@ -444,7 +461,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Stop(InTimerEntity);
+                UCk_Utils_Timer_UE::Request_Stop(InTimerEntity, {});
                 break;
             }
             case ECk_Timer_Behavior::ResetOnDone:
@@ -457,7 +474,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Reset(InTimerEntity);
+                UCk_Utils_Timer_UE::Request_Reset(InTimerEntity, {});
                 break;
             }
             case ECk_Timer_Behavior::PauseOnDone:
@@ -470,7 +487,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Pause(InTimerEntity);
+                UCk_Utils_Timer_UE::Request_Pause(InTimerEntity, {});
                 break;
             }
             default:

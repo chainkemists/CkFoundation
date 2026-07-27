@@ -227,13 +227,18 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Reset(
-        FCk_Handle_Timer& InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Timer
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
 
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
-        FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Reset});
+    const auto Request = FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Reset};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(Request);
 
     return InTimerEntity;
 }
@@ -241,13 +246,18 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Complete(
-        FCk_Handle_Timer& InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Timer
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
 
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
-        FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Complete});
+    const auto Request = FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Complete};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(Request);
 
     return InTimerEntity;
 }
@@ -255,13 +265,18 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Stop(
-        FCk_Handle_Timer& InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Timer
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
 
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
-        FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Stop});
+    const auto Request = FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Stop};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(Request);
 
     return InTimerEntity;
 }
@@ -269,13 +284,18 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Pause(
-        FCk_Handle_Timer& InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Timer
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
 
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
-        FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Pause});
+    const auto Request = FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Pause};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(Request);
 
     return InTimerEntity;
 }
@@ -283,13 +303,18 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Resume(
-        FCk_Handle_Timer& InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Timer
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
 
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
-        FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Resume});
+    const auto Request = FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Resume};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(Request);
 
     return InTimerEntity;
 }
@@ -298,11 +323,15 @@ auto
     UCk_Utils_Timer_UE::
     Request_Jump(
         FCk_Handle_Timer& InTimerEntity,
-        FCk_Request_Timer_Jump InRequest)
+        FCk_Request_Timer_Jump InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Timer
 {
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_Timer_Requests, InTimerEntity,
         TEXT("Jump: Duration [{}]"), InRequest.Get_JumpDuration().Get_Seconds());
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(InRequest);
 
@@ -313,11 +342,15 @@ auto
     UCk_Utils_Timer_UE::
     Request_Consume(
         FCk_Handle_Timer& InTimerEntity,
-        FCk_Request_Timer_Consume InRequest)
+        FCk_Request_Timer_Consume InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Timer
 {
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_Timer_Requests, InTimerEntity,
         TEXT("Consume: Duration [{}]"), InRequest.Get_ConsumeDuration().Get_Seconds());
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(InRequest);
 
@@ -328,7 +361,8 @@ auto
     UCk_Utils_Timer_UE::
     Request_ChangeCountDirection(
         FCk_Handle_Timer& InTimerEntity,
-        ECk_Timer_CountDirection InCountDirection)
+        ECk_Timer_CountDirection InCountDirection,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Timer
 {
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_Timer_Requests, InTimerEntity,
@@ -349,13 +383,17 @@ auto
         }
     }
 
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InTimerEntity, ECk_Request_OperationResult::Succeeded);
+
     return InTimerEntity;
 }
 
 auto
     UCk_Utils_Timer_UE::
     Request_ReverseDirection(
-        FCk_Handle_Timer& InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Timer
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Timer_Requests, InTimerEntity);
@@ -364,6 +402,9 @@ auto
     { InTimerEntity.Remove<ck::FTag_Timer_Countdown>(); }
     else
     { InTimerEntity.Add<ck::FTag_Timer_Countdown>(); }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InTimerEntity, ECk_Request_OperationResult::Succeeded);
 
     return InTimerEntity;
 }
