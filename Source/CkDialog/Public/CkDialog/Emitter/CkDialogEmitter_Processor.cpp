@@ -5,6 +5,7 @@
 #include "CkCore/TypeTraits/CkTypeTraits.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEntityTag/CkEntityTag_Utils.h"
@@ -20,6 +21,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_DialogEmitter_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_DialogEmitter_CancelPendingRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_DialogEmitter_CancelPendingQueries);
 CK_REGISTER_PROCESSOR(ck::FProcessor_DialogEmitter_EvaluateQueries);
 CK_REGISTER_PROCESSOR(ck::FProcessor_DialogEmitter_TickCooldowns);
 
@@ -48,7 +51,10 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
-            DoHandleRequest(InEmitter, Now, InRequest);
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InEmitter, Result);
+
+            Result = DoHandleRequest(InEmitter, Now, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             { InRequest.GetAndDestroyRequestHandle(); }
@@ -64,21 +70,27 @@ namespace ck
             HandleType InEmitter,
             FCk_Time InNow,
             const FCk_Request_DialogEmitter_Query& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         // Benign drop: an invalid ENTER tag matches nothing, so the recovery collapses into the ensure body.
         CK_ENSURE_IF_NOT(InRequest.Get_EventTag().IsValid(),
             TEXT("Dialog Query on Emitter [{}] has an invalid ENTER tag — dropped"), InEmitter)
-        { return; }
+        { return ECk_Request_OperationResult::Failed; }
 
         auto& Pending = InEmitter.AddOrGet<FFragment_DialogEmitter_PendingQueries>();
         Pending._Queries.Emplace(InRequest);
+
+        // The completion delegate rides the copy just emplaced: a query completes when EvaluateQueries answers it,
+        // not when it is queued. Unbinding this copy keeps the drain's guard from completing it early.
+        InRequest.Set_CompletionDelegate(FCk_Delegate_Request_OnCompleted{});
 
         if (NOT Pending._HasOldestPendingQueryTime)
         {
             Pending._OldestPendingQueryTime = InNow;
             Pending._HasOldestPendingQueryTime = true;
         }
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -87,14 +99,14 @@ namespace ck
             HandleType InEmitter,
             FCk_Time InNow,
             const FCk_Request_DialogEmitter_StartCooldown& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         const auto& Line = InRequest.Get_Line();
 
         // Benign drop: a junk entry would only be discarded by the next prune, so the recovery collapses into it.
         CK_ENSURE_IF_NOT(ck::IsValid(Line),
             TEXT("Dialog StartCooldown on Emitter [{}] has an invalid line handle — dropped"), InEmitter)
-        { return; }
+        { return ECk_Request_OperationResult::Failed; }
 
         // Re-starting an already-cooling line REPLACES the entry: the window restarts from zero, never extends.
         InEmitter.Get<FFragment_DialogEmitter_Cooldowns>()._Cooldowns.Add(Line,
@@ -105,9 +117,7 @@ namespace ck
 
         UUtils_Signal_OnDialogCooldownStarted::Broadcast(InEmitter, ck::MakePayload(InEmitter, Line));
 
-        if (const auto& OnComplete = InRequest.Get_OnComplete();
-            OnComplete.IsBound())
-        { OnComplete.Execute(InEmitter, Line); }
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -116,23 +126,21 @@ namespace ck
             HandleType InEmitter,
             FCk_Time InNow,
             const FCk_Request_DialogEmitter_ClearCooldown& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
-        // Removing an absent key is not a transition, so neither the signal nor the completion delegate fires.
+        // Removing an absent key is not a transition, so the signal does not fire and the request reports Failed.
         auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
         const auto Line = InRequest.Get_Line();
 
         if (Cooldowns._Cooldowns.Remove(Line) == 0)
-        { return; }
+        { return ECk_Request_OperationResult::Failed; }
 
         if (Cooldowns._Cooldowns.IsEmpty())
         { InEmitter.Try_Remove<FTag_DialogEmitter_HasCooldowns>(); }
 
         UUtils_Signal_OnDialogCooldownEnded::Broadcast(InEmitter, ck::MakePayload(InEmitter, Line));
 
-        if (const auto& OnComplete = InRequest.Get_OnComplete();
-            OnComplete.IsBound())
-        { OnComplete.Execute(InEmitter, Line); }
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -141,7 +149,7 @@ namespace ck
             HandleType InEmitter,
             FCk_Time InNow,
             const FCk_Request_DialogEmitter_ClearAllCooldowns& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
 
@@ -155,9 +163,36 @@ namespace ck
         for (const auto& Line : Cleared)
         { UUtils_Signal_OnDialogCooldownEnded::Broadcast(InEmitter, ck::MakePayload(InEmitter, Line)); }
 
-        if (const auto& OnComplete = InRequest.Get_OnComplete();
-            OnComplete.IsBound())
-        { OnComplete.Execute(InEmitter, Cleared.Num()); }
+        return ECk_Request_OperationResult::Succeeded;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_DialogEmitter_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InEmitter,
+            const FFragment_DialogEmitter_Requests& InRequests)
+        -> void
+    {
+        request::FireCancelledForPending(InEmitter, InRequests.Get_Requests());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_DialogEmitter_CancelPendingQueries::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InEmitter,
+            const FFragment_DialogEmitter_PendingQueries& InPending)
+        -> void
+    {
+        // A hand-rolled loop rather than request::FireCancelledForPending: the pending list is a plain array of one
+        // request type, not the std::variant list that helper's visitor expects.
+        for (const auto& Query : InPending.Get_Queries())
+        { Query.TryFireCompletion(InEmitter, ECk_Request_OperationResult::Failed_Cancelled); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -208,8 +243,11 @@ namespace ck
         const auto& Cooldowns = InEmitter.Get<FFragment_DialogEmitter_Cooldowns>();
 
         // Evaluate from a COPY: a per-request OnComplete below runs caller code that may enqueue a follow-up query,
-        // and iterating the live array while arbitrary caller code runs is a reentrancy hazard.
+        // and iterating the live array while arbitrary caller code runs is a reentrancy hazard. The live array is
+        // emptied up front so the completion delegates riding these queries exist only on the copy being drained —
+        // the EndPlay cancel processor can then never re-complete one this loop already answered.
         const auto QueriesCopy = InPending._Queries;
+        InPending._Queries.Reset();
 
         for (const auto& Query : QueriesCopy)
         {
@@ -226,6 +264,10 @@ namespace ck
             if (const auto& OnComplete = Query.Get_OnComplete();
                 OnComplete.IsBound())
             { OnComplete.Execute(InEmitter, Result); }
+
+            // The generic completion answers "was my request processed"; the payload above answers "what did it
+            // find". Evaluating IS the success condition — an empty result set is a valid answer, not a failure.
+            Query.TryFireCompletion(InEmitter, ECk_Request_OperationResult::Succeeded);
         }
 
         InEmitter.Remove<FFragment_DialogEmitter_PendingQueries>();

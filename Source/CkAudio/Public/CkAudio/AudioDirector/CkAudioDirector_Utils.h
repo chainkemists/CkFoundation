@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkAudioDirector_Utils.generated.h"
@@ -94,53 +95,64 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
-              DisplayName="[Ck][AudioDirector] Request Add Track")
+              DisplayName="[Ck][AudioDirector] Request Add Track",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AudioDirector
     Request_AddTrack(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
-        const FCk_Fragment_AudioTrack_ParamsData& InTrackParams);
+        const FCk_Fragment_AudioTrack_ParamsData& InTrackParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
-              DisplayName="[Ck][AudioDirector] Request Start Track")
+              DisplayName="[Ck][AudioDirector] Request Start Track",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AudioDirector
     Request_StartTrack(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
-        const FCk_Request_AudioDirector_StartTrack& InRequest);
+        const FCk_Request_AudioDirector_StartTrack& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     static FCk_Handle_AudioDirector
     Request_StartTrack(
         FCk_Handle_AudioDirector& InDirector,
         FName InTrackName,
-        TOptional<FCk_Time> InFadeInTime = TOptional<FCk_Time>{});
+        TOptional<FCk_Time> InFadeInTime = TOptional<FCk_Time>{},
+        const FCk_Delegate_Request_OnCompleted& InDelegate = {});
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
-              DisplayName="[Ck][AudioDirector] Request Stop Track")
+              DisplayName="[Ck][AudioDirector] Request Stop Track",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AudioDirector
     Request_StopTrack(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
         FName InTrackName,
-        FCk_Time InFadeOutTime);
+        FCk_Time InFadeOutTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     static FCk_Handle_AudioDirector
     Request_StopTrack(
         FCk_Handle_AudioDirector& InDirector,
         FName InTrackName,
-        TOptional<FCk_Time> InFadeOutTime = TOptional<FCk_Time>{});
+        TOptional<FCk_Time> InFadeOutTime = TOptional<FCk_Time>{},
+        const FCk_Delegate_Request_OnCompleted& InDelegate = {});
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
-              DisplayName="[Ck][AudioDirector] Request Stop All Tracks")
+              DisplayName="[Ck][AudioDirector] Request Stop All Tracks",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AudioDirector
     Request_StopAllTracks(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
-        FCk_Time InFadeOutTime);
+        FCk_Time InFadeOutTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     static FCk_Handle_AudioDirector
     Request_StopAllTracks(
         FCk_Handle_AudioDirector& InDirector,
-        TOptional<FCk_Time> InFadeOutTime = TOptional<FCk_Time>{});
+        TOptional<FCk_Time> InFadeOutTime = TOptional<FCk_Time>{},
+        const FCk_Delegate_Request_OnCompleted& InDelegate = {});
 
 public:
     UFUNCTION(BlueprintCallable,

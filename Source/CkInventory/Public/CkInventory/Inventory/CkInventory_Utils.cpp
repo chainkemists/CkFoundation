@@ -191,13 +191,19 @@ auto
     Request_AddItem(
         FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_AddItem& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory
 {
     if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_AddItem"),
         [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_ItemToAdd(),
-                ECk_Inventory_OperationResult_Add::Failed_NotEnqueued); }))
+                ECk_Inventory_OperationResult_Add::Failed_NotEnqueued);
+             InCompletionDelegate.ExecuteIfBound(InInventory,
+                ECk_Request_OperationResult::Failed_NotEnqueued); }))
     { return InInventory; }
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Add,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
@@ -220,13 +226,19 @@ auto
     Request_RemoveItem(
         FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_RemoveItem& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Remove& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Remove& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory
 {
     if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_RemoveItem"),
         [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_ItemToRemove(),
-                ECk_Inventory_OperationResult_Remove::Failed_NotEnqueued); }))
+                ECk_Inventory_OperationResult_Remove::Failed_NotEnqueued);
+             InCompletionDelegate.ExecuteIfBound(InInventory,
+                ECk_Request_OperationResult::Failed_NotEnqueued); }))
     { return InInventory; }
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Remove,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
@@ -249,13 +261,19 @@ auto
     Request_StackItems(
         FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_StackItems& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Stack& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Stack& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory
 {
     if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_StackItems"),
         [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_SourceItem(), InRequest.Get_TargetItem(),
-                ECk_Inventory_OperationResult_Stack::Failed_NotEnqueued); }))
+                ECk_Inventory_OperationResult_Stack::Failed_NotEnqueued);
+             InCompletionDelegate.ExecuteIfBound(InInventory,
+                ECk_Request_OperationResult::Failed_NotEnqueued); }))
     { return InInventory; }
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Stack,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
@@ -278,13 +296,19 @@ auto
     Request_SplitStack(
         FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_SplitStack& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory
 {
     if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_SplitStack"),
         [&]{ InDelegate.ExecuteIfBound(InInventory, InRequest.Get_SourceItem(), FCk_Handle_Item{},
-                ECk_Inventory_OperationResult_Split::Failed_NotEnqueued); }))
+                ECk_Inventory_OperationResult_Split::Failed_NotEnqueued);
+             InCompletionDelegate.ExecuteIfBound(InInventory,
+                ECk_Request_OperationResult::Failed_NotEnqueued); }))
     { return InInventory; }
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Split,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
@@ -307,13 +331,19 @@ auto
     Request_AddItemByDefinition(
         FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_AddItemByDefinition& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_AddByDefinition& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_AddByDefinition& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory
 {
     if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_AddItemByDefinition"),
         [&]{ InDelegate.ExecuteIfBound(InInventory,
-                ECk_Inventory_OperationResult_AddByDefinition::Failed_NotEnqueued, 0, TArray<FCk_Handle_Item>{}); }))
+                ECk_Inventory_OperationResult_AddByDefinition::Failed_NotEnqueued, 0, TArray<FCk_Handle_Item>{});
+             InCompletionDelegate.ExecuteIfBound(InInventory,
+                ECk_Request_OperationResult::Failed_NotEnqueued); }))
     { return InInventory; }
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_AddByDefinition,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
@@ -336,15 +366,22 @@ auto
     Request_Sort(
         FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_Sort& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory
 {
     if (NOT ck_inventory_utils::ValidateRequestForDispatch(InInventory, InRequest, TEXT("Request_Sort"),
         [&]{ InDelegate.ExecuteIfBound(InInventory,
-                ECk_Inventory_OperationResult_Sort::Failed_NotEnqueued); }))
+                ECk_Inventory_OperationResult_Sort::Failed_NotEnqueued);
+             InCompletionDelegate.ExecuteIfBound(InInventory,
+                ECk_Request_OperationResult::Failed_NotEnqueued); }))
     { return InInventory; }
 
     auto Request = InRequest;  // Sort carries native delegates that need a mutable copy for PopulateRequestHandle.
+
+    if (InCompletionDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InCompletionDelegate); }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Sort,
         Request.PopulateRequestHandle(InInventory), InDelegate);
 
@@ -366,14 +403,20 @@ auto
     Request_TransferItem_ToSpatial(
         FCk_Handle_Inventory& InSourceInventory,
         const FCk_Request_Inventory_TransferItem_ToSpatial& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory
 {
     if (NOT ck_inventory_utils::ValidateRequestForDispatch(InSourceInventory, InRequest, TEXT("Request_TransferItem_ToSpatial"),
         [&]{ InDelegate.ExecuteIfBound(InSourceInventory, InRequest.Get_SourceItem(),
                 InRequest.Get_TargetInventory(), 0, FCk_Handle_Item{},
-                ECk_Inventory_OperationResult_Transfer::Failed_NotEnqueued); }))
+                ECk_Inventory_OperationResult_Transfer::Failed_NotEnqueued);
+             InCompletionDelegate.ExecuteIfBound(InSourceInventory,
+                ECk_Request_OperationResult::Failed_NotEnqueued); }))
     { return InSourceInventory; }
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Transfer,
         InRequest.PopulateRequestHandle(InSourceInventory), InDelegate);
@@ -396,14 +439,20 @@ auto
     Request_TransferItem_ToDataOnly(
         FCk_Handle_Inventory& InSourceInventory,
         const FCk_Request_Inventory_TransferItem_ToDataOnly& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory
 {
     if (NOT ck_inventory_utils::ValidateRequestForDispatch(InSourceInventory, InRequest, TEXT("Request_TransferItem_ToDataOnly"),
         [&]{ InDelegate.ExecuteIfBound(InSourceInventory, InRequest.Get_SourceItem(),
                 InRequest.Get_TargetInventory(), 0, FCk_Handle_Item{},
-                ECk_Inventory_OperationResult_Transfer::Failed_NotEnqueued); }))
+                ECk_Inventory_OperationResult_Transfer::Failed_NotEnqueued);
+             InCompletionDelegate.ExecuteIfBound(InSourceInventory,
+                ECk_Request_OperationResult::Failed_NotEnqueued); }))
     { return InSourceInventory; }
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Transfer,
         InRequest.PopulateRequestHandle(InSourceInventory), InDelegate);
@@ -426,13 +475,17 @@ auto
     Request_MassTransfer(
         const FCk_Handle& InAnyHandle,
         const FCk_Request_Inventory_MassTransfer& InRequest,
-        const FCk_Delegate_Inventory_MassTransfer_OnComplete& InDelegate)
+        const FCk_Delegate_Inventory_MassTransfer_OnComplete& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle
 {
+    // The op entity does not exist yet on this path, so both delegates report the same empty owner.
     const auto RejectNotEnqueued = [&]() -> FCk_Handle
     {
         InDelegate.ExecuteIfBound(FCk_Handle{},
             ECk_Inventory_MassTransfer_Result::Failed_NotEnqueued, 0, 0, 0);
+        InCompletionDelegate.ExecuteIfBound(FCk_Handle{},
+            ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
     };
 
@@ -494,6 +547,10 @@ auto
     InFlight._TargetResolution = InRequest.Get_TargetResolution();
     InFlight._StepsPerPass     = FMath::Max(1, InRequest.Get_StepsPerPass());
     InFlight._MaxStepsPerFrame = FMath::Max(1, InRequest.Get_MaxStepsPerFrame());
+
+    // The request struct itself is not stored — the op entity outlives it, so the completion delegate
+    // rides the in-flight fragment instead.
+    InFlight._CompletionDelegate = InCompletionDelegate;
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_MassTransfer_OnComplete, Op, InDelegate);
 

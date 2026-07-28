@@ -9,6 +9,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
@@ -19,6 +20,7 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Action_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_AutoReplan);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_Execute);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_HandleResult);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_Planner_EndPlay);
@@ -346,6 +348,15 @@ auto
 		{
 			using T = std::decay_t<decltype(InTypedRequest)>;
 
+			// None of the branches below reject a request — even the "parent plan in flight" defer
+			// and the WS-unresolved PlanFailed path are the Planner engaging with and dispatching
+			// the request, not refusing it (a game-content Planner must always reach PlanFound/
+			// PlanFailed via its fallback Action — see CkGoap CLAUDE.md "Every Planner must always
+			// produce a valid plan"). Several branches below return early, so Result is set up front
+			// rather than after the if-constexpr chain.
+			auto Result = ECk_Request_OperationResult::Succeeded;
+			const auto Guard = MakeCompletionGuard(InTypedRequest, InHandle, Result);
+
 			if constexpr (std::is_same_v<T, FCk_Request_Goap_Planner_Plan>)
 			{
 				if (IsParentPlanInFlight)
@@ -603,6 +614,19 @@ auto
 			}
 		}));
 	});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+	FProcessor_Goap_Planner_CancelPendingRequests::
+	ForEachEntity(
+		TimeType InDeltaT,
+		HandleType InHandle,
+		const FFragment_Goap_Planner_Requests& InRequestsComp)
+	-> void
+{
+	request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

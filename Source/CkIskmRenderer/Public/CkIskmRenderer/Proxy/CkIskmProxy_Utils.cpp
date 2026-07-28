@@ -343,11 +343,17 @@ auto
     UCk_Utils_IskmProxy_UE::
     Request_PlayAnimation(
         FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_PlayAnimation& InRequest)
+        const FCk_Request_IskmProxy_PlayAnimation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
@@ -356,11 +362,17 @@ auto
     UCk_Utils_IskmProxy_UE::
     Request_StopAnimation(
         FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_StopAnimation& InRequest)
+        const FCk_Request_IskmProxy_StopAnimation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
@@ -369,13 +381,19 @@ auto
     UCk_Utils_IskmProxy_UE::
     Request_SetPlayRate(
         FCk_Handle_IskmProxy& InHandle,
-        float InRate)
+        float InRate,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_SetPlayRate{InRate});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_SetPlayRate{InRate};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
@@ -383,13 +401,19 @@ auto
     UCk_Utils_IskmProxy_UE::
     Request_SetVisibility(
         FCk_Handle_IskmProxy& InHandle,
-        bool InIsVisible)
+        bool InIsVisible,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_SetVisibility{InIsVisible});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_SetVisibility{InIsVisible};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
@@ -398,13 +422,19 @@ auto
     Request_SetCustomDataFloat(
         FCk_Handle_IskmProxy& InHandle,
         int32 InOffset,
-        float InValue)
+        float InValue,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_SetCustomDataFloat{InOffset, InValue});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_SetCustomDataFloat{InOffset, InValue};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
@@ -412,24 +442,37 @@ auto
     UCk_Utils_IskmProxy_UE::
     Request_SetMaterialOverride(
         FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_SetMaterialOverride& InRequest)
+        const FCk_Request_IskmProxy_SetMaterialOverride& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_ClearMaterialOverrides(FCk_Handle_IskmProxy& InHandle)
+    Request_ClearMaterialOverrides(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_ClearMaterialOverrides{});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_ClearMaterialOverrides{};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
@@ -438,25 +481,38 @@ auto
     Request_SetMorphTarget(
         FCk_Handle_IskmProxy& InHandle,
         FName InMorphName,
-        float InValue)
+        float InValue,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_SetMorphTarget{InMorphName, InValue});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_SetMorphTarget{InMorphName, InValue};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_ClearMorphTargets(FCk_Handle_IskmProxy& InHandle)
+    Request_ClearMorphTargets(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_ClearMorphTargets{});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_ClearMorphTargets{};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
@@ -464,104 +520,173 @@ auto
     UCk_Utils_IskmProxy_UE::
     Request_SetSkeletalMesh(
         FCk_Handle_IskmProxy& InHandle,
-        USkeletalMesh* InMesh)
+        USkeletalMesh* InMesh,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_SetSkeletalMesh{InMesh});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_SetSkeletalMesh{InMesh};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_AttachSubmesh(FCk_Handle_IskmProxy& InHandle, FName InSubmeshName)
+    Request_AttachSubmesh(
+        FCk_Handle_IskmProxy& InHandle,
+        FName InSubmeshName,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_AttachSubmesh{InSubmeshName});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_AttachSubmesh{InSubmeshName};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_DetachSubmesh(FCk_Handle_IskmProxy& InHandle, FName InSubmeshName)
+    Request_DetachSubmesh(
+        FCk_Handle_IskmProxy& InHandle,
+        FName InSubmeshName,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_DetachSubmesh{InSubmeshName});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_DetachSubmesh{InSubmeshName};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_DetachAllSubmeshes(FCk_Handle_IskmProxy& InHandle)
+    Request_DetachAllSubmeshes(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_DetachAllSubmeshes{});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_DetachAllSubmeshes{};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_SetAnimInstanceClass(FCk_Handle_IskmProxy& InHandle, TSubclassOf<UAnimInstance> InClass)
+    Request_SetAnimInstanceClass(
+        FCk_Handle_IskmProxy& InHandle,
+        TSubclassOf<UAnimInstance> InClass,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(
-        FCk_Request_IskmProxy_SetAnimInstanceClass{InClass});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    const auto Request = FCk_Request_IskmProxy_SetAnimInstanceClass{InClass};
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_PlayMontage(FCk_Handle_IskmProxy& InHandle, const FCk_Request_IskmProxy_PlayMontage& InRequest)
+    Request_PlayMontage(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_PlayMontage& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_StopMontage(FCk_Handle_IskmProxy& InHandle, const FCk_Request_IskmProxy_StopMontage& InRequest)
+    Request_StopMontage(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_StopMontage& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_BeginRagdoll(FCk_Handle_IskmProxy& InHandle, const FCk_Request_IskmProxy_BeginRagdoll& InRequest)
+    Request_BeginRagdoll(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_BeginRagdoll& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
 
 auto
     UCk_Utils_IskmProxy_UE::
-    Request_EndRagdoll(FCk_Handle_IskmProxy& InHandle, const FCk_Request_IskmProxy_EndRagdoll& InRequest)
+    Request_EndRagdoll(
+        FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_EndRagdoll& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IskmProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }

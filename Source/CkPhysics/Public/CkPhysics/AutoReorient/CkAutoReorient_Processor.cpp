@@ -36,7 +36,7 @@ namespace ck
 
         // TODO: Lerp/Smooth reorient
 
-        UCk_Utils_Transform_UE::Request_AddRotationOffset(InHandle, FCk_Request_Transform_AddRotationOffset{RotationOffset});
+        UCk_Utils_Transform_UE::Request_AddRotationOffset(InHandle, FCk_Request_Transform_AddRotationOffset{RotationOffset}, {});
     }
 }
 

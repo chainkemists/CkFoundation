@@ -134,7 +134,8 @@ auto
     UCk_Utils_Vfx_UE::
     Request_PlayAttached(
         FCk_Handle_Vfx& InVfxHandle,
-        const FCk_Request_Vfx_PlayAttached& InRequest)
+        const FCk_Request_Vfx_PlayAttached& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Vfx
 {
     SCOPE_CYCLE_COUNTER(STAT_Fx_VfxSpawnAttached);
@@ -161,7 +162,10 @@ auto
 
     // This may be invalid if it is pre-culled
     if (ck::Is_NOT_Valid(SpawnedVfx))
-    { return InVfxHandle; }
+    {
+        InDelegate.ExecuteIfBound(InVfxHandle, ECk_Request_OperationResult::Failed);
+        return InVfxHandle;
+    }
 
     INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
 
@@ -174,6 +178,8 @@ auto
         TransformRules.Get_ScalePolicy()    == ECk_VFX_Scale_Policy::UseAbsoluteScale
     );
 
+    InDelegate.ExecuteIfBound(InVfxHandle, ECk_Request_OperationResult::Succeeded);
+
     return InVfxHandle;
 }
 
@@ -181,7 +187,8 @@ auto
     UCk_Utils_Vfx_UE::
     Request_PlayAtLocation(
         FCk_Handle_Vfx& InVfxHandle,
-        const FCk_Request_Vfx_PlayAtLocation& InRequest)
+        const FCk_Request_Vfx_PlayAtLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Vfx
 {
     SCOPE_CYCLE_COUNTER(STAT_Fx_VfxSpawnAtLocation);
@@ -204,7 +211,10 @@ auto
 
     // This may be invalid if it is pre-culled
     if (ck::Is_NOT_Valid(SpawnedVfx))
-    { return InVfxHandle; }
+    {
+        InDelegate.ExecuteIfBound(InVfxHandle, ECk_Request_OperationResult::Failed);
+        return InVfxHandle;
+    }
 
     INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
 
@@ -216,6 +226,8 @@ auto
         TransformRules.Get_RotationPolicy() == ECk_VFX_Rotation_Policy::UseAbsoluteRotation,
         TransformRules.Get_ScalePolicy()    == ECk_VFX_Scale_Policy::UseAbsoluteScale
     );
+
+    InDelegate.ExecuteIfBound(InVfxHandle, ECk_Request_OperationResult::Succeeded);
 
     return InVfxHandle;
 }

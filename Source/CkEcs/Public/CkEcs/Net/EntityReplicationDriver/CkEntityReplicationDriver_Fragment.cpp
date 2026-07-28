@@ -246,9 +246,9 @@ auto
     // override means the authority resolved the entity as its own ContextOwner, so map it back to self.
     if (const auto& ContextOwnerOverride = _ReplicationData_EntityScript.Get_ContextOwnerOverride();
         ck::IsValid(ContextOwnerOverride))
-    { UCk_Utils_ContextOwner_UE::Request_Override(_AssociatedEntity, ContextOwnerOverride); }
+    { UCk_Utils_ContextOwner_UE::Request_Override(_AssociatedEntity, ContextOwnerOverride, {}); }
     else
-    { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_AssociatedEntity); }
+    { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_AssociatedEntity, {}); }
 
     // The ownership chain may not resolve to a World yet on clients, so Get_WorldForEntity is given
     // one directly rather than having to walk it.

@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkObjective/Objective/CkObjective_Utils.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Utils.h"
 
@@ -11,6 +12,7 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_Objective_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Objective_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Objective_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Objective_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -79,7 +81,11 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InCurrent, InParams, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InCurrent, InParams, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -96,13 +102,16 @@ namespace ck
             FFragment_Objective_Current& InCurrent,
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Start& InRequest)
-        -> void
+        -> bool
     {
         if (const auto& CurrentStatus = UCk_Utils_Objective_UE::Get_Status(InHandle);
             CurrentStatus == ECk_ObjectiveStatus::NotStarted)
         {
             DoSetStatus(InHandle, InCurrent, ECk_ObjectiveStatus::Active);
+            return true;
         }
+
+        return false;
     }
 
     auto
@@ -112,11 +121,11 @@ namespace ck
             FFragment_Objective_Current& InCurrent,
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Complete& InRequest)
-        -> void
+        -> bool
     {
         if (const auto& CurrentStatus = UCk_Utils_Objective_UE::Get_Status(InHandle);
             CurrentStatus != ECk_ObjectiveStatus::Active)
-        { return; }
+        { return false; }
 
         InCurrent._CompletionTag = InRequest.Get_MetaData();
         DoSetStatus(InHandle, InCurrent, ECk_ObjectiveStatus::Completed);
@@ -124,6 +133,8 @@ namespace ck
         // TODO: The tag does not carry over through OnObjectiveStatusAttributeChanged on the client
         UUtils_Signal_OnObjective_Completed::Broadcast(InHandle,
             MakePayload(InHandle, InRequest.Get_MetaData()));
+
+        return true;
     }
 
     auto
@@ -133,11 +144,11 @@ namespace ck
             FFragment_Objective_Current& InCurrent,
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Fail& InRequest)
-        -> void
+        -> bool
     {
         if (const auto& CurrentStatus = UCk_Utils_Objective_UE::Get_Status(InHandle);
             CurrentStatus != ECk_ObjectiveStatus::Active)
-        { return; }
+        { return false; }
 
         InCurrent._FailureTag = InRequest.Get_MetaData();
         DoSetStatus(InHandle, InCurrent, ECk_ObjectiveStatus::Failed);
@@ -145,6 +156,8 @@ namespace ck
         // TODO: The tag does not carry over through OnObjectiveStatusAttributeChanged on the client
         UUtils_Signal_OnObjective_Failed::Broadcast(InHandle,
             MakePayload(InHandle, InRequest.Get_MetaData()));
+
+        return true;
     }
 
     auto
@@ -163,7 +176,8 @@ namespace ck
         UCk_Utils_ByteAttribute_UE::Request_Override(
             StatusAttribute,
             ck_objective::StatusEnumToByte(NewStatus),
-            ECk_MinMaxCurrent::Current);
+            ECk_MinMaxCurrent::Current,
+            {});
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -179,7 +193,20 @@ namespace ck
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto ObjectiveOwner = UCk_Utils_ObjectiveOwner_UE::CastChecked(LifetimeOwner);
 
-        UCk_Utils_ObjectiveOwner_UE::Request_RemoveObjective(ObjectiveOwner, FCk_Request_ObjectiveOwner_RemoveObjective{InHandle});
+        UCk_Utils_ObjectiveOwner_UE::Request_RemoveObjective(ObjectiveOwner, FCk_Request_ObjectiveOwner_RemoveObjective{InHandle}, {});
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Objective_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Objective_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

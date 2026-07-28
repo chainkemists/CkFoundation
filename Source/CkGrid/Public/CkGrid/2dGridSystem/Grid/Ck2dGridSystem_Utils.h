@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
 
@@ -102,14 +103,20 @@ public:
         const FCk_Handle_2dGridSystem& InGrid,
         ECk_LocalWorld InLocalWorld);
 
+    // InDelegate sits before InRotationOffset (not strictly trailing): InRotationOffset already
+    // carries a C++ default, and a delegate parameter cannot have one (UHT rejects delegate
+    // defaults), so it cannot follow a defaulted parameter in the same declaration. Safe for
+    // Blueprint/AngelScript callers — both bind UFUNCTION parameters by name, not position.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridSystem",
-              DisplayName="[Ck][2dGridSystem] Request Update Pivot")
+              DisplayName="[Ck][2dGridSystem] Request Update Pivot",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_UpdatePivot(
         const FCk_Handle_2dGridSystem& InGrid,
         FVector InLocationOffset,
-        FRotator InRotationOffset = FRotator::ZeroRotator);
+        FRotator InRotationOffset,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridSystem",
@@ -121,11 +128,13 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridSystem",
-              DisplayName="[Ck][2dGridSystem] Request Set Pivot To Anchor")
+              DisplayName="[Ck][2dGridSystem] Request Set Pivot To Anchor",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FTransform
     Request_SetPivotToAnchor(
         const FCk_Handle_2dGridSystem& InGrid,
-        ECk_2dGridSystem_PivotAnchor InAnchor);
+        ECk_2dGridSystem_PivotAnchor InAnchor,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridSystem",

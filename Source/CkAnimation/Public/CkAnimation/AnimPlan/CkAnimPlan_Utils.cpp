@@ -174,9 +174,13 @@ auto
     UCk_Utils_AnimPlan_UE::
     Request_UpdateAnimCluster(
         FCk_Handle_AnimPlan& InHandle,
-        const FCk_Request_AnimPlan_UpdateAnimCluster& InRequest)
+        const FCk_Request_AnimPlan_UpdateAnimCluster& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AnimPlan
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     CK_CALLSTACK_RECORD(ck::FFragment_AnimPlan_Requests, InHandle);
     InHandle.AddOrGet<ck::FFragment_AnimPlan_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
@@ -186,9 +190,13 @@ auto
     UCk_Utils_AnimPlan_UE::
     Request_UpdateAnimState(
         FCk_Handle_AnimPlan& InHandle,
-        const FCk_Request_AnimPlan_UpdateAnimState& InRequest)
+        const FCk_Request_AnimPlan_UpdateAnimState& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AnimPlan
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     CK_CALLSTACK_RECORD(ck::FFragment_AnimPlan_Requests, InHandle);
     InHandle.AddOrGet<ck::FFragment_AnimPlan_Requests>()._Requests.Emplace(InRequest);
     return InHandle;

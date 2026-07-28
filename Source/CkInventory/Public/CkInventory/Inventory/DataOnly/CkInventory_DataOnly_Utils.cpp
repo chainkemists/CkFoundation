@@ -223,7 +223,7 @@ auto
         TEXT("Inventory [{}] does not have a bound max attribute"), InInventory)
     { return InInventory; }
 
-    UCk_Utils_IntegerAttribute_UE::Request_Override(BoundAttr, InNewBoundMax, ECk_MinMaxCurrent::Current);
+    UCk_Utils_IntegerAttribute_UE::Request_Override(BoundAttr, InNewBoundMax, ECk_MinMaxCurrent::Current, {});
 
     return InInventory;
 }

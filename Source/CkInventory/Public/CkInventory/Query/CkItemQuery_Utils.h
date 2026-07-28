@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkInventory/Query/CkItemQuery_Fragment_Data.h"
 
@@ -22,12 +23,14 @@ public:
     // when already built). InAnyHandle only scopes the transient request entity — any valid entity.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ItemQuery",
-              DisplayName = "[Ck][ItemQuery] Request Query Item Definitions")
+              DisplayName = "[Ck][ItemQuery] Request Query Item Definitions",
+              meta = (AutoCreateRefTerm = "InCompletionDelegate"))
     static void
     Request_QueryItemDefinitions(
         const FCk_Handle& InAnyHandle,
         const FCk_Request_ItemQuery_QueryDefinitions& InRequest,
-        const FCk_Delegate_ItemQuery_OnQueried& InDelegate);
+        const FCk_Delegate_ItemQuery_OnQueried& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

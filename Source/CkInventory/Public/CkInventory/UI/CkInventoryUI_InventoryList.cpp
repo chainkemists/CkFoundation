@@ -135,7 +135,8 @@ auto
         UCk_Utils_Inventory_UE::Request_TransferItem_ToSpatial(
             SourceMutable,
             FCk_Request_Inventory_TransferItem_ToSpatial(SourceItem, TgtSpatial),
-            Callback);
+            Callback,
+            {});
     }
     else
     {
@@ -143,7 +144,8 @@ auto
         UCk_Utils_Inventory_UE::Request_TransferItem_ToDataOnly(
             SourceMutable,
             FCk_Request_Inventory_TransferItem_ToDataOnly(SourceItem, TgtDataOnly),
-            Callback);
+            Callback,
+            {});
     }
 
     return true;

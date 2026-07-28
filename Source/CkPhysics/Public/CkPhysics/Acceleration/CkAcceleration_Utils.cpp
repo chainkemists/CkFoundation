@@ -70,10 +70,14 @@ auto
     UCk_Utils_Acceleration_UE::
     Request_OverrideAcceleration(
         FCk_Handle_Acceleration& InHandle,
-        const FVector& InNewAcceleration)
+        const FVector& InNewAcceleration,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     InHandle.Get<ck::FFragment_Acceleration_Current>()._CurrentAcceleration = InNewAcceleration;
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -345,11 +349,15 @@ auto
     Request_AddTarget(
         FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest)
+        const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     if (NOT Ensure(InHandle, InModifierName))
-    { return; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     auto AccelerationModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_BulkAccelerationModifier_UE,
@@ -359,6 +367,9 @@ auto
         TEXT("Cannot Start Affecting Entity [{}] Acceleration because the Bulk Acceleration Modifer [{}] operates on a GLOBAL scope"), InRequest.Get_TargetEntity(), AccelerationModifierEntity)
     { return; }
 
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     DoRequest_AddTarget(AccelerationModifierEntity, InRequest);
 }
 
@@ -367,11 +378,15 @@ auto
     Request_RemoveTarget(
         FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest)
+        const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     if (NOT Ensure(InHandle, InModifierName))
-    { return; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     auto AccelerationModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_BulkAccelerationModifier_UE,
@@ -380,6 +395,9 @@ auto
     CK_ENSURE_IF_NOT(NOT AccelerationModifierEntity.Has<ck::FTag_BulkAccelerationModifier_GlobalScope>(),
         TEXT("Cannot Stop Affecting Entity [{}] Acceleration because the Bulk Acceleration Modifer [{}] operates on a GLOBAL scope"), InRequest.Get_TargetEntity(), AccelerationModifierEntity)
     { return; }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     DoRequest_RemoveTarget(AccelerationModifierEntity, InRequest);
 }

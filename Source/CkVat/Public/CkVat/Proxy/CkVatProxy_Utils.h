@@ -4,6 +4,7 @@
 #include "CkVat/Proxy/CkVatProxy_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkVatProxy_Utils.generated.h"
@@ -73,28 +74,34 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VatProxy",
-              DisplayName="[Ck][VatProxy] Request Play Clip")
+              DisplayName="[Ck][VatProxy] Request Play Clip",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_VatProxy
     Request_PlayClip(
         UPARAM(ref) FCk_Handle_VatProxy& InHandle,
-        const FCk_Request_VatProxy_PlayClip& InRequest);
+        const FCk_Request_VatProxy_PlayClip& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Freezes playback on the current frame. Resume by issuing PlayClip (or SetPlayRate != 0).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VatProxy",
-              DisplayName="[Ck][VatProxy] Request Stop")
+              DisplayName="[Ck][VatProxy] Request Stop",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_VatProxy
     Request_Stop(
-        UPARAM(ref) FCk_Handle_VatProxy& InHandle);
+        UPARAM(ref) FCk_Handle_VatProxy& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Preserves the playback position across the rate change. Rate 0 freezes (same contract as Stop).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VatProxy",
-              DisplayName="[Ck][VatProxy] Request Set Play Rate")
+              DisplayName="[Ck][VatProxy] Request Set Play Rate",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_VatProxy
     Request_SetPlayRate(
         UPARAM(ref) FCk_Handle_VatProxy& InHandle,
-        float InPlayRate);
+        float InPlayRate,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

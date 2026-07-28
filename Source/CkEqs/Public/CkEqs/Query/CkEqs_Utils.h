@@ -5,6 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkEqs_Utils.generated.h"
@@ -59,11 +60,13 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Eqs",
-        DisplayName = "[Ck][Eqs] Request Run Query")
+        DisplayName = "[Ck][Eqs] Request Run Query",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle
     Request_RunQuery(
         UPARAM(ref) FCk_Handle& InQuerierEntity,
-        const FCk_Request_Eqs_RunQuery& InRequest);
+        const FCk_Request_Eqs_RunQuery& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Synchronous path: runs the whole pipeline in-line and returns a handle with results already
@@ -72,33 +75,44 @@ public:
     // also why it takes QueryParams rather than the request type: _OnComplete has no use here.
     // ----------------------------------------------------------------------------------------------------------------
 
+    // The whole pipeline runs on this stack, so the completion delegate fires synchronously before
+    // this returns: Succeeded when the query produced results, Failed when generation failed.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Eqs",
-        DisplayName = "[Ck][Eqs] Request Run Query (Immediate)")
+        DisplayName = "[Ck][Eqs] Request Run Query (Immediate)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_EqsQuery
     Request_RunQuery_Immediate(
         UPARAM(ref) FCk_Handle& InQuerierEntity,
-        const FCk_Eqs_QueryParams& InQueryParams);
+        const FCk_Eqs_QueryParams& InQueryParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Cancellation is a tag: FProcessor_Eqs_Test picks it up, fails the query with empty results,
     // and broadcasts OnComplete. Nothing happens synchronously here.
     // ----------------------------------------------------------------------------------------------------------------
 
+    // Immediate mutator: stamps the Cancelled tag inline and enqueues nothing, so the completion
+    // delegate fires synchronously with Succeeded on the caller's own stack.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Eqs",
-        DisplayName = "[Ck][Eqs] Request Cancel Query")
+        DisplayName = "[Ck][Eqs] Request Cancel Query",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_EqsQuery
     Request_CancelQuery(
-        UPARAM(ref) FCk_Handle_EqsQuery& InQueryEntity);
+        UPARAM(ref) FCk_Handle_EqsQuery& InQueryEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Cancels every in-flight query context-owned by this querier; returns how many were tagged.
+    // Immediate mutator — see Request_CancelQuery.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Eqs",
-        DisplayName = "[Ck][Eqs] Request Cancel All Queries (for Querier)")
+        DisplayName = "[Ck][Eqs] Request Cancel All Queries (for Querier)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static int32
     Request_CancelAllQueries(
-        UPARAM(ref) FCk_Handle& InQuerierEntity);
+        UPARAM(ref) FCk_Handle& InQuerierEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // ----------------------------------------------------------------------------------------------------------------
     // Signal bindings (deferred path only — Immediate does not broadcast).

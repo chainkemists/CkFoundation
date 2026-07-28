@@ -59,10 +59,14 @@ auto
     UCk_Utils_Homing_UE::
     Request_SetTargetEntity(
         FCk_Handle_Homing& InHandle,
-        const FCk_Request_Homing_SetTargetEntity& InRequest)
+        const FCk_Request_Homing_SetTargetEntity& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Homing
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Homing_Requests, InHandle);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InHandle.AddOrGet<ck::FFragment_Homing_Requests>()._Requests.Emplace(InRequest);
 
@@ -73,10 +77,14 @@ auto
     UCk_Utils_Homing_UE::
     Request_SetTargetLocation(
         FCk_Handle_Homing& InHandle,
-        const FCk_Request_Homing_SetTargetLocation& InRequest)
+        const FCk_Request_Homing_SetTargetLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Homing
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Homing_Requests, InHandle);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InHandle.AddOrGet<ck::FFragment_Homing_Requests>()._Requests.Emplace(InRequest);
 
@@ -86,12 +94,18 @@ auto
 auto
     UCk_Utils_Homing_UE::
     Request_ClearTarget(
-        FCk_Handle_Homing& InHandle)
+        FCk_Handle_Homing& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Homing
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Homing_Requests, InHandle);
 
-    InHandle.AddOrGet<ck::FFragment_Homing_Requests>()._Requests.Emplace(FCk_Request_Homing_ClearTarget{});
+    const auto Request = FCk_Request_Homing_ClearTarget{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_Homing_Requests>()._Requests.Emplace(Request);
 
     return InHandle;
 }
@@ -100,10 +114,14 @@ auto
     UCk_Utils_Homing_UE::
     Request_SetDesiredTimeToImpact(
         FCk_Handle_Homing& InHandle,
-        const FCk_Request_Homing_SetDesiredTimeToImpact& InRequest)
+        const FCk_Request_Homing_SetDesiredTimeToImpact& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Homing
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Homing_Requests, InHandle);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InHandle.AddOrGet<ck::FFragment_Homing_Requests>()._Requests.Emplace(InRequest);
 
@@ -114,10 +132,14 @@ auto
     UCk_Utils_Homing_UE::
     Request_EnableDisable(
         FCk_Handle_Homing& InHandle,
-        const FCk_Request_Homing_EnableDisable& InRequest)
+        const FCk_Request_Homing_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Homing
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Homing_Requests, InHandle);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InHandle.AddOrGet<ck::FFragment_Homing_Requests>()._Requests.Emplace(InRequest);
 

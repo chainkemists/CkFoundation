@@ -122,21 +122,37 @@ auto
     Request_SpawnEntity(
         FCk_Handle& InLifetimeOwner,
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
-        FInstancedStruct InSpawnParams)
+        FInstancedStruct InSpawnParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_PendingEntityScript
 {
     if (NOT ck_entity_script_utils::ValidateRetainedSpawnParams(TEXT("Request_SpawnEntity"), InSpawnParams))
-    { return {}; }
+    {
+        InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClass),
+    const auto EntityScriptClassIsValid = ck::IsValid(InEntityScriptClass);
+    CK_ENSURE_IF_NOT(EntityScriptClassIsValid,
         TEXT("EntityScriptClass [{}] is INVALID. Unable to SpawnEntity using LifetimeOwner [{}]."),
         InEntityScriptClass, InLifetimeOwner)
-    { return {}; }
+    {}
+    if (NOT EntityScriptClassIsValid)
+    {
+        InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner),
+    const auto LifetimeOwnerIsValid = ck::IsValid(InLifetimeOwner);
+    CK_ENSURE_IF_NOT(LifetimeOwnerIsValid,
         TEXT("LifetimeOwner is INVALID. Unable to SpawnEntity using EntityScriptClass [{}]."),
         InEntityScriptClass)
-    { return {}; }
+    {}
+    if (NOT LifetimeOwnerIsValid)
+    {
+        InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
     if (const auto DefaultObject = InEntityScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
         ck::IsValid(DefaultObject))
@@ -147,6 +163,12 @@ auto
             const auto& PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
             auto& PendingFragment = InLifetimeOwner.AddOrGet<ck::FFragment_PendingReplication>();
             PendingFragment.Add(InEntityScriptClass.Get(), PendingEntity, InSpawnParams);
+
+            // Completion is LOCAL-machine: on a client the authority owns this spawn and nothing is queued
+            // here, so there is no local processing to report. Promise_OnConstructed on the returned pending
+            // handle is what resolves when the replicated entity arrives.
+            InDelegate.ExecuteIfBound(PendingEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+
             return FCk_Handle_PendingEntityScript{PendingEntity};
         }
     }
@@ -163,7 +185,7 @@ auto
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClass);
 
     const auto CDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_EntityScript_UE>(InEntityScriptClass);
-    return Add(NewEntity, MakeWeakObjectPtr(CDO), InSpawnParams);
+    return Add(NewEntity, MakeWeakObjectPtr(CDO), InSpawnParams, nullptr, InDelegate);
 }
 
 auto
@@ -171,21 +193,37 @@ auto
     Request_SpawnEntity_Archetype(
         FCk_Handle& InLifetimeOwner,
         UCk_EntityScript_UE* InEntityScriptClassArchetype,
-        FInstancedStruct InSpawnParams)
+        FInstancedStruct InSpawnParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_PendingEntityScript
 {
     if (NOT ck_entity_script_utils::ValidateRetainedSpawnParams(TEXT("Request_SpawnEntity_Archetype"), InSpawnParams))
-    { return {}; }
+    {
+        InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScriptClassArchetype),
+    const auto ArchetypeIsValid = ck::IsValid(InEntityScriptClassArchetype);
+    CK_ENSURE_IF_NOT(ArchetypeIsValid,
         TEXT("EntityScriptClass [{}] is INVALID. Unable to SpawnEntity using LifetimeOwner [{}]."),
         InEntityScriptClassArchetype, InLifetimeOwner)
-    { return {}; }
+    {}
+    if (NOT ArchetypeIsValid)
+    {
+        InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner),
+    const auto LifetimeOwnerIsValid = ck::IsValid(InLifetimeOwner);
+    CK_ENSURE_IF_NOT(LifetimeOwnerIsValid,
         TEXT("LifetimeOwner is INVALID. Unable to SpawnEntity using EntityScriptClass [{}]."),
         InEntityScriptClassArchetype)
-    { return {}; }
+    {}
+    if (NOT LifetimeOwnerIsValid)
+    {
+        InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
     if (InEntityScriptClassArchetype->Get_EffectiveReplication() == ECk_Replication::Replicates &&
         UCk_Utils_Net_UE::Get_EntityNetMode(InLifetimeOwner) == ECk_Net_NetModeType::Client)
@@ -193,6 +231,10 @@ auto
         const auto& PendingEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
         auto& PendingFragment = InLifetimeOwner.AddOrGet<ck::FFragment_PendingReplication>();
         PendingFragment.Add(InEntityScriptClassArchetype->GetClass(), PendingEntity, InSpawnParams);
+
+        // See Request_SpawnEntity: nothing is queued locally on a client, so there is no local outcome.
+        InDelegate.ExecuteIfBound(PendingEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+
         return FCk_Handle_PendingEntityScript{PendingEntity};
     }
 
@@ -201,7 +243,7 @@ auto
     CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
         TEXT("Request_SpawnEntity called with class: {}"), InEntityScriptClassArchetype);
 
-    return Add(NewEntity, InEntityScriptClassArchetype, InSpawnParams);
+    return Add(NewEntity, InEntityScriptClassArchetype, InSpawnParams, nullptr, InDelegate);
 }
 
 auto
@@ -223,10 +265,11 @@ auto
         FCk_Handle& InScriptEntity,
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass,
         const FInstancedStruct& InSpawnParams,
-        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc)
+        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_PendingEntityScript
 {
-    return Add(InScriptEntity, InEntityScriptClass.GetDefaultObject(), InSpawnParams, InOptionalFunc);
+    return Add(InScriptEntity, InEntityScriptClass.GetDefaultObject(), InSpawnParams, InOptionalFunc, InDelegate);
 }
 
 auto
@@ -235,11 +278,15 @@ auto
         FCk_Handle& InScriptEntity,
         const TWeakObjectPtr<UCk_EntityScript_UE>& InEntityScriptClassArchetype,
         const FInstancedStruct& InSpawnParams,
-        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc)
+        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_PendingEntityScript
 {
     if (NOT ck_entity_script_utils::ValidateRetainedSpawnParams(TEXT("Add EntityScript"), InSpawnParams))
-    { return {}; }
+    {
+        InDelegate.ExecuteIfBound(InScriptEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InScriptEntity),
         TEXT("Cannot Add EntityScript [{}] to an INVALID Entity. Aborting to avoid operating on a dead Registry handle."),
@@ -290,6 +337,9 @@ auto
                         .Set_ContextOwner(LifetimeOwner)
                         .Set_SpawnParams(InSpawnParams)
                         .Set_PostConstruction_Func(InOptionalFunc);
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
 
     RequestEntity.Add<ck::FFragment_EntityScript_RequestSpawnEntity>(Request);
 

@@ -75,6 +75,7 @@ namespace ck
             FCk_Handle_Transform,
             ck::TReadWrite<FFragment_Transform>,
             ck::TReadOnly<FFragment_Transform_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

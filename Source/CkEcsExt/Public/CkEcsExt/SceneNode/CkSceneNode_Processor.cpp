@@ -5,6 +5,7 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "Components/SceneComponent.h"
@@ -12,6 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_FollowUnrealAnchor);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer0>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer1>);
@@ -43,7 +45,14 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
+                // DoHandleRequest is void and has no rejection path, so reaching the line after the
+                // call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InCurrent, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -67,6 +76,19 @@ namespace ck
         InCurrent._RelativeTransform = InRequest.Get_NewRelativeTransform();
 
         InHandle.AddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_SceneNode_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SceneNode_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

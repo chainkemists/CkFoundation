@@ -14,6 +14,7 @@ namespace ck
             FProcessor_ResolverTarget_HandleRequests,
             FCk_Handle_ResolverTarget,
             ck::TReadOnly<FFragment_ResolverTarget_Requests>,
+            ck::TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -40,6 +41,32 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_ResolverTarget_InitiateNewResolution& InNewResolution) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed target's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKRESOLVER_API FProcessor_ResolverTarget_CancelPendingRequests : public ck_exp::TProcessor<
+            FProcessor_ResolverTarget_CancelPendingRequests,
+            FCk_Handle_ResolverTarget,
+            ck::TReadOnly<FFragment_ResolverTarget_Requests>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ResolverTarget_Requests& InRequestsComp)
+            -> void;
     };
 }
 

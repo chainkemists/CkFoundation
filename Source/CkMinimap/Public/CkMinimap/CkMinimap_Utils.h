@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Delegates/CkDelegates.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -194,43 +195,53 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Minimap",
-              DisplayName="[Ck][Minimap] Request Set View Extent")
+              DisplayName="[Ck][Minimap] Request Set View Extent",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Minimap
     Request_SetViewExtent(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
-        float InViewExtent);
+        float InViewExtent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Minimap",
-              DisplayName="[Ck][Minimap] Request Set Category Filter")
+              DisplayName="[Ck][Minimap] Request Set Category Filter",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Minimap
     Request_SetCategoryFilter(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
-        const FCk_Request_Minimap_SetCategoryFilter& InRequest);
+        const FCk_Request_Minimap_SetCategoryFilter& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Minimap",
-              DisplayName="[Ck][Minimap] Request Set Observer")
+              DisplayName="[Ck][Minimap] Request Set Observer",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Minimap
     Request_SetObserver(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
-        FCk_Handle InObserver);
+        FCk_Handle InObserver,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Minimap",
-              DisplayName="[Ck][Minimap] Request Set Rotation Mode")
+              DisplayName="[Ck][Minimap] Request Set Rotation Mode",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Minimap
     Request_SetRotationMode(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
-        ECk_Minimap_RotationMode InRotationMode);
+        ECk_Minimap_RotationMode InRotationMode,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Minimap",
-              DisplayName="[Ck][Minimap] Request Set Fog Of War")
+              DisplayName="[Ck][Minimap] Request Set Fog Of War",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Minimap
     Request_SetFogOfWar(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
-        FCk_Handle_FogOfWar InFogOfWar);
+        FCk_Handle_FogOfWar InFogOfWar,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     // Membership deltas ONLY (positions are per-frame data — pull those via Get_Entries/Get_ViewOrigin).

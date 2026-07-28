@@ -50,9 +50,13 @@ auto
     UCk_Utils_ShapeBox_UE::
     Request_UpdateDimensions(
         FCk_Handle_ShapeBox& InShapeBox,
-        const FCk_Request_ShapeBox_UpdateDimensions& InRequest)
+        const FCk_Request_ShapeBox_UpdateDimensions& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ShapeBox
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InShapeBox.AddOrGet<ck::FFragment_ShapeBox_Requests>()._Requests.Emplace(InRequest);
     return InShapeBox;
 }

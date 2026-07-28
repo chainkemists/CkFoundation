@@ -54,9 +54,13 @@ auto
     UCk_Utils_IsmProxy_UE::
     Request_SetCustomInstanceData(
         FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest)
+        const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IsmProxy
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
@@ -65,9 +69,13 @@ auto
     UCk_Utils_IsmProxy_UE::
     Request_SetCustomInstanceDataValue(
         FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest)
+        const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IsmProxy
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
@@ -76,9 +84,13 @@ auto
     UCk_Utils_IsmProxy_UE::
     Request_SetCustomPrimitiveData(
         FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest)
+        const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IsmProxy
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
@@ -87,9 +99,13 @@ auto
     UCk_Utils_IsmProxy_UE::
     Request_EnableDisable(
         FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_EnableDisable& InRequest)
+        const FCk_Request_IsmProxy_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_IsmProxy
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }

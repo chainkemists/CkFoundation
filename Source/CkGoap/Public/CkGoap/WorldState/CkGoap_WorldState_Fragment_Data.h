@@ -3,6 +3,7 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkGoap_WorldState_Fragment_Data.generated.h"
 
@@ -74,12 +75,13 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_WorldState_SetValue
+struct CKGOAP_API FCk_Request_Goap_WorldState_SetValue : public FCk_Request_Base
 {
 	GENERATED_BODY()
 
 public:
 	CK_GENERATED_BODY(FCk_Request_Goap_WorldState_SetValue);
+	CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_WorldState_SetValue);
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -102,12 +104,13 @@ public:
 
 // Rarely needed — Setup-time scanning of actions/goals and Set_Value both register keys already.
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_WorldState_RegisterKey
+struct CKGOAP_API FCk_Request_Goap_WorldState_RegisterKey : public FCk_Request_Base
 {
 	GENERATED_BODY()
 
 public:
 	CK_GENERATED_BODY(FCk_Request_Goap_WorldState_RegisterKey);
+	CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_WorldState_RegisterKey);
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,

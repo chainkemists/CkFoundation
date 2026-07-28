@@ -93,13 +93,17 @@ auto
     Request_InitiateNewResolution(
         FCk_Handle_ResolverTarget& InResolverTarget,
         const FCk_Request_ResolverTarget_InitiateNewResolution& InRequest,
-        FCk_Delegate_ResolverTarget_OnNewResolverDataBundle InDelegate)
+        FCk_Delegate_ResolverTarget_OnNewResolverDataBundle InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_ResolverTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_ResolverTarget_Requests, InResolverTarget);
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_ResolverTarget_OnNewResolverDataBundle,
         InRequest.PopulateRequestHandle(InResolverTarget), InDelegate);
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     InResolverTarget.AddOrGet<ck::FFragment_ResolverTarget_Requests>()._ResolverRequests.Emplace(InRequest);
     return InResolverTarget;

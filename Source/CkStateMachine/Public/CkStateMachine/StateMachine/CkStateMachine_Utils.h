@@ -4,6 +4,7 @@
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -65,39 +66,49 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Request Start")
+        DisplayName = "[Ck][SM] Request Start",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_StateMachine
     Request_Start(
-        UPARAM(ref) FCk_Handle_StateMachine& InStateMachine);
+        UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Request Stop")
+        DisplayName = "[Ck][SM] Request Stop",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_StateMachine
     Request_Stop(
-        UPARAM(ref) FCk_Handle_StateMachine& InStateMachine);
+        UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Request Pause")
+        DisplayName = "[Ck][SM] Request Pause",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_StateMachine
     Request_Pause(
-        UPARAM(ref) FCk_Handle_StateMachine& InStateMachine);
+        UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Request Resume")
+        DisplayName = "[Ck][SM] Request Resume",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_StateMachine
     Request_Resume(
-        UPARAM(ref) FCk_Handle_StateMachine& InStateMachine);
+        UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Request Transition")
+        DisplayName = "[Ck][SM] Request Transition",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_StateMachine
     Request_Transition(
         UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass);
+        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Schedules exit on the SM's current state via UCk_Utils_SmState_UE::Request_Exit. Does NOT
     // destroy the SM entity itself.
@@ -114,11 +125,13 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
-        DisplayName = "[Ck][SM] Request Add Override State")
+        DisplayName = "[Ck][SM] Request Add Override State",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_StateMachine
     Request_AddOverrideState(
         UPARAM(ref) FCk_Handle_StateMachine& InStateMachine,
-        TSubclassOf<UCk_SmState_EntityScript> InOverrideStateClass);
+        TSubclassOf<UCk_SmState_EntityScript> InOverrideStateClass,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -347,7 +360,8 @@ private:
     static auto
     DoAddRequest(
         FCk_Handle_StateMachine& InStateMachine,
-        const auto& InRequest) -> FCk_Handle_StateMachine;
+        const auto& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_StateMachine;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

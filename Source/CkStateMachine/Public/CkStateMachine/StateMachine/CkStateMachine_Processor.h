@@ -9,6 +9,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Processor.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -79,6 +80,7 @@ namespace ck
         TReadOnly<FFragment_Sm_Params>,
         TReadWrite<FFragment_Sm_Current>,
         TReadOnly<FFragment_Sm_Requests>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -102,47 +104,50 @@ namespace ck
             const FFragment_Sm_Requests& InRequests) const -> void;
 
     private:
+        // Every overload returns the outcome the drain reports to the request's completion delegate.
+        // The run-status guards below are genuine rejections, not deferrals: a Start on a running SM
+        // or a Transition on a non-Running one is dropped outright and never retried.
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
-            const FCk_Request_Sm_Start& InRequest) -> void;
+            const FCk_Request_Sm_Start& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
-            const FCk_Request_Sm_Stop& InRequest) -> void;
+            const FCk_Request_Sm_Stop& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
-            const FCk_Request_Sm_Pause& InRequest) -> void;
+            const FCk_Request_Sm_Pause& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
-            const FCk_Request_Sm_Resume& InRequest) -> void;
+            const FCk_Request_Sm_Resume& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
-            const FCk_Request_Sm_Transition& InRequest) -> void;
+            const FCk_Request_Sm_Transition& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
-            const FCk_Request_Sm_AddOverrideState& InRequest) -> void;
+            const FCk_Request_Sm_AddOverrideState& InRequest) -> ECk_Request_OperationResult;
 
     private:
         static auto
@@ -159,6 +164,34 @@ namespace ck
             FFragment_Sm_Current& InCurrent,
             bool InScheduleDestroy = true) -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed SM's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKSTATEMACHINE_API FProcessor_Sm_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Sm_CancelPendingRequests,
+        FCk_Handle_StateMachine,
+        ck::TReadOnly<FFragment_Sm_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Requests& InRequestsComp)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     class FProcessor_Sm_CommitPendingTransition;
     class FProcessor_Sm_ApplyReplicatedHistory;

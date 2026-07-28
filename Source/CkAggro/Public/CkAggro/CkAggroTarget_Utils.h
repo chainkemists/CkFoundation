@@ -7,6 +7,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
@@ -181,48 +182,60 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AggroTarget",
-              DisplayName="[Ck][AggroTarget] Request Add Threat")
+              DisplayName="[Ck][AggroTarget] Request Add Threat",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AggroTarget
     Request_AddThreat(
         UPARAM(ref) FCk_Handle_AggroTarget& InTarget,
-        float InThreatDelta);
+        float InThreatDelta,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AggroTarget",
-              DisplayName="[Ck][AggroTarget] Request Set Threat")
+              DisplayName="[Ck][AggroTarget] Request Set Threat",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AggroTarget
     Request_SetThreat(
         UPARAM(ref) FCk_Handle_AggroTarget& InTarget,
-        float InThreat);
+        float InThreat,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AggroTarget",
-              DisplayName="[Ck][AggroTarget] Request Mark Perceived")
+              DisplayName="[Ck][AggroTarget] Request Mark Perceived",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AggroTarget
     Request_MarkPerceived(
         UPARAM(ref) FCk_Handle_AggroTarget& InTarget,
-        FCk_Request_AggroTarget_MarkPerceived InRequest);
+        FCk_Request_AggroTarget_MarkPerceived InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AggroTarget",
-              DisplayName="[Ck][AggroTarget] Request Mark Unperceived")
+              DisplayName="[Ck][AggroTarget] Request Mark Unperceived",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AggroTarget
     Request_MarkUnperceived(
-        UPARAM(ref) FCk_Handle_AggroTarget& InTarget);
+        UPARAM(ref) FCk_Handle_AggroTarget& InTarget,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AggroTarget",
-              DisplayName="[Ck][AggroTarget] Request Reset Perception")
+              DisplayName="[Ck][AggroTarget] Request Reset Perception",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AggroTarget
     Request_ResetPerception(
-        UPARAM(ref) FCk_Handle_AggroTarget& InTarget);
+        UPARAM(ref) FCk_Handle_AggroTarget& InTarget,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AggroTarget",
-              DisplayName="[Ck][AggroTarget] Request Forget")
+              DisplayName="[Ck][AggroTarget] Request Forget",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AggroTarget
     Request_Forget(
-        UPARAM(ref) FCk_Handle_AggroTarget& InTarget);
+        UPARAM(ref) FCk_Handle_AggroTarget& InTarget,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

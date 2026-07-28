@@ -8,6 +8,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkGeometryCollectionOwner_Utils.generated.h"
 
@@ -81,33 +82,43 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
-        DisplayName="[Ck][GeometryCollectionOwner] Request Crumble NonActive Clusters (Replicated)")
+        DisplayName="[Ck][GeometryCollectionOwner] Request Crumble NonActive Clusters (Replicated)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_GeometryCollectionOwner
     Request_CrumbleNonActiveClusters(
-        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner);
+        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
-        DisplayName="[Ck][GeometryCollectionOwner] Request RemoveAllAnchors (Replicated)")
+        DisplayName="[Ck][GeometryCollectionOwner] Request RemoveAllAnchors (Replicated)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_GeometryCollectionOwner
     Request_RemoveAllAnchors(
-        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner);
+        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
-        DisplayName="[Ck][GeometryCollectionOwner] Request Apply Radial Strain (Replicated)")
+        DisplayName="[Ck][GeometryCollectionOwner] Request Apply Radial Strain (Replicated)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_GeometryCollectionOwner
     Request_ApplyRadialStrain(
         UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
-        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest);
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // The completion delegate, if bound, fires once PER TARGETED owner — each report is that
+    // owner's own local-processing outcome, since this fans out to N independent deferred requests.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
-        DisplayName="[Ck][GeometryCollectionOwner] Request Apply Radial Strain On All (Replicated)")
+        DisplayName="[Ck][GeometryCollectionOwner] Request Apply Radial Strain On All (Replicated)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_ApplyRadialStrainOnAll(
         const FCk_Handle& InAnyHandle,
-        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest);
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

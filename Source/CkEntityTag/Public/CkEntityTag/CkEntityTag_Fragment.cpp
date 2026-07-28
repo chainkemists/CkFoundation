@@ -56,7 +56,7 @@ static struct FCkEntityTagSaveHandlerRegistrar
                     Entity, SavedNames.Num(), SavedCounts.Num())
                 { /* DoApply_RestoreSet clamps to the common prefix rather than restoring nothing */ }
 
-                UCk_Utils_EntityTag_UE::Request_RestoreSet(Entity, SavedNames, SavedCounts);
+                UCk_Utils_EntityTag_UE::Request_RestoreSet(Entity, SavedNames, SavedCounts, {});
 
                 return ECk_Persistence_ApplyResult::Applied;
             }});

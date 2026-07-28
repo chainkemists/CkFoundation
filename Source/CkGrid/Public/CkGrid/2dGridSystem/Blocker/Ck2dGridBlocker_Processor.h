@@ -42,6 +42,7 @@ namespace ck
             TReadOnly<FFragment_2dGridBlocker_Params>,
             TReadWrite<FFragment_2dGridBlocker_Current>,
             TReadWrite<FFragment_2dGridBlocker_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -65,6 +66,29 @@ namespace ck
             const FFragment_2dGridBlocker_Params& InParams,
             FFragment_2dGridBlocker_Current& InCurrent,
             FFragment_2dGridBlocker_Requests& InRequestsComp) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKGRID_API FProcessor_2dGridBlocker_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_2dGridBlocker_CancelPendingRequests,
+        FCk_Handle_2dGridBlocker,
+        ck::TReadOnly<FFragment_2dGridBlocker_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_2dGridBlocker_Requests& InRequestsComp)
+            -> void;
     };
 }
 

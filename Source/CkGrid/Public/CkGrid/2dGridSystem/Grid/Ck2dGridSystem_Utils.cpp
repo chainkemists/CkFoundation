@@ -162,15 +162,25 @@ auto
     Request_UpdatePivot(
         const FCk_Handle_2dGridSystem& InGrid,
         FVector InLocationOffset,
-        FRotator InRotationOffset)
+        FRotator InRotationOffset,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InGrid), TEXT("Cannot update pivot for invalid grid"))
-    { return; }
+    const auto IsGridValid = ck::IsValid(InGrid);
+    CK_ENSURE_IF_NOT(IsGridValid, TEXT("Cannot update pivot for invalid grid"))
+    {}
+    if (NOT IsGridValid)
+    {
+        InDelegate.ExecuteIfBound(FCk_Handle{InGrid}, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     auto Pivot = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
     UCk_Utils_SceneNode_UE::Request_UpdateOffset(Pivot,
-        FCk_Request_SceneNode_UpdateRelativeTransform{FTransform{InRotationOffset, InLocationOffset}});
+        FCk_Request_SceneNode_UpdateRelativeTransform{FTransform{InRotationOffset, InLocationOffset}}, {});
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(FCk_Handle{InGrid}, ECk_Request_OperationResult::Succeeded);
 }
 
 auto
@@ -255,11 +265,16 @@ auto
     UCk_Utils_2dGridSystem_UE::
     Request_SetPivotToAnchor(
         const FCk_Handle_2dGridSystem& InGrid,
-        ECk_2dGridSystem_PivotAnchor InAnchor)
+        ECk_2dGridSystem_PivotAnchor InAnchor,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FTransform
 {
     const auto& NewPivotTransform = Get_PivotTransformForAnchor(InGrid, InAnchor);
-    Request_UpdatePivot(InGrid, NewPivotTransform.GetLocation(), NewPivotTransform.GetRotation().Rotator());
+    Request_UpdatePivot(InGrid, NewPivotTransform.GetLocation(), NewPivotTransform.GetRotation().Rotator(), {});
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(FCk_Handle{InGrid}, ECk_Request_OperationResult::Succeeded);
+
     return NewPivotTransform;
 }
 

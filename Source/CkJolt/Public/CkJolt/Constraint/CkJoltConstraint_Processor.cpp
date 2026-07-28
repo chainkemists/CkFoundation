@@ -4,6 +4,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkJolt/Body/CkJoltBody_Fragment.h"
@@ -21,6 +22,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltConstraint_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltConstraint_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_JoltConstraint_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltConstraint_LivenessReap);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltConstraint_EndPlay);
 
@@ -288,12 +290,19 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
+            // Every DoHandleRequest overload below is void and has no rejection path, so reaching the
+            // line after the call IS the success condition.
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
             DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             {
                 InRequest.GetAndDestroyRequestHandle();
             }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
         if (InRequestsComp._Requests.IsEmpty())
@@ -492,6 +501,19 @@ namespace ck
 
         InCurrent._Constraint = nullptr;
         InCurrent._ConstraintAdded = false;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_JoltConstraint_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_JoltConstraint_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

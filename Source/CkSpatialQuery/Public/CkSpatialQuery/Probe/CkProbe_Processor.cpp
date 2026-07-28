@@ -37,6 +37,7 @@
 
 #include <DrawDebugHelpers.h>
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -62,6 +63,7 @@ CK_PROBE_FACTORY(ck::FProcessor_Probe_Setup);
 CK_PROBE_FACTORY(ck::FProcessor_Probe_UpdateTransform);
 CK_PROBE_FACTORY(ck::FProcessor_Probe_UpdateTransform_LinearCast);
 CK_PROBE_FACTORY(ck::FProcessor_Probe_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_CancelPendingRequests);
 CK_PROBE_FACTORY(ck::FProcessor_Probe_EndPlay);
 CK_PROBE_FACTORY(ck::FProcessor_Probe_UpdateShape);
 
@@ -594,11 +596,11 @@ namespace ck_probe
 
             if (ck::IsValid(Overlap.Get_BeginOverlap()))
             {
-                UCk_Utils_Probe_UE::Request_BeginOverlap(Probe, *Overlap.Get_BeginOverlap());
+                UCk_Utils_Probe_UE::Request_BeginOverlap(Probe, *Overlap.Get_BeginOverlap(), {});
             }
             else
             {
-                UCk_Utils_Probe_UE::Request_OverlapUpdated(Probe, *Overlap.Get_UpdateOverlap());
+                UCk_Utils_Probe_UE::Request_OverlapUpdated(Probe, *Overlap.Get_UpdateOverlap(), {});
             }
         }
     }
@@ -625,13 +627,13 @@ namespace ck_probe
             if (ck::Is_NOT_Valid(MaybeOtherProbe))
             { continue; }
 
-            UCk_Utils_Probe_UE::Request_EndOverlap(CastingProbe, FCk_Request_Probe_EndOverlap{OtherEntity});
+            UCk_Utils_Probe_UE::Request_EndOverlap(CastingProbe, FCk_Request_Probe_EndOverlap{OtherEntity}, {});
 
             // A Silent or filtered-out probe never received the Begin, and an unguarded EndOverlap
             // trips the "was NOT overlapping" error in Probe_HandleRequests.
             if (UCk_Utils_Probe_UE::Get_IsOverlappingWith(MaybeOtherProbe, InCastingProbe))
             {
-                UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InCastingProbe});
+                UCk_Utils_Probe_UE::Request_EndOverlap(MaybeOtherProbe, FCk_Request_Probe_EndOverlap{InCastingProbe}, {});
             }
         }
     }
@@ -954,7 +956,10 @@ namespace ck
             algo::ForEachRequest(InRequests.Get_Requests(), Visitor(
             [&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InCurrent, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                Result = DoHandleRequest(InHandle, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -970,7 +975,7 @@ namespace ck
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_BeginOverlap& InRequest)
-            -> void
+            -> ECk_Request_OperationResult
     {
         const auto OverlapInfo = FCk_Probe_OverlapInfo{InRequest.Get_OtherEntity()}
                                  .Set_ContactPoints(InRequest.Get_ContactPoints())
@@ -978,8 +983,7 @@ namespace ck
 
         if (InCurrent._CurrentOverlaps.Contains(OverlapInfo))
         {
-            DoHandleRequest(InHandle, InCurrent, FCk_Request_Probe_OverlapUpdated{InRequest});
-            return;
+            return DoHandleRequest(InHandle, InCurrent, FCk_Request_Probe_OverlapUpdated{InRequest});
         }
 
         InCurrent._CurrentOverlaps.Add(OverlapInfo);
@@ -994,6 +998,8 @@ namespace ck
         };
 
         UUtils_Signal_OnProbeBeginOverlap::Broadcast(InHandle, MakePayload(InHandle, Payload));
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -1002,7 +1008,7 @@ namespace ck
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_OverlapUpdated& InRequest)
-            -> void
+            -> ECk_Request_OperationResult
     {
         const auto OverlapInfo = FCk_Probe_OverlapInfo{InRequest.Get_OtherEntity()}
                                  .Set_ContactPoints(InRequest.Get_ContactPoints())
@@ -1010,8 +1016,7 @@ namespace ck
 
         if (NOT InCurrent._CurrentOverlaps.Contains(OverlapInfo))
         {
-            DoHandleRequest(InHandle, InCurrent, FCk_Request_Probe_BeginOverlap{InRequest});
-            return;
+            return DoHandleRequest(InHandle, InCurrent, FCk_Request_Probe_BeginOverlap{InRequest});
         }
 
         const auto Payload = FCk_Probe_Payload_OnOverlapUpdated{
@@ -1024,6 +1029,8 @@ namespace ck
         InCurrent._CurrentOverlaps.Add(OverlapInfo);
 
         UUtils_Signal_OnProbeOverlapUpdated::Broadcast(InHandle, MakePayload(InHandle, Payload));
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -1032,7 +1039,7 @@ namespace ck
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_EndOverlap& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         const auto OverlapInfo = FCk_Probe_OverlapInfo{InRequest.Get_OtherEntity()};
 
@@ -1049,14 +1056,14 @@ namespace ck
                     TEXT("Ignoring EndOverlap Request for Probe [{}] with Other Entity [{}] — pair already ended by the other entity's teardown."),
                     InHandle,
                     InRequest.Get_OtherEntity());
-                return;
+                return ECk_Request_OperationResult::Failed;
             }
 
             ck::spatialquery::Error(
                 TEXT("Received EndOverlap Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
                 InHandle,
                 InRequest.Get_OtherEntity());
-            return;
+            return ECk_Request_OperationResult::Failed;
         }
 
         if (InCurrent.Get_CurrentOverlaps().IsEmpty())
@@ -1066,6 +1073,8 @@ namespace ck
 
         UUtils_Signal_OnProbeEndOverlap::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Probe_Payload_OnEndOverlap{InRequest.Get_OtherEntity()}));
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -1074,7 +1083,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_EnableDisable& InRequest) const
-        -> void
+        -> ECk_Request_OperationResult
     {
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
 
@@ -1083,7 +1092,7 @@ namespace ck
             case ECk_EnableDisable::Enable:
             {
                 if (InHandle.Try_Remove<ck::FTag_Probe_Disabled>() == 0)
-                { return; }
+                { return ECk_Request_OperationResult::Succeeded; }
 
                 if (NOT InHandle.Has<FTag_Probe_LinearCast>())
                 {
@@ -1103,12 +1112,12 @@ namespace ck
 
                 UUtils_Signal_OnProbeEnableDisable::Broadcast(InHandle,
                     MakePayload(InHandle, FCk_Probe_Payload_OnEnableDisable{ECk_EnableDisable::Enable}));
-                break;
+                return ECk_Request_OperationResult::Succeeded;
             }
             case ECk_EnableDisable::Disable:
             {
                 if (InHandle.Has<FTag_Probe_Disabled>())
-                { return; }
+                { return ECk_Request_OperationResult::Succeeded; }
 
                 if (NOT InHandle.Has<FTag_Probe_LinearCast>())
                 {
@@ -1119,9 +1128,25 @@ namespace ck
 
                 UUtils_Signal_OnProbeEnableDisable::Broadcast(InHandle,
                     MakePayload(InHandle, FCk_Probe_Payload_OnEnableDisable{ECk_EnableDisable::Disable}));
-                break;
+                return ECk_Request_OperationResult::Succeeded;
             }
         }
+
+        CK_INVALID_ENUM(InRequest.Get_EnableDisable());
+        return ECk_Request_OperationResult::Failed;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Probe_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1159,7 +1184,7 @@ namespace ck
                 if (auto OtherEntityAsProbe = UCk_Utils_Probe_UE::Cast(OtherEntity);
                     ck::IsValid(OtherEntityAsProbe) && UCk_Utils_Probe_UE::Get_IsOverlappingWith(OtherEntityAsProbe, InHandle))
                 {
-                    UCk_Utils_Probe_UE::Request_EndOverlap(OtherEntityAsProbe, FCk_Request_Probe_EndOverlap{InHandle});
+                    UCk_Utils_Probe_UE::Request_EndOverlap(OtherEntityAsProbe, FCk_Request_Probe_EndOverlap{InHandle}, {});
                 }
             }
         };

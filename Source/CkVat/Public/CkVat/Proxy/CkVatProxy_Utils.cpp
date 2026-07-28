@@ -40,11 +40,19 @@ auto
     UCk_Utils_VatProxy_UE::
     Request_PlayClip(
         FCk_Handle_VatProxy& InHandle,
-        const FCk_Request_VatProxy_PlayClip& InRequest)
+        const FCk_Request_VatProxy_PlayClip& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_VatProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_VatProxy_Requests>()._Requests.Emplace(InRequest);
     return InHandle;
 }
@@ -52,12 +60,22 @@ auto
 auto
     UCk_Utils_VatProxy_UE::
     Request_Stop(
-        FCk_Handle_VatProxy& InHandle)
+        FCk_Handle_VatProxy& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_VatProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_VatProxy_Requests>()._Requests.Emplace(FCk_Request_VatProxy_Stop{});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    const auto Request = FCk_Request_VatProxy_Stop{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_VatProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
@@ -65,12 +83,22 @@ auto
     UCk_Utils_VatProxy_UE::
     Request_SetPlayRate(
         FCk_Handle_VatProxy& InHandle,
-        float InPlayRate)
+        float InPlayRate,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_VatProxy
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return InHandle; }
-    InHandle.AddOrGet<ck::FFragment_VatProxy_Requests>()._Requests.Emplace(FCk_Request_VatProxy_SetPlayRate{InPlayRate});
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    const auto Request = FCk_Request_VatProxy_SetPlayRate{InPlayRate};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_VatProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 

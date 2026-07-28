@@ -89,12 +89,22 @@ auto
         FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Request_Inventory_AddItem& InRequest,
         const FCk_SpatialPlacement& InPlacement,
-        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory_Spatial
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InInventory);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_AddItem: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
-    { return {}; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InCompletionDelegate.ExecuteIfBound(InInventory, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Add,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
@@ -112,12 +122,22 @@ auto
         FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Request_Inventory_SplitStack& InRequest,
         const FCk_SpatialPlacement& InPlacement,
-        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory_Spatial
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InInventory);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_SplitStack: No authority over inventory [{}].{}"), InInventory, ck::Context(InDelegate.GetFunctionName()))
-    { return {}; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InCompletionDelegate.ExecuteIfBound(InInventory, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Split,
         InRequest.PopulateRequestHandle(InInventory), InDelegate);
@@ -134,14 +154,25 @@ auto
     Request_RelocateItem(
         FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Request_Inventory_Spatial_RelocateItem& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Relocate& InDelegate)
+        const FCk_Delegate_Inventory_OnOperationResult_Relocate& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> FCk_Handle_Inventory_Spatial
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InInventory),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InInventory);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_RelocateItem: No authority over inventory [{}]"), InInventory)
-    { return InInventory; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InCompletionDelegate.ExecuteIfBound(InInventory, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InInventory;
+    }
 
     auto Request = InRequest;
+
+    if (InCompletionDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InCompletionDelegate); }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Inventory_OnOperationResult_Relocate,
         Request.PopulateRequestHandle(InInventory), InDelegate);
 
@@ -475,7 +506,7 @@ auto
         ck::IsValid(TransformHandle))
     {
         const auto Yaw = ck_inventory::CardinalRotationToYaw(InRotation);
-        UCk_Utils_Transform_UE::Request_SetRotation(TransformHandle, FCk_Request_Transform_SetRotation{FRotator{0.0, Yaw, 0.0}});
+        UCk_Utils_Transform_UE::Request_SetRotation(TransformHandle, FCk_Request_Transform_SetRotation{FRotator{0.0, Yaw, 0.0}}, {});
     }
 }
 
@@ -512,6 +543,6 @@ auto
     if (auto TransformHandle = UCk_Utils_Transform_UE::Cast(InItem);
         ck::IsValid(TransformHandle))
     {
-        UCk_Utils_Transform_UE::Request_SetRotation(TransformHandle, FCk_Request_Transform_SetRotation{FRotator::ZeroRotator});
+        UCk_Utils_Transform_UE::Request_SetRotation(TransformHandle, FCk_Request_Transform_SetRotation{FRotator::ZeroRotator}, {});
     }
 }

@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkCore/Enums/CkEnums.h"
 
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment_Data.h"
@@ -112,31 +113,37 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridCell",
-              DisplayName="[Ck][2dGridCell] Request Enable Disable")
+              DisplayName="[Ck][2dGridCell] Request Enable Disable",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_2dGridCell& InCell,
-        ECk_EnableDisable InEnableDisable);
+        ECk_EnableDisable InEnableDisable,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Adds a tag to this cell's own _Tags set. The placement layer unions these with the grid's
     // _DefaultCellTags when evaluating an object's required/forbidden cell-tag gating. Direct
     // params-fragment mutation (the cell feature is data-only, not request/processor-driven).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridCell",
-              DisplayName="[Ck][2dGridCell] Request Add Tag")
+              DisplayName="[Ck][2dGridCell] Request Add Tag",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_2dGridCell
     Request_AddTag(
         UPARAM(ref) FCk_Handle_2dGridCell& InCell,
-        FGameplayTag InTag);
+        FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Removes a tag from this cell's own _Tags set (no-op if absent).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridCell",
-              DisplayName="[Ck][2dGridCell] Request Remove Tag")
+              DisplayName="[Ck][2dGridCell] Request Remove Tag",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_2dGridCell
     Request_RemoveTag(
         UPARAM(ref) FCk_Handle_2dGridCell& InCell,
-        FGameplayTag InTag);
+        FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridCell",

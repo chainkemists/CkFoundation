@@ -7,6 +7,7 @@
 #include <Engine/World.h>
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
@@ -38,7 +39,16 @@ namespace ck
             FFragment_ActorModifier_SpawnActorRequests& InRequests)
         -> void
     {
-        DoHandleRequest(InHandle, InRequests.Get_Request());
+        const auto& Request = InRequests.Get_Request();
+        const auto& RequestOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+        // DoHandleRequest has several genuine-failure and by-design skip early-returns before the
+        // OnActorSpawned broadcast, so its bool return is the source of truth for Result.
+        auto Result = ECk_Request_OperationResult::Failed;
+        const auto Guard = MakeCompletionGuard(Request, RequestOwner, Result);
+
+        if (DoHandleRequest(InHandle, Request))
+        { Result = ECk_Request_OperationResult::Succeeded; }
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
@@ -48,7 +58,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_ActorModifier_SpawnActor& InRequest)
-        -> void
+        -> bool
     {
         switch(const auto& SpawnPolicy = InRequest.Get_SpawnPolicy())
         {
@@ -60,7 +70,7 @@ namespace ck
                     TEXT("SpawnPolicy [{}] REQUIRES the Owner to be an Actor. Unable to Spawn [{}]"),
                     SpawnPolicy,
                     InRequest.Get_SpawnParams().Get_ActorClass())
-                { return; }
+                { return false; }
 
                 if (const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
                     ck::IsValid(OutermostActor))
@@ -78,7 +88,7 @@ namespace ck
                     SpawnPolicy
                 );
 
-                return;
+                return false;
             }
             case ECk_SpawnActor_SpawnPolicy::SpawnOnServer:
             {
@@ -88,7 +98,7 @@ namespace ck
                     TEXT("Unable to Spawn [{}] because OwnerOrWorld is [{}]"),
                     InRequest.Get_SpawnParams().Get_ActorClass(),
                     InRequest.Get_SpawnParams().Get_OwnerOrWorld())
-                { return; }
+                { return false; }
 
                 if (NOT OwnerOrWorld->GetWorld()->IsNetMode(NM_Client))
                 { break; }
@@ -100,19 +110,19 @@ namespace ck
                     SpawnPolicy
                 );
 
-                return;
+                return false;
             }
             default:
             {
                 CK_INVALID_ENUM(SpawnPolicy);
-                return;
+                return false;
             }
         }
 
         const auto& SpawnedActor = UCk_Utils_Actor_UE::Request_SpawnActor(InRequest.Get_SpawnParams(), InRequest.Get_PreFinishSpawnFunc());
 
         CK_ENSURE_IF_NOT(ck::IsValid(SpawnedActor), TEXT("Failed to Spawn Actor [{}]"), InRequest.Get_SpawnParams().Get_ActorClass())
-        { return; }
+        { return false; }
 
         const auto& PostSpawnParams = InRequest.Get_PostSpawnParams();
 
@@ -136,6 +146,8 @@ namespace ck
 
         UUtils_Signal_OnActorSpawned::Broadcast(InHandle, MakePayload(SpawnedActor,
             UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, ECk_Recursion::NotRecursive, IgnoreSucceededFailed)));
+
+        return true;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -158,7 +170,16 @@ namespace ck
             FFragment_ActorModifier_AddActorComponentRequests& InRequests)
         -> void
     {
-        DoHandleRequest(InHandle, InRequests.Get_Request());
+        const auto& Request = InRequests.Get_Request();
+        const auto& RequestOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+        // DoHandleRequest has several genuine-failure early-returns before the
+        // OnActorComponentAdded broadcast, so its bool return is the source of truth for Result.
+        auto Result = ECk_Request_OperationResult::Failed;
+        const auto Guard = MakeCompletionGuard(Request, RequestOwner, Result);
+
+        if (DoHandleRequest(InHandle, Request))
+        { Result = ECk_Request_OperationResult::Succeeded; }
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
@@ -168,22 +189,22 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_ActorModifier_AddActorComponent& InRequest)
-        -> void
+        -> bool
     {
         const auto& ComponentParams = InRequest.Get_ComponentParams();
         const auto& AttachmentType  = ComponentParams.Get_AttachmentType();
         const auto& ComponentParent = ComponentParams.Get_Parent();
 
         CK_ENSURE_IF_NOT(ck::IsValid(ComponentParent), TEXT("Invalid Parent Actor Component supplied to Request_AddActorComponent"))
-        { return; }
+        { return false; }
 
         const auto& ComponentOwner  = ComponentParent->GetOwner();
 
         if (ck::Is_NOT_Valid(ComponentOwner))
-        { return; }
+        { return false; }
 
         if (ComponentOwner->IsPendingKillPending())
-        { return; }
+        { return false; }
 
         const auto& ParentComponent = [&]() -> USceneComponent*
         {
@@ -216,7 +237,7 @@ namespace ck
         auto* AddedActorComponent = UCk_Utils_Actor_UE::Request_AddNewActorComponent<UActorComponent>(AddActorCompParams, PreFinishInitializerFunc);
 
         CK_ENSURE_IF_NOT(ck::IsValid(AddedActorComponent), TEXT("Failed to Add new Actor Component [{}]"), InRequest.Get_ComponentToAdd())
-        { return; }
+        { return false; }
 
         switch (AttachmentType)
         {
@@ -263,6 +284,8 @@ namespace ck
         actor::Verbose(TEXT("ADDING Actor Component [{}] to Actor [{}]"), AddedActorComponent, ComponentOwner);
 
         UUtils_Signal_OnActorComponentAdded::Broadcast(InHandle, MakePayload(AddedActorComponent->GetOwner(), AddedActorComponent, OptionalPayload));
+
+        return true;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -285,7 +308,16 @@ namespace ck
             FFragment_ActorModifier_RemoveActorComponentRequests& InRequests)
         -> void
     {
-        DoHandleRequest(InHandle, InRequests.Get_Request());
+        const auto& Request = InRequests.Get_Request();
+        const auto& RequestOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+        // DoHandleRequest has genuine-failure early-returns before the OnActorComponentRemoved
+        // broadcast, so its bool return is the source of truth for Result.
+        auto Result = ECk_Request_OperationResult::Failed;
+        const auto Guard = MakeCompletionGuard(Request, RequestOwner, Result);
+
+        if (DoHandleRequest(InHandle, Request))
+        { Result = ECk_Request_OperationResult::Succeeded; }
 
         InHandle.Remove<MarkedDirtyBy, IsValid_Policy_IncludePendingKill>();
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
@@ -296,7 +328,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_ActorModifier_RemoveActorComponent& InRequest)
-        -> void
+        -> bool
     {
         constexpr auto IncludePendingKill = true;
 
@@ -304,10 +336,10 @@ namespace ck
         const auto& PromoteChildrenComponents = InRequest.Get_PromoteChildrenComponents();
 
         CK_ENSURE_IF_NOT(ck::IsValid(ComponentToRemove, ck::IsValid_Policy_IncludePendingKill{}), TEXT("Invalid Actor Component to REMOVE"))
-        { return; }
+        { return false; }
 
         if (ck::Is_NOT_Valid(ComponentToRemove))
-        { return; }
+        { return false; }
 
         const auto& ComponentOwner = ComponentToRemove->GetOwner();
         const auto& ComponentToRemoveClass = ComponentToRemove->GetClass();
@@ -318,6 +350,8 @@ namespace ck
 
         UUtils_Signal_OnActorComponentRemoved::Broadcast(InHandle, MakePayload(ComponentOwner, ComponentToRemoveClass,
             UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, ECk_Recursion::NotRecursive, IgnoreSucceededFailed)));
+
+        return true;
     }
 }
 

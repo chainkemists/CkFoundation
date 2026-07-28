@@ -10,9 +10,11 @@
 
 #include <Engine/AssetManager.h>
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ResourceLoader_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ResourceLoader_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -43,7 +45,11 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest)
         {
-            DoHandleRequest(InHandle, InRequest);
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+            if (DoHandleRequest(InHandle, InRequest))
+            { Result = ECk_Request_OperationResult::Succeeded; }
 
             if (InRequest.Get_IsRequestHandleValid())
             {
@@ -63,13 +69,13 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_ResourceLoader_LoadObject& InRequest) const
-        -> void
+        -> bool
     {
         const auto& ObjectToLoadSoftRef = InRequest.Get_ObjectReference_Soft();
 
         CK_ENSURE_IF_NOT(ck::IsValid(ObjectToLoadSoftRef), TEXT("Invalid Object to Load! Soft Ref: [{}]"),
             InRequest.Get_ObjectReference_Soft())
-        { return; }
+        { return false; }
 
         const auto& ObjectToLoadPath = ObjectToLoadSoftRef.Get_SoftObjectPath();
         const auto& LoadingPolicy    = InRequest.Get_LoadingPolicy();
@@ -97,7 +103,7 @@ namespace ck
                     TEXT("Failed to RequestAsyncLoad for [{}] with Loading Policy [{}]!"),
                     ObjectToLoadSoftRef,
                     LoadingPolicy)
-                { return; }
+                { return false; }
 
                 PendingObject.Set_StreamableHandle(StreamingHandle);
 
@@ -121,6 +127,8 @@ namespace ck
                 break;
             }
         }
+
+        return true;
     }
 
     auto
@@ -128,7 +136,7 @@ namespace ck
         DoHandleRequest(
             FCk_Handle InHandle,
             const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest) const
-        -> void
+        -> bool
     {
         const auto& ObjectToLoadSoftRefs = InRequest.Get_ObjectReferences_Soft();
         const auto& LoadingPolicy        = InRequest.Get_LoadingPolicy();
@@ -163,7 +171,7 @@ namespace ck
                 CK_ENSURE_IF_NOT(ck::IsValid(StreamingHandle),
                     TEXT("Failed to RequestAsyncLoad  with Loading Policy [{}]!"),
                     LoadingPolicy)
-                { return; }
+                { return false; }
 
                 PendingObjectBatch.Set_StreamableHandle(StreamingHandle);
 
@@ -193,6 +201,8 @@ namespace ck
                 break;
             }
         }
+
+        return true;
     }
 
     auto
@@ -330,6 +340,19 @@ namespace ck
         {
             ResourceLoaderSubsystem->Request_TrackResource(LoadedObject);
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ResourceLoader_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ResourceLoader_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

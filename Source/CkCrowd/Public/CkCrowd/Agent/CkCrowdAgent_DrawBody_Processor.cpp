@@ -151,8 +151,8 @@ namespace ck
         // One Request_SetVisible covers the procmesh AND its wireframe overlay — the DrawLines
         // processor honours RenderMode==Hidden.
         const auto WantVisible = UCk_Utils_Crowd_DebugSettings_UE::Get_DrawAgentBody();
-        UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(CapsuleHandle, WantVisible);
-        UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(ConeHandle,    WantVisible);
+        UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(CapsuleHandle, WantVisible, {});
+        UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(ConeHandle,    WantVisible, {});
         DebugBody._LastAppliedVisible = WantVisible;
     }
 
@@ -188,8 +188,8 @@ namespace ck
 
         if (WantVisible != InDebugBody._LastAppliedVisible)
         {
-            UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(InDebugBody._CapsuleHandle, WantVisible);
-            UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(InDebugBody._ConeHandle,    WantVisible);
+            UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(InDebugBody._CapsuleHandle, WantVisible, {});
+            UCk_Utils_Pmg_DebugShape_UE::Request_SetVisible(InDebugBody._ConeHandle,    WantVisible, {});
             InDebugBody._LastAppliedVisible = WantVisible;
         }
 
@@ -202,9 +202,9 @@ namespace ck
         if (TintedColor != InDebugBody._LastAppliedColor)
         {
             UCk_Utils_Pmg_DebugShape_UE::Request_SetColor(
-                InDebugBody._CapsuleHandle, FCk_Request_Pmg_DebugShape_SetColor{TintedColor});
+                InDebugBody._CapsuleHandle, FCk_Request_Pmg_DebugShape_SetColor{TintedColor}, {});
             UCk_Utils_Pmg_DebugShape_UE::Request_SetColor(
-                InDebugBody._ConeHandle,    FCk_Request_Pmg_DebugShape_SetColor{TintedColor});
+                InDebugBody._ConeHandle,    FCk_Request_Pmg_DebugShape_SetColor{TintedColor}, {});
             InDebugBody._LastAppliedColor = TintedColor;
         }
     }

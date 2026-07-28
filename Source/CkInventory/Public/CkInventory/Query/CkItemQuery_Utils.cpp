@@ -12,7 +12,8 @@ auto
     Request_QueryItemDefinitions(
         const FCk_Handle& InAnyHandle,
         const FCk_Request_ItemQuery_QueryDefinitions& InRequest,
-        const FCk_Delegate_ItemQuery_OnQueried& InDelegate)
+        const FCk_Delegate_ItemQuery_OnQueried& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> void
 {
     // Kick the index build immediately so the result is ready as soon as
@@ -23,6 +24,9 @@ auto
     // InAnyHandle only scopes the transient request entity — it carries no
     // meaning beyond "some valid entity in this world" (ck::TransientEntity() is fine).
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAnyHandle);
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     RequestEntity.AddOrGet<ck::FFragment_ItemQuery_Requests>()._Requests.Add(InRequest);
     ck::UUtils_Signal_OnItemDefinitionsQueried_PostFireUnbind::Bind(

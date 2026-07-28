@@ -102,7 +102,7 @@ namespace ck
                     TArray{{Overlap.Get_HitLocation()}},
                     Overlap.Get_NormalDirLen().GetSafeNormal(),
                     UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial().Get()
-                });
+                }, {});
 
                 auto Payload = FCk_Probe_Payload_OnOverlapUpdated
                 {
@@ -122,7 +122,7 @@ namespace ck
                     TArray{{Overlap.Get_HitLocation()}},
                     Overlap.Get_NormalDirLen().GetSafeNormal(),
                     UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial().Get()
-                });
+                }, {});
 
                 auto Payload = FCk_Probe_Payload_OnBeginOverlap
                 {
@@ -146,7 +146,7 @@ namespace ck
             if (auto OtherProbe = UCk_Utils_Probe_UE::Cast(ExistingOverlap.Get_OtherEntity());
                 ck::IsValid(OtherProbe))
             {
-                UCk_Utils_Probe_UE::Request_EndOverlap(OtherProbe, FCk_Request_Probe_EndOverlap{InHandle});
+                UCk_Utils_Probe_UE::Request_EndOverlap(OtherProbe, FCk_Request_Probe_EndOverlap{InHandle}, {});
                 UUtils_Signal_OnProbeTraceEndOverlap::Broadcast(InHandle, MakePayload(InHandle,
                     FCk_Probe_Payload_OnEndOverlap{OtherProbe}));
             }
@@ -231,7 +231,7 @@ namespace ck
                     TArray{{Overlap.Get_HitLocation()}},
                     Overlap.Get_NormalDirLen().GetSafeNormal(),
                     UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial().Get()
-                });
+                }, {});
 
                 auto Payload = FCk_Probe_Payload_OnOverlapUpdated
                 {
@@ -251,7 +251,7 @@ namespace ck
                     TArray{{Overlap.Get_HitLocation()}},
                     Overlap.Get_NormalDirLen().GetSafeNormal(),
                     UCk_Utils_Probe_UE::Get_SurfaceInfo(OtherProbe).Get_PhysicalMaterial().Get()
-                });
+                }, {});
 
                 auto Payload = FCk_Probe_Payload_OnBeginOverlap
                 {
@@ -275,7 +275,7 @@ namespace ck
             if (auto OtherProbe = UCk_Utils_Probe_UE::Cast(ExistingOverlap.Get_OtherEntity());
                 ck::IsValid(OtherProbe))
             {
-                UCk_Utils_Probe_UE::Request_EndOverlap(OtherProbe, FCk_Request_Probe_EndOverlap{InHandle});
+                UCk_Utils_Probe_UE::Request_EndOverlap(OtherProbe, FCk_Request_Probe_EndOverlap{InHandle}, {});
                 UUtils_Signal_OnProbeTraceEndOverlap::Broadcast(InHandle, MakePayload(InHandle,
                     FCk_Probe_Payload_OnEndOverlap{OtherProbe}));
             }

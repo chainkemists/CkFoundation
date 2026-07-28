@@ -212,6 +212,7 @@ namespace ck
         TReadWrite<FFragment_IsmProxy_Current>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TReadOnly<FFragment_IsmProxy_Requests>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -266,6 +267,32 @@ namespace ck
 
     private:
         TWeakObjectPtr<UWorld> _World;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed proxy's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKISMRENDERER_API FProcessor_IsmProxy_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_CancelPendingRequests,
+        FCk_Handle_IsmProxy,
+        ck::TReadOnly<FFragment_IsmProxy_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Requests& InRequestsComp)
+            -> void;
     };
 }
 

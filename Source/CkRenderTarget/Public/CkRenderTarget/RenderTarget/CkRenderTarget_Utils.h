@@ -2,6 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
@@ -171,84 +172,103 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] Request Draw Line")
+              DisplayName="[Ck][RenderTarget] Request Draw Line",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RenderTarget
     Request_DrawLine(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawLine& InRequest);
+        const FCk_Request_RenderTarget_DrawLine& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] Request Draw Texture")
+              DisplayName="[Ck][RenderTarget] Request Draw Texture",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RenderTarget
     Request_DrawTexture(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawTexture& InRequest);
+        const FCk_Request_RenderTarget_DrawTexture& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] Request Draw Material")
+              DisplayName="[Ck][RenderTarget] Request Draw Material",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RenderTarget
     Request_DrawMaterial(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawMaterial& InRequest);
+        const FCk_Request_RenderTarget_DrawMaterial& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] Request Draw Text")
+              DisplayName="[Ck][RenderTarget] Request Draw Text",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RenderTarget
     Request_DrawText(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawText& InRequest);
+        const FCk_Request_RenderTarget_DrawText& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] Request Draw Box")
+              DisplayName="[Ck][RenderTarget] Request Draw Box",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RenderTarget
     Request_DrawBox(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawBox& InRequest);
+        const FCk_Request_RenderTarget_DrawBox& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] Request Draw Border")
+              DisplayName="[Ck][RenderTarget] Request Draw Border",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RenderTarget
     Request_DrawBorder(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawBorder& InRequest);
+        const FCk_Request_RenderTarget_DrawBorder& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] Request Draw Triangles")
+              DisplayName="[Ck][RenderTarget] Request Draw Triangles",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RenderTarget
     Request_DrawTriangles(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawTriangles& InRequest);
+        const FCk_Request_RenderTarget_DrawTriangles& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] Request Draw Polygon")
+              DisplayName="[Ck][RenderTarget] Request Draw Polygon",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RenderTarget
     Request_DrawPolygon(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawPolygon& InRequest);
+        const FCk_Request_RenderTarget_DrawPolygon& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
-              DisplayName="[Ck][RenderTarget] Request Clear")
+              DisplayName="[Ck][RenderTarget] Request Clear",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RenderTarget
     Request_Clear(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_Clear& InRequest);
+        const FCk_Request_RenderTarget_Clear& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderTarget",
               DisplayName="[Ck][RenderTarget] Request Sync Pixels",
-              meta=(AutoCreateRefTerm="InRequest"))
+              meta=(AutoCreateRefTerm="InRequest, InDelegate"))
     static FCk_Handle_RenderTarget
     Request_SyncPixels(
         UPARAM(ref) FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_SyncPixels& InRequest);
+        const FCk_Request_RenderTarget_SyncPixels& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     // Test seam: injects a synthetic readback result directly after the GPU step, so

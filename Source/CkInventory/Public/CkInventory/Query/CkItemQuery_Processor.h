@@ -2,6 +2,7 @@
 
 #include "CkInventory/Query/CkItemQuery_Fragment.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
@@ -36,6 +37,30 @@ namespace ck
 
     private:
         TWeakObjectPtr<UCk_ItemQuery_Subsystem_UE> _Subsystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // A query whose definition index never becomes ready stays pending forever; if its request entity
+    // is torn down first, this completes each queued request with Failed_Cancelled so a caller awaiting
+    // completion terminates instead of hanging.
+    class CKINVENTORY_API FProcessor_ItemQuery_CancelPendingRequests : public TProcessor<
+            FProcessor_ItemQuery_CancelPendingRequests,
+            TReadOnly<FFragment_ItemQuery_Requests>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ItemQuery_Requests& InRequestsComp) -> void;
     };
 }
 

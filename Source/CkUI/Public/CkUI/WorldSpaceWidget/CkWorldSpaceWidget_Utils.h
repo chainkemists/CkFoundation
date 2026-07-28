@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
@@ -56,43 +57,53 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
-              DisplayName="[Ck][WorldSpaceWidget] Request Set Enabled")
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Enabled",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_WorldSpaceWidget
     Request_SetEnabled(
         UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        bool InEnabled);
+        bool InEnabled,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
-              DisplayName="[Ck][WorldSpaceWidget] Request Set Location Info")
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Location Info",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_WorldSpaceWidget
     Request_SetLocationInfo(
         UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        const FCk_WorldSpaceWidget_LocationInfo& InLocationInfo);
+        const FCk_WorldSpaceWidget_LocationInfo& InLocationInfo,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
-              DisplayName="[Ck][WorldSpaceWidget] Request Set Scaling Info")
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Scaling Info",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_WorldSpaceWidget
     Request_SetScalingInfo(
         UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        const FCk_WorldSpaceWidget_ScalingInfo& InScalingInfo);
+        const FCk_WorldSpaceWidget_ScalingInfo& InScalingInfo,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
-              DisplayName="[Ck][WorldSpaceWidget] Request Set Fading Info")
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Fading Info",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_WorldSpaceWidget
     Request_SetFadingInfo(
         UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        const FCk_WorldSpaceWidget_FadingInfo& InFadingInfo);
+        const FCk_WorldSpaceWidget_FadingInfo& InFadingInfo,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
-              DisplayName="[Ck][WorldSpaceWidget] Request Set Occlusion Info")
+              DisplayName="[Ck][WorldSpaceWidget] Request Set Occlusion Info",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_WorldSpaceWidget
     Request_SetOcclusionInfo(
         UPARAM(ref) FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        const FCk_WorldSpaceWidget_OcclusionInfo& InOcclusionInfo);
+        const FCk_WorldSpaceWidget_OcclusionInfo& InOcclusionInfo,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|WorldSpaceWidget",

@@ -6,6 +6,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
@@ -46,24 +47,28 @@ public:
     // follower corridor planned against this network is invalidated and replans.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PathNetwork",
-              DisplayName="[Ck][PathNetwork] Request Rebuild")
+              DisplayName="[Ck][PathNetwork] Request Rebuild",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_PathNetwork
     Request_Rebuild(
         UPARAM(ref) FCk_Handle_PathNetwork& InNetwork,
-        const FCk_Request_PathNetwork_Rebuild& InRequest);
+        const FCk_Request_PathNetwork_Rebuild& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Run a per-game detector over the given bounds, vectorize the mask into Generated ribbons,
     // and rebuild as (existing Authored ribbons + fresh Generated ribbons). Hand-authored content
     // survives re-detection; previously Generated ribbons are replaced wholesale.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PathNetwork",
-              DisplayName="[Ck][PathNetwork] Request Rebuild From Detector")
+              DisplayName="[Ck][PathNetwork] Request Rebuild From Detector",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_PathNetwork
     Request_RebuildFromDetector(
         UPARAM(ref) FCk_Handle_PathNetwork& InNetwork,
         const UCk_PathNetwork_Detector_UE* InDetector,
         FBox InWorldBounds,
-        const FCk_PathNetwork_VectorizeParams& InVectorizeParams);
+        const FCk_PathNetwork_VectorizeParams& InVectorizeParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // True once the setup processor has built the graph (and it has at least one edge).
     UFUNCTION(BlueprintPure,
@@ -149,19 +154,23 @@ public:
     // fragment; OnRouteReady / OnRouteFailed fire on completion. Server-only (mirrors CkNavigation).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PathNetworkFollower",
-              DisplayName="[Ck][PathNetworkFollower] Request Find Route")
+              DisplayName="[Ck][PathNetworkFollower] Request Find Route",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_PathNetworkFollower
     Request_FindRoute(
         UPARAM(ref) FCk_Handle_PathNetworkFollower& InFollower,
-        const FCk_Request_PathNetworkFollower_FindRoute& InRequest);
+        const FCk_Request_PathNetworkFollower_FindRoute& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PathNetworkFollower",
-              DisplayName="[Ck][PathNetworkFollower] Request Set Network")
+              DisplayName="[Ck][PathNetworkFollower] Request Set Network",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_PathNetworkFollower
     Request_SetNetwork(
         UPARAM(ref) FCk_Handle_PathNetworkFollower& InFollower,
-        const FCk_Handle_PathNetwork& InNetwork);
+        const FCk_Handle_PathNetwork& InNetwork,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|PathNetworkFollower",

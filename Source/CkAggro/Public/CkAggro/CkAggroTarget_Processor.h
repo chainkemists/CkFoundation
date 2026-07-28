@@ -61,6 +61,7 @@ namespace ck
         TReadWrite<FFragment_AggroTarget_Perception>,
         TReadWrite<FFragment_AggroTarget_Requests>,
         TExclude<FTag_AggroTarget_NeedsSetup>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -102,6 +103,33 @@ namespace ck
         static auto
         DoHandleRequest(HandleType InTarget, const FFragment_AggroTarget_ThreatParams& InThreatParams, const FFragment_AggroTarget_TargetInfo& InTargetInfo,
             FFragment_AggroTarget_Threat& InThreat, FFragment_AggroTarget_Perception& InPerception, const FCk_Request_AggroTarget_Forget& InRequest) -> void;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed target's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+
+    class CKAGGRO_API FProcessor_AggroTarget_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_AggroTarget_CancelPendingRequests,
+        FCk_Handle_AggroTarget,
+        TReadOnly<FFragment_AggroTarget_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InTarget,
+            const FFragment_AggroTarget_Requests& InRequestsComp)
+            -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

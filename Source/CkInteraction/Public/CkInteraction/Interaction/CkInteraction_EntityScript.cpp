@@ -42,7 +42,8 @@ auto
         {
             UCk_Utils_Interaction_UE::Request_EndInteraction(
                 InteractionHandle,
-                FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Succeeded});
+                FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Succeeded},
+                {});
             break;
         }
         case ECk_Interaction_CompletionPolicy::Timed:
@@ -51,7 +52,8 @@ auto
             {
                 UCk_Utils_Interaction_UE::Request_EndInteraction(
                     InteractionHandle,
-                    FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Succeeded});
+                    FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Succeeded},
+                    {});
                 break;
             }
 
@@ -86,7 +88,8 @@ auto
     auto InteractionHandle = UCk_Utils_Interaction_UE::CastChecked(_AssociatedEntity);
     UCk_Utils_Interaction_UE::Request_EndInteraction(
         InteractionHandle,
-        FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Succeeded});
+        FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Succeeded},
+        {});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

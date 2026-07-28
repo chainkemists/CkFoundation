@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -79,19 +80,23 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectiveOwner",
-              DisplayName = "[Ck][ObjectiveOwner] Request Add Objective")
+              DisplayName = "[Ck][ObjectiveOwner] Request Add Objective",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_ObjectiveOwner
     Request_AddObjective(
         UPARAM(ref) FCk_Handle_ObjectiveOwner& InOwner,
-        const FCk_Request_ObjectiveOwner_AddObjective& InRequest);
+        const FCk_Request_ObjectiveOwner_AddObjective& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ObjectiveOwner",
-              DisplayName = "[Ck][ObjectiveOwner] Request Remove Objective")
+              DisplayName = "[Ck][ObjectiveOwner] Request Remove Objective",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_ObjectiveOwner
     Request_RemoveObjective(
         UPARAM(ref) FCk_Handle_ObjectiveOwner& InOwner,
-        const FCk_Request_ObjectiveOwner_RemoveObjective& InRequest);
+        const FCk_Request_ObjectiveOwner_RemoveObjective& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

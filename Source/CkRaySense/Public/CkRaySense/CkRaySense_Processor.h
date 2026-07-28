@@ -190,6 +190,7 @@ namespace ck
         FCk_Handle_RaySense,
         ck::TReadOnly<FFragment_RaySense_Params>,
         ck::TReadOnly<FFragment_RaySense_Requests>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
 
     {
@@ -214,6 +215,29 @@ namespace ck
             DoHandleRequest(
                 HandleType InHandle,
                 const FCk_Request_RaySense_EnableDisable& InRequestsComp) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKRAYSENSE_API FProcessor_RaySense_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_RaySense_CancelPendingRequests,
+        FCk_Handle_RaySense,
+        ck::TReadOnly<FFragment_RaySense_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_RaySense_Requests& InRequestsComp)
+            -> void;
     };
 
 }

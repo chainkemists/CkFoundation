@@ -112,29 +112,57 @@ auto
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	Request_Plan(FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Action
+	Request_Plan(
+		FCk_Handle_Goap_Action& InAction,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
 	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
-	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+	const auto HasOwningPlanner = ck::IsValid(Owning);
+	CK_ENSURE_IF_NOT(HasOwningPlanner,
 		TEXT("Action [{}] has no owning Planner; Request_Plan dropped."), InAction)
-	{ return InAction; }
+	{}
+	if (NOT HasOwningPlanner)
+	{
+		InDelegate.ExecuteIfBound(InAction, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InAction;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_Plan{};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
+
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_Plan{});
+	Reqs._Requests.Add(Request);
 	return InAction;
 }
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	Request_CancelPlan(FCk_Handle_Goap_Action& InAction) -> FCk_Handle_Goap_Action
+	Request_CancelPlan(
+		FCk_Handle_Goap_Action& InAction,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
 	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
-	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+	const auto HasOwningPlanner = ck::IsValid(Owning);
+	CK_ENSURE_IF_NOT(HasOwningPlanner,
 		TEXT("Action [{}] has no owning Planner; Request_CancelPlan dropped."), InAction)
-	{ return InAction; }
+	{}
+	if (NOT HasOwningPlanner)
+	{
+		InDelegate.ExecuteIfBound(InAction, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InAction;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_CancelPlan{};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
+
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_CancelPlan{});
+	Reqs._Requests.Add(Request);
 	return InAction;
 }
 
@@ -143,71 +171,144 @@ auto
 	Request_SetActionCost(
 		FCk_Handle_Goap_Action& InAction,
 		TSubclassOf<UCk_GoapAction_EntityScript> InActionClass,
-		float InCost) -> FCk_Handle_Goap_Action
+		float InCost,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
 	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
-	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+	const auto HasOwningPlanner = ck::IsValid(Owning);
+	CK_ENSURE_IF_NOT(HasOwningPlanner,
 		TEXT("Action [{}] has no owning Planner; Request_SetActionCost dropped."), InAction)
-	{ return InAction; }
+	{}
+	if (NOT HasOwningPlanner)
+	{
+		InDelegate.ExecuteIfBound(InAction, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InAction;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetActionCost{InActionClass, InCost};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
+
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetActionCost{InActionClass, InCost});
+	Reqs._Requests.Add(Request);
 	return InAction;
 }
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	Request_SetReplanInterval(FCk_Handle_Goap_Action& InAction, float InSeconds) -> FCk_Handle_Goap_Action
+	Request_SetReplanInterval(
+		FCk_Handle_Goap_Action& InAction,
+		float InSeconds,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
 	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
-	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+	const auto HasOwningPlanner = ck::IsValid(Owning);
+	CK_ENSURE_IF_NOT(HasOwningPlanner,
 		TEXT("Action [{}] has no owning Planner; Request_SetReplanInterval dropped."), InAction)
-	{ return InAction; }
+	{}
+	if (NOT HasOwningPlanner)
+	{
+		InDelegate.ExecuteIfBound(InAction, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InAction;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetReplanInterval{InSeconds};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
+
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetReplanInterval{InSeconds});
+	Reqs._Requests.Add(Request);
 	return InAction;
 }
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	Request_SetReplanPolicy(FCk_Handle_Goap_Action& InAction, ECk_Goap_ReplanPolicy InPolicy) -> FCk_Handle_Goap_Action
+	Request_SetReplanPolicy(
+		FCk_Handle_Goap_Action& InAction,
+		ECk_Goap_ReplanPolicy InPolicy,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
 	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
-	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+	const auto HasOwningPlanner = ck::IsValid(Owning);
+	CK_ENSURE_IF_NOT(HasOwningPlanner,
 		TEXT("Action [{}] has no owning Planner; Request_SetReplanPolicy dropped."), InAction)
-	{ return InAction; }
+	{}
+	if (NOT HasOwningPlanner)
+	{
+		InDelegate.ExecuteIfBound(InAction, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InAction;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetReplanPolicy{InPolicy};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
+
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetReplanPolicy{InPolicy});
+	Reqs._Requests.Add(Request);
 	return InAction;
 }
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	Request_SetSearchBudget(FCk_Handle_Goap_Action& InAction, int64 InMicroseconds) -> FCk_Handle_Goap_Action
+	Request_SetSearchBudget(
+		FCk_Handle_Goap_Action& InAction,
+		int64 InMicroseconds,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
 	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
-	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+	const auto HasOwningPlanner = ck::IsValid(Owning);
+	CK_ENSURE_IF_NOT(HasOwningPlanner,
 		TEXT("Action [{}] has no owning Planner; Request_SetSearchBudget dropped."), InAction)
-	{ return InAction; }
+	{}
+	if (NOT HasOwningPlanner)
+	{
+		InDelegate.ExecuteIfBound(InAction, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InAction;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetSearchBudget{InMicroseconds};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
+
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetSearchBudget{InMicroseconds});
+	Reqs._Requests.Add(Request);
 	return InAction;
 }
 
 auto
 	UCk_Utils_Goap_Action_UE::
-	Request_SetCostThreshold(FCk_Handle_Goap_Action& InAction, float InThreshold) -> FCk_Handle_Goap_Action
+	Request_SetCostThreshold(
+		FCk_Handle_Goap_Action& InAction,
+		float InThreshold,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Action
 {
 	if (NOT ck::IsValid(InAction)) { return InAction; }
 	auto Owning = ck_goap_action_utils::ResolveOwningPlanner(InAction);
-	CK_ENSURE_IF_NOT(ck::IsValid(Owning),
+	const auto HasOwningPlanner = ck::IsValid(Owning);
+	CK_ENSURE_IF_NOT(HasOwningPlanner,
 		TEXT("Action [{}] has no owning Planner; Request_SetCostThreshold dropped."), InAction)
-	{ return InAction; }
+	{}
+	if (NOT HasOwningPlanner)
+	{
+		InDelegate.ExecuteIfBound(InAction, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InAction;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetCostThreshold{InThreshold};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
+
 	auto& Reqs = Owning.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetCostThreshold{InThreshold});
+	Reqs._Requests.Add(Request);
 	return InAction;
 }
 

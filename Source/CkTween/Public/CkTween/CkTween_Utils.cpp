@@ -335,48 +335,53 @@ auto
 auto
     UCk_Utils_Tween_UE::
     Pause(
-        FCk_Handle_Tween& InTween)
+        FCk_Handle_Tween& InTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Tween
 {
-    return DoAddRequestToTween(InTween, FCk_Request_Tween_Pause{});
+    return DoAddRequestToTween(InTween, FCk_Request_Tween_Pause{}, InDelegate);
 }
 
 auto
     UCk_Utils_Tween_UE::
     Resume(
-        FCk_Handle_Tween& InTween)
+        FCk_Handle_Tween& InTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Tween
 {
-    return DoAddRequestToTween(InTween, FCk_Request_Tween_Resume{});
+    return DoAddRequestToTween(InTween, FCk_Request_Tween_Resume{}, InDelegate);
 }
 
 auto
     UCk_Utils_Tween_UE::
     Stop(
         FCk_Handle_Tween& InTween,
-        ECk_TweenStopBehavior InBehavior)
+        ECk_TweenStopBehavior InBehavior,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Tween
 {
-    return DoAddRequestToTween(InTween, FCk_Request_Tween_Stop{InBehavior});
+    return DoAddRequestToTween(InTween, FCk_Request_Tween_Stop{InBehavior}, InDelegate);
 }
 
 auto
     UCk_Utils_Tween_UE::
     Restart(
-        FCk_Handle_Tween& InTween)
+        FCk_Handle_Tween& InTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Tween
 {
-    return DoAddRequestToTween(InTween, FCk_Request_Tween_Restart{});
+    return DoAddRequestToTween(InTween, FCk_Request_Tween_Restart{}, InDelegate);
 }
 
 auto
     UCk_Utils_Tween_UE::
     SetTimeMultiplier(
         FCk_Handle_Tween& InTween,
-        float InMultiplier)
+        float InMultiplier,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Tween
 {
-    return DoAddRequestToTween(InTween, FCk_Request_Tween_SetTimeMultiplier{InMultiplier});
+    return DoAddRequestToTween(InTween, FCk_Request_Tween_SetTimeMultiplier{InMultiplier}, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -384,16 +389,17 @@ auto
 auto
     UCk_Utils_Tween_UE::
     Pause_TransformTween(
-        FCk_TweenTransformResult& InTransformTween)
+        FCk_TweenTransformResult& InTransformTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_TweenTransformResult
 {
     auto LocationTween = InTransformTween.Get_LocationTween();
     auto RotationTween = InTransformTween.Get_RotationTween();
     auto ScaleTween = InTransformTween.Get_ScaleTween();
 
-    Pause(LocationTween);
-    Pause(RotationTween);
-    Pause(ScaleTween);
+    Pause(LocationTween, InDelegate);
+    Pause(RotationTween, {});
+    Pause(ScaleTween, {});
 
     return InTransformTween;
 }
@@ -401,16 +407,17 @@ auto
 auto
     UCk_Utils_Tween_UE::
     Resume_TransformTween(
-        FCk_TweenTransformResult& InTransformTween)
+        FCk_TweenTransformResult& InTransformTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_TweenTransformResult
 {
     auto LocationTween = InTransformTween.Get_LocationTween();
     auto RotationTween = InTransformTween.Get_RotationTween();
     auto ScaleTween = InTransformTween.Get_ScaleTween();
 
-    Resume(LocationTween);
-    Resume(RotationTween);
-    Resume(ScaleTween);
+    Resume(LocationTween, InDelegate);
+    Resume(RotationTween, {});
+    Resume(ScaleTween, {});
 
     return InTransformTween;
 }
@@ -419,16 +426,17 @@ auto
     UCk_Utils_Tween_UE::
     Stop_TransformTween(
         FCk_TweenTransformResult& InTransformTween,
-        ECk_TweenStopBehavior InBehavior)
+        ECk_TweenStopBehavior InBehavior,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_TweenTransformResult
 {
     auto LocationTween = InTransformTween.Get_LocationTween();
     auto RotationTween = InTransformTween.Get_RotationTween();
     auto ScaleTween = InTransformTween.Get_ScaleTween();
 
-    Stop(LocationTween, InBehavior);
-    Stop(RotationTween, InBehavior);
-    Stop(ScaleTween, InBehavior);
+    Stop(LocationTween, InBehavior, InDelegate);
+    Stop(RotationTween, InBehavior, {});
+    Stop(ScaleTween, InBehavior, {});
 
     return InTransformTween;
 }
@@ -436,16 +444,17 @@ auto
 auto
     UCk_Utils_Tween_UE::
     Restart_TransformTween(
-        FCk_TweenTransformResult& InTransformTween)
+        FCk_TweenTransformResult& InTransformTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_TweenTransformResult
 {
     auto LocationTween = InTransformTween.Get_LocationTween();
     auto RotationTween = InTransformTween.Get_RotationTween();
     auto ScaleTween = InTransformTween.Get_ScaleTween();
 
-    Restart(LocationTween);
-    Restart(RotationTween);
-    Restart(ScaleTween);
+    Restart(LocationTween, InDelegate);
+    Restart(RotationTween, {});
+    Restart(ScaleTween, {});
 
     return InTransformTween;
 }
@@ -454,16 +463,17 @@ auto
     UCk_Utils_Tween_UE::
     SetTimeMultiplier_TransformTween(
         FCk_TweenTransformResult& InTransformTween,
-        float InMultiplier)
+        float InMultiplier,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_TweenTransformResult
 {
     auto LocationTween = InTransformTween.Get_LocationTween();
     auto RotationTween = InTransformTween.Get_RotationTween();
     auto ScaleTween = InTransformTween.Get_ScaleTween();
 
-    SetTimeMultiplier(LocationTween, InMultiplier);
-    SetTimeMultiplier(RotationTween, InMultiplier);
-    SetTimeMultiplier(ScaleTween, InMultiplier);
+    SetTimeMultiplier(LocationTween, InMultiplier, InDelegate);
+    SetTimeMultiplier(RotationTween, InMultiplier, {});
+    SetTimeMultiplier(ScaleTween, InMultiplier, {});
 
     return InTransformTween;
 }
@@ -692,7 +702,7 @@ auto
     -> void
 {
     auto TweenEntity = Cast(InTimer);
-    Resume(TweenEntity);
+    Resume(TweenEntity, {});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -732,10 +742,14 @@ auto
     UCk_Utils_Tween_UE::
     DoAddRequestToTween(
         FCk_Handle_Tween& InTween,
-        const auto& InRequest)
+        const auto& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Tween
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Tween_Requests, InTween);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InTween.AddOrGet<ck::FFragment_Tween_Requests>().Update_Requests([&](auto& InContainer)
     {
@@ -759,7 +773,7 @@ auto
         return;
     }
 
-    DoAddRequestToTween(InNextTween, FCk_Request_Tween_Pause{});
+    DoAddRequestToTween(InNextTween, FCk_Request_Tween_Pause{}, {});
 
     const auto TimerParams = FCk_Fragment_Timer_ParamsData{FCk_Time{InDelay}}
         .Set_StartingState(ECk_Timer_State::Paused);

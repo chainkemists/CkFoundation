@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkProjectile/BallisticMotion/CkBallisticMotion_Fragment_Data.h"
@@ -119,19 +120,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|BallisticMotion",
-        DisplayName="[Ck][BallisticMotion] Request Launch")
+        DisplayName="[Ck][BallisticMotion] Request Launch",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_BallisticMotion
     Request_Launch(
         UPARAM(ref) FCk_Handle_BallisticMotion& InHandle,
-        const FCk_Request_BallisticMotion_Launch& InRequest);
+        const FCk_Request_BallisticMotion_Launch& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|BallisticMotion",
-        DisplayName="[Ck][BallisticMotion] Request Stop")
+        DisplayName="[Ck][BallisticMotion] Request Stop",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_BallisticMotion
     Request_Stop(
         UPARAM(ref) FCk_Handle_BallisticMotion& InHandle,
-        const FCk_Request_BallisticMotion_Stop& InRequest);
+        const FCk_Request_BallisticMotion_Stop& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

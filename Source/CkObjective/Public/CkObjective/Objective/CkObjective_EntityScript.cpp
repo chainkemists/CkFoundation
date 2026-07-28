@@ -54,7 +54,7 @@ auto
     -> void
 {
     auto ObjectiveHandle = UCk_Utils_Objective_UE::Cast(_AssociatedEntity);
-    UCk_Utils_Objective_UE::Request_Start(ObjectiveHandle, FCk_Request_Objective_Start{});
+    UCk_Utils_Objective_UE::Request_Start(ObjectiveHandle, FCk_Request_Objective_Start{}, {});
 }
 
 auto
@@ -64,7 +64,7 @@ auto
     -> void
 {
     auto ObjectiveHandle = UCk_Utils_Objective_UE::Cast(_AssociatedEntity);
-    UCk_Utils_Objective_UE::Request_Complete(ObjectiveHandle, FCk_Request_Objective_Complete{}.Set_MetaData(InMetaData));
+    UCk_Utils_Objective_UE::Request_Complete(ObjectiveHandle, FCk_Request_Objective_Complete{}.Set_MetaData(InMetaData), {});
 }
 
 auto
@@ -74,7 +74,7 @@ auto
     -> void
 {
     auto ObjectiveHandle = UCk_Utils_Objective_UE::Cast(_AssociatedEntity);
-    UCk_Utils_Objective_UE::Request_Fail(ObjectiveHandle, FCk_Request_Objective_Fail{}.Set_MetaData(InMetaData));
+    UCk_Utils_Objective_UE::Request_Fail(ObjectiveHandle, FCk_Request_Objective_Fail{}.Set_MetaData(InMetaData), {});
 }
 
 auto

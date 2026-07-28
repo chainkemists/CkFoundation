@@ -3,6 +3,7 @@
 #include "CkPmg_Fragment_Data_Donut.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkPmg_Utils_Donut.generated.h"
 
@@ -92,11 +93,13 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|Donut",
-              DisplayName="[Ck][Pmg][Donut] Request Update Params")
+              DisplayName="[Ck][Pmg][Donut] Request Update Params",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Pmg_Donut
     Request_UpdateParams(
         UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        const FCk_Request_Pmg_Donut_UpdateParams& InRequest);
+        const FCk_Request_Pmg_Donut_UpdateParams& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|Donut",

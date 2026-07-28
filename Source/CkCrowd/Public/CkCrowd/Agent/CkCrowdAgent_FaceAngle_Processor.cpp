@@ -61,7 +61,8 @@ namespace ck
         UCk_Utils_Transform_UE::Request_AddRotationOffset
         (
             TransformHandle,
-            FCk_Request_Transform_AddRotationOffset{Offset}.Set_LocalWorld(ECk_LocalWorld::World)
+            FCk_Request_Transform_AddRotationOffset{Offset}.Set_LocalWorld(ECk_LocalWorld::World),
+            {}
         );
     }
 }

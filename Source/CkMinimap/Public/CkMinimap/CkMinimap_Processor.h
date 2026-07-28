@@ -42,7 +42,7 @@ namespace ck
     class CKMINIMAP_API FProcessor_Minimap_HandleRequests
         : public ck_exp::TProcessor<FProcessor_Minimap_HandleRequests, FCk_Handle_Minimap,
             ck::TReadWrite<FFragment_Minimap_Current>, ck::TReadWrite<FFragment_Minimap_Params>, ck::TReadWrite<FFragment_Minimap_Requests>,
-            TExclude<FTag_Minimap_NeedsSetup>, CK_IGNORE_PENDING_KILL>
+            TExclude<FTag_Minimap_NeedsSetup>, TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_PostTransform;
@@ -63,12 +63,14 @@ namespace ck
             FFragment_Minimap_Requests& InRequests) const -> void;
 
     private:
+        // Genuine failure path (ViewExtent must be > 0, ensure-gated) — returns whether the request
+        // could be honoured, so the drain can report Failed instead of the default Succeeded.
         static auto
         DoHandleRequest(
             HandleType InMinimapEntity,
             FFragment_Minimap_Current& InCurrent,
             FFragment_Minimap_Params& InParams,
-            const FCk_Request_Minimap_SetViewExtent& InRequest) -> void;
+            const FCk_Request_Minimap_SetViewExtent& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
@@ -97,6 +99,29 @@ namespace ck
             FFragment_Minimap_Current& InCurrent,
             FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetFogOfWar& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKMINIMAP_API FProcessor_Minimap_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Minimap_CancelPendingRequests,
+        FCk_Handle_Minimap,
+        ck::TReadOnly<FFragment_Minimap_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InMinimapEntity,
+            const FFragment_Minimap_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

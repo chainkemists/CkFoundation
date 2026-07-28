@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkLagCompensation/RewindHistory/CkRewindHistory_Fragment_Data.h"
 
@@ -128,10 +129,12 @@ public:
     // Record a frame on the next record pass regardless of the record interval
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|RewindHistory",
-        DisplayName="[Ck][RewindHistory] Request Force Record Frame")
+        DisplayName="[Ck][RewindHistory] Request Force Record Frame",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RewindHistory
     Request_ForceRecordFrame(
-        UPARAM(ref) FCk_Handle_RewindHistory& InHandle);
+        UPARAM(ref) FCk_Handle_RewindHistory& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

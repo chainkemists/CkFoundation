@@ -27,7 +27,7 @@ auto
 {
     const auto SpawnParams = FInstancedStruct::Make(InParams);
     auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity(
-        InHandle, UCk_Interaction_EntityScript::StaticClass(), SpawnParams);
+        InHandle, UCk_Interaction_EntityScript::StaticClass(), SpawnParams, {});
 
     CK_ENSURE_IF_NOT(ck::IsValid(PendingEntity),
         TEXT("Unable to add Interaction to Handle [{}]: Request_SpawnEntity failed"),
@@ -82,9 +82,13 @@ auto
     UCk_Utils_Interaction_UE::
     Request_EndInteraction(
         FCk_Handle_Interaction& InInteraction,
-        const FCk_Request_Interaction_EndInteraction& InRequest)
+        const FCk_Request_Interaction_EndInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Interaction
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InInteraction.AddOrGet<ck::FFragment_Interaction_Requests>()._Requests.Emplace(InRequest);
     return InInteraction;
 }

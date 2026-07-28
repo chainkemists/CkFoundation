@@ -16,6 +16,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkUI/WorldSpaceWidget/CkWorldSpaceWidget_Utils.h"
@@ -33,6 +34,7 @@ DECLARE_CYCLE_STAT(TEXT("UI::WSWidget UMGWrite"),   STAT_CkUI_WSWidget_UMGWrite,
 CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_UpdateLocation);
 CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_UpdateScaling);
 CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_WorldSpaceWidget_EndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -257,7 +259,14 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
+            // Every DoHandleRequest overload below is void and has no rejection path, so reaching the
+            // line after the call IS the success condition.
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
             DoHandleRequest(InHandle, InCurrent, InParams, InRequest);
+
+            Result = ECk_Request_OperationResult::Succeeded;
 
             if (InRequest.Get_IsRequestHandleValid())
             { InRequest.GetAndDestroyRequestHandle(); }
@@ -330,6 +339,19 @@ namespace ck
         -> void
     {
         InParams.Set_OcclusionInfo(InRequest.Get_OcclusionInfo());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_WorldSpaceWidget_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_WorldSpaceWidget_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -23,7 +23,7 @@ static struct FGeometryCollectionOwnerRepHandlerRegistrar
             {
                 ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
                 {
-                    UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
+                    UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc, {});
                 });
             }
 
@@ -31,7 +31,7 @@ static struct FGeometryCollectionOwnerRepHandlerRegistrar
             {
                 ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
                 {
-                    UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
+                    UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc, {});
                 });
             }
 
@@ -39,8 +39,8 @@ static struct FGeometryCollectionOwnerRepHandlerRegistrar
             {
                 ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
                 {
-                    UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
-                    UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
+                    UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc, {});
+                    UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc, {});
                 });
             }
 
@@ -59,7 +59,8 @@ static struct FGeometryCollectionOwnerRepHandlerRegistrar
                         .Set_LinearSpeed(Request.Get_Request()->Get_LinearSpeed())
                         .Set_AngularSpeed(Request.Get_Request()->Get_AngularSpeed())
                         .Set_ChangeParticleStateTo(Request.Get_Request()->Get_ChangeParticleStateTo())
-                        .Set_NormalizedFalloffCurve(Request.Get_Request()->Get_NormalizedFalloffCurve())
+                        .Set_NormalizedFalloffCurve(Request.Get_Request()->Get_NormalizedFalloffCurve()),
+                        {}
                     );
                 });
             }

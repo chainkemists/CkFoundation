@@ -15,6 +15,7 @@
 #include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/TransientEntity/CkTransientEntity_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -23,6 +24,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_SpawnEntity_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_SpawnEntity_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_ContinueConstruction);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_Replicate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_FinishConstruction);
@@ -56,6 +58,9 @@ namespace ck
                 "pending-destroy (owner cascade applied late)"),
                 InRequestFragment.Get_EntityScriptClassArchetype(), LifetimeOwner);
 
+            InRequestFragment.TryFireCompletion(InRequestFragment.Get_NewEntity(),
+                ECk_Request_OperationResult::Failed_Cancelled);
+
             if (auto OrphanedEntity = InRequestFragment.Get_NewEntity();
                 ck::IsValid(OrphanedEntity))
             { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(OrphanedEntity); }
@@ -84,6 +89,12 @@ namespace ck
         -> void
     {
         QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_EntityScript_SpawnEntity)
+
+        // The guard holds Result by reference and fires at scope exit, so it must stay declared after it.
+        // Every early-out below is a genuine failure to spawn; reaching the end IS the success condition.
+        auto Result = ECk_Request_OperationResult::Failed;
+        const auto Guard = MakeCompletionGuard(InRequest, InRequest.Get_NewEntity(), Result);
+
         const auto EntityScriptClassArchetype = InRequest.Get_EntityScriptClassArchetype();
 
 #if WITH_EDITOR
@@ -283,6 +294,22 @@ namespace ck
         {
             InRequest.Get_PostConstruction_Func()(NewEntity);
         }
+
+        Result = ECk_Request_OperationResult::Succeeded;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityScript_SpawnEntity_CancelPendingRequests::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_RequestSpawnEntity& InRequestFragment)
+        -> void
+    {
+        InRequestFragment.TryFireCompletion(InRequestFragment.Get_NewEntity(),
+            ECk_Request_OperationResult::Failed_Cancelled);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

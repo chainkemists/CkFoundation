@@ -228,7 +228,7 @@ auto
     auto TypedHandle = Cast(InHandle);
 
     const auto InitiallyEnabled = InParams.Get_InitialViewportOperation() == ECk_UI_Widget_ViewportOperation::AddToViewport;
-    Request_SetEnabled(TypedHandle, InitiallyEnabled);
+    Request_SetEnabled(TypedHandle, InitiallyEnabled, {});
 
     return TypedHandle;
 }
@@ -237,7 +237,8 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     Request_SetEnabled(
         FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        bool InEnabled)
+        bool InEnabled,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_WorldSpaceWidget
 {
     auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>();
@@ -252,6 +253,8 @@ auto
             WidgetComponent->SetHiddenInGame(NOT InEnabled);
         }
 
+        // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+        InDelegate.ExecuteIfBound(InWorldSpaceWidgetHandle, ECk_Request_OperationResult::Succeeded);
         return InWorldSpaceWidgetHandle;
     }
 
@@ -261,6 +264,8 @@ auto
         WrapperWidget->SetRenderOpacity(InEnabled ? 1.0f : 0.0f);
     }
 
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InWorldSpaceWidgetHandle, ECk_Request_OperationResult::Succeeded);
     return InWorldSpaceWidgetHandle;
 }
 
@@ -268,11 +273,16 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     Request_SetLocationInfo(
         FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        const FCk_WorldSpaceWidget_LocationInfo& InLocationInfo)
+        const FCk_WorldSpaceWidget_LocationInfo& InLocationInfo,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_WorldSpaceWidget
 {
-    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(
-        FCk_Request_WorldSpaceWidget_SetLocationInfo{InLocationInfo});
+    const auto Request = FCk_Request_WorldSpaceWidget_SetLocationInfo{InLocationInfo};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(Request);
 
     return InWorldSpaceWidgetHandle;
 }
@@ -281,11 +291,16 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     Request_SetScalingInfo(
         FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        const FCk_WorldSpaceWidget_ScalingInfo& InScalingInfo)
+        const FCk_WorldSpaceWidget_ScalingInfo& InScalingInfo,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_WorldSpaceWidget
 {
-    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(
-        FCk_Request_WorldSpaceWidget_SetScalingInfo{InScalingInfo});
+    const auto Request = FCk_Request_WorldSpaceWidget_SetScalingInfo{InScalingInfo};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(Request);
 
     return InWorldSpaceWidgetHandle;
 }
@@ -294,11 +309,16 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     Request_SetFadingInfo(
         FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        const FCk_WorldSpaceWidget_FadingInfo& InFadingInfo)
+        const FCk_WorldSpaceWidget_FadingInfo& InFadingInfo,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_WorldSpaceWidget
 {
-    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(
-        FCk_Request_WorldSpaceWidget_SetFadingInfo{InFadingInfo});
+    const auto Request = FCk_Request_WorldSpaceWidget_SetFadingInfo{InFadingInfo};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(Request);
 
     return InWorldSpaceWidgetHandle;
 }
@@ -307,11 +327,16 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     Request_SetOcclusionInfo(
         FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle,
-        const FCk_WorldSpaceWidget_OcclusionInfo& InOcclusionInfo)
+        const FCk_WorldSpaceWidget_OcclusionInfo& InOcclusionInfo,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_WorldSpaceWidget
 {
-    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(
-        FCk_Request_WorldSpaceWidget_SetOcclusionInfo{InOcclusionInfo});
+    const auto Request = FCk_Request_WorldSpaceWidget_SetOcclusionInfo{InOcclusionInfo};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InWorldSpaceWidgetHandle.AddOrGet<ck::FFragment_WorldSpaceWidget_Requests>()._Requests.Emplace(Request);
 
     return InWorldSpaceWidgetHandle;
 }

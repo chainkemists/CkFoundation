@@ -106,9 +106,13 @@ auto
     UCk_Utils_GeometryCollection_UE::
     Request_ApplyRadialStrain(
         FCk_Handle_GeometryCollection& InGeometryCollection,
-        const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest)
+        const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_GeometryCollection
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InGeometryCollection.AddOrGet<ck::FFragment_GeometryCollection_Requests>()._Requests.Emplace(InRequest);
     return InGeometryCollection;
 }
@@ -116,20 +120,31 @@ auto
 auto
     UCk_Utils_GeometryCollection_UE::
     Request_CrumbleNonAnchoredClusters(
-        FCk_Handle_GeometryCollection& InGeometryCollection)
+        FCk_Handle_GeometryCollection& InGeometryCollection,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_GeometryCollection
 {
     InGeometryCollection.AddOrGet<ck::FTag_GeometryCollection_CrumbleNonAnchoredClusters>();
+
+    // Immediate mutation — the tag flip is synchronous on this stack, so completion is too. The
+    // subsequent crumble processing that tag drives is fire-and-forget from this call's perspective.
+    InDelegate.ExecuteIfBound(InGeometryCollection, ECk_Request_OperationResult::Succeeded);
+
     return InGeometryCollection;
 }
 
 auto
     UCk_Utils_GeometryCollection_UE::
     Request_RemoveAllAnchors(
-        FCk_Handle_GeometryCollection& InGeometryCollection)
+        FCk_Handle_GeometryCollection& InGeometryCollection,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_GeometryCollection
 {
     InGeometryCollection.AddOrGet<ck::FTag_GeometryCollection_RemoveAllAnchors>();
+
+    // Immediate mutation — see Request_CrumbleNonAnchoredClusters.
+    InDelegate.ExecuteIfBound(InGeometryCollection, ECk_Request_OperationResult::Succeeded);
+
     return InGeometryCollection;
 }
 

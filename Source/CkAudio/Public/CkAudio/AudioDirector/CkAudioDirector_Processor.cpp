@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkAudio/CkAudio_Log.h"
@@ -10,6 +11,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_AudioDirector_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AudioDirector_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioDirector_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AudioDirector_TrackStateMonitor);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AudioDirector_EndPlay);
 #include "CkAudioDirector_Utils.h"
@@ -60,12 +62,17 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }));
         });
     }
@@ -154,7 +161,7 @@ namespace ck
 
         auto FadeInTime = ResolveFadeTime(InRequest.Get_FadeInTime(), InParams.Get_DefaultCrossfadeDuration(), TrackHandle, true);
 
-        UCk_Utils_AudioTrack_UE::Request_Play(TrackHandle, FadeInTime);
+        UCk_Utils_AudioTrack_UE::Request_Play(TrackHandle, FadeInTime, {});
         InCurrent._CurrentHighestPriority = TrackPriority;
 
         ck::audio::Verbose(TEXT("Started track [{}] with priority [{}] on AudioDirector [{}]"),
@@ -188,7 +195,7 @@ namespace ck
 
         auto FadeOutTime = ResolveFadeTime(InRequest.Get_FadeOutTime(), InParams.Get_DefaultCrossfadeDuration(), TrackHandle, false);
 
-        UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FadeOutTime);
+        UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FadeOutTime, {});
 
         const auto TrackPriority = UCk_Utils_AudioTrack_UE::Get_Priority(TrackHandle);
         if (TrackPriority >= InCurrent._CurrentHighestPriority)
@@ -243,7 +250,7 @@ namespace ck
         {
             if (ck::IsValid(TrackHandle))
             {
-                UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FadeOutTime.GetValue());
+                UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FadeOutTime.GetValue(), {});
                 UUtils_Signal_OnAudioDirector_TrackStopped::Broadcast(InHandle, MakePayload(InHandle, TrackName, TrackHandle));
             }
         }
@@ -289,7 +296,7 @@ namespace ck
                             const auto TrackState = UCk_Utils_AudioTrack_UE::Get_State(TrackHandle);
                             if (TrackState == ECk_AudioTrack_State::Playing || TrackState == ECk_AudioTrack_State::FadingIn)
                             {
-                                UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, CrossfadeTime);
+                                UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, CrossfadeTime, {});
                             }
                         }
                     }
@@ -321,7 +328,7 @@ namespace ck
                     const auto TrackState = UCk_Utils_AudioTrack_UE::Get_State(TrackHandle);
                     if (TrackState == ECk_AudioTrack_State::Playing || TrackState == ECk_AudioTrack_State::FadingIn)
                     {
-                        UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FCk_Time::ZeroSecond());
+                        UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FCk_Time::ZeroSecond(), {});
                     }
                 }
             }
@@ -383,6 +390,19 @@ namespace ck
         }
 
         return FCk_Time::ZeroSecond();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AudioDirector_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_AudioDirector_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -472,7 +492,7 @@ namespace ck
         {
             if (ck::IsValid(TrackHandle))
             {
-                UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FCk_Time::ZeroSecond());
+                UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FCk_Time::ZeroSecond(), {});
             }
         }
 

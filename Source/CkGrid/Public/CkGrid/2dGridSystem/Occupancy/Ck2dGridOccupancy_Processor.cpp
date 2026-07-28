@@ -126,7 +126,7 @@ namespace ck
             auto Existing = UCk_Utils_2dGridOccupancy_UE::Get_PlacementForOccupant(InOccupant);
             if (ck::Is_NOT_Valid(Existing))
             { return; }
-            UCk_Utils_2dGridOccupancy_UE::Request_RemovePlacement(Existing);
+            UCk_Utils_2dGridOccupancy_UE::Request_RemovePlacement(Existing, {});
         };
 
         for (const auto& Entry : OccupantsGone)
@@ -147,7 +147,7 @@ namespace ck
 
             auto Occupant = Entry.Get_Occupant();
             UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement(
-                Grid, Occupant, Entry.Get_Anchor(), Entry.Get_Rotation(), Entry.Get_Cells());
+                Grid, Occupant, Entry.Get_Anchor(), Entry.Get_Rotation(), Entry.Get_Cells(), {});
         }
 
         InHandle.Remove<FFragment_2dGridOccupancy_SyncReplication>();

@@ -99,12 +99,16 @@ auto
     UCk_Utils_Pmg_Donut_UE::
     Request_UpdateParams(
         FCk_Handle_Pmg_Donut& InDonut,
-        const FCk_Request_Pmg_Donut_UpdateParams& InRequest)
+        const FCk_Request_Pmg_Donut_UpdateParams& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Pmg_Donut
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Pmg_Donut_UpdateParams, InDonut);
 
     ck::pmg::Verbose(TEXT("Requesting param update for Pmg Donut [{}]"), InDonut);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InDonut.AddOrGet<ck::FFragment_Pmg_Donut_UpdateParams>() = InRequest;
 

@@ -69,7 +69,7 @@ static struct FEntityCollectionRepHandlerRegistrar
                     {
                         auto Child = UCk_Utils_EntityCollection_UE::TryGet_EntityCollection(Entity, SavedCollection.Get_CollectionName());
                         UCk_Utils_EntityCollection_UE::Request_AddEntities(Child,
-                            FCk_Request_EntityCollection_AddEntities{SavedCollection.Get_EntitiesInCollection()});
+                            FCk_Request_EntityCollection_AddEntities{SavedCollection.Get_EntitiesInCollection()}, {});
                     }
 
                     return ECk_Persistence_ApplyResult::Applied;

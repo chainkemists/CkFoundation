@@ -8,9 +8,11 @@
 
 #include "ResolverTarget/CkResolverTarget_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverSource_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverSource_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -39,12 +41,18 @@ namespace ck
             ck::algo::ForEachRequest(InRequests._ResolverRequests,
             [&](const auto& InRequest)
             {
+                // DoHandleRequest has no rejection path, so reaching the line after it IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             });
         });
     }
@@ -80,14 +88,14 @@ namespace ck
         {
             UCk_Utils_ResolverDataBundle_UE::Request_AddOperation_Modifier(DataBundle,
                 ECk_ResolverDataBundle_PhaseSelection::ThisPhase,
-                FCk_Request_ResolverDataBundle_ModifierOperation{}.Set_ModifierOperation(ModifierOperation));
+                FCk_Request_ResolverDataBundle_ModifierOperation{}.Set_ModifierOperation(ModifierOperation), {});
         }
 
         for (const auto& MetadataOperation : InNewResolution.Get_InitialMetadata())
         {
             UCk_Utils_ResolverDataBundle_UE::Request_AddOperation_Metadata(DataBundle,
                 ECk_ResolverDataBundle_PhaseSelection::ThisPhase,
-                FCk_Request_ResolverDataBundle_MetadataOperation{}.Set_MetadataOperation(MetadataOperation));
+                FCk_Request_ResolverDataBundle_MetadataOperation{}.Set_MetadataOperation(MetadataOperation), {});
         }
 
         UUtils_Signal_ResolverSource_OnNewResolverDataBundle::Broadcast(InHandle,
@@ -95,8 +103,21 @@ namespace ck
 
         if (ck::IsValid(Target))
         {
-            UCk_Utils_ResolverTarget_UE::Request_InitiateNewResolution(Target, FCk_Request_ResolverTarget_InitiateNewResolution{DataBundle}, {});
+            UCk_Utils_ResolverTarget_UE::Request_InitiateNewResolution(Target, FCk_Request_ResolverTarget_InitiateNewResolution{DataBundle}, {}, {});
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ResolverSource_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ResolverSource_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_ResolverRequests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

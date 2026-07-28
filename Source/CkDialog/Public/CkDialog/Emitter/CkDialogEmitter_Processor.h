@@ -1,6 +1,8 @@
 #pragma once
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkDialog/Emitter/CkDialogEmitter_Fragment.h"
@@ -21,6 +23,7 @@ namespace ck
         FCk_Handle_DialogEmitter,
         ck::TReadOnly<FFragment_DialogEmitter_Params>,
         ck::TReadWrite<FFragment_DialogEmitter_Requests>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -43,25 +46,76 @@ namespace ck
         DoHandleRequest(
             HandleType InEmitter,
             FCk_Time InNow,
-            const FCk_Request_DialogEmitter_Query& InRequest) -> void;
+            const FCk_Request_DialogEmitter_Query& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InEmitter,
             FCk_Time InNow,
-            const FCk_Request_DialogEmitter_StartCooldown& InRequest) -> void;
+            const FCk_Request_DialogEmitter_StartCooldown& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InEmitter,
             FCk_Time InNow,
-            const FCk_Request_DialogEmitter_ClearCooldown& InRequest) -> void;
+            const FCk_Request_DialogEmitter_ClearCooldown& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InEmitter,
             FCk_Time InNow,
-            const FCk_Request_DialogEmitter_ClearAllCooldowns& InRequest) -> void;
+            const FCk_Request_DialogEmitter_ClearAllCooldowns& InRequest) -> ECk_Request_OperationResult;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed emitter's still-queued requests
+    // are never drained. This completes each of them with Failed_Cancelled so a caller awaiting completion
+    // terminates instead of hanging.
+    class CKDIALOG_API FProcessor_DialogEmitter_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_DialogEmitter_CancelPendingRequests,
+        FCk_Handle_DialogEmitter,
+        ck::TReadOnly<FFragment_DialogEmitter_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InEmitter,
+            const FFragment_DialogEmitter_Requests& InRequests)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // A query completes when it is EVALUATED, so a query that reached the pending stage and never got evaluated —
+    // the emitter was destroyed, or the Dialog registry never became ready — is completed Failed_Cancelled here.
+    class CKDIALOG_API FProcessor_DialogEmitter_CancelPendingQueries : public ck_exp::TProcessor<
+        FProcessor_DialogEmitter_CancelPendingQueries,
+        FCk_Handle_DialogEmitter,
+        ck::TReadOnly<FFragment_DialogEmitter_PendingQueries>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InEmitter,
+            const FFragment_DialogEmitter_PendingQueries& InPending)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -99,6 +153,7 @@ namespace ck
         FCk_Handle_DialogEmitter,
         ck::TReadOnly<FFragment_DialogEmitter_Params>,
         ck::TReadWrite<FFragment_DialogEmitter_PendingQueries>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

@@ -3,6 +3,7 @@
 #include "GameplayTagContainer.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
@@ -248,19 +249,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",
-              DisplayName = "[Ck][Marker] Request Enable/Disable")
+              DisplayName = "[Ck][Marker] Request Enable/Disable",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Marker
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_Marker& InMarkerEntity,
-        const FCk_Request_Marker_EnableDisable& InRequest);
+        const FCk_Request_Marker_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",
-              DisplayName = "[Ck][Marker] Request Resize")
+              DisplayName = "[Ck][Marker] Request Resize",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Marker
     Request_Resize(
         UPARAM(ref) FCk_Handle_Marker& InMarkerEntity,
-        const FCk_Request_Marker_Resize& InRequest);
+        const FCk_Request_Marker_Resize& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

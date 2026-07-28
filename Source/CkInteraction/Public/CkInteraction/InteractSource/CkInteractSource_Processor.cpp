@@ -12,10 +12,12 @@
 #include "CkInteraction/Interaction/CkInteraction_Utils.h"
 #include "CkInteraction/InteractTarget/CkInteractTarget_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_InteractSource_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_InteractSource_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_InteractSource_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_InteractSource_EndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -73,12 +75,17 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InComp, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }));
         });
     }
@@ -125,7 +132,7 @@ namespace ck
         {
             ck::interaction::VeryVerbose(TEXT("InteractSource [{}] CancelInteraction: cancelling interaction [{}] for target [{}]. Source channel: [{}]"),
                 InHandle, Interaction, InRequest.Get_InteractTarget(), UCk_Utils_InteractSource_UE::Get_InteractionChannel(InHandle));
-            UCk_Utils_Interaction_UE::Request_EndInteraction(Interaction, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed});
+            UCk_Utils_Interaction_UE::Request_EndInteraction(Interaction, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed}, {});
         }
     }
 
@@ -166,6 +173,19 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_InteractSource_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_InteractSource_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_InteractSource_EndPlay::
         ForEachEntity(
             TimeType InDeltaT,
@@ -179,7 +199,7 @@ namespace ck
         for (auto& InteractionFinishedSignal : InComp._InteractionFinishedSignals)
         {
             InteractionFinishedSignal.Value.release();
-            UCk_Utils_Interaction_UE::Request_EndInteraction(InteractionFinishedSignal.Key, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed});
+            UCk_Utils_Interaction_UE::Request_EndInteraction(InteractionFinishedSignal.Key, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed}, {});
         }
     }
 

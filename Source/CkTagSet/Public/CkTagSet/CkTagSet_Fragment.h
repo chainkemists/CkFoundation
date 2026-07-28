@@ -58,6 +58,9 @@ namespace ck
 
     private:
         RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

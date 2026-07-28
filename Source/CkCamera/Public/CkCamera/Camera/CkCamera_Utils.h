@@ -6,6 +6,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkCamera_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -131,84 +133,101 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Camera",
-              DisplayName = "[Ck][Camera] Request Add Layer")
+              DisplayName = "[Ck][Camera] Request Add Layer",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
     Request_AddLayer(
         UPARAM(ref) FCk_Handle_Camera& InCamera,
-        const FCk_Request_Camera_AddLayer& InRequest);
+        const FCk_Request_Camera_AddLayer& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Camera",
-              DisplayName = "[Ck][Camera] Request Remove Layer")
+              DisplayName = "[Ck][Camera] Request Remove Layer",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
     Request_RemoveLayer(
         UPARAM(ref) FCk_Handle_Camera& InCamera,
-        const FCk_Request_Camera_RemoveLayer& InRequest);
+        const FCk_Request_Camera_RemoveLayer& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     // Feeds the camera's abstract orbit intention (X = yaw, Y = pitch), already scaled/inverted by the caller's
     // input/user-preference handling. The camera module never reads input devices.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Camera",
-              DisplayName = "[Ck][Camera] Request Set Orientation Intention")
+              DisplayName = "[Ck][Camera] Request Set Orientation Intention",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
     Request_SetOrientationIntention(
         UPARAM(ref) FCk_Handle_Camera& InCamera,
-        FVector InOrientationIntention);
+        FVector InOrientationIntention,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // One-shot absolute seed of the persistent boom (view) rotation — the orbit equivalent of a teleport. Unlike
     // SetOrientationIntention (a per-frame delta) this snaps the view to a world rotation.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Camera",
-              DisplayName = "[Ck][Camera] Request Snap Boom Rotation")
+              DisplayName = "[Ck][Camera] Request Snap Boom Rotation",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
     Request_SnapBoomRotation(
         UPARAM(ref) FCk_Handle_Camera& InCamera,
-        FRotator InWorldRotation);
+        FRotator InWorldRotation,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Override the orientation-control yaw clamp window (absolute world yaws). The POV clamp is wrap-safe, so a cone
     // straddling +/-180 is fine; pass [-180, 180] to restore unrestricted look. Min/Max are the window edges, NOT a
     // +/- half-angle — callers wanting a cone around a facing pass [Facing - Half, Facing + Half].
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Camera",
-              DisplayName = "[Ck][Camera] Request Set Orientation Yaw Limits")
+              DisplayName = "[Ck][Camera] Request Set Orientation Yaw Limits",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
     Request_Set_OrientationYawLimits(
         UPARAM(ref) FCk_Handle_Camera& InCamera,
         float InMinYaw,
-        float InMaxYaw);
+        float InMaxYaw,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     // ---- Toggles for the non-blending bool leaves stored on FFragment_Camera_Current. Local-only, take effect the
     //      same frame, and are reflected by Get_ComposedProfile / the POV pipeline. ----
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Fixed Boom Rotation")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Fixed Boom Rotation",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
-    Request_Set_UseFixedBoomRotation(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+    Request_Set_UseFixedBoomRotation(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Constrain Aspect Ratio")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Constrain Aspect Ratio",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
-    Request_Set_ConstrainAspectRatio(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+    Request_Set_ConstrainAspectRatio(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Orientation Control")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Orientation Control",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
-    Request_Set_HasOrientationControl(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+    Request_Set_HasOrientationControl(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Auto Reorient")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Auto Reorient",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
-    Request_Set_HasAutoReorient(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+    Request_Set_HasAutoReorient(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Collision")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Has Collision",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
-    Request_Set_HasCollision(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+    Request_Set_HasCollision(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Async Trace")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Async Trace",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
-    Request_Set_UseAsyncTrace(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+    Request_Set_UseAsyncTrace(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Post Process")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Camera", DisplayName = "[Ck][Camera] Request Set Use Post Process",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Camera
-    Request_Set_UsePostProcess(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled);
+    Request_Set_UsePostProcess(UPARAM(ref) FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     // The resolved POV for this frame (the composed view), as written by UpdatePOV. The camera component

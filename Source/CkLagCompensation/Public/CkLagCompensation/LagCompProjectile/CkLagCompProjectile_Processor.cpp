@@ -5,6 +5,7 @@
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -15,6 +16,7 @@
 #include "CkProjectile/BallisticMotion/CkBallisticMotion_Utils.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_LagCompProjectile_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_LagCompProjectile_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,12 +50,19 @@ namespace ck
             algo::ForEachRequest(InRequests.Get_Requests(), Visitor(
             [&](const auto& InRequest)
             {
+                // DoHandleRequest is void and has no rejection path, so reaching the line after the
+                // call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }));
         });
     }
@@ -90,7 +99,8 @@ namespace ck
         UCk_Utils_BallisticMotion_UE::Request_Launch(InHandle,
             FCk_Request_BallisticMotion_Launch{InRequest.Get_StartVelocity()}
                 .Set_LaunchTimePolicy(ECk_BallisticMotion_LaunchTime::OverrideTime)
-                .Set_OverrideStartTime(LaunchTime));
+                .Set_OverrideStartTime(LaunchTime),
+            {});
 
         const auto& TrajectoryParams = InParams.Get_TrajectoryParams();
         const auto SubstepSeconds = FMath::Max(InRequest.Get_SubstepTime().Get_Seconds(), 0.005);
@@ -145,6 +155,19 @@ namespace ck
 
         UUtils_Signal_LagCompProjectile_OnLaunchCompensated::Broadcast(InHandle,
             MakePayload(InHandle, InitialConditions, RewindHits));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_LagCompProjectile_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_LagCompProjectile_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

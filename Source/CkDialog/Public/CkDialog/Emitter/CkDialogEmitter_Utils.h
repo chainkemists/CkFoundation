@@ -4,6 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkDialog/Emitter/CkDialogEmitter_Fragment.h"
@@ -108,46 +109,60 @@ public:
         const FCk_Handle_DialogLine& InLine);
 
 public:
+    // A query is drained in two stages — queued by HandleRequests, answered by EvaluateQueries — so InDelegate
+    // completes when the query is EVALUATED, not when it is accepted. Evaluation is deferred while the Dialog
+    // registry is not ready, and an emitter destroyed with queries still pending completes them Failed_Cancelled.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Dialog|Emitter",
-              DisplayName="[Ck][Dialog][Emitter] Request Query")
+              DisplayName="[Ck][Dialog][Emitter] Request Query",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_DialogEmitter
     Request_Query(
         UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
-        FCk_Request_DialogEmitter_Query InRequest);
+        FCk_Request_DialogEmitter_Query InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Reads the played line's LinkedEventTag and, when valid, enqueues a Query{LinkedEventTag}. Invalid line / no exit => no-op
-    // (Display log). The chaining convenience wrapper over Request_Query.
+    // (Display log) and InDelegate completes Failed_NotEnqueued. The chaining convenience wrapper over Request_Query.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Dialog|Emitter",
-              DisplayName="[Ck][Dialog][Emitter] Request Query Follow-Up")
+              DisplayName="[Ck][Dialog][Emitter] Request Query Follow-Up",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_DialogEmitter
     Request_QueryFollowUp(
         UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
-        FCk_Handle_DialogLine InPlayedLine);
+        FCk_Handle_DialogLine InPlayedLine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Dialog|Emitter",
-              DisplayName="[Ck][Dialog][Emitter] Request Start Cooldown")
+              DisplayName="[Ck][Dialog][Emitter] Request Start Cooldown",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_DialogEmitter
     Request_StartCooldown(
         UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
-        FCk_Request_DialogEmitter_StartCooldown InRequest);
+        FCk_Request_DialogEmitter_StartCooldown InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Clearing a line that was not cooling removes nothing and completes InDelegate with Failed.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Dialog|Emitter",
-              DisplayName="[Ck][Dialog][Emitter] Request Clear Cooldown")
+              DisplayName="[Ck][Dialog][Emitter] Request Clear Cooldown",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_DialogEmitter
     Request_ClearCooldown(
         UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
-        FCk_Handle_DialogLine InLine);
+        FCk_Handle_DialogLine InLine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Dialog|Emitter",
-              DisplayName="[Ck][Dialog][Emitter] Request Clear All Cooldowns")
+              DisplayName="[Ck][Dialog][Emitter] Request Clear All Cooldowns",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_DialogEmitter
     Request_ClearAllCooldowns(
-        UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter);
+        UPARAM(ref) FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

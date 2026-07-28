@@ -9,11 +9,13 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_Replicate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_TagSet_SyncReplication);
 
@@ -36,7 +38,14 @@ namespace ck
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
+                // DoHandleRequest is void and has no rejection path, so reaching the line after the
+                // call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InTagSet, InRequest, TagsAdded, TagsRemoved);
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }), ck::policy::DontResetContainer{});
         });
 
@@ -98,6 +107,19 @@ namespace ck
                 OutTagsRemoved.AddTag(Tag);
             }
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_TagSet_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_TagSet_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // ---- Replicate (Server-side) ----

@@ -68,7 +68,7 @@ auto
         case ECk_VfxCue_PlaybackBehavior::AutoPlay:
         {
             const auto PlayRequest = FCk_Request_VfxCue_Play{};
-            UCk_Utils_VfxCue_UE::Request_Play(VfxCueHandle, PlayRequest);
+            UCk_Utils_VfxCue_UE::Request_Play(VfxCueHandle, PlayRequest, {});
             ck::vfx::Verbose(TEXT("VfxCue EntityScript [{}] auto-started playback"), Get_CueName());
             break;
         }
@@ -119,7 +119,7 @@ auto
     { return; }
 
     const auto PlayRequest = FCk_Request_VfxCue_Play{};
-    UCk_Utils_VfxCue_UE::Request_Play(VfxCueHandle, PlayRequest);
+    UCk_Utils_VfxCue_UE::Request_Play(VfxCueHandle, PlayRequest, {});
     ck::vfx::Verbose(TEXT("VfxCue EntityScript [{}] delayed playback started"), Get_CueName());
 }
 

@@ -81,9 +81,13 @@ auto
     UCk_Utils_BallisticMotion_UE::
     Request_Launch(
         FCk_Handle_BallisticMotion& InHandle,
-        const FCk_Request_BallisticMotion_Launch& InRequest)
+        const FCk_Request_BallisticMotion_Launch& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_BallisticMotion
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_BallisticMotion_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);
@@ -96,9 +100,13 @@ auto
     UCk_Utils_BallisticMotion_UE::
     Request_Stop(
         FCk_Handle_BallisticMotion& InHandle,
-        const FCk_Request_BallisticMotion_Stop& InRequest)
+        const FCk_Request_BallisticMotion_Stop& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_BallisticMotion
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_BallisticMotion_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);

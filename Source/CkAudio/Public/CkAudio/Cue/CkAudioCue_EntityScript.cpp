@@ -63,12 +63,12 @@ auto
         {
             for (const auto& TrackParams : _TrackLibrary)
             {
-                UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirectorHandle, TrackParams);
+                UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirectorHandle, TrackParams, {});
             }
         }
         if (Get_HasValidSingleTrack())
         {
-            UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirectorHandle, _SingleTrack);
+            UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirectorHandle, _SingleTrack, {});
         }
     }
 
@@ -450,8 +450,8 @@ auto
     StartTrackRequest.Set_FadeInTime(_DefaultCrossfadeDuration);
 
     auto AudioDirectorHandle = UCk_Utils_AudioDirector_UE::Cast(_AssociatedEntity);
-    UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirectorHandle, SelectedTrack);
-    UCk_Utils_AudioDirector_UE::Request_StartTrack(AudioDirectorHandle, StartTrackRequest);
+    UCk_Utils_AudioDirector_UE::Request_AddTrack(AudioDirectorHandle, SelectedTrack, {});
+    UCk_Utils_AudioDirector_UE::Request_StartTrack(AudioDirectorHandle, StartTrackRequest, {});
 
     _RecentTracks.Add(SelectedTrack.Get_TrackName());
     if (_RecentTracks.Num() > 10)

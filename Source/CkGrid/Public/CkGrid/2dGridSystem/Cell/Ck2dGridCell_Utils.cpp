@@ -112,16 +112,25 @@ auto
     UCk_Utils_2dGridCell_UE::
     Request_EnableDisable(
         FCk_Handle_2dGridCell& InCell,
-        ECk_EnableDisable InEnableDisable)
+        ECk_EnableDisable InEnableDisable,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid"))
-    { return; }
+    const auto IsCellValid = ck::IsValid(InCell);
+    CK_ENSURE_IF_NOT(IsCellValid, TEXT("Cell is invalid"))
+    {}
+    if (NOT IsCellValid)
+    {
+        InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     switch (InEnableDisable)
     {
         case ECk_EnableDisable::Disable:
         {
+            // Idempotent: AddOrGet on an already-disabled cell is a no-op, so setting the cell to
+            // the state it is already in still reports Succeeded.
             InCell.AddOrGet<ck::FTag_2dGridCell_Disabled>();
             break;
         }
@@ -133,23 +142,42 @@ auto
         default:
             break;
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Succeeded);
 }
 
 auto
     UCk_Utils_2dGridCell_UE::
     Request_AddTag(
         FCk_Handle_2dGridCell& InCell,
-        FGameplayTag InTag)
+        FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_2dGridCell
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid"))
-    { return InCell; }
+    const auto IsCellValid = ck::IsValid(InCell);
+    CK_ENSURE_IF_NOT(IsCellValid, TEXT("Cell is invalid"))
+    {}
+    if (NOT IsCellValid)
+    {
+        InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InCell;
+    }
 
-    CK_ENSURE_IF_NOT(InTag.IsValid(), TEXT("Request_AddTag: tag is invalid"))
-    { return InCell; }
+    const auto IsTagValid = InTag.IsValid();
+    CK_ENSURE_IF_NOT(IsTagValid, TEXT("Request_AddTag: tag is invalid"))
+    {}
+    if (NOT IsTagValid)
+    {
+        InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InCell;
+    }
 
     auto& Params = InCell.Get<ck::FFragment_2dGridCell_Params>();
     Params.Get_Tags().AddTag(InTag);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Succeeded);
 
     return InCell;
 }
@@ -158,14 +186,24 @@ auto
     UCk_Utils_2dGridCell_UE::
     Request_RemoveTag(
         FCk_Handle_2dGridCell& InCell,
-        FGameplayTag InTag)
+        FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_2dGridCell
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCell), TEXT("Cell is invalid"))
-    { return InCell; }
+    const auto IsCellValid = ck::IsValid(InCell);
+    CK_ENSURE_IF_NOT(IsCellValid, TEXT("Cell is invalid"))
+    {}
+    if (NOT IsCellValid)
+    {
+        InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InCell;
+    }
 
     auto& Params = InCell.Get<ck::FFragment_2dGridCell_Params>();
     Params.Get_Tags().RemoveTag(InTag);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCell, ECk_Request_OperationResult::Succeeded);
 
     return InCell;
 }

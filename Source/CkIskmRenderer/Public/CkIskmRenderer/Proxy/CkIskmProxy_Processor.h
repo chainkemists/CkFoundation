@@ -63,6 +63,7 @@ namespace ck
         // Setup-before-consumer: with Setup registered first in the same group, excluding
         // not-yet-setup entities guarantees a valid SKMC in every request handler.
         TExclude<FTag_IskmProxy_NeedsSetup>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -103,6 +104,33 @@ namespace ck
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FFragment_Transform&, const FCk_Request_IskmProxy_BeginRagdoll&) const -> void;
         auto DoHandleRequest(HandleType& InHandle, const FFragment_IskmProxy_Params&, FFragment_IskmProxy_Current&, FFragment_IskmProxy_AnimState&, FFragment_IskmProxy_PoseSource&, FFragment_IskmProxy_CustomData&, const FFragment_Transform&, const FCk_Request_IskmProxy_EndRagdoll&) const -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed proxy's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKISKMRENDERER_API FProcessor_IskmProxy_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_IskmProxy_CancelPendingRequests,
+        FCk_Handle_IskmProxy,
+        TReadOnly<FFragment_IskmProxy_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IskmProxy_Requests& InRequestsComp)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     // TIgnoreInEditor<FTag_IskmProxy_Movable>: editor worlds drop the _Movable gate so
     // editor-placed proxies (never tagged _Movable) still get their transform pushed.

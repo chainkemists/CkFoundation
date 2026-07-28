@@ -6,6 +6,7 @@
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkFloatAttribute_Utils.generated.h"
@@ -223,12 +224,14 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="[Ck][FloatAttribute] Request Override Base Value")
+              DisplayName="[Ck][FloatAttribute] Request Override Base Value",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_FloatAttribute
     Request_Override(
         UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
         float InNewBaseValue,
-        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -334,17 +337,21 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeRefill|Float",
-              DisplayName="[Ck][FloatAttribute] Request Pause Refill")
+              DisplayName="[Ck][FloatAttribute] Request Pause Refill",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_FloatAttributeRefill
     Request_Pause(
-        UPARAM(ref) FCk_Handle_FloatAttributeRefill& InAttributeRefill);
+        UPARAM(ref) FCk_Handle_FloatAttributeRefill& InAttributeRefill,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeRefill|Float",
-              DisplayName="[Ck][FloatAttribute] Request Resume Refill")
+              DisplayName="[Ck][FloatAttribute] Request Resume Refill",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_FloatAttributeRefill
     Request_Resume(
-        UPARAM(ref) FCk_Handle_FloatAttributeRefill& InAttributeRefill);
+        UPARAM(ref) FCk_Handle_FloatAttributeRefill& InAttributeRefill,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -474,7 +481,8 @@ public:
     static void
     Request_ClearAllModifiers(
         FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

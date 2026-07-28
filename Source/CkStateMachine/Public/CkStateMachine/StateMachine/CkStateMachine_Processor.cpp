@@ -1,10 +1,11 @@
-#include "CkStateMachine_Processor.h"
+﻿#include "CkStateMachine_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/CkStateMachine_Stats.h"
 #include "CkStateMachine/Net/CkStateMachineRelay_Actor.h"
@@ -27,6 +28,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_FlushPendingReplication_Drain);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_FirstSyncInitialState);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sm_ApplyReplicatedHistory);
@@ -152,12 +154,21 @@ namespace ck
                      "(NetContext [{}], AuthorityModel [{}]). Requests dropped. Rep-driven transitions "
                      "bypass this processor via the replay path."),
                 NonStartRequestCount, InHandle, NetContext, EffectiveAuth)
-            {
-                InHandle.Try_Remove<FFragment_Sm_Requests>();
-                return;
-            }
+            {}
 
-            InHandle.Try_Remove<FFragment_Sm_Requests>();
+            // The batch never reaches a handler, so complete every entry or a caller awaiting
+            // completion waits forever. Failed rather than Failed_Cancelled: the owner is alive, the
+            // request simply was not this machine's to process. Fired off a COPY with the queue
+            // already detached, so a delegate is free to enqueue a fresh request from inside.
+            InHandle.CopyAndRemove(InRequests, [&](FFragment_Sm_Requests& InRequestsCopy)
+            {
+                algo::ForEachRequest(InRequestsCopy._Requests, Visitor(
+                [&](const auto& InRequest) -> void
+                {
+                    InRequest.TryFireCompletion(InHandle, ECk_Request_OperationResult::Failed);
+                }), policy::DontResetContainer{});
+            });
+
             return;
         }
 
@@ -165,7 +176,10 @@ namespace ck
         {
             algo::ForEachRequest(InRequestsCopy._Requests, Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                Result = DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -246,7 +260,7 @@ namespace ck
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
             const FCk_Request_Sm_Start& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         if (InCurrent._RunStatus != ECk_SmRunStatus::Stopped)
         {
@@ -257,7 +271,7 @@ namespace ck
                 ck::sm::Warning(
                     TEXT("Request_Start on [{}] while Paused — ignored. Use Request_Resume."), InHandle);
             }
-            return;
+            return ECk_Request_OperationResult::Failed;
         }
 
         InCurrent._RunStatus = ECk_SmRunStatus::Running;
@@ -309,6 +323,8 @@ namespace ck
             UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(ParentSm, SubSmStartRequest);
         }
 #endif
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -318,10 +334,10 @@ namespace ck
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
             const FCk_Request_Sm_Stop& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         if (InCurrent._RunStatus == ECk_SmRunStatus::Stopped)
-        { return; }
+        { return ECk_Request_OperationResult::Failed; }
 
         DoExitCurrentState(InHandle, InCurrent);
 
@@ -339,6 +355,8 @@ namespace ck
 
         UUtils_Signal_OnSmStopped::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Sm_Payload_OnStopped{}));
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -348,15 +366,17 @@ namespace ck
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
             const FCk_Request_Sm_Pause& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
-        { return; }
+        { return ECk_Request_OperationResult::Failed; }
 
         InCurrent._RunStatus = ECk_SmRunStatus::Paused;
         InHandle.Add<FTag_Sm_Paused>();
 
         DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Paused);
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -366,15 +386,17 @@ namespace ck
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
             const FCk_Request_Sm_Resume& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         if (InCurrent._RunStatus != ECk_SmRunStatus::Paused)
-        { return; }
+        { return ECk_Request_OperationResult::Failed; }
 
         InCurrent._RunStatus = ECk_SmRunStatus::Running;
         InHandle.Remove<FTag_Sm_Paused>();
 
         DoPublishRunStatus(InHandle, InParams, ECk_SmRunStatus::Running);
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -384,14 +406,14 @@ namespace ck
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
             const FCk_Request_Sm_Transition& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         if (InCurrent._RunStatus != ECk_SmRunStatus::Running)
         {
             // The enqueue side unconditionally added FTag_Sm_TransitionQueued; a dropped request must
             // clear it or FProcessor_SmState_Evaluate blocks forever.
             InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
-            return;
+            return ECk_Request_OperationResult::Failed;
         }
 
         const auto PreviousStateClass  = InCurrent._CurrentStateClass;
@@ -419,6 +441,8 @@ namespace ck
         Pending._TargetStateClass = InRequest.Get_TargetStateClass();
 
         InHandle.Try_Remove<FTag_Sm_TransitionQueued>();
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -428,24 +452,34 @@ namespace ck
             const FFragment_Sm_Params& InParams,
             FFragment_Sm_Current& InCurrent,
             const FCk_Request_Sm_AddOverrideState& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         const auto& OverrideClass = InRequest.Get_OverrideStateClass();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(OverrideClass),
+        const auto OverrideClassIsValid = ck::IsValid(OverrideClass);
+
+        CK_ENSURE_IF_NOT(OverrideClassIsValid,
             TEXT("FCk_Request_Sm_AddOverrideState on [{}] has invalid override state class"), InHandle)
-        { return; }
+        {}
+        if (NOT OverrideClassIsValid)
+        { return ECk_Request_OperationResult::Failed; }
 
         auto* CDO = OverrideClass->GetDefaultObject<UCk_SmState_EntityScript>();
         const auto StatesToOverride = CDO->Get_StatesToOverride();
 
-        CK_ENSURE_IF_NOT(StatesToOverride.Num() > 0,
+        const auto HasStatesToOverride = StatesToOverride.Num() > 0;
+
+        CK_ENSURE_IF_NOT(HasStatesToOverride,
             TEXT("FCk_Request_Sm_AddOverrideState on [{}]: override class [{}] returns empty Get_StatesToOverride()"),
             InHandle, *OverrideClass->GetName())
-        { return; }
+        {}
+        if (NOT HasStatesToOverride)
+        { return ECk_Request_OperationResult::Failed; }
 
         auto& Overrides = InHandle.AddOrGet<FFragment_Sm_StateOverrides>();
         Overrides._Overrides.Add(FFragment_Sm_StateOverrides::FEntry{OverrideClass, StatesToOverride});
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -488,6 +522,19 @@ namespace ck
 
         InCurrent._CurrentStateHandle = FCk_Handle_SmState{};
         InCurrent._CurrentStateClass = nullptr;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Sm_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Sm_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -953,7 +1000,7 @@ namespace ck
                     {
                         if (NOT Pending.Get_StopEnqueued())
                         {
-                            UCk_Utils_StateMachine_UE::Request_Stop(Sm);
+                            UCk_Utils_StateMachine_UE::Request_Stop(Sm, {});
                             Pending._StopEnqueued = true;
                         }
                         return;
@@ -970,7 +1017,7 @@ namespace ck
                         // Idempotent against AutoStart's own Start — HandleRequests drops a Start on an
                         // already-Running machine.
                         ck::sm::Display(TEXT("[SM HydrationResume] [{}] Start phase: enqueueing Request_Start"), InHandle);
-                        UCk_Utils_StateMachine_UE::Request_Start(Sm);
+                        UCk_Utils_StateMachine_UE::Request_Start(Sm, {});
                         Pending._StartEnqueued = true;
                     }
                     return;
@@ -996,7 +1043,7 @@ namespace ck
                     {
                         ck::sm::Display(TEXT("[SM HydrationResume] [{}] Transition phase: enqueueing Request_Transition -> [{}]"),
                             InHandle, DesiredClass->GetFName());
-                        UCk_Utils_StateMachine_UE::Request_Transition(Sm, DesiredClass);
+                        UCk_Utils_StateMachine_UE::Request_Transition(Sm, DesiredClass, {});
                         Pending._TransitionEnqueued = true;
                     }
                     return;
@@ -1014,7 +1061,7 @@ namespace ck
                     {
                         if (NOT Pending.Get_PauseEnqueued())
                         {
-                            UCk_Utils_StateMachine_UE::Request_Pause(Sm);
+                            UCk_Utils_StateMachine_UE::Request_Pause(Sm, {});
                             Pending._PauseEnqueued = true;
                         }
                         return;

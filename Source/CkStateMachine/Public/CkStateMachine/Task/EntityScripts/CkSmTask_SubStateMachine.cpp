@@ -1,4 +1,4 @@
-#include "CkSmTask_SubStateMachine.h"
+﻿#include "CkSmTask_SubStateMachine.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // FTag_Snapshot_SaveTransient
@@ -105,7 +105,7 @@ auto
             ECk_Signal_PostFireBehavior::DoNothing);
     }
 
-    UCk_Utils_StateMachine_UE::Request_Start(_SubSmHandle);
+    UCk_Utils_StateMachine_UE::Request_Start(_SubSmHandle, {});
 
     ck::sm::Verbose(TEXT("[SubStateMachine] Started sub-SM with initial state [{}]"),
         _InitialStateClass->GetName());

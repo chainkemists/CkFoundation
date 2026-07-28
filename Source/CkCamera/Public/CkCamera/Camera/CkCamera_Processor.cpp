@@ -14,6 +14,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include <GameFramework/Pawn.h>
@@ -23,6 +24,7 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_CameraLayer_Lifecycle);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Camera_UpdatePOV);
 
@@ -57,7 +59,11 @@ namespace ck
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InHandle, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
             }), policy::DontResetContainer{});
         });
     }
@@ -67,13 +73,13 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_Camera_AddLayer& InRequest)
-        -> void
+        -> bool
     {
         const auto LayerClass = InRequest.Get_LayerClass();
 
         CK_ENSURE_IF_NOT(ck::IsValid(LayerClass),
             TEXT("AddLayer: invalid layer class on camera [{}]"), InHandle)
-        { return; }
+        { return false; }
 
         const auto Priority = InRequest.Get_Priority();
 
@@ -98,7 +104,7 @@ namespace ck
         auto TypedLayer = ::UCk_Utils_CameraLayer_UE::Create(InHandle, LayerClass);
 
         if (ck::Is_NOT_Valid(TypedLayer))
-        { return; }
+        { return false; }
 
         {
             auto& Params = TypedLayer.Get<FFragment_CameraLayer_Params>();
@@ -112,6 +118,8 @@ namespace ck
 
         camera::VeryVerbose(TEXT("[Camera] AddLayer [{}] -> entity [{}] on camera [{}]"),
             LayerClass, TypedLayer, InHandle);
+
+        return true;
     }
 
     auto
@@ -119,7 +127,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_Camera_RemoveLayer& InRequest)
-        -> void
+        -> bool
     {
         const auto LayerClass = InRequest.Get_LayerClass();
 
@@ -137,6 +145,21 @@ namespace ck
             Blend.Set_TargetAlpha(0.0f);
             Blend.Set_BlendRate(DoGet_BlendRateFromTime(InRequest.Get_BlendOutTime()));
         });
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Camera_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Camera_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // LAYER LIFECYCLE

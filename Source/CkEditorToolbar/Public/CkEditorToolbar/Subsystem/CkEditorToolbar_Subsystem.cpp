@@ -266,6 +266,7 @@ auto
                     _AssetLoaderEntity,
                     FCk_Request_ResourceLoader_LoadObject{FCk_ResourceLoader_ObjectReference_Soft{ToolbarUtilityWidget}}
                     .Set_LoadingPolicy(ECk_ResourceLoader_LoadingPolicy::Synchronous),
+                    {},
                     {}
                 );
 

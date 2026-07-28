@@ -23,6 +23,7 @@ DECLARE_CYCLE_STAT(TEXT("Tween::SplineFollowEval"), STAT_Tween_SplineFollowEval,
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_HandleYoyoDelays);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_ApplyToTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Tween_ApplySplineFollow);
 
@@ -53,7 +54,7 @@ namespace ck_tween
             {
                 if (InValue.IsVector())
                 {
-                    UCk_Utils_Transform_UE::Request_SetLocation(MaybeTransformHandle, FCk_Request_Transform_SetLocation{InValue.GetAsVector()});
+                    UCk_Utils_Transform_UE::Request_SetLocation(MaybeTransformHandle, FCk_Request_Transform_SetLocation{InValue.GetAsVector()}, {});
                 }
                 break;
             }
@@ -61,7 +62,7 @@ namespace ck_tween
             {
                 if (InValue.IsRotator())
                 {
-                    UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{InValue.GetAsRotator()});
+                    UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{InValue.GetAsRotator()}, {});
                 }
                 break;
             }
@@ -69,7 +70,7 @@ namespace ck_tween
             {
                 if (InValue.IsVector())
                 {
-                    UCk_Utils_Transform_UE::Request_SetScale(MaybeTransformHandle, FCk_Request_Transform_SetScale{InValue.GetAsVector()});
+                    UCk_Utils_Transform_UE::Request_SetScale(MaybeTransformHandle, FCk_Request_Transform_SetScale{InValue.GetAsVector()}, {});
                 }
                 break;
             }
@@ -105,13 +106,13 @@ namespace ck_tween
         const auto Distance = FMath::Clamp(InProgress, 0.0f, 1.0f) * UCk_Utils_Spline_UE::Get_Length(SplineHandle);
 
         const auto Location = UCk_Utils_Spline_UE::Get_LocationAtDistance(SplineHandle, Distance);
-        UCk_Utils_Transform_UE::Request_SetLocation(MaybeTransformHandle, FCk_Request_Transform_SetLocation{Location});
+        UCk_Utils_Transform_UE::Request_SetLocation(MaybeTransformHandle, FCk_Request_Transform_SetLocation{Location}, {});
 
         if (InSplineFollow.Get_Orientation() != ECk_Tween_SplineOrientation::OrientToSpline)
         { return; }
 
         const auto Rotation = UCk_Utils_Spline_UE::Get_RotationAtDistance(SplineHandle, Distance);
-        UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{Rotation});
+        UCk_Utils_Transform_UE::Request_SetRotation(MaybeTransformHandle, FCk_Request_Transform_SetRotation{Rotation}, {});
     }
 }
 
@@ -338,7 +339,10 @@ namespace ck
         {
             algo::ForEachRequest(InRequests.Get_Requests(), Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InCurrent, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                Result = DoHandleRequest(InHandle, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -354,14 +358,22 @@ namespace ck
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_Pause& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         if (InCurrent.Get_State() != ECk_TweenState::Playing)
-        { return; }
+        {
+            // Already paused: the caller's intent holds afterwards, so the no-op Succeeded. A
+            // terminal tween can never become paused, so only that path genuinely Failed.
+            return InCurrent.Get_State() == ECk_TweenState::Paused
+                ? ECk_Request_OperationResult::Succeeded
+                : ECk_Request_OperationResult::Failed;
+        }
 
         InHandle.Remove<FTag_Tween_Playing>();
         InHandle.Add<FTag_Tween_Paused>();
         InCurrent.Set_State(ECk_TweenState::Paused);
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -370,14 +382,22 @@ namespace ck
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_Resume& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         if (InCurrent.Get_State() != ECk_TweenState::Paused)
-        { return; }
+        {
+            // Already playing: the caller's intent holds afterwards, so the no-op Succeeded. A
+            // terminal tween can never resume, so only that path genuinely Failed.
+            return InCurrent.Get_State() == ECk_TweenState::Playing
+                ? ECk_Request_OperationResult::Succeeded
+                : ECk_Request_OperationResult::Failed;
+        }
 
         InHandle.Remove<FTag_Tween_Paused>();
         InHandle.Add<FTag_Tween_Playing>();
         InCurrent.Set_State(ECk_TweenState::Playing);
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -386,15 +406,16 @@ namespace ck
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_Stop& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         // A tween already in a terminal state must be left untouched: re-running this body would
         // bare-Add an already-present FTag_Tween_Completed (ensure) and re-broadcast OnTweenComplete.
         // Reachable without misuse — requests are deferred, so a tween can finish between the call
-        // and this handler.
+        // and this handler. The tween is stopped either way, so the caller's intent holds and this
+        // no-op reports Succeeded.
         if (InCurrent.Get_State() != ECk_TweenState::Playing &&
             InCurrent.Get_State() != ECk_TweenState::Paused)
-        { return; }
+        { return ECk_Request_OperationResult::Succeeded; }
 
         InHandle.Try_Remove<FTag_Tween_Playing>();
         InHandle.Try_Remove<FTag_Tween_Paused>();
@@ -410,6 +431,8 @@ namespace ck
         {
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
         }
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -418,7 +441,7 @@ namespace ck
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_Restart& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         InCurrent.Set_CurrentTime(0.0f);
         InCurrent.Set_YoyoDelayTimer(0.0f);
@@ -434,6 +457,8 @@ namespace ck
         InHandle.Try_Remove<FTag_Tween_InYoyoDelay>();
 
         InHandle.Add<FTag_Tween_Playing>();
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -442,9 +467,24 @@ namespace ck
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
             const FCk_Request_Tween_SetTimeMultiplier& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         InCurrent.Set_TimeMultiplier(FMath::Max(0.0f, InRequest.Get_Multiplier()));
+
+        return ECk_Request_OperationResult::Succeeded;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Tween_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Tween_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

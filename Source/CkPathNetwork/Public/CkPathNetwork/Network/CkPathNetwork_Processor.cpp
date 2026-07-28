@@ -12,6 +12,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
@@ -27,7 +28,9 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_PathNetwork_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_PathNetwork_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_PathNetwork_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_PathNetworkFollower_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_PathNetworkFollower_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_PathNetworkFollower_InvalidateOnRebuild);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -293,10 +296,19 @@ namespace ck
             algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
             [&](const auto& InRequest)
             {
+                // DoHandleRequest is void and has no rejection path, so reaching the line after the
+                // call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InGraph, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }), policy::DontResetContainer{});
         });
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_PathNetwork_HandleRequests::
@@ -314,6 +326,19 @@ namespace ck
         ck::pathnetwork::Display(TEXT("PathNetwork [{}] rebuilt: [{}] ribbons -> [{}] nodes, [{}] edges (epoch [{}])"),
             InHandle, InParams.Get_Ribbons().Num(), InGraph.Get_Network()._Nodes.Num(),
             InGraph.Get_Network()._Edges.Num(), InGraph.Get_Epoch());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_PathNetwork_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_PathNetwork_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -347,13 +372,19 @@ namespace ck
                 if (_BudgetRemainingThisTick <= 0)
                 {
                     // Re-queue verbatim: the fragment re-add marks the entity dirty, resuming the drain next tick.
+                    // Not yet handled, so the completion delegate must not fire here — it rides the
+                    // re-queued copy and fires when a later tick actually drains it.
                     auto NonConstHandle = InHandle;
                     NonConstHandle.AddOrGet<FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(InRequest);
                     return;
                 }
 
                 --_BudgetRemainingThisTick;
-                DoHandleRequest(InHandle, InParams, InCorridor, InRequest);
+
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                DoHandleRequest(InHandle, InParams, InCorridor, InRequest, Result);
             }), policy::DontResetContainer{});
         });
     }
@@ -364,7 +395,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_PathNetworkFollower_Params& InParams,
             FFragment_PathNetworkFollower_Corridor& InCorridor,
-            const FCk_Request_PathNetworkFollower_FindRoute& InRequest) const
+            const FCk_Request_PathNetworkFollower_FindRoute& InRequest,
+            ECk_Request_OperationResult& OutResult) const
         -> void
     {
         using namespace ck_pathnetwork_processor;
@@ -590,6 +622,21 @@ namespace ck
         ck::pathnetwork::Verbose(TEXT("PathNetworkFollower [{}] route to {} ready: [{}] legs, [{}] waypoints, cost [{}]"),
             InHandle, GoalLocation, InCorridor.Get_Result().Get_Legs().Num(),
             InCorridor.Get_Result().Get_CompiledWaypoints().Num(), InCorridor.Get_Result().Get_TotalCost());
+
+        OutResult = ECk_Request_OperationResult::Succeeded;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_PathNetworkFollower_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_PathNetworkFollower_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

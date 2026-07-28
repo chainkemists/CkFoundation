@@ -64,6 +64,10 @@ namespace ck
         auto&      Pacer = Base.AddOrGet<ck::FFragment_PacedWork>(
             InFlight.Get_StepsPerPass(), InFlight.Get_MaxStepsPerFrame());
 
+        // Copied before the drain: RunPacedSteps removes the fragment on Done, and the completion
+        // delegate is fired after that removal.
+        const auto CompletionDelegate = InFlight.Get_CompletionDelegate();
+
         auto Finish = FFinishSnapshot{};
 
         // The in-flight fragment IS the dirty marker; RunPacedSteps removes it on Done. The completing
@@ -78,6 +82,9 @@ namespace ck
 
         UUtils_Signal_Inventory_MassTransfer_OnComplete::Broadcast(
             InHandle, MakePayload(InHandle, Finish.Result, Finish.Units, Finish.Fully, Finish.Failed));
+
+        CompletionDelegate.ExecuteIfBound(InHandle,
+            inventory_handlers::ToCompletionResult(Finish.Result));
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
@@ -180,6 +187,9 @@ namespace ck
             InHandle, MakePayload(InHandle,
                 ECk_Inventory_MassTransfer_Result::Failed_OperationCancelled,
                 InFlight.Get_UnitsMoved(), InFlight.Get_ItemsFullyMoved(), InFlight.Get_ItemsFailed()));
+
+        InFlight.Get_CompletionDelegate().ExecuteIfBound(InHandle,
+            ECk_Request_OperationResult::Failed_Cancelled);
     }
 }
 

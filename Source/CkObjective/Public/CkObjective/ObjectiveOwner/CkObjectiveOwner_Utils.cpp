@@ -52,9 +52,13 @@ auto
     UCk_Utils_ObjectiveOwner_UE::
     Request_AddObjective(
         FCk_Handle_ObjectiveOwner& InOwner,
-        const FCk_Request_ObjectiveOwner_AddObjective& InRequest)
+        const FCk_Request_ObjectiveOwner_AddObjective& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ObjectiveOwner
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InOwner.AddOrGet<ck::FFragment_ObjectiveOwner_Requests>()._Requests.Emplace(InRequest);
     return InOwner;
 }
@@ -63,9 +67,13 @@ auto
     UCk_Utils_ObjectiveOwner_UE::
     Request_RemoveObjective(
         FCk_Handle_ObjectiveOwner& InOwner,
-        const FCk_Request_ObjectiveOwner_RemoveObjective& InRequest)
+        const FCk_Request_ObjectiveOwner_RemoveObjective& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ObjectiveOwner
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InOwner.AddOrGet<ck::FFragment_ObjectiveOwner_Requests>()._Requests.Emplace(InRequest);
     return InOwner;
 }

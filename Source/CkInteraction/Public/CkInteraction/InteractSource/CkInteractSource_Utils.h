@@ -5,6 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkInteractSource_Utils.generated.h"
@@ -77,11 +78,13 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractSource",
-        DisplayName="[Ck][InteractSource] Request Cancel Interaction")
+        DisplayName="[Ck][InteractSource] Request Cancel Interaction",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_InteractSource
     Request_CancelInteraction(
         UPARAM(ref) FCk_Handle_InteractSource& InInteractSource,
-        const FCk_Request_InteractSource_CancelInteraction& InRequest);
+        const FCk_Request_InteractSource_CancelInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractSource",
@@ -94,7 +97,8 @@ public:
     static FCk_Handle_InteractSource
     Request_StartInteraction(
         UPARAM(ref) FCk_Handle_InteractSource& InInteractSource,
-        const FCk_Request_InteractSource_StartInteraction& InRequest);
+        const FCk_Request_InteractSource_StartInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

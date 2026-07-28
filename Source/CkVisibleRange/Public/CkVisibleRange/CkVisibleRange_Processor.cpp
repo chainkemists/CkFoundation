@@ -8,6 +8,7 @@
 #include "CkVisibleRange/CkVisibleRange_Utils.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VisibleRange_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VisibleRange_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -57,7 +58,12 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
             DoHandleRequest(InHandle, InCurrent, InRequest);
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -124,6 +130,19 @@ namespace ck
             UUtils_Signal_OnVisibleRange_HiddenChanged::Broadcast(InHandle,
                 MakePayload(ck::StaticCast<FCk_Handle_VisibleRange>(InHandle), NOT IsVisible));
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_VisibleRange_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_VisibleRange_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

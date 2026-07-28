@@ -49,7 +49,7 @@ auto
 
         for (const auto& Tag : Pair.Value)
         {
-            UCk_Utils_2dGridCell_UE::Request_AddTag(Cell, Tag);
+            UCk_Utils_2dGridCell_UE::Request_AddTag(Cell, Tag, {});
         }
     }
 

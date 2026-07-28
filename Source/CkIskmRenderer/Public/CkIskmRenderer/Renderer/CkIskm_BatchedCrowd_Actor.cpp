@@ -408,7 +408,7 @@ auto
             { continue; }   // no baked socket / bad index — leave it parked
 
             UCk_Utils_Transform_UE::Request_SetTransform(
-                C.Cosmetic, FCk_Request_Transform_SetTransform{C.RelOffset * SocketWorld});
+                C.Cosmetic, FCk_Request_Transform_SetTransform{C.RelOffset * SocketWorld}, {});
         }
 
         if (Cosmetics.Num() == 0)

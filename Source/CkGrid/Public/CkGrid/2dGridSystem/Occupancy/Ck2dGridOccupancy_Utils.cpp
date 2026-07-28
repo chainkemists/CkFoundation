@@ -20,12 +20,19 @@ auto
         const FCk_Handle& InOccupant,
         const FIntPoint& InAnchor,
         ECk_CardinalRotation InRotation,
-        const TArray<FIntPoint>& InCells)
+        const TArray<FIntPoint>& InCells,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_2dGridPlacement
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InGrid),
+    const auto IsGridValid = ck::IsValid(InGrid);
+    CK_ENSURE_IF_NOT(IsGridValid,
         TEXT("Request_AddPlacement: grid handle is invalid"))
-    { return {}; }
+    {}
+    if (NOT IsGridValid)
+    {
+        InDelegate.ExecuteIfBound(FCk_Handle{InGrid}, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
     auto GridBase = FCk_Handle{InGrid};
 
@@ -67,6 +74,9 @@ auto
         }
     }
 
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(GridBase, ECk_Request_OperationResult::Succeeded);
+
     return Placement;
 }
 
@@ -75,11 +85,15 @@ auto
 auto
     UCk_Utils_2dGridOccupancy_UE::
     Request_RemovePlacement(
-        FCk_Handle_2dGridPlacement& InPlacement)
+        FCk_Handle_2dGridPlacement& InPlacement,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> bool
 {
     if (ck::Is_NOT_Valid(InPlacement))
-    { return false; }
+    {
+        InDelegate.ExecuteIfBound(FCk_Handle{InPlacement}, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return false;
+    }
 
     // Read the grid BEFORE destroying the placement — its params die with the entity.
     if (auto Grid = InPlacement.Get<ck::FFragment_2dGridPlacement_Params>().Get_Grid();
@@ -90,6 +104,9 @@ auto
 
     auto PlacementBase = FCk_Handle{InPlacement};
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(PlacementBase);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(PlacementBase, ECk_Request_OperationResult::Succeeded);
 
     return true;
 }

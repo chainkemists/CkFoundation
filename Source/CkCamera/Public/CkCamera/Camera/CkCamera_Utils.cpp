@@ -173,9 +173,13 @@ auto
     UCk_Utils_Camera_UE::
     Request_AddLayer(
         FCk_Handle_Camera& InCamera,
-        const FCk_Request_Camera_AddLayer& InRequest)
+        const FCk_Request_Camera_AddLayer& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InCamera.AddOrGet<ck::FFragment_Camera_Requests>()._Requests.Emplace(InRequest);
     return InCamera;
 }
@@ -184,9 +188,13 @@ auto
     UCk_Utils_Camera_UE::
     Request_RemoveLayer(
         FCk_Handle_Camera& InCamera,
-        const FCk_Request_Camera_RemoveLayer& InRequest)
+        const FCk_Request_Camera_RemoveLayer& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InCamera.AddOrGet<ck::FFragment_Camera_Requests>()._Requests.Emplace(InRequest);
     return InCamera;
 }
@@ -195,10 +203,14 @@ auto
     UCk_Utils_Camera_UE::
     Request_SetOrientationIntention(
         FCk_Handle_Camera& InCamera,
-        FVector InOrientationIntention)
+        FVector InOrientationIntention,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     InCamera.Get<ck::FFragment_Camera_Current>().Set_OrientationIntention(InOrientationIntention);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
@@ -206,7 +218,8 @@ auto
     UCk_Utils_Camera_UE::
     Request_SnapBoomRotation(
         FCk_Handle_Camera& InCamera,
-        FRotator InWorldRotation)
+        FRotator InWorldRotation,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     InWorldRotation.Roll = 0.0f;
@@ -216,6 +229,8 @@ auto
     Current._PovState._BoomArmRotation = InWorldRotation;
     Current._PovState._Initialized     = true;
 
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
@@ -224,13 +239,16 @@ auto
     Request_Set_OrientationYawLimits(
         FCk_Handle_Camera& InCamera,
         float InMinYaw,
-        float InMaxYaw)
+        float InMaxYaw,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     auto& Limits = InCamera.Get<ck::FFragment_Camera_OrientationControl>()._Yaw._Limits;
-    UCk_Utils_FloatAttribute_UE::Request_Override(Limits, InMinYaw, ECk_MinMaxCurrent::Min);
-    UCk_Utils_FloatAttribute_UE::Request_Override(Limits, InMaxYaw, ECk_MinMaxCurrent::Max);
+    UCk_Utils_FloatAttribute_UE::Request_Override(Limits, InMinYaw, ECk_MinMaxCurrent::Min, {});
+    UCk_Utils_FloatAttribute_UE::Request_Override(Limits, InMaxYaw, ECk_MinMaxCurrent::Max, {});
 
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
@@ -238,64 +256,85 @@ auto
 
 auto
     UCk_Utils_Camera_UE::
-    Request_Set_UseFixedBoomRotation(FCk_Handle_Camera& InCamera, bool bInEnabled)
+    Request_Set_UseFixedBoomRotation(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     InCamera.Get<ck::FFragment_Camera_Current>().Set_UseFixedBoomRotation(bInEnabled);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
 auto
     UCk_Utils_Camera_UE::
-    Request_Set_ConstrainAspectRatio(FCk_Handle_Camera& InCamera, bool bInEnabled)
+    Request_Set_ConstrainAspectRatio(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     InCamera.Get<ck::FFragment_Camera_Current>().Set_ConstrainAspectRatio(bInEnabled);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
 auto
     UCk_Utils_Camera_UE::
-    Request_Set_HasOrientationControl(FCk_Handle_Camera& InCamera, bool bInEnabled)
+    Request_Set_HasOrientationControl(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     InCamera.Get<ck::FFragment_Camera_Current>().Set_HasOrientationControl(bInEnabled);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
 auto
     UCk_Utils_Camera_UE::
-    Request_Set_HasAutoReorient(FCk_Handle_Camera& InCamera, bool bInEnabled)
+    Request_Set_HasAutoReorient(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     InCamera.Get<ck::FFragment_Camera_Current>().Set_HasAutoReorient(bInEnabled);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
 auto
     UCk_Utils_Camera_UE::
-    Request_Set_HasCollision(FCk_Handle_Camera& InCamera, bool bInEnabled)
+    Request_Set_HasCollision(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     InCamera.Get<ck::FFragment_Camera_Current>().Set_HasCollision(bInEnabled);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
 auto
     UCk_Utils_Camera_UE::
-    Request_Set_UseAsyncTrace(FCk_Handle_Camera& InCamera, bool bInEnabled)
+    Request_Set_UseAsyncTrace(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     InCamera.Get<ck::FFragment_Camera_Current>().Set_UseAsyncTrace(bInEnabled);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
 auto
     UCk_Utils_Camera_UE::
-    Request_Set_UsePostProcess(FCk_Handle_Camera& InCamera, bool bInEnabled)
+    Request_Set_UsePostProcess(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
     InCamera.Get<ck::FFragment_Camera_Current>().Set_UsePostProcess(bInEnabled);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
     return InCamera;
 }
 
@@ -328,7 +367,7 @@ namespace camera_materialize_detail
         if (auto Existing = UCk_Utils_FloatAttribute_UE::TryGet(InOwner, InTag);
             ck::IsValid(Existing))
         {
-            UCk_Utils_FloatAttribute_UE::Request_Override(Existing, InBase, Current);
+            UCk_Utils_FloatAttribute_UE::Request_Override(Existing, InBase, Current, {});
             return Existing;
         }
 
@@ -340,8 +379,8 @@ namespace camera_materialize_detail
         if (auto Existing = UCk_Utils_FloatAttribute_UE::TryGet(InOwner, InTag);
             ck::IsValid(Existing))
         {
-            UCk_Utils_FloatAttribute_UE::Request_Override(Existing, static_cast<float>(InRange.Get_Min()), Min);
-            UCk_Utils_FloatAttribute_UE::Request_Override(Existing, static_cast<float>(InRange.Get_Max()), Max);
+            UCk_Utils_FloatAttribute_UE::Request_Override(Existing, static_cast<float>(InRange.Get_Min()), Min, {});
+            UCk_Utils_FloatAttribute_UE::Request_Override(Existing, static_cast<float>(InRange.Get_Max()), Max, {});
             return Existing;
         }
 
@@ -357,7 +396,7 @@ namespace camera_materialize_detail
         if (auto Existing = UCk_Utils_VectorAttribute_UE::TryGet(InOwner, InTag);
             ck::IsValid(Existing))
         {
-            UCk_Utils_VectorAttribute_UE::Request_Override(Existing, InBase, Current);
+            UCk_Utils_VectorAttribute_UE::Request_Override(Existing, InBase, Current, {});
             return Existing;
         }
 
@@ -369,7 +408,7 @@ namespace camera_materialize_detail
         if (auto Existing = UCk_Utils_RotatorAttribute_UE::TryGet(InOwner, InTag);
             ck::IsValid(Existing))
         {
-            UCk_Utils_RotatorAttribute_UE::Request_Override(Existing, InBase, Current);
+            UCk_Utils_RotatorAttribute_UE::Request_Override(Existing, InBase, Current, {});
             return Existing;
         }
 
@@ -381,7 +420,7 @@ namespace camera_materialize_detail
         if (auto Existing = UCk_Utils_IntegerAttribute_UE::TryGet(InOwner, InTag);
             ck::IsValid(Existing))
         {
-            UCk_Utils_IntegerAttribute_UE::Request_Override(Existing, InBase, Current);
+            UCk_Utils_IntegerAttribute_UE::Request_Override(Existing, InBase, Current, {});
             return Existing;
         }
 

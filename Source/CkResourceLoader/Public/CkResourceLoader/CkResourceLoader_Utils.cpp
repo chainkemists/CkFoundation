@@ -10,12 +10,16 @@ auto
     Request_LoadObject(
         const FCk_Handle& InHandle,
         const FCk_Request_ResourceLoader_LoadObject& InRequest,
-        const FCk_Delegate_ResourceLoader_OnObjectLoaded& InDelegate)
+        const FCk_Delegate_ResourceLoader_OnObjectLoaded& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> void
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
     CK_CALLSTACK_RECORD(ck::FFragment_ResourceLoader_Requests, RequestEntity);
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     RequestEntity.AddOrGet<ck::FFragment_ResourceLoader_Requests>()._Requests.Emplace(InRequest);
 
@@ -27,12 +31,16 @@ auto
     Request_LoadObjectBatch(
         const FCk_Handle& InHandle,
         const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest,
-        const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate)
+        const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> void
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
     CK_CALLSTACK_RECORD(ck::FFragment_ResourceLoader_Requests, RequestEntity);
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     RequestEntity.AddOrGet<ck::FFragment_ResourceLoader_Requests>()._Requests.Emplace(InRequest);
 

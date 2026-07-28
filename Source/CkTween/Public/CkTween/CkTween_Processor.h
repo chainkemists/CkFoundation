@@ -6,6 +6,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkEcsExt/Transform/CkTransform_Processor.h"
@@ -79,6 +80,7 @@ namespace ck
         FCk_Handle_Tween,
         ck::TReadWrite<FFragment_Tween_Current>,
         ck::TReadOnly<FFragment_Tween_Requests>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -95,35 +97,63 @@ namespace ck
             const FFragment_Tween_Requests& InRequestsComp) const -> void;
 
     private:
+        // Pause/Resume/Stop reject requests that arrive in a state they cannot act on, so every
+        // overload reports its outcome rather than letting the drain assume success.
         static auto
     	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
-            const FCk_Request_Tween_Pause& InRequest) -> void;
+            const FCk_Request_Tween_Pause& InRequest) -> ECk_Request_OperationResult;
 
         static auto
     	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
-            const FCk_Request_Tween_Resume& InRequest) -> void;
+            const FCk_Request_Tween_Resume& InRequest) -> ECk_Request_OperationResult;
 
         static auto
     	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
-            const FCk_Request_Tween_Stop& InRequest) -> void;
+            const FCk_Request_Tween_Stop& InRequest) -> ECk_Request_OperationResult;
 
         static auto
     	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
-            const FCk_Request_Tween_Restart& InRequest) -> void;
+            const FCk_Request_Tween_Restart& InRequest) -> ECk_Request_OperationResult;
 
         static auto
     	DoHandleRequest(
             HandleType InHandle,
             FFragment_Tween_Current& InCurrent,
-            const FCk_Request_Tween_SetTimeMultiplier& InRequest) -> void;
+            const FCk_Request_Tween_SetTimeMultiplier& InRequest) -> ECk_Request_OperationResult;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed tween's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKTWEEN_API FProcessor_Tween_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Tween_CancelPendingRequests,
+        FCk_Handle_Tween,
+        ck::TReadOnly<FFragment_Tween_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Tween_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

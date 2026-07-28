@@ -10,9 +10,11 @@
 
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderStatus_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RenderStatus_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -44,12 +46,19 @@ namespace ck
     {
         algo::ForEachRequest(InRequestsComp._Requests, [&](const auto& InRequest)
         {
+            // DoHandleRequest below is void and has no rejection path, so reaching the line after the
+            // call IS the success condition.
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
             DoHandleRequest(InHandle, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             {
                 InRequest.GetAndDestroyRequestHandle();
             }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         });
 
         InHandle.Remove<MarkedDirtyBy>();
@@ -147,6 +156,19 @@ namespace ck
 
         UUtils_Signal_OnRenderedActorsQueried::Broadcast(InHandle, MakePayload(RenderedActorsList,
             UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, ECk_Recursion::NotRecursive, IgnoreSucceededFailed)));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_RenderStatus_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_RenderStatus_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

@@ -123,7 +123,8 @@ auto
     UCk_Utils_Sfx_UE::
     Request_PlayAttached(
         FCk_Handle_Sfx& InSfxHandle,
-        const FCk_Request_Sfx_PlayAttached& InRequest)
+        const FCk_Request_Sfx_PlayAttached& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Sfx
 {
     SCOPE_CYCLE_COUNTER(STAT_Fx_SfxSpawnAttached);
@@ -158,6 +159,9 @@ auto
 
     INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
 
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InSfxHandle, ECk_Request_OperationResult::Succeeded);
+
     return InSfxHandle;
 }
 
@@ -165,7 +169,8 @@ auto
     UCk_Utils_Sfx_UE::
     Request_PlayAtLocation(
         FCk_Handle_Sfx& InSfxHandle,
-        const FCk_Request_Sfx_PlayAtLocation& InRequest)
+        const FCk_Request_Sfx_PlayAtLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Sfx
 {
     SCOPE_CYCLE_COUNTER(STAT_Fx_SfxSpawnAtLocation);
@@ -196,6 +201,9 @@ auto
     );
 
     INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InSfxHandle, ECk_Request_OperationResult::Succeeded);
 
     return InSfxHandle;
 }

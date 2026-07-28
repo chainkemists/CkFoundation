@@ -40,6 +40,7 @@ namespace ck
             TReadWrite<FFragment_AudioDirector_Current>,
             TReadWrite<FFragment_AudioDirector_Requests>,
             TExclude<FTag_AudioDirector_NeedsSetup>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -114,6 +115,32 @@ namespace ck
             const TOptional<FCk_Time>& InDirectorDefault,
             FCk_Handle_AudioTrack InTrackHandle,
             bool InIsFadeIn) -> FCk_Time;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed director's still-
+    // queued requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKAUDIO_API FProcessor_AudioDirector_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_AudioDirector_CancelPendingRequests,
+        FCk_Handle_AudioDirector,
+        ck::TReadOnly<FFragment_AudioDirector_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_AudioDirector_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

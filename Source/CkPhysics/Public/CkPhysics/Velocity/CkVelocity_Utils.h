@@ -8,6 +8,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkPhysics/Velocity/CkVelocity_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -106,7 +107,8 @@ public:
     static auto
     Request_OverrideVelocity(
         UPARAM(ref) FCk_Handle_Velocity& InHandle,
-        const FVector& InNewVelocity) -> void;
+        const FVector& InNewVelocity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -296,21 +298,25 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Velocity|BulkModifier",
-              DisplayName="Request Add Bulk Velocity Modifier Target")
+              DisplayName="Request Add Bulk Velocity Modifier Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_AddTarget(
         UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Request_BulkVelocityModifier_AddTarget& InRequest);
+        const FCk_Request_BulkVelocityModifier_AddTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Velocity|BulkModifier",
-              DisplayName="Request Remove Bulk Velocity Modifier Target")
+              DisplayName="Request Remove Bulk Velocity Modifier Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_RemoveTarget(
         UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest);
+        const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 private:
     static void

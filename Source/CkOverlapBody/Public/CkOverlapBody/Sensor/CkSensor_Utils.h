@@ -8,6 +8,7 @@
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkSensor_Utils.generated.h"
@@ -308,19 +309,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "[Ck][Sensor] Request Enable/Disable")
+              DisplayName = "[Ck][Sensor] Request Enable/Disable",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Sensor
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
-        const FCk_Request_Sensor_EnableDisable& InRequest);
+        const FCk_Request_Sensor_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "[Ck][Sensor] Request Resize")
+              DisplayName = "[Ck][Sensor] Request Resize",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Sensor
     Request_Resize(
         UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
-        const FCk_Request_Sensor_Resize& InRequest);
+        const FCk_Request_Sensor_Resize& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

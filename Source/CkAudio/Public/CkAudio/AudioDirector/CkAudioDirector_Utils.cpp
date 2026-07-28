@@ -96,14 +96,19 @@ auto
     UCk_Utils_AudioDirector_UE::
     Request_AddTrack(
         FCk_Handle_AudioDirector& InDirector,
-        const FCk_Fragment_AudioTrack_ParamsData& InTrackParams)
+        const FCk_Fragment_AudioTrack_ParamsData& InTrackParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> FCk_Handle_AudioDirector
 {
     ck::audio::VeryVerbose(TEXT("Requesting to add track [{}] to AudioDirector [{}]"),
         InTrackParams.Get_TrackName(), InDirector);
 
-    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(
-        FCk_Request_AudioDirector_AddTrack{InTrackParams});
+    auto Request = FCk_Request_AudioDirector_AddTrack{InTrackParams};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(Request);
 
     return InDirector;
 }
@@ -112,11 +117,15 @@ auto
     UCk_Utils_AudioDirector_UE::
     Request_StartTrack(
         FCk_Handle_AudioDirector& InDirector,
-        const FCk_Request_AudioDirector_StartTrack& InRequest)
+        const FCk_Request_AudioDirector_StartTrack& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> FCk_Handle_AudioDirector
 {
     ck::audio::Verbose(TEXT("Requesting to start track [{}] on AudioDirector [{}]"),
         InRequest.Get_TrackName(), InDirector);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(InRequest);
 
@@ -128,7 +137,8 @@ auto
     Request_StartTrack(
         FCk_Handle_AudioDirector& InDirector,
         FName InTrackName,
-        TOptional<FCk_Time> InFadeInTime)
+        TOptional<FCk_Time> InFadeInTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> FCk_Handle_AudioDirector
 {
     auto Request = FCk_Request_AudioDirector_StartTrack{InTrackName};
@@ -137,7 +147,7 @@ auto
         Request.Set_FadeInTime(InFadeInTime);
     }
 
-    return Request_StartTrack(InDirector, Request);
+    return Request_StartTrack(InDirector, Request, InDelegate);
 }
 
 auto
@@ -145,10 +155,11 @@ auto
     Request_StopTrack(
         FCk_Handle_AudioDirector& InDirector,
         FName InTrackName,
-        FCk_Time InFadeOutTime)
+        FCk_Time InFadeOutTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> FCk_Handle_AudioDirector
 {
-    return Request_StopTrack(InDirector, InTrackName, TOptional<FCk_Time>{InFadeOutTime});
+    return Request_StopTrack(InDirector, InTrackName, TOptional<FCk_Time>{InFadeOutTime}, InDelegate);
 }
 
 auto
@@ -156,7 +167,8 @@ auto
     Request_StopTrack(
         FCk_Handle_AudioDirector& InDirector,
         FName InTrackName,
-        TOptional<FCk_Time> InFadeOutTime)
+        TOptional<FCk_Time> InFadeOutTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> FCk_Handle_AudioDirector
 {
     ck::audio::Verbose(TEXT("Requesting to stop track [{}] on AudioDirector [{}]"),
@@ -168,6 +180,9 @@ auto
         Request.Set_FadeOutTime(InFadeOutTime);
     }
 
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
     InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(Request);
 
     return InDirector;
@@ -177,17 +192,19 @@ auto
     UCk_Utils_AudioDirector_UE::
     Request_StopAllTracks(
         FCk_Handle_AudioDirector& InDirector,
-        FCk_Time InFadeOutTime)
+        FCk_Time InFadeOutTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> FCk_Handle_AudioDirector
 {
-    return Request_StopAllTracks(InDirector, TOptional<FCk_Time>{InFadeOutTime});
+    return Request_StopAllTracks(InDirector, TOptional<FCk_Time>{InFadeOutTime}, InDelegate);
 }
 
 auto
     UCk_Utils_AudioDirector_UE::
     Request_StopAllTracks(
         FCk_Handle_AudioDirector& InDirector,
-        TOptional<FCk_Time> InFadeOutTime)
+        TOptional<FCk_Time> InFadeOutTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> FCk_Handle_AudioDirector
 {
     ck::audio::Verbose(TEXT("Requesting to stop all tracks on AudioDirector [{}]"), InDirector);
@@ -197,6 +214,9 @@ auto
     {
         Request.Set_FadeOutTime(InFadeOutTime);
     }
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
 
     InDirector.AddOrGet<ck::FFragment_AudioDirector_Requests>()._Requests.Emplace(Request);
 

@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkProbeTrace_Utils.generated.h"
 
@@ -121,11 +122,13 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ProbeTrace",
-        DisplayName="[Ck][ProbeTrace] Request Enable/Disable")
+        DisplayName="[Ck][ProbeTrace] Request Enable/Disable",
+        meta=(AutoCreateRefTerm="InDelegate"))
     static FCk_Handle_ProbeTrace
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_ProbeTrace& InProbeTrace,
-        const FCk_Request_Probe_EnableDisable& InRequest);
+        const FCk_Request_Probe_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

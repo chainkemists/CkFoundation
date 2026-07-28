@@ -12,9 +12,11 @@
 #include <GeometryCollection/GeometryCollectionComponent.h>
 #include <PhysicsProxy/GeometryCollectionPhysicsProxy.h>
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollection_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollection_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollection_RemoveAllAnchors);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollection_CrumbleNonActiveClusters);
 
@@ -75,7 +77,11 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InParams, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InParams, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -91,26 +97,26 @@ namespace ck
             HandleType InHandle,
             const FFragment_GeometryCollection_Params& InParams,
             const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest)
-        -> void
+        -> bool
     {
         auto GC = InParams.Get_Params().Get_GeometryCollection();
 
         CK_LOG_ERROR_IF_NOT(ck::chaos, ck::IsValid(GC),
             TEXT("Unable to ApplyRadialStrain to GeometryCollection [{}] because the Geometry Collection Component [{}] is INVALID"),
             InHandle, GC)
-        { return; }
+        { return false; }
 
         const auto& Proxy = InParams.Get_Params().Get_GeometryCollection()->GetPhysicsProxy();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Proxy, ck::IsValid_Policy_NullptrOnly{}),
             TEXT("Unable to ApplyRadialStrain to GeometryCollection [{}] because the PhysProxy of Geometry Collection Component [{}] is INVALID"),
             InHandle, InParams.Get_Params().Get_GeometryCollection())
-        { return; }
+        { return false; }
 
         CK_ENSURE_IF_NOT(InRequest.Get_Radius() > 0.0f,
             TEXT("Unable to ApplyRadialStrain to GeometryCollection [{}] because the radius is zero"),
             InHandle)
-        { return; }
+        { return false; }
 
         const auto MaximumRadiusToUse = UCk_Utils_Chaos_Settings_UE::Get_MaximumRadialDamageDeltaRadiusPerFrame();
         auto MaybeNewRequest = InRequest;
@@ -182,8 +188,23 @@ namespace ck
 
         if (MaybeNewRequest.Get_IncrementalRadius() < InRequest.Get_Radius())
         {
-            UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InHandle, MaybeNewRequest);
+            UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InHandle, MaybeNewRequest, {});
         }
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GeometryCollection_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_GeometryCollection_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

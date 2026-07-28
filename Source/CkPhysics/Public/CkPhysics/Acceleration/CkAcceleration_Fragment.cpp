@@ -20,7 +20,7 @@ static struct FAccelerationRepHandlerRegistrar
             if (ck::Is_NOT_Valid(AccelerationHandle))
             { return ECk_Persistence_ApplyResult::NotReady; }
 
-            UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, New.Get<FCk_RepData_Acceleration>().Value);
+            UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, New.Get<FCk_RepData_Acceleration>().Value, {});
             return ECk_Persistence_ApplyResult::Applied;
         };
 

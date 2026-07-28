@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkJolt/Body/CkJoltBody_Fragment_Data.h"
@@ -94,27 +96,33 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltConstraint",
-              DisplayName="[Ck][JoltConstraint] Request Set Enabled")
+              DisplayName="[Ck][JoltConstraint] Request Set Enabled",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltConstraint
     Request_SetEnabled(
         UPARAM(ref) FCk_Handle_JoltConstraint& InConstraint,
-        const FCk_Request_JoltConstraint_SetEnabled& InRequest);
+        const FCk_Request_JoltConstraint_SetEnabled& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltConstraint",
-              DisplayName="[Ck][JoltConstraint] Request Set Distance Range")
+              DisplayName="[Ck][JoltConstraint] Request Set Distance Range",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltConstraint
     Request_Distance_SetRange(
         UPARAM(ref) FCk_Handle_JoltConstraint& InConstraint,
-        const FCk_Request_JoltConstraint_Distance_SetRange& InRequest);
+        const FCk_Request_JoltConstraint_Distance_SetRange& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltConstraint",
-              DisplayName="[Ck][JoltConstraint] Request Set Hinge Motor")
+              DisplayName="[Ck][JoltConstraint] Request Set Hinge Motor",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltConstraint
     Request_Hinge_SetMotor(
         UPARAM(ref) FCk_Handle_JoltConstraint& InConstraint,
-        const FCk_Request_JoltConstraint_Hinge_SetMotor& InRequest);
+        const FCk_Request_JoltConstraint_Hinge_SetMotor& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

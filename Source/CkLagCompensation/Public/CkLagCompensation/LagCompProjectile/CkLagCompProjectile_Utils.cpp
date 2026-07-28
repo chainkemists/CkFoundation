@@ -8,9 +8,13 @@ auto
     UCk_Utils_LagCompProjectile_UE::
     Request_LaunchCompensated(
         FCk_Handle_BallisticMotion& InHandle,
-        const FCk_Request_LagCompProjectile_LaunchCompensated& InRequest)
+        const FCk_Request_LagCompProjectile_LaunchCompensated& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_BallisticMotion
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_LagCompProjectile_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);

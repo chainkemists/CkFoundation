@@ -23,6 +23,7 @@ namespace ck
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             ck::TReadWrite<FFragment_CrowdAgent_MoveRequests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -80,6 +81,32 @@ namespace ck
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_SetMaxSpeed& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed agent's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKCROWD_API FProcessor_CrowdAgent_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_CrowdAgent_CancelPendingRequests,
+        FCk_Handle_CrowdAgent,
+        ck::TReadOnly<FFragment_CrowdAgent_MoveRequests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_CrowdAgent_MoveRequests& InRequestsComp)
+            -> void;
     };
 }
 

@@ -188,9 +188,13 @@ auto
     UCk_Utils_SceneNode_UE::
     Request_UpdateOffset(
         FCk_Handle_SceneNode& InSceneNode,
-        const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest)
+        const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_SceneNode
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InSceneNode.AddOrGet<ck::FFragment_SceneNode_Requests>()._Requests.Emplace(InRequest);
     return InSceneNode;
 }
@@ -198,12 +202,20 @@ auto
 auto
     UCk_Utils_SceneNode_UE::
     Request_Detach(
-        FCk_Handle_SceneNode& InSceneNode)
+        FCk_Handle_SceneNode& InSceneNode,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_SceneNode
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InSceneNode),
+    const auto SceneNodeIsValid = ck::IsValid(InSceneNode);
+
+    CK_ENSURE_IF_NOT(SceneNodeIsValid,
         TEXT("InSceneNode [{}] is INVALID. Unable to detach"), InSceneNode)
-    { return InSceneNode; }
+    {}
+    if (NOT SceneNodeIsValid)
+    {
+        InDelegate.ExecuteIfBound(InSceneNode, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InSceneNode;
+    }
 
     // The Transform fragment already holds the composed world pose, so removing parent / current / layer
     // below stops further composition and the world transform stays put without an explicit write.
@@ -218,6 +230,9 @@ auto
 
     RemoveExistingLayerTag(NodeAsTransform);
     NodeAsTransform.Try_Remove<ck::FTag_Transform_ExternallyDriven>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InSceneNode, ECk_Request_OperationResult::Succeeded);
 
     return InSceneNode;
 }

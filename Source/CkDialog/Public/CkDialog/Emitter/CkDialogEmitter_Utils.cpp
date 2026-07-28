@@ -135,10 +135,14 @@ auto
     UCk_Utils_DialogEmitter_UE::
     Request_Query(
         FCk_Handle_DialogEmitter& InEmitter,
-        FCk_Request_DialogEmitter_Query InRequest)
+        FCk_Request_DialogEmitter_Query InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_DialogEmitter
 {
     CK_CALLSTACK_RECORD(ck::FFragment_DialogEmitter_Requests, InEmitter);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InEmitter.AddOrGet<ck::FFragment_DialogEmitter_Requests>()._Requests.Emplace(InRequest);
 
@@ -149,13 +153,15 @@ auto
     UCk_Utils_DialogEmitter_UE::
     Request_QueryFollowUp(
         FCk_Handle_DialogEmitter& InEmitter,
-        FCk_Handle_DialogLine InPlayedLine)
+        FCk_Handle_DialogLine InPlayedLine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_DialogEmitter
 {
     // A missing exit link (or an already-invalid played line) is a NORMAL end-of-chain state, not a failure.
     if (ck::Is_NOT_Valid(InPlayedLine))
     {
         ck::dialog::Display(TEXT("Dialog QueryFollowUp on Emitter [{}]: invalid played line — no-op"), InEmitter);
+        InDelegate.ExecuteIfBound(InEmitter, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InEmitter;
     }
 
@@ -164,20 +170,25 @@ auto
     {
         ck::dialog::Display(TEXT("Dialog QueryFollowUp on Emitter [{}]: played line [{}] has no exit tag — no-op"),
             InEmitter, InPlayedLine);
+        InDelegate.ExecuteIfBound(InEmitter, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InEmitter;
     }
 
-    return Request_Query(InEmitter, FCk_Request_DialogEmitter_Query{LinkedEventTag});
+    return Request_Query(InEmitter, FCk_Request_DialogEmitter_Query{LinkedEventTag}, InDelegate);
 }
 
 auto
     UCk_Utils_DialogEmitter_UE::
     Request_StartCooldown(
         FCk_Handle_DialogEmitter& InEmitter,
-        FCk_Request_DialogEmitter_StartCooldown InRequest)
+        FCk_Request_DialogEmitter_StartCooldown InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_DialogEmitter
 {
     CK_CALLSTACK_RECORD(ck::FFragment_DialogEmitter_Requests, InEmitter);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InEmitter.AddOrGet<ck::FFragment_DialogEmitter_Requests>()._Requests.Emplace(InRequest);
 
@@ -188,13 +199,18 @@ auto
     UCk_Utils_DialogEmitter_UE::
     Request_ClearCooldown(
         FCk_Handle_DialogEmitter& InEmitter,
-        FCk_Handle_DialogLine InLine)
+        FCk_Handle_DialogLine InLine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_DialogEmitter
 {
     CK_CALLSTACK_RECORD(ck::FFragment_DialogEmitter_Requests, InEmitter);
 
-    InEmitter.AddOrGet<ck::FFragment_DialogEmitter_Requests>()._Requests.Emplace(
-        FCk_Request_DialogEmitter_ClearCooldown{InLine});
+    const auto Request = FCk_Request_DialogEmitter_ClearCooldown{InLine};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InEmitter.AddOrGet<ck::FFragment_DialogEmitter_Requests>()._Requests.Emplace(Request);
 
     return InEmitter;
 }
@@ -202,13 +218,18 @@ auto
 auto
     UCk_Utils_DialogEmitter_UE::
     Request_ClearAllCooldowns(
-        FCk_Handle_DialogEmitter& InEmitter)
+        FCk_Handle_DialogEmitter& InEmitter,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_DialogEmitter
 {
     CK_CALLSTACK_RECORD(ck::FFragment_DialogEmitter_Requests, InEmitter);
 
-    InEmitter.AddOrGet<ck::FFragment_DialogEmitter_Requests>()._Requests.Emplace(
-        FCk_Request_DialogEmitter_ClearAllCooldowns{});
+    const auto Request = FCk_Request_DialogEmitter_ClearAllCooldowns{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InEmitter.AddOrGet<ck::FFragment_DialogEmitter_Requests>()._Requests.Emplace(Request);
 
     return InEmitter;
 }

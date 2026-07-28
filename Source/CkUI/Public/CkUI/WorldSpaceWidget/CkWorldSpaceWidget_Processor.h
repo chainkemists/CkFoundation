@@ -68,6 +68,7 @@ namespace ck
             ck::TReadWrite<FFragment_WorldSpaceWidget_Current>,
             ck::TReadWrite<FFragment_WorldSpaceWidget_Params>,
             ck::TReadWrite<FFragment_WorldSpaceWidget_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -115,6 +116,32 @@ namespace ck
             FFragment_WorldSpaceWidget_Current& InCurrent,
             FFragment_WorldSpaceWidget_Params& InParams,
             const FCk_Request_WorldSpaceWidget_SetOcclusionInfo& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed widget's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKUI_API FProcessor_WorldSpaceWidget_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_WorldSpaceWidget_CancelPendingRequests,
+        FCk_Handle_WorldSpaceWidget,
+        ck::TReadOnly<FFragment_WorldSpaceWidget_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_WorldSpaceWidget_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

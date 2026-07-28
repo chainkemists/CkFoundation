@@ -13,12 +13,14 @@
 
 #include <Components/SkeletalMeshComponent.h>
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Sensor_EndPlay);
 
@@ -172,23 +174,33 @@ namespace ck
             algo::ForEachRequest(InRequests._EnableDisableRequest,
             [&](const FFragment_Sensor_Requests::EnableDisableRequestType& InRequest) -> void
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }, policy::DontResetContainer{});
 
             algo::ForEachRequest(InRequests._ResizeRequest,
             [&](const FFragment_Sensor_Requests::ResizeRequestType& InRequest) -> void
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }, policy::DontResetContainer{});
 
             algo::ForEachRequest(InRequests._BeginOrEndOverlapRequests, ck::Visitor(
@@ -525,6 +537,20 @@ namespace ck
 
         UUtils_Signal_OnSensorEndOverlap_NonMarker::Broadcast(InSensorEntity, MakePayload(
             InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnEndOverlapPayload));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Sensor_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InSensorEntity,
+            const FFragment_Sensor_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InSensorEntity, InRequestsComp.Get_EnableDisableRequest());
+        request::FireCancelledForPending(InSensorEntity, InRequestsComp.Get_ResizeRequest());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

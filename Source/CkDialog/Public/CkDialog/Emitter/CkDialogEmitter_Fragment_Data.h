@@ -168,8 +168,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle_DialogEmitter, InEmitter,
     FCk_DialogEmitter_QueryResult, InResult);
 
-// The SAME type serves the per-request completion delegate and the emitter-wide signal, so an observer and a
-// requester see an identical payload.
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_DialogEmitter_OnCooldownStarted,
     FCk_Handle_DialogEmitter, InEmitter,
@@ -180,11 +178,6 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_DialogEmitter_OnCooldownEnded,
     FCk_Handle_DialogEmitter, InEmitter,
     FCk_Handle_DialogLine, InLine);
-
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_DialogEmitter_OnAllCooldownsCleared,
-    FCk_Handle_DialogEmitter, InEmitter,
-    int32, InNumCleared);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -242,8 +235,10 @@ private:
               meta = (AllowPrivateAccess = true))
     FGameplayTagContainer _ExtraFilterTags;
 
-    // Optional per-request completion callback, fired with THIS query's result. Unlike the emitter-wide
-    // BindTo_OnQueryCompleted it is correlated to the one request that carried it. Unbound is fine.
+    // Optional per-request RESULT callback, fired with THIS query's entries. Unlike the emitter-wide
+    // BindTo_OnQueryCompleted it is correlated to the one request that carried it, and unlike the generic
+    // request-completion delegate it answers "what did the query find" rather than "was it processed".
+    // Unbound is fine.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Delegate_DialogEmitter_OnQueryCompleted _OnComplete;
@@ -284,16 +279,10 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Dialog_CooldownDuration _DurationMode = ECk_Dialog_CooldownDuration::Timed;
 
-    // Fired once the cooldown is actually recorded. Unbound is fine — nothing is executed.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Delegate_DialogEmitter_OnCooldownStarted _OnComplete;
-
 public:
     CK_PROPERTY_GET(_Line);
     CK_PROPERTY_GET(_Duration);
     CK_PROPERTY(_DurationMode);
-    CK_PROPERTY(_OnComplete);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_StartCooldown, _Line, _Duration);
@@ -315,14 +304,8 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle_DialogLine _Line;
 
-    // Fired only when a cooldown was actually removed; clearing a line that was not cooling is a silent no-op.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Delegate_DialogEmitter_OnCooldownEnded _OnComplete;
-
 public:
     CK_PROPERTY_GET(_Line);
-    CK_PROPERTY(_OnComplete);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_DialogEmitter_ClearCooldown, _Line);
@@ -338,15 +321,6 @@ struct CKDIALOG_API FCk_Request_DialogEmitter_ClearAllCooldowns : public FCk_Req
 public:
     CK_GENERATED_BODY(FCk_Request_DialogEmitter_ClearAllCooldowns);
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_DialogEmitter_ClearAllCooldowns);
-
-private:
-    // Carries how many were cleared, so a caller can tell a real purge from a no-op.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Delegate_DialogEmitter_OnAllCooldownsCleared _OnComplete;
-
-public:
-    CK_PROPERTY(_OnComplete);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

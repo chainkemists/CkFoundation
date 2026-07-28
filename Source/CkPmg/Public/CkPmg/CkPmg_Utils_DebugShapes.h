@@ -3,6 +3,7 @@
 #include "CkPmg_Fragment_Data_DebugShapes.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkPmg_Utils_DebugShapes.generated.h"
 
@@ -77,70 +78,86 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName = "[Ck][Pmg][DebugShape] Request Set Color")
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Color",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Pmg_DebugShape
     Request_SetColor(
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetColor& InRequest);
+        const FCk_Request_Pmg_DebugShape_SetColor& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName = "[Ck][Pmg][DebugShape] Request Set Text")
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Text",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Pmg_DebugShape
     Request_SetText(
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
-        FString InNewText);
+        FString InNewText,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName = "[Ck][Pmg][DebugShape] Request Set Line Thickness")
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Line Thickness",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Pmg_DebugShape
     Request_SetLineThickness(
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest);
+        const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName = "[Ck][Pmg][DebugShape] Request Set Draw Lines")
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Draw Lines",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Pmg_DebugShape
     Request_SetDrawLines(
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest);
+        const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName = "[Ck][Pmg][DebugShape] Request Set Duration")
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Duration",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Pmg_DebugShape
     Request_SetDuration(
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetDuration& InRequest);
+        const FCk_Request_Pmg_DebugShape_SetDuration& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName = "[Ck][Pmg][DebugShape] Request Set Render Mode")
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Render Mode",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Pmg_DebugShape
     Request_SetRenderMode(
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest);
+        const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Show/hide toggle covering the filled mesh AND the wireframe overlay: True → DoubleSided,
     // False → Hidden. Per-frame consumers should track last-applied state and only call on an
     // actual change rather than re-requesting every tick.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName = "[Ck][Pmg][DebugShape] Request Set Visible")
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Visible",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Pmg_DebugShape
     Request_SetVisible(
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
-        bool InIsVisible);
+        bool InIsVisible,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|DebugShape",
-              DisplayName = "[Ck][Pmg][DebugShape] Request Set Enable Collision")
+              DisplayName = "[Ck][Pmg][DebugShape] Request Set Enable Collision",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Pmg_DebugShape
     Request_SetEnableCollision(
         UPARAM(ref) FCk_Handle_Pmg_DebugShape& InHandle,
-        const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest);
+        const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

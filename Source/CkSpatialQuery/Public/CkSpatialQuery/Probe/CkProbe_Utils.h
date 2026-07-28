@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkShapes/CkShapes_Common.h"   // FCk_AnyShape (Create's shape param)
 
@@ -180,47 +181,53 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Request Enable/Disable DebugDraw",
-        meta=(DevelopmentOnly))
+        meta=(DevelopmentOnly, AutoCreateRefTerm="InDelegate"))
     static FCk_Handle_Probe
     Request_EnableDisableDebugDraw(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
-        ECk_EnableDisable InEnableDisable = ECk_EnableDisable::Enable);
+        ECk_EnableDisable InEnableDisable,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Request Begin Overlap",
-        meta=(DevelopmentOnly))
+        meta=(DevelopmentOnly, AutoCreateRefTerm="InDelegate"))
     static FCk_Handle_Probe
     Request_BeginOverlap(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_BeginOverlap& InRequest);
+        const FCk_Request_Probe_BeginOverlap& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Request Overlap Updated",
-        meta=(DevelopmentOnly))
+        meta=(DevelopmentOnly, AutoCreateRefTerm="InDelegate"))
     static FCk_Handle_Probe
     Request_OverlapUpdated(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_OverlapUpdated& InRequest);
+        const FCk_Request_Probe_OverlapUpdated& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Request End Overlap",
-        meta=(DevelopmentOnly))
+        meta=(DevelopmentOnly, AutoCreateRefTerm="InDelegate"))
     static FCk_Handle_Probe
     Request_EndOverlap(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_EndOverlap& InRequest);
+        const FCk_Request_Probe_EndOverlap& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request Enable/Disable")
+        DisplayName="[Ck][Probe] Request Enable/Disable",
+        meta=(AutoCreateRefTerm="InDelegate"))
     static FCk_Handle_Probe
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_EnableDisable& InRequest);
+        const FCk_Request_Probe_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

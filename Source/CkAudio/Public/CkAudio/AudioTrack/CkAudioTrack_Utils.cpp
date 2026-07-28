@@ -125,14 +125,19 @@ auto
     UCk_Utils_AudioTrack_UE::
     Request_Play(
         FCk_Handle_AudioTrack& InTrack,
-        FCk_Time InFadeInTime)
+        FCk_Time InFadeInTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AudioTrack
 {
     ck::audio::VeryVerbose(TEXT("Requesting play for AudioTrack [{}] with fade time [{}s]"),
         Get_TrackName(InTrack), InFadeInTime.Get_Seconds());
 
-    InTrack.AddOrGet<ck::FFragment_AudioTrack_Requests>()._Requests.Emplace(
-        FCk_Request_AudioTrack_Play{InFadeInTime});
+    auto Request = FCk_Request_AudioTrack_Play{InFadeInTime};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTrack.AddOrGet<ck::FFragment_AudioTrack_Requests>()._Requests.Emplace(Request);
 
     return InTrack;
 }
@@ -141,14 +146,19 @@ auto
     UCk_Utils_AudioTrack_UE::
     Request_Stop(
         FCk_Handle_AudioTrack& InTrack,
-        FCk_Time InFadeOutTime)
+        FCk_Time InFadeOutTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AudioTrack
 {
     ck::audio::VeryVerbose(TEXT("Requesting stop for AudioTrack [{}] with fade time [{}s]"),
         Get_TrackName(InTrack), InFadeOutTime.Get_Seconds());
 
-    InTrack.AddOrGet<ck::FFragment_AudioTrack_Requests>()._Requests.Emplace(
-        FCk_Request_AudioTrack_Stop{InFadeOutTime});
+    auto Request = FCk_Request_AudioTrack_Stop{InFadeOutTime};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTrack.AddOrGet<ck::FFragment_AudioTrack_Requests>()._Requests.Emplace(Request);
 
     return InTrack;
 }
@@ -158,14 +168,19 @@ auto
     Request_SetVolume(
         FCk_Handle_AudioTrack& InTrack,
         float InTargetVolume,
-        FCk_Time InFadeTime)
+        FCk_Time InFadeTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AudioTrack
 {
     ck::audio::VeryVerbose(TEXT("Requesting volume change for AudioTrack [{}] to [{}] over [{}s]"),
         Get_TrackName(InTrack), InTargetVolume, InFadeTime.Get_Seconds());
 
-    InTrack.AddOrGet<ck::FFragment_AudioTrack_Requests>()._Requests.Emplace(
-        FCk_Request_AudioTrack_SetVolume{InTargetVolume, InFadeTime});
+    auto Request = FCk_Request_AudioTrack_SetVolume{InTargetVolume, InFadeTime};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTrack.AddOrGet<ck::FFragment_AudioTrack_Requests>()._Requests.Emplace(Request);
 
     return InTrack;
 }

@@ -147,10 +147,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_SetSleepState(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_SetSleepState& InRequest)
+        const FCk_Request_JoltBody_SetSleepState& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 
@@ -161,10 +165,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_AddForce(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddForce& InRequest)
+        const FCk_Request_JoltBody_AddForce& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 
@@ -175,10 +183,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_AddForceAtLocation(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddForceAtLocation& InRequest)
+        const FCk_Request_JoltBody_AddForceAtLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 
@@ -189,10 +201,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_AddTorque(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddTorque& InRequest)
+        const FCk_Request_JoltBody_AddTorque& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 
@@ -203,10 +219,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_AddImpulse(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddImpulse& InRequest)
+        const FCk_Request_JoltBody_AddImpulse& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 
@@ -217,10 +237,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_AddImpulseAtLocation(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddImpulseAtLocation& InRequest)
+        const FCk_Request_JoltBody_AddImpulseAtLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 
@@ -231,10 +255,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_AddAngularImpulse(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddAngularImpulse& InRequest)
+        const FCk_Request_JoltBody_AddAngularImpulse& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 
@@ -245,10 +273,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_SetLinearVelocity(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_SetLinearVelocity& InRequest)
+        const FCk_Request_JoltBody_SetLinearVelocity& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 
@@ -259,10 +291,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_SetAngularVelocity(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_SetAngularVelocity& InRequest)
+        const FCk_Request_JoltBody_SetAngularVelocity& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 
@@ -273,10 +309,14 @@ auto
     UCk_Utils_JoltBody_UE::
     Request_Teleport(
         FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_Teleport& InRequest)
+        const FCk_Request_JoltBody_Teleport& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltBody
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltBody_Requests, InJoltBody);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltBody.AddOrGet<ck::FFragment_JoltBody_Requests>()._Requests.Emplace(InRequest);
 

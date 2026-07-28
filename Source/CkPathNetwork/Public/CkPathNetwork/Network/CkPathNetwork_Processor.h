@@ -2,6 +2,8 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
+#include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkPathNetwork/Network/CkPathNetwork_Fragment.h"
 
@@ -42,6 +44,7 @@ namespace ck
         ck::TReadWrite<FFragment_PathNetwork_Params>,
         ck::TReadWrite<FFragment_PathNetwork_Graph>,
         ck::TReadWrite<FFragment_PathNetwork_Requests>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -68,6 +71,32 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed network's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKPATHNETWORK_API FProcessor_PathNetwork_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_PathNetwork_CancelPendingRequests,
+        FCk_Handle_PathNetwork,
+        ck::TReadOnly<FFragment_PathNetwork_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_PathNetwork_Requests& InRequestsComp)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // Each FindRoute runs the full plan: overlay candidates -> A* over FRouteGraph -> navmesh
     // validation/reprice loop -> corridor compile (side-keeping offsets) -> signals. Requests past
     // the per-frame budget (_MaxRouteQueriesPerFrame) are re-queued verbatim and retried next tick.
@@ -77,6 +106,7 @@ namespace ck
         ck::TReadOnly<FFragment_PathNetworkFollower_Params>,
         ck::TReadWrite<FFragment_PathNetworkFollower_Corridor>,
         ck::TReadWrite<FFragment_PathNetworkFollower_Requests>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -96,14 +126,43 @@ namespace ck
             FFragment_PathNetworkFollower_Requests& InRequests) const -> void;
 
     private:
+        // Every DoHandleRequest failure path (FailRoute) leaves OutResult untouched — the caller
+        // primes it Failed before the call, mirroring MakeCompletionGuard's default-Failed contract.
         auto DoHandleRequest(
             HandleType InHandle,
             const FFragment_PathNetworkFollower_Params& InParams,
             FFragment_PathNetworkFollower_Corridor& InCorridor,
-            const FCk_Request_PathNetworkFollower_FindRoute& InRequest) const -> void;
+            const FCk_Request_PathNetworkFollower_FindRoute& InRequest,
+            ECk_Request_OperationResult& OutResult) const -> void;
 
     private:
         mutable int32 _BudgetRemainingThisTick = 0;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed follower's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKPATHNETWORK_API FProcessor_PathNetworkFollower_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_PathNetworkFollower_CancelPendingRequests,
+        FCk_Handle_PathNetworkFollower,
+        ck::TReadOnly<FFragment_PathNetworkFollower_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_PathNetworkFollower_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

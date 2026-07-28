@@ -15,6 +15,7 @@ namespace ck
             FCk_Handle_EntityTagQuery,
             ck::TReadWrite<FFragment_EntityTagQuery_Current>,
             ck::TReadWrite<FFragment_EntityTagQuery_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -39,6 +40,32 @@ namespace ck
         DoHandleRequest(
             FFragment_EntityTagQuery_Current& InCurrent,
             const FCk_Request_EntityTagQuery_RemoveRequirement& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed query's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKENTITYTAG_API FProcessor_EntityTagQuery_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_EntityTagQuery_CancelPendingRequests,
+        FCk_Handle_EntityTagQuery,
+        ck::TReadOnly<FFragment_EntityTagQuery_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityTagQuery_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

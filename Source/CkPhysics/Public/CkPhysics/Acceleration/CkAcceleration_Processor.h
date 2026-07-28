@@ -152,6 +152,7 @@ namespace ck
             FProcessor_BulkAccelerationModifier_HandleRequests,
             ck::TReadOnly<FFragment_BulkAccelerationModifier_Params>,
             ck::TReadWrite<FFragment_BulkAccelerationModifier_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -180,6 +181,31 @@ namespace ck
             HandleType InHandle,
             const FFragment_BulkAccelerationModifier_Params& InParams,
             const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed modifier's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKPHYSICS_API FProcessor_BulkAccelerationModifier_CancelPendingRequests : public TProcessor<
+            FProcessor_BulkAccelerationModifier_CancelPendingRequests,
+            ck::TReadOnly<FFragment_BulkAccelerationModifier_Requests>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

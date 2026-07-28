@@ -48,7 +48,7 @@ auto
 
     auto ProbeHandle = Cast(InHandle);
 
-    Request_EnableDisable(ProbeHandle, FCk_Request_Probe_EnableDisable{InParams.Get_StartingState()});
+    Request_EnableDisable(ProbeHandle, FCk_Request_Probe_EnableDisable{InParams.Get_StartingState()}, {});
 
     return ProbeHandle;
 }
@@ -217,7 +217,8 @@ auto
     UCk_Utils_Probe_UE::
     Request_EnableDisableDebugDraw(
         FCk_Handle_Probe& InProbe,
-        ECk_EnableDisable InEnableDisable)
+        ECk_EnableDisable InEnableDisable,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Probe
 {
     switch(InEnableDisable)
@@ -234,6 +235,9 @@ auto
         }
     }
 
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InProbe, ECk_Request_OperationResult::Succeeded);
+
     return InProbe;
 }
 
@@ -243,9 +247,13 @@ auto
     UCk_Utils_Probe_UE::
     Request_BeginOverlap(
         FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_BeginOverlap& InRequest)
+        const FCk_Request_Probe_BeginOverlap& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Probe
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);
@@ -258,9 +266,13 @@ auto
     UCk_Utils_Probe_UE::
     Request_OverlapUpdated(
         FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_OverlapUpdated& InRequest)
+        const FCk_Request_Probe_OverlapUpdated& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Probe
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);
@@ -273,9 +285,13 @@ auto
     UCk_Utils_Probe_UE::
     Request_EndOverlap(
         FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_EndOverlap& InRequest)
+        const FCk_Request_Probe_EndOverlap& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Probe
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);
@@ -288,9 +304,13 @@ auto
     UCk_Utils_Probe_UE::
     Request_EnableDisable(
         FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_EnableDisable& InRequest)
+        const FCk_Request_Probe_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Probe
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
     {
         InContainer.Emplace(InRequest);

@@ -3,6 +3,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
@@ -266,7 +267,15 @@ namespace ck
         ck::algo::ForEachRequest(RequestsCopy, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
+                // Every DoHandleRequest overload's internal CK_ENSURE_IF_NOT early-outs guard malformed
+                // state (missing SKMC, null asset, etc), not a legitimate request-rejection outcome, so
+                // reaching the line after the call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = ck::MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InCurrent, InAnimState, InPoseSource, InCustomData, InTransform, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }), ck::policy::DontResetContainer{});
     }
 
@@ -1211,10 +1220,24 @@ namespace ck
             : ECk_IskmProxy_PoseSource::Sequence;
         InHandle.Remove<FTag_IskmProxy_Ragdolling>();
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_IskmProxy_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IskmProxy_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
+    }
 }
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_SocketFollower_SyncTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IskmProxy_SocketFollower_SyncDescendants);

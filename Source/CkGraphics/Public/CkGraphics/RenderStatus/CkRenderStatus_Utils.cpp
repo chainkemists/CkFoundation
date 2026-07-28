@@ -84,9 +84,13 @@ auto
         FCk_Handle& InHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate)
+        const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> void
 {
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
+
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
     RequestEntity.AddOrGet<ck::FFragment_RenderStatus_Requests>()._Requests.Add(InRequest);

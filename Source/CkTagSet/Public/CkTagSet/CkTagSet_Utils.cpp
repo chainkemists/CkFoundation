@@ -163,19 +163,36 @@ auto
     UCk_Utils_TagSet_UE::
     Request_AddTags(
         FCk_Handle_TagSet& InTagSet,
-        const FGameplayTagContainer& InTags)
+        const FGameplayTagContainer& InTags,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTagSet),
+    const auto TagSetIsValid = ck::IsValid(InTagSet);
+    CK_ENSURE_IF_NOT(TagSetIsValid,
         TEXT("Request_AddTags: Invalid TagSet handle [{}].{}"), InTagSet, ck::Context(InTagSet))
-    { return; }
+    {}
+    if (NOT TagSetIsValid)
+    {
+        InDelegate.ExecuteIfBound(InTagSet, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InTagSet),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InTagSet);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_AddTags: No authority over entity [{}].{}"), InTagSet, ck::Context(InTagSet))
-    { return; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InTagSet, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
-    InTagSet.AddOrGet<ck::FFragment_TagSet_Requests>()._Requests.Emplace(
-        FCk_Request_TagSet_AddTags{InTags});
+    const auto Request = FCk_Request_TagSet_AddTags{InTags};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTagSet.AddOrGet<ck::FFragment_TagSet_Requests>()._Requests.Emplace(Request);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -184,12 +201,13 @@ auto
     UCk_Utils_TagSet_UE::
     Request_AddTag(
         FCk_Handle_TagSet& InTagSet,
-        FGameplayTag InTag)
+        FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto Container = FGameplayTagContainer{};
     Container.AddTag(InTag);
-    Request_AddTags(InTagSet, Container);
+    Request_AddTags(InTagSet, Container, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -198,19 +216,36 @@ auto
     UCk_Utils_TagSet_UE::
     Request_RemoveTags(
         FCk_Handle_TagSet& InTagSet,
-        const FGameplayTagContainer& InTags)
+        const FGameplayTagContainer& InTags,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTagSet),
+    const auto TagSetIsValid = ck::IsValid(InTagSet);
+    CK_ENSURE_IF_NOT(TagSetIsValid,
         TEXT("Request_RemoveTags: Invalid TagSet handle [{}].{}"), InTagSet, ck::Context(InTagSet))
-    { return; }
+    {}
+    if (NOT TagSetIsValid)
+    {
+        InDelegate.ExecuteIfBound(InTagSet, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InTagSet),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InTagSet);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_RemoveTags: No authority over entity [{}].{}"), InTagSet, ck::Context(InTagSet))
-    { return; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InTagSet, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
-    InTagSet.AddOrGet<ck::FFragment_TagSet_Requests>()._Requests.Emplace(
-        FCk_Request_TagSet_RemoveTags{InTags});
+    const auto Request = FCk_Request_TagSet_RemoveTags{InTags};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTagSet.AddOrGet<ck::FFragment_TagSet_Requests>()._Requests.Emplace(Request);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -219,12 +254,13 @@ auto
     UCk_Utils_TagSet_UE::
     Request_RemoveTag(
         FCk_Handle_TagSet& InTagSet,
-        FGameplayTag InTag)
+        FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto Container = FGameplayTagContainer{};
     Container.AddTag(InTag);
-    Request_RemoveTags(InTagSet, Container);
+    Request_RemoveTags(InTagSet, Container, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

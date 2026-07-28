@@ -61,7 +61,7 @@ auto
     RecordOfMinimaps_Utils::AddIfMissing(InLifetimeOwner, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfMinimaps_Utils::Request_Connect(InLifetimeOwner, NewMinimapEntity, ECk_Record_LabelRequirementPolicy::Optional);
 
-    Request_SetObserver(NewMinimapEntity, InLifetimeOwner);
+    Request_SetObserver(NewMinimapEntity, InLifetimeOwner, {});
 
     return NewMinimapEntity;
 }
@@ -222,13 +222,18 @@ auto
     UCk_Utils_Minimap_UE::
     Request_SetViewExtent(
         FCk_Handle_Minimap& InMinimap,
-        float InViewExtent)
+        float InViewExtent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Minimap
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Minimap_Requests, InMinimap);
 
-    InMinimap.AddOrGet<ck::FFragment_Minimap_Requests>()._Requests.Emplace(
-        FCk_Request_Minimap_SetViewExtent{InViewExtent});
+    const auto Request = FCk_Request_Minimap_SetViewExtent{InViewExtent};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InMinimap.AddOrGet<ck::FFragment_Minimap_Requests>()._Requests.Emplace(Request);
 
     return InMinimap;
 }
@@ -237,10 +242,14 @@ auto
     UCk_Utils_Minimap_UE::
     Request_SetCategoryFilter(
         FCk_Handle_Minimap& InMinimap,
-        const FCk_Request_Minimap_SetCategoryFilter& InRequest)
+        const FCk_Request_Minimap_SetCategoryFilter& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Minimap
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Minimap_Requests, InMinimap);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InMinimap.AddOrGet<ck::FFragment_Minimap_Requests>()._Requests.Emplace(InRequest);
 
@@ -251,13 +260,18 @@ auto
     UCk_Utils_Minimap_UE::
     Request_SetObserver(
         FCk_Handle_Minimap& InMinimap,
-        FCk_Handle InObserver)
+        FCk_Handle InObserver,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Minimap
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Minimap_Requests, InMinimap);
 
-    InMinimap.AddOrGet<ck::FFragment_Minimap_Requests>()._Requests.Emplace(
-        FCk_Request_Minimap_SetObserver{InObserver});
+    const auto Request = FCk_Request_Minimap_SetObserver{InObserver};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InMinimap.AddOrGet<ck::FFragment_Minimap_Requests>()._Requests.Emplace(Request);
 
     return InMinimap;
 }
@@ -266,13 +280,18 @@ auto
     UCk_Utils_Minimap_UE::
     Request_SetRotationMode(
         FCk_Handle_Minimap& InMinimap,
-        ECk_Minimap_RotationMode InRotationMode)
+        ECk_Minimap_RotationMode InRotationMode,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Minimap
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Minimap_Requests, InMinimap);
 
-    InMinimap.AddOrGet<ck::FFragment_Minimap_Requests>()._Requests.Emplace(
-        FCk_Request_Minimap_SetRotationMode{InRotationMode});
+    const auto Request = FCk_Request_Minimap_SetRotationMode{InRotationMode};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InMinimap.AddOrGet<ck::FFragment_Minimap_Requests>()._Requests.Emplace(Request);
 
     return InMinimap;
 }
@@ -281,13 +300,18 @@ auto
     UCk_Utils_Minimap_UE::
     Request_SetFogOfWar(
         FCk_Handle_Minimap& InMinimap,
-        FCk_Handle_FogOfWar InFogOfWar)
+        FCk_Handle_FogOfWar InFogOfWar,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Minimap
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Minimap_Requests, InMinimap);
 
-    InMinimap.AddOrGet<ck::FFragment_Minimap_Requests>()._Requests.Emplace(
-        FCk_Request_Minimap_SetFogOfWar{InFogOfWar});
+    const auto Request = FCk_Request_Minimap_SetFogOfWar{InFogOfWar};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InMinimap.AddOrGet<ck::FFragment_Minimap_Requests>()._Requests.Emplace(Request);
 
     return InMinimap;
 }

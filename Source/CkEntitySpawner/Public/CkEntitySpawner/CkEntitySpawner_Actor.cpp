@@ -350,7 +350,7 @@ auto
 
     UCk_Utils_Transform_UE::Request_SetTransform(
         TransformHandle,
-        FCk_Request_Transform_SetTransform{GetActorTransform()});
+        FCk_Request_Transform_SetTransform{GetActorTransform()}, {});
 }
 #endif
 
@@ -427,10 +427,10 @@ auto
         TEXT("EntitySpawner [{}] could not resolve the TransientEntity for the current world."), this)
     { return; }
 
-    const auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(TransientEntity, _EntityScript, FInstancedStruct{});
+    const auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(TransientEntity, _EntityScript, FInstancedStruct{}, {});
     _RuntimeEntityHandle = PendingEntity.Get_EntityUnderConstruction();
     if (ck::IsValid(_RuntimeEntityHandle))
-    { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_RuntimeEntityHandle); }
+    { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_RuntimeEntityHandle, {}); }
 }
 
 auto

@@ -9,9 +9,11 @@
 #include "CkInteraction/InteractionResolver/CkInteractionResolver_Utils.h"
 #include "CkInteraction/InteractTarget/CkInteractTarget_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_InteractionResolver_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_InteractionResolver_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_InteractionResolver_Persistent);
 CK_REGISTER_PROCESSOR(ck::FProcessor_InteractionResolver_EndPlay);
 
@@ -46,12 +48,17 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }));
         });
     }
@@ -206,6 +213,19 @@ namespace ck
 
         ck::interaction::VeryVerbose(TEXT("Removed {} targets with channel [{}] from resolver [{}]"),
             TargetsToRemove.Num(), Channel, InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_InteractionResolver_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_InteractionResolver_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

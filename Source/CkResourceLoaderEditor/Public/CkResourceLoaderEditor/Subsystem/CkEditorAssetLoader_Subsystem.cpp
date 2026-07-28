@@ -88,6 +88,7 @@ auto
     (
         _AssetLoaderEntity,
         FCk_Request_ResourceLoader_LoadObjectBatch{SoftObjectReferences}.Set_LoadingPolicy(ECk_ResourceLoader_LoadingPolicy::Synchronous),
+        {},
         {}
     );
 

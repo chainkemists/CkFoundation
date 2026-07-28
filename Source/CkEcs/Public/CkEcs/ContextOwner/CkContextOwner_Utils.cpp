@@ -18,16 +18,29 @@ auto
     UCk_Utils_ContextOwner_UE::
     Request_Override(
         FCk_Handle& InEntity,
-        const FCk_Handle& InNewContextOwner)
+        const FCk_Handle& InNewContextOwner,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntity),
+    const auto EntityIsValid = ck::IsValid(InEntity);
+    CK_ENSURE_IF_NOT(EntityIsValid,
         TEXT("Cannot override context owner of invalid entity"))
-    { return; }
+    {}
+    if (NOT EntityIsValid)
+    {
+        InDelegate.ExecuteIfBound(InEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InNewContextOwner),
+    const auto NewContextOwnerIsValid = ck::IsValid(InNewContextOwner);
+    CK_ENSURE_IF_NOT(NewContextOwnerIsValid,
         TEXT("Cannot override context owner with invalid entity"))
-    { return; }
+    {}
+    if (NOT NewContextOwnerIsValid)
+    {
+        InDelegate.ExecuteIfBound(InEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     if (NOT Has(InEntity))
     {
@@ -37,7 +50,11 @@ auto
     const auto CurrentContextOwner = Get_ContextOwner(InEntity);
 
     if (CurrentContextOwner == InNewContextOwner)
-    { return; }
+    {
+        // Already the requested owner — the caller's intent holds, so this is a success, not a rejection.
+        InDelegate.ExecuteIfBound(InEntity, ECk_Request_OperationResult::Succeeded);
+        return;
+    }
 
     InEntity.Replace<ck::FFragment_ContextOwner>(InNewContextOwner);
 
@@ -55,19 +72,23 @@ auto
             // recursively update it
             if (DependentContextOwner == CurrentContextOwner)
             {
-                Request_Override(Dependent, InNewContextOwner);
+                Request_Override(Dependent, InNewContextOwner, {});
             }
         }
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InEntity, ECk_Request_OperationResult::Succeeded);
 }
 
 auto
     UCk_Utils_ContextOwner_UE::
     Request_OverrideToSelf(
-        FCk_Handle& InEntity)
+        FCk_Handle& InEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    Request_Override(InEntity, InEntity);
+    Request_Override(InEntity, InEntity, InDelegate);
 }
 
 auto

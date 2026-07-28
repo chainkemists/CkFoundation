@@ -55,7 +55,7 @@ auto
     { return {}; }
 
     // Standalone child: the lifetime owner is the observer (the entity whose position/view drives the heading)
-    Request_SetObserver(NewCompassEntity, InLifetimeOwner);
+    Request_SetObserver(NewCompassEntity, InLifetimeOwner, {});
 
     return NewCompassEntity;
 }
@@ -165,10 +165,14 @@ auto
     UCk_Utils_Compass_UE::
     Request_SetCategoryFilter(
         FCk_Handle_Compass& InCompass,
-        const FCk_Request_Compass_SetCategoryFilter& InRequest)
+        const FCk_Request_Compass_SetCategoryFilter& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Compass
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Compass_Requests, InCompass);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InCompass.AddOrGet<ck::FFragment_Compass_Requests>()._Requests.Emplace(InRequest);
 
@@ -179,13 +183,18 @@ auto
     UCk_Utils_Compass_UE::
     Request_SetManualHeading(
         FCk_Handle_Compass& InCompass,
-        float InHeadingDegrees)
+        float InHeadingDegrees,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Compass
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Compass_Requests, InCompass);
 
-    InCompass.AddOrGet<ck::FFragment_Compass_Requests>()._Requests.Emplace(
-        FCk_Request_Compass_SetManualHeading{InHeadingDegrees});
+    const auto Request = FCk_Request_Compass_SetManualHeading{InHeadingDegrees};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InCompass.AddOrGet<ck::FFragment_Compass_Requests>()._Requests.Emplace(Request);
 
     return InCompass;
 }
@@ -194,13 +203,18 @@ auto
     UCk_Utils_Compass_UE::
     Request_SetObserver(
         FCk_Handle_Compass& InCompass,
-        FCk_Handle InObserver)
+        FCk_Handle InObserver,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Compass
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Compass_Requests, InCompass);
 
-    InCompass.AddOrGet<ck::FFragment_Compass_Requests>()._Requests.Emplace(
-        FCk_Request_Compass_SetObserver{InObserver});
+    const auto Request = FCk_Request_Compass_SetObserver{InObserver};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InCompass.AddOrGet<ck::FFragment_Compass_Requests>()._Requests.Emplace(Request);
 
     return InCompass;
 }

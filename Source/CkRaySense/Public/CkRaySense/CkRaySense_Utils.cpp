@@ -50,10 +50,14 @@ auto
     UCk_Utils_RaySense_UE::
     Request_EnableDisable(
         FCk_Handle_RaySense& InHandle,
-        const FCk_Request_RaySense_EnableDisable& InRequest)
+        const FCk_Request_RaySense_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RaySense
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RaySense_Requests, InHandle);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InHandle.AddOrGet<ck::FFragment_RaySense_Requests>()._Requests.Emplace(InRequest);
     return InHandle;

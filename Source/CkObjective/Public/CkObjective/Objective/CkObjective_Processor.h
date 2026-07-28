@@ -44,6 +44,7 @@ namespace ck
             TReadWrite<FFragment_Objective_Current>,
             TReadOnly<FFragment_Objective_Params>,
             TReadOnly<FFragment_Objective_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -69,21 +70,21 @@ namespace ck
             HandleType InHandle,
             FFragment_Objective_Current& InCurrent,
             const FFragment_Objective_Params& InParams,
-            const FCk_Request_Objective_Start& InRequest) -> void;
+            const FCk_Request_Objective_Start& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Objective_Current& InCurrent,
             const FFragment_Objective_Params& InParams,
-            const FCk_Request_Objective_Complete& InRequest) -> void;
+            const FCk_Request_Objective_Complete& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Objective_Current& InCurrent,
             const FFragment_Objective_Params& InParams,
-            const FCk_Request_Objective_Fail& InRequest) -> void;
+            const FCk_Request_Objective_Fail& InRequest) -> bool;
 
     private:
         static auto
@@ -111,6 +112,32 @@ namespace ck
             TimeType InDeltaT,
             HandleType& InHandle,
             const FFragment_Objective_Current& InCurrent) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed objective's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKOBJECTIVE_API FProcessor_Objective_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Objective_CancelPendingRequests,
+        FCk_Handle_Objective,
+        ck::TReadOnly<FFragment_Objective_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Objective_Requests& InRequestsComp)
+            -> void;
     };
 }
 

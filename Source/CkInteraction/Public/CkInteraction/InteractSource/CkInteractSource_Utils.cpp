@@ -59,11 +59,16 @@ auto
     UCk_Utils_InteractSource_UE::
     Request_CancelInteraction(
         FCk_Handle_InteractSource& InInteractSource,
-        const FCk_Request_InteractSource_CancelInteraction& InRequest)
+        const FCk_Request_InteractSource_CancelInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_InteractSource
 {
     ck::interaction::VeryVerbose(TEXT("Request_CancelInteraction on InteractSource [{}] for target [{}]. Source channel: [{}]"),
         InInteractSource, InRequest.Get_InteractTarget(), Get_InteractionChannel(InInteractSource));
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InInteractSource.AddOrGet<ck::FFragment_InteractSource_Requests>()._Requests.Emplace(InRequest);
     return InInteractSource;
 }
@@ -85,7 +90,8 @@ auto
         const auto& CurrentInteraction = SignalPair.Key;
         Request_CancelInteraction(InInteractSource,
             FCk_Request_InteractSource_CancelInteraction{
-                UCk_Utils_Interaction_UE::Get_InteractionTarget(CurrentInteraction)});
+                UCk_Utils_Interaction_UE::Get_InteractionTarget(CurrentInteraction)},
+            {});
     }
     return InInteractSource;
 }
@@ -96,9 +102,13 @@ auto
     UCk_Utils_InteractSource_UE::
     Request_StartInteraction(
         FCk_Handle_InteractSource& InInteractSource,
-        const FCk_Request_InteractSource_StartInteraction& InRequest)
+        const FCk_Request_InteractSource_StartInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_InteractSource
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InInteractSource.AddOrGet<ck::FFragment_InteractSource_Requests>()._Requests.Emplace(InRequest);
     InInteractSource.Get<ck::FFragment_InteractSource_Current>()._InteractionsPendingAdd.Emplace(InRequest.Get_Interaction());
     return InInteractSource;

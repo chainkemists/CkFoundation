@@ -3,6 +3,7 @@
 #include "CkSceneNode_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
@@ -122,21 +123,27 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|SceneNode",
-        DisplayName="[Ck][SceneNode] Request UpdateOffset")
+        DisplayName="[Ck][SceneNode] Request UpdateOffset",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_SceneNode
     Request_UpdateOffset(
         UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
-        const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest);
+        const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Severs the scene-node's parent link, keeping the current world transform. After detach,
     // TProcessor_SceneNode_Update no longer iterates this entity, so the Transform fragment stays where it
     // was and can be authoritatively set by downstream callers.
+    // Immediate mutator: the links are removed inline and nothing is enqueued, so the completion
+    // delegate fires synchronously on the caller's stack.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|SceneNode",
-        DisplayName="[Ck][SceneNode] Request Detach (Keep World)")
+        DisplayName="[Ck][SceneNode] Request Detach (Keep World)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_SceneNode
     Request_Detach(
-        UPARAM(ref) FCk_Handle_SceneNode& InSceneNode);
+        UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

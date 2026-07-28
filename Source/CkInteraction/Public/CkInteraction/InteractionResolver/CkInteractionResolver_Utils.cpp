@@ -65,9 +65,13 @@ auto
     UCk_Utils_InteractionResolver_UE::
     Request_StartIntent(
         FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_StartIntent& InRequest)
+        const FCk_Request_InteractionResolver_StartIntent& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InResolver.AddOrGet<ck::FFragment_InteractionResolver_Requests>()._Requests.Emplace(InRequest);
 }
 
@@ -75,9 +79,13 @@ auto
     UCk_Utils_InteractionResolver_UE::
     Request_StopIntent(
         FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_StopIntent& InRequest)
+        const FCk_Request_InteractionResolver_StopIntent& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InResolver.AddOrGet<ck::FFragment_InteractionResolver_Requests>()._Requests.Emplace(InRequest);
 }
 
@@ -85,9 +93,13 @@ auto
     UCk_Utils_InteractionResolver_UE::
     Request_AddInteractTarget(
         FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_AddInteractTarget& InRequest)
+        const FCk_Request_InteractionResolver_AddInteractTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InResolver.AddOrGet<ck::FFragment_InteractionResolver_Requests>()._Requests.Emplace(InRequest);
 }
 
@@ -95,9 +107,13 @@ auto
     UCk_Utils_InteractionResolver_UE::
     Request_RemoveInteractTarget(
         FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_RemoveInteractTarget& InRequest)
+        const FCk_Request_InteractionResolver_RemoveInteractTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InResolver.AddOrGet<ck::FFragment_InteractionResolver_Requests>()._Requests.Emplace(InRequest);
 }
 
@@ -105,9 +121,13 @@ auto
     UCk_Utils_InteractionResolver_UE::
     Request_RemoveAllTargetsByChannel(
         FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_RemoveAllTargetsByChannel& InRequest)
+        const FCk_Request_InteractionResolver_RemoveAllTargetsByChannel& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InResolver.AddOrGet<ck::FFragment_InteractionResolver_Requests>()._Requests.Emplace(InRequest);
 }
 

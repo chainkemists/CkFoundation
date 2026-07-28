@@ -25,8 +25,8 @@ auto
     UCk_Utils_Acceleration_UE::Add(InHandle, InParams.Get_AccelerationParams(), InReplicates);
     UCk_Utils_AutoReorient_UE::Add(InHandle, InParams.Get_AutoReorientParams());
 
-    UCk_Utils_EulerIntegrator_UE::Request_Start(InHandle);
-    UCk_Utils_AutoReorient_UE::Request_Start(InHandle);
+    UCk_Utils_EulerIntegrator_UE::Request_Start(InHandle, {});
+    UCk_Utils_AutoReorient_UE::Request_Start(InHandle, {});
 
     return Cast(InHandle);
 }
@@ -58,10 +58,14 @@ auto
         const FCk_Handle& InHandle,
         const FCk_Request_Projectile_CalculateAimAhead& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_Projectile_OnAimAheadCalculated& InDelegate)
+        const FCk_Delegate_Projectile_OnAimAheadCalculated& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> void
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Projectile_Requests, InHandle);
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 

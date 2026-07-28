@@ -15,6 +15,7 @@ namespace ck
             FCk_Handle_Interaction,
             TReadOnly<FFragment_Interaction_Params>,
             TReadWrite<FFragment_Interaction_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -43,6 +44,35 @@ namespace ck
             HandleType InHandle,
             const FFragment_Interaction_Params& InParams,
             const FCk_Request_Interaction_EndInteraction& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed interaction's
+    // still-queued requests are never drained. This fires each pending request's completion delegate
+    // with Failed_Cancelled so a caller awaiting completion terminates instead of hanging. This is
+    // additive to FProcessor_Interaction_EndPlay below, which broadcasts Failed on the interaction's
+    // own OnInteractionFinished signal (a different consumer — the interaction's participants, not the
+    // caller of this specific Request_EndInteraction).
+    class CKINTERACTION_API FProcessor_Interaction_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Interaction_CancelPendingRequests,
+        FCk_Handle_Interaction,
+        ck::TReadOnly<FFragment_Interaction_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Interaction_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

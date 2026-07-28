@@ -28,8 +28,8 @@ static auto
         const FCk_Fragment_RotatorAttribute_BaseFinal& InEntry)
     -> void
 {
-    UCk_Utils_RotatorAttributeModifier_UE::Request_ClearAllModifiers(InAttributeEntity, InEntry.Get_Component());
-    UCk_Utils_RotatorAttribute_UE::Request_Override(InAttributeEntity, InEntry.Get_Base(), InEntry.Get_Component());
+    UCk_Utils_RotatorAttributeModifier_UE::Request_ClearAllModifiers(InAttributeEntity, InEntry.Get_Component(), {});
+    UCk_Utils_RotatorAttribute_UE::Request_Override(InAttributeEntity, InEntry.Get_Base(), InEntry.Get_Component(), {});
 
     auto AttributeModifier = UCk_Utils_RotatorAttributeModifier_UE::TryGet(InAttributeEntity,
         ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), InEntry.Get_Component());

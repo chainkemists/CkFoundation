@@ -56,7 +56,7 @@ namespace ck
             UCk_Utils_Transform_UE::Request_AddLocationOffset(
                 SelfTransform,
                 FCk_Request_Transform_AddLocationOffset{InOffset}
-                    .Set_LocalWorld(ECk_LocalWorld::World));
+                    .Set_LocalWorld(ECk_LocalWorld::World), {});
         };
 
         if (UCk_Utils_Crowd_Settings_UE::Get_NavmeshConstraintMode() == ECk_CrowdNavmeshConstraintMode::Disabled)

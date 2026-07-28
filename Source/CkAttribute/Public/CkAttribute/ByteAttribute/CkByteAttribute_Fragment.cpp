@@ -30,8 +30,8 @@ static auto
         const FCk_Fragment_ByteAttribute_BaseFinal& InEntry)
     -> void
 {
-    UCk_Utils_ByteAttributeModifier_UE::Request_ClearAllModifiers(InAttributeEntity, InEntry.Get_Component());
-    UCk_Utils_ByteAttribute_UE::Request_Override(InAttributeEntity, InEntry.Get_Base(), InEntry.Get_Component());
+    UCk_Utils_ByteAttributeModifier_UE::Request_ClearAllModifiers(InAttributeEntity, InEntry.Get_Component(), {});
+    UCk_Utils_ByteAttribute_UE::Request_Override(InAttributeEntity, InEntry.Get_Base(), InEntry.Get_Component(), {});
 
     // Byte-only: a sign-flipped re-apply must RECREATE the Final modifier, never Override it. See CkAttribute/CLAUDE.md.
     if (auto ExistingModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(InAttributeEntity,

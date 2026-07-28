@@ -23,6 +23,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_SphereSweep_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_CapsuleSweep_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_CylinderSweep_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RaySense_CancelPendingRequests);
 
 namespace ck_raysense
 {
@@ -75,7 +76,7 @@ namespace ck_raysense
             case ECk_RaySense_CollisionResponse_Policy::Collide:
             {
                 UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
-                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
+                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()}, {});
                 break;
             }
         }
@@ -347,7 +348,12 @@ namespace ck
             algo::ForEachRequest(InRequests._Requests, Visitor([&](
             const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -377,6 +383,19 @@ namespace ck
                 break;
             }
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_RaySense_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_RaySense_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

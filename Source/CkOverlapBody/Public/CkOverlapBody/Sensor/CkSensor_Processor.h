@@ -45,6 +45,7 @@ namespace ck
             ck::TReadOnly<FFragment_Sensor_Params>,
             ck::TReadOnly<FFragment_Sensor_Requests>,
             FTag_Sensor_SetupComplete,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -99,6 +100,30 @@ namespace ck
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed sensor's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+
+    class CKOVERLAPBODY_API FProcessor_Sensor_CancelPendingRequests : public ck_exp::TProcessor<
+            FProcessor_Sensor_CancelPendingRequests,
+            FCk_Handle_Sensor,
+            ck::TReadOnly<FFragment_Sensor_Requests>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InSensorEntity,
+            const FFragment_Sensor_Requests& InRequestsComp) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

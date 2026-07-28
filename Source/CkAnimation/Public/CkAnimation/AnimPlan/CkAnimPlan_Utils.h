@@ -4,6 +4,7 @@
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 #include <StructUtils/InstancedStruct.h>
@@ -143,19 +144,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimPlan",
-              DisplayName="[Ck][AnimPlan] Request Update Anim Cluster")
+              DisplayName="[Ck][AnimPlan] Request Update Anim Cluster",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AnimPlan
     Request_UpdateAnimCluster(
         UPARAM(ref) FCk_Handle_AnimPlan& InHandle,
-        const FCk_Request_AnimPlan_UpdateAnimCluster& InRequest);
+        const FCk_Request_AnimPlan_UpdateAnimCluster& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimPlan",
-              DisplayName="[Ck][AnimPlan] Request Update Anim State")
+              DisplayName="[Ck][AnimPlan] Request Update Anim State",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AnimPlan
     Request_UpdateAnimState(
         UPARAM(ref) FCk_Handle_AnimPlan& InHandle,
-        const FCk_Request_AnimPlan_UpdateAnimState& InRequest);
+        const FCk_Request_AnimPlan_UpdateAnimState& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

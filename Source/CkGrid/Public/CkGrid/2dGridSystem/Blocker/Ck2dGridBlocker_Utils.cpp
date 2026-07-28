@@ -77,13 +77,18 @@ auto
     UCk_Utils_2dGridBlocker_UE::
     Request_SetActive(
         FCk_Handle_2dGridBlocker& InBlocker,
-        bool InActive)
+        bool InActive,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_2dGridBlocker
 {
     CK_CALLSTACK_RECORD(ck::FFragment_2dGridBlocker_Requests, InBlocker);
 
-    InBlocker.AddOrGet<ck::FFragment_2dGridBlocker_Requests>()._Requests.Emplace(
-        FCk_Request_2dGridBlocker_SetActive{InActive});
+    const auto Request = FCk_Request_2dGridBlocker_SetActive{InActive};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InBlocker.AddOrGet<ck::FFragment_2dGridBlocker_Requests>()._Requests.Emplace(Request);
 
     return InBlocker;
 }

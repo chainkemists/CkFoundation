@@ -7,12 +7,14 @@
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_EvaluationPacer);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Aggro_SelectActiveTarget);
 
@@ -71,10 +73,15 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InAggro, Result);
+
             DoHandleRequest(InAggro, InTargetMap, InCurrent, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             { InRequest.GetAndDestroyRequestHandle(); }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -101,7 +108,7 @@ namespace ck
         if (const auto Found = InTargetMap._TargetsByTrackedEntity.Find(Tracked))
         {
             auto Target = *Found;
-            UCk_Utils_AggroTarget_UE::Request_AddThreat(Target, InRequest.Get_ThreatAmount());
+            UCk_Utils_AggroTarget_UE::Request_AddThreat(Target, InRequest.Get_ThreatAmount(), {});
             InAggro.AddOrGet<ck::FTag_Aggro_SelectionPending>();
             return;
         }
@@ -118,7 +125,7 @@ namespace ck
         auto NewTarget = UCk_Utils_Aggro_UE::CreateTarget(InAggro, Tracked);
         if (ck::IsValid(NewTarget))
         {
-            UCk_Utils_AggroTarget_UE::Request_AddThreat(NewTarget, InRequest.Get_ThreatAmount());
+            UCk_Utils_AggroTarget_UE::Request_AddThreat(NewTarget, InRequest.Get_ThreatAmount(), {});
             InAggro.AddOrGet<ck::FTag_Aggro_SelectionPending>();
         }
     }
@@ -208,6 +215,19 @@ namespace ck
         InAggro.AddOrGet<ck::FTag_Aggro_SelectionPending>();
 
         UUtils_Signal_OnAggroActiveTargetChanged::Broadcast(InAggro, MakePayload(InAggro, PrevActive, FCk_Handle_AggroTarget{}));
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Aggro_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InAggro,
+            const FFragment_Aggro_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InAggro, InRequestsComp.Get_Requests());
     }
 
     // ----------------------------------------------------------------------------------------------------------------

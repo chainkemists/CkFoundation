@@ -28,17 +28,33 @@ auto
     UCk_Utils_Eqs_UE::
     Request_RunQuery(
         FCk_Handle& InQuerierEntity,
-        const FCk_Request_Eqs_RunQuery& InRequest)
+        const FCk_Request_Eqs_RunQuery& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InQuerierEntity),
+    const auto QuerierIsValid = ck::IsValid(InQuerierEntity);
+    CK_ENSURE_IF_NOT(QuerierIsValid,
         TEXT("Request_RunQuery called with invalid querier"))
-    { return InQuerierEntity; }
+    {}
+    if (NOT QuerierIsValid)
+    {
+        InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InQuerierEntity;
+    }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InQuerierEntity),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InQuerierEntity);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("CkEqs is server-authoritative. Querier [{}] is not authoritative; query rejected."),
         InQuerierEntity)
-    { return InQuerierEntity; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InQuerierEntity;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InQuerierEntity.AddOrGet<FFragment_EqsQuery_Requests>().Update_Requests(
         [&](TArray<FCk_Request_Eqs_RunQuery>& InContainer)
@@ -55,17 +71,30 @@ auto
     UCk_Utils_Eqs_UE::
     Request_RunQuery_Immediate(
         FCk_Handle& InQuerierEntity,
-        const FCk_Eqs_QueryParams& InQueryParams)
+        const FCk_Eqs_QueryParams& InQueryParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_EqsQuery
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InQuerierEntity),
+    const auto QuerierIsValid = ck::IsValid(InQuerierEntity);
+    CK_ENSURE_IF_NOT(QuerierIsValid,
         TEXT("Request_RunQuery_Immediate called with invalid querier"))
-    { return {}; }
+    {}
+    if (NOT QuerierIsValid)
+    {
+        InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InQuerierEntity),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InQuerierEntity);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("CkEqs is server-authoritative. Querier [{}] is not authoritative; immediate query rejected."),
         InQuerierEntity)
-    { return {}; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
     auto QueryEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InQuerierEntity);
     QueryEntity.Add<FFragment_EqsQuery_Params>(InQueryParams);
@@ -81,7 +110,9 @@ auto
 
     auto Results = FCk_Eqs_QueryResults{};
 
-    if (FCk_Eqs_Algorithm::DoGenerate(TypedQuery, InQueryParams, State, PhysicsSystem))
+    const auto Generated = FCk_Eqs_Algorithm::DoGenerate(TypedQuery, InQueryParams, State, PhysicsSystem);
+
+    if (Generated)
     {
         const auto HardCap = UCk_Utils_Eqs_Settings_UE::Get_MaxCandidates_ImmediatePathHardCap();
         if (State.Get_Candidates().Num() > HardCap)
@@ -110,6 +141,11 @@ auto
     // Deliberately no OnEqsQueryComplete broadcast: the signal would fire before the caller has
     // the handle, so no delegate could ever be bound in time.
 
+    // Immediate execution — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InQuerierEntity, Generated
+        ? ECk_Request_OperationResult::Succeeded
+        : ECk_Request_OperationResult::Failed);
+
     return TypedQuery;
 }
 
@@ -118,36 +154,66 @@ auto
 auto
     UCk_Utils_Eqs_UE::
     Request_CancelQuery(
-        FCk_Handle_EqsQuery& InQueryEntity)
+        FCk_Handle_EqsQuery& InQueryEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_EqsQuery
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InQueryEntity),
+    const auto QueryIsValid = ck::IsValid(InQueryEntity);
+    CK_ENSURE_IF_NOT(QueryIsValid,
         TEXT("Request_CancelQuery called with invalid query handle"))
-    { return InQueryEntity; }
+    {}
+    if (NOT QueryIsValid)
+    {
+        InDelegate.ExecuteIfBound(InQueryEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InQueryEntity;
+    }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InQueryEntity),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InQueryEntity);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("CkEqs is server-authoritative. Query [{}] cancel rejected (not authoritative)."),
         InQueryEntity)
-    { return InQueryEntity; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InQueryEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InQueryEntity;
+    }
 
     InQueryEntity.AddOrGet<ck::FTag_EqsQuery_Cancelled>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InQueryEntity, ECk_Request_OperationResult::Succeeded);
+
     return InQueryEntity;
 }
 
 auto
     UCk_Utils_Eqs_UE::
     Request_CancelAllQueries(
-        FCk_Handle& InQuerierEntity)
+        FCk_Handle& InQuerierEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> int32
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InQuerierEntity),
+    const auto QuerierIsValid = ck::IsValid(InQuerierEntity);
+    CK_ENSURE_IF_NOT(QuerierIsValid,
         TEXT("Request_CancelAllQueries called with invalid querier."))
-    { return 0; }
+    {}
+    if (NOT QuerierIsValid)
+    {
+        InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return 0;
+    }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InQuerierEntity),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InQuerierEntity);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("CkEqs is server-authoritative. Querier [{}] is not authoritative; cancel-all rejected."),
         InQuerierEntity)
-    { return 0; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return 0;
+    }
 
     auto Count = int32{0};
 
@@ -168,6 +234,9 @@ auto
         QueryHandle.AddOrGet<ck::FTag_EqsQuery_Cancelled>();
         ++Count;
     });
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InQuerierEntity, ECk_Request_OperationResult::Succeeded);
 
     return Count;
 }

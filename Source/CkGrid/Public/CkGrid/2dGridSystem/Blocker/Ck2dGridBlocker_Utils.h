@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Data.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment_Data.h"
 
@@ -72,11 +73,13 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridBlocker",
-              DisplayName="[Ck][2dGridBlocker] Request Set Active")
+              DisplayName="[Ck][2dGridBlocker] Request Set Active",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_2dGridBlocker
     Request_SetActive(
         UPARAM(ref) FCk_Handle_2dGridBlocker& InBlocker,
-        bool InActive);
+        bool InActive,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridBlocker",

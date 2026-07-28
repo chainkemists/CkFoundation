@@ -21,6 +21,7 @@ namespace ck
             ck::TReadOnly<FFragment_Homing_Params>,
             ck::TReadWrite<FFragment_Homing_Current>,
             ck::TReadOnly<FFragment_Homing_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -40,35 +41,64 @@ namespace ck
             const FFragment_Homing_Requests& InRequestsComp) const -> void;
 
     private:
+        // Only the SetTargetEntity overload has a genuine rejection path; all five overloads return
+        // bool uniformly so the drain loop below (a single generic lambda over the request variant)
+        // can thread the result out without special-casing per request type.
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
-            const FCk_Request_Homing_SetTargetEntity& InRequest) -> void;
+            const FCk_Request_Homing_SetTargetEntity& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
-            const FCk_Request_Homing_SetTargetLocation& InRequest) -> void;
+            const FCk_Request_Homing_SetTargetLocation& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
-            const FCk_Request_Homing_ClearTarget& InRequest) -> void;
+            const FCk_Request_Homing_ClearTarget& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
-            const FCk_Request_Homing_SetDesiredTimeToImpact& InRequest) -> void;
+            const FCk_Request_Homing_SetDesiredTimeToImpact& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
-            const FCk_Request_Homing_EnableDisable& InRequest) -> void;
+            const FCk_Request_Homing_EnableDisable& InRequest) -> bool;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed Homing's still-
+    // queued requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKPROJECTILE_API FProcessor_Homing_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Homing_CancelPendingRequests,
+        FCk_Handle_Homing,
+        ck::TReadOnly<FFragment_Homing_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Homing_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

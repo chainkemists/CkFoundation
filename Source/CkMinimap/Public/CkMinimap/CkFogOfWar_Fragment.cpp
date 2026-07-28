@@ -45,7 +45,7 @@ namespace ck_fog_of_war_fragment
                     auto FogHandle = UCk_Utils_FogOfWar_UE::Cast(Entity);
 
                     UCk_Utils_FogOfWar_UE::Request_SetExplored(FogHandle,
-                        FCk_Request_FogOfWar_SetExplored{Payload});
+                        FCk_Request_FogOfWar_SetExplored{Payload}, {});
 
                     return ECk_Persistence_ApplyResult::Applied;
                 }});

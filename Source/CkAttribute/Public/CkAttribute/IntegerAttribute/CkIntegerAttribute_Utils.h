@@ -7,6 +7,7 @@
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Fragment.h"
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkIntegerAttribute_Utils.generated.h"
@@ -217,12 +218,14 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Integer",
-              DisplayName="[Ck][IntegerAttribute] Request Override Base Value")
+              DisplayName="[Ck][IntegerAttribute] Request Override Base Value",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IntegerAttribute
     Request_Override(
         UPARAM(ref) FCk_Handle_IntegerAttribute& InAttribute,
         int32 InNewBaseValue,
-        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -328,17 +331,21 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeRefill|Integer",
-              DisplayName="[Ck][IntegerAttribute] Request Pause Refill")
+              DisplayName="[Ck][IntegerAttribute] Request Pause Refill",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IntegerAttributeRefill
     Request_Pause(
-        UPARAM(ref) FCk_Handle_IntegerAttributeRefill& InAttributeRefill);
+        UPARAM(ref) FCk_Handle_IntegerAttributeRefill& InAttributeRefill,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeRefill|Integer",
-              DisplayName="[Ck][IntegerAttribute] Request Resume Refill")
+              DisplayName="[Ck][IntegerAttribute] Request Resume Refill",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IntegerAttributeRefill
     Request_Resume(
-        UPARAM(ref) FCk_Handle_IntegerAttributeRefill& InAttributeRefill);
+        UPARAM(ref) FCk_Handle_IntegerAttributeRefill& InAttributeRefill,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -468,7 +475,8 @@ public:
     static void
     Request_ClearAllModifiers(
         FCk_Handle_IntegerAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

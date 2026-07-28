@@ -91,13 +91,18 @@ auto
     UCk_Utils_VisibleRange_UE::
     Request_SetVisibility(
         FCk_Handle_VisibleRange& InHandle,
-        ECk_VisibleRange_ShowHide InShowHide)
+        ECk_VisibleRange_ShowHide InShowHide,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_VisibleRange
 {
     CK_CALLSTACK_RECORD(ck::FFragment_VisibleRange_Requests, InHandle);
 
-    InHandle.AddOrGet<ck::FFragment_VisibleRange_Requests>()._Requests.Emplace(
-        FCk_Request_VisibleRange_SetVisibility{InShowHide});
+    const auto Request = FCk_Request_VisibleRange_SetVisibility{InShowHide};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_VisibleRange_Requests>()._Requests.Emplace(Request);
 
     return InHandle;
 }

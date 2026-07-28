@@ -9,6 +9,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
@@ -25,6 +26,7 @@
         })
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_CancelPendingRequests);
 CK_EQS_FACTORY(ck::FProcessor_Eqs_Generate);
 CK_EQS_FACTORY(ck::FProcessor_Eqs_Test);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Eqs_Finalize);
@@ -75,8 +77,17 @@ namespace ck
             return;
         }
 
-        for (const auto& Request : InRequests._Requests)
+        // Drained from a copy: a completion delegate firing below may enqueue a new request on this
+        // same querier, which would reallocate the live container mid-iteration.
+        const auto RequestsCopy = InRequests._Requests;
+        InRequests._Requests.Reset();
+
+        for (const auto& Request : RequestsCopy)
         {
+            // Nothing below rejects a request, so reaching the end of the loop body IS the success condition.
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(Request, InHandle, Result);
+
             const auto& QueryParams = Request.Get_QueryParams();
 
             if (QueryParams.Get_Tests().IsEmpty())
@@ -111,10 +122,14 @@ namespace ck
                     TypedQueryHandle,
                     OnComplete);
             }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }
 
-        InRequests._Requests.Reset();
-        InHandle.Try_Remove<FFragment_EqsQuery_Requests>();
+        if (InRequests._Requests.IsEmpty())
+        {
+            InHandle.Try_Remove<FFragment_EqsQuery_Requests>();
+        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -262,6 +277,19 @@ namespace ck
     {
         auto QueryEntity = InHandle.ConvertToHandle();
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(QueryEntity);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Eqs_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EqsQuery_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

@@ -8,9 +8,11 @@
 
 #include <Kismet/GameplayStatics.h>
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CameraShake_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_CameraShake_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -30,7 +32,11 @@ namespace ck
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InHandle, InParams, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InParams, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -46,15 +52,15 @@ namespace ck
             HandleType InHandle,
             const FFragment_CameraShake_Params& InParams,
             const FCk_Request_CameraShake_PlayOnTarget& InRequest) const
-        -> void
+        -> bool
     {
         const auto& TargetEntity = InRequest.Get_Target();
 
         CK_ENSURE_IF_NOT(ck::IsValid(TargetEntity), TEXT("Invalid Camera Shake Target Entity!"))
-        { return; }
+        { return false; }
 
         CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(TargetEntity), TEXT("Camera Shake Targets Entity [{}] that does NOT have an Actor Feature!"), TargetEntity)
-        { return; }
+        { return false; }
 
         auto* TargetOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(TargetEntity);
 
@@ -62,7 +68,7 @@ namespace ck
         {
             camera::VeryVerbose(TEXT("Camera Shake Targets Entity [{}] that does NOT have an Actor!\n"
                 "This may occur if the server destroys the actor before the client destroys the actor's entity"), TargetEntity);
-            return;
+            return false;
         }
 
         const auto& TargetPlayerController = Cast<APlayerController>(TargetOwningActor->GetInstigatorController());
@@ -70,7 +76,7 @@ namespace ck
         if (ck::Is_NOT_Valid(TargetPlayerController))
         {
             camera::VeryVerbose(TEXT("Camera Shake Targets Entity [{}] that is NO valid Player Controller!"), TargetEntity);
-            return;
+            return false;
         }
 
         const auto& CameraManager = TargetPlayerController->PlayerCameraManager;
@@ -78,7 +84,7 @@ namespace ck
         if (ck::Is_NOT_Valid(CameraManager))
         {
             camera::VeryVerbose(TEXT("Camera Shake Targets Entity [{}] with Player Controller [{}] but has NO Player Camera Manager!"), TargetEntity, TargetPlayerController);
-            return;
+            return false;
         }
 
         const auto& Params = InParams.Get_Params();
@@ -88,6 +94,8 @@ namespace ck
         camera::VeryVerbose(TEXT("Playing CameraShake [{}] on Target Entity [{}] with Player Controller [{}]"), CameraShake, TargetEntity, TargetPlayerController);
 
         CameraManager->StartCameraShake(CameraShake, Scale);
+
+        return true;
     }
 
     auto
@@ -96,7 +104,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_CameraShake_Params& InParams,
             const FCk_Request_CameraShake_PlayAtLocation& InRequest) const
-        -> void
+        -> bool
     {
         const auto& Params                 = InParams.Get_Params();
         const auto& CameraShake            = Params.Get_CameraShake();
@@ -108,11 +116,26 @@ namespace ck
         const auto& WorldContextObject     = InRequest.Get_WorldContextObject();
 
         CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(WorldContextObject)
-        { return; }
+        { return false; }
 
         camera::VeryVerbose(TEXT("Playing CameraShake [{}] at Location [{}]"), CameraShake, ShakeLocation);
 
         UGameplayStatics::PlayWorldCameraShake(WorldContextObject->GetWorld(), CameraShake, ShakeLocation, InnerRadius, OuterRadius, FallOff, OrientTowardsEpicenter);
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CameraShake_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_CameraShake_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

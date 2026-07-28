@@ -47,9 +47,13 @@ auto
     UCk_Utils_ShapeCylinder_UE::
     Request_UpdateDimensions(
         FCk_Handle_ShapeCylinder& InShapeCylinder,
-        const FCk_Request_ShapeCylinder_UpdateDimensions& InRequest)
+        const FCk_Request_ShapeCylinder_UpdateDimensions& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ShapeCylinder
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InShapeCylinder.AddOrGet<ck::FFragment_ShapeCylinder_Requests>()._Requests.Emplace(InRequest);
     return InShapeCylinder;
 }

@@ -36,7 +36,7 @@ namespace ck
         if (ck::Is_NOT_Valid(VelocityHandle))
         { return; }
 
-        UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, InDesired.Get_Velocity());
+        UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, InDesired.Get_Velocity(), {});
     }
 }
 

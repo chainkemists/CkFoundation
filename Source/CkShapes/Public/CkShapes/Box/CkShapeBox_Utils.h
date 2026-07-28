@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkShapeBox_Utils.generated.h"
@@ -71,11 +72,13 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeBox",
-        DisplayName = "[Ck][Shapes][Box] Request Update Dimensions")
+        DisplayName = "[Ck][Shapes][Box] Request Update Dimensions",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_ShapeBox
     Request_UpdateDimensions(
         UPARAM(ref) FCk_Handle_ShapeBox& InShapeBox,
-        const FCk_Request_ShapeBox_UpdateDimensions& InRequest);
+        const FCk_Request_ShapeBox_UpdateDimensions& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

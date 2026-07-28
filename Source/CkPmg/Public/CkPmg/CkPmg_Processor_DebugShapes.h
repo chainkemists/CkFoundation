@@ -128,6 +128,7 @@ namespace ck
             ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             ck::TReadWrite<FFragment_Pmg_DebugShape_Requests>,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -195,6 +196,29 @@ namespace ck
             FFragment_Pmg_DebugShape_Common& InCommon,
             FFragment_Pmg_DebugShape_Current& InCurrent,
             const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKPMG_API FProcessor_Pmg_DebugShape_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Pmg_DebugShape_CancelPendingRequests,
+        FCk_Handle_Pmg_DebugShape,
+        ck::TReadOnly<FFragment_Pmg_DebugShape_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_DebugShape_Requests& InRequestsComp)
             -> void;
     };
 }

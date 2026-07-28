@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -19,6 +20,7 @@ DECLARE_CYCLE_STAT(TEXT("FogOfWar::Reveal"), STAT_CkFogOfWar_Reveal, STATGROUP_C
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_FogOfWar_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_FogOfWar_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_FogOfWar_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_FogOfWar_Update);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -150,7 +152,25 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
-            DoHandleRequest(InFogEntity, InCurrent, InParams, InRequest);
+            using T = std::decay_t<decltype(InRequest)>;
+
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InFogEntity, Result);
+
+            // AddRevealer / SetExplored have a genuine ensure-gated failure path; every other
+            // DoHandleRequest overload is void with no rejection, so reaching the line after the
+            // call IS the success condition.
+            if constexpr (std::is_same_v<T, FCk_Request_FogOfWar_AddRevealer> ||
+                std::is_same_v<T, FCk_Request_FogOfWar_SetExplored>)
+            {
+                if (DoHandleRequest(InFogEntity, InCurrent, InParams, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
+            }
+            else
+            {
+                DoHandleRequest(InFogEntity, InCurrent, InParams, InRequest);
+                Result = ECk_Request_OperationResult::Succeeded;
+            }
 
             if (InRequest.Get_IsRequestHandleValid())
             {
@@ -173,16 +193,18 @@ namespace ck
             FFragment_FogOfWar_Current& InCurrent,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_AddRevealer& InRequest)
-        -> void
+        -> bool
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Revealer()),
             TEXT("AddRevealer on FogOfWar [{}] received an INVALID Revealer handle"), InFogEntity)
-        { return; }
+        { return false; }
 
         minimap::VeryVerbose(TEXT("Handling AddRevealer [{}] Request for FogOfWar with Entity [{}]"),
             InRequest.Get_Revealer(), InFogEntity);
 
         InCurrent._Revealers.AddUnique(InRequest.Get_Revealer());
+
+        return true;
     }
 
     auto
@@ -275,7 +297,7 @@ namespace ck
             FFragment_FogOfWar_Current& InCurrent,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_SetExplored& InRequest)
-        -> void
+        -> bool
     {
         const auto& Payload = InRequest.Get_ExploredData();
 
@@ -286,7 +308,7 @@ namespace ck
                  "fresh grid"),
             InFogEntity, Payload.Get_CellCountX(), Payload.Get_CellCountY(),
             InCurrent._CellCounts.X, InCurrent._CellCounts.Y)
-        { return; }
+        { return false; }
 
         minimap::VeryVerbose(TEXT("Handling SetExplored Request for FogOfWar with Entity [{}]"), InFogEntity);
 
@@ -307,6 +329,21 @@ namespace ck
             InCurrent._Explored[CellIndex] = true;
             InCurrent._NewlyRevealedScratch.Add(CellIndex);
         }
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_FogOfWar_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InFogEntity,
+            const FFragment_FogOfWar_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InFogEntity, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

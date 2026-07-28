@@ -3,6 +3,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include <StructUtils/InstancedStruct.h>
 
 #include "CkActorModifier_Utils.generated.h"
@@ -20,36 +22,39 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ActorModifier",
-        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"),
+        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate, InCompletionDelegate"),
         DisplayName = "[Ck][ActorModifier] Request Spawn Actor")
     static void
     Request_SpawnActor(
         const FCk_Handle& InHandle,
         const FCk_Request_ActorModifier_SpawnActor& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_ActorModifier_OnActorSpawned& InDelegate);
+        const FCk_Delegate_ActorModifier_OnActorSpawned& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ActorModifier",
-        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"),
+        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate, InCompletionDelegate"),
         DisplayName = "[Ck][ActorModifier] Request Add Actor Component")
     static void
     Request_AddActorComponent(
         const FCk_Handle& InHandle,
         const FCk_Request_ActorModifier_AddActorComponent& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate);
+        const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ActorModifier",
-        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"),
+        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate, InCompletionDelegate"),
         DisplayName = "[Ck][ActorModifier] Request Remove Actor Component")
     static void
     Request_RemoveActorComponent(
         const FCk_Handle& InHandle,
         const FCk_Request_ActorModifier_RemoveActorComponent& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_ActorModifier_OnActorComponentRemoved& InDelegate);
+        const FCk_Delegate_ActorModifier_OnActorComponentRemoved& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

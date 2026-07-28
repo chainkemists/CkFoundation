@@ -12,6 +12,7 @@
 #include "CkIsmRenderer/CkIsmSubsystem.h"
 
 #include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -28,6 +29,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_TransformInstance);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -483,12 +485,19 @@ namespace ck
             algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
+                // Every DoHandleRequest overload below is void and has no rejection path, so reaching
+                // the line after the call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }), policy::DontResetContainer{});
         });
     }
@@ -662,6 +671,19 @@ namespace ck
                 break;
             }
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_IsmProxy_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 
