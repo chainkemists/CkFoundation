@@ -6,6 +6,7 @@
 #include <Engine/World.h>
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/Snapshot/CkSaveKey_Fragment.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkEcsExt/OwningActor/CkActorSpawnIntent_Fragment.h"
 #include "CkLabel/CkLabel_Utils.h"
@@ -48,7 +49,17 @@ auto
     UCk_Utils_GameplayLabel_UE::Add(InHandle, {});
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, *_OwningActor->GetName());
 
-    if (Get_IsSnapshotRespawnable())
+    // The two halves of one decision: who re-creates this actor after a load. A level-placed actor is re-created by
+    // the LEVEL, so the save must rendezvous its state onto that fresh copy — stamping the respawn intent instead
+    // would have the loader build a second actor beside the one the level already made (and the intent outranks the
+    // key in capture's classification, so the two cannot both be stamped). A runtime-spawned actor has no such
+    // re-creator, so the loader is the only thing that can bring it back and the respawn opt-in still governs.
+    if (const auto PlacedIdentity = ck::save_key::Get_LevelPlacedIdentity(_OwningActor.Get());
+        NOT PlacedIdentity.IsEmpty())
+    {
+        ck::save_key::Assign(InHandle, PlacedIdentity);
+    }
+    else if (Get_IsSnapshotRespawnable())
     {
         InHandle.AddOrGet<FFragment_ActorSpawnIntent>(
             FFragment_ActorSpawnIntent{_OwningActor->GetClass()->GetPathName()});
