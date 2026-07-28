@@ -22,6 +22,15 @@ auto
     DoRegister_SlateStyle()
     -> void
 {
+    // The editor binary also boots as a game process (process-level tests, any -game run under a
+    // real RHI). There is no editor UI to style there, and the style's Slate textures are then
+    // destroyed by the game-process teardown without being released — a fatal "FRenderResource was
+    // deleted without being released first". Under -nullrhi they never acquire GPU resources, which
+    // is why this only bites with rendering on. Guarded here rather than in each of the twelve
+    // caller sites across CkEcsEditor / CkInventoryEditor / the style settings.
+    if (IsRunningGame())
+    { return; }
+
     if (ck::IsValid(_StyleInstance))
     { return; }
 
@@ -36,6 +45,11 @@ auto
     DoUnregister_SlateStyle()
     -> void
 {
+    // Symmetric with DoRegister_SlateStyle: nothing was registered in a game process, and the
+    // dereference below would be null there.
+    if (IsRunningGame())
+    { return; }
+
     FSlateStyleRegistry::UnRegisterSlateStyle(*_StyleInstance);
 
     CK_TRIGGER_ENSURE_IF(NOT _StyleInstance.IsUnique(), TEXT("{} SlateStyle instance is NOT Unique!"), _StyleSetName);
@@ -100,6 +114,11 @@ auto
     DoReloadTextures()
     -> void
 {
+    // ReloadTextureResources deletes the Slate texture atlas; in a game process that is the frame
+    // that fires the FRenderResource fatal. See DoRegister_SlateStyle.
+    if (IsRunningGame())
+    { return; }
+
     if (NOT FSlateApplication::IsInitialized())
     { return; }
 
@@ -120,6 +139,11 @@ auto
         const FCk_CustomAssetStyle_Params& InParams)
     -> void
 {
+    // Must early-out before the brush construction below, which reads _StyleInstance — left null by
+    // the guard in DoRegister_SlateStyle. See DoRegister_SlateStyle.
+    if (IsRunningGame())
+    { return; }
+
     if (ck::Is_NOT_Valid(_StyleInstance))
     {
         DoRegister_SlateStyle();
