@@ -212,9 +212,23 @@ public:
     Get_ActiveGoal(
         const FCk_Handle_CrowdAgent& InAgent);
 
-    // True once the agent's stationary-markup cost disc is painted AND the rebuilt navmesh actually
-    // reports the crowd cost area there (ground truth, not a timer). Lets tests and gameplay gate on
-    // "this standing agent is genuinely priced into pathing right now" instead of on settle timers.
+    // True as soon as the stationary cost-area painter exists. This deliberately does NOT mean
+    // the async navmesh tile rebuild has finished; use Get_IsStationaryMarkupConfirmed before
+    // assuming a path query can see the area. Exposed separately so diagnostics and tests can
+    // observe the paint-to-confirm window without guessing from a timer.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Is Stationary Markup Painted")
+    static bool
+    Get_IsStationaryMarkupPainted(
+        const FCk_Handle_CrowdAgent& InAgent);
+
+    // True once the agent's stationary-markup cost disc is painted AND the rebuilt navmesh
+    // actually reports the crowd cost area at the disc's location (ground truth, not a timer —
+    // see FProcessor_CrowdAgent_PathRefresh). False while the agent is moving, before the
+    // stationary delay elapses, or while the async tile rebake is still in flight. Lets tests
+    // and gameplay gate on "this standing agent is genuinely priced into pathing right now"
+    // instead of guessing with settle timers.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",
               DisplayName="[Ck][CrowdAgent] Get Is Stationary Markup Confirmed")

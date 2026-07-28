@@ -90,11 +90,11 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
                                          displacement along the navmesh surface
                                          (ANavigationData::FindMoveAlongSurface — dtCrowd's
                                          corridor movePosition, which the original port dropped)
-                                         and enqueues ONE Request_AddLocationOffset. XY is
-                                         constrained to the mesh; Z stays owned by path-follow +
-                                         integrator. Worlds with no nav data pass through
-                                         untouched. Master switch: _NavmeshConstraintMode
-                                         (project settings), default Enabled.
+                                         and enqueues ONE Request_AddLocationOffset. The agent
+                                         Transform is its feet anchor: XY follows the surface walk
+                                         and Z lands on the reached navmesh surface. Worlds with no
+                                         nav data pass through untouched. Master switch:
+                                         _NavmeshConstraintMode (project settings), default Enabled.
        │
        ▼
 [Replication]
@@ -104,8 +104,9 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
 Plus `FProcessor_CrowdAgent_BlockedRecheck` (FGroup_Gameplay): resumes a held agent when its goal clears.
 
 Plus `FProcessor_CrowdAgent_StationaryMarkup` (FGroup_Gameplay) + `_NavMarkup_EndPlay`: an agent
-PHYSICALLY STATIONARY past `_StationaryMarkupDelaySeconds` (windowed displacement, NOT the Idle
-tag — a blocked/pressing walker plugs a corridor exactly like an idle agent) paints a
+at or below `_StationaryMarkupSpeedThreshold` past `_StationaryMarkupDelaySeconds` (windowed
+physical displacement, NOT the Idle tag — a blocked/pressing walker plugs a corridor exactly
+like an idle agent) paints a
 `UCk_NavArea_CrowdAgent` COST disc (`UCk_NavAreaMarkup_UE`, actor-free) so fresh paths — a
 joiner's first FindPath, BlockedRecheck's re-path — route AROUND standing crowds; unpainted the
 moment it genuinely moves. Cost (64x — any finite toll has a break-even line length where
@@ -243,8 +244,12 @@ to be here for `_Piercing*`, `_Sleep*`, `_Replan*`, `_MaxReplansPerPath` and `_P
 | `_MaxNeighborsForSteering` | 6 | Top-N cap (sorted by distance). |
 | `_CollisionFlags` / `_IgnoreFlags` | -1 / 0 | Present on the struct; **no processor currently reads them.** |
 
-Avoidance-sampler tuning (velBias, penalty weights, sample density, trigger/stride) lives in
-`UCk_Crowd_ProjectSettings_UE` (`Settings/CkCrowd_ProjectSettings.h`), not on the agent.
+Avoidance-sampler tuning (velBias, penalty weights, sample density, trigger/stride) and
+stationary-markup tuning live in `UCk_Crowd_ProjectSettings_UE`
+(`Settings/CkCrowd_ProjectSettings.h`), not on the agent. `_StationaryMarkupSpeedThreshold`
+defaults to 84 cm/s, the former half-radius-per-0.25-second rule for the standard 42 cm agent;
+the classifier uses XY displacement over the actual sample window rather than instantaneous
+velocity.
 
 ---
 

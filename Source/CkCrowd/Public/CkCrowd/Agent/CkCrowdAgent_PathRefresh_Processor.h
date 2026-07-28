@@ -15,10 +15,25 @@
 
 namespace ck
 {
-    // Mid-walk path refresh — the second half of StationaryMarkup; see CkCrowd/CLAUDE.md.
-    // One-shot per (path, disc-set): path and discs are both static, so a miss now is a miss
-    // forever, and a path that legitimately PAID a disc's cost is never re-planned for it again.
-    // Server-only in effect: only the server paints discs, so the client gather is always empty.
+    // Mid-walk path refresh — the second half of StationaryMarkup. The cost discs only influence
+    // FindPath at PLAN time; a path computed before a crowd formed is a frozen polyline the agent
+    // follows INTO the crowd (UE's own UPathFollowingComponent re-paths when the navmesh under its
+    // path rebuilds; the dtCrowd port dropped that half of the mechanism). Each tick, a Walking
+    // agent whose REMAINING path passes through a disc confirmed AFTER its path was installed is
+    // re-pathed at its own goal (BlockedRecheck's resume dance), so the fresh plan sees the discs
+    // and detours. Assigning the serial at confirmation, not paint, preserves the invalidation
+    // when a route installs during the asynchronous paint-to-navmesh-rebuild window.
+    //
+    // One-shot per (path, disc-set): a path serial older than every eligible disc early-outs on a
+    // single compare, and a clean scan fast-forwards the serial — the path and the discs are both
+    // static, so a miss now is a miss forever. A path that legitimately chose to PAY a disc's cost
+    // and cross (cost, never a hole) is therefore never re-planned for that disc again. Because
+    // the one-shot is precious, a disc only becomes eligible once the REBUILT navmesh actually
+    // reports the cost area at its location (tile rebuild is async and unbounded under churn —
+    // a timer-gated refresh fired pre-rebake, got the same straight path, and burned the serial).
+    //
+    // Server-only in effect: only the server paints discs, so the per-tick gather is empty on
+    // clients and every agent early-outs.
     class CKCROWD_API FProcessor_CrowdAgent_PathRefresh : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_PathRefresh,
             FCk_Handle_CrowdAgent,
@@ -41,6 +56,11 @@ namespace ck
     public:
         auto DoTick(FCk_Time InDeltaT) -> void;
 
+        // Latest process-wide serial assigned to a markup only after Recast confirms its cost area.
+        // Path installers stamp this value; any later confirmation remains strictly newer.
+        static auto
+        Get_CurrentConfirmationSerial() -> uint64;
+
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -62,18 +82,35 @@ namespace ck
             const FVector& InGoal,
             float InAgentRadius) -> TOptional<FVector>;
 
+        // PathNetwork corridors are preferred geometry, not hard movement boundaries. When a
+        // resolved corridor crosses confirmed stationary-agent markup, replace only the affected
+        // span with a Recast path computed under the agent's own query filter. The untouched
+        // prefix/suffix keep the agent on the authored route and make it rejoin immediately after
+        // clearing the standing crowd. Returns false without mutating OutWaypoints when no splice
+        // is needed or no valid detour exists.
+        static auto
+        Try_BuildStationaryMarkupDetour(
+            FCk_Handle InAnyWorldHandle,
+            FCk_Entity InSelfEntity,
+            const FVector& InStartLocation,
+            const FVector& InGoal,
+            const FFragment_CrowdAgent_Params& InParams,
+            float InArrivalRadius,
+            const TArray<FVector>& InCorridorWaypoints,
+            TArray<FVector>& OutWaypoints) -> bool;
+
     private:
         struct FSettledDisc
         {
             FCk_Entity _Owner;
             FVector _Center = FVector::ZeroVector;
             float _Radius = 0.0f;
-            uint64 _PaintSerial = 0;
+            uint64 _ConfirmationSerial = 0;
         };
 
         // Rebuilt in DoTick; read by the per-entity pass the same tick.
         TArray<FSettledDisc> _SettledDiscs;
-        uint64 _MaxEligibleSerial = 0;
+        uint64 _MaxConfirmationSerial = 0;
     };
 }
 

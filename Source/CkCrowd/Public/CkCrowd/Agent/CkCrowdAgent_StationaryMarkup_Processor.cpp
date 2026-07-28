@@ -9,6 +9,7 @@
 
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_NavArea.h"
+#include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Algorithm.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -27,14 +28,10 @@ namespace ck_crowd_agent_stationary_markup
     // Re-painting per push-apart nudge would churn nav tiles for nothing.
     constexpr auto REPAINT_DRIFT_FRACTION = 0.5f;
 
-    // ~84uu/s at the default radius: well below any real walking speed, well above the aggregate
-    // drift a pressed queue member accumulates from push-apart shoves.
+    // Coarse position sampling rejects single-frame push-apart command spikes while still
+    // classifying sustained physical movement promptly.
     constexpr auto STILLNESS_SAMPLE_INTERVAL_SEC = 0.25f;
-    constexpr auto STILLNESS_MAX_DRIFT_RADIUS_FRACTION = 0.5f;
 
-    // Process-wide, not per-world: only monotonicity matters, and paths and discs are only ever
-    // compared within one world.
-    static auto GPaintSerial = uint64{0};
 }
 
 namespace ck
@@ -52,17 +49,8 @@ namespace ck
         }
         InMarkup._StationarySeconds = 0.0f;
         InMarkup._SecondsSincePaint = 0.0f;
+        InMarkup._ConfirmationSerial = 0;
         InMarkup._ConfirmedOnMesh = false;
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_CrowdAgent_StationaryMarkup::
-        Get_CurrentPaintSerial()
-        -> uint64
-    {
-        return ck_crowd_agent_stationary_markup::GPaintSerial;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -89,24 +77,42 @@ namespace ck
         }
 
         const auto Location = InTransform.Get_Transform().GetLocation();
+        const auto& Settings = *UCk_Utils_Crowd_Settings_UE::Get();
+        const auto StationarySpeedThreshold = Settings.Get_StationaryMarkupSpeedThreshold();
+        const auto SpeedThresholdIsValid =
+            ck_crowd_agent_stationary_markup_algorithm::IsValidSpeedThreshold(
+                StationarySpeedThreshold);
+        CK_ENSURE_IF_NOT(
+            SpeedThresholdIsValid,
+            TEXT("Invalid stationary-markup speed threshold [{}]"),
+            StationarySpeedThreshold)
+        {}
+        if (NOT SpeedThresholdIsValid)
+        {
+            Remove_Markup(InMarkup);
+            return;
+        }
 
         // Stationary means PHYSICALLY stationary, not the Idle tag: a blocked walker plugs a
         // corridor exactly like an idle agent, and mutual pressers never go Idle at all.
         InMarkup._StillnessSampleAccumSec += static_cast<float>(InDeltaT.Get_Seconds());
         if (InMarkup._StillnessSampleAccumSec >= STILLNESS_SAMPLE_INTERVAL_SEC)
         {
-            const auto MovedUu = FVector::Dist2D(Location, InMarkup._StillnessSampleLoc);
+            const auto SampleSeconds = InMarkup._StillnessSampleAccumSec;
+            const auto SampleStart = InMarkup._StillnessSampleLoc;
             InMarkup._StillnessSampleLoc = Location;
             InMarkup._StillnessSampleAccumSec = 0.0f;
 
-            if (MovedUu > InParams.Get_Radius() * STILLNESS_MAX_DRIFT_RADIUS_FRACTION)
+            if (NOT ck_crowd_agent_stationary_markup_algorithm::IsStationarySample(
+                    SampleStart,
+                    Location,
+                    SampleSeconds,
+                    StationarySpeedThreshold))
             {
                 Remove_Markup(InMarkup);
                 return;
             }
         }
-
-        const auto& Settings = *UCk_Utils_Crowd_Settings_UE::Get();
 
         InMarkup._StationarySeconds += static_cast<float>(InDeltaT.Get_Seconds());
         if (InMarkup._StationarySeconds < Settings.Get_StationaryMarkupDelaySeconds())
@@ -139,7 +145,7 @@ namespace ck
         InMarkup._MarkupRadiusUu = HalfExtentXY;
         InMarkup._MarkupVerticalHalfExtentUu = HalfExtents.Z;
         InMarkup._SecondsSincePaint = 0.0f;
-        InMarkup._PaintSerial = ++ck_crowd_agent_stationary_markup::GPaintSerial;
+        InMarkup._ConfirmationSerial = 0;
         InMarkup._ConfirmedOnMesh = false;
     }
 

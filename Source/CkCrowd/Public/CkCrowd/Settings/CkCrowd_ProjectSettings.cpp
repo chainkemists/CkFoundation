@@ -27,6 +27,11 @@ auto UCk_Utils_Crowd_Settings_UE::Get_AvoidanceSampleStride() -> int32
     return Get()->Get_AvoidanceSampleStride();
 }
 
+auto UCk_Utils_Crowd_Settings_UE::Get_AvoidanceSampleDepth() -> int32
+{
+    return Get()->Get_AvoidanceSampleDepth();
+}
+
 auto UCk_Utils_Crowd_Settings_UE::Get_PushApartMode() -> ECk_PushApartMode
 {
     return Get()->Get_PushApartMode();
