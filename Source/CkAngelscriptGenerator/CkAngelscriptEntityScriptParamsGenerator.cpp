@@ -117,7 +117,13 @@ namespace ck_entity_script_params_generator
         const auto& PropName = InProperty->GetName();
 
         auto Emission = FPropertyEmission{};
-        Emission.DeclLine = ck::Format_UE(TEXT("    UPROPERTY()\n    {} {}"), AsType, PropName);
+        // CPF_Transient must survive into the generated struct: CkSnapshot's capture/remap walks THIS
+        // struct's fields (not the script class's), and keys its "never persisted" opt-out off the walked
+        // field's flags. Dropping the flag here re-persists the field — a Transient handle to boot infra
+        // (e.g. RentalManager's DayCycle) then makes the whole spawn recipe unresolvable at load and the
+        // entity is orphaned as [unresolved-other].
+        const auto Specifiers = InProperty->HasAnyPropertyFlags(CPF_Transient) ? TEXT("Transient") : TEXT("");
+        Emission.DeclLine = ck::Format_UE(TEXT("    UPROPERTY({})\n    {} {}"), Specifiers, AsType, PropName);
 
         const auto* CDO = InClass->GetDefaultObject();
         if (NOT ck::IsValid(CDO, ck::IsValid_Policy_NullptrOnly{}))
