@@ -13,9 +13,9 @@
 // Blueprint/AngelScript-facing queries over the save/load lifecycle markers. The markers themselves live in CkEcs
 // (CkSnapshot_RestoreMarker.h) / CkEcsExt (CkActorRebind_Utils.h) as plain C++ ECS tags so restore-redrive
 // processors can read them without a CkSnapshot dependency — but plain tags have no reflected surface, so script
-// code cannot see them at all without this library. Every query is read-only: marker lifecycles are owned by the
-// load, and game-side consumers that need a clear-side contract (e.g. a rebound-handled guard) own that policy
-// themselves.
+// code cannot see them at all without this library. The marker queries are read-only: their lifecycles are owned
+// by the load, and game-side consumers that need a clear-side contract (e.g. a rebound-handled guard) own that
+// policy themselves. The SaveKey surface is the one mutator here — see its contract below.
 UCLASS(NotBlueprintable)
 class CKSNAPSHOT_API UCk_Utils_Snapshot_UE : public UBlueprintFunctionLibrary
 {
@@ -55,5 +55,38 @@ public:
               DisplayName = "[Ck][Snapshot] Get Is Load In Progress")
     static bool
     Get_IsLoadInProgress(
+        const FCk_Handle& InHandle);
+
+    /**
+     * Give the entity a stable save identity, derived deterministically from InStableIdentity.
+     *
+     * A keyed entity is captured under rule 2 (`EngineOwned`): the loader does NOT rebuild it, it RENDEZVOUSES —
+     * the saved entity's payloads land on whichever entity in the fresh world carries the same key. That is the
+     * correct shape for anything the fresh world creates on its own (boot-spawned singletons, level-owned infra,
+     * on-demand shared infrastructure): without a key, the saved copy rebuilds ALONGSIDE the freshly-created one
+     * and the world ends up with two.
+     *
+     * The caller owns identity STABILITY: the same logical entity must produce byte-identical InStableIdentity on
+     * every boot, and two distinct logical entities must never produce the same one (they would consolidate onto
+     * whichever the resolver published last). Derive it from something structural — a group tag, a level-unique
+     * name, a configured id — never from spawn order, pointer values, or a runtime counter.
+     *
+     * Assignment is immediate (a fragment add, not a queued request) and idempotent — re-stamping the same
+     * identity leaves the same key. Keys stamped long after BeginPlay are fine: the load re-sweeps the resolver
+     * every rebuild tick.
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Request Assign Save Key")
+    static void
+    Request_AssignSaveKey(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FString& InStableIdentity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Has Save Key")
+    static bool
+    Get_HasSaveKey(
         const FCk_Handle& InHandle);
 };
