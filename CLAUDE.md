@@ -263,9 +263,36 @@ no signal in the default case:
   feature's `FGroup_EndPlay` processor, which calls `ck::request::FireCancelledForPending` over its
   `_Requests` fragment and completes every entry with `Failed_Cancelled`.
 Completion is LOCAL-machine: it reports the outcome of local processing, never a remote peer's.
-Canonical pilot: `CkTimer`. Features with richer failure modes keep bespoke result enums and
-per-operation signals (`CkInventory`, which still uses `PopulateRequestHandle` +
-`CK_SIGNAL_BIND_REQUEST_FULFILLED` + `ck::MakeRequestResultGuard`).
+Canonical reference: `CkTimer`. Every feature module carries the contract.
+
+**Result semantics.** `Succeeded` means the request was processed AND the caller's intent now holds
+— so an idempotent no-op (pause an already-paused entity, disable an already-disabled one) reports
+`Succeeded`, not `Failed`. Reserve `Failed` for an intent that does not hold afterwards and that
+retrying will not fix (a terminal-state target, a missing asset, a rejected transition).
+
+**Never strand a caller.** A `Request_*` that early-returns must still complete. Do NOT fire from
+inside a `CK_ENSURE_IF_NOT` body — that body compiles out under `CK_DISABLE_ENSURE_CHECKS`. Use the
+non-negotiable-#3 shape instead: hoist the condition to a local, give the ensure an empty body, and
+early-out through a separate ordinary `if` that fires `Failed_NotEnqueued`.
+
+**Not every `Request_*` is in scope.** The contract applies to functions that enqueue an
+`FCk_Request_Base`-derived struct onto a `_Requests` fragment, plus immediate mutators on an entity
+handle. It does NOT apply to subsystem/BPFL helpers that merely share the prefix but take a
+`UObject*`/`UPrimitiveComponent*` and return synchronously (`CkActorRelay`, parts of `CkPhysics`,
+`CkCore`), nor to processor-internal enqueues with no external caller. Those have no owner handle to
+report against — never invent one.
+
+**Additive where a bespoke channel already carries RESULTS.** `CkInventory` and `CkResolver` keep
+their bespoke result enums and per-operation signals (`PopulateRequestHandle` +
+`CK_SIGNAL_BIND_REQUEST_FULFILLED` + `ck::MakeRequestResultGuard`) and gain the generic delegate
+alongside; the two are derived from the same value and must never disagree. `FCk_Request_Eqs_RunQuery`
+and `FCk_Request_DialogEmitter_Query` likewise KEEP their `_OnComplete` members: those carry query
+results, and for the deferred path they are the only channel the caller can reach.
+
+**The delegate is always the LAST parameter.** If a preceding parameter had a C++ default, that
+default is dropped — moving the delegate earlier breaks AngelScript, which permits defaults only on
+trailing parameters, and silently rebinds existing positional callers. Dropping a default is a
+source-breaking change for AngelScript callers that omitted the argument, so grep `Script/` for them.
 
 **UObject refs in fragments — ownership split:** `TStrongObjectPtr` when the entity owns the
 object's lifetime (spawned components, render targets); `TWeakObjectPtr` for non-owning

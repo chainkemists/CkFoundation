@@ -1,6 +1,59 @@
 # Request completion delegates — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
+
+**As of 2026-07-27 — CAMPAIGN COMPLETE. Repo-wide rollout shipped.**
+The maintainer directed that the CkTimer treatment be applied across the whole repo rather than
+gate by gate, so gates 01–09 were collapsed into one rollout executed by ~30 parallel sub-agents
+against a written recipe.
+
+**Gate: 877/877, Failed 0** (`Saved/Logs/Rollout-Gate2.log`, `--no-nullrhi --discover-fresh`, 9m00s)
+— identical to the pre-rollout baseline, so zero regressions.
+
+**Scope delivered:** 48 modules converted. ~382 files in CkFoundation, 83 in CkTests, 8 in
+CkGameplayDebugger. 64 `*_CancelPendingRequests` processors (all registered), 68
+`TExclude<FTag_DestroyEntity_Initiate>` view exclusions, ~76 completion guards.
+
+**Defects found and fixed during the rollout (each would have shipped silently):**
+1. `ck::request::FireCancelledForPending` routed through `ck::Visitor` → `std::visit`, which only
+   compiles against a `std::variant`. CkEqs, CkResolver (×3) and CkGraphics hold a plain
+   `TArray<ConcreteRequest>`. Fixed centrally in `CkRequest_Completion.h` with an `if constexpr`
+   variant/non-variant dispatch.
+2. **52 sites** where a `Request_*` early-returned from inside a `CK_ENSURE_IF_NOT` body and so
+   never fired its delegate at all — a caller awaiting completion waited forever. ~72 guards
+   rewritten to the non-negotiable-#3 shape across 12 modules.
+3. CkPmg Donut bound the completion guard to live fragment storage that `Remove<MarkedDirtyBy>()`
+   destructs — the guard's destructor would fire on a dangling reference.
+4. CkEcsExt `_ScaleRequests` is a `TOptional`; a second same-frame `Request_SetScale` silently
+   destroyed the first request's delegate. Superseded requests now complete `Failed`.
+5. CkStateMachine's non-authority path discarded the whole request batch without reaching a
+   handler, so a bound delegate never fired.
+6. 137 AngelScript call sites broke because dropping `ECk_MinMaxCurrent`'s C++ default (to make
+   room for the trailing delegate) made it REQUIRED in AS. Caught only by the gate — the C++ build
+   was green. **AngelScript is a third environment; "no behaviour change" must be argued in all
+   three.**
+
+**Structural discoveries:** CkGoap's 11 Planner/WorldState request structs did not derive
+`FCk_Request_Base` at all (added). `FCk_Request_EntityScript_Replicate` and
+`FCk_Request_ReplicationDriver_ReplicateEntity` are dead — declared, never referenced, and the
+latter's fragment befriends a processor that does not exist. `FCk_Request_ActorRelay_AcquireChannel`
+likewise dead. CkTween's deferred mutators are not named `Request_*` at all.
+
+**Open decisions for the maintainer (none blocking, all recorded):**
+- `FCk_Request_Eqs_RunQuery::_OnComplete` and `FCk_Request_DialogEmitter_Query::_OnComplete` were
+  KEPT, not deleted per G0-D4 — both carry query RESULTS and are the only channel the deferred path
+  can reach. G0-D4 predates that finding.
+- CkPmg's 7 Donut field setters have no delegate: they coalesce into one shared single-slot
+  fragment where a later setter would silently drop an earlier pending delegate. Giving them honest
+  completion needs the fragment to hold a LIST of delegates.
+- CkInventory's 3 Spatial authority rejections fire only the generic delegate; the base-class
+  equivalents fire both channels. Asymmetric but not contradictory.
+- CkGoap WorldState `Request_AddSubscriber`/`RemoveSubscriber` unconverted — orchestrator scoped
+  that agent too narrowly, not a deliberate exclusion.
+- `CkStateMachine::Request_RecordTransition` (debug queue) has no cancel processor.
+
+<!-- historical state below -->
+
 **As of 2026-07-26 afternoon (orchestrator: Fable 5):** G0-D16 discriminator run 1 DONE —
 **INV-C mechanism CONFIRMED** (INV-C3): in the captured FAIL arm, `_Timer` is iterated BEFORE the
 tick-timer every frame; OnTick reads `_Timer` post-update; snapshot ≈ one frame's dt; after the
@@ -120,15 +173,11 @@ regenerate, update C++ call sites) → baseline at new clean HEAD → full gate.
 | Gate | Scope (tentative membership — finalized at each gate's entry) | State |
 |---|---|---|
 | 00 | CkEcs shared contract + CkTimer pilot + AutoTests | ✅ Done (2026-07-26) |
-| 01 | Shape B/C alignment: CkEqs + CkDialog (C→A, delete `_OnComplete`), CkActor (incl. `AttachActor`), CkResourceLoader, CkGraphics, CkProjectile `CalculateAimAhead`, CkResolver DataBundle ops + guard alignment | ⏳ Pending |
-| 02 | Core/state: CkEcsExt (SceneNode, Transform), CkEntityCollection, CkEntityTag, CkTagSet, CkEcs EntityScript/ReplicationDriver requests | ⏳ Pending |
-| 03 | Motion/physics: CkPhysics, CkJolt, CkProjectile (Ballistic/Homing), CkChaos | ⏳ Pending |
-| 04 | AI: CkAggro, CkGoap, CkNavigation, CkCrowd, CkPathNetwork, CkRaySense | ⏳ Pending |
-| 05 | Presentation A: CkAnimation, CkAudio, CkFx, CkVfx, CkVat, CkCamera | ⏳ Pending |
-| 06 | Presentation B: CkIskmRenderer (18 requests), CkIsmRenderer, CkRenderTarget, CkUI, CkPmg | ⏳ Pending |
-| 07 | Gameplay: CkStateMachine, CkInteraction, CkObjective, CkOverlapBody, CkShapes, CkSpatialQuery, CkTween, CkMinimap, CkCompass, CkGrid, CkLagCompensation, CkVisibleRange | ⏳ Pending |
-| 08 | Sweep: residual modules from FEATURE_CENSUS re-grep, CkInventory/CkResolver consistency pass (migrate their per-op signals' *mechanics* only if divergent, keep bespoke enums), zero-dead-`GetAndDestroyRequestHandle` grep | ⏳ Pending |
-| 09 | VALIDATION.md full acceptance + docs sweep + ship (ck-ship-dev) | ⏳ Pending |
+| 01–09 | **COLLAPSED into a single repo-wide rollout at maintainer request (2026-07-27).** Gates 01–08's module membership was delivered in one pass; gate 09's acceptance is the 877/877 gate below. | ✅ Done (2026-07-27) |
+
+**Gates 01–09 superseded.** The maintainer directed that the CkTimer treatment be applied to the
+whole repo rather than gate by gate, so the phased membership above was executed as one rollout.
+Kept here only as the record of what each gate would have contained.
 
 ## Decision log
 
