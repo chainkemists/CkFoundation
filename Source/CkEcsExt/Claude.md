@@ -127,6 +127,11 @@ handles on the actor, `NewObject` components, camera directors, …) is dead on 
 code keys a processor on `ck::FTag_ActorJustRebound` to run its own idempotent reattach, then REMOVES the
 tag as its done-guard. The tag is TRANSIENT — one-shot post-restore bookkeeping, never captured into a save.
 
+`WithActor::Construct` only stamps the intent for a RUNTIME-spawned actor. A level-placed one gets
+`FFragment_SaveKey` (from `ck::save_key::Get_LevelPlacedIdentity`) instead: the level re-creates it on every boot,
+so respawning it from the save would duplicate it, and capture's classification lets the intent outrank the key —
+they are alternatives, never both. `_SnapshotRespawnable` therefore only governs runtime-spawned bridges.
+
 `FFragment_ActorSpawnIntent` stores the class as a plain `FString` (`UClass::GetPathName`), NOT a
 `TSoftClassPtr`: a soft-object path does not survive the snapshot's SaveGame memory-archive
 `SerializeItem` round-trip (it comes back empty), whereas a plain FString round-trips reliably — the same
