@@ -1,5 +1,8 @@
 #include "CkResourceLoader_Fragment_Data.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Validation/CkIsValid.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 auto
     FCk_ResourceLoader_ObjectReference_Soft::
@@ -104,6 +107,65 @@ auto
 {
     return Get_UniqueLoadedObjects() == InOther.Get_UniqueLoadedObjects() &&
         Get_AllOrderedLoadedObjects() == InOther.Get_AllOrderedLoadedObjects();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_ResourceLoader_RootedAssetBatch::
+    Get_IsRequested() const
+    -> bool
+{
+    return _Requested;
+}
+
+auto
+    FCk_ResourceLoader_RootedAssetBatch::
+    Get_IsReady() const
+    -> bool
+{
+    if (NOT Get_IsRequested())
+    { return false; }
+
+    if (NOT _StreamableHandle.IsValid())
+    { return true; }
+
+    return _StreamableHandle->HasLoadCompleted() || _StreamableHandle->WasCanceled();
+}
+
+auto
+    FCk_ResourceLoader_RootedAssetBatch::
+    Get_HasFailed() const
+    -> bool
+{
+    if (NOT Get_IsRequested())
+    { return false; }
+
+    if (NOT _StreamableHandle.IsValid())
+    { return true; }
+
+    if (_StreamableHandle->WasCanceled())
+    { return true; }
+
+    if (NOT _StreamableHandle->HasLoadCompleted())
+    { return false; }
+
+    return ck::algo::AnyOf(_RequestedPaths, [](const FSoftObjectPath& InPath)
+    {
+        return ck::Is_NOT_Valid(InPath.ResolveObject(), ck::IsValid_Policy_NullptrOnly{});
+    });
+}
+
+auto
+    FCk_ResourceLoader_RootedAssetBatch::
+    Get_ResolvedObject(
+        const FSoftObjectPath& InPath) const
+    -> UObject*
+{
+    if (NOT _StreamableHandle.IsValid() || NOT _StreamableHandle->HasLoadCompleted())
+    { return nullptr; }
+
+    return InPath.ResolveObject();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
