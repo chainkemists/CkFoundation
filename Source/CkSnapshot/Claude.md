@@ -176,6 +176,17 @@ bucket — it exists so nothing has to be inferred by subtraction.
 exist in the fresh world. A bridged entity carrying `FFragment_ActorSpawnIntent` is explicitly snapshot-respawnable,
 so it is `RuntimeSpawned` even when keyed; capture retains the key and load republishes it after actor-first rebuild.
 
+Because the intent outranks the key, the two are stamped as ALTERNATIVES, not together — the choice is made at
+construction by whoever creates the entity, and it turns on who re-creates the thing after a load:
+
+| The entity's actor / spawner is… | Stamp | Load behaviour |
+|---|---|---|
+| level-placed (`ck::save_key::Get_IsLevelPlaced`) | `FFragment_SaveKey` from (level package + actor name) | the level re-creates it; the save rendezvouses onto that copy |
+| runtime-spawned | `FFragment_ActorSpawnIntent`, if the class opted in | the loader is the only re-creator, so it respawns the actor |
+
+`UCk_EntityScript_WithActor_UE::Construct` and `ACk_EntitySpawner_UE` both apply exactly this split, which is why a
+snapshot-respawnable opt-in on a class that is ALSO placed in a level is inert rather than a duplicate source.
+
 ---
 
 ## Capture classification rules

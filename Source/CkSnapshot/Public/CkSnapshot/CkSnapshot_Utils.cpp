@@ -3,11 +3,11 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Snapshot/CkSaveKey_Fragment.h"
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
 
 #include "CkEcsExt/OwningActor/CkActorRebind_Utils.h"
 
-#include "CkSnapshot/SaveKey/CkSnapshot_SaveKey_Fragment.h"
 #include "CkSnapshot/Subsystem/CkSnapshot_Subsystem.h"
 
 #include "Engine/GameInstance.h"
@@ -81,23 +81,7 @@ auto
         const FString& InStableIdentity)
     -> void
 {
-    const auto HandleIsValid = ck::IsValid(InHandle);
-    CK_ENSURE_IF_NOT(HandleIsValid,
-        TEXT("Cannot assign the SaveKey [{}] — the Entity Handle is invalid"), InStableIdentity)
-    {}
-    if (NOT HandleIsValid)
-    { return; }
-
-    // An empty identity hashes to a single shared GUID, so every empty-keyed entity would rendezvous onto the same
-    // one and silently consolidate. Reject rather than key.
-    const auto IdentityIsValid = NOT InStableIdentity.IsEmpty();
-    CK_ENSURE_IF_NOT(IdentityIsValid,
-        TEXT("Cannot assign a SaveKey to Entity [{}] — the stable identity is EMPTY"), InHandle)
-    {}
-    if (NOT IdentityIsValid)
-    { return; }
-
-    InHandle.AddOrReplace<FFragment_SaveKey>(FGuid::NewDeterministicGuid(InStableIdentity));
+    ck::save_key::Assign(InHandle, InStableIdentity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
