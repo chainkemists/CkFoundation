@@ -13,6 +13,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Snapshot/CkSaveKey_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsEditor_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
@@ -398,6 +399,12 @@ auto
 
     DoInjectActorTransform();
 
+    // A level-placed spawner re-creates the same entity on every boot, so keying that entity makes a load RENDEZVOUS
+    // the saved state onto the fresh world's copy instead of rebuilding a second one beside it. The identity is the
+    // SPAWNER's, not the script's: one spawner owns exactly one entity, and the spawner is what the level re-creates.
+    // A runtime-spawned spawner gets no key — nothing about it is stable across boots.
+    const auto SaveKeyIdentity = ck::save_key::Get_LevelPlacedIdentity(this);
+
     if (const auto Replication = _EntityScript->Get_EffectiveReplication();
         Replication == ECk_Replication::Replicates && HasAuthority())
     {
@@ -413,7 +420,7 @@ auto
             TEXT("EntitySpawner [{}] could not create a pending-spawn entity."), this)
         { return; }
 
-        PendingEntity.Add<ck::FFragment_EntitySpawner_PendingSpawn>(_EntityScript, _ReplicatedChannelGroup);
+        PendingEntity.Add<ck::FFragment_EntitySpawner_PendingSpawn>(_EntityScript, _ReplicatedChannelGroup, SaveKeyIdentity);
 
         // Track the queue entity, not the payload: destroying this spawner beforehand cancels the pending
         // spawn, and once the payload is spawned under the channel's lifetime this handle goes invalid.
@@ -429,8 +436,13 @@ auto
 
     const auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(TransientEntity, _EntityScript, FInstancedStruct{}, {});
     _RuntimeEntityHandle = PendingEntity.Get_EntityUnderConstruction();
-    if (ck::IsValid(_RuntimeEntityHandle))
-    { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_RuntimeEntityHandle, {}); }
+    if (ck::Is_NOT_Valid(_RuntimeEntityHandle))
+    { return; }
+
+    UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(_RuntimeEntityHandle, {});
+
+    if (NOT SaveKeyIdentity.IsEmpty())
+    { ck::save_key::Assign(_RuntimeEntityHandle, SaveKeyIdentity); }
 }
 
 auto
