@@ -161,7 +161,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | Module | Ck deps |
 |---|---|
 | CkAStar | Core,Ecs,EcsExt,Log |
-| CkActorRelay | Core,Ecs,EcsExt,Label,Log,Settings + private Snapshot (same-tier; channel entities stamp `FFragment_SaveKey`) |
+| CkActorRelay | Core,Ecs,EcsExt,Label,Log,Settings (channel entities stamp `FFragment_SaveKey`, which lives in CkEcs — no Snapshot dep) |
 | CkAggro | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkAnimation | Core,Ecs,EcsExt,Label,Log,Provider,Record |
 | CkAttribute | Core,Ecs,EcsExt,Label,Log,Provider,Record |
@@ -177,7 +177,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkDynamic | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkEntityCollection | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkEntityExtension | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
-| CkEntitySpawner | ActorRelay,Core,Ecs,EcsExt,Log,Settings |
+| CkEntitySpawner | ActorRelay,Core,Ecs,EcsExt,Log,Settings (level-placed spawners key their entity via `ck::save_key` in CkEcs — no Snapshot dep) |
 | CkEntityTag | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkEqs | Core,Ecs,EcsExt,EntityTag,Label,Log,Record,Settings,Shapes,SpatialQuery,ThirdParty |
 | CkFx | Core,Ecs,EcsExt,Label,Log,Record,Settings |

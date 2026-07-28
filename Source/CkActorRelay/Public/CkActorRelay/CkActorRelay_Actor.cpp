@@ -8,12 +8,10 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/Snapshot/CkSaveKey_Fragment.h"
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor.h"
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Utils.h"
 
-#include "CkSnapshot/SaveKey/CkSnapshot_SaveKey_Fragment.h"
-
-#include <Misc/Guid.h>            // FGuid::NewDeterministicGuid — the channel's stable, tag-derived SaveKey
 #include <Net/UnrealNetwork.h>
 #include <Net/Core/PushModel/PushModel.h>
 
@@ -145,12 +143,12 @@ auto
     // therefore shares one key and N saved channel rows rendezvous onto a single fresh channel. That consolidation
     // is the intended behaviour — every channel of a group is interchangeable, and the alternative leaves the whole
     // channel-owned subtree with an owner the loader cannot resolve.
-    const auto SaveKey = FGuid::NewDeterministicGuid(GroupSubsystem->Get_GroupTag().GetTagName().ToString());
+    const auto SaveKeyIdentity = GroupSubsystem->Get_GroupTag().GetTagName().ToString();
 
     UCk_Utils_OwningActor_UE::Promise_OnActorEcsReady(this,
-        [SaveKey](AActor*, FCk_Handle InChannelEntity) -> void
+        [SaveKeyIdentity](AActor*, FCk_Handle InChannelEntity) -> void
         {
-            InChannelEntity.AddOrReplace<FFragment_SaveKey>(SaveKey);
+            ck::save_key::Assign(InChannelEntity, SaveKeyIdentity);
         },
         ECk_ActorEcsReady_Policy::LinkEstablished);
 }
