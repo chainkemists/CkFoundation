@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/Scene.h"          // FLightingChannels
-#include "PerPlatformProperties.h" // FPerPlatformFloat
+#include "UObject/PerPlatformProperties.h"
 #include "Animation/AnimInstance.h"
 
 #include "CkCore/Macros/CkMacros.h"
