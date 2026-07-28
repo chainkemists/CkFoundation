@@ -15,6 +15,12 @@ auto
     StartupModule()
     -> void
 {
+    // Same hazard as CkAnimationEditor: the editor binary also boots as a game process, where
+    // there is no toolbar to extend and the Slate style's RHI textures are destroyed without
+    // being released. Only bites under a real RHI — -nullrhi never gives them GPU resources.
+    if (IsRunningGame())
+    { return; }
+
     FCkCueToolboxStyle::Initialize();
     FCkCueToolboxCommands::Register();
     DoRegisterTabSpawner();
@@ -50,6 +56,9 @@ auto
     ShutdownModule()
     -> void
 {
+    if (IsRunningGame())
+    { return; }
+
     DoUnregisterTabSpawner();
     FCkCueToolboxCommands::Unregister();
     FCkCueToolboxStyle::Shutdown();

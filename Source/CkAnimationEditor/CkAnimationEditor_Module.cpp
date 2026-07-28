@@ -15,6 +15,14 @@ auto
     StartupModule()
     -> void
 {
+    // The editor binary also boots as a game process (process-level tests, and any -game run
+    // under a real RHI). There is no toolbar to extend there, and initializing the Slate style
+    // creates RHI textures that the game-process teardown destroys without releasing them —
+    // a fatal "FRenderResource was deleted without being released first". Under -nullrhi the
+    // same textures never acquire GPU resources, which is why this only bites with rendering on.
+    if (IsRunningGame())
+    { return; }
+
     FCkAnimationToolboxStyle::Initialize();
     FCkAnimationToolboxCommands::Register();
     DoRegisterTabSpawner();
@@ -50,6 +58,9 @@ auto
     ShutdownModule()
     -> void
 {
+    if (IsRunningGame())
+    { return; }
+
     DoUnregisterTabSpawner();
     FCkAnimationToolboxCommands::Unregister();
     FCkAnimationToolboxStyle::Shutdown();
