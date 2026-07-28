@@ -2,6 +2,7 @@
 
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Agent/CkCrowdAgent_PathFollow_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -78,8 +79,31 @@ namespace ck
                 // Steering's plane-crossing retirement comes from where the agent IS at install time.
                 InPathFollow._CurrentSegmentStart = InTransform.Get_Transform().GetLocation();
 
-                // Planned against every disc painted up to now — only NEWER discs may trigger a
-                // PathRefresh re-path.
+                // PathPending installs are normalized by OnPathResolved before they begin walking.
+                // A rebuild swap is already Walking, so it bypasses that processor: retire any
+                // request-time prefix that is behind the agent at install time here. Otherwise the
+                // reset cursor aims back at an obsolete lateral projection before turning forward.
+                if (IsWalking)
+                {
+                    const auto SkippedWaypointCount =
+                        ck_crowd_agent_path_follow_algorithm::SkipAlreadyPassedLeadingWaypoints(
+                            InPathFollow.Get_CurrentSegmentStart(),
+                            Result.Get_CompiledWaypoints(),
+                            InPathFollow._WaypointIndex,
+                            InPathFollow._CurrentSegmentStart);
+
+                    if (SkippedWaypointCount > 0)
+                    {
+                        ck::crowd::Verbose(
+                            TEXT("CrowdAgent [{}] network route swap skipped {} already-passed "
+                                 "leading corner(s)"),
+                            InHandle,
+                            SkippedWaypointCount);
+                    }
+                }
+
+                // This corridor was planned against every disc painted up to now — only NEWER
+                // discs may trigger a PathRefresh re-path.
                 InPathFollow._PathSerial = FProcessor_CrowdAgent_StationaryMarkup::Get_CurrentPaintSerial();
 
                 auto& Installed = NonConstHandle.AddOrGet<FFragment_CrowdAgent_InstalledRoute>();
