@@ -74,21 +74,37 @@ auto
     Request_ApplyOutline(
         FCk_Handle& InHandle,
         UCkUsf_OutlinePreset* InPreset,
-        ECk_Usf_OutlineScope InScope)
+        ECk_Usf_OutlineScope InScope,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Request_ApplyOutline: INVALID handle"))
-    { return InHandle; }
+    {}
+    if (NOT HandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{}),
+    const auto PresetIsValid = ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{});
+    CK_ENSURE_IF_NOT(PresetIsValid,
         TEXT("Request_ApplyOutline on [{}]: null preset"), InHandle)
-    { return InHandle; }
+    {}
+    if (NOT PresetIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
 
     ck_usf_outline_utils::DoStampTarget(InHandle, InPreset, false);
 
     if (InScope == ECk_Usf_OutlineScope::EntityAndDependents)
     { ck_usf_outline_utils::DoStampDependents_Recursive(InHandle, InPreset); }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 
     return InHandle;
 }
@@ -96,18 +112,28 @@ auto
 auto
     UCk_Utils_Usf_Outline_UE::
     Request_RemoveOutline(
-        FCk_Handle& InHandle)
+        FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Request_RemoveOutline: INVALID handle"))
-    { return InHandle; }
+    {}
+    if (NOT HandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
 
     InHandle.Try_Remove<ck::FFragment_Usf_OutlineTarget>();
 
     // Derived targets only ever come from a cascade rooted here (or above) — stripping them is always safe;
     // explicitly-outlined dependents keep theirs.
     ck_usf_outline_utils::DoRemoveDerivedTargets_Recursive(InHandle);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 
     return InHandle;
 }

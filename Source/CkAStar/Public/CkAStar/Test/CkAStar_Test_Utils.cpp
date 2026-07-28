@@ -55,11 +55,18 @@ auto
 auto
 	UCk_Utils_AStarTest_UE::
 	Request_StartSearch(
-		FCk_Handle_AStarTest& InHandle)
+		FCk_Handle_AStarTest& InHandle,
+		const FCk_Delegate_Request_OnCompleted& InDelegate)
 	-> FCk_Handle_AStarTest
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid handle in Request_StartSearch"))
-	{ return InHandle; }
+	const auto HandleIsValid = ck::IsValid(InHandle);
+	CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid handle in Request_StartSearch"))
+	{}
+	if (NOT HandleIsValid)
+	{
+		InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InHandle;
+	}
 
 	auto& GridGraphFragment = InHandle.Get<ck::FFragment_AStarTest_GridGraph>();
 	auto& SearchState = InHandle.Get<ck::FFragment_AStarTest_SearchState>();
@@ -82,6 +89,9 @@ auto
 	InHandle.Try_Remove<ck::FTag_AStar_SearchComplete>();
 	InHandle.Add<ck::FTag_AStar_SearchActive>();
 
+	// Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+	InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
+
 	return InHandle;
 }
 
@@ -92,15 +102,25 @@ auto
 	Request_BlockCell(
 		FCk_Handle_AStarTest& InHandle,
 		int32 InX,
-		int32 InY)
+		int32 InY,
+		const FCk_Delegate_Request_OnCompleted& InDelegate)
 	-> void
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid handle in Request_BlockCell"))
-	{ return; }
+	const auto HandleIsValid = ck::IsValid(InHandle);
+	CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid handle in Request_BlockCell"))
+	{}
+	if (NOT HandleIsValid)
+	{
+		InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return;
+	}
 
 	auto& GridGraphFragment = InHandle.Get<ck::FFragment_AStarTest_GridGraph>();
 	const auto CellIndex = GridGraphFragment._Graph.XYToCell(InX, InY);
 	GridGraphFragment._Graph.BlockCell(CellIndex);
+
+	// Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+	InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -110,15 +130,25 @@ auto
 	Request_UnblockCell(
 		FCk_Handle_AStarTest& InHandle,
 		int32 InX,
-		int32 InY)
+		int32 InY,
+		const FCk_Delegate_Request_OnCompleted& InDelegate)
 	-> void
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid handle in Request_UnblockCell"))
-	{ return; }
+	const auto HandleIsValid = ck::IsValid(InHandle);
+	CK_ENSURE_IF_NOT(HandleIsValid, TEXT("Invalid handle in Request_UnblockCell"))
+	{}
+	if (NOT HandleIsValid)
+	{
+		InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return;
+	}
 
 	auto& GridGraphFragment = InHandle.Get<ck::FFragment_AStarTest_GridGraph>();
 	const auto CellIndex = GridGraphFragment._Graph.XYToCell(InX, InY);
 	GridGraphFragment._Graph.UnblockCell(CellIndex);
+
+	// Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+	InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

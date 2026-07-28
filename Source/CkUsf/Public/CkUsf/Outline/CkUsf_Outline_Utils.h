@@ -4,6 +4,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 
@@ -42,19 +43,26 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Usf_Outline_UE);
 
 public:
+    // NOTE: InScope has NO default (dropped so the trailing delegate can be added — AngelScript
+    // only permits defaults on trailing parameters); the dropped default was the type's zero
+    // value (EntityOnly).
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Usf|Outline",
-              DisplayName = "[Ck][Usf] Request Apply Outline (Entity)")
+              DisplayName = "[Ck][Usf] Request Apply Outline (Entity)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle
     Request_ApplyOutline(
         UPARAM(ref) FCk_Handle& InHandle,
         UCkUsf_OutlinePreset* InPreset,
-        ECk_Usf_OutlineScope InScope = ECk_Usf_OutlineScope::EntityOnly);
+        ECk_Usf_OutlineScope InScope,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Usf|Outline",
-              DisplayName = "[Ck][Usf] Request Remove Outline (Entity)")
+              DisplayName = "[Ck][Usf] Request Remove Outline (Entity)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle
     Request_RemoveOutline(
-        UPARAM(ref) FCk_Handle& InHandle);
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Usf|Outline",
               DisplayName = "[Ck][Usf] Has Outline (Entity)")

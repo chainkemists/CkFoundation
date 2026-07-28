@@ -3,6 +3,7 @@
 #include "CkAStar_Test_Fragment_Data.h"
 #include "CkAStar/CkAStar_Fragment_Data.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkAStar_Test_Utils.generated.h"
@@ -35,28 +36,34 @@ public:
 
 	UFUNCTION(BlueprintCallable,
 		Category = "Ck|AStar|Test",
-		DisplayName = "[Ck][AStar] Request Start Search")
+		DisplayName = "[Ck][AStar] Request Start Search",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_AStarTest
 	Request_StartSearch(
-		UPARAM(ref) FCk_Handle_AStarTest& InHandle);
+		UPARAM(ref) FCk_Handle_AStarTest& InHandle,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable,
 		Category = "Ck|AStar|Test",
-		DisplayName = "[Ck][AStar] Request Block Cell")
+		DisplayName = "[Ck][AStar] Request Block Cell",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static void
 	Request_BlockCell(
 		UPARAM(ref) FCk_Handle_AStarTest& InHandle,
 		int32 InX,
-		int32 InY);
+		int32 InY,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable,
 		Category = "Ck|AStar|Test",
-		DisplayName = "[Ck][AStar] Request Unblock Cell")
+		DisplayName = "[Ck][AStar] Request Unblock Cell",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static void
 	Request_UnblockCell(
 		UPARAM(ref) FCk_Handle_AStarTest& InHandle,
 		int32 InX,
-		int32 InY);
+		int32 InY,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable,
 		Category = "Ck|AStar|Test",

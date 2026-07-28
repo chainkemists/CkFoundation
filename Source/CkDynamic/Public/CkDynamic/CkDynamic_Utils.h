@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkDynamic_Utils.generated.h"
@@ -62,19 +63,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Request Remove")
+              DisplayName="[Ck][DynamicFragment] Request Remove",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_Remove(
         UPARAM(ref) FCk_Handle& InHandle,
-        const UScriptStruct* InStructType);
+        const UScriptStruct* InStructType,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Request Try Remove")
+              DisplayName="[Ck][DynamicFragment] Request Try Remove",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static ECk_SucceededFailed
     Request_TryRemove(
         UPARAM(ref) FCk_Handle& InHandle,
-        const UScriptStruct* InStructType);
+        const UScriptStruct* InStructType,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
@@ -218,11 +223,13 @@ public:
     // call this. Ensures the fragment was added with ECk_Replication::Replicates.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",
-              DisplayName="[Ck][DynamicFragment] Request Mark Replication Dirty")
+              DisplayName="[Ck][DynamicFragment] Request Mark Replication Dirty",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_MarkReplicationDirty(
         UPARAM(ref) FCk_Handle& InHandle,
-        const UScriptStruct* InStructType);
+        const UScriptStruct* InStructType,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|DynamicFragment",

@@ -153,18 +153,22 @@ public:
 	// changes a value, feeding the AutoReplan OnWorldStateDirty / OnEitherDirty policies. Actions
 	// subscribe at activation and unsubscribe at deactivation; external consumers may subscribe too.
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
-		DisplayName = "[Ck][GOAP|WS] Request Add Subscriber")
+		DisplayName = "[Ck][GOAP|WS] Request Add Subscriber",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_WorldState
 	Request_AddSubscriber(
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
-		UPARAM(ref) FCk_Handle& InSubscriber);
+		UPARAM(ref) FCk_Handle& InSubscriber,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
-		DisplayName = "[Ck][GOAP|WS] Request Remove Subscriber")
+		DisplayName = "[Ck][GOAP|WS] Request Remove Subscriber",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_WorldState
 	Request_RemoveSubscriber(
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
-		UPARAM(ref) FCk_Handle& InSubscriber);
+		UPARAM(ref) FCk_Handle& InSubscriber,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	// Counts only currently-valid subscribers; stale entries are excluded.
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",

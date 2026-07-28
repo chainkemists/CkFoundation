@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "Components/ActorComponent.h"
@@ -85,20 +86,24 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|UnrealComponent",
-              DisplayName = "[Ck][UnrealComponent] Request Remove")
+              DisplayName = "[Ck][UnrealComponent] Request Remove",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_Remove(
-        UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent);
+        UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Stops the per-tick push of the owning entity's world transform onto this component — use when
     // it is about to be Unreal-physics-driven instead. ONE-WAY: there is no re-enable, and the
     // component is expected to be short-lived after opting out.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|UnrealComponent",
-              DisplayName = "[Ck][UnrealComponent] Request Disable Transform Push")
+              DisplayName = "[Ck][UnrealComponent] Request Disable Transform Push",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_UnrealComponent
     Request_DisableTransformPush(
-        UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent);
+        UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

@@ -21,7 +21,7 @@ auto
 
     if (InParams.Get_StartingState() == ECk_Substep_State::Running)
     {
-        Request_Resume(SubstepHandle);
+        Request_Resume(SubstepHandle, {});
     }
 
     return SubstepHandle;
@@ -60,7 +60,7 @@ auto
 
     if (InParams.Get_StartingState() == ECk_Substep_State::Running)
     {
-        Request_Resume(MaybeExistingSubstepEntity);
+        Request_Resume(MaybeExistingSubstepEntity, {});
     }
 
     return MaybeExistingSubstepEntity;
@@ -84,10 +84,15 @@ auto
 auto
     UCk_Utils_Substep_UE::
     Request_Pause(
-        FCk_Handle_Substep& InHandle)
+        FCk_Handle_Substep& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Substep
 {
     InHandle.Try_Remove<ck::FTag_Substep_Update>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    // Pausing an already-paused Substep is a no-op: the caller's intent (paused) already holds.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 
     return InHandle;
 }
@@ -95,10 +100,15 @@ auto
 auto
     UCk_Utils_Substep_UE::
     Request_Resume(
-        FCk_Handle_Substep& InHandle)
+        FCk_Handle_Substep& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Substep
 {
     InHandle.AddOrGet<ck::FTag_Substep_Update>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    // Resuming an already-running Substep is a no-op: the caller's intent (running) already holds.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 
     return InHandle;
 }
@@ -107,16 +117,20 @@ auto
     UCk_Utils_Substep_UE::
     Request_Reset(
         FCk_Handle_Substep& InHandle,
-        ECk_Substep_State InState)
+        ECk_Substep_State InState,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Substep
 {
     switch(InState)
     {
-        case ECk_Substep_State::Paused: { Request_Pause(InHandle); break; }
-        case ECk_Substep_State::Running: { Request_Resume(InHandle); break; }
+        case ECk_Substep_State::Paused: { Request_Pause(InHandle, {}); break; }
+        case ECk_Substep_State::Running: { Request_Resume(InHandle, {}); break; }
     }
 
     InHandle.AddOrGet<ck::FTag_Substep_FirstUpdate>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 
     return InHandle;
 }

@@ -140,7 +140,7 @@ auto
 	if (ck::IsValid(InParams.Get_WorldStateSource()))
 	{
 		auto WS = InParams.Get_WorldStateSource();
-		UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, InPlannerEntity);
+		UCk_Utils_Goap_WorldState_UE::Request_AddSubscriber(WS, InPlannerEntity, {});
 	}
 
 	if (InParams.Get_PlanOnStart())

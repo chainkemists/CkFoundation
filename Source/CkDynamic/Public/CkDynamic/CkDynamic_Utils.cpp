@@ -182,10 +182,11 @@ auto
     UCk_Utils_DynamicFragment_UE::
     Request_Remove(
         FCk_Handle& InHandle,
-        const UScriptStruct* InStructType)
+        const UScriptStruct* InStructType,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    const auto Result = Request_TryRemove(InHandle, InStructType);
+    const auto Result = Request_TryRemove(InHandle, InStructType, InDelegate);
 
     CK_ENSURE(Result == ECk_SucceededFailed::Succeeded,
         TEXT("Could NOT remove Dynamic Fragment [{}] from Handle [{}]"), InStructType, InHandle);
@@ -197,16 +198,29 @@ auto
     UCk_Utils_DynamicFragment_UE::
     Request_TryRemove(
         FCk_Handle& InHandle,
-        const UScriptStruct* InStructType)
+        const UScriptStruct* InStructType,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> ECk_SucceededFailed
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InStructType),
+    const auto StructTypeIsValid = ck::IsValid(InStructType);
+    CK_ENSURE_IF_NOT(StructTypeIsValid,
         TEXT("Invalid struct type passed. Unable to remove Dynamic Fragment from Handle [{}]"), InHandle)
-    { return ECk_SucceededFailed::Failed; }
+    {}
+    if (NOT StructTypeIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return ECk_SucceededFailed::Failed;
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle [{}] passed. Unable to remove Dynamic Fragment [{}]"), InHandle, InStructType)
-    { return ECk_SucceededFailed::Failed; }
+    {}
+    if (NOT HandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return ECk_SucceededFailed::Failed;
+    }
 
     const auto StorageId = Get_StorageId(InStructType);
     auto&& Storage = InHandle.Get_RegistryView().Storage<ck::FFragment_DynamicFragment_Data>(StorageId);
@@ -214,6 +228,7 @@ auto
 
     if (NOT Storage.contains(Entity))
     {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed);
         return ECk_SucceededFailed::Failed;
     }
 
@@ -230,6 +245,9 @@ auto
     {
         InHandle.Try_Remove<ck::FFragment_DynamicFragment_Data>();
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 
     return ECk_SucceededFailed::Succeeded;
 }
@@ -562,12 +580,19 @@ auto
     UCk_Utils_DynamicFragment_UE::
     Request_MarkReplicationDirty(
         FCk_Handle& InHandle,
-        const UScriptStruct* InStructType)
+        const UScriptStruct* InStructType,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle passed to Request_MarkReplicationDirty"))
-    { return; }
+    {}
+    if (NOT HandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     const auto IsReplicated = InHandle.Has<ck::FFragment_DynamicFragment_ReplicatedTypes>() &&
         InHandle.Get<ck::FFragment_DynamicFragment_ReplicatedTypes>().Get_Types().Contains(InStructType);
@@ -576,9 +601,17 @@ auto
         TEXT("Request_MarkReplicationDirty: Dynamic Fragment [{}] on Entity [{}] is NOT set up to replicate. ")
         TEXT("Add it with ECk_Replication::Replicates before marking it dirty."),
         InStructType, InHandle)
-    { return; }
+    {}
+    if (NOT IsReplicated)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     InHandle.AddOrGet<ck::FTag_DynamicFragment_MayRequireReplication>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 }
 
 auto

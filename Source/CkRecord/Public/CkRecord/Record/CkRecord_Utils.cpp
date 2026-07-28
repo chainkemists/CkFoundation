@@ -143,20 +143,22 @@ auto
     UCk_Utils_RecordOfEntities_UE::
     Request_Connect(
         FCk_Handle& InRecordHandle,
-        FCk_Handle& InRecordEntry)
+        FCk_Handle& InRecordEntry,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    UtilsType::Request_Connect(InRecordHandle, InRecordEntry);
+    UtilsType::Request_Connect(InRecordHandle, InRecordEntry, ECk_Record_LabelRequirementPolicy::Required, InDelegate);
 }
 
 auto
     UCk_Utils_RecordOfEntities_UE::
     Request_Disconnect(
         FCk_Handle& InRecordHandle,
-        FCk_Handle& InRecordEntry)
+        FCk_Handle& InRecordEntry,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    UtilsType::Request_Disconnect(InRecordHandle, InRecordEntry);
+    UtilsType::Request_Disconnect(InRecordHandle, InRecordEntry, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
