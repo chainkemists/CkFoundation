@@ -103,7 +103,7 @@ namespace ck
     class CKPATHNETWORK_API FProcessor_PathNetworkFollower_HandleRequests : public ck_exp::TProcessor<
         FProcessor_PathNetworkFollower_HandleRequests,
         FCk_Handle_PathNetworkFollower,
-        ck::TReadOnly<FFragment_PathNetworkFollower_Params>,
+        ck::TReadWrite<FFragment_PathNetworkFollower_Params>,
         ck::TReadWrite<FFragment_PathNetworkFollower_Corridor>,
         ck::TReadWrite<FFragment_PathNetworkFollower_Requests>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -121,7 +121,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_PathNetworkFollower_Params& InParams,
+            FFragment_PathNetworkFollower_Params& InParams,
             FFragment_PathNetworkFollower_Corridor& InCorridor,
             FFragment_PathNetworkFollower_Requests& InRequests) const -> void;
 
@@ -133,6 +133,13 @@ namespace ck
             const FFragment_PathNetworkFollower_Params& InParams,
             FFragment_PathNetworkFollower_Corridor& InCorridor,
             const FCk_Request_PathNetworkFollower_FindRoute& InRequest,
+            ECk_Request_OperationResult& OutResult) const -> void;
+
+        auto DoHandleRequest(
+            HandleType InHandle,
+            FFragment_PathNetworkFollower_Params& InParams,
+            FFragment_PathNetworkFollower_Corridor& InCorridor,
+            const FCk_Request_PathNetworkFollower_UpdateTuning& InRequest,
             ECk_Request_OperationResult& OutResult) const -> void;
 
     private:

@@ -71,7 +71,8 @@ namespace ck
 
     public:
         using FindRouteRequestType = FCk_Request_PathNetworkFollower_FindRoute;
-        using RequestType = std::variant<FindRouteRequestType>;
+        using UpdateTuningRequestType = FCk_Request_PathNetworkFollower_UpdateTuning;
+        using RequestType = std::variant<FindRouteRequestType, UpdateTuningRequestType>;
 
     private:
         TArray<RequestType> _Requests;
