@@ -10,6 +10,8 @@
 #include "CkAudio/CkAudio_Stats.h"
 #include "CkAudioTrack_Utils.h"
 
+#include "CkResourceLoader/CkResourceLoader_Utils.h"
+
 #include "CkAudio/CkAudio_Settings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -58,7 +60,64 @@ namespace ck
             FFragment_AudioTrack_Current& InCurrent)
             -> void
     {
+        if (NOT InCurrent._LoadedAssets.Get_IsRequested())
+        {
+            const auto SoundIsAuthored = ck::IsValid(InParams.Get_Sound());
+            CK_ENSURE_IF_NOT(SoundIsAuthored, TEXT("Cannot setup AudioTrack [{}] - its Sound soft reference is unset"), InHandle)
+            {}
+
+            if (NOT SoundIsAuthored)
+            {
+                InHandle.Remove<MarkedDirtyBy>();
+                return;
+            }
+
+            auto PathsToLoad = TArray<FSoftObjectPath>{};
+            PathsToLoad.Emplace(InParams.Get_Sound().ToSoftObjectPath());
+
+            if (ck::IsValid(InParams.Get_LibraryAttenuationSettings()))
+            { PathsToLoad.Emplace(InParams.Get_LibraryAttenuationSettings().ToSoftObjectPath()); }
+            if (ck::IsValid(InParams.Get_LibraryConcurrencySettings()))
+            { PathsToLoad.Emplace(InParams.Get_LibraryConcurrencySettings().ToSoftObjectPath()); }
+            if (ck::IsValid(InParams.Get_LibrarySoundClassSettings()))
+            { PathsToLoad.Emplace(InParams.Get_LibrarySoundClassSettings().ToSoftObjectPath()); }
+
+            InCurrent._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+                TEXT("AudioTrack.Setup"), PathsToLoad);
+        }
+
+        if (NOT InCurrent._LoadedAssets.Get_IsReady())
+        {
+            InHandle.AddOrGet<FTag_AudioTrack_PendingAssetLoad>();
+            return;
+        }
+
+        const auto ResolvedSound = Cast<USoundBase>(
+            InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_Sound().ToSoftObjectPath()));
+        const auto AssetsAreLoaded = NOT InCurrent._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSound);
+
+        CK_ENSURE_IF_NOT(AssetsAreLoaded,
+            TEXT("Cannot setup AudioTrack [{}] - loading its Sound [{}] (or a library setting) through CkResourceLoader failed"),
+            InHandle, InParams.Get_Sound().ToSoftObjectPath())
+        {}
+
+        if (NOT AssetsAreLoaded)
+        {
+            InCurrent._LoadedAssets = {};
+            InHandle.Try_Remove<FTag_AudioTrack_PendingAssetLoad>();
+            InHandle.Remove<MarkedDirtyBy>();
+            return;
+        }
+
+        InHandle.Try_Remove<FTag_AudioTrack_PendingAssetLoad>();
         InHandle.Remove<MarkedDirtyBy>();
+
+        const auto ResolvedLibraryAttenuation = Cast<USoundAttenuation>(
+            InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_LibraryAttenuationSettings().ToSoftObjectPath()));
+        const auto ResolvedLibraryConcurrency = Cast<USoundConcurrency>(
+            InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_LibraryConcurrencySettings().ToSoftObjectPath()));
+        const auto ResolvedLibrarySoundClass = Cast<USoundClass>(
+            InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_LibrarySoundClassSettings().ToSoftObjectPath()));
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot setup AudioTrack [{}] - no valid world"), InHandle)
@@ -76,7 +135,7 @@ namespace ck
         if (ck::IsValid(InParams.Get_ScriptAsset()))
         { UCk_Utils_EntityScript_UE::Add(InHandle, InParams.Get_ScriptAsset(), FInstancedStruct{}); }
 
-        AudioComponent->SetSound(InParams.Get_Sound());
+        AudioComponent->SetSound(ResolvedSound);
         AudioComponent->bAutoActivate = false;
         AudioComponent->SetVolumeMultiplier(0.0f);
 
@@ -95,7 +154,7 @@ namespace ck
             auto SoundCueOverridesConcurrency = false;
             auto SoundCueOverridesSoundClass = false;
 
-            if (auto* SoundCue = Cast<USoundCue>(InParams.Get_Sound());
+            if (auto* SoundCue = Cast<USoundCue>(ResolvedSound);
                 ck::IsValid(SoundCue))
             {
                 if (SoundCue->bOverrideAttenuation)
@@ -126,15 +185,15 @@ namespace ck
 
             if (NOT SoundCueOverridesAttenuation && ck::Is_NOT_Valid(AttenuationToUse))
             {
-                AttenuationToUse = InParams.Get_LibraryAttenuationSettings();
+                AttenuationToUse = ResolvedLibraryAttenuation;
             }
             if (NOT SoundCueOverridesConcurrency && ck::Is_NOT_Valid(ConcurrencyToUse))
             {
-                ConcurrencyToUse = InParams.Get_LibraryConcurrencySettings();
+                ConcurrencyToUse = ResolvedLibraryConcurrency;
             }
             if (NOT SoundCueOverridesSoundClass && ck::Is_NOT_Valid(SoundClassToUse))
             {
-                SoundClassToUse = InParams.Get_LibrarySoundClassSettings();
+                SoundClassToUse = ResolvedLibrarySoundClass;
             }
 
             if (NOT SoundCueOverridesAttenuation)
@@ -190,7 +249,7 @@ namespace ck
             bool SoundCueOverridesConcurrency = false;
             bool SoundCueOverridesSoundClass = false;
 
-            if (auto* SoundCue = Cast<USoundCue>(InParams.Get_Sound()))
+            if (auto* SoundCue = Cast<USoundCue>(ResolvedSound))
             {
                 if (SoundCue->bOverrideConcurrency)
                 {
@@ -210,11 +269,11 @@ namespace ck
 
             if (NOT SoundCueOverridesConcurrency && ck::Is_NOT_Valid(ConcurrencyToUse))
             {
-                ConcurrencyToUse = InParams.Get_LibraryConcurrencySettings();
+                ConcurrencyToUse = ResolvedLibraryConcurrency;
             }
             if (NOT SoundCueOverridesSoundClass && ck::Is_NOT_Valid(SoundClassToUse))
             {
-                SoundClassToUse = InParams.Get_LibrarySoundClassSettings();
+                SoundClassToUse = ResolvedLibrarySoundClass;
             }
 
             if (NOT SoundCueOverridesConcurrency && ck::IsValid(ConcurrencyToUse))
@@ -247,7 +306,7 @@ namespace ck
 
         ck::audio::Verbose(TEXT("Setup AudioTrack [{}] with sound [{}], spatial: [{}]"),
             InParams.Get_TrackName(),
-            InParams.Get_Sound() ? InParams.Get_Sound()->GetName() : TEXT("None"),
+            ResolvedSound->GetName(),
             IsSpatial);
     }
 
@@ -444,7 +503,18 @@ namespace ck
 
         if (InCurrent._State == ECk_AudioTrack_State::Stopped || NOT InCurrent._AudioComponent->IsPlaying())
         {
-            InCurrent._AudioComponent->SetSound(InParams.Get_Sound());
+            const auto ResolvedSound = Cast<USoundBase>(
+                InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_Sound().ToSoftObjectPath()));
+            const auto SoundIsResolved = ck::IsValid(ResolvedSound);
+
+            CK_ENSURE_IF_NOT(SoundIsResolved, TEXT("Cannot play AudioTrack [{}] - its resolved Sound is missing. "
+                "Setup completed, so the loader-rooted asset should still be alive; this should be unreachable."), InHandle)
+            {}
+
+            if (NOT SoundIsResolved)
+            { return; }
+
+            InCurrent._AudioComponent->SetSound(ResolvedSound);
             InCurrent._AudioComponent->SetBoolParameter(TEXT("Loop"), InParams.Get_LoopBehavior() == ECk_LoopBehavior::Loop);
             InCurrent._AudioComponent->Play();
 
@@ -680,6 +750,9 @@ namespace ck
             InCurrent._AudioComponent->DestroyComponent();
             InCurrent._AudioComponent = nullptr;
         }
+
+        // Drops the streamable handle — the track's assets become collectible again
+        InCurrent._LoadedAssets = {};
     }
 
     auto
@@ -986,7 +1059,7 @@ namespace ck
         const auto TextPosition = Position + FVector(0, 0, BoundaryRadius + 50.0f);
         const auto TrackNameStr = InParams.Get_TrackName().ToString();
         const auto SoundAssetName = ck::IsValid(InParams.Get_Sound())
-            ? InParams.Get_Sound()->GetName()
+            ? InParams.Get_Sound().GetAssetName()
             : FString(TEXT("None"));
         const auto bShowSoundName = (TrackNameStr != SoundAssetName);
         const auto TrackInfo = bShowSoundName
@@ -1108,7 +1181,7 @@ namespace ck
         );
 
         const auto SoundName = ck::IsValid(InParams.Get_Sound())
-            ? InParams.Get_Sound()->GetName()
+            ? InParams.Get_Sound().GetAssetName()
             : FString(TEXT("None"));
         const auto bShowSoundName = (TrackNameText != SoundName);
         auto NextLineIndex = 1;
