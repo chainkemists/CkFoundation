@@ -64,6 +64,15 @@ namespace ck::snapshot
             {
                 const FProperty* Property = *PropIt;
 
+                // CPF_Transient = "never persisted": a Transient handle field is a LIVE-SESSION injection (e.g. a
+                // spawn-param handle to boot infrastructure like a DayCycle) that the owner re-acquires after a load.
+                // Skipping it here excludes it from the save's handle stream AND from capture's persisted-target
+                // validation — symmetric on save and load (the walk is layout-driven on both sides), so the
+                // positional stream stays consistent. Without this skip, a spawn-param ref to a non-persisted
+                // entity makes the whole recipe unresolvable and the entity is ORPHANED at load (unresolved-other).
+                if (Property->HasAnyPropertyFlags(CPF_Transient))
+                { continue; }
+
                 if (const auto* StructProp = CastField<FStructProperty>(Property))
                 {
                     VisitOrRecurse(StructProp, StructProp->ContainerPtrToValuePtr<void>(InMemory));
