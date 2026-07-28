@@ -18,11 +18,12 @@
 UE_DEFINE_GAMEPLAY_TAG(TAG_EntityFragment_Root, TEXT("DynamicFragment"));
 
 // --------------------------------------------------------------------------------------------------------------------
-namespace ck::dynamic
+namespace ck_dynamic_fragment
 {
-    static auto IsSnapshotTransient(const UScriptStruct* InType) -> bool
+    auto IsSnapshotTransient(const UScriptStruct* InType) -> bool
     {
-        return InType != nullptr && InType->HasMetaData(TEXT("CkSnapshotTransient"));
+        return ck::IsValid(InType) &&
+               InType->IsChildOf(FCk_DynamicFragment_SnapshotTransient::StaticStruct());
     }
 }
 
@@ -39,7 +40,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                 auto Fragments = UCk_Utils_DynamicFragment_UE::Get_AllFragments(InEntity);
                 Fragments.RemoveAll([](const FInstancedStruct& InEntry)
                 {
-                    return ck::dynamic::IsSnapshotTransient(InEntry.GetScriptStruct());
+                    return ck_dynamic_fragment::IsSnapshotTransient(InEntry.GetScriptStruct());
                 });
                 if (Fragments.IsEmpty())
                 { return {}; }
@@ -86,7 +87,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                     const auto* Type = Entry.GetScriptStruct();
                     if (ck::Is_NOT_Valid(Type))
                     { continue; } // unresolved content drift retains the warning-and-skip behavior below
-                    if (ck::dynamic::IsSnapshotTransient(Type))
+                    if (ck_dynamic_fragment::IsSnapshotTransient(Type))
                     { continue; }
 
                     const auto Schema = ck::dynamic::Validate_FragmentSchema(Type);
@@ -110,7 +111,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                             "still applied."), InEntity);
                         continue;
                     }
-                    if (ck::dynamic::IsSnapshotTransient(Type))
+                    if (ck_dynamic_fragment::IsSnapshotTransient(Type))
                     { continue; }
 
                     auto* Storage = UCk_Utils_DynamicFragment_UE::TryAddOrGet_Fragment_TypeUnsafe(InEntity, Type);
