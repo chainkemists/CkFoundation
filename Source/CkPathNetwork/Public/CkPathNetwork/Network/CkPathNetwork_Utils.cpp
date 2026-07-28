@@ -5,10 +5,33 @@
 #include "CkPathNetwork/Network/CkPathNetwork_Vectorize.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    auto
+        Is_PathNetworkFollowerTuningValid(
+            const FCk_PathNetworkFollower_Tuning& InTuning)
+        -> bool
+    {
+        const auto Multiplier = InTuning.Get_OffPathCostMultiplier();
+        const auto SideKeeping = InTuning.Get_SideKeepingFraction();
+        const auto Spacing = InTuning.Get_CorridorWaypointSpacing();
+        const auto Smoothing = InTuning.Get_CornerSmoothingDistance();
+        const auto Clearance = InTuning.Get_DesiredNavmeshClearance();
+        return FMath::IsFinite(Multiplier) && Multiplier >= 1.0f
+            && FMath::IsFinite(SideKeeping) && SideKeeping >= 0.0f && SideKeeping <= 0.9f
+            && FMath::IsFinite(Spacing) && Spacing >= 50.0f
+            && FMath::IsFinite(Smoothing) && Smoothing >= 0.0f && Smoothing <= 1000.0f
+            && FMath::IsFinite(Clearance) && Clearance >= 0.0f && Clearance <= 1000.0f;
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -118,13 +141,48 @@ auto
 
     const auto Mask = InDetector->Get_DetectionMask(InWorldBounds);
 
+    auto GeneratedRibbons = TArray<FCk_PathNetwork_Ribbon>{};
+    if (Mask.Get_IsValidMask())
+    { GeneratedRibbons = ck::pathnetwork::Vectorize_MaskToRibbons(Mask, InVectorizeParams); }
+
+    const auto Processed = InDetector->Process_GeneratedRibbons(
+        InWorldBounds, GeneratedRibbons);
+    const auto GeneratedRibbonsWereProcessed = Processed.Get_Succeeded();
+    CK_ENSURE_IF_NOT(GeneratedRibbonsWereProcessed,
+        TEXT("Request_RebuildFromDetector on [{}] could not process generated detector output: [{}]"),
+        InNetwork, Processed.Get_FailureReason())
+    {}
+    if (NOT GeneratedRibbonsWereProcessed)
+    { return InNetwork; }
+    GeneratedRibbons = Processed.Get_GeneratedWorldRibbons();
+
+    const auto ProcessedSourcesAreGenerated =
+        ck::pathnetwork::Get_AreAllRibbonSourcesGenerated(
+            GeneratedRibbons);
+    CK_ENSURE_IF_NOT(ProcessedSourcesAreGenerated,
+        TEXT("Request_RebuildFromDetector on [{}] rejected detector processing output containing a non-Generated ribbon"),
+        InNetwork)
+    {}
+    if (NOT ProcessedSourcesAreGenerated)
+    { return InNetwork; }
+
+    const auto Validation = InDetector->Validate_GeneratedRibbons(
+        InWorldBounds, GeneratedRibbons);
+    const auto GeneratedRibbonsAreValid = Validation.Get_Succeeded();
+    CK_ENSURE_IF_NOT(GeneratedRibbonsAreValid,
+        TEXT("Request_RebuildFromDetector on [{}] rejected generated detector output: [{}]"),
+        InNetwork, Validation.Get_FailureReason())
+    {}
+    if (NOT GeneratedRibbonsAreValid)
+    { return InNetwork; }
+
     auto NewRibbons = ck::algo::Filter(
         InNetwork.Get<ck::FFragment_PathNetwork_Params>().Get_Ribbons(),
         [](const FCk_PathNetwork_Ribbon& InRibbon)
         { return InRibbon.Get_Source() == ECk_PathNetwork_RibbonSource::Authored; });
 
     if (Mask.Get_IsValidMask())
-    { NewRibbons.Append(ck::pathnetwork::Vectorize_MaskToRibbons(Mask, InVectorizeParams)); }
+    { NewRibbons.Append(MoveTemp(GeneratedRibbons)); }
     else
     {
         ck::pathnetwork::Verbose(TEXT("Request_RebuildFromDetector on [{}]: detector returned an empty mask — "
@@ -251,6 +309,19 @@ auto
         TEXT("Entity [{}] already has the PathNetworkFollower feature"), InHandle)
     { return Cast(InHandle); }
 
+    auto Tuning = FCk_PathNetworkFollower_Tuning{};
+    Tuning.Set_OffPathCostMultiplier(InParams.Get_OffPathCostMultiplier());
+    Tuning.Set_SideKeepingFraction(InParams.Get_SideKeepingFraction());
+    Tuning.Set_CorridorWaypointSpacing(InParams.Get_CorridorWaypointSpacing());
+    Tuning.Set_CornerSmoothingDistance(InParams.Get_CornerSmoothingDistance());
+    Tuning.Set_DesiredNavmeshClearance(InParams.Get_DesiredNavmeshClearance());
+    const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(Tuning);
+    CK_ENSURE_IF_NOT(TuningIsValid,
+        TEXT("PathNetworkFollower parameters contain invalid tuning"))
+    {}
+    if (NOT TuningIsValid)
+    { return {}; }
+
     InHandle.Add<ck::FFragment_PathNetworkFollower_Params>(InParams);
     InHandle.Add<ck::FFragment_PathNetworkFollower_Corridor>();
 
@@ -269,6 +340,24 @@ auto
     -> bool
 {
     return InHandle.Has<ck::FFragment_PathNetworkFollower_Params>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PathNetworkFollower_UE::
+    Get_OwnerToken(
+        const FCk_Handle_PathNetworkFollower& InFollower)
+    -> FName
+{
+    const bool FollowerIsValid = ck::IsValid(InFollower);
+    CK_ENSURE_IF_NOT(FollowerIsValid,
+        TEXT("Invalid PathNetworkFollower handle [{}] passed to Get_OwnerToken"), InFollower)
+    {}
+    if (NOT FollowerIsValid)
+    { return NAME_None; }
+
+    return InFollower.Get<ck::FFragment_PathNetworkFollower_Params>().Get_OwnerToken();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -326,10 +415,126 @@ auto
     if (InDelegate.IsBound())
     { InRequest.Set_CompletionDelegate(InDelegate); }
 
-    InFollower.AddOrGet<ck::FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(InRequest);
-    InFollower.Get<ck::FFragment_PathNetworkFollower_Corridor>()._Result._Status = ECk_PathNetwork_RouteStatus::Pending;
+    auto& Params = InFollower.Get<ck::FFragment_PathNetworkFollower_Params>();
+    auto Request = InRequest;
+    Request.Set_TuningRevision(Params.Get_TuningRevision());
+    InFollower.AddOrGet<ck::FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(Request);
+    auto& Corridor = InFollower.Get<ck::FFragment_PathNetworkFollower_Corridor>();
+    Corridor._Network = ck::IsValid(Request.Get_Network())
+        ? Request.Get_Network()
+        : Params.Get_Network();
+    auto& Result = Corridor._Result;
+    Result._Status = ECk_PathNetwork_RouteStatus::Pending;
+    Result._GoalLocation = Request.Get_GoalLocation();
+    Result._TuningRevision = Params.Get_TuningRevision();
 
     return InFollower;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PathNetworkFollower_UE::
+    Request_UpdateTuningAndReplan(
+        FCk_Handle_PathNetworkFollower& InFollower,
+        const FCk_PathNetworkFollower_Tuning& InTuning)
+    -> FCk_Handle_PathNetworkFollower
+{
+    const bool FollowerIsValid = ck::IsValid(InFollower);
+    CK_ENSURE_IF_NOT(FollowerIsValid,
+        TEXT("Invalid PathNetworkFollower handle [{}] passed to Request_UpdateTuningAndReplan"), InFollower)
+    {}
+    if (NOT FollowerIsValid)
+    { return InFollower; }
+
+    const bool HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InFollower);
+    CK_ENSURE_IF_NOT(HasAuthority,
+        TEXT("Request_UpdateTuningAndReplan on PathNetworkFollower [{}] dropped — caller does not have authority"), InFollower)
+    {}
+    if (NOT HasAuthority)
+    { return InFollower; }
+
+    const auto Multiplier = InTuning.Get_OffPathCostMultiplier();
+    const auto SideKeeping = InTuning.Get_SideKeepingFraction();
+    const auto Spacing = InTuning.Get_CorridorWaypointSpacing();
+    const auto Smoothing = InTuning.Get_CornerSmoothingDistance();
+    const auto Clearance = InTuning.Get_DesiredNavmeshClearance();
+    const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(InTuning);
+    CK_ENSURE_IF_NOT(TuningIsValid,
+        TEXT("Request_UpdateTuningAndReplan received invalid tuning "
+             "(multiplier [{}], side [{}], spacing [{}], smoothing [{}], clearance [{}])"),
+        Multiplier, SideKeeping, Spacing, Smoothing, Clearance)
+    {}
+    if (NOT TuningIsValid)
+    { return InFollower; }
+
+    InFollower.AddOrGet<ck::FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(
+        FCk_Request_PathNetworkFollower_UpdateTuning{InTuning});
+    return InFollower;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PathNetworkFollower_UE::
+    Request_UpdateTuningAndReplanByOwnerToken(
+        FCk_Handle InAnyHandleInWorld,
+        FName InOwnerToken,
+        const FCk_PathNetworkFollower_Tuning& InTuning)
+    -> int32
+{
+    const bool ContextIsValid = ck::IsValid(InAnyHandleInWorld);
+    CK_ENSURE_IF_NOT(ContextIsValid,
+        TEXT("Invalid world handle [{}] passed to Request_UpdateTuningAndReplanByOwnerToken"),
+        InAnyHandleInWorld)
+    {}
+    if (NOT ContextIsValid)
+    { return 0; }
+
+    const bool OwnerTokenIsValid = NOT InOwnerToken.IsNone();
+    CK_ENSURE_IF_NOT(OwnerTokenIsValid,
+        TEXT("Request_UpdateTuningAndReplanByOwnerToken requires a non-empty owner token"))
+    {}
+    if (NOT OwnerTokenIsValid)
+    { return 0; }
+
+    const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(InTuning);
+    CK_ENSURE_IF_NOT(TuningIsValid,
+        TEXT("Request_UpdateTuningAndReplanByOwnerToken received invalid tuning"))
+    {}
+    if (NOT TuningIsValid)
+    { return 0; }
+
+    const bool HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InAnyHandleInWorld);
+    CK_ENSURE_IF_NOT(HasAuthority,
+        TEXT("Request_UpdateTuningAndReplanByOwnerToken dropped — caller does not have authority"))
+    {}
+    if (NOT HasAuthority)
+    { return 0; }
+
+    // Snapshot matching handles before adding request fragments. This keeps the
+    // registry view read-only for the full iteration.
+    TArray<FCk_Handle_PathNetworkFollower> MatchingFollowers;
+    InAnyHandleInWorld.View<ck::FFragment_PathNetworkFollower_Params>().ForEach(
+        [&](FCk_Entity InEntity, const ck::FFragment_PathNetworkFollower_Params& InParams)
+    {
+        if (InParams.Get_OwnerToken() != InOwnerToken)
+        { return; }
+
+        MatchingFollowers.Emplace(Cast(ck::MakeHandle(InEntity, InAnyHandleInWorld)));
+    });
+
+    auto UpdatedCount = int32{0};
+    for (auto& Follower : MatchingFollowers)
+    {
+        const bool FollowerHasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(Follower);
+        if (NOT FollowerHasAuthority)
+        { continue; }
+
+        Request_UpdateTuningAndReplan(Follower, InTuning);
+        ++UpdatedCount;
+    }
+    return UpdatedCount;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

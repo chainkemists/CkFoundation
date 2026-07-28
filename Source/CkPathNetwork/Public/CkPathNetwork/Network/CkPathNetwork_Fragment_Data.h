@@ -141,6 +141,11 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
     FVector _GoalLocation = FVector::ZeroVector;
 
+    // Monotonic follower-tuning revision that produced this route. Consumers use it
+    // with the network epoch to distinguish a same-goal live tuning replan.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    int32 _TuningRevision = 0;
+
 public:
     CK_PROPERTY_GET(_Status);
     CK_PROPERTY_GET(_FailReason);
@@ -148,6 +153,7 @@ public:
     CK_PROPERTY_GET(_CompiledWaypoints);
     CK_PROPERTY_GET(_TotalCost);
     CK_PROPERTY_GET(_GoalLocation);
+    CK_PROPERTY_GET(_TuningRevision);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -185,6 +191,9 @@ struct CKPATHNETWORK_API FCk_Fragment_PathNetworkFollower_ParamsData
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Fragment_PathNetworkFollower_ParamsData);
 
+    friend class ck::FProcessor_PathNetworkFollower_HandleRequests;
+    friend class ::UCk_Utils_PathNetworkFollower_UE;
+
 private:
     // The shortcut heuristic: off-network travel costs this many times its real distance.
     // Higher = agents cling to the network; 1.0 = the network is ignored (pure shortest path).
@@ -200,16 +209,74 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="50.0"))
     float _CorridorWaypointSpacing = 250.0f;
 
+    // Maximum distance trimmed from each side of an eligible corner before inserting a bounded
+    // fillet. Zero preserves authored corners without smoothing.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _CornerSmoothingDistance = 150.0f;
+
+    // Preferred distance from the already agent-radius-eroded Recast boundary. This is a soft
+    // on-ribbon compile-time preference: zero disables it and insufficient room keeps the
+    // original valid corridor.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _DesiredNavmeshClearance = 75.0f;
+
     // The network this follower routes on. Assign at Add() time (spawn code holds the network
     // handle) or later via Request_SetNetwork; may also be supplied per-request.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FCk_Handle_PathNetwork _Network;
 
+    // Optional cooperative provenance token for composition owners that must
+    // distinguish their follower from a replacement installed by another system
+    // on the same entity. This is a namespaced ownership contract, not a security
+    // boundary; independent writers must use distinct tokens.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FName _OwnerToken = NAME_None;
+
+    // Runtime-only invalidation identity. It is deliberately not exposed as an
+    // authoring value: Request_UpdateTuningAndReplan owns every increment.
+    int32 _TuningRevision = 0;
+
 public:
     CK_PROPERTY(_OffPathCostMultiplier);
     CK_PROPERTY(_SideKeepingFraction);
     CK_PROPERTY(_CorridorWaypointSpacing);
+    CK_PROPERTY(_CornerSmoothingDistance);
+    CK_PROPERTY(_DesiredNavmeshClearance);
     CK_PROPERTY(_Network);
+    CK_PROPERTY(_OwnerToken);
+    CK_PROPERTY_GET(_TuningRevision);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPATHNETWORK_API FCk_PathNetworkFollower_Tuning
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_PathNetworkFollower_Tuning);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
+    float _OffPathCostMultiplier = 3.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0", ClampMax="0.9"))
+    float _SideKeepingFraction = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="50.0"))
+    float _CorridorWaypointSpacing = 250.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _CornerSmoothingDistance = 150.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _DesiredNavmeshClearance = 75.0f;
+
+public:
+    CK_PROPERTY(_OffPathCostMultiplier);
+    CK_PROPERTY(_SideKeepingFraction);
+    CK_PROPERTY(_CorridorWaypointSpacing);
+    CK_PROPERTY(_CornerSmoothingDistance);
+    CK_PROPERTY(_DesiredNavmeshClearance);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -255,12 +322,34 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FCk_Handle_PathNetwork _Network;
 
+    int32 _TuningRevision = 0;
+
 public:
     CK_PROPERTY_GET(_GoalLocation);
     CK_PROPERTY(_Network);
+    CK_PROPERTY(_TuningRevision);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_PathNetworkFollower_FindRoute, _GoalLocation);
+};
+
+// Deferred so tuning changes are serialized with route planning on the follower's entity.
+USTRUCT(BlueprintType)
+struct CKPATHNETWORK_API FCk_Request_PathNetworkFollower_UpdateTuning : public FCk_Request_Base
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_PathNetworkFollower_UpdateTuning);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_PathNetworkFollower_UpdateTuning);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FCk_PathNetworkFollower_Tuning _Tuning;
+
+public:
+    CK_PROPERTY_GET(_Tuning);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_PathNetworkFollower_UpdateTuning, _Tuning);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

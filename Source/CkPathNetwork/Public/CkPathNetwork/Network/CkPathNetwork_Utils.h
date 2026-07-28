@@ -143,6 +143,13 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|PathNetworkFollower",
+              DisplayName = "[Ck][PathNetworkFollower] Get Owner Token")
+    static FName
+    Get_OwnerToken(
+        const FCk_Handle_PathNetworkFollower& InFollower);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PathNetworkFollower",
               DisplayName="[Ck][PathNetworkFollower] Remove Feature")
@@ -171,6 +178,29 @@ public:
         UPARAM(ref) FCk_Handle_PathNetworkFollower& InFollower,
         const FCk_Handle_PathNetwork& InNetwork,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // Atomically updates all routing preference values. If this follower has a
+    // Ready/Pending route, queues a replacement for its same goal; callers never
+    // mutate the backing fragment directly.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|PathNetworkFollower",
+              DisplayName = "[Ck][PathNetworkFollower] Request Update Tuning And Replan")
+    static FCk_Handle_PathNetworkFollower
+    Request_UpdateTuningAndReplan(
+        UPARAM(ref) FCk_Handle_PathNetworkFollower& InFollower,
+        const FCk_PathNetworkFollower_Tuning& InTuning);
+
+    // Queue the same atomic tuning update for every follower in this world whose
+    // owner token matches. The token is part of the follower feature itself, so
+    // callers do not need a secondary tag/index that can drift from ownership.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|PathNetworkFollower",
+              DisplayName = "[Ck][PathNetworkFollower] Request Update Tuning By Owner Token")
+    static int32
+    Request_UpdateTuningAndReplanByOwnerToken(
+        FCk_Handle InAnyHandleInWorld,
+        FName InOwnerToken,
+        const FCk_PathNetworkFollower_Tuning& InTuning);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|PathNetworkFollower",
