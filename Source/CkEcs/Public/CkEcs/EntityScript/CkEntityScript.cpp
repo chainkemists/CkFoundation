@@ -163,7 +163,7 @@ auto
     Get_IsSnapshotRespawnable() const
     -> bool
 {
-    return false;
+    return _SnapshotRespawnable;
 }
 
 // -----------------------------------------------------------------------------------------------------------

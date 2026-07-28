@@ -97,9 +97,17 @@ public:
     virtual auto
     Get_EffectiveReplication() const -> ECk_Replication;
 
-    // Snapshot respawn opt-in: only scripts returning true are re-spawned by a CkSnapshot load, and only those
-    // abstain from Request_SpawnEntity during the load's EARLY window on the fresh post-travel world. Default
-    // false. Lives on this CkEcs base so the spawn guard can query the CDO without depending on CkEcsExt.
+    // Snapshot respawn opt-in. Only entity scripts that return true are re-bridged/re-spawned by a CkSnapshot
+    // load (the WithActor script stamps FFragment_ActorSpawnIntent when true), and only those classes abstain
+    // from Request_SpawnEntity during the load's EARLY window on the fresh post-travel world (world-init →
+    // world-ready) — the restore owns their entities. Default false: framework infrastructure (ActorRelay /
+    // CueRelay / StateMachineRelay, etc.) and ordinary scripts spawn normally and are wiped by the restore's
+    // registry clear. Lives on this base (CkEcs) so the spawn guard in CkEntityScript_Utils can query the CDO
+    // without depending on CkEcsExt.
+    //
+    // The base implementation reads _SnapshotRespawnable, so AngelScript/Blueprint classes opt in with
+    // `default _SnapshotRespawnable = true;` — no C++ shim base needed (same CDO-property-behind-a-virtual
+    // shape as _Replication / Get_EffectiveReplication). C++ classes may still override the virtual outright.
     [[nodiscard]]
     virtual auto
     Get_IsSnapshotRespawnable() const -> bool;
@@ -124,6 +132,12 @@ protected:
         Category = "Ck|EntityScript",
         meta=(AllowPrivateAccess = true, EditCondition="ShowReplicationInEditor()", EditConditionHides))
     ECk_Replication _Replication = ECk_Replication::Replicates;
+
+    // Backing data for Get_IsSnapshotRespawnable — see the opt-in contract on the virtual above.
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+        Category = "Ck|EntityScript",
+        meta=(AllowPrivateAccess = true))
+    bool _SnapshotRespawnable = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Ck|EntityScript",
