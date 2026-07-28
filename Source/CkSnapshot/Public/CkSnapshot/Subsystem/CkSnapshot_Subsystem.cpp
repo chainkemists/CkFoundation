@@ -69,6 +69,31 @@ namespace ck_snapshot_subsystem
         return TEXT("Unknown");
     }
 
+    // The identity an entry is addressed BY, per provenance — the only human-readable key a diagnostic can offer
+    // once the saved-id has failed to resolve. Shared by the skip and orphan records so the two read alike.
+    auto
+        DoIdentity_ForEntry(
+            const FCk_Snapshot_V3_EntityEntry& InEntry)
+        -> FString
+    {
+        switch (InEntry.Get_Provenance())
+        {
+            case ECk_Snapshot_V3_Provenance::EngineOwned:
+                return InEntry.Get_SaveKey().IsValid() ? InEntry.Get_SaveKey().ToString() : InEntry.Get_PlayerId();
+            case ECk_Snapshot_V3_Provenance::ConstructSpawned:
+                return InEntry.Get_Label();
+            case ECk_Snapshot_V3_Provenance::RuntimeSpawned:
+                return NOT InEntry.Get_ActorClassPath().IsEmpty()
+                    ? InEntry.Get_ActorClassPath()
+                    : InEntry.Get_ScriptClassPath();
+            case ECk_Snapshot_V3_Provenance::DefinitionBuilt:
+                return NOT InEntry.Get_BuildRecipe().IsEmpty()
+                    ? InEntry.Get_BuildRecipe()[0].Get_ScriptClassPath()
+                    : InEntry.Get_ScriptClassPath();
+        }
+        return {};
+    }
+
     auto
         DoGet_HasWorldAuthority(
             const UWorld* InWorld)
@@ -345,6 +370,7 @@ void
     _SavedIdMap.Reset();
     _SpawnedRuntimeIds.Reset();
     _SkippedIds.Reset();
+    _SkipRecords.Reset();
     _PersistedIds.Reset();
     for (const auto& Entry : _V3Tables.Get_Entities())
     { _PersistedIds.Add(Entry.Get_SavedId()); }
@@ -638,7 +664,7 @@ auto
                         {
                             ck::snapshot::Error(TEXT("v3 load: RuntimeSpawned bridged entity [{}] actor class [{}] "
                                 "unloadable — orphaned"), SavedId, Entry.Get_ActorClassPath());
-                            _SkippedIds.Add(SavedId);
+                            DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::ClassUnloadable);
                         }
                         else
                         {
@@ -649,7 +675,7 @@ auto
                             {
                                 ck::snapshot::Error(TEXT("v3 load: SpawnActor failed for bridged entity [{}] class [{}]"),
                                     SavedId, Entry.Get_ActorClassPath());
-                                _SkippedIds.Add(SavedId);
+                                DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::SpawnFailed);
                             }
                             else
                             { _PendingBridgeActors.Add(SavedId, Actor); }
@@ -676,7 +702,7 @@ auto
                         {
                             ck::snapshot::Error(TEXT("v3 load: RuntimeSpawned entity [{}] script class [{}] unloadable — orphaned"),
                                 SavedId, Entry.Get_ScriptClassPath());
-                            _SkippedIds.Add(SavedId);
+                            DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::ClassUnloadable);
                             break;
                         }
 
@@ -694,7 +720,12 @@ auto
                             {
                                 if (NOT bSnapshotRespawnable)
                                 {
-                                    _SkippedIds.Add(SavedId);
+                                    ck::snapshot::Warning(
+                                        TEXT("v3 load SKIP: saved-id [{}] provenance [{}] identity [{}] owner [{}] reason [{}]"),
+                                        SavedId, ck_snapshot_subsystem::DoProvenance_ToString(Entry.Get_Provenance()),
+                                        ck_snapshot_subsystem::DoIdentity_ForEntry(Entry), OwnerSavedId,
+                                        ECk_Snapshot_SkipReason::NonPersistedOwnerNotRespawnable);
+                                    DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::NonPersistedOwnerNotRespawnable);
                                     break;
                                 }
                             }
@@ -737,7 +768,7 @@ auto
                     if (OwnerSavedId == ck_snapshot_subsystem::k_NoEntity)
                     {
                         ck::snapshot::Error(TEXT("v3 load: DefinitionBuilt entity [{}] carries no owner recipe — orphaned"), SavedId);
-                        _SkippedIds.Add(SavedId);
+                        DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::NoOwnerRecipe);
                         break;
                     }
                     if (NOT _PersistedIds.Contains(OwnerSavedId))
@@ -747,7 +778,7 @@ auto
                         ck::snapshot::Warning(
                             TEXT("v3 load: DefinitionBuilt entity [{}] owner saved-id [{}] was not persisted — item dropped."),
                             SavedId, OwnerSavedId);
-                        _SkippedIds.Add(SavedId);
+                        DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::OwnerNotPersisted);
                         break;
                     }
                     const auto* MappedOwner = _SavedIdMap.Find(OwnerSavedId);
@@ -778,7 +809,7 @@ auto
                     if (ConstructionInfos.IsEmpty())
                     {
                         ck::snapshot::Error(TEXT("v3 load: DefinitionBuilt entity [{}] has no loadable construction steps — orphaned"), SavedId);
-                        _SkippedIds.Add(SavedId);
+                        DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::NoLoadableSteps);
                         break;
                     }
 
@@ -803,7 +834,7 @@ auto
                         ck::snapshot::Error(
                             TEXT("v3 load: DefinitionBuilt entity [{}] build under owner [{}] returned an invalid handle — orphaned"),
                             SavedId, BuildOwner);
-                        _SkippedIds.Add(SavedId);
+                        DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::BuildFailed);
                     }
                 }
                 break;
@@ -830,6 +861,27 @@ auto
     EcsWorld->Request_PumpToQuiescence(ck::ECk_SchedulerTickScope::LoadKernel);
 
     return NOT AnyUnresolved;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Snapshot_Subsystem_UE::
+    DoRecord_Skip(
+        const FCk_Snapshot_V3_EntityEntry& InEntry,
+        ECk_Snapshot_SkipReason InReason)
+    -> void
+{
+    const auto SavedId = InEntry.Get_SavedId();
+    _SkippedIds.Add(SavedId);
+
+    auto Record = FCk_Snapshot_SkipRecord{};
+    Record.Set_SavedId(SavedId);
+    Record.Set_Provenance(InEntry.Get_Provenance());
+    Record.Set_Identity(ck_snapshot_subsystem::DoIdentity_ForEntry(InEntry));
+    Record.Set_OwnerSavedId(InEntry.Get_LifetimeOwnerSavedId());
+    Record.Set_Reason(InReason);
+    _SkipRecords.Add(MoveTemp(Record));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -949,13 +1001,36 @@ auto
         { Restored.AddOrGet<ck::FTag_Snapshot_JustRestored>(); }
     }
 
+    // An orphan is a saved entity that never mapped AND was not deliberately skipped — skips are intentional (the
+    // fresh world's boot owns them). Computed before the payload walk so each dropped payload is attributed to the
+    // bucket its OWNER landed in rather than to an anonymous continue.
+    auto OrphanIds = TSet<uint32>{};
+    for (const auto& Entry : _V3Tables.Get_Entities())
+    {
+        const auto SavedId = Entry.Get_SavedId();
+        if (NOT _SavedIdMap.Contains(SavedId) && NOT _SkippedIds.Contains(SavedId))
+        { OrphanIds.Add(SavedId); }
+    }
+
     auto EnqueuedCount = 0;
     auto PayloadsDropped = 0;
+    auto PayloadsOnSkipped = 0;
+    auto PayloadsOnOrphaned = 0;
+    auto PayloadsOnUnresolvedOwner = 0;
     for (const auto& Payload : _V3Tables.Get_Payloads())
     {
-        auto* Owner = _SavedIdMap.Find(Payload.Get_OwnerSavedId());
+        const auto OwnerSavedId = Payload.Get_OwnerSavedId();
+        auto* Owner = _SavedIdMap.Find(OwnerSavedId);
         if (Owner == nullptr || ck::Is_NOT_Valid(*Owner))
-        { continue; } // owner unmapped (orphan/skipped) — its payloads drop
+        {
+            // Owner unmapped — its payloads drop. Which bucket says WHY: a skipped owner is deliberate, an orphaned
+            // one is lost state, and neither means the owner id is absent from the entity table or its mapped handle
+            // died between rebuild and here.
+            if (_SkippedIds.Contains(OwnerSavedId))    { ++PayloadsOnSkipped; }
+            else if (OrphanIds.Contains(OwnerSavedId)) { ++PayloadsOnOrphaned; }
+            else                                       { ++PayloadsOnUnresolvedOwner; }
+            continue;
+        }
 
         // A failed deserialize is lost state, not a no-op — counted in the load report even where the ensure is out.
         auto Data = DoDeserialize_V3Blob(Payload.Get_PayloadBytes());
@@ -978,16 +1053,7 @@ auto
         ++EnqueuedCount;
     }
 
-    // An orphan is a saved entity that never mapped AND was not deliberately skipped — skips are intentional (the
-    // fresh world's boot owns them). Each orphan's payloads drop, and gets one Warning + one report record.
-    auto OrphanIds = TSet<uint32>{};
-    for (const auto& Entry : _V3Tables.Get_Entities())
-    {
-        const auto SavedId = Entry.Get_SavedId();
-        if (NOT _SavedIdMap.Contains(SavedId) && NOT _SkippedIds.Contains(SavedId))
-        { OrphanIds.Add(SavedId); }
-    }
-
+    // Each orphan gets one Warning + one report record.
     auto Orphans = TArray<FCk_Snapshot_OrphanRecord>{};
     Orphans.Reserve(OrphanIds.Num());
     for (const auto& Entry : _V3Tables.Get_Entities())
@@ -999,20 +1065,17 @@ auto
         const auto OwnerSavedId  = Entry.Get_LifetimeOwnerSavedId();
         const auto bOwnerOrphaned = OwnerSavedId != ck_snapshot_subsystem::k_NoEntity && OrphanIds.Contains(OwnerSavedId);
 
-        auto Identity = FString{};
-        auto Reason   = FString{};
+        const auto Identity = ck_snapshot_subsystem::DoIdentity_ForEntry(Entry);
+        auto Reason = FString{};
         switch (Entry.Get_Provenance())
         {
             case ECk_Snapshot_V3_Provenance::EngineOwned:
             {
-                const auto bHasSaveKey = Entry.Get_SaveKey().IsValid();
-                Identity = bHasSaveKey ? Entry.Get_SaveKey().ToString() : Entry.Get_PlayerId();
-                Reason   = bHasSaveKey ? TEXT("savekey-miss") : TEXT("player-miss");
+                Reason = Entry.Get_SaveKey().IsValid() ? TEXT("savekey-miss") : TEXT("player-miss");
                 break;
             }
             case ECk_Snapshot_V3_Provenance::ConstructSpawned:
             {
-                Identity = Entry.Get_Label();
                 if (bOwnerOrphaned)                          { Reason = TEXT("owner-orphaned"); }          // cascade
                 else if (_SavedIdMap.Contains(OwnerSavedId)) { Reason = TEXT("owner-mapped-label-miss"); } // content/label drift
                 else                                         { Reason = TEXT("unresolved-other"); }
@@ -1020,18 +1083,13 @@ auto
             }
             case ECk_Snapshot_V3_Provenance::RuntimeSpawned:
             {
-                const auto bBridged = NOT Entry.Get_ActorClassPath().IsEmpty();
-                Identity = bBridged ? Entry.Get_ActorClassPath() : Entry.Get_ScriptClassPath();
-                if (bBridged)            { Reason = TEXT("bridge-never-linked"); } // actor spawned, bridge never linked
-                else if (bOwnerOrphaned) { Reason = TEXT("owner-orphaned"); }
-                else                     { Reason = TEXT("unresolved-other"); }
+                if (NOT Entry.Get_ActorClassPath().IsEmpty()) { Reason = TEXT("bridge-never-linked"); } // actor spawned, bridge never linked
+                else if (bOwnerOrphaned)                      { Reason = TEXT("owner-orphaned"); }
+                else                                          { Reason = TEXT("unresolved-other"); }
                 break;
             }
             case ECk_Snapshot_V3_Provenance::DefinitionBuilt:
             {
-                Identity = NOT Entry.Get_BuildRecipe().IsEmpty()
-                    ? Entry.Get_BuildRecipe()[0].Get_ScriptClassPath()
-                    : Entry.Get_ScriptClassPath();
                 if (bOwnerOrphaned) { Reason = TEXT("owner-orphaned"); }
                 else                { Reason = TEXT("unresolved-other"); }
                 break;
@@ -1050,12 +1108,34 @@ auto
         Orphans.Add(MoveTemp(Record));
     }
 
+    _V3LoadReport.Set_EntitiesTotal(_V3Tables.Get_Entities().Num());
     _V3LoadReport.Set_EntitiesRestored(_SavedIdMap.Num());
+    _V3LoadReport.Set_EntitiesSkipped(_SkippedIds.Num());
     _V3LoadReport.Set_EntitiesOrphaned(OrphanIds.Num());
     _V3LoadReport.Set_Orphans(MoveTemp(Orphans));
+    _V3LoadReport.Set_Skips(_SkipRecords);
+    _V3LoadReport.Set_PayloadsTotal(_V3Tables.Get_Payloads().Num());
+    _V3LoadReport.Set_PayloadsEnqueued(EnqueuedCount);
+    _V3LoadReport.Set_PayloadsOnSkippedEntities(PayloadsOnSkipped);
+    _V3LoadReport.Set_PayloadsOnOrphanedEntities(PayloadsOnOrphaned);
+    _V3LoadReport.Set_PayloadsOnUnresolvedOwner(PayloadsOnUnresolvedOwner);
     _V3LoadReport.Set_PayloadsDropped(PayloadsDropped);
-    ck::snapshot::Display(TEXT("DIAG: v3 hydrate — enqueued [{}] payloads across [{}] mapped entities ([{}] skipped boot-infra, [{}] orphaned, [{}] payloads dropped)"),
-        EnqueuedCount, _SavedIdMap.Num(), _SkippedIds.Num(), _V3LoadReport.Get_EntitiesOrphaned(), PayloadsDropped);
+
+    ck::snapshot::Display(
+        TEXT("DIAG: v3 hydrate — entities [{}] = mapped [{}] + skipped [{}] + orphaned [{}] | ")
+        TEXT("payloads [{}] = enqueued [{}] + on-skipped [{}] + on-orphaned [{}] + unresolved-owner [{}] + dropped [{}]"),
+        _V3LoadReport.Get_EntitiesTotal(), _V3LoadReport.Get_EntitiesRestored(), _V3LoadReport.Get_EntitiesSkipped(),
+        _V3LoadReport.Get_EntitiesOrphaned(), _V3LoadReport.Get_PayloadsTotal(), EnqueuedCount, PayloadsOnSkipped,
+        PayloadsOnOrphaned, PayloadsOnUnresolvedOwner, PayloadsDropped);
+
+    const auto AccountingIsClosed = _V3LoadReport.Get_IsAccountingClosed();
+    CK_ENSURE_IF_NOT(AccountingIsClosed,
+        TEXT("v3 load accounting does not close: entities [{}] vs mapped [{}] + skipped [{}] + orphaned [{}]; ")
+        TEXT("payloads [{}] vs enqueued [{}] + on-skipped [{}] + on-orphaned [{}] + unresolved-owner [{}] + dropped [{}]"),
+        _V3LoadReport.Get_EntitiesTotal(), _V3LoadReport.Get_EntitiesRestored(), _V3LoadReport.Get_EntitiesSkipped(),
+        _V3LoadReport.Get_EntitiesOrphaned(), _V3LoadReport.Get_PayloadsTotal(), EnqueuedCount, PayloadsOnSkipped,
+        PayloadsOnOrphaned, PayloadsOnUnresolvedOwner, PayloadsDropped)
+    {}
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1354,6 +1434,7 @@ auto
     _SavedIdMap.Reset();
     _SpawnedRuntimeIds.Reset();
     _SkippedIds.Reset();
+    _SkipRecords.Reset();
     _PersistedIds.Reset();
     _PendingBridgeActors.Reset();
 

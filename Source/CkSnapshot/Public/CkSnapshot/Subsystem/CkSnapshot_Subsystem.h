@@ -121,6 +121,8 @@ private:
     auto DoRehydrate_SaveKeyResolver() -> void;          // repopulate _SaveKeyResolverMap from LIVE FFragment_SaveKey entities
     auto DoDeserialize_V3Blob(const TArray<uint8>& InBytes) const -> FInstancedStruct; // saved-id map-backed handle remap
     auto DoRebuild_Tick() -> bool;                       // resolve/spawn each entry into _SavedIdMap; true == complete
+    // The ONLY way an entry enters _SkippedIds: pairs the set membership with its reasoned per-entity record.
+    auto DoRecord_Skip(const FCk_Snapshot_V3_EntityEntry& InEntry, ECk_Snapshot_SkipReason InReason) -> void;
     auto DoRestore_SavedOwnership() -> void;             // restore mapped lifetime/context links before hydration
     auto DoApply_SavedTransforms() -> void;              // restore each mapped entity's saved WORLD transform (G1)
     auto DoHydrate_Enqueue() -> void;                    // write payloads -> FFragment_PendingHydration + tag (once)
@@ -147,7 +149,8 @@ private:
     TMap<uint32, FCk_Handle> _SavedIdMap;               // saved-id -> live handle (built during Rebuilding)
     TSet<uint32> _SpawnedRuntimeIds;                    // RuntimeSpawned entries we already issued a spawn for
     TSet<uint32> _PersistedIds;                         // every saved entity id — an owner NOT here is the world root/transient
-    TSet<uint32> _SkippedIds;                           // entries the loader deliberately does NOT rebuild (boot-infra / unloadable)
+    TSet<uint32> _SkippedIds;                           // entries the loader deliberately does NOT rebuild
+    TArray<FCk_Snapshot_SkipRecord> _SkipRecords;       // one reasoned record per _SkippedIds entry; copied into the report
     TMap<uint32, TWeakObjectPtr<AActor>> _PendingBridgeActors; // bridged saved-id -> spawned actor awaiting its bridge
     FCk_Snapshot_LoadReport _V3LoadReport;             // accumulates orphan/skip counts; DoFinish_Load reports it
     bool _HydrationEnqueued = false;                   // Hydrating enqueues payloads exactly once
