@@ -97,13 +97,18 @@ public:
     virtual auto
     Get_EffectiveReplication() const -> ECk_Replication;
 
-    // Snapshot respawn opt-in. Only entity scripts that return true are re-bridged/re-spawned by a CkSnapshot
-    // load (the WithActor script stamps FFragment_ActorSpawnIntent when true), and only those classes abstain
-    // from Request_SpawnEntity during the load's EARLY window on the fresh post-travel world (world-init →
-    // world-ready) — the restore owns their entities. Default false: framework infrastructure (ActorRelay /
-    // CueRelay / StateMachineRelay, etc.) and ordinary scripts spawn normally and are wiped by the restore's
-    // registry clear. Lives on this base (CkEcs) so the spawn guard in CkEntityScript_Utils can query the CDO
-    // without depending on CkEcsExt.
+    // Snapshot respawn opt-in, with exactly two consumers:
+    //  (a) UCk_EntityScript_WithActor_UE::Construct stamps FFragment_ActorSpawnIntent when this returns true, which
+    //      is what makes the capture record an actor recipe and the load re-spawn the bridged actor.
+    //  (b) The v3 load reads the CDO of a RuntimeSpawned entry whose lifetime owner was NOT persisted (i.e. the world
+    //      root / transient): opted-in classes are respawned there, the rest are skipped so the fresh world's own
+    //      copy is not duplicated. Because that test also covers non-bridged scripts, the flag lives on this base
+    //      (CkEcs) rather than on the WithActor subclass in CkEcsExt.
+    // It is NOT a spawn guard: nothing suppresses Request_SpawnEntity during a load, so protecting against a
+    // duplicate is the responsibility of whatever would re-create the entity (see the loader's owner-persisted
+    // branch, and the conditional-skip pattern a boot-time spawner uses).
+    // Default false: framework infrastructure (ActorRelay / CueRelay / StateMachineRelay, etc.) and ordinary scripts
+    // spawn normally and are wiped by the restore's registry clear.
     //
     // The base implementation reads _SnapshotRespawnable, so AngelScript/Blueprint classes opt in with
     // `default _SnapshotRespawnable = true;` — no C++ shim base needed (same CDO-property-behind-a-virtual
