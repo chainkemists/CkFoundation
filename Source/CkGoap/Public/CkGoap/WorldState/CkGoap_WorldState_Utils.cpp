@@ -525,18 +525,36 @@ auto
 	UCk_Utils_Goap_WorldState_UE::
 	Request_AddSubscriber(
 		FCk_Handle_Goap_WorldState& InWorldState,
-		FCk_Handle& InSubscriber)
+		FCk_Handle& InSubscriber,
+		const FCk_Delegate_Request_OnCompleted& InDelegate)
 	-> FCk_Handle_Goap_WorldState
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InWorldState),
+	const auto WorldStateIsValid = ck::IsValid(InWorldState);
+	CK_ENSURE_IF_NOT(WorldStateIsValid,
 		TEXT("Invalid WorldState handle when adding subscriber"))
-	{ return InWorldState; }
-	CK_ENSURE_IF_NOT(ck::IsValid(InSubscriber),
+	{}
+	if (NOT WorldStateIsValid)
+	{
+		InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InWorldState;
+	}
+
+	const auto SubscriberIsValid = ck::IsValid(InSubscriber);
+	CK_ENSURE_IF_NOT(SubscriberIsValid,
 		TEXT("Invalid subscriber handle for WorldState [{}]"), InWorldState)
-	{ return InWorldState; }
+	{}
+	if (NOT SubscriberIsValid)
+	{
+		InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InWorldState;
+	}
 
 	auto& Subscribers = InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>();
 	Subscribers._Subscribers.AddUnique(InSubscriber);
+
+	// Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+	InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Succeeded);
+
 	return InWorldState;
 }
 
@@ -544,12 +562,22 @@ auto
 	UCk_Utils_Goap_WorldState_UE::
 	Request_RemoveSubscriber(
 		FCk_Handle_Goap_WorldState& InWorldState,
-		FCk_Handle& InSubscriber)
+		FCk_Handle& InSubscriber,
+		const FCk_Delegate_Request_OnCompleted& InDelegate)
 	-> FCk_Handle_Goap_WorldState
 {
-	if (NOT ck::IsValid(InWorldState)) { return InWorldState; }
+	if (NOT ck::IsValid(InWorldState))
+	{
+		InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InWorldState;
+	}
+
 	auto& Subscribers = InWorldState.Get<ck::FFragment_Goap_WorldState_Subscribers>();
 	Subscribers._Subscribers.RemoveSwap(InSubscriber);
+
+	// Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+	InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Succeeded);
+
 	return InWorldState;
 }
 
