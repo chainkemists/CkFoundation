@@ -2,6 +2,7 @@
 
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Agent/CkCrowdAgent_PathFollow_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -50,30 +51,28 @@ namespace ck
                 // PathRefresh re-path.
                 InPathFollow._PathSerial = FProcessor_CrowdAgent_StationaryMarkup::Get_CurrentPaintSerial();
 
-                // Without skipping the leading corners the agent is already past, Steering aims
-                // behind it and the agent visibly walks BACKWARD before turning around. The FINAL
-                // waypoint is never skipped (loop bound), matching Steering's retirement rule.
-                const auto AgentLoc = InPathFollow.Get_CurrentSegmentStart();
-                while (InPathFollow._WaypointIndex < Wps.Num() - 1)
-                {
-                    const auto& Corner = Wps[InPathFollow._WaypointIndex];
-                    const auto OnwardDir = (Wps[InPathFollow._WaypointIndex + 1] - Corner).GetSafeNormal();
-                    if (OnwardDir.IsNearlyZero())
-                    { break; }
+                // Pick the STARTING waypoint: skip every leading corner the agent is ALREADY PAST
+                // (dot(corner - agent, onwardSegmentDir) < 0 — UPathFollowingComponent's
+                // HasReachedCurrentTarget test applied at install). Two ways a stale first corner
+                // happens: the path was computed async while the agent kept its momentum (MoveTo
+                // deliberately preserves velocity through PathPending — worst under FollowTarget's
+                // frequent repaths), or the navmesh start-projection landed behind the agent. Without
+                // this, Steering aims at the behind-corner (its plane test anchors on the agent's own
+                // install location, so "crossed" never fires) and the agent visibly walks BACKWARD to
+                // the corner before turning around — the "360 at path start" bug. The FINAL waypoint
+                // is never skipped (loop bound), matching Steering's retirement rule.
+                const auto SkippedWaypointCount =
+                    ck_crowd_agent_path_follow_algorithm::SkipAlreadyPassedLeadingWaypoints(
+                        InPathFollow.Get_CurrentSegmentStart(),
+                        Wps,
+                        InPathFollow._WaypointIndex,
+                        InPathFollow._CurrentSegmentStart);
 
-                    const auto CornerIsStillAhead = FVector::DotProduct(Corner - AgentLoc, OnwardDir) >= 0.0;
-                    if (CornerIsStillAhead)
-                    { break; }
-
-                    InPathFollow._CurrentSegmentStart = Corner;
-                    ++InPathFollow._WaypointIndex;
-                }
-
-                if (InPathFollow._WaypointIndex > 0)
+                if (SkippedWaypointCount > 0)
                 {
                     ck::crowd::Verbose(
                         TEXT("CrowdAgent [{}] path install skipped {} already-passed leading corner(s)"),
-                        InHandle, InPathFollow._WaypointIndex);
+                        InHandle, SkippedWaypointCount);
                 }
 
                 auto PolylineLen = 0.0;
