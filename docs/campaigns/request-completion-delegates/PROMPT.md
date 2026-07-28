@@ -1,8 +1,11 @@
 # Request completion delegates — mission brief (PROMPT.md)
 
 > **Written:** 2026-07-25. STABLE content only — current state lives in [PROGRESS.md](PROGRESS.md).
-> **This doc dies when:** the campaign ships and root CLAUDE.md §Requests carries the contract.
-> On death: delete it, or replace the body with one tombstone line ("Superseded by root CLAUDE.md §Requests — kept for history").
+> **TOMBSTONED 2026-07-27 — death condition met.** The campaign shipped and root
+> [CLAUDE.md](../../../CLAUDE.md) § "Request completion" carries the contract. Superseded by that
+> section; everything below is kept for history only and must not be treated as current instruction.
+> The gate structure it describes was collapsed into a single repo-wide rollout at maintainer
+> request — see PROGRESS.md's Current state.
 
 ## Goal
 

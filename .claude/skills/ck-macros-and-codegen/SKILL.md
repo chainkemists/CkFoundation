@@ -301,6 +301,37 @@ Two bases, both **one-shot** (`PopulateRequestHandle` may be called at most once
 **nothing**; otherwise to `protected: auto Get_RequestDebugName() const -> FName final`. Put it on
 every request struct (root doctrine), immediately after `CK_GENERATED_BODY`.
 
+#### Completion delegate — required on every new `Request_*`
+
+`FCk_Request_Base` carries a non-reflected `_CompletionDelegate`, so a new request gets completion
+transport for free. What you must add by hand (full contract: root CLAUDE.md § "Request completion",
+canonical reference `CkTimer`):
+
+1. **Utils declaration** — trailing `const FCk_Delegate_Request_OnCompleted& InDelegate` with
+   `meta = (AutoCreateRefTerm = "InDelegate")` and **no C++ default** (UHT rejects one). It must be
+   the LAST parameter; if a preceding parameter has a default, DROP that default — moving the
+   delegate earlier breaks AngelScript (defaults must be trailing) and silently rebinds positional
+   callers. Dropping a default is source-breaking for AngelScript callers that omitted the argument,
+   so grep `Script/` for BOTH `utils_x::Fn(` and `UCk_Utils_X_UE::Fn(` call forms.
+2. **Utils boundary** — `if (InDelegate.IsBound()) { Request.Set_CompletionDelegate(InDelegate); }`
+   on a named local, then enqueue that local.
+3. **Handler** — `ck::MakeCompletionGuard(InRequest, InOwner, Result)` declared AFTER the `Result`
+   local. Bind it to a SNAPSHOT of the request, never live fragment storage: where `MarkedDirtyBy`
+   IS the request fragment, `Remove<MarkedDirtyBy>()` destructs what the guard holds by reference.
+4. **Teardown** — `TExclude<FTag_DestroyEntity_Initiate>` on the HandleRequests view, plus a
+   registered `FGroup_EndPlay` processor calling `ck::request::FireCancelledForPending`. Forgetting
+   `CK_REGISTER_PROCESSOR` yields a compiled-but-never-scheduled no-op.
+5. **Immediate mutators** (mutate inline, enqueue nothing) get the delegate too, fired synchronously
+   after the mutation — the caller contract must not depend on a feature's internal deferral shape.
+
+Two rules that are easy to get wrong:
+- **`Succeeded` means the caller's intent holds afterwards.** An idempotent no-op succeeds. Reserve
+  `Failed` for an intent that does not hold and that retrying will not fix.
+- **Never fire from inside a `CK_ENSURE_IF_NOT` body** (it compiles out under
+  `CK_DISABLE_ENSURE_CHECKS`) — but early-returning from one without firing strands the caller
+  forever. Use non-negotiable #3's shape: hoist the condition, empty ensure body, then an ordinary
+  `if` that fires `Failed_NotEnqueued`.
+
 **Vtable-variance constraint (:46, :95-103):** the bases' `virtual Get_RequestDebugName` +
 `virtual ~FCk_Request_Base()` exist ONLY when handle debugging is on. Cross-reference the config
 matrix in §2.4: request structs are **polymorphic in Debug and Dev-editor builds, and

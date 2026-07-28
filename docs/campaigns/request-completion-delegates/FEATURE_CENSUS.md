@@ -1,8 +1,19 @@
 # Feature census — request structs & completion shapes (recon snapshot 2026-07-25)
 
-> Recon output (Opus survey, spot-checked by the orchestrator at the CkEcs/CkInventory/CkSignal
-> anchors). Row-level detail is UNVERIFIED-per-row: each rollout gate re-greps its own modules at
-> gate entry before working from a row. Tier column from `Source/CLAUDE.md` module tier table.
+> **TOMBSTONED 2026-07-27 — superseded by the shipped rollout.** Every module below now carries the
+> completion delegate, so the "Completion today" column is historical. Kept for the record of what
+> the pre-rollout landscape looked like.
+>
+> **This census had a structural flaw worth remembering: it is keyed on modules that declare
+> `FCk_Request_*` structs, so it MISSES modules whose `Request_*` mutate inline and therefore
+> declare no struct.** That omitted CkAttribute, CkAStar, CkCue, CkDynamic, CkRecord, CkSubstep,
+> CkUnrealComponent and CkUsf — all of which were in scope as immediate mutators and had to be
+> caught by a second pass. **Do not use a module-level census as a completeness criterion.** Sweep
+> per DECLARATION: every UFUNCTION `Request_*` taking an `FCk_Handle` that lacks the delegate.
+>
+> Original header: recon output (Opus survey, spot-checked by the orchestrator at the
+> CkEcs/CkInventory/CkSignal anchors). Row-level detail is UNVERIFIED-per-row. Tier column from
+> `Source/CLAUDE.md` module tier table.
 >
 > Completion key: **A** = request-handle + result guard (the target shape) · **B** = spawned
 > request entity + signal · **C** = delegate-in-request-struct (to be deleted, G0-D4) ·
