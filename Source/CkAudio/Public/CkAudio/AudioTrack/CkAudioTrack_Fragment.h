@@ -4,6 +4,8 @@
 
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
 #include <Components/AudioComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -15,6 +17,7 @@ class UCk_Utils_AudioTrack_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_AudioTrack_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_AudioTrack_PendingAssetLoad);
     CK_DEFINE_ECS_TAG(FTag_AudioTrack_IsPlaying);
     CK_DEFINE_ECS_TAG(FTag_AudioTrack_IsFading);
 
@@ -40,6 +43,11 @@ namespace ck
     private:
         // WEAK — lifetime owned by the CkCore ObjectPooling subsystem (DestroyOnRelease)
         TWeakObjectPtr<UAudioComponent> _AudioComponent;
+
+        // The GC root for the track's resolved sound + library settings: the batch's streamable
+        // handle keeps them loaded for exactly as long as this fragment holds it (reset at EndPlay).
+        FCk_ResourceLoader_RootedAssetBatch _LoadedAssets;
+
         ECk_AudioTrack_State _State = ECk_AudioTrack_State::Stopped;
         float _CurrentVolume = 0.0f;
         float _TargetVolume = 0.0f;

@@ -25,6 +25,7 @@ public class CkAudio : CkModuleRules
 
             "CkProvider",
             "CkRecord",
+            "CkResourceLoader",
             "CkSettings",
             "CkTimer"
         });
