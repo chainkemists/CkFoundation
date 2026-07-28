@@ -94,6 +94,26 @@ namespace ck_snapshot_subsystem
         return {};
     }
 
+    // Replays the capture's ArIsSaveGame tagged-property blob onto a deferred-spawn actor. Empty bytes mean the saved
+    // class declared no SaveGame property (or the row predates the field), and the spawn proceeds untouched.
+    auto
+        DoApply_ActorSaveFields(
+            AActor* InActor,
+            const TArray<uint8>& InFieldBytes)
+        -> void
+    {
+        if (InActor == nullptr || InFieldBytes.IsEmpty())
+        { return; }
+
+        auto Reader = FMemoryReader{InFieldBytes, /*bIsPersistent=*/true};
+        constexpr auto LoadIfFindFails = true;
+        auto Proxy = FObjectAndNameAsStringProxyArchive{Reader, LoadIfFindFails};
+        Proxy.ArIsSaveGame = true;      // restore ONLY the CPF_SaveGame properties, symmetric with the capture
+        Proxy.SetIsPersistent(true);
+
+        InActor->SerializeScriptProperties(Proxy);
+    }
+
     auto
         DoGet_HasWorldAuthority(
             const UWorld* InWorld)
@@ -523,22 +543,22 @@ auto
 auto
     UCk_Snapshot_Subsystem_UE::
     DoRehydrate_SaveKeyResolver()
-    -> void
+    -> int32
 {
     _SaveKeyResolverMap.Reset(); // pre-load entries point at pre-travel handles — dead after the world swap
 
     const auto World = GetWorld();
     if (ck::Is_NOT_Valid(World))
-    { return; }
+    { return 0; }
 
     auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
     if (ck::Is_NOT_Valid(EcsWorld))
-    { return; }
+    { return 0; }
 
     auto& CkRegistry = EcsWorld->Get_Registry();
     auto* RawRegistry = ck::registry_table::TryResolve(CkRegistry.Get_RegistryHandle());
     if (RawRegistry == nullptr)
-    { return; }
+    { return 0; }
 
     // The LIVE world-side SaveKey fragments (level actors the normal world build re-created), never restored ones.
     auto PublishedCount = 0;
@@ -553,7 +573,7 @@ auto
         ++PublishedCount;
     }
 
-    ck::snapshot::Display(TEXT("DIAG: rehydrated SaveKey resolver with [{}] live entries"), PublishedCount);
+    return PublishedCount;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -602,6 +622,11 @@ auto
     { return true; }
 
     const auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World);
+
+    // The world-ready sweep only sees keys that exist at BeginPlay. On-demand infrastructure (ActorRelay channels)
+    // stamps its key ticks later, so an EngineOwned entry resolving against a stale map would orphan its whole
+    // channel-owned subtree.
+    DoRehydrate_SaveKeyResolver();
 
     auto AnyUnresolved = false;
 
@@ -668,9 +693,23 @@ auto
                         }
                         else
                         {
-                            auto SpawnInfo = FActorSpawnParameters{};
-                            SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-                            auto* Actor = World->SpawnActor<AActor>(ActorClass, Entry.Get_ActorSpawnTransform(), SpawnInfo);
+                            // Deferred: the saved SaveGame-flagged properties must land BEFORE BeginPlay, because the
+                            // WithActor entity Construct it drives reads them (an item with a null definition composes
+                            // no holder and no pickup probe). An entry with no bytes finishes spawning unchanged.
+                            auto NoSpawnOwner = static_cast<AActor*>(nullptr);
+                            auto NoSpawnInstigator = static_cast<APawn*>(nullptr);
+                            auto* Actor = World->SpawnActorDeferred<AActor>(ActorClass, Entry.Get_ActorSpawnTransform(),
+                                NoSpawnOwner, NoSpawnInstigator, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+                            if (Actor != nullptr)
+                            {
+                                ck_snapshot_subsystem::DoApply_ActorSaveFields(Actor, Entry.Get_ActorSaveFieldBytes());
+
+                                // The finish transform IS the one the deferred spawn already applied, so it is the
+                                // default one — the same call the non-deferred SpawnActor made for us before.
+                                constexpr auto IsDefaultTransform = true;
+                                Actor->FinishSpawning(Entry.Get_ActorSpawnTransform(), IsDefaultTransform);
+                            }
+
                             if (Actor == nullptr)
                             {
                                 ck::snapshot::Error(TEXT("v3 load: SpawnActor failed for bridged entity [{}] class [{}]"),
@@ -1311,7 +1350,8 @@ auto
                 ck::IsValid(EcsWorld))
             { EcsWorld->Set_IsLoadGateActive(true); }
 
-            DoRehydrate_SaveKeyResolver();
+            ck::snapshot::Display(TEXT("DIAG: rehydrated SaveKey resolver with [{}] live entries"),
+                DoRehydrate_SaveKeyResolver());
 
             _LoadFrameCount = 0;
             _LoadPhase = ELoadPhase::Rebuilding;

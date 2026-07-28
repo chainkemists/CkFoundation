@@ -138,6 +138,10 @@ private:
     UPROPERTY() TArray<uint8>               _SpawnParamsBytes;      // FInstancedStruct::Serialize + handle-remap
     UPROPERTY() uint32                      _ContextOwnerSavedId = 0xFFFFFFFFu;
     UPROPERTY() FString                     _ActorClassPath;        // FFragment_ActorSpawnIntent, if present
+    // Tagged-property bytes of the bridged actor's UPROPERTY(SaveGame) fields (ArIsSaveGame capture). Applied between
+    // SpawnActorDeferred and FinishSpawning so BeginPlay — and the entity Construct it drives — sees the saved values
+    // rather than class defaults. Empty when the actor class declares no SaveGame property.
+    UPROPERTY() TArray<uint8>               _ActorSaveFieldBytes;
     // Spawn seed for a bridged (_ActorClassPath set) RuntimeSpawned entity: the entity Transform is seeded from the
     // actor at Construct, so hydrating it instead would be stomped by FProcessor_Transform_SyncFromActor.
     UPROPERTY() FTransform                  _ActorSpawnTransform;
@@ -162,6 +166,7 @@ public:
     CK_PROPERTY(_SpawnParamsBytes);
     CK_PROPERTY(_ContextOwnerSavedId);
     CK_PROPERTY(_ActorClassPath);
+    CK_PROPERTY(_ActorSaveFieldBytes);
     CK_PROPERTY(_ActorSpawnTransform);
     CK_PROPERTY(_SavedWorldTransform);
     CK_PROPERTY(_BuildRecipe);
@@ -219,7 +224,10 @@ public:
     //       compatibility — a v3 stream is rejected by Request_Load (loud, clean abort — see CkSnapshot_Subsystem.cpp).
     //   5 — SaveKey became provenance-orthogonal: explicitly respawnable bridged actors are RuntimeSpawned and carry
     //       their stable key through rebuild. Version 4 rows classified that shape as EngineOwned and lack its recipe.
-    static constexpr uint16 CurrentFormatVersion = 5;
+    //   6 — added FCk_Snapshot_V3_EntityEntry::_ActorSaveFieldBytes: a bridged actor's UPROPERTY(SaveGame) fields ride
+    //       the recipe and are applied before FinishSpawning. Version 5 rows spawn with class defaults, so an actor
+    //       whose Construct branches on a saved field composes nothing.
+    static constexpr uint16 CurrentFormatVersion = 6;
 
 private:
     UPROPERTY() uint16          _FormatVersion = CurrentFormatVersion;
