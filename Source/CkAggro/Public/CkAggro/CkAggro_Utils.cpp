@@ -429,12 +429,19 @@ auto
     UCk_Utils_Aggro_UE::
     Request_MarkUnperceived_ByTrackedEntity(
         FCk_Handle_Aggro& InAggro,
-        const FCk_Handle& InTrackedEntity)
+        const FCk_Handle& InTrackedEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Aggro
 {
     auto Target = TryGet_Target_ByTrackedEntity(InAggro, InTrackedEntity);
-    if (ck::IsValid(Target))
-    { UCk_Utils_AggroTarget_UE::Request_MarkUnperceived(Target); }
+
+    if (ck::Is_NOT_Valid(Target))
+    {
+        InDelegate.ExecuteIfBound(InAggro, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InAggro;
+    }
+
+    UCk_Utils_AggroTarget_UE::Request_MarkUnperceived(Target, InDelegate);
 
     return InAggro;
 }
@@ -443,12 +450,19 @@ auto
     UCk_Utils_Aggro_UE::
     Request_ResetPerception_ByTrackedEntity(
         FCk_Handle_Aggro& InAggro,
-        const FCk_Handle& InTrackedEntity)
+        const FCk_Handle& InTrackedEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Aggro
 {
     auto Target = TryGet_Target_ByTrackedEntity(InAggro, InTrackedEntity);
-    if (ck::IsValid(Target))
-    { UCk_Utils_AggroTarget_UE::Request_ResetPerception(Target); }
+
+    if (ck::Is_NOT_Valid(Target))
+    {
+        InDelegate.ExecuteIfBound(InAggro, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InAggro;
+    }
+
+    UCk_Utils_AggroTarget_UE::Request_ResetPerception(Target, InDelegate);
 
     return InAggro;
 }

@@ -239,19 +239,23 @@ public:
     // grace. A feeder addressing targets by tracked entity needs the balancing half here.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Request Mark Unperceived By Tracked Entity")
+              DisplayName="[Ck][Aggro] Request Mark Unperceived By Tracked Entity",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Aggro
     Request_MarkUnperceived_ByTrackedEntity(
         UPARAM(ref) FCk_Handle_Aggro& InAggro,
-        const FCk_Handle& InTrackedEntity);
+        const FCk_Handle& InTrackedEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Request Reset Perception By Tracked Entity")
+              DisplayName="[Ck][Aggro] Request Reset Perception By Tracked Entity",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Aggro
     Request_ResetPerception_ByTrackedEntity(
         UPARAM(ref) FCk_Handle_Aggro& InAggro,
-        const FCk_Handle& InTrackedEntity);
+        const FCk_Handle& InTrackedEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,
