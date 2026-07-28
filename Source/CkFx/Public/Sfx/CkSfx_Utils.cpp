@@ -2,19 +2,7 @@
 
 #include "Sfx/CkSfx_Fragment.h"
 
-#include "CkFx/CkFx_Log.h"
-#include "CkFx/CkFx_Stats.h"
-
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
-
-#include <Kismet/GameplayStatics.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-
-DECLARE_CYCLE_STAT(TEXT("Fx::SfxSpawnAttached"),   STAT_Fx_SfxSpawnAttached,   STATGROUP_CkFx);
-DECLARE_CYCLE_STAT(TEXT("Fx::SfxSpawnAtLocation"), STAT_Fx_SfxSpawnAtLocation, STATGROUP_CkFx);
-
-// "Fx Effects Spawned" counter is the single shared stat declared EXTERN in CkFx_Stats.h (defined in CkVfx_Utils.cpp).
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -31,6 +19,7 @@ auto
 
         InNewEntity.Add<ck::FFragment_Sfx_Params>(InParams);
         InNewEntity.Add<ck::FFragment_Sfx_Current>();
+        InNewEntity.Add<ck::FTag_Sfx_NeedsSetup>();
     });
 
     auto NewSfxEntity = Cast(NewEntity);
@@ -86,7 +75,11 @@ auto
         const FCk_Handle_Sfx& InSfxHandle)
     -> USoundBase*
 {
-    return InSfxHandle.Get<ck::FFragment_Sfx_Params>().Get_Params().Get_SoundCue();
+    // Resolved from the loader-rooted batch on Current — null until Setup has loaded the assets
+    const auto& Params = InSfxHandle.Get<ck::FFragment_Sfx_Params>().Get_Params();
+    const auto& Current = InSfxHandle.Get<ck::FFragment_Sfx_Current>();
+
+    return ::Cast<USoundBase>(Current._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));
 }
 
 auto
@@ -127,40 +120,14 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Sfx
 {
-    SCOPE_CYCLE_COUNTER(STAT_Fx_SfxSpawnAttached);
-
     CK_CALLSTACK_RECORD(ck::FFragment_Sfx_Requests, InSfxHandle);
 
-    // TODO: Move this to processor
+    auto Request = InRequest;
 
-    const auto& SoundCue = Get_SoundCue(InSfxHandle);
-    const auto& Params = InSfxHandle.Get<ck::FFragment_Sfx_Params>().Get_Params();
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
 
-    const auto& AudioSettings = InRequest.Get_OverrideAudioSettings()
-                                    ? InRequest.Get_OverridenAudioSettings()
-                                    : Params.Get_DefaultAudioSettings();
-
-    constexpr auto StartTime = 0.0f;
-    UGameplayStatics::SpawnSoundAttached
-    (
-        SoundCue,
-        InRequest.Get_AttachComponent().Get(),
-        NAME_None,
-        InRequest.Get_RelativeTransformSettings().Get_Location(),
-        InRequest.Get_RelativeTransformSettings().Get_Rotation(),
-        EAttachLocation::Type::KeepRelativeOffset,
-        InRequest.Get_StopPolicy() == ECk_Sfx_Stop_Policy::StopWhenFinishedOrDetached,
-        AudioSettings.Get_VolumeMultipler(),
-        AudioSettings.Get_PitchMultipler(),
-        StartTime,
-        Params.Get_AttenuationSettings(),
-        Params.Get_ConcurrencySettings()
-    );
-
-    INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
-
-    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
-    InDelegate.ExecuteIfBound(InSfxHandle, ECk_Request_OperationResult::Succeeded);
+    InSfxHandle.AddOrGet<ck::FFragment_Sfx_Requests>()._Requests.Emplace(Request);
 
     return InSfxHandle;
 }
@@ -173,37 +140,14 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Sfx
 {
-    SCOPE_CYCLE_COUNTER(STAT_Fx_SfxSpawnAtLocation);
-
     CK_CALLSTACK_RECORD(ck::FFragment_Sfx_Requests, InSfxHandle);
 
-    // TODO: Move this to processor
+    auto Request = InRequest;
 
-    const auto& SoundCue = Get_SoundCue(InSfxHandle);
-    const auto& Params = InSfxHandle.Get<ck::FFragment_Sfx_Params>().Get_Params();
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
 
-    const auto& AudioSettings = InRequest.Get_OverrideAudioSettings()
-                                    ? InRequest.Get_OverridenAudioSettings()
-                                    : Params.Get_DefaultAudioSettings();
-
-    constexpr auto StartTime = 0.0f;
-    UGameplayStatics::SpawnSoundAtLocation
-    (
-        InRequest.Get_Outer().Get(),
-        SoundCue,
-        InRequest.Get_TransformSettings().Get_Location(),
-        InRequest.Get_TransformSettings().Get_Rotation(),
-        AudioSettings.Get_VolumeMultipler(),
-        AudioSettings.Get_PitchMultipler(),
-        StartTime,
-        Params.Get_AttenuationSettings(),
-        Params.Get_ConcurrencySettings()
-    );
-
-    INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
-
-    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
-    InDelegate.ExecuteIfBound(InSfxHandle, ECk_Request_OperationResult::Succeeded);
+    InSfxHandle.AddOrGet<ck::FFragment_Sfx_Requests>()._Requests.Emplace(Request);
 
     return InSfxHandle;
 }

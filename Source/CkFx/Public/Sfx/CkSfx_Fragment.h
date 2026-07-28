@@ -6,6 +6,8 @@
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Sfx_UE;
@@ -14,6 +16,11 @@ class UCk_Utils_Sfx_UE;
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_Sfx_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_Sfx_PendingAssetLoad);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKFX_API FFragment_Sfx_Params
     {
     public:
@@ -40,11 +47,15 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Sfx_Current);
 
     public:
+        friend class FProcessor_Sfx_Setup;
         friend class FProcessor_Sfx_HandleRequests;
+        friend class FProcessor_Sfx_EndPlay;
         friend class UCk_Utils_Sfx_UE;
 
     private:
-        int32 _DummyProperty = 0;
+        // The GC root for the sfx's resolved cue + settings: the batch's streamable handle keeps
+        // them loaded for exactly as long as this fragment holds it (reset at EndPlay).
+        FCk_ResourceLoader_RootedAssetBatch _LoadedAssets;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -58,8 +69,18 @@ namespace ck
         friend class FProcessor_Sfx_HandleRequests;
         friend class UCk_Utils_Sfx_UE;
 
+    public:
+        using RequestType = std::variant<
+            FCk_Request_Sfx_PlayAttached,
+            FCk_Request_Sfx_PlayAtLocation
+        >;
+        using RequestList = TArray<RequestType>;
+
     private:
-        int32 _DummyProperty = 0;
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

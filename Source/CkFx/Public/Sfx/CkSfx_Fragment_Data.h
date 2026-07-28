@@ -68,17 +68,21 @@ private:
               meta = (AllowPrivateAccess = true, Categories = "Sfx"))
     FGameplayTag _Name;
 
+    // Soft by design: path-serialized, so it is safe to author in DataAssets/Blueprints (a weak ref
+    // silently saves as null there; a hard ref force-loads the asset with the owning package). The
+    // fragment never roots the asset — Setup resolves these through CkResourceLoader and the rooted
+    // result lives on the Sfx's Current.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<USoundBase> _SoundCue;
+    TSoftObjectPtr<USoundBase> _SoundCue;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<USoundAttenuation> _AttenuationSettings;
+    TSoftObjectPtr<USoundAttenuation> _AttenuationSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<USoundConcurrency> _ConcurrencySettings;
+    TSoftObjectPtr<USoundConcurrency> _ConcurrencySettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
