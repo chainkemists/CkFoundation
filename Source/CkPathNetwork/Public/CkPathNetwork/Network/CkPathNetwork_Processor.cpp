@@ -3,6 +3,7 @@
 #include "CkPathNetwork/CkPathNetwork_Log.h"
 #include "CkPathNetwork/CkPathNetwork_Stats.h"
 #include "CkPathNetwork/Network/CkPathNetwork_Build.h"
+#include "CkPathNetwork/Network/CkPathNetwork_CorridorCompile.h"
 #include "CkPathNetwork/Network/CkPathNetwork_RouteGraph.h"
 #include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
 #include "CkPathNetwork/Settings/CkPathNetwork_ProjectSettings.h"
@@ -23,6 +24,9 @@
 
 #include <NavigationSystem.h>
 #include <NavMesh/RecastNavMesh.h>
+
+#include <array>
+#include <type_traits>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,7 +52,9 @@ namespace ck_pathnetwork_processor
 
     constexpr auto SearchIterationCap = 200000;
     constexpr auto CompiledWaypointMergeDistance = 1.0f;
-    constexpr auto SideOffsetClampMarginCm = 30.0f;
+    constexpr auto ClearanceProjectionPlanarExtentCm = 25.0f;
+    constexpr auto ClearanceProjectionVerticalExtentCm = 100.0f;
+    constexpr auto ClearanceImprovementEpsilonCm = 1.0f;
 
     // Outcome drives repricing: PathFailed prices the hop out, NoNavmesh legs are never repriced
     // (they fall back to a straight line).
@@ -214,39 +220,232 @@ namespace ck_pathnetwork_processor
         InOutWaypoints.Add(InPoint);
     }
 
-    // Right-hand walking: the side-keeping offset points to the right of the TRAVEL direction, so
-    // opposing agents naturally occupy opposite sides of the centerline.
     auto
-    Compile_OnRibbonSpan(
+    Get_DefaultRecastNavmesh(UWorld* InWorld) -> ARecastNavMesh*
+    {
+        auto* NavSys = IsValid(InWorld) ? UNavigationSystemV1::GetCurrent(InWorld) : nullptr;
+        return NavSys != nullptr
+            ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
+            : nullptr;
+    }
+
+    auto
+    Is_NavmeshSegmentValid(
+        const ARecastNavMesh& InNavData,
+        const FSharedConstNavQueryFilter& InQueryFilter,
+        const FVector& InFrom,
+        const FVector& InTo) -> bool
+    {
+        auto HitLocation = FVector::ZeroVector;
+        auto RaycastResult = ARecastNavMesh::FRaycastResult{};
+        const auto HitNavmeshBoundary = ARecastNavMesh::NavMeshRaycast(
+            &InNavData,
+            InFrom,
+            InTo,
+            HitLocation,
+            InQueryFilter,
+            nullptr,
+            RaycastResult);
+
+        // Every endpoint is projected before this call, so a boundary hit is the
+        // discriminating evidence that the segment leaves the walkable corridor.
+        // Do not require bIsRaycastEndInCorridor: Recast can select a different
+        // containing polygon for an endpoint on a shared seam and report a false
+        // mismatch even though the ray reached it without crossing a boundary.
+        return NOT HitNavmeshBoundary;
+    }
+
+    auto
+    Try_ProjectPathOntoNavmesh(UWorld* InWorld, TArray<FVector>& InOutWaypoints) -> bool
+    {
+        auto* NavData = Get_DefaultRecastNavmesh(InWorld);
+        if (NavData == nullptr || NOT NavData->HasValidNavmesh())
+        { return true; }
+
+        if (NOT NavData->GetDefaultQueryFilter().IsValid())
+        { return false; }
+
+        const auto QueryFilter = NavData->GetDefaultQueryFilter();
+        const auto ProjectionExtent = FVector{
+            ClearanceProjectionPlanarExtentCm,
+            ClearanceProjectionPlanarExtentCm,
+            ClearanceProjectionVerticalExtentCm};
+
+        for (auto WaypointIndex = 0; WaypointIndex < InOutWaypoints.Num(); ++WaypointIndex)
+        {
+            const auto AuthoredWaypoint = InOutWaypoints[WaypointIndex];
+            auto ProjectedWaypoint = FNavLocation{};
+            if (NOT NavData->ProjectPoint(
+                    AuthoredWaypoint,
+                    ProjectedWaypoint,
+                    ProjectionExtent,
+                    QueryFilter))
+            {
+                ck::pathnetwork::Verbose(
+                    TEXT("PathNetwork nav normalization failed to project waypoint [{}] at [{}]"),
+                    WaypointIndex,
+                    AuthoredWaypoint);
+                return false;
+            }
+
+            if (FVector::Dist2D(ProjectedWaypoint.Location, AuthoredWaypoint) >
+                    ClearanceProjectionPlanarExtentCm ||
+                FMath::Abs(ProjectedWaypoint.Location.Z - AuthoredWaypoint.Z) >
+                    ClearanceProjectionVerticalExtentCm)
+            {
+                ck::pathnetwork::Verbose(
+                    TEXT("PathNetwork nav normalization rejected waypoint [{}]: [{}] -> [{}]"),
+                    WaypointIndex,
+                    AuthoredWaypoint,
+                    ProjectedWaypoint.Location);
+                return false;
+            }
+
+            // Publish the projected point itself. Validating a projected copy while leaving the
+            // authored point in the movement path would recreate the airborne-route defect.
+            InOutWaypoints[WaypointIndex] = ProjectedWaypoint.Location;
+        }
+
+        return true;
+    }
+
+    auto
+    Is_NavmeshPathValid(UWorld* InWorld, TConstArrayView<FVector> InWaypoints) -> bool
+    {
+        auto* NavData = Get_DefaultRecastNavmesh(InWorld);
+        if (NavData == nullptr || NOT NavData->HasValidNavmesh())
+        { return true; }
+
+        if (NOT NavData->GetDefaultQueryFilter().IsValid())
+        { return false; }
+
+        const auto QueryFilter = NavData->GetDefaultQueryFilter();
+        for (auto Index = 0; Index < InWaypoints.Num() - 1; ++Index)
+        {
+            if (NOT Is_NavmeshSegmentValid(
+                *NavData,
+                QueryFilter,
+                InWaypoints[Index],
+                InWaypoints[Index + 1]))
+            {
+                ck::pathnetwork::Verbose(
+                    TEXT("PathNetwork nav validation rejected segment [{}] from [{}] to [{}]"),
+                    Index,
+                    InWaypoints[Index],
+                    InWaypoints[Index + 1]);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    auto
+    Apply_NavmeshClearance(
+        UWorld* InWorld,
         const FBuiltNetwork& InNetwork,
-        const FRouteLegSpan& InSpan,
-        float InSideKeepingFraction,
-        float InWaypointSpacing,
+        TConstArrayView<FRouteLegSpan> InSpans,
+        float InDesiredClearance,
         TArray<FVector>& InOutWaypoints) -> void
     {
-        const auto Span = InSpan._ToDist - InSpan._FromDist;
-        const auto SpanLength = FMath::Abs(Span);
-
-        if (SpanLength < UE_KINDA_SMALL_NUMBER)
+        if (InDesiredClearance <= UE_KINDA_SMALL_NUMBER || InOutWaypoints.Num() < 3)
         { return; }
 
-        const auto Direction = Span > 0.0f ? 1.0f : -1.0f;
-        const auto StepCount = FMath::Max(1, FMath::CeilToInt32(SpanLength / InWaypointSpacing));
-        const auto Step = SpanLength / StepCount;
+        auto* NavData = Get_DefaultRecastNavmesh(InWorld);
+        if (NavData == nullptr ||
+            NOT NavData->HasValidNavmesh() ||
+            NOT NavData->GetDefaultQueryFilter().IsValid())
+        { return; }
 
-        for (auto Index = 0; Index <= StepCount; ++Index)
+        const auto QueryFilter = NavData->GetDefaultQueryFilter();
+        const auto ProjectionExtent = FVector{
+            ClearanceProjectionPlanarExtentCm,
+            ClearanceProjectionPlanarExtentCm,
+            ClearanceProjectionVerticalExtentCm};
+        const auto SentinelValue = TNumericLimits<FVector::FReal>::Max();
+        const auto Sentinel = FVector{SentinelValue, SentinelValue, SentinelValue};
+
+        for (auto WaypointIndex = 1; WaypointIndex < InOutWaypoints.Num() - 1; ++WaypointIndex)
         {
-            const auto Dist = InSpan._FromDist + Direction * FMath::Min(Index * Step, SpanLength);
-            const auto Sample = InNetwork.Sample_Edge(InSpan._EdgeId, Dist);
+            const auto Original = InOutWaypoints[WaypointIndex];
+            auto ClosestWall = Sentinel;
+            const auto CurrentClearance = static_cast<float>(NavData->FindDistanceToWall(
+                Original,
+                QueryFilter,
+                InDesiredClearance,
+                &ClosestWall));
 
-            const auto TravelTangent = Sample._Tangent * Direction;
-            const auto Right = FVector::CrossProduct(FVector::UpVector, TravelTangent).GetSafeNormal();
+            const auto FoundNearbyWall = ClosestWall.X != SentinelValue;
+            if (NOT FoundNearbyWall || CurrentClearance >= InDesiredClearance - ClearanceImprovementEpsilonCm)
+            { continue; }
 
-            const auto OffsetMagnitude = FMath::Min(
-                InSideKeepingFraction * Sample._HalfWidth,
-                FMath::Max(0.0f, Sample._HalfWidth - SideOffsetClampMarginCm));
+            auto AwayFromWall = Original - ClosestWall;
+            AwayFromWall.Z = 0.0;
+            AwayFromWall = AwayFromWall.GetSafeNormal();
+            if (AwayFromWall.IsNearlyZero())
+            { continue; }
 
-            Append_CompiledWaypoint(InOutWaypoints, Sample._Location + Right * OffsetMagnitude);
+            const auto RequestedShift = InDesiredClearance - CurrentClearance;
+            constexpr auto AttemptFractions = std::array{1.0f, 0.5f, 0.25f};
+
+            for (const auto Fraction : AttemptFractions)
+            {
+                const auto UnprojectedCandidate =
+                    Original + AwayFromWall * RequestedShift * Fraction;
+                auto ProjectedCandidate = FNavLocation{};
+                if (NOT NavData->ProjectPoint(
+                    UnprojectedCandidate,
+                    ProjectedCandidate,
+                    ProjectionExtent,
+                    QueryFilter))
+                { continue; }
+
+                auto Candidate = ProjectedCandidate.Location;
+                if (FVector::Dist2D(Candidate, UnprojectedCandidate) >
+                        ClearanceProjectionPlanarExtentCm ||
+                    FMath::Abs(Candidate.Z - UnprojectedCandidate.Z) >
+                        ClearanceProjectionVerticalExtentCm)
+                { continue; }
+
+                if (NOT Is_PointInsideRibbonRun(InNetwork, InSpans, Candidate) ||
+                    NOT Is_SegmentInsideRibbonRun(
+                        InNetwork,
+                        InSpans,
+                        InOutWaypoints[WaypointIndex - 1],
+                        Candidate) ||
+                    NOT Is_SegmentInsideRibbonRun(
+                        InNetwork,
+                        InSpans,
+                        Candidate,
+                        InOutWaypoints[WaypointIndex + 1]))
+                { continue; }
+
+                if (NOT Is_NavmeshSegmentValid(
+                        *NavData,
+                        QueryFilter,
+                        InOutWaypoints[WaypointIndex - 1],
+                        Candidate) ||
+                    NOT Is_NavmeshSegmentValid(
+                        *NavData,
+                        QueryFilter,
+                        Candidate,
+                        InOutWaypoints[WaypointIndex + 1]))
+                { continue; }
+
+                auto CandidateClosestWall = Sentinel;
+                const auto CandidateClearance = static_cast<float>(NavData->FindDistanceToWall(
+                    Candidate,
+                    QueryFilter,
+                    InDesiredClearance,
+                    &CandidateClosestWall));
+                const auto CandidateHasNearbyWall = CandidateClosestWall.X != SentinelValue;
+                if (CandidateHasNearbyWall &&
+                    CandidateClearance <= CurrentClearance + ClearanceImprovementEpsilonCm)
+                { continue; }
+
+                InOutWaypoints[WaypointIndex] = Candidate;
+                break;
+            }
         }
     }
 }
@@ -357,7 +556,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_PathNetworkFollower_Params& InParams,
+            FFragment_PathNetworkFollower_Params& InParams,
             FFragment_PathNetworkFollower_Corridor& InCorridor,
             FFragment_PathNetworkFollower_Requests& InRequests) const
         -> void
@@ -369,17 +568,22 @@ namespace ck
             algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
             [&](const auto& InRequest)
             {
-                if (_BudgetRemainingThisTick <= 0)
+                if constexpr (NOT std::is_same_v<
+                    std::decay_t<decltype(InRequest)>,
+                    FCk_Request_PathNetworkFollower_UpdateTuning>)
                 {
-                    // Re-queue verbatim: the fragment re-add marks the entity dirty, resuming the drain next tick.
-                    // Not yet handled, so the completion delegate must not fire here — it rides the
-                    // re-queued copy and fires when a later tick actually drains it.
-                    auto NonConstHandle = InHandle;
-                    NonConstHandle.AddOrGet<FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(InRequest);
-                    return;
-                }
+                    if (_BudgetRemainingThisTick <= 0)
+                    {
+                        // Out of budget: re-queue verbatim; the fragment re-add marks the entity dirty
+                        // so the drain resumes next tick. The completion delegate rides the re-queued
+                        // copy and fires only when a later tick actually drains it.
+                        auto NonConstHandle = InHandle;
+                        NonConstHandle.AddOrGet<FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(InRequest);
+                        return;
+                    }
 
-                --_BudgetRemainingThisTick;
+                    --_BudgetRemainingThisTick;
+                }
 
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
@@ -402,6 +606,9 @@ namespace ck
         using namespace ck_pathnetwork_processor;
         using namespace ck::pathnetwork;
 
+        if (InRequest.Get_TuningRevision() != InParams.Get_TuningRevision())
+        { return; }
+
         const auto GoalLocation = InRequest.Get_GoalLocation();
 
         const auto FailRoute = [&](ECk_PathNetwork_RouteFailReason InReason)
@@ -410,11 +617,14 @@ namespace ck
             InCorridor._Result._Status = ECk_PathNetwork_RouteStatus::Failed;
             InCorridor._Result._FailReason = InReason;
             InCorridor._Result._GoalLocation = GoalLocation;
+            InCorridor._Result._TuningRevision = InRequest.Get_TuningRevision();
 
             auto Follower = InHandle;
             UUtils_Signal_PathNetworkFollower_OnRouteFailed::Broadcast(Follower, MakePayload(Follower));
 
-            ck::pathnetwork::Warning(TEXT("PathNetworkFollower [{}] route to {} failed: [{}]"),
+            // Route failure is a first-class result delivered by OnRouteFailed, not a framework
+            // fault. Keep it visible without escalating expected unreachable-goal tests.
+            ck::pathnetwork::Display(TEXT("PathNetworkFollower [{}] route to {} failed: [{}]"),
                 InHandle, GoalLocation, InReason);
         };
 
@@ -541,76 +751,157 @@ namespace ck
         Result._Status = ECk_PathNetwork_RouteStatus::Ready;
         Result._TotalCost = AcceptedCost;
         Result._GoalLocation = GoalLocation;
+        Result._TuningRevision = InRequest.Get_TuningRevision();
 
-        for (auto SpanIndex = 0; SpanIndex < AcceptedSpans.Num(); ++SpanIndex)
+        for (auto SpanIndex = 0; SpanIndex < AcceptedSpans.Num();)
         {
             const auto& Span = AcceptedSpans[SpanIndex];
 
-            auto Leg = FCk_PathNetwork_CorridorLeg{};
-
             if (Span._IsOffPath)
             {
+                auto Leg = FCk_PathNetwork_CorridorLeg{};
                 Leg._LegType = ECk_PathNetwork_CorridorLegType::OffPath;
                 Leg._Waypoints = AcceptedOffPathWaypoints.FindChecked(SpanIndex);
 
                 for (const auto& Waypoint : Leg.Get_Waypoints())
                 { Append_CompiledWaypoint(Result._CompiledWaypoints, Waypoint); }
+                Result._Legs.Add(MoveTemp(Leg));
+                ++SpanIndex;
             }
             else
             {
-                Leg._LegType = ECk_PathNetwork_CorridorLegType::OnRibbon;
-                Leg._EdgeId = Span._EdgeId;
-                Leg._EntryDistAlong = Span._FromDist;
-                Leg._ExitDistAlong = Span._ToDist;
+                const auto RunStartIndex = SpanIndex;
+                while (SpanIndex < AcceptedSpans.Num() && NOT AcceptedSpans[SpanIndex]._IsOffPath)
+                {
+                    const auto& RunSpan = AcceptedSpans[SpanIndex];
+                    auto Leg = FCk_PathNetwork_CorridorLeg{};
+                    Leg._LegType = ECk_PathNetwork_CorridorLegType::OnRibbon;
+                    Leg._EdgeId = RunSpan._EdgeId;
+                    Leg._EntryDistAlong = RunSpan._FromDist;
+                    Leg._ExitDistAlong = RunSpan._ToDist;
+                    Result._Legs.Add(MoveTemp(Leg));
+                    ++SpanIndex;
+                }
 
-                Compile_OnRibbonSpan(
-                    BuiltNetwork,
-                    Span,
-                    InParams.Get_SideKeepingFraction(),
-                    InParams.Get_CorridorWaypointSpacing(),
-                    Result._CompiledWaypoints);
+                const auto RunSpans = TConstArrayView<FRouteLegSpan>{
+                    AcceptedSpans.GetData() + RunStartIndex,
+                    SpanIndex - RunStartIndex};
+                auto CompileParams = FCorridorCompileParams{};
+                CompileParams._SideKeepingFraction = InParams.Get_SideKeepingFraction();
+                CompileParams._WaypointSpacing = InParams.Get_CorridorWaypointSpacing();
+                CompileParams._CornerSmoothingDistance = InParams.Get_CornerSmoothingDistance();
+                CompileParams._RampSideOffsetAtStart =
+                    RunStartIndex > 0 && AcceptedSpans[RunStartIndex - 1]._IsOffPath;
+                CompileParams._RampSideOffsetAtEnd =
+                    SpanIndex < AcceptedSpans.Num() && AcceptedSpans[SpanIndex]._IsOffPath;
+
+                auto RunWaypoints = TArray<FVector>{};
+                constexpr auto CompileAttempts = 3;
+                for (auto CompileAttempt = 0; CompileAttempt < CompileAttempts; ++CompileAttempt)
+                {
+                    auto AttemptParams = CompileParams;
+                    if (CompileAttempt >= 1)
+                    { AttemptParams._CornerSmoothingDistance = 0.0f; }
+                    if (CompileAttempt >= 2)
+                    { AttemptParams._SideKeepingFraction = 0.0f; }
+
+                    auto CandidateWaypoints = Compile_OnRibbonRun(
+                        BuiltNetwork,
+                        RunSpans,
+                        AttemptParams);
+                    if (CandidateWaypoints.Num() < 2)
+                    { continue; }
+
+                    if (NOT Try_ProjectPathOntoNavmesh(World, CandidateWaypoints))
+                    { continue; }
+
+                    auto ProjectedPathContained = true;
+                    for (auto WaypointIndex = 0;
+                         WaypointIndex < CandidateWaypoints.Num() - 1;
+                         ++WaypointIndex)
+                    {
+                        if (NOT Is_SegmentInsideRibbonRun(
+                                BuiltNetwork,
+                                RunSpans,
+                                CandidateWaypoints[WaypointIndex],
+                                CandidateWaypoints[WaypointIndex + 1]))
+                        {
+                            ProjectedPathContained = false;
+                            break;
+                        }
+                    }
+                    if (NOT ProjectedPathContained)
+                    { continue; }
+
+                    Apply_NavmeshClearance(
+                        World,
+                        BuiltNetwork,
+                        RunSpans,
+                        InParams.Get_DesiredNavmeshClearance(),
+                        CandidateWaypoints);
+                    if (Is_NavmeshPathValid(World, CandidateWaypoints))
+                    {
+                        RunWaypoints = MoveTemp(CandidateWaypoints);
+                        break;
+                    }
+                }
+
+                if (RunWaypoints.Num() < 2)
+                {
+                    FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
+                    return;
+                }
+
+                for (const auto& Waypoint : RunWaypoints)
+                { Append_CompiledWaypoint(Result._CompiledWaypoints, Waypoint); }
             }
-
-            Result._Legs.Add(MoveTemp(Leg));
         }
 
-        const auto FirstWaypointIsUnderTheAgent = Result._CompiledWaypoints.Num() > 1 &&
-            FVector::Dist(Result._CompiledWaypoints[0], StartLocation) < InParams.Get_CorridorWaypointSpacing() * 0.5f;
+        if (NOT Try_ProjectPathOntoNavmesh(World, Result._CompiledWaypoints))
+        {
+            FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
+            return;
+        }
 
-        if (FirstWaypointIsUnderTheAgent)
+        auto NormalizedStart = TArray<FVector>{StartLocation};
+        if (NOT Try_ProjectPathOntoNavmesh(World, NormalizedStart))
+        {
+            FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
+            return;
+        }
+
+        // The agent stands at the first waypoint already — drop it so movement consumers don't
+        // backtrack (same artifact CkNavigation's first-waypoint skip addresses).
+        if (Result._CompiledWaypoints.Num() > 1 &&
+            FVector::Dist(Result._CompiledWaypoints[0], NormalizedStart[0]) <
+                CompiledWaypointMergeDistance)
         { Result._CompiledWaypoints.RemoveAt(0); }
 
-        // Leg seams emit near-coincident waypoints (an off-path leg ends at the centerline projection,
-        // the next ribbon sample sits at the same arc-length but laterally offset). An agent whose turn
-        // radius exceeds its arrival radius orbits such a lateral micro-hop forever.
-        if (Result._CompiledWaypoints.Num() > 2)
+        auto NormalizedGoal = TArray<FVector>{GoalLocation};
+        if (NOT Try_ProjectPathOntoNavmesh(World, NormalizedGoal))
         {
-            const auto MinSeparation = InParams.Get_CorridorWaypointSpacing() * 0.75f;
-
-            auto Filtered = TArray<FVector>{};
-            Filtered.Reserve(Result._CompiledWaypoints.Num());
-            Filtered.Add(Result._CompiledWaypoints[0]);
-
-            for (auto WaypointIndex = 1; WaypointIndex < Result._CompiledWaypoints.Num() - 1; ++WaypointIndex)
-            {
-                if (FVector::Dist(Result._CompiledWaypoints[WaypointIndex], Filtered.Last()) >= MinSeparation)
-                { Filtered.Add(Result._CompiledWaypoints[WaypointIndex]); }
-            }
-
-            const auto& FinalWaypoint = Result._CompiledWaypoints.Last();
-
-            if (Filtered.Num() > 1 && FVector::Dist(FinalWaypoint, Filtered.Last()) < MinSeparation)
-            { Filtered.Last() = FinalWaypoint; }
-            else
-            { Filtered.Add(FinalWaypoint); }
-
-            Result._CompiledWaypoints = MoveTemp(Filtered);
+            FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
+            return;
         }
 
-        if (Result._CompiledWaypoints.IsEmpty())
-        { Result._CompiledWaypoints.Add(GoalLocation); }
-        else
-        { Result._CompiledWaypoints.Last() = GoalLocation; }
+        const auto HasExactTerminal =
+            Result._CompiledWaypoints.Num() > 0 &&
+            FVector::Dist(Result._CompiledWaypoints.Last(), NormalizedGoal[0]) <
+                CompiledWaypointMergeDistance;
+        if (NOT HasExactTerminal)
+        {
+            FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
+            return;
+        }
+        Result._CompiledWaypoints.Last() = NormalizedGoal[0];
+
+        auto FullMovementPath = Result._CompiledWaypoints;
+        FullMovementPath.Insert(NormalizedStart[0], 0);
+        if (NOT Is_NavmeshPathValid(World, FullMovementPath))
+        {
+            FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
+            return;
+        }
 
         InCorridor._Result = MoveTemp(Result);
         InCorridor._Network = Network;
@@ -642,6 +933,60 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_PathNetworkFollower_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_PathNetworkFollower_Params& InParams,
+            FFragment_PathNetworkFollower_Corridor& InCorridor,
+            const FCk_Request_PathNetworkFollower_UpdateTuning& InRequest,
+            ECk_Request_OperationResult& OutResult) const
+        -> void
+    {
+        const auto& Tuning = InRequest.Get_Tuning();
+        // The public entrypoint validated this payload before enqueueing. Keep the
+        // processor total against malformed/stale requests from native callers.
+        const auto Multiplier = Tuning.Get_OffPathCostMultiplier();
+        const auto SideKeeping = Tuning.Get_SideKeepingFraction();
+        const auto Spacing = Tuning.Get_CorridorWaypointSpacing();
+        const auto Smoothing = Tuning.Get_CornerSmoothingDistance();
+        const auto Clearance = Tuning.Get_DesiredNavmeshClearance();
+        const bool TuningIsValid = FMath::IsFinite(Multiplier) && Multiplier >= 1.0f
+            && FMath::IsFinite(SideKeeping) && SideKeeping >= 0.0f && SideKeeping <= 0.9f
+            && FMath::IsFinite(Spacing) && Spacing >= 50.0f
+            && FMath::IsFinite(Smoothing) && Smoothing >= 0.0f && Smoothing <= 1000.0f
+            && FMath::IsFinite(Clearance) && Clearance >= 0.0f && Clearance <= 1000.0f;
+        CK_ENSURE_IF_NOT(TuningIsValid,
+            TEXT("PathNetworkFollower tuning request contains invalid values "
+                 "(multiplier [{}], side [{}], spacing [{}], smoothing [{}], clearance [{}])"),
+            Multiplier, SideKeeping, Spacing, Smoothing, Clearance)
+        {}
+        if (NOT TuningIsValid)
+        { return; }
+
+        InParams.Set_OffPathCostMultiplier(Multiplier);
+        InParams.Set_SideKeepingFraction(SideKeeping);
+        InParams.Set_CorridorWaypointSpacing(Spacing);
+        InParams.Set_CornerSmoothingDistance(Smoothing);
+        InParams.Set_DesiredNavmeshClearance(Clearance);
+        ++InParams._TuningRevision;
+        OutResult = ECk_Request_OperationResult::Succeeded;
+
+        const auto Status = InCorridor._Result.Get_Status();
+        if (Status != ECk_PathNetwork_RouteStatus::Ready && Status != ECk_PathNetwork_RouteStatus::Pending)
+        { return; }
+
+        auto Replan = FCk_Request_PathNetworkFollower_FindRoute{InCorridor._Result.Get_GoalLocation()};
+        Replan.Set_Network(InCorridor._Network);
+        Replan.Set_TuningRevision(InParams.Get_TuningRevision());
+        auto NonConstHandle = InHandle;
+        NonConstHandle.AddOrGet<FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(Replan);
+        InCorridor._Result._Status = ECk_PathNetwork_RouteStatus::Pending;
+        InCorridor._Result._TuningRevision = InParams.Get_TuningRevision();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_PathNetworkFollower_InvalidateOnRebuild::
         ForEachEntity(
             TimeType InDeltaT,
@@ -667,6 +1012,7 @@ namespace ck
 
         auto Request = FCk_Request_PathNetworkFollower_FindRoute{InCorridor.Get_Result().Get_GoalLocation()};
         Request.Set_Network(InCorridor.Get_Network());
+        Request.Set_TuningRevision(InParams.Get_TuningRevision());
 
         auto NonConstHandle = InHandle;
         NonConstHandle.AddOrGet<FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(Request);

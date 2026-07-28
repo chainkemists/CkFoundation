@@ -1,17 +1,15 @@
 #include "CkPathNetwork_Details.h"
 
 #include "CkPathNetworkEditor/CkPathNetworkEditor_Log.h"
+#include "CkPathNetworkEditor/CkPathNetwork_EditorUtils.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkPathNetwork/Actor/CkPathNetwork_Actor.h"
-#include "CkPathNetwork/Detector/CkPathNetwork_Detector.h"
-#include "CkPathNetwork/Network/CkPathNetwork_Vectorize.h"
 
 #include <DetailCategoryBuilder.h>
 #include <DetailLayoutBuilder.h>
 #include <DetailWidgetRow.h>
-#include <NavigationSystem.h>
 #include <ScopedTransaction.h>
 #include <Widgets/Input/SButton.h>
 #include <Widgets/SBoxPanel.h>
@@ -98,8 +96,8 @@ namespace ck::layout
             + SHorizontalBox::Slot().AutoWidth().Padding(2.0f)
             [
                 MakeButton(
-                    LOCTEXT("ValidateNavmesh", "Validate vs Navmesh"),
-                    LOCTEXT("ValidateNavmeshTooltip", "Project every ribbon point onto the navmesh and report points with no navmesh underneath (agents cannot walk there)."),
+                    LOCTEXT("ValidateNavmesh", "Validate Generated vs Navmesh"),
+                    LOCTEXT("ValidateNavmeshTooltip", "Check every generated ribbon point against the navmesh and report broad projections that move more than 50 cm in the plane or vertically. Authored ribbons are excluded."),
                     &FCk_PathNetwork_Details::DoValidateAgainstNavmesh)
             ]
         ];
@@ -120,41 +118,16 @@ namespace ck::layout
             if (ck::Is_NOT_Valid(Actor))
             { continue; }
 
-            const auto& Detector = Actor->Get_Detector();
-
-            if (ck::Is_NOT_Valid(Detector))
+            const auto Result = UCk_Utils_PathNetworkEditor_UE::Bake_DetectorToActor(Actor);
+            if (NOT Result.Get_Succeeded())
             {
-                ck::pathnetwork_editor::Warning(TEXT("Run Detector on [{}]: no detector assigned"), Actor);
+                ck::pathnetwork_editor::Warning(TEXT("Run Detector on [{}] failed: [{}]"),
+                    Actor, Result.Get_FailureReason());
                 continue;
             }
-
-            const auto Mask = Detector->Get_DetectionMask(Actor->Get_DetectionBounds());
-
-            if (NOT Mask.Get_IsValidMask())
-            {
-                ck::pathnetwork_editor::Warning(TEXT("Run Detector on [{}]: detector returned an empty/invalid mask"), Actor);
-                continue;
-            }
-
-            const auto GeneratedWorldRibbons = ck::pathnetwork::Vectorize_MaskToRibbons(Mask, Actor->Get_VectorizeParams());
-
-            Actor->Modify();
-
-            auto NewRibbons = TArray<FCk_PathNetwork_Ribbon>{};
-            for (const auto& Ribbon : Actor->Get_Ribbons())
-            {
-                if (Ribbon.Get_Source() == ECk_PathNetwork_RibbonSource::Authored)
-                { NewRibbons.Add(Ribbon); }
-            }
-
-            for (const auto& WorldRibbon : GeneratedWorldRibbons)
-            { NewRibbons.Add(Actor->Convert_WorldRibbonToRelative(WorldRibbon)); }
-
-            Actor->Set_Ribbons(NewRibbons);
-            Actor->PostEditChange();
 
             ck::pathnetwork_editor::Display(TEXT("Run Detector on [{}]: [{}] generated ribbons (authored kept: [{}])"),
-                Actor, GeneratedWorldRibbons.Num(), NewRibbons.Num() - GeneratedWorldRibbons.Num());
+                Actor, Result.Get_GeneratedRibbonCount(), Result.Get_AuthoredRibbonCount());
         }
 
         return FReply::Handled();
@@ -275,44 +248,37 @@ namespace ck::layout
             if (ck::Is_NOT_Valid(Actor))
             { continue; }
 
-            auto* World = Actor->GetWorld();
-            auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
-
-            if (NavSys == nullptr)
+            const auto Result = UCk_Utils_PathNetworkEditor_UE::Validate_RibbonPointProjectability(
+                Actor, FVector{200.0, 200.0, 500.0}, 50.0f, 50.0f);
+            if (NOT Result.Get_Succeeded())
             {
-                ck::pathnetwork_editor::Warning(TEXT("Validate on [{}]: no navigation system in this world"), Actor);
+                ck::pathnetwork_editor::Warning(TEXT("Validate on [{}] failed: [{}]"),
+                    Actor, Result.Get_FailureReason());
                 continue;
             }
 
-            const auto ProjectionExtent = FVector{200.0, 200.0, 500.0};
-            auto OffMeshPoints = 0;
-            auto TotalPoints = 0;
-
-            for (const auto& WorldRibbon : Actor->Get_WorldRibbons())
+            for (const auto& UnprojectablePoint : Result.Get_UnprojectablePoints())
             {
-                for (const auto& Point : WorldRibbon.Get_Points())
-                {
-                    ++TotalPoints;
-
-                    auto Projected = FNavLocation{};
-                    if (NOT NavSys->ProjectPointToNavigation(Point.Get_Location(), Projected, ProjectionExtent))
-                    {
-                        ++OffMeshPoints;
-                        ck::pathnetwork_editor::Warning(TEXT("Validate on [{}]: ribbon point at {} has no navmesh within {}"),
-                            Actor, Point.Get_Location(), ProjectionExtent);
-                    }
-                }
+                ck::pathnetwork_editor::Warning(TEXT("Validate on [{}]: generated ribbon point at {} fails navmesh conformance"),
+                    Actor, UnprojectablePoint);
+            }
+            for (const auto& Failure : Result.Get_NonconformantPoints())
+            {
+                ck::pathnetwork_editor::Warning(TEXT("Validate on [{}]: generated point {} projected [{}] (projected={}, planar delta={}cm, vertical delta={}cm) exceeds conformance tolerance"),
+                    Actor, Failure.Get_SourcePoint(), Failure.Get_ProjectedPoint(), Failure.Get_Projected(),
+                    Failure.Get_PlanarDelta(), Failure.Get_VerticalDelta());
             }
 
-            if (OffMeshPoints == 0)
+            const auto UnprojectablePointCount = Result.Get_UnprojectablePoints().Num();
+            if (UnprojectablePointCount == 0)
             {
-                ck::pathnetwork_editor::Display(TEXT("Validate on [{}]: all [{}] ribbon points sit on navmesh"),
-                    Actor, TotalPoints);
+                ck::pathnetwork_editor::Display(TEXT("Validate on [{}]: all [{}] generated ribbon points conform to navmesh"),
+                    Actor, Result.Get_TotalPointCount());
             }
             else
             {
-                ck::pathnetwork_editor::Warning(TEXT("Validate on [{}]: [{}] of [{}] ribbon points are OFF the navmesh"),
-                    Actor, OffMeshPoints, TotalPoints);
+                ck::pathnetwork_editor::Warning(TEXT("Validate on [{}]: [{}] of [{}] generated ribbon points fail navmesh conformance"),
+                    Actor, UnprojectablePointCount, Result.Get_TotalPointCount());
             }
         }
 

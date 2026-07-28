@@ -99,6 +99,28 @@ Jolt static-world cooker — `FCk_Jolt_WorldCooker` (shared with nothing else; t
 
 Shape visualization overlays for overlap body entities in the editor viewport.
 
+### `CkPathNetworkEditor`
+**Runtime twin:** `CkPathNetwork`. **Depends on:** `CkCore`, `CkEcs`, `CkLog`, `CkPathNetwork` (+ UnrealEd, NavigationSystem, PropertyEditor, Slate). Type: UncookedOnly.
+
+Path-network authoring tools for `ACk_PathNetwork_UE`. The Details customization supports
+detector bake, generated-ribbon promotion/clearing, authored-ribbon creation, and navmesh
+validation. Reusable editor automation and Editor Utility Blueprints should call
+`UCk_Utils_PathNetworkEditor_UE::Bake_DetectorToActor` and
+`Validate_RibbonPointProjectability` instead of reproducing detector/vectorization logic.
+Generated ribbons whose tips extend beyond navigable space may be normalized with
+`Trim_UnprojectableGeneratedRibbonEndpoints`.
+
+`Bake_DetectorToActor` owns an undo transaction, preserves authored ribbons, replaces generated
+ribbons, and treats an empty detector mask as a successful authored-only bake. It never saves a
+package. `Validate_RibbonPointProjectability` is read-only and requires the caller to supply the
+projection extent used by its runtime navigation policy; it proves projectability within that
+extent, not that source points already lie on the navmesh. It fails if the world has no navigation
+system or default Recast nav data. Game-side automation remains responsible for map loading,
+detector configuration, package saving, and deciding whether zero generated ribbons is acceptable.
+`Trim_UnprojectableGeneratedRibbonEndpoints` uses the same caller-supplied projection extent, preserves
+authored ribbons exactly, removes only generated unprojectable prefixes and suffixes, drops generated
+ribbons reduced below two points, and fails atomically if any remaining generated point is unprojectable.
+
 ### `CkResourceLoaderEditor`
 **Runtime twin:** `CkResourceLoader`. **Depends on:** `CkCore`, `CkEcs`, `CkLog`, `CkResourceLoader`, `CkSettings`.
 
