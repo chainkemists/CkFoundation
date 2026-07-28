@@ -2,8 +2,8 @@
 
 #include "CkSnapshot/CkSnapshot_Log.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_Header.h"
-#include "CkSnapshot/SaveKey/CkSnapshot_SaveKey_Fragment.h"
 
+#include "CkEcs/Snapshot/CkSaveKey_Fragment.h"
 #include "CkEcs/Snapshot/CkSnapshot_HandleWalk.h"
 #include "CkEcs/Snapshot/CkSnapshot_Context.h"
 #include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // snapshot exclusion tags (rules 1.25 / 1.5)
