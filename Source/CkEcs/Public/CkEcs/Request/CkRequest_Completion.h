@@ -7,6 +7,9 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
+#include <type_traits>
+#include <variant>
+
 #include "CkRequest_Completion.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -81,10 +84,20 @@ namespace ck
 
 namespace ck::request
 {
+    template <typename T>
+    struct TRequestEntry_IsVariant : std::false_type {};
+
+    template <typename... T_Alternatives>
+    struct TRequestEntry_IsVariant<std::variant<T_Alternatives...>> : std::true_type {};
+
     /** Fires Failed_Cancelled for every pending request. Call from a feature's EndPlay processor while
      *  its requests fragment is still alive: a HandleRequests processor that skips destroyed owners
      *  never drains their queue, so without this a caller awaiting completion waits forever.
-     *  Unconditional by design — TryFireCompletion is itself the exactly-once gate. */
+     *  Unconditional by design — TryFireCompletion is itself the exactly-once gate.
+     *
+     *  Handles both request-list shapes: most features hold a std::variant of their request types,
+     *  but some hold a plain TArray of one concrete request. ck::Visitor cannot serve the latter —
+     *  its operator() calls std::visit unconditionally, which does not compile on a non-variant. */
     template <typename T_RequestList>
     auto
         FireCancelledForPending(
@@ -92,11 +105,21 @@ namespace ck::request
             const T_RequestList& InRequests)
         -> void
     {
-        algo::ForEachRequest(InRequests, Visitor(
-        [&](const auto& InRequest) -> void
+        algo::ForEachRequest(InRequests,
+        [&](const auto& InEntry) -> void
         {
-            InRequest.TryFireCompletion(InOwner, ECk_Request_OperationResult::Failed_Cancelled);
-        }), policy::DontResetContainer{});
+            if constexpr (TRequestEntry_IsVariant<std::decay_t<decltype(InEntry)>>::value)
+            {
+                std::visit([&](const auto& InRequest) -> void
+                {
+                    InRequest.TryFireCompletion(InOwner, ECk_Request_OperationResult::Failed_Cancelled);
+                }, InEntry);
+            }
+            else
+            {
+                InEntry.TryFireCompletion(InOwner, ECk_Request_OperationResult::Failed_Cancelled);
+            }
+        }, policy::DontResetContainer{});
     }
 }
 
