@@ -2,7 +2,7 @@
 
 **Purpose:** Actor relay channels — a named communication channel on an `AActor` that entities can broadcast to, and other actors/entities can listen on. Used by `CkAudio`, `CkVfx`, `CkCue` to route events to the actor-side without a direct actor reference.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkSettings`.
+**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkSettings` (+ private `CkSnapshot`).
 **Used by:** `CkAudio`, `CkCue`, `CkObjective`, `CkVfx`.
 
 ---
@@ -38,6 +38,11 @@ Audio/VFX modules acquire a relay channel on the owning actor; the cue system br
 - **`Try_ResolvePending` is the sync-or-null escape hatch.** The Promise/Pending async subscription is
   the wrong fit for consumers that already drive a retry loop (an ECS processor re-evaluating every
   tick); CkStateMachine's owning-client push path uses it. Internal callers use `DoTryResolve` directly.
+- **Every channel entity carries a `FFragment_SaveKey` derived from its group tag.** A save's channel row then
+  classifies `EngineOwned` (capture rule 2) and rendezvouses onto the fresh world's channel for the same group, so
+  the entities the channel lifetime-owns keep a resolvable owner across a load. The key is per GROUP, not per
+  channel — N pooled channels share it and N saved rows consolidate onto one fresh channel, which is sound because
+  channels within a group are interchangeable and nothing per-instance is stable across runs.
 - **`OnPostLoadMapWithWorld` must filter on `InWorld == GetWorld()`.** The delegate is process-global,
   so under multi-PIE it fires for other PIE worlds; reacting to a foreign world wipes this world's
   player pools and spawns channels owned by the foreign world's PlayerStates.
