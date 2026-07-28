@@ -3,9 +3,9 @@
 #include "CkSnapshot/CkSnapshot_Log.h"
 #include "CkSnapshot/SaveGame/CkSnapshot_SaveGame.h"
 #include "CkSnapshot/Snapshot/CkSnapshot_CaptureV3.h" // v3 recipe+payload capture (the live save path)
-#include "CkSnapshot/SaveKey/CkSnapshot_SaveKey_Fragment.h"   // EngineOwned rendezvous resolver
 #include "CkSnapshot/Subsystem/CkSnapshot_Signals.h"
 
+#include "CkEcs/Snapshot/CkSaveKey_Fragment.h"                // EngineOwned rendezvous resolver
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"   // FFragment_LifetimeDependents, FTag_ConstructSpawned

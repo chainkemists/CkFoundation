@@ -2,7 +2,7 @@
 
 **Purpose:** Actor relay channels — a named communication channel on an `AActor` that entities can broadcast to, and other actors/entities can listen on. Used by `CkAudio`, `CkVfx`, `CkCue` to route events to the actor-side without a direct actor reference.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkSettings` (+ private `CkSnapshot`).
+**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkSettings`.
 **Used by:** `CkAudio`, `CkCue`, `CkObjective`, `CkVfx`.
 
 ---
