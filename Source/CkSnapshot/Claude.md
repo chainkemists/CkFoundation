@@ -209,6 +209,17 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
 - **Hydrating is ATOMIC.** One ticker callback enqueues payloads, queues the reconcile-destroys, AND opens the gate,
   so no gated world-tick ever sees pending payloads; hydration can only drain in post-gate FULL passes (Setup then
   hydration, no stomp). `Settling` then lets the parked destroys finish.
+- **The SaveKey resolver is re-swept every rebuild tick, not once at world-ready.** On-demand infrastructure
+  (ActorRelay channels) stamps its key ticks after BeginPlay, so a one-shot sweep left every such `EngineOwned` row
+  unresolvable and orphaned its whole owned subtree. The sweep Resets and rescans the live
+  `FFragment_SaveKey` view; that is lossless because the rebuild's own publish-back writes the fragment onto the
+  entity it mapped, so the next rescan re-finds it.
+- **A bridged actor is spawned DEFERRED and its saved `UPROPERTY(SaveGame)` fields applied before `FinishSpawning`.**
+  The recipe carries them in `_ActorSaveFieldBytes` (ArIsSaveGame tagged-property blob, captured off the owning
+  actor). Plain `SpawnActor` gave BeginPlay — and the WithActor `Construct` it drives — class defaults, so an actor
+  whose composition branches on a saved field (a world item's `ItemDefinition`) came back inert and a later payload
+  hydration back-filled the field onto an entity that had already skipped composing. Empty bytes (no SaveGame
+  property on the class) spawn exactly as before.
 - **Ownership restore runs before any payload.** Rebuild APIs establish a *valid temporary* ownership chain so
   Construct can run, but not necessarily the saved one: RuntimeSpawned scripts can override ContextOwner after spawn,
   and DefinitionBuilt items are rebuilt under a driver-bearing context owner (historically they waited for a feature
