@@ -51,6 +51,18 @@ public:
         const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate,
         const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
+public:
+    // C++-only, processor-friendly load: no request entity, no delegate to bind. The loading policy
+    // resolves from the loader project settings — the per-consumer override for InConsumerId if one
+    // is configured, else the project default (Async). Synchronous is ready on return; Async is
+    // polled via the returned batch (an async request whose assets are already resident completes
+    // inline). The batch's streamable handle is the GC root for the loaded assets: store the batch
+    // where the assets must stay alive, reset it to release them.
+    static auto
+    RequestLoad_RootedBatch(
+        FName InConsumerId,
+        const TArray<FSoftObjectPath>& InSoftPaths) -> FCk_ResourceLoader_RootedAssetBatch;
+
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Convert Soft Class Reference To Soft Resource Loader Object Reference",
         Category = "Ck|Utils|ResourceLoader",
