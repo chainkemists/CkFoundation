@@ -153,6 +153,36 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Plain value type, deliberately NOT a USTRUCT: instances live inside EnTT fragments, never in
+// reflected surfaces. The streamable handle IS the GC root for every asset in the batch — for both
+// loading policies — so resetting/replacing this struct releases the assets (FStreamableManager
+// keeps a handle's targets loaded for the handle's lifetime). UE's GC does not trace fragments;
+// nothing here relies on it.
+struct CKRESOURCELOADER_API FCk_ResourceLoader_RootedAssetBatch
+{
+public:
+    CK_GENERATED_BODY(FCk_ResourceLoader_RootedAssetBatch);
+
+public:
+    auto Get_IsRequested() const -> bool;
+    auto Get_IsReady() const -> bool;
+    auto Get_HasFailed() const -> bool;
+    auto Get_ResolvedObject(const FSoftObjectPath& InPath) const -> UObject*;
+
+private:
+    bool _Requested = false;
+    TArray<FSoftObjectPath> _RequestedPaths;
+    TSharedPtr<FStreamableHandle> _StreamableHandle;
+
+public:
+    CK_PROPERTY_GET(_RequestedPaths);
+
+private:
+    friend class UCk_Utils_ResourceLoader_UE;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKRESOURCELOADER_API FCk_ResourceLoader_PendingObject
 {
