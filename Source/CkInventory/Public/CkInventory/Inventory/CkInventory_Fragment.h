@@ -6,6 +6,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Tag/CkTag.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
@@ -193,12 +194,17 @@ namespace ck
         // Distinguishes Failed_NoCandidateAccepts (nothing placed) from Success_Partial.
         bool  _AnyUnitMoved    = false;
 
+        // The op outlives the request struct that carried it, so the generic completion delegate is
+        // held here instead. Fragment removal on normal completion is what keeps it single-fire.
+        FCk_Delegate_Request_OnCompleted _CompletionDelegate;
+
     public:
         CK_PROPERTY_GET(_StepsPerPass);
         CK_PROPERTY_GET(_MaxStepsPerFrame);
         CK_PROPERTY_GET(_UnitsMoved);
         CK_PROPERTY_GET(_ItemsFullyMoved);
         CK_PROPERTY_GET(_ItemsFailed);
+        CK_PROPERTY_GET(_CompletionDelegate);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

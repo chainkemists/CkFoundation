@@ -5,6 +5,7 @@
 #include "CkGoap/CkGoap_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkGoap_WorldState_Utils.generated.h"
@@ -46,12 +47,14 @@ public:
 	// current value false" and "key unregistered" — use Has_Key when the distinction matters.
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
-		DisplayName = "[Ck][GOAP|WS] Set Value")
+		DisplayName = "[Ck][GOAP|WS] Set Value",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_WorldState
 	Set_Value(
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
 		FGameplayTag InKey,
-		bool InValue);
+		bool InValue,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintPure, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Get Value")
@@ -64,11 +67,13 @@ public:
 	Has_Key(const FCk_Handle_Goap_WorldState& InWorldState, FGameplayTag InKey);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
-		DisplayName = "[Ck][GOAP|WS] Request Register Key")
+		DisplayName = "[Ck][GOAP|WS] Request Register Key",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_WorldState
 	Request_RegisterKey(
 		UPARAM(ref) FCk_Handle_Goap_WorldState& InWorldState,
-		FGameplayTag InKey);
+		FGameplayTag InKey,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 // --------------------------------------------------------------------------------------------------------------------
 	// Named override layers shadow the base store on READ only — Set_Value always writes the base.
@@ -230,7 +235,10 @@ private:
 
 private:
 	static auto
-	DoAddRequest(FCk_Handle_Goap_WorldState& InWorldState, const auto& InRequest) -> FCk_Handle_Goap_WorldState;
+	DoAddRequest(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		const auto& InRequest,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_WorldState;
 
 	// Lives on this Utils class rather than as a free function so it has friend access to the
 	// Subscribers fragment's private _Subscribers.

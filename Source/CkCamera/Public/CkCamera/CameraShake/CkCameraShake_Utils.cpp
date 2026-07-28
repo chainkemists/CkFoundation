@@ -99,9 +99,13 @@ auto
     UCk_Utils_CameraShake_UE::
     Request_PlayOnTarget(
         UPARAM(ref) FCk_Handle_CameraShake& InCameraShakeHandle,
-        const FCk_Request_CameraShake_PlayOnTarget& InRequest)
+        const FCk_Request_CameraShake_PlayOnTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InCameraShakeHandle.AddOrGet<ck::FFragment_CameraShake_Requests>()._Requests.Emplace(InRequest);
 }
 
@@ -109,9 +113,13 @@ auto
     UCk_Utils_CameraShake_UE::
     Request_PlayAtLocation(
         UPARAM(ref) FCk_Handle_CameraShake& InCameraShakeHandle,
-        const FCk_Request_CameraShake_PlayAtLocation& InRequest)
+        const FCk_Request_CameraShake_PlayAtLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InCameraShakeHandle.AddOrGet<ck::FFragment_CameraShake_Requests>()._Requests.Emplace(InRequest);
 }
 

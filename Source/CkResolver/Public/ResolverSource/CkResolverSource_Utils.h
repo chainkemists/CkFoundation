@@ -7,6 +7,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -130,14 +131,18 @@ public:
         const TFunction<void(FCk_Handle_ResolverDataBundle)>& InFunc) -> void;
 
 public:
+    // InDelegate answers "what did this resolution produce"; InCompletionDelegate answers "was my
+    // request processed" — the two are independent and either may be left unbound.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverSource",
-        DisplayName="[Ck][ResolverSource] Request Initiate New Resolution")
+        DisplayName="[Ck][ResolverSource] Request Initiate New Resolution",
+        meta = (AutoCreateRefTerm = "InCompletionDelegate"))
     static FCk_Handle_ResolverSource
     Request_InitiateNewResolution(
         UPARAM(ref) FCk_Handle_ResolverSource& InResolverSource,
         const FCk_Request_ResolverSource_InitiateNewResolution& InRequest,
-        FCk_Delegate_ResolverSource_OnNewResolverDataBundle InDelegate);
+        FCk_Delegate_ResolverSource_OnNewResolverDataBundle InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

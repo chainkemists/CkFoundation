@@ -47,7 +47,7 @@ namespace ck
     class CKVISIBLERANGE_API FProcessor_VisibleRange_HandleRequests
         : public ck_exp::TProcessor<FProcessor_VisibleRange_HandleRequests, FCk_Handle_VisibleRange,
             ck::TReadWrite<FFragment_VisibleRange_Current>, ck::TReadWrite<FFragment_VisibleRange_Requests>,
-            CK_IGNORE_PENDING_KILL>
+            TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_TimeDelta;
@@ -78,6 +78,29 @@ namespace ck
             HandleType InHandle,
             FFragment_VisibleRange_Current& InCurrent,
             const FCk_Request_VisibleRange_SetVisibility& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKVISIBLERANGE_API FProcessor_VisibleRange_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_VisibleRange_CancelPendingRequests,
+        FCk_Handle_VisibleRange,
+        ck::TReadOnly<FFragment_VisibleRange_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_VisibleRange_Requests& InRequestsComp)
+            -> void;
     };
 }
 

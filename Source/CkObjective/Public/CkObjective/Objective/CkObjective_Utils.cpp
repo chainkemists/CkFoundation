@@ -54,9 +54,13 @@ auto
     UCk_Utils_Objective_UE::
     Request_Start(
         FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_Start& InRequest)
+        const FCk_Request_Objective_Start& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Objective
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InObjective.AddOrGet<ck::FFragment_Objective_Requests>()._Requests.Emplace(InRequest);
     return InObjective;
 }
@@ -65,9 +69,13 @@ auto
     UCk_Utils_Objective_UE::
     Request_Complete(
         FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_Complete& InRequest)
+        const FCk_Request_Objective_Complete& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Objective
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InObjective.AddOrGet<ck::FFragment_Objective_Requests>()._Requests.Emplace(InRequest);
     return InObjective;
 }
@@ -76,9 +84,13 @@ auto
     UCk_Utils_Objective_UE::
     Request_Fail(
         FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_Fail& InRequest)
+        const FCk_Request_Objective_Fail& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Objective
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InObjective.AddOrGet<ck::FFragment_Objective_Requests>()._Requests.Emplace(InRequest);
     return InObjective;
 }

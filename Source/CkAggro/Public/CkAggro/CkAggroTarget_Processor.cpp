@@ -8,6 +8,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -16,6 +17,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_AggroTarget_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AggroTarget_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AggroTarget_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AggroTarget_Evaluate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AggroTarget_Forget);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AggroTarget_EndPlay);
@@ -97,10 +99,15 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InTarget, Result);
+
             DoHandleRequest(InTarget, InThreatParams, InTargetInfo, InThreat, InPerception, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             { InRequest.GetAndDestroyRequestHandle(); }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -266,6 +273,19 @@ namespace ck
         -> void
     {
         InTarget.AddOrGet<ck::FTag_AggroTarget_PendingForget>();
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AggroTarget_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InTarget,
+            const FFragment_AggroTarget_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InTarget, InRequestsComp.Get_Requests());
     }
 
     // ----------------------------------------------------------------------------------------------------------------

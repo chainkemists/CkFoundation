@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkAudioTrack_Utils.generated.h"
@@ -118,28 +119,34 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioTrack",
-              DisplayName="[Ck][AudioTrack] Request Play")
+              DisplayName="[Ck][AudioTrack] Request Play",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AudioTrack
     Request_Play(
         UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
-        FCk_Time InFadeInTime);
+        FCk_Time InFadeInTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioTrack",
-              DisplayName="[Ck][AudioTrack] Request Stop")
+              DisplayName="[Ck][AudioTrack] Request Stop",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AudioTrack
     Request_Stop(
         UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
-        FCk_Time InFadeOutTime);
+        FCk_Time InFadeOutTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioTrack",
-              DisplayName="[Ck][AudioTrack] Request Set Volume")
+              DisplayName="[Ck][AudioTrack] Request Set Volume",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AudioTrack
     Request_SetVolume(
         UPARAM(ref) FCk_Handle_AudioTrack& InTrack,
         float InTargetVolume,
-        FCk_Time InFadeTime);
+        FCk_Time InFadeTime,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

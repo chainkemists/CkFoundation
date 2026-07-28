@@ -3,6 +3,8 @@
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment_Data.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkIsmProxy_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -83,35 +85,43 @@ private:
 public:
 UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",
-              DisplayName="[Ck][IsmProxy] Request Set Custom Instance Data")
+              DisplayName="[Ck][IsmProxy] Request Set Custom Instance Data",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IsmProxy
     Request_SetCustomInstanceData(
         UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest);
+        const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",
-              DisplayName="[Ck][IsmProxy] Request Set Custom Instance Data Value")
+              DisplayName="[Ck][IsmProxy] Request Set Custom Instance Data Value",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IsmProxy
     Request_SetCustomInstanceDataValue(
         UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest);
+        const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",
-              DisplayName="[Ck][IsmProxy] Request Set Custom Primitive Data")
+              DisplayName="[Ck][IsmProxy] Request Set Custom Primitive Data",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IsmProxy
     Request_SetCustomPrimitiveData(
         UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest);
+        const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|IsmProxy",
-        DisplayName="[Ck][IsmProxy] Request Enable/Disable")
+        DisplayName="[Ck][IsmProxy] Request Enable/Disable",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IsmProxy
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
-        const FCk_Request_IsmProxy_EnableDisable& InRequest);
+        const FCk_Request_IsmProxy_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

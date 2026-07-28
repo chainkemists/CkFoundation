@@ -74,7 +74,7 @@
                         // Occupant validity is deliberately NOT gated here — see "Occupancy persistence"
                         // in CkGrid/Claude.md.
                         UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement(
-                            Grid, Entry.Get_Occupant(), Entry.Get_Anchor(), Entry.Get_Rotation(), Entry.Get_Cells());
+                            Grid, Entry.Get_Occupant(), Entry.Get_Anchor(), Entry.Get_Rotation(), Entry.Get_Cells(), {});
                     }
                     return ECk_Persistence_ApplyResult::Applied;
                 }});

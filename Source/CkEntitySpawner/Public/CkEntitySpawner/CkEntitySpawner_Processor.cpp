@@ -55,13 +55,13 @@ namespace ck
             {
                 auto LifetimeOwner = InResult.Get_ChannelEntity();
                 auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
-                    LifetimeOwner, EntityScript, FInstancedStruct{});
+                    LifetimeOwner, EntityScript, FInstancedStruct{}, {});
 
                 // Without this the entity inherits the ActorRelay channel as its ContextOwner and replicates
                 // that; the spawn pipeline carries the override through so the client copy resolves to self.
                 auto EntityUnderConstruction = Pending.Get_EntityUnderConstruction();
                 if (ck::IsValid(EntityUnderConstruction))
-                { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(EntityUnderConstruction); }
+                { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(EntityUnderConstruction, {}); }
             });
 
         // The lambda carries the entity-script class forward; destroying the queue entity is what stops re-entry.

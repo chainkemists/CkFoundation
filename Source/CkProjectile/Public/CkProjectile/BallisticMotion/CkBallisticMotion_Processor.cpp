@@ -4,6 +4,7 @@
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -11,6 +12,7 @@
 #include "CkProjectile/Ballistic/CkBallistic_Utils.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_BallisticMotion_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_BallisticMotion_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BallisticMotion_HandleImpacts);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BallisticMotion_UpdateTrajectory);
 
@@ -57,12 +59,19 @@ namespace ck
             algo::ForEachRequest(InRequests.Get_Requests(), Visitor(
             [&](const auto& InRequest)
             {
+                // Every DoHandleRequest overload below is void and has no rejection path, so reaching
+                // the line after the call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }));
         });
     }
@@ -123,6 +132,19 @@ namespace ck
         const auto CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
 
         ballistic_motion_detail::DoBroadcastStopped(InHandle, CurrentLocation);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_BallisticMotion_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BallisticMotion_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -225,7 +247,7 @@ namespace ck
         if (NOT ShouldBounce)
         {
             UCk_Utils_Transform_UE::Request_SetLocation(TransformHandle,
-                FCk_Request_Transform_SetLocation{ImpactLocation});
+                FCk_Request_Transform_SetLocation{ImpactLocation}, {});
 
             ballistic_motion_detail::DoBroadcastStopped(InHandle, ImpactLocation);
             return;
@@ -266,7 +288,7 @@ namespace ck
         auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
 
         UCk_Utils_Transform_UE::Request_SetLocationAndRotation(TransformHandle,
-            FCk_Request_Transform_SetLocationAndRotation{NewLocation, NewVelocity.Rotation()});
+            FCk_Request_Transform_SetLocationAndRotation{NewLocation, NewVelocity.Rotation()}, {});
     }
 }
 

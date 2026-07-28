@@ -1,4 +1,4 @@
-#include "CkSmState_Processor.h"
+﻿#include "CkSmState_Processor.h"
 
 #include "CkRecord/Public/CkRecord/Record/CkRecord_Fragment_Data.h"
 #include "CkStateMachine/CkStateMachine_Log.h"
@@ -147,7 +147,7 @@ namespace ck
                     const auto TargetStateClass = UCk_Utils_SmTransition_UE::Get_TargetStateClass(InTransition);
 
                     UCk_Utils_SmState_UE::TryCheckTransitionBreakpoint(StateMachine, TargetStateClass);
-                    UCk_Utils_StateMachine_UE::Request_Transition(StateMachine, TargetStateClass);
+                    UCk_Utils_StateMachine_UE::Request_Transition(StateMachine, TargetStateClass, {});
                     UCk_Utils_SmState_UE::TryRecordLastFiredTransition(StateMachine, InTransition);
 
                     sm::Verbose(TEXT("SM [{}] transition queued to [{}]"), StateMachine, TargetStateClass->GetName());

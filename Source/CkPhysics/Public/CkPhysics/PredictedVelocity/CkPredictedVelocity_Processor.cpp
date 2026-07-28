@@ -51,7 +51,7 @@ namespace ck
 
         auto VelocityHandle = UCk_Utils_Velocity_UE::Cast(InHandle);
 
-        UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, CurrentVelocity);
+        UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, CurrentVelocity, {});
     }
 }
 

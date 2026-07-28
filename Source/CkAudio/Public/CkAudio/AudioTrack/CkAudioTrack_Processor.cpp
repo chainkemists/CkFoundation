@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkAudio/CkAudio_Log.h"
@@ -20,6 +21,7 @@ DECLARE_CYCLE_STAT(TEXT("Audio::SpatialUpdate"), STAT_Audio_SpatialUpdate, STATG
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_Playback);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_SpatialUpdate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_AudioTrack_EndPlay);
@@ -404,12 +406,17 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }));
         });
     }
@@ -544,6 +551,19 @@ namespace ck
             InCurrent._TargetVolume = TargetVolume;
             InCurrent._AudioComponent->SetVolumeMultiplier(TargetVolume);
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AudioTrack_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_AudioTrack_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

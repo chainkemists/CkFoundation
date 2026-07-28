@@ -4,9 +4,11 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverTarget_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverTarget_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,12 +36,18 @@ namespace ck
             ck::algo::ForEachRequest(InRequests._ResolverRequests,
             [&](const auto& InRequest)
             {
+                // DoHandleRequest has no rejection path, so reaching the line after it IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             });
         });
     }
@@ -56,6 +64,19 @@ namespace ck
 
         UUtils_Signal_ResolverTarget_OnNewResolverDataBundle::Broadcast(InHandle,
             MakePayload(InHandle, InNewResolution.Get_DataBundle()));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ResolverTarget_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ResolverTarget_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_ResolverRequests());
     }
 }
 

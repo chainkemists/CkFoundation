@@ -47,6 +47,7 @@ namespace ck
             ck::TReadWrite<FFragment_VfxCue_Current>,
             ck::TReadOnly<FFragment_EntityScript_Current>,
             ck::TReadOnly<FFragment_VfxCue_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -72,14 +73,40 @@ namespace ck
             HandleType InHandle,
             FFragment_VfxCue_Current& InCurrent,
             const FFragment_EntityScript_Current& InEntityScript,
-            const FCk_Request_VfxCue_Play& InRequest) -> void;
+            const FCk_Request_VfxCue_Play& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_VfxCue_Current& InCurrent,
             const FFragment_EntityScript_Current& InEntityScript,
-            const FCk_Request_VfxCue_Stop& InRequest) -> void;
+            const FCk_Request_VfxCue_Stop& InRequest) -> bool;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed VfxCue's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKVFX_API FProcessor_VfxCue_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_VfxCue_CancelPendingRequests,
+        FCk_Handle_VfxCue,
+        ck::TReadOnly<FFragment_VfxCue_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_VfxCue_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

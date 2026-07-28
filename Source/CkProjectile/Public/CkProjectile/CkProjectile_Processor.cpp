@@ -1,13 +1,16 @@
 #include "CkProjectile_Processor.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkProjectile/Homing/CkHoming_ProNav.h"
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Projectile_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Projectile_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Projectile_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,7 +32,8 @@ namespace ck
         UCk_Utils_Transform_UE::Request_AddLocationOffset
         (
             HandleTransform,
-            FCk_Request_Transform_AddLocationOffset{InIntegratorComp.Get_DistanceOffset()}.Set_LocalWorld(ECk_LocalWorld::World)
+            FCk_Request_Transform_AddLocationOffset{InIntegratorComp.Get_DistanceOffset()}.Set_LocalWorld(ECk_LocalWorld::World),
+            {}
         );
     }
 
@@ -53,7 +57,14 @@ namespace ck
             const FFragment_Projectile_Requests& InRequests)
         -> void
     {
+        // DoHandleRequest below is void and has no rejection path, so reaching the line after the
+        // call IS the success condition.
+        auto Result = ECk_Request_OperationResult::Failed;
+        const auto Guard = MakeCompletionGuard(InRequests.Get_Request(), InHandle, Result);
+
         DoHandleRequest(InDeltaT, InHandle, InRequests.Get_Request());
+
+        Result = ECk_Request_OperationResult::Succeeded;
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
@@ -100,6 +111,19 @@ namespace ck
         UUtils_Signal_Projectile_OnAimAheadCalculated::Broadcast(
             InHandle, MakePayload(FiringSolution.Get_Result(), FiringSolution.Get_ImpactLocation(),
                 FiringSolution.Get_TimeToImpact(), OptionalPayload));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Projectile_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Projectile_Requests& InRequestsComp)
+        -> void
+    {
+        InRequestsComp.Get_Request().TryFireCompletion(InHandle, ECk_Request_OperationResult::Failed_Cancelled);
     }
 }
 

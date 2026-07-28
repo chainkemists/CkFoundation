@@ -5,6 +5,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -17,6 +18,7 @@ namespace ck
             TReadOnly<FFragment_AnimPlan_Params>,
             TReadWrite<FFragment_AnimPlan_Current>,
             TReadWrite<FFragment_AnimPlan_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -47,6 +49,29 @@ namespace ck
             HandleType InHandle,
             FFragment_AnimPlan_Current& InCurrent,
             const FCk_Request_AnimPlan_UpdateAnimState& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKANIMATION_API FProcessor_AnimPlan_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_AnimPlan_CancelPendingRequests,
+        FCk_Handle_AnimPlan,
+        ck::TReadOnly<FFragment_AnimPlan_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_AnimPlan_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

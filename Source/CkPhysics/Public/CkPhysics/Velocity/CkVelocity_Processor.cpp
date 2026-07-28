@@ -4,6 +4,7 @@
 #include "CkCore/Math/ValueRange/CkValueRange.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
@@ -27,6 +28,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_VelocityModifier_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_AddNewTargets);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_BulkVelocityModifier_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Velocity_Replicate);
 
 #include "GameFramework/Character.h"
@@ -256,6 +258,9 @@ namespace ck
         algo::ForEachRequest(InRequests._Requests, ck::Visitor(
         [&](const auto& InRequest)
         {
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
             const auto& TargetEntity = InRequest.Get_TargetEntity();
 
             // Entity may have been destroyed before we got a chance to process it
@@ -271,6 +276,8 @@ namespace ck
             {
                 InRequest.GetAndDestroyRequestHandle();
             }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }));
 
         InHandle.Remove<MarkedDirtyBy>();
@@ -328,6 +335,19 @@ namespace ck
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Velocity>(InHandle);
         if (Produced.IsSet())
         { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Velocity>(InHandle, *Produced); }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_BulkVelocityModifier_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkVelocityModifier_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
 }

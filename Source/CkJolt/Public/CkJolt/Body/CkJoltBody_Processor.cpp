@@ -9,6 +9,7 @@
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/PhysicsOwnership/CkPhysicsOwnership_Utils.h"
@@ -42,6 +43,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_SleepStateMirror);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_KinematicPush);
 CK_REGISTER_PROCESSOR(ck::FProcessor_JoltBody_WritebackInterpolated);
@@ -415,12 +417,19 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
+            // Every DoHandleRequest overload below is void and has no rejection path, so reaching the
+            // line after the call IS the success condition.
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
             DoHandleRequest(InHandle, InCurrent, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             {
                 InRequest.GetAndDestroyRequestHandle();
             }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
         if (InRequestsComp._Requests.IsEmpty())
@@ -931,6 +940,19 @@ namespace ck
         {
             _JoltWorld->Remove_PoseBufferEntry(BodyId.GetIndexAndSequenceNumber());
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_JoltBody_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_JoltBody_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

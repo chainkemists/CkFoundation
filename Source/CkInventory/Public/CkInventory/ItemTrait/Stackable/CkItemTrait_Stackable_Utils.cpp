@@ -332,7 +332,7 @@ auto
     -> void
 {
     auto Attr = UCk_Utils_IntegerAttribute_UE::TryGet(InItem, TAG_IntegerAttribute_InventoryItem_StackCount);
-    UCk_Utils_IntegerAttribute_UE::Request_Override(Attr, InNewCount);
+    UCk_Utils_IntegerAttribute_UE::Request_Override(Attr, InNewCount, ECk_MinMaxCurrent::Current, {});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -121,10 +121,15 @@ auto
 auto
     UCk_Utils_RewindHistory_UE::
     Request_ForceRecordFrame(
-        FCk_Handle_RewindHistory& InHandle)
+        FCk_Handle_RewindHistory& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RewindHistory
 {
     InHandle.AddOrGet<ck::FTag_RewindHistory_ForceRecord>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
+
     return InHandle;
 }
 

@@ -6,6 +6,7 @@
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment.h"
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkVectorAttribute_Utils.generated.h"
@@ -188,12 +189,14 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",
-              DisplayName="[Ck][VectorAttribute] Request Override Base Value")
+              DisplayName="[Ck][VectorAttribute] Request Override Base Value",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_VectorAttribute
     Request_Override(
         UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
         FVector InNewBaseValue,
-        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -384,7 +387,8 @@ public:
     static void
     Request_ClearAllModifiers(
         FCk_Handle_VectorAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

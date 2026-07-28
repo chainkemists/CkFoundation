@@ -5,6 +5,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -124,19 +125,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Vfx",
-              DisplayName="[Ck][Vfx] Request Play (Attached)")
+              DisplayName="[Ck][Vfx] Request Play (Attached)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Vfx
     Request_PlayAttached(
         UPARAM(ref) FCk_Handle_Vfx& InVfxHandle,
-        const FCk_Request_Vfx_PlayAttached& InRequest);
+        const FCk_Request_Vfx_PlayAttached& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Vfx",
-              DisplayName="[Ck][Vfx] Request Play (At Location)")
+              DisplayName="[Ck][Vfx] Request Play (At Location)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Vfx
     Request_PlayAtLocation(
         UPARAM(ref) FCk_Handle_Vfx& InVfxHandle,
-        const FCk_Request_Vfx_PlayAtLocation& InRequest);
+        const FCk_Request_Vfx_PlayAtLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     static auto

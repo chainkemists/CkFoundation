@@ -114,7 +114,7 @@ auto
     { return; }
 
     auto TagSetHandle = UCk_Utils_TagSet_UE::CastChecked(InItem);
-    UCk_Utils_TagSet_UE::Request_AddTags(TagSetHandle, InTags);
+    UCk_Utils_TagSet_UE::Request_AddTags(TagSetHandle, InTags, {});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ auto
     { return; }
 
     auto TagSetHandle = UCk_Utils_TagSet_UE::CastChecked(InItem);
-    UCk_Utils_TagSet_UE::Request_AddTag(TagSetHandle, InTag);
+    UCk_Utils_TagSet_UE::Request_AddTag(TagSetHandle, InTag, {});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -146,7 +146,7 @@ auto
     { return; }
 
     auto TagSetHandle = UCk_Utils_TagSet_UE::CastChecked(InItem);
-    UCk_Utils_TagSet_UE::Request_RemoveTags(TagSetHandle, InTags);
+    UCk_Utils_TagSet_UE::Request_RemoveTags(TagSetHandle, InTags, {});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -162,7 +162,7 @@ auto
     { return; }
 
     auto TagSetHandle = UCk_Utils_TagSet_UE::CastChecked(InItem);
-    UCk_Utils_TagSet_UE::Request_RemoveTag(TagSetHandle, InTag);
+    UCk_Utils_TagSet_UE::Request_RemoveTag(TagSetHandle, InTag, {});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -7,6 +7,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkInteraction_Utils.generated.h"
@@ -69,11 +70,13 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Interaction",
-        DisplayName="[Ck][Interaction] Request End Interaction")
+        DisplayName="[Ck][Interaction] Request End Interaction",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Interaction
     Request_EndInteraction(
         UPARAM(ref) FCk_Handle_Interaction& InInteraction,
-        const FCk_Request_Interaction_EndInteraction& InRequest);
+        const FCk_Request_Interaction_EndInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

@@ -12,6 +12,7 @@
 #include <NiagaraComponent.h>
 #include <NiagaraFunctionLibrary.h>
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -23,6 +24,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("Vfx Active Managed Effects"), STAT_Vfx_ActiveMa
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VfxCue_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VfxCue_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VfxCue_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VfxCue_EffectLifetimeMonitor);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VfxCue_EndPlay);
 
@@ -148,7 +150,11 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InCurrent, InEntityScript, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InCurrent, InEntityScript, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -165,24 +171,24 @@ namespace ck
             FFragment_VfxCue_Current& InCurrent,
             const FFragment_EntityScript_Current& InEntityScript,
             const FCk_Request_VfxCue_Play& InRequest)
-            -> void
+            -> bool
     {
         const auto VfxCueScript = Cast<UCk_VfxCue_EntityScript>(InEntityScript.Get_Script().Get());
         CK_ENSURE_IF_NOT(ck::IsValid(VfxCueScript),
             TEXT("VfxCue [{}] does not have valid VfxCue EntityScript"), InHandle)
-        { return; }
+        { return false; }
 
         ck::vfx::Verbose(TEXT("Handling play request for VfxCue [{}]"), InHandle);
 
         auto NiagaraComponent = InCurrent._NiagaraComponent.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(NiagaraComponent),
             TEXT("VfxCue [{}] has invalid NiagaraComponent"), InHandle)
-        { return; }
+        { return false; }
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(World),
             TEXT("VfxCue [{}] could not get valid World"), InHandle)
-        { return; }
+        { return false; }
 
         const auto TimeParams = FCk_Utils_Time_GetWorldTime_Params{World};
         const auto TimeResult = UCk_Utils_Time_UE::Get_WorldTime(TimeParams);
@@ -198,6 +204,8 @@ namespace ck
             InHandle, InCurrent._EffectStartTime);
 
         UUtils_Signal_OnVfxCue_Started::Broadcast(InHandle, MakePayload(InHandle));
+
+        return true;
     }
 
     auto
@@ -207,7 +215,7 @@ namespace ck
             FFragment_VfxCue_Current& InCurrent,
             const FFragment_EntityScript_Current& InEntityScript,
             const FCk_Request_VfxCue_Stop& InRequest)
-            -> void
+            -> bool
     {
         ck::vfx::Verbose(TEXT("Handling stop request for VfxCue [{}]"), InHandle);
 
@@ -224,6 +232,21 @@ namespace ck
             InCurrent._HasFiredFinished = true;
             UUtils_Signal_OnVfxCue_Finished::Broadcast(InHandle, MakePayload(InHandle));
         }
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_VfxCue_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_VfxCue_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -7,6 +7,7 @@
 #include "CkEntityTag/CkEntityTag_Stats.h"
 #include "CkEntityTag/CkEntityTag_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -18,6 +19,7 @@ DECLARE_CYCLE_STAT(TEXT("EntityTagQuery::BuildPayload"), STAT_EntityTagQuery_Bui
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTagQuery_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTagQuery_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTagQuery_Evaluate);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTagQuery_TrackedEntity_Destructor);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTagQuery_Query_Destructor);
@@ -40,7 +42,14 @@ namespace ck
             ck::algo::ForEachRequest(InRequests.Get_Requests(),
                 ck::Visitor([&](const auto& InEntry)
                 {
+                    // DoHandleRequest is void and has no rejection path, so reaching the line after the
+                    // call IS the success condition.
+                    auto Result = ECk_Request_OperationResult::Failed;
+                    const auto Guard = MakeCompletionGuard(InEntry, InHandle, Result);
+
                     DoHandleRequest(InCurrent, InEntry);
+
+                    Result = ECk_Request_OperationResult::Succeeded;
                 }),
                 ck::policy::DontResetContainer{});
         });
@@ -90,6 +99,19 @@ namespace ck
         {
             InCurrent._PendingRemoved.RemoveAt(Index);
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityTagQuery_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityTagQuery_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

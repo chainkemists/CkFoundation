@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
@@ -155,37 +156,45 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|TagSet",
-              DisplayName = "[Ck][TagSet] Request Add Tags")
+              DisplayName = "[Ck][TagSet] Request Add Tags",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_AddTags(
         UPARAM(ref) FCk_Handle_TagSet& InTagSet,
-        const FGameplayTagContainer& InTags);
+        const FGameplayTagContainer& InTags,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|TagSet",
-              DisplayName = "[Ck][TagSet] Request Add Tag")
+              DisplayName = "[Ck][TagSet] Request Add Tag",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_AddTag(
         UPARAM(ref) FCk_Handle_TagSet& InTagSet,
-        FGameplayTag InTag);
+        FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|TagSet",
-              DisplayName = "[Ck][TagSet] Request Remove Tags")
+              DisplayName = "[Ck][TagSet] Request Remove Tags",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_RemoveTags(
         UPARAM(ref) FCk_Handle_TagSet& InTagSet,
-        const FGameplayTagContainer& InTags);
+        const FGameplayTagContainer& InTags,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|TagSet",
-              DisplayName = "[Ck][TagSet] Request Remove Tag")
+              DisplayName = "[Ck][TagSet] Request Remove Tag",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_RemoveTag(
         UPARAM(ref) FCk_Handle_TagSet& InTagSet,
-        FGameplayTag InTag);
+        FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // ---- Signals ----
 

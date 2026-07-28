@@ -47,9 +47,13 @@ auto
     UCk_Utils_ShapeSphere_UE::
     Request_UpdateDimensions(
         FCk_Handle_ShapeSphere& InShapeSphere,
-        const FCk_Request_ShapeSphere_UpdateDimensions& InRequest)
+        const FCk_Request_ShapeSphere_UpdateDimensions& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ShapeSphere
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InShapeSphere.AddOrGet<ck::FFragment_ShapeSphere_Requests>()._Requests.Emplace(InRequest);
     return InShapeSphere;
 }

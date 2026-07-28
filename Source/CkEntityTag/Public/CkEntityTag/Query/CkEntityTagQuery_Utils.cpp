@@ -125,12 +125,22 @@ auto
     UCk_Utils_EntityTagQuery_UE::
     Request_AddRequirement(
         FCk_Handle_EntityTagQuery& InQuery,
-        const FCk_Request_EntityTagQuery_AddRequirement& InRequest)
+        const FCk_Request_EntityTagQuery_AddRequirement& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_EntityTagQuery
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InQuery),
+    const auto QueryIsValid = ck::IsValid(InQuery);
+    CK_ENSURE_IF_NOT(QueryIsValid,
         TEXT("Invalid Query Handle [{}] passed to Request_AddRequirement"), InQuery)
-    { return InQuery; }
+    {}
+    if (NOT QueryIsValid)
+    {
+        InDelegate.ExecuteIfBound(InQuery, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InQuery;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     auto& Requests = InQuery.AddOrGet<ck::FFragment_EntityTagQuery_Requests>();
     Requests._Requests.Emplace(InRequest);
@@ -142,12 +152,22 @@ auto
     UCk_Utils_EntityTagQuery_UE::
     Request_RemoveRequirement(
         FCk_Handle_EntityTagQuery& InQuery,
-        const FCk_Request_EntityTagQuery_RemoveRequirement& InRequest)
+        const FCk_Request_EntityTagQuery_RemoveRequirement& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_EntityTagQuery
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InQuery),
+    const auto QueryIsValid = ck::IsValid(InQuery);
+    CK_ENSURE_IF_NOT(QueryIsValid,
         TEXT("Invalid Query Handle [{}] passed to Request_RemoveRequirement"), InQuery)
-    { return InQuery; }
+    {}
+    if (NOT QueryIsValid)
+    {
+        InDelegate.ExecuteIfBound(InQuery, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InQuery;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     auto& Requests = InQuery.AddOrGet<ck::FFragment_EntityTagQuery_Requests>();
     Requests._Requests.Emplace(InRequest);

@@ -45,6 +45,32 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // A request entity torn down before its spawn request was ever drained (world teardown, or its script entity
+    // destroyed on the same stack that enqueued it) leaves a caller awaiting completion hanging forever. This
+    // completes those with Failed_Cancelled. The drain view deliberately keeps CK_IGNORE_PENDING_KILL WITHOUT
+    // excluding FTag_DestroyEntity_Initiate: the drain's own owner-liveness branch is what cancels a spawn whose
+    // lifetime owner died, and excluding the tag would suppress it.
+    class CKECS_API FProcessor_EntityScript_SpawnEntity_CancelPendingRequests : public TProcessor<
+            FProcessor_EntityScript_SpawnEntity_CancelPendingRequests,
+            ck::TReadOnly<FFragment_EntityScript_RequestSpawnEntity>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_RequestSpawnEntity& InRequestFragment) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKECS_API FProcessor_EntityScript_ContinueConstruction : public ck_exp::TProcessor<
             FProcessor_EntityScript_ContinueConstruction,
             FCk_Handle_EntityScript,

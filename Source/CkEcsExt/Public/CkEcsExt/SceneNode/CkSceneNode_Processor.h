@@ -20,6 +20,7 @@ namespace ck
             FCk_Handle_SceneNode,
             ck::TReadWrite<FFragment_SceneNode_Current>,
             ck::TReadOnly<FFragment_SceneNode_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -43,6 +44,32 @@ namespace ck
             HandleType InHandle,
             FFragment_SceneNode_Current& InCurrent,
             const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed scene-node's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKECSEXT_API FProcessor_SceneNode_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_SceneNode_CancelPendingRequests,
+        FCk_Handle_SceneNode,
+        ck::TReadOnly<FFragment_SceneNode_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SceneNode_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

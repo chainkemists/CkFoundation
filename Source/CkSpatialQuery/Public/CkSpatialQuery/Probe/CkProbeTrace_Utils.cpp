@@ -258,7 +258,8 @@ auto
     UCk_Utils_ProbeTrace_UE::
     Request_EnableDisable(
         FCk_Handle_ProbeTrace& InProbeTrace,
-        const FCk_Request_Probe_EnableDisable& InRequest)
+        const FCk_Request_Probe_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ProbeTrace
 {
     switch (InRequest.Get_EnableDisable())
@@ -285,7 +286,7 @@ auto
                         ck::IsValid(OtherEntityAsProbe))
                     {
                         UCk_Utils_Probe_UE::Request_EndOverlap(OtherEntityAsProbe,
-                            FCk_Request_Probe_EndOverlap{InProbeTrace});
+                            FCk_Request_Probe_EndOverlap{InProbeTrace}, {});
                     }
                 }
             };
@@ -299,6 +300,9 @@ auto
             break;
         }
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InProbeTrace, ECk_Request_OperationResult::Succeeded);
 
     return InProbeTrace;
 }
@@ -462,9 +466,9 @@ auto
         {
             auto Probe = Hit.Get_Probe();
             UCk_Utils_Probe_UE::Request_BeginOverlap(Probe,
-                FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr});
+                FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr}, {});
 
-            UCk_Utils_Probe_UE::Request_EndOverlap(Probe, FCk_Request_Probe_EndOverlap{InAnyHandle});
+            UCk_Utils_Probe_UE::Request_EndOverlap(Probe, FCk_Request_Probe_EndOverlap{InAnyHandle}, {});
         }
     }
 
@@ -725,9 +729,9 @@ auto
         {
             auto Probe = Hit.Get_Probe();
             UCk_Utils_Probe_UE::Request_BeginOverlap(Probe,
-                FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr});
+                FCk_Request_Probe_BeginOverlap{InAnyHandle, TArray<FVector>{Hit.Get_HitLocation()}, Hit.Get_NormalDirLen(), nullptr}, {});
 
-            UCk_Utils_Probe_UE::Request_EndOverlap(Probe, FCk_Request_Probe_EndOverlap{InAnyHandle});
+            UCk_Utils_Probe_UE::Request_EndOverlap(Probe, FCk_Request_Probe_EndOverlap{InAnyHandle}, {});
         }
     }
 

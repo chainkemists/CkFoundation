@@ -9,6 +9,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
@@ -165,59 +166,73 @@ public:
     // The DamageResolution one-liner — see FCk_Request_Aggro_AddThreat.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Request Add Threat")
+              DisplayName="[Ck][Aggro] Request Add Threat",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Aggro
     Request_AddThreat(
         UPARAM(ref) FCk_Handle_Aggro& InAggro,
-        FCk_Request_Aggro_AddThreat InRequest);
+        FCk_Request_Aggro_AddThreat InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Request Remove Target")
+              DisplayName="[Ck][Aggro] Request Remove Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Aggro
     Request_RemoveTarget(
         UPARAM(ref) FCk_Handle_Aggro& InAggro,
-        const FCk_Handle& InTrackedEntity);
+        const FCk_Handle& InTrackedEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Request Clear All Targets")
+              DisplayName="[Ck][Aggro] Request Clear All Targets",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Aggro
     Request_ClearAllTargets(
-        UPARAM(ref) FCk_Handle_Aggro& InAggro);
+        UPARAM(ref) FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Request Set Active Target")
+              DisplayName="[Ck][Aggro] Request Set Active Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Aggro
     Request_SetActiveTarget(
         UPARAM(ref) FCk_Handle_Aggro& InAggro,
-        const FCk_Handle& InTrackedEntity);
+        const FCk_Handle& InTrackedEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Request Clear Active Target")
+              DisplayName="[Ck][Aggro] Request Clear Active Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Aggro
     Request_ClearActiveTarget(
-        UPARAM(ref) FCk_Handle_Aggro& InAggro);
+        UPARAM(ref) FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Request Enable/Disable")
+              DisplayName="[Ck][Aggro] Request Enable/Disable",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Aggro
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_Aggro& InAggro,
-        ECk_EnableDisable InEnableDisable);
+        ECk_EnableDisable InEnableDisable,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Convenience for perception feeders that know the tracked entity, not the child target.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
-              DisplayName="[Ck][Aggro] Request Mark Perceived By Tracked Entity")
+              DisplayName="[Ck][Aggro] Request Mark Perceived By Tracked Entity",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Aggro
     Request_MarkPerceived_ByTrackedEntity(
         UPARAM(ref) FCk_Handle_Aggro& InAggro,
         const FCk_Handle& InTrackedEntity,
-        FCk_Request_AggroTarget_MarkPerceived InRequest);
+        FCk_Request_AggroTarget_MarkPerceived InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Perceived is a COUNTED tag, so a feeder that can only mark perceived pins its targets
     // perceived forever — they never decay at the unperceived rate nor reach the lost-sight

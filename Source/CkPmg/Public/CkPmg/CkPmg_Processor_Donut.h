@@ -44,6 +44,7 @@ namespace ck
             FCk_Handle_Pmg_Donut,
             ck::TReadWrite<FFragment_Pmg_Donut_Current>,
             ck::TReadOnly<FFragment_Pmg_Donut_UpdateParams>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -69,6 +70,31 @@ namespace ck
             HandleType InHandle,
             FFragment_Pmg_Donut_Current& InCurrent,
             const FCk_Request_Pmg_Donut_UpdateParams& InRequest)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed donut's still-queued
+    // update fires here with Failed_Cancelled instead of never completing.
+    class CKPMG_API FProcessor_Pmg_Donut_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Pmg_Donut_CancelPendingRequests,
+        FCk_Handle_Pmg_Donut,
+        ck::TReadOnly<FFragment_Pmg_Donut_UpdateParams>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_Donut_UpdateParams& InRequest)
             -> void;
     };
 

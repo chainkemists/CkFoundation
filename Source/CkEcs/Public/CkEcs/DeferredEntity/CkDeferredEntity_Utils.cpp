@@ -69,12 +69,19 @@ auto
 auto
     UCk_Utils_DeferredEntity_UE::
     Request_CompleteSetup(
-         FCk_Handle_DeferredEntity& InDeferredEntity)
+         FCk_Handle_DeferredEntity& InDeferredEntity,
+         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(Get_IsDeferred(InDeferredEntity),
+    const auto IsDeferred = Get_IsDeferred(InDeferredEntity);
+    CK_ENSURE_IF_NOT(IsDeferred,
         TEXT("Entity [{}] is not a deferred entity. Cannot complete setup."), InDeferredEntity)
-    { return; }
+    {}
+    if (NOT IsDeferred)
+    {
+        InDelegate.ExecuteIfBound(InDeferredEntity, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     ck::UUtils_Signal_OnDeferredEntitySetupComplete::Broadcast(InDeferredEntity, ck::MakePayload(InDeferredEntity));
 
@@ -84,6 +91,9 @@ auto
     {
         ck::UUtils_Signal_OnDeferredEntityFullyComplete::Broadcast(InDeferredEntity, ck::MakePayload(InDeferredEntity));
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InDeferredEntity, ECk_Request_OperationResult::Succeeded);
 }
 
 auto

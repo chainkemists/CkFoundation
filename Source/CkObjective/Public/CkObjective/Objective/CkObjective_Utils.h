@@ -2,6 +2,7 @@
 
 #include "CkObjective_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkObjective_Utils.generated.h"
@@ -59,27 +60,33 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Objective",
-              DisplayName = "[Ck][Objective] Request Start")
+              DisplayName = "[Ck][Objective] Request Start",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Objective
     Request_Start(
         UPARAM(ref) FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_Start& InRequest);
+        const FCk_Request_Objective_Start& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Objective",
-              DisplayName = "[Ck][Objective] Request Complete")
+              DisplayName = "[Ck][Objective] Request Complete",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Objective
     Request_Complete(
         UPARAM(ref) FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_Complete& InRequest);
+        const FCk_Request_Objective_Complete& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Objective",
-              DisplayName = "[Ck][Objective] Request Fail")
+              DisplayName = "[Ck][Objective] Request Fail",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Objective
     Request_Fail(
         UPARAM(ref) FCk_Handle_Objective& InObjective,
-        const FCk_Request_Objective_Fail& InRequest);
+        const FCk_Request_Objective_Fail& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

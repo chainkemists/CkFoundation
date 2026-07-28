@@ -2,6 +2,7 @@
 
 #include "Kismet/BlueprintFunctionLibrary.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment_Data.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
@@ -180,131 +181,171 @@ public:
     // ---- Requests ----
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Play Animation")
+        DisplayName="[Ck][IskmProxy] Request Play Animation",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_PlayAnimation(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_PlayAnimation& InRequest);
+        const FCk_Request_IskmProxy_PlayAnimation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Stop Animation")
+        DisplayName="[Ck][IskmProxy] Request Stop Animation",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_StopAnimation(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_StopAnimation& InRequest);
+        const FCk_Request_IskmProxy_StopAnimation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Set Play Rate")
+        DisplayName="[Ck][IskmProxy] Request Set Play Rate",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_SetPlayRate(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        float InRate);
+        float InRate,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Set Visibility")
+        DisplayName="[Ck][IskmProxy] Request Set Visibility",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_SetVisibility(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        bool InIsVisible);
+        bool InIsVisible,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Set Custom Data Float")
+        DisplayName="[Ck][IskmProxy] Request Set Custom Data Float",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_SetCustomDataFloat(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
         int32 InOffset,
-        float InValue);
+        float InValue,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // ---- per-proxy material overrides ----
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Set Material Override")
+        DisplayName="[Ck][IskmProxy] Request Set Material Override",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_SetMaterialOverride(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_SetMaterialOverride& InRequest);
+        const FCk_Request_IskmProxy_SetMaterialOverride& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Clear Material Overrides")
+        DisplayName="[Ck][IskmProxy] Request Clear Material Overrides",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
-    Request_ClearMaterialOverrides(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
+    Request_ClearMaterialOverrides(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // ---- per-proxy morph targets ----
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Set Morph Target")
+        DisplayName="[Ck][IskmProxy] Request Set Morph Target",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_SetMorphTarget(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
         FName InMorphName,
-        float InValue);
+        float InValue,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Clear Morph Targets")
+        DisplayName="[Ck][IskmProxy] Request Clear Morph Targets",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
-    Request_ClearMorphTargets(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
+    Request_ClearMorphTargets(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Swaps the base body skeletal mesh (shared-skeleton male/female). The handler re-applies
     // recorded material/morph/custom-data so the outfit and body shape survive the swap.
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Set Skeletal Mesh")
+        DisplayName="[Ck][IskmProxy] Request Set Skeletal Mesh",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_SetSkeletalMesh(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        USkeletalMesh* InMesh);
+        USkeletalMesh* InMesh,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Attach Submesh")
+        DisplayName="[Ck][IskmProxy] Request Attach Submesh",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_AttachSubmesh(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        FName InSubmeshName);
+        FName InSubmeshName,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Detach Submesh")
+        DisplayName="[Ck][IskmProxy] Request Detach Submesh",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_DetachSubmesh(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        FName InSubmeshName);
+        FName InSubmeshName,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Detach All Submeshes")
+        DisplayName="[Ck][IskmProxy] Request Detach All Submeshes",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
-    Request_DetachAllSubmeshes(UPARAM(ref) FCk_Handle_IskmProxy& InHandle);
+    Request_DetachAllSubmeshes(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Set AnimInstance Class")
+        DisplayName="[Ck][IskmProxy] Request Set AnimInstance Class",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_SetAnimInstanceClass(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        TSubclassOf<UAnimInstance> InClass);
+        TSubclassOf<UAnimInstance> InClass,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Play Montage")
+        DisplayName="[Ck][IskmProxy] Request Play Montage",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_PlayMontage(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_PlayMontage& InRequest);
+        const FCk_Request_IskmProxy_PlayMontage& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Stop Montage")
+        DisplayName="[Ck][IskmProxy] Request Stop Montage",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_StopMontage(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_StopMontage& InRequest);
+        const FCk_Request_IskmProxy_StopMontage& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request Begin Ragdoll")
+        DisplayName="[Ck][IskmProxy] Request Begin Ragdoll",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
     Request_BeginRagdoll(
         UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_BeginRagdoll& InRequest);
+        const FCk_Request_IskmProxy_BeginRagdoll& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmProxy",
-        DisplayName="[Ck][IskmProxy] Request End Ragdoll")
+        DisplayName="[Ck][IskmProxy] Request End Ragdoll",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IskmProxy
-    Request_EndRagdoll(UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
-        const FCk_Request_IskmProxy_EndRagdoll& InRequest);
+    Request_EndRagdoll(
+        UPARAM(ref) FCk_Handle_IskmProxy& InHandle,
+        const FCk_Request_IskmProxy_EndRagdoll& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Follower transform is recomputed every frame (after the Transform request
     // pass) as Offset × Socket(Component-space) × LeaderEntityTransform —

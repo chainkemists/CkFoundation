@@ -5,6 +5,7 @@
 #include "CkGoap/WorldState/CkGoap_WorldState_Fragment.h"
 
 #include "CkAStar/CkAStar_Processor.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_AccessPolicy.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
@@ -90,6 +91,7 @@ class CKGOAP_API FProcessor_Goap_Planner_HandleRequests : public ck_exp::TProces
 	ck::TReadWrite<FFragment_Goap_Planner_SearchState>,
 	ck::TReadWrite<FFragment_Goap_Planner_Result>,
 	ck::TReadWrite<FFragment_Goap_Planner_PlanContext>,
+	TExclude<FTag_DestroyEntity_Initiate>,
 	CK_IGNORE_PENDING_KILL>
 {
 public:
@@ -119,6 +121,32 @@ public:
 		FFragment_Goap_Planner_SearchState& InSearchState,
 		FFragment_Goap_Planner_Result& InResult,
 		FFragment_Goap_Planner_PlanContext& InPlanContext) const -> void;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// HandleRequests excludes owners already tagged for destruction, so a destroyed Planner's still-queued
+// requests are never drained. This fires each pending request's completion delegate with
+// Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+
+class CKGOAP_API FProcessor_Goap_Planner_CancelPendingRequests : public ck_exp::TProcessor<
+	FProcessor_Goap_Planner_CancelPendingRequests,
+	FCk_Handle_Goap_Planner,
+	ck::TReadOnly<FFragment_Goap_Planner_Requests>,
+	CK_IF_END_PLAY>
+{
+public:
+	using Group = FGroup_EndPlay;
+
+public:
+	using TProcessor::TProcessor;
+
+public:
+	static auto
+	ForEachEntity(
+		TimeType InDeltaT,
+		HandleType InHandle,
+		const FFragment_Goap_Planner_Requests& InRequestsComp)
+		-> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

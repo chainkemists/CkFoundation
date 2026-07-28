@@ -3,6 +3,7 @@
 #include "CkInventory/Query/CkItemQuery_Subsystem.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -12,6 +13,8 @@ CK_REGISTER_PROCESSOR_WITH_FACTORY(ck::FProcessor_ItemQuery_HandleRequests,
     {
         return ck::FProcessor_ItemQuery_HandleRequests{InRegistry, UCk_ItemQuery_Subsystem_UE::Get()};
     });
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_ItemQuery_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -49,10 +52,25 @@ namespace ck
                 .Set_Definitions(Subsystem->Query_Definitions(Request.Get_Filter()));
 
             UUtils_Signal_OnItemDefinitionsQueried::Broadcast(InHandle, MakePayload(Result));
+
+            Request.TryFireCompletion(InHandle, ECk_Request_OperationResult::Succeeded);
         }
 
         InHandle.Remove<FFragment_ItemQuery_Requests>();
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ItemQuery_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ItemQuery_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

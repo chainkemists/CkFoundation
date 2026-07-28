@@ -5,6 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -124,19 +125,23 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
-        DisplayName="[Ck][InteractTarget] Request Start Interaction")
+        DisplayName="[Ck][InteractTarget] Request Start Interaction",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_InteractTarget
     Request_StartInteraction(
         UPARAM(ref) FCk_Handle_InteractTarget& InInteractTarget,
-        const FCk_Try_InteractTarget_StartInteraction& InRequest);
+        const FCk_Try_InteractTarget_StartInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
-        DisplayName="[Ck][InteractTarget] Request Cancel Interaction")
+        DisplayName="[Ck][InteractTarget] Request Cancel Interaction",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_InteractTarget
     Request_CancelInteraction(
         UPARAM(ref) FCk_Handle_InteractTarget& InInteractTarget,
-        const FCk_Request_InteractTarget_CancelInteraction& InRequest);
+        const FCk_Request_InteractTarget_CancelInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",

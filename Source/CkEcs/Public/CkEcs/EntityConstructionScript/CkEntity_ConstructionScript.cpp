@@ -34,25 +34,37 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Request_Construct(
         FCk_Handle& InHandle,
-        TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript)
+        TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle
 {
     const auto& ConstructionScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Entity_ConstructionScript_PDA>(InConstructionScript);
-    return Request_Construct_Instanced(InHandle, ConstructionScriptCDO);
+    return Request_Construct_Instanced(InHandle, ConstructionScriptCDO, InDelegate);
 }
 
 auto
     UCk_Entity_ConstructionScript_PDA::
     Request_Construct_Instanced(
         FCk_Handle& InHandle,
-        const UCk_Entity_ConstructionScript_PDA* InConstructionScript)
+        const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InConstructionScript),
+    const auto ConstructionScriptIsValid = ck::IsValid(InConstructionScript);
+    CK_ENSURE_IF_NOT(ConstructionScriptIsValid,
         TEXT("Unable to proceed with Entity Construction as the Construction Script [{}] is INVALID."), InConstructionScript)
-    { return InHandle; }
+    {}
+    if (NOT ConstructionScriptIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
 
     InConstructionScript->Construct(InHandle, nullptr);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
+
     return InHandle;
 }
 
@@ -60,13 +72,18 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Request_Construct_Multiple(
         FCk_Handle& InHandle,
-        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript)
+        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle
 {
     for (const auto& ConstructionScript : InConstructionScript)
     {
-        Request_Construct(InHandle, ConstructionScript);
+        Request_Construct(InHandle, ConstructionScript, {});
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack. Per-script
+    // rejections are reported by the individual ensures; this reports only that the batch was walked.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 
     return InHandle;
 }

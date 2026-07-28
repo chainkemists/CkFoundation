@@ -806,42 +806,63 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Request_SetEnableToggle(
 		FCk_Handle_Goap_Planner& InPlanner,
-		ECk_EnableDisable InToggle) -> FCk_Handle_Goap_Planner
+		ECk_EnableDisable InToggle,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid ActionSet handle in Request_SetEnableToggle"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
 
 	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
 	Current._EnableToggle = InToggle;
+
+	// Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+	InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Succeeded);
+
 	return InPlanner;
 }
 
 auto
 	UCk_Utils_Goap_Planner_UE::
-	Request_ResetActiveChain(FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Planner
+	Request_ResetActiveChain(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid ActionSet handle in Request_ResetActiveChain"))
-	{ return InPlanner; }
-
-	const auto Chain = Get_ActiveChain(InPlanner);
-	if (Chain.Num() == 0) { return InPlanner; }
-
-	// Leaf → outermost.
-	for (auto i = Chain.Num() - 1; i >= 0; --i)
+	{}
+	if (NOT PlannerIsValid)
 	{
-		auto Action = Chain[i];
-		if (NOT ck::IsValid(Action)) { continue; }
-		ck::FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner(Action);
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
 	}
 
-	// The cache still points at the old Chain[0]; leaving it would make the next UpdateActivation
-	// tick no-op on OldStep0 == NewStep0 instead of seeing a fresh transition.
+	const auto Chain = Get_ActiveChain(InPlanner);
+	if (Chain.Num() > 0)
 	{
+		// Leaf → outermost.
+		for (auto i = Chain.Num() - 1; i >= 0; --i)
+		{
+			auto Action = Chain[i];
+			if (NOT ck::IsValid(Action)) { continue; }
+			ck::FProcessor_Goap_Planner_UpdateActivation::DoDeactivatePlanner(Action);
+		}
+
+		// The cache still points at the old Chain[0]; leaving it would make the next UpdateActivation
+		// tick no-op on OldStep0 == NewStep0 instead of seeing a fresh transition.
 		auto& PlannerActivation = InPlanner.Get<ck::FFragment_Goap_Planner_Activation>();
 		PlannerActivation._LastActivatedPlan0 = {};
 	}
+
+	// Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+	InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Succeeded);
 
 	return InPlanner;
 }
@@ -850,14 +871,26 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Request_SetGoal(
 		FCk_Handle_Goap_Planner& InPlanner,
-		const TArray<FCk_GoapWS_Condition_Authored>& InGoal) -> FCk_Handle_Goap_Planner
+		const TArray<FCk_GoapWS_Condition_Authored>& InGoal,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetGoal"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetGoal{InGoal};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
 
 	auto& Requests = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Requests._Requests.Add(FCk_Request_Goap_Planner_SetGoal{InGoal});
+	Requests._Requests.Add(Request);
 	return InPlanner;
 }
 
@@ -865,27 +898,53 @@ auto
 
 auto
 	UCk_Utils_Goap_Planner_UE::
-	Request_Plan(FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Planner
+	Request_Plan(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_Plan"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_Plan{};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_Plan{});
+	Reqs._Requests.Add(Request);
 	return InPlanner;
 }
 
 auto
 	UCk_Utils_Goap_Planner_UE::
-	Request_CancelPlan(FCk_Handle_Goap_Planner& InPlanner) -> FCk_Handle_Goap_Planner
+	Request_CancelPlan(
+		FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_CancelPlan"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_CancelPlan{};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_CancelPlan{});
+	Reqs._Requests.Add(Request);
 	return InPlanner;
 }
 
@@ -893,14 +952,26 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Request_SetReplanInterval(
 		FCk_Handle_Goap_Planner& InPlanner,
-		float InSeconds) -> FCk_Handle_Goap_Planner
+		float InSeconds,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetReplanInterval"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetReplanInterval{InSeconds};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetReplanInterval{InSeconds});
+	Reqs._Requests.Add(Request);
 	return InPlanner;
 }
 
@@ -908,14 +979,26 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Request_SetReplanPolicy(
 		FCk_Handle_Goap_Planner& InPlanner,
-		ECk_Goap_ReplanPolicy InPolicy) -> FCk_Handle_Goap_Planner
+		ECk_Goap_ReplanPolicy InPolicy,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetReplanPolicy"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetReplanPolicy{InPolicy};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetReplanPolicy{InPolicy});
+	Reqs._Requests.Add(Request);
 	return InPlanner;
 }
 
@@ -923,14 +1006,26 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Request_SetSearchBudget(
 		FCk_Handle_Goap_Planner& InPlanner,
-		int64 InMicroseconds) -> FCk_Handle_Goap_Planner
+		int64 InMicroseconds,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetSearchBudget"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetSearchBudget{InMicroseconds};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetSearchBudget{InMicroseconds});
+	Reqs._Requests.Add(Request);
 	return InPlanner;
 }
 
@@ -938,14 +1033,26 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Request_SetCostThreshold(
 		FCk_Handle_Goap_Planner& InPlanner,
-		float InThreshold) -> FCk_Handle_Goap_Planner
+		float InThreshold,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetCostThreshold"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetCostThreshold{InThreshold};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetCostThreshold{InThreshold});
+	Reqs._Requests.Add(Request);
 	return InPlanner;
 }
 
@@ -954,14 +1061,26 @@ auto
 	Request_SetChildActionCost(
 		FCk_Handle_Goap_Planner& InPlanner,
 		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass,
-		float InCost) -> FCk_Handle_Goap_Planner
+		float InCost,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_SetChildActionCost"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_SetActionCost{InChildClass, InCost};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_SetActionCost{InChildClass, InCost});
+	Reqs._Requests.Add(Request);
 	return InPlanner;
 }
 
@@ -969,14 +1088,26 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Request_RegisterActionCostProvider(
 		FCk_Handle_Goap_Planner& InPlanner,
-		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass) -> FCk_Handle_Goap_Planner
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_RegisterActionCostProvider"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
+
+	const auto Request = FCk_Request_Goap_Planner_RegisterActionCostProvider{InChildClass};
+
+	if (InDelegate.IsBound())
+	{ Request.Set_CompletionDelegate(InDelegate); }
 
 	auto& Reqs = InPlanner.AddOrGet<ck::FFragment_Goap_Planner_Requests>();
-	Reqs._Requests.Add(FCk_Request_Goap_Planner_RegisterActionCostProvider{InChildClass});
+	Reqs._Requests.Add(Request);
 	return InPlanner;
 }
 
@@ -984,21 +1115,40 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Request_RemoveAction(
 		FCk_Handle_Goap_Planner& InPlanner,
-		TSubclassOf<UCk_GoapAction_EntityScript> InChildActionClass) -> FCk_Handle_Goap_Planner
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildActionClass,
+		const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Goap_Planner
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
+	const auto PlannerIsValid = ck::IsValid(InPlanner);
+	CK_ENSURE_IF_NOT(PlannerIsValid,
 		TEXT("Invalid Planner handle in Request_RemoveAction"))
-	{ return InPlanner; }
+	{}
+	if (NOT PlannerIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
 
-	CK_ENSURE_IF_NOT(ck::IsValid(InChildActionClass),
+	const auto ChildActionClassIsValid = ck::IsValid(InChildActionClass);
+	CK_ENSURE_IF_NOT(ChildActionClassIsValid,
 		TEXT("Invalid ChildActionClass in Request_RemoveAction (Planner [{}])"), InPlanner)
-	{ return InPlanner; }
+	{}
+	if (NOT ChildActionClassIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
 
 	const auto ActionTag = UCk_GoapAction_EntityScript::Get_ActionTagForClass(InChildActionClass);
-	CK_ENSURE_IF_NOT(ActionTag.IsValid(),
+	const auto ActionTagIsValid = ActionTag.IsValid();
+	CK_ENSURE_IF_NOT(ActionTagIsValid,
 		TEXT("Could not derive a valid action tag for class [{}] in Request_RemoveAction (Planner [{}])"),
 		InChildActionClass, InPlanner)
-	{ return InPlanner; }
+	{}
+	if (NOT ActionTagIsValid)
+	{
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InPlanner;
+	}
 
 	auto ChildAction = Find_Action(InPlanner, ActionTag);
 	if (NOT ck::IsValid(ChildAction))
@@ -1006,6 +1156,7 @@ auto
 		ck::goap::Warning(
 			TEXT("Request_RemoveAction: no Action with tag [{}] (class [{}]) registered on Planner [{}]; nothing to remove."),
 			ActionTag, InChildActionClass, InPlanner);
+		InDelegate.ExecuteIfBound(InPlanner, ECk_Request_OperationResult::Failed_NotEnqueued);
 		return InPlanner;
 	}
 
@@ -1049,7 +1200,9 @@ auto
 		UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(ChildAsGeneric);
 	}
 
-	Request_Plan(InPlanner);
+	// The re-plan this removal triggers is where completion is meaningful — forward the delegate
+	// onto that enqueued Plan request rather than firing here, before any request exists.
+	Request_Plan(InPlanner, InDelegate);
 
 	return InPlanner;
 }

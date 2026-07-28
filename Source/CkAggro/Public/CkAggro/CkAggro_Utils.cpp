@@ -282,10 +282,14 @@ auto
     UCk_Utils_Aggro_UE::
     Request_AddThreat(
         FCk_Handle_Aggro& InAggro,
-        FCk_Request_Aggro_AddThreat InRequest)
+        FCk_Request_Aggro_AddThreat InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Aggro
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(InRequest);
 
@@ -296,13 +300,18 @@ auto
     UCk_Utils_Aggro_UE::
     Request_RemoveTarget(
         FCk_Handle_Aggro& InAggro,
-        const FCk_Handle& InTrackedEntity)
+        const FCk_Handle& InTrackedEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Aggro
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
 
-    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(
-        FCk_Request_Aggro_RemoveTarget{InTrackedEntity});
+    const auto Request = FCk_Request_Aggro_RemoveTarget{InTrackedEntity};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(Request);
 
     return InAggro;
 }
@@ -310,13 +319,18 @@ auto
 auto
     UCk_Utils_Aggro_UE::
     Request_ClearAllTargets(
-        FCk_Handle_Aggro& InAggro)
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Aggro
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
 
-    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(
-        FCk_Request_Aggro_ClearAllTargets{});
+    const auto Request = FCk_Request_Aggro_ClearAllTargets{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(Request);
 
     return InAggro;
 }
@@ -325,13 +339,18 @@ auto
     UCk_Utils_Aggro_UE::
     Request_SetActiveTarget(
         FCk_Handle_Aggro& InAggro,
-        const FCk_Handle& InTrackedEntity)
+        const FCk_Handle& InTrackedEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Aggro
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
 
-    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(
-        FCk_Request_Aggro_SetActiveTarget{InTrackedEntity});
+    const auto Request = FCk_Request_Aggro_SetActiveTarget{InTrackedEntity};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(Request);
 
     return InAggro;
 }
@@ -339,13 +358,18 @@ auto
 auto
     UCk_Utils_Aggro_UE::
     Request_ClearActiveTarget(
-        FCk_Handle_Aggro& InAggro)
+        FCk_Handle_Aggro& InAggro,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Aggro
 {
     CK_CALLSTACK_RECORD(ck::FFragment_Aggro_Requests, InAggro);
 
-    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(
-        FCk_Request_Aggro_ClearActiveTarget{});
+    const auto Request = FCk_Request_Aggro_ClearActiveTarget{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InAggro.AddOrGet<ck::FFragment_Aggro_Requests>()._Requests.Emplace(Request);
 
     return InAggro;
 }
@@ -354,7 +378,8 @@ auto
     UCk_Utils_Aggro_UE::
     Request_EnableDisable(
         FCk_Handle_Aggro& InAggro,
-        ECk_EnableDisable InEnableDisable)
+        ECk_EnableDisable InEnableDisable,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Aggro
 {
     switch (InEnableDisable)
@@ -372,6 +397,9 @@ auto
         }
     }
 
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InAggro, ECk_Request_OperationResult::Succeeded);
+
     return InAggro;
 }
 
@@ -380,12 +408,19 @@ auto
     Request_MarkPerceived_ByTrackedEntity(
         FCk_Handle_Aggro& InAggro,
         const FCk_Handle& InTrackedEntity,
-        FCk_Request_AggroTarget_MarkPerceived InRequest)
+        FCk_Request_AggroTarget_MarkPerceived InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Aggro
 {
     auto Target = TryGet_Target_ByTrackedEntity(InAggro, InTrackedEntity);
-    if (ck::IsValid(Target))
-    { UCk_Utils_AggroTarget_UE::Request_MarkPerceived(Target, InRequest); }
+
+    if (ck::Is_NOT_Valid(Target))
+    {
+        InDelegate.ExecuteIfBound(InAggro, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InAggro;
+    }
+
+    UCk_Utils_AggroTarget_UE::Request_MarkPerceived(Target, InRequest, InDelegate);
 
     return InAggro;
 }

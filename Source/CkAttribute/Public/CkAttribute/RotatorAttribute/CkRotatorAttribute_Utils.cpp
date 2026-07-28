@@ -431,7 +431,8 @@ auto
     Request_Override(
         UPARAM(ref) FCk_Handle_RotatorAttribute& InAttribute,
         FRotator InNewBaseValue,
-        ECk_MinMaxCurrent InAttributeComponent)
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RotatorAttribute
 {
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
@@ -451,6 +452,9 @@ auto
             InAttributeComponent
         }
     );
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InAttribute, ECk_Request_OperationResult::Succeeded);
 
     return InAttribute;
 }
@@ -1032,7 +1036,8 @@ auto
     UCk_Utils_RotatorAttributeModifier_UE::
     Request_ClearAllModifiers(
         FCk_Handle_RotatorAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent)
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     switch (InAttributeComponent)
@@ -1053,6 +1058,9 @@ auto
             break;
         }
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InAttribute, ECk_Request_OperationResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -36,7 +36,7 @@ auto
             ItemTrait->GetClass(), this->GetFName())
         { continue; }
 
-        Request_Construct_Instanced(InHandle, ItemTrait.Get());
+        Request_Construct_Instanced(InHandle, ItemTrait.Get(), {});
     }
 
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, *ck::Format_UE(TEXT("Item ({})"), this->GetFName()));

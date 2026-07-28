@@ -4,6 +4,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkResourceLoader_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,21 +31,25 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ResourceLoader",
-              DisplayName = "[Ck][ResourceLoader] Request Load Object")
+              DisplayName = "[Ck][ResourceLoader] Request Load Object",
+              meta = (AutoCreateRefTerm = "InCompletionDelegate"))
     static void
     Request_LoadObject(
         const FCk_Handle& InHandle,
         const FCk_Request_ResourceLoader_LoadObject& InRequest,
-        const FCk_Delegate_ResourceLoader_OnObjectLoaded& InDelegate);
+        const FCk_Delegate_ResourceLoader_OnObjectLoaded& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ResourceLoader",
-              DisplayName = "[Ck][ResourceLoader] Request Load Object Batch")
+              DisplayName = "[Ck][ResourceLoader] Request Load Object Batch",
+              meta = (AutoCreateRefTerm = "InCompletionDelegate"))
     static void
     Request_LoadObjectBatch(
         const FCk_Handle& InHandle,
         const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest,
-        const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate);
+        const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Convert Soft Class Reference To Soft Resource Loader Object Reference",

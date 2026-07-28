@@ -5,12 +5,14 @@
 #include "CkGoap/CkGoap_Stats.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_WorldState_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Goap_WorldState_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -42,13 +44,16 @@ auto
 		{
 			using T = std::decay_t<decltype(InTypedRequest)>;
 
+			auto Result = ECk_Request_OperationResult::Failed;
+			const auto Guard = MakeCompletionGuard(InTypedRequest, InHandle, Result);
+
 			if constexpr (std::is_same_v<T, FCk_Request_Goap_WorldState_SetValue>)
 			{
-				DoHandleRequest(InHandle, InKeyRegistry, InValues, InSubscribers, InTypedRequest);
+				Result = DoHandleRequest(InHandle, InKeyRegistry, InValues, InSubscribers, InTypedRequest);
 			}
 			else if constexpr (std::is_same_v<T, FCk_Request_Goap_WorldState_RegisterKey>)
 			{
-				DoHandleRequest(InHandle, InKeyRegistry, InTypedRequest);
+				Result = DoHandleRequest(InHandle, InKeyRegistry, InTypedRequest);
 			}
 		}));
 	});
@@ -64,7 +69,7 @@ auto
 		FFragment_Goap_WorldState_Values& InValues,
 		FFragment_Goap_WorldState_Subscribers& InSubscribers,
 		const FCk_Request_Goap_WorldState_SetValue& InRequest)
-	-> void
+	-> ECk_Request_OperationResult
 {
 	const auto Key = InKeyRegistry._Registry.FindOrRegister(InRequest.Get_Key());
 	if (Key == goap::InvalidGoapKey)
@@ -73,13 +78,13 @@ auto
 		// registry-full / invalid-tag path is a documented, expected boundary condition.
 		ck::goap::Verbose(TEXT("GOAP WorldState [{}] dropped Set for key [{}] — registry full or tag invalid."),
 			InHandle, InRequest.Get_Key());
-		return;
+		return ECk_Request_OperationResult::Failed;
 	}
 
 	const auto PreviousValue = InValues._Values.Get(Key);
 	InValues._Values.Set(Key, InRequest.Get_Value());
 
-	if (PreviousValue == InRequest.Get_Value()) { return; }
+	if (PreviousValue == InRequest.Get_Value()) { return ECk_Request_OperationResult::Succeeded; }
 
 	InHandle.AddOrGet<FFragment_Goap_WorldState_ChangeLog>().Record(
 		FCk_Goap_WorldStateChange{InRequest.Get_Key(), PreviousValue, InRequest.Get_Value(),
@@ -99,6 +104,8 @@ auto
 		}
 		Subscriber.template AddOrGet<FTag_Goap_Dirty_WorldState>();
 	}
+
+	return ECk_Request_OperationResult::Succeeded;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -109,14 +116,30 @@ auto
 		HandleType InHandle,
 		FFragment_Goap_WorldState_KeyRegistry& InKeyRegistry,
 		const FCk_Request_Goap_WorldState_RegisterKey& InRequest)
-	-> void
+	-> ECk_Request_OperationResult
 {
 	const auto Key = InKeyRegistry._Registry.FindOrRegister(InRequest.Get_Key());
 	if (Key == goap::InvalidGoapKey)
 	{
 		ck::goap::Verbose(TEXT("GOAP WorldState [{}] dropped RegisterKey for [{}] — registry full or tag invalid."),
 			InHandle, InRequest.Get_Key());
+		return ECk_Request_OperationResult::Failed;
 	}
+
+	return ECk_Request_OperationResult::Succeeded;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+	FProcessor_Goap_WorldState_CancelPendingRequests::
+	ForEachEntity(
+		TimeType InDeltaT,
+		HandleType InHandle,
+		const FFragment_Goap_WorldState_Requests& InRequestsComp)
+	-> void
+{
+	request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

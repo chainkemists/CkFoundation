@@ -10,6 +10,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -20,6 +21,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VatProxy_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VatProxy_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VatProxy_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VatProxy_FireSignals);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -90,7 +92,7 @@ namespace ck_vat_proxy_processor
 
         auto IsmProxy = InCurrent.Get_IsmProxy();
         UCk_Utils_IsmProxy_UE::Request_SetCustomInstanceData(IsmProxy,
-            FCk_Request_IsmProxy_SetCustomInstanceData{Pack_CustomData(InCurrent, InCollection)});
+            FCk_Request_IsmProxy_SetCustomInstanceData{Pack_CustomData(InCurrent, InCollection)}, {});
     }
 }
 
@@ -186,7 +188,13 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                // Every DoHandleRequest overload below returns bool: false only on a genuine
+                // (ensure-guarded) failure, true on every idempotent no-op or successful mutation.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InParams, InCurrent, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -207,19 +215,19 @@ namespace ck
             const FFragment_VatProxy_Params& InParams,
             FFragment_VatProxy_Current& InCurrent,
             const FCk_Request_VatProxy_PlayClip& InRequest)
-        -> void
+        -> bool
     {
         const auto& Collection = InParams.Get_Collection();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Collection),
             TEXT("PlayClip on Vat entity [{}] with an invalid VatCollection"), InHandle)
-        { return; }
+        { return false; }
 
         const auto ClipIndex = Collection->Find_BakedClipIndex_ByName(InRequest.Get_ClipName());
         CK_ENSURE_IF_NOT(ClipIndex != INDEX_NONE,
             TEXT("PlayClip: clip [{}] not found in the baked clip table of VatCollection [{}] (entity [{}])"),
             InRequest.Get_ClipName(), Collection, InHandle)
-        { return; }
+        { return false; }
 
         const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
 
@@ -236,6 +244,8 @@ namespace ck
         InCurrent._PlaybackStartTime = Now;
         InCurrent._PausedLocalTime = FCk_Time{};
         InCurrent._FinishedDispatched = false;
+
+        return true;
     }
 
     auto
@@ -245,13 +255,13 @@ namespace ck
             const FFragment_VatProxy_Params& InParams,
             FFragment_VatProxy_Current& InCurrent,
             const FCk_Request_VatProxy_Stop& InRequest)
-        -> void
+        -> bool
     {
         if (InCurrent._ActiveClipIndex == INDEX_NONE)
-        { return; } // nothing playing — reference pose is already static
+        { return true; } // nothing playing — reference pose is already static
 
         if (InCurrent._PlayRate == 0.0f)
-        { return; } // already frozen
+        { return true; } // already frozen
 
         const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
         const auto ElapsedLocalSeconds =
@@ -259,6 +269,8 @@ namespace ck
 
         InCurrent._PausedLocalTime = FCk_Time{ElapsedLocalSeconds};
         InCurrent._PlayRate = 0.0f;
+
+        return true;
     }
 
     auto
@@ -268,15 +280,15 @@ namespace ck
             const FFragment_VatProxy_Params& InParams,
             FFragment_VatProxy_Current& InCurrent,
             const FCk_Request_VatProxy_SetPlayRate& InRequest)
-        -> void
+        -> bool
     {
         if (InCurrent._ActiveClipIndex == INDEX_NONE)
-        { return; }
+        { return true; }
 
         const auto NewRate = InRequest.Get_PlayRate();
 
         if (NewRate == InCurrent._PlayRate)
-        { return; }
+        { return true; }
 
         const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
 
@@ -287,7 +299,7 @@ namespace ck
                 (Now - InCurrent._PlaybackStartTime).Get_Seconds() * InCurrent._PlayRate;
             InCurrent._PausedLocalTime = FCk_Time{ElapsedLocalSeconds};
             InCurrent._PlayRate = 0.0f;
-            return;
+            return true;
         }
 
         // Rebase the start time so (Now - Start) * Rate stays continuous across the rate change.
@@ -298,6 +310,21 @@ namespace ck
         InCurrent._PlaybackStartTime = Now - FCk_Time{CurrentLocalSeconds / NewRate};
         InCurrent._PausedLocalTime = FCk_Time{};
         InCurrent._PlayRate = NewRate;
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_VatProxy_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_VatProxy_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

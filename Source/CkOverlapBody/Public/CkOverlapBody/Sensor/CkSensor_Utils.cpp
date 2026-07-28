@@ -450,9 +450,13 @@ auto
     UCk_Utils_Sensor_UE::
     Request_EnableDisable(
         FCk_Handle_Sensor& InSensorEntity,
-        const FCk_Request_Sensor_EnableDisable& InRequest)
+        const FCk_Request_Sensor_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Sensor
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InSensorEntity.AddOrGet<ck::FFragment_Sensor_Requests>()._EnableDisableRequest = InRequest;
 
     return InSensorEntity;
@@ -462,9 +466,13 @@ auto
     UCk_Utils_Sensor_UE::
     Request_Resize(
         FCk_Handle_Sensor& InSensorEntity,
-        const FCk_Request_Sensor_Resize& InRequest)
+        const FCk_Request_Sensor_Resize& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Sensor
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InSensorEntity.AddOrGet<ck::FFragment_Sensor_Requests>()._ResizeRequest = InRequest;
 
     return InSensorEntity;

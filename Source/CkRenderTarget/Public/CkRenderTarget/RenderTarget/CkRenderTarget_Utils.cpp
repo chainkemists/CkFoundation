@@ -198,10 +198,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_DrawLine(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawLine& InRequest)
+        const FCk_Request_RenderTarget_DrawLine& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -212,10 +216,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_DrawTexture(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawTexture& InRequest)
+        const FCk_Request_RenderTarget_DrawTexture& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -226,10 +234,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_DrawMaterial(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawMaterial& InRequest)
+        const FCk_Request_RenderTarget_DrawMaterial& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -240,10 +252,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_DrawText(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawText& InRequest)
+        const FCk_Request_RenderTarget_DrawText& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -254,10 +270,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_DrawBox(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawBox& InRequest)
+        const FCk_Request_RenderTarget_DrawBox& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -268,10 +288,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_DrawBorder(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawBorder& InRequest)
+        const FCk_Request_RenderTarget_DrawBorder& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -282,10 +306,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_DrawTriangles(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawTriangles& InRequest)
+        const FCk_Request_RenderTarget_DrawTriangles& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -296,10 +324,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_DrawPolygon(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_DrawPolygon& InRequest)
+        const FCk_Request_RenderTarget_DrawPolygon& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -310,10 +342,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_Clear(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_Clear& InRequest)
+        const FCk_Request_RenderTarget_Clear& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -324,10 +360,14 @@ auto
     UCk_Utils_RenderTarget_UE::
     Request_SyncPixels(
         FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const FCk_Request_RenderTarget_SyncPixels& InRequest)
+        const FCk_Request_RenderTarget_SyncPixels& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_RenderTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
 

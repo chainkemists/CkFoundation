@@ -38,7 +38,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_ActorModifier_SpawnActor& InRequest) -> void;
+            const FCk_Request_ActorModifier_SpawnActor& InRequest) -> bool;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_ActorModifier_AddActorComponent& InRequest) -> void;
+            const FCk_Request_ActorModifier_AddActorComponent& InRequest) -> bool;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_ActorModifier_RemoveActorComponent& InRequest) -> void;
+            const FCk_Request_ActorModifier_RemoveActorComponent& InRequest) -> bool;
     };
 }
 

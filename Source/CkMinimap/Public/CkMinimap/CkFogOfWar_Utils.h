@@ -2,6 +2,7 @@
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkMinimap/CkFogOfWar_Fragment.h"
@@ -101,49 +102,61 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|FogOfWar",
-              DisplayName="[Ck][FogOfWar] Request Add Revealer")
+              DisplayName="[Ck][FogOfWar] Request Add Revealer",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_FogOfWar
     Request_AddRevealer(
         UPARAM(ref) FCk_Handle_FogOfWar& InFogOfWar,
-        const FCk_Handle& InRevealer);
+        const FCk_Handle& InRevealer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|FogOfWar",
-              DisplayName="[Ck][FogOfWar] Request Remove Revealer")
+              DisplayName="[Ck][FogOfWar] Request Remove Revealer",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_FogOfWar
     Request_RemoveRevealer(
         UPARAM(ref) FCk_Handle_FogOfWar& InFogOfWar,
-        const FCk_Handle& InRevealer);
+        const FCk_Handle& InRevealer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|FogOfWar",
-              DisplayName="[Ck][FogOfWar] Request Reveal Location")
+              DisplayName="[Ck][FogOfWar] Request Reveal Location",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_FogOfWar
     Request_RevealLocation(
         UPARAM(ref) FCk_Handle_FogOfWar& InFogOfWar,
-        const FCk_Request_FogOfWar_RevealLocation& InRequest);
+        const FCk_Request_FogOfWar_RevealLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|FogOfWar",
-              DisplayName="[Ck][FogOfWar] Request Reveal All")
+              DisplayName="[Ck][FogOfWar] Request Reveal All",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_FogOfWar
     Request_RevealAll(
-        UPARAM(ref) FCk_Handle_FogOfWar& InFogOfWar);
+        UPARAM(ref) FCk_Handle_FogOfWar& InFogOfWar,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|FogOfWar",
-              DisplayName="[Ck][FogOfWar] Request Reset")
+              DisplayName="[Ck][FogOfWar] Request Reset",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_FogOfWar
     Request_Reset(
-        UPARAM(ref) FCk_Handle_FogOfWar& InFogOfWar);
+        UPARAM(ref) FCk_Handle_FogOfWar& InFogOfWar,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|FogOfWar",
-              DisplayName="[Ck][FogOfWar] Request Set Explored")
+              DisplayName="[Ck][FogOfWar] Request Set Explored",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_FogOfWar
     Request_SetExplored(
         UPARAM(ref) FCk_Handle_FogOfWar& InFogOfWar,
-        const FCk_Request_FogOfWar_SetExplored& InRequest);
+        const FCk_Request_FogOfWar_SetExplored& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

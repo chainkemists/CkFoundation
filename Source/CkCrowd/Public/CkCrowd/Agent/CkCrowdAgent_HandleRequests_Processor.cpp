@@ -5,6 +5,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -19,6 +20,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -46,7 +48,14 @@ namespace ck
             algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
             [&](const auto& InRequest)
             {
+                // Every DoHandleRequest overload below is void and has no rejection path, so reaching
+                // the line after the call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }), policy::DontResetContainer{});
         });
     }
@@ -110,7 +119,7 @@ namespace ck
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower,
-                FCk_Request_PathNetworkFollower_FindRoute{Goal});
+                FCk_Request_PathNetworkFollower_FindRoute{Goal}, {});
         }
         else
         {
@@ -140,7 +149,7 @@ namespace ck
                 }
             }
 
-            UCk_Utils_Nav_UE::Request_FindPath(InHandle, Request);
+            UCk_Utils_Nav_UE::Request_FindPath(InHandle, Request, {});
         }
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} (arrival={})"),
@@ -245,6 +254,19 @@ namespace ck
         InParams._MaxSpeed = InRequest.Get_MaxSpeed();
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] SetMaxSpeed {}"), InHandle, InRequest.Get_MaxSpeed());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_CrowdAgent_MoveRequests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

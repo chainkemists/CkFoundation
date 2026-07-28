@@ -52,17 +52,33 @@ auto
     UCk_Utils_PathNetwork_UE::
     Request_Rebuild(
         FCk_Handle_PathNetwork& InNetwork,
-        const FCk_Request_PathNetwork_Rebuild& InRequest)
+        const FCk_Request_PathNetwork_Rebuild& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_PathNetwork
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InNetwork),
+    const auto NetworkIsValid = ck::IsValid(InNetwork);
+    CK_ENSURE_IF_NOT(NetworkIsValid,
         TEXT("Invalid PathNetwork handle [{}] passed to Request_Rebuild"), InNetwork)
-    { return InNetwork; }
+    {}
+    if (NOT NetworkIsValid)
+    {
+        InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InNetwork;
+    }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InNetwork),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InNetwork);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Rebuild on PathNetwork [{}] dropped — caller does not have authority. "
              "The network is server-only."), InNetwork)
-    { return InNetwork; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InNetwork;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InNetwork.AddOrGet<ck::FFragment_PathNetwork_Requests>()._Requests.Emplace(InRequest);
     return InNetwork;
@@ -76,16 +92,29 @@ auto
         FCk_Handle_PathNetwork& InNetwork,
         const UCk_PathNetwork_Detector_UE* InDetector,
         FBox InWorldBounds,
-        const FCk_PathNetwork_VectorizeParams& InVectorizeParams)
+        const FCk_PathNetwork_VectorizeParams& InVectorizeParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_PathNetwork
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InNetwork),
+    const auto NetworkIsValid = ck::IsValid(InNetwork);
+    CK_ENSURE_IF_NOT(NetworkIsValid,
         TEXT("Invalid PathNetwork handle [{}] passed to Request_RebuildFromDetector"), InNetwork)
-    { return InNetwork; }
+    {}
+    if (NOT NetworkIsValid)
+    {
+        InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InNetwork;
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InDetector),
+    const auto DetectorIsValid = ck::IsValid(InDetector);
+    CK_ENSURE_IF_NOT(DetectorIsValid,
         TEXT("Invalid detector passed to Request_RebuildFromDetector on PathNetwork [{}]"), InNetwork)
-    { return InNetwork; }
+    {}
+    if (NOT DetectorIsValid)
+    {
+        InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InNetwork;
+    }
 
     const auto Mask = InDetector->Get_DetectionMask(InWorldBounds);
 
@@ -102,7 +131,7 @@ auto
             "rebuilding with authored ribbons only"), InNetwork);
     }
 
-    return Request_Rebuild(InNetwork, FCk_Request_PathNetwork_Rebuild{NewRibbons});
+    return Request_Rebuild(InNetwork, FCk_Request_PathNetwork_Rebuild{NewRibbons}, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -269,17 +298,33 @@ auto
     UCk_Utils_PathNetworkFollower_UE::
     Request_FindRoute(
         FCk_Handle_PathNetworkFollower& InFollower,
-        const FCk_Request_PathNetworkFollower_FindRoute& InRequest)
+        const FCk_Request_PathNetworkFollower_FindRoute& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_PathNetworkFollower
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InFollower),
+    const auto FollowerIsValid = ck::IsValid(InFollower);
+    CK_ENSURE_IF_NOT(FollowerIsValid,
         TEXT("Invalid PathNetworkFollower handle [{}] passed to Request_FindRoute"), InFollower)
-    { return InFollower; }
+    {}
+    if (NOT FollowerIsValid)
+    {
+        InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InFollower;
+    }
 
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InFollower),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InFollower);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_FindRoute on PathNetworkFollower [{}] dropped — caller does not have authority. "
              "Routing is server-only."), InFollower)
-    { return InFollower; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InFollower;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InFollower.AddOrGet<ck::FFragment_PathNetworkFollower_Requests>()._Requests.Emplace(InRequest);
     InFollower.Get<ck::FFragment_PathNetworkFollower_Corridor>()._Result._Status = ECk_PathNetwork_RouteStatus::Pending;
@@ -293,14 +338,25 @@ auto
     UCk_Utils_PathNetworkFollower_UE::
     Request_SetNetwork(
         FCk_Handle_PathNetworkFollower& InFollower,
-        const FCk_Handle_PathNetwork& InNetwork)
+        const FCk_Handle_PathNetwork& InNetwork,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_PathNetworkFollower
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InFollower),
+    const auto FollowerIsValid = ck::IsValid(InFollower);
+    CK_ENSURE_IF_NOT(FollowerIsValid,
         TEXT("Invalid PathNetworkFollower handle [{}] passed to Request_SetNetwork"), InFollower)
-    { return InFollower; }
+    {}
+    if (NOT FollowerIsValid)
+    {
+        InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InFollower;
+    }
 
     InFollower.Get<ck::FFragment_PathNetworkFollower_Params>().Set_Network(InNetwork);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InFollower, ECk_Request_OperationResult::Succeeded);
+
     return InFollower;
 }
 

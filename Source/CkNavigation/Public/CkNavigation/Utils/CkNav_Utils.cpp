@@ -18,12 +18,22 @@ auto
     UCk_Utils_Nav_UE::
     Request_FindPath(
         FCk_Handle& InHandle,
-        const FCk_Request_Nav_FindPath& InRequest)
+        const FCk_Request_Nav_FindPath& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid handle [{}] passed to UCk_Utils_Nav_UE::Request_FindPath"), InHandle)
-    { return InHandle; }
+    {}
+    if (NOT HandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     auto& Result = InHandle.AddOrGet<ck::FFragment_Nav_PathResult>();
 
@@ -89,23 +99,39 @@ auto
 auto
     UCk_Utils_Nav_UE::
     Request_NavigationRebuild_ForTesting(
-        FCk_Handle& InHandle)
+        FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid handle [{}] passed to Request_NavigationRebuild_ForTesting"), InHandle)
-    { return; }
+    {}
+    if (NOT HandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
     if (NOT IsValid(World))
-    { return; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     auto* NavSys = UNavigationSystemV1::GetCurrent(World);
     if (NavSys == nullptr)
-    { return; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     NavSys->Build();
     ck::nav::Verbose(TEXT("Request_NavigationRebuild_ForTesting kicked off Build() on world [{}]"), World);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

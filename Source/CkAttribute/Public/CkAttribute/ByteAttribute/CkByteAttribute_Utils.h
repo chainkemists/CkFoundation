@@ -6,6 +6,7 @@
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkByteAttribute_Utils.generated.h"
@@ -202,12 +203,14 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="[Ck][ByteAttribute] Request Override Base Value")
+              DisplayName="[Ck][ByteAttribute] Request Override Base Value",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_ByteAttribute
     Request_Override(
         UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
         uint8 InNewBaseValue,
-        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -398,7 +401,8 @@ public:
     static void
     Request_ClearAllModifiers(
         FCk_Handle_ByteAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

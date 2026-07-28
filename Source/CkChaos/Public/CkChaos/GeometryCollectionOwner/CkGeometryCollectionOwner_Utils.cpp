@@ -77,7 +77,8 @@ auto
 auto
     UCk_Utils_GeometryCollectionOwner_UE::
     Request_CrumbleNonActiveClusters(
-        FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner)
+        FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_GeometryCollectionOwner
 {
     UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_GeometryCollectionOwner>(InGeometryCollectionOwner,
@@ -88,8 +89,12 @@ auto
 
     ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InGeometryCollectionOwner, [&](FCk_Handle_GeometryCollection InGc)
     {
-        UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
+        UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc, {});
     });
+
+    // Immediate mutation — the rep bump and per-child fan-out are synchronous on this stack, so the
+    // Owner-level completion is too.
+    InDelegate.ExecuteIfBound(InGeometryCollectionOwner, ECk_Request_OperationResult::Succeeded);
 
     return InGeometryCollectionOwner;
 }
@@ -97,7 +102,8 @@ auto
 auto
     UCk_Utils_GeometryCollectionOwner_UE::
     Request_RemoveAllAnchors(
-        FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner)
+        FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_GeometryCollectionOwner
 {
     UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_GeometryCollectionOwner>(InGeometryCollectionOwner,
@@ -108,8 +114,11 @@ auto
 
     ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InGeometryCollectionOwner, [&](FCk_Handle_GeometryCollection InGc)
     {
-        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
+        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc, {});
     });
+
+    // Immediate mutation — see Request_CrumbleNonActiveClusters.
+    InDelegate.ExecuteIfBound(InGeometryCollectionOwner, ECk_Request_OperationResult::Succeeded);
 
     return InGeometryCollectionOwner;
 }
@@ -118,9 +127,13 @@ auto
     UCk_Utils_GeometryCollectionOwner_UE::
     Request_ApplyRadialStrain(
         FCk_Handle_GeometryCollectionOwner& InGeometryCollection,
-        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_GeometryCollectionOwner
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InGeometryCollection.AddOrGet<ck::FFragment_GeometryCollectionOwner_Requests>()._Requests.Emplace(InRequest);
     return InGeometryCollection;
 }
@@ -129,7 +142,8 @@ auto
     UCk_Utils_GeometryCollectionOwner_UE::
     Request_ApplyRadialStrainOnAll(
         const FCk_Handle& InAnyHandle,
-        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto NonConst = InAnyHandle;
@@ -139,7 +153,7 @@ auto
     {
         auto GcHandle = ck::MakeHandle(InGcOwner, InAnyHandle);
         auto GcOwner = Cast(GcHandle);
-        Request_ApplyRadialStrain(GcOwner, InRequest);
+        Request_ApplyRadialStrain(GcOwner, InRequest, InDelegate);
     });
 }
 

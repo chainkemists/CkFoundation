@@ -243,7 +243,8 @@ auto
     const auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
         _TransientEntity,
         InScriptArchetype,
-        FInstancedStruct{});
+        FInstancedStruct{},
+        {});
 
     const auto NewEntity = PendingEntity.Get_EntityUnderConstruction();
 

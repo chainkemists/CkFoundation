@@ -1,4 +1,4 @@
-#include "CkStateMachine_Replication.h"
+﻿#include "CkStateMachine_Replication.h"
 
 #include "CkStateMachine/CkStateMachine_Log.h"
 #include "CkStateMachine/Net/CkStateMachine_NetContextUtils.h"
@@ -257,7 +257,7 @@ namespace ck_state_machine_replication
             if (ck::Is_NOT_Valid(Saved.Get_OverrideStateClass()))
             { continue; }
 
-            UCk_Utils_StateMachine_UE::Request_AddOverrideState(SmHandle, Saved.Get_OverrideStateClass());
+            UCk_Utils_StateMachine_UE::Request_AddOverrideState(SmHandle, Saved.Get_OverrideStateClass(), {});
         }
     }
 

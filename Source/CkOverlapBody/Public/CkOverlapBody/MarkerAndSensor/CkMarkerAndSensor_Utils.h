@@ -344,7 +344,7 @@ auto
             .Set_IsUnique(false)
             .Set_InitializerFunc(Make_MarkerOrSensor_InitializerFunction<T_MarkerOrSensorCompType, T_MarkerOrSensorParams, T_MarkerOrSensorShapeType>(
                 InMarkerOrSensorEntity, InMarkerOrSensorParams)),
-        {}, {}
+        {}, {}, {}
     );
 }
 

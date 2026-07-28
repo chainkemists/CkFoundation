@@ -11,12 +11,14 @@
 #include <Materials/MaterialInstanceDynamic.h>
 #include <ProceduralMeshComponent.h>
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Donut_EndPlay);
 
@@ -267,7 +269,20 @@ namespace ck
             const FFragment_Pmg_Donut_UpdateParams& InRequest) const
             -> void
     {
+        // Copied because MarkedDirtyBy IS this fragment: Remove<MarkedDirtyBy>() below destructs the
+        // live InRequest storage, and the Guard fires after that at scope exit — it must reference a
+        // copy that outlives the removal, not the live fragment.
+        const auto RequestCopy = InRequest;
+
+        // DoHandleRequest is void and has no rejection path, so reaching the line after the call IS
+        // the success condition.
+        auto Result = ECk_Request_OperationResult::Failed;
+        const auto Guard = ck::MakeCompletionGuard(RequestCopy, InHandle, Result);
+
         DoHandleRequest(InHandle, InCurrent, InRequest);
+
+        Result = ECk_Request_OperationResult::Succeeded;
+
         InHandle.Remove<MarkedDirtyBy>();
     }
 
@@ -362,6 +377,21 @@ namespace ck
 
             ck::pmg::Verbose(TEXT("Pmg Donut [{}] mesh regenerated"), InHandle);
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Pmg_Donut_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_Donut_UpdateParams& InRequest)
+        -> void
+    {
+        // Single-slot fragment, not a queue — fire the one pending request directly rather than
+        // through FireCancelledForPending, which expects a TArray/TOptional request list.
+        InRequest.TryFireCompletion(InHandle, ECk_Request_OperationResult::Failed_Cancelled);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

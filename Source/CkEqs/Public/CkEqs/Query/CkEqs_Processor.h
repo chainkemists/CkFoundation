@@ -2,6 +2,7 @@
 
 #include "CkEqs/Query/CkEqs_Fragment.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
@@ -26,6 +27,7 @@ namespace ck
             FProcessor_Eqs_HandleRequests,
             FCk_Handle,
             ck::TReadWrite<FFragment_EqsQuery_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -39,6 +41,32 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_EqsQuery_Requests& InRequests) const -> void;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes queriers already tagged for destruction, so a destroyed querier's still-
+    // queued requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKEQS_API FProcessor_Eqs_CancelPendingRequests : public ck_exp::TProcessor<
+            FProcessor_Eqs_CancelPendingRequests,
+            FCk_Handle,
+            ck::TReadOnly<FFragment_EqsQuery_Requests>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EqsQuery_Requests& InRequestsComp)
+            -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

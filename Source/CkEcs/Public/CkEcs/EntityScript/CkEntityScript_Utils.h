@@ -3,6 +3,7 @@
 #include "CkEntityScript_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -75,24 +76,32 @@ public:
 
 public:
     // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
+    // The completion delegate reports that the spawn REQUEST was drained, not that construction finished —
+    // a script returning ECk_EntityScript_ConstructionFlow::Continue still completes with Succeeded.
+    // Promise_OnConstructed on the returned pending handle remains the construction-finished channel.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EntityScript|Private",
-        DisplayName="[CK][EntityScript] Request SpawnEntity")
+        DisplayName="[CK][EntityScript] Request SpawnEntity",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_PendingEntityScript
     Request_SpawnEntity(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
         TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
-        FInstancedStruct InSpawnParams);
+        FInstancedStruct InSpawnParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
+    // Completion semantics: see Request_SpawnEntity.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EntityScript|Private",
-        DisplayName="[CK][EntityScript] Request SpawnEntity (Archetype)")
+        DisplayName="[CK][EntityScript] Request SpawnEntity (Archetype)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_PendingEntityScript
     Request_SpawnEntity_Archetype(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
         UCk_EntityScript_UE* InEntityScriptClassArchetype,
-        FInstancedStruct InSpawnParams);
+        FInstancedStruct InSpawnParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EntityScript",
@@ -107,14 +116,16 @@ public:
         FCk_Handle& InScriptEntity,
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScriptClass,
         const FInstancedStruct& InSpawnParams,
-        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc = nullptr) -> FCk_Handle_PendingEntityScript;
+        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc = nullptr,
+        const FCk_Delegate_Request_OnCompleted& InDelegate = {}) -> FCk_Handle_PendingEntityScript;
 
     static auto
     Add(
         FCk_Handle& InScriptEntity,
         const TWeakObjectPtr<UCk_EntityScript_UE>& InEntityScriptClassArchetype,
         const FInstancedStruct& InSpawnParams,
-        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc = nullptr) -> FCk_Handle_PendingEntityScript;
+        const FCk_EntityScript_PostConstruction_Func& InOptionalFunc = nullptr,
+        const FCk_Delegate_Request_OnCompleted& InDelegate = {}) -> FCk_Handle_PendingEntityScript;
 
     static auto
     TryInjectEntityScriptSpawnParams(

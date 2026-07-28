@@ -3,11 +3,13 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ShapeCylinder_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ShapeCylinder_CancelPendingRequests);
 
 namespace ck
 {
@@ -25,12 +27,19 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
+                // DoHandleRequest is void and has no rejection path, so reaching the line after
+                // the call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }));
         });
     }
@@ -51,6 +60,19 @@ namespace ck
 
         InCurrent._Dimensions = NewDimensions;
         UUtils_Signal_OnShapeCylinderDimensionsChanged::Broadcast(InHandle, MakePayload(InHandle, NewDimensions));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ShapeCylinder_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeCylinder_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

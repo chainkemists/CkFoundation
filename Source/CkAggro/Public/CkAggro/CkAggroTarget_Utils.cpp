@@ -251,13 +251,18 @@ auto
     UCk_Utils_AggroTarget_UE::
     Request_AddThreat(
         FCk_Handle_AggroTarget& InTarget,
-        float InThreatDelta)
+        float InThreatDelta,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AggroTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_AggroTarget_Requests, InTarget);
 
-    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(
-        FCk_Request_AggroTarget_AddThreat{InThreatDelta});
+    const auto Request = FCk_Request_AggroTarget_AddThreat{InThreatDelta};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(Request);
 
     return InTarget;
 }
@@ -266,13 +271,18 @@ auto
     UCk_Utils_AggroTarget_UE::
     Request_SetThreat(
         FCk_Handle_AggroTarget& InTarget,
-        float InThreat)
+        float InThreat,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AggroTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_AggroTarget_Requests, InTarget);
 
-    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(
-        FCk_Request_AggroTarget_SetThreat{InThreat});
+    const auto Request = FCk_Request_AggroTarget_SetThreat{InThreat};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(Request);
 
     return InTarget;
 }
@@ -281,10 +291,14 @@ auto
     UCk_Utils_AggroTarget_UE::
     Request_MarkPerceived(
         FCk_Handle_AggroTarget& InTarget,
-        FCk_Request_AggroTarget_MarkPerceived InRequest)
+        FCk_Request_AggroTarget_MarkPerceived InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AggroTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_AggroTarget_Requests, InTarget);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(InRequest);
 
@@ -294,13 +308,18 @@ auto
 auto
     UCk_Utils_AggroTarget_UE::
     Request_MarkUnperceived(
-        FCk_Handle_AggroTarget& InTarget)
+        FCk_Handle_AggroTarget& InTarget,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AggroTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_AggroTarget_Requests, InTarget);
 
-    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(
-        FCk_Request_AggroTarget_MarkUnperceived{});
+    const auto Request = FCk_Request_AggroTarget_MarkUnperceived{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(Request);
 
     return InTarget;
 }
@@ -308,13 +327,18 @@ auto
 auto
     UCk_Utils_AggroTarget_UE::
     Request_ResetPerception(
-        FCk_Handle_AggroTarget& InTarget)
+        FCk_Handle_AggroTarget& InTarget,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AggroTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_AggroTarget_Requests, InTarget);
 
-    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(
-        FCk_Request_AggroTarget_ResetPerception{});
+    const auto Request = FCk_Request_AggroTarget_ResetPerception{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(Request);
 
     return InTarget;
 }
@@ -322,13 +346,18 @@ auto
 auto
     UCk_Utils_AggroTarget_UE::
     Request_Forget(
-        FCk_Handle_AggroTarget& InTarget)
+        FCk_Handle_AggroTarget& InTarget,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_AggroTarget
 {
     CK_CALLSTACK_RECORD(ck::FFragment_AggroTarget_Requests, InTarget);
 
-    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(
-        FCk_Request_AggroTarget_Forget{});
+    const auto Request = FCk_Request_AggroTarget_Forget{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InTarget.AddOrGet<ck::FFragment_AggroTarget_Requests>()._Requests.Emplace(Request);
 
     return InTarget;
 }

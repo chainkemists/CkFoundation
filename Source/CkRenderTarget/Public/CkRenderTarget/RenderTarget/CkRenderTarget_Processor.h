@@ -66,6 +66,7 @@ namespace ck
         ck::TReadWrite<FFragment_RenderTarget_Current>,
         ck::TReadWrite<FFragment_RenderTarget_Requests>,
         TExclude<FTag_RenderTarget_NeedsSetup>,
+        TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -175,6 +176,29 @@ namespace ck
         DoApplyCmdToCanvas(
             UCanvas& InCanvas,
             const FCk_RenderTarget_DrawCmd& InCmd) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKRENDERTARGET_API FProcessor_RenderTarget_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_RenderTarget_CancelPendingRequests,
+        FCk_Handle_RenderTarget,
+        ck::TReadOnly<FFragment_RenderTarget_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InRenderTargetEntity,
+            const FFragment_RenderTarget_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

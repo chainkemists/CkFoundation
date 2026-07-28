@@ -309,9 +309,13 @@ auto
     UCk_Utils_Marker_UE::
     Request_EnableDisable(
         FCk_Handle_Marker& InMarkerEntity,
-        const FCk_Request_Marker_EnableDisable& InRequest)
+        const FCk_Request_Marker_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Marker
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InMarkerEntity.AddOrGet<ck::FFragment_Marker_Requests>()._EnableDisableRequest = InRequest;
     return InMarkerEntity;
 }
@@ -320,9 +324,13 @@ auto
     UCk_Utils_Marker_UE::
     Request_Resize(
         FCk_Handle_Marker& InMarkerEntity,
-        const FCk_Request_Marker_Resize& InRequest)
+        const FCk_Request_Marker_Resize& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Marker
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InMarkerEntity.AddOrGet<ck::FFragment_Marker_Requests>()._ResizeRequest = InRequest;
 
     return InMarkerEntity;

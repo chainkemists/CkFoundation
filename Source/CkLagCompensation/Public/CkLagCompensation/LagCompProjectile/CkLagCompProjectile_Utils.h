@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkLagCompensation/LagCompProjectile/CkLagCompProjectile_Fragment_Data.h"
@@ -42,11 +43,13 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|LagCompProjectile",
-        DisplayName="[Ck][LagCompProjectile] Request Launch Compensated")
+        DisplayName="[Ck][LagCompProjectile] Request Launch Compensated",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_BallisticMotion
     Request_LaunchCompensated(
         UPARAM(ref) FCk_Handle_BallisticMotion& InHandle,
-        const FCk_Request_LagCompProjectile_LaunchCompensated& InRequest);
+        const FCk_Request_LagCompProjectile_LaunchCompensated& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

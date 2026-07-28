@@ -44,6 +44,7 @@ namespace ck
             FCk_Handle_EntityCollection,
             TReadWrite<FFragment_EntityCollections_RecordOfEntities>,
             TReadWrite<FFragment_EntityCollection_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -74,6 +75,32 @@ namespace ck
             HandleType& InHandle,
             FFragment_EntityCollections_RecordOfEntities& InComp,
             const FFragment_EntityCollection_Requests::RemoveEntitiesRequestType& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed collection's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKENTITYCOLLECTION_API FProcessor_EntityCollection_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_EntityCollection_CancelPendingRequests,
+        FCk_Handle_EntityCollection,
+        ck::TReadOnly<FFragment_EntityCollection_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityCollection_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

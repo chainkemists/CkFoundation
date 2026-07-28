@@ -10,9 +10,11 @@
 
 #include "CkInteraction/Interaction/CkInteraction_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Interaction_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Interaction_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Interaction_EndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -43,12 +45,17 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InParams, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }));
         });
     }
@@ -66,6 +73,19 @@ namespace ck
             InParams.Get_Params().Get_Source(), InParams.Get_Params().Get_Target());
         InHandle.AddOrGet<FTag_Interaction_FinishedBroadcastSent>();
         UUtils_Signal_Interaction_OnInteractionFinished::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_SuccessFail()));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Interaction_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Interaction_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

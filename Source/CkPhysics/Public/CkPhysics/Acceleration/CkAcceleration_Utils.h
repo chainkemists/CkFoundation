@@ -8,6 +8,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -105,11 +106,13 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Acceleration",
-              DisplayName="[Ck][Acceleration] Request Override Acceleration")
+              DisplayName="[Ck][Acceleration] Request Override Acceleration",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_OverrideAcceleration(
         UPARAM(ref) FCk_Handle_Acceleration& InHandle,
-        const FVector& InNewAcceleration);
+        const FVector& InNewAcceleration,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -299,21 +302,25 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Acceleration|BulkModifier",
-              DisplayName="Request Add Bulk Acceleration Modifier Target")
+              DisplayName="Request Add Bulk Acceleration Modifier Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_AddTarget(
         UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest);
+        const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Acceleration|BulkModifier",
-              DisplayName="Request Remove Bulk Acceleration Modifier Target")
+              DisplayName="Request Remove Bulk Acceleration Modifier Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_RemoveTarget(
         UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest);
+        const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 private:
     static void

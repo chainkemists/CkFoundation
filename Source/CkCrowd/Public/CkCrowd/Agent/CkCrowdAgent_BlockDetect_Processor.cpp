@@ -296,7 +296,7 @@ namespace ck
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower,
-                FCk_Request_PathNetworkFollower_FindRoute{Goal});
+                FCk_Request_PathNetworkFollower_FindRoute{Goal}, {});
         }
         else
         {
@@ -316,7 +316,7 @@ namespace ck
                        .Set_StartOverrideLocation(*Escaped);
             }
 
-            UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request);
+            UCk_Utils_Nav_UE::Request_FindPath(NonConstHandle, Request, {});
         }
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] goal CLEARED — resuming to {}"), InHandle, Goal);

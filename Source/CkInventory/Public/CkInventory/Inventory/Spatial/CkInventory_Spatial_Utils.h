@@ -2,6 +2,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment_Data.h"
 #include "CkInventory/Inventory/Spatial/CkInventory_Spatial_Fragment.h"
@@ -179,36 +180,39 @@ public:
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory|Spatial",
               DisplayName = "[Ck][Inventory][Spatial] Request Add Item (With Placement)",
-              meta = (AutoCreateRefTerm = "InPlacement, InDelegate"))
+              meta = (AutoCreateRefTerm = "InPlacement, InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory_Spatial
     Request_AddItem(
         UPARAM(ref) FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Request_Inventory_AddItem& InRequest,
         const FCk_SpatialPlacement& InPlacementAddon,
-        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory|Spatial",
               DisplayName = "[Ck][Inventory][Spatial] Request Split Stack (With Placement)",
-              meta = (AutoCreateRefTerm = "InPlacement, InDelegate"))
+              meta = (AutoCreateRefTerm = "InPlacement, InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory_Spatial
     Request_SplitStack(
         UPARAM(ref) FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Request_Inventory_SplitStack& InRequest,
         const FCk_SpatialPlacement& InPlacementAddon,
-        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory|Spatial",
               DisplayName = "[Ck][Inventory][Spatial] Request Relocate Item",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory_Spatial
     Request_RelocateItem(
         UPARAM(ref) FCk_Handle_Inventory_Spatial& InInventory,
         const FCk_Request_Inventory_Spatial_RelocateItem& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Relocate& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Relocate& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
 public:
     /** Checks if an item fits at a specific coordinate with a specific rotation (no rotation search). */
