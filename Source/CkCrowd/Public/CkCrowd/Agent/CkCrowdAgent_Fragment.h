@@ -70,10 +70,12 @@ namespace ck
     private:
         FVector _GoalLocation = FVector::ZeroVector;
         int32 _NetworkEpoch = 0;
+        int32 _TuningRevision = 0;
 
     public:
         CK_PROPERTY_GET(_GoalLocation);
         CK_PROPERTY_GET(_NetworkEpoch);
+        CK_PROPERTY_GET(_TuningRevision);
     };
 
     // Per-frame displacement staging, consumed solely by FProcessor_CrowdAgent_ConstrainToNavmesh.
@@ -116,14 +118,16 @@ namespace ck
         FVector _StillnessSampleLoc = FVector::ZeroVector;
         float _StillnessSampleAccumSec = 0.0f;
 
-        // PathRefresh trigger data. Only a disc whose _PaintSerial is NEWER than a walking agent's
-        // path serial can trigger that agent's re-path.
+        // PathRefresh trigger data: painted XY half-extent, a monotonic CONFIRMATION serial
+        // (assigned only after the rebuilt navmesh reports this disc, then compared against each
+        // walking agent's path serial), and seconds since paint. Paint alone is not eligibility:
+        // dynamic navmesh tiles rebuild asynchronously, so a re-path cannot see the disc yet.
         float _MarkupRadiusUu = 0.0f;
         // The confirm query must reach the floor polys the paint box covered, and the disc centre
         // rides at capsule height.
         float _MarkupVerticalHalfExtentUu = 0.0f;
         float _SecondsSincePaint = 0.0f;
-        uint64 _PaintSerial = 0;
+        uint64 _ConfirmationSerial = 0;
 
         // Set once the rebuilt navmesh actually REPORTS the cost area at the disc's location; tile
         // rebuild latency is unbounded, so the settle timer alone is not proof. Reset on every (re)paint.
@@ -135,7 +139,7 @@ namespace ck
         CK_PROPERTY_GET(_MarkupRadiusUu);
         CK_PROPERTY_GET(_MarkupVerticalHalfExtentUu);
         CK_PROPERTY_GET(_SecondsSincePaint);
-        CK_PROPERTY_GET(_PaintSerial);
+        CK_PROPERTY_GET(_ConfirmationSerial);
         CK_PROPERTY_GET(_ConfirmedOnMesh);
     };
 

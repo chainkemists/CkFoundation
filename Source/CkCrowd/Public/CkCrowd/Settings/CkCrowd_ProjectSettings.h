@@ -20,9 +20,9 @@ enum class ECk_AccelClampMode : uint8
 UENUM(BlueprintType)
 enum class ECk_AvoidanceSidePreference : uint8
 {
-    Disabled,   // skip wSide computation entirely (saves a cross + dot per sample × neighbor)
-    PassLeft,   // wSide active, agents prefer to pass neighbors on the left (dtCrowd default)
-    PassRight,  // wSide active, opposite sign — for mirrored / region-specific conventions
+    Disabled,   // skip the neighbor-relative wSide computation entirely
+    PassLeft,   // wSide favors candidates left of each neighbor-relative offset; not a Detour port
+    PassRight,  // wSide mirrors PassLeft for mirrored / region-specific conventions
 };
 
 UENUM(BlueprintType)
@@ -112,13 +112,18 @@ private:
     int32 _AvoidanceSampleRings = 2;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
+        meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1, ClampMax = 8, UIMax = 8,
+            ToolTip = "Adaptive sampling depth. Depth 1 evaluates the base cloud only; later depths recenter on the prior winner and halve the search radius. Detour's current default is 5."))
+    int32 _AvoidanceSampleDepth = 5;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
         meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0, ClampMax = 0.9, UIMax = 0.9,
             ToolTip = "Velocity bias: the sample cloud is centred on DesiredVelocity * Bias with ring radius MaxSpeed * (1 - Bias), mirroring dtCrowd (DetourObstacleAvoidance.cpp:570-572). Detour ships 0.5 at every quality level (CrowdManager.cpp:182-208), which makes the most conservative candidate half-speed-FORWARD rather than a dead stop. 0 centres the cloud on the origin, putting a full stop at the centre of the search — that is freeze-prone, because a stopped pair predicts no collision and so pays no time-to-impact penalty. Values near 1 stop exploring alternatives."))
     float _AvoidanceVelBias = 0.5f;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling",
         meta = (AllowPrivateAccess = true,
-            ToolTip = "Side-preference behaviour. Disabled skips the wSide cross product entirely. PassLeft mirrors dtCrowd's default convention."))
+            ToolTip = "Neighbor-relative side-preference behaviour. Disabled skips wSide. PassLeft favors candidates left of each neighbor-relative offset; PassRight mirrors it. This is not claimed as Detour parity."))
     ECk_AvoidanceSidePreference _AvoidanceSidePreference = ECk_AvoidanceSidePreference::PassLeft;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Avoidance|Sampling|Penalty",
@@ -191,6 +196,11 @@ private:
     float _StationaryMarkupDelaySeconds = 1.5f;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0, Units = "cm/s",
+            ToolTip = "Maximum windowed physical speed (cm/s) that counts as stationary for nav markup. Measured from XY displacement over a 0.25-second window rather than instantaneous velocity, so one-frame push-apart spikes do not churn the disc. Above this speed the stationary timer resets and any painted disc is removed. The 84cm/s default preserves the former half-radius-per-window rule for a standard 42cm agent."))
+    float _StationaryMarkupSpeedThreshold = 84.0f;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "StationaryMarkup",
         meta = (AllowPrivateAccess = true, ClampMin = 1.0, UIMin = 1.0, ClampMax = 4.0, UIMax = 4.0,
             ToolTip = "Painted half-extent as a multiple of the agent radius. Sized so neighbouring discs in a queue OVERLAP DEEPLY: the planner crosses a crowd at the cheapest seam between two agents, and shallow overlap (1.5x at 120uu queue pitch) made threading the seam cheaper than detouring around the line. 2x makes the seam ~120uu of marked ground, so 'around' wins at store scale."))
     float _StationaryMarkupExtentMultiplier = 2.0f;
@@ -218,6 +228,7 @@ public:
     CK_PROPERTY_GET(_AvoidanceSampleStride);
     CK_PROPERTY_GET(_AvoidanceSampleAngularDivs);
     CK_PROPERTY_GET(_AvoidanceSampleRings);
+    CK_PROPERTY_GET(_AvoidanceSampleDepth);
     CK_PROPERTY_GET(_AvoidanceVelBias);
     CK_PROPERTY_GET(_AvoidanceSidePreference);
     CK_PROPERTY_GET(_AvoidanceWeightDesVel);
@@ -229,6 +240,7 @@ public:
     CK_PROPERTY_GET(_NavmeshConstraintMode);
     CK_PROPERTY_GET(_StationaryMarkupMode);
     CK_PROPERTY_GET(_StationaryMarkupDelaySeconds);
+    CK_PROPERTY_GET(_StationaryMarkupSpeedThreshold);
     CK_PROPERTY_GET(_StationaryMarkupExtentMultiplier);
     CK_PROPERTY_GET(_PathRefreshMode);
     CK_PROPERTY_GET(_PathRefreshMarkupSettleSeconds);
@@ -262,6 +274,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static int32 Get_AvoidanceSampleStride();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
+    static int32 Get_AvoidanceSampleDepth();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Crowd|Settings")
     static ECk_PushApartMode Get_PushApartMode();

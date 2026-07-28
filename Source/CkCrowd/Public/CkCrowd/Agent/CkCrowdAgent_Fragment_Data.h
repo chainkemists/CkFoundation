@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
@@ -254,9 +254,10 @@ private:
     UPROPERTY()
     FVector _CurrentSegmentStart = FVector::ZeroVector;
 
-    // Stationary-markup paint serial current when this path was installed: only a disc painted
-    // AFTER the path can trigger a re-path, so a path that already paid a disc's cost is never
-    // re-planned for it.
+    // Stationary-markup confirmation serial current when this path was installed. PathRefresh
+    // compares it against each confirmed disc's serial: only a disc that became visible to Recast
+    // AFTER the path can trigger a re-path, so a path that already chose to pay a disc's cost is
+    // never re-planned for it.
     UPROPERTY()
     uint64 _PathSerial = 0;
 

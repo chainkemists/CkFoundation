@@ -12,9 +12,22 @@
 
 namespace ck
 {
-    // Paints a UCk_NavArea_CrowdAgent COST disc under a physically stationary agent so fresh paths
-    // route around standing crowds; see CkCrowd/CLAUDE.md. Cost, never a hole. Server-only:
-    // pathfinding is server-authoritative and client worlds skip painting.
+    // Stationary-agent nav markup. The path planner only sees static geometry, so a path for an
+    // agent headed past a standing crowd goes straight THROUGH it, and the local avoidance
+    // sampler (short-horizon, greedy) cannot escape a line-shaped local minimum — the agent
+    // presses into the crowd. This processor paints a UCk_NavArea_CrowdAgent COST disc under any
+    // agent that has stayed below _StationaryMarkupSpeedThreshold for
+    // _StationaryMarkupDelaySeconds — measured by windowed displacement, NOT the Idle tag: a
+    // blocked/pressing walker plugs a corridor exactly like an idle agent, and mutual pressers
+    // never go Idle at all. The disc drops the moment the agent exceeds that threshold — so fresh
+    // paths (a joiner's first FindPath, BlockedRecheck's re-path, PathRefresh) genuinely route
+    // around standing crowds.
+    //
+    // Cost, never a hole: the mesh under the agent stays walkable, so the agent's own navmesh
+    // clamp (ConstrainToNavmesh), its path starts, and slot projections are unaffected, and a
+    // fully-plugged corridor still paths through rather than failing.
+    //
+    // Server-only: pathfinding is server-authoritative; client worlds skip painting.
     class CKCROWD_API FProcessor_CrowdAgent_StationaryMarkup : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_StationaryMarkup,
             FCk_Handle_CrowdAgent,
@@ -43,11 +56,6 @@ namespace ck
         static auto
         Remove_Markup(
             FFragment_CrowdAgent_NavMarkup& InMarkup) -> void;
-
-        // Monotonic, process-wide. Path installers stamp it onto the path; PathRefresh re-paths
-        // only for discs whose serial is NEWER than the path's.
-        static auto
-        Get_CurrentPaintSerial() -> uint64;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

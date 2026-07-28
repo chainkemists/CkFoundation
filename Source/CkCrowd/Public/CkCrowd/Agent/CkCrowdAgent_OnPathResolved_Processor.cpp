@@ -3,7 +3,7 @@
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathFollow_Algorithm.h"
-#include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -47,9 +47,11 @@ namespace ck
                 // Waypoints[0] has to come from the agent's own location at install time.
                 InPathFollow._CurrentSegmentStart = InTransform.Get_Transform().GetLocation();
 
-                // Planned against every disc painted up to now — only NEWER discs may trigger a
-                // PathRefresh re-path.
-                InPathFollow._PathSerial = FProcessor_CrowdAgent_StationaryMarkup::Get_CurrentPaintSerial();
+                // This path was planned against every disc confirmed on Recast up to now. A disc
+                // still waiting on its async tile rebuild receives a newer serial when confirmed
+                // and therefore invalidates this path instead of being silently consumed.
+                InPathFollow._PathSerial =
+                    FProcessor_CrowdAgent_PathRefresh::Get_CurrentConfirmationSerial();
 
                 // Pick the STARTING waypoint: skip every leading corner the agent is ALREADY PAST
                 // (dot(corner - agent, onwardSegmentDir) < 0 — UPathFollowingComponent's

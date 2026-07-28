@@ -7,6 +7,7 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkCrowd/CkCrowd_Stats.h"
+#include "CkCrowd/Agent/CkCrowdAgent_ConstrainToNavmesh_Algorithm.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
 #include "NavigationSystem.h"
@@ -24,8 +25,10 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::ConstrainToNavmesh"), STAT_CkCrowd_ConstrainToNa
 
 namespace ck_crowd_agent_constrain_to_navmesh
 {
-    // An off-mesh agent snaps back if the mesh is within this multiple of its radius, so one bad
-    // frame cannot disable the constraint forever; beyond it, the agent moves freely.
+    // An off-mesh agent (spawned off-mesh, or a pre-existing excursion) is snapped back if the
+    // mesh is within this multiple of its radius horizontally and its normal body-height extent
+    // vertically. Widening only the horizontal search self-heals a corner leak without treating a
+    // deliberately elevated or deeply displaced agent as ordinary navmesh drift.
     constexpr auto RECOVERY_EXTENT_RADIUS_MULTIPLIER = 4.0f;
 }
 
@@ -85,6 +88,7 @@ namespace ck
         }
 
         const auto From = InTransform.Get_Transform().GetLocation();
+        using ck_crowd_agent_constrain_to_navmesh_algorithm::ResolveSurfaceOffset;
 
         const auto HorizontalExtent = InParams.Get_Radius();
         const auto VerticalExtent = InParams.Get_Height();
@@ -105,7 +109,7 @@ namespace ck
             auto Recovered = FNavLocation{};
             if (NavSys->ProjectPointToNavigation(From, Recovered, RecoveryExtent))
             {
-                EnqueueOffset(FVector{Recovered.Location.X - From.X, Recovered.Location.Y - From.Y, Displacement.Z});
+                EnqueueOffset(ResolveSurfaceOffset(From, Recovered.Location));
                 return;
             }
 
@@ -113,19 +117,23 @@ namespace ck
             return;
         }
 
+        // Walk the requested planar displacement from the projected feet location. The result's Z
+        // is the authoritative surface height reached by that walk.
         const auto DesiredTarget = StartOnMesh.Location + FVector{Displacement.X, Displacement.Y, 0.0f};
 
         auto Constrained = FNavLocation{};
         if (NOT NavData->FindMoveAlongSurface(StartOnMesh, DesiredTarget, Constrained))
         {
-            // On-mesh start but the surface walk failed: hold XY rather than risk stepping off.
-            EnqueueOffset(FVector{0.0f, 0.0f, Displacement.Z});
+            // Valid on-mesh start but the surface walk failed: hold position rather than risk
+            // stepping off — dtCrowd's corridor simply doesn't advance in this case either.
             return;
         }
 
-        // Delta against the ACTUAL location, not the projected start, so a small off-mesh drift
-        // folds into this frame's correction.
-        EnqueueOffset(FVector{Constrained.Location.X - From.X, Constrained.Location.Y - From.Y, Displacement.Z});
+        // Delta against the agent's ACTUAL feet location (not the projected start), so planar
+        // drift and vertical drift both fold into this frame's surface correction. Using the
+        // integrator's raw Z here lets downward momentum overshoot the surface and eventually
+        // escape the projection extent.
+        EnqueueOffset(ResolveSurfaceOffset(From, Constrained.Location));
     }
 }
 
