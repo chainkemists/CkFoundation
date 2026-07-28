@@ -23,6 +23,7 @@ public class CkFx : CkModuleRules
             "CkLog",
 
             "CkRecord",
+            "CkResourceLoader",
             "CkSettings",
         });
     }
