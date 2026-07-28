@@ -75,9 +75,13 @@ private:
               meta = (AllowPrivateAccess = true))
     FName _TrackName = NAME_None;
 
+    // Soft by design: path-serialized, so it is safe to author in DataAssets/Blueprints (a weak ref
+    // silently saves as null there; a hard ref force-loads the asset with the owning package). The
+    // fragment never roots the asset — Setup resolves these through CkResourceLoader and the rooted
+    // result lives on the track's Current.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<USoundBase> _Sound;
+    TSoftObjectPtr<USoundBase> _Sound;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, UIMin = 1, ClampMin = 1))
@@ -109,22 +113,23 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<USoundAttenuation> _LibraryAttenuationSettings;
+    TSoftObjectPtr<USoundAttenuation> _LibraryAttenuationSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<USoundConcurrency> _LibraryConcurrencySettings;
+    TSoftObjectPtr<USoundConcurrency> _LibraryConcurrencySettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<USoundClass> _LibrarySoundClassSettings;
+    TSoftObjectPtr<USoundClass> _LibrarySoundClassSettings;
 
 public:
-    // Auto-derives from sound asset name when _TrackName is not explicitly set
+    // Auto-derives from the sound asset's name when _TrackName is not explicitly set — from the
+    // soft PATH, so naming a track never touches or forces a load.
     FName Get_TrackName() const
     {
         if (_TrackName != NAME_None) { return _TrackName; }
-        if (IsValid(_Sound)) { return _Sound->GetFName(); }
+        if (NOT _Sound.IsNull()) { return _Sound.ToSoftObjectPath().GetAssetFName(); }
         return NAME_None;
     }
     CK_PROPERTY_GET(_Sound);
