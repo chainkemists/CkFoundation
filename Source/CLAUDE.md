@@ -161,7 +161,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | Module | Ck deps |
 |---|---|
 | CkAStar | Core,Ecs,EcsExt,Log |
-| CkActorRelay | Core,Ecs,EcsExt,Label,Log,Settings |
+| CkActorRelay | Core,Ecs,EcsExt,Label,Log,Settings + private Snapshot (same-tier; channel entities stamp `FFragment_SaveKey`) |
 | CkAggro | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkAnimation | Core,Ecs,EcsExt,Label,Log,Provider,Record |
 | CkAttribute | Core,Ecs,EcsExt,Label,Log,Provider,Record |
