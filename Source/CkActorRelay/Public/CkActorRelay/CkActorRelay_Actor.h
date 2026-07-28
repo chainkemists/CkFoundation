@@ -46,6 +46,9 @@ private:
     auto
     DoStartBroadcastWhenReadyPolling() -> void;
 
+    auto
+    DoStamp_SaveKey() -> void;
+
 private:
     UPROPERTY(ReplicatedUsing = OnRep_GroupSubsystemClass)
     TSubclassOf<UCk_ActorRelay_Group_Subsystem_Base_UE> _GroupSubsystemClass;

@@ -4,10 +4,16 @@
 
 #include "CkActorRelay/CkActorRelay_Log.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
+#include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor.h"
 #include "CkEcsExt/EntityScript/CkEntityScript_WithActor_Utils.h"
 
+#include "CkSnapshot/SaveKey/CkSnapshot_SaveKey_Fragment.h"
+
+#include <Misc/Guid.h>            // FGuid::NewDeterministicGuid — the channel's stable, tag-derived SaveKey
 #include <Net/UnrealNetwork.h>
 #include <Net/Core/PushModel/PushModel.h>
 
@@ -114,9 +120,39 @@ auto
     ck::actorrelay::Verbose(TEXT("Relay [{}]: registered with [{}] (Owner [{}])"),
         this, GroupSubsystem, GetOwner());
 
+    DoStamp_SaveKey();
     DoStartBroadcastWhenReadyPolling();
 
     return true;
+}
+
+auto
+    ACk_ActorRelay_UE::
+    DoStamp_SaveKey()
+    -> void
+{
+    const auto GroupSubsystem = _GroupSubsystem.Get();
+
+    const auto GroupSubsystemIsValid = ck::IsValid(GroupSubsystem);
+    CK_ENSURE_IF_NOT(GroupSubsystemIsValid,
+        TEXT("Relay [{}]: cannot derive a SaveKey — registration reported success with no resolved group subsystem"), this)
+    {}
+    if (NOT GroupSubsystemIsValid)
+    { return; }
+
+    // Derived from the GROUP TAG alone: a channel has no identity beyond its group, and pool ordering/growth is
+    // demand-driven, so there is nothing per-instance that is stable across two runs. A pool of N live channels
+    // therefore shares one key and N saved channel rows rendezvous onto a single fresh channel. That consolidation
+    // is the intended behaviour — every channel of a group is interchangeable, and the alternative leaves the whole
+    // channel-owned subtree with an owner the loader cannot resolve.
+    const auto SaveKey = FGuid::NewDeterministicGuid(GroupSubsystem->Get_GroupTag().GetTagName().ToString());
+
+    UCk_Utils_OwningActor_UE::Promise_OnActorEcsReady(this,
+        [SaveKey](AActor*, FCk_Handle InChannelEntity) -> void
+        {
+            InChannelEntity.AddOrReplace<FFragment_SaveKey>(SaveKey);
+        },
+        ECk_ActorEcsReady_Policy::LinkEstablished);
 }
 
 auto

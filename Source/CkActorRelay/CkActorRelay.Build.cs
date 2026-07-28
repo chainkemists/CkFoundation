@@ -21,5 +21,12 @@ public class CkActorRelay : CkModuleRules
             "CkLog",
             "CkSettings",
         });
+
+        PrivateDependencyModuleNames.AddRange(new string[]
+        {
+            // FFragment_SaveKey — the channel entity's stable save/load rendezvous identity. Private: only the
+            // channel actor's .cpp stamps it, so consumers of this module do not inherit the link.
+            "CkSnapshot",
+        });
     }
 }
