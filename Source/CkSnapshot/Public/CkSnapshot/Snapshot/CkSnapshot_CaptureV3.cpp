@@ -30,6 +30,7 @@
 #include "Misc/EngineVersion.h"
 #include "Serialization/MemoryWriter.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
+#include "UObject/UnrealType.h" // TFieldIterator / CPF_SaveGame — bridged-actor recipe fields
 
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
@@ -146,6 +147,45 @@ namespace ck::snapshot
             auto Copy = FInstancedStruct{InStruct};
             Copy.Serialize(Proxy);
             ck::snapshot::RemapHandles(Copy.GetScriptStruct(), Copy.GetMutableMemory(), Proxy, Context);
+            return Blob;
+        }
+
+        auto
+            Has_AnySaveGameProperty(
+                const UClass* InClass)
+            -> bool
+        {
+            if (InClass == nullptr)
+            { return false; }
+
+            for (TFieldIterator<FProperty> PropIt{InClass}; PropIt; ++PropIt)
+            {
+                if (PropIt->HasAnyPropertyFlags(CPF_SaveGame))
+                { return true; }
+            }
+            return false;
+        }
+
+        // A bridged respawn re-creates the actor from its class path alone, so any UPROPERTY(SaveGame) it carries
+        // would come back at class defaults and its BeginPlay-driven Construct would compose against nothing. Empty
+        // when the class declares no SaveGame property, so the load side can treat "nothing to apply" as a plain
+        // absence rather than an empty-but-present blob.
+        auto
+            SerializeActorSaveFields(
+                const AActor* InActor)
+            -> TArray<uint8>
+        {
+            auto Blob = TArray<uint8>{};
+            if (InActor == nullptr || NOT Has_AnySaveGameProperty(InActor->GetClass()))
+            { return Blob; }
+
+            auto MemoryWriter = FMemoryWriter{Blob, /*bIsPersistent=*/true};
+            constexpr auto LoadIfFindFails = true;
+            auto Proxy = FObjectAndNameAsStringProxyArchive{MemoryWriter, LoadIfFindFails};
+            Proxy.ArIsSaveGame = true;      // capture ONLY the CPF_SaveGame properties, symmetric with the load apply
+            Proxy.SetIsPersistent(true);
+
+            InActor->SerializeScriptProperties(Proxy);
             return Blob;
         }
 
@@ -430,7 +470,11 @@ namespace ck::snapshot
                     { Entry.Set_ContextOwnerSavedId(Get_SavedId(UCk_Utils_ContextOwner_UE::Get_ContextOwner(Handle))); }
 
                     if (Handle.Has<FFragment_ActorSpawnIntent>())
-                    { Entry.Set_ActorClassPath(Handle.Get<FFragment_ActorSpawnIntent>().Get_ActorClassPath()); }
+                    {
+                        Entry.Set_ActorClassPath(Handle.Get<FFragment_ActorSpawnIntent>().Get_ActorClassPath());
+                        Entry.Set_ActorSaveFieldBytes(
+                            SerializeActorSaveFields(UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Handle)));
+                    }
 
                     if (UCk_Utils_Transform_UE::Has(Handle))
                     { Entry.Set_ActorSpawnTransform(UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(Handle)); }

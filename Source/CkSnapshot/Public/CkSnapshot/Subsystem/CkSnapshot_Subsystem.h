@@ -86,7 +86,7 @@ public:
 
 public:
     // True from the start of a Request_Load until OnLoadComplete fires (spans real frames). Distinct from the
-    // synchronous _SnapshotInProgress save guard. The live signal the bridged-actor abstention reads at BeginPlay.
+    // synchronous _SnapshotInProgress save guard. Consumers that must not act mid-load poll this.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Snapshot",
               DisplayName = "[Ck][Snapshot] Get Is Load In Progress")
@@ -118,7 +118,11 @@ private:
     auto DoFinish_Load(const FCk_Snapshot_LoadReport& InReport) -> void; // clear flag, fire delegate/signal, reset
 
     auto DoGet_LoadWorldEcs() const -> class UCk_EcsWorld_Subsystem_UE*;   // post-travel world's EcsWorld subsystem
-    auto DoRehydrate_SaveKeyResolver() -> void;          // repopulate _SaveKeyResolverMap from LIVE FFragment_SaveKey entities
+    // Repopulate _SaveKeyResolverMap from LIVE FFragment_SaveKey entities; returns the published count. Re-run every
+    // rebuild tick: keys stamped after world-ready (channels are created on demand, ticks into the load) are otherwise
+    // unreachable. Full Reset + rescan is the correct shape — the rebuild's own publish-back writes the fragment onto
+    // the live entity, so a rescan re-finds every entry it added.
+    auto DoRehydrate_SaveKeyResolver() -> int32;
     auto DoDeserialize_V3Blob(const TArray<uint8>& InBytes) const -> FInstancedStruct; // saved-id map-backed handle remap
     auto DoRebuild_Tick() -> bool;                       // resolve/spawn each entry into _SavedIdMap; true == complete
     // The ONLY way an entry enters _SkippedIds: pairs the set membership with its reasoned per-entity record.
