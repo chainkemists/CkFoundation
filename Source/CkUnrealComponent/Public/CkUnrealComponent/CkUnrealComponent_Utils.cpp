@@ -101,30 +101,52 @@ auto
 auto
     UCk_Utils_UnrealComponent_UE::
     Request_Remove(
-        FCk_Handle_UnrealComponent& InUnrealComponent)
+        FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InUnrealComponent),
+    const auto UnrealComponentIsValid = ck::IsValid(InUnrealComponent);
+    CK_ENSURE_IF_NOT(UnrealComponentIsValid,
         TEXT("Cannot Remove invalid UnrealComponent"))
-    { return; }
+    {}
+    if (NOT UnrealComponentIsValid)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     ck::unreal_component::Verbose(TEXT("Requesting Remove for UnrealComponent [{}]"), InUnrealComponent);
 
     auto Handle = static_cast<FCk_Handle&>(InUnrealComponent);
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Handle);
+
+    // Immediate mutation — destroy is initiated synchronously (CkEcs owns the deferred teardown
+    // pipeline from here), so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Succeeded);
 }
 
 auto
     UCk_Utils_UnrealComponent_UE::
     Request_DisableTransformPush(
-        FCk_Handle_UnrealComponent& InUnrealComponent)
+        FCk_Handle_UnrealComponent& InUnrealComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_UnrealComponent
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InUnrealComponent),
+    const auto UnrealComponentIsValid = ck::IsValid(InUnrealComponent);
+    CK_ENSURE_IF_NOT(UnrealComponentIsValid,
         TEXT("Cannot disable transform-push on invalid UnrealComponent"))
-    { return InUnrealComponent; }
+    {}
+    if (NOT UnrealComponentIsValid)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
 
     InUnrealComponent.AddOrGet<ck::FTag_UnrealComponent_TransformPushDisabled>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Succeeded);
+
     return InUnrealComponent;
 }
 

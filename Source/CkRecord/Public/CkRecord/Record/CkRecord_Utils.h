@@ -11,6 +11,8 @@
 #include "CkLabel/Public/CkLabel/CkLabel_Fragment.h"
 #include "CkLabel/Public/CkLabel/CkLabel_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkRecord/CkRecord_Stats.h"
 
 #include "CkRecord_Utils.generated.h"
@@ -234,12 +236,14 @@ namespace ck
         Request_Connect(
             FCk_Handle& InRecordHandle,
             MaybeTypeSafeHandle& InRecordEntry,
-            ECk_Record_LabelRequirementPolicy InGameplayLabelRequirement = ECk_Record_LabelRequirementPolicy::Required) -> void;
+            ECk_Record_LabelRequirementPolicy InGameplayLabelRequirement = ECk_Record_LabelRequirementPolicy::Required,
+            const FCk_Delegate_Request_OnCompleted& InDelegate = {}) -> void;
 
         static auto
         Request_Disconnect(
             FCk_Handle& InRecordHandle,
-            MaybeTypeSafeHandle& InRecordEntry) -> bool;
+            MaybeTypeSafeHandle& InRecordEntry,
+            const FCk_Delegate_Request_OnCompleted& InDelegate = {}) -> bool;
 
         template <typename T_BinaryPredicate>
         static auto
@@ -927,19 +931,30 @@ namespace ck
         Request_Connect(
             FCk_Handle& InRecordHandle,
             MaybeTypeSafeHandle& InRecordEntry,
-            ECk_Record_LabelRequirementPolicy InGameplayLabelRequirement)
+            ECk_Record_LabelRequirementPolicy InGameplayLabelRequirement,
+            const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> void
     {
         QUICK_SCOPE_CYCLE_COUNTER(Request_Connect)
         if (NOT Ensure(InRecordHandle))
-        { return; }
+        {
+            InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+            return;
+        }
 
         auto& RecordFragment = InRecordHandle.Get<RecordType>();
         const auto& CurrentRecordEntries = RecordFragment.Get_RecordEntries();
 
-        CK_ENSURE_IF_NOT(NOT CurrentRecordEntries.Contains(InRecordEntry),
+        const auto AlreadyContainsEntry = CurrentRecordEntries.Contains(InRecordEntry);
+        CK_ENSURE_IF_NOT(NOT AlreadyContainsEntry,
             TEXT("The Record [{}] ALREADY contains the RecordEntry [{}]"), InRecordHandle, InRecordEntry)
-        { return; }
+        {}
+        if (AlreadyContainsEntry)
+        {
+            // The entry is already connected — the caller's intent already holds.
+            InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Succeeded);
+            return;
+        }
 
         if (UCk_Utils_GameplayLabel_UE::Has(InRecordEntry))
         {
@@ -948,12 +963,20 @@ namespace ck
             {
                 if (RecordFragment.Get_EntryHandlingPolicy() == ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames)
                 {
-                    CK_ENSURE_IF_NOT(NOT Get_HasValidEntry_If(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel}),
+                    const auto HasConflictingLabel = Get_HasValidEntry_If(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel});
+                    CK_ENSURE_IF_NOT(NOT HasConflictingLabel,
                         TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because there is already an entry with the GameplayLabel [{}] and the record doesn't allow duplicate names"),
                         InRecordEntry,
                         InRecordHandle,
                         RecordEntryLabel)
-                    { return; }
+                    {}
+                    if (HasConflictingLabel)
+                    {
+                        // A different entry already owns this label under a no-duplicates policy — this
+                        // entry's intent does not hold and retrying will not change that.
+                        InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+                        return;
+                    }
                 }
 
                 RecordFragment._RecordEntriesTagNamePairs.Emplace(TPair<FName, RecordEntityType>(RecordEntryLabel.GetTagName(), InRecordEntry));
@@ -961,11 +984,18 @@ namespace ck
         }
         else
         {
-            CK_ENSURE_IF_NOT(RecordFragment.Get_EntryHandlingPolicy() != ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames,
+            const auto DisallowsUnlabeledEntries = RecordFragment.Get_EntryHandlingPolicy() == ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames;
+            CK_ENSURE_IF_NOT(NOT DisallowsUnlabeledEntries,
                 TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because it does NOT have a GameplayLabel and the record doesn't allow duplicate names!"),
                 InRecordEntry,
                 InRecordHandle)
-            { return; }
+            {}
+            if (DisallowsUnlabeledEntries)
+            {
+                // No label and the record requires unique names — this entry cannot connect.
+                InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+                return;
+            }
 
             CK_ENSURE_IF_NOT(InGameplayLabelRequirement != ECk_Record_LabelRequirementPolicy::Required,
                 TEXT("Missing Gameplay Label on RecordEntry [{}] being added to Record [{}]!"),
@@ -987,6 +1017,9 @@ namespace ck
         {
             InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(ck::StaticCast<MaybeTypeSafeHandle>(InRecordEntryEntity));
         });
+
+        // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+        InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Succeeded);
     }
 
     template <typename T_DerivedRecord>
@@ -994,15 +1027,22 @@ namespace ck
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Disconnect(
             FCk_Handle& InRecordHandle,
-            MaybeTypeSafeHandle& InRecordEntry)
+            MaybeTypeSafeHandle& InRecordEntry,
+            const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> bool
     {
         QUICK_SCOPE_CYCLE_COUNTER(Request_Disconnect)
         if (NOT Ensure(InRecordHandle))
-        { return {}; }
+        {
+            InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+            return {};
+        }
 
         if (NOT UCk_Utils_RecordEntry_UE::Ensure(InRecordEntry))
-        { return {}; }
+        {
+            InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+            return {};
+        }
 
         {
             auto& RecordFragment = InRecordHandle.Get<RecordType>();
@@ -1022,7 +1062,14 @@ namespace ck
                 TEXT("The Record [{}] couldn't remove the RecordEntry [{}]. Does the RecordEntry exist in the Record?"),
                 InRecordHandle,
                 InRecordEntry)
-            { return {}; }
+            {}
+            if (NOT RemovalSuccess)
+            {
+                // The entry was already absent from the record — the caller's intent (disconnected)
+                // already holds, and retrying would never do more.
+                InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Succeeded);
+                return {};
+            }
         }
 
         {
@@ -1039,8 +1086,19 @@ namespace ck
                     "Somehow the RecordEntry was out of sync with the Record."),
                 InRecordEntry,
                 InRecordHandle)
-            { return {}; }
+            {}
+            if (NOT RemovalSuccess)
+            {
+                // The record-side unlink above already succeeded, so this is a genuine bidirectional
+                // desync rather than an idempotent already-disconnected state — the operation could not
+                // fully honor its consistency contract.
+                InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Failed);
+                return {};
+            }
         }
+
+        // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+        InDelegate.ExecuteIfBound(InRecordHandle, ECk_Request_OperationResult::Succeeded);
 
         return true;
     }
@@ -1177,19 +1235,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][Record] Request Connect",
-              Category = "Ck|Utils|Record")
+              Category = "Ck|Utils|Record",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_Connect(
         UPARAM(ref) FCk_Handle& InRecordHandle,
-        UPARAM(ref) FCk_Handle& InRecordEntry);
+        UPARAM(ref) FCk_Handle& InRecordEntry,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][Record] Request Disconnect",
-              Category = "Ck|Utils|Record")
+              Category = "Ck|Utils|Record",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_Disconnect(
         UPARAM(ref) FCk_Handle& InRecordHandle,
-        UPARAM(ref) FCk_Handle& InRecordEntry);
+        UPARAM(ref) FCk_Handle& InRecordEntry,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

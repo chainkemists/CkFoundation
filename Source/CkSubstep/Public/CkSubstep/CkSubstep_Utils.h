@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
@@ -89,25 +90,31 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Substep",
-        DisplayName="[Ck][Substep] Request Pause")
+        DisplayName="[Ck][Substep] Request Pause",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Substep
     Request_Pause(
-        UPARAM(ref) FCk_Handle_Substep& InHandle);
+        UPARAM(ref) FCk_Handle_Substep& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Substep",
-        DisplayName="[Ck][Substep] Request Resume")
+        DisplayName="[Ck][Substep] Request Resume",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Substep
     Request_Resume(
-        UPARAM(ref) FCk_Handle_Substep& InHandle);
+        UPARAM(ref) FCk_Handle_Substep& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Substep",
-        DisplayName="[Ck][Substep] Request Reset")
+        DisplayName="[Ck][Substep] Request Reset",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Substep
     Request_Reset(
         UPARAM(ref) FCk_Handle_Substep& InHandle,
-        ECk_Substep_State InState);
+        ECk_Substep_State InState,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,
