@@ -136,7 +136,7 @@ Restored values are readable at `OnLoadComplete` (the settle phase pumps to quie
 
 ---
 
-## Provenance + orphan diagnostics
+## Provenance + skip/orphan diagnostics
 
 Every saved entity carries one of four provenances (`ECk_Snapshot_V3_Provenance`, `SaveGame/CkSnapshot_Header.h`),
 which drives how it is re-created on load:
@@ -155,6 +155,22 @@ a `FCk_Snapshot_OrphanRecord` in `FCk_Snapshot_LoadReport::_Orphans` (`Snapshot/
 Phase 0). The reason bucket is one of: `owner-orphaned` (cascade), `owner-mapped-label-miss` (content/label drift),
 `savekey-miss`, `player-miss`, `bridge-never-linked` (actor spawned, bridge never linked), `unresolved-other`.
 These are **diagnostics only** — the loader does not act on them.
+
+A saved entity the loader deliberately does NOT rebuild is a **skip**. `DoRecord_Skip` is the only writer of
+`_SkippedIds`, so every skip carries a `FCk_Snapshot_SkipRecord` (same shape as the orphan record) in
+`FCk_Snapshot_LoadReport::_Skips`, with an `ECk_Snapshot_SkipReason` naming the site that took it:
+`ClassUnloadable`, `SpawnFailed`, `NonPersistedOwnerNotRespawnable`, `NoOwnerRecipe`, `OwnerNotPersisted`,
+`NoLoadableSteps`, `BuildFailed`. Every site also logs — the `NonPersistedOwnerNotRespawnable` one emits
+`v3 load SKIP: saved-id [..] provenance [..] identity [..] owner [..] reason [..]`, the rest an Error/Warning
+naming the failure. Skips are not necessarily losses: `NonPersistedOwnerNotRespawnable` is the *expected* fate of
+boot infra the fresh world re-creates itself, while `BuildFailed` is real data loss. This module does not judge
+which is which.
+
+**The report accounts for 100% of the save.** Entities partition into restored + skipped + orphaned; payloads into
+enqueued + on-skipped + on-orphaned + on-unresolved-owner + dropped (a failed deserialize). `Get_IsAccountingClosed`
+asserts both sums, `DoHydrate_Enqueue` ensures on it, and the summary Display line prints every bucket. A payload
+whose owner id is absent from the entity table, or whose mapped handle went invalid, is the `on-unresolved-owner`
+bucket — it exists so nothing has to be inferred by subtraction.
 
 `SaveKey` is stable identity, not provenance. A SaveKey-only level actor remains `EngineOwned` and must already
 exist in the fresh world. A bridged entity carrying `FFragment_ActorSpawnIntent` is explicitly snapshot-respawnable,
