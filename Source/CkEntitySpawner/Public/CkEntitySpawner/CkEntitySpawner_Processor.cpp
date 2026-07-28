@@ -12,6 +12,7 @@
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcs/Snapshot/CkSaveKey_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -49,19 +50,28 @@ namespace ck
         if (ck::Is_NOT_Valid(GroupSubsystem))
         { return; }
 
+        const auto& SaveKeyIdentity = InPending.Get_SaveKeyIdentity();
+
         auto Pending = GroupSubsystem->Request_AcquireChannel();
         UCk_Utils_PendingActorRelay_UE::Promise_OnAcquired(Pending,
-            [EntityScript](FCk_ActorRelay_ChannelResult InResult)
+            [EntityScript, SaveKeyIdentity](FCk_ActorRelay_ChannelResult InResult)
             {
                 auto LifetimeOwner = InResult.Get_ChannelEntity();
                 auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
                     LifetimeOwner, EntityScript, FInstancedStruct{}, {});
 
+                auto EntityUnderConstruction = Pending.Get_EntityUnderConstruction();
+                if (ck::Is_NOT_Valid(EntityUnderConstruction))
+                { return; }
+
                 // Without this the entity inherits the ActorRelay channel as its ContextOwner and replicates
                 // that; the spawn pipeline carries the override through so the client copy resolves to self.
-                auto EntityUnderConstruction = Pending.Get_EntityUnderConstruction();
-                if (ck::IsValid(EntityUnderConstruction))
-                { UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(EntityUnderConstruction, {}); }
+                UCk_Utils_ContextOwner_UE::Request_OverrideToSelf(EntityUnderConstruction, {});
+
+                // Stamped here rather than on the queue entity: the queue entity is bookkeeping that dies this
+                // tick, and this is the first moment the payload the level-placed spawner owns actually exists.
+                if (NOT SaveKeyIdentity.IsEmpty())
+                { ck::save_key::Assign(EntityUnderConstruction, SaveKeyIdentity); }
             });
 
         // The lambda carries the entity-script class forward; destroying the queue entity is what stops re-entry.
