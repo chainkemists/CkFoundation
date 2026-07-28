@@ -8,6 +8,7 @@
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Utils/CkNav_Utils.h"
+#include "CkNavigation/Settings/CkNav_ProjectSettings.h"
 
 #include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
 
@@ -29,6 +30,15 @@ DECLARE_CYCLE_STAT(TEXT("Crowd::PathRefresh"), STAT_CkCrowd_PathRefreshProc, STA
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_crowd_agent_path_refresh
+{
+    // Process-wide (not per-world): only monotonicity matters. A path and a disc are compared only
+    // within one world, while sharing the counter prevents serial reuse across world transitions.
+    static auto GConfirmationSerial = uint64{0};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -37,7 +47,7 @@ namespace ck
         -> void
     {
         _SettledDiscs.Reset();
-        _MaxEligibleSerial = 0;
+        _MaxConfirmationSerial = 0;
 
         const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
         if (IsValid(Settings) &&
@@ -78,6 +88,8 @@ namespace ck
                             static_cast<int32>(NavMesh->GetPolyAreaID(PolyRef)) != CrowdAreaID)
                         { return; }
 
+                        InMarkup._ConfirmationSerial =
+                            ++ck_crowd_agent_path_refresh::GConfirmationSerial;
                         InMarkup._ConfirmedOnMesh = true;
                     }
 
@@ -85,8 +97,11 @@ namespace ck
                         InEntity,
                         InMarkup.Get_MarkupLocation(),
                         InMarkup.Get_MarkupRadiusUu(),
-                        InMarkup.Get_PaintSerial()});
-                    _MaxEligibleSerial = FMath::Max(_MaxEligibleSerial, InMarkup.Get_PaintSerial());
+                        InMarkup.Get_ConfirmationSerial()});
+                    _MaxConfirmationSerial =
+                        FMath::Max(
+                            _MaxConfirmationSerial,
+                            InMarkup.Get_ConfirmationSerial());
                 });
             }
         }
@@ -224,6 +239,216 @@ namespace ck
 
     auto
         FProcessor_CrowdAgent_PathRefresh::
+        Get_CurrentConfirmationSerial()
+        -> uint64
+    {
+        return ck_crowd_agent_path_refresh::GConfirmationSerial;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_PathRefresh::
+        Try_BuildStationaryMarkupDetour(
+            FCk_Handle InAnyWorldHandle,
+            FCk_Entity InSelfEntity,
+            const FVector& InStartLocation,
+            const FVector& InGoal,
+            const FFragment_CrowdAgent_Params& InParams,
+            float InArrivalRadius,
+            const TArray<FVector>& InCorridorWaypoints,
+            TArray<FVector>& OutWaypoints)
+        -> bool
+    {
+        if (InCorridorWaypoints.IsEmpty())
+        { return false; }
+
+        const auto* Settings = UCk_Utils_Crowd_Settings_UE::Get();
+        if (NOT IsValid(Settings) ||
+            Settings->Get_PathRefreshMode() != ECk_CrowdPathRefreshMode::Enabled ||
+            Settings->Get_StationaryMarkupMode() != ECk_CrowdStationaryMarkupMode::Enabled)
+        { return false; }
+
+        auto Discs = TArray<FSettledDisc, TInlineAllocator<32>>{};
+        const auto GoalExemptionPad = InArrivalRadius + InParams.Get_Radius();
+        InAnyWorldHandle.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
+            [&](FCk_Entity InEntity, const FFragment_CrowdAgent_NavMarkup& InMarkup)
+        {
+            if (InEntity == InSelfEntity ||
+                NOT InMarkup.Get_Markup().IsValid() ||
+                NOT InMarkup.Get_ConfirmedOnMesh())
+            { return; }
+
+            // Joining a queue legitimately ends beside standing agents. Match PathRefresh's
+            // exemption so a corridor install does not manufacture a loop around its own goal.
+            if (FVector::Dist2D(InMarkup.Get_MarkupLocation(), InGoal) <=
+                InMarkup.Get_MarkupRadiusUu() + GoalExemptionPad)
+            { return; }
+
+            Discs.Add(FSettledDisc{
+                InEntity,
+                InMarkup.Get_MarkupLocation(),
+                InMarkup.Get_MarkupRadiusUu(),
+                InMarkup.Get_ConfirmationSerial()});
+        });
+
+        if (Discs.IsEmpty())
+        { return false; }
+
+        const auto GetPoint = [&](int32 InPointIndex) -> const FVector&
+        {
+            return InPointIndex == 0
+                ? InStartLocation
+                : InCorridorWaypoints[InPointIndex - 1];
+        };
+
+        auto FirstHitSegment = int32{INDEX_NONE};
+        auto LastHitSegment = int32{INDEX_NONE};
+        for (auto SegmentIndex = 0; SegmentIndex < InCorridorWaypoints.Num(); ++SegmentIndex)
+        {
+            const auto SegmentStart = FVector2D{GetPoint(SegmentIndex)};
+            const auto SegmentEnd = FVector2D{GetPoint(SegmentIndex + 1)};
+
+            for (const auto& Disc : Discs)
+            {
+                const auto DiscCenter = FVector2D{Disc._Center};
+                const auto Closest =
+                    FMath::ClosestPointOnSegment2D(DiscCenter, SegmentStart, SegmentEnd);
+                if (FVector2D::Distance(Closest, DiscCenter) > Disc._Radius)
+                { continue; }
+
+                if (FirstHitSegment == INDEX_NONE)
+                { FirstHitSegment = SegmentIndex; }
+                LastHitSegment = SegmentIndex;
+                break;
+            }
+        }
+
+        if (FirstHitSegment == INDEX_NONE)
+        { return false; }
+
+        // Give Recast one clean corridor point on each side of the affected span. With the
+        // normal corridor spacing this prevents either query endpoint from sitting on the cost
+        // area boundary, while still rejoining locally rather than replacing the whole route.
+        const auto EntryPointIndex = FMath::Max(0, FirstHitSegment - 1);
+        const auto ExitPointIndex =
+            FMath::Min(InCorridorWaypoints.Num(), LastHitSegment + 2);
+        const auto& EntryPoint = GetPoint(EntryPointIndex);
+        const auto& ExitPoint = GetPoint(ExitPointIndex);
+
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAnyWorldHandle);
+        auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
+        auto* NavData = (NavSys != nullptr)
+            ? Cast<ARecastNavMesh>(
+                NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
+            : nullptr;
+        if (NavSys == nullptr || NavData == nullptr)
+        { return false; }
+
+        auto DetourResult = FCk_Nav_PathResult{};
+        const auto FilterClass =
+            UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(
+                InParams.Get_NavQueryFilter());
+        const auto FoundDetour = FCk_Nav_Algorithm::FindPathSync(
+            *NavSys,
+            *NavData,
+            EntryPoint,
+            ExitPoint,
+            /*InAllowPartial*/ false,
+            UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent(),
+            UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
+            InParams.Get_Radius(),
+            DetourResult,
+            FilterClass);
+        if (NOT FoundDetour || DetourResult.Get_Waypoints().IsEmpty())
+        {
+            ck::crowd::Verbose(
+                TEXT("Stationary-markup corridor splice [{} -> {}] found no complete nav detour"),
+                EntryPoint,
+                ExitPoint);
+            return false;
+        }
+
+        auto Candidate = TArray<FVector>{};
+        Candidate.Reserve(
+            InCorridorWaypoints.Num() + DetourResult.Get_Waypoints().Num());
+        const auto AppendDistinct = [&](const FVector& InPoint)
+        {
+            constexpr auto MergeDistanceUu = 1.0f;
+            if (Candidate.IsEmpty() ||
+                FVector::DistSquared(Candidate.Last(), InPoint) >
+                    FMath::Square(MergeDistanceUu))
+            {
+                Candidate.Add(InPoint);
+            }
+        };
+
+        // Point zero is the agent's current location and is not stored in a nav path. Point N
+        // maps to corridor waypoint N-1.
+        for (auto WaypointIndex = 0;
+             WaypointIndex < EntryPointIndex;
+             ++WaypointIndex)
+        {
+            AppendDistinct(InCorridorWaypoints[WaypointIndex]);
+        }
+        for (const auto& DetourWaypoint : DetourResult.Get_Waypoints())
+        { AppendDistinct(DetourWaypoint); }
+        for (auto WaypointIndex = ExitPointIndex;
+             WaypointIndex < InCorridorWaypoints.Num();
+             ++WaypointIndex)
+        {
+            AppendDistinct(InCorridorWaypoints[WaypointIndex]);
+        }
+
+        if (Candidate.IsEmpty())
+        { return false; }
+
+        // Confirmation proves the cost reached Recast, but retain a total failure path: a custom
+        // filter may deliberately make the crowd area cheap enough to cross. In that case the
+        // corridor remains valid preferred geometry, so do not claim or install a fake detour.
+        auto CandidateCrossesDisc = false;
+        auto SegmentStart = FVector2D{InStartLocation};
+        for (const auto& Waypoint : Candidate)
+        {
+            const auto SegmentEnd = FVector2D{Waypoint};
+            for (const auto& Disc : Discs)
+            {
+                const auto DiscCenter = FVector2D{Disc._Center};
+                const auto Closest =
+                    FMath::ClosestPointOnSegment2D(DiscCenter, SegmentStart, SegmentEnd);
+                if (FVector2D::Distance(Closest, DiscCenter) <= Disc._Radius)
+                {
+                    CandidateCrossesDisc = true;
+                    break;
+                }
+            }
+            if (CandidateCrossesDisc)
+            { break; }
+            SegmentStart = SegmentEnd;
+        }
+
+        if (CandidateCrossesDisc)
+        {
+            ck::crowd::Verbose(
+                TEXT("Stationary-markup corridor splice [{} -> {}] still crosses confirmed markup"),
+                EntryPoint,
+                ExitPoint);
+            return false;
+        }
+
+        ck::crowd::Verbose(
+            TEXT("Stationary-markup corridor splice replaced segments [{}..{}] with [{}] nav waypoints"),
+            FirstHitSegment,
+            LastHitSegment,
+            DetourResult.Get_Waypoints().Num());
+        OutWaypoints = MoveTemp(Candidate);
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_PathRefresh::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -236,7 +461,8 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_PathRefreshProc);
 
-        if (InPathFollow.Get_PathSerial() >= _MaxEligibleSerial)
+        // The common frame: this path already covers every settled disc (or there are none).
+        if (InPathFollow.Get_PathSerial() >= _MaxConfirmationSerial)
         { return; }
 
         if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
@@ -256,8 +482,9 @@ namespace ck
         auto CrossesFreshDisc = false;
         for (const auto& Disc : _SettledDiscs)
         {
-            // The planner already priced every older disc.
-            if (Disc._PaintSerial <= PathSerial)
+            // Only a disc confirmed AFTER this path can invalidate it — the planner already saw
+            // (and priced) every older confirmed disc.
+            if (Disc._ConfirmationSerial <= PathSerial)
             { continue; }
 
             if (Disc._Owner == SelfEntity)
@@ -288,7 +515,7 @@ namespace ck
 
         // Path and discs are both static, so a clean scan against the current set stays clean —
         // fast-forward the serial either way; a re-path's install re-stamps it anyway.
-        InPathFollow._PathSerial = _MaxEligibleSerial;
+        InPathFollow._PathSerial = _MaxConfirmationSerial;
 
         if (NOT CrossesFreshDisc)
         { return; }

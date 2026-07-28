@@ -2,6 +2,7 @@
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkCrowd/Agent/CkCrowdAgent_AccelClamp_Algorithm.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
 
@@ -44,52 +45,15 @@ namespace ck
         // without an explicit zero target Dv stays ~0 and the agent glides past its goal forever.
         const auto NewVel = InHandle.Has<FTag_CrowdAgent_Idle>()
             ? FVector::ZeroVector
-            : InDesired.Get_Velocity().GetClampedToMaxSize(MaxSpeed);
+            : InDesired.Get_Velocity();
 
-        const auto LastSpeed = static_cast<float>(LastVel.Size());
-        const auto NewSpeed  = static_cast<float>(NewVel.Size());
-
-        const auto MaxSpeedDelta = MaxAccel * Dt;
-        const auto TargetSpeed = FMath::Clamp(
-            NewSpeed,
-            FMath::Max(0.0f, LastSpeed - MaxSpeedDelta),
-            LastSpeed + MaxSpeedDelta);
-
-        // NewDir is computed before LastDir so a first-frame agent (LastSpeed ~ 0) falls back to
-        // its new direction instead of world +X.
-        const auto NewDir = (NewSpeed > KINDA_SMALL_NUMBER)
-            ? NewVel / NewSpeed
-            : ((LastSpeed > KINDA_SMALL_NUMBER) ? (LastVel / LastSpeed) : FVector::ForwardVector);
-        const auto LastDir = (LastSpeed > KINDA_SMALL_NUMBER)
-            ? LastVel / LastSpeed
-            : NewDir;
-
-        const auto MaxAngleDelta = MaxTurnRate * Dt;
-        const auto CosAngle = static_cast<float>(FVector::DotProduct(LastDir, NewDir));
-        const auto Angle = FMath::Acos(FMath::Clamp(CosAngle, -1.0f, 1.0f));
-
-        FVector TargetDir;
-        if (Angle <= MaxAngleDelta || Angle < KINDA_SMALL_NUMBER)
-        {
-            TargetDir = NewDir;
-        }
-        else
-        {
-            const auto SlerpAlpha = MaxAngleDelta / Angle;
-            const auto SinAngle = FMath::Sin(Angle);
-            if (SinAngle > KINDA_SMALL_NUMBER)
-            {
-                TargetDir = (LastDir * FMath::Sin((1.0f - SlerpAlpha) * Angle)
-                          + NewDir  * FMath::Sin(SlerpAlpha * Angle)) / SinAngle;
-                TargetDir.Normalize();
-            }
-            else
-            {
-                TargetDir = NewDir;
-            }
-        }
-
-        InDesired._Velocity = TargetDir * TargetSpeed;
+        InDesired._Velocity = ck_crowd_agent_accel_clamp_algorithm::ProjectVelocity(
+            LastVel,
+            NewVel,
+            MaxSpeed,
+            MaxAccel,
+            MaxTurnRate,
+            Dt);
         InDesired._LastVelocity = InDesired._Velocity;
     }
 }

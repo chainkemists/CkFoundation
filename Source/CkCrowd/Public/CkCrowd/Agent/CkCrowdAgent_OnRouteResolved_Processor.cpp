@@ -3,13 +3,14 @@
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathFollow_Algorithm.h"
-#include "CkCrowd/Agent/CkCrowdAgent_StationaryMarkup_Processor.h"
+#include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
+#include "CkNavigation/Nav/CkNav_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,6 +30,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
+            const FFragment_CrowdAgent_Params& InParams,
             const FFragment_PathNetworkFollower_Corridor& InCorridor,
             FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
@@ -59,17 +61,35 @@ namespace ck
                 {
                     const auto& Installed = InHandle.Get<FFragment_CrowdAgent_InstalledRoute>();
 
-                    const auto IsCorridorAlreadyInstalled =
-                        Installed.Get_NetworkEpoch() == InCorridor.Get_NetworkEpoch() &&
-                        FVector::Dist(Installed.Get_GoalLocation(), Result.Get_GoalLocation()) <= GoalMatchEpsilonCm;
-
-                    if (IsCorridorAlreadyInstalled)
+                    if (Installed.Get_NetworkEpoch() == InCorridor.Get_NetworkEpoch() &&
+                        Installed.Get_TuningRevision() == Result.Get_TuningRevision() &&
+                        FVector::Dist(Installed.Get_GoalLocation(), Result.Get_GoalLocation()) <= GoalMatchEpsilonCm)
                     { return; }
                 }
 
                 auto NonConstHandle = InHandle;
+                auto WaypointsToInstall = Result.Get_CompiledWaypoints();
+                auto DetouredWaypoints = TArray<FVector>{};
+                const auto UsedStationaryMarkupDetour =
+                    FProcessor_CrowdAgent_PathRefresh::
+                    Try_BuildStationaryMarkupDetour(
+                        NonConstHandle,
+                        InHandle.Get_Entity(),
+                        InTransform.Get_Transform().GetLocation(),
+                        Result.Get_GoalLocation(),
+                        InParams,
+                        InPathFollow.Get_ActiveArrivalRadius(),
+                        WaypointsToInstall,
+                        DetouredWaypoints);
+                if (UsedStationaryMarkupDetour)
+                { WaypointsToInstall = MoveTemp(DetouredWaypoints); }
+
                 FCk_Nav_Algorithm::InstallExternalPath(
-                    NonConstHandle, Result.Get_CompiledWaypoints(), Result.Get_GoalLocation());
+                    NonConstHandle,
+                    MoveTemp(WaypointsToInstall),
+                    Result.Get_GoalLocation());
+                const auto& InstalledWaypoints =
+                    NonConstHandle.Get<FFragment_Nav_PathResult>().Get_Waypoints();
 
                 // Fresh polyline, fresh cursor — on a mid-walk swap the old index may point past
                 // the new waypoint array.
@@ -88,7 +108,7 @@ namespace ck
                     const auto SkippedWaypointCount =
                         ck_crowd_agent_path_follow_algorithm::SkipAlreadyPassedLeadingWaypoints(
                             InPathFollow.Get_CurrentSegmentStart(),
-                            Result.Get_CompiledWaypoints(),
+                            InstalledWaypoints,
                             InPathFollow._WaypointIndex,
                             InPathFollow._CurrentSegmentStart);
 
@@ -102,17 +122,25 @@ namespace ck
                     }
                 }
 
-                // This corridor was planned against every disc painted up to now — only NEWER
-                // discs may trigger a PathRefresh re-path.
-                InPathFollow._PathSerial = FProcessor_CrowdAgent_StationaryMarkup::Get_CurrentPaintSerial();
+                // This corridor was spliced against every disc confirmed on Recast up to now. A
+                // painted disc still awaiting its async tile rebuild receives a newer serial on
+                // confirmation and invalidates this route instead of being silently consumed.
+                InPathFollow._PathSerial =
+                    FProcessor_CrowdAgent_PathRefresh::Get_CurrentConfirmationSerial();
 
                 auto& Installed = NonConstHandle.AddOrGet<FFragment_CrowdAgent_InstalledRoute>();
                 Installed._GoalLocation = Result.Get_GoalLocation();
                 Installed._NetworkEpoch = InCorridor.Get_NetworkEpoch();
+                Installed._TuningRevision = Result.Get_TuningRevision();
 
                 ck::crowd::Verbose(
-                    TEXT("CrowdAgent [{}] network route ready ({} wps, cost={}, epoch={}) — installed as nav path"),
-                    InHandle, Result.Get_CompiledWaypoints().Num(), Result.Get_TotalCost(),
+                    TEXT("CrowdAgent [{}] network route ready ({} raw wps, {} installed wps, "
+                         "stationary detour={}, cost={}, epoch={}) — installed as nav path"),
+                    InHandle,
+                    Result.Get_CompiledWaypoints().Num(),
+                    InstalledWaypoints.Num(),
+                    UsedStationaryMarkupDetour,
+                    Result.Get_TotalCost(),
                     InCorridor.Get_NetworkEpoch());
                 break;
             }
