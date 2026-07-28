@@ -23,6 +23,15 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DestroyFilter);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Snapshot-transient dynamic fragments derive from this marker because USTRUCT metadata is unavailable in Game builds.
+USTRUCT()
+struct CKDYNAMIC_API FCk_DynamicFragment_SnapshotTransient
+{
+    GENERATED_BODY()
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKDYNAMIC_API FCk_Fragment_DynamicFragment_Data
 {
