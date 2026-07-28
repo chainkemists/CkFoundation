@@ -7,6 +7,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkProjectile_Utils.generated.h"
 
@@ -51,14 +52,15 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Projectile",
-              meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"),
+              meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate, InCompletionDelegate"),
               DisplayName="[Ck][Projectile] Request Calculate Aim Ahead")
     static void
     Request_CalculateAimAhead(
         const FCk_Handle& InHandle,
         const FCk_Request_Projectile_CalculateAimAhead& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_Projectile_OnAimAheadCalculated& InDelegate);
+        const FCk_Delegate_Projectile_OnAimAheadCalculated& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

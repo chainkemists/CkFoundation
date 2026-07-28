@@ -337,15 +337,27 @@ auto
     UCk_Utils_EntityTag_UE::
     Request_TryRemove(
         FCk_Handle& InHandle,
-        FName InTag)
+        FName InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> ECk_SucceededFailed
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
-    { return ECk_SucceededFailed::Failed; }
+    {}
+    if (NOT HandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return ECk_SucceededFailed::Failed;
+    }
+
+    const auto Request = FCk_Request_EntityTag_TryRemove{InTag};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
 
     auto& Requests = InHandle.AddOrGet<ck::FFragment_EntityTag_Requests>();
-    Requests._Requests.Emplace(FCk_Request_EntityTag_TryRemove{InTag});
+    Requests._Requests.Emplace(Request);
 
     return ECk_SucceededFailed::Succeeded;
 }
@@ -405,18 +417,33 @@ auto
     UCk_Utils_EntityTag_UE::
     Request_TryRemove_UsingGameplayTag(
         FCk_Handle& InHandle,
-        FGameplayTag InTag)
+        FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> ECk_SucceededFailed
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle passed. Unable to remove Tag [{}] from Entity"), InTag)
-    { return ECk_SucceededFailed::Failed; }
+    {}
+    if (NOT HandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return ECk_SucceededFailed::Failed;
+    }
 
     if (NOT InTag.IsValid())
-    { return ECk_SucceededFailed::Failed; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return ECk_SucceededFailed::Failed;
+    }
+
+    const auto Request = FCk_Request_EntityTag_TryRemoveGameplayTag{InTag};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
 
     auto& Requests = InHandle.AddOrGet<ck::FFragment_EntityTag_Requests>();
-    Requests._Requests.Emplace(FCk_Request_EntityTag_TryRemoveGameplayTag{InTag});
+    Requests._Requests.Emplace(Request);
 
     return ECk_SucceededFailed::Succeeded;
 }
@@ -472,15 +499,27 @@ auto
     Request_RestoreSet(
         FCk_Handle& InHandle,
         const TArray<FName>& InTagNames,
-        const TArray<int32>& InCounts)
+        const TArray<int32>& InCounts,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    const auto HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid Handle passed. Unable to restore the EntityTag set on the Entity"))
-    { return; }
+    {}
+    if (NOT HandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
+
+    const auto Request = FCk_Request_EntityTag_RestoreSet{InTagNames, InCounts};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
 
     auto& Requests = InHandle.AddOrGet<ck::FFragment_EntityTag_Requests>();
-    Requests._Requests.Emplace(FCk_Request_EntityTag_RestoreSet{InTagNames, InCounts});
+    Requests._Requests.Emplace(Request);
 }
 
 // ----

@@ -9,6 +9,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include <Animation/AnimInstance.h>
@@ -19,6 +20,7 @@
 #include <GameFramework/PlayerController.h>
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_MonitorAnimInstance);
 CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_Replicate);
 
@@ -89,7 +91,10 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, AI, InCurrent, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                Result = DoHandleRequest(InHandle, AI, InCurrent, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -106,11 +111,11 @@ namespace ck
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
             const FCk_Request_MontagePlayer_Play& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         auto* Montage = InRequest.Get_Montage().Get();
         if (ck::Is_NOT_Valid(Montage))
-        { return; }
+        { return ECk_Request_OperationResult::Failed; }
 
         const auto FromReplication = InRequest.Get_FromReplication();
 
@@ -159,13 +164,15 @@ namespace ck
 
             if (Elapsed >= MontageLength)
             {
-                // Silent drop: server already finished — neither Started nor Finished fires.
+                // Silent drop: server already finished — neither Started nor Finished fires. The
+                // montage ends up stopped, which is what the replicated state asked for, so this
+                // counts as honoured rather than failed.
                 InCurrent._State = NewState;
                 InCurrent._State.Set_Kind(ECk_MontagePlayer_StateKind::Stop);
                 InCurrent._ActiveMontage = nullptr;
                 InCurrent._CatchUpRemaining = FCk_Time::ZeroSecond();
                 InHandle.Remove<FTag_MontagePlayer_HasActiveMontage>();
-                return;
+                return ECk_Request_OperationResult::Succeeded;
             }
 
             if (Elapsed > FCk_Time::ZeroSecond())
@@ -191,7 +198,7 @@ namespace ck
             InCurrent._ActiveMontage = nullptr;
             InCurrent._CatchUpRemaining = FCk_Time::ZeroSecond();
             InHandle.Remove<FTag_MontagePlayer_HasActiveMontage>();
-            return;
+            return ECk_Request_OperationResult::Failed;
         }
 
         if (NewState.Get_SectionName() != NAME_None)
@@ -222,6 +229,8 @@ namespace ck
 
         if (NOT FromReplication)
         { UCk_Utils_MontagePlayer_UE::Request_TryReplicateMontagePlayer(InHandle); }
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -231,11 +240,14 @@ namespace ck
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
             const FCk_Request_MontagePlayer_Stop& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         auto* Montage = InCurrent._ActiveMontage.Get();
         if (ck::Is_NOT_Valid(Montage))
-        { return; }
+        {
+            // Idempotent: nothing is playing, so the desired end state (stopped) already holds.
+            return ECk_Request_OperationResult::Succeeded;
+        }
 
         const auto FromReplication = InRequest.Get_FromReplication();
 
@@ -255,6 +267,8 @@ namespace ck
 
         if (NOT FromReplication)
         { UCk_Utils_MontagePlayer_UE::Request_TryReplicateMontagePlayer(InHandle); }
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -264,11 +278,15 @@ namespace ck
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
             const FCk_Request_MontagePlayer_Pause& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         auto* Montage = InCurrent._ActiveMontage.Get();
         if (ck::Is_NOT_Valid(Montage))
-        { return; }
+        {
+            // Nothing is playing — there is no montage to pause, so the caller's intent cannot be
+            // honoured (missing target), unlike Stop's already-stopped no-op.
+            return ECk_Request_OperationResult::Failed;
+        }
 
         const auto FromReplication = InRequest.Get_FromReplication();
 
@@ -284,6 +302,8 @@ namespace ck
 
         if (NOT FromReplication)
         { UCk_Utils_MontagePlayer_UE::Request_TryReplicateMontagePlayer(InHandle); }
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -293,11 +313,14 @@ namespace ck
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
             const FCk_Request_MontagePlayer_Resume& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         auto* Montage = InCurrent._ActiveMontage.Get();
         if (ck::Is_NOT_Valid(Montage))
-        { return; }
+        {
+            // Nothing is playing — there is no montage to resume (missing target).
+            return ECk_Request_OperationResult::Failed;
+        }
 
         const auto FromReplication = InRequest.Get_FromReplication();
 
@@ -312,6 +335,8 @@ namespace ck
 
         if (NOT FromReplication)
         { UCk_Utils_MontagePlayer_UE::Request_TryReplicateMontagePlayer(InHandle); }
+
+        return ECk_Request_OperationResult::Succeeded;
     }
 
     auto
@@ -321,11 +346,14 @@ namespace ck
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
             const FCk_Request_MontagePlayer_JumpToSection& InRequest)
-        -> void
+        -> ECk_Request_OperationResult
     {
         auto* Montage = InCurrent._ActiveMontage.Get();
         if (ck::Is_NOT_Valid(Montage))
-        { return; }
+        {
+            // Nothing is playing — there is no section to jump within (missing target).
+            return ECk_Request_OperationResult::Failed;
+        }
 
         const auto FromReplication = InRequest.Get_FromReplication();
 
@@ -341,6 +369,21 @@ namespace ck
 
         if (NOT FromReplication)
         { UCk_Utils_MontagePlayer_UE::Request_TryReplicateMontagePlayer(InHandle); }
+
+        return ECk_Request_OperationResult::Succeeded;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_MontagePlayer_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_MontagePlayer_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

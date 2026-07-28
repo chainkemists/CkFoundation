@@ -40,6 +40,7 @@ namespace ck
         UCk_Utils_Inventory_UE::Request_RemoveItem(
             InventoryHandle,
             FCk_Request_Inventory_RemoveItem{InHandle},
+            {},
             {});
     }
 }

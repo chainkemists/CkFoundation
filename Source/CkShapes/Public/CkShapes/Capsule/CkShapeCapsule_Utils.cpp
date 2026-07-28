@@ -47,9 +47,13 @@ auto
     UCk_Utils_ShapeCapsule_UE::
     Request_UpdateDimensions(
         FCk_Handle_ShapeCapsule& InShapeCapsule,
-        const FCk_Request_ShapeCapsule_UpdateDimensions& InRequest)
+        const FCk_Request_ShapeCapsule_UpdateDimensions& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ShapeCapsule
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InShapeCapsule.AddOrGet<ck::FFragment_ShapeCapsule_Requests>()._Requests.Emplace(InRequest);
     return InShapeCapsule;
 }

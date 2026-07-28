@@ -220,30 +220,55 @@ auto
         FCk_Handle_2dGridSystem& InGrid,
         FCk_Handle& InOccupant,
         const FIntPoint& InAnchor,
-        ECk_CardinalRotation InRotation)
+        ECk_CardinalRotation InRotation,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_2dGridPlacement
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InGrid),
+    const auto IsGridValid = ck::IsValid(InGrid);
+    CK_ENSURE_IF_NOT(IsGridValid,
         TEXT("Request_Place: grid handle is invalid"))
-    { return {}; }
+    {}
+    if (NOT IsGridValid)
+    {
+        InDelegate.ExecuteIfBound(InGrid, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InOccupant),
+    const auto IsOccupantValid = ck::IsValid(InOccupant);
+    CK_ENSURE_IF_NOT(IsOccupantValid,
         TEXT("Request_Place: occupant handle is invalid"))
-    { return {}; }
+    {}
+    if (NOT IsOccupantValid)
+    {
+        InDelegate.ExecuteIfBound(InGrid, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
     const auto Object = UCk_Utils_2dGridObject_UE::Cast(InOccupant);
-    CK_ENSURE_IF_NOT(ck::IsValid(Object),
+    const auto IsObjectValid = ck::IsValid(Object);
+    CK_ENSURE_IF_NOT(IsObjectValid,
         TEXT("Request_Place: occupant [{}] is not a 2dGridObject"), InOccupant)
-    { return {}; }
+    {}
+    if (NOT IsObjectValid)
+    {
+        InDelegate.ExecuteIfBound(InGrid, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
     const auto Result = Get_CanPlace(InGrid, Object, InAnchor, InRotation, ECk_GridConnectivity::Ignore);
     if (NOT Result.Get_CanPlace())
-    { return {}; }
+    {
+        InDelegate.ExecuteIfBound(InGrid, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
     // Authority-gate the mutation: only the authority stamps occupancy. The validity query above
     // is side-effect free, so non-authority callers can still probe Get_CanPlace.
     if (NOT UCk_Utils_Net_UE::Get_HasAuthority(FCk_Handle{InGrid}))
-    { return {}; }
+    {
+        InDelegate.ExecuteIfBound(InGrid, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
 
     const auto Cells = UCk_Utils_2dGridObject_UE::Get_ResolvedCells(Object, InAnchor, InRotation);
 
@@ -252,14 +277,17 @@ auto
     if (auto Existing = UCk_Utils_2dGridOccupancy_UE::Get_PlacementForOccupant(InOccupant);
         ck::IsValid(Existing))
     {
-        UCk_Utils_2dGridOccupancy_UE::Request_RemovePlacement(Existing);
+        UCk_Utils_2dGridOccupancy_UE::Request_RemovePlacement(Existing, {});
     }
 
     auto Placement = UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement(
-        InGrid, InOccupant, InAnchor, InRotation, Cells);
+        InGrid, InOccupant, InAnchor, InRotation, Cells, {});
 
     ck::UUtils_Signal_2dGridPlacement_ObjectPlaced::Broadcast(
         InGrid, ck::MakePayload(InGrid, InOccupant, Cells));
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InGrid, ECk_Request_OperationResult::Succeeded);
 
     return Placement;
 }
@@ -269,25 +297,35 @@ auto
 auto
     UCk_Utils_2dGridPlacement_UE::
     Request_Remove(
-        FCk_Handle_2dGridPlacement& InPlacement)
+        FCk_Handle_2dGridPlacement& InPlacement,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> bool
 {
     if (ck::Is_NOT_Valid(InPlacement))
-    { return false; }
+    {
+        InDelegate.ExecuteIfBound(FCk_Handle{InPlacement}, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return false;
+    }
 
     const auto& Params   = InPlacement.Get<ck::FFragment_2dGridPlacement_Params>();
     auto        Grid     = Params.Get_Grid();
     const auto  Occupant = Params.Get_Occupant();
 
-    const auto Removed = UCk_Utils_2dGridOccupancy_UE::Request_RemovePlacement(InPlacement);
+    const auto Removed = UCk_Utils_2dGridOccupancy_UE::Request_RemovePlacement(InPlacement, {});
     if (NOT Removed)
-    { return false; }
+    {
+        InDelegate.ExecuteIfBound(FCk_Handle{InPlacement}, ECk_Request_OperationResult::Failed);
+        return false;
+    }
 
     if (ck::IsValid(Grid))
     {
         ck::UUtils_Signal_2dGridPlacement_ObjectRemoved::Broadcast(
             Grid, ck::MakePayload(Grid, Occupant));
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(FCk_Handle{InPlacement}, ECk_Request_OperationResult::Succeeded);
 
     return true;
 }

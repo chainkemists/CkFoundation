@@ -5,6 +5,7 @@
 #include "CkGoap/EntityScripts/CkGoapAction_EntityScript.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkGoap_Action_Utils.generated.h"
@@ -66,49 +67,65 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Request Plan")
+		DisplayName = "[Ck][Goap|Action] Request Plan",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Action
-	Request_Plan(UPARAM(ref) FCk_Handle_Goap_Action& InAction);
+	Request_Plan(
+		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Request Cancel Plan")
+		DisplayName = "[Ck][Goap|Action] Request Cancel Plan",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Action
-	Request_CancelPlan(UPARAM(ref) FCk_Handle_Goap_Action& InAction);
+	Request_CancelPlan(
+		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Request Set Action Cost")
+		DisplayName = "[Ck][Goap|Action] Request Set Action Cost",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Action
 	Request_SetActionCost(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
 		TSubclassOf<UCk_GoapAction_EntityScript> InActionClass,
-		float InCost);
+		float InCost,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Request Set Replan Interval")
+		DisplayName = "[Ck][Goap|Action] Request Set Replan Interval",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Action
 	Request_SetReplanInterval(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		float InSeconds);
+		float InSeconds,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Request Set Replan Policy")
+		DisplayName = "[Ck][Goap|Action] Request Set Replan Policy",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Action
 	Request_SetReplanPolicy(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		ECk_Goap_ReplanPolicy InPolicy);
+		ECk_Goap_ReplanPolicy InPolicy,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Request Set Search Budget")
+		DisplayName = "[Ck][Goap|Action] Request Set Search Budget",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Action
 	Request_SetSearchBudget(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		int64 InMicroseconds);
+		int64 InMicroseconds,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Action",
-		DisplayName = "[Ck][Goap|Action] Request Set Cost Threshold")
+		DisplayName = "[Ck][Goap|Action] Request Set Cost Threshold",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Action
 	Request_SetCostThreshold(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		float InThreshold);
+		float InThreshold,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 };

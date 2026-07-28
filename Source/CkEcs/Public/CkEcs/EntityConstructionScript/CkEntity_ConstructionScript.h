@@ -3,6 +3,7 @@
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include <StructUtils/InstancedStruct.h>
 
@@ -43,29 +44,40 @@ public:
         UObject* InOptionalObjectConstructionScript = nullptr) const -> void;
 
 public:
+    // Immediate mutator: the construction script runs inline and nothing is enqueued, so the completion
+    // delegate fires synchronously with Succeeded on the caller's own stack.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|ConstructionScript",
-              DisplayName = "[Ck] Request Construct Sub-ConstructionScript")
+              DisplayName = "[Ck] Request Construct Sub-ConstructionScript",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle
     Request_Construct(
         UPARAM(ref) FCk_Handle& InHandle,
-        TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript);
+        TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Immediate mutator — see Request_Construct.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|ConstructionScript",
-              DisplayName = "[Ck] Request Construct Sub-ConstructionScript (Instanced)")
+              DisplayName = "[Ck] Request Construct Sub-ConstructionScript (Instanced)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle
     Request_Construct_Instanced(
         UPARAM(ref) FCk_Handle& InHandle,
-        const UCk_Entity_ConstructionScript_PDA* InConstructionScript);
+        const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Immediate mutator — see Request_Construct. Completion reports that the batch was walked, not that
+    // every individual script was valid.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|ConstructionScript",
-              DisplayName = "[Ck] Request Construct Sub-ConstructionScript (Multiple)")
+              DisplayName = "[Ck] Request Construct Sub-ConstructionScript (Multiple)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle
     Request_Construct_Multiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript);
+        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 protected:
     UFUNCTION(BlueprintNativeEvent,

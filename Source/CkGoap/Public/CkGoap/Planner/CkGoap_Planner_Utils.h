@@ -7,6 +7,7 @@
 #include "CkGoap/CkGoap_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkGoap_Planner_Utils.generated.h"
@@ -209,87 +210,113 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Set Enable Toggle")
+		DisplayName = "[Ck][Goap|Planner] Request Set Enable Toggle",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_SetEnableToggle(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		ECk_EnableDisable InToggle);
+		ECk_EnableDisable InToggle,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Reset Active Chain")
+		DisplayName = "[Ck][Goap|Planner] Request Reset Active Chain",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_ResetActiveChain(
-		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner);
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	// Triggers a replan. This goal is independent of any Action-role effects the entity carries.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Set Goal")
+		DisplayName = "[Ck][Goap|Planner] Request Set Goal",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_SetGoal(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		const TArray<FCk_GoapWS_Condition_Authored>& InGoal);
+		const TArray<FCk_GoapWS_Condition_Authored>& InGoal,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Plan")
+		DisplayName = "[Ck][Goap|Planner] Request Plan",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
-	Request_Plan(UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner);
+	Request_Plan(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Cancel Plan")
+		DisplayName = "[Ck][Goap|Planner] Request Cancel Plan",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
-	Request_CancelPlan(UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner);
+	Request_CancelPlan(
+		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Set Replan Interval")
+		DisplayName = "[Ck][Goap|Planner] Request Set Replan Interval",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_SetReplanInterval(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		float InSeconds);
+		float InSeconds,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Set Replan Policy")
+		DisplayName = "[Ck][Goap|Planner] Request Set Replan Policy",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_SetReplanPolicy(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		ECk_Goap_ReplanPolicy InPolicy);
+		ECk_Goap_ReplanPolicy InPolicy,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Set Search Budget")
+		DisplayName = "[Ck][Goap|Planner] Request Set Search Budget",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_SetSearchBudget(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		int64 InMicroseconds);
+		int64 InMicroseconds,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Set Cost Threshold")
+		DisplayName = "[Ck][Goap|Planner] Request Set Cost Threshold",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_SetCostThreshold(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		float InThreshold);
+		float InThreshold,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Set Child Action Cost")
+		DisplayName = "[Ck][Goap|Planner] Request Set Child Action Cost",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_SetChildActionCost(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
 		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass,
-		float InCost);
+		float InCost,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Register Action Cost Provider")
+		DisplayName = "[Ck][Goap|Planner] Request Register Action Cost Provider",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_RegisterActionCostProvider(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass);
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildClass,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 	// Inverse of AddAction: unregisters the child Action, destroys its entity, and replans. Warns
 	// and leaves the Planner unchanged when the class is not registered on it.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
-		DisplayName = "[Ck][Goap|Planner] Request Remove Action")
+		DisplayName = "[Ck][Goap|Planner] Request Remove Action",
+		meta = (AutoCreateRefTerm = "InDelegate"))
 	static FCk_Handle_Goap_Planner
 	Request_RemoveAction(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		TSubclassOf<UCk_GoapAction_EntityScript> InChildActionClass);
+		TSubclassOf<UCk_GoapAction_EntityScript> InChildActionClass,
+		const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 // --------------------------------------------------------------------------------------------------------------------
 

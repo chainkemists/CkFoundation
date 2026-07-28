@@ -5,6 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkGeometryCollection_Utils.generated.h"
 
@@ -75,25 +76,31 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Apply Radial Strain (NOT Replicated)")
+              DisplayName="[Ck][GeometryCollection] Request Apply Radial Strain (NOT Replicated)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_GeometryCollection
     Request_ApplyRadialStrain(
         UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection,
-        const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest);
+        const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Crumble NonAnchoredClusters (NOT Replicated)")
+              DisplayName="[Ck][GeometryCollection] Request Crumble NonAnchoredClusters (NOT Replicated)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_GeometryCollection
     Request_CrumbleNonAnchoredClusters(
-        UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection);
+        UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Remove All Anchors (NOT Replicated)")
+              DisplayName="[Ck][GeometryCollection] Request Remove All Anchors (NOT Replicated)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_GeometryCollection
     Request_RemoveAllAnchors(
-        UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection);
+        UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

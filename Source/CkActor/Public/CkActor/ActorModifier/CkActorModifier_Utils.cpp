@@ -16,10 +16,14 @@ auto
         const FCk_Handle& InHandle,
         const FCk_Request_ActorModifier_SpawnActor& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_ActorModifier_OnActorSpawned& InDelegate)
+        const FCk_Delegate_ActorModifier_OnActorSpawned& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> void
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     RequestEntity.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>()._Request = InRequest;
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);
@@ -35,10 +39,14 @@ auto
         const FCk_Handle& InHandle,
         const FCk_Request_ActorModifier_AddActorComponent& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate)
+        const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> void
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     RequestEntity.AddOrGet<ck::FFragment_ActorModifier_AddActorComponentRequests>()._Request = InRequest;
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);
@@ -54,10 +62,14 @@ auto
         const FCk_Handle& InHandle,
         const FCk_Request_ActorModifier_RemoveActorComponent& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_ActorModifier_OnActorComponentRemoved& InDelegate)
+        const FCk_Delegate_ActorModifier_OnActorComponentRemoved& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate)
     -> void
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+
+    if (InCompletionDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InCompletionDelegate); }
 
     RequestEntity.AddOrGet<ck::FFragment_ActorModifier_RemoveActorComponentRequests>()._Request = InRequest;
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);

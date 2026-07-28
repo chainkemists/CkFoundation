@@ -142,7 +142,7 @@ namespace ck_cue_subsystem_base
         }
 
         ck::cue::Verbose(TEXT("Executing cue [{}] on entity [{}]"), InCueName, InOwnerEntity);
-        auto PendingEntityScript = UCk_Utils_EntityScript_UE::Request_SpawnEntity(InOwnerEntity, InCueClass, InSpawnParams);
+        auto PendingEntityScript = UCk_Utils_EntityScript_UE::Request_SpawnEntity(InOwnerEntity, InCueClass, InSpawnParams, {});
 
         return PendingEntityScript;
     }

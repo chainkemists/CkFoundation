@@ -11,7 +11,10 @@
 
 #include "CkProjectile/Homing/CkHoming_ProNav.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 CK_REGISTER_PROCESSOR(ck::FProcessor_Homing_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Homing_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Homing_Update);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -24,7 +27,7 @@ namespace ck::homing_detail
         const FVector& InBaseAcceleration) -> void
     {
         auto AccelerationHandle = UCk_Utils_Acceleration_UE::CastChecked(InHandle);
-        UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, InBaseAcceleration);
+        UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, InBaseAcceleration, {});
     }
 }
 
@@ -48,7 +51,11 @@ namespace ck
             algo::ForEachRequest(InRequests._Requests, Visitor(
             [&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InCurrent, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InCurrent, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
             }));
         });
     }
@@ -59,17 +66,17 @@ namespace ck
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
             const FCk_Request_Homing_SetTargetEntity& InRequest)
-        -> void
+        -> bool
     {
         const auto& Target = InRequest.Get_TargetEntity();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Target),
             TEXT("Request_SetTargetEntity on [{}] with an invalid target entity"), InHandle)
-        { return; }
+        { return false; }
 
         CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(Target),
             TEXT("Homing target [{}] has no Transform feature — there is no location to chase"), Target)
-        { return; }
+        { return false; }
 
         InCurrent._TargetEntity = Target;
         InCurrent._TargetMode = ECk_Homing_TargetMode::Entity;
@@ -90,6 +97,8 @@ namespace ck
         {
             InHandle.AddOrGet<FTag_Homing_Active>();
         }
+
+        return true;
     }
 
     auto
@@ -98,7 +107,7 @@ namespace ck
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
             const FCk_Request_Homing_SetTargetLocation& InRequest)
-        -> void
+        -> bool
     {
         InCurrent._TargetEntity = FCk_Handle{};
         InCurrent._TargetMode = ECk_Homing_TargetMode::WorldPoint;
@@ -113,6 +122,8 @@ namespace ck
         {
             InHandle.AddOrGet<FTag_Homing_Active>();
         }
+
+        return true;
     }
 
     auto
@@ -121,7 +132,7 @@ namespace ck
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
             const FCk_Request_Homing_ClearTarget& InRequest)
-        -> void
+        -> bool
     {
         if (InCurrent._TargetMode != ECk_Homing_TargetMode::None)
         {
@@ -133,6 +144,8 @@ namespace ck
         InCurrent._HasPreviousTargetLocation = false;
 
         InHandle.Try_Remove<FTag_Homing_Active>();
+
+        return true;
     }
 
     auto
@@ -141,10 +154,12 @@ namespace ck
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
             const FCk_Request_Homing_SetDesiredTimeToImpact& InRequest)
-        -> void
+        -> bool
     {
         InCurrent._ImpactTiming = InRequest.Get_ImpactTiming();
         InCurrent._DesiredTimeToImpactRemaining = InRequest.Get_DesiredTimeToImpact();
+
+        return true;
     }
 
     auto
@@ -153,7 +168,7 @@ namespace ck
             FCk_Handle_Homing InHandle,
             FFragment_Homing_Current& InCurrent,
             const FCk_Request_Homing_EnableDisable& InRequest)
-        -> void
+        -> bool
     {
         switch (const auto EnableDisable = InRequest.Get_EnableDisable())
         {
@@ -186,6 +201,21 @@ namespace ck
                 break;
             }
         }
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Homing_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Homing_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -282,7 +312,7 @@ namespace ck
 
         auto AccelerationHandle = UCk_Utils_Acceleration_UE::CastChecked(InHandle);
         UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(
-            AccelerationHandle, InCurrent._BaseAcceleration + HomingAcceleration);
+            AccelerationHandle, InCurrent._BaseAcceleration + HomingAcceleration, {});
 
         DoCheckForMissedTarget(InHandle, InParams, InCurrent, GuidanceState);
     }

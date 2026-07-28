@@ -23,6 +23,7 @@
 #include <Materials/MaterialInstanceDynamic.h>
 #include <ProceduralMeshComponent.h>
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -38,6 +39,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_UpdateTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_BakeLines);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_CheckDuration);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_DebugShape_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Sphere_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Pmg_Box_Setup);
@@ -321,7 +323,14 @@ namespace ck
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
+                // Every DoHandleRequest overload below is void and has no rejection path, so reaching
+                // the line after the call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = ck::MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InCommon, InCurrent, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }), ck::policy::DontResetContainer{});
         });
     }
@@ -435,5 +444,18 @@ namespace ck
                 ? ECollisionEnabled::QueryAndPhysics
                 : ECollisionEnabled::NoCollision);
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Pmg_DebugShape_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Pmg_DebugShape_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }

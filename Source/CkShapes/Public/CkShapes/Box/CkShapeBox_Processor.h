@@ -16,7 +16,7 @@ namespace ck
             ck::TReadOnly<FFragment_ShapeBox_Params>,
             ck::TReadWrite<FFragment_ShapeBox_Current>,
             ck::TReadWrite<FFragment_ShapeBox_Requests>,
-            CK_IGNORE_PENDING_KILL>
+            TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
@@ -41,6 +41,29 @@ namespace ck
             const FFragment_ShapeBox_Params& InParams,
             FFragment_ShapeBox_Current& InCurrent,
             const FCk_Request_ShapeBox_UpdateDimensions& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKSHAPES_API FProcessor_ShapeBox_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_ShapeBox_CancelPendingRequests,
+        FCk_Handle_ShapeBox,
+        ck::TReadOnly<FFragment_ShapeBox_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeBox_Requests& InRequestsComp)
+            -> void;
     };
 }
 

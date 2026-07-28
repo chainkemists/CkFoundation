@@ -8,6 +8,8 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
@@ -158,19 +160,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityCollection",
-              DisplayName = "[Ck][EntityCollection] Request Add Entities To Collection")
+              DisplayName = "[Ck][EntityCollection] Request Add Entities To Collection",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_EntityCollection
     Request_AddEntities(
         UPARAM(ref) FCk_Handle_EntityCollection& InEntityCollectionHandle,
-        const FCk_Request_EntityCollection_AddEntities& InRequest);
+        const FCk_Request_EntityCollection_AddEntities& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityCollection",
-              DisplayName = "[Ck][EntityCollection] Request Remove Entities From Collection")
+              DisplayName = "[Ck][EntityCollection] Request Remove Entities From Collection",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_EntityCollection
     Request_RemoveEntities(
         UPARAM(ref) FCk_Handle_EntityCollection& InEntityCollectionHandle,
-        const FCk_Request_EntityCollection_RemoveEntities& InRequest);
+        const FCk_Request_EntityCollection_RemoveEntities& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

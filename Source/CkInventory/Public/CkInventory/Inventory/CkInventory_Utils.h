@@ -6,6 +6,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Delegates/CkDelegates.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
@@ -241,89 +242,97 @@ public:
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Add Item",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory
     Request_AddItem(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_AddItem& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Add& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Remove Item",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory
     Request_RemoveItem(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_RemoveItem& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Remove& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Remove& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Stack Items",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory
     Request_StackItems(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_StackItems& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Stack& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Stack& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Split Stack",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory
     Request_SplitStack(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_SplitStack& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Split& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Add Item (By Definition)",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory
     Request_AddItemByDefinition(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_AddItemByDefinition& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_AddByDefinition& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_AddByDefinition& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Sort",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory
     Request_Sort(
         UPARAM(ref) FCk_Handle_Inventory& InInventory,
         const FCk_Request_Inventory_Sort& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Sort& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Transfer Item (To Spatial)",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory
     Request_TransferItem_ToSpatial(
         UPARAM(ref) FCk_Handle_Inventory& InSourceInventory,
         const FCk_Request_Inventory_TransferItem_ToSpatial& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Transfer Item (To DataOnly)",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle_Inventory
     Request_TransferItem_ToDataOnly(
         UPARAM(ref) FCk_Handle_Inventory& InSourceInventory,
         const FCk_Request_Inventory_TransferItem_ToDataOnly& InRequest,
-        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate);
+        const FCk_Delegate_Inventory_OnOperationResult_Transfer& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
     /** Bulk-moves every (filtered) item out of InRequest.SourceInventories into the best-fitting
      *  candidate (InRequest.TargetResolution), paced over multiple pump passes so deferred stack-count
@@ -336,12 +345,13 @@ public:
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|Inventory",
               DisplayName = "[Ck][Inventory] Request Mass Transfer",
-              meta = (AutoCreateRefTerm = "InDelegate"))
+              meta = (AutoCreateRefTerm = "InDelegate, InCompletionDelegate"))
     static FCk_Handle
     Request_MassTransfer(
         const FCk_Handle& InAnyHandle,
         const FCk_Request_Inventory_MassTransfer& InRequest,
-        const FCk_Delegate_Inventory_MassTransfer_OnComplete& InDelegate);
+        const FCk_Delegate_Inventory_MassTransfer_OnComplete& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

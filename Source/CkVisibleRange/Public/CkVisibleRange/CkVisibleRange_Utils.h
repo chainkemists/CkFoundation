@@ -110,11 +110,13 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VisibleRange",
-              DisplayName="[Ck][VisibleRange] Request Set Visibility")
+              DisplayName="[Ck][VisibleRange] Request Set Visibility",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_VisibleRange
     Request_SetVisibility(
         UPARAM(ref) FCk_Handle_VisibleRange& InHandle,
-        ECk_VisibleRange_ShowHide InShowHide);
+        ECk_VisibleRange_ShowHide InShowHide,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

@@ -40,7 +40,7 @@ auto
 
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
     InHandle.Add<ck::FFragment_Transform_Previous>(InInitialTransform);
-    UCk_Utils_Transform_TypeUnsafe_UE::Request_ForceRefresh(InHandle);
+    UCk_Utils_Transform_TypeUnsafe_UE::Request_ForceRefresh(InHandle, {});
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
@@ -205,20 +205,25 @@ auto
     UCk_Utils_Transform_UE::
     Request_SetLocationAndRotation(
         FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetLocationAndRotation& InRequest)
+        const FCk_Request_Transform_SetLocationAndRotation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    Request_SetLocation(InHandle, FCk_Request_Transform_SetLocation{InRequest.Get_NewLocation()}.Set_LocalWorld(InRequest.Get_LocalWorld()));
-    Request_SetRotation(InHandle, FCk_Request_Transform_SetRotation{InRequest.Get_NewRotation()}.Set_LocalWorld(InRequest.Get_LocalWorld()));
+    Request_SetLocation(InHandle, FCk_Request_Transform_SetLocation{InRequest.Get_NewLocation()}.Set_LocalWorld(InRequest.Get_LocalWorld()), {});
+    Request_SetRotation(InHandle, FCk_Request_Transform_SetRotation{InRequest.Get_NewRotation()}.Set_LocalWorld(InRequest.Get_LocalWorld()), InDelegate);
 }
 
 auto
     UCk_Utils_Transform_UE::
     Request_SetLocation(
         FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetLocation& InRequest)
+        const FCk_Request_Transform_SetLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
 }
 
@@ -226,9 +231,13 @@ auto
     UCk_Utils_Transform_UE::
     Request_AddLocationOffset(
         FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_AddLocationOffset& InRequest)
+        const FCk_Request_Transform_AddLocationOffset& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
 }
 
@@ -236,9 +245,13 @@ auto
     UCk_Utils_Transform_UE::
     Request_SetRotation(
         FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetRotation& InRequest)
+        const FCk_Request_Transform_SetRotation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
 }
 
@@ -246,36 +259,58 @@ auto
     UCk_Utils_Transform_UE::
     Request_AddRotationOffset(
         FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_AddRotationOffset& InRequest)
+        const FCk_Request_Transform_AddRotationOffset& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_Transform_UE::
     Request_ForceRefresh(
-        FCk_Handle_Transform& InHandle)
+        FCk_Handle_Transform& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._ForceRefreshRequests.Emplace(FCk_Request_Transform_ForceRefresh{});
+    const auto Request = FCk_Request_Transform_ForceRefresh{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._ForceRefreshRequests.Emplace(Request);
 }
 
 auto
     UCk_Utils_Transform_UE::
     Request_SetScale(
         FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetScale&  InRequest)
+        const FCk_Request_Transform_SetScale&  InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._ScaleRequests = InRequest;
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    auto& ScaleRequest = InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._ScaleRequests;
+
+    // The slot holds one request, so assigning drops whatever was pending — complete it first or a
+    // caller awaiting the superseded request waits forever.
+    if (ScaleRequest.IsSet())
+    { ScaleRequest->TryFireCompletion(InHandle, ECk_Request_OperationResult::Failed); }
+
+    ScaleRequest = InRequest;
 }
 
 auto
     UCk_Utils_Transform_UE::
     Request_SetTransform(
         FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetTransform& InRequest)
+        const FCk_Request_Transform_SetTransform& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     const auto& NewTransform = InRequest.Get_NewTransform();
@@ -284,7 +319,16 @@ auto
 
     RequestsFragment._LocationRequests.Emplace(FCk_Request_Transform_SetLocation{NewTransform.GetLocation()}.Set_LocalWorld(ECk_LocalWorld::World));
     RequestsFragment._RotationRequests.Emplace(FCk_Request_Transform_SetRotation{NewTransform.GetRotation().Rotator()}.Set_LocalWorld(ECk_LocalWorld::World));
-    RequestsFragment._ScaleRequests = FCk_Request_Transform_SetScale{NewTransform.GetScale3D()}.Set_LocalWorld(ECk_LocalWorld::World);
+
+    const auto ScaleRequest = FCk_Request_Transform_SetScale{NewTransform.GetScale3D()}.Set_LocalWorld(ECk_LocalWorld::World);
+
+    if (InDelegate.IsBound())
+    { ScaleRequest.Set_CompletionDelegate(InDelegate); }
+
+    if (RequestsFragment._ScaleRequests.IsSet())
+    { RequestsFragment._ScaleRequests->TryFireCompletion(InHandle, ECk_Request_OperationResult::Failed); }
+
+    RequestsFragment._ScaleRequests = ScaleRequest;
 }
 
 auto
@@ -500,94 +544,158 @@ auto
     UCk_Utils_Transform_TypeUnsafe_UE::
     Request_SetLocationAndRotation(
         FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetLocationAndRotation& InRequest)
+        const FCk_Request_Transform_SetLocationAndRotation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    Request_SetLocation(InHandle, FCk_Request_Transform_SetLocation{InRequest.Get_NewLocation()}.Set_LocalWorld(InRequest.Get_LocalWorld()));
-    Request_SetRotation(InHandle, FCk_Request_Transform_SetRotation{InRequest.Get_NewRotation()}.Set_LocalWorld(InRequest.Get_LocalWorld()));
+    Request_SetLocation(InHandle, FCk_Request_Transform_SetLocation{InRequest.Get_NewLocation()}.Set_LocalWorld(InRequest.Get_LocalWorld()), {});
+    Request_SetRotation(InHandle, FCk_Request_Transform_SetRotation{InRequest.Get_NewRotation()}.Set_LocalWorld(InRequest.Get_LocalWorld()), InDelegate);
 }
 
 auto
     UCk_Utils_Transform_TypeUnsafe_UE::
     Request_SetLocation(
         FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetLocation& InRequest)
+        const FCk_Request_Transform_SetLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
-    UCk_Utils_Transform_UE::Request_SetLocation(TransformHandle, InRequest);
+    const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
+
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    if (NOT TransformHandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
+
+    UCk_Utils_Transform_UE::Request_SetLocation(TransformHandle, InRequest, InDelegate);
 }
 
 auto
     UCk_Utils_Transform_TypeUnsafe_UE::
     Request_AddLocationOffset(
         FCk_Handle& InHandle,
-        const FCk_Request_Transform_AddLocationOffset& InRequest)
+        const FCk_Request_Transform_AddLocationOffset& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
-    UCk_Utils_Transform_UE::Request_AddLocationOffset(TransformHandle, InRequest);
+    const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
+
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    if (NOT TransformHandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
+
+    UCk_Utils_Transform_UE::Request_AddLocationOffset(TransformHandle, InRequest, InDelegate);
 }
 
 auto
     UCk_Utils_Transform_TypeUnsafe_UE::
     Request_SetRotation(
         FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetRotation& InRequest)
+        const FCk_Request_Transform_SetRotation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
-    UCk_Utils_Transform_UE::Request_SetRotation(TransformHandle, InRequest);
+    const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
+
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    if (NOT TransformHandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
+
+    UCk_Utils_Transform_UE::Request_SetRotation(TransformHandle, InRequest, InDelegate);
 }
 
 auto
     UCk_Utils_Transform_TypeUnsafe_UE::
     Request_AddRotationOffset(
         FCk_Handle& InHandle,
-        const FCk_Request_Transform_AddRotationOffset& InRequest)
+        const FCk_Request_Transform_AddRotationOffset& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
-    UCk_Utils_Transform_UE::Request_AddRotationOffset(TransformHandle, InRequest);
+    const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
+
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    if (NOT TransformHandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
+
+    UCk_Utils_Transform_UE::Request_AddRotationOffset(TransformHandle, InRequest, InDelegate);
 }
 
 auto
     UCk_Utils_Transform_TypeUnsafe_UE::
     Request_ForceRefresh(
-        FCk_Handle& InHandle)
+        FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
-    UCk_Utils_Transform_UE::Request_ForceRefresh(TransformHandle);
+    const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
+
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    if (NOT TransformHandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
+
+    UCk_Utils_Transform_UE::Request_ForceRefresh(TransformHandle, InDelegate);
 }
 
 auto
     UCk_Utils_Transform_TypeUnsafe_UE::
     Request_SetScale(
         FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetScale& InRequest)
+        const FCk_Request_Transform_SetScale& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
-    UCk_Utils_Transform_UE::Request_SetScale(TransformHandle, InRequest);
+    const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
+
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    if (NOT TransformHandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
+
+    UCk_Utils_Transform_UE::Request_SetScale(TransformHandle, InRequest, InDelegate);
 }
 
 auto
     UCk_Utils_Transform_TypeUnsafe_UE::
     Request_SetTransform(
         FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetTransform& InRequest)
+        const FCk_Request_Transform_SetTransform& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
-    UCk_Utils_Transform_UE::Request_SetTransform(TransformHandle, InRequest);
+    const auto TransformHandleIsValid = ck::IsValid(TransformHandle);
+
+    CK_ENSURE_IF_NOT(TransformHandleIsValid, TEXT("Handle [{}] does NOT have Transform"), InHandle) {}
+    if (NOT TransformHandleIsValid)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
+
+    UCk_Utils_Transform_UE::Request_SetTransform(TransformHandle, InRequest, InDelegate);
 }
 
 auto

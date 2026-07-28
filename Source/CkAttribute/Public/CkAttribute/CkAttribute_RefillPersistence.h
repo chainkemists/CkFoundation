@@ -50,9 +50,9 @@ namespace ck::attribute_refill_restore
 
         const auto SavedState = InNew.Get<T_SaveData>().Get_State();
         if (SavedState == ECk_Attribute_RefillState::Paused)
-        { T_RefillUtils::Request_Pause(RefillHandle); }
+        { T_RefillUtils::Request_Pause(RefillHandle, {}); }
         else
-        { T_RefillUtils::Request_Resume(RefillHandle); }
+        { T_RefillUtils::Request_Resume(RefillHandle, {}); }
 
         return ECk_Persistence_ApplyResult::Applied;
     }

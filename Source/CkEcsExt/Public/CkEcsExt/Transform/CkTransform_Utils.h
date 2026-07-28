@@ -6,6 +6,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
@@ -115,68 +116,90 @@ private:
     Get_InvalidHandle() { return {}; };
 
 public:
+    // Composite: enqueues a SetLocation and a SetRotation request. The completion delegate rides the
+    // rotation request, which the drain handles after the location one, so it reports once for both.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Location & Rotation")
+              DisplayName = "[Ck][Transform] Request Set Location & Rotation",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetLocationAndRotation(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetLocationAndRotation& InRequest);
+        const FCk_Request_Transform_SetLocationAndRotation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Location")
+              DisplayName = "[Ck][Transform] Request Set Location",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetLocation(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetLocation& InRequest);
+        const FCk_Request_Transform_SetLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Add Location Offset")
+              DisplayName = "[Ck][Transform] Request Add Location Offset",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_AddLocationOffset(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_AddLocationOffset& InRequest);
+        const FCk_Request_Transform_AddLocationOffset& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Rotation")
+              DisplayName = "[Ck][Transform] Request Set Rotation",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetRotation(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetRotation& InRequest);
+        const FCk_Request_Transform_SetRotation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Add Rotation Offset")
+              DisplayName = "[Ck][Transform] Request Add Rotation Offset",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_AddRotationOffset(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_AddRotationOffset& InRequest);
+        const FCk_Request_Transform_AddRotationOffset& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Force Refresh")
+              DisplayName = "[Ck][Transform] Request Force Refresh",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_ForceRefresh(
-        UPARAM(ref) FCk_Handle_Transform& InHandle);
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // A pending scale request is REPLACED rather than queued, so the superseded one completes with
+    // Failed before the new one takes its slot.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Scale")
+              DisplayName = "[Ck][Transform] Request Set Scale",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetScale(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetScale&  InRequest);
+        const FCk_Request_Transform_SetScale&  InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Composite: enqueues location, rotation and scale requests. The completion delegate rides the
+    // scale request, which the drain handles last, so it reports once for all three.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Transform")
+              DisplayName = "[Ck][Transform] Request Set Transform",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetTransform(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Request_Transform_SetTransform& InRequest);
+        const FCk_Request_Transform_SetTransform& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -278,66 +301,82 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Location & Rotation")
+              DisplayName = "[Ck][Transform] Request Set Location & Rotation",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetLocationAndRotation(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetLocationAndRotation& InRequest);
+        const FCk_Request_Transform_SetLocationAndRotation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Location")
+              DisplayName = "[Ck][Transform] Request Set Location",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetLocation(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetLocation& InRequest);
+        const FCk_Request_Transform_SetLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Add Location Offset")
+              DisplayName = "[Ck][Transform] Request Add Location Offset",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_AddLocationOffset(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Request_Transform_AddLocationOffset& InRequest);
+        const FCk_Request_Transform_AddLocationOffset& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Rotation")
+              DisplayName = "[Ck][Transform] Request Set Rotation",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetRotation(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetRotation& InRequest);
+        const FCk_Request_Transform_SetRotation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Add Rotation Offset")
+              DisplayName = "[Ck][Transform] Request Add Rotation Offset",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_AddRotationOffset(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Request_Transform_AddRotationOffset& InRequest);
+        const FCk_Request_Transform_AddRotationOffset& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Force Refresh")
+              DisplayName = "[Ck][Transform] Request Force Refresh",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_ForceRefresh(
-        UPARAM(ref) FCk_Handle& InHandle);
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Scale")
+              DisplayName = "[Ck][Transform] Request Set Scale",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetScale(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetScale&  InRequest);
+        const FCk_Request_Transform_SetScale&  InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Ck][Transform] Request Set Transform")
+              DisplayName = "[Ck][Transform] Request Set Transform",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetTransform(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Request_Transform_SetTransform& InRequest);
+        const FCk_Request_Transform_SetTransform& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

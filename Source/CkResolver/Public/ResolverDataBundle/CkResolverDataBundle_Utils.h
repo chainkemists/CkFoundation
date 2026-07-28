@@ -5,6 +5,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "ResolverDataBundle/CkResolverDataBundle_Fragment_Data.h"
 
@@ -157,21 +158,25 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][ResolverDataBundle] Request Add Operation (Modifier)")
+        DisplayName="[Ck][ResolverDataBundle] Request Add Operation (Modifier)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_ResolverDataBundle
     Request_AddOperation_Modifier(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
         ECk_ResolverDataBundle_PhaseSelection InPhase,
-        const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest);
+        const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][ResolverDataBundle] Request Add Operation (Metadata)")
+        DisplayName="[Ck][ResolverDataBundle] Request Add Operation (Metadata)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_ResolverDataBundle
     Request_AddOperation_Metadata(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
         ECk_ResolverDataBundle_PhaseSelection InPhase,
-        const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest);
+        const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

@@ -15,12 +15,14 @@
 
 #include <Components/SkeletalMeshComponent.h>
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Marker_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Marker_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Marker_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Marker_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Marker_UpdateTransform);
 
@@ -141,23 +143,33 @@ namespace ck
             algo::ForEachRequest(InRequests._EnableDisableRequest,
             [&](const FFragment_Marker_Requests::EnableDisableRequestType& InRequest) -> void
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InMarkerEntity, Result);
+
                 DoHandleRequest(InMarkerEntity, InCurrentComp, InParamsComp, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }, policy::DontResetContainer{});
 
             algo::ForEachRequest(InRequests._ResizeRequest,
             [&](const FFragment_Marker_Requests::ResizeRequestType& InRequest) -> void
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InMarkerEntity, Result);
+
                 DoHandleRequest(InMarkerEntity, InCurrentComp, InParamsComp, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             }, policy::DontResetContainer{});
         });
     }
@@ -282,6 +294,20 @@ namespace ck
             }
         }
     }
+
+    auto
+        FProcessor_Marker_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InMarkerEntity,
+            const FFragment_Marker_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InMarkerEntity, InRequestsComp.Get_EnableDisableRequest());
+        request::FireCancelledForPending(InMarkerEntity, InRequestsComp.Get_ResizeRequest());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_Marker_EndPlay::

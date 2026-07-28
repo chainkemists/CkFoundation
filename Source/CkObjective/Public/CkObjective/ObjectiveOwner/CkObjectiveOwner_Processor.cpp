@@ -5,6 +5,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 #include "CkObjective/Objective/CkObjective_Utils.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Utils.h"
@@ -13,6 +14,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ObjectiveOwner_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ObjectiveOwner_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ObjectiveOwner_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -73,7 +75,7 @@ namespace ck
 
                 if (ck::IsValid(ObjectiveClass))
                 {
-                    UCk_Utils_ObjectiveOwner_UE::Request_AddObjective(InHandle, FCk_Request_ObjectiveOwner_AddObjective{ObjectiveClass});
+                    UCk_Utils_ObjectiveOwner_UE::Request_AddObjective(InHandle, FCk_Request_ObjectiveOwner_AddObjective{ObjectiveClass}, {});
                 }
             }
         }
@@ -94,7 +96,11 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InCurrent, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InCurrent, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -110,11 +116,11 @@ namespace ck
             HandleType InHandle,
             FFragment_ObjectiveOwner_Current& InCurrent,
             const FCk_Request_ObjectiveOwner_AddObjective& InRequest)
-        -> void
+        -> bool
     {
         const auto& ObjectiveClass = InRequest.Get_ObjectiveClass();
         CK_ENSURE_IF_NOT(ck::IsValid(ObjectiveClass), TEXT("INVALID Objective Class requested to ADD to [{}]!"), InHandle)
-        { return; }
+        { return false; }
 
         auto ObjectiveEntityToUse = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
         const auto& AutoStartObjective = InRequest.Get_AutoStartObjective();
@@ -129,16 +135,18 @@ namespace ck
             auto ObjectiveEntity = UCk_Utils_Objective_UE::Cast(InConstructedEntity);
             auto CollectionHandle = ObjectiveOwner.Get<FFragment_ObjectiveOwner_Current>().Get_ObjectivesEntityCollection();
 
-            UCk_Utils_EntityCollection_UE::Request_AddEntities(CollectionHandle, FCk_Request_EntityCollection_AddEntities{{ObjectiveEntity}});
+            UCk_Utils_EntityCollection_UE::Request_AddEntities(CollectionHandle, FCk_Request_EntityCollection_AddEntities{{ObjectiveEntity}}, {});
 
             if (AutoStartObjective)
             {
-                UCk_Utils_Objective_UE::Request_Start(ObjectiveEntity, FCk_Request_Objective_Start{});
+                UCk_Utils_Objective_UE::Request_Start(ObjectiveEntity, FCk_Request_Objective_Start{}, {});
             }
         });
 
         CK_ENSURE_IF_NOT(ck::IsValid(PendingObjectiveEntity), TEXT("Failed to create new Objective of class [{}]"), ObjectiveClass)
-        { return; }
+        { return false; }
+
+        return true;
     }
 
     auto
@@ -147,16 +155,31 @@ namespace ck
             HandleType InHandle,
             FFragment_ObjectiveOwner_Current& InCurrent,
             const FCk_Request_ObjectiveOwner_RemoveObjective& InRequest)
-        -> void
+        -> bool
     {
         const auto& ObjectiveHandle = InRequest.Get_ObjectiveHandle();
 
         if (ck::Is_NOT_Valid(ObjectiveHandle, ck::IsValid_Policy_IncludePendingKill{}))
-        { return; }
+        { return false; }
 
         auto CollectionHandle = InCurrent.Get_ObjectivesEntityCollection();
 
-        UCk_Utils_EntityCollection_UE::Request_RemoveEntities(CollectionHandle, FCk_Request_EntityCollection_RemoveEntities{ {ObjectiveHandle} });
+        UCk_Utils_EntityCollection_UE::Request_RemoveEntities(CollectionHandle, FCk_Request_EntityCollection_RemoveEntities{ {ObjectiveHandle} }, {});
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ObjectiveOwner_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ObjectiveOwner_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

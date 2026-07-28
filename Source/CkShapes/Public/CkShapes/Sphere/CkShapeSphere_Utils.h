@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkShapeSphere_Utils.generated.h"
 
@@ -70,11 +71,13 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeSphere",
-        DisplayName="[Ck][Shapes][Sphere] Request Update Dimensions")
+        DisplayName="[Ck][Shapes][Sphere] Request Update Dimensions",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_ShapeSphere
     Request_UpdateDimensions(
         UPARAM(ref) FCk_Handle_ShapeSphere& InShapeSphere,
-        const FCk_Request_ShapeSphere_UpdateDimensions& InRequest);
+        const FCk_Request_ShapeSphere_UpdateDimensions& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

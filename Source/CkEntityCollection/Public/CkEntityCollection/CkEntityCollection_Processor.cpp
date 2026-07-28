@@ -8,6 +8,7 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -22,6 +23,7 @@ DECLARE_CYCLE_STAT(TEXT("EntityCollection::DiffContent"), STAT_EntityCollection_
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityCollection_StorePrevious);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityCollection_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityCollection_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityCollection_SyncReplication);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityCollection_FireSignals);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityCollection_Replicate);
@@ -62,7 +64,14 @@ namespace ck
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
+                // Every DoHandleRequest overload below is void and has no rejection path, so reaching the
+                // line after the call IS the success condition.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InComp, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -193,8 +202,8 @@ namespace ck
             {
                 entity_collection::Verbose(TEXT("Replicating EntityCollection for the FIRST time to [{}]"), EntityCollectionToReplicate);
 
-                UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()});
-                UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()});
+                UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()}, {});
+                UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()}, {});
 
                 continue;
             }
@@ -203,8 +212,8 @@ namespace ck
             {
                 entity_collection::Verbose(TEXT("Replicating EntityCollection and UPDATING it to [{}]"), EntityCollectionToReplicate);
 
-                UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()});
-                UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()});
+                UCk_Utils_EntityCollection_UE::Request_RemoveEntities(EntityCollectionEntity, FCk_Request_EntityCollection_RemoveEntities{CurrentCollectionContent.Get_EntitiesInCollection()}, {});
+                UCk_Utils_EntityCollection_UE::Request_AddEntities(EntityCollectionEntity, FCk_Request_EntityCollection_AddEntities{EntityCollectionToReplicate.Get_EntitiesInCollection()}, {});
 
                 continue;
             }
@@ -299,6 +308,19 @@ namespace ck
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_EntityCollections>(LifetimeOwner);
         if (Produced.IsSet())
         { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_EntityCollections>(LifetimeOwner, *Produced); }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityCollection_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityCollection_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

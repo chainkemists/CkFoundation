@@ -92,19 +92,23 @@ auto
     UCk_Utils_Velocity_UE::
     Request_OverrideVelocity(
         FCk_Handle_Velocity& InHandle,
-        const FVector& InNewVelocity)
+        const FVector& InNewVelocity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     InHandle.Get<ck::FFragment_Velocity_Current>()._CurrentVelocity = InNewVelocity;
 
-    if (NOT InHandle.Has<ck::FFragment_MovementComponent>())
-    { return; }
-
-    if (const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
-        ck::IsValid(MovementComponent.Get_MovementComponent()))
+    if (InHandle.Has<ck::FFragment_MovementComponent>())
     {
-        MovementComponent.Get_MovementComponent()->Velocity = InNewVelocity;
+        if (const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
+            ck::IsValid(MovementComponent.Get_MovementComponent()))
+        {
+            MovementComponent.Get_MovementComponent()->Velocity = InNewVelocity;
+        }
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -376,11 +380,15 @@ auto
     Request_AddTarget(
         FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Request_BulkVelocityModifier_AddTarget& InRequest)
+        const FCk_Request_BulkVelocityModifier_AddTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     if (NOT Ensure(InHandle, InModifierName))
-    { return; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     auto VelocityModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_BulkVelocityModifier_UE,
@@ -390,6 +398,9 @@ auto
         TEXT("Cannot Start Affecting Entity [{}] Velocity because the Bulk Velocity Modifer [{}] operates on a GLOBAL scope"), InRequest.Get_TargetEntity(), VelocityModifierEntity)
     { return; }
 
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     DoRequest_AddTarget(VelocityModifierEntity, InRequest);
 }
 
@@ -398,11 +409,15 @@ auto
     Request_RemoveTarget(
         FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest)
+        const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     if (NOT Ensure(InHandle, InModifierName))
-    { return; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     auto VelocityModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_BulkVelocityModifier_UE,
@@ -411,6 +426,9 @@ auto
     CK_ENSURE_IF_NOT(NOT VelocityModifierEntity.Has<ck::FTag_BulkVelocityModifier_GlobalScope>(),
         TEXT("Cannot Stop Affecting Entity [{}] Velocity because the Bulk Velocity Modifer [{}] operates on a GLOBAL scope"), InRequest.Get_TargetEntity(), VelocityModifierEntity)
     { return; }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     DoRequest_RemoveTarget(VelocityModifierEntity, InRequest);
 }

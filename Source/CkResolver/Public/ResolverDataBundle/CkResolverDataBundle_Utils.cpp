@@ -183,7 +183,8 @@ auto
     Request_AddOperation_Modifier(
         FCk_Handle_ResolverDataBundle& InDataBundle,
         ECk_ResolverDataBundle_PhaseSelection InPhase,
-        const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest)
+        const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ResolverDataBundle
 {
     CK_CALLSTACK_RECORD(ck::FFragment_ResolverDataBundle_Requests, InDataBundle);
@@ -192,29 +193,50 @@ auto
     {
         case ECk_ResolverDataBundle_PhaseSelection::ThisPhase:
         {
-            CK_ENSURE_IF_NOT(NOT InDataBundle.Has<ck::FTag_ResolverDataBundle_OperationsResolved>(),
+            const auto OperationsAlreadyResolved = InDataBundle.Has<ck::FTag_ResolverDataBundle_OperationsResolved>();
+            CK_ENSURE_IF_NOT(NOT OperationsAlreadyResolved,
                 TEXT("Cannot add operation to [{}] because opertions have already been RESOLVED for DataBundle [{}]. "
                     "A new phase is about to start and the current phase [{}] (if INVALID, we have not yet started resolution) just ended"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            { return InDataBundle; }
+            {}
+            if (OperationsAlreadyResolved)
+            {
+                InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
+                return InDataBundle;
+            }
             break;
         }
         case ECk_ResolverDataBundle_PhaseSelection::NextPhase:
         {
-            CK_ENSURE_IF_NOT(Get_NextPhase(InDataBundle) != TAG_ResolverDataBundle_InvalidPhase,
+            const auto HasValidNextPhase = Get_NextPhase(InDataBundle) != TAG_ResolverDataBundle_InvalidPhase;
+            CK_ENSURE_IF_NOT(HasValidNextPhase,
                 TEXT("Cannot add operation to [{}] as there are no VALID Phases after the current Phase for DataBundle [{}]. "
                     "The Phase [{}] has just been completed"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            { return InDataBundle; }
+            {}
+            if (NOT HasValidNextPhase)
+            {
+                InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
+                return InDataBundle;
+            }
 
-            CK_ENSURE_IF_NOT(InDataBundle.Has<ck::FTag_ResolverDataBundle_OperationsResolved>(),
+            const auto OperationsResolved = InDataBundle.Has<ck::FTag_ResolverDataBundle_OperationsResolved>();
+            CK_ENSURE_IF_NOT(OperationsResolved,
                 TEXT("Cannot add operation to [{}] because current opertions have NOT RESOLVED yet for DataBundle [{}]. "
                     "The Phase [{}] is currently underway with pending operations"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            { return InDataBundle; }
+            {}
+            if (NOT OperationsResolved)
+            {
+                InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
+                return InDataBundle;
+            }
             break;
         }
     }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InDataBundle.AddOrGet<ck::FFragment_ResolverDataBundle_Requests>()._MutateModifierRequests.Emplace(InRequest);
     return InDataBundle;
@@ -225,7 +247,8 @@ auto
     Request_AddOperation_Metadata(
         FCk_Handle_ResolverDataBundle& InDataBundle,
         ECk_ResolverDataBundle_PhaseSelection InPhase,
-        const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest)
+        const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ResolverDataBundle
 {
     CK_CALLSTACK_RECORD(ck::FFragment_ResolverDataBundle_Requests, InDataBundle);
@@ -234,29 +257,50 @@ auto
     {
         case ECk_ResolverDataBundle_PhaseSelection::ThisPhase:
         {
-            CK_ENSURE_IF_NOT(NOT InDataBundle.Has<ck::FTag_ResolverDataBundle_OperationsResolved>(),
+            const auto OperationsAlreadyResolved = InDataBundle.Has<ck::FTag_ResolverDataBundle_OperationsResolved>();
+            CK_ENSURE_IF_NOT(NOT OperationsAlreadyResolved,
                 TEXT("Cannot add operation to [{}] because opertions have already been RESOLVED for DataBundle [{}]. "
                     "A new phase is about to start and the current phase [{}] (if INVALID, we have not yet started resolution) just ended"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            { return InDataBundle; }
+            {}
+            if (OperationsAlreadyResolved)
+            {
+                InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
+                return InDataBundle;
+            }
             break;
         }
         case ECk_ResolverDataBundle_PhaseSelection::NextPhase:
         {
-            CK_ENSURE_IF_NOT(Get_NextPhase(InDataBundle) != TAG_ResolverDataBundle_InvalidPhase,
+            const auto HasValidNextPhase = Get_NextPhase(InDataBundle) != TAG_ResolverDataBundle_InvalidPhase;
+            CK_ENSURE_IF_NOT(HasValidNextPhase,
                 TEXT("Cannot add operation to [{}] as there are no VALID Phases after the current Phase for DataBundle [{}]. "
                     "The Phase [{}] has just been completed"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            { return InDataBundle; }
+            {}
+            if (NOT HasValidNextPhase)
+            {
+                InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
+                return InDataBundle;
+            }
 
-            CK_ENSURE_IF_NOT(InDataBundle.Has<ck::FTag_ResolverDataBundle_OperationsResolved>(),
+            const auto OperationsResolved = InDataBundle.Has<ck::FTag_ResolverDataBundle_OperationsResolved>();
+            CK_ENSURE_IF_NOT(OperationsResolved,
                 TEXT("Cannot add operation to [{}] because current opertions have NOT RESOLVED yet for DataBundle [{}]. "
                     "The Phase [{}] is currently underway with pending operations"),
                 InPhase, InDataBundle, Get_CurrentPhase(InDataBundle))
-            { return InDataBundle; }
+            {}
+            if (NOT OperationsResolved)
+            {
+                InDelegate.ExecuteIfBound(InDataBundle, ECk_Request_OperationResult::Failed_NotEnqueued);
+                return InDataBundle;
+            }
             break;
         }
     }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InDataBundle.AddOrGet<ck::FFragment_ResolverDataBundle_Requests>()._MutateMetadataRequests.Emplace(InRequest);
     return InDataBundle;

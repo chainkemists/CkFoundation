@@ -5,6 +5,7 @@
 #include "CkCore/Enums/CkEnums.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Fragment_Data.h"
 #include "CkGrid/2dGridSystem/Placement/Ck2dGridPlacement_Fragment_Data.h"
@@ -27,21 +28,25 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridOccupancy",
-              DisplayName="[Ck][2dGridOccupancy] Request Add Placement")
+              DisplayName="[Ck][2dGridOccupancy] Request Add Placement",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_2dGridPlacement
     Request_AddPlacement(
         UPARAM(ref) FCk_Handle_2dGridSystem& InGrid,
         const FCk_Handle& InOccupant,
         const FIntPoint& InAnchor,
         ECk_CardinalRotation InRotation,
-        const TArray<FIntPoint>& InCells);
+        const TArray<FIntPoint>& InCells,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridOccupancy",
-              DisplayName="[Ck][2dGridOccupancy] Request Remove Placement")
+              DisplayName="[Ck][2dGridOccupancy] Request Remove Placement",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static bool
     Request_RemovePlacement(
-        UPARAM(ref) FCk_Handle_2dGridPlacement& InPlacement);
+        UPARAM(ref) FCk_Handle_2dGridPlacement& InPlacement,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

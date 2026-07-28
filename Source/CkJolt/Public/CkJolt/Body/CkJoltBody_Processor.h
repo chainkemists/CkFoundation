@@ -93,6 +93,7 @@ namespace ck
             ck::TReadWrite<FFragment_JoltBody_Current>,
             ck::TReadWrite<FFragment_JoltBody_Requests>,
             TExclude<FTag_JoltBody_NeedsSetup>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -178,6 +179,32 @@ namespace ck
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
         FJoltWorld* _JoltWorld = nullptr;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed body's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKJOLT_API FProcessor_JoltBody_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_JoltBody_CancelPendingRequests,
+        FCk_Handle_JoltBody,
+        ck::TReadOnly<FFragment_JoltBody_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_JoltBody_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

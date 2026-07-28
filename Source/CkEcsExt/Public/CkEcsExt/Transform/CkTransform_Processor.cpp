@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/CkEcsExt_Log.h"
@@ -177,6 +178,41 @@ namespace ck
     {
         TProcessor::DoTick(InDeltaT);
 
+        // Whatever the drain did not reach — an owner mid-destroy, or one whose RootComponent is not
+        // Movable — is about to be discarded by the Clear below. Complete those entries here, or a
+        // caller awaiting completion never hears back. This is where the cancellation must live: a
+        // separate FGroup_EndPlay processor would find the pool already cleared by this same tick.
+        // The owners are collected first because a completion handler is free to enqueue, and the pool
+        // being iterated must not grow underneath the view.
+        auto UndrainedOwners = TArray<EntityType>{};
+
+        _TransientEntity.View<FFragment_Transform_Requests>().ForEach(
+        [&](EntityType InEntity, const FFragment_Transform_Requests&)
+        {
+            UndrainedOwners.Emplace(InEntity);
+        });
+
+        for (const auto& UndrainedEntity : UndrainedOwners)
+        {
+            auto Owner = MakeHandle(UndrainedEntity, _TransientEntity);
+            const auto& Requests = Owner.Get<FFragment_Transform_Requests>();
+
+            request::FireCancelledForPending(Owner, Requests.Get_LocationRequests());
+            request::FireCancelledForPending(Owner, Requests.Get_RotationRequests());
+
+            algo::ForEachRequest(Requests.Get_ScaleRequests(),
+            [&](const FCk_Request_Transform_SetScale& InRequest)
+            {
+                InRequest.TryFireCompletion(Owner, ECk_Request_OperationResult::Failed_Cancelled);
+            }, policy::DontResetContainer{});
+
+            algo::ForEachRequest(Requests.Get_ForceRefreshRequests(),
+            [&](const FCk_Request_Transform_ForceRefresh& InRequest)
+            {
+                InRequest.TryFireCompletion(Owner, ECk_Request_OperationResult::Failed_Cancelled);
+            }, policy::DontResetContainer{});
+        }
+
         _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
@@ -220,10 +256,17 @@ namespace ck
         InHandle.CopyAndRemove(InRequestsComp,
         [&](FFragment_Transform_Requests& InRequests)
         {
+            // Every DoHandleRequest overload below is void and has no rejection path, so reaching the
+            // line after the call IS the success condition.
             algo::ForEachRequest(InRequests._LocationRequests, Visitor(
             [&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InComp, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -234,7 +277,12 @@ namespace ck
             algo::ForEachRequest(InRequests._RotationRequests, ck::Visitor(
             [&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InComp, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -245,7 +293,12 @@ namespace ck
             algo::ForEachRequest(InRequests._ScaleRequests,
             [&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InComp, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -258,6 +311,13 @@ namespace ck
             if (NOT InRequests._ForceRefreshRequests.IsEmpty())
             {
                 InHandle.AddOrGet<FTag_Transform_Updated>();
+
+                algo::ForEachRequest(InRequests._ForceRefreshRequests,
+                [&](const FCk_Request_Transform_ForceRefresh& InRequest)
+                {
+                    InRequest.TryFireCompletion(InHandle, ECk_Request_OperationResult::Succeeded);
+                }, policy::DontResetContainer{});
+
                 InRequests._ForceRefreshRequests.Reset();
             }
         });
@@ -569,7 +629,8 @@ namespace ck
             UCk_Utils_Transform_UE::Request_SetLocation
             (
                 InHandle,
-                FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + InGoal.Get_InterpolationOffset()}
+                FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + InGoal.Get_InterpolationOffset()},
+                {}
             );
 
             InHandle.Remove<MarkedDirtyBy>();
@@ -596,7 +657,8 @@ namespace ck
                 UCk_Utils_Transform_UE::Request_SetLocation
                 (
                     InHandle,
-                    FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + FinalOffset}
+                    FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + FinalOffset},
+                    {}
                 );
             }
             InHandle.Remove<MarkedDirtyBy>();
@@ -609,7 +671,8 @@ namespace ck
         UCk_Utils_Transform_UE::Request_SetLocation
         (
             InHandle,
-            FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + GoalFraction}
+            FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + GoalFraction},
+            {}
         );
     }
 
@@ -628,7 +691,8 @@ namespace ck
             UCk_Utils_Transform_UE::Request_SetRotation
             (
                 InHandle,
-                FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + InGoal.Get_InterpolationOffset()}
+                FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + InGoal.Get_InterpolationOffset()},
+                {}
             );
 
             InHandle.Remove<MarkedDirtyBy>();
@@ -653,7 +717,8 @@ namespace ck
                 UCk_Utils_Transform_UE::Request_SetRotation
                 (
                     InHandle,
-                    FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + FinalOffset}
+                    FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + FinalOffset},
+                    {}
                 );
             }
             InHandle.Remove<MarkedDirtyBy>();
@@ -666,7 +731,8 @@ namespace ck
         UCk_Utils_Transform_UE::Request_SetRotation
         (
             InHandle,
-            FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + GoalFraction}
+            FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + GoalFraction},
+            {}
         );
     }
 }

@@ -697,7 +697,7 @@ auto
 
                         _SpawnedRuntimeIds.Add(SavedId);
                         auto Params = DoDeserialize_V3Blob(Entry.Get_SpawnParamsBytes());
-                        const auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity(Owner, ScriptClass, Params);
+                        const auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity(Owner, ScriptClass, Params, {});
                         // The pending handle wraps the immediately-created entity (Construct completes over the pumps);
                         // map it now so dependents can reference it.
                         Resolved = Pending.Get_EntityUnderConstruction();
@@ -851,7 +851,7 @@ auto
                     : FCk_Handle{};
 
                 if (CurrentContext != *SavedContext)
-                { UCk_Utils_ContextOwner_UE::Request_Override(Entity, *SavedContext); }
+                { UCk_Utils_ContextOwner_UE::Request_Override(Entity, *SavedContext, {}); }
             }
         }
     }
@@ -897,7 +897,7 @@ auto
         if (UCk_Utils_Transform_UE::Has(Entity))
         {
             UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(
-                Entity, FCk_Request_Transform_SetTransform{Saved});
+                Entity, FCk_Request_Transform_SetTransform{Saved}, {});
         }
     }
 }

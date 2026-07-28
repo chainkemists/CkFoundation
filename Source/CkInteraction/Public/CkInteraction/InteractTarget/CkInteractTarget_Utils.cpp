@@ -121,9 +121,13 @@ auto
     UCk_Utils_InteractTarget_UE::
     Request_StartInteraction(
         FCk_Handle_InteractTarget& InInteractTarget,
-        const FCk_Try_InteractTarget_StartInteraction& InRequest)
+        const FCk_Try_InteractTarget_StartInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_InteractTarget
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InInteractTarget.AddOrGet<ck::FFragment_InteractTarget_Requests>()._Requests.Emplace(InRequest);
     return InInteractTarget;
 }
@@ -132,9 +136,13 @@ auto
     UCk_Utils_InteractTarget_UE::
     Request_CancelInteraction(
         FCk_Handle_InteractTarget& InInteractTarget,
-        const FCk_Request_InteractTarget_CancelInteraction& InRequest)
+        const FCk_Request_InteractTarget_CancelInteraction& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_InteractTarget
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InInteractTarget.AddOrGet<ck::FFragment_InteractTarget_Requests>()._Requests.Emplace(InRequest);
     return InInteractTarget;
 }

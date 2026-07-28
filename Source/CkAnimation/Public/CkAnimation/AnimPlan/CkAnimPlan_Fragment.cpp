@@ -31,7 +31,7 @@ static struct FAnimPlanRepHandlerRegistrar
 
                 if (NOT OldPlans.IsValidIndex(Index) || OldPlans[Index] != AnimPlanToReplicate)
                 {
-                    UCk_Utils_AnimPlan_UE::Request_UpdateAnimState(AnimPlanEntity, FCk_Request_AnimPlan_UpdateAnimState{AnimPlanToReplicate.Get_AnimCluster(), AnimPlanToReplicate.Get_AnimState()});
+                    UCk_Utils_AnimPlan_UE::Request_UpdateAnimState(AnimPlanEntity, FCk_Request_AnimPlan_UpdateAnimState{AnimPlanToReplicate.Get_AnimCluster(), AnimPlanToReplicate.Get_AnimState()}, {});
                 }
             }
 
@@ -73,7 +73,7 @@ static struct FAnimPlanRepHandlerRegistrar
                     for (const auto& Saved : New.Get<FCk_RepData_AnimPlans>().AnimPlans)
                     {
                         UCk_Utils_AnimPlan_UE::Request_UpdateAnimState(Plan,
-                            FCk_Request_AnimPlan_UpdateAnimState{Saved.Get_AnimCluster(), Saved.Get_AnimState()});
+                            FCk_Request_AnimPlan_UpdateAnimState{Saved.Get_AnimCluster(), Saved.Get_AnimState()}, {});
                     }
                     return ECk_Persistence_ApplyResult::Applied;
                 }});

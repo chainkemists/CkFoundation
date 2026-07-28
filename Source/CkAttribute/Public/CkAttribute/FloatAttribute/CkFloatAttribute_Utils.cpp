@@ -521,7 +521,8 @@ auto
     Request_Override(
         UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
         float InNewBaseValue,
-        ECk_MinMaxCurrent InAttributeComponent)
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_FloatAttribute
 {
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
@@ -541,6 +542,9 @@ auto
             InAttributeComponent
         }
     );
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InAttribute, ECk_Request_OperationResult::Succeeded);
 
     return InAttribute;
 }
@@ -747,20 +751,30 @@ auto
 auto
     UCk_Utils_FloatAttributeRefill_UE::
     Request_Pause(
-        FCk_Handle_FloatAttributeRefill& InAttributeRefill)
+        FCk_Handle_FloatAttributeRefill& InAttributeRefill,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_FloatAttributeRefill
 {
     InAttributeRefill.Try_Remove<ck::FTag_IsRefillRunning>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InAttributeRefill, ECk_Request_OperationResult::Succeeded);
+
     return InAttributeRefill;
 }
 
 auto
     UCk_Utils_FloatAttributeRefill_UE::
     Request_Resume(
-        FCk_Handle_FloatAttributeRefill& InAttributeRefill)
+        FCk_Handle_FloatAttributeRefill& InAttributeRefill,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_FloatAttributeRefill
 {
     InAttributeRefill.AddOrGet<ck::FTag_IsRefillRunning>();
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InAttributeRefill, ECk_Request_OperationResult::Succeeded);
+
     return InAttributeRefill;
 }
 
@@ -1191,7 +1205,8 @@ auto
     UCk_Utils_FloatAttributeModifier_UE::
     Request_ClearAllModifiers(
         FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent)
+        ECk_MinMaxCurrent InAttributeComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     switch (InAttributeComponent)
@@ -1212,6 +1227,9 @@ auto
             break;
         }
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InAttribute, ECk_Request_OperationResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

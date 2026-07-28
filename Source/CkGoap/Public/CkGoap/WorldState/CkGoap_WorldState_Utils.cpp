@@ -114,10 +114,11 @@ auto
 	Set_Value(
 		FCk_Handle_Goap_WorldState& InWorldState,
 		FGameplayTag InKey,
-		bool InValue)
+		bool InValue,
+		const FCk_Delegate_Request_OnCompleted& InDelegate)
 	-> FCk_Handle_Goap_WorldState
 {
-	return DoAddRequest(InWorldState, FCk_Request_Goap_WorldState_SetValue{InKey, InValue});
+	return DoAddRequest(InWorldState, FCk_Request_Goap_WorldState_SetValue{InKey, InValue}, InDelegate);
 }
 
 auto
@@ -167,10 +168,11 @@ auto
 	UCk_Utils_Goap_WorldState_UE::
 	Request_RegisterKey(
 		FCk_Handle_Goap_WorldState& InWorldState,
-		FGameplayTag InKey)
+		FGameplayTag InKey,
+		const FCk_Delegate_Request_OnCompleted& InDelegate)
 	-> FCk_Handle_Goap_WorldState
 {
-	return DoAddRequest(InWorldState, FCk_Request_Goap_WorldState_RegisterKey{InKey});
+	return DoAddRequest(InWorldState, FCk_Request_Goap_WorldState_RegisterKey{InKey}, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -666,11 +668,23 @@ auto
 
 auto
 	UCk_Utils_Goap_WorldState_UE::
-	DoAddRequest(FCk_Handle_Goap_WorldState& InWorldState, const auto& InRequest)
+	DoAddRequest(
+		FCk_Handle_Goap_WorldState& InWorldState,
+		const auto& InRequest,
+		const FCk_Delegate_Request_OnCompleted& InDelegate)
 	-> FCk_Handle_Goap_WorldState
 {
-	CK_ENSURE_IF_NOT(ck::IsValid(InWorldState), TEXT("Invalid GOAP WorldState handle when adding request"))
-	{ return InWorldState; }
+	const auto WorldStateIsValid = ck::IsValid(InWorldState);
+	CK_ENSURE_IF_NOT(WorldStateIsValid, TEXT("Invalid GOAP WorldState handle when adding request"))
+	{}
+	if (NOT WorldStateIsValid)
+	{
+		InDelegate.ExecuteIfBound(InWorldState, ECk_Request_OperationResult::Failed_NotEnqueued);
+		return InWorldState;
+	}
+
+	if (InDelegate.IsBound())
+	{ InRequest.Set_CompletionDelegate(InDelegate); }
 
 	auto& Requests = InWorldState.AddOrGet<ck::FFragment_Goap_WorldState_Requests>();
 	Requests._Requests.Add(InRequest);

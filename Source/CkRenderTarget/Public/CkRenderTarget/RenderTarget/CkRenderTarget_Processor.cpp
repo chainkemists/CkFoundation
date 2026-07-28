@@ -7,6 +7,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkRenderTarget/Net/CkRenderTargetRelay_Actor.h"
@@ -43,6 +44,7 @@
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_PixelCapture);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_PixelSyncPump);
 CK_REGISTER_PROCESSOR(ck::FProcessor_RenderTarget_FlushPendingReplication);
@@ -483,6 +485,11 @@ namespace ck
             algo::ForEachRequest(RequestsCopy, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
+                // Genuinely rejected — the batch is dropped rather than applied, so the caller's
+                // intent does NOT hold. Result stays at its Failed default; the guard fires it.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InRenderTargetEntity, Result);
+
                 if (InRequest.Get_IsRequestHandleValid())
                 { InRequest.GetAndDestroyRequestHandle(); }
             }), policy::DontResetContainer{});
@@ -495,10 +502,17 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
+            // Every DoHandleRequest overload below is void and has no rejection path, so reaching the
+            // line after the call IS the success condition.
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InRenderTargetEntity, Result);
+
             DoHandleRequest(InRenderTargetEntity, Cmds, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             { InRequest.GetAndDestroyRequestHandle(); }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
         if (Cmds.IsEmpty())
@@ -945,6 +959,19 @@ namespace ck
                 break;
             }
         }
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_RenderTarget_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InRenderTargetEntity,
+            const FFragment_RenderTarget_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InRenderTargetEntity, InRequestsComp.Get_Requests());
     }
 
     // ----------------------------------------------------------------------------------------------------------------

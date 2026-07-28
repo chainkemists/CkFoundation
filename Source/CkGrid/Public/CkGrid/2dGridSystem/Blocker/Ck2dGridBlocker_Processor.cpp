@@ -5,10 +5,12 @@
 #include "CkGrid/2dGridSystem/Cell/Ck2dGridCell_Fragment.h"
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_2dGridBlocker_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_2dGridBlocker_Requests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_2dGridBlocker_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -92,6 +94,10 @@ namespace ck
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                // Requests within the same tick are coalesced to the last one's value (see
+                // FinalActive above), so every drained request reports the outcome it asked for.
+                InRequest.TryFireCompletion(InHandle, ECk_Request_OperationResult::Succeeded);
             }));
 
             if (NOT AnyRequest)
@@ -127,6 +133,19 @@ namespace ck
 
             InCurrent._IsActive = FinalActive;
         });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_2dGridBlocker_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_2dGridBlocker_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 

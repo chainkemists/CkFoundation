@@ -119,10 +119,14 @@ auto
     UCk_Utils_JoltConstraint_UE::
     Request_SetEnabled(
         FCk_Handle_JoltConstraint& InConstraint,
-        const FCk_Request_JoltConstraint_SetEnabled& InRequest)
+        const FCk_Request_JoltConstraint_SetEnabled& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltConstraint
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltConstraint_Requests, InConstraint);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InConstraint.AddOrGet<ck::FFragment_JoltConstraint_Requests>()._Requests.Emplace(InRequest);
 
@@ -133,10 +137,14 @@ auto
     UCk_Utils_JoltConstraint_UE::
     Request_Distance_SetRange(
         FCk_Handle_JoltConstraint& InConstraint,
-        const FCk_Request_JoltConstraint_Distance_SetRange& InRequest)
+        const FCk_Request_JoltConstraint_Distance_SetRange& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltConstraint
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltConstraint_Requests, InConstraint);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InConstraint.AddOrGet<ck::FFragment_JoltConstraint_Requests>()._Requests.Emplace(InRequest);
 
@@ -147,10 +155,14 @@ auto
     UCk_Utils_JoltConstraint_UE::
     Request_Hinge_SetMotor(
         FCk_Handle_JoltConstraint& InConstraint,
-        const FCk_Request_JoltConstraint_Hinge_SetMotor& InRequest)
+        const FCk_Request_JoltConstraint_Hinge_SetMotor& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltConstraint
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltConstraint_Requests, InConstraint);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InConstraint.AddOrGet<ck::FFragment_JoltConstraint_Requests>()._Requests.Emplace(InRequest);
 

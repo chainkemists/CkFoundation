@@ -4,6 +4,7 @@
 
 #include "CkCamera/Camera/CkCamera_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -44,6 +45,7 @@ namespace ck_minimap_processor
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Minimap_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Minimap_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Minimap_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Minimap_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Minimap_EndPlay);
 
@@ -110,7 +112,24 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
-            DoHandleRequest(InMinimapEntity, InCurrent, InParams, InRequest);
+            using T = std::decay_t<decltype(InRequest)>;
+
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InMinimapEntity, Result);
+
+            // SetViewExtent has a genuine ensure-gated failure path; every other DoHandleRequest
+            // overload is void with no rejection, so reaching the line after the call IS the
+            // success condition.
+            if constexpr (std::is_same_v<T, FCk_Request_Minimap_SetViewExtent>)
+            {
+                if (DoHandleRequest(InMinimapEntity, InCurrent, InParams, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
+            }
+            else
+            {
+                DoHandleRequest(InMinimapEntity, InCurrent, InParams, InRequest);
+                Result = ECk_Request_OperationResult::Succeeded;
+            }
 
             if (InRequest.Get_IsRequestHandleValid())
             {
@@ -131,19 +150,21 @@ namespace ck
             FFragment_Minimap_Current& InCurrent,
             FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetViewExtent& InRequest)
-        -> void
+        -> bool
     {
         minimap::VeryVerbose(TEXT("Handling SetViewExtent Request for Minimap with Entity [{}]"), InMinimapEntity);
 
         CK_ENSURE_IF_NOT(InRequest.Get_ViewExtent() > 0.0f,
             TEXT("Minimap [{}] SetViewExtent [{}] must be > 0 — request rejected"),
             InMinimapEntity, InRequest.Get_ViewExtent())
-        { return; }
+        { return false; }
 
         InCurrent._ViewExtent = InRequest.Get_ViewExtent();
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
         InCurrent._TimeSinceUpdate = ProjectImmediately;
+
+        return true;
     }
 
     auto
@@ -214,6 +235,19 @@ namespace ck
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
         InCurrent._TimeSinceUpdate = ProjectImmediately;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Minimap_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InMinimapEntity,
+            const FFragment_Minimap_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InMinimapEntity, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

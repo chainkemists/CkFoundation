@@ -4,6 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkDeferredEntity_Utils.generated.h"
 
@@ -81,12 +82,17 @@ private:
     Get_InvalidHandle() { return {}; };
 
 public:
+    // Immediate mutator: broadcasts and removes the deferred tag inline and enqueues nothing, so the completion
+    // delegate fires synchronously with Succeeded on the caller's own stack. The OnSetupComplete /
+    // OnFullyComplete signals stay the channel for what the completion MEANT; this reports only that it ran.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|DeferredEntity",
-        DisplayName="[Ck][DeferredEntity] Complete Setup")
+        DisplayName="[Ck][DeferredEntity] Complete Setup",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_CompleteSetup(
-        UPARAM(ref) FCk_Handle_DeferredEntity& InDeferredEntity);
+        UPARAM(ref) FCk_Handle_DeferredEntity& InDeferredEntity,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

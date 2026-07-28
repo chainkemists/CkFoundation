@@ -62,7 +62,7 @@ namespace ck
     private:
         ResolverRequestList _ResolverRequests;
 
-    private:
+    public:
         CK_PROPERTY_GET(_ResolverRequests);
     };
 

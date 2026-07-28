@@ -65,11 +65,15 @@ auto
 auto
     UCk_Utils_AutoReorient_UE::
     Request_Start(
-        FCk_Handle& InHandle)
+        FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     if (NOT Ensure(InHandle))
-    { return; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     if (const auto& ReorientPolicy = InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_Params().Get_ReorientPolicy() ==
         ECk_AutoReorient_Policy::OrientTowardsVelocity)
@@ -82,21 +86,31 @@ auto
 
         InHandle.Add<ck::FTag_AutoReorient_OrientTowardsVelocity>();
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 }
 
 auto
     UCk_Utils_AutoReorient_UE::
     Request_Stop(
-        FCk_Handle& InHandle)
+        FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
     if (NOT Ensure(InHandle))
-    { return; }
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return;
+    }
 
     if (InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_Params().Get_ReorientPolicy() == ECk_AutoReorient_Policy::OrientTowardsVelocity)
     {
         InHandle.Remove<ck::FTag_AutoReorient_OrientTowardsVelocity>();
     }
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

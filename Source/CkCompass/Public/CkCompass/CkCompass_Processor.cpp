@@ -9,6 +9,7 @@
 #include "CkCompass/CkCompass_Log.h"
 #include "CkCompass/CkCompass_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -46,6 +47,7 @@ namespace ck_compass_processor
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_Compass_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Compass_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Compass_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Compass_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Compass_EndPlay);
 
@@ -91,12 +93,19 @@ namespace ck
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest) -> void
         {
+            // Every DoHandleRequest overload below is void and has no rejection path, so reaching the
+            // line after the call IS the success condition.
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InCompassEntity, Result);
+
             DoHandleRequest(InCompassEntity, InCurrent, InParams, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             {
                 InRequest.GetAndDestroyRequestHandle();
             }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
         if (InRequests._Requests.IsEmpty())
@@ -153,6 +162,19 @@ namespace ck
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
         InCurrent._TimeSinceUpdate = ProjectImmediately;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Compass_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InCompassEntity,
+            const FFragment_Compass_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InCompassEntity, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

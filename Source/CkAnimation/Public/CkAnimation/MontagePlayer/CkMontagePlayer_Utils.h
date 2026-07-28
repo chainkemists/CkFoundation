@@ -4,6 +4,8 @@
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkMontagePlayer_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -55,11 +57,13 @@ public:
     // BaseSKMC) to revive server-side playback.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|MontagePlayer",
-              DisplayName="[Ck][MontagePlayer] Request Rebind SkeletalMeshComponent")
+              DisplayName="[Ck][MontagePlayer] Request Rebind SkeletalMeshComponent",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_MontagePlayer
     Request_RebindSkeletalMeshComponent(
         UPARAM(ref) FCk_Handle_MontagePlayer& InMontagePlayer,
-        USkeletalMeshComponent* InSkeletalMeshComponent);
+        USkeletalMeshComponent* InSkeletalMeshComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|MontagePlayer",
@@ -128,47 +132,57 @@ public:
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|MontagePlayer",
-              DisplayName="[Ck][MontagePlayer] Request Play")
+              DisplayName="[Ck][MontagePlayer] Request Play",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_MontagePlayer
     Request_Play(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_Play& InRequest);
+        const FCk_Request_MontagePlayer_Play& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|MontagePlayer",
-              DisplayName="[Ck][MontagePlayer] Request Stop")
+              DisplayName="[Ck][MontagePlayer] Request Stop",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_MontagePlayer
     Request_Stop(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_Stop& InRequest);
+        const FCk_Request_MontagePlayer_Stop& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|MontagePlayer",
-              DisplayName="[Ck][MontagePlayer] Request Pause")
+              DisplayName="[Ck][MontagePlayer] Request Pause",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_MontagePlayer
     Request_Pause(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_Pause& InRequest);
+        const FCk_Request_MontagePlayer_Pause& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|MontagePlayer",
-              DisplayName="[Ck][MontagePlayer] Request Resume")
+              DisplayName="[Ck][MontagePlayer] Request Resume",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_MontagePlayer
     Request_Resume(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_Resume& InRequest);
+        const FCk_Request_MontagePlayer_Resume& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|Utils|MontagePlayer",
-              DisplayName="[Ck][MontagePlayer] Request Jump To Section")
+              DisplayName="[Ck][MontagePlayer] Request Jump To Section",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_MontagePlayer
     Request_JumpToSection(
         UPARAM(ref) FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_JumpToSection& InRequest);
+        const FCk_Request_MontagePlayer_JumpToSection& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

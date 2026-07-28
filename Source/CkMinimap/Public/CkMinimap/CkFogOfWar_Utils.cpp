@@ -126,13 +126,18 @@ auto
     UCk_Utils_FogOfWar_UE::
     Request_AddRevealer(
         FCk_Handle_FogOfWar& InFogOfWar,
-        const FCk_Handle& InRevealer)
+        const FCk_Handle& InRevealer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_FogOfWar
 {
     CK_CALLSTACK_RECORD(ck::FFragment_FogOfWar_Requests, InFogOfWar);
 
-    InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(
-        FCk_Request_FogOfWar_AddRevealer{InRevealer});
+    const auto Request = FCk_Request_FogOfWar_AddRevealer{InRevealer};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(Request);
 
     return InFogOfWar;
 }
@@ -141,13 +146,18 @@ auto
     UCk_Utils_FogOfWar_UE::
     Request_RemoveRevealer(
         FCk_Handle_FogOfWar& InFogOfWar,
-        const FCk_Handle& InRevealer)
+        const FCk_Handle& InRevealer,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_FogOfWar
 {
     CK_CALLSTACK_RECORD(ck::FFragment_FogOfWar_Requests, InFogOfWar);
 
-    InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(
-        FCk_Request_FogOfWar_RemoveRevealer{InRevealer});
+    const auto Request = FCk_Request_FogOfWar_RemoveRevealer{InRevealer};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(Request);
 
     return InFogOfWar;
 }
@@ -156,10 +166,14 @@ auto
     UCk_Utils_FogOfWar_UE::
     Request_RevealLocation(
         FCk_Handle_FogOfWar& InFogOfWar,
-        const FCk_Request_FogOfWar_RevealLocation& InRequest)
+        const FCk_Request_FogOfWar_RevealLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_FogOfWar
 {
     CK_CALLSTACK_RECORD(ck::FFragment_FogOfWar_Requests, InFogOfWar);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(InRequest);
 
@@ -169,13 +183,18 @@ auto
 auto
     UCk_Utils_FogOfWar_UE::
     Request_RevealAll(
-        FCk_Handle_FogOfWar& InFogOfWar)
+        FCk_Handle_FogOfWar& InFogOfWar,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_FogOfWar
 {
     CK_CALLSTACK_RECORD(ck::FFragment_FogOfWar_Requests, InFogOfWar);
 
-    InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(
-        FCk_Request_FogOfWar_RevealAll{});
+    const auto Request = FCk_Request_FogOfWar_RevealAll{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(Request);
 
     return InFogOfWar;
 }
@@ -183,13 +202,18 @@ auto
 auto
     UCk_Utils_FogOfWar_UE::
     Request_Reset(
-        FCk_Handle_FogOfWar& InFogOfWar)
+        FCk_Handle_FogOfWar& InFogOfWar,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_FogOfWar
 {
     CK_CALLSTACK_RECORD(ck::FFragment_FogOfWar_Requests, InFogOfWar);
 
-    InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(
-        FCk_Request_FogOfWar_Reset{});
+    const auto Request = FCk_Request_FogOfWar_Reset{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(Request);
 
     return InFogOfWar;
 }
@@ -198,10 +222,14 @@ auto
     UCk_Utils_FogOfWar_UE::
     Request_SetExplored(
         FCk_Handle_FogOfWar& InFogOfWar,
-        const FCk_Request_FogOfWar_SetExplored& InRequest)
+        const FCk_Request_FogOfWar_SetExplored& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_FogOfWar
 {
     CK_CALLSTACK_RECORD(ck::FFragment_FogOfWar_Requests, InFogOfWar);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InFogOfWar.AddOrGet<ck::FFragment_FogOfWar_Requests>()._Requests.Emplace(InRequest);
 

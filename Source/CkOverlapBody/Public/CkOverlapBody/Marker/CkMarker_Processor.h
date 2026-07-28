@@ -45,6 +45,7 @@ namespace ck
             TReadOnly<FFragment_Marker_Params>,
             TReadOnly<FFragment_Marker_Requests>,
             FTag_Marker_SetupComplete,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -75,6 +76,30 @@ namespace ck
             FFragment_Marker_Current& InCurrentComp,
             const FFragment_Marker_Params& InParamsComp,
             const FCk_Request_Marker_Resize& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed marker's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+
+    class CKOVERLAPBODY_API FProcessor_Marker_CancelPendingRequests : public ck_exp::TProcessor<
+            FProcessor_Marker_CancelPendingRequests,
+            FCk_Handle_Marker,
+            TReadOnly<FFragment_Marker_Requests>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InMarkerEntity,
+            const FFragment_Marker_Requests& InRequestsComp) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

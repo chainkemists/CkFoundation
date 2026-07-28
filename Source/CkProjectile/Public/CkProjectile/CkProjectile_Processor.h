@@ -44,6 +44,7 @@ namespace ck
     class CKPROJECTILE_API FProcessor_Projectile_HandleRequests : public TProcessor<
             FProcessor_Projectile_HandleRequests,
             ck::TReadOnly<FFragment_Projectile_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -70,6 +71,33 @@ namespace ck
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_Projectile_Requests::RequestType& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed request entity's
+    // still-pending request is never drained. This fires its completion delegate with Failed_Cancelled
+    // so a caller awaiting completion terminates instead of hanging. The request is stored singular
+    // (not a list/variant) here, so this calls TryFireCompletion directly rather than the
+    // FireCancelledForPending container helper.
+    class CKPROJECTILE_API FProcessor_Projectile_CancelPendingRequests : public TProcessor<
+        FProcessor_Projectile_CancelPendingRequests,
+        ck::TReadOnly<FFragment_Projectile_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Projectile_Requests& InRequestsComp)
+            -> void;
     };
 }
 

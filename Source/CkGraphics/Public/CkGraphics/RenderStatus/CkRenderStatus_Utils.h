@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkGraphics/RenderStatus/CkRenderStatus_Fragment_Data.h"
 
@@ -51,14 +52,15 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderStatus",
-              meta = (AutoCreateRefTerm = "InOptionalPayload"),
+              meta = (AutoCreateRefTerm = "InOptionalPayload, InCompletionDelegate"),
               DisplayName="[Ck][RenderStatus] Request Query Rendered Actors")
     static void
     Request_QueryRenderedActors(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
         const FInstancedStruct& InOptionalPayload,
-        const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate);
+        const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate,
+        const FCk_Delegate_Request_OnCompleted& InCompletionDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

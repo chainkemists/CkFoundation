@@ -2,6 +2,7 @@
 
 #include "CkCore/Format/CkFormat.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkGoap/CkGoap_Fragment_Data.h"
@@ -71,10 +72,11 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Planner_Plan
+struct CKGOAP_API FCk_Request_Goap_Planner_Plan : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_Plan);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_Planner_Plan);
 
 private:
     // Who asked for this plan — recorded onto the Planner's ReplanCause when consumed.
@@ -86,17 +88,19 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Planner_CancelPlan
+struct CKGOAP_API FCk_Request_Goap_Planner_CancelPlan : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_CancelPlan);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_Planner_CancelPlan);
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Planner_SetGoal
+struct CKGOAP_API FCk_Request_Goap_Planner_SetGoal : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetGoal);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_Planner_SetGoal);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -108,10 +112,11 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Planner_SetActionCost
+struct CKGOAP_API FCk_Request_Goap_Planner_SetActionCost : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetActionCost);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_Planner_SetActionCost);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -129,10 +134,11 @@ public:
 // Carries no cost — it only stamps FTag_Goap_Action_HasCostProvider. The value
 // itself is pushed via FCk_Request_Goap_Planner_SetActionCost.
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Planner_RegisterActionCostProvider
+struct CKGOAP_API FCk_Request_Goap_Planner_RegisterActionCostProvider : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_RegisterActionCostProvider);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_Planner_RegisterActionCostProvider);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -144,10 +150,11 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Planner_SetReplanInterval
+struct CKGOAP_API FCk_Request_Goap_Planner_SetReplanInterval : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetReplanInterval);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_Planner_SetReplanInterval);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -160,10 +167,11 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Planner_SetReplanPolicy
+struct CKGOAP_API FCk_Request_Goap_Planner_SetReplanPolicy : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetReplanPolicy);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_Planner_SetReplanPolicy);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -175,10 +183,11 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Planner_SetSearchBudget
+struct CKGOAP_API FCk_Request_Goap_Planner_SetSearchBudget : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetSearchBudget);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_Planner_SetSearchBudget);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -191,10 +200,11 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Request_Goap_Planner_SetCostThreshold
+struct CKGOAP_API FCk_Request_Goap_Planner_SetCostThreshold : public FCk_Request_Base
 {
     GENERATED_BODY()
     CK_GENERATED_BODY(FCk_Request_Goap_Planner_SetCostThreshold);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Goap_Planner_SetCostThreshold);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

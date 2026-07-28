@@ -11,10 +11,12 @@
 
 #include "ResolverDataBundle/CkResolverDataBundle_Utils.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverDataBundle_StartNewPhase);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverDataBundle_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverDataBundle_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverDataBundle_ResolveOperations);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ResolverDataBundle_Calculate);
 
@@ -96,26 +98,38 @@ namespace ck
     {
         InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_ResolverDataBundle_Requests& InRequests)
         {
+            // Neither DoHandleRequest overload has a rejection path, so reaching the line after the
+            // call IS the success condition.
             ck::algo::ForEachRequest(InRequests._MutateMetadataRequests,
             [&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InComp, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             });
 
             ck::algo::ForEachRequest(InRequests._MutateModifierRequests,
             [&](const auto& InRequest)
             {
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
                 DoHandleRequest(InHandle, InComp, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
                     InRequest.GetAndDestroyRequestHandle();
                 }
+
+                Result = ECk_Request_OperationResult::Succeeded;
             });
         });
     }
@@ -159,6 +173,22 @@ namespace ck
 
         UCk_Utils_ResolverDataBundle_UE::DoAddPendingOperation(InHandle, MetadataOperation);
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ResolverDataBundle_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ResolverDataBundle_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_MutateMetadataRequests());
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_MutateModifierRequests());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_ResolverDataBundle_ResolveOperations::

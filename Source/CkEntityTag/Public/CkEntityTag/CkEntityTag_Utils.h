@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkEntityTag_Utils.generated.h"
@@ -84,19 +85,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityTag",
-              DisplayName="[Ck][EntityTag] Request Remove (Using FName)")
+              DisplayName="[Ck][EntityTag] Request Remove (Using FName)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static ECk_SucceededFailed
     Request_TryRemove(
         UPARAM(ref) FCk_Handle& InHandle,
-        UPARAM(meta = (Categories = "EntityTag")) FName InTag);
+        UPARAM(meta = (Categories = "EntityTag")) FName InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityTag",
-              DisplayName="[Ck][EntityTag] Request Remove (Using GameplayTag)")
+              DisplayName="[Ck][EntityTag] Request Remove (Using GameplayTag)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static ECk_SucceededFailed
     Request_TryRemove_UsingGameplayTag(
         UPARAM(ref) FCk_Handle& InHandle,
-        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag);
+        UPARAM(meta = (Categories = "EntityTag")) FGameplayTag InTag,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     // Enqueues ONE composite RestoreSet request that, at drain, SETs the FName tag set to EXACTLY the supplied
@@ -105,7 +110,8 @@ public:
     Request_RestoreSet(
         FCk_Handle& InHandle,
         const TArray<FName>& InTagNames,
-        const TArray<int32>& InCounts) -> void;
+        const TArray<int32>& InCounts,
+        const FCk_Delegate_Request_OnCompleted& InDelegate) -> void;
 
 public:
     UFUNCTION(BlueprintCallable,

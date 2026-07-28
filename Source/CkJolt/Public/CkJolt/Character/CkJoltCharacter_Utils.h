@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkJolt/Character/CkJoltCharacter_Fragment.h"
@@ -88,27 +90,33 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltCharacter",
-              DisplayName="[Ck][JoltCharacter] Request Move")
+              DisplayName="[Ck][JoltCharacter] Request Move",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltCharacter
     Request_Move(
         UPARAM(ref) FCk_Handle_JoltCharacter& InJoltCharacter,
-        const FCk_Request_JoltCharacter_Move& InRequest);
+        const FCk_Request_JoltCharacter_Move& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltCharacter",
-              DisplayName="[Ck][JoltCharacter] Request Jump")
+              DisplayName="[Ck][JoltCharacter] Request Jump",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltCharacter
     Request_Jump(
         UPARAM(ref) FCk_Handle_JoltCharacter& InJoltCharacter,
-        const FCk_Request_JoltCharacter_Jump& InRequest);
+        const FCk_Request_JoltCharacter_Jump& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltCharacter",
-              DisplayName="[Ck][JoltCharacter] Request Teleport")
+              DisplayName="[Ck][JoltCharacter] Request Teleport",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltCharacter
     Request_Teleport(
         UPARAM(ref) FCk_Handle_JoltCharacter& InJoltCharacter,
-        const FCk_Request_JoltCharacter_Teleport& InRequest);
+        const FCk_Request_JoltCharacter_Teleport& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

@@ -42,10 +42,14 @@ auto
     UCk_Utils_VfxCue_UE::
     Request_Play(
         FCk_Handle_VfxCue& InVfxCue,
-        const FCk_Request_VfxCue_Play& InRequest)
+        const FCk_Request_VfxCue_Play& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_VfxCue
 {
     ck::vfx::Verbose(TEXT("Requesting play for VfxCue [{}]"), InVfxCue);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InVfxCue.AddOrGet<ck::FFragment_VfxCue_Requests>()._Requests.Emplace(InRequest);
 
@@ -55,13 +59,18 @@ auto
 auto
     UCk_Utils_VfxCue_UE::
     Request_Stop(
-        FCk_Handle_VfxCue& InVfxCue)
+        FCk_Handle_VfxCue& InVfxCue,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_VfxCue
 {
     ck::vfx::Verbose(TEXT("Requesting stop for VfxCue [{}]"), InVfxCue);
 
-    InVfxCue.AddOrGet<ck::FFragment_VfxCue_Requests>()._Requests.Emplace(
-        FCk_Request_VfxCue_Stop{});
+    const auto Request = FCk_Request_VfxCue_Stop{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InVfxCue.AddOrGet<ck::FFragment_VfxCue_Requests>()._Requests.Emplace(Request);
 
     return InVfxCue;
 }

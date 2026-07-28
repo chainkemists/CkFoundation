@@ -346,6 +346,7 @@ namespace ck
             ck::TReadWrite<FFragment_Probe_Current>,
             ck::TReadOnly<FFragment_Probe_Requests>,
             TExclude<FTag_Probe_NeedsSetup>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -377,28 +378,54 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
-            const FCk_Request_Probe_BeginOverlap& InRequest) -> void;
+            const FCk_Request_Probe_BeginOverlap& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
-            const FCk_Request_Probe_OverlapUpdated& InRequest) -> void;
+            const FCk_Request_Probe_OverlapUpdated& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
-            const FCk_Request_Probe_EndOverlap& InRequest) -> void;
+            const FCk_Request_Probe_EndOverlap& InRequest) -> ECk_Request_OperationResult;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Probe_Current& InCurrent,
-            const FCk_Request_Probe_EnableDisable& InRequest) const -> void;
+            const FCk_Request_Probe_EnableDisable& InRequest) const -> ECk_Request_OperationResult;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed probe's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKSPATIALQUERY_API FProcessor_Probe_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Probe_CancelPendingRequests,
+        FCk_Handle_Probe,
+        ck::TReadOnly<FFragment_Probe_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

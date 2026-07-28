@@ -47,7 +47,7 @@ static struct FTransformRepHandlerRegistrar
                         return ECk_Persistence_ApplyResult::Applied;
                     }
 
-                    UCk_Utils_Transform_UE::Request_SetLocation(HandleTransform, FCk_Request_Transform_SetLocation{Location});
+                    UCk_Utils_Transform_UE::Request_SetLocation(HandleTransform, FCk_Request_Transform_SetLocation{Location}, {});
                     return ECk_Persistence_ApplyResult::Applied;
                 } });
 
@@ -69,7 +69,7 @@ static struct FTransformRepHandlerRegistrar
                         return ECk_Persistence_ApplyResult::Applied;
                     }
 
-                    UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform, FCk_Request_Transform_SetRotation{Rotation.Rotator()});
+                    UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform, FCk_Request_Transform_SetRotation{Rotation.Rotator()}, {});
                     return ECk_Persistence_ApplyResult::Applied;
                 } });
 
@@ -82,7 +82,7 @@ static struct FTransformRepHandlerRegistrar
 
                     UCk_Utils_Transform_UE::Request_SetScale(HandleTransform,
                         FCk_Request_Transform_SetScale{New.Get<FCk_RepData_Scale>().Value}
-                            .Set_LocalWorld(ECk_LocalWorld::World));
+                            .Set_LocalWorld(ECk_LocalWorld::World), {});
                     return ECk_Persistence_ApplyResult::Applied;
                 } });
     }

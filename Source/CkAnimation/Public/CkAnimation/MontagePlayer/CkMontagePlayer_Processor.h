@@ -5,6 +5,7 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Processor/CkProcessor_NetModePolicy.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 class UAnimInstance;
@@ -19,6 +20,7 @@ namespace ck
             TReadOnly<FFragment_MontagePlayer_Params>,
             TReadWrite<FFragment_MontagePlayer_Current>,
             TReadWrite<FFragment_MontagePlayer_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -47,35 +49,58 @@ namespace ck
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
-            const FCk_Request_MontagePlayer_Play& InRequest) -> void;
+            const FCk_Request_MontagePlayer_Play& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
-            const FCk_Request_MontagePlayer_Stop& InRequest) -> void;
+            const FCk_Request_MontagePlayer_Stop& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
-            const FCk_Request_MontagePlayer_Pause& InRequest) -> void;
+            const FCk_Request_MontagePlayer_Pause& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
-            const FCk_Request_MontagePlayer_Resume& InRequest) -> void;
+            const FCk_Request_MontagePlayer_Resume& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
             FFragment_MontagePlayer_Current& InCurrent,
-            const FCk_Request_MontagePlayer_JumpToSection& InRequest) -> void;
+            const FCk_Request_MontagePlayer_JumpToSection& InRequest) -> ECk_Request_OperationResult;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKANIMATION_API FProcessor_MontagePlayer_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_MontagePlayer_CancelPendingRequests,
+        FCk_Handle_MontagePlayer,
+        ck::TReadOnly<FFragment_MontagePlayer_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_MontagePlayer_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

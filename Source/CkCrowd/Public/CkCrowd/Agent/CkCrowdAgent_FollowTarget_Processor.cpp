@@ -73,7 +73,7 @@ namespace ck
 
         // HandleRequests re-resolves the live goal and re-arms this fragment, so the cadence
         // continues from the repath.
-        UCk_Utils_CrowdAgent_UE::Request_FollowTarget(InHandle, Request);
+        UCk_Utils_CrowdAgent_UE::Request_FollowTarget(InHandle, Request, {});
     }
 }
 

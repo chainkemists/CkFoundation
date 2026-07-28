@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include <GameplayTagContainer.h>
@@ -39,19 +40,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityTagQuery",
-              DisplayName = "[Ck][EntityTagQuery] Request Add Requirement")
+              DisplayName = "[Ck][EntityTagQuery] Request Add Requirement",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_EntityTagQuery
     Request_AddRequirement(
         UPARAM(ref) FCk_Handle_EntityTagQuery& InQuery,
-        const FCk_Request_EntityTagQuery_AddRequirement& InRequest);
+        const FCk_Request_EntityTagQuery_AddRequirement& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityTagQuery",
-              DisplayName = "[Ck][EntityTagQuery] Request Remove Requirement")
+              DisplayName = "[Ck][EntityTagQuery] Request Remove Requirement",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_EntityTagQuery
     Request_RemoveRequirement(
         UPARAM(ref) FCk_Handle_EntityTagQuery& InQuery,
-        const FCk_Request_EntityTagQuery_RemoveRequirement& InRequest);
+        const FCk_Request_EntityTagQuery_RemoveRequirement& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

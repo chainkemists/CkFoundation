@@ -4,6 +4,8 @@
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkCameraShake_Utils.generated.h"
@@ -107,19 +109,23 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CameraShake",
-              DisplayName="[Ck][CameraShake] Request Play On Target")
+              DisplayName="[Ck][CameraShake] Request Play On Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_PlayOnTarget(
         UPARAM(ref) FCk_Handle_CameraShake& InCameraShakeHandle,
-        const FCk_Request_CameraShake_PlayOnTarget& InRequest);
+        const FCk_Request_CameraShake_PlayOnTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CameraShake",
-              DisplayName="[Ck][CameraShake] Request Play At Location")
+              DisplayName="[Ck][CameraShake] Request Play At Location",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_PlayAtLocation(
         UPARAM(ref) FCk_Handle_CameraShake& InCameraShakeHandle,
-        const FCk_Request_CameraShake_PlayAtLocation& InRequest);
+        const FCk_Request_CameraShake_PlayAtLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -180,10 +180,15 @@ auto
     UCk_Utils_EntityCollection_UE::
     Request_AddEntities(
         FCk_Handle_EntityCollection& InEntityCollectionHandle,
-        const FCk_Request_EntityCollection_AddEntities& InRequest)
+        const FCk_Request_EntityCollection_AddEntities& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_EntityCollection
 {
     CK_CALLSTACK_RECORD(ck::FFragment_EntityCollection_Requests, InEntityCollectionHandle);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InEntityCollectionHandle.AddOrGet<ck::FFragment_EntityCollection_Requests>()._Requests.Emplace(InRequest);
     return InEntityCollectionHandle;
 }
@@ -192,10 +197,15 @@ auto
     UCk_Utils_EntityCollection_UE::
     Request_RemoveEntities(
         FCk_Handle_EntityCollection& InEntityCollectionHandle,
-        const FCk_Request_EntityCollection_RemoveEntities& InRequest)
+        const FCk_Request_EntityCollection_RemoveEntities& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_EntityCollection
 {
     CK_CALLSTACK_RECORD(ck::FFragment_EntityCollection_Requests, InEntityCollectionHandle);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     InEntityCollectionHandle.AddOrGet<ck::FFragment_EntityCollection_Requests>()._Requests.Emplace(InRequest);
     return InEntityCollectionHandle;
 }

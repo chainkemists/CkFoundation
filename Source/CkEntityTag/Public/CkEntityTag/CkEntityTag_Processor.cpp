@@ -6,11 +6,13 @@
 #include "CkEntityTag/CkEntityTag_Utils.h"
 
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTag_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTag_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityTag_BroadcastOnDestroy);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -30,7 +32,14 @@ namespace ck
             ck::algo::ForEachRequest(InRequests.Get_Requests(),
                 ck::Visitor([&](const auto& InEntry)
                 {
+                    // DoHandleRequest is void and has no rejection path, so reaching the line after the
+                    // call IS the success condition.
+                    auto Result = ECk_Request_OperationResult::Failed;
+                    const auto Guard = MakeCompletionGuard(InEntry, InHandle, Result);
+
                     DoHandleRequest(InHandle, InEntry);
+
+                    Result = ECk_Request_OperationResult::Succeeded;
                 }),
                 ck::policy::DontResetContainer{});
         });
@@ -86,6 +95,19 @@ namespace ck
         -> void
     {
         UCk_Utils_EntityTag_UE::DoApply_RestoreSet(InHandle, InRequest.Get_TagNames(), InRequest.Get_Counts());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityTag_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityTag_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

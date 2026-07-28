@@ -3,6 +3,7 @@
 #include "CkTween_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
@@ -246,79 +247,106 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Pause")
+        DisplayName = "[Ck][Tween] Pause",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Tween
     Pause(
-        UPARAM(ref) FCk_Handle_Tween& InTween);
+        UPARAM(ref) FCk_Handle_Tween& InTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Resume")
+        DisplayName = "[Ck][Tween] Resume",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Tween
     Resume(
-        UPARAM(ref) FCk_Handle_Tween& InTween);
+        UPARAM(ref) FCk_Handle_Tween& InTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // InBehavior carries no C++ default: the trailing completion delegate cannot have one (UHT
+    // cannot parse a delegate default), and C++ forbids a defaulted parameter before it.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Stop")
+        DisplayName = "[Ck][Tween] Stop",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Tween
     Stop(
         UPARAM(ref) FCk_Handle_Tween& InTween,
-        ECk_TweenStopBehavior InBehavior = ECk_TweenStopBehavior::DoNothing);
+        ECk_TweenStopBehavior InBehavior,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Restart")
+        DisplayName = "[Ck][Tween] Restart",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Tween
     Restart(
-        UPARAM(ref) FCk_Handle_Tween& InTween);
+        UPARAM(ref) FCk_Handle_Tween& InTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Set Time Multiplier")
+        DisplayName = "[Ck][Tween] Set Time Multiplier",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Tween
     SetTimeMultiplier(
         UPARAM(ref) FCk_Handle_Tween& InTween,
-        float InMultiplier);
+        float InMultiplier,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Each *_TransformTween below fans one call out to three independent tween entities. The
+    // completion delegate must fire exactly once, so it rides the Location tween's request only;
+    // all three are drained in the same pass of FProcessor_Tween_HandleRequests, so that one
+    // completion faithfully reports when the fan-out was processed.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Pause Transform Tween")
+        DisplayName = "[Ck][Tween] Pause Transform Tween",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_TweenTransformResult
     Pause_TransformTween(
-        UPARAM(ref) FCk_TweenTransformResult& InTransformTween);
+        UPARAM(ref) FCk_TweenTransformResult& InTransformTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Resume Transform Tween")
+        DisplayName = "[Ck][Tween] Resume Transform Tween",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_TweenTransformResult
     Resume_TransformTween(
-        UPARAM(ref) FCk_TweenTransformResult& InTransformTween);
+        UPARAM(ref) FCk_TweenTransformResult& InTransformTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // InBehavior carries no C++ default — see Stop.
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Stop Transform Tween")
+        DisplayName = "[Ck][Tween] Stop Transform Tween",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_TweenTransformResult
     Stop_TransformTween(
         UPARAM(ref) FCk_TweenTransformResult& InTransformTween,
-        ECk_TweenStopBehavior InBehavior = ECk_TweenStopBehavior::DoNothing);
+        ECk_TweenStopBehavior InBehavior,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Restart Transform Tween")
+        DisplayName = "[Ck][Tween] Restart Transform Tween",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_TweenTransformResult
     Restart_TransformTween(
-        UPARAM(ref) FCk_TweenTransformResult& InTransformTween);
+        UPARAM(ref) FCk_TweenTransformResult& InTransformTween,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Tween",
-        DisplayName = "[Ck][Tween] Set Time Multiplier Transform Tween")
+        DisplayName = "[Ck][Tween] Set Time Multiplier Transform Tween",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_TweenTransformResult
     SetTimeMultiplier_TransformTween(
         UPARAM(ref) FCk_TweenTransformResult& InTransformTween,
-        float InMultiplier);
+        float InMultiplier,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -533,7 +561,8 @@ private:
 
     static auto DoAddRequestToTween(
         FCk_Handle_Tween& InTween,
-        const auto& InRequest) -> FCk_Handle_Tween;
+        const auto& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle_Tween;
 
     static auto DoChainWithDelay(
         FCk_Handle_Tween& InFirstTween,

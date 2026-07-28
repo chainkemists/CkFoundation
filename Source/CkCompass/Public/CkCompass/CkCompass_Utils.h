@@ -2,6 +2,7 @@
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkCompass/CkCompass_Fragment.h"
@@ -153,27 +154,33 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Compass",
-              DisplayName="[Ck][Compass] Request Set Category Filter")
+              DisplayName="[Ck][Compass] Request Set Category Filter",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Compass
     Request_SetCategoryFilter(
         UPARAM(ref) FCk_Handle_Compass& InCompass,
-        const FCk_Request_Compass_SetCategoryFilter& InRequest);
+        const FCk_Request_Compass_SetCategoryFilter& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Compass",
-              DisplayName="[Ck][Compass] Request Set Manual Heading")
+              DisplayName="[Ck][Compass] Request Set Manual Heading",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Compass
     Request_SetManualHeading(
         UPARAM(ref) FCk_Handle_Compass& InCompass,
-        float InHeadingDegrees);
+        float InHeadingDegrees,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Compass",
-              DisplayName="[Ck][Compass] Request Set Observer")
+              DisplayName="[Ck][Compass] Request Set Observer",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Compass
     Request_SetObserver(
         UPARAM(ref) FCk_Handle_Compass& InCompass,
-        FCk_Handle InObserver);
+        FCk_Handle InObserver,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     // Membership deltas ONLY (positions are per-frame data — pull those via Get_Entries/Get_Heading).

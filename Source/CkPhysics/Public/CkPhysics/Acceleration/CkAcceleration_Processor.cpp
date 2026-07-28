@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkPhysics/CkPhysics_Log.h"
@@ -15,6 +16,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_AccelerationModifier_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_AddNewTargets);
 CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_BulkAccelerationModifier_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Acceleration_Replicate);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -190,6 +192,9 @@ namespace ck
         algo::ForEachRequest(InRequests._Requests, ck::Visitor(
         [&](const auto& InRequest)
         {
+            auto Result = ECk_Request_OperationResult::Failed;
+            const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
             const auto& TargetEntity = InRequest.Get_TargetEntity();
 
             // Entity may have been destroyed before we got a chance to process it
@@ -205,6 +210,8 @@ namespace ck
             {
                 InRequest.GetAndDestroyRequestHandle();
             }
+
+            Result = ECk_Request_OperationResult::Succeeded;
         }));
 
         InHandle.Remove<MarkedDirtyBy>();
@@ -264,6 +271,19 @@ namespace ck
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Acceleration>(InHandle);
         if (Produced.IsSet())
         { UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_Acceleration>(InHandle, *Produced); }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_BulkAccelerationModifier_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
 }

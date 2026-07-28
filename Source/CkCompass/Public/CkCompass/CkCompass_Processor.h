@@ -42,7 +42,7 @@ namespace ck
     class CKCOMPASS_API FProcessor_Compass_HandleRequests
         : public ck_exp::TProcessor<FProcessor_Compass_HandleRequests, FCk_Handle_Compass,
             ck::TReadWrite<FFragment_Compass_Current>, ck::TReadWrite<FFragment_Compass_Params>, ck::TReadWrite<FFragment_Compass_Requests>,
-            TExclude<FTag_Compass_NeedsSetup>, CK_IGNORE_PENDING_KILL>
+            TExclude<FTag_Compass_NeedsSetup>, TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_PostTransform;
@@ -83,6 +83,33 @@ namespace ck
             FFragment_Compass_Current& InCurrent,
             FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetObserver& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed compass' still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKCOMPASS_API FProcessor_Compass_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Compass_CancelPendingRequests,
+        FCk_Handle_Compass,
+        ck::TReadOnly<FFragment_Compass_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InCompassEntity,
+            const FFragment_Compass_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

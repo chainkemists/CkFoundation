@@ -7,10 +7,73 @@
 
 #include "CkCore/Payload/CkPayload.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include <variant>
 
 namespace ck::inventory_handlers
 {
+    /** Coarse Succeeded/Failed view of a bespoke per-operation result, for the generic completion
+     *  delegate. Both are derived from the SAME result value, so they can never disagree. */
+    constexpr auto ToCompletionResult(ECk_Inventory_OperationResult_Add InResult) -> ECk_Request_OperationResult
+    {
+        return InResult == ECk_Inventory_OperationResult_Add::Success
+            ? ECk_Request_OperationResult::Succeeded : ECk_Request_OperationResult::Failed;
+    }
+
+    constexpr auto ToCompletionResult(ECk_Inventory_OperationResult_Remove InResult) -> ECk_Request_OperationResult
+    {
+        return InResult == ECk_Inventory_OperationResult_Remove::Success
+            ? ECk_Request_OperationResult::Succeeded : ECk_Request_OperationResult::Failed;
+    }
+
+    constexpr auto ToCompletionResult(ECk_Inventory_OperationResult_Stack InResult) -> ECk_Request_OperationResult
+    {
+        return InResult == ECk_Inventory_OperationResult_Stack::Success
+            ? ECk_Request_OperationResult::Succeeded : ECk_Request_OperationResult::Failed;
+    }
+
+    constexpr auto ToCompletionResult(ECk_Inventory_OperationResult_Split InResult) -> ECk_Request_OperationResult
+    {
+        return InResult == ECk_Inventory_OperationResult_Split::Success
+            ? ECk_Request_OperationResult::Succeeded : ECk_Request_OperationResult::Failed;
+    }
+
+    constexpr auto ToCompletionResult(ECk_Inventory_OperationResult_AddByDefinition InResult) -> ECk_Request_OperationResult
+    {
+        return InResult == ECk_Inventory_OperationResult_AddByDefinition::Success_AllAdded
+            || InResult == ECk_Inventory_OperationResult_AddByDefinition::Success_PartiallyAdded
+            ? ECk_Request_OperationResult::Succeeded : ECk_Request_OperationResult::Failed;
+    }
+
+    constexpr auto ToCompletionResult(ECk_Inventory_OperationResult_Sort InResult) -> ECk_Request_OperationResult
+    {
+        return InResult == ECk_Inventory_OperationResult_Sort::Success
+            ? ECk_Request_OperationResult::Succeeded : ECk_Request_OperationResult::Failed;
+    }
+
+    constexpr auto ToCompletionResult(ECk_Inventory_OperationResult_Transfer InResult) -> ECk_Request_OperationResult
+    {
+        return InResult == ECk_Inventory_OperationResult_Transfer::Success
+            || InResult == ECk_Inventory_OperationResult_Transfer::Success_Partial
+            ? ECk_Request_OperationResult::Succeeded : ECk_Request_OperationResult::Failed;
+    }
+
+    constexpr auto ToCompletionResult(ECk_Inventory_OperationResult_Relocate InResult) -> ECk_Request_OperationResult
+    {
+        return InResult == ECk_Inventory_OperationResult_Relocate::Success
+            ? ECk_Request_OperationResult::Succeeded : ECk_Request_OperationResult::Failed;
+    }
+
+    constexpr auto ToCompletionResult(ECk_Inventory_MassTransfer_Result InResult) -> ECk_Request_OperationResult
+    {
+        return InResult == ECk_Inventory_MassTransfer_Result::Success
+            || InResult == ECk_Inventory_MassTransfer_Result::Success_Partial
+            ? ECk_Request_OperationResult::Succeeded : ECk_Request_OperationResult::Failed;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // Default Handle bodies live in CkInventory_RequestHandlers.cpp; per-shape overrides (whole
     // Handle or just a divergence hook) live in the typed inventory's folder's RequestTraits.cpp.
 
@@ -117,32 +180,39 @@ namespace ck::inventory_handlers
         template <typename T> struct HasRelocate<T, std::void_t<typename T::Relocate>> : std::true_type {};
     }
 
+    // The generic completion delegate reports the coarse view of the very same result the bespoke
+    // per-operation signal carries, so the two can never disagree.
     template <typename Traits, typename TInventoryHandle, typename TEntry>
     auto DispatchToHandler(
         TInventoryHandle& InHandle,
         const FFragment_Inventory_Params& InParams,
         const TEntry& InEntry) -> void
     {
+        const auto Complete = [&](auto InResult) -> void
+        {
+            InEntry.Common.TryFireCompletion(InHandle, ToCompletionResult(InResult));
+        };
+
         if constexpr (std::is_same_v<TEntry, typename Traits::AddItem::Entry>)
-            std::ignore = Traits::AddItem::Handle(InHandle, InParams, InEntry);
+            Complete(Traits::AddItem::Handle(InHandle, InParams, InEntry));
         else if constexpr (std::is_same_v<TEntry, typename Traits::RemoveItem::Entry>)
-            std::ignore = Traits::RemoveItem::Handle(InHandle, InParams, InEntry);
+            Complete(Traits::RemoveItem::Handle(InHandle, InParams, InEntry));
         else if constexpr (std::is_same_v<TEntry, typename Traits::StackItems::Entry>)
-            std::ignore = Traits::StackItems::Handle(InHandle, InParams, InEntry);
+            Complete(Traits::StackItems::Handle(InHandle, InParams, InEntry));
         else if constexpr (std::is_same_v<TEntry, typename Traits::SplitStack::Entry>)
-            std::ignore = Traits::SplitStack::Handle(InHandle, InParams, InEntry);
+            Complete(Traits::SplitStack::Handle(InHandle, InParams, InEntry));
         else if constexpr (std::is_same_v<TEntry, typename Traits::AddByDefinition::Entry>)
-            std::ignore = Traits::AddByDefinition::Handle(InHandle, InParams, InEntry);
+            Complete(Traits::AddByDefinition::Handle(InHandle, InParams, InEntry));
         else if constexpr (std::is_same_v<TEntry, typename Traits::Sort::Entry>)
-            std::ignore = Traits::Sort::Handle(InHandle, InParams, InEntry);
+            Complete(Traits::Sort::Handle(InHandle, InParams, InEntry));
         else if constexpr (std::is_same_v<TEntry, typename Traits::Transfer_ToSpatial::Entry>)
-            std::ignore = Traits::Transfer_ToSpatial::Handle(InHandle, InParams, InEntry);
+            Complete(Traits::Transfer_ToSpatial::Handle(InHandle, InParams, InEntry));
         else if constexpr (std::is_same_v<TEntry, typename Traits::Transfer_ToDataOnly::Entry>)
-            std::ignore = Traits::Transfer_ToDataOnly::Handle(InHandle, InParams, InEntry);
+            Complete(Traits::Transfer_ToDataOnly::Handle(InHandle, InParams, InEntry));
         else if constexpr (detail::HasRelocate<Traits>::value)
         {
             if constexpr (std::is_same_v<TEntry, typename Traits::Relocate::Entry>)
-                std::ignore = Traits::Relocate::Handle(InHandle, InParams, InEntry);
+                Complete(Traits::Relocate::Handle(InHandle, InParams, InEntry));
             else
                 static_assert(sizeof(TEntry) == 0,
                     "DispatchToHandler: entry type does not match any operation in TInventoryRequestTraits.");
@@ -154,13 +224,18 @@ namespace ck::inventory_handlers
         }
     }
 
-    // Fires only if the request still owns a valid handle, and destroys that handle on fire.
+    // The bespoke signal fires only if the request still owns a valid handle, and destroys that handle
+    // on fire. The generic completion delegate fires unconditionally — TryFireCompletion unbinds after
+    // executing, so that unbind is itself the exactly-once gate.
     template <typename Traits, typename TInventoryHandle, typename TEntry>
     auto DispatchCancel(
         TInventoryHandle& InHandle,
         const TEntry& InEntry) -> void
     {
         const auto& Req = InEntry.Common;
+
+        Req.TryFireCompletion(InHandle, ECk_Request_OperationResult::Failed_Cancelled);
+
         if (NOT Req.Get_IsRequestHandleValid())
         { return; }
 

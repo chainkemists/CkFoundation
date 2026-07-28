@@ -44,6 +44,7 @@ namespace ck
             TReadOnly<FFragment_VatProxy_Params>,
             TReadWrite<FFragment_VatProxy_Current>,
             TReadWrite<FFragment_VatProxy_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -69,21 +70,47 @@ namespace ck
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
             FFragment_VatProxy_Current& InCurrent,
-            const FCk_Request_VatProxy_PlayClip& InRequest) -> void;
+            const FCk_Request_VatProxy_PlayClip& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
             FFragment_VatProxy_Current& InCurrent,
-            const FCk_Request_VatProxy_Stop& InRequest) -> void;
+            const FCk_Request_VatProxy_Stop& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
             FFragment_VatProxy_Current& InCurrent,
-            const FCk_Request_VatProxy_SetPlayRate& InRequest) -> void;
+            const FCk_Request_VatProxy_SetPlayRate& InRequest) -> bool;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed VatProxy's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKVAT_API FProcessor_VatProxy_CancelPendingRequests : public ck_exp::TProcessor<
+            FProcessor_VatProxy_CancelPendingRequests,
+            FCk_Handle_VatProxy,
+            TReadOnly<FFragment_VatProxy_Requests>,
+            CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_VatProxy_Requests& InRequestsComp)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

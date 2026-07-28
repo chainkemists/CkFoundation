@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkRaySense_Utils.generated.h"
@@ -78,11 +79,13 @@ private:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|RaySense",
-        DisplayName="[Ck][RaySense] Request Enable/Disable")
+        DisplayName="[Ck][RaySense] Request Enable/Disable",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_RaySense
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_RaySense& InHandle,
-        const FCk_Request_RaySense_EnableDisable& InRequest);
+        const FCk_Request_RaySense_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

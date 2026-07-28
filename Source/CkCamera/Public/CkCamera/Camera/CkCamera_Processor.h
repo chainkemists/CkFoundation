@@ -15,6 +15,7 @@ namespace ck
             FProcessor_Camera_HandleRequests,
             FCk_Handle_Camera,
             TReadOnly<FFragment_Camera_Requests>,
+            TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -33,11 +34,37 @@ namespace ck
     private:
         static auto DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_Camera_AddLayer& InRequest) -> void;
+            const FCk_Request_Camera_AddLayer& InRequest) -> bool;
 
         static auto DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_Camera_RemoveLayer& InRequest) -> void;
+            const FCk_Request_Camera_RemoveLayer& InRequest) -> bool;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // HandleRequests excludes owners already tagged for destruction, so a destroyed camera's still-queued
+    // requests are never drained. This fires each pending request's completion delegate with
+    // Failed_Cancelled so a caller awaiting completion terminates instead of hanging.
+    class CKCAMERA_API FProcessor_Camera_CancelPendingRequests : public ck_exp::TProcessor<
+        FProcessor_Camera_CancelPendingRequests,
+        FCk_Handle_Camera,
+        ck::TReadOnly<FFragment_Camera_Requests>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Camera_Requests& InRequestsComp)
+            -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

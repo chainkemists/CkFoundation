@@ -14,10 +14,12 @@
 
 #include "PhysicsProxy/GeometryCollectionPhysicsProxy.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollectionOwner_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollectionOwner_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollectionOwner_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_GeometryCollectionOwner_Replicate);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -84,7 +86,11 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
-                DoHandleRequest(InHandle, InRequest);
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (DoHandleRequest(InHandle, InRequest))
+                { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -99,12 +105,12 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
-        -> void
+        -> bool
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Request()),
             TEXT("Unable to ApplyAoE on [{}] GeometryCollection because the Request DataAsset [{}] is INVALID"),
             InHandle, InRequest.Get_Request())
-        { return; }
+        { return false; }
 
         ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InHandle, [&](FCk_Handle_GeometryCollection InGc)
         {
@@ -117,10 +123,25 @@ namespace ck
             .Set_ChangeParticleStateTo(Settings->Get_ChangeParticleStateTo())
             .Set_NormalizedFalloffCurve(Settings->Get_NormalizedFalloffCurve());
 
-            UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InGc, Request);
+            UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InGc, Request, {});
         });
 
         InHandle.AddOrGet<FFragment_GeometryCollection_ReplicationRequests>()._Requests.Emplace(InRequest);
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GeometryCollectionOwner_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_GeometryCollectionOwner_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -76,37 +76,41 @@ auto
 auto
     UCk_Utils_StateMachine_UE::
     Request_Start(
-        FCk_Handle_StateMachine& InStateMachine)
+        FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_StateMachine
 {
-    return DoAddRequest(InStateMachine, FCk_Request_Sm_Start{});
+    return DoAddRequest(InStateMachine, FCk_Request_Sm_Start{}, InDelegate);
 }
 
 auto
     UCk_Utils_StateMachine_UE::
     Request_Stop(
-        FCk_Handle_StateMachine& InStateMachine)
+        FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_StateMachine
 {
-    return DoAddRequest(InStateMachine, FCk_Request_Sm_Stop{});
+    return DoAddRequest(InStateMachine, FCk_Request_Sm_Stop{}, InDelegate);
 }
 
 auto
     UCk_Utils_StateMachine_UE::
     Request_Pause(
-        FCk_Handle_StateMachine& InStateMachine)
+        FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_StateMachine
 {
-    return DoAddRequest(InStateMachine, FCk_Request_Sm_Pause{});
+    return DoAddRequest(InStateMachine, FCk_Request_Sm_Pause{}, InDelegate);
 }
 
 auto
     UCk_Utils_StateMachine_UE::
     Request_Resume(
-        FCk_Handle_StateMachine& InStateMachine)
+        FCk_Handle_StateMachine& InStateMachine,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_StateMachine
 {
-    return DoAddRequest(InStateMachine, FCk_Request_Sm_Resume{});
+    return DoAddRequest(InStateMachine, FCk_Request_Sm_Resume{}, InDelegate);
 }
 
 auto
@@ -147,16 +151,24 @@ auto
     UCk_Utils_StateMachine_UE::
     Request_Transition(
         FCk_Handle_StateMachine& InStateMachine,
-        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass)
+        TSubclassOf<UCk_SmState_EntityScript> InTargetStateClass,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_StateMachine
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InTargetStateClass),
+    const auto TargetStateClassIsValid = ck::IsValid(InTargetStateClass);
+
+    CK_ENSURE_IF_NOT(TargetStateClassIsValid,
         TEXT("Request_Transition on [{}] with an invalid target state class — request dropped"),
         InStateMachine)
-    { return InStateMachine; }
+    {}
+    if (NOT TargetStateClassIsValid)
+    {
+        InDelegate.ExecuteIfBound(InStateMachine, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InStateMachine;
+    }
 
     InStateMachine.AddOrGet<ck::FTag_Sm_TransitionQueued>();
-    return DoAddRequest(InStateMachine, FCk_Request_Sm_Transition{InTargetStateClass});
+    return DoAddRequest(InStateMachine, FCk_Request_Sm_Transition{InTargetStateClass}, InDelegate);
 }
 
 auto
@@ -184,10 +196,11 @@ auto
     UCk_Utils_StateMachine_UE::
     Request_AddOverrideState(
         FCk_Handle_StateMachine& InStateMachine,
-        TSubclassOf<UCk_SmState_EntityScript> InOverrideStateClass)
+        TSubclassOf<UCk_SmState_EntityScript> InOverrideStateClass,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_StateMachine
 {
-    return DoAddRequest(InStateMachine, FCk_Request_Sm_AddOverrideState{InOverrideStateClass});
+    return DoAddRequest(InStateMachine, FCk_Request_Sm_AddOverrideState{InOverrideStateClass}, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -487,9 +500,13 @@ auto
     UCk_Utils_StateMachine_UE::
     DoAddRequest(
         FCk_Handle_StateMachine& InStateMachine,
-        const auto& InRequest)
+        const auto& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_StateMachine
 {
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
     auto& Requests = InStateMachine.AddOrGet<ck::FFragment_Sm_Requests>();
     Requests._Requests.Add(InRequest);
 

@@ -31,8 +31,8 @@ static auto
         const FCk_Fragment_IntegerAttribute_BaseFinal& InEntry)
     -> void
 {
-    UCk_Utils_IntegerAttributeModifier_UE::Request_ClearAllModifiers(InAttributeEntity, InEntry.Get_Component());
-    UCk_Utils_IntegerAttribute_UE::Request_Override(InAttributeEntity, InEntry.Get_Base(), InEntry.Get_Component());
+    UCk_Utils_IntegerAttributeModifier_UE::Request_ClearAllModifiers(InAttributeEntity, InEntry.Get_Component(), {});
+    UCk_Utils_IntegerAttribute_UE::Request_Override(InAttributeEntity, InEntry.Get_Base(), InEntry.Get_Component(), {});
 
     auto AttributeModifier = UCk_Utils_IntegerAttributeModifier_UE::TryGet(InAttributeEntity,
         ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), InEntry.Get_Component());

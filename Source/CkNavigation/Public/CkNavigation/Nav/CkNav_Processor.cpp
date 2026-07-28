@@ -10,6 +10,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
@@ -71,7 +72,15 @@ namespace ck
             {
                 auto& Entry = ck_nav_processor::GDeferredNavRequests[i];
                 if (NOT ck::IsValid(Entry.Handle))
-                { ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No); continue; }
+                {
+                    // The owner died while the request sat in this process-wide deferral queue — it
+                    // never reaches FProcessor_Nav_CancelPendingRequests (the request already left
+                    // FFragment_Nav_Requests), so this is the only site that can honor the
+                    // fire-exactly-once completion guarantee for it.
+                    Entry.Request.TryFireCompletion(Entry.Handle, ECk_Request_OperationResult::Failed_Cancelled);
+                    ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
+                    continue;
+                }
 
                 auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Entry.Handle);
                 auto* NavSys = IsValid(World) ? UNavigationSystemV1::GetCurrent(World) : nullptr;
@@ -97,7 +106,9 @@ namespace ck
                         auto Handle = Entry.Handle;
                         auto Request = Entry.Request;
                         ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
-                        UCk_Utils_Nav_UE::Request_FindPath(Handle, Request);
+                        // Request already carries whatever completion delegate the original caller
+                        // bound (mutable, copied along with the struct) — {} here does not drop it.
+                        UCk_Utils_Nav_UE::Request_FindPath(Handle, Request, {});
                         ++DrainActions;
                         continue;
                     }
@@ -121,6 +132,7 @@ namespace ck
                             TEXT("that the level has static walkable geometry inside the volume."),
                             Handle, MaxDeferralSec);
                     }
+                    Entry.Request.TryFireCompletion(Handle, ECk_Request_OperationResult::Failed);
                     ck_nav_processor::GDeferredNavRequests.RemoveAt(i, EAllowShrinking::No);
                     ++DrainActions;
                 }
@@ -225,6 +237,9 @@ namespace ck
             ck::algo::ForEachRequest(InSnapshot._Requests, ck::Visitor(
                 [&](const auto& InFindPath) -> void
                 {
+                    auto Result = ECk_Request_OperationResult::Failed;
+                    const auto Guard = MakeCompletionGuard(InFindPath, InHandle, Result);
+
                     const auto FilterClass = UCk_Utils_Nav_Settings_UE::Get_QueryFilterClass(InFindPath.Get_QueryFilter());
 
                     // The readiness gate above probed the ENTITY location; an override start sits
@@ -256,11 +271,13 @@ namespace ck
                     {
                         UUtils_Signal_Nav_OnPathReady::Broadcast(
                             InHandle, ck::MakePayload(InHandle, InResult));
+                        Result = ECk_Request_OperationResult::Succeeded;
                     }
                     else
                     {
                         UUtils_Signal_Nav_OnPathFailed::Broadcast(
                             InHandle, ck::MakePayload(InHandle));
+                        // Result stays Failed — genuine pathfinding failure.
                     }
                 }), ck::policy::DontResetContainer{});
         });
@@ -269,6 +286,23 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    auto
+        FProcessor_Nav_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Nav_Requests& InRequestsComp)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_REGISTER_PROCESSOR(ck::FProcessor_Nav_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_Nav_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------

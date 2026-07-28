@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkJolt/Body/CkJoltBody_Fragment.h"
@@ -97,83 +99,103 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Set Sleep State")
+              DisplayName="[Ck][JoltBody] Request Set Sleep State",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_SetSleepState(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_SetSleepState& InRequest);
+        const FCk_Request_JoltBody_SetSleepState& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Add Force")
+              DisplayName="[Ck][JoltBody] Request Add Force",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_AddForce(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddForce& InRequest);
+        const FCk_Request_JoltBody_AddForce& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Add Force At Location")
+              DisplayName="[Ck][JoltBody] Request Add Force At Location",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_AddForceAtLocation(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddForceAtLocation& InRequest);
+        const FCk_Request_JoltBody_AddForceAtLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Add Torque")
+              DisplayName="[Ck][JoltBody] Request Add Torque",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_AddTorque(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddTorque& InRequest);
+        const FCk_Request_JoltBody_AddTorque& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Add Impulse")
+              DisplayName="[Ck][JoltBody] Request Add Impulse",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_AddImpulse(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddImpulse& InRequest);
+        const FCk_Request_JoltBody_AddImpulse& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Add Impulse At Location")
+              DisplayName="[Ck][JoltBody] Request Add Impulse At Location",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_AddImpulseAtLocation(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddImpulseAtLocation& InRequest);
+        const FCk_Request_JoltBody_AddImpulseAtLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Add Angular Impulse")
+              DisplayName="[Ck][JoltBody] Request Add Angular Impulse",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_AddAngularImpulse(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_AddAngularImpulse& InRequest);
+        const FCk_Request_JoltBody_AddAngularImpulse& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Set Linear Velocity")
+              DisplayName="[Ck][JoltBody] Request Set Linear Velocity",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_SetLinearVelocity(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_SetLinearVelocity& InRequest);
+        const FCk_Request_JoltBody_SetLinearVelocity& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Set Angular Velocity")
+              DisplayName="[Ck][JoltBody] Request Set Angular Velocity",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_SetAngularVelocity(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_SetAngularVelocity& InRequest);
+        const FCk_Request_JoltBody_SetAngularVelocity& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|JoltBody",
-              DisplayName="[Ck][JoltBody] Request Teleport")
+              DisplayName="[Ck][JoltBody] Request Teleport",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_JoltBody
     Request_Teleport(
         UPARAM(ref) FCk_Handle_JoltBody& InJoltBody,
-        const FCk_Request_JoltBody_Teleport& InRequest);
+        const FCk_Request_JoltBody_Teleport& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

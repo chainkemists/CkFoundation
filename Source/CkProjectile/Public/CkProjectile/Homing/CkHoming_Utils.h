@@ -4,6 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
@@ -75,42 +76,52 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Homing",
-              DisplayName="[Ck][Homing] Request Set Target Entity")
+              DisplayName="[Ck][Homing] Request Set Target Entity",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Homing
     Request_SetTargetEntity(
         UPARAM(ref) FCk_Handle_Homing& InHandle,
-        const FCk_Request_Homing_SetTargetEntity& InRequest);
+        const FCk_Request_Homing_SetTargetEntity& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Homing",
-              DisplayName="[Ck][Homing] Request Set Target Location")
+              DisplayName="[Ck][Homing] Request Set Target Location",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Homing
     Request_SetTargetLocation(
         UPARAM(ref) FCk_Handle_Homing& InHandle,
-        const FCk_Request_Homing_SetTargetLocation& InRequest);
+        const FCk_Request_Homing_SetTargetLocation& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Homing",
-              DisplayName="[Ck][Homing] Request Clear Target")
+              DisplayName="[Ck][Homing] Request Clear Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Homing
     Request_ClearTarget(
-        UPARAM(ref) FCk_Handle_Homing& InHandle);
+        UPARAM(ref) FCk_Handle_Homing& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Homing",
-              DisplayName="[Ck][Homing] Request Set Desired Time To Impact")
+              DisplayName="[Ck][Homing] Request Set Desired Time To Impact",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Homing
     Request_SetDesiredTimeToImpact(
         UPARAM(ref) FCk_Handle_Homing& InHandle,
-        const FCk_Request_Homing_SetDesiredTimeToImpact& InRequest);
+        const FCk_Request_Homing_SetDesiredTimeToImpact& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Homing",
-              DisplayName="[Ck][Homing] Request Enable/Disable")
+              DisplayName="[Ck][Homing] Request Enable/Disable",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_Homing
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_Homing& InHandle,
-        const FCk_Request_Homing_EnableDisable& InRequest);
+        const FCk_Request_Homing_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,

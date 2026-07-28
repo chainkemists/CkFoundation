@@ -5,6 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
@@ -84,43 +85,53 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractionResolver",
-        DisplayName="[Ck][InteractionResolver] Request Start Intent")
+        DisplayName="[Ck][InteractionResolver] Request Start Intent",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_StartIntent(
         UPARAM(ref) FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_StartIntent& InRequest);
+        const FCk_Request_InteractionResolver_StartIntent& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractionResolver",
-        DisplayName="[Ck][InteractionResolver] Request Stop Intent")
+        DisplayName="[Ck][InteractionResolver] Request Stop Intent",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_StopIntent(
         UPARAM(ref) FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_StopIntent& InRequest);
+        const FCk_Request_InteractionResolver_StopIntent& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractionResolver",
-        DisplayName="[Ck][InteractionResolver] Request Add InteractTarget")
+        DisplayName="[Ck][InteractionResolver] Request Add InteractTarget",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_AddInteractTarget(
         UPARAM(ref) FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_AddInteractTarget& InRequest);
+        const FCk_Request_InteractionResolver_AddInteractTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractionResolver",
-        DisplayName="[Ck][InteractionResolver] Request Remove InteractTarget")
+        DisplayName="[Ck][InteractionResolver] Request Remove InteractTarget",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_RemoveInteractTarget(
         UPARAM(ref) FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_RemoveInteractTarget& InRequest);
+        const FCk_Request_InteractionResolver_RemoveInteractTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractionResolver",
-        DisplayName="[Ck][InteractionResolver] Request Remove All Targets By Channel")
+        DisplayName="[Ck][InteractionResolver] Request Remove All Targets By Channel",
+        meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_RemoveAllTargetsByChannel(
         UPARAM(ref) FCk_Handle_InteractionResolver& InResolver,
-        const FCk_Request_InteractionResolver_RemoveAllTargetsByChannel& InRequest);
+        const FCk_Request_InteractionResolver_RemoveAllTargetsByChannel& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

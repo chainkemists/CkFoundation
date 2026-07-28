@@ -58,7 +58,7 @@ auto
     if (_AutoDetectOnBeginPlay == ECk_EnableDisable::Enable && ck::IsValid(_Detector))
     {
         UCk_Utils_PathNetwork_UE::Request_RebuildFromDetector(
-            _NetworkHandle, _Detector, Get_DetectionBounds(), _VectorizeParams);
+            _NetworkHandle, _Detector, Get_DetectionBounds(), _VectorizeParams, {});
     }
 
     ck::pathnetwork::Display(TEXT("PathNetwork actor [{}] constructed network entity [{}] ([{}] ribbons, auto-detect [{}])"),

@@ -2,6 +2,8 @@
 
 #include "CkAutoReorient_Fragment_Data.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkAutoReorient_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -57,17 +59,21 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AutoReorient",
-              DisplayName="[Ck][AutoReorient] Request Start")
+              DisplayName="[Ck][AutoReorient] Request Start",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_Start(
-        UPARAM(ref) FCk_Handle& InHandle);
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AutoReorient",
-              DisplayName="[Ck][AutoReorient] Request Stop")
+              DisplayName="[Ck][AutoReorient] Request Stop",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_Stop(
-        UPARAM(ref) FCk_Handle& InHandle);
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

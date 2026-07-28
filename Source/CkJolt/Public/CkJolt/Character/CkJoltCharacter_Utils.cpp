@@ -81,10 +81,14 @@ auto
     UCk_Utils_JoltCharacter_UE::
     Request_Move(
         FCk_Handle_JoltCharacter& InJoltCharacter,
-        const FCk_Request_JoltCharacter_Move& InRequest)
+        const FCk_Request_JoltCharacter_Move& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltCharacter
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltCharacter_Requests, InJoltCharacter);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltCharacter.AddOrGet<ck::FFragment_JoltCharacter_Requests>()._Requests.Emplace(InRequest);
 
@@ -95,10 +99,14 @@ auto
     UCk_Utils_JoltCharacter_UE::
     Request_Jump(
         FCk_Handle_JoltCharacter& InJoltCharacter,
-        const FCk_Request_JoltCharacter_Jump& InRequest)
+        const FCk_Request_JoltCharacter_Jump& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltCharacter
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltCharacter_Requests, InJoltCharacter);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltCharacter.AddOrGet<ck::FFragment_JoltCharacter_Requests>()._Requests.Emplace(InRequest);
 
@@ -109,10 +117,14 @@ auto
     UCk_Utils_JoltCharacter_UE::
     Request_Teleport(
         FCk_Handle_JoltCharacter& InJoltCharacter,
-        const FCk_Request_JoltCharacter_Teleport& InRequest)
+        const FCk_Request_JoltCharacter_Teleport& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_JoltCharacter
 {
     CK_CALLSTACK_RECORD(ck::FFragment_JoltCharacter_Requests, InJoltCharacter);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     InJoltCharacter.AddOrGet<ck::FFragment_JoltCharacter_Requests>()._Requests.Emplace(InRequest);
 

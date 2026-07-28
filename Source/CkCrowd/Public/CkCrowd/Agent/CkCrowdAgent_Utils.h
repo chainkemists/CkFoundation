@@ -6,6 +6,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
@@ -83,41 +84,49 @@ public:
     // final waypoint; _ArrivalRadiusOverride on InRequest overrides that default per-request.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
-              DisplayName="[Ck][CrowdAgent] Request Move To")
+              DisplayName="[Ck][CrowdAgent] Request Move To",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_CrowdAgent
     Request_MoveTo(
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
-        const FCk_Request_CrowdAgent_MoveTo& InRequest);
+        const FCk_Request_CrowdAgent_MoveTo& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Request_MoveTo with a LIVE transform handle as the goal: the agent re-paths toward it on the
     // request's repath cadence, re-engaging after an arrival when the target walks out of reach again.
     // Ends on a plain MoveTo, a Stop, or the target dying (the agent keeps its last resolved goal).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
-              DisplayName="[Ck][CrowdAgent] Request Follow Target")
+              DisplayName="[Ck][CrowdAgent] Request Follow Target",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_CrowdAgent
     Request_FollowTarget(
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
-        const FCk_Request_CrowdAgent_FollowTarget& InRequest);
+        const FCk_Request_CrowdAgent_FollowTarget& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Cancel any active path. Agent transitions Walking/PathPending → Idle, _DesiredVelocity is
     // zeroed. Subsequent ticks see the bridge writing zero into _CurrentVelocity → agent halts.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
-              DisplayName="[Ck][CrowdAgent] Request Stop")
+              DisplayName="[Ck][CrowdAgent] Request Stop",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_CrowdAgent
     Request_Stop(
-        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent);
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Override the agent's max speed at runtime (sprint/flee gaits). Applies from the next tick
     // and persists until the next SetMaxSpeed; does not disturb the active path or goal.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
-              DisplayName="[Ck][CrowdAgent] Request Set Max Speed")
+              DisplayName="[Ck][CrowdAgent] Request Set Max Speed",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_CrowdAgent
     Request_SetMaxSpeed(
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
-        float InMaxSpeed);
+        float InMaxSpeed,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // The params fragment's current max speed (post any runtime SetMaxSpeed override).
     UFUNCTION(BlueprintPure,
@@ -237,11 +246,13 @@ public:
     // own MoveTo, so a debugger-issued goal isn't immediately overwritten.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CrowdAgent",
-              DisplayName="[Ck][CrowdAgent] Set Debug Override")
+              DisplayName="[Ck][CrowdAgent] Set Debug Override",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_CrowdAgent
     Request_SetDebugOverride(
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
-        bool InOverride);
+        bool InOverride,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",

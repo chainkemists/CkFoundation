@@ -6,6 +6,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
@@ -30,11 +31,13 @@ public:
     // requires CkEcsExt's Transform feature for the start location (absent -> StartProjectFailed).
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Nav",
-              DisplayName = "[Ck][Nav] Request FindPath")
+              DisplayName = "[Ck][Nav] Request FindPath",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle
     Request_FindPath(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Request_Nav_FindPath& InRequest);
+        const FCk_Request_Nav_FindPath& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // Default-constructed result (Status == None) if the entity has never issued a request.
     UFUNCTION(BlueprintPure,
@@ -62,10 +65,12 @@ public:
     // Request_FindPath land while the start point is unbakeable. Production never needs this.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Nav",
-              DisplayName = "[Ck][Nav] Request Rebuild (Testing)")
+              DisplayName = "[Ck][Nav] Request Rebuild (Testing)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_NavigationRebuild_ForTesting(
-        UPARAM(ref) FCk_Handle& InHandle);
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     // OutSnappedPosition is written only when a navmesh tile is found within the search box.
     UFUNCTION(BlueprintCallable,

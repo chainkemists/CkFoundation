@@ -79,17 +79,27 @@ auto
     UCk_Utils_MontagePlayer_UE::
     Request_RebindSkeletalMeshComponent(
         FCk_Handle_MontagePlayer& InMontagePlayer,
-        USkeletalMeshComponent* InSkeletalMeshComponent)
+        USkeletalMeshComponent* InSkeletalMeshComponent,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_MontagePlayer
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InSkeletalMeshComponent, ck::IsValid_Policy_NullptrOnly{}),
+    const auto IsSkeletalMeshComponentValid = ck::IsValid(InSkeletalMeshComponent, ck::IsValid_Policy_NullptrOnly{});
+    CK_ENSURE_IF_NOT(IsSkeletalMeshComponentValid,
         TEXT("Rebinding MontagePlayer on Entity [{}] with an INVALID SkeletalMeshComponent!"), InMontagePlayer)
-    { return InMontagePlayer; }
+    {}
+    if (NOT IsSkeletalMeshComponentValid)
+    {
+        InDelegate.ExecuteIfBound(InMontagePlayer, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InMontagePlayer;
+    }
 
     // The SKMC is the one param that cannot round-trip a save/load — a live component can't be captured or
     // rebuilt from a snapshot payload — so replace the whole Params payload with one wrapping the re-created mesh.
     auto& ParamsFragment = InMontagePlayer.Get<ck::FFragment_MontagePlayer_Params>();
     ParamsFragment._Params = FCk_Fragment_MontagePlayer_ParamsData{InSkeletalMeshComponent};
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InMontagePlayer, ECk_Request_OperationResult::Succeeded);
 
     return InMontagePlayer;
 }
@@ -142,12 +152,19 @@ auto
     UCk_Utils_MontagePlayer_UE::
     Request_Play(
         FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_Play& InRequest)
+        const FCk_Request_MontagePlayer_Play& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_MontagePlayer
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InHandle),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Play called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    { return InHandle; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
 
     auto* SkelMeshComp = InHandle.Get<ck::FFragment_MontagePlayer_Params>().Get_Params().Get_SkeletalMeshComponent().Get();
 
@@ -161,8 +178,12 @@ auto
         const auto FailureState = FCk_MontagePlayer_State{InRequest.Get_Montage()};
         ck::UUtils_Signal_MontagePlayer_OnFinished::Broadcast(
             InHandle, ck::MakePayload(InHandle, FailureState, Reason));
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
     }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     CK_CALLSTACK_RECORD(ck::FFragment_MontagePlayer_Requests, InHandle);
     InHandle.AddOrGet<ck::FFragment_MontagePlayer_Requests>()._Requests.Emplace(InRequest);
@@ -173,12 +194,22 @@ auto
     UCk_Utils_MontagePlayer_UE::
     Request_Stop(
         FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_Stop& InRequest)
+        const FCk_Request_MontagePlayer_Stop& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_MontagePlayer
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InHandle),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Stop called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    { return InHandle; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     CK_CALLSTACK_RECORD(ck::FFragment_MontagePlayer_Requests, InHandle);
     InHandle.AddOrGet<ck::FFragment_MontagePlayer_Requests>()._Requests.Emplace(InRequest);
@@ -189,12 +220,22 @@ auto
     UCk_Utils_MontagePlayer_UE::
     Request_Pause(
         FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_Pause& InRequest)
+        const FCk_Request_MontagePlayer_Pause& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_MontagePlayer
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InHandle),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Pause called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    { return InHandle; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     CK_CALLSTACK_RECORD(ck::FFragment_MontagePlayer_Requests, InHandle);
     InHandle.AddOrGet<ck::FFragment_MontagePlayer_Requests>()._Requests.Emplace(InRequest);
@@ -205,12 +246,22 @@ auto
     UCk_Utils_MontagePlayer_UE::
     Request_Resume(
         FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_Resume& InRequest)
+        const FCk_Request_MontagePlayer_Resume& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_MontagePlayer
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InHandle),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_Resume called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    { return InHandle; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     CK_CALLSTACK_RECORD(ck::FFragment_MontagePlayer_Requests, InHandle);
     InHandle.AddOrGet<ck::FFragment_MontagePlayer_Requests>()._Requests.Emplace(InRequest);
@@ -221,12 +272,22 @@ auto
     UCk_Utils_MontagePlayer_UE::
     Request_JumpToSection(
         FCk_Handle_MontagePlayer& InHandle,
-        const FCk_Request_MontagePlayer_JumpToSection& InRequest)
+        const FCk_Request_MontagePlayer_JumpToSection& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_MontagePlayer
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_HasAuthority(InHandle),
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InHandle);
+    CK_ENSURE_IF_NOT(HasAuthority,
         TEXT("Request_JumpToSection called without authority on MontagePlayer [{}] — request dropped."), InHandle)
-    { return InHandle; }
+    {}
+    if (NOT HasAuthority)
+    {
+        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InHandle;
+    }
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
 
     CK_CALLSTACK_RECORD(ck::FFragment_MontagePlayer_Requests, InHandle);
     InHandle.AddOrGet<ck::FFragment_MontagePlayer_Requests>()._Requests.Emplace(InRequest);

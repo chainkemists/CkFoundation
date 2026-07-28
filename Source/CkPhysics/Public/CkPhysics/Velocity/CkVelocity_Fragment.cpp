@@ -20,7 +20,7 @@ static struct FVelocityRepHandlerRegistrar
             if (ck::Is_NOT_Valid(VelocityHandle))
             { return ECk_Persistence_ApplyResult::NotReady; }
 
-            UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value);
+            UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, New.Get<FCk_RepData_Velocity>().Value, {});
             return ECk_Persistence_ApplyResult::Applied;
         };
 
