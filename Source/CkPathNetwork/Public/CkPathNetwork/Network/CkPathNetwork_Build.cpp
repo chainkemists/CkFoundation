@@ -95,8 +95,9 @@ namespace ck_pathnetwork_build
         OutHalfWidth = FMath::Lerp(InPolyline._HalfWidths[SegmentIndex], InPolyline._HalfWidths[SegmentIndex + 1], Alpha);
     }
 
-    // Cuts must arrive sorted and deduped; each one yields two coincident endpoints (end of one
-    // piece, start of the next) for the node clustering to fuse.
+    // Split one polyline at the given sorted, deduped distances. Each interpolated cut produces
+    // coincident endpoints for adjacent pieces and node clustering, never a repeated control point
+    // within either piece.
     auto
     Split_Polyline(const FWorkingPolyline& InPolyline, const TArray<float>& InSortedCutDistances) -> TArray<FWorkingPolyline>
     {
@@ -133,8 +134,11 @@ namespace ck_pathnetwork_build
                 Current._HalfWidths.Add(CutHalfWidth);
             }
 
-            Current._Points.Add(InPolyline._Points[Index + 1]);
-            Current._HalfWidths.Add(InPolyline._HalfWidths[Index + 1]);
+            if (NOT Current._Points.Last().Equals(InPolyline._Points[Index + 1], UE_KINDA_SMALL_NUMBER))
+            {
+                Current._Points.Add(InPolyline._Points[Index + 1]);
+                Current._HalfWidths.Add(InPolyline._HalfWidths[Index + 1]);
+            }
         }
 
         Recompute_CumulativeLengths(Current);
