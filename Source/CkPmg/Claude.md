@@ -2,7 +2,9 @@
 
 **Purpose:** Procedural mesh generation — runtime-built debug shapes (capsule, sphere, box, cone, cylinder, torus, hemisphere, pyramid + angular/directional/icon/symbol variants) with optional matching wireframe overlay. Attached to entities as `UProceduralMeshComponent` instances.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkProvider`, `CkRecord`, `CkSettings`.
+**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkProvider`, `CkRecord`,
+`CkResourceLoader` (the donut material is a soft ref resolved through a rooted batch, consumer id
+`PmgDonut.Material`), `CkSettings`.
 **Used by:** Ability VFX, AoE indicators, in-world debugger overlays, procedural geometry.
 
 ---
