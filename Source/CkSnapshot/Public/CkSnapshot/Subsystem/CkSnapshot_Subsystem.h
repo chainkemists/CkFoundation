@@ -93,6 +93,15 @@ public:
     bool
     Get_IsLoadInProgress() const;
 
+    // The report of the most recently FINISHED load (success or abort). Default-constructed (Result=Failed_IO)
+    // until the first load completes. The delegate/signal remain the push channel; this is the pull channel for
+    // consumers that were not party to the Request_Load call (gates, diagnostics UI).
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Snapshot",
+              DisplayName = "[Ck][Snapshot] Get Last Load Report")
+    FCk_Snapshot_LoadReport
+    Get_LastLoadReport() const;
+
 protected:
     virtual auto Deinitialize() -> void override;
 
@@ -157,11 +166,13 @@ private:
     TArray<FCk_Snapshot_SkipRecord> _SkipRecords;       // one reasoned record per _SkippedIds entry; copied into the report
     TMap<uint32, TWeakObjectPtr<AActor>> _PendingBridgeActors; // bridged saved-id -> spawned actor awaiting its bridge
     FCk_Snapshot_LoadReport _V3LoadReport;             // accumulates orphan/skip counts; DoFinish_Load reports it
+    FCk_Snapshot_LoadReport _LastLoadReport;           // frozen copy of the last finished load's report (pull channel)
     bool _HydrationEnqueued = false;                   // Hydrating enqueues payloads exactly once
     int32 _SettleFramesRemaining = 0;                  // post-gate frames to let parked destroys + Setups drain
     bool _SettleStarted = false;                       // sentinel: arm the settle countdown once
     int32 _RebuildLastMappedCount = 0;                 // progress tracking: mapped count at the previous rebuild tick
     int32 _RebuildStallTicks = 0;                      // consecutive rebuild ticks with no NEW mapping (early-exit gate)
+    bool  _RebuildEscalated = false;                   // kernel quiesced with unresolved rows -> full-scope ticks (see Rebuilding)
 
     TWeakObjectPtr<UWorld> _PreTravelWorld;  // captured before OpenLevel; AwaitingWorld waits for a different world
     FString _TravelMapName;                  // resolved from the pre-travel world (RemovePIEPrefix)
