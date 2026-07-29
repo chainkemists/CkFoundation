@@ -22,6 +22,7 @@ public class CkVat : CkModuleRules
             "CkGraphics",
             "CkIsmRenderer",
             "CkLog",
+            "CkResourceLoader",
             "CkUsf",
         });
     }

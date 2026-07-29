@@ -13,6 +13,8 @@
 
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment_Data.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
 #include <variant>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -43,8 +45,13 @@ namespace ck
         friend class FProcessor_VatProxy_Setup;
         friend class FProcessor_VatProxy_HandleRequests;
         friend class FProcessor_VatProxy_FireSignals;
+        friend class ::UCk_Utils_VatProxy_UE;
 
     private:
+        // Pins the resolved collection from Add until the entity dies — GC does not trace
+        // fragments, and the subsystem's render-state map only roots it once Setup runs.
+        FCk_ResourceLoader_RootedAssetBatch _CollectionPinBatch;
+
         // Index into the collection's SERIALIZED baked clip table; INDEX_NONE = reference pose (row 0).
         int32 _ActiveClipIndex = INDEX_NONE;
         ECk_VatProxy_LoopMode _ActiveLoopMode = ECk_VatProxy_LoopMode::Loop;
