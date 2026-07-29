@@ -59,9 +59,11 @@ public:
     CK_GENERATED_BODY(FCk_Actor_AttachToActor_Params);
 
 protected:
+    // Weak by design: the params only OBSERVE the attach target across the queue window — a strong
+    // ref in a fragment roots nothing anyway (GC does not trace fragments).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<AActor> _ActorToAttachTo;
+    TWeakObjectPtr<AActor> _ActorToAttachTo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
