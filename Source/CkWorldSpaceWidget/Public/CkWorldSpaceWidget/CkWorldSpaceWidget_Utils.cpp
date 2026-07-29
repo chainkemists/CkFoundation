@@ -213,11 +213,28 @@ auto
     constexpr auto TickEvenWhenOffscreen = true;
     WidgetComponent->SetTickWhenOffscreen(TickEvenWhenOffscreen);
 
-    if (const auto OverrideMaterial = WorldComponentInfo.Get_OverrideMaterial();
-        ck::IsValid(OverrideMaterial))
+    // The component roots the applied material; resolution is resident-or-fail because this
+    // creation path is synchronous — there is no deferred setup to queue a load behind.
+    const auto OverrideMaterial = [&]() -> UMaterialInterface*
     {
-        WidgetComponent->SetMaterial(0, OverrideMaterial);
-    }
+        const auto& SoftOverrideMaterial = WorldComponentInfo.Get_OverrideMaterial();
+
+        if (ck::Is_NOT_Valid(SoftOverrideMaterial))
+        { return nullptr; }
+
+        auto* ResidentMaterial = SoftOverrideMaterial.Get();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(ResidentMaterial),
+            TEXT("WorldSpaceWidget override material [{}] is authored but NOT RESIDENT - the widget is "
+                 "created without it. Preload the material before creating the widget."),
+            SoftOverrideMaterial.ToSoftObjectPath())
+        { return nullptr; }
+
+        return ResidentMaterial;
+    }();
+
+    if (ck::IsValid(OverrideMaterial))
+    { WidgetComponent->SetMaterial(0, OverrideMaterial); }
 
     WidgetComponent->RegisterComponentWithWorld(World);
 
