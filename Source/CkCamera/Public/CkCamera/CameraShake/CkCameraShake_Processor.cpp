@@ -113,7 +113,8 @@ namespace ck
         const auto& FallOff                = Params.Get_Falloff();
         const auto& OrientTowardsEpicenter = Params.Get_OrientTowardsEpicenter();
         const auto& ShakeLocation          = InRequest.Get_Location();
-        const auto& WorldContextObject     = InRequest.Get_WorldContextObject();
+        // Resolved at drain time — the context object may legitimately die while the request queues.
+        const auto WorldContextObject      = InRequest.Get_WorldContextObject().Get();
 
         CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(WorldContextObject)
         { return false; }

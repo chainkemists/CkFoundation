@@ -54,6 +54,17 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("RaySense Traces Issued"), STAT_RaySense_TracesI
 
 namespace ck_raysense
 {
+    // The engine trace helpers take raw actor arrays; the fragment stores weak refs. Stale entries
+    // resolve to null, which the engine ignore-list handling tolerates. Ignore lists are typically
+    // 0-2 entries, so the per-trace copy is negligible.
+    auto Get_ResolvedActorsToIgnore(
+        const ck::FFragment_RaySense_Params& InParams) -> TArray<AActor*>
+    {
+        return ck::algo::Transform<TArray<AActor*>>(
+            InParams.Get_DataToIgnore().Get_ActorsToIgnore(),
+            [](const TWeakObjectPtr<AActor>& InActor) { return InActor.Get(); });
+    }
+
     template<typename T_Handle>
     auto Request_ProcessTraceHit(
         T_Handle& InHandle,
@@ -64,7 +75,7 @@ namespace ck_raysense
         { return; }
 
         auto Result = FCk_RaySense_HitResult{InHitResult.ImpactPoint, InHitResult.ImpactNormal}
-        .Set_ImpactPhysMat(InHitResult.PhysMaterial.Get())
+        .Set_ImpactPhysMat(InHitResult.PhysMaterial)
         .Set_MaybeHitActor(InHitResult.GetActor())
         .Set_MaybeHitComponent(InHitResult.GetComponent())
         .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(InHitResult.GetActor()) ?
@@ -169,7 +180,7 @@ namespace ck
             CurrTransform.GetLocation(),
             UEngineTypes::ConvertToTraceType(InParams.Get_CollisionChannel()),
             TraceComplex,
-            InParams.Get_DataToIgnore().Get_ActorsToIgnore(),
+            ck_raysense::Get_ResolvedActorsToIgnore(InParams),
             ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
             HitResult,
             IgnoreSelf,
@@ -217,7 +228,7 @@ namespace ck
                     InCurrTransform.GetRotation().Rotator(),
                     UEngineTypes::ConvertToTraceType(InP.Get_CollisionChannel()),
                     bTraceComplex,
-                    InP.Get_DataToIgnore().Get_ActorsToIgnore(),
+                    ck_raysense::Get_ResolvedActorsToIgnore(InP),
                     ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
                     OutHitResult,
                     bIgnoreSelf,
@@ -260,7 +271,7 @@ namespace ck
                     InShape.Get_Dimensions().Get_Radius(),
                     UEngineTypes::ConvertToTraceType(InP.Get_CollisionChannel()),
                     bTraceComplex,
-                    InP.Get_DataToIgnore().Get_ActorsToIgnore(),
+                    ck_raysense::Get_ResolvedActorsToIgnore(InP),
                     ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
                     OutHitResult,
                     bIgnoreSelf,
@@ -304,7 +315,7 @@ namespace ck
                     InShape.Get_Dimensions().Get_HalfHeight(),
                     UEngineTypes::ConvertToTraceType(InP.Get_CollisionChannel()),
                     bTraceComplex,
-                    InP.Get_DataToIgnore().Get_ActorsToIgnore(),
+                    ck_raysense::Get_ResolvedActorsToIgnore(InP),
                     ck_raysense::cvar::DebugDrawAllTraces ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
                     OutHitResult,
                     bIgnoreSelf,

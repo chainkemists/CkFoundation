@@ -86,9 +86,10 @@ public:
     CK_GENERATED_BODY(FCk_AddActorComponent_Params);
 
 private:
+    // Weak by design: the request only OBSERVES the parent component across the queue window.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditCondition = "_AttachmentType == ECk_ActorComponent_AttachmentPolicy::Attach"))
-    TObjectPtr<USceneComponent> _Parent;
+    TWeakObjectPtr<USceneComponent> _Parent;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

@@ -23,7 +23,10 @@ namespace ck
         friend class FProcessor_EntitySpawner_Spawn;
 
     private:
-        TObjectPtr<UCk_EntityScript_UE> _EntityScript;
+        // Weak by design: EntityScript instances are vended and PINNED by the ObjectPooling
+        // subsystem — "the pin is the root" (CkCore/ObjectPooling/README.md), and a strong holder
+        // here would fight the pool's recycling.
+        TWeakObjectPtr<UCk_EntityScript_UE> _EntityScript;
         FGameplayTag _ReplicatedChannelGroup;
 
         // The spawner actor never sees the entity it queued — it is spawned ticks later under a relay channel — so
