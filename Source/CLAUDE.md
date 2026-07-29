@@ -178,7 +178,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkAStar | Core,Ecs,EcsExt,Log |
 | CkActorRelay | Core,Ecs,EcsExt,Label,Log,Settings (channel entities stamp `FFragment_SaveKey`, which lives in CkEcs — no Snapshot dep) |
 | CkAggro | Core,Ecs,EcsExt,Label,Log,Record,Settings |
-| CkAnimation | Core,Ecs,EcsExt,Label,Log,Provider,Record |
+| CkAnimation | Core,Ecs,EcsExt,Label,Log,Provider,Record,ResourceLoader |
 | CkAttribute | Core,Ecs,EcsExt,Label,Log,Provider,Record |
 | CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkCamera | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
@@ -206,7 +206,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkInventory | Attribute,Core,Ecs,EcsExt,Grid,Label,Log,Record,Settings,TagSet |
 | CkJolt | Core,Ecs,EcsExt,Log,Settings,ThirdParty (owns the Jolt world; extracted from CkSpatialQuery 2026-07-16; +EcsExt Phase 3, also engine PhysicsCore/Landscape) |
 | CkIsmRenderer | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings |
-| CkIskmRenderer | Animation,Core,Ecs,EcsExt,Graphics,IskmRendererVF,Label,Log,Physics,Provider,Record,Settings |
+| CkIskmRenderer | Animation,Core,Ecs,EcsExt,Graphics,IskmRendererVF,Label,Log,Physics,Provider,Record,ResourceLoader,Settings |
 | CkMessaging | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkMinimap | Camera,Core,Ecs,EcsExt,EntityTag,Label,Log,Poi,PoiDisplayDefinition,Record,UICore,VisibleRange (UI→UICore 2026-08-14) |
 | CkNavigation | Core,Ecs,EcsExt,Label,Log,Record,Settings |
