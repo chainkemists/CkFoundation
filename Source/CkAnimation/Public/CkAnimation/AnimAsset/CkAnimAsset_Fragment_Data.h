@@ -34,13 +34,19 @@ private:
               meta = (AllowPrivateAccess = true, Categories = "AnimAsset"))
     FGameplayTag _ID;
 
+    // Soft by design: path-serialized, so it is safe to author in DataAssets/Blueprints (a weak ref
+    // silently saves as null there; a hard ref force-loads the asset with the owning package), and a
+    // fragment-held hard pointer would root nothing anyway (UE GC never walks the EnTT registry).
+    // AnimAsset is pure path data — it kicks no loads and roots nothing; consumers resolve through
+    // their own CkResourceLoader consumer id, or read resident-or-null via .Get().
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UAnimationAsset> _Animation;
+    TSoftObjectPtr<UAnimationAsset> _Animation;
 
+    // Soft by design — see _Animation above.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UBlendSpace> _BlendSpace;
+    TSoftObjectPtr<UBlendSpace> _BlendSpace;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

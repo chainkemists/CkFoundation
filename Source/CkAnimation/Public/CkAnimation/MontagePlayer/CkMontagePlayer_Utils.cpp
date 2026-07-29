@@ -6,25 +6,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Net/CkNet_Utils.h"
-
-namespace ck::montage_player_detail
-{
-    auto MapFailureReason(
-        ECk_PlayMontageFailureReason InReason) -> ECk_MontagePlayer_FinishReason
-    {
-        switch (InReason)
-        {
-            case ECk_PlayMontageFailureReason::InvalidMontage:                    return ECk_MontagePlayer_FinishReason::Failed_InvalidMontage;
-            case ECk_PlayMontageFailureReason::InvalidMeshComponent:              return ECk_MontagePlayer_FinishReason::Failed_InvalidMeshComponent;
-            case ECk_PlayMontageFailureReason::InvalidPlayRate:                   return ECk_MontagePlayer_FinishReason::Failed_InvalidPlayRate;
-            case ECk_PlayMontageFailureReason::MissingAnimInstanceOnMeshComponent: return ECk_MontagePlayer_FinishReason::Failed_MissingAnimInstance;
-            case ECk_PlayMontageFailureReason::SkeletonMismatch:                  return ECk_MontagePlayer_FinishReason::Failed_SkeletonMismatch;
-            case ECk_PlayMontageFailureReason::MeshTickDisabled:                  return ECk_MontagePlayer_FinishReason::Failed_MeshTickDisabled;
-            case ECk_PlayMontageFailureReason::MeshComponentCannotTickOnServer:   return ECk_MontagePlayer_FinishReason::Failed_MeshComponentCannotTickOnServer;
-        }
-        return ECk_MontagePlayer_FinishReason::Failed_InvalidMontage;
-    }
-}
+#include "CkResourceLoader/CkResourceLoader_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -164,25 +146,47 @@ auto
 
     auto* SkelMeshComp = InHandle.Get<ck::FFragment_MontagePlayer_Params>().Get_Params().Get_SkeletalMeshComponent().Get();
 
-    auto Validation = ECk_SucceededFailed::Failed;
-    const auto Failure = UCk_Utils_Animation_UE::Get_CanPlayMontage(
-        SkelMeshComp, InRequest.Get_Montage(), InRequest.Get_PlayRate(), Validation);
+    auto Request = InRequest;
 
-    if (Validation == ECk_SucceededFailed::Failed)
+    // Unset and resident keep the old pre-flight; authored-but-not-resident is net-new and defers to
+    // the drain, which re-runs it once the batch lands.
+    const auto MontageIsAuthored = ck::IsValid(Request.Get_Montage());
+    auto* ResolvedMontage = Request.Get_Montage().Get();
+
+    if (NOT MontageIsAuthored || ck::IsValid(ResolvedMontage))
     {
-        const auto Reason = ck::montage_player_detail::MapFailureReason(Failure);
-        const auto FailureState = FCk_MontagePlayer_State{InRequest.Get_Montage()};
-        ck::UUtils_Signal_MontagePlayer_OnFinished::Broadcast(
-            InHandle, ck::MakePayload(InHandle, FailureState, Reason));
-        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
-        return InHandle;
+        auto Validation = ECk_SucceededFailed::Failed;
+        const auto Failure = UCk_Utils_Animation_UE::Get_CanPlayMontage(
+            SkelMeshComp, ResolvedMontage, Request.Get_PlayRate(), Validation);
+
+        if (Validation == ECk_SucceededFailed::Failed)
+        {
+            const auto Reason = ck::montage_player_detail::MapFailureReason(Failure);
+            const auto FailureState = FCk_MontagePlayer_State{ResolvedMontage};
+            ck::UUtils_Signal_MontagePlayer_OnFinished::Broadcast(
+                InHandle, ck::MakePayload(InHandle, FailureState, Reason));
+            InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
+            return InHandle;
+        }
+    }
+    else
+    {
+        Request.Set_PreflightDeferred(true);
+    }
+
+    if (MontageIsAuthored)
+    {
+        // Kicked even when resident: the soft ptr roots nothing, and the batch is what keeps the
+        // montage alive from enqueue to drain. Resident kicks complete inline (warm path unchanged).
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            TEXT("MontagePlayer.Play"), {Request.Get_Montage().ToSoftObjectPath()}));
     }
 
     if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
+    { Request.Set_CompletionDelegate(InDelegate); }
 
     CK_CALLSTACK_RECORD(ck::FFragment_MontagePlayer_Requests, InHandle);
-    InHandle.AddOrGet<ck::FFragment_MontagePlayer_Requests>()._Requests.Emplace(InRequest);
+    InHandle.AddOrGet<ck::FFragment_MontagePlayer_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 

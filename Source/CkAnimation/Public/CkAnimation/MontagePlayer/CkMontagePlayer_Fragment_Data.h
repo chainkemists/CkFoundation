@@ -7,6 +7,8 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
 #include <Animation/AnimMontage.h>
 #include <Components/SkeletalMeshComponent.h>
 
@@ -166,9 +168,15 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_MontagePlayer_Play);
 
 private:
+    // Soft by design: a hard ref force-loads with the owning package and roots nothing anyway (GC
+    // never walks the EnTT registry). Rooting is the preload batch's job until the receiver takes it.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UAnimMontage> _Montage;
+    TSoftObjectPtr<UAnimMontage> _Montage;
+
+    // Not reflected: kicked by Request_Play; a request built raw in BP/AS carries no batch and the
+    // drain resolves the soft ref resident-or-null instead.
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -194,8 +202,16 @@ private:
     FCk_Time _AuthoritativeServerStartTime;
     bool _FromReplication = false;
 
+    // Set by Request_Play when the montage was authored but not resident at enqueue: the
+    // montage-dependent pre-flight could not run there, so the drain re-runs it once resolved.
+    bool _PreflightDeferred = false;
+
 public:
     CK_PROPERTY(_Montage);
+    // Hand-written (not CK_PROPERTY): the batch type is deliberately not AS-registered, and the
+    // macro's AngelScript accessor registration would fail loudly at every editor boot.
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY(_SectionName);
     CK_PROPERTY(_StartPosition);
     CK_PROPERTY(_PlayRate);
@@ -204,6 +220,7 @@ public:
     CK_PROPERTY(_AuthoritativePlayInstanceId);
     CK_PROPERTY(_AuthoritativeServerStartTime);
     CK_PROPERTY(_FromReplication);
+    CK_PROPERTY(_PreflightDeferred);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_MontagePlayer_Play, _Montage);
