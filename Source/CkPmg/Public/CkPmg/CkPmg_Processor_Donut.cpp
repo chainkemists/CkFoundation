@@ -170,6 +170,17 @@ namespace ck
             FFragment_Pmg_Donut_Current& InCurrent)
             -> void
     {
+        // Returning before the NeedsSetup removal below is what re-arms this Setup next tick; the
+        // pending tag is not the dirty marker, so marking it cannot re-pump the frame.
+        if (InCurrent._MaterialPreloadBatch.Get_IsRequested() &&
+            NOT InCurrent._MaterialPreloadBatch.Get_IsReady())
+        {
+            InHandle.AddOrGet<FTag_Pmg_Donut_PendingAssetLoad>();
+            return;
+        }
+
+        InHandle.Try_Remove<FTag_Pmg_Donut_PendingAssetLoad>();
+
         InHandle.Remove<MarkedDirtyBy>();
 
         ck::pmg::Verbose(TEXT("Setting up Pmg Donut [{}]"), InHandle);
@@ -199,11 +210,25 @@ namespace ck
         MeshComponent->SetHiddenInGame(false);
         MeshComponent->SetCastShadow(true);
 
+        const auto& MaterialPreloadBatch = InCurrent._MaterialPreloadBatch;
+        const auto MaterialPreloadFailed = MaterialPreloadBatch.Get_IsRequested() && MaterialPreloadBatch.Get_HasFailed();
+
+        // Batch-first so the applied material is the one the batch roots; the resident-or-null
+        // fallback covers params built raw with an already-loaded material.
+        auto ResolvedMaterial = MaterialPreloadBatch.Get_IsRequested()
+            ? ::Cast<UMaterialInterface>(MaterialPreloadBatch.Get_ResolvedObject(InParams.Get_Params().Get_Material().ToSoftObjectPath()))
+            : InParams.Get_Params().Get_Material().Get();
+
+        CK_ENSURE_IF_NOT(NOT MaterialPreloadFailed,
+            TEXT("Pmg Donut [{}]: preload of Material [{}] failed — falling back to the default material."),
+            InHandle, InParams.Get_Params().Get_Material().ToSoftObjectPath().ToString())
+        { ResolvedMaterial = nullptr; }
+
         InCurrent._InnerRadius = InParams.Get_Params().Get_InnerRadius();
         InCurrent._OuterRadius = InParams.Get_Params().Get_OuterRadius();
         InCurrent._Segments = InParams.Get_Params().Get_Segments();
         InCurrent._FillAngle = InParams.Get_Params().Get_FillAngle();
-        InCurrent._Material = InParams.Get_Params().Get_Material();
+        InCurrent._Material = ResolvedMaterial;
         InCurrent._EnableCollision = InParams.Get_Params().Get_EnableCollision();
         InCurrent._RenderMode = InParams.Get_Params().Get_RenderMode();
 
@@ -269,6 +294,16 @@ namespace ck
             const FFragment_Pmg_Donut_UpdateParams& InRequest) const
             -> void
     {
+        // Returning before the fragment removal below is what re-arms this drain next tick, and a
+        // newer Request_UpdateParams may still overwrite it (latest-wins, carrying its own batch);
+        // the pending tag is not the dirty marker, so marking it cannot re-pump the frame.
+        if (InRequest.Get_PreloadBatch().Get_IsRequested() &&
+            NOT InRequest.Get_PreloadBatch().Get_IsReady())
+        {
+            InHandle.AddOrGet<FTag_Pmg_Donut_PendingAssetLoad>();
+            return;
+        }
+
         // Copied because MarkedDirtyBy IS this fragment: Remove<MarkedDirtyBy>() below destructs the
         // live InRequest storage, and the Guard fires after that at scope exit — it must reference a
         // copy that outlives the removal, not the live fragment.
@@ -284,6 +319,7 @@ namespace ck
         Result = ECk_Request_OperationResult::Succeeded;
 
         InHandle.Remove<MarkedDirtyBy>();
+        InHandle.Try_Remove<FTag_Pmg_Donut_PendingAssetLoad>();
     }
 
     auto
@@ -329,10 +365,26 @@ namespace ck
 
         if (InRequest.Get_Material().IsSet())
         {
-            InCurrent._Material = InRequest.Get_Material().GetValue();
-            if (ck::IsValid(InCurrent._Material))
+            const auto& SoftMaterial = InRequest.Get_Material().GetValue();
+            const auto& PreloadBatch = InRequest.Get_PreloadBatch();
+            const auto PreloadFailed = PreloadBatch.Get_IsRequested() && PreloadBatch.Get_HasFailed();
+
+            // Batch-first so the applied material is the one the batch roots; the
+            // resident-or-null fallback covers requests built raw in BP/AS.
+            auto ResolvedMaterial = PreloadBatch.Get_IsRequested()
+                ? ::Cast<UMaterialInterface>(PreloadBatch.Get_ResolvedObject(SoftMaterial.ToSoftObjectPath()))
+                : SoftMaterial.Get();
+
+            CK_ENSURE_IF_NOT(NOT PreloadFailed,
+                TEXT("Pmg Donut [{}]: preload of Material [{}] failed — the material update is skipped, other fields still apply."),
+                InHandle, InRequest.Get_Material().GetValue().ToSoftObjectPath().ToString())
+            { ResolvedMaterial = nullptr; }
+
+            if (ck::IsValid(ResolvedMaterial))
             {
+                InCurrent._Material = ResolvedMaterial;
                 MeshComponent->SetMaterial(0, InCurrent._Material);
+                InCurrent._MaterialPreloadBatch = PreloadBatch;
             }
         }
 

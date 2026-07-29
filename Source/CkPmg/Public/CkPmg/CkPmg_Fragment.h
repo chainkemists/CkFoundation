@@ -20,6 +20,10 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Pmg_Donut_NeedsSetup);
 
+    // Present while a donut's material preload batch is still loading (Setup / HandleRequests
+    // re-poll, keeping their gating fragment). Observability only — nothing gates on it.
+    CK_DEFINE_ECS_TAG(FTag_Pmg_Donut_PendingAssetLoad);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct CKPMG_API FFragment_Pmg_Donut_Params
@@ -63,6 +67,10 @@ namespace ck
         TObjectPtr<UMaterialInterface> _Material;
         bool _EnableCollision = false;
         ECk_Pmg_RenderMode _RenderMode = ECk_Pmg_RenderMode::DoubleSided;
+
+        // Roots the resolved material for the fragment's lifetime — GC does not trace fragments,
+        // and _Material above is only otherwise rooted once the pooled mesh component applies it.
+        FCk_ResourceLoader_RootedAssetBatch _MaterialPreloadBatch;
 
     public:
         CK_PROPERTY_GET(_MeshComponent);
