@@ -37,6 +37,10 @@ enum class ECk_Snapshot_SkipReason : uint8
     NoLoadableSteps,
     // The build request returned an invalid handle (host gate / rep-driver rejection).
     BuildFailed,
+    // A keyed bridged row resolved to a live entity another saved row had already claimed — a second saved
+    // copy of the same logical entity (e.g. a statue player captured by an earlier polluted save). Skipped
+    // so distinct saved rows never consolidate onto one live entity.
+    DuplicateSaveKey,
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Snapshot_SkipReason);

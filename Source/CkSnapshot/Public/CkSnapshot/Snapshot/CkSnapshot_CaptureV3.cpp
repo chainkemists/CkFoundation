@@ -190,6 +190,10 @@ namespace ck::snapshot
         }
 
         // The PlayerState unique-id; empty for standalone player 0; UNSET ⇒ not a player-owned entity at all.
+        // ONLY the possessed pawn carries player-rendezvous identity. Controller/PlayerState entities are
+        // engine-recreated infra: a saved row for them cross-maps onto the PAWN's entity at load
+        // (DoResolve_PlayerEntity resolves via State->GetPawn()) and steals the keyed pawn row's adoption —
+        // the DuplicateSaveKey pawn-skip incident, 2026-07-28.
         auto
             TryResolve_PlayerRendezvous(
                 const FCk_Handle& InHandle)
@@ -199,20 +203,13 @@ namespace ck::snapshot
             if (Actor == nullptr)
             { return {}; }
 
-            const APlayerState* PlayerState = nullptr;
-            if (const auto* AsPlayerState = Cast<APlayerState>(Actor))
-            { PlayerState = AsPlayerState; }
-            else if (const auto* AsController = Cast<APlayerController>(Actor))
-            { PlayerState = AsController->PlayerState; }
-            else if (const auto* AsPawn = Cast<APawn>(Actor); AsPawn != nullptr && AsPawn->IsPlayerControlled())
-            { PlayerState = AsPawn->GetPlayerState(); }
+            const auto* AsPawn = Cast<APawn>(Actor);
+            if (AsPawn == nullptr || AsPawn->IsPlayerControlled() == false)
+            { return {}; }
 
+            const auto* PlayerState = AsPawn->GetPlayerState();
             if (PlayerState == nullptr)
-            {
-                if (const auto* AsPawn = Cast<APawn>(Actor); AsPawn != nullptr && AsPawn->IsPlayerControlled())
-                { return FString{}; }
-                return {};
-            }
+            { return FString{}; }
 
             const auto UniqueId = PlayerState->GetUniqueId();
             return UniqueId.IsValid() ? UniqueId.ToString() : FString{};
