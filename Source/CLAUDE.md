@@ -197,7 +197,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkEntityVisualizer | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Pmg,Shapes,SpatialQuery (retained/event-driven; high-count visuals use shared ISM batches) |
 | CkEntityTag | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkEqs | Core,Ecs,EcsExt,EntityTag,Label,Log,Record,Settings,Shapes,SpatialQuery,ThirdParty |
-| CkFx | Core,Ecs,EcsExt,Label,Log,Record,Settings |
+| CkFx | Core,Ecs,EcsExt,Label,Log,Record,ResourceLoader,Settings |
 | CkGameSession | Core,Ecs,Label,Log,Record,Settings |
 | CkGoap | AStar,Core,Ecs,EcsExt,Label,Log,Record |
 | CkGraphics | Core,Ecs,Log,Variables |

@@ -7,15 +7,12 @@
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
-#include <NiagaraFunctionLibrary.h>
 #include <NiagaraComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_CYCLE_STAT(TEXT("Fx::VfxSpawnAttached"),   STAT_Fx_VfxSpawnAttached,   STATGROUP_CkFx);
-DECLARE_CYCLE_STAT(TEXT("Fx::VfxSpawnAtLocation"), STAT_Fx_VfxSpawnAtLocation, STATGROUP_CkFx);
-
-// Single shared "Fx Effects Spawned" counter (declared EXTERN in CkFx_Stats.h, also INC'd from CkSfx_Utils.cpp).
+// Single shared "Fx Effects Spawned" counter (declared EXTERN in CkFx_Stats.h, INC'd from the Sfx
+// and Vfx HandleRequests processors).
 DEFINE_STAT(STAT_Fx_EffectsSpawned);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -33,6 +30,7 @@ auto
 
         InNewEntity.Add<ck::FFragment_Vfx_Params>(InParams);
         InNewEntity.Add<ck::FFragment_Vfx_Current>();
+        InNewEntity.Add<ck::FTag_Vfx_NeedsSetup>();
     });
 
     auto NewVfxEntity = Cast(NewEntity);
@@ -88,7 +86,7 @@ auto
         const FCk_Handle_Vfx& InVfxHandle)
     -> UNiagaraSystem*
 {
-    return InVfxHandle.Get<ck::FFragment_Vfx_Params>().Get_Params().Get_ParticleSystem();
+    return InVfxHandle.Get<ck::FFragment_Vfx_Params>().Get_Params().Get_ParticleSystem().Get();
 }
 
 auto
@@ -138,47 +136,14 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Vfx
 {
-    SCOPE_CYCLE_COUNTER(STAT_Fx_VfxSpawnAttached);
-
     CK_CALLSTACK_RECORD(ck::FFragment_Vfx_Requests, InVfxHandle);
 
-    // TODO: Move this to processor
+    auto Request = InRequest;
 
-    const auto& ParticleSystem     = Get_ParticleSystem(InVfxHandle);
-    const auto& AttachmentSettings = Get_AttachmentSettings(InVfxHandle);
-    const auto& TransformRules     = AttachmentSettings.Get_TransformRules();
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
 
-    constexpr auto PreCull = true;
-    const auto& SpawnedVfx = UNiagaraFunctionLibrary::SpawnSystemAttached
-    (
-        ParticleSystem,
-        InRequest.Get_AttachComponent().Get(),
-        AttachmentSettings.Get_SocketName(),
-        InRequest.Get_RelativeTransformSettings().Get_Location(),
-        InRequest.Get_RelativeTransformSettings().Get_Rotation(),
-        EAttachLocation::Type::KeepRelativeOffset,
-        PreCull
-    );
-
-    // This may be invalid if it is pre-culled
-    if (ck::Is_NOT_Valid(SpawnedVfx))
-    {
-        InDelegate.ExecuteIfBound(InVfxHandle, ECk_Request_OperationResult::Failed);
-        return InVfxHandle;
-    }
-
-    INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
-
-    DoSet_NiagaraInstanceParameter(SpawnedVfx, InRequest.Get_InstanceParameterSettings());
-
-    SpawnedVfx->SetAbsolute
-    (
-        TransformRules.Get_LocationPolicy() == ECk_VFX_Location_Policy::UseAbsoluteLocation,
-        TransformRules.Get_RotationPolicy() == ECk_VFX_Rotation_Policy::UseAbsoluteRotation,
-        TransformRules.Get_ScalePolicy()    == ECk_VFX_Scale_Policy::UseAbsoluteScale
-    );
-
-    InDelegate.ExecuteIfBound(InVfxHandle, ECk_Request_OperationResult::Succeeded);
+    InVfxHandle.AddOrGet<ck::FFragment_Vfx_Requests>()._Requests.Emplace(Request);
 
     return InVfxHandle;
 }
@@ -191,43 +156,14 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Vfx
 {
-    SCOPE_CYCLE_COUNTER(STAT_Fx_VfxSpawnAtLocation);
-
     CK_CALLSTACK_RECORD(ck::FFragment_Vfx_Requests, InVfxHandle);
 
-    // TODO: Move this to processor
+    auto Request = InRequest;
 
-    const auto& ParticleSystem     = Get_ParticleSystem(InVfxHandle);
-    const auto& AttachmentSettings = Get_AttachmentSettings(InVfxHandle);
-    const auto& TransformRules     = AttachmentSettings.Get_TransformRules();
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
 
-    const auto& SpawnedVfx = UNiagaraFunctionLibrary::SpawnSystemAtLocation
-    (
-        InRequest.Get_Outer().Get(),
-        ParticleSystem,
-        InRequest.Get_TransformSettings().Get_Location(),
-        InRequest.Get_TransformSettings().Get_Rotation()
-    );
-
-    // This may be invalid if it is pre-culled
-    if (ck::Is_NOT_Valid(SpawnedVfx))
-    {
-        InDelegate.ExecuteIfBound(InVfxHandle, ECk_Request_OperationResult::Failed);
-        return InVfxHandle;
-    }
-
-    INC_DWORD_STAT(STAT_Fx_EffectsSpawned);
-
-    DoSet_NiagaraInstanceParameter(SpawnedVfx, InRequest.Get_InstanceParameterSettings());
-
-    SpawnedVfx->SetAbsolute
-    (
-        TransformRules.Get_LocationPolicy() == ECk_VFX_Location_Policy::UseAbsoluteLocation,
-        TransformRules.Get_RotationPolicy() == ECk_VFX_Rotation_Policy::UseAbsoluteRotation,
-        TransformRules.Get_ScalePolicy()    == ECk_VFX_Scale_Policy::UseAbsoluteScale
-    );
-
-    InDelegate.ExecuteIfBound(InVfxHandle, ECk_Request_OperationResult::Succeeded);
+    InVfxHandle.AddOrGet<ck::FFragment_Vfx_Requests>()._Requests.Emplace(Request);
 
     return InVfxHandle;
 }
