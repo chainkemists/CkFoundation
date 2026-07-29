@@ -6,6 +6,10 @@
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
+#include <variant>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Vfx_UE;
@@ -14,6 +18,14 @@ class UCk_Utils_Vfx_UE;
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_Vfx_NeedsSetup);
+
+    // Present while the vfx's particle-system preload batch is still loading (Setup re-polls,
+    // keeping NeedsSetup). Observability only — nothing gates on it.
+    CK_DEFINE_ECS_TAG(FTag_Vfx_PendingAssetLoad);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKFX_API FFragment_Vfx_Params
     {
     public:
@@ -40,11 +52,16 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Vfx_Current);
 
     public:
+        friend class FProcessor_Vfx_Setup;
         friend class FProcessor_Vfx_HandleRequests;
+        friend class FProcessor_Vfx_EndPlay;
         friend class UCk_Utils_Vfx_UE;
 
     private:
-        int32 _DummyProperty = 0;
+        // Roots the resolved particle system from Setup's kick until EndPlay — GC does not trace
+        // fragments, and spawned Niagara components are fire-and-forget (world-rooted), so this
+        // batch is what keeps the soft-authored system resident between plays.
+        FCk_ResourceLoader_RootedAssetBatch _LoadedAssets;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -56,11 +73,20 @@ namespace ck
 
     public:
         friend class FProcessor_Vfx_HandleRequests;
+        friend class FProcessor_Vfx_CancelPendingRequests;
         friend class UCk_Utils_Vfx_UE;
 
+    public:
+        using RequestType = std::variant<
+            FCk_Request_Vfx_PlayAttached,
+            FCk_Request_Vfx_PlayAtLocation>;
+        using RequestList = TArray<RequestType>;
+
     private:
-        // TODO: Add various requests here
-        int32 _DummyProperty = 0;
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
