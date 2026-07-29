@@ -402,6 +402,7 @@ void
     _TravelMapName.Reset();
 
     _SavedIdMap.Reset();
+    _MappedLiveEntities.Reset();
     _SpawnedRuntimeIds.Reset();
     _SkippedIds.Reset();
     _SkipRecords.Reset();
@@ -672,6 +673,9 @@ auto
             case ECk_Snapshot_V3_Provenance::ConstructSpawned:
             {
                 // Adopt by (owner, label) — needs the owner mapped first (owners precede dependents in the table).
+                // A child another row already claimed is excluded, so equal-label siblings (e.g. an attribute and
+                // its refill child sharing one name) bind positionally: table order and LifetimeDependents order
+                // are both creation order.
                 const auto* Owner = _SavedIdMap.Find(Entry.Get_LifetimeOwnerSavedId());
                 if (Owner != nullptr && ck::IsValid(*Owner) && Owner->Has<ck::FFragment_LifetimeDependents>())
                 {
@@ -679,6 +683,8 @@ auto
                     for (auto& Child : Owner->Get<ck::FFragment_LifetimeDependents>().Get_Entities())
                     {
                         if (ck::Is_NOT_Valid(Child) || NOT Child.Has<ck::FTag_ConstructSpawned>())
+                        { continue; }
+                        if (_MappedLiveEntities.Contains(Child))
                         { continue; }
                         if (NOT UCk_Utils_GameplayLabel_UE::Has(Child) || UCk_Utils_GameplayLabel_UE::Get_IsUnnamedLabel(Child))
                         { continue; }
@@ -708,14 +714,7 @@ auto
                         auto Found = FCk_Handle{};
                         if (TryResolve_SaveKey(Entry.Get_SaveKey(), Found) && ck::IsValid(Found))
                         {
-                            auto bAlreadyClaimed = false;
-                            for (const auto& Kvp : _SavedIdMap)
-                            {
-                                if (Kvp.Value == Found)
-                                { bAlreadyClaimed = true; break; }
-                            }
-
-                            if (bAlreadyClaimed)
+                            if (_MappedLiveEntities.Contains(Found))
                             {
                                 ck::snapshot::Warning(
                                     TEXT("v3 load SKIP: saved-id [{}] provenance [{}] identity [{}] owner [{}] reason [{}]"),
@@ -973,6 +972,7 @@ auto
             }
 
             _SavedIdMap.Add(SavedId, Resolved);
+            _MappedLiveEntities.Add(Resolved);
         }
         else if (NOT _SkippedIds.Contains(SavedId))
         { AnyUnresolved = true; } // still pending (bridge linking, owner not yet mapped) — retry next tick
@@ -1580,6 +1580,7 @@ auto
     _PendingTeardownRoots.Reset();
     _V3Tables = FCk_Snapshot_V3_Tables{};
     _SavedIdMap.Reset();
+    _MappedLiveEntities.Reset();
     _SpawnedRuntimeIds.Reset();
     _SkippedIds.Reset();
     _SkipRecords.Reset();

@@ -160,6 +160,7 @@ private:
     FCk_Snapshot_V3_Tables _V3Tables;
     FCk_Snapshot_HeaderV3  _V3Header;
     TMap<uint32, FCk_Handle> _SavedIdMap;               // saved-id -> live handle (built during Rebuilding)
+    TSet<FCk_Handle> _MappedLiveEntities;               // every _SavedIdMap value — a live entity one row already claimed
     TSet<uint32> _SpawnedRuntimeIds;                    // RuntimeSpawned entries we already issued a spawn for
     TSet<uint32> _PersistedIds;                         // every saved entity id — an owner NOT here is the world root/transient
     TSet<uint32> _SkippedIds;                           // entries the loader deliberately does NOT rebuild
