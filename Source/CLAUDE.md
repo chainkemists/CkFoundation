@@ -237,7 +237,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkWidgets | Core,Graphics,Input,Log,ThirdParty,UICore (split from CkUI 2026-08-14 — custom widgets, the 29 Common* styles, widget rasterizer, screen-projection utils; SIBLING of CkUI on CkUICore, never a layer under it) |
 | CkUnrealComponent | Core,Ecs,EcsExt,Jolt,Label,Log,Record,Settings (Jolt added 2026-08-11 for the static-world bake opt-in — same-tier dep) |
 | CkUsf | Core,Ecs,Graphics,Log |
-| CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
+| CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,ResourceLoader,Usf |
 | CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkVisibleRange | Core,Ecs,EcsExt,Log (deliberately minimal — no Poi/consumer knowledge; see its Claude.md) |
 | CkVoiceChat | ActorRelay,Core,Ecs,EcsExt,Label,Log,Record,ResourceLoader,Settings,Shapes,SpatialQuery (P4 2026-08-04 — feature-complete; engine deps AudioMixer/DeveloperSettings/GameplayTags/NetCore/Voice; never Relationship) |
