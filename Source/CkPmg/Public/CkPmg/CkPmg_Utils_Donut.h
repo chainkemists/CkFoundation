@@ -139,7 +139,7 @@ public:
     static FCk_Handle_Pmg_Donut
     Request_SetMaterial(
         UPARAM(ref) FCk_Handle_Pmg_Donut& InDonut,
-        UMaterialInterface* InValue);
+        TSoftObjectPtr<UMaterialInterface> InValue);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|Donut",
