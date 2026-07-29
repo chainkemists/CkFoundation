@@ -269,6 +269,13 @@ private:
     UPROPERTY()
     FVector _CurrentSegmentStart = FVector::ZeroVector;
 
+    // A Partial path ends at the closest REACHABLE point, not the goal. Set at install when
+    // that end falls outside the arrival radius of the (projected) goal: the final-stop latch
+    // must then report OnGoalFailed, not OnGoalReached — an agent marooned off its goal's nav
+    // region otherwise "arrives" at the stub's end and no caller can tell the difference.
+    UPROPERTY()
+    bool _ActivePathEndsShortOfGoal = false;
+
     // Stationary-markup confirmation serial current when this path was installed. PathRefresh
     // compares it against each confirmed disc's serial: only a disc that became visible to Recast
     // AFTER the path can trigger a re-path, so a path that already chose to pay a disc's cost is
@@ -281,6 +288,7 @@ public:
     CK_PROPERTY_GET(_ActiveArrivalRadius);
     CK_PROPERTY_GET(_ActiveGoal);
     CK_PROPERTY_GET(_CurrentSegmentStart);
+    CK_PROPERTY_GET(_ActivePathEndsShortOfGoal);
     CK_PROPERTY_GET(_PathSerial);
 };
 
