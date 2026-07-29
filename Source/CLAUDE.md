@@ -204,7 +204,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkIntent | Core,Ecs,EcsExt,Input,Log,Settings (frame record over the raw input layer; the dependency is strictly one-way — CkInput must never depend on CkIntent) |
 | CkInteraction | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkInventory | Attribute,Core,Ecs,EcsExt,Grid,Label,Log,Record,Settings,TagSet |
-| CkJolt | Core,Ecs,EcsExt,Log,Settings,ThirdParty (owns the Jolt world; extracted from CkSpatialQuery 2026-07-16; +EcsExt Phase 3, also engine PhysicsCore/Landscape) |
+| CkJolt | Core,Ecs,EcsExt,Log,ResourceLoader,Settings,ThirdParty (owns the Jolt world; extracted from CkSpatialQuery 2026-07-16; +EcsExt Phase 3, also engine PhysicsCore/Landscape) |
 | CkIsmRenderer | Core,Ecs,EcsExt,Graphics,Label,Log,Provider,Record,Settings |
 | CkIskmRenderer | Animation,Core,Ecs,EcsExt,Graphics,IskmRendererVF,Label,Log,Physics,Provider,Record,Settings |
 | CkMessaging | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
