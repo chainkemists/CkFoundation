@@ -9,6 +9,8 @@
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
 #include <Engine/Canvas.h>
 #include <GameplayTags.h>
 #include <NativeGameplayTags.h>
@@ -325,9 +327,15 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_RenderTarget_DrawTexture);
 
 private:
+    // Soft by design: a hard ref force-loads with the owning package and roots nothing anyway (GC
+    // never walks the EnTT registry). Rooting is the preload batch's job until the receiver takes it.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UTexture> _Texture;
+    TSoftObjectPtr<UTexture> _Texture;
+
+    // Not reflected: kicked by the Utils enqueue boundary; a request built raw in BP/AS carries no
+    // batch and the handler resolves the soft ref resident-or-null instead.
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -355,6 +363,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_Texture);
+    // Hand-written: CK_PROPERTY would AS-register the batch type and fail at editor boot.
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY_GET(_Position);
     CK_PROPERTY_GET(_Size);
     CK_PROPERTY(_CoordinatePosition);
@@ -378,9 +389,12 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_RenderTarget_DrawMaterial);
 
 private:
+    // Soft by design (see FCk_Request_RenderTarget_DrawTexture::_Texture).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UMaterialInterface> _Material;
+    TSoftObjectPtr<UMaterialInterface> _Material;
+
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -396,6 +410,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_Material);
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY_GET(_Position);
     CK_PROPERTY_GET(_Size);
     CK_PROPERTY(_Rotation);
@@ -424,10 +440,13 @@ private:
         meta = (AllowPrivateAccess = true))
     FVector2D _Position = FVector2D::ZeroVector;
 
-    // Optional — engine default (tiny) font is used when unset
+    // Optional — engine default (tiny) font is used when unset.
+    // Soft by design (see FCk_Request_RenderTarget_DrawTexture::_Texture).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UFont> _Font;
+    TSoftObjectPtr<UFont> _Font;
+
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -441,6 +460,8 @@ public:
     CK_PROPERTY_GET(_Text);
     CK_PROPERTY_GET(_Position);
     CK_PROPERTY(_Font);
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY(_Scale);
     CK_PROPERTY(_Color);
 
@@ -518,29 +539,33 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_RenderTarget_DrawBorder);
 
 private:
+    // Soft by design (see FCk_Request_RenderTarget_DrawTexture::_Texture). All six textures ride
+    // ONE preload batch, kicked at the Utils enqueue boundary.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UTexture> _BorderTexture;
+    TSoftObjectPtr<UTexture> _BorderTexture;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UTexture> _BackgroundTexture;
+    TSoftObjectPtr<UTexture> _BackgroundTexture;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UTexture> _LeftBorderTexture;
+    TSoftObjectPtr<UTexture> _LeftBorderTexture;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UTexture> _RightBorderTexture;
+    TSoftObjectPtr<UTexture> _RightBorderTexture;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UTexture> _TopBorderTexture;
+    TSoftObjectPtr<UTexture> _TopBorderTexture;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UTexture> _BottomBorderTexture;
+    TSoftObjectPtr<UTexture> _BottomBorderTexture;
+
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -573,6 +598,8 @@ public:
     CK_PROPERTY_GET(_RightBorderTexture);
     CK_PROPERTY_GET(_TopBorderTexture);
     CK_PROPERTY_GET(_BottomBorderTexture);
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY_GET(_Position);
     CK_PROPERTY_GET(_Size);
     CK_PROPERTY(_CoordinatePosition);
@@ -598,9 +625,12 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_RenderTarget_DrawTriangles);
 
 private:
+    // Soft by design (see FCk_Request_RenderTarget_DrawTexture::_Texture).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UTexture> _Texture;
+    TSoftObjectPtr<UTexture> _Texture;
+
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -608,6 +638,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_Texture);
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY_GET(_Triangles);
 
 public:
@@ -638,10 +670,13 @@ private:
         meta = (AllowPrivateAccess = true, ClampMin = "3"))
     int32 _NumberOfSides = 3;
 
-    // Optional — null draws with the engine's default white texture
+    // Optional — null draws with the engine's default white texture.
+    // Soft by design (see FCk_Request_RenderTarget_DrawTexture::_Texture).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    TObjectPtr<UTexture> _Texture;
+    TSoftObjectPtr<UTexture> _Texture;
+
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -652,6 +687,8 @@ public:
     CK_PROPERTY_GET(_Radius);
     CK_PROPERTY_GET(_NumberOfSides);
     CK_PROPERTY(_Texture);
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY(_Color);
 
 public:

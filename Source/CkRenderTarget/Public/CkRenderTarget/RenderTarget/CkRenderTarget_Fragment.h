@@ -32,6 +32,10 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_RenderTarget_NeedsSetup);
 
+    // Present while the head of the target's draw-request queue awaits its preload batch (drain
+    // stalled to preserve per-target draw order). Observability only — nothing gates on it.
+    CK_DEFINE_ECS_TAG(FTag_RenderTarget_PendingAssetLoad);
+
     CK_DEFINE_ECS_TAG(FTag_RenderTarget_PixelCapturePending);
 
     // Spans the whole capture → diff → compress pass (readback and background job)
@@ -69,6 +73,11 @@ namespace ck
 
         // Monotonic per sync entity; doubles as the replicated batch seq on replicating targets.
         int32 _NextBatchSeq = 1;
+
+        // GC does not trace EnTT fragments and applied DrawCmds outlive their requests — these pins
+        // keep them valid. Grows with each distinct asset drawn on this target (released only with
+        // the entity); eviction-tied release is an open design question.
+        TArray<TStrongObjectPtr<UObject>> _PinnedCmdAssets;
 
     public:
         CK_PROPERTY_GET(_Target);

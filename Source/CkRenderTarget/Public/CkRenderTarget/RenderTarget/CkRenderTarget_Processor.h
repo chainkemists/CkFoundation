@@ -158,10 +158,11 @@ namespace ck
     public:
         // Shared by the local request path and the replicated replay path. No-ops gracefully when
         // the process cannot render (-nullrhi, dedicated server) or the target failed setup.
+        // Pins cmd assets on Current first.
         static auto
         DoApplyBatch(
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget_Current& InCurrent,
             const TArray<FCk_RenderTarget_DrawCmd>& InCmds) -> void;
 
         // Returns false (NotReady, retry) until the restored child's Setup has composed Current;
@@ -176,6 +177,11 @@ namespace ck
         DoApplyCmdToCanvas(
             UCanvas& InCanvas,
             const FCk_RenderTarget_DrawCmd& InCmd) -> void;
+
+        static auto
+        DoPinCmdAssets(
+            FFragment_RenderTarget_Current& InCurrent,
+            const TArray<FCk_RenderTarget_DrawCmd>& InCmds) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -332,7 +338,7 @@ namespace ck
     class CKRENDERTARGET_API FProcessor_RenderTarget_ApplyReplicatedBatches : public ck_exp::TProcessor<
         FProcessor_RenderTarget_ApplyReplicatedBatches,
         FCk_Handle_RenderTarget,
-        ck::TReadOnly<FFragment_RenderTarget_Current>,
+        ck::TReadWrite<FFragment_RenderTarget_Current>,
         ck::TReadWrite<FFragment_RenderTarget_ReplayQueue>,
         TExclude<FTag_RenderTarget_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -352,7 +358,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget_Current& InCurrent,
             FFragment_RenderTarget_ReplayQueue& InReplayQueue)
             -> void;
     };
