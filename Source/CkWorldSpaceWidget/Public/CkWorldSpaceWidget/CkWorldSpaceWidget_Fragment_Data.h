@@ -100,9 +100,12 @@ private:
         meta=(AllowPrivateAccess = true))
     bool _TwoSided = false;
 
+    // Soft by design: a hard ref force-loads with the owning package and roots nothing anyway (GC
+    // never walks the EnTT registry). Resolved resident-or-fail at the synchronous creation site —
+    // no deferred setup to queue a load behind.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
-    TObjectPtr<UMaterialInterface> _OverrideMaterial;
+    TSoftObjectPtr<UMaterialInterface> _OverrideMaterial;
 
 public:
     CK_PROPERTY_GET(_DrawSize);
