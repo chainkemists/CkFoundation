@@ -155,7 +155,14 @@ namespace ck_snapshot_subsystem
             if (InPlayerId.IsEmpty() || IdString == InPlayerId)
             {
                 if (auto Entity = TryPawnEntity(State); ck::IsValid(Entity))
-                { return Entity; }
+                {
+                    // A keyed live entity belongs to KEYED rows — the bridged pawn row adopts it. Legacy
+                    // player-id rows (old saves' controller/state entities) must not pre-claim it, or the
+                    // pawn's own row skips as DuplicateSaveKey and its whole subtree orphans.
+                    if (Entity.Has<FFragment_SaveKey>())
+                    { return {}; }
+                    return Entity;
+                }
             }
         }
         return {};
@@ -679,6 +686,70 @@ auto
 
                 if (bBridged)
                 {
+                    // Rendezvous-first for KEYED bridged rows: when the retained SaveKey already resolves to a live
+                    // entity, the fresh world created its own copy (a GameMode-spawned player pawn) — ADOPT it instead
+                    // of respawning, or the impostor pair survives as an unpossessed statue that the NEXT save captures
+                    // as one more row (the duplicate-player incident, 2026-07-28). A key that resolves to an entity
+                    // another row already claimed is a second saved copy of the same logical entity — skip it, so
+                    // distinct rows never consolidate. While the rebuild is still mapping entities elsewhere, an
+                    // unresolved key WAITS (the key-holder may construct ticks later); once the rebuild quiesces with
+                    // the key still unresolved (a DefaultPawn-GameMode map — no fresh copy exists), fall through to
+                    // the actor respawn below, which is the loader-owned rebuild this row declared.
+                    if (NOT _SpawnedRuntimeIds.Contains(SavedId) && Entry.Get_SaveKey().IsValid())
+                    {
+                        auto Found = FCk_Handle{};
+                        if (TryResolve_SaveKey(Entry.Get_SaveKey(), Found) && ck::IsValid(Found))
+                        {
+                            auto bAlreadyClaimed = false;
+                            for (const auto& Kvp : _SavedIdMap)
+                            {
+                                if (Kvp.Value == Found)
+                                { bAlreadyClaimed = true; break; }
+                            }
+
+                            if (bAlreadyClaimed)
+                            {
+                                ck::snapshot::Warning(
+                                    TEXT("v3 load SKIP: saved-id [{}] provenance [{}] identity [{}] owner [{}] reason [{}]"),
+                                    SavedId, ck_snapshot_subsystem::DoProvenance_ToString(Entry.Get_Provenance()),
+                                    ck_snapshot_subsystem::DoIdentity_ForEntry(Entry), Entry.Get_LifetimeOwnerSavedId(),
+                                    ECk_Snapshot_SkipReason::DuplicateSaveKey);
+                                DoRecord_Skip(Entry, ECk_Snapshot_SkipReason::DuplicateSaveKey);
+                                break;
+                            }
+
+                            // The respawn path seeds the actor spawn with the saved transform, and
+                            // DoApply_SavedTransforms deliberately skips bridged rows — an ADOPTED actor got
+                            // neither, so place it here. For a possessed pawn, also align the controller's
+                            // control rotation: a Character's yaw follows it every tick, and the adopt path
+                            // (unlike respawn-then-possess) inherits a STALE control rotation that would stomp
+                            // the restored facing on the next move tick.
+                            if (auto* AdoptedActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Found);
+                                AdoptedActor != nullptr)
+                            {
+                                constexpr auto Sweep = false;
+                                AdoptedActor->SetActorTransform(Entry.Get_ActorSpawnTransform(), Sweep,
+                                    nullptr, ETeleportType::TeleportPhysics);
+
+                                if (const auto* AdoptedPawn = Cast<APawn>(AdoptedActor))
+                                {
+                                    if (auto* Controller = AdoptedPawn->GetController();
+                                        Controller != nullptr)
+                                    { Controller->SetControlRotation(Entry.Get_ActorSpawnTransform().Rotator()); }
+                                }
+                            }
+
+                            Resolved = Found;
+                            break;
+                        }
+
+                        if (_RebuildStallTicks < 1)
+                        {
+                            AnyUnresolved = true; // key-holder may still be constructing — wait while others progress
+                            break;
+                        }
+                    }
+
                     // Actor-first: spawn the actor at its saved transform; its own BeginPlay re-creates the
                     // WithActor entity (Construct composes features). Rendezvous-map via the actor once the bridge links.
                     if (NOT _SpawnedRuntimeIds.Contains(SavedId))
