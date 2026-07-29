@@ -113,10 +113,12 @@ private:
                       EditCondition = "_ShapeSource == ECk_JoltBody_ShapeSource::ExplicitShape"))
     FCk_Jolt_ShapeDimensions _ShapeDimensions;
 
+    // Soft by design: a hard ref force-loads with the owning package and roots nothing anyway (GC
+    // never walks the EnTT registry). The batch on Current roots the mesh through the load window.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
                       EditCondition = "_ShapeSource == ECk_JoltBody_ShapeSource::StaticMeshAsset"))
-    TObjectPtr<UStaticMesh> _StaticMesh;
+    TSoftObjectPtr<UStaticMesh> _StaticMesh;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
