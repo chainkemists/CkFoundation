@@ -53,8 +53,10 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _Location = FVector::Zero();
 
+    // Weak by design: the request is queued across frames and only OBSERVES the context object to
+    // reach its world at drain time — exact twin of FCk_Request_Sfx_PlayAtLocation::_Outer.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UObject> _WorldContextObject;
+    TWeakObjectPtr<UObject> _WorldContextObject;
 
 public:
     CK_PROPERTY_GET(_Location);

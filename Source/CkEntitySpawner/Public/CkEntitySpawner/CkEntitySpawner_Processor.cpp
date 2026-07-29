@@ -57,6 +57,16 @@ namespace ck
         UCk_Utils_PendingActorRelay_UE::Promise_OnAcquired(Pending,
             [EntityScript, SaveKeyIdentity, WeakWorld = MakeWeakObjectPtr(World)](FCk_ActorRelay_ChannelResult InResult)
             {
+                // Resolved at promise-fire time: the pool's pin is the root, so a script recycled
+                // while the acquisition was pending leaves no spawn target and this aborts loudly.
+                auto* ResolvedEntityScript = EntityScript.Get();
+                CK_ENSURE_IF_NOT(ck::IsValid(ResolvedEntityScript),
+                    TEXT("EntitySpawner pending spawn [SaveKey: {}]: pooled EntityScript was recycled while the relay "
+                         "channel acquisition was pending — the spawn is abandoned. A keyed row waiting to adopt this "
+                         "entity will never rendezvous."),
+                    SaveKeyIdentity)
+                { return; }
+
                 auto LifetimeOwner = InResult.Get_ChannelEntity();
 
                 // A KEYED spawn is a rendezvous target — during a load the saved row waits to ADOPT this very
@@ -68,7 +78,7 @@ namespace ck
                 const auto RendezvousWindow = FCk_ScopedRendezvousSpawnWindow{EcsWorld};
 
                 auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
-                    LifetimeOwner, EntityScript, FInstancedStruct{}, {});
+                    LifetimeOwner, ResolvedEntityScript, FInstancedStruct{}, {});
 
                 auto EntityUnderConstruction = Pending.Get_EntityUnderConstruction();
                 if (ck::Is_NOT_Valid(EntityUnderConstruction))
