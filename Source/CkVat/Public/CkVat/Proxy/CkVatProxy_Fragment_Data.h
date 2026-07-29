@@ -54,10 +54,13 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_VatProxy_ParamsData);
 
 private:
-    // Must be loaded AND baked before Add — callers async-load soft references themselves.
+    // Soft by design: path-serialized, so it is safe to author in DataAssets/Blueprints without
+    // force-loading the collection with the owning package. The LOAD CONTRACT is unchanged: the
+    // collection must be resident AND baked before Add — callers async-load it themselves; Add
+    // ensures residency and pins the resolved collection on Current for the entity's lifetime.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_VatCollection_Data> _Collection;
+    TSoftObjectPtr<UCk_VatCollection_Data> _Collection;
 
     // Clip to start playing on setup. None = hold the reference pose (texture row 0).
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
