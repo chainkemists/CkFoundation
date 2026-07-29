@@ -149,6 +149,14 @@ public:
     auto Get_IsLoadGateActive() const -> bool;
     auto Set_IsLoadGateActive(bool InActive) -> void;
 
+    // Escalated rebuild: the load gate stays owned by the orchestrator, but the world ticks the FULL
+    // processor scope. The loader escalates when the kernel quiesces with saved rows still unresolved —
+    // a multi-stage construction (EntityScript `Continue` fulfilled by a game processor) can only finish
+    // under the full graph, and the identity it late-stamps (a GameplayLabel adopt key, a SaveKey) is the
+    // very thing the rebuild is waiting on. Cleared automatically when the gate deactivates.
+    auto Get_IsLoadGateEscalated() const -> bool;
+    auto Set_IsLoadGateEscalated(bool InEscalated) -> void;
+
 private:
     auto DoBuildGraphAndSpawnActors(
         UWorld& InWorld) -> void;
@@ -169,6 +177,7 @@ private:
     FDelegateHandle _OnEndFrameHandle;
 
     bool _IsLoadGateActive = false;
+    bool _IsLoadGateEscalated = false;
 
 private:
     // _Registry below is a non-owning (slot+gen) view bound to this owned registry.

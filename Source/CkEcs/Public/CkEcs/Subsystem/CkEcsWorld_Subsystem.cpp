@@ -46,10 +46,13 @@ auto
 
     const auto TickStatCounter = FScopeCycleCounter{_TickStatId};
 
-    // The load kernel keeps feature processors frozen against the half-rebuilt world.
+    // The load kernel keeps feature processors frozen against the half-rebuilt world. An ESCALATED gate
+    // runs the full scope while the loader still owns completion — multi-stage constructions (EntityScript
+    // `Continue` fulfilled by game processors) are unfinishable under the kernel, and the rebuild may be
+    // waiting on the identity they stamp on completion.
     auto Scope = ck::ECk_SchedulerTickScope::Full;
     if (const auto* Subsystem = DoGet_OwningSubsystem();
-        Subsystem != nullptr and Subsystem->Get_IsLoadGateActive())
+        Subsystem != nullptr and Subsystem->Get_IsLoadGateActive() and NOT Subsystem->Get_IsLoadGateEscalated())
     { Scope = ck::ECk_SchedulerTickScope::LoadKernel; }
 
     _Scheduler->Tick(FCk_Time{DeltaSeconds}, _Registry, Scope);
@@ -161,6 +164,26 @@ auto
     -> void
 {
     _IsLoadGateActive = InActive;
+
+    if (NOT InActive)
+    { _IsLoadGateEscalated = false; }
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Get_IsLoadGateEscalated() const
+    -> bool
+{
+    return _IsLoadGateEscalated;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Set_IsLoadGateEscalated(
+        bool InEscalated)
+    -> void
+{
+    _IsLoadGateEscalated = InEscalated;
 }
 
 auto

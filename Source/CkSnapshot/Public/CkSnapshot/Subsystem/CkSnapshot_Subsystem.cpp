@@ -206,6 +206,13 @@ bool
     return _LoadInProgress;
 }
 
+FCk_Snapshot_LoadReport
+    UCk_Snapshot_Subsystem_UE::
+    Get_LastLoadReport() const
+{
+    return _LastLoadReport;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -409,6 +416,7 @@ void
     _SettleStarted = false;
     _RebuildLastMappedCount = 0;
     _RebuildStallTicks = 0;
+    _RebuildEscalated = false;
 
     {
         auto EngineOwned = 0, ConstructSpawned = 0, RuntimeSpawned = 0, Bridged = 0;
@@ -743,7 +751,11 @@ auto
                             break;
                         }
 
-                        if (_RebuildStallTicks < 1)
+                        // Fall through to the respawn only at FINAL quiesce: the fresh copy may be created by a
+                        // game processor the kernel cannot run (a multi-stage construction), so the key can appear
+                        // only under the ESCALATED full-scope ticks. Respawning any earlier re-opens the
+                        // duplicate-statue class for late-keyed fresh copies.
+                        if (NOT _RebuildEscalated || _RebuildStallTicks < 1)
                         {
                             AnyUnresolved = true; // key-holder may still be constructing — wait while others progress
                             break;
@@ -1445,12 +1457,32 @@ auto
             if (NOT Complete && NOT Stalled && _LoadFrameCount < kLoad_RebuildFrameCap)
             { return true; } // keep polling
 
+            if (NOT Complete && NOT _RebuildEscalated)
+            {
+                // The kernel quiesced with rows still unresolved. A row can legitimately depend on work the
+                // kernel cannot run: a multi-stage construction (EntityScript `Continue`) is finished by a
+                // GAME processor, and the identity it stamps on completion — a child's GameplayLabel adopt
+                // key, a SaveKey — is exactly what the resolution scan is waiting on (the gondola-shelf
+                // orphan incident, 2026-07-29). Escalate to full-scope ticks and only conclude when THAT
+                // quiesces too; orphaning here would silently drop every payload under the waiting rows.
+                _RebuildEscalated = true;
+                if (auto* EcsWorld = DoGet_LoadWorldEcs();
+                    ck::IsValid(EcsWorld))
+                { EcsWorld->Set_IsLoadGateEscalated(true); }
+                _RebuildStallTicks = 0;
+                _LoadFrameCount = 0;
+                _V3LoadReport.Set_UsedEscalatedRebuild(true);
+                ck::snapshot::Display(TEXT("DIAG: rebuild kernel quiesced with [{}]/[{}] mapped — escalating to full-scope ticks"),
+                    _SavedIdMap.Num(), _V3Tables.Get_Entities().Num());
+                return true;
+            }
+
             if (NOT Complete)
             {
                 auto UnEngine = 0, UnConstruct = 0, UnRuntime = 0, UnDefinitionBuilt = 0;
                 for (const auto& Entry : _V3Tables.Get_Entities())
                 {
-                    if (_SavedIdMap.Contains(Entry.Get_SavedId()))
+                    if (_SavedIdMap.Contains(Entry.Get_SavedId()) || _SkippedIds.Contains(Entry.Get_SavedId()))
                     { continue; }
                     switch (Entry.Get_Provenance())
                     {
@@ -1465,8 +1497,11 @@ auto
                         _SavedIdMap.Contains(Entry.Get_LifetimeOwnerSavedId()), Entry.Get_Label(),
                         Entry.Get_ScriptClassPath(), Entry.Get_ActorClassPath());
                 }
-                ck::snapshot::Error(TEXT("Request_Load: rebuild {} — [{}]/[{}] mapped; unresolved by provenance: "
-                    "EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}], DefinitionBuilt [{}]. Proceeding (partial load)."),
+                _V3LoadReport.Set_UnresolvedAfterEscalation(UnEngine + UnConstruct + UnRuntime + UnDefinitionBuilt);
+                ck::snapshot::Error(TEXT("Request_Load: ESCALATED rebuild {} — [{}]/[{}] mapped; unresolved by provenance: "
+                    "EngineOwned [{}], ConstructSpawned [{}], RuntimeSpawned [{}], DefinitionBuilt [{}]. The full processor "
+                    "scope quiesced and these rows still cannot resolve (content drift, or an identity the fresh world "
+                    "never re-creates) — every payload under them will be recorded as orphaned. Proceeding (partial load)."),
                     Stalled ? TEXT("stalled (no progress)") : TEXT("hit frame cap"),
                     _SavedIdMap.Num(), _V3Tables.Get_Entities().Num(), UnEngine, UnConstruct, UnRuntime, UnDefinitionBuilt);
             }
@@ -1536,6 +1571,8 @@ auto
     if (auto* EcsWorld = DoGet_LoadWorldEcs();
         ck::IsValid(EcsWorld))
     { EcsWorld->Set_IsLoadGateActive(false); }
+
+    _LastLoadReport = InReport;
 
     _LoadTickerHandle.Reset(); // DoTick_Load returns false to unregister; just drop our copy of the handle
     _LoadPhase = ELoadPhase::Idle;
