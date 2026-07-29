@@ -225,6 +225,21 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
   unresolvable and orphaned its whole owned subtree. The sweep Resets and rescans the live
   `FFragment_SaveKey` view; that is lossless because the rebuild's own publish-back writes the fragment onto the
   entity it mapped, so the next rescan re-finds it.
+- **The rebuild ESCALATES to full-scope ticks instead of orphaning at kernel stall.** A row can legitimately depend
+  on work the kernel cannot run: a multi-stage construction (EntityScript `Continue`) is finished by a GAME
+  processor (`GatedDuringLoad` — the load policy is framework-kernel-only by design), and the identity it stamps on
+  completion — a child's GameplayLabel adopt key, a SaveKey — is exactly what the resolution scan waits on. When the
+  kernel quiesces with unresolved rows, the loader sets `Set_IsLoadGateEscalated(true)` (world ticks the FULL
+  processor scope while the load still owns completion) and concludes only when THAT quiesces too. Bridged
+  respawn fallbacks fire only at final (post-escalation) quiesce, so a fresh copy created by a gated processor is
+  adopted, never duplicated. Rows still unresolved after escalation are real losses: Error log,
+  `Get_UnresolvedAfterEscalation` on the report, per-row orphan records. Loads that fully resolve in the kernel
+  never escalate (`Get_UsedEscalatedRebuild` false) and behave exactly as before. Chaos exposure of pre-hydration
+  full-scope ticks is the same class the design already accepts post-gate (hydration drains over live frames with
+  `NotReady` retries), bounded to the escalation window. Fence:
+  `Ck.Snapshot.StagedConstructionAdoption` (CkTests) — a parent that defer-spawns promise-labeled children whose
+  construction only a gated processor can finish, three levels deep; the RetailGondola incident (2026-07-29)
+  reduced to framework terms.
 - **A bridged actor is spawned DEFERRED and its saved `UPROPERTY(SaveGame)` fields applied before `FinishSpawning`.**
   The recipe carries them in `_ActorSaveFieldBytes` (ArIsSaveGame tagged-property blob, captured off the owning
   actor). Plain `SpawnActor` gave BeginPlay — and the WithActor `Construct` it drives — class defaults, so an actor

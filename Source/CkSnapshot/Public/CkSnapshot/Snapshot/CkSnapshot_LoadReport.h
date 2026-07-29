@@ -129,6 +129,12 @@ private:
     UPROPERTY() TArray<FCk_Snapshot_OrphanRecord> _Orphans;
     UPROPERTY() TArray<FCk_Snapshot_SkipRecord>   _Skips;
     UPROPERTY() FCk_Snapshot_Header _LoadedHeader;
+    // The rebuild kernel quiesced with unresolved rows and the loader ran full-scope ticks to let
+    // multi-stage constructions (and the identity they stamp on completion) finish. Not a failure.
+    UPROPERTY() bool               _UsedEscalatedRebuild = false;
+    // Rows that stayed unresolved even after the escalated full scope quiesced — real losses (content
+    // drift, or an identity the fresh world never re-creates). Per-row detail is in _Orphans.
+    UPROPERTY() int32              _UnresolvedAfterEscalation = 0;
 
 public:
     CK_PROPERTY(_Result);
@@ -149,6 +155,8 @@ public:
     CK_PROPERTY(_Orphans);
     CK_PROPERTY(_Skips);
     CK_PROPERTY(_LoadedHeader);
+    CK_PROPERTY(_UsedEscalatedRebuild);
+    CK_PROPERTY(_UnresolvedAfterEscalation);
 
 public:
     /** True when every saved entity landed in exactly one of restored / skipped / orphaned. */
