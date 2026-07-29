@@ -36,6 +36,7 @@ public class CkJolt : CkModuleRules
             "CkEcs",
             "CkEcsExt",
             "CkLog",
+            "CkResourceLoader",
             "CkSettings",
         });
     }
