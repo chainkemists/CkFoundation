@@ -194,8 +194,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
     // OnGoalReached fires once when the path-follow cursor crosses the final waypoint within
-    // _ActiveArrivalRadius (Walking → Idle); OnGoalFailed once when CkNavigation reports Failed
-    // on the path query (PathPending → Idle).
+    // _ActiveArrivalRadius (Walking → Idle) — and only when that waypoint actually is the goal.
+    // OnGoalFailed fires once when CkNavigation reports Failed on the path query
+    // (PathPending → Idle), or when a PARTIAL path is walked to its end but the goal is
+    // unreachable from there (Walking → Idle; see _ActivePathEndsShortOfGoal).
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKCROWD_API,
         CrowdAgent_OnGoalReached,
