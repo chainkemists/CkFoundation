@@ -69,6 +69,21 @@ enum class ECk_CrowdAgent_BlockedPolicy : uint8
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_BlockedPolicy);
 
+// The agent's steering-state tag, exposed as a queryable value. The tags themselves
+// (FTag_CrowdAgent_Idle/PathPending/Walking) are EnTT fragments invisible to BP/AS, and
+// state discriminates failure modes no other getter can: Walking with zero desired
+// velocity (steering wedge) vs Idle with a live goal (arrival/stop wedge) vs a stale
+// PathPending (lost path request).
+UENUM(BlueprintType)
+enum class ECk_CrowdAgent_MovementState : uint8
+{
+    None,
+    Idle,
+    PathPending,
+    Walking
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_MovementState);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 // Reflected ECS params for a crowd agent (radius, height, tags, locomotion, separation, etc.).
