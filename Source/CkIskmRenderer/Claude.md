@@ -131,6 +131,8 @@ Streamable.RequestAsyncLoad(SoftPath, FStreamableDelegate::CreateLambda([Handle,
 
 `FTag_IskmRenderer_PendingAsyncLoad` is reserved for forward-compat. Plan-1 never sets it (the `Add` API takes a hard pointer), but the Setup processor clears it alongside `FTag_IskmRenderer_NeedsSetup` so a future `Request_AddAsync(...)` helper can mark entities as pending without needing to update Setup.
 
+**Proxy request assets are soft refs** (`FCk_Request_IskmProxy_PlayAnimation::_Sequence`, `_PlayMontage::_Montage`, `_SetMaterialOverride::_Material`, `_SetSkeletalMesh::_Mesh`): a fragment-held `TObjectPtr` roots nothing (UE GC never walks the EnTT registry), so each request carries a `TSoftObjectPtr` plus a non-reflected CkResourceLoader `RootedAssetBatch` kicked at the Utils enqueue boundary (consumer id `"IskmProxy.Requests"` — flip it to Synchronous per-project in the ResourceLoader settings for debugging). Resident assets complete inline, so the warm path drains same-tick as before; a cold load stalls the WHOLE per-proxy queue (order preserved — nothing overtakes a loading request) and marks the entity `FTag_IskmProxy_PendingAssetLoad` (observability only) until the batch lands. A failed load completes the request `Failed`. Post-apply rooting is owned by the receivers (SKMC / AnimInstance / the `TStrongObjectPtr` override map), so the batch releases with the consumed request.
+
 ---
 
 ## Plan-2 production guide (BusterBlock crowds: 130 NPCs + hundreds ambient)

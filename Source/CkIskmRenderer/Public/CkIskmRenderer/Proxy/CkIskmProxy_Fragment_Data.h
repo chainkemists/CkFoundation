@@ -13,6 +13,8 @@
 
 #include "CkGraphics/CkGraphics_Common.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 
 #include "CkIskmProxy_Fragment_Data.generated.h"
@@ -120,8 +122,14 @@ public:
     CK_GENERATED_BODY(FCk_Request_IskmProxy_PlayAnimation);
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_PlayAnimation);
 private:
+    // Soft by design: a hard ref force-loads with the owning package and roots nothing anyway (GC
+    // never walks the EnTT registry). Rooting is the preload batch's job until the receiver takes it.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UAnimSequenceBase> _Sequence;
+    TSoftObjectPtr<UAnimSequenceBase> _Sequence;
+
+    // Not reflected: kicked by the Utils enqueue boundary; a request built raw in BP/AS carries no
+    // batch and the handler resolves the soft ref resident-or-null instead.
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _Loop = true;
@@ -146,6 +154,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_Sequence);
+    // Hand-written: CK_PROPERTY would AS-register the batch type and fail at editor boot.
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY(_Loop);
     CK_PROPERTY(_StartAt);
     CK_PROPERTY(_PlayRate);
@@ -173,8 +184,11 @@ public:
     CK_GENERATED_BODY(FCk_Request_IskmProxy_PlayMontage);
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_PlayMontage);
 private:
+    // Soft by design (see FCk_Request_IskmProxy_PlayAnimation::_Sequence).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UAnimMontage> _Montage;
+    TSoftObjectPtr<UAnimMontage> _Montage;
+
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _PlayRate = 1.0f;
@@ -183,6 +197,8 @@ private:
     FName _StartSection = NAME_None;
 public:
     CK_PROPERTY_GET(_Montage);
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY(_PlayRate);
     CK_PROPERTY(_StartSection);
 public:
@@ -306,11 +322,16 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     int32 _SlotIndex = 0;
 
+    // Soft by design (see FCk_Request_IskmProxy_PlayAnimation::_Sequence).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UMaterialInterface> _Material;
+    TSoftObjectPtr<UMaterialInterface> _Material;
+
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 public:
     CK_PROPERTY_GET(_SlotIndex);
     CK_PROPERTY_GET(_Material);
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetMaterialOverride, _SlotIndex, _Material);
 };
@@ -370,10 +391,15 @@ public:
     CK_GENERATED_BODY(FCk_Request_IskmProxy_SetSkeletalMesh);
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_IskmProxy_SetSkeletalMesh);
 private:
+    // Soft by design (see FCk_Request_IskmProxy_PlayAnimation::_Sequence).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<USkeletalMesh> _Mesh;
+    TSoftObjectPtr<USkeletalMesh> _Mesh;
+
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 public:
     CK_PROPERTY_GET(_Mesh);
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_IskmProxy_SetSkeletalMesh, _Mesh);
 };
