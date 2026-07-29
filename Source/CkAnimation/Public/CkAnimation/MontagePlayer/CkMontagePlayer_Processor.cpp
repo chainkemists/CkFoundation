@@ -4,6 +4,7 @@
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkAnimation/CkAnimation_Log.h"
+#include "CkAnimation/CkAnimation_Utils.h"
 #include "CkAnimation/MontagePlayer/CkMontagePlayer_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -25,6 +26,47 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_MonitorAnimInstance);
 CK_REGISTER_PROCESSOR(ck::FProcessor_MontagePlayer_Replicate);
 
 const FCk_Time ck::FProcessor_MontagePlayer_HandleRequests::_SyncTargetTime{0.5};
+
+namespace ck_montageplayer_processor
+{
+    auto Get_IsPreloadPending(
+        const ck::FFragment_MontagePlayer_Requests::RequestType& InEntry) -> bool
+    {
+        const auto* Play = std::get_if<FCk_Request_MontagePlayer_Play>(&InEntry);
+        if (Play == nullptr)
+        { return false; }
+        const auto& Batch = Play->Get_PreloadBatch();
+        return Batch.Get_IsRequested() && NOT Batch.Get_IsReady();
+    }
+
+    // Batch-first so the played montage is the one the batch roots; the resident-or-null fallback
+    // covers requests that never kicked a batch (built raw in BP/AS, or replication rebuilds).
+    auto Resolve_Montage(
+        const FCk_Request_MontagePlayer_Play& InRequest) -> UAnimMontage*
+    {
+        const auto& Batch = InRequest.Get_PreloadBatch();
+        if (Batch.Get_IsRequested())
+        { return Cast<UAnimMontage>(Batch.Get_ResolvedObject(InRequest.Get_Montage().ToSoftObjectPath())); }
+        return InRequest.Get_Montage().Get();
+    }
+
+    // Only a Play carries an OnFinished contract; the other request kinds have nothing to report.
+    auto Broadcast_PlayFailed(
+        FCk_Handle_MontagePlayer InHandle,
+        const FCk_Request_MontagePlayer_Play& InRequest,
+        ECk_MontagePlayer_FinishReason InReason) -> void
+    {
+        ck::UUtils_Signal_MontagePlayer_OnFinished::Broadcast(
+            InHandle, ck::MakePayload(InHandle, FCk_MontagePlayer_State{Resolve_Montage(InRequest)}, InReason));
+    }
+
+    template <typename T_Request>
+    auto Broadcast_PlayFailed(
+        FCk_Handle_MontagePlayer,
+        const T_Request&,
+        ECk_MontagePlayer_FinishReason) -> void
+    {}
+}
 
 namespace ck
 {
@@ -70,36 +112,88 @@ namespace ck
         -> void
     {
         auto* SkelMeshComp = InParams.Get_Params().Get_SkeletalMeshComponent().Get();
-        CK_ENSURE_IF_NOT(ck::IsValid(SkelMeshComp),
+        const auto SkelMeshCompIsValid = ck::IsValid(SkelMeshComp);
+        CK_ENSURE_IF_NOT(SkelMeshCompIsValid,
             TEXT("SkeletalMeshComponent on MontagePlayer [{}] is no longer valid."), InHandle)
         {
-            InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_MontagePlayer_Requests& InRequests) { /* drain */ });
+            DoFailPendingRequests(InHandle, InRequestsComp, ECk_PlayMontageFailureReason::InvalidMeshComponent);
             return;
         }
 
         auto* AI = SkelMeshComp->GetAnimInstance();
-        CK_ENSURE_IF_NOT(ck::IsValid(AI),
+        const auto AnimInstanceIsValid = ck::IsValid(AI);
+        CK_ENSURE_IF_NOT(AnimInstanceIsValid,
             TEXT("AnimInstance on SkelMesh for MontagePlayer [{}] is invalid."), InHandle)
         {
-            InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_MontagePlayer_Requests& InRequests) { /* drain */ });
+            DoFailPendingRequests(InHandle, InRequestsComp,
+                ECk_PlayMontageFailureReason::MissingAnimInstanceOnMeshComponent);
             return;
         }
 
         InCurrent._LastSeenAnimInstance = AI;
 
+        // While the head Play's preload batch is still loading, the fragment is left untouched so
+        // everything behind the head stays queued in order; the tag is not this drain's dirty marker
+        // (the Requests fragment is), so re-marking it cannot re-pump the drain within the frame.
+        if (InRequestsComp._Requests.Num() > 0 &&
+            ck_montageplayer_processor::Get_IsPreloadPending(InRequestsComp._Requests[0]))
+        {
+            InHandle.AddOrGet<FTag_MontagePlayer_PendingAssetLoad>();
+            return;
+        }
+
+        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_MontagePlayer_Requests& InRequests)
+        {
+            for (auto Index = 0; Index < InRequests._Requests.Num(); ++Index)
+            {
+                if (ck_montageplayer_processor::Get_IsPreloadPending(InRequests._Requests[Index]))
+                {
+                    // Splicing the remainder to the FRONT keeps it ahead of re-entrant requests that
+                    // handler signals enqueued later; spliced entries keep their completion delegates
+                    // bound for a later drain, or for teardown's Failed_Cancelled.
+                    InHandle.AddOrGet<FFragment_MontagePlayer_Requests>()._Requests.Insert(
+                        InRequests._Requests.GetData() + Index, InRequests._Requests.Num() - Index, 0);
+                    InHandle.AddOrGet<FTag_MontagePlayer_PendingAssetLoad>();
+                    return;
+                }
+
+                std::visit([&](const auto& InRequest) -> void
+                {
+                    auto Result = ECk_Request_OperationResult::Failed;
+                    const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
+
+                    Result = DoHandleRequest(InHandle, AI, InCurrent, InRequest);
+
+                    if (InRequest.Get_IsRequestHandleValid())
+                    {
+                        InRequest.GetAndDestroyRequestHandle();
+                    }
+                }, InRequests._Requests[Index]);
+            }
+        });
+
+        InHandle.Try_Remove<FTag_MontagePlayer_PendingAssetLoad>();
+    }
+
+    auto
+        FProcessor_MontagePlayer_HandleRequests::
+        DoFailPendingRequests(
+            HandleType InHandle,
+            FFragment_MontagePlayer_Requests& InRequestsComp,
+            ECk_PlayMontageFailureReason InFailureReason)
+        -> void
+    {
+        // Never strand a caller: a drain abort completes every queued request as Failed instead of
+        // silently dropping bound completion delegates, and mirrors the enqueue-time pre-flight's
+        // OnFinished broadcast so a consumer bound only to that signal still observes the failure.
+        const auto FinishReason = montage_player_detail::MapFailureReason(InFailureReason);
+
         InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_MontagePlayer_Requests& InRequests)
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
-                auto Result = ECk_Request_OperationResult::Failed;
-                const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
-
-                Result = DoHandleRequest(InHandle, AI, InCurrent, InRequest);
-
-                if (InRequest.Get_IsRequestHandleValid())
-                {
-                    InRequest.GetAndDestroyRequestHandle();
-                }
+                ck_montageplayer_processor::Broadcast_PlayFailed(InHandle, InRequest, FinishReason);
+                InRequest.TryFireCompletion(InHandle, ECk_Request_OperationResult::Failed);
             }));
         });
     }
@@ -113,9 +207,33 @@ namespace ck
             const FCk_Request_MontagePlayer_Play& InRequest)
         -> ECk_Request_OperationResult
     {
-        auto* Montage = InRequest.Get_Montage().Get();
+        const auto& PreloadBatch = InRequest.Get_PreloadBatch();
+        const auto PreloadSucceeded = NOT (PreloadBatch.Get_IsRequested() && PreloadBatch.Get_HasFailed());
+        CK_ENSURE_IF_NOT(PreloadSucceeded,
+            TEXT("MontagePlayer [{}]: preload of Montage [{}] failed — completing the request as Failed"),
+            InHandle, InRequest.Get_Montage().ToSoftObjectPath().ToString())
+        { return ECk_Request_OperationResult::Failed; }
+
+        auto* Montage = ck_montageplayer_processor::Resolve_Montage(InRequest);
         if (ck::Is_NOT_Valid(Montage))
         { return ECk_Request_OperationResult::Failed; }
+
+        if (InRequest.Get_PreflightDeferred())
+        {
+            // Enqueue could not validate a not-yet-resident montage; re-run the full pre-flight now,
+            // mirroring the synchronous failure shape (OnFinished broadcast with the mapped reason).
+            auto Validation = ECk_SucceededFailed::Failed;
+            const auto Failure = UCk_Utils_Animation_UE::Get_CanPlayMontage(
+                InAnimInstance->GetOwningComponent(), Montage, InRequest.Get_PlayRate(), Validation);
+
+            if (Validation == ECk_SucceededFailed::Failed)
+            {
+                const auto Reason = montage_player_detail::MapFailureReason(Failure);
+                UUtils_Signal_MontagePlayer_OnFinished::Broadcast(
+                    InHandle, ck::MakePayload(InHandle, FCk_MontagePlayer_State{Montage}, Reason));
+                return ECk_Request_OperationResult::Failed;
+            }
+        }
 
         const auto FromReplication = InRequest.Get_FromReplication();
 
