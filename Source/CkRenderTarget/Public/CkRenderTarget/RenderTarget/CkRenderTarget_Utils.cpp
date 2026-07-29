@@ -13,8 +13,18 @@
 #include "CkRenderTarget/RenderTarget/CkRenderTarget_Processor.h"
 #include "CkRenderTarget/Settings/CkRenderTarget_Settings.h"
 
+#include "CkResourceLoader/CkResourceLoader_Utils.h"
+
 #include <Engine/TextureRenderTarget2D.h>
 #include <Misc/App.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_render_target_utils
+{
+    // Consumer id — flip to Synchronous per-project in the ResourceLoader settings to debug.
+    static const auto PreloadConsumerId = FName{TEXT("RenderTarget.Draw")};
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -222,10 +232,17 @@ auto
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
 
-    if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
+    auto Request = InRequest;
+    if (ck::IsValid(Request.Get_Texture()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_render_target_utils::PreloadConsumerId, {Request.Get_Texture().ToSoftObjectPath()}));
+    }
 
-    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(Request);
 
     return InRenderTargetEntity;
 }
@@ -240,10 +257,17 @@ auto
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
 
-    if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
+    auto Request = InRequest;
+    if (ck::IsValid(Request.Get_Material()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_render_target_utils::PreloadConsumerId, {Request.Get_Material().ToSoftObjectPath()}));
+    }
 
-    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(Request);
 
     return InRenderTargetEntity;
 }
@@ -258,10 +282,17 @@ auto
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
 
-    if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
+    auto Request = InRequest;
+    if (ck::IsValid(Request.Get_Font()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_render_target_utils::PreloadConsumerId, {Request.Get_Font().ToSoftObjectPath()}));
+    }
 
-    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(Request);
 
     return InRenderTargetEntity;
 }
@@ -294,10 +325,28 @@ auto
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
 
-    if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
+    auto Request = InRequest;
 
-    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
+    auto Paths = TArray<FSoftObjectPath>{};
+    for (const auto& Soft : {
+        Request.Get_BorderTexture(), Request.Get_BackgroundTexture(),
+        Request.Get_LeftBorderTexture(), Request.Get_RightBorderTexture(),
+        Request.Get_TopBorderTexture(), Request.Get_BottomBorderTexture() })
+    {
+        if (ck::IsValid(Soft))
+        { Paths.Emplace(Soft.ToSoftObjectPath()); }
+    }
+
+    if (NOT Paths.IsEmpty())
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_render_target_utils::PreloadConsumerId, Paths));
+    }
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(Request);
 
     return InRenderTargetEntity;
 }
@@ -312,10 +361,17 @@ auto
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
 
-    if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
+    auto Request = InRequest;
+    if (ck::IsValid(Request.Get_Texture()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_render_target_utils::PreloadConsumerId, {Request.Get_Texture().ToSoftObjectPath()}));
+    }
 
-    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(Request);
 
     return InRenderTargetEntity;
 }
@@ -330,10 +386,17 @@ auto
 {
     CK_CALLSTACK_RECORD(ck::FFragment_RenderTarget_Requests, InRenderTargetEntity);
 
-    if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
+    auto Request = InRequest;
+    if (ck::IsValid(Request.Get_Texture()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_render_target_utils::PreloadConsumerId, {Request.Get_Texture().ToSoftObjectPath()}));
+    }
 
-    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(InRequest);
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InRenderTargetEntity.AddOrGet<ck::FFragment_RenderTarget_Requests>()._Requests.Emplace(Request);
 
     return InRenderTargetEntity;
 }

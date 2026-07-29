@@ -221,7 +221,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkProjectile | Core,Ecs,EcsExt,Log,Physics,Record,Variables |
 | CkRaySense | Core,Ecs,EcsExt,IsmRenderer,Label,Log,Provider,Record,Settings,Shapes |
 | CkRelationship | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
-| CkRenderTarget | ActorRelay,Core,Ecs,EcsExt,Label,Log,Profile,Record,Settings,Timer |
+| CkRenderTarget | ActorRelay,Core,Ecs,EcsExt,Label,Log,Profile,Record,ResourceLoader,Settings,Timer |
 | CkResolver | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
 | CkShapes | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkSnapshot | Core,Ecs,EcsExt,Log,ThirdParty |
