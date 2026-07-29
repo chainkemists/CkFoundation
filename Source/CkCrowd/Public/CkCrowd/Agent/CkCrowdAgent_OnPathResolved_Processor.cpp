@@ -53,6 +53,22 @@ namespace ck
                 InPathFollow._PathSerial =
                     FProcessor_CrowdAgent_PathRefresh::Get_CurrentConfirmationSerial();
 
+                // Verdict for the final-stop latch: a Partial path whose reachable end is outside
+                // the arrival radius of the goal can never produce a genuine arrival — walking it
+                // to the end must report OnGoalFailed. Decided here, against nav-space points,
+                // so Steering never compares against a caller-supplied (possibly unprojected) goal.
+                InPathFollow._ActivePathEndsShortOfGoal = [&]() -> bool
+                {
+                    if (InPathResult.Get_Status() != ECk_Nav_PathStatus::Partial || Wps.Num() == 0)
+                    { return false; }
+
+                    const auto& Diag = InPathResult.Get_Diagnostics();
+                    const auto GoalOnMesh = Diag.Get_EndProjected()
+                        ? Diag.Get_LastProjectedEnd()
+                        : InPathResult.Get_DestinationLocation();
+                    return FVector::Dist(Wps.Last(), GoalOnMesh) > InPathFollow.Get_ActiveArrivalRadius();
+                }();
+
                 // Pick the STARTING waypoint: skip every leading corner the agent is ALREADY PAST
                 // (dot(corner - agent, onwardSegmentDir) < 0 — UPathFollowingComponent's
                 // HasReachedCurrentTarget test applied at install). Two ways a stale first corner

@@ -1,5 +1,7 @@
 #include "CkCrowdAgent_Steering_Processor.h"
 
+#include "CkCrowd/CkCrowd_Log.h"
+
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -122,6 +124,20 @@ namespace ck
             auto NonConstHandle = InHandle;
             NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
             NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
+
+            // A partial path's final waypoint is the closest REACHABLE point, not the goal —
+            // reaching it is a FAILURE to reach the goal (verdict computed at install).
+            if (InPathFollow.Get_ActivePathEndsShortOfGoal())
+            {
+                ck::crowd::Verbose(
+                    TEXT("CrowdAgent [{}] walked its partial path to the end but the goal {} is unreachable from there — reporting OnGoalFailed"),
+                    NonConstHandle, InPathFollow.Get_ActiveGoal());
+
+                UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
+                    NonConstHandle,
+                    MakePayload(NonConstHandle));
+                return;
+            }
 
             UUtils_Signal_CrowdAgent_OnGoalReached::Broadcast(
                 NonConstHandle,
