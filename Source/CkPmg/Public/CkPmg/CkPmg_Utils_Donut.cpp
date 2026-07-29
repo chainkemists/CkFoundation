@@ -8,7 +8,17 @@
 #include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 
+#include "CkResourceLoader/CkResourceLoader_Utils.h"
+
 #include <Engine/World.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_pmg_utils_donut
+{
+    // Consumer id — flip to Synchronous per-project in the ResourceLoader settings to debug.
+    static const auto PreloadConsumerId = FName{TEXT("PmgDonut.Material")};
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 // Pmg Donut Utils
@@ -34,8 +44,16 @@ auto
     auto& ParamsFragment = InHandle.Add<ck::FFragment_Pmg_Donut_Params>();
     ParamsFragment._Params = InParams;
 
-    InHandle.Add<ck::FFragment_Pmg_Donut_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_Pmg_Donut_Current>();
     InHandle.Add<ck::FTag_Pmg_Donut_NeedsSetup>();
+
+    // Kick the material preload at composition so the load overlaps the frames before Setup —
+    // resident assets complete inline and Setup's gate falls through same-tick.
+    if (ck::IsValid(InParams.Get_Material()))
+    {
+        Current._MaterialPreloadBatch = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_pmg_utils_donut::PreloadConsumerId, {InParams.Get_Material().ToSoftObjectPath()});
+    }
 
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, TEXT("Pmg: Donut"));
 
@@ -107,10 +125,18 @@ auto
 
     ck::pmg::Verbose(TEXT("Requesting param update for Pmg Donut [{}]"), InDonut);
 
-    if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
+    auto Request = InRequest;
+    if (Request.Get_Material().IsSet() && ck::IsValid(Request.Get_Material().GetValue()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_pmg_utils_donut::PreloadConsumerId,
+            {Request.Get_Material().GetValue().ToSoftObjectPath()}));
+    }
 
-    InDonut.AddOrGet<ck::FFragment_Pmg_Donut_UpdateParams>() = InRequest;
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InDonut.AddOrGet<ck::FFragment_Pmg_Donut_UpdateParams>() = Request;
 
     return InDonut;
 }
@@ -163,10 +189,18 @@ auto
     UCk_Utils_Pmg_Donut_UE::
     Request_SetMaterial(
         FCk_Handle_Pmg_Donut& InDonut,
-        UMaterialInterface* InValue)
+        TSoftObjectPtr<UMaterialInterface> InValue)
     -> FCk_Handle_Pmg_Donut
 {
-    InDonut.AddOrGet<ck::FFragment_Pmg_Donut_UpdateParams>().Set_Material(InValue);
+    auto& Request = InDonut.AddOrGet<ck::FFragment_Pmg_Donut_UpdateParams>();
+    Request.Set_Material(InValue);
+
+    if (ck::IsValid(InValue))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_pmg_utils_donut::PreloadConsumerId, {InValue.ToSoftObjectPath()}));
+    }
+
     return InDonut;
 }
 

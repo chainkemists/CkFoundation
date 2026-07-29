@@ -215,7 +215,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkObjective | ActorRelay,Attribute,Core,Cue,Ecs,EcsExt,EntityCollection,Label,Log,Provider,Record,Settings |
 | CkOverlapBody | Actor,Core,Ecs,EcsExt,Graphics,Label,Log,Physics,Record,Settings |
 | CkPhysics | Actor,Chaos,Core,Ecs,EcsExt,Label,Log,Record |
-| CkPmg | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkPmg | Core,Ecs,EcsExt,Label,Log,Provider,Record,ResourceLoader,Settings |
 | CkPoi | Core,Ecs,EcsExt,EntityTag,Label,Log |
 | CkPoiDisplayDefinition | Core,Ecs,EcsExt,Label,Log,Record,Settings,VisibleRange |
 | CkProjectile | Core,Ecs,EcsExt,Log,Physics,Record,Variables |

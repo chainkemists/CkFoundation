@@ -8,6 +8,8 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
 #include <Materials/MaterialInterface.h>
 
 #include "CkPmg_Fragment_Data_Donut.generated.h"
@@ -41,8 +43,10 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.0", ClampMax = "360.0"))
     float _FillAngle = 360.0f;
 
+    // Soft by design: a hard ref force-loads with the owning package and roots nothing anyway (GC
+    // never walks the EnTT registry). The batch on Current roots the material through the load window.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UMaterialInterface> _Material;
+    TSoftObjectPtr<UMaterialInterface> _Material;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     bool _EnableCollision = false;
@@ -84,8 +88,13 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TOptional<float> _FillAngle;
 
+    // Soft by design (see FCk_Fragment_Pmg_Donut_ParamsData::_Material).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TOptional<UMaterialInterface*> _Material;
+    TOptional<TSoftObjectPtr<UMaterialInterface>> _Material;
+
+    // Not reflected: kicked by the Utils enqueue boundary; a request built raw in BP/AS carries no
+    // batch and the handler resolves the soft ref resident-or-null instead.
+    FCk_ResourceLoader_RootedAssetBatch _PreloadBatch;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TOptional<bool> _EnableCollision;
@@ -99,6 +108,10 @@ public:
     CK_PROPERTY(_Segments);
     CK_PROPERTY(_FillAngle);
     CK_PROPERTY(_Material);
+    // Hand-written (not CK_PROPERTY): the batch type is deliberately not AS-registered, and the
+    // macro's AngelScript accessor registration would fail loudly at every editor boot.
+    auto Get_PreloadBatch() const -> const FCk_ResourceLoader_RootedAssetBatch& { return _PreloadBatch; }
+    auto Set_PreloadBatch(const FCk_ResourceLoader_RootedAssetBatch& InValue) -> ThisType& { _PreloadBatch = InValue; return *this; }
     CK_PROPERTY(_EnableCollision);
     CK_PROPERTY(_RenderMode);
 };
