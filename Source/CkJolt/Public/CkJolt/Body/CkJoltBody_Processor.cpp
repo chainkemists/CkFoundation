@@ -25,6 +25,8 @@
 #include "CkJolt/StaticWorld/CkJoltMeshShape_Utils.h"
 #include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
 
+#include "CkResourceLoader/CkResourceLoader_Utils.h"
+
 #include <Engine/StaticMesh.h>
 #include <PhysicalMaterials/PhysicalMaterial.h>
 #include <PhysicsEngine/BodySetup.h>
@@ -59,6 +61,9 @@ DECLARE_CYCLE_STAT(TEXT("JoltBody_KinematicPush"), STAT_CkJolt_KinematicPush, ST
 
 namespace ck_jolt_body_processor
 {
+    // Consumer id — flip to Synchronous per-project in the ResourceLoader settings to debug.
+    static const auto PreloadConsumerId = FName{TEXT("JoltBody.Setup")};
+
     // A world with no Jolt subsystem never publishes the context — absent/null is legal, never an error.
     auto
         TryResolve_JoltWorld(
@@ -151,6 +156,28 @@ namespace ck
     {
         using namespace JPH;
 
+        if (InParams.Get_ShapeSource() == ECk_JoltBody_ShapeSource::StaticMeshAsset)
+        {
+            auto& PreloadBatch = InCurrent._MeshPreloadBatch;
+
+            if (NOT PreloadBatch.Get_IsRequested() && ck::IsValid(InParams.Get_StaticMesh()))
+            {
+                PreloadBatch = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+                    ck_jolt_body_processor::PreloadConsumerId,
+                    {InParams.Get_StaticMesh().ToSoftObjectPath()});
+            }
+
+            // Returning before the NeedsSetup removal below is what re-arms this Setup next tick; the
+            // pending tag is not the dirty marker, so marking it cannot re-pump the frame.
+            if (PreloadBatch.Get_IsRequested() && NOT PreloadBatch.Get_IsReady())
+            {
+                InHandle.AddOrGet<FTag_JoltBody_PendingAssetLoad>();
+                return;
+            }
+
+            InHandle.Try_Remove<FTag_JoltBody_PendingAssetLoad>();
+        }
+
         InHandle.Remove<MarkedDirtyBy>();
 
         const auto& EntityTransform = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
@@ -173,10 +200,22 @@ namespace ck
             }
             case ECk_JoltBody_ShapeSource::StaticMeshAsset:
             {
-                const UStaticMesh* Mesh = InParams.Get_StaticMesh();
+                const auto& PreloadBatch = InCurrent._MeshPreloadBatch;
+                const auto PreloadFailed = PreloadBatch.Get_IsRequested() && PreloadBatch.Get_HasFailed();
+
+                CK_ENSURE_IF_NOT(NOT PreloadFailed,
+                    TEXT("JoltBody on Entity [{}]: preload of StaticMesh [{}] failed — the body is never created."),
+                    InHandle, InParams.Get_StaticMesh().ToSoftObjectPath().ToString())
+                { return; }
+
+                // Batch-first so the cooked mesh is the one the batch roots; the resident-or-null
+                // fallback covers params built raw with an already-loaded mesh.
+                const UStaticMesh* Mesh = PreloadBatch.Get_IsRequested()
+                    ? ::Cast<UStaticMesh>(PreloadBatch.Get_ResolvedObject(InParams.Get_StaticMesh().ToSoftObjectPath()))
+                    : InParams.Get_StaticMesh().Get();
 
                 CK_ENSURE_IF_NOT(ck::IsValid(Mesh),
-                    TEXT("JoltBody on Entity [{}] uses ShapeSource StaticMeshAsset but has NO StaticMesh set."), InHandle)
+                    TEXT("JoltBody on Entity [{}] uses ShapeSource StaticMeshAsset but has NO StaticMesh set (or it failed to resolve)."), InHandle)
                 { return; }
 
                 auto* BodySetup = Mesh->GetBodySetup();

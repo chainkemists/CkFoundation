@@ -8,6 +8,8 @@
 
 #include "CkJolt/Body/CkJoltBody_Fragment_Data.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
 #include <variant>
 
 #include <CoreMinimal.h>
@@ -39,6 +41,9 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_JoltBody_TransformDirty);
 
     CK_DEFINE_ECS_TAG(FTag_JoltBody_NeedsSetup);
+    // Present while a StaticMeshAsset body's mesh preload batch is still loading (Setup re-polls,
+    // keeping NeedsSetup). Observability only — nothing gates on it.
+    CK_DEFINE_ECS_TAG(FTag_JoltBody_PendingAssetLoad);
     CK_DEFINE_ECS_TAG(FTag_JoltBody_MotionType_Static);
     CK_DEFINE_ECS_TAG(FTag_JoltBody_MotionType_Kinematic);
     CK_DEFINE_ECS_TAG(FTag_JoltBody_MotionType_Dynamic);
@@ -94,6 +99,11 @@ namespace ck
         JPH::BodyID          _BodyId;
         JPH::Ref<JPH::Shape> _Shape;
         bool                 _BodyAdded = false;
+
+        // Roots the StaticMeshAsset mesh from Setup's kick until the entity dies. The cooked Jolt
+        // shape owns its own geometry, but the batch is the only thing keeping the soft-authored
+        // mesh resident across the load window.
+        FCk_ResourceLoader_RootedAssetBatch _MeshPreloadBatch;
 
     public:
         CK_PROPERTY_GET(_BodyId);
