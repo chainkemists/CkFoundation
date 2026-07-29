@@ -8,7 +8,9 @@ here; features that *use* the Jolt world (CkSpatialQuery's Probe today) are cons
 Extracted from CkSpatialQuery (2026-07-16, jolt-collision-world campaign Phase 0) with zero behavior
 change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host project.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkLog`, `CkSettings`, `CkThirdParty` (vendored Jolt 5.2.1).
+**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLog`, `CkResourceLoader` (StaticMeshAsset bodies
+resolve their soft mesh through a rooted batch, consumer id `JoltBody.Setup`), `CkSettings`,
+`CkThirdParty` (vendored Jolt 5.2.1).
 **Used by:** `CkSpatialQuery` (Probe/ProbeTrace), `CkEqs` (via registry context), `CkWatermark` (stats).
 
 ---
