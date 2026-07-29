@@ -9,10 +9,17 @@
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Utils.h"
 #include "CkIskmRenderer/CkIskmRenderer_Stats.h"
+#include "CkResourceLoader/CkResourceLoader_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_CYCLE_STAT(TEXT("Iskm::GetSocketTransform"), STAT_CkIskm_GetSocketTransform, STATGROUP_CkIskmRenderer);
+
+namespace ck_iskmproxy_utils
+{
+    // Consumer id — flip to Synchronous per-project in the ResourceLoader settings to debug.
+    static const auto PreloadConsumerId = FName{TEXT("IskmProxy.Requests")};
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 // ---- Add / Has ----
@@ -455,9 +462,15 @@ auto
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
     }
+    auto Request = InRequest;
+    if (ck::IsValid(Request.Get_Sequence()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_iskmproxy_utils::PreloadConsumerId, {Request.Get_Sequence().ToSoftObjectPath()}));
+    }
     if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
@@ -578,9 +591,15 @@ auto
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
     }
+    auto Request = InRequest;
+    if (ck::IsValid(Request.Get_Material()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_iskmproxy_utils::PreloadConsumerId, {Request.Get_Material().ToSoftObjectPath()}));
+    }
     if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 
@@ -656,7 +675,12 @@ auto
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
     }
-    const auto Request = FCk_Request_IskmProxy_SetSkeletalMesh{InMesh};
+    auto Request = FCk_Request_IskmProxy_SetSkeletalMesh{InMesh};
+    if (ck::IsValid(Request.Get_Mesh()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_iskmproxy_utils::PreloadConsumerId, {Request.Get_Mesh().ToSoftObjectPath()}));
+    }
     if (InDelegate.IsBound())
     { Request.Set_CompletionDelegate(InDelegate); }
     InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
@@ -755,9 +779,15 @@ auto
         InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InHandle;
     }
+    auto Request = InRequest;
+    if (ck::IsValid(Request.Get_Montage()))
+    {
+        Request.Set_PreloadBatch(UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            ck_iskmproxy_utils::PreloadConsumerId, {Request.Get_Montage().ToSoftObjectPath()}));
+    }
     if (InDelegate.IsBound())
-    { InRequest.Set_CompletionDelegate(InDelegate); }
-    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(InRequest);
+    { Request.Set_CompletionDelegate(InDelegate); }
+    InHandle.AddOrGet<ck::FFragment_IskmProxy_Requests>()._Requests.Emplace(Request);
     return InHandle;
 }
 

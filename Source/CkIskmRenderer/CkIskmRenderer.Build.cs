@@ -31,6 +31,7 @@ public class CkIskmRenderer : CkModuleRules
 
             "CkProvider",
             "CkRecord",
+            "CkResourceLoader",
             "CkSettings",
 
             "CkAnimation",
