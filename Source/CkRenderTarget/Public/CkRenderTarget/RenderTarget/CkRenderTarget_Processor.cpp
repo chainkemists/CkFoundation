@@ -105,6 +105,74 @@ namespace ck_render_target_processor
         return LocalController->PlayerState;
     }
 
+    // ---- preload gate for the soft-ref asset requests ----
+
+    enum class EPreloadGate : uint8 { Ready, Pending, Failed };
+
+    struct FPreloadGateResult
+    {
+        EPreloadGate _State = EPreloadGate::Ready;
+        FSoftObjectPath _Path;
+    };
+
+    auto DoGet_PreloadGate(
+        const FSoftObjectPath& InPath,
+        const FCk_ResourceLoader_RootedAssetBatch& InBatch) -> FPreloadGateResult
+    {
+        // No batch = a request built raw in BP/AS, or a null-authored asset: the handler resolves the
+        // soft ref resident-or-null and the canvas apply's ensure remains the null contract.
+        if (NOT InBatch.Get_IsRequested())
+        { return {EPreloadGate::Ready, InPath}; }
+        if (NOT InBatch.Get_IsReady())
+        { return {EPreloadGate::Pending, InPath}; }
+        if (InBatch.Get_HasFailed())
+        { return {EPreloadGate::Failed, InPath}; }
+        return {EPreloadGate::Ready, InPath};
+    }
+
+    auto Get_PreloadGate(const FCk_Request_RenderTarget_DrawTexture& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_Texture().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    auto Get_PreloadGate(const FCk_Request_RenderTarget_DrawMaterial& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_Material().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    auto Get_PreloadGate(const FCk_Request_RenderTarget_DrawText& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_Font().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    auto Get_PreloadGate(const FCk_Request_RenderTarget_DrawBorder& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_BorderTexture().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    auto Get_PreloadGate(const FCk_Request_RenderTarget_DrawTriangles& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_Texture().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    auto Get_PreloadGate(const FCk_Request_RenderTarget_DrawPolygon& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_Texture().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    template <typename T_Request>
+    auto Get_PreloadGate(const T_Request&) -> FPreloadGateResult
+    { return {}; }
+
+    auto Get_IsPreloadPending(
+        const ck::FFragment_RenderTarget_Requests::RequestType& InEntry) -> bool
+    {
+        return std::visit([](const auto& InRequest) -> bool
+        {
+            return Get_PreloadGate(InRequest)._State == EPreloadGate::Pending;
+        }, InEntry);
+    }
+
+    // Batch-first so the stored object is the one the batch roots; the resident-or-null fallback
+    // covers requests that never kicked a batch.
+    template <typename T_Asset, typename T_SoftPtr>
+    auto Resolve_FromRequest(
+        const T_SoftPtr& InSoft,
+        const FCk_ResourceLoader_RootedAssetBatch& InBatch) -> T_Asset*
+    {
+        if (InBatch.Get_IsRequested())
+        { return ::Cast<T_Asset>(InBatch.Get_ResolvedObject(InSoft.ToSoftObjectPath())); }
+        return InSoft.Get();
+    }
+
     // The final hop MUST stay an RHI CopyTexture (never a canvas draw) and the upload texture MUST
     // match the target's native format, or this stops being byte-preserving — CkRenderTarget/Claude.md.
     auto
@@ -460,6 +528,16 @@ namespace ck
             FFragment_RenderTarget_Requests& InRequests) const
         -> void
     {
+        // While the head request's preload batch is still loading, the fragment is left untouched so
+        // everything behind the head stays queued in per-target draw order; the tag is not this
+        // drain's dirty marker (the Requests fragment is), so re-marking it cannot re-pump the drain.
+        if (InRequests._Requests.Num() > 0 &&
+            ck_render_target_processor::Get_IsPreloadPending(InRequests._Requests[0]))
+        {
+            InRenderTargetEntity.AddOrGet<FTag_RenderTarget_PendingAssetLoad>();
+            return;
+        }
+
         const auto RequestsCopy = InRequests._Requests;
         InRequests._Requests.Reset();
 
@@ -499,21 +577,57 @@ namespace ck
         auto Cmds = TArray<FCk_RenderTarget_DrawCmd>{};
         Cmds.Reserve(RequestsCopy.Num());
 
-        algo::ForEachRequest(RequestsCopy, ck::Visitor(
-        [&](const auto& InRequest) -> void
+        auto StalledAtIndex = static_cast<int32>(INDEX_NONE);
+        for (auto Index = 0; Index < RequestsCopy.Num(); ++Index)
         {
-            // Every DoHandleRequest overload below is void and has no rejection path, so reaching the
-            // line after the call IS the success condition.
-            auto Result = ECk_Request_OperationResult::Failed;
-            const auto Guard = MakeCompletionGuard(InRequest, InRenderTargetEntity, Result);
+            // A later request's preload went pending mid-drain: stop here — the cmds already built
+            // this pass still apply below as their own batch, so the stall never reorders draws.
+            if (ck_render_target_processor::Get_IsPreloadPending(RequestsCopy[Index]))
+            {
+                StalledAtIndex = Index;
+                break;
+            }
 
-            DoHandleRequest(InRenderTargetEntity, Cmds, InRequest);
+            std::visit([&](const auto& InRequest) -> void
+            {
+                const auto GateResult = ck_render_target_processor::Get_PreloadGate(InRequest);
+                const auto PreloadSucceeded = GateResult._State != ck_render_target_processor::EPreloadGate::Failed;
 
-            if (InRequest.Get_IsRequestHandleValid())
-            { InRequest.GetAndDestroyRequestHandle(); }
+                // Every DoHandleRequest overload below is void and has no rejection path, so reaching
+                // the line after the call IS the success condition. A failed preload is the one
+                // rejection decided here: the asset is missing, and a retry cannot fix it.
+                auto Result = ECk_Request_OperationResult::Failed;
+                const auto Guard = MakeCompletionGuard(InRequest, InRenderTargetEntity, Result);
 
-            Result = ECk_Request_OperationResult::Succeeded;
-        }), policy::DontResetContainer{});
+                if (InRequest.Get_IsRequestHandleValid())
+                { InRequest.GetAndDestroyRequestHandle(); }
+
+                CK_ENSURE_IF_NOT(PreloadSucceeded,
+                    TEXT("RenderTarget [{}]: preload of [{}] failed — completing the request as Failed"),
+                    InRenderTargetEntity, GateResult._Path.ToString())
+                { return; }
+
+                DoHandleRequest(InRenderTargetEntity, Cmds, InRequest);
+
+                Result = ECk_Request_OperationResult::Succeeded;
+            }, RequestsCopy[Index]);
+        }
+
+        if (StalledAtIndex != INDEX_NONE)
+        {
+            // Splice the unprocessed remainder back to the FRONT of the (re-created) live fragment —
+            // ahead of any re-entrant requests enqueued by completion delegates, which were issued
+            // later and must stay behind. No completion guard was constructed for spliced entries,
+            // so their delegates stay bound (a later drain completes them, or teardown fires
+            // Failed_Cancelled).
+            InRenderTargetEntity.AddOrGet<FFragment_RenderTarget_Requests>()._Requests.Insert(
+                RequestsCopy.GetData() + StalledAtIndex, RequestsCopy.Num() - StalledAtIndex, 0);
+            InRenderTargetEntity.AddOrGet<FTag_RenderTarget_PendingAssetLoad>();
+        }
+        else
+        {
+            InRenderTargetEntity.Try_Remove<FTag_RenderTarget_PendingAssetLoad>();
+        }
 
         if (Cmds.IsEmpty())
         { return; }
@@ -634,7 +748,8 @@ namespace ck
     {
         InOutCmds.Emplace(FCk_RenderTarget_DrawCmd{}
             .Set_Type(ECk_RenderTarget_DrawCmdType::Texture)
-            .Set_Asset(InRequest.Get_Texture())
+            .Set_Asset(ck_render_target_processor::Resolve_FromRequest<UTexture>(
+                InRequest.Get_Texture(), InRequest.Get_PreloadBatch()))
             .Set_PositionA(InRequest.Get_Position())
             .Set_Size(InRequest.Get_Size())
             .Set_CoordinatePosition(InRequest.Get_CoordinatePosition())
@@ -653,7 +768,8 @@ namespace ck
     {
         InOutCmds.Emplace(FCk_RenderTarget_DrawCmd{}
             .Set_Type(ECk_RenderTarget_DrawCmdType::Material)
-            .Set_Asset(InRequest.Get_Material())
+            .Set_Asset(ck_render_target_processor::Resolve_FromRequest<UMaterialInterface>(
+                InRequest.Get_Material(), InRequest.Get_PreloadBatch()))
             .Set_PositionA(InRequest.Get_Position())
             .Set_Size(InRequest.Get_Size())
             .Set_Rotation(InRequest.Get_Rotation()));
@@ -669,7 +785,8 @@ namespace ck
     {
         InOutCmds.Emplace(FCk_RenderTarget_DrawCmd{}
             .Set_Type(ECk_RenderTarget_DrawCmdType::Text)
-            .Set_Asset(InRequest.Get_Font())
+            .Set_Asset(ck_render_target_processor::Resolve_FromRequest<UFont>(
+                InRequest.Get_Font(), InRequest.Get_PreloadBatch()))
             .Set_Text(InRequest.Get_Text())
             .Set_PositionA(InRequest.Get_Position())
             .Set_Size(InRequest.Get_Scale())
@@ -700,16 +817,19 @@ namespace ck
             const FCk_Request_RenderTarget_DrawBorder& InRequest)
         -> void
     {
+        const auto& PreloadBatch = InRequest.Get_PreloadBatch();
+
         auto ExtraAssets = TArray<TObjectPtr<UObject>>{};
-        ExtraAssets.Emplace(InRequest.Get_BackgroundTexture());
-        ExtraAssets.Emplace(InRequest.Get_LeftBorderTexture());
-        ExtraAssets.Emplace(InRequest.Get_RightBorderTexture());
-        ExtraAssets.Emplace(InRequest.Get_TopBorderTexture());
-        ExtraAssets.Emplace(InRequest.Get_BottomBorderTexture());
+        ExtraAssets.Emplace(ck_render_target_processor::Resolve_FromRequest<UTexture>(InRequest.Get_BackgroundTexture(), PreloadBatch));
+        ExtraAssets.Emplace(ck_render_target_processor::Resolve_FromRequest<UTexture>(InRequest.Get_LeftBorderTexture(), PreloadBatch));
+        ExtraAssets.Emplace(ck_render_target_processor::Resolve_FromRequest<UTexture>(InRequest.Get_RightBorderTexture(), PreloadBatch));
+        ExtraAssets.Emplace(ck_render_target_processor::Resolve_FromRequest<UTexture>(InRequest.Get_TopBorderTexture(), PreloadBatch));
+        ExtraAssets.Emplace(ck_render_target_processor::Resolve_FromRequest<UTexture>(InRequest.Get_BottomBorderTexture(), PreloadBatch));
 
         InOutCmds.Emplace(FCk_RenderTarget_DrawCmd{}
             .Set_Type(ECk_RenderTarget_DrawCmdType::Border)
-            .Set_Asset(InRequest.Get_BorderTexture())
+            .Set_Asset(ck_render_target_processor::Resolve_FromRequest<UTexture>(
+                InRequest.Get_BorderTexture(), PreloadBatch))
             .Set_ExtraAssets(ExtraAssets)
             .Set_PositionA(InRequest.Get_Position())
             .Set_Size(InRequest.Get_Size())
@@ -729,7 +849,8 @@ namespace ck
     {
         InOutCmds.Emplace(FCk_RenderTarget_DrawCmd{}
             .Set_Type(ECk_RenderTarget_DrawCmdType::Triangles)
-            .Set_Asset(InRequest.Get_Texture())
+            .Set_Asset(ck_render_target_processor::Resolve_FromRequest<UTexture>(
+                InRequest.Get_Texture(), InRequest.Get_PreloadBatch()))
             .Set_Triangles(InRequest.Get_Triangles()));
     }
 
@@ -743,7 +864,8 @@ namespace ck
     {
         InOutCmds.Emplace(FCk_RenderTarget_DrawCmd{}
             .Set_Type(ECk_RenderTarget_DrawCmdType::Polygon)
-            .Set_Asset(InRequest.Get_Texture())
+            .Set_Asset(ck_render_target_processor::Resolve_FromRequest<UTexture>(
+                InRequest.Get_Texture(), InRequest.Get_PreloadBatch()))
             .Set_PositionA(InRequest.Get_Position())
             .Set_Size(InRequest.Get_Radius())
             .Set_Sides(InRequest.Get_NumberOfSides())
@@ -780,12 +902,16 @@ namespace ck
         FProcessor_RenderTarget_HandleRequests::
         DoApplyBatch(
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget_Current& InCurrent,
             const TArray<FCk_RenderTarget_DrawCmd>& InCmds)
         -> void
     {
         if (InCmds.IsEmpty())
         { return; }
+
+        // Pin BEFORE the render gates: headless machines skip the draw but still hold the cmds in
+        // the authored log / channel ring, which GC does not trace.
+        DoPinCmdAssets(InCurrent, InCmds);
 
         // -nullrhi CI and dedicated servers cannot draw — the batch still counts as applied
         // (seq advances, signal fires) so the instruction stream stays consistent across machines.
@@ -841,6 +967,37 @@ namespace ck
         }
 
         CloseCanvas();
+    }
+
+    auto
+        FProcessor_RenderTarget_HandleRequests::
+        DoPinCmdAssets(
+            FFragment_RenderTarget_Current& InCurrent,
+            const TArray<FCk_RenderTarget_DrawCmd>& InCmds)
+        -> void
+    {
+        const auto PinAsset = [&](UObject* InAsset) -> void
+        {
+            if (ck::Is_NOT_Valid(InAsset))
+            { return; }
+
+            const auto AlreadyPinned = InCurrent._PinnedCmdAssets.ContainsByPredicate(
+                [&](const TStrongObjectPtr<UObject>& InPinned) -> bool
+                { return InPinned.Get() == InAsset; });
+
+            if (AlreadyPinned)
+            { return; }
+
+            InCurrent._PinnedCmdAssets.Emplace(TStrongObjectPtr<UObject>{InAsset});
+        };
+
+        for (const auto& Cmd : InCmds)
+        {
+            PinAsset(Cmd.Get_Asset());
+
+            for (const auto& Extra : Cmd.Get_ExtraAssets())
+            { PinAsset(Extra); }
+        }
     }
 
     auto
@@ -1214,7 +1371,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget_Current& InCurrent,
             FFragment_RenderTarget_ReplayQueue& InReplayQueue)
         -> void
     {
