@@ -202,6 +202,15 @@ public:
     Get_IsGoalBlocked(
         const FCk_Handle_CrowdAgent& InAgent);
 
+    // The agent's steering state (Idle / PathPending / Walking) — the state tags are EnTT
+    // fragments BP/AS cannot read directly. None only before setup completes.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Movement State")
+    static ECk_CrowdAgent_MovementState
+    Get_MovementState(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // The goal of the agent's current/last MoveTo (ZeroVector if it never had one). Lets a caller that
     // periodically re-anchors an agent tell "still the goal it is blocked on — leave HoldAndRetry alone"
     // from "the goal moved — a fresh MoveTo is warranted".

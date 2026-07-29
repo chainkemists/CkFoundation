@@ -397,6 +397,30 @@ auto
 
 auto
     UCk_Utils_CrowdAgent_UE::
+    Get_MovementState(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> ECk_CrowdAgent_MovementState
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAgent),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_MovementState"), InAgent)
+    { return ECk_CrowdAgent_MovementState::None; }
+
+    if (InAgent.Has<ck::FTag_CrowdAgent_Walking>())
+    { return ECk_CrowdAgent_MovementState::Walking; }
+
+    if (InAgent.Has<ck::FTag_CrowdAgent_PathPending>())
+    { return ECk_CrowdAgent_MovementState::PathPending; }
+
+    if (InAgent.Has<ck::FTag_CrowdAgent_Idle>())
+    { return ECk_CrowdAgent_MovementState::Idle; }
+
+    return ECk_CrowdAgent_MovementState::None;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
     Get_ActiveGoal(
         const FCk_Handle_CrowdAgent& InAgent)
     -> FVector
