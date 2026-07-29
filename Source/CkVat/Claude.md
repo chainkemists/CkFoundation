@@ -12,7 +12,7 @@ from CkIskmRenderer Plan-2's bake).
 > finish signals). Visual [EDITOR-VERIFY] passes pending — see [PROGRESS.md](PROGRESS.md). This
 > note dies with the campaign docs.
 
-**Depends on:** `Core,CoreUObject,Engine,GameplayTags,Projects,RenderCore,CkCore,CkEcs,CkEcsExt,CkGraphics,CkIsmRenderer,CkLog,CkUsf`.
+**Depends on:** `Core,CoreUObject,Engine,GameplayTags,Projects,RenderCore,CkCore,CkEcs,CkEcsExt,CkGraphics,CkIsmRenderer,CkLog,CkResourceLoader,CkUsf`.
 **Used by:** crowds/props needing cheap animated instances below the CkIskmRenderer batched tier, and
 non-skeletal vertex animation (future).
 
@@ -38,8 +38,11 @@ non-skeletal vertex animation (future).
     sRGB-pre-decoded) vs `WeightTexture` (indices+weights in two data textures by one lookup UV —
     frees UV channels + color, linear end-to-end, the Nanite prerequisite). Verified bit-identical
     by `Ck_Vat_DebugVerifyBake` (runs BOTH storages).
-- `UCk_Utils_VatProxy_UE::Add(InHandle, InParams)` — compose Vat on an entity (collection must be loaded
-  AND baked; async-load soft refs yourself, mirroring CkIskmRenderer's contract).
+- `UCk_Utils_VatProxy_UE::Add(InHandle, InParams)` — compose Vat on an entity. `_Collection` is a
+  soft ref for authoring, but the LOAD CONTRACT is unchanged: it must be resident AND baked before
+  Add (async-load it yourself, mirroring CkIskmRenderer's contract) — Add ensures residency and
+  pins the resolved collection on Current via an inline-completing rooted batch (consumer id
+  `VatProxy.CollectionPin`).
 - `Request_PlayClip / Request_Stop / Request_SetPlayRate` — deferred playback control. Stop freezes
   the current frame; SetPlayRate preserves the playback position (start-time rebase); rate 0 == Stop.
 - `BindTo_OnClipFinished` — fires once per non-looping clip completion (Gate 3).
