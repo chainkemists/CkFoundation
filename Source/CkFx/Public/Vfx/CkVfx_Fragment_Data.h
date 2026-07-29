@@ -180,9 +180,13 @@ private:
               meta = (AllowPrivateAccess = true, Categories = "Vfx"))
     FGameplayTag _Name;
 
+    // Soft by design: path-serialized, so it is safe to author in DataAssets/Blueprints (a weak ref
+    // silently saves as null there; a hard ref force-loads the asset with the owning package).
+    // Setup resolves it through a rooted loader batch held on Current; play requests queue behind
+    // FTag_Vfx_NeedsSetup while it loads.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UNiagaraSystem> _ParticleSystem;
+    TSoftObjectPtr<UNiagaraSystem> _ParticleSystem;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

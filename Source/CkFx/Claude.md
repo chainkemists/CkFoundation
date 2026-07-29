@@ -1,9 +1,13 @@
 # CkFx
 
-**Purpose:** Sound effects (SFX) attachment to entities. Thin module for spawning one-shot audio events anchored to an entity's position, without the full AudioTrack Record lifetime management of `CkAudio`.
+**Purpose:** Fire-and-forget effects attachment to entities — one-shot audio events (Sfx) and
+one-shot Niagara spawns (Vfx) anchored to an entity's position, without the full AudioTrack Record
+lifetime management of `CkAudio` or the replicated cue routing of `CkVfx`.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkRecord`, `CkSettings`.
-**Used by:** Hit effects, footstep sounds, UI clicks — anything that is fire-and-forget audio.
+**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkRecord`, `CkResourceLoader`
+(soft sound/system params resolve through rooted batches — consumer ids `Sfx.Setup` / `Vfx.Setup`),
+`CkSettings`.
+**Used by:** Hit effects, footstep sounds, UI clicks, impact particles — anything fire-and-forget.
 
 ---
 
