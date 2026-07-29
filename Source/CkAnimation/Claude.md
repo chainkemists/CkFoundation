@@ -65,6 +65,27 @@ re-added there without clean-build evidence.
 builds the payload through the registered `Produce` handler; the two are byte-identical by construction, so
 do not re-inline the payload build.
 
+## Soft asset refs (fragment-GC sweep)
+
+UE GC never walks the EnTT registry, so a fragment-held `TObjectPtr<UAsset>` roots nothing. This module's
+authored asset refs are therefore soft:
+
+- **AnimAsset** (`FCk_AnimAsset_Animation::_Animation`/`_BlendSpace`) is **pure path data** — it kicks no
+  loads, roots nothing, and has no processor. Consumers resolve: resident-or-null via `.Get()`, or through
+  their own CkResourceLoader consumer id for a rooted async load.
+- **MontagePlayer** `FCk_Request_MontagePlayer_Play::_Montage` is soft; `Request_Play` kicks a
+  CkResourceLoader `RootedAssetBatch` riding the request (consumer id `"MontagePlayer.Play"`, flip to
+  Synchronous per-project in the ResourceLoader settings for debugging). Resident montages keep the
+  synchronous pre-flight byte-identical; an authored-but-not-resident montage defers pre-flight to the
+  drain (which re-runs `Get_CanPlayMontage` once resolved and mirrors the OnFinished failure shape). A
+  cold-loading Play stalls the whole per-entity request queue (order preserved) and marks
+  `FTag_MontagePlayer_PendingAssetLoad`; teardown fires `Failed_Cancelled` for stalled entries. The played
+  montage is rooted by the AnimInstance's montage instance after `Montage_Play`, so the batch dies with
+  the consumed request.
+- **`FCk_MontagePlayer_State::_Montage` stays a hard `TObjectPtr` deliberately** — it is replicated AND
+  save-serialized (`Register_NetAndSave_SharedApply`), so flipping it is a wire/save-format change gated
+  on a maintainer ruling. A save restored when the montage is not resident still reads null there.
+
 ---
 
 ## See also

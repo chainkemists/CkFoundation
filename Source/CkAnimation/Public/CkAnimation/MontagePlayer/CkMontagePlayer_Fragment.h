@@ -2,6 +2,8 @@
 
 #include "CkMontagePlayer_Fragment_Data.h"
 
+#include "CkAnimation/CkAnimation_Common.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
 
@@ -26,6 +28,30 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_MontagePlayer_MayRequireReplication);
     CK_DEFINE_ECS_TAG(FTag_MontagePlayer_HasActiveMontage);
+    // Present while the head of the request queue awaits its preload batch (drain stalled to
+    // preserve request order). Observability only — nothing gates on it.
+    CK_DEFINE_ECS_TAG(FTag_MontagePlayer_PendingAssetLoad);
+
+    // Shared by the enqueue-time pre-flight (Utils) and the drain-time deferred re-validation
+    // (Processor) — the two must map failures identically.
+    namespace montage_player_detail
+    {
+        inline auto MapFailureReason(
+            ECk_PlayMontageFailureReason InReason) -> ECk_MontagePlayer_FinishReason
+        {
+            switch (InReason)
+            {
+                case ECk_PlayMontageFailureReason::InvalidMontage:                    return ECk_MontagePlayer_FinishReason::Failed_InvalidMontage;
+                case ECk_PlayMontageFailureReason::InvalidMeshComponent:              return ECk_MontagePlayer_FinishReason::Failed_InvalidMeshComponent;
+                case ECk_PlayMontageFailureReason::InvalidPlayRate:                   return ECk_MontagePlayer_FinishReason::Failed_InvalidPlayRate;
+                case ECk_PlayMontageFailureReason::MissingAnimInstanceOnMeshComponent: return ECk_MontagePlayer_FinishReason::Failed_MissingAnimInstance;
+                case ECk_PlayMontageFailureReason::SkeletonMismatch:                  return ECk_MontagePlayer_FinishReason::Failed_SkeletonMismatch;
+                case ECk_PlayMontageFailureReason::MeshTickDisabled:                  return ECk_MontagePlayer_FinishReason::Failed_MeshTickDisabled;
+                case ECk_PlayMontageFailureReason::MeshComponentCannotTickOnServer:   return ECk_MontagePlayer_FinishReason::Failed_MeshComponentCannotTickOnServer;
+            }
+            return ECk_MontagePlayer_FinishReason::Failed_InvalidMontage;
+        }
+    }
 
     // --------------------------------------------------------------------------------------------------------------------
 
