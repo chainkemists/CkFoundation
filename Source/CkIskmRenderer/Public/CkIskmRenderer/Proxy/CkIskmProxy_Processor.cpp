@@ -56,6 +56,59 @@ namespace ck_iskmproxy_processor
                 InClass, InOwningHandle);
         }
     }
+
+    // ---- preload gate for the soft-ref asset requests ----
+
+    enum class EPreloadGate : uint8 { Ready, Pending, Failed };
+
+    struct FPreloadGateResult
+    {
+        EPreloadGate _State = EPreloadGate::Ready;
+        FSoftObjectPath _Path;
+    };
+
+    auto DoGet_PreloadGate(
+        const FSoftObjectPath& InPath,
+        const FCk_ResourceLoader_RootedAssetBatch& InBatch) -> FPreloadGateResult
+    {
+        // No batch = a request built raw in BP/AS, or a null-authored asset: the handler resolves the
+        // soft ref resident-or-null and its own ensure remains the null contract.
+        if (NOT InBatch.Get_IsRequested())
+        { return {EPreloadGate::Ready, InPath}; }
+        if (NOT InBatch.Get_IsReady())
+        { return {EPreloadGate::Pending, InPath}; }
+        if (InBatch.Get_HasFailed())
+        { return {EPreloadGate::Failed, InPath}; }
+        return {EPreloadGate::Ready, InPath};
+    }
+
+    auto Get_PreloadGate(const FCk_Request_IskmProxy_PlayAnimation& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_Sequence().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    auto Get_PreloadGate(const FCk_Request_IskmProxy_PlayMontage& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_Montage().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    auto Get_PreloadGate(const FCk_Request_IskmProxy_SetMaterialOverride& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_Material().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    auto Get_PreloadGate(const FCk_Request_IskmProxy_SetSkeletalMesh& InRequest) -> FPreloadGateResult
+    { return DoGet_PreloadGate(InRequest.Get_Mesh().ToSoftObjectPath(), InRequest.Get_PreloadBatch()); }
+
+    template <typename T_Request>
+    auto Get_PreloadGate(const T_Request&) -> FPreloadGateResult
+    { return {}; }
+
+    // Batch-first so the returned object is the one the batch roots; the resident-or-null fallback
+    // covers requests that never kicked a batch.
+    template <typename T_Asset, typename T_SoftPtr>
+    auto Resolve_FromRequest(
+        const T_SoftPtr& InSoft,
+        const FCk_ResourceLoader_RootedAssetBatch& InBatch) -> T_Asset*
+    {
+        if (InBatch.Get_IsRequested())
+        { return Cast<T_Asset>(InBatch.Get_ResolvedObject(InSoft.ToSoftObjectPath())); }
+        return InSoft.Get();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -264,19 +317,47 @@ namespace ck
         auto RequestsCopy = MoveTemp(InRequests._Requests);
         InRequests._Requests.Reset();
 
-        ck::algo::ForEachRequest(RequestsCopy, ck::Visitor(
-            [&](const auto& InRequest) -> void
+        for (auto Index = 0; Index < RequestsCopy.Num(); ++Index)
+        {
+            const auto GateResult = std::visit([](const auto& InRequest)
+            { return ck_iskmproxy_processor::Get_PreloadGate(InRequest); }, RequestsCopy[Index]);
+
+            if (GateResult._State == ck_iskmproxy_processor::EPreloadGate::Pending)
             {
+                // Splicing the remainder to the FRONT keeps it ahead of re-entrant requests enqueued
+                // mid-drain, so nothing overtakes a loading request; spliced entries keep their completion
+                // delegates bound for a later drain, or for teardown's Failed_Cancelled. The tag is not
+                // this drain's dirty marker (the Requests fragment is), so a stalled frame is pump-safe.
+                InRequests._Requests.Insert(RequestsCopy.GetData() + Index, RequestsCopy.Num() - Index, 0);
+                InHandle.AddOrGet<FTag_IskmProxy_PendingAssetLoad>();
+                return;
+            }
+
+            std::visit([&](const auto& InRequest) -> void
+            {
+                const auto PreloadSucceeded = GateResult._State != ck_iskmproxy_processor::EPreloadGate::Failed;
+                CK_ENSURE_IF_NOT(PreloadSucceeded,
+                    TEXT("IskmProxy [{}]: preload of [{}] failed — completing the request as Failed"),
+                    InHandle, GateResult._Path.ToString())
+                {}
+
                 // Every DoHandleRequest overload's internal CK_ENSURE_IF_NOT early-outs guard malformed
                 // state (missing SKMC, null asset, etc), not a legitimate request-rejection outcome, so
-                // reaching the line after the call IS the success condition.
+                // reaching the line after the call IS the success condition. A failed preload is the one
+                // rejection decided here: the asset is missing, and a retry cannot fix it.
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = ck::MakeCompletionGuard(InRequest, InHandle, Result);
+
+                if (NOT PreloadSucceeded)
+                { return; }
 
                 DoHandleRequest(InHandle, InParams, InCurrent, InAnimState, InPoseSource, InCustomData, InTransform, InRequest);
 
                 Result = ECk_Request_OperationResult::Succeeded;
-            }), ck::policy::DontResetContainer{});
+            }, RequestsCopy[Index]);
+        }
+
+        InHandle.Try_Remove<FTag_IskmProxy_PendingAssetLoad>();
     }
 
     auto
@@ -592,12 +673,14 @@ namespace ck
             InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Sequence()),
-            TEXT("IskmProxy [{}]: PlayAnimation request has a null Sequence. Caller must supply a valid UAnimSequenceBase"),
+        auto* Sequence = ck_iskmproxy_processor::Resolve_FromRequest<UAnimSequenceBase>(
+            InRequest.Get_Sequence(), InRequest.Get_PreloadBatch());
+        CK_ENSURE_IF_NOT(ck::IsValid(Sequence),
+            TEXT("IskmProxy [{}]: PlayAnimation request has a null or unresolved Sequence. Caller must supply a valid UAnimSequenceBase"),
             InHandle)
         { return; }
 
-        if (InRequest.Get_Unique() && InAnimState._CurrentSequence.Get() == InRequest.Get_Sequence())
+        if (InRequest.Get_Unique() && InAnimState._CurrentSequence.Get() == Sequence)
         {
             return;
         }
@@ -608,18 +691,18 @@ namespace ck
         {
             SKMC->SetAnimInstanceClass(nullptr);
         }
-        SKMC->PlayAnimation(InRequest.Get_Sequence(), InRequest.Get_Loop());
+        SKMC->PlayAnimation(Sequence, InRequest.Get_Loop());
         SKMC->SetPosition(InRequest.Get_StartAt(), false);
         SKMC->SetPlayRate(InRequest.Get_PlayRate());
 
         if (auto* Old = InAnimState._CurrentSequence.Get();
-            ck::IsValid(Old) && Old != InRequest.Get_Sequence())
+            ck::IsValid(Old) && Old != Sequence)
         {
             UUtils_Signal_IskmProxy_OnAnimationFinished::Broadcast(
                 InHandle,
                 MakePayload(InHandle, FCk_IskmProxy_AnimSequenceRef{Old}, ECk_IskmProxy_AnimFinishReason::Replaced));
         }
-        InAnimState._CurrentSequence = InRequest.Get_Sequence();
+        InAnimState._CurrentSequence = Sequence;
         InAnimState._LastFinishedDispatched = false;
     }
 
@@ -755,8 +838,10 @@ namespace ck
             InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Material()),
-            TEXT("IskmProxy [{}]: SetMaterialOverride request has a null Material for slot [{}]. Use Request_ClearMaterialOverrides to restore mesh-default materials"),
+        auto* Material = ck_iskmproxy_processor::Resolve_FromRequest<UMaterialInterface>(
+            InRequest.Get_Material(), InRequest.Get_PreloadBatch());
+        CK_ENSURE_IF_NOT(ck::IsValid(Material),
+            TEXT("IskmProxy [{}]: SetMaterialOverride request has a null or unresolved Material for slot [{}]. Use Request_ClearMaterialOverrides to restore mesh-default materials"),
             InHandle, InRequest.Get_SlotIndex())
         { return; }
 
@@ -770,10 +855,10 @@ namespace ck
         auto& Overrides = InHandle.Get<FFragment_IskmProxy_MaterialOverrides>();
         Overrides._SlotToMaterial.Add(
             InRequest.Get_SlotIndex(),
-            TStrongObjectPtr<UMaterialInterface>{InRequest.Get_Material().Get()});
+            TStrongObjectPtr<UMaterialInterface>{Material});
         Overrides._Dirty = true;
 
-        SKMC->SetMaterial(InRequest.Get_SlotIndex(), InRequest.Get_Material());
+        SKMC->SetMaterial(InRequest.Get_SlotIndex(), Material);
     }
 
     auto
@@ -884,13 +969,15 @@ namespace ck
             InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Mesh()),
-            TEXT("IskmProxy [{}]: SetSkeletalMesh request has a null Mesh"),
+        auto* Mesh = ck_iskmproxy_processor::Resolve_FromRequest<USkeletalMesh>(
+            InRequest.Get_Mesh(), InRequest.Get_PreloadBatch());
+        CK_ENSURE_IF_NOT(ck::IsValid(Mesh),
+            TEXT("IskmProxy [{}]: SetSkeletalMesh request has a null or unresolved Mesh"),
             InHandle)
         { return; }
 
         constexpr auto ReinitPose = true;
-        SKMC->SetSkeletalMesh(InRequest.Get_Mesh(), ReinitPose);
+        SKMC->SetSkeletalMesh(Mesh, ReinitPose);
 
         // SetSkeletalMesh re-ran InitAnim -> a FRESH AnimInstance of the preserved AnimClass, so the
         // notify bridge's owning handle must be re-established or the signals stop routing.
@@ -1110,8 +1197,10 @@ namespace ck
             InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Montage()),
-            TEXT("IskmProxy [{}]: PlayMontage request has a null Montage. Caller must supply a valid UAnimMontage"),
+        auto* Montage = ck_iskmproxy_processor::Resolve_FromRequest<UAnimMontage>(
+            InRequest.Get_Montage(), InRequest.Get_PreloadBatch());
+        CK_ENSURE_IF_NOT(ck::IsValid(Montage),
+            TEXT("IskmProxy [{}]: PlayMontage request has a null or unresolved Montage. Caller must supply a valid UAnimMontage"),
             InHandle)
         { return; }
 
@@ -1132,16 +1221,16 @@ namespace ck
 
         // Montage_Play returns 0 on failure. Bail BEFORE mutating state, or the entity is permanently
         // marked montage-active with nothing playing and OnMontageFinished never fires.
-        const auto MontageLength = AI->Montage_Play(InRequest.Get_Montage(), InRequest.Get_PlayRate());
+        const auto MontageLength = AI->Montage_Play(Montage, InRequest.Get_PlayRate());
         CK_ENSURE_IF_NOT(MontageLength > 0.0f,
             TEXT("IskmProxy [{}]: Montage_Play failed for Montage [{}] — montage/skeleton/slot mismatch with the current SkeletalMesh"),
-            InHandle, GetNameSafe(InRequest.Get_Montage()))
+            InHandle, GetNameSafe(Montage))
         { return; }
         if (InRequest.Get_StartSection() != NAME_None)
         {
-            AI->Montage_JumpToSection(InRequest.Get_StartSection(), InRequest.Get_Montage());
+            AI->Montage_JumpToSection(InRequest.Get_StartSection(), Montage);
         }
-        InAnimState._CurrentMontage = InRequest.Get_Montage();
+        InAnimState._CurrentMontage = Montage;
         // Re-triggering while a montage is already active is normal flow, so the add must be guarded
         // against the "tag already exists" ensure.
         if (NOT InHandle.Has<FTag_IskmProxy_HasActiveMontage>())

@@ -22,7 +22,9 @@ namespace ck
     // ---- tags ----
 
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_NeedsSetup);
-    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_PendingAsyncLoad);
+    // Present while the head of the proxy's request queue awaits its preload batch (drain stalled to
+    // preserve per-proxy request order). Observability only — nothing gates on it.
+    CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_PendingAssetLoad);
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_HasActiveMontage);
     CK_DEFINE_ECS_TAG_TRANSIENT(FTag_IskmProxy_Ragdolling);
     // Set at Setup from ParamsData._IsMovable. UpdateTransform requires it alongside
