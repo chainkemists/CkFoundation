@@ -27,6 +27,7 @@ public class CkRenderTarget : CkModuleRules
             "CkLog",
             "CkProfile",
             "CkRecord",
+            "CkResourceLoader",
             "CkSettings",
             "CkTimer",
         });
