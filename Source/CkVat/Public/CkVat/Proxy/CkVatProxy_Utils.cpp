@@ -6,6 +6,17 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkResourceLoader/CkResourceLoader_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_vat_proxy_utils
+{
+    // Resident at Add by contract, so this batch completes inline — it exists to ROOT the resolved
+    // collection for the entity's lifetime, not to load it.
+    static const auto PinConsumerId = FName{TEXT("VatProxy.CollectionPin")};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -19,13 +30,20 @@ auto
         TEXT("Entity [{}] already has a Vat — one Vat per entity"), InHandle)
     { return Cast(InHandle); }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_Collection()),
-        TEXT("Cannot add Vat to entity [{}] — the VatCollection is invalid"), InHandle)
+    // Residency is the caller's contract — this diagnoses the misuse.
+    const auto CollectionIsResident = ck::IsValid(InParams.Get_Collection().Get());
+    CK_ENSURE_IF_NOT(CollectionIsResident,
+        TEXT("Cannot add Vat to entity [{}] — the VatCollection [{}] is unset or NOT RESIDENT. "
+             "It must be loaded AND baked before Add — async-load the soft reference yourself."),
+        InHandle, InParams.Get_Collection().ToSoftObjectPath().ToString())
     { return {}; }
 
     InHandle.Add<ck::FFragment_VatProxy_Params>(InParams);
-    InHandle.Add<ck::FFragment_VatProxy_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_VatProxy_Current>();
     InHandle.Add<ck::FTag_VatProxy_NeedsSetup>();
+
+    Current._CollectionPinBatch = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+        ck_vat_proxy_utils::PinConsumerId, {InParams.Get_Collection().ToSoftObjectPath()});
 
     return Cast(InHandle);
 }
@@ -112,7 +130,7 @@ auto
 {
     if (ck::Is_NOT_Valid(InHandle))
     { return {}; }
-    return InHandle.Get<ck::FFragment_VatProxy_Params>().Get_Collection();
+    return InHandle.Get<ck::FFragment_VatProxy_Params>().Get_Collection().Get();
 }
 
 auto
@@ -128,7 +146,7 @@ auto
     if (Current.Get_ActiveClipIndex() == INDEX_NONE)
     { return {}; }
 
-    const auto& Collection = InHandle.Get<ck::FFragment_VatProxy_Params>().Get_Collection();
+    const auto* Collection = InHandle.Get<ck::FFragment_VatProxy_Params>().Get_Collection().Get();
     if (ck::Is_NOT_Valid(Collection))
     { return {}; }
 

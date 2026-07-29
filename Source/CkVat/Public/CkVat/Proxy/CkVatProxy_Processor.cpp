@@ -111,10 +111,11 @@ namespace ck
     {
         InHandle.Remove<FTag_VatProxy_NeedsSetup>();
 
-        const auto& Collection = InParams.Get_Collection();
+        const auto* Collection = InParams.Get_Collection().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Collection),
-            TEXT("Vat entity [{}] has an invalid VatCollection"), InHandle)
+            TEXT("Vat entity [{}] has an invalid or non-resident VatCollection [{}]"),
+            InHandle, InParams.Get_Collection().ToSoftObjectPath().ToString())
         { return; }
 
         CK_ENSURE_IF_NOT(Collection->Get_BakedData().Get_IsBaked(),
@@ -204,8 +205,9 @@ namespace ck
         });
 
         // One custom-data push per drained batch — playback state only reaches the GPU on change.
-        if (ck::IsValid(InParams.Get_Collection()))
-        { ck_vat_proxy_processor::Push_CustomData(InCurrent, *InParams.Get_Collection()); }
+        if (const auto* Collection = InParams.Get_Collection().Get();
+            ck::IsValid(Collection))
+        { ck_vat_proxy_processor::Push_CustomData(InCurrent, *Collection); }
     }
 
     auto
@@ -217,10 +219,10 @@ namespace ck
             const FCk_Request_VatProxy_PlayClip& InRequest)
         -> bool
     {
-        const auto& Collection = InParams.Get_Collection();
+        const auto* Collection = InParams.Get_Collection().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Collection),
-            TEXT("PlayClip on Vat entity [{}] with an invalid VatCollection"), InHandle)
+            TEXT("PlayClip on Vat entity [{}] with an invalid or non-resident VatCollection"), InHandle)
         { return false; }
 
         const auto ClipIndex = Collection->Find_BakedClipIndex_ByName(InRequest.Get_ClipName());
@@ -344,7 +346,7 @@ namespace ck
             InCurrent.Get_PlayRate() <= 0.0f)
         { return; }
 
-        const auto& Collection = InParams.Get_Collection();
+        const auto* Collection = InParams.Get_Collection().Get();
         if (ck::Is_NOT_Valid(Collection))
         { return; } // Setup already ensured loudly
 
