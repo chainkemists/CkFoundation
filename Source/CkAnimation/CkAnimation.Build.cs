@@ -27,6 +27,7 @@ public class CkAnimation : CkModuleRules
 
             "CkProvider",
             "CkRecord",
+            "CkResourceLoader",
         });
     }
 }

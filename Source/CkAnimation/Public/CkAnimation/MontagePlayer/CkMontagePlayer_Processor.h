@@ -45,6 +45,12 @@ namespace ck
 
     private:
         static auto
+        DoFailPendingRequests(
+            HandleType InHandle,
+            FFragment_MontagePlayer_Requests& InRequestsComp,
+            ECk_PlayMontageFailureReason InFailureReason) -> void;
+
+        static auto
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,

@@ -31,6 +31,9 @@ UCk_Utils_AnimAsset_UE::Add(ParentEntity, AnimAssetParams);
 ```cpp
 auto AnimAsset = UCk_Utils_AnimAsset_UE::TryGet_AnimAsset(ParentEntity, TAG_Anim_Walk);
 auto Animation = UCk_Utils_AnimAsset_UE::Get_Animation(AnimAsset);
+// Animation carries SOFT refs (pure path data — AnimAsset kicks no loads and roots nothing).
+// Resolve at the consumer: resident-or-null via .Get(), or through the consumer's own
+// CkResourceLoader consumer id for a rooted async load.
 ```
 
 ### Create an animation plan
