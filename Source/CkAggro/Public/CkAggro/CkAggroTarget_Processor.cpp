@@ -257,7 +257,10 @@ namespace ck
         if (NOT InTarget.Has<ck::FTag_AggroTarget_Perceived>())
         { return; }
 
-        InTarget.Try_Remove<ck::FTag_AggroTarget_Perceived>();
+        // A perception RESET wipes every feeder's vote at once — deliberately NOT the counted
+        // try-decrement (the default), which would leave the target Perceived while other
+        // feeders still hold votes.
+        InTarget.Try_Remove<ck::FTag_AggroTarget_Perceived, ck::policy::ForceErase>();
         InPerception._LastPerceivedTime = ck_aggro_target_processor::Get_Now(InTarget);
     }
 
