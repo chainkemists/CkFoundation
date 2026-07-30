@@ -449,6 +449,30 @@ auto
 
 auto
     UCk_Utils_DynamicFragment_UE::
+    Get_IsSnapshotTransient(
+        const UScriptStruct* InStructType)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InStructType))
+    { return false; }
+
+    const auto* Marker = FCk_DynamicFragment_SnapshotTransient::StaticStruct();
+    if (InStructType->IsChildOf(Marker))
+    { return true; }
+
+    for (TFieldIterator<FStructProperty> It{InStructType}; It; ++It)
+    {
+        if (It->Struct == Marker)
+        { return true; }
+    }
+
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_DynamicFragment_UE::
     Get_StorageId(
         const UScriptStruct* InStructType)
     -> entt::id_type
