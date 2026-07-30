@@ -49,13 +49,23 @@ auto
     // The load kernel keeps feature processors frozen against the half-rebuilt world. An ESCALATED gate
     // runs the full scope while the loader still owns completion — multi-stage constructions (EntityScript
     // `Continue` fulfilled by game processors) are unfinishable under the kernel, and the rebuild may be
-    // waiting on the identity they stamp on completion.
+    // waiting on the identity they stamp on completion. Escalated passes run at ZERO TIME: constructions are
+    // marker/event-driven and complete fine, but time-paced world policy (population pacing, refills, timers,
+    // cadences) must not observe the half-rebuilt world — a census read mid-rebuild is a lie, and acting on it
+    // double-populates the world (the save-inflation incident, 2026-07-29). A construction that wall-clock
+    // waits cannot finish under a load and orphans loudly — construction must not depend on real time.
     auto Scope = ck::ECk_SchedulerTickScope::Full;
+    auto TickTime = FCk_Time{DeltaSeconds};
     if (const auto* Subsystem = DoGet_OwningSubsystem();
-        Subsystem != nullptr and Subsystem->Get_IsLoadGateActive() and NOT Subsystem->Get_IsLoadGateEscalated())
-    { Scope = ck::ECk_SchedulerTickScope::LoadKernel; }
+        Subsystem != nullptr and Subsystem->Get_IsLoadGateActive())
+    {
+        if (Subsystem->Get_IsLoadGateEscalated())
+        { TickTime = FCk_Time{0.0f}; }
+        else
+        { Scope = ck::ECk_SchedulerTickScope::LoadKernel; }
+    }
 
-    _Scheduler->Tick(FCk_Time{DeltaSeconds}, _Registry, Scope);
+    _Scheduler->Tick(TickTime, _Registry, Scope);
 }
 
 auto
@@ -184,6 +194,62 @@ auto
     -> void
 {
     _IsLoadGateEscalated = InEscalated;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Get_IsInLoaderSpawnWindow() const
+    -> bool
+{
+    return _LoaderSpawnWindowDepth > 0;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Push_LoaderSpawnWindow()
+    -> void
+{
+    ++_LoaderSpawnWindowDepth;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Pop_LoaderSpawnWindow()
+    -> void
+{
+    CK_ENSURE_IF_NOT(_LoaderSpawnWindowDepth > 0,
+        TEXT("Pop_LoaderSpawnWindow with no window open — unbalanced FCk_ScopedLoaderSpawnWindow"))
+    { return; }
+
+    --_LoaderSpawnWindowDepth;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Get_IsInRendezvousSpawnWindow() const
+    -> bool
+{
+    return _RendezvousSpawnWindowDepth > 0;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Push_RendezvousSpawnWindow()
+    -> void
+{
+    ++_RendezvousSpawnWindowDepth;
+}
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Pop_RendezvousSpawnWindow()
+    -> void
+{
+    CK_ENSURE_IF_NOT(_RendezvousSpawnWindowDepth > 0,
+        TEXT("Pop_RendezvousSpawnWindow with no window open — unbalanced FCk_ScopedRendezvousSpawnWindow"))
+    { return; }
+
+    --_RendezvousSpawnWindowDepth;
 }
 
 auto

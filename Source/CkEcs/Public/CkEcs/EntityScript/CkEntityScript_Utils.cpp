@@ -18,6 +18,7 @@
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 #include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+#include "CkEcs/CkEcsLog.h"                       // load-gate spawn suppression Warning
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h" // Relink_AssociatedEntities_AfterRestore (EcsWorld registry access)
 
@@ -32,6 +33,46 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityScript_UE, FCk_Handle_En
 
 namespace ck_entity_script_utils
 {
+    // While a CkSnapshot load owns the world (the load gate is active), the loader is the SOLE creator of
+    // world population: saved rows respawn through its own window (FCk_ScopedLoaderSpawnWindow) and replayed
+    // constructions re-create their ConstructSpawned children. Any other spawn is world POLICY reacting to
+    // the half-rebuilt world — a population census reading near-zero, an adopt-or-spawn task whose adopt scan
+    // ran before the loader materialized the restored copy. Admitting those double-populates the world and
+    // the next capture saves both copies (the save-inflation incident, 2026-07-29: +77 NPCs and a doubled
+    // StoreDriver subordinate family in one save->load->save cycle). Suppressed spawns return an INVALID
+    // pending handle; Promise_OnConstructed no-ops on it and the completion delegate reports
+    // Failed_NotEnqueued — reconcile-shaped callers converge on their next real-world evaluation.
+    auto Get_IsSpawnSuppressedByLoadGate(const FCk_Handle& InLifetimeOwner, const UObject* InEntityScriptClassOrArchetype) -> bool
+    {
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InLifetimeOwner);
+        if (ck::Is_NOT_Valid(World))
+        { return false; }
+
+        const auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+        if (ck::Is_NOT_Valid(EcsWorld))
+        { return false; }
+
+        if (NOT EcsWorld->Get_IsLoadGateActive())
+        { return false; }
+
+        if (EcsWorld->Get_IsInLoaderSpawnWindow())
+        { return false; }
+
+        if (EcsWorld->Get_IsInRendezvousSpawnWindow())
+        { return false; }
+
+        if (UCk_Utils_EntityLifetime_UE::Get_IsInsideConstructionWindow(InLifetimeOwner))
+        { return false; }
+
+        ck::ecs::Warning(TEXT("Request_SpawnEntity of [{}] under [{}] SUPPRESSED: a CkSnapshot load owns the world. "
+            "This spawn is a world-policy decision made against the half-rebuilt world — the loader respawns what "
+            "the save recorded; spawn-on-demand logic must re-evaluate once the world is coherent. If this spawn "
+            "re-creates IDENTITY-BEARING content the loader adopts (a SaveKey / adopt-label rendezvous target), "
+            "declare it: Request_SpawnEntity_LoadRendezvous, or FCk_ScopedRendezvousSpawnWindow in C++."),
+            InEntityScriptClassOrArchetype, InLifetimeOwner);
+        return true;
+    }
+
     auto ValidateRetainedSpawnParams(const TCHAR* InOperation, const FInstancedStruct& InSpawnParams) -> bool
     {
         if (NOT InSpawnParams.IsValid())
@@ -154,6 +195,12 @@ auto
         return {};
     }
 
+    if (ck_entity_script_utils::Get_IsSpawnSuppressedByLoadGate(InLifetimeOwner, InEntityScriptClass))
+    {
+        InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
+
     if (const auto DefaultObject = InEntityScriptClass->GetDefaultObject<UCk_EntityScript_UE>();
         ck::IsValid(DefaultObject))
     {
@@ -190,6 +237,24 @@ auto
 
 auto
     UCk_Utils_EntityScript_UE::
+    Request_SpawnEntity_LoadRendezvous(
+        FCk_Handle& InLifetimeOwner,
+        TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
+        FInstancedStruct InSpawnParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_PendingEntityScript
+{
+    auto EcsWorld = static_cast<UCk_EcsWorld_Subsystem_UE*>(nullptr);
+    if (const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InLifetimeOwner);
+        ck::IsValid(World))
+    { EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>(); }
+
+    const auto RendezvousWindow = FCk_ScopedRendezvousSpawnWindow{EcsWorld};
+    return Request_SpawnEntity(InLifetimeOwner, InEntityScriptClass, InSpawnParams, InDelegate);
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
     Request_SpawnEntity_Archetype(
         FCk_Handle& InLifetimeOwner,
         UCk_EntityScript_UE* InEntityScriptClassArchetype,
@@ -220,6 +285,12 @@ auto
         InEntityScriptClassArchetype)
     {}
     if (NOT LifetimeOwnerIsValid)
+    {
+        InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return {};
+    }
+
+    if (ck_entity_script_utils::Get_IsSpawnSuppressedByLoadGate(InLifetimeOwner, InEntityScriptClassArchetype))
     {
         InDelegate.ExecuteIfBound(InLifetimeOwner, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};

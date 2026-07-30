@@ -13,4 +13,11 @@ namespace utils_entity_script
         auto LifetimeOwner = InLifetimeOwner;
         return UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(LifetimeOwner, InEntityScriptClass, InSpawnParams.InstancedStruct);
     }
+
+    FCk_Handle_PendingEntityScript
+    Request_SpawnEntity_LoadRendezvous(FCk_Handle InLifetimeOwner, TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass, FAngelscriptAnyStructParameter InSpawnParams)
+    {
+        auto LifetimeOwner = InLifetimeOwner;
+        return UCk_Utils_EntityScript_UE::Request_SpawnEntity_LoadRendezvous(LifetimeOwner, InEntityScriptClass, InSpawnParams.InstancedStruct);
+    }
 }
