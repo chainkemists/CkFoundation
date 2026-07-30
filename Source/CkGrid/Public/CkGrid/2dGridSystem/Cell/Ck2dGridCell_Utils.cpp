@@ -129,9 +129,10 @@ auto
     {
         case ECk_EnableDisable::Disable:
         {
-            // Idempotent: AddOrGet on an already-disabled cell is a no-op, so setting the cell to
-            // the state it is already in still reports Succeeded.
-            InCell.AddOrGet<ck::FTag_2dGridCell_Disabled>();
+            // Disabled is a COUNTED tag: each disabler holds one vote, so overlapping
+            // disablers compose (two blockers on one cell -> count 2). Add increments
+            // and never ensures for counted tags.
+            InCell.Add<ck::FTag_2dGridCell_Disabled>();
             break;
         }
         case ECk_EnableDisable::Enable:
