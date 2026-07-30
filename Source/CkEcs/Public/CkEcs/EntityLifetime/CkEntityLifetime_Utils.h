@@ -121,6 +121,14 @@ public:
     Get_IsTransientEntity(
         const FCk_Handle& InHandle);
 
+    // True while the entity is inside its own construction window: an EntityScript that has not begun play,
+    // or a definition build in progress. This is the FTag_ConstructSpawned provenance-stamp condition AND the
+    // load-gate spawn-admission condition (a replayed construction re-creating its deterministic build) — one
+    // predicate, so the two sites cannot drift.
+    static bool
+    Get_IsInsideConstructionWindow(
+        const FCk_Handle& InHandle);
+
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get World For Entity",
               Category = "Ck|Utils|Lifetime")

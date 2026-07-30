@@ -90,6 +90,22 @@ public:
         FInstancedStruct InSpawnParams,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Request_SpawnEntity for world-bootstrap sites that re-create IDENTITY-BEARING content: the spawned
+    // entity carries (or acquires during construction) a SaveKey or adopt-label, so during a CkSnapshot load
+    // the loader ADOPTS it instead of respawning it — this variant passes the load-gate spawn suppression.
+    // Identical to Request_SpawnEntity when no load is active. Census/count-driven population spawns must
+    // never use it; they are the doubling class the suppression exists to stop.
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EntityScript",
+        DisplayName="[CK][EntityScript] Request SpawnEntity (Load Rendezvous)",
+        meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_PendingEntityScript
+    Request_SpawnEntity_LoadRendezvous(
+        UPARAM(ref) FCk_Handle& InLifetimeOwner,
+        TSubclassOf<UCk_EntityScript_UE> InEntityScriptClass,
+        FInstancedStruct InSpawnParams,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
     // Hidden in the editor through the DefaultCkFoundation.ini Config file (see: BlueprintEditor.Menu section)
     // Completion semantics: see Request_SpawnEntity.
     UFUNCTION(BlueprintCallable,

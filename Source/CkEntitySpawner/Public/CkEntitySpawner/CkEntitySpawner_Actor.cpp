@@ -434,6 +434,14 @@ auto
         TEXT("EntitySpawner [{}] could not resolve the TransientEntity for the current world."), this)
     { return; }
 
+    // A KEYED spawn is a rendezvous target — during a load the saved row waits to ADOPT this very entity, so
+    // it must pass the load-gate spawn suppression. An unkeyed spawn stays suppressible: its saved row is
+    // recipe-respawned by the loader, and admitting the world's copy would double it.
+    auto EcsWorld = static_cast<UCk_EcsWorld_Subsystem_UE*>(nullptr);
+    if (NOT SaveKeyIdentity.IsEmpty())
+    { EcsWorld = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>(); }
+    const auto RendezvousWindow = FCk_ScopedRendezvousSpawnWindow{EcsWorld};
+
     const auto PendingEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(TransientEntity, _EntityScript, FInstancedStruct{}, {});
     _RuntimeEntityHandle = PendingEntity.Get_EntityUnderConstruction();
     if (ck::Is_NOT_Valid(_RuntimeEntityHandle))
