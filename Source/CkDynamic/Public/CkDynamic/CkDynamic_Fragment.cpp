@@ -32,7 +32,7 @@ namespace ck_dynamic_fragment
     // carries only its DEFAULT. A whole-struct assign would stomp the rebuilt world's freshly
     // constructed value (e.g. a runtime child-entity handle written during construction replay)
     // with that default — copy field-wise and preserve the destination's Transient values instead.
-    static auto CopyFragment_PreservingTransientFields(const FInstancedStruct& InSource, FInstancedStruct& InDest) -> void
+    auto CopyFragment_PreservingTransientFields(const FInstancedStruct& InSource, FInstancedStruct& InDest) -> void
     {
         const auto* Type = InSource.GetScriptStruct();
 
@@ -156,7 +156,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                 // Commit every value before the first notification: a listener may destroy the entity, but it
                 // can no longer observe a half-hydrated set.
                 for (const auto& Resolved : ResolvedEntries)
-                { ck::dynamic::CopyFragment_PreservingTransientFields(*Resolved.Key, *Resolved.Value); }
+                { ck_dynamic_fragment::CopyFragment_PreservingTransientFields(*Resolved.Key, *Resolved.Value); }
 
                 for (const auto& Resolved : ResolvedEntries)
                 {
