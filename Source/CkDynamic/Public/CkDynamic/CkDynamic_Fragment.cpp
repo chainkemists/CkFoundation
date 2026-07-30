@@ -12,6 +12,7 @@
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // RegisterLazyTyped
 
 #include <NativeGameplayTags.h>
+#include <UObject/UnrealType.h> // TFieldIterator / FProperty (transient-preserving hydration copy)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -24,6 +25,37 @@ namespace ck_dynamic_fragment
     {
         return ck::IsValid(InType) &&
                InType->IsChildOf(FCk_DynamicFragment_SnapshotTransient::StaticStruct());
+    }
+
+    // A CPF_Transient field is a LIVE-SESSION value: the persistent save archive never wrote it
+    // (FProperty::ShouldSerializeValue) and the handle walker skips it, so the deserialized payload
+    // carries only its DEFAULT. A whole-struct assign would stomp the rebuilt world's freshly
+    // constructed value (e.g. a runtime child-entity handle written during construction replay)
+    // with that default — copy field-wise and preserve the destination's Transient values instead.
+    static auto CopyFragment_PreservingTransientFields(const FInstancedStruct& InSource, FInstancedStruct& InDest) -> void
+    {
+        const auto* Type = InSource.GetScriptStruct();
+
+        auto AnyTransient = false;
+        for (TFieldIterator<FProperty> It{Type}; It; ++It)
+        {
+            if (It->HasAnyPropertyFlags(CPF_Transient))
+            { AnyTransient = true; break; }
+        }
+
+        const auto DestTypeMatches = InDest.GetScriptStruct() == Type;
+        if (NOT AnyTransient || NOT DestTypeMatches)
+        {
+            InDest = InSource;
+            return;
+        }
+
+        for (TFieldIterator<FProperty> It{Type}; It; ++It)
+        {
+            if (It->HasAnyPropertyFlags(CPF_Transient))
+            { continue; }
+            It->CopyCompleteValue_InContainer(InDest.GetMutableMemory(), InSource.GetMemory());
+        }
     }
 }
 
@@ -124,7 +156,7 @@ static struct FCkDynamicFragmentsSaveHandlerRegistrar
                 // Commit every value before the first notification: a listener may destroy the entity, but it
                 // can no longer observe a half-hydrated set.
                 for (const auto& Resolved : ResolvedEntries)
-                { *Resolved.Value = *Resolved.Key; }
+                { ck::dynamic::CopyFragment_PreservingTransientFields(*Resolved.Key, *Resolved.Value); }
 
                 for (const auto& Resolved : ResolvedEntries)
                 {
