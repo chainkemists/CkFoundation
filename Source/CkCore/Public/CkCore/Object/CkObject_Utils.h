@@ -4,6 +4,7 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/ObjectPooling/CkObjectPooling_Params.h"
+#include "CkCore/Policy/CkPolicy.h"
 
 #include "GameplayTagContainer.h"
 
