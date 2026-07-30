@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkCore/Enums/CkEnums.h"
+#include "CkCore/Policy/CkPolicy.h"
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkCore/AngelScript/CkAngelscriptDebugger.h"
 #include "CkEcs/Handle/CkHandle_Debugging.h"
@@ -190,10 +191,16 @@ public:
     template <typename T_Fragment, typename... T_Args>
     auto AddOrReplace(T_Args&&... InArgs) -> T_Fragment&;
 
+    // The 2-parameter forms take EITHER policy — a ck::IsValid_Policy or a removal policy
+    // (ck::policy::ForceErase) — and default the other, so neither has to be spelled to reach
+    // the other. T_RemovalPolicy is honored for COUNTED tags only; see FCk_Registry::Remove.
     template <typename T_Fragment>
     auto Remove() -> void;
 
-    template <typename T_Fragment, typename T_ValidationPolicy>
+    template <typename T_Fragment, typename T_Policy>
+    auto Remove() -> void;
+
+    template <typename T_Fragment, typename T_ValidationPolicy, typename T_RemovalPolicy>
     auto Remove() -> void;
 
     template <typename T_Fragment, typename T_FragmentFunc>
@@ -202,7 +209,10 @@ public:
     template <typename T_Fragment>
     auto Try_Remove() -> bool;
 
-    template <typename T_Fragment, typename T_ValidationPolicy>
+    template <typename T_Fragment, typename T_Policy>
+    auto Try_Remove() -> bool;
+
+    template <typename T_Fragment, typename T_ValidationPolicy, typename T_RemovalPolicy>
     auto Try_Remove() -> bool;
 
     template <typename... T_Fragments>
@@ -747,15 +757,30 @@ auto
     Remove()
     -> void
 {
-    Remove<T_Fragment, ck::IsValid_Policy_Default>();
+    Remove<T_Fragment, ck::IsValid_Policy_Default, void>();
 }
 
-template <typename T_Fragment, typename T_ValidationPolicy>
+template <typename T_Fragment, typename T_Policy>
 auto
     FCk_Handle::
     Remove()
     -> void
 {
+    if constexpr (std::is_base_of_v<ck::IsValid_Policy, T_Policy>)
+    { Remove<T_Fragment, T_Policy, void>(); }
+    else
+    { Remove<T_Fragment, ck::IsValid_Policy_Default, T_Policy>(); }
+}
+
+template <typename T_Fragment, typename T_ValidationPolicy, typename T_RemovalPolicy>
+auto
+    FCk_Handle::
+    Remove()
+    -> void
+{
+    static_assert(std::is_base_of_v<ck::IsValid_Policy, T_ValidationPolicy>,
+        "T_ValidationPolicy must be a ck::IsValid_Policy");
+
     CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] {}."),
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
@@ -773,7 +798,7 @@ auto
         }())
     { return; }
 
-    Get_RegistryView().Remove<T_Fragment>(_Entity);
+    Get_RegistryView().Remove<T_Fragment, T_RemovalPolicy>(_Entity);
 
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {
@@ -825,15 +850,30 @@ auto
     Try_Remove()
     -> bool
 {
-    return Try_Remove<T_Fragment, ck::IsValid_Policy_Default>();
+    return Try_Remove<T_Fragment, ck::IsValid_Policy_Default, void>();
 }
 
-template <typename T_Fragment, typename T_ValidationPolicy>
+template <typename T_Fragment, typename T_Policy>
 auto
     FCk_Handle::
     Try_Remove()
     -> bool
 {
+    if constexpr (std::is_base_of_v<ck::IsValid_Policy, T_Policy>)
+    { return Try_Remove<T_Fragment, T_Policy, void>(); }
+    else
+    { return Try_Remove<T_Fragment, ck::IsValid_Policy_Default, T_Policy>(); }
+}
+
+template <typename T_Fragment, typename T_ValidationPolicy, typename T_RemovalPolicy>
+auto
+    FCk_Handle::
+    Try_Remove()
+    -> bool
+{
+    static_assert(std::is_base_of_v<ck::IsValid_Policy, T_ValidationPolicy>,
+        "T_ValidationPolicy must be a ck::IsValid_Policy");
+
     CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] {}."),
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
@@ -851,7 +891,7 @@ auto
         }())
     { return false; }
 
-    const auto Result = Get_RegistryView().Try_Remove<T_Fragment>(_Entity);
+    const auto Result = Get_RegistryView().Try_Remove<T_Fragment, T_RemovalPolicy>(_Entity);
 
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {

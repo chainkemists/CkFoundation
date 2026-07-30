@@ -3,6 +3,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Policy/CkPolicy.h"
 
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Registry/CkRegistry_Handle.h"
@@ -65,6 +66,15 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Count);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Only a counted tag has votes to erase, so ForceErase on anything else would silently mean
+    // nothing — reject it at compile time rather than let a call site believe it did something.
+    template <typename T_Fragment, typename T_RemovalPolicy>
+    inline constexpr auto RemovalPolicyIsValidFor_V =
+        std::is_same_v<T_RemovalPolicy, void> ||
+        (std::is_same_v<T_RemovalPolicy, policy::ForceErase> && std::is_base_of_v<FTag_CountedTag, T_Fragment>);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -209,10 +219,10 @@ private:
     template <typename T_FragmentType, typename... T_Args>
     auto AddOrReplace(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
-    template <typename T_Fragment>
+    template <typename T_Fragment, typename T_RemovalPolicy = void>
     auto Remove(EntityType InEntity) -> void;
 
-    template <typename T_Fragment>
+    template <typename T_Fragment, typename T_RemovalPolicy = void>
     auto Try_Remove(EntityType InEntity) -> bool;
 
     template <typename... T_Fragments>
@@ -505,16 +515,26 @@ auto
     ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::AddOrGet"));
 #endif
 
-    if (Has<T_FragmentType>(InEntity))
+    if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_FragmentType>)
     {
-        // AddOrGet callers mutate the fragment in place (appending to a request TArray), which never
-        // touches the registry — without this bump the pump short-circuit gates out a legitimately dirty
-        // processor and request-queueing stops propagating the same frame.
-        DoBumpDirtyMarkerVersion<T_FragmentType>();
-        return Get<T_FragmentType>(InEntity);
+        // Counted tag: every holder owes a later Remove, so AddOrGet on a present tag must
+        // STILL increment — the get-without-increment path below would hand back a vote the
+        // caller never cast, and that caller's eventual Remove would drop someone else's.
+        return Add<T_FragmentType>(InEntity, std::forward<T_Args>(InArgs)...);
     }
+    else
+    {
+        if (Has<T_FragmentType>(InEntity))
+        {
+            // AddOrGet callers mutate the fragment in place (appending to a request TArray), which never
+            // touches the registry — without this bump the pump short-circuit gates out a legitimately dirty
+            // processor and request-queueing stops propagating the same frame.
+            DoBumpDirtyMarkerVersion<T_FragmentType>();
+            return Get<T_FragmentType>(InEntity);
+        }
 
-    return Add<T_FragmentType>(InEntity, std::forward<T_Args>(InArgs)...);
+        return Add<T_FragmentType>(InEntity, std::forward<T_Args>(InArgs)...);
+    }
 }
 
 template <typename T_FragmentType, typename T_Func>
@@ -592,13 +612,17 @@ auto
     return Add<T_FragmentType>(InEntity, std::forward<T_Args>(InArgs)...);
 }
 
-template <typename T_Fragment>
+template <typename T_Fragment, typename T_RemovalPolicy>
 auto
     FCk_Registry::
     Remove(
         EntityType InEntity)
     -> void
 {
+    static_assert(ck::RemovalPolicyIsValidFor_V<T_Fragment, T_RemovalPolicy>,
+        "T_RemovalPolicy must be void (the default), or ck::policy::ForceErase on a COUNTED tag "
+        "(CK_DEFINE_ECS_TAG_COUNTED)");
+
 #if !UE_BUILD_SHIPPING
     ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Remove"));
 #endif
@@ -611,7 +635,10 @@ auto
         ck::TypeToString<T_Fragment>, InEntity)
     { return; }
 
-    if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
+    // ForceErase skips the decrement to discard every holder's vote at once — a RESET (perception
+    // losing every feeder), as opposed to one feeder retracting its own sighting.
+    if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment> &&
+                  std::is_same_v<T_RemovalPolicy, void>)
     {
         auto& Fragment = Get<T_Fragment>(InEntity);
         --Fragment._Count;
@@ -626,13 +653,17 @@ auto
     DoBumpDirtyMarkerVersion<T_Fragment>();
 }
 
-template <typename T_Fragment>
+template <typename T_Fragment, typename T_RemovalPolicy>
 auto
     FCk_Registry::
     Try_Remove(
         EntityType InEntity)
     -> bool
 {
+    static_assert(ck::RemovalPolicyIsValidFor_V<T_Fragment, T_RemovalPolicy>,
+        "T_RemovalPolicy must be void (the default), or ck::policy::ForceErase on a COUNTED tag "
+        "(CK_DEFINE_ECS_TAG_COUNTED)");
+
 #if !UE_BUILD_SHIPPING
     ck::registry_table::AssertNotInParallelRegion(_RegistryHandle, TEXT("Registry::Try_Remove"));
 #endif
@@ -640,12 +671,27 @@ auto
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to TryRemove Fragment/Tag."), InEntity)
     { return false; }
 
-    const auto RemovedAny = Resolve()->remove<T_Fragment>(InEntity.Get_ID()) > 0;
-    if (RemovedAny)
+    if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment> &&
+                  std::is_same_v<T_RemovalPolicy, void>)
     {
-        DoBumpDirtyMarkerVersion<T_Fragment>();
+        // Try-decrement: drop ONE vote, erase only at zero (Remove owns that logic). An
+        // unconditional pool erase here would take every other holder's vote with it —
+        // that is what ck::policy::ForceErase asks for, and it uses the branch below.
+        if (NOT Has<T_Fragment>(InEntity))
+        { return false; }
+
+        Remove<T_Fragment>(InEntity);
+        return true;
     }
-    return RemovedAny;
+    else
+    {
+        const auto RemovedAny = Resolve()->remove<T_Fragment>(InEntity.Get_ID()) > 0;
+        if (RemovedAny)
+        {
+            DoBumpDirtyMarkerVersion<T_Fragment>();
+        }
+        return RemovedAny;
+    }
 }
 
 template <typename ... T_Fragments>
