@@ -30,6 +30,7 @@
 
 #include "CkLabel/CkLabel_Utils.h"                            // ConstructSpawned adopt/reconcile by label
 
+#include "HAL/IConsoleManager.h"    // Ck.Snapshot.DumpSlot census command
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ScopeExit.h"
 #include "Serialization/BufferArchive.h"
@@ -645,6 +646,12 @@ auto
     DoRehydrate_SaveKeyResolver();
 
     auto AnyUnresolved = false;
+
+    // The loader's own spawn window: recipe replays and definition rebuilds issued by this rebuild tick ARE
+    // the world reconstitution and pass the load-gate spawn suppression. The window spans the kernel pump too
+    // (the kernel scope carries no world-policy processors); the escalated full-scope passes run on the world
+    // actor's own Tick, OUTSIDE this window — there, only construction cascades are admitted.
+    const auto LoaderSpawnWindow = FCk_ScopedLoaderSpawnWindow{EcsWorld};
 
     for (const auto& Entry : _V3Tables.Get_Entities())
     {
@@ -1472,7 +1479,7 @@ auto
                 _RebuildStallTicks = 0;
                 _LoadFrameCount = 0;
                 _V3LoadReport.Set_UsedEscalatedRebuild(true);
-                ck::snapshot::Display(TEXT("DIAG: rebuild kernel quiesced with [{}]/[{}] mapped — escalating to full-scope ticks"),
+                ck::snapshot::Display(TEXT("DIAG: rebuild kernel quiesced with [{}]/[{}] mapped — escalating to zero-time full-scope ticks"),
                     _SavedIdMap.Num(), _V3Tables.Get_Entities().Num());
                 return true;
             }
@@ -1666,6 +1673,106 @@ auto
     -> void
 {
     _SaveKeyResolverMap.Remove(InKey);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Offline slot census: what a save CONTAINS, without loading it. The duplicate (owner, label) adopt-key report is
+// the signature of double-population — two live copies of one logical child captured under the same key, which the
+// loader can then only bind positionally and the reconcile can never subtract (the label IS present in the save).
+
+namespace ck_snapshot_subsystem
+{
+    static FAutoConsoleCommandWithWorldAndArgs GCmd_Snapshot_DumpSlot(
+        TEXT("Ck.Snapshot.DumpSlot"),
+        TEXT("Census a save slot without loading it: provenance totals, per-identity row counts, duplicate (owner,label) adopt-key groups. Usage: Ck.Snapshot.DumpSlot <SlotName>"),
+        FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* /*InWorld*/) -> void
+        {
+            if (InArgs.IsEmpty())
+            {
+                ck::snapshot::Error(TEXT("Ck.Snapshot.DumpSlot: usage: Ck.Snapshot.DumpSlot <SlotName>"));
+                return;
+            }
+
+            const auto& SlotName = InArgs[0];
+            auto* SaveGame = Cast<UCk_Snapshot_SaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, UserIndex));
+            if (ck::Is_NOT_Valid(SaveGame))
+            {
+                ck::snapshot::Error(TEXT("Ck.Snapshot.DumpSlot: no/invalid save in slot [{}]"), SlotName);
+                return;
+            }
+
+            auto Tables = FCk_Snapshot_V3_Tables{};
+            auto Reader = FMemoryReader{SaveGame->_SnapshotBytesV3, /*bIsPersistent=*/true};
+            FCk_Snapshot_V3_Tables::StaticStruct()->SerializeItem(Reader, &Tables, /*Defaults=*/nullptr);
+            if (Reader.IsError())
+            {
+                ck::snapshot::Error(TEXT("Ck.Snapshot.DumpSlot: v3 stream in slot [{}] is corrupt (deserialize failed)"), SlotName);
+                return;
+            }
+
+            auto EngineOwned = 0, ConstructSpawned = 0, RuntimeSpawned = 0, DefinitionBuilt = 0;
+            auto IdentityCounts = TMap<FString, int32>{};
+            auto AdoptKeyCounts = TMap<FString, int32>{};
+
+            for (const auto& Entry : Tables.Get_Entities())
+            {
+                switch (Entry.Get_Provenance())
+                {
+                    case ECk_Snapshot_V3_Provenance::EngineOwned:      ++EngineOwned; break;
+                    case ECk_Snapshot_V3_Provenance::ConstructSpawned: ++ConstructSpawned; break;
+                    case ECk_Snapshot_V3_Provenance::RuntimeSpawned:   ++RuntimeSpawned; break;
+                    case ECk_Snapshot_V3_Provenance::DefinitionBuilt:  ++DefinitionBuilt; break;
+                }
+
+                ++IdentityCounts.FindOrAdd(ck::Format_UE(TEXT("[{}] {}"),
+                    DoProvenance_ToString(Entry.Get_Provenance()), DoIdentity_ForEntry(Entry)));
+
+                if (Entry.Get_Provenance() == ECk_Snapshot_V3_Provenance::ConstructSpawned)
+                {
+                    ++AdoptKeyCounts.FindOrAdd(ck::Format_UE(TEXT("owner [{}] label [{}]"),
+                        Entry.Get_LifetimeOwnerSavedId(), Entry.Get_Label()));
+                }
+            }
+
+            ck::snapshot::Display(TEXT("DumpSlot [{}]: entities [{}] = EngineOwned [{}] + ConstructSpawned [{}] + "
+                "RuntimeSpawned [{}] + DefinitionBuilt [{}] | payloads [{}]"),
+                SlotName, Tables.Get_Entities().Num(), EngineOwned, ConstructSpawned, RuntimeSpawned, DefinitionBuilt,
+                Tables.Get_Payloads().Num());
+
+            auto SortedIdentities = IdentityCounts.Array();
+            SortedIdentities.Sort([](const auto& InA, const auto& InB) { return InA.Value > InB.Value; });
+
+            constexpr auto MaxIdentityLines = 60;
+            auto PrintedIdentities = 0;
+            auto SingletonIdentities = 0;
+            for (const auto& Kvp : SortedIdentities)
+            {
+                if (Kvp.Value < 2)
+                { ++SingletonIdentities; continue; }
+                if (PrintedIdentities < MaxIdentityLines)
+                {
+                    ck::snapshot::Display(TEXT("DumpSlot census: x{}  {}"), Kvp.Value, Kvp.Key);
+                    ++PrintedIdentities;
+                }
+            }
+            if (PrintedIdentities == MaxIdentityLines)
+            { ck::snapshot::Display(TEXT("DumpSlot census: ... (list capped at [{}] lines)"), MaxIdentityLines); }
+            ck::snapshot::Display(TEXT("DumpSlot census: plus [{}] singleton identities (count 1)"), SingletonIdentities);
+
+            auto DuplicateKeys = AdoptKeyCounts.Array();
+            DuplicateKeys.RemoveAll([](const auto& InKvp) { return InKvp.Value < 2; });
+            DuplicateKeys.Sort([](const auto& InA, const auto& InB) { return InA.Value > InB.Value; });
+
+            ck::snapshot::Display(TEXT("DumpSlot adopt-keys: [{}] duplicate (owner, label) groups"), DuplicateKeys.Num());
+            constexpr auto MaxDuplicateLines = 40;
+            for (auto Index = 0; Index < DuplicateKeys.Num() && Index < MaxDuplicateLines; ++Index)
+            {
+                ck::snapshot::Display(TEXT("DumpSlot adopt-keys: x{}  {}"),
+                    DuplicateKeys[Index].Value, DuplicateKeys[Index].Key);
+            }
+            if (DuplicateKeys.Num() > MaxDuplicateLines)
+            { ck::snapshot::Display(TEXT("DumpSlot adopt-keys: ... (list capped at [{}] lines)"), MaxDuplicateLines); }
+        }));
 }
 
 // --------------------------------------------------------------------------------------------------------------------

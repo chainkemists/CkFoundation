@@ -13,6 +13,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Snapshot/CkSaveKey_Fragment.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -54,9 +55,18 @@ namespace ck
 
         auto Pending = GroupSubsystem->Request_AcquireChannel();
         UCk_Utils_PendingActorRelay_UE::Promise_OnAcquired(Pending,
-            [EntityScript, SaveKeyIdentity](FCk_ActorRelay_ChannelResult InResult)
+            [EntityScript, SaveKeyIdentity, WeakWorld = MakeWeakObjectPtr(World)](FCk_ActorRelay_ChannelResult InResult)
             {
                 auto LifetimeOwner = InResult.Get_ChannelEntity();
+
+                // A KEYED spawn is a rendezvous target — during a load the saved row waits to ADOPT this very
+                // entity, so it must pass the load-gate spawn suppression. An unkeyed spawn stays suppressible:
+                // its saved row is recipe-respawned by the loader, and admitting the world's copy would double it.
+                auto EcsWorld = static_cast<UCk_EcsWorld_Subsystem_UE*>(nullptr);
+                if (NOT SaveKeyIdentity.IsEmpty() && WeakWorld.IsValid())
+                { EcsWorld = WeakWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>(); }
+                const auto RendezvousWindow = FCk_ScopedRendezvousSpawnWindow{EcsWorld};
+
                 auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity_Archetype(
                     LifetimeOwner, EntityScript, FInstancedStruct{}, {});
 

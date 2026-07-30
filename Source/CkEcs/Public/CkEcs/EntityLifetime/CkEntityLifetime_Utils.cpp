@@ -205,6 +205,20 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
+    Get_IsInsideConstructionWindow(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
+    return (InHandle.Has<ck::FFragment_EntityScript_Current>() &&
+            NOT InHandle.Has<ck::FTag_EntityScript_HasBegunPlay>()) ||
+           InHandle.Has<ck::FTag_DefinitionBuild_InProgress>();
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
     Get_WorldForEntity(
         const FCk_Handle& InHandle)
     -> UWorld*
@@ -460,11 +474,7 @@ auto
     // Provenance stamp: a child born inside the owner's construction window is part of the owner's deterministic
     // build and is re-created by the owner's replayed construction on load, so the save adopts it by identity
     // rather than respawning a recipe. No stamp → RuntimeSpawned by default. See ck::FTag_ConstructSpawned.
-    const auto OwnerInConstructionWindow =
-        (InLifetimeOwner.Has<ck::FFragment_EntityScript_Current>() &&
-         NOT InLifetimeOwner.Has<ck::FTag_EntityScript_HasBegunPlay>()) ||
-        InLifetimeOwner.Has<ck::FTag_DefinitionBuild_InProgress>();
-    if (OwnerInConstructionWindow)
+    if (Get_IsInsideConstructionWindow(InLifetimeOwner))
     { InNewEntity.Add<ck::FTag_ConstructSpawned>(); }
 
     if (UCk_Utils_ContextOwner_UE::Has(InLifetimeOwner))

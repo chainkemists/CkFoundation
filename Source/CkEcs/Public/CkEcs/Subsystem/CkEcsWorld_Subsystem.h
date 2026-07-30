@@ -150,12 +150,29 @@ public:
     auto Set_IsLoadGateActive(bool InActive) -> void;
 
     // Escalated rebuild: the load gate stays owned by the orchestrator, but the world ticks the FULL
-    // processor scope. The loader escalates when the kernel quiesces with saved rows still unresolved —
-    // a multi-stage construction (EntityScript `Continue` fulfilled by a game processor) can only finish
-    // under the full graph, and the identity it late-stamps (a GameplayLabel adopt key, a SaveKey) is the
-    // very thing the rebuild is waiting on. Cleared automatically when the gate deactivates.
+    // processor scope AT ZERO TIME. The loader escalates when the kernel quiesces with saved rows still
+    // unresolved — a multi-stage construction (EntityScript `Continue` fulfilled by a game processor) can
+    // only finish under the full graph, and the identity it late-stamps (a GameplayLabel adopt key, a
+    // SaveKey) is the very thing the rebuild is waiting on. Zero time keeps time-paced world policy from
+    // observing the half-rebuilt world. Cleared automatically when the gate deactivates.
     auto Get_IsLoadGateEscalated() const -> bool;
     auto Set_IsLoadGateEscalated(bool InEscalated) -> void;
+
+    // While the load gate is active, the loader is the sole creator of world population: only spawns issued
+    // inside its own window (recipe replays, definition rebuilds) or by an owner still inside its construction
+    // window are admitted — everything else is world policy reacting to the half-rebuilt world and is
+    // suppressed (see Request_SpawnEntity). Scope-managed via FCk_ScopedLoaderSpawnWindow; never set directly.
+    auto Get_IsInLoaderSpawnWindow() const -> bool;
+    auto Push_LoaderSpawnWindow() -> void;
+    auto Pop_LoaderSpawnWindow() -> void;
+
+    // Declared load admission for RENDEZVOUS spawns: world bootstrap re-creating identity-bearing content
+    // the loader ADOPTS instead of respawning (level-placed spawner entities with SaveKeys, keyed world
+    // singletons). Suppressing these starves the rebuild — their saved rows wait on a rendezvous that never
+    // comes. Scope-managed via FCk_ScopedRendezvousSpawnWindow; never set directly.
+    auto Get_IsInRendezvousSpawnWindow() const -> bool;
+    auto Push_RendezvousSpawnWindow() -> void;
+    auto Pop_RendezvousSpawnWindow() -> void;
 
 private:
     auto DoBuildGraphAndSpawnActors(
@@ -178,6 +195,8 @@ private:
 
     bool _IsLoadGateActive = false;
     bool _IsLoadGateEscalated = false;
+    int32 _LoaderSpawnWindowDepth = 0;
+    int32 _RendezvousSpawnWindowDepth = 0;
 
 private:
     // _Registry below is a non-owning (slot+gen) view bound to this owned registry.
@@ -189,6 +208,65 @@ public:
     CK_PROPERTY_GET(_WorldActors);
     CK_PROPERTY_GET(_Registry);
     CK_PROPERTY_GET_NON_CONST(_Registry);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// RAII loader-spawn window: spawns issued inside this scope are the LOADER's own world reconstitution (recipe
+// replays, definition rebuilds) and pass the load-gate spawn suppression. The snapshot load orchestrator owns
+// the only legitimate call sites — game code must never open one.
+struct CKECS_API FCk_ScopedLoaderSpawnWindow
+{
+    explicit FCk_ScopedLoaderSpawnWindow(UCk_EcsWorld_Subsystem_UE* InSubsystem)
+        : _Subsystem(InSubsystem)
+    {
+        if (_Subsystem.IsValid())
+        { _Subsystem->Push_LoaderSpawnWindow(); }
+    }
+
+    ~FCk_ScopedLoaderSpawnWindow()
+    {
+        if (_Subsystem.IsValid())
+        { _Subsystem->Pop_LoaderSpawnWindow(); }
+    }
+
+    FCk_ScopedLoaderSpawnWindow(const FCk_ScopedLoaderSpawnWindow&) = delete;
+    FCk_ScopedLoaderSpawnWindow& operator=(const FCk_ScopedLoaderSpawnWindow&) = delete;
+    FCk_ScopedLoaderSpawnWindow(FCk_ScopedLoaderSpawnWindow&&) = delete;
+    FCk_ScopedLoaderSpawnWindow& operator=(FCk_ScopedLoaderSpawnWindow&&) = delete;
+
+private:
+    TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _Subsystem;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// RAII declared-admission window for RENDEZVOUS spawns during a load: the caller asserts the spawned entity
+// carries (or acquires during construction) a stable identity — a SaveKey or an (owner, label) adopt key —
+// so the loader ADOPTS it rather than respawning it, and admitting it mid-load cannot double the world.
+// Census/count-driven population spawns must NEVER open this window; they stay suppressed by design.
+struct CKECS_API FCk_ScopedRendezvousSpawnWindow
+{
+    explicit FCk_ScopedRendezvousSpawnWindow(UCk_EcsWorld_Subsystem_UE* InSubsystem)
+        : _Subsystem(InSubsystem)
+    {
+        if (_Subsystem.IsValid())
+        { _Subsystem->Push_RendezvousSpawnWindow(); }
+    }
+
+    ~FCk_ScopedRendezvousSpawnWindow()
+    {
+        if (_Subsystem.IsValid())
+        { _Subsystem->Pop_RendezvousSpawnWindow(); }
+    }
+
+    FCk_ScopedRendezvousSpawnWindow(const FCk_ScopedRendezvousSpawnWindow&) = delete;
+    FCk_ScopedRendezvousSpawnWindow& operator=(const FCk_ScopedRendezvousSpawnWindow&) = delete;
+    FCk_ScopedRendezvousSpawnWindow(FCk_ScopedRendezvousSpawnWindow&&) = delete;
+    FCk_ScopedRendezvousSpawnWindow& operator=(FCk_ScopedRendezvousSpawnWindow&&) = delete;
+
+private:
+    TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _Subsystem;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
