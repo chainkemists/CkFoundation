@@ -4,6 +4,8 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkSnapshot/Subsystem/CkSnapshot_Signals.h" // FCk_Delegate_Snapshot_OnLoadComplete
+
 #include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "CkSnapshot_Utils.generated.h"
@@ -56,6 +58,21 @@ public:
     static bool
     Get_IsLoadInProgress(
         const FCk_Handle& InHandle);
+
+    // Runs the delegate once the world is COHERENT: immediately when no load is in progress, else one-shot on
+    // this load's OnLoadComplete (post-settle — hydrated values are readable). The consumer-side twin of the
+    // load gate: feature processors are frozen during a load, but signal/promise CALLBACKS are not — a callback
+    // delivered mid-load that reads world population (occupancy rosters, tag scans, counts) must route that
+    // read through this instead of acting on the half-rebuilt world. The immediate path passes a
+    // default-constructed report (there was no load to report on).
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Snapshot",
+              DisplayName = "[Ck][Snapshot] Promise On Load Complete",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static void
+    Promise_OnLoadComplete(
+        const FCk_Handle& InAnyWorldHandle,
+        const FCk_Delegate_Snapshot_OnLoadComplete& InDelegate);
 
     /**
      * Give the entity a stable save identity, derived deterministically from InStableIdentity.
