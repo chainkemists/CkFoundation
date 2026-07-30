@@ -19,12 +19,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKUI_API FCk_Handle_WorldSpaceWidget : public FCk_Handle_TypeSafe
-{
-    GENERATED_BODY()
-    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidget);
-};
-
+struct CKUI_API FCk_Handle_WorldSpaceWidget : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidget); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_WorldSpaceWidget);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -110,7 +105,7 @@ private:
     TObjectPtr<UMaterialInterface> _OverrideMaterial;
 
 public:
-    CK_PROPERTY(_DrawSize);
+    CK_PROPERTY_GET(_DrawSize);
     CK_PROPERTY(_DrawAtDesiredSize);
     CK_PROPERTY(_Pivot);
     CK_PROPERTY(_BlendMode);
@@ -275,6 +270,30 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_AspectScaling_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// What unit ScreenSpaceOffset is authored in.
+//
+// ViewportPixels is the historical meaning and remains the DEFAULT: the offset is applied as raw
+// viewport pixels, i.e. a fixed pixel distance at every resolution. That is almost always the
+// wrong look — the widget it displaces is laid out in DESIGN space and so grows with the DPI
+// curve, meaning the further the viewport is from the resolution the offset was tuned at, the
+// further the widget drifts off its anchor. It stays the default anyway, because every existing
+// caller's numbers were tuned against it and re-interpreting the field would silently move all
+// of them.
+//
+// DesignSpace authors the offset in the SAME units as the widget's own size (the space
+// DesignScreenSize / UIScaleCurve define), so the offset and the widget scale together and the
+// composition holds at every resolution. Prefer it for new callers.
+UENUM(BlueprintType)
+enum class ECk_WorldSpaceWidget_ScreenOffset_Space : uint8
+{
+    ViewportPixels,
+    DesignSpace
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WorldSpaceWidget_ScreenOffset_Space);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UENUM(BlueprintType)
 enum class ECk_WorldSpaceWidget_OffsetDistanceScaling_Policy : uint8
 {
@@ -328,10 +347,10 @@ private:
     float _DistanceFalloff_EndDistance = 5000.0f;
 
 public:
-    CK_PROPERTY_GET(_AspectScalingPolicy);
+    CK_PROPERTY(_AspectScalingPolicy);
     CK_PROPERTY(_AspectRatio_MinScale);
     CK_PROPERTY(_AspectRatio_MaxScale);
-    CK_PROPERTY_GET(_DistanceScalingPolicy);
+    CK_PROPERTY(_DistanceScalingPolicy);
     CK_PROPERTY(_DistanceScale_Max);
     CK_PROPERTY(_DistanceScale_Min);
     CK_PROPERTY(_DistanceFalloff_StartDistance);
@@ -363,15 +382,20 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
+    ECk_WorldSpaceWidget_ScreenOffset_Space _ScreenSpaceOffset_Space = ECk_WorldSpaceWidget_ScreenOffset_Space::ViewportPixels;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
     FCk_WorldSpaceWidget_ScreenOffsetScalingInfo _ScreenOffsetScaling;
 
 public:
     CK_PROPERTY_GET(_WorldSpaceOffset);
     CK_PROPERTY_GET(_ScreenSpaceOffset);
-    CK_PROPERTY_GET(_ClampingPolicy);
-    CK_PROPERTY_GET(_ScreenOffsetScaling);
+    CK_PROPERTY(_ClampingPolicy);
+    CK_PROPERTY(_ScreenSpaceOffset_Space);
+    CK_PROPERTY(_ScreenOffsetScaling);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_LocationInfo, _WorldSpaceOffset, _ScreenSpaceOffset, _ClampingPolicy);
+    CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_LocationInfo, _WorldSpaceOffset, _ScreenSpaceOffset);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
