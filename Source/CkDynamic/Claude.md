@@ -61,9 +61,10 @@ comment-light; the *why* lives here.
   so a bound `OnRepNotify` handler re-runs against the restored value.
 - The re-arm payload **carries no per-type replication flag**, so a fragment the rebuild did not
   re-register as replicated stays local-only.
-- Snapshot-transient dynamic structs derive from `FCk_DynamicFragment_SnapshotTransient`; capture and
-  hydration identify them through runtime `IsChildOf`. Do not use USTRUCT metadata for this contract:
-  Game and cooked targets strip metadata behind `WITH_METADATA`.
+- Snapshot-transient dynamic structs derive from `FCk_DynamicFragment_SnapshotTransient` (C++) or
+  carry a field of that type (AngelScript — script structs cannot inherit); capture and hydration
+  identify them through runtime `IsChildOf` / marker-typed-property scan. Do not use USTRUCT
+  metadata for this contract: Game and cooked targets strip metadata behind `WITH_METADATA`.
 
 ### Script-processor host (`CkDynamic_ScriptProcessor_Host.*`)
 

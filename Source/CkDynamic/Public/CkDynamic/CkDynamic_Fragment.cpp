@@ -23,8 +23,7 @@ namespace ck_dynamic_fragment
 {
     auto IsSnapshotTransient(const UScriptStruct* InType) -> bool
     {
-        return ck::IsValid(InType) &&
-               InType->IsChildOf(FCk_DynamicFragment_SnapshotTransient::StaticStruct());
+        return UCk_Utils_DynamicFragment_UE::Get_IsSnapshotTransient(InType);
     }
 
     // A CPF_Transient field is a LIVE-SESSION value: the persistent save archive never wrote it
