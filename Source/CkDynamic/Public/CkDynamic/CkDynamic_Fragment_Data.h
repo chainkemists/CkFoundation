@@ -23,8 +23,11 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DestroyFilter);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Snapshot-transient dynamic fragments derive from this marker because USTRUCT metadata is unavailable in Game builds.
-USTRUCT()
+// Snapshot-transient dynamic fragments derive from this marker (C++), or carry a field of this type
+// (AngelScript — script structs cannot inherit), because USTRUCT metadata is unavailable in Game builds.
+// BlueprintType is load-bearing: the AngelScript binder only auto-binds BlueprintType structs, and the
+// script-side marker-field spelling needs the type visible in AS.
+USTRUCT(BlueprintType)
 struct CKDYNAMIC_API FCk_DynamicFragment_SnapshotTransient
 {
     GENERATED_BODY()

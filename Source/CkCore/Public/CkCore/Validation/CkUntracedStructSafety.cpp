@@ -27,8 +27,12 @@ namespace ck_untraced_struct_safety
         // Native structs certified to retain no untraced UObject reference, matched by reflected path (same
         // link-avoidance rationale as IsAngelScriptStruct). FCk_Entity is provably GC-independent yet has zero
         // reflected fields in a cooked build, so the field-less-struct heuristic below would otherwise reject
-        // every dynamic fragment / spawn-param embedding an FCk_Handle.
-        static const auto ApprovedPaths = TSet<FString>{TEXT("/Script/CkEcs.Ck_Entity")};
+        // every dynamic fragment / spawn-param embedding an FCk_Handle. FCk_DynamicFragment_SnapshotTransient
+        // is an empty-by-design marker AngelScript fragments carry as a field (script structs cannot inherit
+        // it) — without approval the marker would fail every fragment that declares snapshot-transience.
+        static const auto ApprovedPaths = TSet<FString>{
+            TEXT("/Script/CkEcs.Ck_Entity"),
+            TEXT("/Script/CkDynamic.Ck_DynamicFragment_SnapshotTransient")};
         return InStruct != nullptr && ApprovedPaths.Contains(InStruct->GetPathName());
     }
 
