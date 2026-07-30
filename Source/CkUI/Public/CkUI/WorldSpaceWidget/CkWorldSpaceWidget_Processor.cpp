@@ -2,6 +2,8 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "Blueprint/WidgetLayoutLibrary.h"
+
 #include "Components/CanvasPanelSlot.h"
 
 #include "CollisionQueryParams.h"
@@ -154,6 +156,16 @@ namespace ck
             }
         }
 
+        // ScreenSpaceOffset (and the wrapper's own DesiredSize) are authored in DESIGN space —
+        // the space the widget's size and fonts live in — while ProjectWorldToScreen yields raw
+        // viewport pixels. SetPositionInViewport then divides the whole position back out by the
+        // DPI scale, so an un-scaled offset survives as a constant PIXEL count while the widget it
+        // displaces scales with DPI. The further the viewport is from DesignScreenSize, the further
+        // the widget drifts off its anchor (windowed vs fullscreen). GetViewportScale on the wrapper
+        // is the exact call SetPositionInViewport's divide makes, so the two cancel precisely.
+        const auto DpiScale = UWidgetLayoutLibrary::GetViewportScale(WrapperWidget);
+        AppliedScreenOffset *= DpiScale;
+
         auto ScreenPosition = ProjectedScreenPosition + AppliedScreenOffset;
 
         const auto ClampingPolicy = LocationInfo.Get_ClampingPolicy();
@@ -162,7 +174,8 @@ namespace ck
         auto ViewportRect = FVector4(0.0, 0.0, ViewportSize.X, ViewportSize.Y);
         if (ClampingPolicy == ECk_WorldSpaceWidget_Clamping_Policy::ClampToViewport_ByBounds)
         {
-            if (const auto DesiredSize = WrapperWidget->GetDesiredSize();
+            // DesiredSize is design-space; ViewportRect is pixels — see the DPI note above.
+            if (const auto DesiredSize = WrapperWidget->GetDesiredSize() * DpiScale;
                 DesiredSize.SizeSquared() > KINDA_SMALL_NUMBER)
             {
                 ViewportRect += FVector4(DesiredSize.X, DesiredSize.Y, -DesiredSize.X, -DesiredSize.Y);
