@@ -156,15 +156,20 @@ namespace ck
             }
         }
 
-        // ScreenSpaceOffset (and the wrapper's own DesiredSize) are authored in DESIGN space —
-        // the space the widget's size and fonts live in — while ProjectWorldToScreen yields raw
-        // viewport pixels. SetPositionInViewport then divides the whole position back out by the
-        // DPI scale, so an un-scaled offset survives as a constant PIXEL count while the widget it
-        // displaces scales with DPI. The further the viewport is from DesignScreenSize, the further
-        // the widget drifts off its anchor (windowed vs fullscreen). GetViewportScale on the wrapper
-        // is the exact call SetPositionInViewport's divide makes, so the two cancel precisely.
-        const auto DpiScale = UWidgetLayoutLibrary::GetViewportScale(WrapperWidget);
-        AppliedScreenOffset *= DpiScale;
+        // ProjectWorldToScreen yields raw viewport pixels, and SetPositionInViewport below divides
+        // the whole position back out by the DPI scale — so whatever we add here lands on screen as
+        // that same pixel count, DPI-invariant. A DesignSpace offset therefore has to be converted
+        // INTO pixels first, using the exact call SetPositionInViewport's divide makes so the two
+        // cancel to the authored value with no residue.
+        //
+        // Guarded on > 0: GetViewportScale returns 0 with no viewport/world, and an unguarded
+        // multiply would silently collapse the offset to zero rather than leaving it alone.
+        if (LocationInfo.Get_ScreenSpaceOffset_Space() == ECk_WorldSpaceWidget_ScreenOffset_Space::DesignSpace)
+        {
+            if (const auto DpiScale = UWidgetLayoutLibrary::GetViewportScale(WrapperWidget);
+                DpiScale > 0.0f)
+            { AppliedScreenOffset *= DpiScale; }
+        }
 
         auto ScreenPosition = ProjectedScreenPosition + AppliedScreenOffset;
 
@@ -174,8 +179,7 @@ namespace ck
         auto ViewportRect = FVector4(0.0, 0.0, ViewportSize.X, ViewportSize.Y);
         if (ClampingPolicy == ECk_WorldSpaceWidget_Clamping_Policy::ClampToViewport_ByBounds)
         {
-            // DesiredSize is design-space; ViewportRect is pixels — see the DPI note above.
-            if (const auto DesiredSize = WrapperWidget->GetDesiredSize() * DpiScale;
+            if (const auto DesiredSize = WrapperWidget->GetDesiredSize();
                 DesiredSize.SizeSquared() > KINDA_SMALL_NUMBER)
             {
                 ViewportRect += FVector4(DesiredSize.X, DesiredSize.Y, -DesiredSize.X, -DesiredSize.Y);
