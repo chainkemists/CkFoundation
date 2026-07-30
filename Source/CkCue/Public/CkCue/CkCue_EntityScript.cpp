@@ -7,6 +7,7 @@
 #include "CkCue/CkCue_Log.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // FTag_Snapshot_SaveTransient
 #include "CkTimer/CkTimer_Utils.h"
 
 #include <NativeGameplayTags.h>
@@ -86,6 +87,13 @@ auto
 
     // TODO: This should be done through the Utils_Cue::Add(...) function
     UCk_Utils_GameplayLabel_UE::Add(InHandle, Get_CueName());
+
+    // Cues are cosmetic reactions to gameplay events — DERIVED state. Capturing one as a respawnable
+    // recipe replays a stale one-shot on load (the recipe carries the FIRST fire's params; RestartExisting
+    // only ever updates the live UObject), which restores at most one wrong visual and can actively corrupt
+    // (a replayed retire cue killing a fresh proxy). Features restore visuals from their hydrated durable
+    // state, never from cue replay.
+    InHandle.Add<ck::FTag_Snapshot_SaveTransient>();
 
     auto CueOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
     ck::ActiveCues_Utils::AddIfMissing(CueOwner);
