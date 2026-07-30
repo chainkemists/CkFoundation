@@ -42,6 +42,7 @@ Scan the left column. Each row points at the folder that owns the utility and (w
 | Build-time feature flags (`CK_DISABLE_ENSURE_CHECKS`, `CKCORE_API` style) | `Build` | `CkBuild_Macros.h` | guards around ensure/debug |
 | C++20 concepts used across CkFoundation | `Concepts` | `CkConcepts.h` | constraints for templates |
 | `type_traits::AsArray`, `AsString`, `ExtractValueType`, `Const/NonConst` | `TypeTraits` | `CkTypeTraits.h` | `ck::type_traits::ExtractValueType<T>::type` |
+| Behavior-selecting policy tags (`All`/`Any`, `TransientPackage`, `ReturnOptional`, `DontResetContainer`, `ForceErase`, `TMutability`) | `Policy` | `CkPolicy.h` | `ck::policy::DontResetContainer{}` |
 | Variadic tuple payload for signal / delegate arguments | `Payload` | `CkPayload.h` | `ck::MakePayload(Arg1, Arg2)` |
 | Step-pipeline return type (`Continue`/`Abort`) | `Technique` | `CkTechnique.h` | `ck::EStepResult::Continue` |
 | Inline `std::visit` overload helper, `ToTransform`, dereference helper | `Algorithms` | `CkAlgorithms.h` | `ck::algo::Overload{[](A){}, [](B){}}` |
