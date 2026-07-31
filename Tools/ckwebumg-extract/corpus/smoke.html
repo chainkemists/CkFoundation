@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>smoke</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body { width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif; }
+  .hud {
+    display: flex; flex-direction: column; gap: 16px;
+    padding: 24px; width: 480px; height: 320px;
+    background-color: rgba(20, 24, 30, 0.9);
+    border: 1px solid rgb(80, 90, 110);
+    border-radius: 8px;
+  }
+  .row { display: flex; flex-direction: row; gap: 8px; align-items: center; }
+  .bar-track { flex-grow: 1; height: 18px; background-color: #1a1e26; border-radius: 4px; overflow: hidden; }
+  .bar-fill { width: 62%; height: 100%; background-color: rgb(190, 60, 60); }
+  .label { color: #d8dce4; font-size: 14px; font-weight: 600; letter-spacing: 1px; }
+  .btn {
+    display: flex; justify-content: center; align-items: center;
+    height: 40px; padding: 0 16px;
+    background-color: rgb(50, 90, 160); color: #fff; font-size: 15px;
+    border-radius: 6px; border: 0;
+    backdrop-filter: blur(4px); /* deliberately unsupported: must land in diagnostics */
+  }
+  .btn:hover { background-color: rgb(70, 115, 195); }
+  .scaffold-note { display: none; }
+</style>
+</head>
+<body>
+  <div class="hud" data-ck-name="HudRoot">
+    <div class="row">
+      <span class="label">HEALTH</span>
+      <div class="bar-track" data-ck-name="HealthBar" data-ck-bind="Health">
+        <div class="bar-fill"></div>
+      </div>
+    </div>
+    <div class="row" style="order: 2;">
+      <button class="btn" data-ck-name="ConfirmButton">CONFIRM</button>
+    </div>
+    <div class="row" style="order: 1;">
+      <span class="label">STAMINA</span>
+    </div>
+    <div class="scaffold-note" data-ck-ignore>mockup scaffolding — never emitted</div>
+  </div>
+</body>
+</html>
