@@ -110,6 +110,26 @@ validation. Reusable editor automation and Editor Utility Blueprints should call
 Generated ribbons whose tips extend beyond navigable space may be normalized with
 `Trim_UnprojectableGeneratedRibbonEndpoints`.
 
+Launch **Tools > Ck Path Network Designer** to open or focus the visible, docked
+**Ck Path Network** editor mode. It is the reusable designer workflow. A game supplies a
+concrete `UCk_PathNetwork_Detector_UE` and may register named defaults through
+`ck::pathnetwork_editor::designer::Register_Preset`; CkFoundation owns the mode, panel, preview,
+viewport overlay, target-level selection, and undoable Apply operation. In the mode:
+
+1. choose a preset or detector class;
+2. choose **Use Current Level** or load one selected path-network actor;
+3. use **Fit Loaded World** or **Fit Selection** and refine the detector/generation options;
+4. **Preview** the yellow occupied-mask samples and cyan generated ribbons;
+5. compare them with green authored and orange stored-generated ribbons; and
+6. **Apply**, then save the chosen level.
+
+Preview is editor-only and does not create an actor, dirty a package, change selection, or open a
+transaction. Apply re-runs the detector on a transient copy and rejects stale configuration or
+changed source output before mutating the exact target level. It preserves authored ribbons and
+creates or updates the path-network actor in one undoable transaction. Games unregister their
+presets by owner during module shutdown. The workflow neither requires a detector actor in the
+level nor runs in PIE.
+
 `Bake_DetectorToActor` owns an undo transaction, preserves authored ribbons, replaces generated
 ribbons, and treats an empty detector mask as a successful authored-only bake. It never saves a
 package. `Validate_RibbonPointProjectability` is read-only and requires the caller to supply the

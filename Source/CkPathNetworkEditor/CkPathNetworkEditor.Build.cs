@@ -10,14 +10,18 @@ public class CkPathNetworkEditor : CkModuleRules
             "CoreUObject",
             "Engine",
             "UnrealEd",
+            "EditorFramework",
 
             "InputCore",
+            "LevelEditor",
             "NavigationSystem",
             "PropertyEditor",
             "Slate",
             "SlateCore",
+            "ToolMenus",
 
             "CkCore",
+            "CkEditorTools",
             "CkEcs",
             "CkLog",
             "CkPathNetwork",
