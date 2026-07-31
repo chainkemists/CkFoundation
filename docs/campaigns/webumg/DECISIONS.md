@@ -27,5 +27,5 @@ Brief §4 proposal is the working set (flexbox, box model, backgrounds/borders/r
 ## Standing evidence notes (carried from Phase 0)
 
 - Yoga vendoring cautions: pin `c766885`; `UseWebDefaults` on; never expose inert grid setters; extractor pre-sorts children by computed `order`; fix `pointScaleFactor` for deterministic harness comparisons (PriorArt §3).
-- Engine CEF 128 as CDP backend: half-day Gate 1 probe, option not commitment (PriorArt § recommendation R1).
+- Engine CEF 128 as CDP backend: **probe done 2026-07-31** — feasible: `-cefdebug=<port>` enables CDP remote debugging (`WebBrowserSingleton.cpp:343-347`). Requires a running editor process hosting an offscreen SWebBrowser, so heavier than system Chrome; not adopted for Gate 1. Revisit only if the Node toolchain becomes a real friction (e.g. designer machines without Chrome/Node).
 - Chrome-version drift: extraction rides installed Chrome (auto-updates); IR must record browser version + viewport + dpr; determinism claims are per-browser-version (Gate 1 risk table).

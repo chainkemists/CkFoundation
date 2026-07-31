@@ -98,6 +98,16 @@ Repos cloned (shallow) at `D:\tmp\ckstyle-phase0\thirdparty\`: StyledWidgets @ `
 | Tracer WebUI: maintained, UE 4.23–5.8, CEF 128.4.13/Chromium 128, updated 2026-06-21, $70.04–$210.16, accelerated paint, mobile via native webviews | `fab.com/s/67cbc9dcdad6` (browser pane, 2026-07-31) | [web] |
 | Tracer console support = "COMING SOON: Xbox and PlayStation support using WebKit" | same listing, verbatim | ⟨V⟩ (roadmap claim; also note WebKit ≠ Chromium fidelity) |
 
+## Gate 1 additions (2026-07-31, session 2)
+
+| Claim | Evidence | Method |
+|---|---|---|
+| Engine CEF supports CDP remote debugging via `-cefdebug=<port>` (sets `Settings.remote_debugging_port`) | `Engine/Source/Runtime/WebBrowser/Private/WebBrowserSingleton.cpp:343-347` | [read] |
+| Extraction is deterministic on smoke page: IR and golden PNG byte-identical across two independent runs (Chrome 150.0.7871.188) | `diff` empty + `cmp` clean, run 2026-07-31 | [read] |
+| Unsupported-property diagnostic carries exact file:line (`backdrop-filter` → `smoke.html:25`, matches `sed -n '25p'`) | extractor output vs file content, this session | [read] |
+| CkFoundation `.gitignore:49` ignores `*.md` repo-wide; prior campaign docs were force-added (46 tracked files under docs/) | `git check-ignore -v` + `git ls-files docs \| wc -l` | [read] |
+| Campaign branch `feature/webumg-campaign` = dev + 2 commits, zero `node_modules`/`corpus/out` files in tree | `git ls-tree -r … \| grep -cE "node_modules\|corpus/out"` → 0 | [read] |
+
 ## Slate layout contract (supports Yoga §3 assessment)
 
 | Claim | Evidence | Method |

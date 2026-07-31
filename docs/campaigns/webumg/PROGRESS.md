@@ -1,10 +1,10 @@
 # CkWebUmg — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-07-31 (uncommitted):** Gate 0 ✅. Gate 1 work items 1 (CLI ✅), 3 (extraction core ✅ on smoke page), 4 (diagnostics mechanism ✅), 5 (`data-ck-*` ✅ extraction + spec; duplicate-name + unknown-attribute diagnostics still open), 7 (determinism ✅ on smoke page — full corpus pending). Open: 2 (schema review), 6 (20-page corpus — 1/20), 8 (CEF probe), 9 (DECISION packs), assets/fonts blocks.
-**Baseline being diffed against:** n/a — no engine-code changes yet; toolchain baseline in Gate_01 entry criteria.
-**Next action:** author the corpus (L1–L8 layout, P1–P5 paint, T1–T4 text, C1–C2 controls, H1 hostile) and run the determinism proof across all of it. Corpus authoring is executor-shaped work — a candidate for an Opus session with `/execute-phase` against Gate_01.
-**Blocked on:** nothing for current work (DECISIONS 1–4 block Gate 1 *exit*). Open Adam-side item: R3 WebToUMG purchase.
+**As of 2026-07-31 session 2 (branch `feature/webumg-campaign`):** Gate 0 ✅. Gate 1 work items ✅: 1 CLI, 3 extraction core, 4 diagnostics (4 classes), 5 `data-ck-*` complete (incl. duplicate-name + unknown-attr), 6 corpus (20 pages incl. hostile), 7 determinism (all 20 pages, IR+PNG byte-identical), 8 CEF probe (closed: feasible, not adopted). **Remaining for Gate 1 exit: work item 9 (DECISION 1–4 evidence packs) + Adam's schema review + Adam's DECISION 1–4 rulings.**
+**Baseline being diffed against:** n/a — no engine-code changes yet.
+**Next action:** write the four DECISION packs from corpus evidence, then present the Gate 1 exit package to Adam.
+**Blocked on:** after packs land — Adam (schema review + DECISIONS 1–4). Open Adam-side item: R3 WebToUMG purchase.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -15,6 +15,16 @@
 | 2026-07-31 | CLI lives at `Tools/ckwebumg-extract/` (plugin root), outside `Source/` | UBT must never see it; brief calls it "outside engine" | If plugin packaging complains |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-07-31 (session 2) — Corpus complete (20 pages), 9 extractor bugs found and fixed, full determinism proof
+- Committed Gate 0→1 checkpoint to **`feature/webumg-campaign`** (built from `dev` via temp index — working checkout is the sibling session's `feature/usf-grid-materials` and was not touched). First attempt force-added ignored `node_modules/` (`git add -f` on the dir); rebuilt the commit clean, verified `git ls-tree | grep -c node_modules` → 0.
+- Delegated 19-page corpus authoring to an Opus executor agent (L1–L9 layout, P1–P5 paint, T1–T3+C1 text/controls, H1 hostile). Agent reported 9 extractor bugs; **I re-verified B1/B3/B6/B8 against the artifacts before fixing** (all held), then fixed all 9:
+  B1 whiteSpace lost (Chrome 150 dropped the shorthand from computed list → synthesized from `white-space-collapse`+`text-wrap-mode`); B2 background-position missing (read `-x`/`-y` longhands); B3 `%` radii leaked as bare numbers (resolve against border box; elliptical → diagnostic); B4 alignContent never emitted; B5 per-side border colors silently dropped (→ computed-divergence diagnostic); B6 value-level gaps (`display:grid`/`position:sticky` now diagnosed via VALUE_RULES); B7 `::before/::after` invisible (→ diagnosed with rule file:line); B8 absolute machine paths in `source` (→ relativized; cross-checkout determinism restored); B9 `disabled` attribute invisible (→ `attributes` field for semantic DOM attrs).
+- Bonus from agent findings: `inset.authored` records which edges the author pinned (Chromium resolves all four, erasing anchor intent — Gate 2/4 needs it).
+- Ran: full re-extraction (20 pages, zero crashes) + per-bug assertion script (all 9 fixes confirmed in output) + determinism sweep — **all 20 IRs and all 20 PNGs byte-identical across two runs** (Chrome 150.0.7871.188).
+- CEF probe closed: `-cefdebug=<port>` → CDP supported (`WebBrowserSingleton.cpp:343-347`); feasible but heavier than system Chrome; not adopted (DECISIONS.md standing note).
+- Known-not-done: H1 duplicate `ck.name` nodes both still emit the name (emitter dedupe policy = Gate 4); `fonts[]` untested (no web fonts in corpus); T4 (mixed inline weights) folded into T3 by the agent — corpus is 20 pages counting smoke.
+- Inferred (unconfirmed): PNG determinism across machines/GPUs — unchanged risk, per-machine goldens acceptable.
 
 ### 2026-07-31 (later) — Extractor working end-to-end on smoke page
 - Built `Tools/ckwebumg-extract/` (Node ESM, puppeteer-core@24 on system Chrome; no Chromium download). `npm install` clean, 0 vulnerabilities.
