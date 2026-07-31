@@ -100,6 +100,16 @@ public:
     Get_BuildEpoch(
         const FCk_Handle_PathNetwork& InNetwork);
 
+    // Returns the map-authored follower profile when this network explicitly opted in.
+    // Disabled or malformed recommendations fail closed and leave OutTuning at defaults.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|PathNetwork",
+              DisplayName="[Ck][PathNetwork] Try Get Recommended Follower Tuning")
+    static bool
+    TryGet_RecommendedFollowerTuning(
+        const FCk_Handle_PathNetwork& InNetwork,
+        FCk_PathNetworkFollower_Tuning& OutTuning);
+
     // Closest point on any edge centerline within InSearchRadius. Returns false if the network
     // is unbuilt or nothing is in range.
     UFUNCTION(BlueprintCallable,
@@ -136,6 +146,19 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_PathNetworkFollower_ParamsData& InParams);
 
+    // Adds the feature when absent, or reacquires the existing feature when its
+    // cooperative owner token matches. A foreign or unowned feature is never
+    // mutated, removed, or retuned.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|PathNetworkFollower",
+              DisplayName="[Ck][PathNetworkFollower] Try Add Or Adopt By Owner Token",
+              meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_PathNetworkFollower
+    Try_AddOrAdoptByOwnerToken(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Fragment_PathNetworkFollower_ParamsData& InParams,
+        ECk_PathNetworkFollower_OwnershipResult& OutResult);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|PathNetworkFollower",
               DisplayName="[Ck][PathNetworkFollower] Has Feature")
@@ -149,6 +172,13 @@ public:
     static FName
     Get_OwnerToken(
         const FCk_Handle_PathNetworkFollower& InFollower);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|PathNetworkFollower",
+              DisplayName="[Ck][PathNetworkFollower] Get Is Tuning Valid")
+    static bool
+    Get_IsTuningValid(
+        const FCk_PathNetworkFollower_Tuning& InTuning);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|PathNetworkFollower",

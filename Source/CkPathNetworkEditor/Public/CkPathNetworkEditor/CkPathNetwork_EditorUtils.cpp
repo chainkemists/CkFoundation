@@ -1,8 +1,8 @@
 #include "CkPathNetwork_EditorUtils.h"
 
+#include "CkPathNetworkEditor/Authoring/CkPathNetwork_AuthoringService.h"
+
 #include "CkPathNetwork/Actor/CkPathNetwork_Actor.h"
-#include "CkPathNetwork/Detector/CkPathNetwork_Detector.h"
-#include "CkPathNetwork/Network/CkPathNetwork_Vectorize.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 
@@ -99,75 +99,26 @@ auto
         return Result;
     }
 
-    const auto Mask = Detector->Get_DetectionMask(InActor->Get_DetectionBounds());
-    auto GeneratedWorldRibbons = TArray<FCk_PathNetwork_Ribbon>{};
-    if (Mask.Get_IsValidMask())
-    { GeneratedWorldRibbons = ck::pathnetwork::Vectorize_MaskToRibbons(Mask, InActor->Get_VectorizeParams()); }
-
-    const auto Processed = Detector->Process_GeneratedRibbons(
-        InActor->Get_DetectionBounds(), GeneratedWorldRibbons);
-    const auto GeneratedRibbonsWereProcessed = Processed.Get_Succeeded();
-    CK_ENSURE_IF_NOT(GeneratedRibbonsWereProcessed,
-        TEXT("Bake_DetectorToActor on [{}] could not process generated detector output: [{}]"),
-        InActor, Processed.Get_FailureReason())
-    {}
-    if (NOT GeneratedRibbonsWereProcessed)
+    const auto Preview = ck::pathnetwork_editor::authoring::Preview(
+        ck::pathnetwork_editor::authoring::FPreviewRequest{
+            ._World = InActor->GetWorld(),
+            ._DetectorTemplate = Detector,
+            ._SourceActor = InActor,
+            ._DetectionBounds = InActor->Get_DetectionBounds(),
+            ._VectorizeParams = InActor->Get_VectorizeParams()});
+    if (NOT Preview._Succeeded)
     {
-        Result._FailureReason = Processed.Get_FailureReason();
-        return Result;
-    }
-    GeneratedWorldRibbons = Processed.Get_GeneratedWorldRibbons();
-
-    const auto ProcessedSourcesAreGenerated =
-        ck::pathnetwork::Get_AreAllRibbonSourcesGenerated(
-            GeneratedWorldRibbons);
-    CK_ENSURE_IF_NOT(ProcessedSourcesAreGenerated,
-        TEXT("Bake_DetectorToActor on [{}] rejected detector processing output containing a non-Generated ribbon"),
-        InActor)
-    {}
-    if (NOT ProcessedSourcesAreGenerated)
-    {
-        Result._FailureReason =
-            TEXT("Detector processing output contains a non-Generated ribbon");
+        Result._FailureReason = Preview._FailureReason;
         return Result;
     }
 
-    const auto Validation = Detector->Validate_GeneratedRibbons(
-        InActor->Get_DetectionBounds(), GeneratedWorldRibbons);
-    const auto GeneratedRibbonsAreValid = Validation.Get_Succeeded();
-    CK_ENSURE_IF_NOT(GeneratedRibbonsAreValid,
-        TEXT("Bake_DetectorToActor on [{}] rejected generated detector output: [{}]"),
-        InActor, Validation.Get_FailureReason())
-    {}
-    if (NOT GeneratedRibbonsAreValid)
-    {
-        Result._FailureReason = Validation.Get_FailureReason();
-        return Result;
-    }
-
-    auto NewRibbons = TArray<FCk_PathNetwork_Ribbon>{};
-    for (const auto& Ribbon : InActor->Get_Ribbons())
-    {
-        if (Ribbon.Get_Source() == ECk_PathNetwork_RibbonSource::Authored)
-        {
-            NewRibbons.Add(Ribbon);
-            ++Result._AuthoredRibbonCount;
-        }
-    }
-
-    for (const auto& WorldRibbon : GeneratedWorldRibbons)
-    { NewRibbons.Add(InActor->Convert_WorldRibbonToRelative(WorldRibbon)); }
-
-    Result._GeneratedRibbonCount = GeneratedWorldRibbons.Num();
-    Result._TotalRibbonCount = NewRibbons.Num();
-
-    const FScopedTransaction Transaction{
-        NSLOCTEXT("CkPathNetworkEditor", "BakeDetectorTransaction", "Path Network: Bake Detector")};
-    InActor->Modify();
-    InActor->Set_Ribbons(NewRibbons);
-    InActor->PostEditChange();
-
-    Result._Succeeded = true;
+    const auto Applied =
+        ck::pathnetwork_editor::authoring::ApplyPreview_ToExistingActor(InActor, Preview);
+    Result._Succeeded = Applied._Succeeded;
+    Result._FailureReason = Applied._FailureReason;
+    Result._AuthoredRibbonCount = Applied._AuthoredRibbonCount;
+    Result._GeneratedRibbonCount = Applied._GeneratedRibbonCount;
+    Result._TotalRibbonCount = Applied._TotalRibbonCount;
     return Result;
 }
 

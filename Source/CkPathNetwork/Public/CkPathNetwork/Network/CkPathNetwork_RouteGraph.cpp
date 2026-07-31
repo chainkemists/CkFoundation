@@ -41,9 +41,15 @@ namespace ck::pathnetwork
             case ERouteNodeKind::Start:
             {
                 for (auto Index = 0; Index < _Shared->_OverlayPoints.Num(); ++Index)
-                { Result.Add(FRouteNodeId{ERouteNodeKind::OverlayPoint, Index}); }
+                {
+                    const auto Distance = static_cast<float>(
+                        FVector::Dist(_StartLocation, _Shared->_OverlayPoints[Index]._Location));
+                    if (_CostPolicy.Get_IsEndpointJoinPermitted(Distance))
+                    { Result.Add(FRouteNodeId{ERouteNodeKind::OverlayPoint, Index}); }
+                }
 
-                Result.Add(FRouteNodeId{ERouteNodeKind::Goal, 0});
+                if (_Shared->_AllowDirectStartToGoal)
+                { Result.Add(FRouteNodeId{ERouteNodeKind::Goal, 0}); }
                 break;
             }
             case ERouteNodeKind::OverlayPoint:
@@ -65,7 +71,15 @@ namespace ck::pathnetwork
                     }
                 }
 
-                Result.Add(FRouteNodeId{ERouteNodeKind::Goal, 0});
+                const auto GoalDistance = static_cast<float>(FVector::Dist(Point._Location, _GoalLocation));
+                if (_CostPolicy.Get_IsEndpointJoinPermitted(GoalDistance))
+                { Result.Add(FRouteNodeId{ERouteNodeKind::Goal, 0}); }
+
+                if (const auto* TransferNodes =
+                        _Shared->_ComponentTransfersByRouteNode.Find(InNode))
+                {
+                    Result.Append(*TransferNodes);
+                }
                 break;
             }
             case ERouteNodeKind::NetNode:
@@ -84,6 +98,40 @@ namespace ck::pathnetwork
                     {
                         for (const auto PointIndex : *EdgePoints)
                         { Result.Add(FRouteNodeId{ERouteNodeKind::OverlayPoint, PointIndex}); }
+                    }
+                }
+
+                if (const auto* TransferNodes =
+                        _Shared->_ComponentTransfersByRouteNode.Find(InNode))
+                {
+                    Result.Append(*TransferNodes);
+                }
+
+                // Legacy node-only transfers remain a read-through compatibility
+                // surface. Canonical route-node transfers take precedence, while
+                // AddUnique keeps a mirrored legacy entry from duplicating a
+                // neighbor already published by the canonical map.
+                if (const auto* LegacyTransferNodes =
+                        _Shared->_ComponentTransfersByNode.Find(InNode._Index))
+                {
+                    for (const auto OtherNodeId : *LegacyTransferNodes)
+                    {
+                        Result.AddUnique(
+                            FRouteNodeId{
+                                ERouteNodeKind::NetNode,
+                                OtherNodeId});
+                    }
+                }
+
+                if (const auto* ShortcutNodes =
+                        _Shared->_LocalNetworkShortcutsByNode.Find(InNode._Index))
+                {
+                    for (const auto OtherNodeId : *ShortcutNodes)
+                    {
+                        Result.Add(
+                            FRouteNodeId{
+                                ERouteNodeKind::NetNode,
+                                OtherNodeId});
                     }
                 }
                 break;
@@ -190,7 +238,23 @@ namespace ck::pathnetwork
         Get_IsOffPathHop(const FRouteNodeId& InFrom, const FRouteNodeId& InTo) const
         -> bool
     {
-        return InFrom._Kind == ERouteNodeKind::Start || InTo._Kind == ERouteNodeKind::Goal;
+        return InFrom._Kind == ERouteNodeKind::Start
+            || InTo._Kind == ERouteNodeKind::Goal
+            || Get_IsComponentTransferHop(InFrom, InTo)
+            || Get_IsLocalNetworkShortcutHop(InFrom, InTo);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FRouteGraph::
+        Get_OffPathCostForResolvedLength(
+            const FRouteNodeId& InFrom,
+            const FRouteNodeId& InTo,
+            float InResolvedLength) const
+        -> float
+    {
+        return InResolvedLength * DoGet_OffPathCostMultiplier(InFrom, InTo);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -202,6 +266,78 @@ namespace ck::pathnetwork
     {
         using namespace ck_pathnetwork_routegraph;
         return (static_cast<uint64>(Encode_NodeId32(InFrom)) << 32) | static_cast<uint64>(Encode_NodeId32(InTo));
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FRouteGraph::
+        Get_IsComponentTransferHop(
+            const FRouteNodeId& InFrom,
+            const FRouteNodeId& InTo) const
+        -> bool
+    {
+        const auto* TransferNodes =
+            _Shared->_ComponentTransfersByRouteNode.Find(InFrom);
+        if (TransferNodes != nullptr
+            && TransferNodes->Contains(InTo))
+        { return true; }
+
+        if (InFrom._Kind != ERouteNodeKind::NetNode
+            || InTo._Kind != ERouteNodeKind::NetNode)
+        { return false; }
+
+        const auto* LegacyTransferNodes =
+            _Shared->_ComponentTransfersByNode.Find(InFrom._Index);
+        return LegacyTransferNodes != nullptr
+            && LegacyTransferNodes->Contains(InTo._Index);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FRouteGraph::
+        Get_IsLocalNetworkShortcutHop(
+            const FRouteNodeId& InFrom,
+            const FRouteNodeId& InTo) const
+        -> bool
+    {
+        if (InFrom._Kind != ERouteNodeKind::NetNode
+            || InTo._Kind != ERouteNodeKind::NetNode)
+        { return false; }
+
+        const auto* ShortcutNodes =
+            _Shared->_LocalNetworkShortcutsByNode.Find(InFrom._Index);
+        return ShortcutNodes != nullptr
+            && ShortcutNodes->Contains(InTo._Index);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FRouteGraph::
+        DoGet_OffPathCostMultiplier(
+            const FRouteNodeId& InFrom,
+            const FRouteNodeId& InTo) const
+        -> float
+    {
+        if (Get_IsComponentTransferHop(InFrom, InTo)
+            || Get_IsLocalNetworkShortcutHop(InFrom, InTo))
+        { return _CostPolicy._NetworkGapCostMultiplier; }
+
+        const bool IsDirectHop =
+            InFrom._Kind == ERouteNodeKind::Start
+            && InTo._Kind == ERouteNodeKind::Goal;
+        if (NOT IsDirectHop)
+        { return _CostPolicy._NearEndpointCostMultiplier; }
+
+        const auto DirectDistance = static_cast<float>(FVector::Dist(_StartLocation, _GoalLocation));
+        const bool IsGraceTrip =
+            _CostPolicy._DirectTripGraceDistance > 0.0f
+            && DirectDistance <= _CostPolicy._DirectTripGraceDistance;
+        return IsGraceTrip
+            ? _CostPolicy._NearEndpointCostMultiplier
+            : _CostPolicy._FarOrDirectCostMultiplier;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -236,7 +372,7 @@ namespace ck::pathnetwork
         { return *Repriced; }
 
         const auto Euclidean = FVector::Dist(Get_NodeLocation(InFrom), Get_NodeLocation(InTo));
-        return static_cast<float>(Euclidean) * _OffPathCostMultiplier;
+        return Get_OffPathCostForResolvedLength(InFrom, InTo, static_cast<float>(Euclidean));
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -332,6 +468,15 @@ namespace ck::pathnetwork
                 Span._FromDist = Edge._NodeA == From._Index ? 0.0f : Edge._Length;
                 Span._ToDist = Edge._NodeA == From._Index ? Edge._Length : 0.0f;
             }
+
+            const auto IsZeroLengthOnRibbonSpan =
+                Span._EdgeId != INDEX_NONE
+                && FMath::IsNearlyEqual(
+                    Span._FromDist,
+                    Span._ToDist,
+                    KINDA_SMALL_NUMBER);
+            if (IsZeroLengthOnRibbonSpan)
+            { continue; }
 
             Spans.Add(Span);
         }
