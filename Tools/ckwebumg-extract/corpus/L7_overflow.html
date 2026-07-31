@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>L7_overflow</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif;
+    display: flex; flex-direction: row; gap: 40px; padding: 40px;
+  }
+  .clip {
+    overflow: hidden;
+    width: 400px; height: 400px;
+    background-color: rgb(20, 24, 30);
+  }
+  .oversized { width: 700px; height: 700px; background-color: rgb(190, 60, 60); }
+
+  .scroller {
+    overflow: auto;
+    width: 400px; height: 400px;
+    background-color: rgb(20, 24, 30);
+  }
+  .tall { width: 360px; height: 1200px; background-color: rgb(60, 150, 90); }
+
+  .outer-clip {
+    overflow: hidden;
+    width: 400px; height: 400px; padding: 40px;
+    background-color: rgb(20, 24, 30);
+  }
+  .inner-clip {
+    overflow: hidden;
+    width: 400px; height: 400px;
+    background-color: rgb(44, 52, 66);
+  }
+  .inner-child { width: 600px; height: 600px; background-color: rgb(70, 110, 200); }
+</style>
+</head>
+<body>
+  <div class="clip" data-ck-name="ClipBox">
+    <div class="oversized" data-ck-name="OversizedChild"></div>
+  </div>
+  <div class="scroller" data-ck-name="ScrollBox">
+    <div class="tall" data-ck-name="TallContent"></div>
+  </div>
+  <div class="outer-clip" data-ck-name="OuterClip">
+    <div class="inner-clip" data-ck-name="InnerClip">
+      <div class="inner-child" data-ck-name="InnerClipChild"></div>
+    </div>
+  </div>
+</body>
+</html>

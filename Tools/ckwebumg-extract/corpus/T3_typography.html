@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>T3_typography</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif;
+    display: flex; flex-direction: row; gap: 40px; padding: 60px;
+    align-items: flex-start;
+  }
+  .col {
+    display: flex; flex-direction: column; gap: 20px;
+    width: 560px; padding: 20px;
+    background-color: rgb(20, 24, 30);
+    color: rgb(220, 226, 236);
+  }
+  .tracked { letter-spacing: 2px; font-size: 20px; }
+  .w400 { font-weight: 400; font-size: 22px; }
+  .w600 { font-weight: 600; font-size: 22px; }
+  .w800 { font-weight: 800; font-size: 22px; }
+  .s12 { font-size: 12px; }
+  .s16 { font-size: 16px; }
+  .s24 { font-size: 24px; }
+  .s32 { font-size: 32px; }
+  .upper { text-transform: uppercase; font-size: 20px; color: rgb(240, 200, 80); }
+  .under { text-decoration: underline; font-size: 20px; color: rgb(120, 200, 255); }
+  .ta-left { text-align: left; font-size: 20px; background-color: rgb(44, 52, 66); }
+  .ta-center { text-align: center; font-size: 20px; background-color: rgb(44, 52, 66); }
+  .ta-right { text-align: right; font-size: 20px; background-color: rgb(44, 52, 66); }
+</style>
+</head>
+<body>
+  <div class="col" data-ck-name="WeightAndTrackingColumn">
+    <div class="tracked" data-ck-name="LetterSpacing2px">Letter spacing two pixels</div>
+    <div class="w400" data-ck-name="Weight400">Weight four hundred</div>
+    <div class="w600" data-ck-name="Weight600">Weight six hundred</div>
+    <div class="w800" data-ck-name="Weight800">Weight eight hundred</div>
+  </div>
+  <div class="col" data-ck-name="SizeColumn">
+    <div class="s12" data-ck-name="Size12">Twelve pixel body copy</div>
+    <div class="s16" data-ck-name="Size16">Sixteen pixel body copy</div>
+    <div class="s24" data-ck-name="Size24">Twenty four pixel copy</div>
+    <div class="s32" data-ck-name="Size32">Thirty two pixel copy</div>
+  </div>
+  <div class="col" data-ck-name="DecorationAndAlignColumn">
+    <div class="upper" data-ck-name="TransformUppercase">uppercase transform applied</div>
+    <div class="under" data-ck-name="DecorationUnderline">Underlined decoration</div>
+    <div class="ta-left" data-ck-name="AlignLeft">Aligned left</div>
+    <div class="ta-center" data-ck-name="AlignCenter">Aligned center</div>
+    <div class="ta-right" data-ck-name="AlignRight">Aligned right</div>
+  </div>
+</body>
+</html>

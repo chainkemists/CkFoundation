@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>L1_row_basics</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12;
+    font-family: Arial, sans-serif;
+    display: flex; flex-direction: column; gap: 40px; padding: 40px;
+  }
+  .row {
+    display: flex; flex-direction: row;
+    width: 1200px; height: 240px;
+    padding: 20px;
+    background-color: rgb(26, 30, 38);
+  }
+  .r-start  { justify-content: flex-start;   align-items: flex-start; }
+  .r-center { justify-content: center;       align-items: center; }
+  .r-between{ justify-content: space-between; align-items: flex-end; }
+
+  .box { width: 180px; height: 120px; }
+  .b1 { background-color: rgb(190, 60, 60); }
+  .b2 { background-color: rgb(60, 150, 90); width: 240px; height: 80px; }
+  .b3 { background-color: rgb(70, 110, 200); width: 120px; height: 160px; }
+</style>
+</head>
+<body>
+  <div class="row r-start" data-ck-name="RowStart">
+    <div class="box b1"></div>
+    <div class="box b2"></div>
+    <div class="box b3"></div>
+  </div>
+  <div class="row r-center" data-ck-name="RowCenter">
+    <div class="box b1"></div>
+    <div class="box b2"></div>
+    <div class="box b3"></div>
+  </div>
+  <div class="row r-between" data-ck-name="RowBetween">
+    <div class="box b1"></div>
+    <div class="box b2"></div>
+    <div class="box b3"></div>
+  </div>
+</body>
+</html>

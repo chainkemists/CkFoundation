@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>L3_shrink_basis</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body { width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif; padding: 40px; }
+  .rail {
+    display: flex; flex-direction: row;
+    width: 600px; height: 200px;
+    background-color: rgb(20, 24, 30);
+  }
+  .seg { height: 200px; }
+  .s-basis300 { flex-basis: 300px; flex-shrink: 1; background-color: rgb(190, 60, 60); }
+  .s-basis50  { flex-basis: 50%;   flex-shrink: 2; background-color: rgb(60, 150, 90); }
+  .s-basisauto{ flex-basis: auto;  flex-shrink: 0; width: 240px; background-color: rgb(70, 110, 200); }
+</style>
+</head>
+<body>
+  <div class="rail" data-ck-name="ShrinkRail">
+    <div class="seg s-basis300" data-ck-name="Basis300Shrink1"></div>
+    <div class="seg s-basis50" data-ck-name="Basis50PctShrink2"></div>
+    <div class="seg s-basisauto" data-ck-name="BasisAutoShrink0"></div>
+  </div>
+</body>
+</html>

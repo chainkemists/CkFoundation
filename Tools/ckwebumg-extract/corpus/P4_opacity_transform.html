@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>P4_opacity_transform</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif;
+    display: flex; flex-direction: row; gap: 80px; padding: 120px;
+    align-items: flex-start;
+  }
+  .cell { width: 300px; height: 300px; }
+
+  .op-outer { opacity: 0.5; background-color: rgb(190, 60, 60); padding: 40px; }
+  .op-inner { opacity: 0.5; width: 220px; height: 220px; background-color: rgb(240, 240, 250); }
+
+  .tx-translate { transform: translate(60px, 40px); background-color: rgb(60, 150, 90); }
+  .tx-rotate { transform: rotate(15deg); background-color: rgb(70, 110, 200); }
+  .tx-scale { transform: scale(1.5); background-color: rgb(200, 160, 50); }
+</style>
+</head>
+<body>
+  <div class="cell op-outer" data-ck-name="OpacityOuterHalf">
+    <div class="op-inner" data-ck-name="OpacityInnerHalf"></div>
+  </div>
+  <div class="cell tx-translate" data-ck-name="TransformTranslate"></div>
+  <div class="cell tx-rotate" data-ck-name="TransformRotate15"></div>
+  <div class="cell tx-scale" data-ck-name="TransformScale150"></div>
+</body>
+</html>

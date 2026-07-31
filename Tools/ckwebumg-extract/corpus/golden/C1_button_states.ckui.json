@@ -1,0 +1,486 @@
+{
+  "schema": 1,
+  "source": {
+    "html": "C1_button_states.html",
+    "viewport": [
+      1920,
+      1080
+    ],
+    "dpr": 1,
+    "browser": "Chrome/150.0.7871.188"
+  },
+  "assets": [],
+  "fonts": [],
+  "diagnostics": [],
+  "root": {
+    "id": "n0",
+    "tag": "body",
+    "ck": null,
+    "asset": null,
+    "attributes": null,
+    "box": {
+      "content": {
+        "x": 80,
+        "y": 80,
+        "w": 1760,
+        "h": 920
+      },
+      "padding": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "border": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "margin": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      }
+    },
+    "layout": {
+      "display": "flex",
+      "direction": "row",
+      "justify": "normal",
+      "align": "flex-start",
+      "alignSelf": "auto",
+      "alignContent": "normal",
+      "wrap": "nowrap",
+      "gap": [
+        60,
+        60
+      ],
+      "grow": 0,
+      "shrink": 1,
+      "basis": "auto",
+      "position": "static",
+      "inset": null,
+      "zIndex": 0,
+      "order": 0,
+      "boxSizing": "border-box",
+      "overflow": [
+        "visible",
+        "visible"
+      ]
+    },
+    "paint": {
+      "background": {
+        "type": "color",
+        "rgba": [
+          12,
+          14,
+          18,
+          255
+        ]
+      },
+      "borderRadius": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "borderWidth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "borderColor": [
+        0,
+        0,
+        0,
+        255
+      ],
+      "boxShadow": null,
+      "opacity": 1,
+      "transform": null,
+      "visibility": "visible"
+    },
+    "text": null,
+    "states": null,
+    "children": [
+      {
+        "id": "n1",
+        "tag": "button",
+        "ck": {
+          "name": "InteractiveButton",
+          "widgetClass": null,
+          "bind": null,
+          "slot": null
+        },
+        "asset": null,
+        "attributes": null,
+        "box": {
+          "content": {
+            "x": 88,
+            "y": 83,
+            "w": 264,
+            "h": 58
+          },
+          "padding": {
+            "x": 82,
+            "y": 82,
+            "w": 276,
+            "h": 60
+          },
+          "border": {
+            "x": 80,
+            "y": 80,
+            "w": 280,
+            "h": 64
+          },
+          "margin": {
+            "x": 80,
+            "y": 80,
+            "w": 280,
+            "h": 64
+          }
+        },
+        "layout": {
+          "display": "flex",
+          "direction": "row",
+          "justify": "center",
+          "align": "center",
+          "alignSelf": "auto",
+          "alignContent": "normal",
+          "wrap": "nowrap",
+          "gap": [
+            0,
+            0
+          ],
+          "grow": 0,
+          "shrink": 1,
+          "basis": "auto",
+          "position": "static",
+          "inset": null,
+          "zIndex": 0,
+          "order": 0,
+          "boxSizing": "border-box",
+          "overflow": [
+            "visible",
+            "visible"
+          ]
+        },
+        "paint": {
+          "background": {
+            "type": "color",
+            "rgba": [
+              50,
+              90,
+              160,
+              255
+            ]
+          },
+          "borderRadius": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "borderWidth": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "borderColor": [
+            90,
+            130,
+            200,
+            255
+          ],
+          "boxShadow": null,
+          "opacity": 1,
+          "transform": null,
+          "visibility": "visible"
+        },
+        "text": {
+          "content": "HOVER AND PRESS",
+          "family": "Arial",
+          "sizePx": 18,
+          "weight": 600,
+          "style": "normal",
+          "lineHeightPx": null,
+          "letterSpacingPx": 0,
+          "color": [
+            240,
+            244,
+            252,
+            255
+          ],
+          "align": "center",
+          "whiteSpace": "normal",
+          "textOverflow": "clip",
+          "transformCase": "none",
+          "decoration": "none"
+        },
+        "states": {
+          "hover": {
+            "background-color": "rgb(70, 115, 195)",
+            "border-top-color": "rgb(140, 180, 240)",
+            "border-right-color": "rgb(140, 180, 240)",
+            "border-bottom-color": "rgb(140, 180, 240)",
+            "border-left-color": "rgb(140, 180, 240)",
+            "color": "rgb(255, 255, 255)"
+          },
+          "active": {
+            "background-color": "rgb(30, 60, 120)",
+            "border-top-color": "rgb(60, 90, 150)",
+            "border-right-color": "rgb(60, 90, 150)",
+            "border-bottom-color": "rgb(60, 90, 150)",
+            "border-left-color": "rgb(60, 90, 150)"
+          }
+        },
+        "children": [],
+        "unsupported": []
+      },
+      {
+        "id": "n2",
+        "tag": "button",
+        "ck": {
+          "name": "DisabledButton",
+          "widgetClass": null,
+          "bind": null,
+          "slot": null
+        },
+        "asset": null,
+        "attributes": {
+          "disabled": true
+        },
+        "box": {
+          "content": {
+            "x": 428,
+            "y": 83,
+            "w": 264,
+            "h": 58
+          },
+          "padding": {
+            "x": 422,
+            "y": 82,
+            "w": 276,
+            "h": 60
+          },
+          "border": {
+            "x": 420,
+            "y": 80,
+            "w": 280,
+            "h": 64
+          },
+          "margin": {
+            "x": 420,
+            "y": 80,
+            "w": 280,
+            "h": 64
+          }
+        },
+        "layout": {
+          "display": "flex",
+          "direction": "row",
+          "justify": "center",
+          "align": "center",
+          "alignSelf": "auto",
+          "alignContent": "normal",
+          "wrap": "nowrap",
+          "gap": [
+            0,
+            0
+          ],
+          "grow": 0,
+          "shrink": 1,
+          "basis": "auto",
+          "position": "static",
+          "inset": null,
+          "zIndex": 0,
+          "order": 0,
+          "boxSizing": "border-box",
+          "overflow": [
+            "visible",
+            "visible"
+          ]
+        },
+        "paint": {
+          "background": {
+            "type": "color",
+            "rgba": [
+              48,
+              52,
+              60,
+              255
+            ]
+          },
+          "borderRadius": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "borderWidth": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "borderColor": [
+            70,
+            76,
+            88,
+            255
+          ],
+          "boxShadow": null,
+          "opacity": 1,
+          "transform": null,
+          "visibility": "visible"
+        },
+        "text": {
+          "content": "DISABLED",
+          "family": "Arial",
+          "sizePx": 18,
+          "weight": 600,
+          "style": "normal",
+          "lineHeightPx": null,
+          "letterSpacingPx": 0,
+          "color": [
+            120,
+            126,
+            138,
+            255
+          ],
+          "align": "center",
+          "whiteSpace": "normal",
+          "textOverflow": "clip",
+          "transformCase": "none",
+          "decoration": "none"
+        },
+        "states": null,
+        "children": [],
+        "unsupported": []
+      },
+      {
+        "id": "n3",
+        "tag": "button",
+        "ck": {
+          "name": "PlainButton",
+          "widgetClass": null,
+          "bind": null,
+          "slot": null
+        },
+        "asset": null,
+        "attributes": null,
+        "box": {
+          "content": {
+            "x": 768,
+            "y": 83,
+            "w": 264,
+            "h": 58
+          },
+          "padding": {
+            "x": 762,
+            "y": 82,
+            "w": 276,
+            "h": 60
+          },
+          "border": {
+            "x": 760,
+            "y": 80,
+            "w": 280,
+            "h": 64
+          },
+          "margin": {
+            "x": 760,
+            "y": 80,
+            "w": 280,
+            "h": 64
+          }
+        },
+        "layout": {
+          "display": "flex",
+          "direction": "row",
+          "justify": "center",
+          "align": "center",
+          "alignSelf": "auto",
+          "alignContent": "normal",
+          "wrap": "nowrap",
+          "gap": [
+            0,
+            0
+          ],
+          "grow": 0,
+          "shrink": 1,
+          "basis": "auto",
+          "position": "static",
+          "inset": null,
+          "zIndex": 0,
+          "order": 0,
+          "boxSizing": "border-box",
+          "overflow": [
+            "visible",
+            "visible"
+          ]
+        },
+        "paint": {
+          "background": {
+            "type": "color",
+            "rgba": [
+              50,
+              90,
+              160,
+              255
+            ]
+          },
+          "borderRadius": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "borderWidth": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "borderColor": [
+            90,
+            130,
+            200,
+            255
+          ],
+          "boxShadow": null,
+          "opacity": 1,
+          "transform": null,
+          "visibility": "visible"
+        },
+        "text": {
+          "content": "PLAIN",
+          "family": "Arial",
+          "sizePx": 18,
+          "weight": 600,
+          "style": "normal",
+          "lineHeightPx": null,
+          "letterSpacingPx": 0,
+          "color": [
+            240,
+            244,
+            252,
+            255
+          ],
+          "align": "center",
+          "whiteSpace": "normal",
+          "textOverflow": "clip",
+          "transformCase": "none",
+          "decoration": "none"
+        },
+        "states": null,
+        "children": [],
+        "unsupported": []
+      }
+    ],
+    "unsupported": []
+  }
+}

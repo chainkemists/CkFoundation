@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>T2_ellipsis</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif;
+    display: flex; flex-direction: row; gap: 60px; padding: 80px;
+    align-items: flex-start;
+  }
+  .clipped {
+    width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 20px;
+    color: rgb(240, 200, 80);
+    background-color: rgb(30, 34, 42);
+    padding: 12px;
+  }
+  .unclipped {
+    white-space: nowrap;
+    font-size: 20px;
+    color: rgb(200, 230, 210);
+    background-color: rgb(30, 34, 42);
+    padding: 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="clipped" data-ck-name="EllipsisClipped">Sector Seven Reclamation Depot — Access Restricted</div>
+  <div class="unclipped" data-ck-name="EllipsisUnclipped">Sector Seven Reclamation Depot — Access Restricted</div>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>T1_wrap_text</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif;
+    display: flex; flex-direction: row; gap: 80px; padding: 80px;
+    align-items: flex-start;
+  }
+  .col { width: 400px; background-color: rgb(20, 24, 30); padding: 20px; }
+  .para-ratio {
+    width: 400px;
+    font-size: 18px;
+    line-height: 1.6;
+    color: rgb(216, 220, 228);
+  }
+  .para-px {
+    width: 400px;
+    font-size: 18px;
+    line-height: 28px;
+    color: rgb(200, 230, 210);
+  }
+</style>
+</head>
+<body>
+  <div class="col" data-ck-name="RatioLineHeightColumn">
+    <p class="para-ratio" data-ck-name="ParagraphRatio16">The scouting party crossed the frozen ridge before dawn, dragging sledges of salvage behind them while the wind carved long ribbons of snow from the summit above. Nobody spoke. Each of them counted paces against the map they had memorized in the shelter, and each of them privately doubted the count, because the ridge had shifted since the last survey and the beacons were dark.</p>
+  </div>
+  <div class="col" data-ck-name="PixelLineHeightColumn">
+    <p class="para-px" data-ck-name="ParagraphPixel28">The scouting party crossed the frozen ridge before dawn, dragging sledges of salvage behind them while the wind carved long ribbons of snow from the summit above. Nobody spoke. Each of them counted paces against the map they had memorized in the shelter, and each of them privately doubted the count, because the ridge had shifted since the last survey and the beacons were dark.</p>
+  </div>
+</body>
+</html>

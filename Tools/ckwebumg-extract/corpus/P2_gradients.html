@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>P2_gradients</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif;
+    display: flex; flex-direction: row; gap: 40px; padding: 40px;
+  }
+  .panel { width: 560px; height: 400px; }
+
+  .grad-two {
+    background-image: linear-gradient(rgb(190, 60, 60), rgb(60, 110, 200));
+  }
+  .grad-multi {
+    background-image: linear-gradient(
+      135deg,
+      rgb(190, 60, 60) 0%,
+      rgb(200, 160, 50) 35%,
+      rgb(60, 150, 90) 70%,
+      rgb(70, 110, 200) 100%);
+  }
+  .grad-radial {
+    background-image: radial-gradient(circle at 40% 40%, rgb(240, 240, 250) 0%, rgb(150, 80, 190) 60%, rgb(20, 24, 30) 100%);
+  }
+</style>
+</head>
+<body>
+  <div class="panel grad-two" data-ck-name="LinearTwoStop"></div>
+  <div class="panel grad-multi" data-ck-name="LinearMultiStopAngled"></div>
+  <div class="panel grad-radial" data-ck-name="RadialGradient"></div>
+</body>
+</html>

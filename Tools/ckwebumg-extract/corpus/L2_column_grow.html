@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>L2_column_grow</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body { width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif; }
+  .col {
+    display: flex; flex-direction: column; gap: 12px;
+    width: 640px; height: 1080px;
+    padding: 24px;
+    background-color: rgb(20, 24, 30);
+  }
+  .cell { width: 100%; }
+  .g1 { flex-grow: 1; background-color: rgb(190, 60, 60); }
+  .g2 { flex-grow: 2; background-color: rgb(60, 150, 90); }
+  .g3 { flex-grow: 1; min-height: 200px; background-color: rgb(70, 110, 200); }
+</style>
+</head>
+<body>
+  <div class="col" data-ck-name="GrowColumn">
+    <div class="cell g1" data-ck-name="GrowOne"></div>
+    <div class="cell g2" data-ck-name="GrowTwo"></div>
+    <div class="cell g3" data-ck-name="GrowOneMinHeight"></div>
+  </div>
+</body>
+</html>

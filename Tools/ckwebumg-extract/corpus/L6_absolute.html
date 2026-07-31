@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>L6_absolute</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif;
+    display: flex; flex-direction: row; gap: 40px; padding: 40px;
+  }
+  .stage {
+    position: relative;
+    width: 900px; height: 900px;
+    background-color: rgb(20, 24, 30);
+  }
+  .a-tl { position: absolute; top: 20px; left: 20px; width: 200px; height: 120px; background-color: rgb(190, 60, 60); }
+  .a-br { position: absolute; bottom: 20px; right: 20px; width: 200px; height: 120px; background-color: rgb(60, 150, 90); }
+  .a-stretch { position: absolute; top: 200px; right: 260px; bottom: 200px; left: 260px; background-color: rgb(70, 110, 200); }
+  .a-center { position: absolute; top: 0; right: 0; bottom: 0; left: 0; margin: auto; width: 160px; height: 160px; background-color: rgb(200, 160, 50); }
+
+  .z-a { position: absolute; top: 100px; left: 100px; width: 400px; height: 300px; z-index: 1; background-color: rgb(190, 60, 60); }
+  .z-b { position: absolute; top: 200px; left: 200px; width: 400px; height: 300px; z-index: 3; background-color: rgb(60, 150, 90); }
+  .z-c { position: absolute; top: 300px; left: 300px; width: 400px; height: 300px; z-index: 2; background-color: rgb(70, 110, 200); }
+</style>
+</head>
+<body>
+  <div class="stage" data-ck-name="InsetStage">
+    <div class="a-tl" data-ck-name="AbsTopLeft"></div>
+    <div class="a-br" data-ck-name="AbsBottomRight"></div>
+    <div class="a-stretch" data-ck-name="AbsStretchAll"></div>
+    <div class="a-center" data-ck-name="AbsCenteredMarginAuto"></div>
+  </div>
+  <div class="stage" data-ck-name="ZOrderStage">
+    <div class="z-a" data-ck-name="ZOne"></div>
+    <div class="z-b" data-ck-name="ZThree"></div>
+    <div class="z-c" data-ck-name="ZTwo"></div>
+  </div>
+</body>
+</html>

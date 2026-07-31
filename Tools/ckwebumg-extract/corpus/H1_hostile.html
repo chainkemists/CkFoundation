@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>H1_hostile</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif;
+    padding: 40px;
+  }
+  .grid-host {
+    display: grid;
+    grid-template-columns: 300px 300px 300px;
+    gap: 20px;
+    width: 1000px;
+    height: 300px;
+    background-color: rgb(20, 24, 30);
+  }
+  .grid-cell { background-color: rgb(190, 60, 60); }
+
+  .blurred {
+    filter: blur(2px);
+    width: 300px; height: 200px;
+    background-color: rgb(60, 150, 90);
+  }
+  .clipped {
+    clip-path: circle(40%);
+    width: 300px; height: 200px;
+    background-color: rgb(70, 110, 200);
+  }
+  .blended {
+    mix-blend-mode: multiply;
+    width: 300px; height: 200px;
+    background-color: rgb(200, 160, 50);
+  }
+  .sticky-el {
+    position: sticky;
+    top: 10px;
+    width: 300px; height: 120px;
+    background-color: rgb(150, 80, 190);
+  }
+  .vertical {
+    writing-mode: vertical-rl;
+    width: 120px; height: 300px;
+    background-color: rgb(44, 52, 66);
+    color: rgb(240, 240, 250);
+    font-size: 20px;
+  }
+  .pseudo-host {
+    width: 300px; height: 120px;
+    background-color: rgb(30, 34, 42);
+    color: rgb(240, 200, 80);
+    font-size: 18px;
+  }
+  .pseudo-host::before {
+    content: "PSEUDO ";
+    color: rgb(120, 200, 255);
+  }
+  .animated {
+    width: 300px; height: 120px;
+    background-color: rgb(90, 200, 180);
+    transition: background-color 200ms ease-in-out;
+    animation: pulse 1200ms infinite;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+  .multicol {
+    columns: 2;
+    width: 500px; height: 160px;
+    background-color: rgb(30, 34, 42);
+    color: rgb(220, 226, 236);
+    font-size: 14px;
+  }
+  .floated {
+    float: left;
+    width: 200px; height: 120px;
+    background-color: rgb(230, 120, 60);
+  }
+  .strip { display: flex; flex-direction: row; gap: 20px; margin-top: 20px; }
+</style>
+</head>
+<body>
+  <div class="grid-host" data-ck-name="GridHost">
+    <div class="grid-cell"></div>
+    <div class="grid-cell"></div>
+    <div class="grid-cell"></div>
+  </div>
+
+  <div class="strip">
+    <div class="blurred" data-ck-name="Duplicate"></div>
+    <div class="clipped" data-ck-name="Duplicate"></div>
+    <div class="blended" data-ck-name="BlendMultiply"></div>
+    <div class="sticky-el" data-ck-name="StickyElement"></div>
+  </div>
+
+  <div class="strip">
+    <div class="vertical" data-ck-name="VerticalWritingMode">VERTICAL TEXT</div>
+    <div class="pseudo-host" data-ck-name="PseudoBeforeHost">host content</div>
+    <div class="animated" data-ck-name="AnimatedElement" data-ck-nmae="typo"></div>
+  </div>
+
+  <div class="strip">
+    <div class="multicol" data-ck-name="MultiColumn">Column flow text that the multi column layout will split across two columns because the columns property is set to two and the box is short enough to force a break.</div>
+    <div class="floated" data-ck-name="FloatedElement"></div>
+  </div>
+</body>
+</html>

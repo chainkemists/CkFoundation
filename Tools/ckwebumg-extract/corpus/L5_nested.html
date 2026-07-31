@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>L5_nested</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body { width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif; padding: 40px; }
+
+  .lvl1 {
+    display: flex; flex-direction: row; gap: 24px;
+    width: 1600px; height: 900px; padding: 20px;
+    background-color: rgb(18, 22, 28);
+  }
+  .lvl2 {
+    display: flex; flex-direction: column; gap: 16px;
+    flex-grow: 1; padding: 16px;
+    background-color: rgb(30, 36, 46);
+  }
+  .lvl3 {
+    display: flex; flex-direction: row; gap: 8px;
+    height: 220px; padding: 8px;
+    background-color: rgb(44, 52, 66);
+  }
+  .leaf { width: 140px; height: 120px; }
+  .l-a { background-color: rgb(190, 60, 60); }
+  .l-b { background-color: rgb(60, 150, 90); }
+  .l-c { background-color: rgb(70, 110, 200); }
+  .l-stretch { width: 140px; background-color: rgb(200, 160, 50); }
+  .l-selfend { align-self: flex-end; }
+</style>
+</head>
+<body>
+  <div class="lvl1" data-ck-name="NestLevel1">
+    <div class="lvl2" data-ck-name="NestLevel2A">
+      <div class="lvl3" data-ck-name="NestLevel3A">
+        <div class="leaf l-a"></div>
+        <div class="leaf l-b l-selfend" data-ck-name="SelfEndGrandchild"></div>
+        <div class="l-stretch"></div>
+      </div>
+      <div class="lvl3">
+        <div class="leaf l-c"></div>
+        <div class="l-stretch"></div>
+      </div>
+    </div>
+    <div class="lvl2" data-ck-name="NestLevel2B">
+      <div class="lvl3">
+        <div class="leaf l-b"></div>
+        <div class="leaf l-c"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

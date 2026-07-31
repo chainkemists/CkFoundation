@@ -1,0 +1,815 @@
+{
+  "schema": 1,
+  "source": {
+    "html": "L7_overflow.html",
+    "viewport": [
+      1920,
+      1080
+    ],
+    "dpr": 1,
+    "browser": "Chrome/150.0.7871.188"
+  },
+  "assets": [],
+  "fonts": [],
+  "diagnostics": [],
+  "root": {
+    "id": "n0",
+    "tag": "body",
+    "ck": null,
+    "asset": null,
+    "attributes": null,
+    "box": {
+      "content": {
+        "x": 40,
+        "y": 40,
+        "w": 1840,
+        "h": 1000
+      },
+      "padding": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "border": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "margin": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      }
+    },
+    "layout": {
+      "display": "flex",
+      "direction": "row",
+      "justify": "normal",
+      "align": "normal",
+      "alignSelf": "auto",
+      "alignContent": "normal",
+      "wrap": "nowrap",
+      "gap": [
+        40,
+        40
+      ],
+      "grow": 0,
+      "shrink": 1,
+      "basis": "auto",
+      "position": "static",
+      "inset": null,
+      "zIndex": 0,
+      "order": 0,
+      "boxSizing": "border-box",
+      "overflow": [
+        "visible",
+        "visible"
+      ]
+    },
+    "paint": {
+      "background": {
+        "type": "color",
+        "rgba": [
+          12,
+          14,
+          18,
+          255
+        ]
+      },
+      "borderRadius": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "borderWidth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "borderColor": [
+        0,
+        0,
+        0,
+        255
+      ],
+      "boxShadow": null,
+      "opacity": 1,
+      "transform": null,
+      "visibility": "visible"
+    },
+    "text": null,
+    "states": null,
+    "children": [
+      {
+        "id": "n1",
+        "tag": "div",
+        "ck": {
+          "name": "ClipBox",
+          "widgetClass": null,
+          "bind": null,
+          "slot": null
+        },
+        "asset": null,
+        "attributes": null,
+        "box": {
+          "content": {
+            "x": 40,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          },
+          "padding": {
+            "x": 40,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          },
+          "border": {
+            "x": 40,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          },
+          "margin": {
+            "x": 40,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          }
+        },
+        "layout": {
+          "display": "block",
+          "direction": "row",
+          "justify": "normal",
+          "align": "normal",
+          "alignSelf": "auto",
+          "alignContent": "normal",
+          "wrap": "nowrap",
+          "gap": [
+            0,
+            0
+          ],
+          "grow": 0,
+          "shrink": 1,
+          "basis": "auto",
+          "position": "static",
+          "inset": null,
+          "zIndex": 0,
+          "order": 0,
+          "boxSizing": "border-box",
+          "overflow": [
+            "hidden",
+            "hidden"
+          ]
+        },
+        "paint": {
+          "background": {
+            "type": "color",
+            "rgba": [
+              20,
+              24,
+              30,
+              255
+            ]
+          },
+          "borderRadius": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderWidth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderColor": [
+            0,
+            0,
+            0,
+            255
+          ],
+          "boxShadow": null,
+          "opacity": 1,
+          "transform": null,
+          "visibility": "visible"
+        },
+        "text": null,
+        "states": null,
+        "children": [
+          {
+            "id": "n2",
+            "tag": "div",
+            "ck": {
+              "name": "OversizedChild",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 40,
+                "y": 40,
+                "w": 700,
+                "h": 700
+              },
+              "padding": {
+                "x": 40,
+                "y": 40,
+                "w": 700,
+                "h": 700
+              },
+              "border": {
+                "x": 40,
+                "y": 40,
+                "w": 700,
+                "h": 700
+              },
+              "margin": {
+                "x": 40,
+                "y": 40,
+                "w": 700,
+                "h": 700
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": {
+                "type": "color",
+                "rgba": [
+                  190,
+                  60,
+                  60,
+                  255
+                ]
+              },
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": null,
+            "states": null,
+            "children": [],
+            "unsupported": []
+          }
+        ],
+        "unsupported": []
+      },
+      {
+        "id": "n3",
+        "tag": "div",
+        "ck": {
+          "name": "ScrollBox",
+          "widgetClass": null,
+          "bind": null,
+          "slot": null
+        },
+        "asset": null,
+        "attributes": null,
+        "box": {
+          "content": {
+            "x": 480,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          },
+          "padding": {
+            "x": 480,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          },
+          "border": {
+            "x": 480,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          },
+          "margin": {
+            "x": 480,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          }
+        },
+        "layout": {
+          "display": "block",
+          "direction": "row",
+          "justify": "normal",
+          "align": "normal",
+          "alignSelf": "auto",
+          "alignContent": "normal",
+          "wrap": "nowrap",
+          "gap": [
+            0,
+            0
+          ],
+          "grow": 0,
+          "shrink": 1,
+          "basis": "auto",
+          "position": "static",
+          "inset": null,
+          "zIndex": 0,
+          "order": 0,
+          "boxSizing": "border-box",
+          "overflow": [
+            "auto",
+            "auto"
+          ]
+        },
+        "paint": {
+          "background": {
+            "type": "color",
+            "rgba": [
+              20,
+              24,
+              30,
+              255
+            ]
+          },
+          "borderRadius": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderWidth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderColor": [
+            0,
+            0,
+            0,
+            255
+          ],
+          "boxShadow": null,
+          "opacity": 1,
+          "transform": null,
+          "visibility": "visible"
+        },
+        "text": null,
+        "states": null,
+        "children": [
+          {
+            "id": "n4",
+            "tag": "div",
+            "ck": {
+              "name": "TallContent",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 480,
+                "y": 40,
+                "w": 360,
+                "h": 1200
+              },
+              "padding": {
+                "x": 480,
+                "y": 40,
+                "w": 360,
+                "h": 1200
+              },
+              "border": {
+                "x": 480,
+                "y": 40,
+                "w": 360,
+                "h": 1200
+              },
+              "margin": {
+                "x": 480,
+                "y": 40,
+                "w": 360,
+                "h": 1200
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": {
+                "type": "color",
+                "rgba": [
+                  60,
+                  150,
+                  90,
+                  255
+                ]
+              },
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": null,
+            "states": null,
+            "children": [],
+            "unsupported": []
+          }
+        ],
+        "unsupported": []
+      },
+      {
+        "id": "n5",
+        "tag": "div",
+        "ck": {
+          "name": "OuterClip",
+          "widgetClass": null,
+          "bind": null,
+          "slot": null
+        },
+        "asset": null,
+        "attributes": null,
+        "box": {
+          "content": {
+            "x": 960,
+            "y": 80,
+            "w": 320,
+            "h": 320
+          },
+          "padding": {
+            "x": 920,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          },
+          "border": {
+            "x": 920,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          },
+          "margin": {
+            "x": 920,
+            "y": 40,
+            "w": 400,
+            "h": 400
+          }
+        },
+        "layout": {
+          "display": "block",
+          "direction": "row",
+          "justify": "normal",
+          "align": "normal",
+          "alignSelf": "auto",
+          "alignContent": "normal",
+          "wrap": "nowrap",
+          "gap": [
+            0,
+            0
+          ],
+          "grow": 0,
+          "shrink": 1,
+          "basis": "auto",
+          "position": "static",
+          "inset": null,
+          "zIndex": 0,
+          "order": 0,
+          "boxSizing": "border-box",
+          "overflow": [
+            "hidden",
+            "hidden"
+          ]
+        },
+        "paint": {
+          "background": {
+            "type": "color",
+            "rgba": [
+              20,
+              24,
+              30,
+              255
+            ]
+          },
+          "borderRadius": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderWidth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderColor": [
+            0,
+            0,
+            0,
+            255
+          ],
+          "boxShadow": null,
+          "opacity": 1,
+          "transform": null,
+          "visibility": "visible"
+        },
+        "text": null,
+        "states": null,
+        "children": [
+          {
+            "id": "n6",
+            "tag": "div",
+            "ck": {
+              "name": "InnerClip",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 960,
+                "y": 80,
+                "w": 400,
+                "h": 400
+              },
+              "padding": {
+                "x": 960,
+                "y": 80,
+                "w": 400,
+                "h": 400
+              },
+              "border": {
+                "x": 960,
+                "y": 80,
+                "w": 400,
+                "h": 400
+              },
+              "margin": {
+                "x": 960,
+                "y": 80,
+                "w": 400,
+                "h": 400
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "hidden",
+                "hidden"
+              ]
+            },
+            "paint": {
+              "background": {
+                "type": "color",
+                "rgba": [
+                  44,
+                  52,
+                  66,
+                  255
+                ]
+              },
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": null,
+            "states": null,
+            "children": [
+              {
+                "id": "n7",
+                "tag": "div",
+                "ck": {
+                  "name": "InnerClipChild",
+                  "widgetClass": null,
+                  "bind": null,
+                  "slot": null
+                },
+                "asset": null,
+                "attributes": null,
+                "box": {
+                  "content": {
+                    "x": 960,
+                    "y": 80,
+                    "w": 600,
+                    "h": 600
+                  },
+                  "padding": {
+                    "x": 960,
+                    "y": 80,
+                    "w": 600,
+                    "h": 600
+                  },
+                  "border": {
+                    "x": 960,
+                    "y": 80,
+                    "w": 600,
+                    "h": 600
+                  },
+                  "margin": {
+                    "x": 960,
+                    "y": 80,
+                    "w": 600,
+                    "h": 600
+                  }
+                },
+                "layout": {
+                  "display": "block",
+                  "direction": "row",
+                  "justify": "normal",
+                  "align": "normal",
+                  "alignSelf": "auto",
+                  "alignContent": "normal",
+                  "wrap": "nowrap",
+                  "gap": [
+                    0,
+                    0
+                  ],
+                  "grow": 0,
+                  "shrink": 1,
+                  "basis": "auto",
+                  "position": "static",
+                  "inset": null,
+                  "zIndex": 0,
+                  "order": 0,
+                  "boxSizing": "border-box",
+                  "overflow": [
+                    "visible",
+                    "visible"
+                  ]
+                },
+                "paint": {
+                  "background": {
+                    "type": "color",
+                    "rgba": [
+                      70,
+                      110,
+                      200,
+                      255
+                    ]
+                  },
+                  "borderRadius": [
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "borderWidth": [
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "borderColor": [
+                    0,
+                    0,
+                    0,
+                    255
+                  ],
+                  "boxShadow": null,
+                  "opacity": 1,
+                  "transform": null,
+                  "visibility": "visible"
+                },
+                "text": null,
+                "states": null,
+                "children": [],
+                "unsupported": []
+              }
+            ],
+            "unsupported": []
+          }
+        ],
+        "unsupported": []
+      }
+    ],
+    "unsupported": []
+  }
+}

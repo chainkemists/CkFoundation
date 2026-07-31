@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>L9_order</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body { width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif; padding: 40px; }
+  .rail {
+    display: flex; flex-direction: row; gap: 20px;
+    width: 1200px; height: 300px; padding: 20px;
+    background-color: rgb(20, 24, 30);
+  }
+  .card {
+    display: flex; justify-content: center; align-items: center;
+    width: 200px; height: 200px;
+    color: rgb(255, 255, 255); font-size: 24px;
+  }
+  .o4 { order: 4; background-color: rgb(190, 60, 60); }
+  .o2 { order: 2; background-color: rgb(60, 150, 90); }
+  .o5 { order: 5; background-color: rgb(70, 110, 200); }
+  .o1 { order: 1; background-color: rgb(200, 160, 50); }
+  .o3 { order: 3; background-color: rgb(150, 80, 190); }
+</style>
+</head>
+<body>
+  <div class="rail" data-ck-name="OrderRail">
+    <div class="card o4" data-ck-name="SourceA_Order4">A order 4</div>
+    <div class="card o2" data-ck-name="SourceB_Order2">B order 2</div>
+    <div class="card o5" data-ck-name="SourceC_Order5">C order 5</div>
+    <div class="card o1" data-ck-name="SourceD_Order1">D order 1</div>
+    <div class="card o3" data-ck-name="SourceE_Order3">E order 3</div>
+  </div>
+</body>
+</html>

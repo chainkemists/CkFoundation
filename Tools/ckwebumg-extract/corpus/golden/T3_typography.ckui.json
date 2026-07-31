@@ -1,0 +1,1881 @@
+{
+  "schema": 1,
+  "source": {
+    "html": "T3_typography.html",
+    "viewport": [
+      1920,
+      1080
+    ],
+    "dpr": 1,
+    "browser": "Chrome/150.0.7871.188"
+  },
+  "assets": [],
+  "fonts": [],
+  "diagnostics": [],
+  "root": {
+    "id": "n0",
+    "tag": "body",
+    "ck": null,
+    "asset": null,
+    "attributes": null,
+    "box": {
+      "content": {
+        "x": 60,
+        "y": 60,
+        "w": 1800,
+        "h": 960
+      },
+      "padding": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "border": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "margin": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      }
+    },
+    "layout": {
+      "display": "flex",
+      "direction": "row",
+      "justify": "normal",
+      "align": "flex-start",
+      "alignSelf": "auto",
+      "alignContent": "normal",
+      "wrap": "nowrap",
+      "gap": [
+        40,
+        40
+      ],
+      "grow": 0,
+      "shrink": 1,
+      "basis": "auto",
+      "position": "static",
+      "inset": null,
+      "zIndex": 0,
+      "order": 0,
+      "boxSizing": "border-box",
+      "overflow": [
+        "visible",
+        "visible"
+      ]
+    },
+    "paint": {
+      "background": {
+        "type": "color",
+        "rgba": [
+          12,
+          14,
+          18,
+          255
+        ]
+      },
+      "borderRadius": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "borderWidth": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "borderColor": [
+        0,
+        0,
+        0,
+        255
+      ],
+      "boxShadow": null,
+      "opacity": 1,
+      "transform": null,
+      "visibility": "visible"
+    },
+    "text": null,
+    "states": null,
+    "children": [
+      {
+        "id": "n1",
+        "tag": "div",
+        "ck": {
+          "name": "WeightAndTrackingColumn",
+          "widgetClass": null,
+          "bind": null,
+          "slot": null
+        },
+        "asset": null,
+        "attributes": null,
+        "box": {
+          "content": {
+            "x": 80,
+            "y": 80,
+            "w": 520,
+            "h": 166
+          },
+          "padding": {
+            "x": 60,
+            "y": 60,
+            "w": 560,
+            "h": 206
+          },
+          "border": {
+            "x": 60,
+            "y": 60,
+            "w": 560,
+            "h": 206
+          },
+          "margin": {
+            "x": 60,
+            "y": 60,
+            "w": 560,
+            "h": 206
+          }
+        },
+        "layout": {
+          "display": "flex",
+          "direction": "column",
+          "justify": "normal",
+          "align": "normal",
+          "alignSelf": "auto",
+          "alignContent": "normal",
+          "wrap": "nowrap",
+          "gap": [
+            20,
+            20
+          ],
+          "grow": 0,
+          "shrink": 1,
+          "basis": "auto",
+          "position": "static",
+          "inset": null,
+          "zIndex": 0,
+          "order": 0,
+          "boxSizing": "border-box",
+          "overflow": [
+            "visible",
+            "visible"
+          ]
+        },
+        "paint": {
+          "background": {
+            "type": "color",
+            "rgba": [
+              20,
+              24,
+              30,
+              255
+            ]
+          },
+          "borderRadius": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderWidth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderColor": [
+            220,
+            226,
+            236,
+            255
+          ],
+          "boxShadow": null,
+          "opacity": 1,
+          "transform": null,
+          "visibility": "visible"
+        },
+        "text": null,
+        "states": null,
+        "children": [
+          {
+            "id": "n2",
+            "tag": "div",
+            "ck": {
+              "name": "LetterSpacing2px",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 80,
+                "y": 80,
+                "w": 520,
+                "h": 23
+              },
+              "padding": {
+                "x": 80,
+                "y": 80,
+                "w": 520,
+                "h": 23
+              },
+              "border": {
+                "x": 80,
+                "y": 80,
+                "w": 520,
+                "h": 23
+              },
+              "margin": {
+                "x": 80,
+                "y": 80,
+                "w": 520,
+                "h": 23
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Letter spacing two pixels",
+              "family": "Arial, sans-serif",
+              "sizePx": 20,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 2,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n3",
+            "tag": "div",
+            "ck": {
+              "name": "Weight400",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 80,
+                "y": 123,
+                "w": 520,
+                "h": 26
+              },
+              "padding": {
+                "x": 80,
+                "y": 123,
+                "w": 520,
+                "h": 26
+              },
+              "border": {
+                "x": 80,
+                "y": 123,
+                "w": 520,
+                "h": 26
+              },
+              "margin": {
+                "x": 80,
+                "y": 123,
+                "w": 520,
+                "h": 26
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Weight four hundred",
+              "family": "Arial, sans-serif",
+              "sizePx": 22,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n4",
+            "tag": "div",
+            "ck": {
+              "name": "Weight600",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 80,
+                "y": 169,
+                "w": 520,
+                "h": 26
+              },
+              "padding": {
+                "x": 80,
+                "y": 169,
+                "w": 520,
+                "h": 26
+              },
+              "border": {
+                "x": 80,
+                "y": 169,
+                "w": 520,
+                "h": 26
+              },
+              "margin": {
+                "x": 80,
+                "y": 169,
+                "w": 520,
+                "h": 26
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Weight six hundred",
+              "family": "Arial, sans-serif",
+              "sizePx": 22,
+              "weight": 600,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n5",
+            "tag": "div",
+            "ck": {
+              "name": "Weight800",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 80,
+                "y": 215,
+                "w": 520,
+                "h": 31
+              },
+              "padding": {
+                "x": 80,
+                "y": 215,
+                "w": 520,
+                "h": 31
+              },
+              "border": {
+                "x": 80,
+                "y": 215,
+                "w": 520,
+                "h": 31
+              },
+              "margin": {
+                "x": 80,
+                "y": 215,
+                "w": 520,
+                "h": 31
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Weight eight hundred",
+              "family": "Arial, sans-serif",
+              "sizePx": 22,
+              "weight": 800,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          }
+        ],
+        "unsupported": []
+      },
+      {
+        "id": "n6",
+        "tag": "div",
+        "ck": {
+          "name": "SizeColumn",
+          "widgetClass": null,
+          "bind": null,
+          "slot": null
+        },
+        "asset": null,
+        "attributes": null,
+        "box": {
+          "content": {
+            "x": 680,
+            "y": 80,
+            "w": 520,
+            "h": 157
+          },
+          "padding": {
+            "x": 660,
+            "y": 60,
+            "w": 560,
+            "h": 197
+          },
+          "border": {
+            "x": 660,
+            "y": 60,
+            "w": 560,
+            "h": 197
+          },
+          "margin": {
+            "x": 660,
+            "y": 60,
+            "w": 560,
+            "h": 197
+          }
+        },
+        "layout": {
+          "display": "flex",
+          "direction": "column",
+          "justify": "normal",
+          "align": "normal",
+          "alignSelf": "auto",
+          "alignContent": "normal",
+          "wrap": "nowrap",
+          "gap": [
+            20,
+            20
+          ],
+          "grow": 0,
+          "shrink": 1,
+          "basis": "auto",
+          "position": "static",
+          "inset": null,
+          "zIndex": 0,
+          "order": 0,
+          "boxSizing": "border-box",
+          "overflow": [
+            "visible",
+            "visible"
+          ]
+        },
+        "paint": {
+          "background": {
+            "type": "color",
+            "rgba": [
+              20,
+              24,
+              30,
+              255
+            ]
+          },
+          "borderRadius": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderWidth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderColor": [
+            220,
+            226,
+            236,
+            255
+          ],
+          "boxShadow": null,
+          "opacity": 1,
+          "transform": null,
+          "visibility": "visible"
+        },
+        "text": null,
+        "states": null,
+        "children": [
+          {
+            "id": "n7",
+            "tag": "div",
+            "ck": {
+              "name": "Size12",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 680,
+                "y": 80,
+                "w": 520,
+                "h": 14
+              },
+              "padding": {
+                "x": 680,
+                "y": 80,
+                "w": 520,
+                "h": 14
+              },
+              "border": {
+                "x": 680,
+                "y": 80,
+                "w": 520,
+                "h": 14
+              },
+              "margin": {
+                "x": 680,
+                "y": 80,
+                "w": 520,
+                "h": 14
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Twelve pixel body copy",
+              "family": "Arial, sans-serif",
+              "sizePx": 12,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n8",
+            "tag": "div",
+            "ck": {
+              "name": "Size16",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 680,
+                "y": 114,
+                "w": 520,
+                "h": 18
+              },
+              "padding": {
+                "x": 680,
+                "y": 114,
+                "w": 520,
+                "h": 18
+              },
+              "border": {
+                "x": 680,
+                "y": 114,
+                "w": 520,
+                "h": 18
+              },
+              "margin": {
+                "x": 680,
+                "y": 114,
+                "w": 520,
+                "h": 18
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Sixteen pixel body copy",
+              "family": "Arial, sans-serif",
+              "sizePx": 16,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n9",
+            "tag": "div",
+            "ck": {
+              "name": "Size24",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 680,
+                "y": 152,
+                "w": 520,
+                "h": 28
+              },
+              "padding": {
+                "x": 680,
+                "y": 152,
+                "w": 520,
+                "h": 28
+              },
+              "border": {
+                "x": 680,
+                "y": 152,
+                "w": 520,
+                "h": 28
+              },
+              "margin": {
+                "x": 680,
+                "y": 152,
+                "w": 520,
+                "h": 28
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Twenty four pixel copy",
+              "family": "Arial, sans-serif",
+              "sizePx": 24,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n10",
+            "tag": "div",
+            "ck": {
+              "name": "Size32",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 680,
+                "y": 200,
+                "w": 520,
+                "h": 37
+              },
+              "padding": {
+                "x": 680,
+                "y": 200,
+                "w": 520,
+                "h": 37
+              },
+              "border": {
+                "x": 680,
+                "y": 200,
+                "w": 520,
+                "h": 37
+              },
+              "margin": {
+                "x": 680,
+                "y": 200,
+                "w": 520,
+                "h": 37
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Thirty two pixel copy",
+              "family": "Arial, sans-serif",
+              "sizePx": 32,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          }
+        ],
+        "unsupported": []
+      },
+      {
+        "id": "n11",
+        "tag": "div",
+        "ck": {
+          "name": "DecorationAndAlignColumn",
+          "widgetClass": null,
+          "bind": null,
+          "slot": null
+        },
+        "asset": null,
+        "attributes": null,
+        "box": {
+          "content": {
+            "x": 1280,
+            "y": 80,
+            "w": 520,
+            "h": 195
+          },
+          "padding": {
+            "x": 1260,
+            "y": 60,
+            "w": 560,
+            "h": 235
+          },
+          "border": {
+            "x": 1260,
+            "y": 60,
+            "w": 560,
+            "h": 235
+          },
+          "margin": {
+            "x": 1260,
+            "y": 60,
+            "w": 560,
+            "h": 235
+          }
+        },
+        "layout": {
+          "display": "flex",
+          "direction": "column",
+          "justify": "normal",
+          "align": "normal",
+          "alignSelf": "auto",
+          "alignContent": "normal",
+          "wrap": "nowrap",
+          "gap": [
+            20,
+            20
+          ],
+          "grow": 0,
+          "shrink": 1,
+          "basis": "auto",
+          "position": "static",
+          "inset": null,
+          "zIndex": 0,
+          "order": 0,
+          "boxSizing": "border-box",
+          "overflow": [
+            "visible",
+            "visible"
+          ]
+        },
+        "paint": {
+          "background": {
+            "type": "color",
+            "rgba": [
+              20,
+              24,
+              30,
+              255
+            ]
+          },
+          "borderRadius": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderWidth": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "borderColor": [
+            220,
+            226,
+            236,
+            255
+          ],
+          "boxShadow": null,
+          "opacity": 1,
+          "transform": null,
+          "visibility": "visible"
+        },
+        "text": null,
+        "states": null,
+        "children": [
+          {
+            "id": "n12",
+            "tag": "div",
+            "ck": {
+              "name": "TransformUppercase",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 1280,
+                "y": 80,
+                "w": 520,
+                "h": 23
+              },
+              "padding": {
+                "x": 1280,
+                "y": 80,
+                "w": 520,
+                "h": 23
+              },
+              "border": {
+                "x": 1280,
+                "y": 80,
+                "w": 520,
+                "h": 23
+              },
+              "margin": {
+                "x": 1280,
+                "y": 80,
+                "w": 520,
+                "h": 23
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                240,
+                200,
+                80,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "uppercase transform applied",
+              "family": "Arial, sans-serif",
+              "sizePx": 20,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                240,
+                200,
+                80,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "uppercase",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n13",
+            "tag": "div",
+            "ck": {
+              "name": "DecorationUnderline",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 1280,
+                "y": 123,
+                "w": 520,
+                "h": 23
+              },
+              "padding": {
+                "x": 1280,
+                "y": 123,
+                "w": 520,
+                "h": 23
+              },
+              "border": {
+                "x": 1280,
+                "y": 123,
+                "w": 520,
+                "h": 23
+              },
+              "margin": {
+                "x": 1280,
+                "y": 123,
+                "w": 520,
+                "h": 23
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": null,
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                120,
+                200,
+                255,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Underlined decoration",
+              "family": "Arial, sans-serif",
+              "sizePx": 20,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                120,
+                200,
+                255,
+                255
+              ],
+              "align": "start",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "underline"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n14",
+            "tag": "div",
+            "ck": {
+              "name": "AlignLeft",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 1280,
+                "y": 166,
+                "w": 520,
+                "h": 23
+              },
+              "padding": {
+                "x": 1280,
+                "y": 166,
+                "w": 520,
+                "h": 23
+              },
+              "border": {
+                "x": 1280,
+                "y": 166,
+                "w": 520,
+                "h": 23
+              },
+              "margin": {
+                "x": 1280,
+                "y": 166,
+                "w": 520,
+                "h": 23
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": {
+                "type": "color",
+                "rgba": [
+                  44,
+                  52,
+                  66,
+                  255
+                ]
+              },
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Aligned left",
+              "family": "Arial, sans-serif",
+              "sizePx": 20,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "left",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n15",
+            "tag": "div",
+            "ck": {
+              "name": "AlignCenter",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 1280,
+                "y": 209,
+                "w": 520,
+                "h": 23
+              },
+              "padding": {
+                "x": 1280,
+                "y": 209,
+                "w": 520,
+                "h": 23
+              },
+              "border": {
+                "x": 1280,
+                "y": 209,
+                "w": 520,
+                "h": 23
+              },
+              "margin": {
+                "x": 1280,
+                "y": 209,
+                "w": 520,
+                "h": 23
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": {
+                "type": "color",
+                "rgba": [
+                  44,
+                  52,
+                  66,
+                  255
+                ]
+              },
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Aligned center",
+              "family": "Arial, sans-serif",
+              "sizePx": 20,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "center",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          },
+          {
+            "id": "n16",
+            "tag": "div",
+            "ck": {
+              "name": "AlignRight",
+              "widgetClass": null,
+              "bind": null,
+              "slot": null
+            },
+            "asset": null,
+            "attributes": null,
+            "box": {
+              "content": {
+                "x": 1280,
+                "y": 252,
+                "w": 520,
+                "h": 23
+              },
+              "padding": {
+                "x": 1280,
+                "y": 252,
+                "w": 520,
+                "h": 23
+              },
+              "border": {
+                "x": 1280,
+                "y": 252,
+                "w": 520,
+                "h": 23
+              },
+              "margin": {
+                "x": 1280,
+                "y": 252,
+                "w": 520,
+                "h": 23
+              }
+            },
+            "layout": {
+              "display": "block",
+              "direction": "row",
+              "justify": "normal",
+              "align": "normal",
+              "alignSelf": "auto",
+              "alignContent": "normal",
+              "wrap": "nowrap",
+              "gap": [
+                0,
+                0
+              ],
+              "grow": 0,
+              "shrink": 1,
+              "basis": "auto",
+              "position": "static",
+              "inset": null,
+              "zIndex": 0,
+              "order": 0,
+              "boxSizing": "border-box",
+              "overflow": [
+                "visible",
+                "visible"
+              ]
+            },
+            "paint": {
+              "background": {
+                "type": "color",
+                "rgba": [
+                  44,
+                  52,
+                  66,
+                  255
+                ]
+              },
+              "borderRadius": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderWidth": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "borderColor": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "boxShadow": null,
+              "opacity": 1,
+              "transform": null,
+              "visibility": "visible"
+            },
+            "text": {
+              "content": "Aligned right",
+              "family": "Arial, sans-serif",
+              "sizePx": 20,
+              "weight": 400,
+              "style": "normal",
+              "lineHeightPx": null,
+              "letterSpacingPx": 0,
+              "color": [
+                220,
+                226,
+                236,
+                255
+              ],
+              "align": "right",
+              "whiteSpace": "normal",
+              "textOverflow": "clip",
+              "transformCase": "none",
+              "decoration": "none"
+            },
+            "states": null,
+            "children": [],
+            "unsupported": []
+          }
+        ],
+        "unsupported": []
+      }
+    ],
+    "unsupported": []
+  }
+}

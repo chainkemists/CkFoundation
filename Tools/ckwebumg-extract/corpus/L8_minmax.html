@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>L8_minmax</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; background: #0c0e12; font-family: Arial, sans-serif;
+    display: flex; flex-direction: column; gap: 40px; padding: 40px;
+  }
+  .rail {
+    display: flex; flex-direction: row; gap: 20px;
+    width: 1200px; height: 260px;
+    padding: 20px;
+    background-color: rgb(20, 24, 30);
+  }
+
+  /* basis 100px but min-width 300px wins -> border box must be 300 wide */
+  .clamp-minw { flex-basis: 100px; flex-grow: 0; flex-shrink: 0; min-width: 300px; height: 120px; background-color: rgb(190, 60, 60); }
+  /* basis 800px but max-width 250px wins -> border box must be 250 wide */
+  .clamp-maxw { flex-basis: 800px; flex-shrink: 0; max-width: 250px; height: 120px; background-color: rgb(60, 150, 90); }
+  /* height 40px but min-height 180px wins */
+  .clamp-minh { width: 200px; height: 40px; min-height: 180px; background-color: rgb(70, 110, 200); }
+  /* height 900px but max-height 90px wins */
+  .clamp-maxh { width: 200px; height: 900px; max-height: 90px; background-color: rgb(200, 160, 50); }
+
+  .center-rail {
+    display: flex; flex-direction: row;
+    width: 1200px; height: 200px;
+    background-color: rgb(20, 24, 30);
+  }
+  .auto-margin { width: 300px; height: 120px; margin: auto; background-color: rgb(150, 80, 190); }
+</style>
+</head>
+<body>
+  <div class="rail" data-ck-name="ClampRail">
+    <div class="clamp-minw" data-ck-name="ClampMinWidth300"></div>
+    <div class="clamp-maxw" data-ck-name="ClampMaxWidth250"></div>
+    <div class="clamp-minh" data-ck-name="ClampMinHeight180"></div>
+    <div class="clamp-maxh" data-ck-name="ClampMaxHeight90"></div>
+  </div>
+  <div class="center-rail" data-ck-name="AutoMarginRail">
+    <div class="auto-margin" data-ck-name="AutoMarginBlock"></div>
+  </div>
+</body>
+</html>
