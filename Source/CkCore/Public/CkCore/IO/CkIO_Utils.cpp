@@ -522,6 +522,14 @@ auto
             return ExactResults;
         }
 
+        // A qualified object path cannot match DoFuzzySearch: fuzzy matching compares
+        // AssetData.AssetName (the leaf name) against the complete input string.
+        // Avoid scanning every asset for a fallback that cannot succeed.
+        if (AssetName.StartsWith(TEXT("/")))
+        {
+            return FCk_Utils_Object_AssetSearchResult_Array{};
+        }
+
         return DoFuzzySearch(AssetName, AssetClass, SearchScope);
     }
 
