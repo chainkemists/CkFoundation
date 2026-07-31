@@ -7,8 +7,8 @@
 | Gate | Name (brief phase) | Deliverable | Exit gate | Status |
 |---|---|---|---|---|
 | 0 | Recon + build/buy (§9 P0) | PriorArt.md, VERIFIED.md, DECISION 0 | Adam decides build/buy | ✅ Done 2026-07-31 (BUILD) |
-| 1 | IR + extraction (§9 P1) | `ckwebumg-extract` CLI, `*.ckui.json` schema v1, `data-ck-*` spec, 20-page corpus + golden PNGs | Deterministic extraction; schema reviewed; **DECISIONS 1–4 made by Adam** | 🟡 In progress — [Plan/Gate_01_IR_Extraction.md](Plan/Gate_01_IR_Extraction.md) |
-| 2 | Layout runtime (§9 P2) | Layout impl per DECISION 1 + rect/pixel-diff harness (harness home decided here: CkTests vs dedicated module) | Layout-only corpus at threshold in CI | ⏳ Pending |
+| 1 | IR + extraction (§9 P1) | `ckwebumg-extract` CLI, `*.ckui.json` schema v1, `data-ck-*` spec, 20-page corpus + golden PNGs | Deterministic extraction; schema reviewed; **DECISIONS 1–4 made by Adam** | ✅ Done 2026-07-31 (D1=C Yoga panel, D2=DataAsset-runtime, D3=read-only regen, D4=allowlist ratified) |
+| 2 | Layout runtime (§9 P2) | Yoga vendored (CkThirdParty), `CkWebUmg` module, `SCkWebUmgFlexPanel`, IR loader, rect-diff harness (home: **CkTests**, decided) | Layout-only corpus (L1–L9) within ±1px of IR boxes in automated run | 🟡 In progress — [Plan/Gate_02_Layout_Runtime.md](Plan/Gate_02_Layout_Runtime.md) |
 | 3 | Paint layer (§9 P3) | SDF rounded-rect/gradient/shadow brushes, text styling, asset import | Paint corpus at threshold; text at §8.1 tolerance | ⏳ Pending |
 | 4 | Emission (§9 P4) | DECISION 2 output form; read-only generated assets per DECISION 3 | Round-trip diff within threshold; idempotent regen | ⏳ Pending |
 | 5 | Ergonomics (§9 P5) | `data-ck-*` end-to-end, live-reload preview, report UI | Real project screen converted + wired | ⏳ Pending |

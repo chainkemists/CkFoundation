@@ -1,10 +1,10 @@
 # CkWebUmg — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-07-31 session 2 (branch `feature/webumg-campaign`):** Gate 0 ✅. Gate 1 work items ✅: 1 CLI, 3 extraction core, 4 diagnostics (4 classes), 5 `data-ck-*` complete (incl. duplicate-name + unknown-attr), 6 corpus (20 pages incl. hostile), 7 determinism (all 20 pages, IR+PNG byte-identical), 8 CEF probe (closed: feasible, not adopted). **Remaining for Gate 1 exit: work item 9 (DECISION 1–4 evidence packs) + Adam's schema review + Adam's DECISION 1–4 rulings.**
-**Baseline being diffed against:** n/a — no engine-code changes yet.
-**Next action:** write the four DECISION packs from corpus evidence, then present the Gate 1 exit package to Adam.
-**Blocked on:** after packs land — Adam (schema review + DECISIONS 1–4). Open Adam-side item: R3 WebToUMG purchase.
+**As of 2026-07-31 session 2, later (branch `feature/webumg-campaign`):** **Gate 1 ✅ CLOSED** — Adam approved schema + all four DECISION-pack recommendations verbatim ("Go with your recommendations"): D1 = Yoga panel (C), D2 = DataAsset-runtime, D3 = read-only regen + duplicate-name hard error, D4 = allowlist ratified. Harness home = CkTests (recorded). **Gate 2 opened** (Plan/Gate_02_Layout_Runtime.md).
+**Baseline being diffed against:** NOT YET CAPTURED — Gate 2 entry requires a toolbox build + automation baseline before the first engine-code change. That is the next action's first step.
+**Next action:** Gate 2 work item 0 — capture toolbox baseline; then vendor Yoga (item 1) + scaffold CkWebUmg (item 2).
+**Blocked on:** nothing until Gate 2 exit (threshold ratification). Open Adam-side item: R3 WebToUMG purchase.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |

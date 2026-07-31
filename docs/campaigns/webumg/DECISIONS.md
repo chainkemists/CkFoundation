@@ -8,21 +8,25 @@ Phase 0 recommendation accepted as presented ([PriorArt.md](PriorArt.md) § Buil
 
 `CkWebUmg` (Runtime) + `CkWebUmgEditor` (UncookedOnly); CLI `ckwebumg-extract`; campaign dir `docs/campaigns/webumg/`. Chosen over CkCss/CkMockup/CkFlexUi. Reason `CkStyle` was unavailable: collides with `namespace CkStyle` (`Source/CkEditorTools/Public/CkEditorTools/Style/CkStyle.h:32`) and `CkStyleSettings.h`; `CkEditorStyle` module also exists (`CkFoundation.uplugin:370`). Harness module placement (CkTests plugin vs dedicated) is a Gate 2 decision — no `*Harness` module precedent exists.
 
-## DECISION 1 — Layout runtime — **OPEN, due at Gate 1 exit with evidence**
+## DECISION 1 — Layout runtime — **DECIDED: option C** (Adam, 2026-07-31, per Gate_01_Decision_Packs recommendation)
 
-Options A (bake to canvas) / B (lower to native panels) / C (Yoga-backed `SCkWebUmgFlexPanel`) / D (C + lowering pass) per brief §4. Evidence on file: Slate/Yoga measure-model reconciliation (PriorArt §3 — C's headline risk survived recon on paper; compiled proof pending); WebToUMG ships A/B-style lowering with known costs (single viewport, baked) ⟨V⟩. Gate 1 adds: IR-driven layout fixtures both engines must satisfy.
+Yoga-backed Slate flex panel for Gate 2; lowering pass (option D) is the stated evolution path, deferred until a real hand-editability demand exists. Revisit triggers recorded in the pack: Gate 2 prototype failing text-measure integration at ±1px, or R3 baseline showing native lowering already within tolerance.
 
-## DECISION 2 — Output form — **OPEN, due at Gate 1 exit**
+## DECISION 2 — Output form — **DECIDED: DataAsset-runtime primary** (Adam, 2026-07-31)
 
-Generated WBP assets / generated C++ UUserWidget / runtime build from DataAsset IR (brief §4). Evidence to gather in Gate 1: what the IR makes cheap or expensive per option.
+Runtime construction from the IR is the primary output (the Gate 2 harness forces the runtime builder into existence regardless). "Also emit WBP?" re-examined at Gate 4 entry with observed designer-visibility costs.
 
-## DECISION 3 — Regeneration model — **OPEN, due at Gate 1 exit**
+## DECISION 3 — Regeneration model — **DECIDED: read-only regeneration, ratified** (Adam, 2026-07-31)
 
-Proposed: generated assets strictly read-only (`WBP_Foo_Generated`), hand-authoring in subclass/bound C++. Corroboration: WebToUMG independently converged on regenerate+preserve-logic+stable-names, merge "on roadmap" ⟨V⟩.
+Generated output strictly read-only; hand-authoring in subclasses/bound C++; no merge-back. Corpus addendum adopted: duplicate `data-ck-name` is a **hard emit error**, not a warning.
 
-## DECISION 4 — v1 CSS surface — **OPEN, due at Gate 1 exit**
+## DECISION 4 — v1 CSS surface — **DECIDED: implemented allowlist ratified** (Adam, 2026-07-31)
 
-Brief §4 proposal is the working set (flexbox, box model, backgrounds/borders/radii, typography, images, absolute/relative, overflow, opacity, transform, :hover/:active/:disabled in; Grid, inline mixed boxes, pseudo-elements, animations, filter, clip-path, blend modes out — with diagnostics). Gate 1's extractor implements the diagnostic mechanism against this proposed set; corpus findings may amend it before ratification.
+The corpus-tested `SUPPORTED_PROPERTIES`/`SUPPORTED_SHORTHANDS`/`VALUE_RULES` in `Tools/ckwebumg-extract/src/extract.mjs` are the v1 surface of record, with the four diagnostic classes (name / value / pseudo-element / computed-divergence). Surface grows by evidence (diagnostic reports from real screens), not speculation. Schema v1 approved same date.
+
+## Gate 2 structural decision — harness home — **DECIDED: CkTests plugin** (recorded 2026-07-31, per precedent)
+
+No `*Harness` module precedent exists in CkFoundation; CkTests owns test infrastructure (AutoTests/gyms/Gauntlet). The rect-diff harness lands there; CkWebUmg ships no test-only module.
 
 ## Standing evidence notes (carried from Phase 0)
 

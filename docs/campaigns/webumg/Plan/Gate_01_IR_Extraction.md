@@ -1,8 +1,8 @@
 # Gate 1 — IR + extraction
 
-> **Status:** 🟡 In progress (entered 2026-07-31)
+> **Status:** ✅ Done (2026-07-31)
 > **Depends on:** Gate 0 ✅ (DECISION 0 = BUILD, 2026-07-31)
-> **Estimate at entry:** 2–4 sessions (Phase 0 estimate, re-dated 2026-07-31; actual recorded at exit)
+> **Estimate at entry:** 2–4 sessions · **Actual:** 2 sessions (same day)
 
 ## Goal
 
@@ -46,8 +46,10 @@ After this gate: running `ckwebumg-extract <page.html>` produces a schema-versio
 
 ## Exit criteria — ALL land in the same commit as the last work item
 
-- [ ] All expected observations confirmed; evidence (diff outputs, corpus manifest) in PROGRESS.md
-- [ ] Schema reviewed by Adam; DECISIONS 1–4 made by Adam (campaign stops here until then — brief §1 rule 3)
-- [ ] `data-ck-*` spec exists and extraction honors it
-- [ ] PLAN.md status row AND this header updated, same commit
-- [ ] PROGRESS.md dated entry; VERIFIED.md appended with any new engine/protocol claims
+- [x] All expected observations confirmed; evidence in PROGRESS.md (2026-07-31 session-2 entry: 20/20 pages byte-deterministic IR+PNG; H1 fires all diagnostic classes; no CSS syntax leaks after B3 fix)
+- [x] Schema reviewed by Adam; DECISIONS 1–4 made by Adam ("Go with your recommendations", 2026-07-31 — recorded in DECISIONS.md)
+- [x] `data-ck-*` spec exists (DATA_CK_SPEC.md) and extraction honors it (smoke + H1 assertions)
+- [x] PLAN.md status row AND this header updated, same commit
+- [x] PROGRESS.md dated entries; VERIFIED.md appended (Gate 1 additions section)
+
+**Deviation from plan, recorded:** T4 (mixed inline weights) and C2 (inputs) were folded into T3/C1 by the corpus author; corpus is 20 pages counting smoke. The inline-formatting hard limit (brief §8.5) gets its dedicated fixture at Gate 3 when text tolerance is defined.
