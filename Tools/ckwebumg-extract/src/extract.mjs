@@ -49,6 +49,7 @@ const SUPPORTED_PROPERTIES = new Set([
     'color', 'font-family', 'font-size', 'font-weight', 'font-style',
     'line-height', 'letter-spacing', 'text-align', 'text-overflow', 'white-space',
     'text-decoration-line', 'text-transform', 'vertical-align', 'word-break',
+    'white-space-collapse', 'text-wrap-mode', 'text-wrap',
     // misc accepted-as-computed
     'cursor', 'pointer-events', 'object-fit',
 ]);
@@ -63,6 +64,21 @@ const SUPPORTED_SHORTHANDS = new Set([
 ]);
 
 const STATE_PSEUDO_CLASSES = ['hover', 'active', 'disabled'];
+
+const KNOWN_CK_ATTRIBUTES = new Set([
+    'data-ck-name', 'data-ck-widget', 'data-ck-bind', 'data-ck-slot', 'data-ck-ignore',
+]);
+
+// Value-level restrictions on properties whose *name* is supported. A supported property
+// carrying an out-of-surface value (display:grid) must be diagnosed like any other drop.
+const VALUE_RULES = new Map([
+    ['display', new Set(['flex', 'inline-flex', 'block', 'inline-block', 'inline', 'flow-root', 'none'])],
+    ['position', new Set(['static', 'relative', 'absolute'])],
+]);
+
+// Semantic DOM attributes the emitter needs (form-control state, alt text). Captured
+// verbatim; boolean attributes report true.
+const SEMANTIC_ATTRIBUTES = ['type', 'value', 'placeholder', 'disabled', 'checked', 'alt', 'href'];
 
 // ---------------------------------------------------------------------------------------------
 
@@ -100,11 +116,31 @@ const parseColor = v => {
 // ---------------------------------------------------------------------------------------------
 
 class Extractor {
-    constructor(cdp, pageUrl) {
+    constructor(cdp, pageUrl, imageMeta) {
         this.cdp = cdp;
         this.pageUrl = pageUrl;
+        this.baseUrl = pageUrl.slice(0, pageUrl.lastIndexOf('/') + 1);
+        this.imageMeta = imageMeta; // src(resolved) -> {naturalWidth, naturalHeight}
         this.nodeCounter = 0;
         this.stylesheetHeaders = new Map(); // styleSheetId -> {sourceURL}
+        this.assets = new Map();      // resolved src -> {id, src, kind, intrinsic}
+        this.diagnostics = [];        // page-level issues (duplicate names, unknown ck attrs)
+        this.ckNames = new Map();     // data-ck-name -> first node id
+    }
+
+    assetRef(rawUrl) {
+        let resolved;
+        try { resolved = new URL(rawUrl, this.pageUrl).href; } catch { resolved = rawUrl; }
+        if (!this.assets.has(resolved)) {
+            const meta = this.imageMeta.get(resolved);
+            this.assets.set(resolved, {
+                id: `img${this.assets.size}`,
+                src: rawUrl,
+                kind: rawUrl.startsWith('data:') ? 'data-uri' : 'raster',
+                intrinsic: meta ? [meta.naturalWidth, meta.naturalHeight] : null,
+            });
+        }
+        return this.assets.get(resolved).id;
     }
 
     async run() {
@@ -131,19 +167,42 @@ class Extractor {
         const hdr = this.stylesheetHeaders.get(styleSheetId);
         if (!hdr) return 'unknown';
         if (hdr.sourceURL && hdr.sourceURL.length > 0) {
-            try { return decodeURIComponent(new URL(hdr.sourceURL).pathname.replace(/^\//, '')); }
+            // Relativize against the page dir so committed IRs are checkout-root independent.
+            if (hdr.sourceURL.startsWith(this.baseUrl)) {
+                return decodeURIComponent(hdr.sourceURL.slice(this.baseUrl.length));
+            }
+            try { return decodeURIComponent(new URL(hdr.sourceURL).pathname.split('/').pop()); }
             catch { return hdr.sourceURL; }
         }
         return hdr.isInline ? 'inline <style>' : 'unknown';
     }
 
     // Author-set properties + provenance, from matched rules (skips UA origin).
+    // Also surfaces ::before/::after usage — pseudo-elements paint real pixels the IR
+    // cannot represent, so they must be diagnosed (B7).
     async authorProperties(nodeId) {
         let matched;
         try {
             matched = await this.cdp.send('CSS.getMatchedStylesForNode', { nodeId });
         } catch {
-            return []; // non-styleable node
+            return { props: [], pseudoDiags: [] }; // non-styleable node
+        }
+        const pseudoDiags = [];
+        for (const pm of matched.pseudoElements ?? []) {
+            if (pm.pseudoType !== 'before' && pm.pseudoType !== 'after') continue;
+            for (const m of pm.matches ?? []) {
+                if (m.rule.origin !== 'regular') continue;
+                const hdr = this.stylesheetHeaders.get(m.rule.styleSheetId);
+                const line = m.rule.style?.range
+                    ? m.rule.style.range.startLine + (hdr?.isInline ? hdr.startLine : 0) + 1
+                    : null;
+                const label = this.ruleSourceLabel(m.rule.styleSheetId);
+                pseudoDiags.push({
+                    property: `::${pm.pseudoType}`,
+                    value: 'pseudo-element content is not representable in the IR',
+                    source: line !== null ? `${label}:${line}` : label,
+                });
+            }
         }
         const out = [];
         const harvest = (style, sourceLabel, lineOffset) => {
@@ -165,16 +224,19 @@ class Extractor {
             harvest(m.rule.style, label, hdr?.isInline ? hdr.startLine : 0);
         }
         harvest(matched.inlineStyle, 'inline style=', 0);
-        return out;
+        return { props: out, pseudoDiags };
     }
 
-    diagnoseUnsupported(authorProps) {
+    diagnoseUnsupported(authorProps, extraDiags) {
         const seen = new Set();
-        const out = [];
+        const out = [...extraDiags];
         for (const p of authorProps) {
             const name = p.property.toLowerCase();
             if (name.startsWith('--')) continue; // custom properties are inputs, resolved by Chromium
-            if (SUPPORTED_PROPERTIES.has(name) || SUPPORTED_SHORTHANDS.has(name)) continue;
+            const nameSupported = SUPPORTED_PROPERTIES.has(name) || SUPPORTED_SHORTHANDS.has(name);
+            const valueRule = VALUE_RULES.get(name);
+            const valueRejected = valueRule !== undefined && !valueRule.has(p.value.trim());
+            if (nameSupported && !valueRejected) continue;
             const key = `${name}|${p.source}|${p.line}`;
             if (seen.has(key)) continue;
             seen.add(key);
@@ -188,14 +250,23 @@ class Extractor {
         return out;
     }
 
-    layoutBlock(c) {
+    layoutBlock(c, authorProps) {
         const display = c.get('display');
+        // Chromium resolves all four inset sides, erasing "which edges did the author pin" —
+        // that distinction decides anchors at emission, so recover it from the author rules.
+        const authoredSides = new Set();
+        for (const p of authorProps) {
+            const n = p.property.toLowerCase();
+            if (['top', 'right', 'bottom', 'left'].includes(n)) authoredSides.add(n);
+            if (n === 'inset') ['top', 'right', 'bottom', 'left'].forEach(s => authoredSides.add(s));
+        }
         return {
             display,
             direction: c.get('flex-direction'),
             justify: c.get('justify-content'),
             align: c.get('align-items'),
             alignSelf: c.get('align-self'),
+            alignContent: c.get('align-content'),
             wrap: c.get('flex-wrap'),
             gap: [px(c.get('column-gap')), px(c.get('row-gap'))],
             grow: parseFloat(c.get('flex-grow')) || 0,
@@ -205,6 +276,7 @@ class Extractor {
             inset: c.get('position') === 'static' ? null : {
                 top: c.get('top'), right: c.get('right'),
                 bottom: c.get('bottom'), left: c.get('left'),
+                authored: [...authoredSides].sort(),
             },
             zIndex: c.get('z-index') === 'auto' ? 0 : parseInt(c.get('z-index'), 10),
             order: parseInt(c.get('order'), 10) || 0,
@@ -213,28 +285,69 @@ class Extractor {
         };
     }
 
-    paintBlock(c) {
+    paintBlock(c, box, unsupportedSink) {
         const bgColor = parseColor(c.get('background-color'));
         const bgImage = c.get('background-image');
         let background = null;
         if (bgImage && bgImage !== 'none') {
-            // Gradients and url() are recorded verbatim-computed for Gate 1; the emitter's
-            // gradient parser is Gate 3 scope. Recording, not dropping.
-            background = { type: bgImage.startsWith('url(') ? 'image' : 'gradient', computed: bgImage };
+            if (bgImage.startsWith('url(')) {
+                const url = /^url\("?([^")]+)"?\)$/.exec(bgImage)?.[1];
+                background = {
+                    type: 'image',
+                    asset: url ? this.assetRef(url) : null,
+                    size: c.get('background-size'),
+                    // background-position shorthand is absent from the computed list; the
+                    // -x/-y longhands are authoritative (B2).
+                    position: [c.get('background-position-x'), c.get('background-position-y')],
+                    repeat: c.get('background-repeat'),
+                };
+            } else {
+                // Gradients recorded verbatim-computed for Gate 1; typed stop parsing is Gate 3.
+                background = { type: 'gradient', computed: bgImage };
+            }
         } else if (bgColor && bgColor[3] !== 0) {
             background = { type: 'color', rgba: bgColor };
+        }
+        // Computed radii can be "Npx", "N%", or "H V" pairs; % resolves against the border box
+        // (horizontal % of width, vertical % of height — B3). Elliptical results (H != V after
+        // resolution) are out of the v1 surface and diagnosed, with the horizontal value kept.
+        const radius = corner => {
+            const raw = c.get(corner);
+            const parts = raw.split(' ');
+            const resolve = (part, basis) =>
+                part.endsWith('%') ? round2(parseFloat(part) / 100 * basis) : px(part);
+            const h = resolve(parts[0], box.border.w);
+            const v = resolve(parts[1] ?? parts[0], box.border.h);
+            if (Math.abs(h - v) > 0.5) {
+                unsupportedSink.push({
+                    property: corner, value: `${raw} resolves elliptically (${h}px / ${v}px)`,
+                    source: 'computed',
+                });
+            }
+            return h;
+        };
+        const borderColors = ['top', 'right', 'bottom', 'left']
+            .map(s => parseColor(c.get(`border-${s}-color`)));
+        const sidesDiffer = borderColors.some(col =>
+            JSON.stringify(col) !== JSON.stringify(borderColors[0]));
+        if (sidesDiffer) {
+            unsupportedSink.push({
+                property: 'border-color',
+                value: 'per-side border colors differ; only the top color is representable',
+                source: 'computed',
+            });
         }
         return {
             background,
             borderRadius: [
-                px(c.get('border-top-left-radius')), px(c.get('border-top-right-radius')),
-                px(c.get('border-bottom-right-radius')), px(c.get('border-bottom-left-radius')),
+                radius('border-top-left-radius'), radius('border-top-right-radius'),
+                radius('border-bottom-right-radius'), radius('border-bottom-left-radius'),
             ],
             borderWidth: [
                 px(c.get('border-top-width')), px(c.get('border-right-width')),
                 px(c.get('border-bottom-width')), px(c.get('border-left-width')),
             ],
-            borderColor: parseColor(c.get('border-top-color')),
+            borderColor: borderColors[0],
             boxShadow: c.get('box-shadow') === 'none' ? null : { computed: c.get('box-shadow') },
             opacity: round2(parseFloat(c.get('opacity'))),
             transform: c.get('transform') === 'none' ? null : {
@@ -248,6 +361,15 @@ class Extractor {
         const textChildren = (node.children ?? []).filter(ch => ch.nodeType === 3);
         const content = textChildren.map(t => t.nodeValue).join('').replace(/\s+/g, ' ').trim();
         if (content.length === 0) return null;
+        // Chrome 150's computed list dropped the `white-space` shorthand in favor of the
+        // `white-space-collapse` + `text-wrap-mode` longhands (B1); synthesize the classic value.
+        const collapse = c.get('white-space-collapse') ?? 'collapse';
+        const wrapMode = c.get('text-wrap-mode') ?? 'wrap';
+        const whiteSpace = c.get('white-space')
+            ?? { 'collapse|wrap': 'normal', 'collapse|nowrap': 'nowrap',
+                 'preserve|nowrap': 'pre', 'preserve|wrap': 'pre-wrap',
+                 'preserve-breaks|wrap': 'pre-line' }[`${collapse}|${wrapMode}`]
+            ?? `${collapse} ${wrapMode}`;
         return {
             content,
             family: c.get('font-family'),
@@ -258,19 +380,38 @@ class Extractor {
             letterSpacingPx: c.get('letter-spacing') === 'normal' ? 0 : px(c.get('letter-spacing')),
             color: parseColor(c.get('color')),
             align: c.get('text-align'),
-            whiteSpace: c.get('white-space'),
+            whiteSpace,
             textOverflow: c.get('text-overflow'),
             transformCase: c.get('text-transform'),
             decoration: c.get('text-decoration-line'),
         };
     }
 
-    ckBlock(attrs) {
-        const has = attrs.has('data-ck-name') || attrs.has('data-ck-widget')
+    ckBlock(attrs, nodeId) {
+        for (const key of attrs.keys()) {
+            if (key.startsWith('data-ck-') && !KNOWN_CK_ATTRIBUTES.has(key)) {
+                this.diagnostics.push({
+                    kind: 'unknown-ck-attribute', node: nodeId,
+                    detail: `${key}="${attrs.get(key)}" is not a recognized data-ck-* attribute`,
+                });
+            }
+        }
+        const name = attrs.get('data-ck-name');
+        if (name !== undefined) {
+            if (this.ckNames.has(name)) {
+                this.diagnostics.push({
+                    kind: 'duplicate-ck-name', node: nodeId,
+                    detail: `data-ck-name="${name}" already used by ${this.ckNames.get(name)}`,
+                });
+            } else {
+                this.ckNames.set(name, nodeId);
+            }
+        }
+        const has = name !== undefined || attrs.has('data-ck-widget')
             || attrs.has('data-ck-bind') || attrs.has('data-ck-slot');
         if (!has) return null;
         return {
-            name: attrs.get('data-ck-name') ?? null,
+            name: name ?? null,
             widgetClass: attrs.get('data-ck-widget') ?? null,
             bind: attrs.get('data-ck-bind') ?? null,
             slot: attrs.get('data-ck-slot') ?? null,
@@ -317,8 +458,16 @@ class Extractor {
             return null; // no box => not rendered
         }
 
-        const authorProps = await this.authorProperties(node.nodeId);
+        const { props: authorProps, pseudoDiags } = await this.authorProperties(node.nodeId);
         const id = `n${this.nodeCounter++}`;
+        const imgAsset = node.nodeName === 'IMG' && attrs.has('src')
+            ? this.assetRef(attrs.get('src'))
+            : null;
+        const semanticAttrs = {};
+        for (const name of SEMANTIC_ATTRIBUTES) {
+            if (attrs.has(name)) semanticAttrs[name] = attrs.get(name) === '' ? true : attrs.get(name);
+        }
+        const paintSink = [];
 
         const childElements = [];
         for (const child of node.children ?? []) {
@@ -333,14 +482,16 @@ class Extractor {
         return {
             id,
             tag: node.nodeName.toLowerCase(),
-            ck: this.ckBlock(attrs),
+            ck: this.ckBlock(attrs, id),
+            asset: imgAsset,
+            attributes: Object.keys(semanticAttrs).length > 0 ? semanticAttrs : null,
             box,
-            layout: this.layoutBlock(c),
-            paint: this.paintBlock(c),
+            layout: this.layoutBlock(c, authorProps),
+            paint: this.paintBlock(c, box, paintSink),
             text: this.textBlock(node, c),
             states: await this.stateBlock(node.nodeId, c),
             children: childElements,
-            unsupported: this.diagnoseUnsupported(authorProps),
+            unsupported: this.diagnoseUnsupported(authorProps, [...pseudoDiags, ...paintSink]),
         };
     }
 }
@@ -381,8 +532,15 @@ const main = async () => {
         await page.goto(pathToFileURL(inputPath).href, { waitUntil: 'networkidle0' });
         await page.evaluate(() => document.fonts.ready);
 
+        const imageMeta = new Map(Object.entries(await page.evaluate(() =>
+            Object.fromEntries([...document.images].map(img =>
+                [img.src, { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight }])))));
+        const loadedFonts = await page.evaluate(() =>
+            [...document.fonts].map(f => ({ family: f.family, weight: f.weight, style: f.style }))
+                .sort((a, b) => a.family.localeCompare(b.family) || a.weight.localeCompare(b.weight)));
+
         const cdp = await page.createCDPSession();
-        const extractor = new Extractor(cdp, pathToFileURL(inputPath).href);
+        const extractor = new Extractor(cdp, pathToFileURL(inputPath).href, imageMeta);
         cdp.on('CSS.styleSheetAdded', e => extractor.stylesheetHeaders.set(e.header.styleSheetId, e.header));
         await cdp.send('DOM.enable');
         await cdp.send('CSS.enable');
@@ -409,8 +567,9 @@ const main = async () => {
                 dpr: VIEWPORT.deviceScaleFactor,
                 browser: version,
             },
-            assets: [], // populated when corpus pages reference images (Gate 1 later item)
-            fonts: [],  // populated from document.fonts once font mapping lands
+            assets: [...extractor.assets.values()],
+            fonts: loadedFonts, // web fonts only; system-font stacks live on each node's text.family
+            diagnostics: extractor.diagnostics,
             root,
         };
 
@@ -429,6 +588,10 @@ const main = async () => {
             for (const d of drops) console.log(`  [${d.node}] ${d.property}: ${d.value}  (${d.source})`);
         } else {
             console.log('unsupported properties: none');
+        }
+        if (extractor.diagnostics.length > 0) {
+            console.log(`\nPAGE DIAGNOSTICS (${extractor.diagnostics.length}):`);
+            for (const d of extractor.diagnostics) console.log(`  [${d.node}] ${d.kind}: ${d.detail}`);
         }
     } finally {
         await browser.close();
