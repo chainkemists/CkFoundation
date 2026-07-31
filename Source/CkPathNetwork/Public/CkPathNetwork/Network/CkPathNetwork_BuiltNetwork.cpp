@@ -7,6 +7,98 @@
 namespace ck::pathnetwork
 {
     auto
+    Analyze_NetworkTopology(
+        const FBuiltNetwork& InNetwork)
+        -> FNetworkTopologyAnalysis
+    {
+        auto Result = FNetworkTopologyAnalysis{};
+        Result._NodeCount = InNetwork._Nodes.Num();
+        Result._EdgeCount = InNetwork._Edges.Num();
+        Result._ComponentByNode.Init(INDEX_NONE, Result._NodeCount);
+        Result._LogicalDegreeByNode.Init(0, Result._NodeCount);
+
+        auto AdjacentNodes = TArray<TArray<int32>>{};
+        auto IncidentEdges = TArray<TArray<int32>>{};
+        AdjacentNodes.SetNum(Result._NodeCount);
+        IncidentEdges.SetNum(Result._NodeCount);
+
+        for (auto EdgeId = 0; EdgeId < InNetwork._Edges.Num(); ++EdgeId)
+        {
+            const auto& Edge = InNetwork._Edges[EdgeId];
+            if (NOT InNetwork._Nodes.IsValidIndex(Edge._NodeA)
+                || NOT InNetwork._Nodes.IsValidIndex(Edge._NodeB))
+            { continue; }
+
+            // A self-loop contributes two to its node's logical degree.
+            ++Result._LogicalDegreeByNode[Edge._NodeA];
+            ++Result._LogicalDegreeByNode[Edge._NodeB];
+            IncidentEdges[Edge._NodeA].Add(EdgeId);
+            AdjacentNodes[Edge._NodeA].Add(Edge._NodeB);
+            if (Edge._NodeB != Edge._NodeA)
+            {
+                IncidentEdges[Edge._NodeB].Add(EdgeId);
+                AdjacentNodes[Edge._NodeB].Add(Edge._NodeA);
+            }
+        }
+
+        for (auto NodeId = 0; NodeId < Result._NodeCount; ++NodeId)
+        {
+            const auto Degree = Result._LogicalDegreeByNode[NodeId];
+            if (Degree <= 0)
+            {
+                ++Result._IsolatedNodeCount;
+                continue;
+            }
+
+            ++Result._RoutableNodeCount;
+            if (Degree == 1)
+            { ++Result._DeadEndNodeCount; }
+        }
+
+        for (auto SeedNodeId = 0; SeedNodeId < Result._NodeCount; ++SeedNodeId)
+        {
+            if (Result._LogicalDegreeByNode[SeedNodeId] <= 0
+                || Result._ComponentByNode[SeedNodeId] != INDEX_NONE)
+            { continue; }
+
+            const auto ComponentId = Result._ComponentCount++;
+            auto PendingNodes = TArray<int32>{SeedNodeId};
+            auto PendingIndex = 0;
+            auto ComponentNodeCount = 0;
+            auto ComponentEdgeIds = TSet<int32>{};
+            Result._ComponentByNode[SeedNodeId] = ComponentId;
+
+            while (PendingIndex < PendingNodes.Num())
+            {
+                const auto NodeId = PendingNodes[PendingIndex++];
+                ++ComponentNodeCount;
+
+                for (const auto EdgeId : IncidentEdges[NodeId])
+                { ComponentEdgeIds.Add(EdgeId); }
+
+                for (const auto OtherNodeId : AdjacentNodes[NodeId])
+                {
+                    if (Result._ComponentByNode[OtherNodeId] != INDEX_NONE)
+                    { continue; }
+
+                    Result._ComponentByNode[OtherNodeId] = ComponentId;
+                    PendingNodes.Add(OtherNodeId);
+                }
+            }
+
+            if (ComponentNodeCount > Result._LargestComponentNodeCount)
+            {
+                Result._LargestComponentNodeCount = ComponentNodeCount;
+                Result._LargestComponentEdgeCount = ComponentEdgeIds.Num();
+            }
+        }
+
+        return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         FBuiltNetwork::
         Get_ChunkIndex(const FVector& InLocation) const
         -> int32

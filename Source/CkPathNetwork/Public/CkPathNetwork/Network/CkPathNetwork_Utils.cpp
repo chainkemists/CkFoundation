@@ -13,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace
+namespace ck_pathnetwork_utils
 {
     auto
         Is_PathNetworkFollowerTuningValid(
@@ -21,15 +21,59 @@ namespace
         -> bool
     {
         const auto Multiplier = InTuning.Get_OffPathCostMultiplier();
+        const auto NearEndpointMultiplier = InTuning.Get_NearEndpointCostMultiplier();
+        const auto NetworkGapMultiplier = InTuning.Get_NetworkGapCostMultiplier();
+        const auto JoinMaxDistance = InTuning.Get_EndpointJoinMaxDistance();
+        const auto TransferMaxDistance = InTuning.Get_ComponentTransferMaxDistance();
+        const auto LocalShortcutMaxDistance =
+            InTuning.Get_LocalNetworkShortcutMaxDistance();
+        const auto DirectGraceDistance = InTuning.Get_DirectTripGraceDistance();
+        const auto DirectMinimumSavings =
+            InTuning.Get_DirectRouteMinimumSavingsFraction();
         const auto SideKeeping = InTuning.Get_SideKeepingFraction();
         const auto Spacing = InTuning.Get_CorridorWaypointSpacing();
         const auto Smoothing = InTuning.Get_CornerSmoothingDistance();
         const auto Clearance = InTuning.Get_DesiredNavmeshClearance();
         return FMath::IsFinite(Multiplier) && Multiplier >= 1.0f
+            && FMath::IsFinite(NearEndpointMultiplier)
+            && (NearEndpointMultiplier == 0.0f || NearEndpointMultiplier >= 1.0f)
+            && FMath::IsFinite(NetworkGapMultiplier)
+            && (NetworkGapMultiplier == 0.0f || NetworkGapMultiplier >= 1.0f)
+            && FMath::IsFinite(JoinMaxDistance) && JoinMaxDistance >= 0.0f
+            && FMath::IsFinite(TransferMaxDistance) && TransferMaxDistance >= 0.0f
+            && FMath::IsFinite(LocalShortcutMaxDistance)
+            && LocalShortcutMaxDistance >= 0.0f
+            && FMath::IsFinite(DirectGraceDistance) && DirectGraceDistance >= 0.0f
+            && FMath::IsFinite(DirectMinimumSavings)
+            && DirectMinimumSavings >= 0.0f
+            && DirectMinimumSavings <= 1.0f
             && FMath::IsFinite(SideKeeping) && SideKeeping >= 0.0f && SideKeeping <= 0.9f
             && FMath::IsFinite(Spacing) && Spacing >= 50.0f
             && FMath::IsFinite(Smoothing) && Smoothing >= 0.0f && Smoothing <= 1000.0f
             && FMath::IsFinite(Clearance) && Clearance >= 0.0f && Clearance <= 1000.0f;
+    }
+
+    auto
+        Get_Tuning(
+            const FCk_Fragment_PathNetworkFollower_ParamsData& InParams)
+        -> FCk_PathNetworkFollower_Tuning
+    {
+        auto Tuning = FCk_PathNetworkFollower_Tuning{};
+        Tuning.Set_OffPathCostMultiplier(InParams.Get_OffPathCostMultiplier());
+        Tuning.Set_NearEndpointCostMultiplier(InParams.Get_NearEndpointCostMultiplier());
+        Tuning.Set_NetworkGapCostMultiplier(InParams.Get_NetworkGapCostMultiplier());
+        Tuning.Set_EndpointJoinMaxDistance(InParams.Get_EndpointJoinMaxDistance());
+        Tuning.Set_ComponentTransferMaxDistance(InParams.Get_ComponentTransferMaxDistance());
+        Tuning.Set_LocalNetworkShortcutMaxDistance(
+            InParams.Get_LocalNetworkShortcutMaxDistance());
+        Tuning.Set_DirectTripGraceDistance(InParams.Get_DirectTripGraceDistance());
+        Tuning.Set_DirectRouteMinimumSavingsFraction(
+            InParams.Get_DirectRouteMinimumSavingsFraction());
+        Tuning.Set_SideKeepingFraction(InParams.Get_SideKeepingFraction());
+        Tuning.Set_CorridorWaypointSpacing(InParams.Get_CorridorWaypointSpacing());
+        Tuning.Set_CornerSmoothingDistance(InParams.Get_CornerSmoothingDistance());
+        Tuning.Set_DesiredNavmeshClearance(InParams.Get_DesiredNavmeshClearance());
+        return Tuning;
     }
 }
 
@@ -139,11 +183,44 @@ auto
         return InNetwork;
     }
 
+    const auto BoundsValidation = InDetector->Validate_DetectionBounds(InWorldBounds);
+    const auto DetectorAcceptsBounds = BoundsValidation.Get_Succeeded();
+    CK_ENSURE_IF_NOT(DetectorAcceptsBounds,
+        TEXT("Request_RebuildFromDetector on [{}] rejected detection bounds: [{}]"),
+        InNetwork,
+        BoundsValidation.Get_FailureReason())
+    {}
+    if (NOT DetectorAcceptsBounds)
+    {
+        InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InNetwork;
+    }
+
     const auto Mask = InDetector->Get_DetectionMask(InWorldBounds);
 
     auto GeneratedRibbons = TArray<FCk_PathNetwork_Ribbon>{};
     if (Mask.Get_IsValidMask())
-    { GeneratedRibbons = ck::pathnetwork::Vectorize_MaskToRibbons(Mask, InVectorizeParams); }
+    {
+        auto Vectorized = ck::pathnetwork::Try_VectorizeDetectorMaskToRibbons(
+            *InDetector,
+            InWorldBounds,
+            Mask,
+            InVectorizeParams);
+        const auto GeneratedRibbonsWereVectorized = Vectorized._Succeeded;
+        CK_ENSURE_IF_NOT(GeneratedRibbonsWereVectorized,
+            TEXT("Request_RebuildFromDetector on [{}] could not vectorize detector output: [{}]"),
+            InNetwork,
+            Vectorized._FailureReason)
+        { }
+        if (NOT GeneratedRibbonsWereVectorized)
+        {
+            InDelegate.ExecuteIfBound(
+                InNetwork,
+                ECk_Request_OperationResult::Failed_NotEnqueued);
+            return InNetwork;
+        }
+        GeneratedRibbons = MoveTemp(Vectorized._Ribbons);
+    }
 
     const auto Processed = InDetector->Process_GeneratedRibbons(
         InWorldBounds, GeneratedRibbons);
@@ -257,6 +334,48 @@ auto
 
 auto
     UCk_Utils_PathNetwork_UE::
+    TryGet_RecommendedFollowerTuning(
+        const FCk_Handle_PathNetwork& InNetwork,
+        FCk_PathNetworkFollower_Tuning& OutTuning)
+    -> bool
+{
+    using namespace ck_pathnetwork_utils;
+
+    OutTuning = {};
+
+    const bool NetworkIsValid =
+        ck::IsValid(InNetwork)
+        && InNetwork.Has<ck::FFragment_PathNetwork_Params>()
+        && Has(InNetwork);
+    CK_ENSURE_IF_NOT(NetworkIsValid,
+        TEXT("Invalid PathNetwork handle [{}] passed to TryGet_RecommendedFollowerTuning"),
+        InNetwork)
+    {}
+    if (NOT NetworkIsValid)
+    { return false; }
+
+    const auto& Params = InNetwork.Get<ck::FFragment_PathNetwork_Params>();
+    if (Params.Get_UseRecommendedFollowerTuning() != ECk_EnableDisable::Enable)
+    { return false; }
+
+    const auto& Recommendation = Params.Get_RecommendedFollowerTuning();
+    const bool RecommendationIsValid =
+        Is_PathNetworkFollowerTuningValid(Recommendation);
+    CK_ENSURE_IF_NOT(RecommendationIsValid,
+        TEXT("PathNetwork [{}] contains an invalid recommended follower tuning profile"),
+        InNetwork)
+    {}
+    if (NOT RecommendationIsValid)
+    { return false; }
+
+    OutTuning = Recommendation;
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PathNetwork_UE::
     TryGet_ClosestPointOnNetwork(
         const FCk_Handle_PathNetwork& InNetwork,
         FVector InLocation,
@@ -301,20 +420,23 @@ auto
         const FCk_Fragment_PathNetworkFollower_ParamsData& InParams)
     -> FCk_Handle_PathNetworkFollower
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+    using namespace ck_pathnetwork_utils;
+
+    const bool HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
         TEXT("Invalid handle [{}] passed to UCk_Utils_PathNetworkFollower_UE::Add"), InHandle)
+    {}
+    if (NOT HandleIsValid)
     { return {}; }
 
-    CK_ENSURE_IF_NOT(NOT Has(InHandle),
+    const bool FeatureIsAbsent = NOT Has(InHandle);
+    CK_ENSURE_IF_NOT(FeatureIsAbsent,
         TEXT("Entity [{}] already has the PathNetworkFollower feature"), InHandle)
+    {}
+    if (NOT FeatureIsAbsent)
     { return Cast(InHandle); }
 
-    auto Tuning = FCk_PathNetworkFollower_Tuning{};
-    Tuning.Set_OffPathCostMultiplier(InParams.Get_OffPathCostMultiplier());
-    Tuning.Set_SideKeepingFraction(InParams.Get_SideKeepingFraction());
-    Tuning.Set_CorridorWaypointSpacing(InParams.Get_CorridorWaypointSpacing());
-    Tuning.Set_CornerSmoothingDistance(InParams.Get_CornerSmoothingDistance());
-    Tuning.Set_DesiredNavmeshClearance(InParams.Get_DesiredNavmeshClearance());
+    const auto Tuning = Get_Tuning(InParams);
     const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(Tuning);
     CK_ENSURE_IF_NOT(TuningIsValid,
         TEXT("PathNetworkFollower parameters contain invalid tuning"))
@@ -329,6 +451,66 @@ auto
         InHandle, InParams.Get_OffPathCostMultiplier());
 
     return Cast(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PathNetworkFollower_UE::
+    Try_AddOrAdoptByOwnerToken(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_PathNetworkFollower_ParamsData& InParams,
+        ECk_PathNetworkFollower_OwnershipResult& OutResult)
+    -> FCk_Handle_PathNetworkFollower
+{
+    using namespace ck_pathnetwork_utils;
+
+    OutResult = ECk_PathNetworkFollower_OwnershipResult::RejectedInvalidInput;
+
+    const bool HandleIsValid = ck::IsValid(InHandle);
+    CK_ENSURE_IF_NOT(HandleIsValid,
+        TEXT("Invalid handle [{}] passed to Try_AddOrAdoptByOwnerToken"), InHandle)
+    {}
+    if (NOT HandleIsValid)
+    { return {}; }
+
+    const auto OwnerToken = InParams.Get_OwnerToken();
+    const bool OwnerTokenIsValid = NOT OwnerToken.IsNone();
+    CK_ENSURE_IF_NOT(OwnerTokenIsValid,
+        TEXT("Try_AddOrAdoptByOwnerToken requires a non-empty owner token"))
+    {}
+    if (NOT OwnerTokenIsValid)
+    { return {}; }
+
+    const auto Tuning = Get_Tuning(InParams);
+    const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(Tuning);
+    CK_ENSURE_IF_NOT(TuningIsValid,
+        TEXT("Try_AddOrAdoptByOwnerToken received invalid follower tuning"))
+    {}
+    if (NOT TuningIsValid)
+    { return {}; }
+
+    if (Has(InHandle))
+    {
+        const auto ExistingFollower = Cast(InHandle);
+        if (Get_OwnerToken(ExistingFollower) != OwnerToken)
+        {
+            OutResult = ECk_PathNetworkFollower_OwnershipResult::RejectedExistingOwner;
+            return {};
+        }
+
+        OutResult = ECk_PathNetworkFollower_OwnershipResult::Adopted;
+        ck::pathnetwork::Verbose(TEXT("PathNetworkFollower [{}] reacquired by owner token [{}]"),
+            ExistingFollower, OwnerToken);
+        return ExistingFollower;
+    }
+
+    auto Follower = Add(InHandle, InParams);
+    if (NOT ck::IsValid(Follower))
+    { return {}; }
+
+    OutResult = ECk_PathNetworkFollower_OwnershipResult::Added;
+    return Follower;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -358,6 +540,17 @@ auto
     { return NAME_None; }
 
     return InFollower.Get<ck::FFragment_PathNetworkFollower_Params>().Get_OwnerToken();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PathNetworkFollower_UE::
+    Get_IsTuningValid(
+        const FCk_PathNetworkFollower_Tuning& InTuning)
+    -> bool
+{
+    return ck_pathnetwork_utils::Is_PathNetworkFollowerTuningValid(InTuning);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -440,6 +633,8 @@ auto
         const FCk_PathNetworkFollower_Tuning& InTuning)
     -> FCk_Handle_PathNetworkFollower
 {
+    using namespace ck_pathnetwork_utils;
+
     const bool FollowerIsValid = ck::IsValid(InFollower);
     CK_ENSURE_IF_NOT(FollowerIsValid,
         TEXT("Invalid PathNetworkFollower handle [{}] passed to Request_UpdateTuningAndReplan"), InFollower)
@@ -455,6 +650,15 @@ auto
     { return InFollower; }
 
     const auto Multiplier = InTuning.Get_OffPathCostMultiplier();
+    const auto NearEndpointMultiplier = InTuning.Get_NearEndpointCostMultiplier();
+    const auto NetworkGapMultiplier = InTuning.Get_NetworkGapCostMultiplier();
+    const auto JoinMaxDistance = InTuning.Get_EndpointJoinMaxDistance();
+    const auto TransferMaxDistance = InTuning.Get_ComponentTransferMaxDistance();
+    const auto LocalShortcutMaxDistance =
+        InTuning.Get_LocalNetworkShortcutMaxDistance();
+    const auto DirectGraceDistance = InTuning.Get_DirectTripGraceDistance();
+    const auto DirectMinimumSavings =
+        InTuning.Get_DirectRouteMinimumSavingsFraction();
     const auto SideKeeping = InTuning.Get_SideKeepingFraction();
     const auto Spacing = InTuning.Get_CorridorWaypointSpacing();
     const auto Smoothing = InTuning.Get_CornerSmoothingDistance();
@@ -462,8 +666,11 @@ auto
     const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(InTuning);
     CK_ENSURE_IF_NOT(TuningIsValid,
         TEXT("Request_UpdateTuningAndReplan received invalid tuning "
-             "(multiplier [{}], side [{}], spacing [{}], smoothing [{}], clearance [{}])"),
-        Multiplier, SideKeeping, Spacing, Smoothing, Clearance)
+             "(far/direct multiplier [{}], near multiplier [{}], network gap multiplier [{}], join max [{}], transfer max [{}], local shortcut max [{}], direct grace [{}], minimum direct savings [{}], "
+             "side [{}], spacing [{}], smoothing [{}], clearance [{}])"),
+        Multiplier, NearEndpointMultiplier, NetworkGapMultiplier, JoinMaxDistance, TransferMaxDistance,
+        LocalShortcutMaxDistance, DirectGraceDistance, DirectMinimumSavings,
+        SideKeeping, Spacing, Smoothing, Clearance)
     {}
     if (NOT TuningIsValid)
     { return InFollower; }
@@ -483,6 +690,8 @@ auto
         const FCk_PathNetworkFollower_Tuning& InTuning)
     -> int32
 {
+    using namespace ck_pathnetwork_utils;
+
     const bool ContextIsValid = ck::IsValid(InAnyHandleInWorld);
     CK_ENSURE_IF_NOT(ContextIsValid,
         TEXT("Invalid world handle [{}] passed to Request_UpdateTuningAndReplanByOwnerToken"),

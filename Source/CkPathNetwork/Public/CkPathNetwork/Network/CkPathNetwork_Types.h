@@ -136,7 +136,8 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _MinHalfWidth = 50.0f;
 
-    // Douglas-Peucker tolerance in cm. Higher = fewer centerline points, straighter ribbons.
+    // Douglas-Peucker tolerance in cm. Positive values also absorb the mask's unavoidable
+    // cell-center quantization; zero preserves the raw skeleton. Higher = fewer, straighter points.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
     float _SimplifyTolerance = 25.0f;
 
@@ -162,7 +163,16 @@ struct CKPATHNETWORK_API FCk_PathNetwork_BuildParams
 private:
     // Ribbon endpoints within this radius of each other (or of another ribbon's interior — a
     // T-junction) fuse into one network node.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "1.0",
+            UIMin = "1.0",
+            UIMax = "1000.0",
+            Delta = "25.0",
+            Units = "cm",
+            DisplayName = "Node Snap Radius",
+            ToolTip = "Fuses nearby ribbon endpoints and endpoint-to-interior T-junctions during build. Large values can move endpoints and create false junctions; use component transfers for intentional off-network gaps such as road crossings."))
     float _NodeSnapRadius = 150.0f;
 
     // Spatial-index cell size in cm. Also the granularity of rebuild versioning: a corridor is

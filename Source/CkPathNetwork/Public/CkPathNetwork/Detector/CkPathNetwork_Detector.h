@@ -2,11 +2,34 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkPathNetwork/Network/CkPathNetwork_Types.h"
+#include "CkPathNetwork/Network/CkPathNetwork_Vectorize.h"
 
 #include <CoreMinimal.h>
 
 #include "CkPathNetwork_Detector.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Result of the detector's pre-rasterization bounds admission pass. Detectors advertise their
+// operational limits here so editor tooling and runtime callers can reject an unaffordable request
+// before invoking Get_DetectionMask.
+USTRUCT(BlueprintType)
+struct CKPATHNETWORK_API FCk_PathNetwork_DetectorBoundsValidationResult
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_PathNetwork_DetectorBoundsValidationResult);
+
+private:
+    UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    bool _Succeeded = true;
+
+    UPROPERTY(BlueprintReadOnly, meta=(AllowPrivateAccess=true))
+    FString _FailureReason;
+
+public:
+    CK_PROPERTY(_Succeeded);
+    CK_PROPERTY(_FailureReason);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 // Result of the detector's optional post-vectorization validation pass. Detectors that need a
@@ -112,6 +135,25 @@ public:
     CK_GENERATED_BODY(UCk_PathNetwork_Detector_UE);
 
 public:
+    // Optional C++-only exact segment proof policy. The returned evaluator is owned by one
+    // synchronous vectorization pass; null means the generic occupancy/height policy is sufficient.
+    // Reflected detector subclasses retain legacy behavior unless their native base overrides this.
+    virtual auto
+    Create_VectorizationSegmentEvaluator(
+        const FBox& InWorldBounds,
+        const FCk_PathNetwork_DetectionMask& InMask) const
+        -> FCk_PathNetwork_VectorizationEvaluatorCreationResult;
+
+    // Admit or reject bounds before rasterization. Override when the detector has a resolution,
+    // memory, source-coverage, or other bounds-dependent operating limit.
+    UFUNCTION(BlueprintCallable,
+              BlueprintNativeEvent,
+              Category = "Ck|PathNetwork|Detector",
+              DisplayName = "[Ck][PathNetwork] Validate Detection Bounds")
+    FCk_PathNetwork_DetectorBoundsValidationResult
+    Validate_DetectionBounds(
+        const FBox& InWorldBounds) const;
+
     // Rasterize path/sidewalk coverage inside InWorldBounds. Return an invalid mask (SizeX/Y == 0)
     // to report "nothing detected".
     UFUNCTION(BlueprintCallable,

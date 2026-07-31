@@ -5,10 +5,9 @@
 #include "CkPathNetwork/Network/CkPathNetwork_Build.h"
 #include "CkPathNetwork/Network/CkPathNetwork_CorridorCompile.h"
 #include "CkPathNetwork/Network/CkPathNetwork_RouteGraph.h"
+#include "CkPathNetwork/Network/CkPathNetwork_RoutePlan.h"
 #include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
 #include "CkPathNetwork/Settings/CkPathNetwork_ProjectSettings.h"
-
-#include "CkAStar/Algorithm/CkAStar_Search.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
@@ -65,6 +64,52 @@ namespace ck_pathnetwork_processor
         Resolved
     };
 
+    enum class ERouteFailureStage : uint8
+    {
+        NotResolved,
+        NoNetwork,
+        NetworkNotBuilt,
+        MissingTransform,
+        GraphSearch,
+        OffPathNavValidation,
+        RibbonCompileEmpty,
+        RibbonProjection,
+        RibbonContainment,
+        RibbonNavValidation,
+        CompiledPathProjection,
+        StartProjection,
+        GoalProjection,
+        TerminalMismatch,
+        FullPathValidation
+    };
+
+    auto
+    Get_RouteFailureStageName(
+        ERouteFailureStage InStage)
+        -> const TCHAR*
+    {
+        switch (InStage)
+        {
+            case ERouteFailureStage::NoNetwork: return TEXT("NoNetwork");
+            case ERouteFailureStage::NetworkNotBuilt: return TEXT("NetworkNotBuilt");
+            case ERouteFailureStage::MissingTransform: return TEXT("MissingTransform");
+            case ERouteFailureStage::GraphSearch: return TEXT("GraphSearch");
+            case ERouteFailureStage::OffPathNavValidation: return TEXT("OffPathNavValidation");
+            case ERouteFailureStage::RibbonCompileEmpty: return TEXT("RibbonCompileEmpty");
+            case ERouteFailureStage::RibbonProjection: return TEXT("RibbonProjection");
+            case ERouteFailureStage::RibbonContainment: return TEXT("RibbonContainment");
+            case ERouteFailureStage::RibbonNavValidation: return TEXT("RibbonNavValidation");
+            case ERouteFailureStage::CompiledPathProjection: return TEXT("CompiledPathProjection");
+            case ERouteFailureStage::StartProjection: return TEXT("StartProjection");
+            case ERouteFailureStage::GoalProjection: return TEXT("GoalProjection");
+            case ERouteFailureStage::TerminalMismatch: return TEXT("TerminalMismatch");
+            case ERouteFailureStage::FullPathValidation: return TEXT("FullPathValidation");
+            case ERouteFailureStage::NotResolved:
+            default:
+                return TEXT("NotResolved");
+        }
+    }
+
     struct FOffPathLegResolution
     {
         TArray<FVector> _Waypoints;
@@ -86,8 +131,47 @@ namespace ck_pathnetwork_processor
             ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate))
             : nullptr;
 
-        if (NavSys == nullptr || NavData == nullptr)
+        if (NavSys == nullptr
+            || NavData == nullptr
+            || NOT NavData->HasValidNavmesh())
         { return Result; }
+
+        if (NOT NavData->GetDefaultQueryFilter().IsValid())
+        {
+            Result._Outcome = EOffPathResolve::PathFailed;
+            return Result;
+        }
+
+        const auto QueryFilter = NavData->GetDefaultQueryFilter();
+        const auto EndpointProjectionExtent = FVector{
+            ClearanceProjectionPlanarExtentCm,
+            ClearanceProjectionPlanarExtentCm,
+            ClearanceProjectionVerticalExtentCm};
+        auto ProjectedFrom = FNavLocation{};
+        auto ProjectedTo = FNavLocation{};
+        const auto EndpointsProjected =
+            NavData->ProjectPoint(
+                InFrom,
+                ProjectedFrom,
+                EndpointProjectionExtent,
+                QueryFilter)
+            && NavData->ProjectPoint(
+                InTo,
+                ProjectedTo,
+                EndpointProjectionExtent,
+                QueryFilter);
+        if (NOT EndpointsProjected)
+        {
+            Result._Outcome = EOffPathResolve::PathFailed;
+            return Result;
+        }
+
+        Result._Waypoints =
+            {ProjectedFrom.Location, ProjectedTo.Location};
+        Result._Length = static_cast<float>(
+            FVector::Dist(
+                ProjectedFrom.Location,
+                ProjectedTo.Location));
 
         auto NavResult = FCk_Nav_PathResult{};
 
@@ -97,8 +181,8 @@ namespace ck_pathnetwork_processor
         const auto FoundPath = FCk_Nav_Algorithm::FindPathSync(
             *NavSys,
             *NavData,
-            InFrom,
-            InTo,
+            ProjectedFrom.Location,
+            ProjectedTo.Location,
             AllowPartial,
             UCk_Utils_Nav_Settings_UE::Get_NavQuerySearchHalfExtent(),
             UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
@@ -129,83 +213,6 @@ namespace ck_pathnetwork_processor
         Result._Length = Length;
         Result._Outcome = EOffPathResolve::Resolved;
         return Result;
-    }
-
-    // ----------------------------------------------------------------------------------------------------------------
-
-    auto
-    Gather_Candidates(const FBuiltNetwork& InNetwork, const FVector& InLocation) -> TArray<FRouteOverlayPoint>
-    {
-        const auto CandidateCount = UCk_Utils_PathNetwork_Settings_UE::Get_GoalCandidateCount();
-        const auto MaxDoublings = UCk_Utils_PathNetwork_Settings_UE::Get_CandidateSearchMaxDoublings();
-
-        auto Radius = UCk_Utils_PathNetwork_Settings_UE::Get_CandidateSearchRadius();
-        auto EdgeIds = TArray<int32>{};
-
-        for (auto Doubling = 0; Doubling <= MaxDoublings; ++Doubling)
-        {
-            EdgeIds = InNetwork.Query_EdgesNear(InLocation, Radius);
-
-            if (EdgeIds.Num() >= CandidateCount)
-            { break; }
-
-            Radius *= 2.0f;
-        }
-
-        struct FScoredCandidate
-        {
-            FRouteOverlayPoint _Point;
-            float _Distance = 0.0f;
-        };
-
-        auto Scored = TArray<FScoredCandidate>{};
-        Scored.Reserve(EdgeIds.Num());
-
-        for (const auto EdgeId : EdgeIds)
-        {
-            const auto Projection = InNetwork.Project_OntoEdge(EdgeId, InLocation);
-            Scored.Add(FScoredCandidate{
-                FRouteOverlayPoint{EdgeId, Projection._DistAlong, Projection._Location},
-                Projection._Distance});
-        }
-
-        Scored.Sort([](const FScoredCandidate& InA, const FScoredCandidate& InB)
-        { return InA._Distance < InB._Distance; });
-
-        auto Result = TArray<FRouteOverlayPoint>{};
-        for (auto Index = 0; Index < Scored.Num() && Index < CandidateCount; ++Index)
-        { Result.Add(Scored[Index]._Point); }
-
-        return Result;
-    }
-
-    auto
-    Merge_CandidatesIntoOverlay(FRouteGraphSharedData& InOutShared, const TArray<FRouteOverlayPoint>& InCandidates) -> void
-    {
-        constexpr auto DedupeDistAlong = 1.0f;
-
-        for (const auto& Candidate : InCandidates)
-        {
-            auto IsDuplicate = false;
-
-            if (const auto* ExistingOnEdge = InOutShared._OverlayPointsByEdge.Find(Candidate._EdgeId))
-            {
-                for (const auto ExistingIndex : *ExistingOnEdge)
-                {
-                    if (FMath::Abs(InOutShared._OverlayPoints[ExistingIndex]._DistAlong - Candidate._DistAlong) < DedupeDistAlong)
-                    {
-                        IsDuplicate = true;
-                        break;
-                    }
-                }
-            }
-
-            if (IsDuplicate)
-            { continue; }
-
-            const auto NewIndex = InOutShared._OverlayPoints.Add(Candidate);
-            InOutShared._OverlayPointsByEdge.FindOrAdd(Candidate._EdgeId).Add(NewIndex);
-        }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -337,6 +344,46 @@ namespace ck_pathnetwork_processor
             }
         }
 
+        return true;
+    }
+
+    auto
+    Validate_ResolvedOffPathLeg(
+        UWorld* InWorld,
+        const FVector& InFrom,
+        const FVector& InTo,
+        FOffPathLegResolution& InOutResolution) -> bool
+    {
+        if (InOutResolution._Outcome != EOffPathResolve::Resolved)
+        { return InOutResolution._Outcome != EOffPathResolve::PathFailed; }
+
+        auto ConnectedWaypoints = TArray<FVector>{};
+        Append_CompiledWaypoint(ConnectedWaypoints, InFrom);
+        for (const auto& Waypoint : InOutResolution._Waypoints)
+        { Append_CompiledWaypoint(ConnectedWaypoints, Waypoint); }
+        Append_CompiledWaypoint(ConnectedWaypoints, InTo);
+
+        const auto PathIsValid =
+            ConnectedWaypoints.Num() >= 2
+            && Try_ProjectPathOntoNavmesh(InWorld, ConnectedWaypoints)
+            && Is_NavmeshPathValid(InWorld, ConnectedWaypoints);
+        if (NOT PathIsValid)
+        {
+            InOutResolution._Outcome = EOffPathResolve::PathFailed;
+            return false;
+        }
+
+        auto Length = 0.0f;
+        for (auto Index = 0; Index < ConnectedWaypoints.Num() - 1; ++Index)
+        {
+            Length += static_cast<float>(
+                FVector::Dist(
+                    ConnectedWaypoints[Index],
+                    ConnectedWaypoints[Index + 1]));
+        }
+
+        InOutResolution._Waypoints = MoveTemp(ConnectedWaypoints);
+        InOutResolution._Length = Length;
         return true;
     }
 
@@ -610,6 +657,7 @@ namespace ck
         { return; }
 
         const auto GoalLocation = InRequest.Get_GoalLocation();
+        auto FailureStage = ERouteFailureStage::NotResolved;
 
         const auto FailRoute = [&](ECk_PathNetwork_RouteFailReason InReason)
         {
@@ -624,14 +672,19 @@ namespace ck
 
             // Route failure is a first-class result delivered by OnRouteFailed, not a framework
             // fault. Keep it visible without escalating expected unreachable-goal tests.
-            ck::pathnetwork::Display(TEXT("PathNetworkFollower [{}] route to {} failed: [{}]"),
-                InHandle, GoalLocation, InReason);
+            ck::pathnetwork::Display(
+                TEXT("PathNetworkFollower [{}] route to {} failed: [{}] at stage [{}]"),
+                InHandle,
+                GoalLocation,
+                InReason,
+                Get_RouteFailureStageName(FailureStage));
         };
 
         auto Network = ck::IsValid(InRequest.Get_Network()) ? InRequest.Get_Network() : InParams.Get_Network();
 
         if (ck::Is_NOT_Valid(Network) || NOT UCk_Utils_PathNetwork_UE::Has(Network))
         {
+            FailureStage = ERouteFailureStage::NoNetwork;
             FailRoute(ECk_PathNetwork_RouteFailReason::NoNetwork);
             return;
         }
@@ -641,6 +694,7 @@ namespace ck
 
         if (GraphFragment.Get_Epoch() <= 0 || BuiltNetwork._Edges.IsEmpty())
         {
+            FailureStage = ERouteFailureStage::NetworkNotBuilt;
             FailRoute(ECk_PathNetwork_RouteFailReason::NetworkNotBuilt);
             return;
         }
@@ -650,46 +704,48 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
             TEXT("PathNetworkFollower [{}] has no Transform — cannot resolve a route start location"), InHandle)
         {
+            FailureStage = ERouteFailureStage::MissingTransform;
             FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
             return;
         }
 
         const auto StartLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
-
-        auto Shared = MakeShared<FRouteGraphSharedData>();
-        Merge_CandidatesIntoOverlay(*Shared, Gather_Candidates(BuiltNetwork, StartLocation));
-        Merge_CandidatesIntoOverlay(*Shared, Gather_Candidates(BuiltNetwork, GoalLocation));
+        const auto CostPolicy = Resolve_RouteCostPolicy(InParams);
+        auto Shared = Build_RouteGraphSharedData(
+            BuiltNetwork,
+            StartLocation,
+            GoalLocation,
+            CostPolicy);
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
-        const auto StartId = FRouteNodeId{ERouteNodeKind::Start, 0};
-        const auto GoalId = FRouteNodeId{ERouteNodeKind::Goal, 0};
-
         const auto MaxRepriceIterations = UCk_Utils_PathNetwork_Settings_UE::Get_MaxRepriceIterations();
         const auto RepriceTolerance = UCk_Utils_PathNetwork_Settings_UE::Get_RepriceTolerance();
-        const auto Multiplier = InParams.Get_OffPathCostMultiplier();
 
         auto AcceptedSpans = TArray<FRouteLegSpan>{};
         auto AcceptedOffPathWaypoints = TMap<int32, TArray<FVector>>{};
         auto AcceptedCost = 0.0f;
         auto RouteFound = false;
+        auto PlanningFailureStage = ERouteFailureStage::GraphSearch;
 
         for (auto Iteration = 0; Iteration <= MaxRepriceIterations; ++Iteration)
         {
-            const auto Graph = FRouteGraph{&BuiltNetwork, StartLocation, GoalLocation, Multiplier, Shared};
-
-            auto Search = astar::TSearchState<FRouteNodeId, FRouteGraph>{Graph, StartId, GoalId};
-
-            auto SearchParams = astar::FSearchParams{};
-            SearchParams.MaxIterationsPerTick = SearchIterationCap;
-
-            if (Search.ContinueSearch(SearchParams) != astar::ESearchStatus::Complete)
+            const auto Graph = FRouteGraph{&BuiltNetwork, StartLocation, GoalLocation, CostPolicy, Shared};
+            const auto Plan = Search_RouteGraph(
+                BuiltNetwork,
+                StartLocation,
+                GoalLocation,
+                CostPolicy,
+                Shared,
+                SearchIterationCap);
+            if (NOT Plan._Succeeded)
             { break; }
 
-            const auto Spans = ExtractLegSpans(Graph, BuiltNetwork, Search.GetResultPath());
+            const auto& Spans = Plan._Spans;
 
             auto OffPathWaypoints = TMap<int32, TArray<FVector>>{};
             auto NeedsReprice = false;
+            auto HasBlockedHop = false;
 
             for (auto SpanIndex = 0; SpanIndex < Spans.Num(); ++SpanIndex)
             {
@@ -698,11 +754,33 @@ namespace ck
                 if (NOT Span._IsOffPath)
                 { continue; }
 
-                const auto Resolution = Resolve_OffPathLeg(World, Span._FromLocation, Span._ToLocation);
+                auto Resolution =
+                    Resolve_OffPathLeg(
+                        World,
+                        Span._FromLocation,
+                        Span._ToLocation);
+                Validate_ResolvedOffPathLeg(
+                    World,
+                    Span._FromLocation,
+                    Span._ToLocation,
+                    Resolution);
+                const bool IsStrictNetworkGap =
+                    Graph.Get_IsComponentTransferHop(
+                        Span._FromId,
+                        Span._ToId)
+                    || Graph.Get_IsLocalNetworkShortcutHop(
+                        Span._FromId,
+                        Span._ToId);
+                if (Resolution._Outcome == EOffPathResolve::NoNavmesh
+                    && IsStrictNetworkGap)
+                {
+                    // Legacy endpoint and direct hops retain their no-navmesh
+                    // straight-line fallback. Opt-in network transfers and local
+                    // shortcuts are intentionally stricter: an arbitrary gap is
+                    // never made traversable without navmesh evidence.
+                    Resolution._Outcome = EOffPathResolve::PathFailed;
+                }
                 OffPathWaypoints.Add(SpanIndex, Resolution._Waypoints);
-
-                if (Iteration >= MaxRepriceIterations)
-                { continue; }
 
                 const auto Key = FRouteGraph::PackOffPathKey(Span._FromId, Span._ToId);
                 const auto Euclidean = static_cast<float>(FVector::Dist(Span._FromLocation, Span._ToLocation));
@@ -711,16 +789,37 @@ namespace ck
                 {
                     case EOffPathResolve::PathFailed:
                     {
-                        const auto PriceOutBlockedHop = TNumericLimits<float>::Max() / 8.0f;
-                        Shared->_RepricedOffPathCosts.Add(Key, PriceOutBlockedHop);
-                        NeedsReprice = true;
+                        HasBlockedHop = true;
+                        if (IsStrictNetworkGap)
+                        {
+                            // Once a strict network gap has failed navmesh
+                            // validation, do not let the retry bypass the same
+                            // obstacle through the legacy raw direct fallback.
+                            Shared->_AllowDirectStartToGoal = false;
+                        }
+                        if (Iteration < MaxRepriceIterations)
+                        {
+                            const auto PriceOutBlockedHop =
+                                TNumericLimits<float>::Max() / 8.0f;
+                            Shared->_RepricedOffPathCosts.Add(
+                                Key,
+                                PriceOutBlockedHop);
+                            NeedsReprice = true;
+                        }
                         break;
                     }
                     case EOffPathResolve::Resolved:
                     {
-                        if (Resolution._Length > Euclidean * RepriceTolerance)
+                        if (Iteration < MaxRepriceIterations
+                            && Resolution._Length
+                                > Euclidean * RepriceTolerance)
                         {
-                            Shared->_RepricedOffPathCosts.Add(Key, Resolution._Length * Multiplier);
+                            Shared->_RepricedOffPathCosts.Add(
+                                Key,
+                                Graph.Get_OffPathCostForResolvedLength(
+                                    Span._FromId,
+                                    Span._ToId,
+                                    Resolution._Length));
                             NeedsReprice = true;
                         }
                         break;
@@ -731,11 +830,22 @@ namespace ck
                 }
             }
 
+            if (HasBlockedHop)
+            {
+                if (Iteration >= MaxRepriceIterations)
+                {
+                    PlanningFailureStage =
+                        ERouteFailureStage::OffPathNavValidation;
+                    break;
+                }
+                continue;
+            }
+
             if (NOT NeedsReprice || Iteration >= MaxRepriceIterations)
             {
                 AcceptedSpans = Spans;
                 AcceptedOffPathWaypoints = MoveTemp(OffPathWaypoints);
-                AcceptedCost = Search.GetResultCost();
+                AcceptedCost = Plan._EstimatedCost;
                 RouteFound = true;
                 break;
             }
@@ -743,6 +853,7 @@ namespace ck
 
         if (NOT RouteFound)
         {
+            FailureStage = PlanningFailureStage;
             FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
             return;
         }
@@ -796,6 +907,7 @@ namespace ck
                     SpanIndex < AcceptedSpans.Num() && AcceptedSpans[SpanIndex]._IsOffPath;
 
                 auto RunWaypoints = TArray<FVector>{};
+                auto LastCompileFailure = ERouteFailureStage::RibbonCompileEmpty;
                 constexpr auto CompileAttempts = 3;
                 for (auto CompileAttempt = 0; CompileAttempt < CompileAttempts; ++CompileAttempt)
                 {
@@ -810,10 +922,16 @@ namespace ck
                         RunSpans,
                         AttemptParams);
                     if (CandidateWaypoints.Num() < 2)
-                    { continue; }
+                    {
+                        LastCompileFailure = ERouteFailureStage::RibbonCompileEmpty;
+                        continue;
+                    }
 
                     if (NOT Try_ProjectPathOntoNavmesh(World, CandidateWaypoints))
-                    { continue; }
+                    {
+                        LastCompileFailure = ERouteFailureStage::RibbonProjection;
+                        continue;
+                    }
 
                     auto ProjectedPathContained = true;
                     for (auto WaypointIndex = 0;
@@ -831,7 +949,10 @@ namespace ck
                         }
                     }
                     if (NOT ProjectedPathContained)
-                    { continue; }
+                    {
+                        LastCompileFailure = ERouteFailureStage::RibbonContainment;
+                        continue;
+                    }
 
                     Apply_NavmeshClearance(
                         World,
@@ -844,10 +965,12 @@ namespace ck
                         RunWaypoints = MoveTemp(CandidateWaypoints);
                         break;
                     }
+                    LastCompileFailure = ERouteFailureStage::RibbonNavValidation;
                 }
 
                 if (RunWaypoints.Num() < 2)
                 {
+                    FailureStage = LastCompileFailure;
                     FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
                     return;
                 }
@@ -859,6 +982,7 @@ namespace ck
 
         if (NOT Try_ProjectPathOntoNavmesh(World, Result._CompiledWaypoints))
         {
+            FailureStage = ERouteFailureStage::CompiledPathProjection;
             FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
             return;
         }
@@ -866,6 +990,7 @@ namespace ck
         auto NormalizedStart = TArray<FVector>{StartLocation};
         if (NOT Try_ProjectPathOntoNavmesh(World, NormalizedStart))
         {
+            FailureStage = ERouteFailureStage::StartProjection;
             FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
             return;
         }
@@ -880,6 +1005,7 @@ namespace ck
         auto NormalizedGoal = TArray<FVector>{GoalLocation};
         if (NOT Try_ProjectPathOntoNavmesh(World, NormalizedGoal))
         {
+            FailureStage = ERouteFailureStage::GoalProjection;
             FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
             return;
         }
@@ -890,6 +1016,7 @@ namespace ck
                 CompiledWaypointMergeDistance;
         if (NOT HasExactTerminal)
         {
+            FailureStage = ERouteFailureStage::TerminalMismatch;
             FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
             return;
         }
@@ -899,6 +1026,7 @@ namespace ck
         FullMovementPath.Insert(NormalizedStart[0], 0);
         if (NOT Is_NavmeshPathValid(World, FullMovementPath))
         {
+            FailureStage = ERouteFailureStage::FullPathValidation;
             FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
             return;
         }
@@ -946,24 +1074,58 @@ namespace ck
         // The public entrypoint validated this payload before enqueueing. Keep the
         // processor total against malformed/stale requests from native callers.
         const auto Multiplier = Tuning.Get_OffPathCostMultiplier();
+        const auto NearEndpointMultiplier = Tuning.Get_NearEndpointCostMultiplier();
+        const auto NetworkGapMultiplier = Tuning.Get_NetworkGapCostMultiplier();
+        const auto JoinMaxDistance = Tuning.Get_EndpointJoinMaxDistance();
+        const auto TransferMaxDistance = Tuning.Get_ComponentTransferMaxDistance();
+        const auto LocalShortcutMaxDistance =
+            Tuning.Get_LocalNetworkShortcutMaxDistance();
+        const auto DirectGraceDistance = Tuning.Get_DirectTripGraceDistance();
+        const auto DirectMinimumSavings =
+            Tuning.Get_DirectRouteMinimumSavingsFraction();
         const auto SideKeeping = Tuning.Get_SideKeepingFraction();
         const auto Spacing = Tuning.Get_CorridorWaypointSpacing();
         const auto Smoothing = Tuning.Get_CornerSmoothingDistance();
         const auto Clearance = Tuning.Get_DesiredNavmeshClearance();
         const bool TuningIsValid = FMath::IsFinite(Multiplier) && Multiplier >= 1.0f
+            && FMath::IsFinite(NearEndpointMultiplier)
+            && (NearEndpointMultiplier == 0.0f || NearEndpointMultiplier >= 1.0f)
+            && FMath::IsFinite(NetworkGapMultiplier)
+            && (NetworkGapMultiplier == 0.0f || NetworkGapMultiplier >= 1.0f)
+            && FMath::IsFinite(JoinMaxDistance) && JoinMaxDistance >= 0.0f
+            && FMath::IsFinite(TransferMaxDistance) && TransferMaxDistance >= 0.0f
+            && FMath::IsFinite(LocalShortcutMaxDistance)
+            && LocalShortcutMaxDistance >= 0.0f
+            && FMath::IsFinite(DirectGraceDistance) && DirectGraceDistance >= 0.0f
+            && FMath::IsFinite(DirectMinimumSavings)
+            && DirectMinimumSavings >= 0.0f
+            && DirectMinimumSavings <= 1.0f
             && FMath::IsFinite(SideKeeping) && SideKeeping >= 0.0f && SideKeeping <= 0.9f
             && FMath::IsFinite(Spacing) && Spacing >= 50.0f
             && FMath::IsFinite(Smoothing) && Smoothing >= 0.0f && Smoothing <= 1000.0f
             && FMath::IsFinite(Clearance) && Clearance >= 0.0f && Clearance <= 1000.0f;
         CK_ENSURE_IF_NOT(TuningIsValid,
             TEXT("PathNetworkFollower tuning request contains invalid values "
-                 "(multiplier [{}], side [{}], spacing [{}], smoothing [{}], clearance [{}])"),
-            Multiplier, SideKeeping, Spacing, Smoothing, Clearance)
+                 "(far/direct multiplier [{}], near multiplier [{}], network gap multiplier [{}], join max [{}], transfer max [{}], local shortcut max [{}], direct grace [{}], minimum direct savings [{}], "
+                 "side [{}], spacing [{}], smoothing [{}], clearance [{}])"),
+            Multiplier, NearEndpointMultiplier, NetworkGapMultiplier, JoinMaxDistance, TransferMaxDistance,
+            LocalShortcutMaxDistance, DirectGraceDistance,
+            DirectMinimumSavings,
+            SideKeeping, Spacing, Smoothing, Clearance)
         {}
         if (NOT TuningIsValid)
         { return; }
 
         InParams.Set_OffPathCostMultiplier(Multiplier);
+        InParams.Set_NearEndpointCostMultiplier(NearEndpointMultiplier);
+        InParams.Set_NetworkGapCostMultiplier(NetworkGapMultiplier);
+        InParams.Set_EndpointJoinMaxDistance(JoinMaxDistance);
+        InParams.Set_ComponentTransferMaxDistance(TransferMaxDistance);
+        InParams.Set_LocalNetworkShortcutMaxDistance(
+            LocalShortcutMaxDistance);
+        InParams.Set_DirectTripGraceDistance(DirectGraceDistance);
+        InParams.Set_DirectRouteMinimumSavingsFraction(
+            DirectMinimumSavings);
         InParams.Set_SideKeepingFraction(SideKeeping);
         InParams.Set_CorridorWaypointSpacing(Spacing);
         InParams.Set_CornerSmoothingDistance(Smoothing);

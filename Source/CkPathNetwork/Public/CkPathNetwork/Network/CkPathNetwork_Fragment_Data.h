@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -46,6 +47,18 @@ enum class ECk_PathNetwork_RouteStatus : uint8
     Failed      // Last request failed (see fail reason)
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PathNetwork_RouteStatus);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_PathNetworkFollower_OwnershipResult : uint8
+{
+    RejectedInvalidInput,
+    Added,
+    Adopted,
+    RejectedExistingOwner
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PathNetworkFollower_OwnershipResult);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -156,6 +169,171 @@ public:
     CK_PROPERTY_GET(_TuningRevision);
 };
 
+// A complete, world-independent route preference profile. Path-network actors can
+// publish one as a per-map recommendation; followers still own the final choice.
+USTRUCT(BlueprintType)
+struct CKPATHNETWORK_API FCk_PathNetworkFollower_Tuning
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_PathNetworkFollower_Tuning);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "1.0",
+            UIMin = "1.0",
+            UIMax = "20.0",
+            Delta = "0.25",
+            DisplayName = "Off-Network Cost (Long Trips)",
+            ToolTip = "Cost multiplier for long direct travel away from the network. Higher values make the network more attractive."))
+    float _OffPathCostMultiplier = 3.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "1.0",
+            UIMin = "1.0",
+            UIMax = "20.0",
+            Delta = "0.25",
+            DisplayName = "Endpoint Connector Cost",
+            ToolTip = "Cost multiplier for the short connection from each endpoint to the network. Custom values start at 1.0; the untouched zero default inherits the long-trip value."))
+    float _NearEndpointCostMultiplier = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "1.0",
+            UIMin = "1.0",
+            UIMax = "20.0",
+            Delta = "0.25",
+            DisplayName = "Network Gap Cost Multiplier",
+            ToolTip = "Cost multiplier for navmesh-validated graph gap links between network nodes. Custom values start at 1.0; zero inherits Far/Direct Cost Multiplier."))
+    float _NetworkGapCostMultiplier = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "0.0",
+            UIMin = "0.0",
+            UIMax = "10000.0",
+            Delta = "50.0",
+            Units = "cm",
+            DisplayName = "Maximum Network Join Distance",
+            ToolTip = "Maximum distance an endpoint may travel to join the network. Zero allows an unlimited search."))
+    float _EndpointJoinMaxDistance = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "0.0",
+            UIMin = "0.0",
+            UIMax = "5000.0",
+            Delta = "50.0",
+            Units = "cm",
+            DisplayName = "Maximum Component Transfer Distance",
+            ToolTip = "Maximum navmesh-resolved gap between nearby nodes in separate network islands. Transfers pay Network Gap Cost Multiplier. Zero disables component transfers."))
+    float _ComponentTransferMaxDistance = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "0.0",
+            UIMin = "0.0",
+            UIMax = "2000.0",
+            Delta = "50.0",
+            Units = "cm",
+            DisplayName = "Maximum Local Network Gap",
+            ToolTip = "Allows a short, navmesh-resolved crossing between nearby path-network nodes that are already connected by a longer network route. Crossings pay Network Gap Cost Multiplier. Zero disables local crossings."))
+    float _LocalNetworkShortcutMaxDistance = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "0.0",
+            UIMin = "0.0",
+            UIMax = "10000.0",
+            Delta = "50.0",
+            Units = "cm",
+            DisplayName = "Short-Trip Direct Grace",
+            ToolTip = "Trips no longer than this may use the cheaper endpoint cost for a direct shortcut. Zero disables the grace distance."))
+    float _DirectTripGraceDistance = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "0.0",
+            ClampMax = "1.0",
+            UIMin = "0.0",
+            UIMax = "1.0",
+            Delta = "0.01",
+            DisplayName = "Minimum Direct-Route Savings",
+            ToolTip = "Minimum relative cost saving required before choosing a long direct off-network route when a sidewalk alternative exists. For example, 0.05 requires a 5% saving. Zero preserves strict lowest-cost selection. Trips inside Short-Trip Direct Grace bypass this preference."))
+    float _DirectRouteMinimumSavingsFraction = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "0.0",
+            ClampMax = "0.9",
+            UIMin = "0.0",
+            UIMax = "0.9",
+            Delta = "0.05",
+            DisplayName = "Side-Keeping Fraction",
+            ToolTip = "Lateral walking offset as a fraction of ribbon half-width. Opposing travelers use opposite sides."))
+    float _SideKeepingFraction = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "50.0",
+            UIMin = "50.0",
+            UIMax = "1000.0",
+            Delta = "25.0",
+            Units = "cm",
+            DisplayName = "Route Waypoint Spacing",
+            ToolTip = "Spacing of generated waypoints while following a ribbon."))
+    float _CorridorWaypointSpacing = 250.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "0.0",
+            UIMin = "0.0",
+            UIMax = "1000.0",
+            Delta = "25.0",
+            Units = "cm",
+            DisplayName = "Corner Smoothing Distance",
+            ToolTip = "Maximum distance used to round eligible ribbon corners. Zero preserves authored corners."))
+    float _CornerSmoothingDistance = 150.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "0.0",
+            UIMin = "0.0",
+            UIMax = "1000.0",
+            Delta = "25.0",
+            Units = "cm",
+            DisplayName = "Desired Navmesh Clearance",
+            ToolTip = "Soft clearance from navmesh boundaries while compiling on-network routes. Zero disables the preference."))
+    float _DesiredNavmeshClearance = 75.0f;
+
+public:
+    CK_PROPERTY(_OffPathCostMultiplier);
+    CK_PROPERTY(_NearEndpointCostMultiplier);
+    CK_PROPERTY(_NetworkGapCostMultiplier);
+    CK_PROPERTY(_EndpointJoinMaxDistance);
+    CK_PROPERTY(_ComponentTransferMaxDistance);
+    CK_PROPERTY(_LocalNetworkShortcutMaxDistance);
+    CK_PROPERTY(_DirectTripGraceDistance);
+    CK_PROPERTY(_DirectRouteMinimumSavingsFraction);
+    CK_PROPERTY(_SideKeepingFraction);
+    CK_PROPERTY(_CorridorWaypointSpacing);
+    CK_PROPERTY(_CornerSmoothingDistance);
+    CK_PROPERTY(_DesiredNavmeshClearance);
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -175,9 +353,19 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FCk_PathNetwork_BuildParams _BuildParams;
 
+    // Disabled preserves the pre-profile contract for existing actors and callers.
+    // Games opt in when their authored network should supply a map-specific default.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    ECk_EnableDisable _UseRecommendedFollowerTuning = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FCk_PathNetworkFollower_Tuning _RecommendedFollowerTuning;
+
 public:
     CK_PROPERTY(_Ribbons);
     CK_PROPERTY(_BuildParams);
+    CK_PROPERTY(_UseRecommendedFollowerTuning);
+    CK_PROPERTY(_RecommendedFollowerTuning);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_PathNetwork_ParamsData, _Ribbons);
@@ -195,10 +383,46 @@ struct CKPATHNETWORK_API FCk_Fragment_PathNetworkFollower_ParamsData
     friend class ::UCk_Utils_PathNetworkFollower_UE;
 
 private:
-    // The shortcut heuristic: off-network travel costs this many times its real distance.
-    // Higher = agents cling to the network; 1.0 = the network is ignored (pure shortest path).
+    // The shortcut heuristic for long direct off-network travel. Higher values make
+    // the network more attractive; 1.0 is pure distance for that hop.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _OffPathCostMultiplier = 3.0f;
+
+    // Cost multiplier for the short off-network connector at either end of a route.
+    // Zero inherits _OffPathCostMultiplier and preserves legacy behavior.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _NearEndpointCostMultiplier = 0.0f;
+
+    // Cost multiplier for navmesh-validated graph gap links between network nodes.
+    // Zero inherits _OffPathCostMultiplier and preserves legacy behavior.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _NetworkGapCostMultiplier = 0.0f;
+
+    // Maximum straight-line distance from start/goal to a network projection.
+    // Zero leaves candidate reach unlimited, preserving legacy behavior.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _EndpointJoinMaxDistance = 0.0f;
+
+    // Maximum off-network transfer between nearby nodes that belong to different
+    // connected components. Zero disables transfers and preserves legacy topology.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _ComponentTransferMaxDistance = 0.0f;
+
+    // Maximum off-network shortcut between nearby network nodes that already
+    // belong to the same connected component. Zero disables local shortcuts.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _LocalNetworkShortcutMaxDistance = 0.0f;
+
+    // Whole trips at or below this distance price their direct hop like an endpoint
+    // connector. Zero disables the grace window, preserving legacy behavior.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
+    float _DirectTripGraceDistance = 0.0f;
+
+    // Minimum relative saving required before a long direct route may beat a
+    // traversable network alternative. Zero preserves strict lowest-cost selection.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true, ClampMin="0.0", ClampMax="1.0"))
+    float _DirectRouteMinimumSavingsFraction = 0.0f;
 
     // Lateral offset from the centerline as a fraction of the local half-width, signed by travel
     // direction (right-hand walking). Opposing streams pass cleanly because their signs differ.
@@ -238,6 +462,13 @@ private:
 
 public:
     CK_PROPERTY(_OffPathCostMultiplier);
+    CK_PROPERTY(_NearEndpointCostMultiplier);
+    CK_PROPERTY(_NetworkGapCostMultiplier);
+    CK_PROPERTY(_EndpointJoinMaxDistance);
+    CK_PROPERTY(_ComponentTransferMaxDistance);
+    CK_PROPERTY(_LocalNetworkShortcutMaxDistance);
+    CK_PROPERTY(_DirectTripGraceDistance);
+    CK_PROPERTY(_DirectRouteMinimumSavingsFraction);
     CK_PROPERTY(_SideKeepingFraction);
     CK_PROPERTY(_CorridorWaypointSpacing);
     CK_PROPERTY(_CornerSmoothingDistance);
@@ -246,40 +477,6 @@ public:
     CK_PROPERTY(_OwnerToken);
     CK_PROPERTY_GET(_TuningRevision);
 };
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKPATHNETWORK_API FCk_PathNetworkFollower_Tuning
-{
-    GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_PathNetworkFollower_Tuning);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
-    float _OffPathCostMultiplier = 3.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0", ClampMax="0.9"))
-    float _SideKeepingFraction = 0.5f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="50.0"))
-    float _CorridorWaypointSpacing = 250.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
-    float _CornerSmoothingDistance = 150.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
-    float _DesiredNavmeshClearance = 75.0f;
-
-public:
-    CK_PROPERTY(_OffPathCostMultiplier);
-    CK_PROPERTY(_SideKeepingFraction);
-    CK_PROPERTY(_CorridorWaypointSpacing);
-    CK_PROPERTY(_CornerSmoothingDistance);
-    CK_PROPERTY(_DesiredNavmeshClearance);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
 
 // Replace the network's ribbons and rebuild the graph — the runtime-rebuild entrypoint. Every
 // follower corridor on this network is invalidated (epoch bump) and replans.

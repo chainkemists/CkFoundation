@@ -14,6 +14,61 @@ class UCk_PathNetwork_Detector_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT()
+struct CKPATHNETWORK_API FCk_PathNetwork_RepresentativeRoute
+{
+    GENERATED_BODY()
+
+public:
+    FCk_PathNetwork_RepresentativeRoute() = default;
+
+    FCk_PathNetwork_RepresentativeRoute(
+        const FName InName,
+        const FVector& InStart,
+        const FVector& InGoal)
+        : _Name{InName}
+        , _Start{InStart}
+        , _Goal{InGoal}
+    {}
+
+    auto Get_Name() const -> FName { return _Name; }
+    auto Get_Start() const -> const FVector& { return _Start; }
+    auto Get_Goal() const -> const FVector& { return _Goal; }
+
+    auto Set_Name(const FName InName) -> FCk_PathNetwork_RepresentativeRoute&
+    {
+        _Name = InName;
+        return *this;
+    }
+
+    auto Set_Start(const FVector& InStart) -> FCk_PathNetwork_RepresentativeRoute&
+    {
+        _Start = InStart;
+        return *this;
+    }
+
+    auto Set_Goal(const FVector& InGoal) -> FCk_PathNetwork_RepresentativeRoute&
+    {
+        _Goal = InGoal;
+        return *this;
+    }
+
+private:
+    UPROPERTY(EditAnywhere,
+        Category = "Ck|PathNetwork|Representative Routes")
+    FName _Name;
+
+    UPROPERTY(EditAnywhere,
+        Category = "Ck|PathNetwork|Representative Routes")
+    FVector _Start = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere,
+        Category = "Ck|PathNetwork|Representative Routes")
+    FVector _Goal = FVector::ZeroVector;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Level-placed home of a path network: authoring + lifetime plumbing only, all runtime behavior
 // lives on the entity it constructs at BeginPlay (authority only). Ribbons are stored
 // actor-RELATIVE (MakeEditWidget's space; moves the network as one unit) — see Get_WorldRibbons.
@@ -46,6 +101,43 @@ public:
 
     auto
     ShouldTickIfViewportsOnly() const -> bool override;
+
+    // Editor authoring services own validation, transaction boundaries, and detector duplication.
+    // InOwnedDetector must already be an instanced child of this actor.
+    auto
+    Set_EditorAuthoringConfiguration(
+        const FCk_PathNetwork_BuildParams& InBuildParams,
+        const FCk_PathNetwork_VectorizeParams& InVectorizeParams,
+        UCk_PathNetwork_Detector_UE* InOwnedDetector,
+        const FVector& InDetectionExtents,
+        ECk_EnableDisable InAutoDetectOnBeginPlay) -> bool;
+
+    auto
+    Set_EditorAuthoringConfiguration(
+        const FCk_PathNetwork_BuildParams& InBuildParams,
+        const FCk_PathNetwork_VectorizeParams& InVectorizeParams,
+        UCk_PathNetwork_Detector_UE* InOwnedDetector,
+        const FVector& InDetectionExtents,
+        ECk_EnableDisable InAutoDetectOnBeginPlay,
+        ECk_EnableDisable InUseRecommendedFollowerTuning,
+        const FCk_PathNetworkFollower_Tuning& InRecommendedFollowerTuning) -> bool;
+
+    auto
+    Get_RepresentativeRoutes() const
+        -> const TArray<FCk_PathNetwork_RepresentativeRoute>&;
+
+    auto
+    Get_WorldRepresentativeRoutes() const
+        -> TArray<FCk_PathNetwork_RepresentativeRoute>;
+
+    auto
+    Convert_WorldRepresentativeRouteToRelative(
+        const FCk_PathNetwork_RepresentativeRoute& InWorldRoute) const
+        -> FCk_PathNetwork_RepresentativeRoute;
+
+    auto
+    Set_RepresentativeRoutes(
+        const TArray<FCk_PathNetwork_RepresentativeRoute>& InRoutes) -> void;
 #endif
 
 public:
@@ -112,6 +204,34 @@ private:
         meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _AutoDetectOnBeginPlay = ECk_EnableDisable::Disable;
 
+    // Optional per-map routing profile. Existing actors remain opt-out until a
+    // designer explicitly enables and applies a recommendation.
+    UPROPERTY(EditAnywhere,
+        Category = "Ck|PathNetwork|Route Preferences",
+        meta = (
+            AllowPrivateAccess = true,
+            DisplayName = "Use Map Route Preferences",
+            ToolTip = "Publish this actor's route preference profile for game-specific followers to consume."))
+    ECk_EnableDisable _UseRecommendedFollowerTuning = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere,
+        Category = "Ck|PathNetwork|Route Preferences",
+        meta = (
+            AllowPrivateAccess = true,
+            ShowOnlyInnerProperties,
+            DisplayName = "Recommended Follower Tuning"))
+    FCk_PathNetworkFollower_Tuning _RecommendedFollowerTuning;
+
+#if WITH_EDITORONLY_DATA
+    UPROPERTY(EditAnywhere,
+        Category = "Ck|PathNetwork|Representative Routes",
+        meta = (
+            AllowPrivateAccess = true,
+            TitleProperty = "_Name",
+            DisplayName = "Representative Route Watchlist"))
+    TArray<FCk_PathNetwork_RepresentativeRoute> _RepresentativeRoutes;
+#endif
+
 public:
     CK_PROPERTY(_Ribbons);
     CK_PROPERTY_GET(_BuildParams);
@@ -119,6 +239,8 @@ public:
     CK_PROPERTY_GET(_Detector);
     CK_PROPERTY_GET(_DetectionExtents);
     CK_PROPERTY_GET(_AutoDetectOnBeginPlay);
+    CK_PROPERTY_GET(_UseRecommendedFollowerTuning);
+    CK_PROPERTY_GET(_RecommendedFollowerTuning);
 
 private:
     FCk_Handle_PathNetwork _NetworkHandle;

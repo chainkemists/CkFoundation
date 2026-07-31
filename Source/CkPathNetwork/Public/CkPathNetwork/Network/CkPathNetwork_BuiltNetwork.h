@@ -48,6 +48,30 @@ namespace ck::pathnetwork
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    // World-independent connectivity diagnostics over a built network. Components count only
+    // nodes incident to at least one valid edge; malformed or isolated nodes remain explicitly
+    // visible without being treated as routable islands.
+    struct CKPATHNETWORK_API FNetworkTopologyAnalysis
+    {
+        int32 _NodeCount = 0;
+        int32 _EdgeCount = 0;
+        int32 _RoutableNodeCount = 0;
+        int32 _ComponentCount = 0;
+        int32 _LargestComponentNodeCount = 0;
+        int32 _LargestComponentEdgeCount = 0;
+        int32 _DeadEndNodeCount = 0;
+        int32 _IsolatedNodeCount = 0;
+
+        TArray<int32> _ComponentByNode;
+        TArray<int32> _LogicalDegreeByNode;
+    };
+
+    CKPATHNETWORK_API auto
+    Analyze_NetworkTopology(
+        const struct FBuiltNetwork& InNetwork) -> FNetworkTopologyAnalysis;
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     struct CKPATHNETWORK_API FBuiltNetwork
     {
         TArray<FBuiltNode> _Nodes;

@@ -52,6 +52,8 @@ auto
 
     auto Params = FCk_Fragment_PathNetwork_ParamsData{Get_WorldRibbons()};
     Params.Set_BuildParams(_BuildParams);
+    Params.Set_UseRecommendedFollowerTuning(_UseRecommendedFollowerTuning);
+    Params.Set_RecommendedFollowerTuning(_RecommendedFollowerTuning);
 
     _NetworkHandle = UCk_Utils_PathNetwork_UE::Add(TransientEntity, Params);
 
@@ -148,6 +150,140 @@ auto
     -> bool
 {
     return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ACk_PathNetwork_UE::
+    Set_EditorAuthoringConfiguration(
+        const FCk_PathNetwork_BuildParams& InBuildParams,
+        const FCk_PathNetwork_VectorizeParams& InVectorizeParams,
+        UCk_PathNetwork_Detector_UE* InOwnedDetector,
+        const FVector& InDetectionExtents,
+        const ECk_EnableDisable InAutoDetectOnBeginPlay)
+    -> bool
+{
+    return Set_EditorAuthoringConfiguration(
+        InBuildParams,
+        InVectorizeParams,
+        InOwnedDetector,
+        InDetectionExtents,
+        InAutoDetectOnBeginPlay,
+        _UseRecommendedFollowerTuning,
+        _RecommendedFollowerTuning);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ACk_PathNetwork_UE::
+    Set_EditorAuthoringConfiguration(
+        const FCk_PathNetwork_BuildParams& InBuildParams,
+        const FCk_PathNetwork_VectorizeParams& InVectorizeParams,
+        UCk_PathNetwork_Detector_UE* InOwnedDetector,
+        const FVector& InDetectionExtents,
+        const ECk_EnableDisable InAutoDetectOnBeginPlay,
+        const ECk_EnableDisable InUseRecommendedFollowerTuning,
+        const FCk_PathNetworkFollower_Tuning& InRecommendedFollowerTuning)
+    -> bool
+{
+    const bool DetectorIsOwned =
+        ck::IsValid(InOwnedDetector)
+        && InOwnedDetector->GetOuter() == this;
+    CK_ENSURE_IF_NOT(DetectorIsOwned,
+        TEXT("Set_EditorAuthoringConfiguration on [{}] requires a valid actor-owned detector"), this)
+    {}
+    if (NOT DetectorIsOwned)
+    { return false; }
+
+    const bool ExtentsAreValid =
+        NOT InDetectionExtents.ContainsNaN()
+        && InDetectionExtents.X > 0.0
+        && InDetectionExtents.Y > 0.0
+        && InDetectionExtents.Z > 0.0;
+    CK_ENSURE_IF_NOT(ExtentsAreValid,
+        TEXT("Set_EditorAuthoringConfiguration on [{}] requires finite positive extents, received [{}]"),
+        this, InDetectionExtents)
+    {}
+    if (NOT ExtentsAreValid)
+    { return false; }
+
+    const bool RecommendationIsValid =
+        InUseRecommendedFollowerTuning != ECk_EnableDisable::Enable
+        || UCk_Utils_PathNetworkFollower_UE::Get_IsTuningValid(
+            InRecommendedFollowerTuning);
+    CK_ENSURE_IF_NOT(RecommendationIsValid,
+        TEXT("Set_EditorAuthoringConfiguration on [{}] received invalid recommended follower tuning"),
+        this)
+    {}
+    if (NOT RecommendationIsValid)
+    { return false; }
+
+    _BuildParams = InBuildParams;
+    _VectorizeParams = InVectorizeParams;
+    _Detector = InOwnedDetector;
+    _DetectionExtents = InDetectionExtents;
+    _AutoDetectOnBeginPlay = InAutoDetectOnBeginPlay;
+    _UseRecommendedFollowerTuning = InUseRecommendedFollowerTuning;
+    _RecommendedFollowerTuning = InRecommendedFollowerTuning;
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ACk_PathNetwork_UE::
+    Get_RepresentativeRoutes() const
+    -> const TArray<FCk_PathNetwork_RepresentativeRoute>&
+{
+    return _RepresentativeRoutes;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ACk_PathNetwork_UE::
+    Get_WorldRepresentativeRoutes() const
+    -> TArray<FCk_PathNetwork_RepresentativeRoute>
+{
+    const auto& ActorTransform = GetActorTransform();
+
+    auto WorldRoutes = _RepresentativeRoutes;
+    for (auto& Route : WorldRoutes)
+    {
+        Route.Set_Start(ActorTransform.TransformPosition(Route.Get_Start()));
+        Route.Set_Goal(ActorTransform.TransformPosition(Route.Get_Goal()));
+    }
+    return WorldRoutes;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ACk_PathNetwork_UE::
+    Convert_WorldRepresentativeRouteToRelative(
+        const FCk_PathNetwork_RepresentativeRoute& InWorldRoute) const
+    -> FCk_PathNetwork_RepresentativeRoute
+{
+    const auto& ActorTransform = GetActorTransform();
+    auto RelativeRoute = InWorldRoute;
+    RelativeRoute.Set_Start(
+        ActorTransform.InverseTransformPosition(InWorldRoute.Get_Start()));
+    RelativeRoute.Set_Goal(
+        ActorTransform.InverseTransformPosition(InWorldRoute.Get_Goal()));
+    return RelativeRoute;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    ACk_PathNetwork_UE::
+    Set_RepresentativeRoutes(
+        const TArray<FCk_PathNetwork_RepresentativeRoute>& InRoutes)
+    -> void
+{
+    _RepresentativeRoutes = InRoutes;
 }
 #endif
 

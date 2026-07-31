@@ -110,8 +110,6 @@ namespace ck::layout
         DoRunDetector()
         -> FReply
     {
-        const FScopedTransaction Transaction{LOCTEXT("RunDetectorTransaction", "Path Network: Run Detector")};
-
         for (const auto& WeakActor : _CustomizedActors)
         {
             auto* Actor = WeakActor.Get();

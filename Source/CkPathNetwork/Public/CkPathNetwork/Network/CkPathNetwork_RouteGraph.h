@@ -8,8 +8,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 // The per-query search space: the built network plus a virtual Start/Goal and overlay points
-// (start/goal projected onto nearby edges). Off-path hops cost euclidean x OffPathCostMultiplier —
-// that one number IS the "prefer the sidewalk unless the shortcut is worth it" heuristic.
+// (start/goal projected onto nearby edges). Endpoint-aware cost policy distinguishes local
+// connectors from a long direct off-network shortcut while retaining a direct fallback.
 // LIFETIME: raw pointer to the built network, valid only for one synchronous search inside a
 // processor tick. Never store it across frames.
 // --------------------------------------------------------------------------------------------------------------------
@@ -49,8 +49,53 @@ namespace ck::pathnetwork
         TArray<FRouteOverlayPoint> _OverlayPoints;
         TMap<int32, TArray<int32>> _OverlayPointsByEdge;
 
+        // The default preserves the runtime direct-fallback route. Editor diagnostics can
+        // explicitly omit this synthetic edge when asking whether the network is connected.
+        bool _AllowDirectStartToGoal = true;
+
+        // Optional, symmetric off-network transfers between nodes in distinct
+        // connected components. The route-node map is canonical and can join
+        // query-local edge-interior overlay points as well as authored nodes.
+        // The node-only map remains as a compatibility/diagnostic view.
+        TMap<FRouteNodeId, TArray<FRouteNodeId>>
+            _ComponentTransfersByRouteNode;
+        TMap<int32, TArray<int32>> _ComponentTransfersByNode;
+        int32 _ComponentTransferCandidateCount = 0;
+        int32 _ComponentTransferEdgeInteriorCandidateCount = 0;
+        int32 _ComponentTransferRejectedByCellCapCount = 0;
+
+        // Optional, symmetric off-network shortcuts between nearby nodes in the
+        // same connected component. Built per query from an independently opt-in
+        // local-gap policy.
+        TMap<int32, TArray<int32>> _LocalNetworkShortcutsByNode;
+        int32 _LocalNetworkShortcutCandidateCount = 0;
+        int32 _LocalNetworkShortcutCandidateSourceCount = 0;
+        bool _LocalNetworkShortcutBudgetExceeded = false;
+
         // Off-path hops repriced by the navmesh validation pass. Key = PackOffPathKey(from, to).
         TMap<uint64, float> _RepricedOffPathCosts;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // Resolved per-query policy. Public follower tuning uses zero-valued compatibility
+    // sentinels; the processor resolves those before constructing a graph.
+    struct CKPATHNETWORK_API FRouteCostPolicy
+    {
+        float _FarOrDirectCostMultiplier = 3.0f;
+        float _NearEndpointCostMultiplier = 3.0f;
+        float _NetworkGapCostMultiplier = 3.0f;
+        float _EndpointJoinMaxDistance = 0.0f;
+        float _ComponentTransferMaxDistance = 0.0f;
+        float _LocalNetworkShortcutMaxDistance = 0.0f;
+        float _DirectTripGraceDistance = 0.0f;
+        float _DirectRouteMinimumSavingsFraction = 0.0f;
+
+        auto
+        Get_IsEndpointJoinPermitted(float InDistance) const -> bool
+        {
+            return _EndpointJoinMaxDistance <= 0.0f || InDistance <= _EndpointJoinMaxDistance;
+        }
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -64,12 +109,12 @@ namespace ck::pathnetwork
             const FBuiltNetwork* InNetwork,
             const FVector& InStartLocation,
             const FVector& InGoalLocation,
-            float InOffPathCostMultiplier,
+            const FRouteCostPolicy& InCostPolicy,
             TSharedPtr<FRouteGraphSharedData> InShared)
             : _Network{InNetwork}
             , _StartLocation{InStartLocation}
             , _GoalLocation{InGoalLocation}
-            , _OffPathCostMultiplier{InOffPathCostMultiplier}
+            , _CostPolicy{InCostPolicy}
             , _Shared{MoveTemp(InShared)}
         {
         }
@@ -93,6 +138,22 @@ namespace ck::pathnetwork
         Get_IsOffPathHop(const FRouteNodeId& InFrom, const FRouteNodeId& InTo) const -> bool;
 
         auto
+        Get_IsComponentTransferHop(
+            const FRouteNodeId& InFrom,
+            const FRouteNodeId& InTo) const -> bool;
+
+        auto
+        Get_IsLocalNetworkShortcutHop(
+            const FRouteNodeId& InFrom,
+            const FRouteNodeId& InTo) const -> bool;
+
+        auto
+        Get_OffPathCostForResolvedLength(
+            const FRouteNodeId& InFrom,
+            const FRouteNodeId& InTo,
+            float InResolvedLength) const -> float;
+
+        auto
         Get_Shared() const -> const TSharedPtr<FRouteGraphSharedData>& { return _Shared; }
 
         static auto
@@ -105,11 +166,14 @@ namespace ck::pathnetwork
         auto
         DoGet_OffPathCost(const FRouteNodeId& InFrom, const FRouteNodeId& InTo) const -> float;
 
+        auto
+        DoGet_OffPathCostMultiplier(const FRouteNodeId& InFrom, const FRouteNodeId& InTo) const -> float;
+
     private:
         const FBuiltNetwork* _Network = nullptr;
         FVector _StartLocation = FVector::ZeroVector;
         FVector _GoalLocation = FVector::ZeroVector;
-        float _OffPathCostMultiplier = 3.0f;
+        FRouteCostPolicy _CostPolicy;
 
         TSharedPtr<FRouteGraphSharedData> _Shared;
     };
