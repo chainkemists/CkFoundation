@@ -12,6 +12,7 @@
 #include "CkAssetExporter/AssetAction/CkUserDefinedEnumExporter_AssetAction.h"
 #include "CkAssetExporter/AssetAction/CkUserDefinedStructExporter_AssetAction.h"
 #include "CkAssetExporter/ExporterTab/SCkAssetExporterTab.h"
+#include "CkAssetExporter/Validation/CkAssetExporter_AutoReimportGuard.h"
 #include "CkAssetExporter/VfxCorpusExporter/CkVfxCorpusExporter.h"
 
 #include <ToolMenus.h>
@@ -48,6 +49,10 @@ auto
     DoRegisterTabSpawner();
 
     FCk_AssetExporter_OnSaveHook::Register();
+
+    // Deferred to post-engine-init: the guard enumerates every import factory CDO, which is only complete once the
+    // engine has finished loading the modules that declare them.
+    _AutoReimportGuardHandle = FCoreDelegates::OnPostEngineInit.AddStatic(&FCk_AssetExporter_AutoReimportGuard::Validate);
 }
 
 auto
@@ -55,6 +60,12 @@ auto
     ShutdownModule()
     -> void
 {
+    if (_AutoReimportGuardHandle.IsValid())
+    {
+        FCoreDelegates::OnPostEngineInit.Remove(_AutoReimportGuardHandle);
+        _AutoReimportGuardHandle.Reset();
+    }
+
     FCk_AssetExporter_OnSaveHook::Unregister();
 
     DoUnregisterTabSpawner();

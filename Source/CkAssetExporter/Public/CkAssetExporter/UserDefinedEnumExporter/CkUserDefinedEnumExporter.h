@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
 
@@ -30,7 +32,8 @@ class CKASSETEXPORTER_API FCk_UserDefinedEnumExporter
 public:
     static auto
     ExportUserDefinedEnum(
-        UUserDefinedEnum* InEnum) -> FCk_UserDefinedEnumExportResult;
+        UUserDefinedEnum* InEnum,
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_UserDefinedEnumExportResult;
 
     static auto
     ExportUserDefinedEnums(

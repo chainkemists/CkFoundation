@@ -14,16 +14,53 @@ class UObject;
 
 namespace ck::asset_exporter::version
 {
-    inline constexpr int32 DataAsset = 1;
-    inline constexpr int32 DataTable = 1;
-    inline constexpr int32 Blueprint = 2;
-    inline constexpr int32 BehaviorTree = 1;
-    inline constexpr int32 EQS = 1;
-    inline constexpr int32 StateTree = 1;
-    inline constexpr int32 UserDefinedEnum = 1;
-    inline constexpr int32 UserDefinedStruct = 1;
-    inline constexpr int32 Material = 1;
+    inline constexpr int32 DataAsset = 2;
+    inline constexpr int32 DataTable = 2;
+    inline constexpr int32 Blueprint = 3;
+    inline constexpr int32 BehaviorTree = 2;
+    inline constexpr int32 EQS = 2;
+    inline constexpr int32 StateTree = 2;
+    inline constexpr int32 UserDefinedEnum = 2;
+    inline constexpr int32 UserDefinedStruct = 2;
+    inline constexpr int32 Material = 2;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+// Sidecar file extensions, written next to the source .uasset under Content/.
+//
+// The structured sidecar deliberately does NOT end in ".json". UE's auto-reimport monitor applies
+// SetApplicableExtensions(GetAllFactoryExtensions()) to every watched content directory, and json IS a registered
+// import format (UReimportDataTableFactory). A watched sidecar corpus accumulates into the monitor's pending set,
+// parks its state machine on the "N changes to source content files" prompt, and re-stats the entire outstanding set
+// EVERY FRAME while parked -- measured at 18 fps on a 1,178-file corpus. FMatchRules::IsFileApplicable gates on the
+// extension BEFORE any wildcard rule, so an extension no factory claims is invisible to the monitor in every project
+// with zero configuration. The gate reads the FINAL extension only (MatchExtensionString -> Strrchr): "Foo.x.json"
+// still parses as json, so this must remain a terminal extension.
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::asset_exporter::extension
+{
+    // The structured, lossless export. Plain UTF-8 JSON content despite the extension.
+    inline const FString Sidecar = TEXT(".ckexport");
+
+    // The human-readable companion summary. Lossy; manual-export path only.
+    inline const FString SummaryText = TEXT(".txt");
+
+    // DataTable row dump.
+    inline const FString Csv = TEXT(".csv");
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Which sibling files an export call writes. The on-save path is JsonOnly: the summary text is lossy, gitignored in
+// consuming projects, and therefore never shared -- refreshing it on every save costs I/O for a file nobody reads,
+// while the committed structured sidecar is the artifact that must stay truthful.
+// --------------------------------------------------------------------------------------------------------------------
+
+enum class ECk_AssetExporter_SidecarFormats
+{
+    JsonOnly,
+    JsonAndText
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 // The "_meta" object every sibling-writing exporter embeds. Deliberately NO timestamp and NO machine path: two

@@ -1,8 +1,14 @@
 <#
 .SYNOPSIS
     Exports Unreal assets (DataAsset/Blueprint/BT/EQS/StateTree/enum/struct/etc.) to sibling
-    JSON + text files via the CkAssetExporter commandlet, without the caller needing to know
+    .ckexport files via the CkAssetExporter commandlet, without the caller needing to know
     engine paths.
+
+    A '<Asset>.ckexport' sits next to '<Asset>.uasset' and is plain UTF-8 JSON despite the
+    extension -- read and grep it directly as text. It does NOT end in '.json' on purpose: UE's
+    auto-reimport monitor treats every registered import extension under Content/ as source
+    content, and a committed .json corpus pins the editor at ~18 fps. A manual export also writes
+    a lossy human-readable '<Asset>.txt' summary; the on-save refresh writes only the .ckexport.
 
 .DESCRIPTION
     Self-contained PowerShell 7 wrapper around `-run=CkAssetExporter`. Resolves the project's
