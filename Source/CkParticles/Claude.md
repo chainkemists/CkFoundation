@@ -12,14 +12,30 @@ This is the particle analog of **CkUsf** (which authors materials via `.ush` ins
 (`GetFunctionsInternal`, context/`GPUParamInfo` HLSL hooks, `AppendTemplateHLSL`); re-verify against engine source on a
 major bump.
 
-> ### Forked-engine requirement — `CK_WITH_PARTICLES`
-> The fully code-built template (below) needs a few NiagaraEditor pin-authoring symbols stock UE does not export
+> ### Forked-engine requirement — `CK_WITH_PARTICLES` is an AUTHORING gate, not a runtime one
+> **Runtime works on any engine, stock or forked.** The DI, the `.ush` behaviors, the CPU mirror and the spawn
+> utils are all ungated — every `#if CK_WITH_PARTICLES` lives in **CkParticlesEditor**. A template generated once
+> on a fork-enabled engine and committed is a compiled Niagara asset; it runs identically on retail. Nothing about
+> shipping or consuming CkParticles requires an engine change.
+>
+> What needs the fork is **regenerating the template assets**. Building the behavior-call module from C++ uses a
+> few NiagaraEditor pin-authoring symbols stock UE does not export
 > (`UNiagaraNodeWithDynamicPins::RequestNewTypedPin` / `AddParameter` / `AddParameterPin`). The fork tags them
 > `NIAGARAEDITOR_API` and ships a marker header
-> `Engine/Plugins/FX/Niagara/Source/NiagaraEditor/Public/CkNiagaraAuthoring.h`. Both `CkParticles*.Build.cs` probe for
-> that file and define `CK_WITH_PARTICLES=1`. On a **stock engine** the marker is absent → `CK_WITH_PARTICLES=0` → the
-> editor template builder skips the code-built behavior module so CkFoundation still **builds cleanly** (the seed
-> template is just an empty GPU emitter there). The engine edit is additive-only; safe to merge-forward.
+> `Engine/Plugins/FX/Niagara/Source/NiagaraEditor/Public/CkNiagaraAuthoring.h`; both `CkParticles*.Build.cs` probe
+> for that file and define `CK_WITH_PARTICLES` accordingly. The engine edit is additive-only and safe to
+> merge-forward, but it is **opt-in and not required** — treat it as a content-authoring tool, like needing the
+> editor to bake assets.
+>
+> Practical consequence: on a stock engine, **do not regenerate**. `Build_AllTemplateSystems` refuses (see below)
+> precisely because a regen there would overwrite good committed templates with inert ones.
+>
+> *(Reimplementing the module build with only exported API is not currently viable: `RequestNewTypedPin` repurposes
+> the node's "Add" pin and then calls the protected virtual `OnNewTypedPinAdded`, which is where the parameter-map
+> nodes actually register the parameter. `UEdGraphSchema_Niagara::TypeDefinitionToPinType` IS exported, so only the
+> registration step blocks it. The engine-change-free alternative would be to ship the behavior-call module as one
+> committed generic Niagara module-script asset added via `Add_ModuleFromAssetPath` — it is behavior-agnostic, since
+> behaviors are selected by `User.BehaviorId` inside the `.ush`, so per-effect authoring would stay pure code.)*
 
 ---
 
