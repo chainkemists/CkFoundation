@@ -8,7 +8,38 @@
 
 ---
 
-## 1. WebToUMG (commercial, Fab) — Verdict: **Reference only — buy one copy as a fidelity baseline, do not adopt**
+## 1. WebToUMG (commercial, Fab) — Verdict: **Reference only — do not adopt** (R3 purchase CLOSED 2026-08-01: Adam declined; public documentation sufficed)
+
+> **R3 closure addendum (2026-08-01, from the vendor's public documentation, supplied by Adam):**
+> the docs answer what the listing withheld, and every answer confirms BUILD:
+> - **Bundled Chromium 90** (2021) — vendor admits no `color-mix()`, `:has()`, container queries,
+>   `position:sticky`. Our contract records live-Chrome versions per extraction.
+> - **Layout maps to stock UMG panels** ("UHorizontalBox / UVerticalBox / UUniformGridPanel /
+>   UCanvasPanel / UOverlay") — no flex engine; grow/shrink/basis/wrap semantics cannot generally
+>   survive that mapping (the exact gap DECISION 1's Yoga panel exists to close).
+> - **Editable output + merge reimport** ("Everything stays editable after import"; reimport
+>   "preserves your Event Graph logic") — the hand-edit/regeneration drift model DECISION 3's
+>   read-only regeneration rejects by design.
+> - **Fidelity stays unquantified** ("reproduces … faithfully" — no number, no harness, no
+>   diagnostics contract), consistent with the listing's refusal to promise one.
+> The baseline-number question R3 was meant to answer is moot: our own harness now measures
+> per-page fidelity directly (Gate 3: exact-to-§8-bounded), which is strictly stronger evidence
+> than a comparative score against an unmeasured product.
+>
+> **Fair-credit notes from the full listing (Adam-supplied)** — capabilities ahead of our current
+> scope, recorded as candidate ideas, not as verdict-changers:
+> - **State-aware capture**: drives live JS/React pages (click-and-reload discovery) and emits
+>   every reachable screen/modal/tab (tabs → one `UWidgetSwitcher`, modals → collapsible dialogs,
+>   nav wired). Empirical DOM-driven, framework-agnostic. Relevant to Gate 5 ergonomics scope.
+> - **Animations**: CSS transition/:hover/:active/group-hover/@keyframes → `UWidgetAnimation`
+>   tracks. Out of our v1 surface entirely; candidate for a later gate.
+> - **Tiered material strategy**: 3 master materials (fill, shadow/glow, noise) with deduplicated
+>   parametric instances; SVG/complex effects rasterized to Texture2D. Cross-check for our Gate 4
+>   bake-at-import fork: their shadow choice (parametric MI) is the unmeasured alternative to our
+>   measured baked-Gaussian; their dedup idea applies to our baked textures regardless.
+> - **16 bundled font families** — the shipped-asset font answer Gate 4 needs (bundled faces, not
+>   the harness's machine-local OS mapping); `oklch()/oklab()` pre-conversion to sRGB for their
+>   frozen Chromium 90 (our live-Chrome extraction gets modern color spaces for free).
 
 **Access:** No source available pre-purchase. Evidence = Fab listing (read 2026-07-31 in-browser: `fab.com/listings/9a3687aa-26a6-4d88-a841-2769a39e00a9`), seller Michel Brito, published 2026-06-19, last update 2026-07-29, $56.03–$112.08, Fab Standard License. Everything below from the listing is a **vendor claim**, labeled ⟨V⟩, not a finding.
 

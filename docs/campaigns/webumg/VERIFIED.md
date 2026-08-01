@@ -162,3 +162,11 @@ Repos cloned (shallow) at `D:\tmp\ckstyle-phase0\thirdparty\`: StyledWidgets @ `
 | T2's "2-line" nowrap node was a font-fallback shaping split (em-dash run), not two lines — extractor now merges same-line client rects; comparator honors nowrap/pre. Final text dataset: 25 runs, **0 line-count mismatches, mean 1.28%**, sole outlier 13.8% = Arial weight-800 synthetic emboldening (Chromium synthesizes above the 700 cut; Slate does not) — named renderer divergence, kept as residual | final cycle stats + T2 IR re-extract (1 merged line, 485.78px) | [read] |
 | Arial weight ≥800 → ariblk.ttf (Arial Black cut) closes the synthetic-bold gap: n5 13.8% → within the 2.9% dataset max. Final text dataset: 25 runs, 0 line-count mismatches, **mean 0.78%, max 2.9%** | Black-cut cycle (CkPlugins-backup-2026.08.01-21.24.59.log), 33/33 | [read] |
 | Hostile corpus page (H1: duplicate ck-names, adversarial values) loads, builds, and arranges 32 widgets with zero NaN geometry — the load→build→layout chain's invalid-input contract now has its focused test (`CkTests.UnitTests.CkWebUmg.HostileLoad`) | same cycle | [read] |
+
+## R3 closure (2026-08-01 — WebToUMG public docs, link supplied by Adam)
+
+| Claim | Evidence | Method |
+|---|---|---|
+| WebToUMG bundles Chromium 90; vendor lists color-mix/:has/container-queries/position:sticky as unsupported | vendor documentation (Google Doc, fetched 2026-08-01) | [read] |
+| Layout emits stock UMG panels (UHorizontalBox/UVerticalBox/UUniformGridPanel/UCanvasPanel/UOverlay), not a flex engine; output is editable Widget Blueprints with merge-style reimport ("preserves your Event Graph logic") | same | [read] |
+| No fidelity number, harness, or diagnostics contract appears anywhere in the docs | same (absence after targeted extraction) | [read] |

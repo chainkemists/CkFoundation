@@ -302,24 +302,26 @@ bool
         ChannelTolerance, Score.MaxChannelDelta, Score.MaskedPixels,
         *ProbeAt(10, 10), *ProbeAt(100, 100), *ProbeAt(Width / 2, Height / 2)));
 
-    // Solid-color layout pages gate NOW; paint/text pages (and smoke, which uses radii) report
-    // until the Gate 3 paint work lands and Adam ratifies the paint threshold.
-    if (PageName.StartsWith(TEXT("L")))
+    // Gate 3 ratified thresholds (2026-08-01, per-class — measured floors in VERIFIED.md):
+    // solids 0.2%; opaque paint pages 0.5% (AA floor 0.17%); translucency-bearing pages 7%
+    // (the §8.4 compositing-space band, policy option 1 — floors 5.75%/4.39% are the platform
+    // ceiling, not unbuilt features). Never tolerate via the channel threshold.
+    const auto Budget = [&]() -> float
     {
-        const auto WithinBudget = Score.Get_FailingFraction() <= SolidPageFailingBudget;
-        TestTrue(FString::Printf(TEXT("[%s] solid-page pixel parity — failing fraction %.4f%% within budget %.4f%%"),
-                *PageName, Score.Get_FailingFraction() * 100.0f, SolidPageFailingBudget * 100.0f),
-            WithinBudget);
+        if (PageName.StartsWith(TEXT("L")) || PageName.StartsWith(TEXT("C")))
+        { return SolidPageFailingBudget; }
+        if (PageName.StartsWith(TEXT("P3")) || PageName.StartsWith(TEXT("P4")))
+        { return 0.07f; }
+        return 0.005f;
+    }();
 
-        if (NOT WithinBudget)
-        {
-            DumpDiffArtifacts(PageName, Rendered, Golden, MaskedRects, Width, Height);
-        }
-    }
-    else if (Score.Get_FailingFraction() > 0.01f)
+    const auto WithinBudget = Score.Get_FailingFraction() <= Budget;
+    TestTrue(FString::Printf(TEXT("[%s] pixel parity — failing fraction %.4f%% within budget %.4f%%"),
+            *PageName, Score.Get_FailingFraction() * 100.0f, Budget * 100.0f),
+        WithinBudget);
+
+    if (NOT WithinBudget || Score.Get_FailingFraction() > 0.01f)
     {
-        // Report-only pages still dump artifacts when visibly off — the diff image is the
-        // primary diagnostic for paint-feature bring-up.
         DumpDiffArtifacts(PageName, Rendered, Golden, MaskedRects, Width, Height);
     }
 

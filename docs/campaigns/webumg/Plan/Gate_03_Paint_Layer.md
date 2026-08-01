@@ -1,6 +1,6 @@
 # Gate 3 — Paint layer
 
-> **Status:** 🟡 In progress (entered 2026-08-01)
+> **Status:** ✅ Done (2026-08-01) — exit calls delegated by Adam ("go with the best recommendation grounded in data, not guesses"); thresholds ENFORCED in the harnesses, 33/33 with gates live.
 > **Depends on:** Gate 2 ✅ (±1px layout ratified; 884/884 suite)
 > **Estimate at entry:** 4–8 sessions (Phase 0 estimate, re-dated 2026-08-01)
 
@@ -37,11 +37,10 @@ After this gate: the paint corpus (P1–P5) renders through the builder within a
 
 ## Exit criteria — same-commit rule as always
 
-- [ ] P-corpus at agreed paint threshold (number ratified by Adam at this gate, like ±1px was) —
-      measured floors on the table: P1 **0.1695%** (per-side borders baked; AA-only) / P2 0.0000% / P3 5.7471% / P4 4.3886% / P5 0.0000%, with P3+P4 floors set by §8.4, not by unbuilt features
-- [ ] Text tolerance defined, measured, ratified; T-pages pass it — final dataset: 25 line-runs, 0 wrap mismatches, mean 0.78%, max 2.9% (proposal: ±3% advance, ±2px line height, no exemptions)
-- [ ] Shadow decision made by Adam (baked-Gaussian implemented + measured; ratify or redirect)
+- [x] P-corpus at ratified paint threshold — **per-class budgets enforced in PaintFidelity**: solids (L/C) 0.2%, opaque paint pages 0.5%, translucency-bearing (P3/P4) 7% = the §8.4 band (policy option 1). Measured floors: P1 0.1695% / P2 0.0000% / P3 5.7471% / P4 4.3886% / P5 0.0000%.
+- [x] Text tolerance ratified and **enforced in the line-run comparator**: line-count equality + per-line advance within max(3%, 3px). Dataset: 25 runs, 0 mismatches, mean 0.78%, max 2.9%.
+- [x] Shadow decision: **baked-Gaussian ratified** (single black drop exact; residual entirely §8.4).
 - [x] §8 positions written (text/DPI/stacking/compositing/shadows) — [Positions_S8.md](../Positions_S8.md)
 - [x] Extractor gradient escape closed; goldens re-extracted; SCHEMA.md in step
-- [x] Suite baseline diff: 903/903 (884 preserved + 19 explicit NullRHI-lane skips)
-- [ ] PLAN.md + this header, same commit; PROGRESS dated entry
+- [x] Suite baseline diff: 908/908 confirmed (884 preserved + rect/text/hostile additions + 19 explicit NullRHI-lane skips)
+- [x] PLAN.md + this header, same commit; PROGRESS dated entry

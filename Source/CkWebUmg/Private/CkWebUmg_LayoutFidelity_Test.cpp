@@ -220,14 +220,24 @@ bool
                 }
 
                 auto MaxAdvanceDeltaPct = 0.0f;
+                auto AdvancesWithinTolerance = true;
                 for (auto Line = 0; Line < FMath::Min(SlateLines.Num(), LineBoxes.Num()); ++Line)
                 {
                     if (LineBoxes[Line].W > 0.0f)
                     {
+                        const auto DeltaPx = FMath::Abs(SlateLines[Line] - LineBoxes[Line].W);
                         MaxAdvanceDeltaPct = FMath::Max(MaxAdvanceDeltaPct,
-                            FMath::Abs(SlateLines[Line] - LineBoxes[Line].W) / LineBoxes[Line].W * 100.0f);
+                            DeltaPx / LineBoxes[Line].W * 100.0f);
+                        // Gate 3 ratified text tolerance (2026-08-01): per-line advance within
+                        // max(3%, 3px) of Chromium's line box — dataset floor: mean 0.78%, max 2.9%.
+                        if (DeltaPx > FMath::Max(LineBoxes[Line].W * 0.03f, 3.0f))
+                        { AdvancesWithinTolerance = false; }
                     }
                 }
+                TestTrue(FString::Printf(
+                    TEXT("[%s] text tolerance — line count %d==%d, max advance delta %.1f%% within max(3%%, 3px)"),
+                    *NodeId, LineBoxes.Num(), SlateLines.Num(), MaxAdvanceDeltaPct),
+                    SlateLines.Num() == LineBoxes.Num() && AdvancesWithinTolerance);
                 AddInfo(FString::Printf(
                     TEXT("[%s] line-run: chromium %d lines, slate %d lines, max advance delta %.1f%% (first line %.2f vs %.2f)"),
                     *NodeId, LineBoxes.Num(), SlateLines.Num(), MaxAdvanceDeltaPct,

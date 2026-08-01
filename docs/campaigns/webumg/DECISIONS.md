@@ -42,6 +42,17 @@ Each reversible, each measured; revisit at the Gate 3 exit if any reads wrong:
 - **`<br>` = forced break** folded to a newline in IR `text.content` (whitespace collapses per segment); builder renders it, comparator segments on it. Capability landed; no corpus page exercises it yet.
 - **NullRHI lane policy**: pixel suite skips explicitly (`GUsingNullRHI`) instead of failing as a lane artifact; full-suite baseline now **908/908**.
 
+## Gate 3 exit — **DECIDED 2026-08-01** (Adam delegated: "go with the best recommendation grounded in data, not guesses")
+
+1. **Paint threshold = per-class budgets, ENFORCED** in `CkWebUmg_PaintFidelity_Test.cpp`: solids (L*/C*) 0.2%; opaque paint pages (P1/P2/P5/smoke/T*) 0.5%; translucency-bearing pages (P3/P4) 7%. Rationale: a single global number would need >=5.75% to pass P3, gutting the gate for pages that measure 0%; the P3/P4 band IS the sec-8.4 policy (below).
+2. **Shadow strategy = baked Gaussian textures, RATIFIED** (sigma=blur/2 over SDF rounded-rect coverage, sRGB layer compositing). Evidence: single black drop exact; residual entirely sec-8.4. Alternatives unbuilt on measured grounds; WebToUMG's parametric-MI shadow choice noted in PriorArt as the unmeasured alternative.
+3. **Text tolerance = line-count equality + per-line advance within max(3%, 3px), ENFORCED** in the rect harness's line-run comparator. Dataset: 25 runs, 0 mismatches, mean 0.78%, max 2.9%.
+4. **Sec-8.4 translucency policy = option 1** (accept + per-page tolerance band) — implemented as the P3/P4 budget class. Options 2 (extraction-time pre-compositing) and 3 (reject translucency) declined per Positions_S8 reasoning.
+
+**R3 — CLOSED without purchase 2026-08-01**: Adam declined the purchase ("we are not purchasing anything") and supplied WebToUMG's public documentation + full listing instead. The docs answered what the listing withheld and confirmed BUILD on every axis (Chromium 90; stock-panel layout, no flex engine; editable-output + merge reimport = the drift model D3 rejects; fidelity unquantified). Fair-credit capability notes (state capture, animations, material dedup, bundled fonts) recorded in PriorArt for Gates 4-5. The baseline-number question is moot: our harness measures fidelity directly.
+
+Gate proof: 33/33 pattern lane with all gates live; 908/908 full suite. **Gate 4 (Emission) entry awaits Adam's explicit approval** per brief sec-1 rule 2 — draft contract at Plan/Gate_04_Emission.md.
+
 ## Standing evidence notes (carried from Phase 0)
 
 - Yoga vendoring cautions: pin `c766885`; `UseWebDefaults` on; never expose inert grid setters; extractor pre-sorts children by computed `order`; fix `pointScaleFactor` for deterministic harness comparisons (PriorArt §3).
