@@ -14,6 +14,14 @@ class SWidget;
 namespace ck::webumg
 {
     // The harness-shared font mapping (OS faces matching the goldens; engine-default fallback).
+    // CSS text-transform applied to folded IR content (the IR stores authored text; Chromium
+    // renders the transformed form, so measurement and rendering must both apply it).
+    CKWEBUMG_API auto
+    ApplyTextTransform(
+        const FString& InContent,
+        const FString& InTransformCase)
+        -> FString;
+
     CKWEBUMG_API auto
     MakeWebFontInfo(
         const FCkWebUmg_IrText& InText)

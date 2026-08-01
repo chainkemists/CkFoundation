@@ -546,7 +546,7 @@ namespace ck_webumg_builder
         {
             const auto& Text = *InNode->Text;
             Content = SNew(STextBlock)
-                .Text(FText::FromString(Text.Content))
+                .Text(FText::FromString(ck::webumg::ApplyTextTransform(Text.Content, Text.TransformCase)))
                 .Font(MakeFontInfo(Text))
                 .ColorAndOpacity(Text.Color.IsSet()
                     ? FSlateColor{FLinearColor{*Text.Color}}
@@ -707,6 +707,31 @@ namespace ck_webumg_builder
 
 namespace ck::webumg
 {
+    auto
+    ApplyTextTransform(
+        const FString& InContent,
+        const FString& InTransformCase)
+        -> FString
+    {
+        if (InTransformCase == TEXT("uppercase"))
+        { return InContent.ToUpper(); }
+        if (InTransformCase == TEXT("lowercase"))
+        { return InContent.ToLower(); }
+        if (InTransformCase == TEXT("capitalize"))
+        {
+            auto Result = InContent;
+            auto AtWordStart = true;
+            for (auto& Char : Result.GetCharArray())
+            {
+                if (AtWordStart)
+                { Char = FChar::ToUpper(Char); }
+                AtWordStart = FChar::IsWhitespace(Char);
+            }
+            return Result;
+        }
+        return InContent;
+    }
+
     auto
     MakeWebFontInfo(
         const FCkWebUmg_IrText& InText)

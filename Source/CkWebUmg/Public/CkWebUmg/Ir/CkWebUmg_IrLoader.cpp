@@ -286,6 +286,7 @@ namespace ck_webumg_irloader
             Text.Color = ReadColor(*TextObj, TEXT("color"));
             Text.Align = (*TextObj)->GetStringField(TEXT("align"));
             Text.WhiteSpace = (*TextObj)->GetStringField(TEXT("whiteSpace"));
+            (*TextObj)->TryGetStringField(TEXT("transformCase"), Text.TransformCase);
 
             auto LineHeight = 0.0;
             if ((*TextObj)->TryGetNumberField(TEXT("lineHeightPx"), LineHeight))

@@ -133,6 +133,7 @@ struct CKWEBUMG_API FCkWebUmg_IrText
     TOptional<FColor> Color;
     FString Align;
     FString WhiteSpace;
+    FString TransformCase; // CSS text-transform keyword; content stores the AUTHORED text
     TArray<FCkWebUmg_IrRect> LineBoxes; // one per rendered line (Chromium Range.getClientRects)
 };
 

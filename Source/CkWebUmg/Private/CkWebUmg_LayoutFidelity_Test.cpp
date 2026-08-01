@@ -90,6 +90,12 @@ void
 
     auto Files = TArray<FString>{};
     IFileManager::Get().FindFiles(Files, *FPaths::Combine(GoldenDir, TEXT("L*.ckui.json")), true, false);
+    // Text pages join the rect suite for the line-run/wrap comparison; their non-text nodes gate
+    // at the same ±1px as everything else.
+    auto TextPageFiles = TArray<FString>{};
+    IFileManager::Get().FindFiles(TextPageFiles, *FPaths::Combine(GoldenDir, TEXT("T*.ckui.json")), true, false);
+    Files.Append(TextPageFiles);
+    Files.Add(TEXT("C1_button_states.ckui.json"));
     Files.Sort();
 
     for (const auto& File : Files)
@@ -157,20 +163,54 @@ bool
         {
             TextNodeDeviations.Add(FString::Printf(TEXT("[%s] %.2fpx"), *NodeId, Deviation));
 
-            // Line-run comparison (the §8.1 regime's measured datum): Slate advance width with the
-            // mapped OS font vs Chromium's recorded line box. Single-line runs only — multi-line
-            // needs identical wrap decisions first, which the tolerance decision may not require.
-            if (IrNode->Text->LineBoxes.Num() == 1 && FSlateApplication::IsInitialized())
+            // Line-run comparison (the §8.1 regime's measured datum): Slate advances with the
+            // mapped OS font vs Chromium's recorded line boxes. Multi-line runs replay Chromium's
+            // greedy wrap (space-separated words filled to the content-box width) so line COUNT
+            // agreement is measured too, not assumed.
+            if (IrNode->Text->LineBoxes.Num() > 0 && FSlateApplication::IsInitialized())
             {
                 const auto FontMeasure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
-                const auto Measured = FontMeasure->Measure(
-                    IrNode->Text->Content, ck::webumg::MakeWebFontInfo(*IrNode->Text), 1.0f);
-                const auto& LineBox = IrNode->Text->LineBoxes[0];
+                const auto FontInfo = ck::webumg::MakeWebFontInfo(*IrNode->Text);
+                const auto& LineBoxes = IrNode->Text->LineBoxes;
+
+                auto SlateLines = TArray<float>{}; // advance per wrapped line
+                {
+                    const auto WrapWidth = IrNode->Get_LayoutBox().Content.W;
+                    auto Words = TArray<FString>{};
+                    ck::webumg::ApplyTextTransform(IrNode->Text->Content, IrNode->Text->TransformCase)
+                        .ParseIntoArray(Words, TEXT(" "));
+                    const auto SpaceW = static_cast<float>(
+                        FontMeasure->Measure(TEXT(" "), FontInfo, 1.0f).X);
+                    auto Current = 0.0f;
+                    for (const auto& Word : Words)
+                    {
+                        const auto WordW = static_cast<float>(FontMeasure->Measure(Word, FontInfo, 1.0f).X);
+                        const auto Extended = Current > 0.0f ? Current + SpaceW + WordW : WordW;
+                        if (Current > 0.0f && Extended > WrapWidth + 0.5f && LineBoxes.Num() > 1)
+                        {
+                            SlateLines.Add(Current);
+                            Current = WordW;
+                        }
+                        else
+                        { Current = Extended; }
+                    }
+                    if (Current > 0.0f)
+                    { SlateLines.Add(Current); }
+                }
+
+                auto MaxAdvanceDeltaPct = 0.0f;
+                for (auto Line = 0; Line < FMath::Min(SlateLines.Num(), LineBoxes.Num()); ++Line)
+                {
+                    if (LineBoxes[Line].W > 0.0f)
+                    {
+                        MaxAdvanceDeltaPct = FMath::Max(MaxAdvanceDeltaPct,
+                            FMath::Abs(SlateLines[Line] - LineBoxes[Line].W) / LineBoxes[Line].W * 100.0f);
+                    }
+                }
                 AddInfo(FString::Printf(
-                    TEXT("[%s] line-run: chromium %.2fx%.2f, slate %.2fx%.2f, advance delta %.2fpx (%.1f%%)"),
-                    *NodeId, LineBox.W, LineBox.H, Measured.X, Measured.Y,
-                    Measured.X - LineBox.W,
-                    LineBox.W > 0.0f ? (Measured.X - LineBox.W) / LineBox.W * 100.0f : 0.0f));
+                    TEXT("[%s] line-run: chromium %d lines, slate %d lines, max advance delta %.1f%% (first line %.2f vs %.2f)"),
+                    *NodeId, LineBoxes.Num(), SlateLines.Num(), MaxAdvanceDeltaPct,
+                    LineBoxes[0].W, SlateLines.Num() > 0 ? SlateLines[0] : 0.0f));
             }
             continue;
         }
