@@ -16,6 +16,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+int32
+    UCk_Utils_Particles_UE::
+    Get_NumBehaviors()
+{
+    return ck::particles::NumBehaviors;
+}
+
 UNiagaraComponent*
     UCk_Utils_Particles_UE::
     Spawn_BehaviorAtLocation(
@@ -26,9 +33,7 @@ UNiagaraComponent*
         FVector        InScale,
         FName          InTextureName)
 {
-    const auto TemplatePath = ck::particles::Get_BehaviorUsesBurstTemplate(InBehaviorId)
-        ? ck::particles::Get_BurstTemplateSystemObjectPath()
-        : ck::particles::Get_DefaultTemplateSystemObjectPath();
+    const auto TemplatePath = ck::particles::Get_BehaviorTemplateSystemObjectPath(InBehaviorId);
     auto* System = LoadObject<UNiagaraSystem>(nullptr, *TemplatePath);
     return Spawn_SystemAtLocation(InWorldContextObject, System, InBehaviorId, InLocation, InRotation, InScale, InTextureName);
 }
@@ -63,8 +68,19 @@ UNiagaraComponent*
     {
         Component->SetIntParameter(TEXT("User.BehaviorId"), InBehaviorId);
 
-        // Per-effect texture: swap the sprite material instance bound to the renderer's User param. Null-tolerant —
-        // a missing instance leaves the renderer's default (Glow) material, never invisible.
+        // Sprite material, in precedence order. Both write the SAME User.SpriteMaterial param, so a behavior with a
+        // bound look renders it without callers knowing, and an explicit texture still wins when one is asked for.
+        //
+        // 1. A behavior-bound generated CkUsf look (the hand-authored-shader recreations).
+        if (const auto LookName = ck::particles::Get_BehaviorLookName(InBehaviorId); LookName != NAME_None)
+        {
+            const auto LookPath = ck::particles::Get_GeneratedLookMasterObjectPath(LookName);
+            if (auto* LookMaster = LoadObject<UMaterialInterface>(nullptr, *LookPath))
+            { Component->SetVariableMaterial(ck::particles::Get_SpriteMaterialParameterName(), LookMaster); }
+        }
+
+        // 2. Per-effect procedural texture: swap the sprite material instance bound to the renderer's User param.
+        //    Null-tolerant — a missing instance leaves the renderer's default (Glow) material, never invisible.
         if (InTextureName != NAME_None)
         {
             const auto MicPath = ck::particles::Get_TextureMaterialInstanceObjectPath(InTextureName);

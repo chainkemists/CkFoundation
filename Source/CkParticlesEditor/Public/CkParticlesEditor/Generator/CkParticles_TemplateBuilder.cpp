@@ -1,4 +1,4 @@
-#include "CkParticlesEditor/Generator/CkParticles_TemplateBuilder.h"
+﻿#include "CkParticlesEditor/Generator/CkParticles_TemplateBuilder.h"
 
 #include "CkParticlesEditor_Log.h"
 
@@ -66,11 +66,8 @@ namespace ck::particles_editor
 {
     namespace TemplateBuilderLocal
     {
-        static const TCHAR* PkgPath   = TEXT("/CkFoundation/CkParticles/Templates/PS_CkParticles_Template");
-        static const TCHAR* AssetName = TEXT("PS_CkParticles_Template");
-
-        static const TCHAR* BurstPkgPath   = TEXT("/CkFoundation/CkParticles/Templates/PS_CkParticles_Template_Burst");
-        static const TCHAR* BurstAssetName = TEXT("PS_CkParticles_Template_Burst");
+        // Template package paths come from the cadence table (ck::particles::Get_TemplateSpecs) — there is no
+        // per-template constant here to drift out of sync with it.
 
         // Samples a baked texture through a "BaseTexture" parameter that per-effect material instances swap later.
         // Returns nullptr on failure — the template then falls back to the default sprite material.
@@ -302,8 +299,9 @@ namespace ck::particles_editor
 
         // ---- Burst emitter stack (built from an empty emitter so no continuous SpawnRate is left behind) -------
         static auto Add_BurstEmitterStack(
-            UNiagaraEmitter*              InEmitter,
-            FVersionedNiagaraEmitterData* InEmitterData) -> bool
+            UNiagaraEmitter*                                InEmitter,
+            FVersionedNiagaraEmitterData*                   InEmitterData,
+            const ck::particles::FCk_ParticlesTemplateSpec& InSpec) -> bool
         {
             auto* EmitterUpdateOut  = Find_StageOutputNode(InEmitterData, ENiagaraScriptUsage::EmitterUpdateScript,  InEmitterData->EmitterUpdateScriptProps.Script);
             auto* ParticleSpawnOut  = Find_StageOutputNode(InEmitterData, ENiagaraScriptUsage::ParticleSpawnScript,  InEmitterData->SpawnScriptProps.Script);
@@ -316,7 +314,7 @@ namespace ck::particles_editor
 
             auto* EmitterStateNode = Add_ModuleFromAssetPath(TEXT("/Niagara/Modules/Emitter/EmitterState.EmitterState"), *EmitterUpdateOut);
             Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, EmitterStateNode,
-                TEXT("Loop Duration"), FNiagaraTypeDefinition::GetFloatDef(), 1.2f);
+                TEXT("Loop Duration"), FNiagaraTypeDefinition::GetFloatDef(), InSpec.LoopDuration);
 
             auto* BurstNode = Add_ModuleFromAssetPath(TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous.SpawnBurst_Instantaneous"), *EmitterUpdateOut);
             if (BurstNode == nullptr)
@@ -324,8 +322,8 @@ namespace ck::particles_editor
             // The module's input variable name has drifted across engine versions ("Spawn Count" in the assets the
             // corpus captured; "SpawnCount" in newer wizard code) — write both spellings; the compile binds whichever
             // the module graph declares and the other stays an inert orphan constant.
-            Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("Spawn Count"), FNiagaraTypeDefinition::GetIntDef(),   96);
-            Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("SpawnCount"),  FNiagaraTypeDefinition::GetIntDef(),   96);
+            Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("Spawn Count"), FNiagaraTypeDefinition::GetIntDef(),   InSpec.BurstCount);
+            Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("SpawnCount"),  FNiagaraTypeDefinition::GetIntDef(),   InSpec.BurstCount);
             Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("Spawn Time"),  FNiagaraTypeDefinition::GetFloatDef(), 0.0f);
             Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("SpawnTime"),   FNiagaraTypeDefinition::GetFloatDef(), 0.0f);
 
@@ -341,7 +339,9 @@ namespace ck::particles_editor
             {
                 FNiagaraConstants::GetAttributeDefaultValue(SYS_PARAM_PARTICLES_SPRITE_SIZE),
                 FNiagaraConstants::GetAttributeDefaultValue(SYS_PARAM_PARTICLES_SPRITE_ROTATION),
-                TEXT("1.2"), // burst archetypes play a sub-1.2s arc; matches the loop duration so generations don't pile up
+                // Lifetime comes from the spec, not the loop duration: a source system may outlive its own loop
+                // (NS_Lightning_Range is 1.1s lifetime on a 1.0s loop) and rounding that away changes the overlap.
+                FString::SanitizeFloat(InSpec.ParticleLifetime),
             };
             FNiagaraStackGraphUtilities::AddParameterModuleToStack(Vars, *ParticleSpawnOut, INDEX_NONE, Defaults);
 
@@ -547,20 +547,93 @@ namespace ck::particles_editor
         }
 #endif // CK_WITH_PARTICLES
 
+        // ---- Imported source art -------------------------------------------------------------------------------
+        //
+        // A recreation may need leaf ART (textures/meshes) it cannot generate procedurally. Those are COPIED once
+        // into plugin-owned content so the shipped effect never references the source pack; materials are never
+        // copied — they are recreated as CkUsf looks.
+        //
+        // This runs only when the source pack happens to be mounted (a dev host with the pack installed). On any
+        // other machine the copies already exist as committed plugin content and this is a no-op, which is exactly
+        // why the runtime has no dependency on the source pack.
+        struct FImportedTexture { const TCHAR* SourceObjectPath; const TCHAR* DestPackagePath; const TCHAR* DestAssetName; };
+
+        static auto Get_ImportedTextures() -> TArrayView<const FImportedTexture>
+        {
+            static const FImportedTexture Textures[] =
+            {
+                // NS_Lightning_Range / M_VFX_DisAdd_Ring04: Main_Tex + Color_Tex (the ring shape).
+                { TEXT("/Game/Vefects/Anime_VFX/Shared/Textures/T_VFX_Ring_04.T_VFX_Ring_04"),
+                  TEXT("/CkFoundation/CkParticles/Imported/Vefects/NS_Lightning_Range/T_VFX_Ring_04"),
+                  TEXT("T_VFX_Ring_04") },
+                // ... and Dissolve_Tex (the erosion noise). Distortion_Tex is the same asset but
+                // Distortion_Intensity resolves to 0 on this instance, so it is imported once, for the dissolve.
+                { TEXT("/Game/Vefects/Anime_VFX/Shared/Textures/T_VFX_Noise_04.T_VFX_Noise_04"),
+                  TEXT("/CkFoundation/CkParticles/Imported/Vefects/NS_Lightning_Range/T_VFX_Noise_04"),
+                  TEXT("T_VFX_Noise_04") },
+            };
+            return MakeArrayView(Textures);
+        }
+
+        static auto Import_SourceTextures() -> void
+        {
+            for (const auto& Import : Get_ImportedTextures())
+            {
+                if (FPackageName::DoesPackageExist(Import.DestPackagePath))
+                {
+                    ck::particles_editor::Log(TEXT("Imported texture [{}] already present — leaving it alone"),
+                        FString(Import.DestAssetName));
+                    continue;
+                }
+
+                auto* Source = LoadObject<UTexture2D>(nullptr, Import.SourceObjectPath);
+                if (Source == nullptr)
+                {
+                    ck::particles_editor::Log(TEXT("Import source [{}] not mounted — skipping (expected off a dev host)"),
+                        FString(Import.SourceObjectPath));
+                    continue;
+                }
+
+                auto* Package = CreatePackage(Import.DestPackagePath);
+                auto* Copy = Cast<UTexture2D>(StaticDuplicateObject(Source, Package, FName(Import.DestAssetName)));
+                if (Copy == nullptr)
+                {
+                    ck::particles_editor::Log(TEXT("Import of [{}] failed to duplicate"), FString(Import.DestAssetName));
+                    continue;
+                }
+
+                Copy->SetFlags(RF_Public | RF_Standalone);
+                Copy->MarkPackageDirty();
+                FAssetRegistryModule::AssetCreated(Copy);
+
+                const auto FileName = FPackageName::LongPackageNameToFilename(
+                    Import.DestPackagePath, FPackageName::GetAssetPackageExtension());
+                FSavePackageArgs SaveArgs;
+                SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
+                UPackage::SavePackage(Package, Copy, *FileName, SaveArgs);
+
+                ck::particles_editor::Log(TEXT("Imported texture [{}] -> [{}]"),
+                    FString(Import.SourceObjectPath), FString(Import.DestPackagePath));
+            }
+        }
+
         // ---- One template system (continuous or burst) ---------------------------------------------------------
         static auto DoBuild_OneTemplateSystem(
-            const TCHAR* InPkgPath,
-            const TCHAR* InAssetName,
-            bool         bInBurstSpawn,
+            const ck::particles::FCk_ParticlesTemplateSpec& InSpec,
             UMaterialInterface* InSpriteMaterial) -> UNiagaraSystem*
         {
-            // ---- Package (idempotent refresh) ----
-            UPackage* Package = FPackageName::DoesPackageExist(InPkgPath)
-                ? LoadPackage(nullptr, InPkgPath, LOAD_None)
-                : nullptr;
-            if (Package == nullptr) { Package = CreatePackage(InPkgPath); }
+            const auto* AssetName = InSpec.AssetName;
+            const auto  PkgPathStr    = FString::Printf(TEXT("/CkFoundation/CkParticles/Templates/%s"), AssetName);
+            const auto* PkgPath   = *PkgPathStr;
+            const auto  UsesBurstSpawn = InSpec.BurstCount > 0;
 
-            if (auto* Old = StaticFindObject(UNiagaraSystem::StaticClass(), Package, InAssetName))
+            // ---- Package (idempotent refresh) ----
+            UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
+                ? LoadPackage(nullptr, PkgPath, LOAD_None)
+                : nullptr;
+            if (Package == nullptr) { Package = CreatePackage(PkgPath); }
+
+            if (auto* Old = StaticFindObject(UNiagaraSystem::StaticClass(), Package, AssetName))
             {
                 Old->ClearFlags(RF_Standalone | RF_Public);
                 Old->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
@@ -570,10 +643,10 @@ namespace ck::particles_editor
             // Continuous: factory defaults (spawn-rate 10 + init modules + a sprite renderer we then retag).
             // Burst: an EMPTY stack (output nodes only) so no continuous SpawnRate survives.
             constexpr auto CreateDefaultNodes = true;
-            auto* System = NewObject<UNiagaraSystem>(Package, InAssetName, RF_Public | RF_Standalone);
+            auto* System = NewObject<UNiagaraSystem>(Package, AssetName, RF_Public | RF_Standalone);
             UNiagaraSystemFactoryNew::InitializeSystem(System, CreateDefaultNodes);
 
-            const auto AddDefaultModulesAndRenderers = NOT bInBurstSpawn;
+            const auto AddDefaultModulesAndRenderers = NOT UsesBurstSpawn;
             auto* Emitter = NewObject<UNiagaraEmitter>(GetTransientPackage(), TEXT("CkParticles"), RF_Transactional);
             UNiagaraEmitterFactoryNew::InitializeEmitter(Emitter, AddDefaultModulesAndRenderers);
 
@@ -598,7 +671,7 @@ namespace ck::particles_editor
 
             if (System->GetEmitterHandles().Num() == 0)
             {
-                ck::particles_editor::Log(TEXT("Template builder [{}]: emitter failed to attach"), FString(InAssetName));
+                ck::particles_editor::Log(TEXT("Template builder [{}]: emitter failed to attach"), FString(AssetName));
                 return nullptr;
             }
 
@@ -612,11 +685,11 @@ namespace ck::particles_editor
 
             Configure_Renderers(SystemEmitter, Handle.GetInstance().Version, SystemEmitterData, InSpriteMaterial);
 
-            if (bInBurstSpawn)
+            if (UsesBurstSpawn)
             {
-                if (NOT Add_BurstEmitterStack(SystemEmitter, SystemEmitterData))
+                if (NOT Add_BurstEmitterStack(SystemEmitter, SystemEmitterData, InSpec))
                 {
-                    ck::particles_editor::Log(TEXT("Template builder [{}]: burst emitter stack failed"), FString(InAssetName));
+                    ck::particles_editor::Log(TEXT("Template builder [{}]: burst emitter stack failed"), FString(AssetName));
                     return nullptr;
                 }
             }
@@ -641,7 +714,7 @@ namespace ck::particles_editor
 #if CK_WITH_PARTICLES
             const auto bModuleAdded = Try_AddCodeBuiltBehaviorModule(System);
             ck::particles_editor::Log(TEXT("[{}] Code-built behavior module added to Particle Update: {}"),
-                FString(InAssetName), bModuleAdded ? FString(TEXT("YES")) : FString(TEXT("NO")));
+                FString(AssetName), bModuleAdded ? FString(TEXT("YES")) : FString(TEXT("NO")));
 #endif
 
             // ---- Compile (incl. GPU) + save ----
@@ -654,13 +727,13 @@ namespace ck::particles_editor
             System->MarkPackageDirty();
             FAssetRegistryModule::AssetCreated(System);
 
-            const auto FileName = FPackageName::LongPackageNameToFilename(InPkgPath, FPackageName::GetAssetPackageExtension());
+            const auto FileName = FPackageName::LongPackageNameToFilename(PkgPath, FPackageName::GetAssetPackageExtension());
             FSavePackageArgs SaveArgs;
             SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
             UPackage::SavePackage(Package, System, *FileName, SaveArgs);
 
             ck::particles_editor::Log(TEXT("Built template [{}] ({})"),
-                FString(InAssetName), bInBurstSpawn ? FString(TEXT("burst-spawn")) : FString(TEXT("continuous-rate")));
+                FString(AssetName), UsesBurstSpawn ? FString(TEXT("burst-spawn")) : FString(TEXT("continuous-rate")));
             return System;
         }
     }
@@ -671,6 +744,7 @@ namespace ck::particles_editor
 
         // Order matters: textures -> materials (sample them) -> meshes (slot them) -> templates (reference all three).
         Generate_AllVfxTextures();
+        Import_SourceTextures();
 
         auto* BaseTex = LoadObject<UTexture2D>(nullptr,
             TEXT("/CkFoundation/CkParticles/Textures/T_CkParticles_Glow.T_CkParticles_Glow"));
@@ -680,13 +754,19 @@ namespace ck::particles_editor
         Generate_AllVfxMaterials();
         Generate_AllVfxMeshes();
 
-        constexpr auto ContinuousSpawn = false;
-        constexpr auto BurstSpawn      = true;
+        // One template per cadence row — adding a recreation with a new cadence is a row in
+        // ck::particles::Get_TemplateSpecs(), not another hand-maintained build call here.
+        auto AllBuilt = true;
+        for (const auto& Spec : ck::particles::Get_TemplateSpecs())
+        {
+            if (DoBuild_OneTemplateSystem(Spec, VfxMaterial) == nullptr)
+            {
+                ck::particles_editor::Log(TEXT("Template [{}] failed to build"), FString(Spec.AssetName));
+                AllBuilt = false;
+            }
+        }
 
-        auto* Continuous = DoBuild_OneTemplateSystem(PkgPath, AssetName, ContinuousSpawn, VfxMaterial);
-        auto* Burst      = DoBuild_OneTemplateSystem(BurstPkgPath, BurstAssetName, BurstSpawn, VfxMaterial);
-
-        return Continuous != nullptr && Burst != nullptr;
+        return AllBuilt;
     }
 
     auto Build_TemplateSystem() -> UNiagaraSystem*
