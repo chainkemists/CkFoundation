@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkUI/Extension/CkUI_Extension_Types.h"
 #include "CkUI/Layout/CkUI_LayerStack.h"
@@ -62,9 +63,9 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Transition, meta = (AllowPrivateAccess = true))
     ETransitionCurve _TransitionCurve = ETransitionCurve::CubicInOut;
 
-    /** Duration of transition in seconds. 0 for instant. */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Transition, meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
-    float _TransitionDuration = 0.0f;
+    /** Duration of transition. 0 for instant. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Transition, meta = (AllowPrivateAccess = true))
+    FCk_Time _TransitionDuration;
 
     /** Widgets to automatically push when this layer is created. Loaded async. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true, DisplayName = "Starting Widgets", AllowAbstract = false))
