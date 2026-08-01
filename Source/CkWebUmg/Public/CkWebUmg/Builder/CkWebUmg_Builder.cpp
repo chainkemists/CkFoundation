@@ -104,12 +104,24 @@ namespace ck_webumg_builder
         const auto SizePt = InText.SizePx * 0.75f;
 
         auto FontInfo = FSlateFontInfo{};
-        if (const auto* Files = OsFontFiles.Find(FirstFamily))
+        // Chromium synthetically emboldens Arial above its 700 cut (measured +16% advance at
+        // weight 800); Slate has no synthesis, so ultra weights map to the Black cut instead —
+        // the closest real face.
+        if (FirstFamily == TEXT("Arial") && InText.Weight >= 800)
         {
-            const auto Path = FPaths::Combine(TEXT("C:/Windows/Fonts"),
-                IsBold ? Files->Value : Files->Key);
-            if (FPaths::FileExists(Path))
-            { FontInfo = FSlateFontInfo{Path, SizePt}; }
+            const auto BlackPath = FString{TEXT("C:/Windows/Fonts/ariblk.ttf")};
+            if (FPaths::FileExists(BlackPath))
+            { FontInfo = FSlateFontInfo{BlackPath, SizePt}; }
+        }
+        if (NOT FontInfo.HasValidFont())
+        {
+            if (const auto* Files = OsFontFiles.Find(FirstFamily))
+            {
+                const auto Path = FPaths::Combine(TEXT("C:/Windows/Fonts"),
+                    IsBold ? Files->Value : Files->Key);
+                if (FPaths::FileExists(Path))
+                { FontInfo = FSlateFontInfo{Path, SizePt}; }
+            }
         }
         if (NOT FontInfo.HasValidFont())
         {

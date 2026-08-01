@@ -257,4 +257,50 @@ bool
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// The hostile corpus page (duplicate ck-names, extreme values, adversarial structures) must load,
+// build, and arrange without crashing or producing NaN geometry — the invalid-input contract for
+// the whole load→build→layout chain. Fidelity is NOT asserted; surviving hostile input is.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCkWebUmg_HostileLoad_Test,
+    "CkTests.UnitTests.CkWebUmg.HostileLoad",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool
+    FCkWebUmg_HostileLoad_Test::
+    RunTest(
+        const FString&)
+{
+    using namespace ck_webumg_layoutfidelity;
+
+    const auto IrPath = FPaths::Combine(CorpusGoldenDir(), TEXT("H1_hostile.ckui.json"));
+    const auto Document = ck::webumg::LoadIrDocumentFromFile(IrPath);
+    if (NOT TestTrue(TEXT("hostile IR document loads"), Document.IsSet()))
+    { return false; }
+
+    const auto Built = ck::webumg::BuildWidgetTree(*Document);
+    if (NOT TestTrue(TEXT("hostile widget tree builds"), Built.RootWidget != nullptr))
+    { return false; }
+
+    const auto RootWidget = Built.RootWidget.ToSharedRef();
+    RootWidget->SlatePrepass(1.0f);
+    const auto RootGeometry = FGeometry::MakeRoot(
+        FVector2D(Document->Viewport.X, Document->Viewport.Y), FSlateLayoutTransform{});
+
+    auto ArrangedRects = TMap<const SWidget*, FSlateRect>{};
+    CollectArrangedRects(RootWidget, RootGeometry, ArrangedRects);
+
+    auto NanCount = 0;
+    for (const auto& [Widget, Rect] : ArrangedRects)
+    {
+        if (FMath::IsNaN(Rect.Left) || FMath::IsNaN(Rect.Top) ||
+            FMath::IsNaN(Rect.GetSize().X) || FMath::IsNaN(Rect.GetSize().Y))
+        { ++NanCount; }
+    }
+    TestTrue(FString::Printf(TEXT("no NaN geometry across %d arranged widgets (found %d)"),
+        ArrangedRects.Num(), NanCount), NanCount == 0);
+    AddInfo(FString::Printf(TEXT("hostile page: %d widgets arranged"), ArrangedRects.Num()));
+    return true;
+}
+
 #endif // WITH_AUTOMATION_TESTS
