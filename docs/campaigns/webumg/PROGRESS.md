@@ -16,6 +16,13 @@
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-01 (session 2, Gate 3 opened) — pixel harness calibrated; paint-gap baseline measured
+- Gate 2 closed (±1px ratified), boundary commit `a94d787de`. Slate paint inventory cited (FSlateRoundedBoxBrush + FSlateBrushOutlineSettings CornerRadii `SlateBrush.h:130-143`; SComplexGradient/SSimpleGradient exist) — radius/borders/axis-gradients need no materials.
+- **Pixel harness landed** (`CkWebUmg_PaintFidelity_Test.cpp`, FWidgetRenderer → RT → per-pixel vs golden PNG, text-leaf rects masked; L-pages gate at 0.2% failing budget, P/T report-only until Adam ratifies a paint threshold). Three bring-up defects fixed with evidence: RT resource init; **toolbox runs automation with `-nullrhi`** → pixel lane requires `--no-nullrhi` (flag exists exactly for this; CI needs a second lane invocation — rect suite stays in the default lane); **FWidgetRenderer ctor arg is bUseGammaSpace** — `true` double-encodes sRGB (probes matched sRGBencode(golden) on the exact transfer curve: 12→61, 190→224, 60→133) → `false`.
+- **Calibration proof:** L1–L5, L8 at exactly 0.0000% failing pixels (2,073,600 compared each). Rect-green ⇒ pixel-green for solids holds.
+- **Measured paint-gap baseline (per-page failing %, channel delta > 4):** L6 2.89% (z-index paint order unimplemented — §8.6 stacking, now quantified); L7 29.36% (overflow:hidden clipping unapplied); L9 3.20% (unattributed 60,000 px — needs diff-image dump, next item); P1 radius 2.22%; P2 gradients 32.41%; P3 shadows 6.06%; P4 opacity/transform 16.97%; P5 images 13.87%; smoke 0.08%; T1/T2/T3 ≤ 0.0003% (masking verified).
+- Next: builder clipping (overflow) + z-order paint sorting + diff-PNG dump tool, then P-feature work items in Gate_03 order.
+
 ### 2026-08-01 (session 2, Gate 2 execution, cont.) — L-corpus 9/9 at ±1px, honestly
 - **False-green caught and killed:** first harness run reported 9/9 with `nan` rects — under UE's default `/fp:fast`, `nan <= tolerance` folded to true AND Yoga's NaN-sentinel undefined system broke (finite 1920×1080 in → NaN out, proven by instrumented run). Fix: `FPSemantics = FPSemanticsMode.Precise` on CkThirdParty (UBT knob verified at `VCToolChain.cs:1265-1266`); harness now hard-fails NaN via bit-pattern `FMath::IsNaN` on every node. Memory note saved (`ue-fpfast-vendored-nan-code`).
 - **Convergence 0→5→8→9**, each fix a named mechanism from exact deviation arithmetic (no tolerance widening):
