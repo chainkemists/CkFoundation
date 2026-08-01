@@ -84,6 +84,17 @@ struct CKWEBUMG_API FCkWebUmg_IrGradient
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct CKWEBUMG_API FCkWebUmg_IrShadowLayer
+{
+    FColor Color = FColor::Black;
+    FVector2f Offset = FVector2f::ZeroVector;
+    float Blur = 0.0f;
+    float Spread = 0.0f;
+    bool Inset = false;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 struct CKWEBUMG_API FCkWebUmg_IrTransform
 {
     // CSS matrix order [a, b, c, d, tx, ty]; empty when the computed transform was 3D (the
@@ -103,6 +114,8 @@ struct CKWEBUMG_API FCkWebUmg_IrPaint
     FVector4f BorderWidth = FVector4f::Zero();  // t, r, b, l
     TOptional<FColor> BorderColor;
     TOptional<FCkWebUmg_IrTransform> Transform;
+    TArray<FCkWebUmg_IrShadowLayer> ShadowLayers; // CSS order: first layer paints topmost
+    bool HasUntypedShadow = false;                // boxShadow present but layers unparseable
     float Opacity = 1.0f;
     FString Visibility;
 };

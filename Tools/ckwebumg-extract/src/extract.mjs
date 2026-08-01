@@ -497,7 +497,10 @@ class Extractor {
                 px(c.get('border-bottom-width')), px(c.get('border-left-width')),
             ],
             borderColor: borderColors[0],
-            boxShadow: c.get('box-shadow') === 'none' ? null : { computed: c.get('box-shadow') },
+            boxShadow: c.get('box-shadow') === 'none' ? null : {
+                ...(l => l !== null ? { layers: l } : {})(parseBoxShadow(c.get('box-shadow'))),
+                computed: c.get('box-shadow'),
+            },
             opacity: round2(parseFloat(c.get('opacity'))),
             transform: c.get('transform') === 'none' ? null : this.transformBlock(c),
             visibility: c.get('visibility'),

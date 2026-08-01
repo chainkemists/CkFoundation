@@ -223,6 +223,35 @@ namespace ck_webumg_irloader
         Paint.BorderWidth = ReadFloat4(PaintObj, TEXT("borderWidth"));
         Paint.BorderColor = ReadColor(PaintObj, TEXT("borderColor"));
 
+        const TSharedPtr<FJsonObject>* ShadowObj = nullptr;
+        if (PaintObj->TryGetObjectField(TEXT("boxShadow"), ShadowObj))
+        {
+            const TArray<TSharedPtr<FJsonValue>>* LayerValues = nullptr;
+            if ((*ShadowObj)->TryGetArrayField(TEXT("layers"), LayerValues))
+            {
+                for (const auto& LayerValue : *LayerValues)
+                {
+                    const auto& LayerObj = LayerValue->AsObject();
+                    auto Layer = FCkWebUmg_IrShadowLayer{};
+                    if (const auto Color = ReadColor(LayerObj, TEXT("rgba")); Color.IsSet())
+                    { Layer.Color = *Color; }
+                    const TArray<TSharedPtr<FJsonValue>>* OffsetValues = nullptr;
+                    if (LayerObj->TryGetArrayField(TEXT("offset"), OffsetValues) && OffsetValues->Num() == 2)
+                    {
+                        Layer.Offset = FVector2f(
+                            static_cast<float>((*OffsetValues)[0]->AsNumber()),
+                            static_cast<float>((*OffsetValues)[1]->AsNumber()));
+                    }
+                    Layer.Blur = static_cast<float>(LayerObj->GetNumberField(TEXT("blur")));
+                    Layer.Spread = static_cast<float>(LayerObj->GetNumberField(TEXT("spread")));
+                    LayerObj->TryGetBoolField(TEXT("inset"), Layer.Inset);
+                    Paint.ShadowLayers.Add(Layer);
+                }
+            }
+            else
+            { Paint.HasUntypedShadow = true; }
+        }
+
         const TSharedPtr<FJsonObject>* TransformObj = nullptr;
         if (PaintObj->TryGetObjectField(TEXT("transform"), TransformObj))
         {

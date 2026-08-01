@@ -220,6 +220,23 @@
             255
           ],
           "boxShadow": {
+            "layers": [
+              {
+                "rgba": [
+                  0,
+                  0,
+                  0,
+                  191
+                ],
+                "offset": [
+                  12,
+                  16
+                ],
+                "blur": 24,
+                "spread": 0,
+                "inset": false
+              }
+            ],
             "computed": "rgba(0, 0, 0, 0.75) 12px 16px 24px 0px"
           },
           "opacity": 1,
@@ -334,6 +351,53 @@
             255
           ],
           "boxShadow": {
+            "layers": [
+              {
+                "rgba": [
+                  0,
+                  0,
+                  0,
+                  153
+                ],
+                "offset": [
+                  0,
+                  4
+                ],
+                "blur": 8,
+                "spread": 0,
+                "inset": false
+              },
+              {
+                "rgba": [
+                  70,
+                  110,
+                  200,
+                  128
+                ],
+                "offset": [
+                  0,
+                  16
+                ],
+                "blur": 32,
+                "spread": 0,
+                "inset": false
+              },
+              {
+                "rgba": [
+                  200,
+                  160,
+                  50,
+                  102
+                ],
+                "offset": [
+                  -8,
+                  -8
+                ],
+                "blur": 16,
+                "spread": 0,
+                "inset": false
+              }
+            ],
             "computed": "rgba(0, 0, 0, 0.6) 0px 4px 8px 0px, rgba(70, 110, 200, 0.5) 0px 16px 32px 0px, rgba(200, 160, 50, 0.4) -8px -8px 16px 0px"
           },
           "opacity": 1,
@@ -448,6 +512,23 @@
             255
           ],
           "boxShadow": {
+            "layers": [
+              {
+                "rgba": [
+                  0,
+                  0,
+                  0,
+                  217
+                ],
+                "offset": [
+                  0,
+                  0
+                ],
+                "blur": 40,
+                "spread": 10,
+                "inset": true
+              }
+            ],
             "computed": "rgba(0, 0, 0, 0.85) 0px 0px 40px 10px inset"
           },
           "opacity": 1,

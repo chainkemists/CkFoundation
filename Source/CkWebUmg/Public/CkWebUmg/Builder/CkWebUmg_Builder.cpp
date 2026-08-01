@@ -12,6 +12,7 @@
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -67,6 +68,33 @@ namespace ck_webumg_builder
         const TSharedPtr<FSlateBrush> Brush = MakeShared<FSlateBrush>();
         Brush->SetResourceObject(Texture);
         Brush->ImageSize = FVector2D(InDrawSize);
+        Brush->DrawAs = ESlateBrushDrawType::Image;
+        InCtx.Result.OwnedBrushes.Add(Brush);
+        return Brush.Get();
+    }
+
+    auto
+    MakeTextureBrush(
+        FBuildContext& InCtx,
+        const TArray<FColor>& InPixels,
+        int32 InWidth,
+        int32 InHeight)
+        -> const FSlateBrush*
+    {
+        auto* Texture = UTexture2D::CreateTransient(InWidth, InHeight, PF_B8G8R8A8);
+        if (Texture == nullptr)
+        { return nullptr; }
+        Texture->SRGB = true;
+        auto& Mip = Texture->GetPlatformData()->Mips[0];
+        auto* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);
+        FMemory::Memcpy(Data, InPixels.GetData(), InPixels.Num() * sizeof(FColor));
+        Mip.BulkData.Unlock();
+        Texture->UpdateResource();
+
+        InCtx.Result.OwnedTextures.Add(TStrongObjectPtr<UTexture2D>{Texture});
+        const TSharedPtr<FSlateBrush> Brush = MakeShared<FSlateBrush>();
+        Brush->SetResourceObject(Texture);
+        Brush->ImageSize = FVector2D(InWidth, InHeight);
         Brush->DrawAs = ESlateBrushDrawType::Image;
         InCtx.Result.OwnedBrushes.Add(Brush);
         return Brush.Get();
@@ -188,23 +216,255 @@ namespace ck_webumg_builder
             }
         }
 
-        auto* Texture = UTexture2D::CreateTransient(Width, Height, PF_B8G8R8A8);
-        if (Texture == nullptr)
-        { return nullptr; }
-        Texture->SRGB = true;
-        auto& Mip = Texture->GetPlatformData()->Mips[0];
-        auto* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);
-        FMemory::Memcpy(Data, Pixels.GetData(), Pixels.Num() * sizeof(FColor));
-        Mip.BulkData.Unlock();
-        Texture->UpdateResource();
+        return MakeTextureBrush(InCtx, Pixels, Width, Height);
+    }
 
-        InCtx.Result.OwnedTextures.Add(TStrongObjectPtr<UTexture2D>{Texture});
-        const TSharedPtr<FSlateBrush> Brush = MakeShared<FSlateBrush>();
-        Brush->SetResourceObject(Texture);
-        Brush->ImageSize = FVector2D(InSize);
-        Brush->DrawAs = ESlateBrushDrawType::Image;
-        InCtx.Result.OwnedBrushes.Add(Brush);
-        return Brush.Get();
+    // Signed distance to a rounded rect (per-corner radii, CSS order tl/tr/br/bl); coverage is
+    // clamp(0.5 - d, 0, 1) — the same analytic antialias the gradient path relies on textures for.
+    auto
+    RoundedBoxCoverage(
+        const FVector2f InPoint,
+        const FVector2f InCenter,
+        const FVector2f InHalfSize,
+        const FVector4f InRadii)
+        -> float
+    {
+        const auto P = InPoint - InCenter;
+        const auto Radius = P.X > 0.0f
+            ? (P.Y > 0.0f ? InRadii.Z : InRadii.Y)
+            : (P.Y > 0.0f ? InRadii.W : InRadii.X);
+        const auto Q = FVector2f(FMath::Abs(P.X), FMath::Abs(P.Y)) - InHalfSize + FVector2f(Radius, Radius);
+        const auto Distance = FMath::Min(FMath::Max(Q.X, Q.Y), 0.0f)
+            + FVector2f(FMath::Max(Q.X, 0.0f), FMath::Max(Q.Y, 0.0f)).Size() - Radius;
+        return FMath::Clamp(0.5f - Distance, 0.0f, 1.0f);
+    }
+
+    // Separable Gaussian with the browser's shadow model: sigma = blur/2 (Skia), kernel cut at 3σ.
+    auto
+    GaussianBlurMask(
+        TArray<float>& InOutMask,
+        int32 InWidth,
+        int32 InHeight,
+        float InSigma)
+        -> void
+    {
+        if (InSigma <= KINDA_SMALL_NUMBER)
+        { return; }
+
+        const auto KernelRadius = FMath::CeilToInt32(3.0f * InSigma);
+        auto Kernel = TArray<float>{};
+        Kernel.SetNum(2 * KernelRadius + 1);
+        auto Sum = 0.0f;
+        for (auto Index = -KernelRadius; Index <= KernelRadius; ++Index)
+        {
+            const auto Value = FMath::Exp(-0.5f * FMath::Square(static_cast<float>(Index) / InSigma));
+            Kernel[Index + KernelRadius] = Value;
+            Sum += Value;
+        }
+        for (auto& Value : Kernel)
+        { Value /= Sum; }
+
+        auto Scratch = TArray<float>{};
+        Scratch.SetNumZeroed(InOutMask.Num());
+        for (auto Y = 0; Y < InHeight; ++Y)
+        {
+            for (auto X = 0; X < InWidth; ++X)
+            {
+                auto Acc = 0.0f;
+                for (auto K = -KernelRadius; K <= KernelRadius; ++K)
+                {
+                    const auto Sample = FMath::Clamp(X + K, 0, InWidth - 1);
+                    Acc += InOutMask[Y * InWidth + Sample] * Kernel[K + KernelRadius];
+                }
+                Scratch[Y * InWidth + X] = Acc;
+            }
+        }
+        for (auto X = 0; X < InWidth; ++X)
+        {
+            for (auto Y = 0; Y < InHeight; ++Y)
+            {
+                auto Acc = 0.0f;
+                for (auto K = -KernelRadius; K <= KernelRadius; ++K)
+                {
+                    const auto Sample = FMath::Clamp(Y + K, 0, InHeight - 1);
+                    Acc += Scratch[Sample * InWidth + X] * Kernel[K + KernelRadius];
+                }
+                InOutMask[Y * InWidth + X] = Acc;
+            }
+        }
+    }
+
+    // Composite shadow layers back-to-front (CSS: first layer topmost) in straight-alpha sRGB
+    // space — the browser blends shadows in sRGB (sec. 8), so the baked texel IS its pixel value.
+    struct FShadowAccum
+    {
+        TArray<FVector4f> Texels; // R,G,B (sRGB 0-255) + A (0-1), straight alpha
+
+        auto CompositeUnder(const TArray<float>& InMask, const FColor InColor) -> void
+        {
+            const auto LayerAlphaScale = static_cast<float>(InColor.A) / 255.0f;
+            for (auto Index = 0; Index < Texels.Num(); ++Index)
+            {
+                const auto SrcA = InMask[Index] * LayerAlphaScale;
+                if (SrcA <= 0.0f)
+                { continue; }
+                auto& Dst = Texels[Index];
+                const auto OutA = Dst.W + SrcA * (1.0f - Dst.W);
+                if (OutA <= KINDA_SMALL_NUMBER)
+                { continue; }
+                // Layers iterate topmost-first, so each new layer goes UNDER the accumulated result.
+                Dst.X = (Dst.X * Dst.W + static_cast<float>(InColor.R) * SrcA * (1.0f - Dst.W)) / OutA;
+                Dst.Y = (Dst.Y * Dst.W + static_cast<float>(InColor.G) * SrcA * (1.0f - Dst.W)) / OutA;
+                Dst.Z = (Dst.Z * Dst.W + static_cast<float>(InColor.B) * SrcA * (1.0f - Dst.W)) / OutA;
+                Dst.W = OutA;
+            }
+        }
+
+        auto ToPixels() const -> TArray<FColor>
+        {
+            auto Pixels = TArray<FColor>{};
+            Pixels.SetNumUninitialized(Texels.Num());
+            for (auto Index = 0; Index < Texels.Num(); ++Index)
+            {
+                const auto& Texel = Texels[Index];
+                Pixels[Index] = FColor{
+                    static_cast<uint8>(FMath::RoundToInt(FMath::Clamp(Texel.X, 0.0f, 255.0f))),
+                    static_cast<uint8>(FMath::RoundToInt(FMath::Clamp(Texel.Y, 0.0f, 255.0f))),
+                    static_cast<uint8>(FMath::RoundToInt(FMath::Clamp(Texel.Z, 0.0f, 255.0f))),
+                    static_cast<uint8>(FMath::RoundToInt(FMath::Clamp(Texel.W * 255.0f, 0.0f, 255.0f)))};
+            }
+            return Pixels;
+        }
+    };
+
+    struct FBakedShadows
+    {
+        const FSlateBrush* OutsetBrush = nullptr;
+        FMargin OutsetMargins; // px the outset canvas extends beyond the node on each side
+        const FSlateBrush* InsetBrush = nullptr;
+    };
+
+    auto
+    BakeShadowBrushes(
+        FBuildContext& InCtx,
+        const FCkWebUmg_IrPaint& InPaint,
+        const FVector2f InSize)
+        -> FBakedShadows
+    {
+        auto Result = FBakedShadows{};
+        const auto Width = FMath::RoundToInt32(InSize.X);
+        const auto Height = FMath::RoundToInt32(InSize.Y);
+        if (Width <= 0 || Height <= 0)
+        { return Result; }
+
+        auto OutsetLayers = TArray<FCkWebUmg_IrShadowLayer>{};
+        auto InsetLayers = TArray<FCkWebUmg_IrShadowLayer>{};
+        for (const auto& Layer : InPaint.ShadowLayers)
+        { (Layer.Inset ? InsetLayers : OutsetLayers).Add(Layer); }
+
+        if (OutsetLayers.Num() > 0)
+        {
+            auto MarginL = 0.0f, MarginT = 0.0f, MarginR = 0.0f, MarginB = 0.0f;
+            for (const auto& Layer : OutsetLayers)
+            {
+                const auto Reach = Layer.Spread + 1.5f * Layer.Blur;
+                MarginL = FMath::Max(MarginL, Reach - Layer.Offset.X);
+                MarginR = FMath::Max(MarginR, Reach + Layer.Offset.X);
+                MarginT = FMath::Max(MarginT, Reach - Layer.Offset.Y);
+                MarginB = FMath::Max(MarginB, Reach + Layer.Offset.Y);
+            }
+            MarginL = FMath::CeilToFloat(FMath::Max(MarginL, 0.0f));
+            MarginT = FMath::CeilToFloat(FMath::Max(MarginT, 0.0f));
+            MarginR = FMath::CeilToFloat(FMath::Max(MarginR, 0.0f));
+            MarginB = FMath::CeilToFloat(FMath::Max(MarginB, 0.0f));
+
+            const auto CanvasW = Width + static_cast<int32>(MarginL + MarginR);
+            const auto CanvasH = Height + static_cast<int32>(MarginT + MarginB);
+            auto Accum = FShadowAccum{};
+            Accum.Texels.SetNumZeroed(CanvasW * CanvasH);
+
+            for (const auto& Layer : OutsetLayers)
+            {
+                const auto HalfSize = FVector2f(
+                    InSize.X * 0.5f + Layer.Spread, InSize.Y * 0.5f + Layer.Spread);
+                const auto Center = FVector2f(
+                    MarginL + InSize.X * 0.5f + Layer.Offset.X,
+                    MarginT + InSize.Y * 0.5f + Layer.Offset.Y);
+                const auto Radii = FVector4f(
+                    InPaint.BorderRadius.X > 0.0f ? FMath::Max(InPaint.BorderRadius.X + Layer.Spread, 0.0f) : 0.0f,
+                    InPaint.BorderRadius.Y > 0.0f ? FMath::Max(InPaint.BorderRadius.Y + Layer.Spread, 0.0f) : 0.0f,
+                    InPaint.BorderRadius.Z > 0.0f ? FMath::Max(InPaint.BorderRadius.Z + Layer.Spread, 0.0f) : 0.0f,
+                    InPaint.BorderRadius.W > 0.0f ? FMath::Max(InPaint.BorderRadius.W + Layer.Spread, 0.0f) : 0.0f);
+
+                auto Mask = TArray<float>{};
+                Mask.SetNumUninitialized(CanvasW * CanvasH);
+                for (auto Y = 0; Y < CanvasH; ++Y)
+                {
+                    for (auto X = 0; X < CanvasW; ++X)
+                    {
+                        Mask[Y * CanvasW + X] = RoundedBoxCoverage(
+                            FVector2f(static_cast<float>(X) + 0.5f, static_cast<float>(Y) + 0.5f),
+                            Center, HalfSize, Radii);
+                    }
+                }
+                GaussianBlurMask(Mask, CanvasW, CanvasH, Layer.Blur * 0.5f);
+                Accum.CompositeUnder(Mask, Layer.Color);
+            }
+
+            Result.OutsetBrush = MakeTextureBrush(InCtx, Accum.ToPixels(), CanvasW, CanvasH);
+            Result.OutsetMargins = FMargin(MarginL, MarginT, MarginR, MarginB);
+        }
+
+        if (InsetLayers.Num() > 0)
+        {
+            auto Accum = FShadowAccum{};
+            Accum.Texels.SetNumZeroed(Width * Height);
+
+            for (const auto& Layer : InsetLayers)
+            {
+                // Inset shadow: blur the COMPLEMENT of the spread-shrunk rect, then clip to the
+                // border box's own rounded silhouette.
+                const auto HalfSize = FVector2f(
+                    FMath::Max(InSize.X * 0.5f - Layer.Spread, 0.0f),
+                    FMath::Max(InSize.Y * 0.5f - Layer.Spread, 0.0f));
+                const auto Center = FVector2f(
+                    InSize.X * 0.5f + Layer.Offset.X, InSize.Y * 0.5f + Layer.Offset.Y);
+                const auto Radii = FVector4f(
+                    FMath::Max(InPaint.BorderRadius.X - Layer.Spread, 0.0f),
+                    FMath::Max(InPaint.BorderRadius.Y - Layer.Spread, 0.0f),
+                    FMath::Max(InPaint.BorderRadius.Z - Layer.Spread, 0.0f),
+                    FMath::Max(InPaint.BorderRadius.W - Layer.Spread, 0.0f));
+
+                auto Mask = TArray<float>{};
+                Mask.SetNumUninitialized(Width * Height);
+                for (auto Y = 0; Y < Height; ++Y)
+                {
+                    for (auto X = 0; X < Width; ++X)
+                    {
+                        Mask[Y * Width + X] = 1.0f - RoundedBoxCoverage(
+                            FVector2f(static_cast<float>(X) + 0.5f, static_cast<float>(Y) + 0.5f),
+                            Center, HalfSize, Radii);
+                    }
+                }
+                GaussianBlurMask(Mask, Width, Height, Layer.Blur * 0.5f);
+                const auto BoxHalfSize = FVector2f(InSize.X * 0.5f, InSize.Y * 0.5f);
+                const auto BoxCenter = BoxHalfSize;
+                for (auto Y = 0; Y < Height; ++Y)
+                {
+                    for (auto X = 0; X < Width; ++X)
+                    {
+                        Mask[Y * Width + X] *= RoundedBoxCoverage(
+                            FVector2f(static_cast<float>(X) + 0.5f, static_cast<float>(Y) + 0.5f),
+                            BoxCenter, BoxHalfSize, InPaint.BorderRadius);
+                    }
+                }
+                Accum.CompositeUnder(Mask, Layer.Color);
+            }
+
+            Result.InsetBrush = MakeTextureBrush(InCtx, Accum.ToPixels(), Width, Height);
+        }
+
+        return Result;
     }
 
     auto
@@ -252,6 +512,29 @@ namespace ck_webumg_builder
 
         auto Result = Content.ToSharedRef();
         const auto& Paint = InNode->Paint;
+
+        auto BakedShadows = FBakedShadows{};
+        if (Paint.ShadowLayers.Num() > 0)
+        {
+            BakedShadows = BakeShadowBrushes(InCtx, Paint,
+                FVector2f(InNode->Get_LayoutBox().Border.W, InNode->Get_LayoutBox().Border.H));
+            if (BakedShadows.InsetBrush != nullptr)
+            {
+                // CSS layering: background, then inset shadow, then content — the background
+                // wrapper below draws its brush before children, so nesting here lands it right.
+                Content = SNew(SOverlay)
+                    + SOverlay::Slot()[SNew(SImage).Image(BakedShadows.InsetBrush)]
+                    + SOverlay::Slot()[Content.ToSharedRef()];
+                Result = Content.ToSharedRef();
+            }
+        }
+        if (Paint.HasUntypedShadow)
+        {
+            ck::webumg::Warning(
+                TEXT("Node [{}] has a box-shadow the IR could not type — left unpainted"),
+                InNode->Id);
+        }
+
         const auto HasRadius = Paint.BorderRadius != FVector4f::Zero();
         const auto HasBorder = Paint.BorderWidth != FVector4f::Zero() && Paint.BorderColor.IsSet();
 
@@ -316,6 +599,20 @@ namespace ck_webumg_builder
                         Content.ToSharedRef()
                     ];
             }
+        }
+
+        if (BakedShadows.OutsetBrush != nullptr)
+        {
+            // The outset halo paints outside the node rect: a negative-padding overlay slot hands
+            // the shadow image a geometry larger than the node (Slate doesn't clip unless asked).
+            // Wrapping the FINAL widget keeps render transform/opacity applying to the shadow too,
+            // exactly as CSS transforms/fades an element's shadow with it.
+            const auto& Margins = BakedShadows.OutsetMargins;
+            Result = SNew(SOverlay)
+                + SOverlay::Slot()
+                    .Padding(FMargin(-Margins.Left, -Margins.Top, -Margins.Right, -Margins.Bottom))
+                    [SNew(SImage).Image(BakedShadows.OutsetBrush)]
+                + SOverlay::Slot()[Result];
         }
 
         if (Paint.Transform.IsSet())
