@@ -2,7 +2,7 @@ namespace utils_screen_fade
 {
     void Request_SimpleFadeToBlack(
         APlayerController InOwningController,
-        float32 InDuration,
+        FCk_Time InDuration,
         FCk_Delegate_OnScreenFadeFinished_Dynamic InOnFinished = FCk_Delegate_OnScreenFadeFinished_Dynamic())
     {
         auto FadeOutParams = FCk_ScreenFade_Params(InDuration);
@@ -16,7 +16,7 @@ namespace utils_screen_fade
 
     void Request_SimpleFadeFromBlack(
         APlayerController InOwningController,
-        float32 InDuration,
+        FCk_Time InDuration,
         FCk_Delegate_OnScreenFadeFinished_Dynamic InOnFinished = FCk_Delegate_OnScreenFadeFinished_Dynamic())
     {
         auto FadeOutParams = FCk_ScreenFade_Params(InDuration);

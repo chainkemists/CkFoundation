@@ -1,6 +1,6 @@
 // Inspired by https://github.com/suramaru517/ScreenFade
 
-#include "CkScreenFade_Widget.h"
+#include "CkScreenFade_Slate.h"
 
 #include <AudioDevice.h>
 #include <Engine/GameViewportClient.h>
@@ -9,17 +9,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    SScreenFade_Widget::
+    SCk_ScreenFade::
     Construct(
         const FArguments& InArgs)
     -> void
 {
-    _FadeParams = InArgs.__FadeParams;
-    _OnFadeFinished = InArgs.__OnFadeFinished;
+    _FadeParams = InArgs._FadeParams;
+    _OnFadeFinished = InArgs._OnFadeFinished;
 }
 
 auto
-    SScreenFade_Widget::
+    SCk_ScreenFade::
     Tick(
         const FGeometry& AllottedGeometry,
         const double InCurrentTime,
@@ -29,26 +29,27 @@ auto
     if (NOT _FadeParams.Get_FadeWhenPaused() && Get_IsGamePaused())
     { return; }
 
-    _TimeRemaining = FMath::Max(_TimeRemaining - InDeltaTime, 0.0f);
+    _TimeRemaining = FCk_Time{FMath::Max(_TimeRemaining.Get_Seconds() - InDeltaTime, 0.0)};
 
-    if (_TimeRemaining <= 0.0f)
+    if (_TimeRemaining <= FCk_Time::ZeroSecond())
     {
         FinishFade();
         return;
     }
 
-    const auto NextColor = _FadeParams.Get_ToColor() - (_FadeParams.Get_ToColor() - _FadeParams.Get_FromColor()) * _TimeRemaining / _FadeParams.Get_FadeTime();
+    const auto FadeAlpha = static_cast<float>(_TimeRemaining / _FadeParams.Get_FadeTime());
+    const auto NextColor = _FadeParams.Get_ToColor() - (_FadeParams.Get_ToColor() - _FadeParams.Get_FromColor()) * FadeAlpha;
     ApplyFade(NextColor);
 }
 
 auto
-    SScreenFade_Widget::
+    SCk_ScreenFade::
     StartFade()
     -> void
 {
     SetImage(FCoreStyle::Get().GetBrush(TEXT("WhiteBrush")));
 
-    if (_FadeParams.Get_FadeTime() <= 0.0f)
+    if (_FadeParams.Get_FadeTime() <= FCk_Time::ZeroSecond())
     {
         FinishFade();
         return;
@@ -61,7 +62,7 @@ auto
 }
 
 auto
-    SScreenFade_Widget::
+    SCk_ScreenFade::
     FinishFade()
     -> void
 {
@@ -75,7 +76,7 @@ auto
 }
 
 auto
-    SScreenFade_Widget::
+    SCk_ScreenFade::
     ApplyFade(
         const FLinearColor& NextColor)
     -> void
@@ -89,7 +90,7 @@ auto
 }
 
 auto
-    SScreenFade_Widget::
+    SCk_ScreenFade::
     Get_World()
     -> UWorld*
 {
@@ -106,7 +107,7 @@ auto
 }
 
 auto
-    SScreenFade_Widget::
+    SCk_ScreenFade::
     Get_IsGamePaused()
     -> bool
 {
@@ -120,7 +121,7 @@ auto
 }
 
 auto
-    SScreenFade_Widget::
+    SCk_ScreenFade::
     SetPrimaryVolume(
         const float Volume)
     -> void

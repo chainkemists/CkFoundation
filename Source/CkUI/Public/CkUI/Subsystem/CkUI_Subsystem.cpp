@@ -12,7 +12,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
-#include "CkUI/ScreenFade/CkScreenFade_Widget.h"
+#include "CkUI/ScreenFade/CkScreenFade_Slate.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -156,9 +156,9 @@ auto
         OnFadeFinished.BindUObject(this, &ThisType::DoRemoveScreenFadeWidget, ControllerID);
     }
 
-    TSharedRef<SScreenFade_Widget> FadeWidget = SNew(SScreenFade_Widget)
-        ._FadeParams(InFadeParams)
-        ._OnFadeFinished(OnFadeFinished);
+    TSharedRef<SCk_ScreenFade> FadeWidget = SNew(SCk_ScreenFade)
+        .FadeParams(InFadeParams)
+        .OnFadeFinished(OnFadeFinished);
 
     auto* GameViewport = GetWorld()->GetGameViewport();
 
