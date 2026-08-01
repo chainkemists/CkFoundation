@@ -23,6 +23,7 @@ namespace ck_webumg_builder
     {
         const FCkWebUmg_IrDocument& Document;
         FString ContentBaseDir;
+        const TMap<FString, TObjectPtr<UTexture2D>>* PreloadedTextures = nullptr;
         ck::webumg::FCkWebUmg_BuildResult& Result;
     };
 
@@ -33,6 +34,21 @@ namespace ck_webumg_builder
         const FVector2f InDrawSize)
         -> const FSlateBrush*
     {
+        // Asset-backed pages carry their textures already imported — no disk involved.
+        if (InCtx.PreloadedTextures != nullptr)
+        {
+            if (const auto* Found = InCtx.PreloadedTextures->Find(InAssetId);
+                Found != nullptr && *Found != nullptr)
+            {
+                const TSharedPtr<FSlateBrush> Brush = MakeShared<FSlateBrush>();
+                Brush->SetResourceObject(Found->Get());
+                Brush->ImageSize = FVector2D(InDrawSize);
+                Brush->DrawAs = ESlateBrushDrawType::Image;
+                InCtx.Result.OwnedBrushes.Add(Brush);
+                return Brush.Get();
+            }
+        }
+
         if (InCtx.ContentBaseDir.IsEmpty())
         { return nullptr; }
 
@@ -847,7 +863,8 @@ namespace ck::webumg
     auto
     BuildWidgetTree(
         const FCkWebUmg_IrDocument& InDocument,
-        const FString& InContentBaseDir)
+        const FString& InContentBaseDir,
+        const TMap<FString, TObjectPtr<UTexture2D>>* InPreloadedTextures)
         -> FCkWebUmg_BuildResult
     {
         const auto RootIsValid = InDocument.Root != nullptr;
@@ -857,7 +874,7 @@ namespace ck::webumg
         { return {}; }
 
         auto Result = FCkWebUmg_BuildResult{};
-        auto Context = ck_webumg_builder::FBuildContext{InDocument, InContentBaseDir, Result};
+        auto Context = ck_webumg_builder::FBuildContext{InDocument, InContentBaseDir, InPreloadedTextures, Result};
         Result.RootWidget = ck_webumg_builder::DoBuildNode(InDocument.Root, Context);
         return Result;
     }

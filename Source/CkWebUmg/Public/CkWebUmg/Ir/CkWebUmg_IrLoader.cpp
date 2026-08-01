@@ -80,6 +80,10 @@ namespace ck_webumg_irloader
         Node->Tag = InObj->GetStringField(TEXT("tag"));
         InObj->TryGetStringField(TEXT("asset"), Node->Asset);
 
+        const TSharedPtr<FJsonObject>* CkObj = nullptr;
+        if (InObj->TryGetObjectField(TEXT("ck"), CkObj))
+        { (*CkObj)->TryGetStringField(TEXT("name"), Node->CkName); }
+
         const auto ReadBox = [](const TSharedPtr<FJsonObject>& InBoxObj) -> FCkWebUmg_IrBox
         {
             return FCkWebUmg_IrBox{

@@ -54,7 +54,8 @@ namespace ck::webumg
     CKWEBUMG_API auto
     BuildWidgetTree(
         const FCkWebUmg_IrDocument& InDocument,
-        const FString& InContentBaseDir = {})
+        const FString& InContentBaseDir = {},
+        const TMap<FString, TObjectPtr<UTexture2D>>* InPreloadedTextures = nullptr)
         -> FCkWebUmg_BuildResult;
 }
 

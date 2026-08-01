@@ -144,7 +144,8 @@ struct CKWEBUMG_API FCkWebUmg_IrNode
 {
     FString Id;
     FString Tag;
-    FString Asset; // for <img>: id into FCkWebUmg_IrDocument::AssetSourcesById
+    FString CkName; // data-ck-name (empty = unnamed); uniqueness enforced at emission (D3)
+    FString Asset;  // for <img>: id into FCkWebUmg_IrDocument::AssetSourcesById
     FCkWebUmg_IrBox Box;               // post-transform AABB when a transform applies (SCHEMA.md)
     TOptional<FCkWebUmg_IrBox> BoxUntransformed; // the rect layout reproduces; transform reapplies at paint
     FCkWebUmg_IrLayout Layout;

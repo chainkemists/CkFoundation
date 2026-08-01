@@ -1,6 +1,6 @@
 # Gate 4 — Emission
 
-> **Status:** 📝 DRAFT — not entered. Prepared 2026-08-01 so the Gate 3 exit conversation can see
+> **Status:** 🟡 In progress (entered 2026-08-01 — Adam approved entry after the Gate 3 close). Prepared 2026-08-01 so the Gate 3 exit conversation can see
 > the next gate's shape; every section below is revisable at entry, and entry itself requires
 > Gate 3 closed by Adam (brief §1 rule 2).
 > **Depends on:** Gate 3 ✅ (pending Adam's four exit calls)
