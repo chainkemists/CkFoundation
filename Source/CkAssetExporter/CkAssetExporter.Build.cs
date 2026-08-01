@@ -23,6 +23,7 @@ public class CkAssetExporter : CkModuleRules
             "AssetTools",
             "AssetRegistry",
             "ContentBrowser",
+            "DirectoryWatcher",
             "WorkspaceMenuStructure",
             "AIModule",
             "GameplayTasks",

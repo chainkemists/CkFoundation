@@ -57,8 +57,8 @@ auto
 
     Result.AssetName = InDataTable->GetName();
 
-    const auto JsonPath = ck_data_table_exporter::DoResolveOutputPath(InDataTable, TEXT(".json"));
-    const auto CsvPath  = ck_data_table_exporter::DoResolveOutputPath(InDataTable, TEXT(".csv"));
+    const auto JsonPath = ck_data_table_exporter::DoResolveOutputPath(InDataTable, ck::asset_exporter::extension::Sidecar);
+    const auto CsvPath  = ck_data_table_exporter::DoResolveOutputPath(InDataTable, ck::asset_exporter::extension::Csv);
     if (JsonPath.IsEmpty() || CsvPath.IsEmpty())
     {
         Result.ErrorMessage = TEXT("Failed to resolve output file paths");

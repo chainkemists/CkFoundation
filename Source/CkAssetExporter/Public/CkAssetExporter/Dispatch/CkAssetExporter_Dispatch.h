@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 
 #include "CoreMinimal.h"
@@ -55,14 +57,16 @@ public:
     static auto
     ExportAssets(
         const TArray<FString>& InObjectPaths,
-        bool InSkipFresh) -> FCk_AssetExportDispatchSummary;
+        bool InSkipFresh,
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_AssetExportDispatchSummary;
 
     // Recursive. Empty InClassFilters = every supported type; an unknown friendly name = summary-level failure.
     static auto
     SweepDirectory(
         const FString& InPackageDir,
         const TArray<FString>& InClassFilters,
-        bool InSkipFresh) -> FCk_AssetExportDispatchSummary;
+        bool InSkipFresh,
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_AssetExportDispatchSummary;
 
     // Same filter as SweepDirectory but no loading. A bad filter name returns "ok": false + "error".
     static auto
@@ -85,9 +89,10 @@ public:
         const FString& InName,
         FString& OutError) -> UClass*;
 
-    // Empty when the package can't be resolved to a filename.
+    // The structured sidecar (<Asset>.ckexport) next to the source .uasset. Empty when the package can't be
+    // resolved to a filename.
     static auto
-    Get_SiblingJsonPathForAsset(
+    Get_SiblingSidecarPathForAsset(
         const UObject* InAsset) -> FString;
 
     // The on-save sidecar hook's cheap pre-filter — art saves must not spam export attempts.

@@ -1,6 +1,9 @@
 #include "CkAssetExporter/Dispatch/CkAssetExporter_Dispatch.h"
 #include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 #include "CkAssetExporter/GraphDump/CkAssetExporter_GraphDump.h"
+#include "CkAssetExporter/Validation/CkAssetExporter_AutoReimportGuard.h"
+
+#include "CkCore/Macros/CkMacros.h"
 
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
@@ -157,11 +160,46 @@ bool FCk_AssetExporter_Dispatch_SummaryTextBanner_Test::RunTest(const FString& I
     const auto Banner = FCk_AssetExportMeta::Get_SummaryTextBanner(TEXT("MyAsset"));
 
     TestTrue(TEXT("banner opens with the module tag"), Banner.StartsWith(TEXT("// [CkAssetExporter]")));
-    TestTrue(TEXT("banner names the sibling json"), Banner.Contains(TEXT("MyAsset.json")));
+    TestTrue(TEXT("banner names the sibling sidecar by its real filename"), Banner.Contains(TEXT("MyAsset.ckexport")));
     TestTrue(TEXT("banner points at _meta"), Banner.Contains(TEXT("\"_meta\"")));
     TestTrue(TEXT("banner ends with a blank separator line"), Banner.EndsWith(TEXT("\n\n")));
 
     TestEqual(TEXT("banner is deterministic"), Banner, FCk_AssetExportMeta::Get_SummaryTextBanner(TEXT("MyAsset")));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// The load-bearing invariant of the whole sidecar-extension design: an extension no import factory claims is rejected
+// by FMatchRules::IsFileApplicable BEFORE any wildcard rule, which is what makes the sidecar corpus invisible to the
+// auto-reimport monitor in every consuming project with zero configuration. If someone ever changes the extension to
+// something a factory does claim, the editor silently drops to ~18 fps on a large corpus and no UE-side profiler can
+// attribute it. This test is the only thing standing between that change and that outcome.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCk_AssetExporter_Dispatch_SidecarExtensionUnclaimed_Test,
+    "Ck.AssetExporter.Dispatch.SidecarExtensionUnclaimed",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FCk_AssetExporter_Dispatch_SidecarExtensionUnclaimed_Test::RunTest(const FString& InParameters)
+{
+    const auto FactoryExtensions = FCk_AssetExporter_AutoReimportGuard::Get_AllFactoryExtensions();
+
+    TestTrue(TEXT("factory extension enumeration returned something"), NOT FactoryExtensions.IsEmpty());
+
+    // Control assertion: json IS a claimed import format (UReimportDataTableFactory) — that is precisely why the
+    // sidecar had to stop being a .json. Without this, a broken enumeration would let the real assertion below pass
+    // vacuously and the test would guard nothing.
+    TestTrue(TEXT("control: 'json' is claimed by an import factory"),
+        FactoryExtensions.Contains(TEXT("json;"), ESearchCase::IgnoreCase));
+
+    const auto SidecarWithoutDot = ck::asset_exporter::extension::Sidecar.RightChop(1);
+    TestTrue(TEXT("sidecar extension is a terminal extension starting with a dot"),
+        ck::asset_exporter::extension::Sidecar.StartsWith(TEXT(".")) && NOT SidecarWithoutDot.Contains(TEXT(".")));
+
+    TestFalse(TEXT("NO import factory claims the sidecar extension"),
+        FactoryExtensions.Contains(SidecarWithoutDot + TEXT(";"), ESearchCase::IgnoreCase));
 
     return true;
 }

@@ -60,8 +60,12 @@ namespace ck_asset_exporter_onsavehook
         if (NOT FCk_AssetExporter_Dispatch::Get_IsExportableClass(Asset->GetClass()))
         { return; }
 
+        // JsonOnly: the summary text is lossy and gitignored in consuming projects, so it is never shared and drifts
+        // silently out of date. The structured sidecar is the artifact that must stay truthful on every save; the
+        // manual right-click path still writes both for anyone who wants the readable companion.
         constexpr auto SkipFresh = false;
-        const auto Summary = FCk_AssetExporter_Dispatch::ExportAssets({ Asset->GetPathName() }, SkipFresh);
+        const auto Summary = FCk_AssetExporter_Dispatch::ExportAssets(
+            { Asset->GetPathName() }, SkipFresh, ECk_AssetExporter_SidecarFormats::JsonOnly);
 
         if (Summary.Failed > 0)
         {

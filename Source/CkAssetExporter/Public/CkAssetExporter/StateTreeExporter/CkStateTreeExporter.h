@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
 
@@ -31,7 +33,8 @@ class CKASSETEXPORTER_API FCk_StateTreeExporter
 public:
     static auto
     ExportStateTree(
-        UStateTree* InStateTree) -> FCk_StateTreeExportResult;
+        UStateTree* InStateTree,
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_StateTreeExportResult;
 
     static auto
     ExportStateTrees(

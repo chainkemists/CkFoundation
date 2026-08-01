@@ -114,7 +114,7 @@ namespace ck_asset_exporter_dispatch
         InOutEntry.ErrorMessage = InResult.ErrorMessage;
     }
 
-    // True (and stamps the entry as a skip) when skip-fresh is on and the sibling json is up to date for InVersion.
+    // True (and stamps the entry as a skip) when skip-fresh is on and the sibling sidecar is up to date for InVersion.
     static auto
     Is_FreshAndSkip(
         const UObject* InAsset,
@@ -126,7 +126,7 @@ namespace ck_asset_exporter_dispatch
         if (NOT InSkipFresh)
         { return false; }
 
-        const auto SiblingJson = FCk_AssetExporter_Dispatch::Get_SiblingJsonPathForAsset(InAsset);
+        const auto SiblingJson = FCk_AssetExporter_Dispatch::Get_SiblingSidecarPathForAsset(InAsset);
         if (SiblingJson.IsEmpty())
         { return false; }
 
@@ -145,6 +145,7 @@ namespace ck_asset_exporter_dispatch
     Route(
         UObject* InAsset,
         bool InSkipFresh,
+        ECk_AssetExporter_SidecarFormats InFormats,
         FCk_AssetExportDispatchEntryResult& InOutEntry)
         -> void
     {
@@ -154,52 +155,52 @@ namespace ck_asset_exporter_dispatch
         {
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::BehaviorTree, InOutEntry))
             { return; }
-            Fill_Entry(InOutEntry, FCk_BehaviorTreeExporter::ExportBehaviorTree(BehaviorTree));
+            Fill_Entry(InOutEntry, FCk_BehaviorTreeExporter::ExportBehaviorTree(BehaviorTree, InFormats));
             return;
         }
         if (auto* Query = Cast<UEnvQuery>(InAsset))
         {
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::EQS, InOutEntry))
             { return; }
-            Fill_Entry(InOutEntry, FCk_EQSExporter::ExportEQS(Query));
+            Fill_Entry(InOutEntry, FCk_EQSExporter::ExportEQS(Query, InFormats));
             return;
         }
         if (auto* StateTree = Cast<UStateTree>(InAsset))
         {
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::StateTree, InOutEntry))
             { return; }
-            Fill_Entry(InOutEntry, FCk_StateTreeExporter::ExportStateTree(StateTree));
+            Fill_Entry(InOutEntry, FCk_StateTreeExporter::ExportStateTree(StateTree, InFormats));
             return;
         }
         if (auto* Enum = Cast<UUserDefinedEnum>(InAsset))
         {
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::UserDefinedEnum, InOutEntry))
             { return; }
-            Fill_Entry(InOutEntry, FCk_UserDefinedEnumExporter::ExportUserDefinedEnum(Enum));
+            Fill_Entry(InOutEntry, FCk_UserDefinedEnumExporter::ExportUserDefinedEnum(Enum, InFormats));
             return;
         }
         if (auto* Struct = Cast<UUserDefinedStruct>(InAsset))
         {
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::UserDefinedStruct, InOutEntry))
             { return; }
-            Fill_Entry(InOutEntry, FCk_UserDefinedStructExporter::ExportUserDefinedStruct(Struct));
+            Fill_Entry(InOutEntry, FCk_UserDefinedStructExporter::ExportUserDefinedStruct(Struct, InFormats));
             return;
         }
         if (auto* Blueprint = Cast<UBlueprint>(InAsset)) // covers UWidgetBlueprint
         {
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::Blueprint, InOutEntry))
             { return; }
-            Fill_Entry(InOutEntry, FCk_BlueprintExporter::ExportBlueprint(Blueprint));
+            Fill_Entry(InOutEntry, FCk_BlueprintExporter::ExportBlueprint(Blueprint, InFormats));
             return;
         }
         if (auto* NiagaraSystem = Cast<UNiagaraSystem>(InAsset)) // no versioned meta — never skips
         {
-            Fill_Entry(InOutEntry, FCk_NiagaraExporter::ExportNiagaraSystem(NiagaraSystem));
+            Fill_Entry(InOutEntry, FCk_NiagaraExporter::ExportNiagaraSystem(NiagaraSystem, FString{}, InFormats));
             return;
         }
         if (auto* CascadeSystem = Cast<UParticleSystem>(InAsset)) // no versioned meta — never skips
         {
-            Fill_Entry(InOutEntry, FCk_CascadeExporter::ExportParticleSystem(CascadeSystem));
+            Fill_Entry(InOutEntry, FCk_CascadeExporter::ExportParticleSystem(CascadeSystem, FString{}, InFormats));
             return;
         }
         if (auto* Material = Cast<UMaterialInterface>(InAsset)) // covers UMaterial + UMaterialInstance(Constant)
@@ -213,6 +214,7 @@ namespace ck_asset_exporter_dispatch
         {
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::DataTable, InOutEntry))
             { return; }
+            // The csv is a data artifact external tooling consumes, not the lossy summary text — always written.
             Fill_Entry(InOutEntry, FCk_DataTableExporter::ExportDataTable(DataTable));
             return;
         }
@@ -220,7 +222,7 @@ namespace ck_asset_exporter_dispatch
         {
             if (Is_FreshAndSkip(InAsset, InSkipFresh, ck::asset_exporter::version::DataAsset, InOutEntry))
             { return; }
-            Fill_Entry(InOutEntry, FCk_DataAssetExporter::ExportDataAsset(DataAsset));
+            Fill_Entry(InOutEntry, FCk_DataAssetExporter::ExportDataAsset(DataAsset, InFormats));
             return;
         }
 
@@ -345,7 +347,7 @@ auto
 
 auto
     FCk_AssetExporter_Dispatch::
-    Get_SiblingJsonPathForAsset(
+    Get_SiblingSidecarPathForAsset(
         const UObject* InAsset)
     -> FString
 {
@@ -358,7 +360,7 @@ auto
     if (NOT FPackageName::TryConvertLongPackageNameToFilename(PackageName, DiskPath))
     { return {}; }
 
-    return DiskPath + TEXT(".json");
+    return DiskPath + ck::asset_exporter::extension::Sidecar;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -480,7 +482,8 @@ auto
     FCk_AssetExporter_Dispatch::
     ExportAssets(
         const TArray<FString>& InObjectPaths,
-        bool InSkipFresh)
+        bool InSkipFresh,
+        ECk_AssetExporter_SidecarFormats InFormats)
     -> FCk_AssetExportDispatchSummary
 {
     auto Summary = FCk_AssetExportDispatchSummary{};
@@ -502,7 +505,7 @@ auto
         }
         else
         {
-            ck_asset_exporter_dispatch::Route(Asset, InSkipFresh, Entry);
+            ck_asset_exporter_dispatch::Route(Asset, InSkipFresh, InFormats, Entry);
         }
 
         ck_asset_exporter_dispatch::Tally_Entry(Summary, MoveTemp(Entry));
@@ -521,7 +524,8 @@ auto
     SweepDirectory(
         const FString& InPackageDir,
         const TArray<FString>& InClassFilters,
-        bool InSkipFresh)
+        bool InSkipFresh,
+        ECk_AssetExporter_SidecarFormats InFormats)
     -> FCk_AssetExportDispatchSummary
 {
     auto Summary = FCk_AssetExportDispatchSummary{};
@@ -560,7 +564,7 @@ auto
         }
         else
         {
-            ck_asset_exporter_dispatch::Route(Asset, InSkipFresh, Entry);
+            ck_asset_exporter_dispatch::Route(Asset, InSkipFresh, InFormats, Entry);
         }
 
         ck_asset_exporter_dispatch::Tally_Entry(Summary, MoveTemp(Entry));

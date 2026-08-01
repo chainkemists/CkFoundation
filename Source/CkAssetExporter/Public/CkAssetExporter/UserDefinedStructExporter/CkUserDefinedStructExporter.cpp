@@ -42,7 +42,8 @@ namespace ck_user_defined_struct_exporter_internal
 auto
     FCk_UserDefinedStructExporter::
     ExportUserDefinedStruct(
-        UUserDefinedStruct* InStruct)
+        UUserDefinedStruct* InStruct,
+        ECk_AssetExporter_SidecarFormats InFormats)
     -> FCk_UserDefinedStructExportResult
 {
     auto Result = FCk_UserDefinedStructExportResult{};
@@ -66,12 +67,14 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    const auto TextString = DoSerializeToText(InStruct);
+    const auto WriteText = InFormats == ECk_AssetExporter_SidecarFormats::JsonAndText;
 
-    const auto JsonPath = DoResolveOutputPath(InStruct, TEXT(".json"));
-    const auto TextPath = DoResolveOutputPath(InStruct, TEXT(".txt"));
+    const auto TextString = WriteText ? DoSerializeToText(InStruct) : FString{};
 
-    if (JsonPath.IsEmpty() || TextPath.IsEmpty())
+    const auto JsonPath = DoResolveOutputPath(InStruct, ck::asset_exporter::extension::Sidecar);
+    const auto TextPath = WriteText ? DoResolveOutputPath(InStruct, ck::asset_exporter::extension::SummaryText) : FString{};
+
+    if (JsonPath.IsEmpty() || (WriteText && TextPath.IsEmpty()))
     {
         Result.ErrorMessage = TEXT("Failed to resolve output file paths");
         return Result;
@@ -79,7 +82,7 @@ auto
 
     const auto JsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
-    const auto TextWritten = FFileHelper::SaveStringToFile(
+    const auto TextWritten = NOT WriteText || FFileHelper::SaveStringToFile(
         TextString, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
     if (NOT JsonWritten || NOT TextWritten)
