@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "CkCore/Time/CkTime.h"
+
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 
@@ -24,7 +26,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    float _FadeTime = 1.0f;
+    FCk_Time _FadeTime = FCk_Time{1.0};
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FLinearColor _FromColor = FLinearColor::Transparent;
@@ -76,11 +78,11 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
         Category = "Ck|Utils|ScreenFade",
         DisplayName = "[Ck] Request Screen Fade In",
-        meta = (InFadeTime = "1.0", InFromColor = "(R=0.0,G=0.0,B=0.0,A=1.0)", AdvancedDisplay = 3))
+        meta = (InFadeTime = "(_Seconds=1.0)", InFromColor = "(R=0.0,G=0.0,B=0.0,A=1.0)", AdvancedDisplay = 3))
     static void
     Request_ScreenFadeIn(
         const APlayerController* InOwningPlayer,
-        float InFadeTime,
+        FCk_Time InFadeTime,
         FLinearColor InFromColor,
         FCk_Delegate_OnScreenFadeFinished_Dynamic OnFinished,
         bool InFadeAudio,
@@ -90,11 +92,11 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
         Category = "Ck|Utils|ScreenFade",
         DisplayName = "[Ck] Request Screen Fade Out",
-        meta = (InFadeTime = "1.0", InToColor = "(R=0.0,G=0.0,B=0.0,A=1.0)", AdvancedDisplay = 3))
+        meta = (InFadeTime = "(_Seconds=1.0)", InToColor = "(R=0.0,G=0.0,B=0.0,A=1.0)", AdvancedDisplay = 3))
     static void
     Request_ScreenFadeOut(
         const APlayerController* InOwningPlayer,
-        float InFadeTime,
+        FCk_Time InFadeTime,
         FLinearColor InToColor,
         FCk_Delegate_OnScreenFadeFinished_Dynamic OnFinished,
         bool InFadeAudio,

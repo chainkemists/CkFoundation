@@ -35,7 +35,7 @@ auto
     UCk_Utils_ScreenFade_UE::
     Request_ScreenFadeIn(
         const APlayerController* InOwningPlayer,
-        float InFadeTime,
+        FCk_Time InFadeTime,
         FLinearColor InFromColor,
         FCk_Delegate_OnScreenFadeFinished_Dynamic OnFinished,
         bool InFadeAudio,
@@ -57,7 +57,7 @@ auto
     UCk_Utils_ScreenFade_UE::
     Request_ScreenFadeOut(
         const APlayerController* InOwningPlayer,
-        float InFadeTime,
+        FCk_Time InFadeTime,
         FLinearColor ToColor,
         FCk_Delegate_OnScreenFadeFinished_Dynamic OnFinished,
         bool InFadeAudio,
