@@ -78,11 +78,12 @@ FCkParticles_StageOutput CkParticles_Behavior_LightningRange(FCkParticles_StageI
     O.Rotation    = 0.0;
     O.Velocity    = float3(0.0, 0.0, 0.0);
 
-    // VisTag 0 = camera-facing sprite, whose material is the bound CkUsf look. KNOWN FIDELITY GAP: the source
-    // renderer is CustomAlignment + CustomFacingVector with an identity quaternion, i.e. a quad lying FLAT in
-    // the local XY plane, not camera-facing. Closing it needs a custom-facing sprite renderer on the template
-    // (a new VisTag), which is renderer work outside this slice — see the recipe's fidelity section.
-    O.VisTag = 0;
+    // VisTag 4 = custom-facing sprite, whose material is the bound CkUsf look. The source pairs
+    // CustomAlignment + CustomFacingVector with an identity orientation quaternion, i.e. a quad lying FLAT
+    // in the local XY plane facing +Z — a ground ring, not a camera-facing billboard.
+    O.VisTag          = 4;
+    O.SpriteAlignment = float3(0.0, 1.0, 0.0); // source: Mesh Orientation Relative Sprite Alignment Vector
+    O.SpriteFacing    = float3(0.0, 0.0, 1.0); // source: Mesh Orientation Relative Sprite Facing Vector
 
     return O;
 }

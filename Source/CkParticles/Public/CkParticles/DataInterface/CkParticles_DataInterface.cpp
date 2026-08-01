@@ -65,6 +65,9 @@ namespace NDICkParticlesLocal
         float        Rotation    = 0.0f;
         int32        MeshIndex   = 0;
         int32        VisTag      = 0;
+        // VisTag 4 only. Never zero — a degenerate pair collapses the sprite instead of failing visibly.
+        FVector3f    SpriteAlignment = FVector3f(0.0f, 1.0f, 0.0f);
+        FVector3f    SpriteFacing    = FVector3f(0.0f, 0.0f, 1.0f);
     };
 
     // Mirrors CkParticles_Rand / CkParticles_RandDir (Common.ush); 24-bit normalization keeps it bit-identical.
@@ -681,9 +684,11 @@ namespace NDICkParticlesLocal
                 Out.Color       = FLinearColor(R, G, B, Alpha);
                 Out.Size        = FVector2f(700.0f, 700.0f);
                 Out.Dynamic     = FVector4f(FMath::Lerp(-1.0f, 0.2f, Saturate(T / DissolveEnd)), 0.0f, 0.0f, -0.5f);
-                Out.Orientation = FQuat4f::Identity;
-                Out.Rotation    = 0.0f;
-                Out.VisTag      = 0;
+                Out.Orientation     = FQuat4f::Identity;
+                Out.Rotation        = 0.0f;
+                Out.VisTag          = 4;
+                Out.SpriteAlignment = FVector3f(0.0f, 1.0f, 0.0f);
+                Out.SpriteFacing    = FVector3f(0.0f, 0.0f, 1.0f);
                 break;
             }
             case 0: // Gravity — constant downward accel, integrate, tint warm->dark over life.
@@ -749,6 +754,8 @@ void
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(),   TEXT("OutRotation")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetIntDef(),     TEXT("OutMeshIndex")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetIntDef(),     TEXT("OutVisTag")));
+    Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),    TEXT("OutSpriteAlignment")));
+    Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),    TEXT("OutSpriteFacing")));
     Sig.SetDescription(LOCTEXT("ExecuteStageDesc",
         "Runs the CkParticles behavior selected by BehaviorId. Logic lives in /CkParticles/*.ush (GPU) and the CPU mirror."));
     OutFunctions.Add(Sig);
@@ -792,6 +799,8 @@ void
     FNDIOutputParam<float>       OutRotation(Context);
     FNDIOutputParam<int32>       OutMeshIndex(Context);
     FNDIOutputParam<int32>       OutVisTag(Context);
+    FNDIOutputParam<FVector3f>   OutSpriteAlignment(Context);
+    FNDIOutputParam<FVector3f>   OutSpriteFacing(Context);
 
     for (int32 i = 0; i < Context.GetNumInstances(); ++i)
     {
@@ -814,6 +823,8 @@ void
         OutRotation.SetAndAdvance(Result.Rotation);
         OutMeshIndex.SetAndAdvance(Result.MeshIndex);
         OutVisTag.SetAndAdvance(Result.VisTag);
+        OutSpriteAlignment.SetAndAdvance(Result.SpriteAlignment);
+        OutSpriteFacing.SetAndAdvance(Result.SpriteFacing);
     }
 }
 

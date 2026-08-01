@@ -30,7 +30,7 @@ UCkParticles_DataInterface (UNiagaraDataInterface, stateless)
   └─ ExecuteStage(BehaviorId, DeltaTime, Age, Lifetime, Position, Velocity, Seed)
         -> OutPosition, OutVelocity, OutColor, OutSize, OutScale, OutOrientation (quat),
            OutDynamic (float4 -> Particles.DynamicMaterialParameter), OutRotation (sprite degrees),
-           OutMeshIndex, OutVisTag
+           OutMeshIndex, OutVisTag, OutSpriteAlignment, OutSpriteFacing
        GPU: GetParameterDefinitionHLSL -> AppendTemplateHLSL(CkParticles_DataInterfaceTemplate.ush)
             template #includes CkParticles_Behaviors.ush -> Behaviors/*.ush   (logic lives here)
        CPU: VMExecuteStage -> NDICkParticlesLocal::ExecuteStage_CPU            (mirror of the same switch)
@@ -41,7 +41,13 @@ template's renderers draw only their tagged particles — `0` camera sprite (per
 `User.SpriteMaterial`, the legacy default), `1` velocity-aligned sprite (streaks/tracers; stretch =
 `Size.y`), `2` smoke sprite (translucent `M_CkParticles_SoftSmoke`, `Rotation` applies), `3` carrier mesh
 (`MeshIndex` picks SM_CkParticles_ **Sweep/Tube/Shell/Disc**; `Scale` + `Orientation` apply; the meshes carry
-`M_CkParticles_SweepErode` / `M_CkParticles_FresnelShell`). `Dynamic` drives the mesh/smoke materials:
+`M_CkParticles_SweepErode` / `M_CkParticles_FresnelShell`), `4` **custom-facing sprite** — a quad fixed in sim
+space rather than billboarded, with `SpriteAlignment` as its up axis and `SpriteFacing` as its plane normal
+(ground decals / range rings, matching Niagara's CustomAlignment + CustomFacingVector pair). VisTag 4 shares
+`User.SpriteMaterial` with VisTag 0, so a behavior-bound CkUsf look reaches either without callers knowing.
+**Both attributes must be written**: a missing `Particles.SpriteAlignment` makes CustomAlignment silently fall
+back to Unaligned, so `CkParticles_DefaultOutput` seeds a valid Z-up pair rather than zeros.
+`Dynamic` drives the mesh/smoke materials:
 x dissolve, y distortion, z UV-pan, w emissive boost — the exact idiom the marketplace "DissolveAdd"
 materials animate via curves (Vefects M_VFX_DisAdd_Slash01 et al).
 
@@ -129,7 +135,15 @@ BOTH templates (`PS_CkParticles_Template` continuous + `PS_CkParticles_Template_
   The map threads through Map **Set** (`Source→Dest`); Map Get only taps it (it has no map output).
 - Bakes the procedural VFX textures and assigns the master material (below) to the sprite renderer.
 
-Idempotent — re-run any time; it overwrites in place. (On a stock engine the behavior module is skipped.)
+Idempotent — re-run any time; it overwrites in place.
+
+> **Regeneration REFUSES on a non-fork engine.** With `CK_WITH_PARTICLES=0` there is no behavior-call module,
+> so every template written would be **inert**: the DI is never invoked and nothing renders. Those assets still
+> save and still load, so the failure is invisible to any test that only checks existence — it cost a real
+> regression once (a regen on a non-fork machine silently stripped the module out of the committed templates,
+> 437KB → 368KB, and the whole test suite stayed green). `Build_AllTemplateSystems` therefore logs an Error and
+> returns false rather than overwriting. **Check `ExecuteStage` is present in a template before trusting it:**
+> `grep -ac ExecuteStage PS_CkParticles_Template.uasset` should be ~35, never 0.
 
 ---
 

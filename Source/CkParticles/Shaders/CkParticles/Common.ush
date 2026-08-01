@@ -23,6 +23,9 @@ struct FCkParticles_StageInput
 //   1 = velocity-aligned sprite (streaks/tracers; stretch = Size.y along motion)
 //   2 = smoke sprite (translucent soft material; Rotation applies)
 //   3 = mesh (MeshIndex picks the carrier: 0 Sweep, 1 Tube, 2 Shell, 3 Disc; Scale/Orientation apply)
+//   4 = custom-facing sprite (a quad fixed in SIM space, not camera-facing; SpriteAlignment = its "up"
+//       axis, SpriteFacing = its plane normal). For ground decals/range rings, whose source systems use
+//       Niagara's CustomAlignment + CustomFacingVector pair. Material comes from User.SpriteMaterial.
 //
 // Dynamic -> Particles.DynamicMaterialParameter, read by the VFX master materials as
 //   x = dissolve/erosion threshold [0..1], y = distortion strength, z = UV pan offset, w = emissive boost.
@@ -39,6 +42,8 @@ struct FCkParticles_StageOutput
     float  Rotation;    // sprite rotation in DEGREES -> Particles.SpriteRotation
     int    MeshIndex;   // carrier mesh index -> Particles.MeshIndex (VisTag 3 only)
     int    VisTag;      // renderer selection -> Particles.VisibilityTag (see header comment)
+    float3 SpriteAlignment; // -> Particles.SpriteAlignment, the sprite's "up" axis (VisTag 4 only)
+    float3 SpriteFacing;    // -> Particles.SpriteFacing, the sprite's plane normal   (VisTag 4 only)
 };
 
 // 0..1 over the particle's lifetime (0 when lifetime is unset).
@@ -109,5 +114,9 @@ FCkParticles_StageOutput CkParticles_DefaultOutput(FCkParticles_StageInput In)
     O.Rotation    = 0.0;
     O.MeshIndex   = 0;
     O.VisTag      = 0;
+    // Sim-space Z-up quad. Only VisTag 4 reads these, but they must never be zero: a degenerate
+    // alignment/facing pair collapses the sprite instead of failing visibly.
+    O.SpriteAlignment = float3(0.0, 1.0, 0.0);
+    O.SpriteFacing    = float3(0.0, 0.0, 1.0);
     return O;
 }
