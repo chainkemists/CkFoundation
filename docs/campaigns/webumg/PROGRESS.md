@@ -16,6 +16,22 @@
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-01 (session 2, Gate 2 execution, cont.) — L-corpus 9/9 at ±1px, honestly
+- **False-green caught and killed:** first harness run reported 9/9 with `nan` rects — under UE's default `/fp:fast`, `nan <= tolerance` folded to true AND Yoga's NaN-sentinel undefined system broke (finite 1920×1080 in → NaN out, proven by instrumented run). Fix: `FPSemantics = FPSemanticsMode.Precise` on CkThirdParty (UBT knob verified at `VCToolChain.cs:1265-1266`); harness now hard-fails NaN via bit-pattern `FMath::IsNaN` on every node. Memory note saved (`ue-fpfast-vendored-nan-code`).
+- **Convergence 0→5→8→9**, each fix a named mechanism from exact deviation arithmetic (no tolerance widening):
+  (1) `sizingAuthored` added to IR (authored sizes beat cross-axis stretch — the 640/320px family); (2) percent flex-basis → `SetFlexBasisPercent` (was parsed as px); (3) children of block parents get grow/shrink zeroed (computed flex-* is meaningless outside a flex context — L7); (4) min/max extracted as values and applied **only when binding at reference** — non-binding mins shift Yoga's grow distribution because **Yoga floors the flex-base to min pre-distribution while Blink clamps the target post-distribution** (L2's 402=202+200 signature; a real Yoga-vs-Blink divergence the harness caught exactly as designed); (5) grow-containers with auto basis bake used main size as basis (local-decomposition limit — nested panels are content-less leaves to the parent tree; documented).
+- **Final: 9/9 L-pages ≤ ±1px on all non-text nodes, NaN-checked**; text-leaf measure callback verified firing with real constraint modes (W=AtMost/H=Exactly) and logging the Chromium-vs-Slate gap (e.g. 200×200 recorded vs 131×38 Slate default font) — Gate 3 data.
+- Bring-up diagnostics stripped (Display → VeryVerbose per their own comments). Full 875-baseline regression run in flight (mandatory: Jolt now compiles /fp:precise).
+- Corpus goldens re-extracted twice this session (sizingAuthored, minSize/maxSize) — SCHEMA.md updated in step each time.
+
+### 2026-07-31 (session 2, Gate 2 execution) — module + Yoga compile green; harness running
+- Baseline captured pre-change: **875/875 automation tests, 0 failed** (BuildTest-WebUmg-Baseline.log, 9m40s).
+- Landed in Source/: Yoga @ c7668858 vendored into CkThirdParty (19 TUs under `Public/CkThirdParty/yoga-c7668858/`, include path added to Build.cs — Jolt precedent confirmed cpps-under-Public compile in-module); CkWebUmg module (IR loader, SCk_WebUmgFlexPanel, builder, logs); uplugin entry after CkUsfEditor.
+- Confirmed: DebugGame Editor build **Succeeded**, log shows all 19 Yoga TUs + 5 CkWebUmg TUs actually compiled (not skipped) — first-attempt green after staged self-review fixes (slot API, TStaticArray init, SNullWidget singleton mutation).
+- Toolbox trap re-confirmed: `--generate` fails on this machine (project-file generator demands a VS2022 IDE install; UBT itself builds fine). Matches the existing memory note "drop --generate".
+- Harness (`Private/CkWebUmg_LayoutFidelity_Test.cpp`, complex automation test over `corpus/golden/L*.ckui.json`, ±1px on non-text nodes, text leaves report-only) added; build+test with pattern `WebUmg` in flight.
+- CkTests deviation recorded in DECISIONS.md: harness interim home is CkWebUmg (CkTests' Build.cs dirty with sibling WIP).
+
 ### 2026-07-31 (session 2) — Corpus complete (20 pages), 9 extractor bugs found and fixed, full determinism proof
 - Committed Gate 0→1 checkpoint to **`feature/webumg-campaign`** (built from `dev` via temp index — working checkout is the sibling session's `feature/usf-grid-materials` and was not touched). First attempt force-added ignored `node_modules/` (`git add -f` on the dir); rebuilt the commit clean, verified `git ls-tree | grep -c node_modules` → 0.
 - Delegated 19-page corpus authoring to an Opus executor agent (L1–L9 layout, P1–P5 paint, T1–T3+C1 text/controls, H1 hostile). Agent reported 9 extractor bugs; **I re-verified B1/B3/B6/B8 against the artifacts before fixing** (all held), then fixed all 9:

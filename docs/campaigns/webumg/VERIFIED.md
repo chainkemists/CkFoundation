@@ -108,6 +108,16 @@ Repos cloned (shallow) at `D:\tmp\ckstyle-phase0\thirdparty\`: StyledWidgets @ `
 | CkFoundation `.gitignore:49` ignores `*.md` repo-wide; prior campaign docs were force-added (46 tracked files under docs/) | `git check-ignore -v` + `git ls-files docs \| wc -l` | [read] |
 | Campaign branch `feature/webumg-campaign` = dev + 2 commits, zero `node_modules`/`corpus/out` files in tree | `git ls-tree -r … \| grep -cE "node_modules\|corpus/out"` → 0 | [read] |
 
+## Gate 2 bring-up findings (2026-07-31/08-01, session 2)
+
+| Claim | Evidence | Method |
+|---|---|---|
+| UE compiles modules `/fp:fast` unless overridden; `ModuleRules.FPSemantics = FPSemanticsMode.Precise` emits `/fp:precise` | `UnrealBuildTool/Configuration/ModuleRules.cs:777-783`; `UnrealBuildTool/Platform/Windows/VCToolChain.cs:1265-1266` | [read] |
+| Yoga under `/fp:fast` cascades NaN through all layout (its undefined-dimension system is quiet-NaN + `std::isnan`, which fast-math folds away) | Instrumented run: `DoRunLayout[n0]: avail [1920 x 1080] -> child0 [nan…]` (finite in, NaN out of `YGNodeCalculateLayout`); fixed by `/fp:precise` on CkThirdParty — next run had zero NaN and finite deviations | [read] (mechanism inferred from both observations + Yoga's YGUndefined design (PriorArt §3); consistent with the false-green: `nan <= 1.0` folded under fast-math while bit-pattern `FMath::IsNaN` detected it) |
+| First honest fidelity numbers: L2 (grow/basis/gap column) passes ±1px; 8 pages fail with deviations that are exact multiples of the stretch delta (640/320px) — cross-axis stretch vs authored-width priority | `BuildTest-WebUmg-FpPrecise.log` per-node failures, e.g. L1 n1 expected 1200×240 arranged 1840×240 | [read] |
+| Yoga floors flex-base size to `min-*` before grow distribution; Blink clamps the target after — a non-binding min shifts every sibling's share (L2: n4 arranged 402 = grow share 202 + min 200; Chromium 252/504/252 untouched) | `BuildTest-WebUmg-FourFixes.log` per-node values; fixed by binding-only clamp application, `BuildTest-WebUmg-BindingClamps.log` 9/9 | [read] |
+| **Gate 2 layout milestone: all 9 L-pages ≤ ±1px on every non-text node, NaN hard-checked; measure callbacks fire with W=AtMost/H=Exactly and log Chromium-vs-Slate metric gap (200×200 vs 131×38)** | `BuildTest-WebUmg-BindingClamps.log` — Total 9 / Passed 9 / Failed 0 (36s) | [read] |
+
 ## Slate layout contract (supports Yoga §3 assessment)
 
 | Claim | Evidence | Method |

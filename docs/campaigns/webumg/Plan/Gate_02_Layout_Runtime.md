@@ -11,7 +11,7 @@ After this gate: an automated run loads each layout-only corpus IR (L1–L9), bu
 ## Entry criteria (ran 2026-07-31)
 
 - [x] Gate 1 exit re-verified: DECISIONS recorded; corpus + goldens committed (`7ec0e6116`).
-- [ ] **Build baseline captured via toolbox** before any engine-code change: clean editor compile + automation test counts (pass/fail + failing names). Record here.
+- [x] **Build baseline captured via toolbox** before any engine-code change (2026-07-31): DebugGame Editor build clean, full automation suite **Total 875 / Passed 875 / Failed 0 / Skipped 0**, duration 9m40s (`Saved/Logs/BuildTest-WebUmg-Baseline.log`). Exit diff target: 875 passing + new harness tests, zero newly failing.
 - [x] Yoga pinned: `c766885` at `D:\tmp\ckstyle-phase0\thirdparty\yoga` (clone verified in Phase 0; re-verify SHA at vendor time).
 - [x] Mimicry sources named (root non-negotiable #1): `CkThirdParty` vendor shape (EnTT/Jolt/fmt), `CkUsf` (small Runtime module with Slate/Graphics deps), `CkTimer` (quartet reference — though CkWebUmg is not an ECS feature module; it is Slate/asset infrastructure, closer to CkUsf's shape).
 

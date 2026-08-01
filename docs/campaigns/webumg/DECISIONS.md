@@ -24,9 +24,9 @@ Generated output strictly read-only; hand-authoring in subclasses/bound C++; no 
 
 The corpus-tested `SUPPORTED_PROPERTIES`/`SUPPORTED_SHORTHANDS`/`VALUE_RULES` in `Tools/ckwebumg-extract/src/extract.mjs` are the v1 surface of record, with the four diagnostic classes (name / value / pseudo-element / computed-divergence). Surface grows by evidence (diagnostic reports from real screens), not speculation. Schema v1 approved same date.
 
-## Gate 2 structural decision — harness home — **DECIDED: CkTests plugin** (recorded 2026-07-31, per precedent)
+## Gate 2 structural decision — harness home — **DECIDED: CkTests plugin — with a recorded Gate 2 deviation** (2026-07-31)
 
-No `*Harness` module precedent exists in CkFoundation; CkTests owns test infrastructure (AutoTests/gyms/Gauntlet). The rect-diff harness lands there; CkWebUmg ships no test-only module.
+Target home stays CkTests (owns test infrastructure; no `*Harness` module precedent). **Gate 2 deviation:** at execution time, CkTests' `Source/CkTests/CkTests.Build.cs` was dirty with a sibling session's uncommitted work (their CkParticles test edits) — adding the CkWebUmg dependency line there cannot be committed without publishing their WIP, which shared-worktree discipline forbids. The rect-diff harness therefore lands **inside CkWebUmg** (`Source/CkWebUmg/Private/`) for Gate 2. **Migration trigger:** the sibling's CkTests changes land on `dev` → move the harness to CkTests, delete it from CkWebUmg, re-run the gate observations. Follow-up owned by the campaign, noted in PROGRESS open items.
 
 ## Standing evidence notes (carried from Phase 0)
 
