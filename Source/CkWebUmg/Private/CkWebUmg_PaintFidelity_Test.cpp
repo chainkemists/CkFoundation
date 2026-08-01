@@ -1,4 +1,5 @@
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkWebUmg/Asset/CkWebUmg_PageAssetConvert.h"
 #include "CkWebUmg/Builder/CkWebUmg_Builder.h"
 #include "CkWebUmg/Ir/CkWebUmg_IrLoader.h"
 #include "CkWebUmg_Log.h"
@@ -237,9 +238,20 @@ bool
         return true;
     }
 
-    const auto Document = ck::webumg::LoadIrDocumentFromFile(InIrFilePath);
-    if (NOT TestTrue(TEXT("IR document loads"), Document.IsSet()))
+    const auto Loaded = ck::webumg::LoadIrDocumentFromFile(InIrFilePath);
+    if (NOT TestTrue(TEXT("IR document loads"), Loaded.IsSet()))
     { return false; }
+
+    // Gate 4 exit criterion: the ratified pixel budgets hold THROUGH the emission projection —
+    // every page renders from IR -> PageAsset -> IR. Projection losslessness is separately proven
+    // (AssetRoundTrip); a regression here would mean the emitted form paints differently.
+    // Disk-bundle texture sources are spliced back (embedded textures are ImportIdempotence's subject).
+    auto* PageAsset = NewObject<UCk_WebUmg_PageAsset_UE>();
+    if (NOT TestTrue(TEXT("IR converts to asset"),
+            ck::webumg::ConvertIrToAsset(*Loaded, TEXT("pixel-lane"), *PageAsset)))
+    { return false; }
+    auto Document = TOptional<FCkWebUmg_IrDocument>{ck::webumg::ConvertAssetToIr(*PageAsset)};
+    Document->AssetSourcesById = Loaded->AssetSourcesById;
 
     const auto Built = ck::webumg::BuildWidgetTree(*Document,
         FPaths::GetPath(InIrFilePath)); // asset srcs are IR-relative (normalized ckui-assets/)
