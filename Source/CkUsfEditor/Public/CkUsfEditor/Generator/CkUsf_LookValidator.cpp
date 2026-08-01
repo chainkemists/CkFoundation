@@ -20,6 +20,8 @@ namespace ck_usf_look_validator
         TEXT("WorldPosition"), TEXT("CameraVector"), TEXT("VertexNormal"),
         TEXT("VertexTangent"), TEXT("PixelDepth"), TEXT("VertexColor"),
         TEXT("SceneColor"), TEXT("SceneDepth"), TEXT("SceneNormal"), TEXT("CustomDepth"), TEXT("CustomStencil"),
+        TEXT("ParticleColor"), TEXT("ParticleAlpha"),
+        TEXT("DynParam0"), TEXT("DynParam1"), TEXT("DynParam2"), TEXT("DynParam3"),
         TEXT("EmissiveColor"), TEXT("Roughness"), TEXT("Metallic"), TEXT("Specular"),
         TEXT("AmbientOcclusion"), TEXT("Normal"), TEXT("Opacity"), TEXT("OpacityMask"),
         TEXT("Refraction"), TEXT("SubsurfaceColor"), TEXT("ClearCoat"), TEXT("ClearCoatRoughness"),
@@ -362,6 +364,38 @@ namespace ck::usf_editor
             Result.Warnings.Add(FString::Printf(
                 TEXT("Look [%s]: has _PerInstance params but a non-surface domain — there are no instances to source them from"),
                 *LookName.ToString()));
+        }
+
+        // Particle inputs are wired on the SURFACE branch of the generator only; asking for them anywhere
+        // else silently leaves In.ParticleColor / In.DynamicParameter at their inert defaults.
+        if ((InDef->_ParticleColor || InDef->_ParticleDynamicParameter) && NOT IsSurfaceDomain)
+        {
+            Result.Errors.Add(FString::Printf(
+                TEXT("Look [%s]: _ParticleColor/_ParticleDynamicParameter require a Surface domain — the generator wires them nowhere else"),
+                *LookName.ToString()));
+        }
+
+        if (InDef->_UsedWithNiagaraSprites && NOT IsSurfaceDomain)
+        {
+            Result.Warnings.Add(FString::Printf(
+                TEXT("Look [%s]: _UsedWithNiagaraSprites is set but the domain is not Surface — a sprite renderer cannot use this master"),
+                *LookName.ToString()));
+        }
+
+        // A particle look whose master lacks the sprite usage renders as the DEFAULT material in a packaged
+        // build — the exact silent-fallback this flag exists to prevent.
+        if ((InDef->_ParticleColor || InDef->_ParticleDynamicParameter) && NOT InDef->_UsedWithNiagaraSprites)
+        {
+            Result.Warnings.Add(FString::Printf(
+                TEXT("Look [%s]: reads particle inputs but _UsedWithNiagaraSprites is false — a Niagara sprite renderer would fall back to the default material"),
+                *LookName.ToString()));
+        }
+
+        if (InDef->_ParticleDynamicParameterNames.Num() > 4)
+        {
+            Result.Warnings.Add(FString::Printf(
+                TEXT("Look [%s]: _ParticleDynamicParameterNames has %d entries — only the first 4 are used"),
+                *LookName.ToString(), InDef->_ParticleDynamicParameterNames.Num()));
         }
 
         if (InDef->_SceneTextures.Num() > 0)
