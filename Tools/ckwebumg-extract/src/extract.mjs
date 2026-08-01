@@ -108,6 +108,45 @@ const quadToRect = q => ({
     h: round2(Math.max(q[1], q[3], q[5], q[7]) - Math.min(q[1], q[3], q[5], q[7])),
 });
 
+// Typed gradient parse of a COMPUTED background-image (colors already rgb()/rgba()).
+// Returns {gradientType, angleDeg, stops:[{rgba, posPct|null}]} or {gradientType:'unparsed'} —
+// the verbatim `computed` field is always kept alongside, so nothing is ever lost.
+const parseGradient = v => {
+    const m = /^(repeating-)?(linear|radial|conic)-gradient\((.*)\)$/s.exec(v);
+    if (!m || m[1]) return { gradientType: 'unparsed' };
+    const kind = m[2];
+    // split top-level commas
+    const parts = [];
+    let depth = 0, cur = '';
+    for (const ch of m[3]) {
+        if (ch === '(') depth++;
+        if (ch === ')') depth--;
+        if (ch === ',' && depth === 0) { parts.push(cur.trim()); cur = ''; }
+        else cur += ch;
+    }
+    parts.push(cur.trim());
+
+    let angleDeg = 180; // CSS default: to bottom
+    let stopParts = parts;
+    if (kind === 'linear' && /^-?[\d.]+deg$/.test(parts[0])) {
+        angleDeg = parseFloat(parts[0]);
+        stopParts = parts.slice(1);
+    } else if (kind !== 'linear' && !parts[0].startsWith('rgb')) {
+        stopParts = parts.slice(1); // radial/conic shape/position prelude — recorded via `computed`
+    }
+
+    const stops = [];
+    for (const part of stopParts) {
+        const sm = /^(rgba?\([^)]*\))(?:\s+([\d.]+)%)?$/.exec(part);
+        if (!sm) return { gradientType: 'unparsed' };
+        const rgba = parseColor(sm[1]);
+        if (!rgba) return { gradientType: 'unparsed' };
+        stops.push({ rgba, posPct: sm[2] !== undefined ? round2(parseFloat(sm[2])) : null });
+    }
+    if (stops.length < 2) return { gradientType: 'unparsed' };
+    return { gradientType: kind, angleDeg: kind === 'linear' ? angleDeg : null, stops };
+};
+
 const parseColor = v => {
     // Chromium computed colors arrive as rgb(r, g, b) / rgba(r, g, b, a). Absolute already.
     const m = /^rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)$/.exec(v);
@@ -137,7 +176,9 @@ class Extractor {
             const meta = this.imageMeta.get(resolved);
             this.assets.set(resolved, {
                 id: `img${this.assets.size}`,
-                src: rawUrl,
+                src: rawUrl, // rewritten to the normalized copy before the IR is written
+                origSrc: rawUrl,
+                resolvedUrl: resolved,
                 kind: rawUrl.startsWith('data:') ? 'data-uri' : 'raster',
                 intrinsic: meta ? [meta.naturalWidth, meta.naturalHeight] : null,
             });
@@ -314,8 +355,7 @@ class Extractor {
                     repeat: c.get('background-repeat'),
                 };
             } else {
-                // Gradients recorded verbatim-computed for Gate 1; typed stop parsing is Gate 3.
-                background = { type: 'gradient', computed: bgImage };
+                background = { type: 'gradient', ...parseGradient(bgImage), computed: bgImage };
             }
         } else if (bgColor && bgColor[3] !== 0) {
             background = { type: 'color', rgba: bgColor };
@@ -536,6 +576,7 @@ const main = async () => {
             '--hide-scrollbars',
             '--disable-lcd-text',
             '--force-device-scale-factor=1',
+            '--allow-file-access-from-files', // asset normalization canvas-reads file:// images
         ],
     });
     try {
@@ -571,6 +612,31 @@ const main = async () => {
         const root = await extractor.run();
         const version = await browser.version();
 
+        // Normalize assets through the browser's own decode: Chromium color-manages PNGs (gamma/
+        // color chunks), the engine reads raw bytes — the golden is the spec, so the IR bundle
+        // ships canvas-decoded copies whose raw bytes ARE the browser's interpretation.
+        const assetEntries = [...extractor.assets.values()];
+        if (assetEntries.length > 0) {
+            fs.mkdirSync(path.join(outDir, 'ckui-assets'), { recursive: true });
+            for (const entry of assetEntries) {
+                const dataUrl = await page.evaluate(async (src) => {
+                    const img = new Image();
+                    img.src = src;
+                    await img.decode();
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    canvas.getContext('2d').drawImage(img, 0, 0);
+                    return canvas.toDataURL('image/png');
+                }, entry.resolvedUrl);
+                const normalizedRel = `ckui-assets/${entry.id}.png`;
+                fs.writeFileSync(path.join(outDir, normalizedRel),
+                    Buffer.from(dataUrl.split(',')[1], 'base64'));
+                entry.src = normalizedRel; // now relative to the IR file itself
+                delete entry.resolvedUrl;
+            }
+        }
+
         const ir = {
             schema: SCHEMA_VERSION,
             source: {
@@ -579,7 +645,7 @@ const main = async () => {
                 dpr: VIEWPORT.deviceScaleFactor,
                 browser: version,
             },
-            assets: [...extractor.assets.values()],
+            assets: assetEntries,
             fonts: loadedFonts, // web fonts only; system-font stacks live on each node's text.family
             diagnostics: extractor.diagnostics,
             root,

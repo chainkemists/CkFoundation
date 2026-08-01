@@ -194,6 +194,28 @@
         "paint": {
           "background": {
             "type": "gradient",
+            "gradientType": "linear",
+            "angleDeg": 180,
+            "stops": [
+              {
+                "rgba": [
+                  190,
+                  60,
+                  60,
+                  255
+                ],
+                "posPct": null
+              },
+              {
+                "rgba": [
+                  60,
+                  110,
+                  200,
+                  255
+                ],
+                "posPct": null
+              }
+            ],
             "computed": "linear-gradient(rgb(190, 60, 60), rgb(60, 110, 200))"
           },
           "borderRadius": [
@@ -301,6 +323,46 @@
         "paint": {
           "background": {
             "type": "gradient",
+            "gradientType": "linear",
+            "angleDeg": 135,
+            "stops": [
+              {
+                "rgba": [
+                  190,
+                  60,
+                  60,
+                  255
+                ],
+                "posPct": 0
+              },
+              {
+                "rgba": [
+                  200,
+                  160,
+                  50,
+                  255
+                ],
+                "posPct": 35
+              },
+              {
+                "rgba": [
+                  60,
+                  150,
+                  90,
+                  255
+                ],
+                "posPct": 70
+              },
+              {
+                "rgba": [
+                  70,
+                  110,
+                  200,
+                  255
+                ],
+                "posPct": 100
+              }
+            ],
             "computed": "linear-gradient(135deg, rgb(190, 60, 60) 0%, rgb(200, 160, 50) 35%, rgb(60, 150, 90) 70%, rgb(70, 110, 200) 100%)"
           },
           "borderRadius": [
@@ -408,6 +470,37 @@
         "paint": {
           "background": {
             "type": "gradient",
+            "gradientType": "radial",
+            "angleDeg": null,
+            "stops": [
+              {
+                "rgba": [
+                  240,
+                  240,
+                  250,
+                  255
+                ],
+                "posPct": 0
+              },
+              {
+                "rgba": [
+                  150,
+                  80,
+                  190,
+                  255
+                ],
+                "posPct": 60
+              },
+              {
+                "rgba": [
+                  20,
+                  24,
+                  30,
+                  255
+                ],
+                "posPct": 100
+              }
+            ],
             "computed": "radial-gradient(circle at 40% 40%, rgb(240, 240, 250) 0%, rgb(150, 80, 190) 60%, rgb(20, 24, 30) 100%)"
           },
           "borderRadius": [

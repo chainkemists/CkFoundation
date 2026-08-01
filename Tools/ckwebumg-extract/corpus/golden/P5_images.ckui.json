@@ -12,7 +12,8 @@
   "assets": [
     {
       "id": "img0",
-      "src": "assets/red1x1.png",
+      "src": "ckui-assets/img0.png",
+      "origSrc": "assets/red1x1.png",
       "kind": "raster",
       "intrinsic": [
         1,

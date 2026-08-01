@@ -84,6 +84,55 @@ namespace ck_webumg_paintfidelity
         { CollectTextLeafRects(Child, OutRects); }
     }
 
+    auto
+    DumpDiffArtifacts(
+        const FString& InPageName,
+        const TArray<FColor>& InRendered,
+        const TArray<FColor>& InGolden,
+        const TArray<FCkWebUmg_IrRect>& InMaskedRects,
+        int32 InWidth,
+        int32 InHeight)
+        -> void
+    {
+        const auto DumpDir = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Automation"), TEXT("WebUmg"));
+        IFileManager::Get().MakeDirectory(*DumpDir, true);
+        auto& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
+
+        const auto WritePng = [&](const FString& InName, const TArray<FColor>& InPixels) -> void
+        {
+            const auto Wrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+            Wrapper->SetRaw(InPixels.GetData(), InPixels.Num() * sizeof(FColor),
+                InWidth, InHeight, ERGBFormat::BGRA, 8);
+            const auto Compressed = Wrapper->GetCompressed();
+            FFileHelper::SaveArrayToFile(Compressed, *FPaths::Combine(DumpDir, InName));
+        };
+
+        auto Heatmap = TArray<FColor>{};
+        Heatmap.SetNumUninitialized(InWidth * InHeight);
+        for (auto Index = 0; Index < InWidth * InHeight; ++Index)
+        {
+            const auto Delta = FMath::Max3(
+                FMath::Abs(static_cast<int32>(InRendered[Index].R) - InGolden[Index].R),
+                FMath::Abs(static_cast<int32>(InRendered[Index].G) - InGolden[Index].G),
+                FMath::Abs(static_cast<int32>(InRendered[Index].B) - InGolden[Index].B));
+            const auto X = Index % InWidth;
+            const auto Y = Index / InWidth;
+            const auto IsMasked = InMaskedRects.ContainsByPredicate(
+                [&](const FCkWebUmg_IrRect& InRect)
+                {
+                    return X >= InRect.X && X < InRect.X + InRect.W
+                        && Y >= InRect.Y && Y < InRect.Y + InRect.H;
+                });
+            // red = counted failure; blue = difference inside a masked (text) region
+            Heatmap[Index] = Delta > ChannelTolerance
+                ? (IsMasked ? FColor(0, 90, 255, 255) : FColor(255, 0, 0, 255))
+                : FColor(InGolden[Index].R / 4, InGolden[Index].G / 4, InGolden[Index].B / 4, 255);
+        }
+        WritePng(InPageName + TEXT(".rendered.png"), InRendered);
+        WritePng(InPageName + TEXT(".diff.png"), Heatmap);
+        ck::webumg::Display(TEXT("[{}] dumped rendered + diff PNGs to [{}]"), InPageName, DumpDir);
+    }
+
     struct FPixelScore
     {
         int32 ComparedPixels = 0;
@@ -183,7 +232,9 @@ bool
     if (NOT TestTrue(TEXT("IR document loads"), Document.IsSet()))
     { return false; }
 
-    const auto Built = ck::webumg::BuildWidgetTree(Document->Root);
+    const auto Built = ck::webumg::BuildWidgetTree(*Document,
+        FPaths::GetPath(InIrFilePath)); // asset srcs are IR-relative (normalized ckui-assets/)
+    FlushRenderingCommands(); // freshly imported textures must have RHI resources before the draw
     if (NOT TestTrue(TEXT("widget tree builds"), Built.RootWidget != nullptr))
     { return false; }
 
@@ -196,8 +247,11 @@ bool
     RenderTarget->UpdateResourceImmediate(true);
     FlushRenderingCommands();
 
-    // FWidgetRenderer's ctor arg is bUseGammaSpace: true ADDS a linear->sRGB encode on write,
-    // which double-encodes against an sRGB golden (probes matched sRGBencode(golden) exactly).
+    // Linear pipeline with sRGB-decoded input colors: solids round-trip exactly (proven 0.0000%
+    // on all L-pages). The gamma-space alternative was tried and reverted — Slate quantizes
+    // vertex colors through an sRGB encode regardless, so reinterpreted colors double-encode
+    // (probe arithmetic in VERIFIED.md). Translucent compositing diverges from the browser by
+    // design (linear vs sRGB blend space) — measured and recorded as a §8 position.
     constexpr auto UseGammaSpace = false;
     const auto Renderer = MakeUnique<FWidgetRenderer>(UseGammaSpace);
     Renderer->DrawWidget(RenderTarget, Built.RootWidget.ToSharedRef(),
@@ -250,44 +304,14 @@ bool
 
         if (NOT WithinBudget)
         {
-            const auto DumpDir = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Automation"), TEXT("WebUmg"));
-            IFileManager::Get().MakeDirectory(*DumpDir, true);
-            auto& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
-
-            const auto WritePng = [&](const FString& InName, const TArray<FColor>& InPixels) -> void
-            {
-                const auto Wrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
-                Wrapper->SetRaw(InPixels.GetData(), InPixels.Num() * sizeof(FColor),
-                    Width, Height, ERGBFormat::BGRA, 8);
-                const auto Compressed = Wrapper->GetCompressed();
-                FFileHelper::SaveArrayToFile(Compressed, *FPaths::Combine(DumpDir, InName));
-            };
-
-            auto Heatmap = TArray<FColor>{};
-            Heatmap.SetNumUninitialized(Width * Height);
-            for (auto Index = 0; Index < Width * Height; ++Index)
-            {
-                const auto Delta = FMath::Max3(
-                    FMath::Abs(static_cast<int32>(Rendered[Index].R) - Golden[Index].R),
-                    FMath::Abs(static_cast<int32>(Rendered[Index].G) - Golden[Index].G),
-                    FMath::Abs(static_cast<int32>(Rendered[Index].B) - Golden[Index].B));
-                const auto X = Index % Width;
-                const auto Y = Index / Width;
-                const auto IsMasked = MaskedRects.ContainsByPredicate(
-                    [&](const FCkWebUmg_IrRect& InRect)
-                    {
-                        return X >= InRect.X && X < InRect.X + InRect.W
-                            && Y >= InRect.Y && Y < InRect.Y + InRect.H;
-                    });
-                // red = counted failure; blue = difference inside a masked (text) region
-                Heatmap[Index] = Delta > ChannelTolerance
-                    ? (IsMasked ? FColor(0, 90, 255, 255) : FColor(255, 0, 0, 255))
-                    : FColor(Golden[Index].R / 4, Golden[Index].G / 4, Golden[Index].B / 4, 255);
-            }
-            WritePng(PageName + TEXT(".rendered.png"), Rendered);
-            WritePng(PageName + TEXT(".diff.png"), Heatmap);
-            AddInfo(FString::Printf(TEXT("[%s] dumped rendered + diff PNGs to %s"), *PageName, *DumpDir));
+            DumpDiffArtifacts(PageName, Rendered, Golden, MaskedRects, Width, Height);
         }
+    }
+    else if (Score.Get_FailingFraction() > 0.01f)
+    {
+        // Report-only pages still dump artifacts when visibly off — the diff image is the
+        // primary diagnostic for paint-feature bring-up.
+        DumpDiffArtifacts(PageName, Rendered, Golden, MaskedRects, Width, Height);
     }
 
     return true;

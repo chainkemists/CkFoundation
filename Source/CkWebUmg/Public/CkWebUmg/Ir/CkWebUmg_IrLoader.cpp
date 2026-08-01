@@ -78,6 +78,7 @@ namespace ck_webumg_irloader
         auto Node = MakeShared<FCkWebUmg_IrNode>();
         Node->Id = InObj->GetStringField(TEXT("id"));
         Node->Tag = InObj->GetStringField(TEXT("tag"));
+        InObj->TryGetStringField(TEXT("asset"), Node->Asset);
 
         const auto& BoxObj = InObj->GetObjectField(TEXT("box"));
         Node->Box.Content = ReadRect(BoxObj->GetObjectField(TEXT("content")));
@@ -159,10 +160,44 @@ namespace ck_webumg_irloader
         const auto& PaintObj = InObj->GetObjectField(TEXT("paint"));
         auto& Paint = Node->Paint;
         const TSharedPtr<FJsonObject>* BackgroundObj = nullptr;
-        if (PaintObj->TryGetObjectField(TEXT("background"), BackgroundObj) &&
-            (*BackgroundObj)->GetStringField(TEXT("type")) == TEXT("color"))
+        if (PaintObj->TryGetObjectField(TEXT("background"), BackgroundObj))
         {
-            Paint.BackgroundColor = ReadColor(*BackgroundObj, TEXT("rgba"));
+            const auto BackgroundType = (*BackgroundObj)->GetStringField(TEXT("type"));
+            if (BackgroundType == TEXT("color"))
+            {
+                Paint.BackgroundColor = ReadColor(*BackgroundObj, TEXT("rgba"));
+            }
+            else if (BackgroundType == TEXT("gradient"))
+            {
+                auto Gradient = FCkWebUmg_IrGradient{};
+                Gradient.GradientType = (*BackgroundObj)->GetStringField(TEXT("gradientType"));
+                auto Angle = 0.0;
+                if ((*BackgroundObj)->TryGetNumberField(TEXT("angleDeg"), Angle))
+                { Gradient.AngleDeg = static_cast<float>(Angle); }
+
+                const TArray<TSharedPtr<FJsonValue>>* StopValues = nullptr;
+                if ((*BackgroundObj)->TryGetArrayField(TEXT("stops"), StopValues))
+                {
+                    for (const auto& StopValue : *StopValues)
+                    {
+                        const auto& StopObj = StopValue->AsObject();
+                        auto Stop = FCkWebUmg_IrGradientStop{};
+                        if (const auto Color = ReadColor(StopObj, TEXT("rgba")); Color.IsSet())
+                        { Stop.Color = *Color; }
+                        auto Pos = 0.0;
+                        if (StopObj->TryGetNumberField(TEXT("posPct"), Pos))
+                        { Stop.PosPct = static_cast<float>(Pos); }
+                        Gradient.Stops.Add(Stop);
+                    }
+                }
+                Paint.Gradient = Gradient;
+            }
+            else if (BackgroundType == TEXT("image"))
+            {
+                auto AssetId = FString{};
+                if ((*BackgroundObj)->TryGetStringField(TEXT("asset"), AssetId) && NOT AssetId.IsEmpty())
+                { Paint.BackgroundImageAsset = AssetId; }
+            }
         }
         Paint.BorderRadius = ReadFloat4(PaintObj, TEXT("borderRadius"));
         Paint.BorderWidth = ReadFloat4(PaintObj, TEXT("borderWidth"));
@@ -244,6 +279,17 @@ namespace ck::webumg
             Document.Viewport = FIntPoint(
                 static_cast<int32>((*ViewportValues)[0]->AsNumber()),
                 static_cast<int32>((*ViewportValues)[1]->AsNumber()));
+        }
+
+        const TArray<TSharedPtr<FJsonValue>>* AssetValues = nullptr;
+        if (RootObj->TryGetArrayField(TEXT("assets"), AssetValues))
+        {
+            for (const auto& AssetValue : *AssetValues)
+            {
+                const auto& AssetObj = AssetValue->AsObject();
+                Document.AssetSourcesById.Add(
+                    AssetObj->GetStringField(TEXT("id")), AssetObj->GetStringField(TEXT("src")));
+            }
         }
 
         Document.Root = ck_webumg_irloader::ReadNode(RootObj->GetObjectField(TEXT("root")));

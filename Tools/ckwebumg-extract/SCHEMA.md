@@ -14,9 +14,13 @@
     "dpr": 1,
     "browser": "Chrome/150.0.7871.188" // determinism is per-browser-version (Gate_01 risk 1)
   },
-  "assets": [ { "id": "img0", "src": "assets/red1x1.png", "kind": "raster", "intrinsic": [1, 1] } ],
+  "assets": [ { "id": "img0", "src": "ckui-assets/img0.png", "origSrc": "assets/red1x1.png",
+                "kind": "raster", "intrinsic": [1, 1] } ],
                                       // deduped by resolved URL, ids in first-reference order;
-                                      // kind: "raster" | "data-uri"; intrinsic = natural W/H px (null if unknown)
+                                      // src = BROWSER-NORMALIZED copy written next to the IR
+                                      // (canvas-decoded: raw bytes are Chromium's color-managed
+                                      // interpretation, gamma/color chunks resolved away) —
+                                      // IR bundles are self-contained; origSrc = author's path
   "fonts": [],                        // loaded web fonts ({family, weight, style}) — system-font
                                       // stacks live on each node's text.family; mapping to UFont is emitter config
   "diagnostics": [],                  // page-level issues: {kind, node, detail};

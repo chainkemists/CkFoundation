@@ -107,7 +107,7 @@ bool
     if (NOT TestTrue(TEXT("IR document loads"), Document.IsSet()))
     { return false; }
 
-    const auto Built = ck::webumg::BuildWidgetTree(Document->Root);
+    const auto Built = ck::webumg::BuildWidgetTree(*Document);
     if (NOT TestTrue(TEXT("widget tree builds"), Built.RootWidget != nullptr))
     { return false; }
 

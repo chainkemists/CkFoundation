@@ -67,9 +67,26 @@ struct CKWEBUMG_API FCkWebUmg_IrLayout
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct CKWEBUMG_API FCkWebUmg_IrGradientStop
+{
+    FColor Color = FColor::Black;
+    TOptional<float> PosPct;
+};
+
+struct CKWEBUMG_API FCkWebUmg_IrGradient
+{
+    FString GradientType; // linear | radial | conic | unparsed
+    TOptional<float> AngleDeg;
+    TArray<FCkWebUmg_IrGradientStop> Stops;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 struct CKWEBUMG_API FCkWebUmg_IrPaint
 {
     TOptional<FColor> BackgroundColor;
+    TOptional<FCkWebUmg_IrGradient> Gradient;
+    TOptional<FString> BackgroundImageAsset;
     FVector4f BorderRadius = FVector4f::Zero(); // tl, tr, br, bl
     FVector4f BorderWidth = FVector4f::Zero();  // t, r, b, l
     TOptional<FColor> BorderColor;
@@ -98,6 +115,7 @@ struct CKWEBUMG_API FCkWebUmg_IrNode
 {
     FString Id;
     FString Tag;
+    FString Asset; // for <img>: id into FCkWebUmg_IrDocument::AssetSourcesById
     FCkWebUmg_IrBox Box;
     FCkWebUmg_IrLayout Layout;
     FCkWebUmg_IrPaint Paint;
@@ -113,5 +131,6 @@ struct CKWEBUMG_API FCkWebUmg_IrDocument
     FIntPoint Viewport = FIntPoint::ZeroValue;
     float Dpr = 1.0f;
     FString Browser;
+    TMap<FString, FString> AssetSourcesById; // asset id -> src path relative to the page
     TSharedPtr<FCkWebUmg_IrNode> Root;
 };
