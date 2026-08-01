@@ -53,22 +53,9 @@ struct FNiagaraDataInterfaceProxyCkParticles : public FNiagaraDataInterfaceProxy
 // CPU mirror of /CkParticles/CkParticles_Behaviors.ush — same BehaviorId, same math, or the two diverge.
 namespace NDICkParticlesLocal
 {
-    struct FStageIO
-    {
-        FVector3f    Position    = FVector3f::ZeroVector;
-        FVector3f    Velocity    = FVector3f::ZeroVector;
-        FLinearColor Color       = FLinearColor::White;
-        FVector2f    Size        = FVector2f(20.0f, 20.0f);
-        FVector3f    Scale       = FVector3f(1.0f, 1.0f, 1.0f);
-        FQuat4f      Orientation = FQuat4f::Identity;
-        FVector4f    Dynamic     = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
-        float        Rotation    = 0.0f;
-        int32        MeshIndex   = 0;
-        int32        VisTag      = 0;
-        // VisTag 4 only. Never zero — a degenerate pair collapses the sprite instead of failing visibly.
-        FVector3f    SpriteAlignment = FVector3f(0.0f, 1.0f, 0.0f);
-        FVector3f    SpriteFacing    = FVector3f(0.0f, 0.0f, 1.0f);
-    };
+    // The public result type IS the mirror's output — one definition, so a field added here cannot drift
+    // out of sync with what callers and tests observe.
+    using FStageIO = FCk_Particles_StageResult;
 
     // Mirrors CkParticles_Rand / CkParticles_RandDir (Common.ush); 24-bit normalization keeps it bit-identical.
     static auto Rand(int32 InSeed, int32 InSalt) -> float
@@ -773,6 +760,21 @@ void
     {
         OutFunc = FVMExternalFunction::CreateUObject(this, &UCkParticles_DataInterface::VMExecuteStage);
     }
+}
+
+FCk_Particles_StageResult
+    UCkParticles_DataInterface::
+    Execute_Stage_CPU(
+        int32     InBehaviorId,
+        float     InDeltaTime,
+        float     InAge,
+        float     InLifetime,
+        FVector3f InPosition,
+        FVector3f InVelocity,
+        int32     InSeed)
+{
+    return NDICkParticlesLocal::ExecuteStage_CPU(
+        InBehaviorId, InDeltaTime, InAge, InLifetime, InPosition, InVelocity, InSeed);
 }
 
 void
