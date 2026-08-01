@@ -57,7 +57,7 @@ auto
         JsonPath = FPaths::Combine(InOutputDir, InMaterial->GetName() + TEXT(".json"));
     }
     else if (NOT FPackageName::TryConvertLongPackageNameToFilename(
-        InMaterial->GetOutermost()->GetName(), JsonPath, TEXT(".json")))
+        InMaterial->GetOutermost()->GetName(), JsonPath, ck::asset_exporter::extension::Sidecar))
     {
         Result.ErrorMessage = ck::Format_UE(TEXT("Failed to resolve sibling json path for [{}]"), InMaterial->GetName());
         return Result;

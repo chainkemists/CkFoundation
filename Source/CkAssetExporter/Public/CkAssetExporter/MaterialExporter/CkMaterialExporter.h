@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 
 #include "CoreMinimal.h"

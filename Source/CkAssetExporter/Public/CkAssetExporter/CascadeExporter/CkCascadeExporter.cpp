@@ -76,7 +76,8 @@ auto
     FCk_CascadeExporter::
     ExportParticleSystem(
         UParticleSystem* InSystem,
-        const FString& InOutputDir)
+        const FString& InOutputDir,
+        ECk_AssetExporter_SidecarFormats InFormats)
     -> FCk_CascadeExportResult
 {
     auto Result = FCk_CascadeExportResult{};
@@ -99,11 +100,17 @@ auto
         FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
     }
 
-    const auto TextString = DoSerializeToText(JsonObject);
+    const auto WriteText = InFormats == ECk_AssetExporter_SidecarFormats::JsonAndText;
 
-    const auto JsonPath = DoResolveOutputPath(InSystem, TEXT(".json"), InOutputDir);
-    const auto TextPath = DoResolveOutputPath(InSystem, TEXT(".txt"), InOutputDir);
-    if (JsonPath.IsEmpty() || TextPath.IsEmpty())
+    const auto TextString = WriteText ? DoSerializeToText(JsonObject) : FString{};
+
+    // Corpus mode writes outside Content/, where the auto-reimport monitor never looks and nothing is committed —
+    // plain .json is friendlier for those consumers. Only the sibling written next to a .uasset needs to be invisible.
+    const auto StructuredExtension = InOutputDir.IsEmpty() ? ck::asset_exporter::extension::Sidecar : FString{TEXT(".json")};
+
+    const auto JsonPath = DoResolveOutputPath(InSystem, StructuredExtension, InOutputDir);
+    const auto TextPath = WriteText ? DoResolveOutputPath(InSystem, ck::asset_exporter::extension::SummaryText, InOutputDir) : FString{};
+    if (JsonPath.IsEmpty() || (WriteText && TextPath.IsEmpty()))
     {
         Result.ErrorMessage = TEXT("Failed to resolve output file paths");
         return Result;
@@ -116,7 +123,7 @@ auto
     }
 
     const auto JsonWritten = FFileHelper::SaveStringToFile(JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
-    const auto TextWritten = FFileHelper::SaveStringToFile(TextString, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+    const auto TextWritten = NOT WriteText || FFileHelper::SaveStringToFile(TextString, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
     if (NOT JsonWritten || NOT TextWritten)
     {
         Result.ErrorMessage = ck::Format_UE(TEXT("Failed to write files (JSON: {}, Text: {})"),

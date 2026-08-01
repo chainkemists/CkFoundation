@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
 
@@ -27,7 +29,8 @@ class CKASSETEXPORTER_API FCk_DataAssetExporter
 public:
     static auto
     ExportDataAsset(
-        UDataAsset* InDataAsset) -> FCk_DataAssetExportResult;
+        UDataAsset* InDataAsset,
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_DataAssetExportResult;
 
     static auto
     ExportDataAssets(

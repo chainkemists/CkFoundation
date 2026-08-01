@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
 
@@ -35,7 +37,8 @@ class CKASSETEXPORTER_API FCk_BehaviorTreeExporter
 public:
     static auto
     ExportBehaviorTree(
-        UBehaviorTree* InBehaviorTree) -> FCk_BehaviorTreeExportResult;
+        UBehaviorTree* InBehaviorTree,
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_BehaviorTreeExportResult;
 
     static auto
     ExportBehaviorTrees(

@@ -27,7 +27,8 @@
 auto
     FCk_BehaviorTreeExporter::
     ExportBehaviorTree(
-        UBehaviorTree* InBehaviorTree)
+        UBehaviorTree* InBehaviorTree,
+        ECk_AssetExporter_SidecarFormats InFormats)
     -> FCk_BehaviorTreeExportResult
 {
     auto Result = FCk_BehaviorTreeExportResult{};
@@ -51,12 +52,14 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    const auto TextString = DoSerializeToText(InBehaviorTree);
+    const auto WriteText = InFormats == ECk_AssetExporter_SidecarFormats::JsonAndText;
 
-    const auto JsonPath = DoResolveOutputPath(InBehaviorTree, TEXT(".json"));
-    const auto TextPath = DoResolveOutputPath(InBehaviorTree, TEXT(".txt"));
+    const auto TextString = WriteText ? DoSerializeToText(InBehaviorTree) : FString{};
 
-    if (JsonPath.IsEmpty() || TextPath.IsEmpty())
+    const auto JsonPath = DoResolveOutputPath(InBehaviorTree, ck::asset_exporter::extension::Sidecar);
+    const auto TextPath = WriteText ? DoResolveOutputPath(InBehaviorTree, ck::asset_exporter::extension::SummaryText) : FString{};
+
+    if (JsonPath.IsEmpty() || (WriteText && TextPath.IsEmpty()))
     {
         Result.ErrorMessage = TEXT("Failed to resolve output file paths");
         return Result;
@@ -64,7 +67,7 @@ auto
 
     const auto bJsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
-    const auto bTextWritten = FFileHelper::SaveStringToFile(
+    const auto bTextWritten = NOT WriteText || FFileHelper::SaveStringToFile(
         TextString, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
     if (!bJsonWritten || !bTextWritten)

@@ -2,6 +2,53 @@
 
 **Purpose:** Asset export utilities — exports CkFoundation asset data to external formats (JSON, etc.) for tooling, auditing, or external pipelines.
 
+## The sidecar extension is `.ckexport`, and it is JSON (2026-08-01)
+
+`<Asset>.ckexport` sits next to `<Asset>.uasset` and is **plain UTF-8 JSON** — Read/Grep it directly.
+Every sidecar's `_meta.format` says so in its own first lines, so a reader who opens one cold needs
+no doc.
+
+**Why not `.json`.** `FAutoReimportManager::SetUpDirectoryMonitors` stamps every watched content
+directory with `SetApplicableExtensions(GetAllFactoryExtensions())`, and json IS a registered import
+format (`UReimportDataTableFactory`). A committed sidecar corpus therefore accumulates into the
+monitor's pending set, parks its state machine on the *"N changes to source content files"* prompt,
+and — while parked — re-stats **the entire outstanding set every frame**. Measured on BusterBlock's
+1,178-file corpus: **18.8 fps, editor-wide, on every map**, with the game thread at 99.7% of a core
+looking compute-bound while actually blocked in `FileExists`/`GetTimeStamp` through the NTFS +
+Defender filter drivers. No UE-side profiler can see it (Insights attributes it to `Tick_Engine`
+self-time; `SimpleTickObjects` → `FAutoReimportManager` carries no stat scope) — it took `xperf`
+stack sampling to find. `FMatchRules::IsFileApplicable` rejects an unclaimed extension **before any
+wildcard rule**, so an extension no factory claims is invisible to the monitor in every consuming
+project with zero configuration. That is the whole mechanism.
+
+Two constraints that make it work, both enforced by tests:
+- **Terminal extension only.** `MatchExtensionString` reads the FINAL extension (`Strrchr`), so
+  `Foo.export.json` still parses as json. Any replacement must be the last extension.
+- **Must stay unclaimed.** `Ck.AssetExporter.Dispatch.SidecarExtensionUnclaimed` asserts no import
+  factory claims it, with a control assertion that json *is* claimed so the test cannot pass
+  vacuously. Changing the extension to something a factory claims silently reintroduces the 18 fps
+  bug — that test is the only thing standing in the way.
+
+Extensions live in one place: `ck::asset_exporter::extension::{Sidecar, SummaryText, Csv}`
+(`ExportMeta/CkAssetExporter_ExportMeta.h`). Corpus-mode output (non-empty `InOutputDir` →
+`Saved/CkVfxCorpus/`) deliberately keeps `.json`: it is outside `Content/`, never watched, never
+committed.
+
+**Startup guard.** `Validation/CkAssetExporter_AutoReimportGuard` runs at `OnPostEngineInit` and
+warns — naming the exact `AutoReimportDirectorySettings` line — if any extension this module writes
+under `Content/` is factory-claimed AND not excluded by the effective monitor. It rebuilds the
+engine's own parse + same-or-parent dedup and asks `FMatchRules::IsFileApplicable`, rather than
+approximating. `.csv` is deliberately NOT probed: a DataTable's csv sidecar is a legitimate
+re-import source for that DataTable, so a monitor picking it up is correct behaviour.
+
+**Auto path is JSON-only.** `ExportAssets`/`SweepDirectory` take
+`ECk_AssetExporter_SidecarFormats`; the on-save hook passes `JsonOnly`, every manual path
+(right-click, Exporter Tab, commandlet, server/bridge) keeps `JsonAndText`. Rationale: the `.txt`
+summary is lossy AND gitignored in consuming projects, so it is never shared and drifts — BB's
+committed `StoreDriver_BB_BP.txt` still listed variables renamed months earlier. Refreshing it on
+every save cost I/O for a file nobody read. DataTable `.csv` and the WBP paste artifacts still
+emit on both paths: they are consumed data artifacts, not the drift-prone summary.
+
 **Supported asset types:** Behavior Trees, Blueprints, Data Assets, EQS Queries, State Trees, Blueprint structs (`UUserDefinedStruct`), Blueprint enums (`UUserDefinedEnum`), **Niagara systems**, **Cascade particle systems**, **materials / material instances** (`UMaterialInterface` — json-only, dispatch-routed 2026-07-20), and **textures** (corpus-chained only — no standalone right-click/dispatch entry). Most are exposed as Content Browser right-click actions (`AssetAction/`) and buttons in the batch Exporter Tab (`ExporterTab/`). State Trees walk the authored `UStateTreeEditorData` (states, tasks, conditions, transitions, global tasks/evaluators). Blueprint structs export their schema (each field's authored name, internal name, CPP type, category, tooltip) plus default values read from the struct's default instance — reusing `FCk_DataAssetExporter`'s shared property serializer. Blueprint enums export each authored enumerator's display name, internal name, fully-qualified name, numeric value, and tooltip (the auto-generated trailing `_MAX` is skipped via the `NumEnums()-1` idiom).
 
 **VFX corpus pipeline (2026-07-12):** `FCk_NiagaraExporter` deconstructs a system into a JSON+text recipe — emitter module stacks with Rapid-Iteration constants, **override-pin harvesting** (dynamic inputs, curve DIs rasterized to keys via `UNiagaraDataInterfaceCurveBase::GetCurveData`, attribute links; nested dynamic-input overrides re-associated via `DoExpandDynamicInputOverrides`, orphans surfaced as `unattachedOverrides` — never silently dropped), enum display names, user-param values, determinism/bounds, renderer detail with material paths. `FCk_CascadeExporter` dumps legacy `UParticleSystem` LOD-0 modules generically via reflection with `UDistribution*` rasterization. `FCk_MaterialExporter` (blend/shading/params + expression histogram + `GetUsedTextures`) and `FCk_TextureExporter` (editor source → PNG capped at 1024 + metadata) chain off renderer material references; `FCk_MaterialExporter` is **dual-mode** (2026-07-20): a set `InOutputDir` writes into the corpus tree (as before), an empty default writes the sibling `<Asset>.json` next to the `.uasset` and stamps `_meta` (`version::Material`), so it is now a first-class dispatch/right-click/tab type. It is json-only — no `.txt` sibling, so it carries no freshness banner; the sibling json's `_meta` is its freshness oracle. `FCk_MeshExporter` (LOD-0 render geometry → Wavefront OBJ + stats JSON with bounds/UV-ranges/sections; UE V-down UV convention noted in the OBJ header) chains off mesh-renderer `Meshes` references into `meshes/` — the carrier geometry (slash sweeps, shells, trails) VFX recreation needs. `FCk_VfxCorpusExporter` orchestrates a batch over asset-registry class sweeps into `Saved/CkVfxCorpus/` (`index.json` manifest; per-asset failures recorded, never skipped; output dirs mirror package folder chains so same-named assets can't collide). Entry points: automation test `Ck.AssetExporter.ExportVfxCorpus` (**gated on env `CK_VFX_CORPUS_EXPORT=1`** — instant skip otherwise; StressFilter is unusable because the automation commandline's "Standard" filter excludes it) and console command `Ck.AssetExporter.ExportVfxCorpus`. Gotchas that cost time once: `UNiagaraNodeParameterMapSet`/`NiagaraNodeParameterMapBase.h` are Private NiagaraEditor headers (detect override nodes by class name on `UEdGraphNode`); `UNiagaraNodeInput`'s accessors are MinimalAPI-unexported (read `DataInterface`/`ObjectAsset` UPROPERTYs via `FindFProperty`); the 5-arg `GetUsedTextures` overload is a UE_DEPRECATED(5.7) final no-op (use the TOptional overload).
@@ -22,8 +69,9 @@ commandlet command line. Components:
   `Saved/CkAssetExporter/LastRun.json` manifest (`entries` array). All externally-consumed paths
   are `ConvertRelativePathToFull` — relative `ProjectSavedDir` forms don't resolve from a
   submitter's cwd.
-- `ExportMeta/` — deterministic `_meta` (source .uasset MD5 + per-exporter version constant)
-  stamped in every sibling `.json`; powers `-SkipFresh` (hash AND version must match). Bump the
+- `ExportMeta/` — deterministic `_meta` (`format` self-description + source .uasset MD5 +
+  per-exporter version constant)
+  stamped in every sibling `.ckexport`; powers `-SkipFresh` (hash AND version must match). Bump the
   version constant whenever an exporter's output shape changes (`version::Blueprint = 2` — bumped
   for the WBP paste artifacts: `hierarchy.copy.txt` + per-animation t3d dumps). Only the versioned
   exporters participate in the `-SkipFresh` gate at all — Niagara and Cascade stamp no versioned
@@ -52,8 +100,9 @@ commandlet command line. Components:
   `ck.AssetExporter.AutoSidecarOnSave`); inert for commandlets/procedural saves/non-canonical
   save targets (autosaves must not stamp sidecars with unsaved states). This is what keeps
   committed sidecars truthful MECHANICALLY rather than by convention: every editor save of a
-  logic-bearing asset re-exports its sibling `.json`/`.txt` in place, and because output is
-  deterministic + write-if-changed, saving an unchanged asset produces zero diff noise.
+  logic-bearing asset re-exports its sibling `.ckexport` in place (JSON only — see the extension
+  section above), and because output is deterministic + write-if-changed, saving an unchanged asset
+  produces zero diff noise.
 - `DataTableExporter/`, `GraphDump/` — sibling `.csv` + rows-json; full dependency graph with
   hard/soft deps and cascade/redirector hazard flags. `GraphDump/` enumerates with NO class filter
   (migration-closure planning must see art and redirectors too) and records dependencies pointing
