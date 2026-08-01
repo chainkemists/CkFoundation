@@ -1,0 +1,59 @@
+// /CkUsf/Looks/ProtoGridOrientation.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+#ifndef CKUSF_ORIENTGRID_SUBCELLS
+#define CKUSF_ORIENTGRID_SUBCELLS 10.0
+#endif
+#ifndef CKUSF_ORIENTGRID_LINE_WIDTH
+#define CKUSF_ORIENTGRID_LINE_WIDTH 1.5
+#endif
+#ifndef CKUSF_ORIENTGRID_BACKFACE_DIM
+#define CKUSF_ORIENTGRID_BACKFACE_DIM 0.45
+#endif
+
+// Params: TopColor (Vector), FrontColor (Vector), RightColor (Vector), CellSize (Scalar, cm),
+//         ShiftX (Scalar, cm), ShiftY (Scalar, cm).
+// Orientation blockout grid (SuperGrid's Orientation material): every face is dyed by the world
+// axis it points along — Z = TopColor, X = FrontColor, Y = RightColor — with the negative-facing
+// side of each axis dimmed so all six directions stay distinguishable. Grid lines darken the dye.
+FCkUsf_SurfaceOutput CkUsf_Look_ProtoGridOrientation(FCkUsf_SurfaceInput In, float3 TopColor, float3 FrontColor,
+                                                     float3 RightColor, float CellSize, float ShiftX, float ShiftY)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float3 N = normalize(In.VertexNormal);
+    float3 A = abs(N);
+
+    float3 Face;
+    float AxisSign;
+    if (A.z >= A.x && A.z >= A.y)
+    {
+        Face = TopColor;
+        AxisSign = N.z;
+    }
+    else if (A.x >= A.y)
+    {
+        Face = FrontColor;
+        AxisSign = N.x;
+    }
+    else
+    {
+        Face = RightColor;
+        AxisSign = N.y;
+    }
+    Face *= AxisSign >= 0.0 ? 1.0 : CKUSF_ORIENTGRID_BACKFACE_DIM;
+
+    float2 P = CkUsf_WorldPlanarUV(In.WorldPosition, In.VertexNormal) + float2(ShiftX, ShiftY);
+    float MinorCell = CellSize / CKUSF_ORIENTGRID_SUBCELLS;
+    float Minor = CkUsf_GridLineCoverage(P, MinorCell, CKUSF_ORIENTGRID_LINE_WIDTH * 0.35);
+    float Major = CkUsf_GridLineCoverage(P, CellSize, CKUSF_ORIENTGRID_LINE_WIDTH);
+
+    float3 Col = Face;
+    Col = lerp(Col, Face * 0.6, Minor);
+    Col = lerp(Col, Face * 0.2, Major);
+
+    O.BaseColor = Col;
+    O.Roughness = lerp(0.5, 0.3, max(Major, Minor));
+    return O;
+}
