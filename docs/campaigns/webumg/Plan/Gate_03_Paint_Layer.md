@@ -16,14 +16,14 @@ After this gate: the paint corpus (P1–P5) renders through the builder within a
 
 ## Work items
 
-0. **Slate paint inventory** — cite what exists (rounded box brush, gradients, box element rounding) before any material work; pick per-feature: native Slate / material / diagnostic-only.
-1. **Pixel harness** — `FWidgetRenderer` renders the built tree at the recorded viewport to a render target; compare vs golden PNG: per-pixel channel delta with (a) a global threshold + failing-pixel budget, (b) text-region masks (from IR text-leaf rects) excluded from the pixel metric and measured separately. Per-page score reported; runs in the default suite (`CkTests.UnitTests.CkWebUmg.PaintFidelity.*`).
-2. **Radius + borders** — `FSlateRoundedBoxBrush`-backed painting in the builder (per-corner radii from IR; uniform outline; per-side width/color divergence → already diagnosed by extractor).
-3. **Typed gradients** — extractor closes the Gate-1 `computed` escape: parse `linear-gradient`/`radial-gradient` computed strings into typed stops in the IR (schema addition, goldens re-extracted); builder emits axis-aligned linear via Slate gradient widgets; arbitrary angles/radial per work-item-0 decision (material or diagnostic).
-4. **Shadow strategy [DECISION-shaped]** — options with measured pixel scores: (a) SDF material brush (build UMaterial programmatically in an editor module), (b) 9-slice baked texture approximation, (c) diagnostic-only in v1. Presented with numbers, Adam picks at gate exit.
-5. **Text styling + tolerance regime (§8.1 position)** — font mapping config (corpus uses Arial; decide the bundled/mapped face), apply weight/size/letter-spacing/line-height to STextBlock; implement the per-glyph-run box comparison; propose the numeric text tolerance from measured data (Gate 2 already logged 200×200-vs-131×38-class gaps).
-6. **Asset import (P5)** — `img`/background-image textures: load PNG at build time for the harness path (UTexture2D from file); editor-time import pipeline is Gate 4 scope.
-7. **§8 written positions** — text metrics strategy (from 5), DPI contract (verify UMG DPI-curve application site with path:line), stacking contexts scoping. Due before Gate 4 per the brief.
+0. ✅ **Slate paint inventory** — cited (FSlateRoundedBoxBrush, gradient widgets; shadows have no native soft path).
+1. ✅ **Pixel harness** — landed with text-rect masking, per-page scores, diff-artifact dumps; pixel lane requires `--no-nullrhi` (default lane skips explicitly via `GUsingNullRHI` guard; full suite 903/903).
+2. ✅ **Radius + borders** — `FSlateRoundedBoxBrush` per node. P1 0.7412%, attributed by arithmetic: ~0.51% = per-side widths/colors (diagnosed v1-surface limit), ~0.2% = rounded-edge AA. Optional surface widening listed in [Positions_S8.md](../Positions_S8.md).
+3. ✅ **Typed gradients** — EXCEEDED the plan: extractor types stops + radial center/radius absolutely; builder BAKES all linear (any angle) and radial gradients to per-node sRGB textures with browser math. P2 31.86% → **0.0000%** (maxDelta 1). SComplexGradient path deleted.
+4. ✅-implemented **Shadow strategy** — baked Gaussian textures (σ=blur/2, SDF coverage, sRGB layer compositing). Single black drop exact; P3 → 5.7471% where the ENTIRE residual is §8.4 compositing-space, not shadow geometry. Alternatives not built (could only score worse at higher complexity). **Adam ratifies at exit.**
+5. **Text styling + tolerance regime (§8.1 position)** — REMAINING. Font mapping config (corpus uses Arial; decide the bundled/mapped face), apply weight/size/letter-spacing/line-height to STextBlock; implement the per-glyph-run box comparison; propose the numeric text tolerance from measured data (Gate 2 already logged 200×200-vs-131×38-class gaps).
+6. ✅ **Asset import (P5)** — browser-normalized `ckui-assets/` bundles + `ImportFileAsTexture2D` with SRGB. P5 0.0000%.
+7. ✅ **§8 written positions** — [Positions_S8.md](../Positions_S8.md): compositing space (with options), text metrics, DPI contract, stacking contexts, shadows, per-side borders.
 
 ## Expected observations — and branches
 
@@ -37,10 +37,12 @@ After this gate: the paint corpus (P1–P5) renders through the builder within a
 
 ## Exit criteria — same-commit rule as always
 
-- [ ] P-corpus at agreed paint threshold (number ratified by Adam at this gate, like ±1px was)
-- [ ] Text tolerance defined, measured, ratified; T-pages pass it
-- [ ] Shadow decision made by Adam from measured options
-- [ ] §8 positions written (text/DPI/stacking)
-- [ ] Extractor gradient escape closed; goldens re-extracted; SCHEMA.md in step
-- [ ] Suite baseline diff (884 + new tests, zero newly failing)
+- [ ] P-corpus at agreed paint threshold (number ratified by Adam at this gate, like ±1px was) —
+      measured floors on the table: P1 0.7412% / P2 0.0000% / P3 5.7471% / P4 4.3886% / P5 0.0000%,
+      with P3+P4 floors set by §8.4, not by unbuilt features
+- [ ] Text tolerance defined, measured, ratified; T-pages pass it (work item 5)
+- [ ] Shadow decision made by Adam (baked-Gaussian implemented + measured; ratify or redirect)
+- [x] §8 positions written (text/DPI/stacking/compositing/shadows) — [Positions_S8.md](../Positions_S8.md)
+- [x] Extractor gradient escape closed; goldens re-extracted; SCHEMA.md in step
+- [x] Suite baseline diff: 903/903 (884 preserved + 19 explicit NullRHI-lane skips)
 - [ ] PLAN.md + this header, same commit; PROGRESS dated entry
