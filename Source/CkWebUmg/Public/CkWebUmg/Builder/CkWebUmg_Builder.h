@@ -36,6 +36,7 @@ namespace ck::webumg
          * The fidelity harness walks this to compare arranged rects against the IR.
          */
         TMap<FString, TSharedPtr<SWidget>> WidgetsByIrId;
+        TMap<FString, TSharedPtr<SWidget>> WidgetsByCkName; // data-ck-name -> widget (gameplay binding surface)
 
         /** Brushes built per node (rounded boxes etc.) — Slate widgets hold raw brush pointers,
          *  so the result owns their lifetime; keep this result alive while the tree renders. */

@@ -148,6 +148,20 @@ bool
     auto IrNodes = TArray<TSharedPtr<const FCkWebUmg_IrNode>>{};
     CollectIrNodes(RoundTrippedIr.Root, IrNodes);
 
+    // The data-ck-name binding surface: every named node in the (unique-name-guaranteed) tree
+    // must resolve to its widget through the asset path.
+    {
+        const auto CountNames = [](const auto& InSelf, const TSharedPtr<const FCkWebUmg_IrNode>& InNode) -> int32
+        {
+            auto Count = InNode->CkName.IsEmpty() ? 0 : 1;
+            for (const auto& Child : InNode->Children)
+            { Count += InSelf(InSelf, Child); }
+            return Count;
+        };
+        TestTrue(TEXT("every data-ck-name resolves to a widget"),
+            Built.WidgetsByCkName.Num() == CountNames(CountNames, RoundTrippedIr.Root));
+    }
+
     for (const auto& IrNode : IrNodes)
     {
         if (IrNode->Text.IsSet() && IrNode->Children.Num() == 0)

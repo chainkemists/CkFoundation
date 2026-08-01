@@ -819,6 +819,8 @@ namespace ck_webumg_builder
         Result->SetRenderOpacity(InNode->Paint.Opacity);
 
         InOutResult.WidgetsByIrId.Add(InNode->Id, Result);
+        if (NOT InNode->CkName.IsEmpty())
+        { InOutResult.WidgetsByCkName.Add(InNode->CkName, Result); }
         return Result;
     }
 }
