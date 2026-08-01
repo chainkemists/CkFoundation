@@ -47,12 +47,12 @@ public:
     // Pass nullptr to unlink.
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|TabBar")
     void
-    Set_LinkedSwitcher(
+    Request_SetLinkedSwitcher(
         UWidgetSwitcher* InSwitcher);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|TabBar")
     void
-    Set_ActiveTab(
+    Request_SetActiveTab(
         int32 InIndex);
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Ck|UI|TabBar")
@@ -65,7 +65,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|TabBar")
     void
-    Set_TabConfig(
+    Request_SetTabConfig(
         int32 InIndex,
         const FCk_TabBar_TabConfig& InTabConfig);
 

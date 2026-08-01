@@ -34,7 +34,7 @@ public:
     // Re-discovers parameters, preserving existing overrides by name. The source asset is never modified.
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|ParametricImage")
     void
-    Set_SourceMaterial(
+    Request_SetSourceMaterial(
         UMaterialInterface* InSourceMaterial);
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Ck|UI|ParametricImage")
