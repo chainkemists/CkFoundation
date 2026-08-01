@@ -16,6 +16,7 @@
 #include <Components/NamedSlot.h>
 #include <Components/PanelWidget.h>
 #include <Components/Widget.h>
+#include <Framework/Application/NavigationConfig.h>
 #include <Framework/Application/SlateApplication.h>
 #include <Framework/Application/SlateUser.h>
 #include <GameFramework/PlayerController.h>
@@ -213,6 +214,60 @@ auto
     }
 
     return nullptr;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UI_UE::
+    Request_SetNavigationConfig(
+        const FCk_UI_NavigationConfig& InConfig)
+    -> void
+{
+    if (NOT FSlateApplication::IsInitialized())
+    { return; }
+
+    // A fresh config rather than mutating the live one: the FNavigationConfig constructor is what
+    // populates KeyEventRules / KeyActionRules, so building anew keeps the digital-rule defaults
+    // intact instead of inheriting whatever a previous caller left behind.
+    const auto NavigationConfig = MakeShared<FNavigationConfig>();
+
+    NavigationConfig->bTabNavigation = InConfig.Get_TabNavigation();
+    NavigationConfig->bKeyNavigation = InConfig.Get_KeyNavigation();
+    NavigationConfig->bAnalogNavigation = InConfig.Get_AnalogNavigation();
+    NavigationConfig->bIgnoreModifiersForNavigationActions = InConfig.Get_IgnoreModifiersForNavigationActions();
+    NavigationConfig->AnalogNavigationHorizontalThreshold = InConfig.Get_AnalogNavigationHorizontalThreshold();
+    NavigationConfig->AnalogNavigationVerticalThreshold = InConfig.Get_AnalogNavigationVerticalThreshold();
+    NavigationConfig->AnalogHorizontalKey = InConfig.Get_AnalogHorizontalKey();
+    NavigationConfig->AnalogVerticalKey = InConfig.Get_AnalogVerticalKey();
+
+    FSlateApplication::Get().SetNavigationConfig(NavigationConfig);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UI_UE::
+    Get_NavigationConfig()
+    -> FCk_UI_NavigationConfig
+{
+    auto Config = FCk_UI_NavigationConfig{};
+
+    if (NOT FSlateApplication::IsInitialized())
+    { return Config; }
+
+    const auto& NavigationConfig = FSlateApplication::Get().GetNavigationConfig();
+
+    Config.Set_TabNavigation(NavigationConfig->bTabNavigation);
+    Config.Set_KeyNavigation(NavigationConfig->bKeyNavigation);
+    Config.Set_AnalogNavigation(NavigationConfig->bAnalogNavigation);
+    Config.Set_IgnoreModifiersForNavigationActions(NavigationConfig->bIgnoreModifiersForNavigationActions);
+    Config.Set_AnalogNavigationHorizontalThreshold(NavigationConfig->AnalogNavigationHorizontalThreshold);
+    Config.Set_AnalogNavigationVerticalThreshold(NavigationConfig->AnalogNavigationVerticalThreshold);
+    Config.Set_AnalogHorizontalKey(NavigationConfig->AnalogHorizontalKey);
+    Config.Set_AnalogVerticalKey(NavigationConfig->AnalogVerticalKey);
+
+    return Config;
 }
 
 auto
