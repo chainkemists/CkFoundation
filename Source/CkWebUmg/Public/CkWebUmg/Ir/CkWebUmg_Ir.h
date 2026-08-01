@@ -113,6 +113,7 @@ struct CKWEBUMG_API FCkWebUmg_IrPaint
     FVector4f BorderRadius = FVector4f::Zero(); // tl, tr, br, bl
     FVector4f BorderWidth = FVector4f::Zero();  // t, r, b, l
     TOptional<FColor> BorderColor;
+    TArray<FColor> BorderColors; // t, r, b, l (empty when the page has no borders)
     TOptional<FCkWebUmg_IrTransform> Transform;
     TArray<FCkWebUmg_IrShadowLayer> ShadowLayers; // CSS order: first layer paints topmost
     bool HasUntypedShadow = false;                // boxShadow present but layers unparseable

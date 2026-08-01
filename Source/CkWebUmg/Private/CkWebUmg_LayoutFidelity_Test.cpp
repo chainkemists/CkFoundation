@@ -176,26 +176,47 @@ bool
                 auto SlateLines = TArray<float>{}; // advance per wrapped line
                 {
                     const auto WrapWidth = IrNode->Get_LayoutBox().Content.W;
-                    auto Words = TArray<FString>{};
-                    ck::webumg::ApplyTextTransform(IrNode->Text->Content, IrNode->Text->TransformCase)
-                        .ParseIntoArray(Words, TEXT(" "));
-                    const auto SpaceW = static_cast<float>(
-                        FontMeasure->Measure(TEXT(" "), FontInfo, 1.0f).X);
-                    auto Current = 0.0f;
-                    for (const auto& Word : Words)
+                    // Letter-spacing is modeled explicitly (measure with spacing zeroed, add
+                    // LetterSpacingPx per character, Chromium-style) so the comparison does not
+                    // depend on whether Slate's measure path honors FSlateFontInfo::LetterSpacing.
+                    auto MeasureFont = FontInfo;
+                    MeasureFont.LetterSpacing = 0;
+                    const auto Spacing = IrNode->Text->LetterSpacingPx;
+                    const auto MeasureRun = [&](const FString& InRun) -> float
                     {
-                        const auto WordW = static_cast<float>(FontMeasure->Measure(Word, FontInfo, 1.0f).X);
-                        const auto Extended = Current > 0.0f ? Current + SpaceW + WordW : WordW;
-                        if (Current > 0.0f && Extended > WrapWidth + 0.5f && LineBoxes.Num() > 1)
+                        return static_cast<float>(FontMeasure->Measure(InRun, MeasureFont, 1.0f).X)
+                            + Spacing * static_cast<float>(InRun.Len());
+                    };
+                    const auto SpaceW = MeasureRun(TEXT(" "));
+
+                    // \n in content is a FORCED break (<br> at extraction); greedy wrap applies
+                    // within each segment only.
+                    auto Segments = TArray<FString>{};
+                    ck::webumg::ApplyTextTransform(IrNode->Text->Content, IrNode->Text->TransformCase)
+                        .ParseIntoArray(Segments, TEXT("\n"));
+                    // nowrap/pre suppress soft wrapping entirely — Chromium overflows instead.
+                    const auto CanWrap = IrNode->Text->WhiteSpace != TEXT("nowrap")
+                        && IrNode->Text->WhiteSpace != TEXT("pre");
+                    for (const auto& Segment : Segments)
+                    {
+                        auto Words = TArray<FString>{};
+                        Segment.ParseIntoArray(Words, TEXT(" "));
+                        auto Current = 0.0f;
+                        for (const auto& Word : Words)
                         {
-                            SlateLines.Add(Current);
-                            Current = WordW;
+                            const auto WordW = MeasureRun(Word);
+                            const auto Extended = Current > 0.0f ? Current + SpaceW + WordW : WordW;
+                            if (Current > 0.0f && Extended > WrapWidth + 0.5f && LineBoxes.Num() > 1 && CanWrap)
+                            {
+                                SlateLines.Add(Current);
+                                Current = WordW;
+                            }
+                            else
+                            { Current = Extended; }
                         }
-                        else
-                        { Current = Extended; }
+                        if (Current > 0.0f)
+                        { SlateLines.Add(Current); }
                     }
-                    if (Current > 0.0f)
-                    { SlateLines.Add(Current); }
                 }
 
                 auto MaxAdvanceDeltaPct = 0.0f;

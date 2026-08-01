@@ -223,6 +223,20 @@ namespace ck_webumg_irloader
         Paint.BorderWidth = ReadFloat4(PaintObj, TEXT("borderWidth"));
         Paint.BorderColor = ReadColor(PaintObj, TEXT("borderColor"));
 
+        const TArray<TSharedPtr<FJsonValue>>* BorderColorValues = nullptr;
+        if (PaintObj->TryGetArrayField(TEXT("borderColors"), BorderColorValues) && BorderColorValues->Num() == 4)
+        {
+            for (const auto& ColorValue : *BorderColorValues)
+            {
+                const auto& Rgba = ColorValue->AsArray();
+                if (Rgba.Num() != 4)
+                { Paint.BorderColors.Reset(); break; }
+                Paint.BorderColors.Add(FColor(
+                    static_cast<uint8>(Rgba[0]->AsNumber()), static_cast<uint8>(Rgba[1]->AsNumber()),
+                    static_cast<uint8>(Rgba[2]->AsNumber()), static_cast<uint8>(Rgba[3]->AsNumber())));
+            }
+        }
+
         const TSharedPtr<FJsonObject>* ShadowObj = nullptr;
         if (PaintObj->TryGetObjectField(TEXT("boxShadow"), ShadowObj))
         {

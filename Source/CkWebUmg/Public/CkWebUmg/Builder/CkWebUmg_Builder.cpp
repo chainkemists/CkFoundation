@@ -388,6 +388,67 @@ namespace ck_webumg_builder
         }
     };
 
+    // Bespoke border ring for per-side widths/colors: alpha = outer rounded coverage minus inner
+    // (inset per-side, inner radii reduced by the larger adjacent width — exact for square
+    // corners, approximate for elliptical inner arcs); each pixel takes the color of the side
+    // whose penetration ratio it is deepest into, which reproduces Chromium's miter diagonals.
+    auto
+    BakeBorderBrush(
+        FBuildContext& InCtx,
+        const FCkWebUmg_IrPaint& InPaint,
+        const FVector2f InSize)
+        -> const FSlateBrush*
+    {
+        const auto Width = FMath::RoundToInt32(InSize.X);
+        const auto Height = FMath::RoundToInt32(InSize.Y);
+        if (Width <= 0 || Height <= 0 || InPaint.BorderColors.Num() != 4)
+        { return nullptr; }
+
+        const auto& Bw = InPaint.BorderWidth; // t, r, b, l
+        const auto InnerHalf = FVector2f(
+            FMath::Max((InSize.X - Bw.W - Bw.Y) * 0.5f, 0.0f),
+            FMath::Max((InSize.Y - Bw.X - Bw.Z) * 0.5f, 0.0f));
+        const auto InnerCenter = FVector2f(Bw.W + InnerHalf.X, Bw.X + InnerHalf.Y);
+        const auto& R = InPaint.BorderRadius;
+        const auto InnerRadii = FVector4f(
+            FMath::Max(R.X - FMath::Max(Bw.X, Bw.W), 0.0f),
+            FMath::Max(R.Y - FMath::Max(Bw.X, Bw.Y), 0.0f),
+            FMath::Max(R.Z - FMath::Max(Bw.Z, Bw.Y), 0.0f),
+            FMath::Max(R.W - FMath::Max(Bw.Z, Bw.W), 0.0f));
+
+        auto Pixels = TArray<FColor>{};
+        Pixels.SetNumUninitialized(Width * Height);
+        for (auto Y = 0; Y < Height; ++Y)
+        {
+            for (auto X = 0; X < Width; ++X)
+            {
+                const auto P = FVector2f(static_cast<float>(X) + 0.5f, static_cast<float>(Y) + 0.5f);
+                const auto Outer = RoundedBoxCoverage(P, InSize * 0.5f, InSize * 0.5f, R);
+                const auto Inner = RoundedBoxCoverage(P, InnerCenter, InnerHalf, InnerRadii);
+                const auto Ring = FMath::Clamp(Outer - Inner, 0.0f, 1.0f);
+                if (Ring <= 0.0f)
+                {
+                    Pixels[Y * Width + X] = FColor{0, 0, 0, 0};
+                    continue;
+                }
+                const auto Ratio = [&](float InDepth, float InSideWidth) -> float
+                { return InSideWidth > 0.0f ? InDepth / InSideWidth : TNumericLimits<float>::Max(); };
+                const float Ratios[4] = {
+                    Ratio(P.Y, Bw.X),            // top
+                    Ratio(InSize.X - P.X, Bw.Y), // right
+                    Ratio(InSize.Y - P.Y, Bw.Z), // bottom
+                    Ratio(P.X, Bw.W)};           // left
+                auto Side = 0;
+                for (auto Index = 1; Index < 4; ++Index)
+                { if (Ratios[Index] < Ratios[Side]) { Side = Index; } }
+                const auto& Color = InPaint.BorderColors[Side];
+                Pixels[Y * Width + X] = FColor{Color.R, Color.G, Color.B,
+                    static_cast<uint8>(FMath::RoundToInt(Ring * static_cast<float>(Color.A)))};
+            }
+        }
+        return MakeTextureBrush(InCtx, Pixels, Width, Height);
+    }
+
     struct FBakedShadows
     {
         const FSlateBrush* OutsetBrush = nullptr;
@@ -586,8 +647,39 @@ namespace ck_webumg_builder
 
         const auto HasRadius = Paint.BorderRadius != FVector4f::Zero();
         const auto HasBorder = Paint.BorderWidth != FVector4f::Zero() && Paint.BorderColor.IsSet();
+        const auto SidesUniform =
+            Paint.BorderWidth.X == Paint.BorderWidth.Y && Paint.BorderWidth.X == Paint.BorderWidth.Z &&
+            Paint.BorderWidth.X == Paint.BorderWidth.W &&
+            (Paint.BorderColors.Num() != 4 ||
+                (Paint.BorderColors[0] == Paint.BorderColors[1] && Paint.BorderColors[0] == Paint.BorderColors[2] &&
+                 Paint.BorderColors[0] == Paint.BorderColors[3]));
 
-        if (HasRadius || HasBorder)
+        if (HasBorder && NOT SidesUniform)
+        {
+            const auto BorderSize = FVector2f(
+                InNode->Get_LayoutBox().Border.W, InNode->Get_LayoutBox().Border.H);
+            const auto* RingBrush = BakeBorderBrush(InCtx, Paint, BorderSize);
+            const auto Fill = Paint.BackgroundColor.IsSet()
+                ? FLinearColor{*Paint.BackgroundColor}
+                : FLinearColor::Transparent;
+            const TSharedPtr<FSlateBrush> FillBrush = MakeShared<FSlateRoundedBoxBrush>(
+                Fill,
+                FVector4(Paint.BorderRadius.X, Paint.BorderRadius.Y, Paint.BorderRadius.Z, Paint.BorderRadius.W),
+                FLinearColor::Transparent, 0.0f);
+            InOutResult.OwnedBrushes.Add(FillBrush);
+
+            Result = SNew(SBorder)
+                .Padding(0.0f)
+                .BorderImage(FillBrush.Get())
+                [
+                    SNew(SOverlay)
+                    + SOverlay::Slot()[RingBrush != nullptr
+                        ? TSharedRef<SWidget>{SNew(SImage).Image(RingBrush)}
+                        : TSharedRef<SWidget>{SNew(SBox)}]
+                    + SOverlay::Slot()[Content.ToSharedRef()]
+                ];
+        }
+        else if (HasRadius || HasBorder)
         {
             // FSlateBrushOutlineSettings corner order (TL, TR, BR, BL) matches the IR's CSS order.
             const auto Fill = Paint.BackgroundColor.IsSet()

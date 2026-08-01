@@ -475,17 +475,9 @@ class Extractor {
             }
             return h;
         };
+        // Per-side colors are typed (the consumer bakes bespoke borders); no diagnostic needed.
         const borderColors = ['top', 'right', 'bottom', 'left']
             .map(s => parseColor(c.get(`border-${s}-color`)));
-        const sidesDiffer = borderColors.some(col =>
-            JSON.stringify(col) !== JSON.stringify(borderColors[0]));
-        if (sidesDiffer) {
-            unsupportedSink.push({
-                property: 'border-color',
-                value: 'per-side border colors differ; only the top color is representable',
-                source: 'computed',
-            });
-        }
         return {
             background,
             borderRadius: [
@@ -497,6 +489,7 @@ class Extractor {
                 px(c.get('border-bottom-width')), px(c.get('border-left-width')),
             ],
             borderColor: borderColors[0],
+            borderColors,
             boxShadow: c.get('box-shadow') === 'none' ? null : {
                 ...(l => l !== null ? { layers: l } : {})(parseBoxShadow(c.get('box-shadow'))),
                 computed: c.get('box-shadow'),
@@ -525,9 +518,16 @@ class Extractor {
     }
 
     textBlock(node, c) {
-        const textChildren = (node.children ?? []).filter(ch => ch.nodeType === 3);
-        const content = textChildren.map(t => t.nodeValue).join('').replace(/\s+/g, ' ').trim();
-        if (content.length === 0) return null;
+        // <br> folds to \n (a FORCED break the consumer must honor); whitespace collapses within
+        // each segment, not across breaks. Pure-whitespace content stays null.
+        const parts = [];
+        for (const ch of node.children ?? []) {
+            if (ch.nodeType === 3) parts.push(ch.nodeValue);
+            else if (ch.nodeType === 1 && ch.nodeName === 'BR') parts.push('\n');
+        }
+        const content = parts.join('')
+            .split('\n').map(s => s.replace(/\s+/g, ' ').trim()).join('\n');
+        if (content.replace(/\n/g, '').trim().length === 0) return null;
         // Chrome 150's computed list dropped the `white-space` shorthand in favor of the
         // `white-space-collapse` + `text-wrap-mode` longhands (B1); synthesize the classic value.
         const collapse = c.get('white-space-collapse') ?? 'collapse';
@@ -638,8 +638,22 @@ class Extractor {
                     functionDeclaration: `function() {
                         const r = document.createRange();
                         r.selectNodeContents(this);
-                        return [...r.getClientRects()].map(b =>
-                            [b.x, b.y, b.width, b.height].map(v => Math.round(v * 100) / 100));
+                        // Font-fallback splits one visual line into per-run rects (e.g. an em-dash
+                        // from a fallback face) — merge rects sharing a line so a lineBox means a
+                        // LINE, not a shaping run.
+                        const merged = [];
+                        for (const b of r.getClientRects()) {
+                            const last = merged[merged.length - 1];
+                            if (last && Math.abs(b.y - last.y) < Math.max(b.height, last.h) * 0.5) {
+                                last.w = Math.max(last.x + last.w, b.x + b.width) - Math.min(last.x, b.x);
+                                last.x = Math.min(last.x, b.x);
+                                last.h = Math.max(last.h, b.height);
+                            } else {
+                                merged.push({ x: b.x, y: b.y, w: b.width, h: b.height });
+                            }
+                        }
+                        return merged.map(b =>
+                            [b.x, b.y, b.w, b.h].map(v => Math.round(v * 100) / 100));
                     }`,
                 });
                 if (Array.isArray(result.value)) text.lineBoxes = result.value;
