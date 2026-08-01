@@ -347,13 +347,20 @@ default material.
 
 | Test | Lane | Asserts |
 |---|---|---|
-| `CkTests.UnitTests.CkParticles.LightningRangeAuthoring` | any (renderer-free) | 17 is in the roster; routes to the single-burst template; the cadence row is 1.0/1.1/1; the look binds and its master resolves and declares sprite usage; both imported textures resolve from plugin content; **neither the template nor the look master has any `/Game/Vefects` package dependency** |
+| `CkTests.UnitTests.CkParticles.LightningRangeBehavior` | any (no Niagara, no RHI, no fork) | **the numbers**: the colour snap and its hold, all three alpha keys plus that the late move is a swell not a fade, the dissolve ramp, the inert distortion/offset/core channels, `VisTag 4` with a non-degenerate alignment/facing pair, and Seed-independence. Cannot pass vacuously — the default size is 20, so asserting 700 proves the switch reached case 17 |
+| `CkTests.UnitTests.CkParticles.RosterSanity` | any (no Niagara, no RHI, no fork) | every behavior, across ages/lifetimes/seeds, produces renderable output: finite everywhere, non-negative size, alpha in [0,1], `VisTag` inside the renderer set, valid `MeshIndex` where read, non-degenerate sprite vectors on VisTag 4 — and routes to a template the cadence table declares |
+| `CkTests.UnitTests.CkParticles.LightningRangeAuthoring` | needs `CK_WITH_PARTICLES=1` (skips otherwise) | 17 is in the roster; routes to the single-burst template; the cadence row is 1.0/1.1/1; the look binds and its master resolves and declares sprite usage; both imported textures resolve from plugin content; **neither the template nor the look master has any `/Game/Vefects` package dependency** |
 | `CkTests.UnitTests.CkUsf.NiagaraSpriteContract` | `--no-nullrhi` | the look generates; the master declares `bUsedWithNiagaraSprites`; `ParticleColor` and all four `DynParam*` pins are *connected* (not merely declared); regeneration is idempotent; **every non-particle look gained neither the flag nor the pins** |
 | `Ck_AutoTest_Particles_SpawnAllBehaviors` | `--no-nullrhi` | every id in `Get_NumBehaviors()` spawns a live component |
 
 The spawn test **self-skips under `-nullrhi`** (`FApp::CanEverRender()` is false, so Niagara refuses
 to create components). A green default lane therefore proves authored state, **not** that anything
 rendered.
+
+**Know which gate holds which line.** The two CPU-mirror tests are the only ones that check behavior
+*correctness*; everything else checks existence, and existence checks pass against a behavior that does
+nothing. Neither covers the GPU `.ush` — it cannot be executed headlessly, so GPU/CPU lockstep stays a
+review obligation. And none of them substitutes for the visual gate below.
 
 ```bash
 ./CkAuto/UnrealToolbox.exe --build --config=Development --target=Editor --test --test-pattern Particles --no-nullrhi --output=Saved/Logs/BuildTest-Particles.log --project=<project-root>
