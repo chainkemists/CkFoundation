@@ -72,7 +72,7 @@ auto
 
 auto
     UCk_ColorWheelWidget_UE::
-    Set_Color(
+    Request_SetColor(
         FLinearColor InColor)
     -> void
 {
@@ -90,7 +90,7 @@ auto
 
 auto
     UCk_ColorWheelWidget_UE::
-    Set_BrushTint(
+    Request_SetBrushTint(
         ECk_ColorWheel_BrushTarget InTarget,
         FLinearColor InTint)
     -> void

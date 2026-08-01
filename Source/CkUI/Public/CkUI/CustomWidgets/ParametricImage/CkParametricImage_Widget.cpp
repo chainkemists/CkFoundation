@@ -11,7 +11,7 @@
 
 auto
     UCk_ParametricImageWidget_UE::
-    Set_SourceMaterial(
+    Request_SetSourceMaterial(
         UMaterialInterface* InSourceMaterial)
     -> void
 {

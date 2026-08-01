@@ -112,22 +112,22 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Flipbook")
     void
-    Set_SourceFlipbook(
+    Request_SetSourceFlipbook(
         UPaperFlipbook* InSourceFlipbook);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Flipbook")
     void
-    Set_SpriteSheet(
+    Request_SetSpriteSheet(
         const FCk_FlipbookSpriteSheet& InSpriteSheet);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Flipbook")
     void
-    Set_Looping(
+    Request_SetLooping(
         bool InLoop);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|Flipbook")
     void
-    Set_Autoplay(
+    Request_SetAutoplay(
         bool InAutoplay);
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Ck|UI|Flipbook")

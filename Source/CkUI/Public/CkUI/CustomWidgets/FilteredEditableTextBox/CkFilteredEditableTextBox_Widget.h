@@ -70,7 +70,7 @@ public:
     auto Get_MaxLength() const -> TOptional<int32>;
 
     UFUNCTION(BlueprintCallable, Category = "Filter", DisplayName = "Set Max Length")
-    void Set_MaxLength(int32 InMaxLength);
+    void Request_SetMaxLength(int32 InMaxLength);
 
 private:
     UPROPERTY(EditAnywhere, Category = "Filter", meta = (AllowPrivateAccess = true))

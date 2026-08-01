@@ -82,7 +82,7 @@ auto
 
 auto
     UCk_TabBarWidget_UE::
-    Set_LinkedSwitcher(
+    Request_SetLinkedSwitcher(
         UWidgetSwitcher* InSwitcher)
     -> void
 {
@@ -99,7 +99,7 @@ auto
 
 auto
     UCk_TabBarWidget_UE::
-    Set_ActiveTab(
+    Request_SetActiveTab(
         int32 InIndex)
     -> void
 {
@@ -137,7 +137,7 @@ auto
 
 auto
     UCk_TabBarWidget_UE::
-    Set_TabConfig(
+    Request_SetTabConfig(
         int32 InIndex,
         const FCk_TabBar_TabConfig& InTabConfig)
     -> void
