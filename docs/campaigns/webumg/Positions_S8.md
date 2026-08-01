@@ -88,11 +88,10 @@ material brush / 9-slice approximation / diagnostic-only) were not built: the ba
 hit the platform ceiling, so their scores could only be worse or equal at higher complexity.
 Ratify or redirect at exit.
 
-## P1 per-side borders (surface-limit position; optional widening: Adam)
+## P1 per-side borders — RESOLVED 2026-08-01 (surface widened under Adam's blanket authorization)
 
-P1's 0.7412% attributes by arithmetic: card n4 declares per-side widths [2,8,16,24] + per-side
-colors — both **diagnosed at extraction** as v1-surface limits (DECISION 4); the builder paints a
-uniform top-width outline, leaving ≈10,600 px ≈ 0.51%. The rest (~0.2%) is rounded-edge AA
-(n3 alone is a full r=110 circle). Options: keep the diagnosed limit (default), or widen the v1
-surface — per-side borders are exactly bakeable with the now-proven texture path (trapezoid
-regions + miter joins). Surface changes are gate-boundary calls, so this is listed, not done.
+Originally a listed option; Adam's "tackle any issues and additional items" authorized it. Per-side
+widths AND colors are now in-surface: the extractor types `borderColors [t,r,b,l]` (the B5
+diagnostic retired), the builder bakes a miter-classified ring texture (outer-minus-inner rounded
+SDF, penetration-ratio side ownership). Measured: P1 0.7412% → **0.1695%**, matching the
+arithmetic attribution — the residual is rounded-edge AA only (n3's r=110 circle dominates).

@@ -32,6 +32,16 @@ Target home stays CkTests (owns test infrastructure; no `*Harness` module preced
 
 "Every element's final rect within ±1px of the Chromium box model at the reference resolution" (brief §10) is now the enforced, measured bar — all 9 L-pages pass it in the default automation suite (884/884 full run). NaN is a hard failure on every node. Recorded deviation at close: CkWebUmg has no BP/AS surface yet — the three-environments rule attaches to the reflected DataAsset API arriving at Gate 4, not to the internal Slate/loader layer; revisit at Gate 4 exit.
 
+## Gate 3 execution decisions (2026-08-01, session 3 — made under Adam's standing "continue and follow your recommendations" / "tackle any issues and additional items")
+
+Each reversible, each measured; revisit at the Gate 3 exit if any reads wrong:
+
+- **Paint strategy = CPU-baked transient textures** (gradients, shadows, per-side border rings): per-pixel browser math in sRGB space + `SRGB=true` texture round-trip. Chosen over material brushes after the gradient bake measured EXACT (P2 0.0000%); the Gate-plan shadow alternatives were consequently not built (could only score worse at higher complexity). Editor-time/test-path only today — the Gate 4 emitter decides what form ships in assets.
+- **Harness font mapping = OS faces** (Arial/Segoe UI/Verdana from `C:/Windows/Fonts`; bold cut ≥600; **Black cut ≥800** for Arial — closes Chromium's synthetic-bold divergence, 13.8%→≤2.9%). Rationale: the goldens were rendered by system Chrome with exactly these faces; no other mapping can converge. Machine-local by design; the emitter's shipped font config is Gate 4+ scope.
+- **v1 surface widened: per-side border widths AND colors** (was: diagnosed limit, listed as Adam's option in Positions_S8). Done under the blanket "tackle additional items" authorization; extractor B5 diagnostic retired, `borderColors` typed. P1 0.7412%→0.1695%.
+- **`<br>` = forced break** folded to a newline in IR `text.content` (whitespace collapses per segment); builder renders it, comparator segments on it. Capability landed; no corpus page exercises it yet.
+- **NullRHI lane policy**: pixel suite skips explicitly (`GUsingNullRHI`) instead of failing as a lane artifact; full-suite baseline now **908/908**.
+
 ## Standing evidence notes (carried from Phase 0)
 
 - Yoga vendoring cautions: pin `c766885`; `UseWebDefaults` on; never expose inert grid setters; extractor pre-sorts children by computed `order`; fix `pointScaleFactor` for deterministic harness comparisons (PriorArt §3).

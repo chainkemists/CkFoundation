@@ -18,10 +18,10 @@ After this gate: the paint corpus (P1–P5) renders through the builder within a
 
 0. ✅ **Slate paint inventory** — cited (FSlateRoundedBoxBrush, gradient widgets; shadows have no native soft path).
 1. ✅ **Pixel harness** — landed with text-rect masking, per-page scores, diff-artifact dumps; pixel lane requires `--no-nullrhi` (default lane skips explicitly via `GUsingNullRHI` guard; full suite 903/903).
-2. ✅ **Radius + borders** — `FSlateRoundedBoxBrush` per node. P1 0.7412%, attributed by arithmetic: ~0.51% = per-side widths/colors (diagnosed v1-surface limit), ~0.2% = rounded-edge AA. Optional surface widening listed in [Positions_S8.md](../Positions_S8.md).
+2. ✅ **Radius + borders** — `FSlateRoundedBoxBrush` per node; per-side widths/colors later baked in-surface (miter-classified ring textures, B5 diagnostic retired). P1 0.7412% → **0.1695%** (AA-only residual).
 3. ✅ **Typed gradients** — EXCEEDED the plan: extractor types stops + radial center/radius absolutely; builder BAKES all linear (any angle) and radial gradients to per-node sRGB textures with browser math. P2 31.86% → **0.0000%** (maxDelta 1). SComplexGradient path deleted.
 4. ✅-implemented **Shadow strategy** — baked Gaussian textures (σ=blur/2, SDF coverage, sRGB layer compositing). Single black drop exact; P3 → 5.7471% where the ENTIRE residual is §8.4 compositing-space, not shadow geometry. Alternatives not built (could only score worse at higher complexity). **Adam ratifies at exit.**
-5. **Text styling + tolerance regime (§8.1 position)** — REMAINING. Font mapping config (corpus uses Arial; decide the bundled/mapped face), apply weight/size/letter-spacing/line-height to STextBlock; implement the per-glyph-run box comparison; propose the numeric text tolerance from measured data (Gate 2 already logged 200×200-vs-131×38-class gaps).
+5. ✅ **Text styling + tolerance regime** — OS font mapping (Arial/Segoe/Verdana + Black cut for ≥800; px→pt 0.75 factor), letter-spacing/text-transform/`<br>` modeled, line-run comparator (line boxes from Range.getClientRects, greedy-wrap replay, fallback-run merging, nowrap honored). Final dataset: 25 runs, 0 wrap mismatches, mean 0.78%, max 2.9%. Tolerance proposal for exit: ±3% advance, ±2px line height.
 6. ✅ **Asset import (P5)** — browser-normalized `ckui-assets/` bundles + `ImportFileAsTexture2D` with SRGB. P5 0.0000%.
 7. ✅ **§8 written positions** — [Positions_S8.md](../Positions_S8.md): compositing space (with options), text metrics, DPI contract, stacking contexts, shadows, per-side borders.
 
@@ -38,9 +38,8 @@ After this gate: the paint corpus (P1–P5) renders through the builder within a
 ## Exit criteria — same-commit rule as always
 
 - [ ] P-corpus at agreed paint threshold (number ratified by Adam at this gate, like ±1px was) —
-      measured floors on the table: P1 0.7412% / P2 0.0000% / P3 5.7471% / P4 4.3886% / P5 0.0000%,
-      with P3+P4 floors set by §8.4, not by unbuilt features
-- [ ] Text tolerance defined, measured, ratified; T-pages pass it (work item 5)
+      measured floors on the table: P1 **0.1695%** (per-side borders baked; AA-only) / P2 0.0000% / P3 5.7471% / P4 4.3886% / P5 0.0000%, with P3+P4 floors set by §8.4, not by unbuilt features
+- [ ] Text tolerance defined, measured, ratified; T-pages pass it — final dataset: 25 line-runs, 0 wrap mismatches, mean 0.78%, max 2.9% (proposal: ±3% advance, ±2px line height, no exemptions)
 - [ ] Shadow decision made by Adam (baked-Gaussian implemented + measured; ratify or redirect)
 - [x] §8 positions written (text/DPI/stacking/compositing/shadows) — [Positions_S8.md](../Positions_S8.md)
 - [x] Extractor gradient escape closed; goldens re-extracted; SCHEMA.md in step
