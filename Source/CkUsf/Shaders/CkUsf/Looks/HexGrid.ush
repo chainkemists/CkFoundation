@@ -1,0 +1,60 @@
+// /CkUsf/Looks/HexGrid.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+#ifndef CKUSF_HEXGRID_ROUGH_A
+#define CKUSF_HEXGRID_ROUGH_A 0.3
+#endif
+#ifndef CKUSF_HEXGRID_ROUGH_B
+#define CKUSF_HEXGRID_ROUGH_B 0.76
+#endif
+
+// Signed distance from the hex-cell centre toward the edge: 0.5 exactly on the cell border
+// (lattice basis (1, sqrt(3)); P in lattice units).
+float CkUsf_HexGrid_EdgeDist(float2 P)
+{
+    P = abs(P);
+    return max(dot(P, float2(0.5, 0.8660254)), P.x);
+}
+
+// Local position within the containing hex (.xy) + the hex's lattice id (.zw).
+float4 CkUsf_HexGrid_Coords(float2 P)
+{
+    const float2 R = float2(1.0, 1.7320508);
+    float2 H = R * 0.5;
+    float2 CellA = (frac(P / R) - 0.5) * R;
+    float2 CellB = (frac((P - H) / R) - 0.5) * R;
+    float2 GV = dot(CellA, CellA) < dot(CellB, CellB) ? CellA : CellB;
+    return float4(GV, P - GV);
+}
+
+// Params: ColorA (Vector), ColorB (Vector), LineColor (Vector), HexSize (Scalar, cm), LineWidth (Scalar, cm),
+//         ShiftX (Scalar, cm), ShiftY (Scalar, cm).
+// Hexagonal blockout tiling (SuperGrid's Hexagon material): world-aligned hex cells, each cell
+// randomly shaded between ColorA and ColorB, edges drawn in LineColor.
+FCkUsf_SurfaceOutput CkUsf_Look_HexGrid(FCkUsf_SurfaceInput In, float3 ColorA, float3 ColorB, float3 LineColor,
+                                        float HexSize, float LineWidth, float ShiftX, float ShiftY)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float Size = max(HexSize, 0.01);
+    float2 P = (CkUsf_WorldPlanarUV(In.WorldPosition, In.VertexNormal) + float2(ShiftX, ShiftY)) / Size;
+
+    float4 HC = CkUsf_HexGrid_Coords(P);
+    float Shade = CkUsf_Hash21(HC.zw * 17.31);
+    float3 Col = lerp(ColorA, ColorB, Shade);
+
+    float DistToEdge = (0.5 - CkUsf_HexGrid_EdgeDist(HC.xy)) * Size;
+#if PIXELSHADER
+    float Aa = max(fwidth(DistToEdge), 1e-4);
+    float Line = saturate((LineWidth * 0.5 - DistToEdge) / Aa + 0.5);
+#else
+    float Line = DistToEdge < LineWidth * 0.5 ? 1.0 : 0.0;
+#endif
+    Col = lerp(Col, LineColor, Line);
+
+    O.BaseColor = Col;
+    O.Roughness = lerp(lerp(CKUSF_HEXGRID_ROUGH_A, CKUSF_HEXGRID_ROUGH_B, Shade), CKUSF_HEXGRID_ROUGH_A, Line);
+    O.Normal = CkUsf_NormalFromHeight(-Line * LineWidth, 0.3);
+    return O;
+}

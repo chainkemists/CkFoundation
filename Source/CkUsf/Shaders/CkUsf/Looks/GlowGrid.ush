@@ -1,0 +1,44 @@
+// /CkUsf/Looks/GlowGrid.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+#ifndef CKUSF_GLOWGRID_SUBCELLS
+#define CKUSF_GLOWGRID_SUBCELLS 10.0
+#endif
+#ifndef CKUSF_GLOWGRID_LINE_WIDTH
+#define CKUSF_GLOWGRID_LINE_WIDTH 1.5
+#endif
+#ifndef CKUSF_GLOWGRID_METALLIC
+#define CKUSF_GLOWGRID_METALLIC 0.0
+#endif
+#ifndef CKUSF_GLOWGRID_GLOW_INTENSITY
+#define CKUSF_GLOWGRID_GLOW_INTENSITY 2.0
+#endif
+
+// Params: PrimaryColor (Vector), SecondaryColor (Vector), GlowColor (Vector),
+//         CellSize (Scalar, cm), PulseSpeed (Scalar), ShiftX (Scalar, cm), ShiftY (Scalar, cm).
+// Emissive blockout grid (SuperGrid's Glowing MultiColor / GlowingLava): world-aligned checker of
+// Primary/Secondary with the fine sub-grid glowing in GlowColor, pulsing on a global sine.
+FCkUsf_SurfaceOutput CkUsf_Look_GlowGrid(FCkUsf_SurfaceInput In, float3 PrimaryColor, float3 SecondaryColor,
+                                         float3 GlowColor, float CellSize, float PulseSpeed,
+                                         float ShiftX, float ShiftY)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 P = CkUsf_WorldPlanarUV(In.WorldPosition, In.VertexNormal) + float2(ShiftX, ShiftY);
+
+    float Checker = CkUsf_CheckerParity(P, CellSize);
+    float3 Col = lerp(PrimaryColor, SecondaryColor, Checker);
+
+    float MinorCell = CellSize / CKUSF_GLOWGRID_SUBCELLS;
+    float Minor = CkUsf_GridLineCoverage(P, MinorCell, CKUSF_GLOWGRID_LINE_WIDTH * 0.35);
+    float Major = CkUsf_GridLineCoverage(P, CellSize, CKUSF_GLOWGRID_LINE_WIDTH);
+
+    float Pulse = 0.6 + 0.4 * sin(In.Time * PulseSpeed);
+
+    O.BaseColor = lerp(Col, Col * 0.15, max(Major, Minor));
+    O.EmissiveColor = GlowColor * (Minor * CKUSF_GLOWGRID_GLOW_INTENSITY + Major * 0.4) * Pulse;
+    O.Metallic = CKUSF_GLOWGRID_METALLIC;
+    O.Roughness = lerp(0.7, 0.4, max(Major, Minor));
+    return O;
+}

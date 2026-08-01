@@ -1,0 +1,51 @@
+// /CkUsf/Looks/PanelGrid.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+#ifndef CKUSF_PANELGRID_GAP
+#define CKUSF_PANELGRID_GAP 1.0
+#endif
+#ifndef CKUSF_PANELGRID_BEVEL
+#define CKUSF_PANELGRID_BEVEL 3.0
+#endif
+#ifndef CKUSF_PANELGRID_ACCENT_A
+#define CKUSF_PANELGRID_ACCENT_A 0.12
+#endif
+#ifndef CKUSF_PANELGRID_ACCENT_B
+#define CKUSF_PANELGRID_ACCENT_B 0.25
+#endif
+
+// Params: ColorA (Vector), ColorB (Vector), ColorC (Vector), PanelSize (Scalar, cm).
+// Sci-fi wall paneling (SuperGrid's PanelCustom / Modern): world-aligned brick-offset panels,
+// most in the neutral ColorC with occasional ColorA/ColorB accents picked per panel, beveled
+// edges and dark seams. Gap/bevel widths and accent frequency retune via defines.
+FCkUsf_SurfaceOutput CkUsf_Look_PanelGrid(FCkUsf_SurfaceInput In, float3 ColorA, float3 ColorB, float3 ColorC,
+                                          float PanelSize)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float PanelW = max(PanelSize, 1.0);
+    float PanelH = PanelW * 0.5;
+    float2 P = CkUsf_WorldPlanarUV(In.WorldPosition, In.VertexNormal);
+
+    float Row = floor(P.y / PanelH);
+    float RowShift = frac(Row * 0.5) * PanelW;
+    float Col = floor((P.x + RowShift) * (1.0 / PanelW));
+    float2 PanelId = float2(Col, Row);
+
+    float2 Local = float2(frac((P.x + RowShift) / PanelW) - 0.5, frac(P.y / PanelH) - 0.5) * float2(PanelW, PanelH);
+    float SdPanel = CkUsf_SdBox(Local, float2(PanelW, PanelH) * 0.5 - CKUSF_PANELGRID_GAP);
+
+    float Pick = CkUsf_Hash21(PanelId * 7.13);
+    float3 PanelColor = Pick < CKUSF_PANELGRID_ACCENT_A ? ColorA
+                      : Pick < CKUSF_PANELGRID_ACCENT_B ? ColorB
+                      : ColorC * lerp(0.85, 1.1, CkUsf_Hash21(PanelId * 3.77));
+
+    float Face = CkUsf_SdfEdgeAA(SdPanel);
+    float BevelHeight = saturate(-SdPanel / CKUSF_PANELGRID_BEVEL);
+
+    O.BaseColor = lerp(PanelColor * 0.1, PanelColor, Face);
+    O.Roughness = lerp(0.8, lerp(0.55, 0.35, CkUsf_Hash21(PanelId * 11.29)), Face);
+    O.Normal = CkUsf_NormalFromHeight(BevelHeight * CKUSF_PANELGRID_BEVEL, 0.8);
+    return O;
+}

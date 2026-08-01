@@ -1,0 +1,54 @@
+// /CkUsf/Looks/HoloGrid.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+#ifndef CKUSF_HOLOGRID_SUBCELLS
+#define CKUSF_HOLOGRID_SUBCELLS 10.0
+#endif
+#ifndef CKUSF_HOLOGRID_LINE_WIDTH
+#define CKUSF_HOLOGRID_LINE_WIDTH 1.5
+#endif
+#ifndef CKUSF_HOLOGRID_PRIMARY_INTENSITY
+#define CKUSF_HOLOGRID_PRIMARY_INTENSITY 2.0
+#endif
+#ifndef CKUSF_HOLOGRID_SECONDARY_INTENSITY
+#define CKUSF_HOLOGRID_SECONDARY_INTENSITY 5.0
+#endif
+
+// Params: PrimaryColor (Vector), SecondaryColor (Vector), CellSize (Scalar, cm),
+//         ScrollSpeed (Scalar), Alpha (Scalar), Ior (Scalar)
+// Holographic refracting grid (SuperGrid's HoloRefract): translucent surface whose world-aligned
+// grid lines glow in PrimaryColor while scan bands scroll up world Z in SecondaryColor; a fresnel
+// rim keeps silhouettes readable and Ior bends the scene behind it.
+FCkUsf_SurfaceOutput CkUsf_Look_HoloGrid(FCkUsf_SurfaceInput In, float3 PrimaryColor, float3 SecondaryColor,
+                                         float CellSize, float ScrollSpeed, float Alpha, float Ior)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 P = CkUsf_WorldPlanarUV(In.WorldPosition, In.VertexNormal);
+
+    float MinorCell = CellSize / CKUSF_HOLOGRID_SUBCELLS;
+    float Minor = CkUsf_GridLineCoverage(P, MinorCell, CKUSF_HOLOGRID_LINE_WIDTH * 0.35);
+    float Major = CkUsf_GridLineCoverage(P, CellSize, CKUSF_HOLOGRID_LINE_WIDTH);
+    float Grid = max(Major, Minor * 0.4);
+
+    // Two scan-band frequencies scrolling at different rates read as interference, not a wipe.
+    float Z = In.WorldPosition.z;
+    float BandA = 0.5 + 0.5 * sin(Z * 0.02 - In.Time * ScrollSpeed * 6.0);
+    float BandB = 0.5 + 0.5 * sin(Z * 0.005 - In.Time * ScrollSpeed * 2.5);
+    float Bands = BandA * 0.35 + BandB * 0.65;
+
+    float Fresnel = pow(1.0 - saturate(dot(normalize(In.CameraVector), normalize(In.VertexNormal))), 3.0);
+
+    O.BaseColor = float3(0.0, 0.0, 0.0);
+    O.EmissiveColor =
+        PrimaryColor * Grid * CKUSF_HOLOGRID_PRIMARY_INTENSITY +
+        SecondaryColor * Bands * CKUSF_HOLOGRID_SECONDARY_INTENSITY * 0.2 +
+        PrimaryColor * Fresnel * 0.6;
+    O.Metallic = 0.0;
+    O.Roughness = 0.1;
+    O.Specular = 1.0;
+    O.Opacity = saturate(Alpha + Grid * 0.5 + Fresnel * 0.3);
+    O.Refraction = Ior;
+    return O;
+}

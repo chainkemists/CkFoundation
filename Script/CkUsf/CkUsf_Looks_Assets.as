@@ -481,6 +481,289 @@ namespace CkUsf
         _Parameters.Add(Speed);
     }
 
+    // ---- Prototyping grids (SuperGrid-inspired, fully procedural / world-aligned) ----
+
+    asset ProtoGrid of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/ProtoGrid.ush";
+        _UshFunctionName = n"CkUsf_Look_ProtoGrid";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _LookName        = n"ProtoGrid";
+
+        FCk_Usf_ParamDesc PrimaryColor;
+        PrimaryColor._Name = n"PrimaryColor";
+        PrimaryColor._Type = ECk_Usf_ParamType::Vector;
+        PrimaryColor._DefaultVector = FLinearColor(0.109, 0.16, 0.23, 1.0);
+        _Parameters.Add(PrimaryColor);
+
+        FCk_Usf_ParamDesc SecondaryColor;
+        SecondaryColor._Name = n"SecondaryColor";
+        SecondaryColor._Type = ECk_Usf_ParamType::Vector;
+        SecondaryColor._DefaultVector = FLinearColor(0.148, 0.216, 0.31, 1.0);
+        _Parameters.Add(SecondaryColor);
+
+        FCk_Usf_ParamDesc LineColor;
+        LineColor._Name = n"LineColor";
+        LineColor._Type = ECk_Usf_ParamType::Vector;
+        LineColor._DefaultVector = FLinearColor(0.766, 0.922, 1.0, 1.0);
+        _Parameters.Add(LineColor);
+
+        FCk_Usf_ParamDesc CellSize;
+        CellSize._Name = n"CellSize";
+        CellSize._Type = ECk_Usf_ParamType::Scalar;
+        CellSize._DefaultScalar = 100.0;
+        _Parameters.Add(CellSize);
+
+        FCk_Usf_ParamDesc SubCells;
+        SubCells._Name = n"SubCells";
+        SubCells._Type = ECk_Usf_ParamType::Scalar;
+        SubCells._DefaultScalar = 10.0;
+        _Parameters.Add(SubCells);
+
+        FCk_Usf_ParamDesc LineWidth;
+        LineWidth._Name = n"LineWidth";
+        LineWidth._Type = ECk_Usf_ParamType::Scalar;
+        LineWidth._DefaultScalar = 1.5;
+        _Parameters.Add(LineWidth);
+
+        FCk_Usf_ParamDesc ShiftX;
+        ShiftX._Name = n"ShiftX";
+        ShiftX._Type = ECk_Usf_ParamType::Scalar;
+        ShiftX._DefaultScalar = 0.0;
+        _Parameters.Add(ShiftX);
+
+        FCk_Usf_ParamDesc ShiftY;
+        ShiftY._Name = n"ShiftY";
+        ShiftY._Type = ECk_Usf_ParamType::Scalar;
+        ShiftY._DefaultScalar = 0.0;
+        _Parameters.Add(ShiftY);
+    }
+
+    asset ProtoGridOrientation of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/ProtoGridOrientation.ush";
+        _UshFunctionName = n"CkUsf_Look_ProtoGridOrientation";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _LookName        = n"ProtoGridOrientation";
+
+        FCk_Usf_ParamDesc TopColor;
+        TopColor._Name = n"TopColor";
+        TopColor._Type = ECk_Usf_ParamType::Vector;
+        TopColor._DefaultVector = FLinearColor(0.0, 0.37, 1.0, 1.0);
+        _Parameters.Add(TopColor);
+
+        FCk_Usf_ParamDesc FrontColor;
+        FrontColor._Name = n"FrontColor";
+        FrontColor._Type = ECk_Usf_ParamType::Vector;
+        FrontColor._DefaultVector = FLinearColor(0.97, 0.026, 0.0, 1.0);
+        _Parameters.Add(FrontColor);
+
+        FCk_Usf_ParamDesc RightColor;
+        RightColor._Name = n"RightColor";
+        RightColor._Type = ECk_Usf_ParamType::Vector;
+        RightColor._DefaultVector = FLinearColor(0.137, 0.37, 0.069, 1.0);
+        _Parameters.Add(RightColor);
+
+        FCk_Usf_ParamDesc CellSize;
+        CellSize._Name = n"CellSize";
+        CellSize._Type = ECk_Usf_ParamType::Scalar;
+        CellSize._DefaultScalar = 100.0;
+        _Parameters.Add(CellSize);
+
+        FCk_Usf_ParamDesc ShiftX;
+        ShiftX._Name = n"ShiftX";
+        ShiftX._Type = ECk_Usf_ParamType::Scalar;
+        ShiftX._DefaultScalar = 0.0;
+        _Parameters.Add(ShiftX);
+
+        FCk_Usf_ParamDesc ShiftY;
+        ShiftY._Name = n"ShiftY";
+        ShiftY._Type = ECk_Usf_ParamType::Scalar;
+        ShiftY._DefaultScalar = 0.0;
+        _Parameters.Add(ShiftY);
+    }
+
+    asset HexGrid of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/HexGrid.ush";
+        _UshFunctionName = n"CkUsf_Look_HexGrid";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _LookName        = n"HexGrid";
+
+        FCk_Usf_ParamDesc ColorA;
+        ColorA._Name = n"ColorA";
+        ColorA._Type = ECk_Usf_ParamType::Vector;
+        ColorA._DefaultVector = FLinearColor(0.04, 0.04, 0.04, 1.0);
+        _Parameters.Add(ColorA);
+
+        FCk_Usf_ParamDesc ColorB;
+        ColorB._Name = n"ColorB";
+        ColorB._Type = ECk_Usf_ParamType::Vector;
+        ColorB._DefaultVector = FLinearColor(0.155, 0.155, 0.155, 1.0);
+        _Parameters.Add(ColorB);
+
+        FCk_Usf_ParamDesc LineColor;
+        LineColor._Name = n"LineColor";
+        LineColor._Type = ECk_Usf_ParamType::Vector;
+        LineColor._DefaultVector = FLinearColor(1.0, 1.0, 1.0, 1.0);
+        _Parameters.Add(LineColor);
+
+        FCk_Usf_ParamDesc HexSize;
+        HexSize._Name = n"HexSize";
+        HexSize._Type = ECk_Usf_ParamType::Scalar;
+        HexSize._DefaultScalar = 50.0;
+        _Parameters.Add(HexSize);
+
+        FCk_Usf_ParamDesc LineWidth;
+        LineWidth._Name = n"LineWidth";
+        LineWidth._Type = ECk_Usf_ParamType::Scalar;
+        LineWidth._DefaultScalar = 1.5;
+        _Parameters.Add(LineWidth);
+
+        FCk_Usf_ParamDesc ShiftX;
+        ShiftX._Name = n"ShiftX";
+        ShiftX._Type = ECk_Usf_ParamType::Scalar;
+        ShiftX._DefaultScalar = 0.0;
+        _Parameters.Add(ShiftX);
+
+        FCk_Usf_ParamDesc ShiftY;
+        ShiftY._Name = n"ShiftY";
+        ShiftY._Type = ECk_Usf_ParamType::Scalar;
+        ShiftY._DefaultScalar = 0.0;
+        _Parameters.Add(ShiftY);
+    }
+
+    asset GlowGrid of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/GlowGrid.ush";
+        _UshFunctionName = n"CkUsf_Look_GlowGrid";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _LookName        = n"GlowGrid";
+
+        FCk_Usf_ParamDesc PrimaryColor;
+        PrimaryColor._Name = n"PrimaryColor";
+        PrimaryColor._Type = ECk_Usf_ParamType::Vector;
+        PrimaryColor._DefaultVector = FLinearColor(0.109, 0.16, 0.23, 1.0);
+        _Parameters.Add(PrimaryColor);
+
+        FCk_Usf_ParamDesc SecondaryColor;
+        SecondaryColor._Name = n"SecondaryColor";
+        SecondaryColor._Type = ECk_Usf_ParamType::Vector;
+        SecondaryColor._DefaultVector = FLinearColor(0.37, 0.124, 0.152, 1.0);
+        _Parameters.Add(SecondaryColor);
+
+        FCk_Usf_ParamDesc GlowColor;
+        GlowColor._Name = n"GlowColor";
+        GlowColor._Type = ECk_Usf_ParamType::Vector;
+        GlowColor._DefaultVector = FLinearColor(0.139, 1.0, 0.15, 1.0);
+        _Parameters.Add(GlowColor);
+
+        FCk_Usf_ParamDesc CellSize;
+        CellSize._Name = n"CellSize";
+        CellSize._Type = ECk_Usf_ParamType::Scalar;
+        CellSize._DefaultScalar = 100.0;
+        _Parameters.Add(CellSize);
+
+        FCk_Usf_ParamDesc PulseSpeed;
+        PulseSpeed._Name = n"PulseSpeed";
+        PulseSpeed._Type = ECk_Usf_ParamType::Scalar;
+        PulseSpeed._DefaultScalar = 4.0;
+        _Parameters.Add(PulseSpeed);
+
+        FCk_Usf_ParamDesc ShiftX;
+        ShiftX._Name = n"ShiftX";
+        ShiftX._Type = ECk_Usf_ParamType::Scalar;
+        ShiftX._DefaultScalar = 0.0;
+        _Parameters.Add(ShiftX);
+
+        FCk_Usf_ParamDesc ShiftY;
+        ShiftY._Name = n"ShiftY";
+        ShiftY._Type = ECk_Usf_ParamType::Scalar;
+        ShiftY._DefaultScalar = 0.0;
+        _Parameters.Add(ShiftY);
+    }
+
+    asset HoloGrid of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/HoloGrid.ush";
+        _UshFunctionName = n"CkUsf_Look_HoloGrid";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        // Same rationale as Glass: forward per-pixel lighting so the translucent surface doesn't
+        // read flat, and lit translucency is what gets Refraction wired.
+        _TranslucencyLighting = ECk_Usf_TranslucencyLighting::SurfacePerPixel;
+        _TwoSided        = true;
+        _LookName        = n"HoloGrid";
+
+        FCk_Usf_ParamDesc PrimaryColor;
+        PrimaryColor._Name = n"PrimaryColor";
+        PrimaryColor._Type = ECk_Usf_ParamType::Vector;
+        PrimaryColor._DefaultVector = FLinearColor(0.0, 0.9, 0.384, 1.0);
+        _Parameters.Add(PrimaryColor);
+
+        FCk_Usf_ParamDesc SecondaryColor;
+        SecondaryColor._Name = n"SecondaryColor";
+        SecondaryColor._Type = ECk_Usf_ParamType::Vector;
+        SecondaryColor._DefaultVector = FLinearColor(0.0, 0.125, 0.107, 1.0);
+        _Parameters.Add(SecondaryColor);
+
+        FCk_Usf_ParamDesc CellSize;
+        CellSize._Name = n"CellSize";
+        CellSize._Type = ECk_Usf_ParamType::Scalar;
+        CellSize._DefaultScalar = 100.0;
+        _Parameters.Add(CellSize);
+
+        FCk_Usf_ParamDesc ScrollSpeed;
+        ScrollSpeed._Name = n"ScrollSpeed";
+        ScrollSpeed._Type = ECk_Usf_ParamType::Scalar;
+        ScrollSpeed._DefaultScalar = 0.25;
+        _Parameters.Add(ScrollSpeed);
+
+        FCk_Usf_ParamDesc Alpha;
+        Alpha._Name = n"Alpha";
+        Alpha._Type = ECk_Usf_ParamType::Scalar;
+        Alpha._DefaultScalar = 0.3;
+        _Parameters.Add(Alpha);
+
+        FCk_Usf_ParamDesc Ior;
+        Ior._Name = n"Ior";
+        Ior._Type = ECk_Usf_ParamType::Scalar;
+        Ior._DefaultScalar = 1.05;
+        _Parameters.Add(Ior);
+    }
+
+    asset PanelGrid of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/PanelGrid.ush";
+        _UshFunctionName = n"CkUsf_Look_PanelGrid";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _LookName        = n"PanelGrid";
+
+        FCk_Usf_ParamDesc ColorA;
+        ColorA._Name = n"ColorA";
+        ColorA._Type = ECk_Usf_ParamType::Vector;
+        ColorA._DefaultVector = FLinearColor(0.155, 0.634, 1.0, 1.0);
+        _Parameters.Add(ColorA);
+
+        FCk_Usf_ParamDesc ColorB;
+        ColorB._Name = n"ColorB";
+        ColorB._Type = ECk_Usf_ParamType::Vector;
+        ColorB._DefaultVector = FLinearColor(0.78, 0.339, 0.0, 1.0);
+        _Parameters.Add(ColorB);
+
+        FCk_Usf_ParamDesc ColorC;
+        ColorC._Name = n"ColorC";
+        ColorC._Type = ECk_Usf_ParamType::Vector;
+        ColorC._DefaultVector = FLinearColor(0.21, 0.21, 0.21, 1.0);
+        _Parameters.Add(ColorC);
+
+        FCk_Usf_ParamDesc PanelSize;
+        PanelSize._Name = n"PanelSize";
+        PanelSize._Type = ECk_Usf_ParamType::Scalar;
+        PanelSize._DefaultScalar = 100.0;
+        _Parameters.Add(PanelSize);
+    }
+
     // ---- Multi-pass (render-texture) passes ----
 
     asset SmokeBuffer of UCkUsf_LookDefinition
