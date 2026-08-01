@@ -4,6 +4,40 @@ Schema and evidence-tag conventions: [README.md](README.md).
 
 ---
 
+## Completion state — READ FIRST
+
+**This recreation is source-verified and math-verified, but NOT rendered or visually verified.**
+
+| Piece | State |
+|---|---|
+| Behavior `.ush` + CPU mirror | done; math asserted against the source values (`LightningRangeBehavior`) |
+| CkUsf look + Niagara sprite contract | done; generated and asserted (`NiagaraSpriteContract`) |
+| Runtime binding, gym station, cadence row, imported textures | done |
+| `PS_CkParticles_Template_Single` asset | **MISSING — the blocker** |
+| Anything rendered or visually compared | **not done** |
+
+### Why it is blocked
+
+Template generation needs `CK_WITH_PARTICLES=1`, i.e. an engine carrying the fork's NiagaraEditor
+pin-authoring exports. Generating on any other engine produces an **inert** template — it loads fine
+and renders nothing — so `Build_AllTemplateSystems` now refuses rather than writing one. Runtime is
+unaffected: once the asset exists it works on retail like every other template.
+
+### To finish, on a fork-enabled machine
+
+1. `$env:CK_PARTICLES_REBUILD_TEMPLATES='1'` then
+   `./CkAuto/UnrealToolbox.exe --build --config=Development --target=Editor --test --test-pattern RebuildTemplateAssets --no-nullrhi --project=<root>`
+2. **Confirm the asset is not inert** — `grep -ac ExecuteStage PS_CkParticles_Template_Single.uasset`
+   must be ~35, never 0. This check is the whole reason the guard exists.
+3. Re-run `--test-pattern CkParticles --no-nullrhi`. `LightningRangeAuthoring` will now RUN instead of
+   skipping — that is the signal the fork is active.
+4. Commit the generated `PS_CkParticles_Template_Single.uasset`.
+5. Execute the `[EDITOR-VERIFY]` gate in §12 and fill in §13 from what is actually observed.
+
+Until step 5, no fidelity claim in this document has been confirmed by looking at the effect.
+
+---
+
 ## 1. Source system and provenance
 
 | | |
@@ -347,13 +381,20 @@ default material.
 
 | Test | Lane | Asserts |
 |---|---|---|
-| `CkTests.UnitTests.CkParticles.LightningRangeAuthoring` | any (renderer-free) | 17 is in the roster; routes to the single-burst template; the cadence row is 1.0/1.1/1; the look binds and its master resolves and declares sprite usage; both imported textures resolve from plugin content; **neither the template nor the look master has any `/Game/Vefects` package dependency** |
+| `CkTests.UnitTests.CkParticles.LightningRangeBehavior` | any (no Niagara, no RHI, no fork) | **the numbers**: the colour snap and its hold, all three alpha keys plus that the late move is a swell not a fade, the dissolve ramp, the inert distortion/offset/core channels, `VisTag 4` with a non-degenerate alignment/facing pair, and Seed-independence. Cannot pass vacuously — the default size is 20, so asserting 700 proves the switch reached case 17 |
+| `CkTests.UnitTests.CkParticles.RosterSanity` | any (no Niagara, no RHI, no fork) | every behavior, across ages/lifetimes/seeds, produces renderable output: finite everywhere, non-negative size, alpha in [0,1], `VisTag` inside the renderer set, valid `MeshIndex` where read, non-degenerate sprite vectors on VisTag 4 — and routes to a template the cadence table declares |
+| `CkTests.UnitTests.CkParticles.LightningRangeAuthoring` | needs `CK_WITH_PARTICLES=1` (skips otherwise) | 17 is in the roster; routes to the single-burst template; the cadence row is 1.0/1.1/1; the look binds and its master resolves and declares sprite usage; both imported textures resolve from plugin content; **neither the template nor the look master has any `/Game/Vefects` package dependency** |
 | `CkTests.UnitTests.CkUsf.NiagaraSpriteContract` | `--no-nullrhi` | the look generates; the master declares `bUsedWithNiagaraSprites`; `ParticleColor` and all four `DynParam*` pins are *connected* (not merely declared); regeneration is idempotent; **every non-particle look gained neither the flag nor the pins** |
 | `Ck_AutoTest_Particles_SpawnAllBehaviors` | `--no-nullrhi` | every id in `Get_NumBehaviors()` spawns a live component |
 
 The spawn test **self-skips under `-nullrhi`** (`FApp::CanEverRender()` is false, so Niagara refuses
 to create components). A green default lane therefore proves authored state, **not** that anything
 rendered.
+
+**Know which gate holds which line.** The two CPU-mirror tests are the only ones that check behavior
+*correctness*; everything else checks existence, and existence checks pass against a behavior that does
+nothing. Neither covers the GPU `.ush` — it cannot be executed headlessly, so GPU/CPU lockstep stays a
+review obligation. And none of them substitutes for the visual gate below.
 
 ```bash
 ./CkAuto/UnrealToolbox.exe --build --config=Development --target=Editor --test --test-pattern Particles --no-nullrhi --output=Saved/Logs/BuildTest-Particles.log --project=<project-root>
