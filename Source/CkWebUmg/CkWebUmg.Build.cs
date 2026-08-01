@@ -17,6 +17,7 @@ public class CkWebUmg : CkModuleRules
             "Projects",
             "UMG",
             "RenderCore",
+            "RHI",
             "ImageWrapper",
 
             "CkCore",

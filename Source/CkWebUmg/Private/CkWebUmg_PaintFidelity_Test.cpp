@@ -228,6 +228,15 @@ bool
 {
     using namespace ck_webumg_paintfidelity;
 
+    // The default automation lane runs -nullrhi, where FWidgetRenderer has no RT resource; the
+    // pixel suite only measures anything in the --no-nullrhi lane. Skipping (not failing) keeps
+    // the default-lane count stable without pretending these pages were compared.
+    if (GUsingNullRHI)
+    {
+        AddInfo(TEXT("NullRHI lane — pixel comparison requires the --no-nullrhi lane; skipped"));
+        return true;
+    }
+
     const auto Document = ck::webumg::LoadIrDocumentFromFile(InIrFilePath);
     if (NOT TestTrue(TEXT("IR document loads"), Document.IsSet()))
     { return false; }
