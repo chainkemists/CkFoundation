@@ -275,6 +275,22 @@ namespace ck::particles_editor
             { SmokeSprite->Material = InSpriteMaterial; }
             InEmitter->AddRenderer(SmokeSprite, InVersion);
 
+            // Ground decals / range rings: a quad fixed in SIM space rather than billboarded at the camera,
+            // driven by Particles.SpriteAlignment (its up axis) + Particles.SpriteFacing (its plane normal).
+            // Shares User.SpriteMaterial with the camera sprite, so a behavior-bound CkUsf look reaches it
+            // through the same binding and no caller needs to know which renderer drew the particle.
+            auto* CustomFacingSprite = NewObject<UNiagaraSpriteRendererProperties>(InEmitter, TEXT("SpriteRenderer_CustomFacing"));
+            CustomFacingSprite->Alignment  = ENiagaraSpriteAlignment::CustomAlignment;
+            CustomFacingSprite->FacingMode = ENiagaraSpriteFacingMode::CustomFacingVector;
+            CustomFacingSprite->RendererVisibility = 4;
+            if (InSpriteMaterial != nullptr)
+            {
+                CustomFacingSprite->Material = InSpriteMaterial;
+                CustomFacingSprite->MaterialUserParamBinding.Parameter =
+                    FNiagaraVariable(FNiagaraTypeDefinition::GetUMaterialDef(), ck::particles::Get_SpriteMaterialParameterName());
+            }
+            InEmitter->AddRenderer(CustomFacingSprite, InVersion);
+
             // Particles.MeshIndex picks the carrier; Particles.Scale + Particles.MeshOrientation apply.
             auto* MeshRenderer = NewObject<UNiagaraMeshRendererProperties>(InEmitter, TEXT("MeshRenderer_Carriers"));
             MeshRenderer->RendererVisibility = 3;
@@ -471,6 +487,10 @@ namespace ck::particles_editor
             UEdGraphPin* SetRotation    = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetFloatDef(),    TEXT("Particles.SpriteRotation"));
             UEdGraphPin* SetMeshIndex   = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetIntDef(),      TEXT("Particles.MeshIndex"));
             UEdGraphPin* SetVisTag      = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetIntDef(),      TEXT("Particles.VisibilityTag"));
+            // Both attributes must EXIST for the custom-facing renderer: a missing Particles.SpriteAlignment
+            // makes CustomAlignment silently fall back to Unaligned (NiagaraSpriteRendererProperties.h).
+            UEdGraphPin* SetSpriteAlign = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetVec3Def(),     TEXT("Particles.SpriteAlignment"));
+            UEdGraphPin* SetSpriteFacing= MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetVec3Def(),     TEXT("Particles.SpriteFacing"));
 
             const auto Wire = [Schema](UEdGraphPin* InFrom, UEdGraphPin* InTo)
             {
@@ -507,6 +527,8 @@ namespace ck::particles_editor
             Wire(Find_PinByName(FuncNode, TEXT("OutRotation"),    EGPD_Output), SetRotation);
             Wire(Find_PinByName(FuncNode, TEXT("OutMeshIndex"),   EGPD_Output), SetMeshIndex);
             Wire(Find_PinByName(FuncNode, TEXT("OutVisTag"),      EGPD_Output), SetVisTag);
+            Wire(Find_PinByName(FuncNode, TEXT("OutSpriteAlignment"), EGPD_Output), SetSpriteAlign);
+            Wire(Find_PinByName(FuncNode, TEXT("OutSpriteFacing"),    EGPD_Output), SetSpriteFacing);
 
             Graph->NotifyGraphChanged();
             Script->SetLatestSource(Source);
@@ -742,6 +764,17 @@ namespace ck::particles_editor
     {
         using namespace TemplateBuilderLocal;
 
+#if !CK_WITH_PARTICLES
+        // Without the fork's NiagaraEditor pin-authoring exports there is no behavior-call module, so every
+        // template this would write is INERT: the DI is never invoked and no behavior renders. The assets still
+        // save cleanly and still load, so the failure is invisible to any test that only checks existence —
+        // which is exactly why this refuses instead of proceeding. Regenerate on a fork-enabled engine.
+        ck::particles_editor::Error(TEXT("Refusing to build CkParticles templates: CK_WITH_PARTICLES=0 (the engine "
+            "is missing NiagaraEditor/Public/CkNiagaraAuthoring.h). Templates built here would silently render "
+            "nothing. Regenerate on an engine with the Chainkemists Niagara authoring exports."));
+        return false;
+#else
+
         // Order matters: textures -> materials (sample them) -> meshes (slot them) -> templates (reference all three).
         Generate_AllVfxTextures();
         Import_SourceTextures();
@@ -767,6 +800,7 @@ namespace ck::particles_editor
         }
 
         return AllBuilt;
+#endif
     }
 
     auto Build_TemplateSystem() -> UNiagaraSystem*

@@ -208,7 +208,7 @@ Particle Color does all the tinting.
 | Behavior ID | **17** — next after the 0–16 roster |
 | Template | **`PS_CkParticles_Template_Single`** (new cadence row) |
 | Seeds / salts | **none** — the source spawns exactly one particle with no randomness; the behavior is a pure function of Age |
-| `VisTag` | `0` (camera sprite renderer) — see the fidelity gap in §13 |
+| `VisTag` | `4` (custom-facing sprite renderer — added for this recreation) |
 
 **The cadence required a template change, and it is recorded rather than hidden.** The shared burst
 template is Loop Duration 1.2 s / lifetime 1.2 s / **96** particles; the source is 1.0 s / 1.1 s /
@@ -231,7 +231,21 @@ Stage outputs written:
 | `Dynamic` | yes | `x` = dissolve curve, `y` = 0, `z` = 0, `w` = −0.5 |
 | `Orientation` | yes | identity |
 | `Rotation` | yes | 0 |
+| `SpriteAlignment` | yes | `(0,1,0)` — the source's Sprite Alignment Vector |
+| `SpriteFacing` | yes | `(0,0,1)` — the source's Sprite Facing Vector |
 | `Scale`, `MeshIndex` | no | left at default — not a mesh behavior |
+
+**This recreation added `VisTag 4`, a custom-facing sprite renderer.** The template previously had no way
+to express a quad fixed in sim space, so a first pass rendered the ring camera-facing — visibly wrong against
+a source that lies flat on the ground. Rather than leave that as a permanent fidelity gap, the DI contract
+gained `SpriteAlignment` + `SpriteFacing` (float3 each, GPU and CPU in lockstep) and the template gained a
+renderer with Niagara's `CustomAlignment` + `CustomFacingVector` pair. It shares `User.SpriteMaterial` with
+VisTag 0, so the bound look reaches it with no change at any call site.
+
+Engine trap that shaped this: **a missing `Particles.SpriteAlignment` makes `CustomAlignment` silently fall
+back to Unaligned** (`NiagaraSpriteRendererProperties.h`). The attribute must therefore always be written, and
+`CkParticles_DefaultOutput` seeds a valid Z-up pair rather than zeros — a degenerate pair collapses the sprite
+instead of failing visibly.
 
 ---
 
@@ -388,26 +402,26 @@ data, or *unverified*. The effect is **source-verified, not visually verified**.
 
 ### Known differences — deliberate
 
-1. **Facing / orientation (the significant one).** The source renders as a quad lying **flat in the
-   local XY plane** (`CustomAlignment` + `CustomFacingVector`, identity quaternion) — a ground ring.
-   The recreation uses `VisTag 0`, the **camera-facing** sprite renderer, because the template has no
-   custom-facing sprite renderer. **Expect the recreation to face the camera while the original stays
-   flat on the ground** — criterion (c) will differ, and so may (b) at oblique angles.
-   *Fix, deliberately out of this slice's scope:* add a custom-facing sprite renderer to the template
-   as a new `VisTag`, driven by the existing `Orientation` output.
-2. **Distortion branch omitted.** `Distortion_Intensity` resolves to 0 on this instance, so the
+1. **Distortion branch omitted.** `Distortion_Intensity` resolves to 0 on this instance, so the
    branch cannot contribute. The look still exposes `distortion` (channel y) for reuse.
-3. **Core-colour branch inert.** `core_color` is −0.5 and `saturate` clamps it to 0. Implemented but
+2. **Core-colour branch inert.** `core_color` is −0.5 and `saturate` clamps it to 0. Implemented but
    never engaged by this effect.
-4. **`GradientShape` / `GradientMap` chain omitted.** `GradientMap_Tex` is a white pixel and the
+3. **`GradientShape` / `GradientMap` chain omitted.** `GradientMap_Tex` is a white pixel and the
    gradient scale/speed are 1/0, so the chain is not separable from a constant here `[inferred]`.
    `T_VFX_Noise_02` was therefore not copied.
-5. **`DepthFade` omitted.** The source sets `Opacty_DepthFade = 10`, which softens the ring where it
+4. **`DepthFade` omitted.** The source sets `Opacty_DepthFade = 10`, which softens the ring where it
    intersects geometry. CkUsf surface looks do not wire scene depth, so this is dropped. Visible only
    where the ring cuts through world geometry.
-6. **`_TwoSided = true`** on the look, versus `twoSided: false` on the source. Irrelevant for a
-   camera-facing sprite; it becomes relevant if difference 1 is fixed and the ring is viewed from
-   below.
+5. **`_TwoSided = true`** on the look, versus `twoSided: false` on the source. This is a deliberate
+   divergence, and it is load-bearing now that the ring lies flat: a one-sided ground quad disappears
+   when the camera drops below its plane. Verify the original's behaviour from underneath before
+   matching it — it may rely on the sprite renderer's own facing rather than material two-sidedness.
+
+**The facing gap is CLOSED.** An earlier pass rendered the ring camera-facing; the recreation now uses the
+custom-facing sprite renderer (`VisTag 4`) added for it, matching the source's `CustomAlignment` +
+`CustomFacingVector` pair. This is confirmed at the authoring level (the behavior writes `VisTag 4` and both
+sprite vectors, the renderer is built with the matching enums) but **not yet confirmed visually** — criterion
+(c) is exactly what the editor gate must now check.
 
 ### Unverified
 
@@ -455,6 +469,18 @@ data, or *unverified*. The effect is **source-verified, not visually verified**.
 9. **Adding a look re-gates every other look.** `GeneratesUsableMasters` regenerates *all* looks, so a
    broken new one fails tests that look unrelated (it also took down `MultiPassRendersToTexture` here).
    Read the failure text before assuming you broke the subsystem it names.
+10. **Templates can only be regenerated on a FORK-enabled engine, and getting this wrong is silent.**
+    Without `CkNiagaraAuthoring.h` the builder has no pin-authoring API, so `CK_WITH_PARTICLES=0` and the
+    behavior-call module is skipped. The templates still write, still save, still load — and render
+    NOTHING, because the DI is never invoked. This regressed the committed templates once
+    (`ExecuteStage` 35 → 0, 437KB → 368KB) while every test stayed green, because existence checks and
+    "component spawned" checks both pass against an inert template. `Build_AllTemplateSystems` now
+    refuses under that define. **Before trusting any template, run
+    `grep -ac ExecuteStage <template>.uasset` — expect ~35, never 0.**
+11. **Match the gate to the claim.** "The asset regenerated" and "a component spawned" are existence
+    checks; neither says a particle moved or a pixel lit. When a whole green suite is compatible with
+    the feature doing nothing at all, the suite is measuring the wrong thing — and a visual gate is
+    not optional garnish, it is the only check that closes that hole.
 10. **Sprite facing is a template capability, not a shader one.** A source using `CustomAlignment` /
    `CustomFacingVector` cannot be matched by a camera-facing renderer no matter how good the
    material is. Check the renderer's alignment/facing pair in §6 *before* promising fidelity.
