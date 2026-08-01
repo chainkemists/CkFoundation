@@ -977,3 +977,95 @@ namespace CkUsf
         _Parameters.Add(PulseAmount);
     }
 }
+
+namespace CkUsf
+{
+    // Recreation of the Vefects "DissolveAdd" sprite material family (M_VFX_DisAdd_Ring04 — the material
+    // NS_Lightning_Range's sprite renderer binds). Parameter DEFAULTS are the source instance's own
+    // effective values, read out of the extracted corpus; the CkParticles behavior supplies the animated
+    // part through the Niagara dynamic material parameter.
+    //
+    // Recipe + provenance: CkFoundation/Source/CkParticles/Cookbook/NS_Lightning_Range.md
+    asset RingDissolveAdd of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/RingDissolveAdd.ush";
+        _UshFunctionName = n"CkUsf_Look_RingDissolveAdd";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        _LookName        = n"RingDissolveAdd";
+        _TwoSided        = true;
+
+        // Sprite renderers need the usage baked in, or the master falls back to the default material
+        // in a packaged build.
+        _UsedWithNiagaraSprites  = true;
+        _ParticleColor           = true;
+        _ParticleDynamicParameter = true;
+
+        // The SOURCE material's own channel names — kept verbatim so the generated master reads the same
+        // as the asset it recreates.
+        _ParticleDynamicParameterNames.Add("dissolve");
+        _ParticleDynamicParameterNames.Add("distortion");
+        _ParticleDynamicParameterNames.Add("offset");
+        _ParticleDynamicParameterNames.Add("core_color");
+
+        FCk_Usf_ParamDesc ShapeTex;
+        ShapeTex._Name = n"ShapeTex";
+        ShapeTex._Type = ECk_Usf_ParamType::Texture2D;
+        ShapeTex._DefaultTexturePath = "/CkFoundation/CkParticles/Imported/Vefects/NS_Lightning_Range/T_VFX_Ring_04.T_VFX_Ring_04";
+        _Parameters.Add(ShapeTex);
+
+        FCk_Usf_ParamDesc DissolveTex;
+        DissolveTex._Name = n"DissolveTex";
+        DissolveTex._Type = ECk_Usf_ParamType::Texture2D;
+        DissolveTex._DefaultTexturePath = "/CkFoundation/CkParticles/Imported/Vefects/NS_Lightning_Range/T_VFX_Noise_04.T_VFX_Noise_04";
+        _Parameters.Add(DissolveTex);
+
+        FCk_Usf_ParamDesc DistortTex;
+        DistortTex._Name = n"DistortTex";
+        DistortTex._Type = ECk_Usf_ParamType::Texture2D;
+        DistortTex._DefaultTexturePath = "/CkFoundation/CkParticles/Imported/Vefects/NS_Lightning_Range/T_VFX_Noise_04.T_VFX_Noise_04";
+        _Parameters.Add(DistortTex);
+
+        // Color_Core on the source instance.
+        FCk_Usf_ParamDesc CoreColor;
+        CoreColor._Name = n"CoreColor";
+        CoreColor._Type = ECk_Usf_ParamType::Vector;
+        CoreColor._DefaultVector = FLinearColor(1.0, 1.0, 1.0, 1.0);
+        _Parameters.Add(CoreColor);
+
+        // Brightness = 30 on the source instance — this is what makes the ring read as additive-bright.
+        FCk_Usf_ParamDesc Brightness;
+        Brightness._Name = n"Brightness";
+        Brightness._Type = ECk_Usf_ParamType::Scalar;
+        Brightness._DefaultScalar = 30.0;
+        _Parameters.Add(Brightness);
+
+        // Dissolve_Speed_X/Y = 0.2.
+        FCk_Usf_ParamDesc DissolveSpeed;
+        DissolveSpeed._Name = n"DissolveSpeed";
+        DissolveSpeed._Type = ECk_Usf_ParamType::Scalar;
+        DissolveSpeed._DefaultScalar = 0.2;
+        _Parameters.Add(DissolveSpeed);
+
+        // Erosion edge softness — the source expresses this through a SmoothStep in the parent graph.
+        FCk_Usf_ParamDesc DissolveEdge;
+        DissolveEdge._Name = n"DissolveEdge";
+        DissolveEdge._Type = ECk_Usf_ParamType::Scalar;
+        DissolveEdge._DefaultScalar = 0.15;
+        _Parameters.Add(DissolveEdge);
+
+        // Distortion_Scale_X/Y = 0.1.
+        FCk_Usf_ParamDesc DistortScale;
+        DistortScale._Name = n"DistortScale";
+        DistortScale._Type = ECk_Usf_ParamType::Scalar;
+        DistortScale._DefaultScalar = 0.1;
+        _Parameters.Add(DistortScale);
+
+        // Opacity_Boldness = 1.
+        FCk_Usf_ParamDesc OpacityBoldness;
+        OpacityBoldness._Name = n"OpacityBoldness";
+        OpacityBoldness._Type = ECk_Usf_ParamType::Scalar;
+        OpacityBoldness._DefaultScalar = 1.0;
+        _Parameters.Add(OpacityBoldness);
+    }
+}

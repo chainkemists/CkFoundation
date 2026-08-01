@@ -18,6 +18,13 @@ class CKPARTICLES_API UCk_Utils_Particles_UE : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 
 public:
+    // Size of the behavior roster; valid ids are [0, Get_NumBehaviors()-1]. Exposed so tests and gyms iterate every
+    // behavior without each restating a maximum id that then drifts when a behavior is added.
+    UFUNCTION(BlueprintPure, Category = "Ck|Particles",
+        DisplayName = "[Ck][Particles] Get Num Behaviors")
+    static int32
+    Get_NumBehaviors();
+
     // Spawns the CkParticles seed template (PS_CkParticles_Template) at a world location, selecting the behavior by
     // Id via User.BehaviorId. Returns the spawned component (nullptr if the template is missing or spawn fails).
     UFUNCTION(BlueprintCallable, Category = "Ck|Particles",

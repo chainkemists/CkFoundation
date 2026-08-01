@@ -22,6 +22,7 @@
 #include "/CkParticles/Behaviors/Behavior_GroundRing.ush"
 #include "/CkParticles/Behaviors/Behavior_LightningStrike.ush"
 #include "/CkParticles/Behaviors/Behavior_AuraSwirl.ush"
+#include "/CkParticles/Behaviors/Behavior_LightningRange.ush"
 
 FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
 {
@@ -41,6 +42,7 @@ FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
     if (In.BehaviorId == 14) { return CkParticles_Behavior_GroundRing(In); }
     if (In.BehaviorId == 15) { return CkParticles_Behavior_LightningStrike(In); }
     if (In.BehaviorId == 16) { return CkParticles_Behavior_AuraSwirl(In); }
+    if (In.BehaviorId == 17) { return CkParticles_Behavior_LightningRange(In); }
 
     // BehaviorId 0 (and any unknown id) -> Gravity.
     return CkParticles_Behavior_Gravity(In);

@@ -65,6 +65,24 @@ Shaders (`Source/CkParticles/Shaders/CkParticles/`, virtual path `/CkParticles`)
 
 ---
 
+## Recreating an existing Niagara effect — the cookbook
+
+Recreations of real marketplace/reference effects are documented as **recipes** under
+[`Cookbook/`](Cookbook/) — [`Cookbook/README.md`](Cookbook/README.md) defines the recipe schema
+(provenance → archaeology → CkParticles/CkUsf translation → verification → fidelity gaps → lessons)
+and the corpus-regeneration command that produces the evidence.
+
+**Read the README before recreating anything**, and write the recipe alongside the code, not after.
+Shipped recipes:
+
+| Recipe | Source | Behavior |
+|---|---|---|
+| [`NS_Lightning_Range.md`](Cookbook/NS_Lightning_Range.md) | Vefects `NS_Lightning_Range` + `M_VFX_DisAdd_Ring04` | `LightningRange` (17) |
+
+Behavior 7 (`Slash`) recreates Vefects `NS_BasicAttack` but predates the cookbook and has no recipe.
+
+---
+
 ## Adding a new behavior (pure C++/USF — no asset edits)
 
 1. Author `Shaders/CkParticles/Behaviors/Behavior_<Name>.ush` with
@@ -74,11 +92,20 @@ Shaders (`Source/CkParticles/Shaders/CkParticles/`, virtual path `/CkParticles`)
    **GPU and CPU MUST stay in lockstep** (same id, same math, same hashing).
 4. Add the new `.ush` to `NDICkParticlesLocal::DependentShaderFiles` so `AppendCompileHash` busts the shader cache.
 
+5. Bump `ck::particles::NumBehaviors` (Naming header) so roster-driven tests and gyms pick the behavior up.
+6. Pick the behavior's **template** in `ck::particles::Get_BehaviorTemplateSystemObjectPath`:
+   - continuous-rate seed (the default),
+   - `PS_CkParticles_Template_Burst` via `Get_BehaviorUsesBurstTemplate` — one instantaneous 96-burst per
+     ~1.2 s loop on a real `Age`; surplus burst particles a behavior doesn't use must be hidden
+     (`Color/Size/Scale = 0`),
+   - or a **new cadence row** in `Get_TemplateSpecs()` when recreating a source whose loop/lifetime/count
+     differ. Add the row; do not approximate onto the nearest template and do not fake the cadence with
+     `frac(Age/Cycle)` inside the behavior.
+7. If the behavior's look is a hand-authored shader rather than a procedural texture, bind its generated
+   CkUsf master in `ck::particles::Get_BehaviorLookName` — the spawn path does the rest.
+
 Then select it at runtime (`Spawn_BehaviorAtLocation(..., id, ...)`) or via a `UCkParticles_ScriptDefinition`'s
-`_BehaviorId` + regenerate. One-shot archetypes should also be added to
-`ck::particles::Get_BehaviorUsesBurstTemplate` (Naming header) so the spawn util routes them through
-`PS_CkParticles_Template_Burst` (one instantaneous 96-burst per ~1.2 s loop, real `Age`) instead of the
-continuous-rate seed; surplus burst particles a behavior doesn't use must be hidden (`Color/Size/Scale = 0`). **Self-driving** behaviors (write an absolute `O.Position` from Age/Seed, like Swirl /
+`_BehaviorId` + regenerate. **Self-driving** behaviors (write an absolute `O.Position` from Age/Seed, like Swirl /
 Explosion / Galaxy) rely on the emitter being in **local space** — the template sets this, so they render where the
 system is spawned. **Velocity-integrating** behaviors (Gravity) work in either space.
 
@@ -133,7 +160,10 @@ a per-component override (`UNiagaraComponent::SetVariableMaterial`) bound to a `
 
 **Behavior roster (the `BehaviorId` a caller passes):** Gravity=0, Swirl=1, Explosion=2, Fire=3, Fireworks=4,
 Galaxy=5, Beam=6, Slash=7, Nova=8, MuzzleFlash=9, ImpactBurst=10, Tracer=11, SmokePlume=12, SparksBurst=13,
-GroundRing=14, LightningStrike=15, AuraSwirl=16.
+GroundRing=14, LightningStrike=15, AuraSwirl=16, LightningRange=17.
+
+The roster SIZE has one definition — `ck::particles::NumBehaviors`, exposed to BP/AS as
+`UCk_Utils_Particles_UE::Get_NumBehaviors()`. Tests and gyms iterate that; never re-state a maximum id.
 
 **Aim-axis conventions** (these are baked into the behavior math — spawn rotation aims them):
 MuzzleFlash/Tracer forward = **+X**; ImpactBurst surface normal = **+Z**;
@@ -142,6 +172,27 @@ GroundRing/LightningStrike/AuraSwirl ground plane = local **XY**; Beam travels d
 **Sprite material fallback:** `User.SpriteMaterial` (`ck::particles::Get_SpriteMaterialParameterName`) overrides
 the sprite renderer's material per component. When unset, the renderer's own Material is used — a miss renders
 the default glow, never an invisible effect.
+
+**Behavior → CkUsf look binding.** A behavior whose visual identity is a hand-authored shader (rather than a
+procedural texture) binds a generated CkUsf master in `ck::particles::Get_BehaviorLookName`. The spawn path
+resolves it and binds it through the SAME `User.SpriteMaterial` param, so callers pass only a behavior id and
+**no caller ever patches the material after spawning**. An explicit `InTextureName` still wins, leaving the
+texture path unchanged for behaviors that use it. CkParticles deliberately does not depend on CkUsf — the
+generated-master path convention is mirrored in the naming header and a test asserts it still resolves.
+
+**Template cadence is a TABLE, not code.** `ck::particles::Get_TemplateSpecs()` lists one row per cadence
+(asset name, loop duration, particle lifetime, burst count; count 0 = the continuous spawn-rate stack) and the
+editor builder emits one template per row:
+
+| Template | Loop | Lifetime | Burst | Used by |
+|---|---|---|---|---|
+| `PS_CkParticles_Template` | — | — | continuous | the default roster |
+| `PS_CkParticles_Template_Burst` | 1.2 s | 1.2 s | 96 | the multi-particle one-shots (7, 10, 13, 14, 15) |
+| `PS_CkParticles_Template_Single` | 1.0 s | 1.1 s | 1 | one-sprite, one-second-loop recreations (17) |
+
+Recreating a source whose cadence differs adds a ROW — never an approximation onto the nearest template, and
+never a `frac(Age/Cycle)` fake inside the behavior. `Get_BehaviorTemplateSystemObjectPath(id)` is the single
+resolver the spawn path calls.
 
 `UCk_Utils_Particles_UE` (runtime module, BlueprintCallable / AngelScript-callable):
 - `Spawn_BehaviorAtLocation(WorldContext, BehaviorId, Location, Rotation, Scale)` — spawns the seed template and sets

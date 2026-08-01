@@ -1,0 +1,65 @@
+// /CkUsf/Looks/RingDissolveAdd.ush
+//
+// Recreation of the Vefects "DissolveAdd" sprite material family as used by M_VFX_DisAdd_Ring04
+// (the material NS_Lightning_Range's sprite renderer binds). Additive-reading unlit translucency:
+// a shape texture tinted by Particle Color, lifted by a large Brightness, eaten away by a panning
+// noise dissolve whose threshold rides the Niagara Dynamic Material Parameter.
+//
+// Dynamic parameter channels — these mirror the SOURCE material's own channel names
+// (corpus materials/.../M_VFX_DisAdd_Ring04.json "dynamicParameters"), so the emitter writing them
+// and this look reading them agree by construction:
+//   x = dissolve    threshold offset; more negative = more intact
+//   y = distortion  UV distortion strength
+//   z = offset      UV pan offset applied to the shape
+//   w = core_color  blend toward CoreColor; <= 0 disables the core tint
+//
+// Recipe + provenance: CkParticles/Cookbook/NS_Lightning_Range.md
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Look_RingDissolveAdd(
+    FCkUsf_SurfaceInput In,
+    Texture2D ShapeTex,    SamplerState ShapeTexSampler,
+    Texture2D DissolveTex, SamplerState DissolveTexSampler,
+    Texture2D DistortTex,  SamplerState DistortTexSampler,
+    float3    CoreColor,
+    float     Brightness,
+    float     DissolveSpeed,
+    float     DissolveEdge,
+    float     DistortScale,
+    float     OpacityBoldness)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    const float Dissolve   = In.DynamicParameter.x;
+    const float Distortion = In.DynamicParameter.y;
+    const float PanOffset  = In.DynamicParameter.z;
+    const float CoreAmount = In.DynamicParameter.w;
+
+    // Distortion is a no-op whenever the emitter leaves y at 0 — the branchless form keeps one shader
+    // permutation rather than trading a texture fetch for divergence.
+    const float2 DistortUv = In.UV * DistortScale + In.Time * DissolveSpeed;
+    const float2 Distort   = (CkUsf_SampleTexture2D(DistortTex, DistortTexSampler, DistortUv).rg - 0.5)
+                           * Distortion;
+
+    const float2 ShapeUv = In.UV + Distort + PanOffset;
+    const float  Shape   = CkUsf_SampleTexture2D(ShapeTex, ShapeTexSampler, ShapeUv).r;
+
+    // The dissolve noise pans over time; the particle's dissolve channel slides the cut threshold across
+    // that noise, so the shape erodes from its sparsest regions inward.
+    const float2 DissolveUv = In.UV + Distort + In.Time * DissolveSpeed;
+    const float  Noise      = CkUsf_SampleTexture2D(DissolveTex, DissolveTexSampler, DissolveUv).r;
+
+    // The threshold is deliberately NOT saturated: the source drives this channel from -1, and -1 means
+    // "nothing cut". Clamping it to 0 would erode the darkest part of the noise from the very first frame.
+    const float Mask = smoothstep(Dissolve, Dissolve + max(DissolveEdge, 1e-4), Noise);
+
+    // Core tint pulls the hot centre toward CoreColor; a non-positive core_color channel leaves the
+    // particle's own colour untouched.
+    const float3 Tint = lerp(In.ParticleColor.rgb, CoreColor, saturate(CoreAmount));
+
+    O.EmissiveColor = Tint * Shape * Mask * Brightness;
+    O.Opacity       = saturate(Shape * Mask * In.ParticleColor.a * OpacityBoldness);
+
+    return O;
+}
