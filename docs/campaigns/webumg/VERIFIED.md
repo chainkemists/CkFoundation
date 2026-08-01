@@ -147,3 +147,12 @@ Repos cloned (shallow) at `D:\tmp\ckstyle-phase0\thirdparty\`: StyledWidgets @ `
 | Gaussian shadow model σ = blur/2 (CSS spec / Skia) + SDF rounded-rect coverage reproduces single black drop shadow exactly (card 1 region delta ≤ 1) | probe (300,395): rendered (7,9,12) vs golden (7,9,11) | [read] |
 | P3 residual 5.7471% (maxDelta 145 → 52) is the §8 compositing divergence on COLORED translucent glows: UE linear-blend renders brighter than browser sRGB-blend — blue glow probe (850,400): rendered (33,52,97) vs golden (23,33,53); black-over-dark agrees in both spaces (why card 1 passes) — one mechanism, all observations incl. the negative | probes on rendered vs golden PNGs | [read] |
 | §8 is not fixable per-element inside Slate: blend happens in linear space in the compositor; Slate material brushes cannot read the destination; the global gamma posture already failed measurably (session 2) | prior gamma-posture experiment + Slate material brush API surface | [read + inferred: no dest-read API found; verify against 5.7 source before treating as final] |
+
+## Gate 3 text findings (2026-08-01, session 3 — font mapping + line-run comparator)
+
+| Claim | Evidence | Method |
+|---|---|---|
+| Slate font sizes are POINTS drawn at 96 dpi (em = size · 96/72), not px: mapping CSS SizePx 1:1 inflated every line-run uniformly +34.9% (135.00 vs 100.05 advance, 37 vs 27 height ≈ 4/3 + glyph noise) | line-run comparator first cycle, 5 runs all +34.5–34.9% | [read] |
+| With SizePx · 0.75 and the OS Arial faces (C:/Windows/Fonts, bold cut ≥600), Slate advances track Chromium at mean \|delta\| 0.76%, max 1.0% (≤1.05px); line heights within 1px | line-run comparator second cycle (CkPlugins.log), 28/28 | [read] |
+| OS font mapping resolves for every corpus text node (zero "No OS font mapping" fallbacks) | Display-log sweep across both editor logs | [read] |
+| `text.lineBoxes` (Range.getClientRects per node via DOM.resolveNode + Runtime.callFunctionOn) changed only the 7 text-bearing pages' IRs; goldens/PNGs byte-stable elsewhere | per-file hash compare vs branch (14 changed files enumerated) | [read] |
