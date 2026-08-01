@@ -61,6 +61,12 @@ namespace ck_webumg_builder
         if (InNode->Paint.Visibility == TEXT("hidden"))
         { Result->SetVisibility(EVisibility::Hidden); }
 
+        // overflow hidden/auto/scroll all clip paint; scrolling behavior itself is Gate 5 scope.
+        const auto Clips = [](const FString& InOverflow)
+        { return InOverflow == TEXT("hidden") || InOverflow == TEXT("auto") || InOverflow == TEXT("scroll"); };
+        if (Clips(InNode->Layout.OverflowX) || Clips(InNode->Layout.OverflowY))
+        { Result->SetClipping(EWidgetClipping::ClipToBounds); }
+
         Result->SetRenderOpacity(InNode->Paint.Opacity);
 
         InOutWidgetsById.Add(InNode->Id, Result);

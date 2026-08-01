@@ -243,9 +243,51 @@ bool
     // until the Gate 3 paint work lands and Adam ratifies the paint threshold.
     if (PageName.StartsWith(TEXT("L")))
     {
+        const auto WithinBudget = Score.Get_FailingFraction() <= SolidPageFailingBudget;
         TestTrue(FString::Printf(TEXT("[%s] solid-page pixel parity — failing fraction %.4f%% within budget %.4f%%"),
                 *PageName, Score.Get_FailingFraction() * 100.0f, SolidPageFailingBudget * 100.0f),
-            Score.Get_FailingFraction() <= SolidPageFailingBudget);
+            WithinBudget);
+
+        if (NOT WithinBudget)
+        {
+            const auto DumpDir = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Automation"), TEXT("WebUmg"));
+            IFileManager::Get().MakeDirectory(*DumpDir, true);
+            auto& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
+
+            const auto WritePng = [&](const FString& InName, const TArray<FColor>& InPixels) -> void
+            {
+                const auto Wrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+                Wrapper->SetRaw(InPixels.GetData(), InPixels.Num() * sizeof(FColor),
+                    Width, Height, ERGBFormat::BGRA, 8);
+                const auto Compressed = Wrapper->GetCompressed();
+                FFileHelper::SaveArrayToFile(Compressed, *FPaths::Combine(DumpDir, InName));
+            };
+
+            auto Heatmap = TArray<FColor>{};
+            Heatmap.SetNumUninitialized(Width * Height);
+            for (auto Index = 0; Index < Width * Height; ++Index)
+            {
+                const auto Delta = FMath::Max3(
+                    FMath::Abs(static_cast<int32>(Rendered[Index].R) - Golden[Index].R),
+                    FMath::Abs(static_cast<int32>(Rendered[Index].G) - Golden[Index].G),
+                    FMath::Abs(static_cast<int32>(Rendered[Index].B) - Golden[Index].B));
+                const auto X = Index % Width;
+                const auto Y = Index / Width;
+                const auto IsMasked = MaskedRects.ContainsByPredicate(
+                    [&](const FCkWebUmg_IrRect& InRect)
+                    {
+                        return X >= InRect.X && X < InRect.X + InRect.W
+                            && Y >= InRect.Y && Y < InRect.Y + InRect.H;
+                    });
+                // red = counted failure; blue = difference inside a masked (text) region
+                Heatmap[Index] = Delta > ChannelTolerance
+                    ? (IsMasked ? FColor(0, 90, 255, 255) : FColor(255, 0, 0, 255))
+                    : FColor(Golden[Index].R / 4, Golden[Index].G / 4, Golden[Index].B / 4, 255);
+            }
+            WritePng(PageName + TEXT(".rendered.png"), Rendered);
+            WritePng(PageName + TEXT(".diff.png"), Heatmap);
+            AddInfo(FString::Printf(TEXT("[%s] dumped rendered + diff PNGs to %s"), *PageName, *DumpDir));
+        }
     }
 
     return true;

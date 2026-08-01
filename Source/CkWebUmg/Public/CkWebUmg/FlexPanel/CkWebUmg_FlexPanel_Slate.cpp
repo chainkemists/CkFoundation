@@ -240,17 +240,21 @@ namespace ck_webumg_flexpanel
         const auto BorderW = InIr.Box.Border.W;
         const auto BorderH = InIr.Box.Border.H;
 
-        // Text leaves take no explicit size — their measure callback drives sizing, which is the
-        // plumbing this gate exists to prove.
+        // Text leaves: authored axes are explicit like any node (an authored height beats both
+        // stretch AND the measure callback — L9's stretched-card defect); only genuinely
+        // auto-sized axes are measure-driven.
+        const auto MainAuthored = MainIsRow ? WidthAuthored : HeightAuthored;
+        const auto SetMain = NOT MainSizeIsFlexDriven && (NOT InIsTextLeaf || MainAuthored);
+        const auto SetCross = NOT CrossSizeIsStretchDriven && (NOT InIsTextLeaf || CrossAuthored);
         if (MainIsRow)
         {
-            if (NOT MainSizeIsFlexDriven && NOT InIsTextLeaf) { YGNodeStyleSetWidth(InNode, BorderW); }
-            if (NOT CrossSizeIsStretchDriven && NOT InIsTextLeaf) { YGNodeStyleSetHeight(InNode, BorderH); }
+            if (SetMain) { YGNodeStyleSetWidth(InNode, BorderW); }
+            if (SetCross) { YGNodeStyleSetHeight(InNode, BorderH); }
         }
         else
         {
-            if (NOT MainSizeIsFlexDriven && NOT InIsTextLeaf) { YGNodeStyleSetHeight(InNode, BorderH); }
-            if (NOT CrossSizeIsStretchDriven && NOT InIsTextLeaf) { YGNodeStyleSetWidth(InNode, BorderW); }
+            if (SetMain) { YGNodeStyleSetHeight(InNode, BorderH); }
+            if (SetCross) { YGNodeStyleSetWidth(InNode, BorderW); }
         }
 
         if (Layout.Position == TEXT("absolute"))
@@ -443,7 +447,21 @@ void
     const auto LocalSize = AllottedGeometry.GetLocalSize();
     DoRunLayout(LocalSize.X, LocalSize.Y);
 
+    // Paint/hit-test order follows z-index (stable — equal z keeps source order) while layout
+    // geometry stays indexed by the original slot order. Real CSS stacking contexts are §8.6
+    // scope; sibling z-order covers the corpus and most mockups.
+    auto PaintOrder = TArray<int32>{};
+    PaintOrder.Reserve(_Children.Num());
     for (auto Index = 0; Index < _Children.Num(); ++Index)
+    { PaintOrder.Add(Index); }
+    PaintOrder.StableSort([&](int32 InA, int32 InB)
+    {
+        const auto& IrA = _Children[InA].Get_IrNode();
+        const auto& IrB = _Children[InB].Get_IrNode();
+        return (IrA != nullptr ? IrA->Layout.ZIndex : 0) < (IrB != nullptr ? IrB->Layout.ZIndex : 0);
+    });
+
+    for (const auto Index : PaintOrder)
     {
         const auto& Slot = _Children[Index];
         if (Slot.GetWidget()->GetVisibility() == EVisibility::Collapsed)
