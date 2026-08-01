@@ -76,8 +76,20 @@ struct CKWEBUMG_API FCkWebUmg_IrGradientStop
 struct CKWEBUMG_API FCkWebUmg_IrGradient
 {
     FString GradientType; // linear | radial | conic | unparsed
-    TOptional<float> AngleDeg;
+    TOptional<float> AngleDeg;         // linear only; CSS convention (0 = to top, 90 = to right)
+    TOptional<FVector2f> RadialCenter; // radial only; absolute px within the painted box
+    TOptional<FVector2f> RadialRadius; // radial only; rx, ry px (unset = unparseable prelude)
     TArray<FCkWebUmg_IrGradientStop> Stops;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKWEBUMG_API FCkWebUmg_IrTransform
+{
+    // CSS matrix order [a, b, c, d, tx, ty]; empty when the computed transform was 3D (the
+    // extractor keeps the verbatim string; consumers diagnose, never guess).
+    TArray<float> Matrix;
+    FVector2f Origin = FVector2f::ZeroVector; // absolute px within the node
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -90,6 +102,7 @@ struct CKWEBUMG_API FCkWebUmg_IrPaint
     FVector4f BorderRadius = FVector4f::Zero(); // tl, tr, br, bl
     FVector4f BorderWidth = FVector4f::Zero();  // t, r, b, l
     TOptional<FColor> BorderColor;
+    TOptional<FCkWebUmg_IrTransform> Transform;
     float Opacity = 1.0f;
     FString Visibility;
 };
@@ -116,11 +129,17 @@ struct CKWEBUMG_API FCkWebUmg_IrNode
     FString Id;
     FString Tag;
     FString Asset; // for <img>: id into FCkWebUmg_IrDocument::AssetSourcesById
-    FCkWebUmg_IrBox Box;
+    FCkWebUmg_IrBox Box;               // post-transform AABB when a transform applies (SCHEMA.md)
+    TOptional<FCkWebUmg_IrBox> BoxUntransformed; // the rect layout reproduces; transform reapplies at paint
     FCkWebUmg_IrLayout Layout;
     FCkWebUmg_IrPaint Paint;
     TOptional<FCkWebUmg_IrText> Text;
     TArray<TSharedPtr<FCkWebUmg_IrNode>> Children;
+
+    // The box the layout runtime reproduces — untransformed geometry when a transform (own or
+    // ancestral) moved this node; the transform itself reapplies at paint as a render transform.
+    auto Get_LayoutBox() const -> const FCkWebUmg_IrBox&
+    { return BoxUntransformed.IsSet() ? *BoxUntransformed : Box; }
 };
 
 // --------------------------------------------------------------------------------------------------------------------

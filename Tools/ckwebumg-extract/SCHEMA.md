@@ -42,7 +42,8 @@ Omitted entirely: `display:none` subtrees, `data-ck-ignore` subtrees, non-render
 | `ck` | object\|null | the `data-ck-*` escape hatch — see [DATA_CK_SPEC.md](DATA_CK_SPEC.md); null when no ck attributes present |
 | `asset` | string\|null | for `<img>`: id into top-level `assets` |
 | `attributes` | object\|null | semantic DOM attributes (`type`/`value`/`placeholder`/`disabled`/`checked`/`alt`/`href`), verbatim; boolean attributes → `true`. Carries form-control state the computed style cannot (a disabled button's disabledness) |
-| `box` | object | `content`/`padding`/`border`/`margin`, each `{x,y,w,h}` in **absolute page px** (2-decimal), from `DOM.getBoxModel` quads. Quads are post-transform geometry; when `paint.transform` is non-null, `box` is the transformed AABB — consumers needing the untransformed box invert via `paint.transform` (Gate 2 concern, recorded here so it isn't rediscovered) |
+| `box` | object | `content`/`padding`/`border`/`margin`, each `{x,y,w,h}` in **absolute page px** (2-decimal), from `DOM.getBoxModel` quads. Quads are post-transform geometry; when `paint.transform` is non-null, `box` is the transformed AABB |
+| `boxUntransformed` | object | present only on nodes whose geometry moves under a transform (own or ancestor's): the same four rects re-measured with all transforms neutralized (inspector-origin `transform:none` pass). This is the rect the layout runtime reproduces; the transform reapplies at paint as a render transform. Serialized after `unsupported` (attachment order — deterministic, just not the visual field order) |
 | `layout` | object | see below |
 | `paint` | object | see below |
 | `text` | object\|null | present when the element has direct text content (folded from child text nodes, whitespace-collapsed) |
@@ -58,10 +59,11 @@ Note: `layout` carries no width/height/margin/padding *values* — they are deri
 
 ### `paint`
 
-- `background`: null | `{type:"color", rgba:[r,g,b,a]}` | `{type:"image", asset, size, position:[x,y], repeat}` | `{type:"gradient", computed:"<verbatim computed background-image>"}` — the gradient `computed` escape is temporary Gate-1 honesty: typed stop parsing is Gate 3 scope; recording beats dropping. `size`/`position` are computed strings (may contain `%` — background positioning percentages are relative placement semantics, not resolvable to px independently of the painted box; the Gate 3 brush owns that math).
+- `background`: null | `{type:"color", rgba:[r,g,b,a]}` | `{type:"image", asset, size, position:[x,y], repeat}` | `{type:"gradient", gradientType, angleDeg, stops, computed}` — gradients are typed (Gate 3): `gradientType` `linear|radial|conic|unparsed`, `angleDeg` (linear only; CSS convention, 0 = to top), `stops:[{rgba, posPct|null}]`. Radial gradients additionally carry `center:[cx,cy]` + `radius:[rx,ry]` **absolute px against the painted box** (prelude resolved: shape, size keyword incl. corner/side rules, position); an unparseable prelude omits them — the consumer diagnoses. The verbatim `computed` string is always kept alongside. `size`/`position` on images are computed strings (may contain `%` — background positioning percentages are relative placement semantics, not resolvable to px independently of the painted box; the Gate 3 brush owns that math).
 - `borderRadius` `[tl,tr,br,bl]` px — `%` radii resolved against the border box (horizontal basis); an elliptical result (H≠V) is out of v1 surface → diagnosed with `source:"computed"`, horizontal value kept. `borderWidth` `[t,r,b,l]` px · `borderColor` rgba (top edge; differing per-side colors → diagnosed with `source:"computed"`).
 - `boxShadow`: null | `{computed:"…"}` (same temporary escape, Gate 3 parses it).
-- `opacity` 0–1 · `transform`: null | `{computed, origin}` · `visibility`.
+- `opacity` 0–1 · `visibility`.
+- `transform`: null | `{computed, matrix, origin}` — Chromium computes every transform down to a matrix; 2D becomes typed `matrix:[a,b,c,d,tx,ty]` (CSS matrix order, tx/ty px), `matrix3d` keeps `matrix:null` with the verbatim `computed` (a consumer that cannot type it diagnoses, never guesses). `origin:[x,y]` absolute px within the node. Matrix coefficients round to **6** decimals, not the schema-wide 2 — they are unitless, and 2-decimal rounding denormalizes rotations.
 
 ### `text`
 

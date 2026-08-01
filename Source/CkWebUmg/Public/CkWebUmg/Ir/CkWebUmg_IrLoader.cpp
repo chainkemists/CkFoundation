@@ -80,11 +80,19 @@ namespace ck_webumg_irloader
         Node->Tag = InObj->GetStringField(TEXT("tag"));
         InObj->TryGetStringField(TEXT("asset"), Node->Asset);
 
-        const auto& BoxObj = InObj->GetObjectField(TEXT("box"));
-        Node->Box.Content = ReadRect(BoxObj->GetObjectField(TEXT("content")));
-        Node->Box.Padding = ReadRect(BoxObj->GetObjectField(TEXT("padding")));
-        Node->Box.Border = ReadRect(BoxObj->GetObjectField(TEXT("border")));
-        Node->Box.Margin = ReadRect(BoxObj->GetObjectField(TEXT("margin")));
+        const auto ReadBox = [](const TSharedPtr<FJsonObject>& InBoxObj) -> FCkWebUmg_IrBox
+        {
+            return FCkWebUmg_IrBox{
+                ReadRect(InBoxObj->GetObjectField(TEXT("content"))),
+                ReadRect(InBoxObj->GetObjectField(TEXT("padding"))),
+                ReadRect(InBoxObj->GetObjectField(TEXT("border"))),
+                ReadRect(InBoxObj->GetObjectField(TEXT("margin")))};
+        };
+        Node->Box = ReadBox(InObj->GetObjectField(TEXT("box")));
+
+        const TSharedPtr<FJsonObject>* BoxUntransformedObj = nullptr;
+        if (InObj->TryGetObjectField(TEXT("boxUntransformed"), BoxUntransformedObj))
+        { Node->BoxUntransformed = ReadBox(*BoxUntransformedObj); }
 
         const auto& LayoutObj = InObj->GetObjectField(TEXT("layout"));
         auto& Layout = Node->Layout;
@@ -175,6 +183,18 @@ namespace ck_webumg_irloader
                 if ((*BackgroundObj)->TryGetNumberField(TEXT("angleDeg"), Angle))
                 { Gradient.AngleDeg = static_cast<float>(Angle); }
 
+                const auto ReadVec2 = [&](const TCHAR* InField) -> TOptional<FVector2f>
+                {
+                    const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+                    if (NOT (*BackgroundObj)->TryGetArrayField(InField, Values) || Values->Num() != 2)
+                    { return {}; }
+                    return FVector2f(
+                        static_cast<float>((*Values)[0]->AsNumber()),
+                        static_cast<float>((*Values)[1]->AsNumber()));
+                };
+                Gradient.RadialCenter = ReadVec2(TEXT("center"));
+                Gradient.RadialRadius = ReadVec2(TEXT("radius"));
+
                 const TArray<TSharedPtr<FJsonValue>>* StopValues = nullptr;
                 if ((*BackgroundObj)->TryGetArrayField(TEXT("stops"), StopValues))
                 {
@@ -202,6 +222,26 @@ namespace ck_webumg_irloader
         Paint.BorderRadius = ReadFloat4(PaintObj, TEXT("borderRadius"));
         Paint.BorderWidth = ReadFloat4(PaintObj, TEXT("borderWidth"));
         Paint.BorderColor = ReadColor(PaintObj, TEXT("borderColor"));
+
+        const TSharedPtr<FJsonObject>* TransformObj = nullptr;
+        if (PaintObj->TryGetObjectField(TEXT("transform"), TransformObj))
+        {
+            auto Transform = FCkWebUmg_IrTransform{};
+            const TArray<TSharedPtr<FJsonValue>>* MatrixValues = nullptr;
+            if ((*TransformObj)->TryGetArrayField(TEXT("matrix"), MatrixValues) && MatrixValues->Num() == 6)
+            {
+                for (const auto& Value : *MatrixValues)
+                { Transform.Matrix.Add(static_cast<float>(Value->AsNumber())); }
+            }
+            const TArray<TSharedPtr<FJsonValue>>* OriginValues = nullptr;
+            if ((*TransformObj)->TryGetArrayField(TEXT("origin"), OriginValues) && OriginValues->Num() == 2)
+            {
+                Transform.Origin = FVector2f(
+                    static_cast<float>((*OriginValues)[0]->AsNumber()),
+                    static_cast<float>((*OriginValues)[1]->AsNumber()));
+            }
+            Paint.Transform = Transform;
+        }
         Paint.Opacity = static_cast<float>(PaintObj->GetNumberField(TEXT("opacity")));
         Paint.Visibility = PaintObj->GetStringField(TEXT("visibility"));
 

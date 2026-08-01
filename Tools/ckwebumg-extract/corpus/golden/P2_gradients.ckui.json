@@ -472,6 +472,14 @@
             "type": "gradient",
             "gradientType": "radial",
             "angleDeg": null,
+            "center": [
+              224,
+              160
+            ],
+            "radius": [
+              412.91,
+              412.91
+            ],
             "stops": [
               {
                 "rgba": [

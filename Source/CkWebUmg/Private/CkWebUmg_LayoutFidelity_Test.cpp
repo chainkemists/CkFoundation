@@ -137,7 +137,9 @@ bool
         if (NOT TestTrue(FString::Printf(TEXT("arranged rect exists for IR node [%s]"), *NodeId), Rect != nullptr))
         { continue; }
 
-        const auto& Expected = IrNode->Box.Border;
+        // Arranged geometry is pre-render-transform, so transformed nodes compare against their
+        // untransformed rect; the transform itself is a paint concern the pixel suite covers.
+        const auto& Expected = IrNode->Get_LayoutBox().Border;
         const auto Deviation = FMath::Max(
             FMath::Max(FMath::Abs(Rect->Left - Expected.X), FMath::Abs(Rect->Top - Expected.Y)),
             FMath::Max(FMath::Abs(Rect->GetSize().X - Expected.W), FMath::Abs(Rect->GetSize().Y - Expected.H)));

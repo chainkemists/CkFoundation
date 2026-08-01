@@ -151,8 +151,8 @@ namespace ck_webumg_flexpanel
         YGNodeStyleSetFlexWrap(InNode, ToWrap(InIr.Layout.Wrap));
         YGNodeStyleSetGap(InNode, YGGutterColumn, InIr.Layout.Gap.X);
         YGNodeStyleSetGap(InNode, YGGutterRow, InIr.Layout.Gap.Y);
-        SetEdges(InNode, PaddingEdges(InIr.Box), &YGNodeStyleSetPadding);
-        SetEdges(InNode, BorderEdges(InIr.Box), &YGNodeStyleSetBorder);
+        SetEdges(InNode, PaddingEdges(InIr.Get_LayoutBox()), &YGNodeStyleSetPadding);
+        SetEdges(InNode, BorderEdges(InIr.Get_LayoutBox()), &YGNodeStyleSetBorder);
     }
 
     // Item-level inputs. Sizing policy (v1, reference-viewport contract): explicit used size on
@@ -171,6 +171,9 @@ namespace ck_webumg_flexpanel
         -> void
     {
         const auto& Layout = InIr.Layout;
+        // Transformed nodes lay out at their UNtransformed geometry; the transform reapplies at
+        // paint (render transform). Feeding the transformed AABB here would teach Yoga wrong sizes.
+        const auto& Box = InIr.Get_LayoutBox();
 
         // Computed flex-grow/shrink exist on every element, but they only have meaning inside a
         // flex formatting context — a block parent's children never flex (L7 defect).
@@ -196,7 +199,7 @@ namespace ck_webumg_flexpanel
             // main size as basis — positions/gaps stay live; this node's grow share is fixed at
             // the reference layout. Documented v1 limitation (module Claude.md).
             YGNodeStyleSetFlexBasis(InNode,
-                MainIsRowForBasis ? InIr.Box.Border.W : InIr.Box.Border.H);
+                MainIsRowForBasis ? Box.Border.W : Box.Border.H);
         }
         else
         { YGNodeStyleSetFlexBasisAuto(InNode); }
@@ -211,15 +214,15 @@ namespace ck_webumg_flexpanel
             if (InConstraint.IsSet() && FMath::IsNearlyEqual(*InConstraint, InUsed, 0.5f))
             { InSetter(InNode, *InConstraint); }
         };
-        ApplyIfBinding(Layout.MinSize[0], InIr.Box.Border.W, &YGNodeStyleSetMinWidth);
-        ApplyIfBinding(Layout.MinSize[1], InIr.Box.Border.H, &YGNodeStyleSetMinHeight);
-        ApplyIfBinding(Layout.MaxSize[0], InIr.Box.Border.W, &YGNodeStyleSetMaxWidth);
-        ApplyIfBinding(Layout.MaxSize[1], InIr.Box.Border.H, &YGNodeStyleSetMaxHeight);
+        ApplyIfBinding(Layout.MinSize[0], Box.Border.W, &YGNodeStyleSetMinWidth);
+        ApplyIfBinding(Layout.MinSize[1], Box.Border.H, &YGNodeStyleSetMinHeight);
+        ApplyIfBinding(Layout.MaxSize[0], Box.Border.W, &YGNodeStyleSetMaxWidth);
+        ApplyIfBinding(Layout.MaxSize[1], Box.Border.H, &YGNodeStyleSetMaxHeight);
 
         if (Layout.AlignSelf != TEXT("auto"))
         { YGNodeStyleSetAlignSelf(InNode, ToAlign(Layout.AlignSelf, YGAlignAuto)); }
 
-        SetEdges(InNode, MarginEdges(InIr.Box), &YGNodeStyleSetMargin);
+        SetEdges(InNode, MarginEdges(Box), &YGNodeStyleSetMargin);
 
         const auto EffectiveAlign = Layout.AlignSelf != TEXT("auto")
             ? ToAlign(Layout.AlignSelf, InParentAlignItems)
@@ -237,8 +240,8 @@ namespace ck_webumg_flexpanel
         const auto MainSizeIsFlexDriven = Layout.Grow > 0.0f;
         const auto CrossSizeIsStretchDriven = EffectiveAlign == YGAlignStretch && NOT CrossAuthored;
 
-        const auto BorderW = InIr.Box.Border.W;
-        const auto BorderH = InIr.Box.Border.H;
+        const auto BorderW = Box.Border.W;
+        const auto BorderH = Box.Border.H;
 
         // Text leaves: authored axes are explicit like any node (an authored height beats both
         // stretch AND the measure callback — L9's stretched-card defect); only genuinely
@@ -303,7 +306,7 @@ namespace ck_webumg_flexpanel
         { return YGSize{0.0f, 0.0f}; }
 
         const auto& Text = *Ir->Text;
-        auto Result = YGSize{Ir->Box.Border.W, Ir->Box.Border.H};
+        auto Result = YGSize{Ir->Get_LayoutBox().Border.W, Ir->Get_LayoutBox().Border.H};
 
         if (FSlateApplication::IsInitialized())
         {
@@ -314,7 +317,7 @@ namespace ck_webumg_flexpanel
             ck::webumg::VeryVerbose(
                 TEXT("MeasureTextLeaf [{}]: modes W={} H={} avail [{} x {}] -> recorded [{} x {}], slate [{} x {}]"),
                 Ir->Id, static_cast<int32>(InWidthMode), static_cast<int32>(InHeightMode),
-                InWidth, InHeight, Ir->Box.Border.W, Ir->Box.Border.H, SlateMeasured.X, SlateMeasured.Y);
+                InWidth, InHeight, Ir->Get_LayoutBox().Border.W, Ir->Get_LayoutBox().Border.H, SlateMeasured.X, SlateMeasured.Y);
         }
 
         if (InWidthMode == YGMeasureModeExactly)
@@ -485,7 +488,7 @@ FVector2D
     // the root at the recorded viewport, so this stays exact. Unconstrained-Yoga desired size is
     // revisited when non-reference layouts arrive (post-v1 responsive work).
     if (_IrNode != nullptr)
-    { return FVector2D(_IrNode->Box.Border.W, _IrNode->Box.Border.H); }
+    { return FVector2D(_IrNode->Get_LayoutBox().Border.W, _IrNode->Get_LayoutBox().Border.H); }
     return FVector2D::ZeroVector;
 }
 

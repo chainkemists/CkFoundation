@@ -108,10 +108,62 @@ const quadToRect = q => ({
     h: round2(Math.max(q[1], q[3], q[5], q[7]) - Math.min(q[1], q[3], q[5], q[7])),
 });
 
+// Radial prelude ("circle at 40% 40%", "ellipse farthest-side at center", explicit px radii) →
+// absolute {center:[cx,cy], radius:[rx,ry]} px against the painted box, per the CSS sizing rules.
+// Anything outside the supported grammar returns null — the consumer diagnoses, never guesses.
+const parseRadialPrelude = (prelude, boxW, boxH) => {
+    const m = /^(?:(circle|ellipse)\s*)?(?:(closest-side|closest-corner|farthest-side|farthest-corner|[\d.]+px(?:\s+[\d.]+px)?)\s*)?(?:at\s+(.+))?$/
+        .exec(prelude.trim());
+    if (!m) return null;
+    const explicitRadii = m[2] && m[2].endsWith('px') ? m[2].split(/\s+/).map(parseFloat) : null;
+    // CSS default shape: ellipse, unless a single explicit radius forces circle.
+    const shape = m[1] ?? (explicitRadii && explicitRadii.length === 1 ? 'circle' : 'ellipse');
+    const size = explicitRadii ? null : (m[2] ?? 'farthest-corner');
+
+    const resolveCoord = (token, basis) => {
+        if (token === 'center') return basis / 2;
+        if (token === 'left' || token === 'top') return 0;
+        if (token === 'right' || token === 'bottom') return basis;
+        if (token.endsWith('%')) return parseFloat(token) / 100 * basis;
+        if (token.endsWith('px')) return parseFloat(token);
+        return null;
+    };
+    let cx = boxW / 2, cy = boxH / 2;
+    if (m[3] !== undefined) {
+        const posTokens = m[3].trim().split(/\s+/);
+        if (posTokens.length > 2) return null;
+        cx = resolveCoord(posTokens[0], boxW);
+        cy = resolveCoord(posTokens[1] ?? 'center', boxH);
+        if (cx === null || cy === null) return null;
+    }
+
+    let rx, ry;
+    if (explicitRadii) {
+        rx = explicitRadii[0];
+        ry = explicitRadii.length === 2 ? explicitRadii[1] : explicitRadii[0];
+    } else {
+        const sideX = { 'closest-side': Math.min(cx, boxW - cx), 'farthest-side': Math.max(cx, boxW - cx) };
+        const sideY = { 'closest-side': Math.min(cy, boxH - cy), 'farthest-side': Math.max(cy, boxH - cy) };
+        const dx = size.includes('closest') ? sideX['closest-side'] : sideX['farthest-side'];
+        const dy = size.includes('closest') ? sideY['closest-side'] : sideY['farthest-side'];
+        if (size.endsWith('corner')) {
+            // Corner sizes keep the side-size aspect and scale through the corner (k = sqrt2 when
+            // dx,dy are the corner deltas): circle uses the corner distance directly.
+            if (shape === 'circle') { rx = ry = Math.hypot(dx, dy); }
+            else { rx = dx * Math.SQRT2; ry = dy * Math.SQRT2; }
+        } else {
+            if (shape === 'circle') { rx = ry = size === 'closest-side' ? Math.min(dx, dy) : Math.max(dx, dy); }
+            else { rx = dx; ry = dy; }
+        }
+    }
+    if (!Number.isFinite(rx) || !Number.isFinite(ry)) return null;
+    return { center: [round2(cx), round2(cy)], radius: [round2(rx), round2(ry)] };
+};
+
 // Typed gradient parse of a COMPUTED background-image (colors already rgb()/rgba()).
 // Returns {gradientType, angleDeg, stops:[{rgba, posPct|null}]} or {gradientType:'unparsed'} —
 // the verbatim `computed` field is always kept alongside, so nothing is ever lost.
-const parseGradient = v => {
+const parseGradient = (v, boxW, boxH) => {
     const m = /^(repeating-)?(linear|radial|conic)-gradient\((.*)\)$/s.exec(v);
     if (!m || m[1]) return { gradientType: 'unparsed' };
     const kind = m[2];
@@ -128,11 +180,15 @@ const parseGradient = v => {
 
     let angleDeg = 180; // CSS default: to bottom
     let stopParts = parts;
+    let radial = null;
     if (kind === 'linear' && /^-?[\d.]+deg$/.test(parts[0])) {
         angleDeg = parseFloat(parts[0]);
         stopParts = parts.slice(1);
     } else if (kind !== 'linear' && !parts[0].startsWith('rgb')) {
-        stopParts = parts.slice(1); // radial/conic shape/position prelude — recorded via `computed`
+        if (kind === 'radial') radial = parseRadialPrelude(parts[0], boxW, boxH);
+        stopParts = parts.slice(1); // conic prelude (and unparseable radial) stays `computed`-only
+    } else if (kind === 'radial') {
+        radial = parseRadialPrelude('', boxW, boxH); // no prelude: ellipse farthest-corner at center
     }
 
     const stops = [];
@@ -144,7 +200,43 @@ const parseGradient = v => {
         stops.push({ rgba, posPct: sm[2] !== undefined ? round2(parseFloat(sm[2])) : null });
     }
     if (stops.length < 2) return { gradientType: 'unparsed' };
-    return { gradientType: kind, angleDeg: kind === 'linear' ? angleDeg : null, stops };
+    return {
+        gradientType: kind,
+        angleDeg: kind === 'linear' ? angleDeg : null,
+        ...(radial !== null ? radial : {}),
+        stops,
+    };
+};
+
+// Typed box-shadow parse of the COMPUTED value: comma-separated layers, each
+// "<color> <offsetX>px <offsetY>px <blur>px <spread>px [inset]" (Chromium's emission order).
+// Returns [{rgba, offset:[x,y], blur, spread, inset}] or null — the verbatim string is kept
+// alongside either way.
+const parseBoxShadow = v => {
+    const layers = [];
+    let depth = 0, cur = '', parts = [];
+    for (const ch of v) {
+        if (ch === '(') depth++;
+        if (ch === ')') depth--;
+        if (ch === ',' && depth === 0) { parts.push(cur.trim()); cur = ''; }
+        else cur += ch;
+    }
+    parts.push(cur.trim());
+    for (const part of parts) {
+        const m = /^(rgba?\([^)]*\))\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px(\s+inset)?$/
+            .exec(part);
+        if (!m) return null;
+        const rgba = parseColor(m[1]);
+        if (!rgba) return null;
+        layers.push({
+            rgba,
+            offset: [round2(parseFloat(m[2])), round2(parseFloat(m[3]))],
+            blur: round2(parseFloat(m[4])),
+            spread: round2(parseFloat(m[5])),
+            inset: m[6] !== undefined,
+        });
+    }
+    return layers.length > 0 ? layers : null;
 };
 
 const parseColor = v => {
@@ -167,6 +259,7 @@ class Extractor {
         this.assets = new Map();      // resolved src -> {id, src, kind, intrinsic}
         this.diagnostics = [];        // page-level issues (duplicate names, unknown ck attrs)
         this.ckNames = new Map();     // data-ck-name -> first node id
+        this.domNodeIds = new Map();  // IR id -> CDP nodeId, for the untransformed box pass
     }
 
     assetRef(rawUrl) {
@@ -355,7 +448,11 @@ class Extractor {
                     repeat: c.get('background-repeat'),
                 };
             } else {
-                background = { type: 'gradient', ...parseGradient(bgImage), computed: bgImage };
+                background = {
+                    type: 'gradient',
+                    ...parseGradient(bgImage, box.border.w, box.border.h),
+                    computed: bgImage,
+                };
             }
         } else if (bgColor && bgColor[3] !== 0) {
             background = { type: 'color', rgba: bgColor };
@@ -402,10 +499,25 @@ class Extractor {
             borderColor: borderColors[0],
             boxShadow: c.get('box-shadow') === 'none' ? null : { computed: c.get('box-shadow') },
             opacity: round2(parseFloat(c.get('opacity'))),
-            transform: c.get('transform') === 'none' ? null : {
-                computed: c.get('transform'), origin: c.get('transform-origin'),
-            },
+            transform: c.get('transform') === 'none' ? null : this.transformBlock(c),
             visibility: c.get('visibility'),
+        };
+    }
+
+    // Chromium computes every transform down to a matrix. 2D matrices become typed
+    // [a,b,c,d,tx,ty]; matrix3d stays matrix:null with the verbatim `computed` kept — a
+    // consumer that cannot type it must diagnose, not guess. Origin is absolute px (x, y).
+    transformBlock(c) {
+        const computed = c.get('transform');
+        // Matrix coefficients are unitless — 2-decimal rounding would denormalize rotations
+        // (0.97²+0.26² ≈ 1.0085 → visible corner error); 6 decimals preserves orthonormality.
+        const round6 = n => Math.round(n * 1e6) / 1e6;
+        const m = /^matrix\(([^)]+)\)$/.exec(computed);
+        const parsed = m ? m[1].split(',').map(v => round6(parseFloat(v))) : null;
+        return {
+            computed,
+            matrix: parsed && parsed.length === 6 && parsed.every(Number.isFinite) ? parsed : null,
+            origin: c.get('transform-origin').split(' ').slice(0, 2).map(px),
         };
     }
 
@@ -512,6 +624,7 @@ class Extractor {
 
         const { props: authorProps, pseudoDiags } = await this.authorProperties(node.nodeId);
         const id = `n${this.nodeCounter++}`;
+        this.domNodeIds.set(id, node.nodeId);
         const imgAsset = node.nodeName === 'IMG' && attrs.has('src')
             ? this.assetRef(attrs.get('src'))
             : null;
@@ -604,13 +717,46 @@ const main = async () => {
         const frameTree = await cdp.send('Page.getFrameTree').catch(() => null);
         const frameId = frameTree?.frameTree?.frame?.id;
         const { styleSheetId: injectedSheet } = await cdp.send('CSS.createStyleSheet', { frameId });
-        await cdp.send('CSS.setStyleSheetText', {
-            styleSheetId: injectedSheet,
-            text: '*,*::before,*::after{animation:none !important;transition:none !important;caret-color:transparent !important;}',
-        });
+        const NEUTRALIZER =
+            '*,*::before,*::after{animation:none !important;transition:none !important;caret-color:transparent !important;}';
+        await cdp.send('CSS.setStyleSheetText', { styleSheetId: injectedSheet, text: NEUTRALIZER });
 
         const root = await extractor.run();
         const version = await browser.version();
+
+        // Second box pass with transforms neutralized: getBoxModel quads are post-transform
+        // geometry, but the layout runtime reproduces the UNtransformed rects (the transform is
+        // reapplied at paint as a render transform). Nodes whose geometry moves get
+        // `boxUntransformed`; the sheet is restored before the golden screenshot, which must
+        // keep the transformed pixels.
+        const irNodesById = new Map();
+        (function walk(n) { irNodesById.set(n.id, n); n.children.forEach(walk); })(root);
+        const anyTransform = [...irNodesById.values()].some(n => n.paint.transform !== null);
+        if (anyTransform) {
+            await cdp.send('CSS.setStyleSheetText', {
+                styleSheetId: injectedSheet,
+                text: NEUTRALIZER + '*{transform:none !important;}',
+            });
+            const rectsEqual = (a, b) =>
+                ['x', 'y', 'w', 'h'].every(k => Math.abs(a[k] - b[k]) < 0.05);
+            for (const [irId, domNodeId] of extractor.domNodeIds) {
+                const irNode = irNodesById.get(irId);
+                let model;
+                try { ({ model } = await cdp.send('DOM.getBoxModel', { nodeId: domNodeId })); }
+                catch { continue; }
+                const untransformed = {
+                    content: quadToRect(model.content),
+                    padding: quadToRect(model.padding),
+                    border: quadToRect(model.border),
+                    margin: quadToRect(model.margin),
+                };
+                if (!['content', 'padding', 'border', 'margin']
+                    .every(k => rectsEqual(untransformed[k], irNode.box[k]))) {
+                    irNode.boxUntransformed = untransformed;
+                }
+            }
+            await cdp.send('CSS.setStyleSheetText', { styleSheetId: injectedSheet, text: NEUTRALIZER });
+        }
 
         // Normalize assets through the browser's own decode: Chromium color-manages PNGs (gamma/
         // color chunks), the engine reads raw bytes — the golden is the spec, so the IR bundle

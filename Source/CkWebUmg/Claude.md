@@ -42,6 +42,14 @@ Yoga-backed flex panel (campaign DECISION 1, option C).
 - **Text measure returns the IR-recorded box** (Chromium's truth) and *logs* the Slate-side
   measurement (VeryVerbose) — the §8.1 font-metric divergence is collected as data for Gate 3, not
   imported into every sibling's position, and not silently baked either.
+- **Transforms: layout at untransformed geometry, transform reapplies at paint.** Every layout
+  consumer reads `FCkWebUmg_IrNode::Get_LayoutBox()` (= `boxUntransformed` when a transform — own
+  or ancestral — moved the node; the extractor measures it in a second `transform:none` pass).
+  The builder maps the IR's typed 2D matrix onto `SetRenderTransform` + a pivot normalized from
+  `transform-origin` over the untransformed size — CSS `p' = origin + M·(p−origin) + t` and
+  Slate's pivot composition are the same arithmetic. 3D matrices are warned and left unapplied.
+  The rect suite compares transformed nodes against `boxUntransformed` (arranged geometry is
+  pre-render-transform); the pixel suite owns the transformed output.
 - `UseWebDefaults` on, `pointScaleFactor` = 1, box-sizing pinned border-box. Yoga's inert grid
   setters are never exposed (PriorArt §3 trap).
 - IR structs are plain aggregates (Technique-Context precedent) — the reflected/asset form is
