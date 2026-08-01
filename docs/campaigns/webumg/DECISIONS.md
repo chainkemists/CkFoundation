@@ -28,6 +28,10 @@ The corpus-tested `SUPPORTED_PROPERTIES`/`SUPPORTED_SHORTHANDS`/`VALUE_RULES` in
 
 Target home stays CkTests (owns test infrastructure; no `*Harness` module precedent). **Gate 2 deviation:** at execution time, CkTests' `Source/CkTests/CkTests.Build.cs` was dirty with a sibling session's uncommitted work (their CkParticles test edits) — adding the CkWebUmg dependency line there cannot be committed without publishing their WIP, which shared-worktree discipline forbids. The rect-diff harness therefore lands **inside CkWebUmg** (`Source/CkWebUmg/Private/`) for Gate 2. **Migration trigger:** the sibling's CkTests changes land on `dev` → move the harness to CkTests, delete it from CkWebUmg, re-run the gate observations. Follow-up owned by the campaign, noted in PROGRESS open items.
 
+## Gate 2 exit — layout threshold — **DECIDED: ±1px ratified** (Adam, 2026-08-01)
+
+"Every element's final rect within ±1px of the Chromium box model at the reference resolution" (brief §10) is now the enforced, measured bar — all 9 L-pages pass it in the default automation suite (884/884 full run). NaN is a hard failure on every node. Recorded deviation at close: CkWebUmg has no BP/AS surface yet — the three-environments rule attaches to the reflected DataAsset API arriving at Gate 4, not to the internal Slate/loader layer; revisit at Gate 4 exit.
+
 ## Standing evidence notes (carried from Phase 0)
 
 - Yoga vendoring cautions: pin `c766885`; `UseWebDefaults` on; never expose inert grid setters; extractor pre-sorts children by computed `order`; fix `pointScaleFactor` for deterministic harness comparisons (PriorArt §3).

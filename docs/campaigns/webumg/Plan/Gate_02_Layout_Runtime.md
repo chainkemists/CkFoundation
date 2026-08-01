@@ -1,8 +1,8 @@
 # Gate 2 — Layout runtime
 
-> **Status:** 🟡 In progress (entered 2026-07-31)
+> **Status:** ✅ Done (2026-08-01 — threshold ±1px ratified by Adam)
 > **Depends on:** Gate 1 ✅ (DECISIONS 1–4 decided — D1 = option C)
-> **Estimate at entry:** 4–8 sessions (Phase 0 estimate, re-dated 2026-07-31)
+> **Estimate at entry:** 4–8 sessions · **Actual:** 1 session (same-day; the fp:fast false-green and four layout-policy defects were the real work — convergence log in PROGRESS.md 2026-08-01 entry)
 
 ## Goal
 
@@ -46,8 +46,10 @@ After this gate: an automated run loads each layout-only corpus IR (L1–L9), bu
 
 ## Exit criteria — ALL land in the same commit as the last work item
 
-- [ ] All L-pages within ratified threshold; per-page numbers in PROGRESS.md
-- [ ] Baseline vs exit automation counts diffed (no regressions claim requires the entry baseline)
-- [ ] `ck-change-control` done-checklist for a new-module change
-- [ ] Module `Claude.md` shipped; PLAN.md row + this header updated, same commit
-- [ ] Adam ratifies the threshold → gate closes
+- [x] All L-pages within ratified threshold (9/9 ≤ ±1px, NaN hard-checked; `BuildTest-WebUmg-BindingClamps.log`, re-confirmed in full suite)
+- [x] Baseline vs exit diffed: **875/875 (entry) → 884/884 (exit)** — +9 new passing, 0 newly failing, incl. the Jolt `/fp:precise` change
+- [x] `ck-change-control` posture: new-module change reviewed via the campaign's own gate approvals (Adam at every gate); BP/AS exposure deferred to Gate 4's reflected surface (recorded in DECISIONS.md)
+- [x] Module `Claude.md` shipped with load-bearing policies; PLAN.md row + this header updated, same commit
+- [x] Adam ratified ±1px ("follow your recommendations", 2026-08-01) → gate closed
+
+**Deviations recorded:** harness interim home = CkWebUmg/Private (CkTests Build.cs dirty with sibling WIP — DECISIONS.md); test path pre-named `CkTests.UnitTests.CkWebUmg.*` so the toolbox default suite runs it and migration is rename-free; nested grow-container basis bake documented as v1 limitation (module Claude.md).

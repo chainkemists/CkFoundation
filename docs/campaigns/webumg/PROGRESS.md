@@ -1,10 +1,10 @@
 # CkWebUmg — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-07-31 session 2, later (branch `feature/webumg-campaign`):** **Gate 1 ✅ CLOSED** — Adam approved schema + all four DECISION-pack recommendations verbatim ("Go with your recommendations"): D1 = Yoga panel (C), D2 = DataAsset-runtime, D3 = read-only regen + duplicate-name hard error, D4 = allowlist ratified. Harness home = CkTests (recorded). **Gate 2 opened** (Plan/Gate_02_Layout_Runtime.md).
-**Baseline being diffed against:** NOT YET CAPTURED — Gate 2 entry requires a toolbox build + automation baseline before the first engine-code change. That is the next action's first step.
-**Next action:** Gate 2 work item 0 — capture toolbox baseline; then vendor Yoga (item 1) + scaffold CkWebUmg (item 2).
-**Blocked on:** nothing until Gate 2 exit (threshold ratification). Open Adam-side item: R3 WebToUMG purchase.
+**As of 2026-08-01 (branch `feature/webumg-campaign`, tip `e4edd5952`+boundary commit):** **Gate 2 ✅ CLOSED** — ±1px ratified by Adam; 9/9 L-pages green in the default suite; 884/884 full-suite vs 875 baseline. **Gate 3 opened** (Plan/Gate_03_Paint_Layer.md) — pixel harness first (work item 1), Slate paint inventory (item 0) alongside.
+**Baseline being diffed against:** 884/884 (2026-08-01, `BuildTest-WebUmg-FullRegression2.log`).
+**Next action:** Gate 3 items 0+1 — Slate paint capability inventory (cited), then FWidgetRenderer pixel harness with L-page sanity check.
+**Blocked on:** nothing until Gate 3 exit (paint threshold + shadow decision + text tolerance = Adam). Open Adam-side items: R3 WebToUMG purchase; harness migration to CkTests when sibling work lands.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
