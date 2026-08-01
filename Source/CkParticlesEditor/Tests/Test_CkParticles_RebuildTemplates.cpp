@@ -27,13 +27,16 @@ bool FCk_Particles_RebuildTemplateAssets_Test::RunTest(const FString& Parameters
         return true;
     }
 
-    TestTrue(TEXT("Build_AllTemplateSystems (textures + materials + meshes + both templates)"),
+    TestTrue(TEXT("Build_AllTemplateSystems (textures + materials + meshes + every cadence template)"),
         ck::particles_editor::Build_AllTemplateSystems());
 
-    TestNotNull(TEXT("Continuous seed template loads"),
-        LoadObject<UNiagaraSystem>(nullptr, *ck::particles::Get_DefaultTemplateSystemObjectPath()));
-    TestNotNull(TEXT("Burst template loads"),
-        LoadObject<UNiagaraSystem>(nullptr, *ck::particles::Get_BurstTemplateSystemObjectPath()));
+    // Driven off the cadence table, so adding a cadence row does not need this test edited.
+    for (const auto& Spec : ck::particles::Get_TemplateSpecs())
+    {
+        const auto Path = ck::particles::Get_TemplateSystemObjectPath(Spec.AssetName);
+        TestNotNull(*FString::Printf(TEXT("template [%s] loads"), Spec.AssetName),
+            LoadObject<UNiagaraSystem>(nullptr, *Path));
+    }
 
     return true;
 }

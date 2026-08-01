@@ -37,6 +37,7 @@ namespace NDICkParticlesLocal
         TEXT("/CkParticles/Behaviors/Behavior_GroundRing.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_LightningStrike.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_AuraSwirl.ush"),
+        TEXT("/CkParticles/Behaviors/Behavior_LightningRange.ush"),
     };
 }
 
@@ -647,6 +648,42 @@ namespace NDICkParticlesLocal
 
                 Out.Color = FLinearColor(Ramp.X * Bright * A, Ramp.Y * Bright * A, Ramp.Z * Bright * A, A);
                 Out.Size  = FVector2f(1.0f, 1.0f) * FMath::Lerp(22.6f, 57.3f, Rand(InSeed, 8)) * (1.0f + m) * 0.55f;
+                break;
+            }
+            case 17: // LightningRange — Vefects NS_Lightning_Range range ring. Mirrors Behavior_LightningRange.ush.
+            {
+                constexpr auto ColorSplit  = 0.0630213f;
+                constexpr auto AlphaT0     = 0.206364f;
+                constexpr auto AlphaT1     = 0.693235f;
+                constexpr auto AlphaT2     = 0.95397f;
+                constexpr auto DissolveEnd = 0.4f;
+
+                const float T = NormalizedAge;
+
+                Out.Position = FVector3f::ZeroVector;
+                Out.Velocity = FVector3f::ZeroVector;
+
+                const float ColorT = Saturate(T / ColorSplit);
+                const float R = FMath::Lerp(1.0f,      0.266356f, ColorT);
+                const float G = FMath::Lerp(0.89627f,  0.102242f, ColorT);
+                const float B = FMath::Lerp(0.520996f, 1.0f,      ColorT);
+
+                float Alpha;
+                if (T <= AlphaT0)
+                { Alpha = 0.15f; }
+                else if (T <= AlphaT1)
+                { Alpha = FMath::Lerp(0.15f, 0.2f, (T - AlphaT0) / (AlphaT1 - AlphaT0)); }
+                else if (T <= AlphaT2)
+                { Alpha = FMath::Lerp(0.2f, 1.0f, (T - AlphaT1) / (AlphaT2 - AlphaT1)); }
+                else
+                { Alpha = 1.0f; }
+
+                Out.Color       = FLinearColor(R, G, B, Alpha);
+                Out.Size        = FVector2f(700.0f, 700.0f);
+                Out.Dynamic     = FVector4f(FMath::Lerp(-1.0f, 0.2f, Saturate(T / DissolveEnd)), 0.0f, 0.0f, -0.5f);
+                Out.Orientation = FQuat4f::Identity;
+                Out.Rotation    = 0.0f;
+                Out.VisTag      = 0;
                 break;
             }
             case 0: // Gravity — constant downward accel, integrate, tint warm->dark over life.

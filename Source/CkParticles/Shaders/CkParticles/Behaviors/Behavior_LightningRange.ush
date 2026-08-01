@@ -1,0 +1,88 @@
+// /CkParticles/Behaviors/Behavior_LightningRange.ush — BehaviorId 17.
+//
+// Recreation of Vefects NS_Lightning_Range: a single flat range-indicator ring that snaps on warm-white,
+// shifts hard to blue within the first ~6% of its life, erodes under a dissolve, and swells back to full
+// alpha just before it dies. Recipe + corpus evidence: CkParticles/Cookbook/NS_Lightning_Range.md
+//
+// Source cadence (corpus): ONE instantaneous particle at t=0, 1.0s infinite emitter loop, 1.1s lifetime.
+// It therefore spawns through PS_CkParticles_Template_Single, whose cadence row carries those numbers —
+// so this behavior reads a REAL Age and must not fake a cycle with frac(Age/Cycle).
+//
+// The ring is a flat quad in the local XY plane facing +Z, matching the source's CustomAlignment /
+// CustomFacingVector pair with an identity orientation quaternion.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Source curve keys, transcribed from the corpus recipe. Color/alpha sample NormalizedAge.
+//   R: (0, 1)C -> (0.0630213, 0.266356)L
+//   G: (0, 0.89627)C -> (0.0630213, 0.102242)L
+//   B: (0, 0.520996)C -> (0.0630213, 1)L
+//   A: (0.206364, 0.15)L (0.693235, 0.2)L (0.95397, 1)C
+//   Dissolve (Dynamic.x): (0, -1)L -> (0.4, 0.2)L
+#define CKP_LR_COLOR_SPLIT   0.0630213
+#define CKP_LR_ALPHA_T0      0.206364
+#define CKP_LR_ALPHA_T1      0.693235
+#define CKP_LR_ALPHA_T2      0.95397
+#define CKP_LR_DISSOLVE_END  0.4
+
+FCkParticles_StageOutput CkParticles_Behavior_LightningRange(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const float T = CkParticles_NormalizedAge(In);
+
+    // The source's Initialize Particle uses Simulation Position with a zero offset, and the emitter is local
+    // space, so the ring sits exactly on the spawn transform for its whole life.
+    O.Position = float3(0.0, 0.0, 0.0);
+
+    // ---- Color: a fast constant-then-linear snap from warm white to blue, then held ----
+    const float ColorT = saturate(T / CKP_LR_COLOR_SPLIT);
+    O.Color.r = lerp(1.0,       0.266356, ColorT);
+    O.Color.g = lerp(0.89627,   0.102242, ColorT);
+    O.Color.b = lerp(0.520996,  1.0,      ColorT);
+
+    // ---- Alpha: flat 0.15 until the first key, a slow lift to 0.2, then a hard swell to 1.0 ----
+    float Alpha;
+    if (T <= CKP_LR_ALPHA_T0)
+    {
+        Alpha = 0.15;
+    }
+    else if (T <= CKP_LR_ALPHA_T1)
+    {
+        Alpha = lerp(0.15, 0.2, (T - CKP_LR_ALPHA_T0) / (CKP_LR_ALPHA_T1 - CKP_LR_ALPHA_T0));
+    }
+    else if (T <= CKP_LR_ALPHA_T2)
+    {
+        Alpha = lerp(0.2, 1.0, (T - CKP_LR_ALPHA_T1) / (CKP_LR_ALPHA_T2 - CKP_LR_ALPHA_T1));
+    }
+    else
+    {
+        Alpha = 1.0;
+    }
+    O.Color.a = Alpha;
+
+    // ---- Size: uniform 700, held for the whole life (the source never animates it) ----
+    O.Size = float2(700.0, 700.0);
+
+    // ---- Dynamic material parameters, in the SOURCE material's channel order ----
+    //   x dissolve: -1 -> 0.2 across the first 40% of life, then held at 0.2
+    //   y distortion: the instance resolves Distortion_Intensity to 0
+    //   z offset: unused by this effect
+    //   w core_color: -0.5, i.e. the core tint is disabled
+    O.Dynamic.x = lerp(-1.0, 0.2, saturate(T / CKP_LR_DISSOLVE_END));
+    O.Dynamic.y = 0.0;
+    O.Dynamic.z = 0.0;
+    O.Dynamic.w = -0.5;
+
+    O.Orientation = float4(0.0, 0.0, 0.0, 1.0);
+    O.Rotation    = 0.0;
+    O.Velocity    = float3(0.0, 0.0, 0.0);
+
+    // VisTag 0 = camera-facing sprite, whose material is the bound CkUsf look. KNOWN FIDELITY GAP: the source
+    // renderer is CustomAlignment + CustomFacingVector with an identity quaternion, i.e. a quad lying FLAT in
+    // the local XY plane, not camera-facing. Closing it needs a custom-facing sprite renderer on the template
+    // (a new VisTag), which is renderer work outside this slice — see the recipe's fidelity section.
+    O.VisTag = 0;
+
+    return O;
+}
