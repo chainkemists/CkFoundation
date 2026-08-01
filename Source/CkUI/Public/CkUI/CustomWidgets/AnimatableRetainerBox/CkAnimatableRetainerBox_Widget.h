@@ -24,7 +24,7 @@ private:
     // Runtime-available designer-preview toggle; the parent's URetainerBox::bShowEffectsInDesigner is
     // editor-only. The name must NOT match the parent's — see CkUI/CLAUDE.md (AngelScript binder collision).
     UPROPERTY(EditAnywhere, Category = "Effect", meta = (AllowPrivateAccess = true))
-    bool bShowEffectsPreview = true;
+    bool ShowEffectsPreview = true;
 
 protected:
     auto SynchronizeProperties() -> void override;
