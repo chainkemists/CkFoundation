@@ -1,0 +1,45 @@
+// /CkUsf/Looks/ProtoGrid.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+#ifndef CKUSF_PROTOGRID_ROUGH_BASE
+#define CKUSF_PROTOGRID_ROUGH_BASE 0.5
+#endif
+#ifndef CKUSF_PROTOGRID_ROUGH_LINE
+#define CKUSF_PROTOGRID_ROUGH_LINE 0.25
+#endif
+#ifndef CKUSF_PROTOGRID_BEVEL_STRENGTH
+#define CKUSF_PROTOGRID_BEVEL_STRENGTH 0.35
+#endif
+
+// Params: PrimaryColor (Vector), SecondaryColor (Vector), LineColor (Vector),
+//         CellSize (Scalar, cm), SubCells (Scalar), LineWidth (Scalar, cm),
+//         ShiftX (Scalar, cm), ShiftY (Scalar, cm).
+// Blockout/prototyping grid in the spirit of the SuperGrid materials: world-aligned cells
+// (constant world size on any mesh or scale), checkerboard dye, faint sub-grid and strong
+// major lines. SecondaryColor = PrimaryColor collapses the checker to a single-color grid.
+// World-aligned means cells sit on world meter boundaries, not object bounds — Shift nudges
+// the pattern for geometry that is deliberately off-grid.
+FCkUsf_SurfaceOutput CkUsf_Look_ProtoGrid(FCkUsf_SurfaceInput In, float3 PrimaryColor, float3 SecondaryColor,
+                                          float3 LineColor, float CellSize, float SubCells, float LineWidth,
+                                          float ShiftX, float ShiftY)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 P = CkUsf_WorldPlanarUV(In.WorldPosition, In.VertexNormal) + float2(ShiftX, ShiftY);
+
+    float Checker = CkUsf_CheckerParity(P, CellSize);
+    float3 Col = lerp(PrimaryColor, SecondaryColor, Checker);
+
+    float MinorCell = CellSize / max(SubCells, 1.0);
+    float Minor = CkUsf_GridLineCoverage(P, MinorCell, LineWidth * 0.35);
+    float Major = CkUsf_GridLineCoverage(P, CellSize, LineWidth);
+
+    Col = lerp(Col, LineColor * 0.5, Minor * 0.35);
+    Col = lerp(Col, LineColor, Major);
+
+    O.BaseColor = Col;
+    O.Roughness = lerp(CKUSF_PROTOGRID_ROUGH_BASE, CKUSF_PROTOGRID_ROUGH_LINE, max(Major, Minor));
+    O.Normal = CkUsf_NormalFromHeight(-Major * LineWidth, CKUSF_PROTOGRID_BEVEL_STRENGTH);
+    return O;
+}

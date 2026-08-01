@@ -330,6 +330,43 @@ float4 CkUsf_Triplanar(Texture2D Tex, SamplerState Samp, float3 WorldPosition, f
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// World-aligned prototyping grids. Planar projection along the dominant world axis keeps cells a
+// constant world size on any mesh, UV layout, or actor scale; coverage is fwidth-AA'd in the PS.
+// --------------------------------------------------------------------------------------------------------------------
+
+// Dominant-axis planar projection of a world position (units preserved — cm in, cm out).
+float2 CkUsf_WorldPlanarUV(float3 WorldPosition, float3 WorldNormal)
+{
+    float3 A = abs(WorldNormal);
+    if (A.z >= A.x && A.z >= A.y)
+    { return WorldPosition.xy; }
+    if (A.x >= A.y)
+    { return WorldPosition.yz; }
+    return WorldPosition.xz;
+}
+
+// Anti-aliased coverage (0..1) of grid lines spaced CellSize apart, each 2*HalfWidth wide (P units).
+float CkUsf_GridLineCoverage(float2 P, float CellSize, float HalfWidth)
+{
+    float Cell = max(CellSize, 0.01);
+    float2 D = (0.5 - abs(frac(P / Cell) - 0.5)) * Cell;
+    float Dist = min(D.x, D.y);
+#if PIXELSHADER
+    float Aa = max(fwidth(Dist), 1e-4);
+    return saturate((HalfWidth - Dist) / Aa + 0.5);
+#else
+    return Dist < HalfWidth ? 1.0 : 0.0;
+#endif
+}
+
+// Checkerboard parity (0 or 1) of the CellSize cell containing P.
+float CkUsf_CheckerParity(float2 P, float CellSize)
+{
+    float2 I = floor(P / max(CellSize, 0.01));
+    return step(0.25, frac((I.x + I.y) * 0.5));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Flow maps: scroll UVs along a flow direction with two half-offset phases; the triangle-wave
 // weight crossfades them so the periodic reset never pops.
 // --------------------------------------------------------------------------------------------------------------------
