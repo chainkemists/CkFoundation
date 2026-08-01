@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
 
@@ -30,7 +32,8 @@ class CKASSETEXPORTER_API FCk_EQSExporter
 public:
     static auto
     ExportEQS(
-        UEnvQuery* InQuery) -> FCk_EQSExportResult;
+        UEnvQuery* InQuery,
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_EQSExportResult;
 
     static auto
     ExportEQSQueries(

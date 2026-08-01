@@ -19,6 +19,9 @@ private:
     auto DoOnSpawnTab(const FSpawnTabArgs& Args) -> TSharedRef<SDockTab>;
 
 private:
+    FDelegateHandle _AutoReimportGuardHandle;
+
+private:
     static constexpr auto ExporterTab_TabName = "CkAssetExporterTab";
     static constexpr auto ExporterTab_TabDisplayName = "Asset Exporter";
 };

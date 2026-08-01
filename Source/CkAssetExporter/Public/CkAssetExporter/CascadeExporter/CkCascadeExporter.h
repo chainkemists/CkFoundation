@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
 
@@ -33,8 +35,8 @@ struct CKASSETEXPORTER_API FCk_CascadeExportResult
 class CKASSETEXPORTER_API FCk_CascadeExporter
 {
 public:
-    // InOutputDir: when set, writes <AssetName>.json/.txt into that directory instead of next to the asset.
-    static auto ExportParticleSystem (UParticleSystem* InSystem, const FString& InOutputDir = FString{}) -> FCk_CascadeExportResult;
+    // InOutputDir: when set, writes <AssetName>.ckexport/.txt into that directory instead of next to the asset.
+    static auto ExportParticleSystem (UParticleSystem* InSystem, const FString& InOutputDir = FString{}, ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_CascadeExportResult;
     static auto ExportParticleSystems(const TArray<UParticleSystem*>& InSystems) -> TArray<FCk_CascadeExportResult>;
 
 private:

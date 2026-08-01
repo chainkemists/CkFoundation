@@ -52,7 +52,8 @@
 auto
     FCk_BlueprintExporter::
     ExportBlueprint(
-        UBlueprint* InBlueprint)
+        UBlueprint* InBlueprint,
+        ECk_AssetExporter_SidecarFormats InFormats)
     -> FCk_BlueprintExportResult
 {
     auto Result = FCk_BlueprintExportResult{};
@@ -76,12 +77,14 @@ auto
     const auto JsonWriter = TJsonWriterFactory<>::Create(&JsonString);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
 
-    const auto TextString = DoSerializeToText(InBlueprint);
+    const auto WriteText = InFormats == ECk_AssetExporter_SidecarFormats::JsonAndText;
 
-    const auto JsonPath = DoResolveOutputPath(InBlueprint, TEXT(".json"));
-    const auto TextPath = DoResolveOutputPath(InBlueprint, TEXT(".txt"));
+    const auto TextString = WriteText ? DoSerializeToText(InBlueprint) : FString{};
 
-    if (JsonPath.IsEmpty() || TextPath.IsEmpty())
+    const auto JsonPath = DoResolveOutputPath(InBlueprint, ck::asset_exporter::extension::Sidecar);
+    const auto TextPath = WriteText ? DoResolveOutputPath(InBlueprint, ck::asset_exporter::extension::SummaryText) : FString{};
+
+    if (JsonPath.IsEmpty() || (WriteText && TextPath.IsEmpty()))
     {
         Result.ErrorMessage = TEXT("Failed to resolve output file paths");
         return Result;
@@ -89,7 +92,7 @@ auto
 
     const auto JsonWritten = FFileHelper::SaveStringToFile(
         JsonString, *JsonPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
-    const auto TextWritten = FFileHelper::SaveStringToFile(
+    const auto TextWritten = NOT WriteText || FFileHelper::SaveStringToFile(
         TextString, *TextPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 
     if (NOT JsonWritten || NOT TextWritten)

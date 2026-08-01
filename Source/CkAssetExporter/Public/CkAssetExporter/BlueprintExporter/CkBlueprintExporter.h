@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
 
@@ -39,7 +41,8 @@ class CKASSETEXPORTER_API FCk_BlueprintExporter
 public:
     static auto
     ExportBlueprint(
-        UBlueprint* InBlueprint) -> FCk_BlueprintExportResult;
+        UBlueprint* InBlueprint,
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_BlueprintExportResult;
 
     static auto
     ExportBlueprints(

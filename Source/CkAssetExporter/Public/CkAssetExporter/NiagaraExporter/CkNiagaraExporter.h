@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+
 #include <Dom/JsonObject.h>
 #include <Dom/JsonValue.h>
 
@@ -37,8 +39,8 @@ struct CKASSETEXPORTER_API FCk_NiagaraExportResult
 class CKASSETEXPORTER_API FCk_NiagaraExporter
 {
 public:
-    // InOutputDir: when set, writes <AssetName>.json/.txt into that directory instead of next to the asset.
-    static auto ExportNiagaraSystem (UNiagaraSystem* InSystem, const FString& InOutputDir = FString{}) -> FCk_NiagaraExportResult;
+    // InOutputDir: when set, writes <AssetName>.ckexport/.txt into that directory instead of next to the asset.
+    static auto ExportNiagaraSystem (UNiagaraSystem* InSystem, const FString& InOutputDir = FString{}, ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_NiagaraExportResult;
     static auto ExportNiagaraSystems(const TArray<UNiagaraSystem*>& InSystems) -> TArray<FCk_NiagaraExportResult>;
 
 private:

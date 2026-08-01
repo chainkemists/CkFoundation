@@ -66,6 +66,9 @@ auto
     -> TSharedPtr<FJsonObject>
 {
     auto Meta = MakeShared<FJsonObject>();
+    // Stamped here rather than at each exporter's root so it cannot drift and future exporters inherit it: a reader
+    // who opens a .ckexport cold must learn what the file is from the file, not from a doc they may never find.
+    Meta->SetStringField(TEXT("format"), TEXT("CkAssetExporter sidecar - UTF-8 JSON export of the sibling .uasset of the same name"));
     Meta->SetStringField(TEXT("sourceHash"), Get_SourceHash(InAsset));
     Meta->SetNumberField(TEXT("exporterVersion"), InExporterVersion);
     return Meta;
@@ -150,10 +153,11 @@ auto
 {
     return FString::Printf(
         TEXT("// [CkAssetExporter] Human-readable companion - carries NO freshness metadata.\n")
-        TEXT("// Freshness oracle: sibling %s.json \"_meta\" (source-asset MD5 + exporter version);\n")
+        TEXT("// Freshness oracle: sibling %s%s \"_meta\" (source-asset MD5 + exporter version);\n")
         TEXT("// its verdict covers this file (all siblings are written in the same export call).\n")
         TEXT("\n"),
-        *InAssetName);
+        *InAssetName,
+        *ck::asset_exporter::extension::Sidecar);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
