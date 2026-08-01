@@ -3,6 +3,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkWebUmg/FlexPanel/CkWebUmg_FlexPanel_Slate.h"
 
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
@@ -15,7 +16,7 @@ namespace ck_webumg_builder
     auto
     DoBuildNode(
         const TSharedPtr<const FCkWebUmg_IrNode>& InNode,
-        TMap<FString, TSharedPtr<SWidget>>& InOutWidgetsById)
+        ck::webumg::FCkWebUmg_BuildResult& InOutResult)
         -> TSharedRef<SWidget>
     {
         auto Content = TSharedPtr<SWidget>{};
@@ -24,7 +25,7 @@ namespace ck_webumg_builder
         {
             const auto Panel = SNew(SCk_WebUmgFlexPanel).IrNode(InNode);
             for (const auto& Child : InNode->Children)
-            { Panel->AddIrChild(Child, DoBuildNode(Child, InOutWidgetsById)); }
+            { Panel->AddIrChild(Child, DoBuildNode(Child, InOutResult)); }
             Content = Panel;
         }
         else if (InNode->Text.IsSet())
@@ -47,12 +48,40 @@ namespace ck_webumg_builder
         }
 
         auto Result = Content.ToSharedRef();
-        if (InNode->Paint.BackgroundColor.IsSet())
+        const auto& Paint = InNode->Paint;
+        const auto HasRadius = Paint.BorderRadius != FVector4f::Zero();
+        const auto HasBorder = Paint.BorderWidth != FVector4f::Zero() && Paint.BorderColor.IsSet();
+
+        if (HasRadius || HasBorder)
+        {
+            // FSlateBrushOutlineSettings corner order (TL, TR, BR, BL) matches the IR's CSS order.
+            const auto Fill = Paint.BackgroundColor.IsSet()
+                ? FLinearColor{*Paint.BackgroundColor}
+                : FLinearColor::Transparent;
+            const auto OutlineColor = Paint.BorderColor.IsSet()
+                ? FLinearColor{*Paint.BorderColor}
+                : FLinearColor::Transparent;
+            const auto OutlineWidth = Paint.BorderWidth.X; // uniform; per-side divergence is diagnosed upstream
+            const TSharedPtr<FSlateBrush> Brush = MakeShared<FSlateRoundedBoxBrush>(
+                Fill,
+                FVector4(Paint.BorderRadius.X, Paint.BorderRadius.Y, Paint.BorderRadius.Z, Paint.BorderRadius.W),
+                OutlineColor,
+                OutlineWidth);
+            InOutResult.OwnedBrushes.Add(Brush);
+
+            Result = SNew(SBorder)
+                .Padding(0.0f)
+                .BorderImage(Brush.Get())
+                [
+                    Content.ToSharedRef()
+                ];
+        }
+        else if (Paint.BackgroundColor.IsSet())
         {
             Result = SNew(SBorder)
                 .Padding(0.0f)
                 .BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
-                .BorderBackgroundColor(FSlateColor{FLinearColor{*InNode->Paint.BackgroundColor}})
+                .BorderBackgroundColor(FSlateColor{FLinearColor{*Paint.BackgroundColor}})
                 [
                     Content.ToSharedRef()
                 ];
@@ -69,7 +98,7 @@ namespace ck_webumg_builder
 
         Result->SetRenderOpacity(InNode->Paint.Opacity);
 
-        InOutWidgetsById.Add(InNode->Id, Result);
+        InOutResult.WidgetsByIrId.Add(InNode->Id, Result);
         return Result;
     }
 }
@@ -90,7 +119,7 @@ namespace ck::webumg
         { return {}; }
 
         auto Result = FCkWebUmg_BuildResult{};
-        Result.RootWidget = ck_webumg_builder::DoBuildNode(InRoot, Result.WidgetsByIrId);
+        Result.RootWidget = ck_webumg_builder::DoBuildNode(InRoot, Result);
         return Result;
     }
 }

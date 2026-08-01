@@ -37,7 +37,8 @@ Yoga-backed flex panel (campaign DECISION 1, option C).
 
 - **Sizing policy (v1, reference-viewport contract):** items get explicit used sizes on any axis
   Yoga is not asked to compute; grow axes ride basis+grow, stretch cross-axes stretch, text leaves
-  measure. This keeps Yoga math real without pretending the IR still has unresolved percentages.
+  measure — **but authored axes are explicit for everyone, text leaves included** (an authored
+  height beats both stretch and the measure callback; L9's stretched-card defect).
 - **Text measure returns the IR-recorded box** (Chromium's truth) and *logs* the Slate-side
   measurement (VeryVerbose) — the §8.1 font-metric divergence is collected as data for Gate 3, not
   imported into every sibling's position, and not silently baked either.
@@ -52,4 +53,8 @@ Yoga-backed flex panel (campaign DECISION 1, option C).
   string shows up outside documented escape fields, fix the extractor, not the consumer.
 - Don't "fix" layout deviations by widening the harness tolerance — Gate 2's threshold is the
   product contract (±1px at reference resolution).
-- Don't add paint richness here ahead of Gate 3 (SDF radius/gradient/shadow brushes land there).
+- Radius/borders paint via per-node `FSlateRoundedBoxBrush` owned by `FCkWebUmg_BuildResult::OwnedBrushes`
+  (Slate holds raw brush pointers — the result must outlive the widget tree). Uniform outline only;
+  per-side widths/colors are diagnosed at extraction, not approximated silently here.
+- The pixel suite (`PaintFidelity`) requires the toolbox's `--no-nullrhi` lane; the rect suite
+  (`LayoutFidelity`) runs in the default (NullRHI) lane.
