@@ -82,7 +82,11 @@ namespace ck_webumg_irloader
 
         const TSharedPtr<FJsonObject>* CkObj = nullptr;
         if (InObj->TryGetObjectField(TEXT("ck"), CkObj))
-        { (*CkObj)->TryGetStringField(TEXT("name"), Node->CkName); }
+        {
+            (*CkObj)->TryGetStringField(TEXT("name"), Node->CkName);
+            (*CkObj)->TryGetStringField(TEXT("bind"), Node->CkBind);
+            (*CkObj)->TryGetStringField(TEXT("slot"), Node->CkSlot);
+        }
 
         const auto ReadBox = [](const TSharedPtr<FJsonObject>& InBoxObj) -> FCkWebUmg_IrBox
         {

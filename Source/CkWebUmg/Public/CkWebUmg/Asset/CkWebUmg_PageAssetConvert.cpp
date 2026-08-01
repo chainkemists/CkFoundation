@@ -49,7 +49,8 @@ namespace ck_webumg_pageassetconvert
         const auto Index = InOutNodes.AddDefaulted();
         {
             auto& Data = InOutNodes[Index];
-            Data.Set_Id(InNode->Id).Set_Tag(InNode->Tag).Set_CkName(InNode->CkName).Set_AssetId(InNode->Asset);
+            Data.Set_Id(InNode->Id).Set_Tag(InNode->Tag).Set_CkName(InNode->CkName)
+                .Set_CkBind(InNode->CkBind).Set_CkSlot(InNode->CkSlot).Set_AssetId(InNode->Asset);
             Data.Set_Box(ToBoxData(InNode->Box));
             if (InNode->BoxUntransformed.IsSet())
             { Data.Set_HasBoxUntransformed(true).Set_BoxUntransformed(ToBoxData(*InNode->BoxUntransformed)); }
@@ -158,6 +159,8 @@ namespace ck_webumg_pageassetconvert
         Node->Id = Data.Get_Id();
         Node->Tag = Data.Get_Tag();
         Node->CkName = Data.Get_CkName();
+        Node->CkBind = Data.Get_CkBind();
+        Node->CkSlot = Data.Get_CkSlot();
         Node->Asset = Data.Get_AssetId();
         Node->Box = ToIrBox(Data.Get_Box());
         if (Data.Get_HasBoxUntransformed())

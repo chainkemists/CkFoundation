@@ -160,6 +160,17 @@ bool
         };
         TestTrue(TEXT("every data-ck-name resolves to a widget"),
             Built.WidgetsByCkName.Num() == CountNames(CountNames, RoundTrippedIr.Root));
+
+        const auto CountBinds = [](const auto& InSelf, const TSharedPtr<const FCkWebUmg_IrNode>& InNode) -> int32
+        {
+            auto Count = InNode->CkBind.IsEmpty() ? 0 : 1;
+            for (const auto& Child : InNode->Children)
+            { Count += InSelf(InSelf, Child); }
+            return Count;
+        };
+        const auto CountOriginalBinds = CountBinds(CountBinds, Document->Root);
+        TestTrue(TEXT("data-ck-bind survives the projection"),
+            CountBinds(CountBinds, RoundTrippedIr.Root) == CountOriginalBinds);
     }
 
     for (const auto& IrNode : IrNodes)

@@ -419,6 +419,12 @@ private:
     FString _CkName; // data-ck-name; unique per asset (duplicate = hard import error, DECISION 3)
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FString _CkBind; // data-ck-bind, verbatim (semantics: Gate 5 real-consumer design)
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FString _CkSlot; // data-ck-slot, verbatim
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FString _AssetId;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
@@ -449,6 +455,8 @@ public:
     CK_PROPERTY(_Id);
     CK_PROPERTY(_Tag);
     CK_PROPERTY(_CkName);
+    CK_PROPERTY(_CkBind);
+    CK_PROPERTY(_CkSlot);
     CK_PROPERTY(_AssetId);
     CK_PROPERTY(_Box);
     CK_PROPERTY(_HasBoxUntransformed);
