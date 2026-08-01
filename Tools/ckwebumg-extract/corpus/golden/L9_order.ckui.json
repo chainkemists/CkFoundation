@@ -67,6 +67,18 @@
       "overflow": [
         "visible",
         "visible"
+      ],
+      "sizingAuthored": [
+        "height",
+        "width"
+      ],
+      "minSize": [
+        0,
+        0
+      ],
+      "maxSize": [
+        null,
+        null
       ]
     },
     "paint": {
@@ -165,6 +177,18 @@
           "overflow": [
             "visible",
             "visible"
+          ],
+          "sizingAuthored": [
+            "height",
+            "width"
+          ],
+          "minSize": [
+            0,
+            0
+          ],
+          "maxSize": [
+            null,
+            null
           ]
         },
         "paint": {
@@ -263,6 +287,18 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [
+                "height",
+                "width"
+              ],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {
@@ -382,6 +418,18 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [
+                "height",
+                "width"
+              ],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {
@@ -501,6 +549,18 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [
+                "height",
+                "width"
+              ],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {
@@ -620,6 +680,18 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [
+                "height",
+                "width"
+              ],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {
@@ -739,6 +811,18 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [
+                "height",
+                "width"
+              ],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {

@@ -67,6 +67,18 @@
       "overflow": [
         "visible",
         "visible"
+      ],
+      "sizingAuthored": [
+        "height",
+        "width"
+      ],
+      "minSize": [
+        0,
+        0
+      ],
+      "maxSize": [
+        null,
+        null
       ]
     },
     "paint": {
@@ -165,6 +177,18 @@
           "overflow": [
             "visible",
             "visible"
+          ],
+          "sizingAuthored": [
+            "height",
+            "width"
+          ],
+          "minSize": [
+            0,
+            0
+          ],
+          "maxSize": [
+            null,
+            null
           ]
         },
         "paint": {
@@ -263,6 +287,17 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [
+                "width"
+              ],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {
@@ -363,6 +398,17 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [
+                "width"
+              ],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {
@@ -463,6 +509,18 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [
+                "min-height",
+                "width"
+              ],
+              "minSize": [
+                null,
+                200
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {

@@ -95,6 +95,8 @@ const px = v => {
     const n = parseFloat(v);
     return Number.isFinite(n) ? round2(n) : 0;
 };
+// Absolute-px-or-null for constraint values: 'none'/'auto' (and anything non-px) become null.
+const pxOrNull = v => (typeof v === 'string' && v.endsWith('px')) ? round2(parseFloat(v)) : null;
 const round2 = n => Math.round(n * 100) / 100;
 
 // Quad = [x1,y1,x2,y2,x3,y3,x4,y4] clockwise from top-left. Axis-aligned assumption is
@@ -255,10 +257,17 @@ class Extractor {
         // Chromium resolves all four inset sides, erasing "which edges did the author pin" —
         // that distinction decides anchors at emission, so recover it from the author rules.
         const authoredSides = new Set();
+        // Same intent-erasure for sizing: a used width of 1200 could be an authored `width:1200px`
+        // (beats cross-axis stretch) or the stretch result itself. Record authored presence so the
+        // layout runtime can reproduce the priority Chromium applied.
+        const authoredSizing = new Set();
+        const sizingProps = ['width', 'height', 'min-width', 'min-height', 'max-width', 'max-height'];
         for (const p of authorProps) {
             const n = p.property.toLowerCase();
             if (['top', 'right', 'bottom', 'left'].includes(n)) authoredSides.add(n);
             if (n === 'inset') ['top', 'right', 'bottom', 'left'].forEach(s => authoredSides.add(s));
+            if (sizingProps.includes(n) && p.value.trim() !== 'auto') authoredSizing.add(n);
+            if (n === 'flex' || n === 'flex-basis') authoredSizing.add('basis');
         }
         return {
             display,
@@ -282,6 +291,9 @@ class Extractor {
             order: parseInt(c.get('order'), 10) || 0,
             boxSizing: c.get('box-sizing'),
             overflow: [c.get('overflow-x'), c.get('overflow-y')],
+            sizingAuthored: [...authoredSizing].sort(),
+            minSize: [pxOrNull(c.get('min-width')), pxOrNull(c.get('min-height'))],
+            maxSize: [pxOrNull(c.get('max-width')), pxOrNull(c.get('max-height'))],
         };
     }
 

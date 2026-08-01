@@ -67,6 +67,18 @@
       "overflow": [
         "visible",
         "visible"
+      ],
+      "sizingAuthored": [
+        "height",
+        "width"
+      ],
+      "minSize": [
+        0,
+        0
+      ],
+      "maxSize": [
+        null,
+        null
       ]
     },
     "paint": {
@@ -165,6 +177,18 @@
           "overflow": [
             "visible",
             "visible"
+          ],
+          "sizingAuthored": [
+            "height",
+            "width"
+          ],
+          "minSize": [
+            0,
+            0
+          ],
+          "maxSize": [
+            null,
+            null
           ]
         },
         "paint": {
@@ -258,6 +282,15 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {
@@ -343,6 +376,15 @@
                   "overflow": [
                     "visible",
                     "visible"
+                  ],
+                  "sizingAuthored": [],
+                  "minSize": [
+                    null,
+                    null
+                  ],
+                  "maxSize": [
+                    null,
+                    null
                   ]
                 },
                 "paint": {
@@ -454,6 +496,17 @@
                   "overflow": [
                     "hidden",
                     "hidden"
+                  ],
+                  "sizingAuthored": [
+                    "height"
+                  ],
+                  "minSize": [
+                    null,
+                    null
+                  ],
+                  "maxSize": [
+                    null,
+                    null
                   ]
                 },
                 "paint": {
@@ -547,6 +600,18 @@
                       "overflow": [
                         "visible",
                         "visible"
+                      ],
+                      "sizingAuthored": [
+                        "height",
+                        "width"
+                      ],
+                      "minSize": [
+                        0,
+                        0
+                      ],
+                      "maxSize": [
+                        null,
+                        null
                       ]
                     },
                     "paint": {
@@ -648,6 +713,15 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {
@@ -733,6 +807,15 @@
                   "overflow": [
                     "visible",
                     "visible"
+                  ],
+                  "sizingAuthored": [],
+                  "minSize": [
+                    null,
+                    null
+                  ],
+                  "maxSize": [
+                    null,
+                    null
                   ]
                 },
                 "paint": {
@@ -842,6 +925,15 @@
               "overflow": [
                 "visible",
                 "visible"
+              ],
+              "sizingAuthored": [],
+              "minSize": [
+                null,
+                null
+              ],
+              "maxSize": [
+                null,
+                null
               ]
             },
             "paint": {
@@ -932,6 +1024,17 @@
                   "overflow": [
                     "visible",
                     "visible"
+                  ],
+                  "sizingAuthored": [
+                    "height"
+                  ],
+                  "minSize": [
+                    null,
+                    null
+                  ],
+                  "maxSize": [
+                    null,
+                    null
                   ]
                 },
                 "paint": {

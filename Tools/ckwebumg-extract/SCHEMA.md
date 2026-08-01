@@ -50,7 +50,7 @@ Omitted entirely: `display:none` subtrees, `data-ck-ignore` subtrees, non-render
 
 `display`, `direction` (flex-direction), `justify`, `align` (align-items), `alignSelf`, `alignContent`, `wrap`, `gap` `[column,row]` px, `grow`, `shrink`, `basis` (computed string — `auto` or px), `position`, `inset` (null when static; else computed `top/right/bottom/left` strings — px or `auto` — plus `authored`: the sides the author actually pinned, recovered from matched rules because Chromium resolves all four and erases intent; decides anchors at emission), `zIndex` (int, `auto`→0), `order` (int — informational; children already sorted), `boxSizing`, `overflow` `[x,y]`.
 
-Note: `layout` carries no width/height/margin/padding — they are derived by differencing the four `box` rects (used values beat specified values for fidelity).
+Note: `layout` carries no width/height/margin/padding *values* — they are derived by differencing the four `box` rects (used values beat specified values for fidelity). It does carry `sizingAuthored`: which of `width`/`height`/`min-*`/`max-*`/`basis` the author *declared* (non-`auto`) — the sizing twin of `inset.authored`. Chromium gives an authored size priority over cross-axis stretch; a consumer reproducing layout from inputs needs that priority bit, which used values alone erase. (Added 2026-07-31 during Gate 2 bring-up; the L1 stretch defect is the motivating case. Known gap, recorded: presence only — an authored width *combined with* `flex-grow` on the same axis would need the authored value too; no corpus page exercises that yet.)
 
 ### `paint`
 
