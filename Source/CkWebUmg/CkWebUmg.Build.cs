@@ -15,6 +15,9 @@ public class CkWebUmg : CkModuleRules
             "SlateCore",
             "Json",
             "Projects",
+            "UMG",
+            "RenderCore",
+            "ImageWrapper",
 
             "CkCore",
             "CkLog",
