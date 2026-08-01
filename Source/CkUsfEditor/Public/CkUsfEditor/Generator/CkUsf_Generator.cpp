@@ -28,6 +28,8 @@
 #include "Materials/MaterialExpressionPixelDepth.h"
 #include "Materials/MaterialExpressionVertexColor.h"
 #include "Materials/MaterialExpressionPerInstanceCustomData.h"
+#include "Materials/MaterialExpressionParticleColor.h"
+#include "Materials/MaterialExpressionDynamicParameter.h"
 #include "Engine/Texture.h"
 #include "SceneTypes.h"
 #include "UObject/SavePackage.h"
@@ -177,6 +179,23 @@ namespace ck::usf_editor
         return { ECk_Usf_SceneTexture::SceneColor, ECk_Usf_SceneTexture::SceneDepth, ECk_Usf_SceneTexture::SceneNormal };
     }
 
+    // Exactly four names — UMaterialExpressionDynamicParameter indexes ParamNames[0..3] unguarded
+    // (MaterialExpressions.cpp:9965-9972), so a short array from the asset would read out of bounds.
+    // Blank or missing entries fall back to the engine's own Param1..4.
+    static auto Get_DynamicParameterNames(const UCkUsf_LookDefinition* InDef) -> TArray<FString>
+    {
+        auto Names = TArray<FString>{ TEXT("Param1"), TEXT("Param2"), TEXT("Param3"), TEXT("Param4") };
+
+        const auto NumAuthored = FMath::Min(InDef->_ParticleDynamicParameterNames.Num(), 4);
+        for (auto Index = 0; Index < NumAuthored; ++Index)
+        {
+            if (const auto& Authored = InDef->_ParticleDynamicParameterNames[Index]; NOT Authored.IsEmpty())
+            { Names[Index] = Authored; }
+        }
+
+        return Names;
+    }
+
     // ---- Build the Custom node Code (assemble FCkUsf_SurfaceInput, call, assign outputs) ----
     static auto Build_CustomCode(const UCkUsf_LookDefinition* InDef, bool InIsPostProcess) -> FString
     {
@@ -203,6 +222,20 @@ namespace ck::usf_editor
             {
                 Code += TEXT("In.UV1 = UV1;\n");
                 Code += TEXT("In.UV2 = UV2;\n");
+            }
+            if (InDef->_ParticleColor)
+            {
+                // UMaterialExpressionParticleColor's output 0 is "RGB" (a float3); alpha is a SEPARATE output
+                // (MaterialExpressions.cpp:9869). Assembling the float4 here keeps In.ParticleColor a float4
+                // for looks that need the particle's alpha.
+                Code += TEXT("In.ParticleColor = float4(ParticleColor, ParticleAlpha);\n");
+            }
+            if (InDef->_ParticleDynamicParameter)
+            {
+                // Assembled from four scalar pins rather than one float4: UMaterialExpressionDynamicParameter
+                // exposes four SCALAR outputs (MaterialExpressions.cpp:9965-9972), so a float4 would need an
+                // AppendVector chain — which has already failed to compile under SM6 in this codebase.
+                Code += TEXT("In.DynamicParameter = float4(DynParam0, DynParam1, DynParam2, DynParam3);\n");
             }
         }
 
@@ -413,6 +446,7 @@ namespace ck::usf_editor
         Material->bUsedWithInstancedStaticMeshes = InDef->_UsedWithInstancedStaticMeshes;
         Material->bUsedWithSkeletalMesh = InDef->_UsedWithSkeletalMesh;
         Material->bUsedWithMorphTargets = InDef->_UsedWithMorphTargets;
+        Material->bUsedWithNiagaraSprites = InDef->_UsedWithNiagaraSprites;
 
         // The Refraction pin is inert unless RefractionMethod is set; a look wanting no bend outputs 1.0 (air).
         if (WantsRefraction) { Material->RefractionMethod = RM_IndexOfRefraction; }
@@ -484,6 +518,20 @@ namespace ck::usf_editor
             { FCustomInput U; U.InputName = TEXT("UV1"); Custom->Inputs.Add(U); }
             { FCustomInput U; U.InputName = TEXT("UV2"); Custom->Inputs.Add(U); }
         }
+        if (NOT IsPostProcess && InDef->_ParticleColor)
+        {
+            { FCustomInput P; P.InputName = TEXT("ParticleColor"); Custom->Inputs.Add(P); }
+            { FCustomInput P; P.InputName = TEXT("ParticleAlpha"); Custom->Inputs.Add(P); }
+        }
+        if (NOT IsPostProcess && InDef->_ParticleDynamicParameter)
+        {
+            for (int32 Channel = 0; Channel < 4; ++Channel)
+            {
+                FCustomInput D;
+                D.InputName = FName(*FString::Printf(TEXT("DynParam%d"), Channel));
+                Custom->Inputs.Add(D);
+            }
+        }
 
         Custom->Code = Build_CustomCode(InDef, IsPostProcess);
         Apply_LookDefines(Custom, InDef);
@@ -537,6 +585,39 @@ namespace ck::usf_editor
                 };
                 AddUvChannel(TEXT("UV1"), 1, 6);
                 AddUvChannel(TEXT("UV2"), 2, 7);
+            }
+
+            if (InDef->_ParticleColor)
+            {
+                // One node, two taps: output "RGB" (float3) and output "A" (float). Connecting the default
+                // output would hand the Custom node a float3 for a float4 field.
+                auto* PColor = UMaterialEditingLibrary::CreateMaterialExpression(
+                    Material, UMaterialExpressionParticleColor::StaticClass(), -1100, 8 * 160);
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PColor, TEXT("RGB"), Custom, TEXT("ParticleColor"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PColor, TEXT("A"),   Custom, TEXT("ParticleAlpha"));
+            }
+
+            if (InDef->_ParticleDynamicParameter)
+            {
+                auto* Dyn = Cast<UMaterialExpressionDynamicParameter>(
+                    UMaterialEditingLibrary::CreateMaterialExpression(
+                        Material, UMaterialExpressionDynamicParameter::StaticClass(), -1100, 9 * 160));
+
+                Dyn->ParameterIndex = 0;
+                Dyn->DefaultValue = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                Dyn->ParamNames = Get_DynamicParameterNames(InDef);
+
+                // ConnectMaterialExpressions matches against the RAW Outputs array, which still carries the
+                // CDO's "Param1..4" until GetOutputs() syncs it from ParamNames (MaterialExpressions.cpp:9965).
+                // Without this call every by-name connect below silently no-ops.
+                Dyn->GetOutputs();
+
+                for (int32 Channel = 0; Channel < 4; ++Channel)
+                {
+                    UMaterialEditingLibrary::ConnectMaterialExpressions(
+                        Dyn, Dyn->ParamNames[Channel],
+                        Custom, FString::Printf(TEXT("DynParam%d"), Channel));
+                }
             }
         }
 

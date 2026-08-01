@@ -193,6 +193,28 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _UsedWithMorphTargets = false;
 
+    // Niagara SPRITE renderers only (MATUSAGE_NiagaraSprites). Without it a sprite renderer using this
+    // master falls back to the default material in a packaged build. Ribbon / mesh-particle usages are
+    // deliberately absent — add them when a look actually needs one, not speculatively.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _UsedWithNiagaraSprites = false;
+
+    // Surface-only: wire the renderer's per-particle color into the PIXEL Custom node (In.ParticleColor).
+    // Opt-in because it costs an interpolator and reads as opaque white outside a particle renderer.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _ParticleColor = false;
+
+    // Surface-only: wire the Niagara Dynamic Material Parameter float4 into the PIXEL Custom node
+    // (In.DynamicParameter). The emitter writes it as Particles.DynamicMaterialParameter; channel meanings
+    // are the effect's own contract. Opt-in for the same reason as _ParticleColor.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _ParticleDynamicParameter = false;
+
+    // Names for the four DynamicParameter channels, purely for readability in the generated master
+    // (the .ush reads In.DynamicParameter.xyzw positionally). Empty entries fall back to Param1..4.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    TArray<FString> _ParticleDynamicParameterNames;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     TArray<FCk_Usf_ParamDesc> _Parameters;
 

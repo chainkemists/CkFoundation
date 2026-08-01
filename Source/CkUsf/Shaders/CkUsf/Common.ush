@@ -24,6 +24,10 @@ struct FCkUsf_SurfaceInput
     float4 SceneNormal;    // world-space scene normal (post-process)
     float4 CustomDepth;    // custom depth buffer (post-process; .r = depth) — wired only if the look declares it
     float4 CustomStencil;  // custom stencil buffer (post-process; .r = stencil value) — wired only if declared
+    float4 ParticleColor;      // per-particle color (surface; wired only when the look sets _ParticleColor)
+    float4 DynamicParameter;   // Niagara Particles.DynamicMaterialParameter float4 (surface; wired only when
+                               // the look sets _ParticleDynamicParameter). Channel meanings are the effect's
+                               // own contract — the emitter writing it and the look reading it must agree.
 };
 
 FCkUsf_SurfaceInput CkUsf_DefaultInput()
@@ -44,6 +48,10 @@ FCkUsf_SurfaceInput CkUsf_DefaultInput()
     I.SceneNormal = float4(0.0, 0.0, 1.0, 0.0);
     I.CustomDepth = float4(0.0, 0.0, 0.0, 0.0);
     I.CustomStencil = float4(0.0, 0.0, 0.0, 0.0);
+    // Inert defaults: an unwired particle look reads opaque-white tint and zeroed dynamics, so a look
+    // that reads them renders identically on a non-particle mesh instead of going black.
+    I.ParticleColor = float4(1.0, 1.0, 1.0, 1.0);
+    I.DynamicParameter = float4(0.0, 0.0, 0.0, 0.0);
     return I;
 }
 

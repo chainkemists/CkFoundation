@@ -111,6 +111,48 @@ legal only on Scalar/Vector params (textures cannot ride per-instance custom dat
   would render as the checkered default.
 - **Multi-pass looks** declare the magic uniforms (`iResolution` Vector, `iFrame`/`iTimeDelta`
   Scalars, `iChannelN` Texture2D) as ordinary params; the renderer binds them by name each tick.
+- **Niagara sprite looks need BOTH the usage flag and the inputs.** `_UsedWithNiagaraSprites` alone
+  gets you a master a sprite renderer will accept; without it the renderer silently falls back to the
+  DEFAULT material in a packaged build. The particle data is separate opt-in (below).
+
+## Niagara sprite contract (opt-in)
+
+A look that renders on a Niagara **sprite** renderer declares it on the LookDefinition. Every field
+defaults off, so looks that predate the contract regenerate byte-identically — the
+`NiagaraSpriteContract` test asserts exactly that negative.
+
+| Field | Effect |
+|---|---|
+| `_UsedWithNiagaraSprites` | bakes `bUsedWithNiagaraSprites` (engine `Material.h:721`) onto the generated master |
+| `_ParticleColor` | wires `UMaterialExpressionParticleColor` → `In.ParticleColor` (float4) |
+| `_ParticleDynamicParameter` | wires `UMaterialExpressionDynamicParameter` (index 0) → `In.DynamicParameter` (float4) |
+| `_ParticleDynamicParameterNames` | up to 4 channel names, for readability in the generated master |
+
+Both inputs are **Surface-domain only** — the generator wires them nowhere else, and the validator
+errors rather than leaving them silently inert. Reading them on a non-particle mesh is safe:
+`In.ParticleColor` defaults to opaque white and `In.DynamicParameter` to zero.
+
+Only **sprite** usage exists. Ribbon and mesh-particle usages were deliberately not added — add one
+when a look actually needs it.
+
+Three engine facts the generator depends on (verified against the checked-out 5.7 source):
+
+- `UMaterialExpressionParticleColor`'s output 0 is **`RGB` — a float3**, with alpha as a separate `A` output
+  (`MaterialExpressions.cpp:9869`). The generator therefore wires TWO pins (`ParticleColor` + `ParticleAlpha`)
+  and assembles the float4 in generated code. Connecting the node's default output instead yields
+  `cannot convert from 'float3' to 'float4'` inside generated `Material.ush` — a message that names no look,
+  so trace it back through the `SHADER FAILED TO COMPILE` line that does.
+
+- `UMaterialExpressionDynamicParameter` exposes **four SCALAR outputs**, not a float4. The generator
+  therefore declares four `DynParam0..3` pins and assembles the float4 in generated code, rather than
+  building an `AppendVector` chain (which has failed to compile under SM6 in this codebase).
+- Those outputs are named from `ParamNames` only inside `GetOutputs()`
+  (`MaterialExpressions.cpp:9965`). `ConnectMaterialExpressions` matches the RAW `Outputs` array, so
+  **`GetOutputs()` must be called after setting `ParamNames`** or every by-name connect silently
+  no-ops — a failure that produces a working-looking material with dead inputs.
+
+Consumer example: CkParticles behavior 17 (`RingDissolveAdd`) — recipe in
+`CkParticles/Cookbook/NS_Lightning_Range.md`.
 
 ## Anti-patterns
 
