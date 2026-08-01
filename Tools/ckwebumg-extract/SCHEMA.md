@@ -67,7 +67,7 @@ Note: `layout` carries no width/height/margin/padding *values* — they are deri
 
 ### `text`
 
-`content` (collapsed), `family` (computed stack, verbatim — font *mapping* to UFont is emitter-side config, brief §6), `sizePx`, `weight` (100–900), `style`, `lineHeightPx` (null = `normal`), `letterSpacingPx`, `color` rgba, `align` (computed keyword — may be `start`/`end`; emitter owns direction-resolved mapping), `whiteSpace` (classic keyword, synthesized from Chrome 150's `white-space-collapse` + `text-wrap-mode` longhands — the shorthand left the computed list), `textOverflow`, `transformCase`, `decoration`.
+`content` (collapsed), `family` (computed stack, verbatim — font *mapping* to UFont is emitter-side config, brief §6), `sizePx`, `weight` (100–900), `style`, `lineHeightPx` (null = `normal`), `letterSpacingPx`, `color` rgba, `align` (computed keyword — may be `start`/`end`; emitter owns direction-resolved mapping), `whiteSpace` (classic keyword, synthesized from Chrome 150's `white-space-collapse` + `text-wrap-mode` longhands — the shorthand left the computed list), `textOverflow`, `transformCase`, `decoration`, `lineBoxes` (array of `[x,y,w,h]` page-px rects, one per rendered line of the folded text, from `Range.getClientRects()` — the §8.1 comparanda; absent when the node was not resolvable).
 
 ### `unsupported` (the no-silent-drops contract, brief §1 rule 5)
 

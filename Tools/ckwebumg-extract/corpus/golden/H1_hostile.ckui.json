@@ -1360,7 +1360,15 @@
               "whiteSpace": "normal",
               "textOverflow": "clip",
               "transformCase": "none",
-              "decoration": "none"
+              "decoration": "none",
+              "lineBoxes": [
+                [
+                  138,
+                  580,
+                  22,
+                  153.02
+                ]
+              ]
             },
             "states": null,
             "children": [],
@@ -1497,7 +1505,15 @@
               "whiteSpace": "normal",
               "textOverflow": "clip",
               "transformCase": "none",
-              "decoration": "none"
+              "decoration": "none",
+              "lineBoxes": [
+                [
+                  261.03,
+                  580,
+                  98.08,
+                  20
+                ]
+              ]
             },
             "states": null,
             "children": [],
@@ -1854,7 +1870,39 @@
               "whiteSpace": "normal",
               "textOverflow": "clip",
               "transformCase": "none",
-              "decoration": "none"
+              "decoration": "none",
+              "lineBoxes": [
+                [
+                  40,
+                  900,
+                  236.55,
+                  16
+                ],
+                [
+                  40,
+                  916,
+                  216.3,
+                  16
+                ],
+                [
+                  40,
+                  932,
+                  239.69,
+                  16
+                ],
+                [
+                  297,
+                  900,
+                  214.05,
+                  16
+                ],
+                [
+                  297,
+                  916,
+                  85.61,
+                  16
+                ]
+              ]
             },
             "states": null,
             "children": [],

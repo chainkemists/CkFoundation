@@ -291,6 +291,20 @@ namespace ck_webumg_irloader
             if ((*TextObj)->TryGetNumberField(TEXT("lineHeightPx"), LineHeight))
             { Text.LineHeightPx = static_cast<float>(LineHeight); }
 
+            const TArray<TSharedPtr<FJsonValue>>* LineBoxValues = nullptr;
+            if ((*TextObj)->TryGetArrayField(TEXT("lineBoxes"), LineBoxValues))
+            {
+                for (const auto& LineBoxValue : *LineBoxValues)
+                {
+                    const auto& Rect = LineBoxValue->AsArray();
+                    if (Rect.Num() != 4)
+                    { continue; }
+                    Text.LineBoxes.Add(FCkWebUmg_IrRect{
+                        static_cast<float>(Rect[0]->AsNumber()), static_cast<float>(Rect[1]->AsNumber()),
+                        static_cast<float>(Rect[2]->AsNumber()), static_cast<float>(Rect[3]->AsNumber())});
+                }
+            }
+
             Node->Text = Text;
         }
 

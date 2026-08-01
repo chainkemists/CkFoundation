@@ -625,6 +625,27 @@ class Extractor {
             return null; // no box => not rendered
         }
 
+        const text = this.textBlock(node, c);
+        if (text !== null) {
+            // Line boxes (one rect per rendered line of the folded text) — the comparanda for the
+            // sec-8.1 text regime: wrap positions, line origins, advance widths, at CSS-visible
+            // granularity.
+            try {
+                const { object } = await this.cdp.send('DOM.resolveNode', { nodeId: node.nodeId });
+                const { result } = await this.cdp.send('Runtime.callFunctionOn', {
+                    objectId: object.objectId,
+                    returnByValue: true,
+                    functionDeclaration: `function() {
+                        const r = document.createRange();
+                        r.selectNodeContents(this);
+                        return [...r.getClientRects()].map(b =>
+                            [b.x, b.y, b.width, b.height].map(v => Math.round(v * 100) / 100));
+                    }`,
+                });
+                if (Array.isArray(result.value)) text.lineBoxes = result.value;
+            } catch { /* non-resolvable node: lineBoxes absent, comparator skips */ }
+        }
+
         const { props: authorProps, pseudoDiags } = await this.authorProperties(node.nodeId);
         const id = `n${this.nodeCounter++}`;
         this.domNodeIds.set(id, node.nodeId);
@@ -656,7 +677,7 @@ class Extractor {
             box,
             layout: this.layoutBlock(c, authorProps),
             paint: this.paintBlock(c, box, paintSink),
-            text: this.textBlock(node, c),
+            text,
             states: await this.stateBlock(node.nodeId, c),
             children: childElements,
             unsupported: this.diagnoseUnsupported(authorProps, [...pseudoDiags, ...paintSink]),

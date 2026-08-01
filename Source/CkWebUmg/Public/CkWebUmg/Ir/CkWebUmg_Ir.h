@@ -133,6 +133,7 @@ struct CKWEBUMG_API FCkWebUmg_IrText
     TOptional<FColor> Color;
     FString Align;
     FString WhiteSpace;
+    TArray<FCkWebUmg_IrRect> LineBoxes; // one per rendered line (Chromium Range.getClientRects)
 };
 
 // --------------------------------------------------------------------------------------------------------------------

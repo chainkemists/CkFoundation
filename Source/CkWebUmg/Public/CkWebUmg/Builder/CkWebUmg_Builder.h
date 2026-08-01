@@ -3,6 +3,7 @@
 #include "CkWebUmg/Ir/CkWebUmg_Ir.h"
 
 #include "Engine/Texture2D.h"
+#include "Fonts/SlateFontInfo.h"
 #include "Styling/SlateBrush.h"
 #include "UObject/StrongObjectPtr.h"
 
@@ -12,6 +13,12 @@ class SWidget;
 
 namespace ck::webumg
 {
+    // The harness-shared font mapping (OS faces matching the goldens; engine-default fallback).
+    CKWEBUMG_API auto
+    MakeWebFontInfo(
+        const FCkWebUmg_IrText& InText)
+        -> FSlateFontInfo;
+
     struct CKWEBUMG_API FCkWebUmg_BuildResult
     {
         TSharedPtr<SWidget> RootWidget;

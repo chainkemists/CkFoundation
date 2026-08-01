@@ -352,7 +352,15 @@
               "whiteSpace": "normal",
               "textOverflow": "clip",
               "transformCase": "none",
-              "decoration": "none"
+              "decoration": "none",
+              "lineBoxes": [
+                [
+                  109.97,
+                  146,
+                  100.05,
+                  27
+                ]
+              ]
             },
             "states": null,
             "children": [],
@@ -483,7 +491,15 @@
               "whiteSpace": "normal",
               "textOverflow": "clip",
               "transformCase": "none",
-              "decoration": "none"
+              "decoration": "none",
+              "lineBoxes": [
+                [
+                  330.64,
+                  146,
+                  98.72,
+                  27
+                ]
+              ]
             },
             "states": null,
             "children": [],
@@ -614,7 +630,15 @@
               "whiteSpace": "normal",
               "textOverflow": "clip",
               "transformCase": "none",
-              "decoration": "none"
+              "decoration": "none",
+              "lineBoxes": [
+                [
+                  550.64,
+                  146,
+                  98.72,
+                  27
+                ]
+              ]
             },
             "states": null,
             "children": [],
@@ -745,7 +769,15 @@
               "whiteSpace": "normal",
               "textOverflow": "clip",
               "transformCase": "none",
-              "decoration": "none"
+              "decoration": "none",
+              "lineBoxes": [
+                [
+                  771.3,
+                  146,
+                  97.41,
+                  27
+                ]
+              ]
             },
             "states": null,
             "children": [],
@@ -876,7 +908,15 @@
               "whiteSpace": "normal",
               "textOverflow": "clip",
               "transformCase": "none",
-              "decoration": "none"
+              "decoration": "none",
+              "lineBoxes": [
+                [
+                  989.97,
+                  146,
+                  100.05,
+                  27
+                ]
+              ]
             },
             "states": null,
             "children": [],

@@ -241,7 +241,21 @@
           "whiteSpace": "nowrap",
           "textOverflow": "ellipsis",
           "transformCase": "none",
-          "decoration": "none"
+          "decoration": "none",
+          "lineBoxes": [
+            [
+              92,
+              92,
+              485.78,
+              22
+            ],
+            [
+              92,
+              92,
+              151.2,
+              22
+            ]
+          ]
         },
         "states": null,
         "children": [],
@@ -369,7 +383,15 @@
           "whiteSpace": "nowrap",
           "textOverflow": "clip",
           "transformCase": "none",
-          "decoration": "none"
+          "decoration": "none",
+          "lineBoxes": [
+            [
+              352,
+              92,
+              485.78,
+              22
+            ]
+          ]
         },
         "states": null,
         "children": [],

@@ -430,7 +430,15 @@
                   "whiteSpace": "normal",
                   "textOverflow": "clip",
                   "transformCase": "none",
-                  "decoration": "none"
+                  "decoration": "none",
+                  "lineBoxes": [
+                    [
+                      25,
+                      26,
+                      61.73,
+                      16
+                    ]
+                  ]
                 },
                 "states": null,
                 "children": [],
@@ -861,7 +869,15 @@
                   "whiteSpace": "normal",
                   "textOverflow": "clip",
                   "transformCase": "none",
-                  "decoration": "none"
+                  "decoration": "none",
+                  "lineBoxes": [
+                    [
+                      25,
+                      59,
+                      69.73,
+                      16
+                    ]
+                  ]
                 },
                 "states": null,
                 "children": [],
@@ -1088,7 +1104,15 @@
                   "whiteSpace": "normal",
                   "textOverflow": "clip",
                   "transformCase": "none",
-                  "decoration": "none"
+                  "decoration": "none",
+                  "lineBoxes": [
+                    [
+                      41,
+                      102.5,
+                      70,
+                      17
+                    ]
+                  ]
                 },
                 "states": {
                   "hover": {

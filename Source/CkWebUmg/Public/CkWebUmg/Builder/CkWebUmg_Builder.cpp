@@ -99,13 +99,17 @@ namespace ck_webumg_builder
             {TEXT("Verdana"), {TEXT("verdana.ttf"), TEXT("verdanab.ttf")}},
         };
 
+        // Slate font sizes are POINTS rendered at 96 dpi (drawn em = size * 96/72); CSS sizes are
+        // px. Measured before this factor: uniform +34.9% advance/height inflation (1.35 ≈ 4/3).
+        const auto SizePt = InText.SizePx * 0.75f;
+
         auto FontInfo = FSlateFontInfo{};
         if (const auto* Files = OsFontFiles.Find(FirstFamily))
         {
             const auto Path = FPaths::Combine(TEXT("C:/Windows/Fonts"),
                 IsBold ? Files->Value : Files->Key);
             if (FPaths::FileExists(Path))
-            { FontInfo = FSlateFontInfo{Path, InText.SizePx}; }
+            { FontInfo = FSlateFontInfo{Path, SizePt}; }
         }
         if (NOT FontInfo.HasValidFont())
         {
@@ -113,7 +117,7 @@ namespace ck_webumg_builder
                 TEXT("No OS font mapping for family [{}] — engine default metrics will diverge"),
                 FirstFamily);
             FontInfo = FCoreStyle::GetDefaultFontStyle(
-                IsBold ? "Bold" : "Regular", FMath::RoundToInt32(InText.SizePx));
+                IsBold ? "Bold" : "Regular", FMath::RoundToInt32(SizePt));
         }
         if (InText.LetterSpacingPx != 0.0f && InText.SizePx > 0.0f)
         { FontInfo.LetterSpacing = FMath::RoundToInt32(InText.LetterSpacingPx / InText.SizePx * 1000.0f); }
@@ -703,6 +707,14 @@ namespace ck_webumg_builder
 
 namespace ck::webumg
 {
+    auto
+    MakeWebFontInfo(
+        const FCkWebUmg_IrText& InText)
+        -> FSlateFontInfo
+    {
+        return ck_webumg_builder::MakeFontInfo(InText);
+    }
+
     auto
     BuildWidgetTree(
         const FCkWebUmg_IrDocument& InDocument,

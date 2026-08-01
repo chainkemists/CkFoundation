@@ -1,5 +1,8 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkWebUmg/Builder/CkWebUmg_Builder.h"
+
+#include "Fonts/FontMeasure.h"
+#include "Framework/Application/SlateApplication.h"
 #include "CkWebUmg/Ir/CkWebUmg_IrLoader.h"
 #include "CkWebUmg_Log.h"
 
@@ -153,6 +156,22 @@ bool
         if (IsTextLeaf)
         {
             TextNodeDeviations.Add(FString::Printf(TEXT("[%s] %.2fpx"), *NodeId, Deviation));
+
+            // Line-run comparison (the §8.1 regime's measured datum): Slate advance width with the
+            // mapped OS font vs Chromium's recorded line box. Single-line runs only — multi-line
+            // needs identical wrap decisions first, which the tolerance decision may not require.
+            if (IrNode->Text->LineBoxes.Num() == 1 && FSlateApplication::IsInitialized())
+            {
+                const auto FontMeasure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+                const auto Measured = FontMeasure->Measure(
+                    IrNode->Text->Content, ck::webumg::MakeWebFontInfo(*IrNode->Text), 1.0f);
+                const auto& LineBox = IrNode->Text->LineBoxes[0];
+                AddInfo(FString::Printf(
+                    TEXT("[%s] line-run: chromium %.2fx%.2f, slate %.2fx%.2f, advance delta %.2fpx (%.1f%%)"),
+                    *NodeId, LineBox.W, LineBox.H, Measured.X, Measured.Y,
+                    Measured.X - LineBox.W,
+                    LineBox.W > 0.0f ? (Measured.X - LineBox.W) / LineBox.W * 100.0f : 0.0f));
+            }
             continue;
         }
 
