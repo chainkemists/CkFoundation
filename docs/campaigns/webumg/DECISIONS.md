@@ -53,6 +53,10 @@ Each reversible, each measured; revisit at the Gate 3 exit if any reads wrong:
 
 Gate proof: 33/33 pattern lane with all gates live; 908/908 full suite. **Gate 4 (Emission) entry awaits Adam's explicit approval** per brief sec-1 rule 2 — draft contract at Plan/Gate_04_Emission.md.
 
+## Gate 4 exit — **CLOSED 2026-08-01** (Adam approved the evidence table)
+
+Delivered per D2/D3: reflected PageAsset (flattened tree, read-only, source-hash stamped), atomic emission (duplicate data-ck-name hard error, proven on H1), idempotence at projection AND package level, CkWebUmgEditor importer, WidgetsByCkName binding surface, and the pixel suite rendering THROUGH the projection with a scoreboard identical to the direct path (the exit criterion, now permanently gated). 931/931 full suite. Deferred to Gate 5 with Adam's visibility: real AS consumption script, editor UX (factory/context-menu). "Also emit WBP?" (D2's re-examination clause) — NOT pursued: the through-projection pixel evidence shows the DataAsset-runtime path meets the fidelity contract without WBP emission; revisit only if Gate 5's real-screen work surfaces a designer-visibility need.
+
 ## Standing evidence notes (carried from Phase 0)
 
 - Yoga vendoring cautions: pin `c766885`; `UseWebDefaults` on; never expose inert grid setters; extractor pre-sorts children by computed `order`; fix `pointScaleFactor` for deterministic harness comparisons (PriorArt §3).

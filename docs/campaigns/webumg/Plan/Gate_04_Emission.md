@@ -1,6 +1,6 @@
 # Gate 4 — Emission
 
-> **Status:** 🟡 In progress (entered 2026-08-01 — Adam approved entry after the Gate 3 close). Prepared 2026-08-01 so the Gate 3 exit conversation can see
+> **Status:** ✅ Done (2026-08-01, Adam approved the exit evidence). Delivered: PageAsset projection (atomic, idempotent, D3 duplicate-name hard error), CkWebUmgEditor importer (hash-stamped no-op reimport, textures outered), WidgetsByCkName binding surface, pixel suite through the projection (scoreboard identical to direct), 931/931. Honest partial: AS consumption script deferred to Gate 5; editor UX deferred to Gate 5. Prepared 2026-08-01 so the Gate 3 exit conversation can see
 > the next gate's shape; every section below is revisable at entry, and entry itself requires
 > Gate 3 closed by Adam (brief §1 rule 2).
 > **Depends on:** Gate 3 ✅ (pending Adam's four exit calls)
