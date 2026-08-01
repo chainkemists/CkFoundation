@@ -118,6 +118,16 @@ Repos cloned (shallow) at `D:\tmp\ckstyle-phase0\thirdparty\`: StyledWidgets @ `
 | Yoga floors flex-base size to `min-*` before grow distribution; Blink clamps the target after — a non-binding min shifts every sibling's share (L2: n4 arranged 402 = grow share 202 + min 200; Chromium 252/504/252 untouched) | `BuildTest-WebUmg-FourFixes.log` per-node values; fixed by binding-only clamp application, `BuildTest-WebUmg-BindingClamps.log` 9/9 | [read] |
 | **Gate 2 layout milestone: all 9 L-pages ≤ ±1px on every non-text node, NaN hard-checked; measure callbacks fire with W=AtMost/H=Exactly and log Chromium-vs-Slate metric gap (200×200 vs 131×38)** | `BuildTest-WebUmg-BindingClamps.log` — Total 9 / Passed 9 / Failed 0 (36s) | [read] |
 
+## Gate 3 paint findings (2026-08-01, session 2)
+
+| Claim | Evidence | Method |
+|---|---|---|
+| Chromium composites translucent content in sRGB space; UE/Slate in linear — rgba(255,0,0,0.5) over #0c0e12: browser 133 (0.5·255+0.5·12), UE 188 (encode(0.5·1.0+0.5·0.0018)); rendered probes matched both predictions exactly | P5 probe series (rendered 187,7,10 vs golden 133,7,9) + raw PNG scanline decode ([255,0,0,127]) | [read] |
+| Gamma-space rendering + reinterpreted colors double-encodes (Slate quantizes vertex colors through an sRGB encode regardless): all 28 tests → ~100% failing; reverted per pre-stated rule | `BuildTest-WebUmg-GammaSpace.log`; probe arithmetic (12→61 = encode(12/255)) | [read] |
+| `SComplexGradient`'s `Orientation` names the band axis, not the color-variation axis (Orient_Vertical varies horizontally) | P2 rendered dump: 180deg CSS gradient painted horizontally under Orient_Vertical | [read] |
+| Browser-normalized asset emission (canvas decode → clean PNG next to IR) + `SRGB=true` import round-trips opaque images exactly: P5 13.8696% → **0.0000%** | `BuildTest-WebUmg-OpaqueAssets.log`, 28/28 | [read] |
+| Corpus scoreboard after this stretch: L1–L9+C1+P5 = 0.0000%; P1 0.7412%; P2 31.8605%; P3 6.0603%; P4 16.9740%; smoke 0.0786%; T ≤ 0.0003% | same log | [read] |
+
 ## Slate layout contract (supports Yoga §3 assessment)
 
 | Claim | Evidence | Method |
