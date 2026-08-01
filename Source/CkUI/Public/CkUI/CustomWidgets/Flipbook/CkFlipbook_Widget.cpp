@@ -265,7 +265,7 @@ auto
 
 auto
     UCk_FlipbookWidget_UE::
-    Set_SourceFlipbook(
+    Request_SetSourceFlipbook(
         UPaperFlipbook* InSourceFlipbook)
     -> void
 {
@@ -276,7 +276,7 @@ auto
 
 auto
     UCk_FlipbookWidget_UE::
-    Set_SpriteSheet(
+    Request_SetSpriteSheet(
         const FCk_FlipbookSpriteSheet& InSpriteSheet)
     -> void
 {
@@ -287,7 +287,7 @@ auto
 
 auto
     UCk_FlipbookWidget_UE::
-    Set_Looping(
+    Request_SetLooping(
         bool InLoop)
     -> void
 {
@@ -296,7 +296,7 @@ auto
 
 auto
     UCk_FlipbookWidget_UE::
-    Set_Autoplay(
+    Request_SetAutoplay(
         bool InAutoplay)
     -> void
 {

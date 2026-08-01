@@ -36,7 +36,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ColorWheel_BrushTarget);
  * Configure the brushes and initial color below; usable directly with no WBP wrapper.
  *
  * The wheel edits hue (angle) and saturation (radius); the color's value (brightness)
- * and alpha are preserved from whatever was last passed to Set_Color.
+ * and alpha are preserved from whatever was last passed to Request_SetColor.
  */
 UCLASS(meta = (DisplayName = "Ck Color Wheel"))
 class CKUI_API UCk_ColorWheelWidget_UE : public UWidget
@@ -69,7 +69,7 @@ public:
     // pin's current hue/saturation since they don't define one themselves.
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|ColorWheel")
     void
-    Set_Color(
+    Request_SetColor(
         FLinearColor InColor);
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Ck|UI|ColorWheel")
@@ -78,7 +78,7 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|ColorWheel")
     void
-    Set_BrushTint(
+    Request_SetBrushTint(
         ECk_ColorWheel_BrushTarget InTarget,
         FLinearColor InTint);
 

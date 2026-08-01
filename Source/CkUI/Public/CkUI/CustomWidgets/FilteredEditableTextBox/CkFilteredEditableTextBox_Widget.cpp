@@ -74,7 +74,7 @@ void
 
 void
     UCk_FilteredEditableTextBox::
-    Set_MaxLength(
+    Request_SetMaxLength(
         int32 InMaxLength)
 {
     if (InMaxLength > 0)
