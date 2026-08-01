@@ -4,6 +4,40 @@ Schema and evidence-tag conventions: [README.md](README.md).
 
 ---
 
+## Completion state — READ FIRST
+
+**This recreation is source-verified and math-verified, but NOT rendered or visually verified.**
+
+| Piece | State |
+|---|---|
+| Behavior `.ush` + CPU mirror | done; math asserted against the source values (`LightningRangeBehavior`) |
+| CkUsf look + Niagara sprite contract | done; generated and asserted (`NiagaraSpriteContract`) |
+| Runtime binding, gym station, cadence row, imported textures | done |
+| `PS_CkParticles_Template_Single` asset | **MISSING — the blocker** |
+| Anything rendered or visually compared | **not done** |
+
+### Why it is blocked
+
+Template generation needs `CK_WITH_PARTICLES=1`, i.e. an engine carrying the fork's NiagaraEditor
+pin-authoring exports. Generating on any other engine produces an **inert** template — it loads fine
+and renders nothing — so `Build_AllTemplateSystems` now refuses rather than writing one. Runtime is
+unaffected: once the asset exists it works on retail like every other template.
+
+### To finish, on a fork-enabled machine
+
+1. `$env:CK_PARTICLES_REBUILD_TEMPLATES='1'` then
+   `./CkAuto/UnrealToolbox.exe --build --config=Development --target=Editor --test --test-pattern RebuildTemplateAssets --no-nullrhi --project=<root>`
+2. **Confirm the asset is not inert** — `grep -ac ExecuteStage PS_CkParticles_Template_Single.uasset`
+   must be ~35, never 0. This check is the whole reason the guard exists.
+3. Re-run `--test-pattern CkParticles --no-nullrhi`. `LightningRangeAuthoring` will now RUN instead of
+   skipping — that is the signal the fork is active.
+4. Commit the generated `PS_CkParticles_Template_Single.uasset`.
+5. Execute the `[EDITOR-VERIFY]` gate in §12 and fill in §13 from what is actually observed.
+
+Until step 5, no fidelity claim in this document has been confirmed by looking at the effect.
+
+---
+
 ## 1. Source system and provenance
 
 | | |

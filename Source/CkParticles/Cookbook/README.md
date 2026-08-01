@@ -54,7 +54,7 @@ is what makes the recipe survive without the corpus.
 
 ## Recipe file layout
 
-One file per source system: `Cookbook/<SourceSystemName>.md`. Every recipe carries all 14 sections
+One file per source system: `Cookbook/<SourceSystemName>.md`. Every recipe carries all 15 sections
 below, in this order. A section that genuinely does not apply says `N/A — <reason>`; it is never
 deleted, because a missing section is indistinguishable from an unresearched one.
 
@@ -66,6 +66,14 @@ Each archaeology claim is tagged so a reader can separate evidence from reasonin
 - **`[visual]`** — established by looking at the running effect; say who looked and when.
 
 ---
+
+### 0. Completion state
+
+A short block at the very top: what is done, what is blocked and why, and the exact steps to finish.
+Recreations routinely stall on something environmental (a missing engine capability, an unmounted
+source pack, a gate only a human can run), and a recipe that reads as finished when it is not is worse
+than no recipe. State plainly whether the effect has ever been *rendered and looked at* — that is the
+claim readers will otherwise assume.
 
 ### 1. Source system and provenance
 
@@ -160,7 +168,7 @@ cookbook is worth more than the sum of its recipes.
 
 | Recipe | Source system | Behavior | Status |
 |---|---|---|---|
-| [NS_Lightning_Range.md](NS_Lightning_Range.md) | Vefects `NS_Lightning_Range` | `LightningRange` (17) | source-verified; visual gate pending |
+| [NS_Lightning_Range.md](NS_Lightning_Range.md) | Vefects `NS_Lightning_Range` | `LightningRange` (17) | source- and math-verified; **template asset missing** (needs a fork-enabled engine), visual gate not run |
 
 ---
 
