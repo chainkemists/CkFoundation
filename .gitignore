@@ -51,6 +51,10 @@ sync.ffs_db
 # ...except the Claude skill library / reports / project template, which are tracked
 !.claude/**/*.md
 
+# ...and the CkParticles VFX cookbook — recipes are a source-controlled deliverable, and adding a new
+# one must not depend on remembering to force-add it
+!Source/CkParticles/Cookbook/**/*.md
+
 # Precompiled Assets
 SourceArt/**/*.png
 SourceArt/**/*.tga
