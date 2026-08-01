@@ -73,6 +73,53 @@ namespace ck_webumg_builder
         return Brush.Get();
     }
 
+    // The goldens were rendered by system Chrome with the OS font the page asked for, so the only
+    // mapping that can converge is the same OS face: first family in the computed stack, resolved
+    // against C:/Windows/Fonts (bold cut for weight >= 600). Anything unresolvable falls back to
+    // the engine default — visibly wrong metrics, but never silent (Display log names the miss).
+    // CSS letter-spacing (px) maps to FSlateFontInfo::LetterSpacing (1/1000 em).
+    auto
+    MakeFontInfo(
+        const FCkWebUmg_IrText& InText)
+        -> FSlateFontInfo
+    {
+        const auto FirstFamily = [&]() -> FString
+        {
+            auto Family = FString{};
+            InText.Family.Split(TEXT(","), &Family, nullptr);
+            if (Family.IsEmpty())
+            { Family = InText.Family; }
+            return Family.TrimStartAndEnd().Replace(TEXT("\""), TEXT(""));
+        }();
+
+        const auto IsBold = InText.Weight >= 600;
+        static const TMap<FString, TPair<FString, FString>> OsFontFiles = {
+            {TEXT("Arial"), {TEXT("arial.ttf"), TEXT("arialbd.ttf")}},
+            {TEXT("Segoe UI"), {TEXT("segoeui.ttf"), TEXT("segoeuib.ttf")}},
+            {TEXT("Verdana"), {TEXT("verdana.ttf"), TEXT("verdanab.ttf")}},
+        };
+
+        auto FontInfo = FSlateFontInfo{};
+        if (const auto* Files = OsFontFiles.Find(FirstFamily))
+        {
+            const auto Path = FPaths::Combine(TEXT("C:/Windows/Fonts"),
+                IsBold ? Files->Value : Files->Key);
+            if (FPaths::FileExists(Path))
+            { FontInfo = FSlateFontInfo{Path, InText.SizePx}; }
+        }
+        if (NOT FontInfo.HasValidFont())
+        {
+            ck::webumg::Display(
+                TEXT("No OS font mapping for family [{}] — engine default metrics will diverge"),
+                FirstFamily);
+            FontInfo = FCoreStyle::GetDefaultFontStyle(
+                IsBold ? "Bold" : "Regular", FMath::RoundToInt32(InText.SizePx));
+        }
+        if (InText.LetterSpacingPx != 0.0f && InText.SizePx > 0.0f)
+        { FontInfo.LetterSpacing = FMath::RoundToInt32(InText.LetterSpacingPx / InText.SizePx * 1000.0f); }
+        return FontInfo;
+    }
+
     auto
     MakeTextureBrush(
         FBuildContext& InCtx,
@@ -494,11 +541,9 @@ namespace ck_webumg_builder
         else if (InNode->Text.IsSet())
         {
             const auto& Text = *InNode->Text;
-            const auto FontInfo = FCoreStyle::GetDefaultFontStyle(
-                Text.Weight >= 600 ? "Bold" : "Regular", FMath::RoundToInt32(Text.SizePx));
             Content = SNew(STextBlock)
                 .Text(FText::FromString(Text.Content))
-                .Font(FontInfo)
+                .Font(MakeFontInfo(Text))
                 .ColorAndOpacity(Text.Color.IsSet()
                     ? FSlateColor{FLinearColor{*Text.Color}}
                     : FSlateColor::UseForeground());
