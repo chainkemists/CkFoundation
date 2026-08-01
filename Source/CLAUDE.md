@@ -78,6 +78,7 @@ Before writing any code, navigate the documentation in this order:
 | ECS raycast sensing | `CkRaySense` |
 | replicate render-target pixels / draw calls | `CkRenderTarget` (no doc yet) |
 | runtime shader Looks / outline rendering | `CkUsf` |
+| convert HTML/CSS mockups to widget trees (measured fidelity) | `CkWebUmg` (+ `CkWebUmgEditor` importer; extractor CLI in `Tools/ckwebumg-extract/`) |
 | ISM / skeletal-instance rendering | `CkIsmRenderer` / `CkIskmRenderer` |
 | vertex-animation-texture playback (bake skeletal anims to textures, tick-less ISM instances) | `CkVat` (+ `CkVatEditor` baker) |
 | ECS targeting / scoring | `CkTargeting` |
@@ -220,6 +221,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
 | CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkVisibleRange | Core,Ecs,EcsExt,Log (deliberately minimal — no Poi/consumer knowledge; see its Claude.md) |
+| CkWebUmg | Core,Log,ThirdParty (Yoga; + Slate/Json/UMG/RenderCore/RHI/ImageWrapper engine deps; webumg campaign — see its Claude.md) |
 | CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UI |
 
 ### T5 — editor modules (25 UncookedOnly + 3 Editor; runtime code must NEVER depend on these)

@@ -15,6 +15,15 @@ Yoga-backed flex panel (campaign DECISION 1, option C).
   Hard-fails (ensure + empty optional) on schema mismatch or malformed structure; never a partial tree.
 - `ck::webumg::BuildWidgetTree` (`Builder/CkWebUmg_Builder.h`) — IR → widget tree; returns the root
   plus an `IR id → widget` map the fidelity harness uses to compare arranged rects vs IR boxes.
+- `UCk_WebUmg_PageAsset_UE` + `ck::webumg::ConvertIrToAsset/ConvertAssetToIr`
+  (`Asset/CkWebUmg_PageAsset[Convert].h`) — the DECISION 2 reflected asset form: flattened node
+  array (UHT forbids recursive USTRUCTs), Has-flag optionality, VisibleAnywhere read-only
+  (DECISION 3), source-hash stamped. Emission is ATOMIC — duplicate `data-ck-name` hard-fails
+  leaving the asset untouched. Runtime consumption = ConvertAssetToIr → the one builder
+  (`BuildWidgetTree` takes optional preloaded textures for asset-embedded pages).
+  `FCkWebUmg_BuildResult::WidgetsByCkName` is the gameplay binding surface.
+  The pixel suite renders THROUGH this projection (Gate 4 exit criterion, permanently gated).
+  Importer lives in `CkWebUmgEditor` (see its Claude.md).
 - `SCk_WebUmgFlexPanel` (`FlexPanel/CkWebUmg_FlexPanel_Slate.h`) — one panel per CSS flex container;
   nested containers are nested panels (local Yoga passes — exact decomposition). Real layout runs in
   `OnArrangeChildren` (allotted geometry known); text leaves use Yoga measure callbacks.
@@ -62,7 +71,8 @@ Yoga-backed flex panel (campaign DECISION 1, option C).
 - Don't "fix" layout deviations by widening the harness tolerance — Gate 2's threshold is the
   product contract (±1px at reference resolution).
 - Radius/borders paint via per-node `FSlateRoundedBoxBrush` owned by `FCkWebUmg_BuildResult::OwnedBrushes`
-  (Slate holds raw brush pointers — the result must outlive the widget tree). Uniform outline only;
-  per-side widths/colors are diagnosed at extraction, not approximated silently here.
+  (Slate holds raw brush pointers — the result must outlive the widget tree). Non-uniform
+  per-side widths/colors bake a miter-classified ring texture (Gate 3 surface widening) — the
+  same CPU-baked-texture strategy as gradients/shadows (browser math in sRGB + texture round-trip).
 - The pixel suite (`PaintFidelity`) requires the toolbox's `--no-nullrhi` lane; the rect suite
   (`LayoutFidelity`) runs in the default (NullRHI) lane.
