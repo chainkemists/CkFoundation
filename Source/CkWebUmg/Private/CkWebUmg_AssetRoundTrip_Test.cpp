@@ -215,4 +215,42 @@ bool
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// The no-silent-drops contract survives into the asset: node-level unsupported entries and
+// page-level diagnostics both land in the conversion report with provenance intact.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCkWebUmg_ConversionReport_Test,
+    "CkTests.UnitTests.CkWebUmg.ConversionReport",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool
+    FCkWebUmg_ConversionReport_Test::
+    RunTest(
+        const FString&)
+{
+    auto Document = FCkWebUmg_IrDocument{};
+    Document.Schema = 1;
+    Document.Viewport = FIntPoint(100, 100);
+    Document.Root = MakeShared<FCkWebUmg_IrNode>();
+    Document.Root->Id = TEXT("n0");
+    Document.Root->Unsupported.Add(
+        FCkWebUmg_IrUnsupported{TEXT("backdrop-filter"), TEXT("blur(4px)"), TEXT("styles.css:12")});
+    Document.Diagnostics.Add(
+        FCkWebUmg_IrDiagnostic{TEXT("unknown-ck-attribute"), TEXT("n0"), TEXT("data-ck-bogus")});
+
+    auto* Asset = NewObject<UCk_WebUmg_PageAsset_UE>();
+    if (NOT TestTrue(TEXT("converts"), ck::webumg::ConvertIrToAsset(Document, TEXT("h"), *Asset)))
+    { return false; }
+
+    const auto& Report = Asset->Get_ConversionReport();
+    TestTrue(TEXT("both report rows present"), Report.Num() == 2);
+    TestTrue(TEXT("unsupported row carries provenance"),
+        Report.Num() == 2 && Report[0].Get_Property() == TEXT("backdrop-filter")
+        && Report[0].Get_Source() == TEXT("styles.css:12"));
+    TestTrue(TEXT("page diagnostic row present"),
+        Report.Num() == 2 && Report[1].Get_Property() == TEXT("unknown-ck-attribute")
+        && Report[1].Get_Source() == TEXT("page-diagnostic"));
+    return true;
+}
+
 #endif // WITH_AUTOMATION_TESTS

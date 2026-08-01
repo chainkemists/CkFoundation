@@ -89,6 +89,11 @@ namespace ck::webumg::editor
         }
         webumg::Display(TEXT("ImportPageAsset: [{}] imported ({} nodes, {} textures)"),
             AssetName, Asset->Get_Nodes().Num(), Textures.Num());
+        for (const auto& Entry : Asset->Get_ConversionReport())
+        {
+            webumg::Warning(TEXT("ImportPageAsset: [{}] {} [{}]: {} ({})"),
+                AssetName, Entry.Get_NodeId(), Entry.Get_Property(), Entry.Get_Value(), Entry.Get_Source());
+        }
         return Asset;
     }
 }

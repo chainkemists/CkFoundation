@@ -327,6 +327,20 @@ namespace ck_webumg_irloader
             Node->Text = Text;
         }
 
+        const TArray<TSharedPtr<FJsonValue>>* UnsupportedValues = nullptr;
+        if (InObj->TryGetArrayField(TEXT("unsupported"), UnsupportedValues))
+        {
+            for (const auto& UnsupportedValue : *UnsupportedValues)
+            {
+                const auto& Obj = UnsupportedValue->AsObject();
+                auto Entry = FCkWebUmg_IrUnsupported{};
+                Obj->TryGetStringField(TEXT("property"), Entry.Property);
+                Obj->TryGetStringField(TEXT("value"), Entry.Value);
+                Obj->TryGetStringField(TEXT("source"), Entry.Source);
+                Node->Unsupported.Add(Entry);
+            }
+        }
+
         const TArray<TSharedPtr<FJsonValue>>* ChildValues = nullptr;
         if (InObj->TryGetArrayField(TEXT("children"), ChildValues))
         {
@@ -391,6 +405,20 @@ namespace ck::webumg
                 const auto& AssetObj = AssetValue->AsObject();
                 Document.AssetSourcesById.Add(
                     AssetObj->GetStringField(TEXT("id")), AssetObj->GetStringField(TEXT("src")));
+            }
+        }
+
+        const TArray<TSharedPtr<FJsonValue>>* DiagnosticValues = nullptr;
+        if (RootObj->TryGetArrayField(TEXT("diagnostics"), DiagnosticValues))
+        {
+            for (const auto& DiagnosticValue : *DiagnosticValues)
+            {
+                const auto& Obj = DiagnosticValue->AsObject();
+                auto Diagnostic = FCkWebUmg_IrDiagnostic{};
+                Obj->TryGetStringField(TEXT("kind"), Diagnostic.Kind);
+                Obj->TryGetStringField(TEXT("node"), Diagnostic.Node);
+                Obj->TryGetStringField(TEXT("detail"), Diagnostic.Detail);
+                Document.Diagnostics.Add(Diagnostic);
             }
         }
 

@@ -462,6 +462,36 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKWEBUMG_API FCk_WebUmg_ReportEntryData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_WebUmg_ReportEntryData);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FString _NodeId;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FString _Property;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FString _Value;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FString _Source;
+
+public:
+    CK_PROPERTY(_NodeId);
+    CK_PROPERTY(_Property);
+    CK_PROPERTY(_Value);
+    CK_PROPERTY(_Source);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /// One imported web page. Node 0 is the root; the tree is child-index encoded.
 /// Regeneration (DECISION 3) overwrites the whole node array + textures from the stamped source —
 /// a source-hash match makes re-import a no-op (idempotence contract, verified by the round-trip test).
@@ -489,6 +519,11 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     TArray<FCk_WebUmg_NodeData> _Nodes;
 
+    // The conversion report: every author-set declaration the v1 surface dropped, with node id
+    // and stylesheet provenance — the no-silent-drops contract, visible on the asset itself.
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TArray<FCk_WebUmg_ReportEntryData> _ConversionReport;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     TMap<FString, TObjectPtr<UTexture2D>> _Textures; // asset id -> imported texture
 
@@ -498,5 +533,6 @@ public:
     CK_PROPERTY(_Browser);
     CK_PROPERTY(_SourceHash);
     CK_PROPERTY(_Nodes);
+    CK_PROPERTY(_ConversionReport);
     CK_PROPERTY(_Textures);
 };

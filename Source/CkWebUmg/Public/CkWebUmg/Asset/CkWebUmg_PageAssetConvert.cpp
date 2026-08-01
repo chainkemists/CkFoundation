@@ -36,9 +36,16 @@ namespace ck_webumg_pageassetconvert
     auto
     FlattenNode(
         const TSharedPtr<const FCkWebUmg_IrNode>& InNode,
-        TArray<FCk_WebUmg_NodeData>& InOutNodes)
+        TArray<FCk_WebUmg_NodeData>& InOutNodes,
+        TArray<FCk_WebUmg_ReportEntryData>& InOutReport)
         -> int32
     {
+        for (const auto& Entry : InNode->Unsupported)
+        {
+            InOutReport.Add(FCk_WebUmg_ReportEntryData{}
+                .Set_NodeId(InNode->Id).Set_Property(Entry.Property)
+                .Set_Value(Entry.Value).Set_Source(Entry.Source));
+        }
         const auto Index = InOutNodes.AddDefaulted();
         {
             auto& Data = InOutNodes[Index];
@@ -132,7 +139,7 @@ namespace ck_webumg_pageassetconvert
 
         auto ChildIndices = TArray<int32>{};
         for (const auto& Child : InNode->Children)
-        { ChildIndices.Add(FlattenNode(Child, InOutNodes)); }
+        { ChildIndices.Add(FlattenNode(Child, InOutNodes, InOutReport)); }
         InOutNodes[Index].Set_ChildIndices(ChildIndices);
         return Index;
     }
@@ -301,13 +308,21 @@ namespace ck::webumg
         { return false; }
 
         auto Nodes = TArray<FCk_WebUmg_NodeData>{};
-        FlattenNode(InDocument.Root, Nodes);
+        auto Report = TArray<FCk_WebUmg_ReportEntryData>{};
+        FlattenNode(InDocument.Root, Nodes, Report);
+        for (const auto& Diagnostic : InDocument.Diagnostics)
+        {
+            Report.Add(FCk_WebUmg_ReportEntryData{}
+                .Set_NodeId(Diagnostic.Node).Set_Property(Diagnostic.Kind)
+                .Set_Value(Diagnostic.Detail).Set_Source(TEXT("page-diagnostic")));
+        }
 
         InOutAsset.Set_SchemaVersion(InDocument.Schema);
         InOutAsset.Set_Viewport(InDocument.Viewport);
         InOutAsset.Set_Browser(InDocument.Browser);
         InOutAsset.Set_SourceHash(InSourceHash);
         InOutAsset.Set_Nodes(Nodes);
+        InOutAsset.Set_ConversionReport(Report);
         return true;
     }
 

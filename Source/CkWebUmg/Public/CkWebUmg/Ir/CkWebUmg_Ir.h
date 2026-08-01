@@ -140,6 +140,17 @@ struct CKWEBUMG_API FCkWebUmg_IrText
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// One extractor diagnostic: an author-set declaration outside the v1 surface (SCHEMA.md, four
+// classes). Carried so the no-silent-drops contract survives into the emitted asset.
+struct CKWEBUMG_API FCkWebUmg_IrUnsupported
+{
+    FString Property;
+    FString Value;
+    FString Source; // file:line or "computed"/"inline style="
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 struct CKWEBUMG_API FCkWebUmg_IrNode
 {
     FString Id;
@@ -151,12 +162,22 @@ struct CKWEBUMG_API FCkWebUmg_IrNode
     FCkWebUmg_IrLayout Layout;
     FCkWebUmg_IrPaint Paint;
     TOptional<FCkWebUmg_IrText> Text;
+    TArray<FCkWebUmg_IrUnsupported> Unsupported;
     TArray<TSharedPtr<FCkWebUmg_IrNode>> Children;
 
     // The box the layout runtime reproduces — untransformed geometry when a transform (own or
     // ancestral) moved this node; the transform itself reapplies at paint as a render transform.
     auto Get_LayoutBox() const -> const FCkWebUmg_IrBox&
     { return BoxUntransformed.IsSet() ? *BoxUntransformed : Box; }
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKWEBUMG_API FCkWebUmg_IrDiagnostic
+{
+    FString Kind; // duplicate-ck-name | unknown-ck-attribute
+    FString Node;
+    FString Detail;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -168,5 +189,6 @@ struct CKWEBUMG_API FCkWebUmg_IrDocument
     float Dpr = 1.0f;
     FString Browser;
     TMap<FString, FString> AssetSourcesById; // asset id -> src path relative to the page
+    TArray<FCkWebUmg_IrDiagnostic> Diagnostics; // page-level extractor diagnostics
     TSharedPtr<FCkWebUmg_IrNode> Root;
 };
