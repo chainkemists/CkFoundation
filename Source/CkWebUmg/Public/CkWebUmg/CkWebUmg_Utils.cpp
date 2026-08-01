@@ -1,8 +1,46 @@
 #include "CkWebUmg_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkWebUmg/Asset/CkWebUmg_PageAssetConvert.h"
+#include "CkWebUmg/Ir/CkWebUmg_IrLoader.h"
+
+#include "Interfaces/IPluginManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Misc/SecureHash.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_WebUmg_UE::
+    TryLoad_PageAssetFromJson(
+        const FString& InJsonPath)
+    -> UCk_WebUmg_PageAsset_UE*
+{
+    auto Path = InJsonPath;
+    if (FPaths::IsRelative(Path))
+    {
+        const auto Plugin = IPluginManager::Get().FindPlugin(TEXT("CkFoundation"));
+        if (Plugin != nullptr)
+        { Path = FPaths::Combine(Plugin->GetBaseDir(), Path); }
+    }
+
+    auto JsonText = FString{};
+    const auto FileWasRead = FFileHelper::LoadFileToString(JsonText, *Path);
+    CK_ENSURE_IF_NOT(FileWasRead, TEXT("TryLoad_PageAssetFromJson: cannot read [{}]"), Path)
+    {}
+    if (NOT FileWasRead)
+    { return nullptr; }
+
+    const auto Document = ck::webumg::LoadIrDocument(JsonText);
+    if (NOT Document.IsSet())
+    { return nullptr; }
+
+    auto* Asset = NewObject<UCk_WebUmg_PageAsset_UE>();
+    if (NOT ck::webumg::ConvertIrToAsset(*Document, FMD5::HashAnsiString(*JsonText), *Asset))
+    { return nullptr; }
+    return Asset;
+}
 
 auto
     UCk_Utils_WebUmg_UE::

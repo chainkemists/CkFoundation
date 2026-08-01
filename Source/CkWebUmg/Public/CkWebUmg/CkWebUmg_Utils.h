@@ -21,6 +21,16 @@ class CKWEBUMG_API UCk_Utils_WebUmg_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_Utils_WebUmg_UE);
 
+    // The DECISION 2 runtime entry point: load a *.ckui.json bundle into a transient PageAsset.
+    // Relative paths resolve against the CkFoundation plugin dir. Returns nullptr (ensured) on
+    // any failure — never a partial asset.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|WebUmg",
+              DisplayName="[Ck][WebUmg] Try Load Page Asset From Json")
+    static UCk_WebUmg_PageAsset_UE*
+    TryLoad_PageAssetFromJson(
+        const FString& InJsonPath);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|WebUmg",
               DisplayName="[Ck][WebUmg] Get Node Count")
