@@ -18,6 +18,13 @@
   window is not foreground, and that case is reported rather than swallowed.
 - `ACk_HUD_UE::Refresh_Context` — explicit rebuild-completion refresh for the primary layout and active Game-layer
   HUD root. It bypasses first-push `OnlyIfMissing` only at that owned root; unrelated menu layers keep their context.
+- `UCk_Utils_UI_UE::Request_SetNavigationConfig` / `Get_NavigationConfig` — read/replace Slate's navigation policy
+  via `FCk_UI_NavigationConfig` (mirrors the tunable public fields of `FNavigationConfig`). Needed by any game that
+  binds a navigation key as a gameplay/UI input: `FNavigationConfig::GetNavigationDirectionFromKey` consumes Tab and
+  the arrow keys before the event can bubble to the game viewport, so a CommonUI action-router binding on Tab never
+  fires while Escape and gamepad face buttons do (gamepad routes through the `FCommonAnalogCursor` *preprocessor*,
+  which runs ahead of navigation). `FSlateApplication` is **process-global** — a caller that narrows navigation for
+  gameplay must restore defaults on EndPlay or the editor's own UI keeps the narrowed config after PIE.
 
 ---
 

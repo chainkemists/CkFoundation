@@ -5,6 +5,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include <GameplayTagContainer.h>
+#include <InputCoreTypes.h>
 
 #include "CkUI_Types.generated.h"
 
@@ -50,6 +51,76 @@ enum class ECk_UI_Widget_ViewportOperation : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_Widget_ViewportOperation);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Mirrors the tunable public surface of Slate's FNavigationConfig.
+ *
+ * Defaults match a freshly-constructed FNavigationConfig, so passing a default-constructed instance
+ * to Request_SetNavigationConfig restores stock Slate navigation.
+ *
+ * The digital rule maps (KeyEventRules / KeyActionRules) are deliberately NOT mirrored: the
+ * FNavigationConfig constructor repopulates them, so arrow-key navigation and the Accept/Back
+ * actions keep their engine defaults regardless of what is set here.
+ *
+ * Why this exists: a game that binds Tab (or an arrow key) as a UI/gameplay input has to stop Slate
+ * claiming it first. FNavigationConfig::GetNavigationDirectionFromKey consumes those keys before the
+ * event can bubble to the game viewport, so e.g. a CommonUI action-router binding on Tab never fires
+ * while Escape and gamepad face buttons do (the latter route through FCommonAnalogCursor, an input
+ * PREPROCESSOR that runs ahead of navigation).
+ */
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_UI_NavigationConfig
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_UI_NavigationConfig);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    bool _TabNavigation = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    bool _KeyNavigation = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    bool _AnalogNavigation = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    bool _IgnoreModifiersForNavigationActions = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    float _AnalogNavigationHorizontalThreshold = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    float _AnalogNavigationVerticalThreshold = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    FKey _AnalogHorizontalKey = EKeys::Gamepad_LeftX;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    FKey _AnalogVerticalKey = EKeys::Gamepad_LeftY;
+
+public:
+    CK_PROPERTY(_TabNavigation);
+    CK_PROPERTY(_KeyNavigation);
+    CK_PROPERTY(_AnalogNavigation);
+    CK_PROPERTY(_IgnoreModifiersForNavigationActions);
+    CK_PROPERTY(_AnalogNavigationHorizontalThreshold);
+    CK_PROPERTY(_AnalogNavigationVerticalThreshold);
+    CK_PROPERTY(_AnalogHorizontalKey);
+    CK_PROPERTY(_AnalogVerticalKey);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 

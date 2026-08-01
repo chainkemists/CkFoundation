@@ -89,6 +89,28 @@ public:
         DisplayName = "[Ck][UI] Get Currently Focused Widget")
     static UWidget* Get_CurrentlyFocusedWidget(int32 InUserIndex = 0);
 
+    // ----------------------------------------------------------------------------------------------------------------
+
+public:
+    /**
+     * Installs a fresh Slate navigation config built from InConfig.
+     *
+     * FSlateApplication is PROCESS-global, not world- or player-scoped: whatever is set here persists
+     * past PIE teardown into the editor's own UI. Callers that narrow navigation for gameplay are
+     * expected to restore it (pass a default-constructed FCk_UI_NavigationConfig) on EndPlay.
+     *
+     * No-op when Slate is not initialized (dedicated server / early startup / commandlet).
+     */
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|Navigation", BlueprintCosmetic,
+        DisplayName = "[Ck][UI] Request Set Navigation Config")
+    static void Request_SetNavigationConfig(
+        const FCk_UI_NavigationConfig& InConfig);
+
+    /** Reads back the live Slate navigation config. Returns defaults when Slate is not initialized. */
+    UFUNCTION(BlueprintPure, Category = "Ck|UI|Navigation", BlueprintCosmetic,
+        DisplayName = "[Ck][UI] Get Navigation Config")
+    static FCk_UI_NavigationConfig Get_NavigationConfig();
+
     UFUNCTION(BlueprintCallable,
         DisplayName = "[Ck] Get Widgets Of Class In Hierarchy",
         Category = "Ck|Utils|UI",
