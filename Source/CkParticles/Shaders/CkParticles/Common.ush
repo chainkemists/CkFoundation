@@ -29,7 +29,8 @@ struct FCkParticles_StageInput
 //   5+ = ROW-DECLARED renderers. A cadence row may declare extra renderers of its own
 //       (ck::particles::FCk_ParticlesRendererSpec), each with a named generated mesh and/or a named CkUsf
 //       look bound explicitly. They exist only on that row's template, so a behavior writing one of these
-//       tags renders nothing anywhere else. Behavior 7 (Slash) owns 5..9.
+//       tags renders nothing anywhere else. Behavior 7 (Slash) owns 5..9; behaviors 18 and 19 (the
+//       projectile pair) share 10..11 on one cadence row.
 //
 // Dynamic -> Particles.DynamicMaterialParameter, read by the VFX master materials as
 //   x = dissolve/erosion threshold [0..1], y = distortion strength, z = UV pan offset, w = emissive boost.
