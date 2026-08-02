@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 18;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 20;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -123,6 +123,20 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_Gunshot_Projectile + NS_Arrow_Projectile: two streaked sprite looks shared by both recreations.
+    // Only the DissolveAdd instances differ per layer, so one pair of renderers serves the whole cadence row and
+    // each behavior tags only the ones it draws (recipes Cookbook/NS_Gunshot_Projectile.md §8,
+    // Cookbook/NS_Arrow_Projectile.md §8).
+    inline auto Get_ProjectileTrioRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 10, nullptr, TEXT("PartDisAdd01") },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 11, nullptr, TEXT("PartDisAdd04") },
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -158,6 +172,10 @@ namespace ck::particles
             // Vefects NS_BasicAttack: five emitters burst together at loop start, 19 particles per loop, longest
             // layer 0.5 s on a 1.0 s loop. Its five renderers are row-declared rather than shared.
             { TEXT("PS_CkParticles_Template_Slash"),  1.0f, 0.5f, 19, Get_SlashRendererSpecs() },
+            // Vefects NS_Gunshot_Projectile and NS_Arrow_Projectile: three emitters burst one particle each at
+            // t=0 of a Loop-Once 10 s SYSTEM, every particle living the full 10 s. Named for the cadence, not for
+            // either effect — both recreations route here and differ only in per-layer constants.
+            { TEXT("PS_CkParticles_Template_ProjectileTrio"), 10.0f, 10.0f, 3, Get_ProjectileTrioRendererSpecs() },
         };
         return MakeArrayView(Specs);
     }
@@ -195,6 +213,11 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_Slash"));
     }
 
+    inline auto Get_ProjectileTrioTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_ProjectileTrio"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -203,6 +226,9 @@ namespace ck::particles
         {
             case 7:  return Get_SlashTemplateSystemObjectPath();       // Slash — 1.0s loop, 0.5s lifetime, 19 burst
             case 17: return Get_SingleBurstTemplateSystemObjectPath(); // LightningRange — 1.0s loop, 1.1s lifetime, 1
+            // GunshotProjectile + ArrowProjectile share one row — 10s loop, 10s lifetime, burst 3.
+            case 18:
+            case 19: return Get_ProjectileTrioTemplateSystemObjectPath();
             default: break;
         }
 
@@ -230,6 +256,11 @@ namespace ck::particles
         switch (InBehaviorId)
         {
             case 17: return FName(TEXT("RingDissolveAdd")); // Vefects M_VFX_DisAdd_Ring04 recreation
+            // ArrowProjectile's Glow_01 is the ONLY layer in the projectile pair that is camera-facing rather
+            // than velocity-aligned, so it draws on the shared VisTag 0 sprite — whose material is exactly this
+            // User.SpriteMaterial binding. Its other two layers ride the row's own Part04 renderer, and the
+            // Gunshot recreation (18) keeps NAME_None because every one of its layers is velocity-aligned.
+            case 19: return FName(TEXT("PartDisAdd01")); // Vefects M_VFX_DisAdd_Part01 recreation
             default: return NAME_None;
         }
     }

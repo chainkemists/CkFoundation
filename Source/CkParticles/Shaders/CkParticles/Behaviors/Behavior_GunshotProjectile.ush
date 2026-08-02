@@ -1,0 +1,81 @@
+// /CkParticles/Behaviors/Behavior_GunshotProjectile.ush — BehaviorId 18.
+//
+// Faithful re-port of Vefects NS_Gunshot_Projectile: the in-flight bullet body — three velocity-aligned
+// streaks stacked along the local -X axis, a warm glow head and two increasingly long, increasingly dark
+// tails. Recipe + corpus evidence: CkParticles/Cookbook/NS_Gunshot_Projectile.md — every number below is a
+// source value from §5, not a tuning.
+//
+// Source cadence (corpus v3): the SYSTEM governs (every emitter is Life Cycle Mode = System), Loop Behavior
+// Once, Loop Duration 10 s; each of the three emitters bursts ONE particle at t=0 and every particle lives
+// the full 10 s. It therefore spawns through PS_CkParticles_Template_ProjectileTrio (10 s loop / 10 s
+// lifetime / burst 3) and reads a REAL Age.
+//
+// There is not one age-driven curve in this system: every layer is a constant for its whole life, so the
+// behavior is a pure function of the layer index. The only thing Age decides is death.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 18) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — three particles per burst, one per source emitter (recipe §2).
+#define CKP_GP_NUM_LAYERS   3
+#define CKP_GP_LAYER_GLOW   0
+#define CKP_GP_LAYER_BRIGHT 1
+
+// Every emitter's Initialize Particle sets Lifetime Mode = Direct Set, Lifetime 10, and Particle State kills
+// on elapse. The template particle lives exactly as long, so this only ever bites if the row is retuned.
+#define CKP_GP_LIFE 10.0
+
+// Add Velocity is 0.01 units/second on all three layers: visually zero, but non-zero so VelocityAligned has a
+// defined axis. Reproduce the DIRECTION (local +X); the magnitude is irrelevant.
+#define CKP_GP_DRIFT 0.01
+
+FCkParticles_StageOutput CkParticles_Behavior_GunshotProjectile(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    // Burst UniqueIDs are sequential, so the modulo draws exactly one particle per source emitter per loop.
+    // Double-modulo because a negative Seed is representable even though UniqueID never is.
+    const int Layer = ((In.Seed % CKP_GP_NUM_LAYERS) + CKP_GP_NUM_LAYERS) % CKP_GP_NUM_LAYERS;
+
+    O.Velocity = float3(CKP_GP_DRIFT, 0.0, 0.0);
+
+    if (In.Age > CKP_GP_LIFE)
+    {
+        O.Velocity = float3(0.0, 0.0, 0.0);
+        O.Color    = float4(0.0, 0.0, 0.0, 0.0);
+        O.Size     = float2(0.0, 0.0);
+        O.Scale    = float3(0.0, 0.0, 0.0);
+        return O;
+    }
+
+    if (Layer == CKP_GP_LAYER_GLOW)
+    {
+        // Glow_01, on M_VFX_DisAdd_Part01 — the only layer this system erodes (dissolve = 1) and the only one
+        // wearing the soft round paint rather than the streak.
+        O.Position = float3(-52.048, 0.0, 0.0);
+        O.Color    = float4(1.0, 0.194618, 0.021219, 0.5);
+        O.Size     = float2(80.0, 300.0);
+        O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag   = 10;
+        return O;
+    }
+
+    // Projectile_Bright and Projectile_Dark, both on M_VFX_DisAdd_Part04 and both with every dynamic channel
+    // at zero — they share one row renderer and differ only in colour, offset and streak length.
+    O.Dynamic = float4(0.0, 0.0, 0.0, 0.0);
+    O.VisTag  = 11;
+
+    if (Layer == CKP_GP_LAYER_BRIGHT)
+    {
+        O.Position = float3(-77.6262, 0.0, 0.0);
+        O.Color    = float4(1.0, 0.552046, 0.147, 1.0);
+        O.Size     = float2(20.0, 200.0);
+        return O;
+    }
+
+    O.Position = float3(-194.751, 0.0, 0.0);
+    O.Color    = float4(0.1, 0.0171441, 0.00865005, 0.2);
+    O.Size     = float2(35.0, 500.0);
+    return O;
+}
