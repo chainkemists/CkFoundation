@@ -63,6 +63,19 @@ space rather than billboarded, with `SpriteAlignment` as its up axis and `Sprite
 `User.SpriteMaterial` with VisTag 0, so a behavior-bound CkUsf look reaches either without callers knowing.
 **Both attributes must be written**: a missing `Particles.SpriteAlignment` makes CustomAlignment silently fall
 back to Unaligned, so `CkParticles_DefaultOutput` seeds a valid Z-up pair rather than zeros.
+
+**VisTags 0–4 are the SHARED set — nothing behavior-specific may be added to it**, because every template
+carries it. A recreation whose source draws through renderers the shared set cannot express declares its own
+on its **cadence row** instead (`FCk_ParticlesRendererSpec` + `FCk_ParticlesTemplateSpec::RendererOverrides`
+in the naming header): either a `Mesh` renderer carrying one named generated mesh drawn with one named CkUsf
+look, or a `VelocityAlignedSprite` drawn with a look. Row renderers bind their look master **explicitly**
+(`bOverrideMaterials` / `Material`) rather than through `User.SpriteMaterial`, because one user parameter
+cannot carry several materials — so such a behavior keeps `Get_BehaviorLookName` at `NAME_None`. They are
+emitted for that row's template only. Behavior 7 (Slash) owns 5–9: four crescent-mesh slash layers and one
+spark sprite. **The roster-wide ceiling is DERIVED** — `ck::particles::Get_RosterVisTag_Max()` walks the
+cadence table on top of `SharedRendererVisTag_Max`; tests read it and never restate a literal.
+Ordering consequence: **generate the CkUsf looks BEFORE rebuilding templates** — row renderers resolve their
+masters at build time, and a miss logs an Error rather than failing the build.
 `Dynamic` drives the mesh/smoke materials:
 x dissolve, y distortion, z UV-pan, w emissive boost — the exact idiom the marketplace "DissolveAdd"
 materials animate via curves (Vefects M_VFX_DisAdd_Slash01 et al).
@@ -74,7 +87,7 @@ between the GPU `.ush` and the C++ CPU mirror).
 Shaders (`Source/CkParticles/Shaders/CkParticles/`, virtual path `/CkParticles`):
 - `Common.ush` — `FCkParticles_StageInput/Output`, `CkParticles_NormalizedAge`, `CkParticles_Rand`, `CkParticles_RandDir`.
 - `Behaviors/Behavior_*.ush` — Gravity (0), Swirl (1), Explosion (2), Fire (3), Fireworks (4), Galaxy (5),
-  Beam (6, directional — aim via spawn rotation), Slash (7, arc crescent), Nova (8, shockwave ring),
+  Beam (6, directional — aim via spawn rotation), Slash (7, the faithful NS_BasicAttack re-port: 19-layer burst on a procedural crescent), Nova (8, shockwave ring),
   and the **marketplace recreations** (2026-07-12, derived from the VFX corpus translation sheets —
   `Saved/CkVfxCorpus/analysis/` in the dev host): MuzzleFlash (9, +X barrel), ImpactBurst (10, +Z normal),
   Tracer (11, +X forward), SmokePlume (12), SparksBurst (13), GroundRing (14), LightningStrike (15),
@@ -100,8 +113,7 @@ Shipped recipes:
 | Recipe | Source | Behavior |
 |---|---|---|
 | [`NS_Lightning_Range.md`](Cookbook/NS_Lightning_Range.md) | Vefects `NS_Lightning_Range` + `M_VFX_DisAdd_Ring04` | `LightningRange` (17) |
-
-Behavior 7 (`Slash`) recreates Vefects `NS_BasicAttack` but predates the cookbook and has no recipe.
+| [`NS_BasicAttack.md`](Cookbook/NS_BasicAttack.md) | Vefects `NS_BasicAttack` + the `M_VFX_DisAdd_{Slash01,Slash02,Slash04,Pan_Wind02,Part04}` set | `Slash` (7) |
 
 ---
 
@@ -159,7 +171,8 @@ Idempotent — re-run any time; it overwrites in place.
 > regression once (a regen on a non-fork machine silently stripped the module out of the committed templates,
 > 437KB → 368KB, and the whole test suite stayed green). `Build_AllTemplateSystems` therefore logs an Error and
 > returns false rather than overwriting. **Check `ExecuteStage` is present in a template before trusting it:**
-> `grep -ac ExecuteStage PS_CkParticles_Template.uasset` should be ~35, never 0.
+> `grep -ac ExecuteStage PS_CkParticles_Template.uasset` must be **non-zero** (39 on all three templates as of
+> 2026-08-01; earlier wording said "~35" — the count tracks the builder, so treat only ZERO as the failure).
 
 ---
 
@@ -167,7 +180,10 @@ Idempotent — re-run any time; it overwrites in place.
 
 **`Generate VFX Textures`** (same subsystem; also called by `Create Template System`) bakes a `UTexture2D` library
 under `/CkFoundation/CkParticles/Textures/` **purely from noise/SDF/radial math** (`CkParticles_TextureGenerator.cpp`)
-— no imported art: `Glow`, `Flare` (star), `Smoke` (FBM + erosion in A), `Electric` (ridged), `Streak`, `Ring` (SDF).
+— no imported art: `Glow`, `Flare` (star), `Smoke` (FBM + erosion in A), `Electric` (ridged), `Streak`, `Ring` (SDF),
+`SweepStreak`, `TileNoise`, and the NS_BasicAttack stand-in set `SlashArc01` / `SlashArc02` / `WindBand` /
+`SoftParticle` / `SparkStreak`, whose constants come from characteristics MEASURED off the corpus PNGs
+(profiles, streak counts, falloff exponents — never copied pixels; see that recipe's §7).
 They are **grayscale** (so Particle Color tints them), `SRGB=false`, uncompressed (`TC_VectorDisplacementmap`).
 
 `M_CkParticles_VfxMaster` samples a **`BaseTexture`** parameter × **Particle Color**, additive + unlit (sampler type
@@ -217,8 +233,15 @@ editor builder emits one template per row:
 | Template | Loop | Lifetime | Burst | Used by |
 |---|---|---|---|---|
 | `PS_CkParticles_Template` | — | — | continuous | the default roster |
-| `PS_CkParticles_Template_Burst` | 1.2 s | 1.2 s | 96 | the multi-particle one-shots (7, 10, 13, 14, 15) |
+| `PS_CkParticles_Template_Burst` | 1.2 s | 1.2 s | 96 | the multi-particle one-shots (10, 13, 14, 15) |
 | `PS_CkParticles_Template_Single` | 1.0 s | 1.1 s | 1 | one-sprite, one-second-loop recreations (17) |
+| `PS_CkParticles_Template_Slash` | 1.0 s | 0.5 s | 19 | Vefects `NS_BasicAttack`'s exact cadence (7); declares 5 row renderers |
+
+Rows verified 2026-08-01 against `ck::particles::Get_TemplateSpecs()` and against `Add_BurstEmitterStack`,
+which reads `LoopDuration` / `ParticleLifetime` / `BurstCount` straight off the spec — so the table above is
+the generator's input, not a transcription of it. A row may additionally declare its own renderers (see the
+VisTag paragraph above). The first three templates were regenerated 2026-08-01 and each carries a non-zero
+`ExecuteStage` count (39).
 
 Recreating a source whose cadence differs adds a ROW — never an approximation onto the nearest template, and
 never a `frac(Age/Cycle)` fake inside the behavior. `Get_BehaviorTemplateSystemObjectPath(id)` is the single
@@ -230,11 +253,17 @@ resolver the spawn path calls.
 - `Spawn_SystemAtLocation(WorldContext, System, BehaviorId, ...)` — same for an explicit (e.g. generated) system.
 
 The **CkParticles gym** lives in CkTests (`Script/CkParticles/`, registered as "Particles" in `CkTests_GymRegistry.as`):
-one station per behavior (0–16), each spawning the seed template with a fitting procedural texture; the recreation
-stations (9–16) credit their marketplace exemplars in the station description. In-PIE exec:
+**one station per behavior, EXCEPT the faithful Vefects ports (7, 17)** — those live in the **VfxExamples gym**
+(`Script/CkVfxExamples/`), which shows each port as a PAIR of pedestals: the CkParticles recreation next to the
+ORIGINAL Niagara system, soft-loaded by path string at runtime (no package dependency — an absent Vefects install
+shows a placard instead). In-PIE exec there: `Ck_GymVfxExamples_RestartAll` (re-fires both sides in sync).
+The Particles gym's remaining stations spawn each behavior's template with a fitting procedural texture; the
+marketplace-recreation stations credit their exemplars in the station description. In-PIE exec:
 `Ck_GymParticles_RestartAll`. The composition pattern for richer VFX (spells/trails) is multiple
 `Spawn_BehaviorAtLocation` calls at one transform. Automated coverage: the PIE autotest
-`CkAutoTest_Particles_SpawnAllBehaviors.as` spawns every id 0–16 and asserts a live component.
+`CkAutoTest_Particles_SpawnAllBehaviors.as` loops the FULL roster (including 7 and 17) and asserts a live
+component per id; `CkAutoTest_VfxExamples_PairStationsSpawn.as` covers the pair harness.
+**Never restate a maximum id in a gym or test** — that is exactly the drift `NumBehaviors` exists to prevent.
 
 ---
 
