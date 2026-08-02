@@ -1,15 +1,21 @@
-# Translation sheet: NS_BuffCast → CkParticles (PRE-IMPLEMENTATION)
+# Recipe: NS_BuffCast → CkParticles (IMPLEMENTATION-COMPLETE)
 
 Schema and evidence-tag conventions: [README.md](README.md). Exemplars: [NS_BasicAttack.md](NS_BasicAttack.md),
 [NS_Lightning_Range.md](NS_Lightning_Range.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02, Phase 3 batch G). Behavior id 38. Not yet A/B'd.**
 
-No behavior id is allocated, no `.ush` exists, no cadence row was added, no look was authored, no
-asset was generated, nothing was built and nothing was rendered. Sections 1–6 are archaeology and a
-plan; §6's capability-gap callout is the part an implementer must read before committing a session.
+`Behavior_BuffCast.ush` + `ExecuteStage_CPU` case 38, the `PS_CkParticles_Template_BuffCast` cadence
+row (2.0 s / 1.5 s / burst 23, plus a ribbon emitter bursting 301 EVENT samples), one new CkUsf look
+(`TrailDisAdd03`, ribbon-drawn), one new texture (`LinearRamp`), zero new meshes,
+`Test_Particles_BuffCastBehavior.cpp`, and a VfxExamples gym pair. Nothing has been rendered or
+visually compared — §12 is open.
+
+**This is the cookbook's FIRST consumer of C6c, the event collapse.** §9.2 is the section to read
+before touching the trail: the source's ribbon is spawned by per-frame location events, and the
+recreation turns those events into closed-form samples of the leader's own path.
 
 ---
 
@@ -87,13 +93,18 @@ inert-emitter-row reading.
 > | `executionMode` | `SpawnedParticles` |
 > | `spawnCount` | **1 per event** (`randomSpawnCount = false`) |
 > | `maxEventsPerFrame` | **0** (unbounded) |
-> | handler module | `Receive Location Event` — `Position`, `Velocity`, `Acceleration`, `Ribbon ID`, `Ribbon UV Distance`, `Coordinate Space Transform` = **Apply**; `Color`, `Normalized Age`, `Random Normalized Float` = Output; `Interpolate Spawned Positions = true` |
+> | handler module | `Receive Location Event` — `Position`, `Acceleration`, `Ribbon ID`, `Ribbon UV Distance`, `Coordinate Space Transform` = **Apply**; **`Velocity`**, `Color`, `Normalized Age`, `Random Normalized Float` = **Output**; `Interpolate Spawned Positions = true` **[P3-G2]** |
 >
-> The sender is `Sparkles_02`'s `Generate Location Event` (Send Rate 30, Event Probability 0.5, Delay
-> Before Sending Events 0.5, Movement Tolerance 0.5, Unit Spacing 20, "Every Frame"). So each of the
-> 7 `Sparkles_02` particles emits location events at up to 30/s (50 % probability, after a 0.5 s
-> delay) from t = 0.05, and each accepted event spawns exactly one ribbon particle that inherits the
-> emitting particle's position/velocity and **Ribbon ID** — one ribbon strand per sparkle.
+> The sender is `Sparkles_02`'s `Generate Location Event`. Its `Event Type` is **`Every Frame`**, and
+> its own toggles read `Use Event Probability = false` and `UseEventDelay = false` — so the stored
+> Send Rate 30, Event Probability 0.5, Delay Before Sending Events 0.5, Movement Tolerance 0.5 and
+> Unit Spacing 20 are ALL INERT (corpus caveat 8 in its toggle form). **[P3-G1]** Each of the 7
+> `Sparkles_02` particles therefore emits ONE location event PER FRAME from t = 0.05 until it dies,
+> and each event spawns exactly one ribbon particle that inherits the emitting particle's POSITION and
+> **Ribbon ID** — one ribbon strand per sparkle. It does NOT inherit velocity ([P3-G2]), and its own
+> `Add Velocity from Point` is disabled, so a trail point holds where it was placed.
+>
+> *(Was read as a probabilistic 30/s stream after a delay; the toggles say otherwise.)*
 >
 > Ribbon particle lifetime is **0.2 s**, from `Initialize Ribbon.Lifetime` — note the emitter's
 > `lifetimeResolved` reads `NO_MODULE` because it only inspects `Initialize Particle`.
@@ -269,8 +280,11 @@ Every curve samples **NormalizedAge** (age / that emitter's own lifetime) unless
 - Scale Sprite Size (Uniform Curve): `(0, 0)C (0.1, 1)C (1, 0)C`.
 - **Scale Sprite Size 001 is DISABLED** — its `X: (0, 0.2)C (0.3, 0.7)C | Y: (0.2, 1)L (1, 1.2)L` is inert.
 - `Sprite Rotation Rate` (Float from Curve): **`(0, 720)C (1, 0)C`** — 720 °/s spin decaying to 0.
-- `Generate Location Event` (Every Frame): Send Rate 30, Event Probability 0.5, Delay Before Sending 0.5,
-  Movement Tolerance 0.5, Unit Spacing 20. **This IS the ribbon's driver, confirmed `[corpus-v3]` — see §2's event-chain box.**
+- `Generate Location Event`, `Event Type = Every Frame`, `Use Event Probability = false`,
+  `UseEventDelay = false` — one event per particle per FRAME, unconditionally. The stored Send Rate 30 /
+  Event Probability 0.5 / Delay 0.5 / Movement Tolerance 0.5 / Unit Spacing 20 belong to the other event
+  types and are inert **[P3-G1]**. **This IS the ribbon's driver, confirmed `[corpus-v3]` — see §2's
+  event-chain box.**
 - Dynamic params: **`[1, 0, 0, 0]`** constant.
 
 ### Layer 7 — `Sparkles_01` (7 particles, spawn t = 0)
@@ -297,6 +311,8 @@ Every curve samples **NormalizedAge** (age / that emitter's own lifetime) unless
 ### Layer 8 — `Ring` (3 particles, spawn t = 0)
 - Lifetime Mode **Random**: Min **0.3**, Max **0.7**. (`InitializeParticle.Lifetime = 1` is also in the
   store; Random mode means Min/Max win and the 1 is inert `[corpus]`.)
+- **`Color.Scale Alpha` = 0.25** — the only emitter in this system below 1, so every alpha value below is
+  quartered. *(Was MISSING from this section — the [P2-D2] class, corrected as **[P3-G3]**.)*
 - Sprite Size Mode Random Uniform: **Min 150, Max 160** (`Uniform Sprite Size 200` present but not selected).
 - Sprite Rotation Mode Random, Min 0 / Max 360. Initialize Color `RGBA(1, 1, 1, 1)`.
 - Color from Curve:
@@ -324,185 +340,293 @@ Every curve samples **NormalizedAge** (age / that emitter's own lifetime) unless
 
 ---
 
-## 6. Translation plan (CkParticles / CkUsf)
+## 6. Translation plan (CkParticles / CkUsf) — AS IMPLEMENTED
+
+*This section is REWRITTEN in place. Its original text was authored before Phase 1's and Phase 3's
+capability work and listed five blockers (camera-facing row renderer, ribbon renderer, event spawning,
+gradient LUT, sprite rotation) that no longer exist. Each is resolved below; the batch-D precedent
+(supersede a stale plan rather than annotate it) applies.*
 
 ### 6.1 Cadence row
 
-**A new row is required.** No existing row in `ck::particles::Get_TemplateSpecs()` matches:
+**A new row, `PS_CkParticles_Template_BuffCast`:**
 
-| Row | Loop | Lifetime | Burst |
+| Field | Value | Why |
+|---|---|---|
+| Loop duration | **2.0 s** `[corpus-v3]` | the system's `Once` loop duration ([P0-D1]/[P0-D3]); every per-emitter `Loop Duration = 1` is inert |
+| Particle lifetime | **1.5 s** | [P0-D5] max over layers of (spawn delay + resolved lifetime) — `Arrow`/`BigArrow`, both 1.5 s off a zero beat |
+| Burst count | **23** | 1+1+1+1+1+1+7+7+3, the nine sprite emitters' own counts (§2) |
+| Spawn rate | **0** | every sprite emitter is a `Spawn Burst Instantaneous`; nothing streams |
+| Ribbon emitter | **burst 301**, one `Ribbon` renderer | 43 event samples for each of the seven sparkles — see §9.2 |
+
+Layer partition is `Seed % 23`, in table order: 0 `Bomb_Glow_01`, 1 `Bomb_Glow_02`, 2 `Bomb_Glow_03`,
+3 `Raimbow`, 4 `Arrow`, 5 `BigArrow`, 6–12 `Sparkles_02`, 13–19 `Sparkles_01`, 20–22 `Ring`.
+
+### 6.2 VisTag / renderer needs — RESOLVED
+
+`ECk_ParticlesRenderer_Kind::CameraFacingSprite` landed in Phase 1 and `::Ribbon` in Phase 3, so both
+original blockers are closed. Seven row renderers cover the nine sprite emitters, plus the ribbon:
+
+| VisTag | Kind | Look | Source emitters |
 |---|---|---|---|
-| `PS_CkParticles_Template` | continuous | — | — |
-| `PS_CkParticles_Template_Burst` | 1.2 | 1.2 | 96 |
-| `PS_CkParticles_Template_Single` | 1.0 | 1.1 | 1 |
-| `PS_CkParticles_Template_Slash` | 1.0 | 0.5 | 19 |
-| **needed here `[corpus-v3]`** | **2.0** | **1.5** | **23** |
+| 167 | CameraFacingSprite | `PartDisAdd01` | Bomb_Glow_01, Bomb_Glow_02 |
+| 168 | CameraFacingSprite | `PartDisAdd02` | Bomb_Glow_03 |
+| 169 | CameraFacingSprite | `RainbowDisAdd` | Raimbow |
+| 170 | VelocityAlignedSprite | `ArrowsDisAdd` | Arrow, BigArrow |
+| 171 | CameraFacingSprite | `StarDisAdd01` | Sparkles_02 |
+| 172 | VelocityAlignedSprite | `PartDisAdd04` | Sparkles_01 |
+| 173 | CameraFacingSprite | `RingDisAdd01` | Ring |
+| 174 | **Ribbon** (ribbon emitter) | `TrailDisAdd03` | Sparkles_02_Trail |
 
-Per [P0-D3]: loop **2.0 s** (the system's `Once` loop duration — *was 1.0 s, taken from the inert
-emitter rows*), template particle lifetime **1.5 s** (max resolved lifetime — the longest source layer —
-`Arrow`/`BigArrow`; every shorter layer must self-hide past its own lifetime the way `Behavior_Slash`
-does), burst **23** (1+1+1+1+1+1+7+7+3). The ribbon is **not** in that count — it cannot be expressed
-at all (§6.5).
+`Get_BehaviorLookName(38)` stays `NAME_None` — every look binds explicitly on its own renderer.
 
-Layer partition: `Seed % 23`, matching `Behavior_Slash`'s `Seed % 19` idiom — burst UniqueIDs are
-sequential, so one template particle lands on exactly one source particle per loop. Suggested banding:
-0 = Bomb_Glow_01, 1 = Bomb_Glow_02, 2 = Bomb_Glow_03, 3 = Raimbow, 4 = Arrow, 5 = BigArrow,
-6–12 = Sparkles_02, 13–19 = Sparkles_01, 20–22 = Ring.
+### 6.3 Look / material needs — SEVEN REUSED, ONE NEW
 
-### 6.2 VisTag / renderer needs
+All eight source materials are `M_VFX_DissolveAdd` instances. Seven were already carried by earlier
+ports and were checked value-by-value against §4 before reuse (§10). Only `M_VFX_DisAdd_Trail03` is
+new, and only because it is the first ribbon-drawn instance of the family.
 
-The shared set (0–4) cannot carry this effect: **seven of the nine sprite layers are camera-facing
-sprites that each need a DIFFERENT material**, and VisTag 0 / VisTag 4 both bind through the single
-`User.SpriteMaterial` user parameter. Row-declared renderers are the right mechanism — but the
-existing `ECk_ParticlesRenderer_Kind` has only **`Mesh`** and **`VelocityAlignedSprite`**.
+### 6.4 Texture needs — ONE NEW BAKE
 
-| Source emitter | Renderer needed | Available today? |
-|---|---|---|
-| Bomb_Glow_01/02/03, Raimbow, Sparkles_02, Ring | camera-facing sprite with a per-row explicit look | **NO — new renderer kind required** |
-| Arrow, BigArrow, Sparkles_01 | `VelocityAlignedSprite` with a per-row look | yes |
-| Sparkles_02_Trail | ribbon | **NO — see §6.5** |
+See §7. Eight of the nine masks are paints an earlier batch already measured and baked; the ninth,
+`T_VFX_Gradient_02`, is not a painting at all.
 
-**Minimum pipeline addition: a `CameraFacingSprite` kind on `FCk_ParticlesRendererSpec`.** It is the
-same shape as `VelocityAlignedSprite` (one look bound explicitly via `bOverrideMaterials`), differing
-only in the renderer's `Alignment`/`FacingMode`, so it is additive and small — but it does not exist
-and must be written. Every effect in this batch needs it.
+### 6.5 The original capability gaps, closed
 
-Distinct looks needed for this system: **8** if each material instance gets its own
-(Part01, Part02, Rainbow, Arrows, Star01, Part04, Ring01, Trail03) — but `Bomb_Glow_01` and
-`Bomb_Glow_02` share `Part01`, and `Arrow`/`BigArrow` share `Arrows`, so **6 distinct renderers** would
-suffice if two layers may share one VisTag. They can: VisTag selects a renderer, not a layer.
-So **6 row renderers** (5 camera-facing + … see the split below), which with the existing shared band
-means VisTags allocated **above 9** (behavior 7 owns 5–9).
+1. **Ribbon renderer** — landed as C6a/[P3-D1] (second emitter + seed bank + `RibbonIdBinding`). The
+   trail is recreated in full, not approximated and not dropped.
+2. **Event-driven spawning** — expressed by C6c's collapse (§9.2), not by an event mechanism.
+3. **Camera-facing row renderer** — landed in Phase 1 (C1).
+4. **Gradient-map LUT** — the chain is plumbed (C3) and `RainbowDisAdd` already carries the
+   displacement and invert values; the ramp itself stays `LutWhite` pending [P1-D1], exactly as every
+   other Rainbow consumer does. Recorded in §13.
+5. **World vs local space** — the C12 known difference, §13.
+6. **Sprite rotation** — `Particles.SpriteRotation` is bound on every row-declared sprite renderer;
+   the four rotating layers are reproduced, including `Sparkles_02`'s decaying 720°/s spin.
+7. **Non-uniform sprite size** — `OutSize` is a float2 and the velocity-aligned kind stretches on
+   `Size.y`, which is what the two chevrons and `Sparkles_01` need.
+8. **No sub-UV in this system** — still true; nothing here declares a `SubImageSize`.
 
-| Renderer | Kind | Look | Source emitters |
-|---|---|---|---|
-| a | CameraFacingSprite *(new kind)* | `PartDisAdd01` | Bomb_Glow_01, Bomb_Glow_02 |
-| b | CameraFacingSprite *(new kind)* | `PartDisAdd02` | Bomb_Glow_03 |
-| c | CameraFacingSprite *(new kind)* | `RainbowDisAdd` | Raimbow |
-| d | CameraFacingSprite *(new kind)* | `StarDisAdd01` | Sparkles_02 |
-| e | CameraFacingSprite *(new kind)* | `RingDisAdd01` | Ring |
-| f | VelocityAlignedSprite | `ArrowsDisAdd` | Arrow, BigArrow |
-| g | VelocityAlignedSprite | `PartDisAdd04` — **already exists** (NS_BasicAttack) | Sparkles_01 |
+### 6.6 Corrections applied to this sheet at implementation
 
-That is **7 renderers**, of which 5 need the new kind and 1 reuses an existing look verbatim.
-
-### 6.3 Look / material needs
-
-All eight materials are `M_VFX_DissolveAdd` instances, so the existing `CkUsf_Look_DissolveAdd` entry
-point is the right family shader — but **five of its needed parameters are not plumbed today**. Against
-the 15-parameter signature (`ShapeTex`, `DissolveTex`, `DistortTex`, `CoreColor`, `Brightness`,
-`DissolveSpeed`, `DissolveEdge`, `DistortScale`, `OpacityBoldness`, `DissolveSpeedY`, `DissolveBias`,
-`DissolveScale`, `DistortIntensity`, `DistortSpeed`, `MainTexScale`):
-
-| Source param this batch uses | Plumbed? | Consequence if omitted |
-|---|---|---|
-| `Brightness` | yes | — |
-| `Opacity_Boldness` | yes (`OpacityBoldness`) | — |
-| `Glow_Intensity` (0.3 on Part02) | **no** | Bomb_Glow_03 reads ~3× too bright |
-| `Gradient_Invert` (0 vs 0.5 vs 2) | **no** | gradient chain differences lost |
-| `GradientMap_Tex` + `GradientMap_Displacement` | **no** | **fatal for the Rainbow layer** — see §6.5 |
-| `Opacty_StepAdd` (0.3 on Rainbow) | **no** | opacity bias lost |
-| `Opacty_DepthFade` (10/20/30) | **no** | same gap NS_BasicAttack §13.3 records |
-| `Core_Intensity` / `Core_Power` / `Color_CoreDifferent` | **no** | (all 0/1 defaults in this system — inert here) |
-| `CamOffset` | **no** | (0 in this system — inert here) |
-
-Only `Glow_Intensity`, `Gradient_Invert` and the gradient-map pair are new *and* non-default here.
-`Glow_Intensity` and `Gradient_Invert` are cheap scalar additions to the family shader.
-
-### 6.4 Texture needs
-
-Nine greyscale 512² masks. Mapping onto the existing procedural bake set
-(`Glow`, `Flare`, `Smoke`, `Electric`, `Streak`, `Ring`, `SweepStreak`, `TileNoise`, `SlashArc01`,
-`SlashArc02`, `WindBand`, `SoftParticle`, `SparkStreak`):
-
-| Source | Plausible existing stand-in | New bake needed? |
-|---|---|---|
-| `T_VFX_Part_01` | `SoftParticle` (NS_BasicAttack measured it as `pow(1-r, 2.2)` radially symmetric) | no |
-| `T_VFX_Part_04` | `SparkStreak` (already measured and baked) | no |
-| `T_VFX_Noise_02` | `TileNoise` (NS_BasicAttack §7 established this mapping) | no |
-| `T_VFX_Ring_01` | `Ring` (SDF ring) — **unmeasured**, likely needs its own parameterization | probably |
-| `T_VFX_Part_02` | — | **yes** — measure it |
-| `T_VFX_Arrow_01` | — | **yes** — a directional chevron/arrow shape; no existing bake resembles one |
-| `T_VFX_Star_01` | `Flare` (star) — **unmeasured** | probably |
-| `T_VFX_Ring_02` | — | **yes** (Rainbow's `Main_Tex`) |
-| `T_VFX_Gradient_02` | — | **yes** (ribbon only — moot if the ribbon is dropped) |
-| **`T_VFX_LUT_Rainbow_01`** | — | **yes, and it is NOT a mask** — 512×2 sRGB BGRA colour ramp |
-
-None of these has been measured off its PNG yet. NS_BasicAttack §7's method (32-bin per-axis profiles,
-structure tensor, zero-crossing counts, radial ring means) applies unchanged and must be run per texture
-at implementation time.
-
-### 6.5 CAPABILITY GAPS — read before committing a session
-
-1. **RIBBON RENDERER — does not exist, at any level.** `Sparkles_02_Trail` is a
-   `NiagaraRibbonRendererProperties` emitter. `ECk_ParticlesRenderer_Kind` has no ribbon kind, the
-   template builder emits none, the DI writes no ribbon attributes (`RibbonWidth`, `RibbonID`,
-   `RibbonLinkOrder`), and `CkParticles/CLAUDE.md` records that CkUsf's ribbon usage flag is
-   "deliberately absent". **Recreating layer 9 requires new pipeline capability in three places
-   (renderer kind, DI outputs, CkUsf usage flag).** The honest options are (a) build ribbon support,
-   (b) approximate the trail as a chain of velocity-aligned sprites and record it as a §13 deviation,
-   or (c) drop the layer and record it. **Do not assume (b) is free** — a sprite chain does not
-   reproduce a continuous ribbon's width taper or its `Emitter.Age`-indexed colour.
-
-2. **EVENT-DRIVEN SPAWNING — not expressible (but now fully readable `[corpus-v3]`).**
-   `Generate Location Event` on `Sparkles_02` is a Niagara event, and CkParticles has no event
-   mechanism at all: the DI's `ExecuteStage` is a **pure, stateless per-particle function** with no
-   inter-particle or inter-emitter channel. The spawn contract itself is **no longer unknown** — v3
-   exports the handler stack (§2: `LocationEvent`, `SpawnedParticles`, 1 particle per event,
-   unbounded events/frame, `Receive Location Event` applying Position/Velocity/Acceleration/RibbonID).
-   *This gap is now purely a CAPABILITY gap; the archaeology half is closed.*
-
-3. **CAMERA-FACING SPRITE ROW RENDERER — does not exist.** Five of this system's nine sprite layers
-   need one each with a distinct look. Additive and small, but it is a code change, not data. **All six
-   effects in this batch need it**; it is worth doing once, first, before any of them.
-
-4. **GRADIENT-MAP LUT — the Rainbow layer's entire identity, and unrepresentable today.**
-   `M_VFX_DisAdd_Rainbow` swaps `GradientMap_Tex` from the family's 1×1 `T_VFX_WhitePixel` to a
-   **512×2 sRGB colour ramp** and raises `GradientMap_Displacement` to 0.9 with `Gradient_Invert` 2.
-   NS_BasicAttack §13.4 dismissed the gradient chain as "a no-op on this family (a white-pixel gradient
-   map)" — **that reasoning does not transfer here**, because this instance's gradient map is real
-   content. Reproducing the rainbow needs (a) a gradient-map sample + displacement in
-   `DissolveAdd.ush`, and (b) a colour-ramp texture the procedural generator does not currently make
-   (every existing bake is greyscale, `SRGB=false`, `TC_VectorDisplacementmap`). Without both, the
-   Raimbow layer renders as a plain white-ish glow.
-
-5. **WORLD SPACE vs LOCAL SPACE.** All ten source emitters are `LocalSpace: false`. The CkParticles
-   template is local-space (self-driving behaviors write absolute positions). Same deviation
-   NS_BasicAttack §13.2 records: visible only if the spawning actor moves during the 1.5 s life.
-   Record it; do not "fix" it per-effect.
-
-6. **SPRITE ROTATION.** Four layers use `Sprite Rotation Mode = Random` (0–360°) and `Sparkles_02`
-   additionally spins at 720 °/s decaying to 0. The DI does write `OutRotation` (sprite degrees), but
-   `CkParticles/CLAUDE.md` documents rotation as applying on **VisTag 2 (smoke sprite)** and is silent
-   for the other sprite tags. `[unresolved: whether Particles.SpriteRotation is bound on the shared
-   camera sprite renderer and would be bound on a new row-declared camera-facing sprite]` — verify
-   against `CkParticles_TemplateBuilder.cpp` before planning the layer, because a silently-ignored
-   rotation makes four layers wrong in a way no headless test catches.
-
-7. **NON-UNIFORM sprite size on a camera-facing sprite.** `Arrow` (170×170) and `BigArrow` (150×240)
-   are non-uniform, and `Sparkles_01` is non-uniform random. `OutSize` is a float2, so this is
-   expressible — but the existing `VelocityAlignedSprite` documentation says "stretch is
-   `Particles.SpriteSize.y` along motion", so the axis convention must be checked, not assumed.
-
-8. **No sub-UV in this system** — unlike its Debuff/Heal siblings, NS_BuffCast has no flipbook. One
-   fewer gap here.
-
-### 6.6 Behavior id
-
-**Do NOT allocate an id in this document.** `ck::particles::NumBehaviors` is 18 today (ids 0–17), so
-the next free id is 18 *at the time of writing*, but the sibling sheets in this batch and any
-concurrent work also want ids. The implementing session allocates from `NumBehaviors` at that moment
-and bumps it in the same edit.
-
-### 6.7 Complexity assessment
-
-**Tier L.** Not because the curves are hard — they are ordinary — but because a faithful port needs
-**three pipeline capabilities that do not exist**: a camera-facing-sprite row renderer (small), a
-gradient-map/colour-LUT path through the DissolveAdd family plus non-greyscale procedural textures
-(medium), and a ribbon renderer with its DI attributes (large). Dropping the ribbon and the rainbow
-gradient would bring it to **M**, at a fidelity cost that must be a recorded maintainer decision
-rather than a silent one.
+- **[P3-G1]** §2's event-chain box read `Generate Location Event`'s stored values as live: "Send Rate
+  30, Event Probability 0.5, Delay Before Sending Events 0.5". The module's own toggles say otherwise
+  — `Event Type = Every Frame`, `Use Event Probability = false`, `UseEventDelay = false` — so the
+  probability, the delay AND the send rate are all INERT and the emitter sends one event per particle
+  per FRAME. Corpus caveat 8 (`[values]` presence ≠ evidence), in its toggle form.
+- **[P3-G2]** the same box listed `Velocity` among the handler's **Apply** fields. The corpus reads
+  `Velocity (Vector 2) = Output`, so a ribbon point does NOT inherit the sparkle's velocity — which,
+  with its own `Add Velocity from Point` disabled, is why a trail point holds its position. This is the
+  fact the whole collapse rests on; the sheet's reading would have had the trail flying apart.
+- **[P3-G3]** §5's layer 8 (`Ring`) omitted `Color.Scale Alpha`, which the corpus gives as **0.25**.
+  The [P2-D2] class, fourth sighting: the layer's alpha peaks at a quarter, not at one.
 
 ---
 
-## 7+. Reserved for implementation — sections 7–14 per [README.md](README.md) are written by the session that implements this effect.
+## 7. Textures — ONE new bake
+
+Eight of the nine masks this system needs already exist, each measured off this very paint by an
+earlier batch: `T_VFX_Part_01` → `SoftParticle`, `T_VFX_Part_02` → `SoftParticleBright`,
+`T_VFX_Part_04` → `SparkStreak`, `T_VFX_Arrow_01` → `ArrowChevron`, `T_VFX_Star_01` → `StarFour`,
+`T_VFX_Ring_01` → `RingUneven`, `T_VFX_Ring_02` → `RingFlare`, `T_VFX_Noise_02` → `TileNoise`.
+`T_VFX_LUT_Rainbow_01` → `LutRainbow` exists too and is held back only by [P1-D1].
+
+### 7.1 `LinearRamp` — a TRANSCRIPTION, not a stand-in
+
+`T_VFX_Gradient_02` was measured before anything was written, per the measure-before-reuse rule. The
+measurement ended the question immediately:
+
+- the image is **exactly `1 - u`**: the largest deviation from that closed form anywhere in the 512²
+  is **0.0024**, which is under one 8-bit quantum and is precisely the difference between the source's
+  `u = X/511` sampling and this baker's `(X + 0.5)/512`;
+- it is **constant in v** to **1.4e-14** (row-wise standard deviation);
+- its best correlation against every other paint in the corpus is **0.084** (`T_VFX_Noise_07`), so
+  there is nothing to reuse.
+
+A ramp is functional CONFIG rather than art — the same call `Px_LutWhite` already made — so the bake
+is the closed form itself and carries no fitted constants. `Px_LinearRamp` is two lines.
+
+---
+
+## 8. Meshes — none
+
+`NS_BuffCast` has no mesh renderer. Nothing was generated.
+
+---
+
+## 9. The behavior — `Behavior_BuffCast.ush` + `ExecuteStage_CPU` case 38
+
+### 9.1 The sprite layers
+
+Nine layers, partitioned by `Seed % 23`, each hiding itself past its own lifetime (the NS_BasicAttack
+§8 mechanism) since the row's 1.5 s is the longest of them. Everything is a direct transcription of
+§5; the three shapes worth naming:
+
+- **The two chevrons compose TWO size modules.** `Arrow` runs a uniform curve AND a non-uniform one,
+  so its quad opens at a fifth of its width and stretches to 1.2 of its length; `BigArrow` carries no
+  size module at all and holds its authored `(150, 240)` for its whole life.
+- **`Raimbow`'s Scale Color has a single RGB key**, so the tint is a flat 0.5 multiplier and NOT a
+  ramp — the layer's colour never moves, only its alpha does.
+- **`Ring` is the only animated dynamic channel in the system**: its dissolve threshold slides
+  −0.325 → −0.5 over life, so the shockwave erodes rather than fading.
+
+### 9.2 The event collapse — C6c's first real consumer
+
+The source's trail is spawned by events, and the corpus states the whole chain: `Sparkles_02` runs a
+`Generate Location Event` whose **`Event Type` is `Every Frame`**, with `Use Event Probability` and
+`UseEventDelay` both **false** ([P3-G1]). Each event spawns exactly one ribbon particle through a
+`Receive Location Event` that **Applies** Position, Acceleration, Ribbon ID, Ribbon UV Distance and the
+coordinate-space transform, and merely **Outputs** Velocity, Colour, Normalized Age and the random
+float ([P3-G2]). The ribbon emitter's own `Add Velocity from Point` is DISABLED.
+
+Put together: a ribbon point is a **sample of the leader's position, taken at the instant the event
+fired, and held**. That is exactly what a stateless closed form can express, and it is what C6c
+predicted:
+
+```
+trail point (Strand, Step)  ->  CkParticles_BuffCast_SparklePos(6 + Strand, Step / 60)
+```
+
+- **`Strand` is the ribbon id** (`LocalSeed / 43`), matching the source's per-particle Ribbon ID: seven
+  sparkles, seven strands, one renderer, separated by `RibbonIdBinding` ← `Particles.MeshIndex`.
+- **`Step / 60` is the event time.** The source emits one event per FRAME, so the sample spacing is a
+  frame; 60 Hz is the reference rate it is quoted against, stated rather than tuned, and 43 steps is
+  what covers the 0.7 s maximum a sparkle can live. A point whose step is past its own leader's death
+  is hidden — that event was never sent.
+- **The leader is the SAME function the sparkle sprite draws itself with.** Not a re-derivation: one
+  `CkParticles_BuffCast_SparklePos`, called from both branches, so the trail sits on the sparkle by
+  construction and the test asserts it as an identity rather than within a tolerance.
+- **The colour rides `Emitter.Age`.** The source's `Color from Curve` on the ribbon has
+  `CurveIndex = linked:Emitter.Age`, so every live trail point carries the same colour at any instant
+  and the whole trail fades together at 0.997 s. A ribbon burst particle's own age IS the loop clock,
+  so the recreation reads `In.Age` for the colour and the point's own 0.2 s window separately.
+- **The width is the ribbon's own**: 15 units under a `Scale Ribbon Width` curve running 1 → 0 across
+  the point's 0.2 s, written to `Size.x` (which is the one float `RibbonWidthBinding` reads).
+
+### 9.3 Why the ribbon emitter BURSTS rather than streams
+
+The source's cadence is per-frame, i.e. a rate. A rate on the ribbon emitter would force the behavior
+to read the emitter clock to know when each point spawned, and the point's own position depends on
+that time. A BURST does not: burst particles land at loop phase zero, so `In.Age` is the loop clock
+directly and the point index carries its own sample time. The row therefore states the population as
+a capacity (301 = 7 × 43) and the behavior solves the times — the same shape NS_Bomb_Projectile used
+for arc length, applied to time instead of distance.
+
+### 9.4 The leader identity, and what it costs
+
+The two emitters have separate `Particles.UniqueID` counters, so there is no particle identity shared
+between them that does not assume UniqueID arithmetic (that ids start at zero and never skip) which
+the CPU mirror cannot verify. The recreation therefore names the leader by its **burst slot**: the
+sparkle layer draws its lifetime, direction, size and rotation from `Seed % 23` rather than from
+`Seed`, and the trail's strand index names the same slot.
+
+The trade is stated rather than hidden: the trail sits exactly on a drawn sparkle (the thing the
+effect is *about*), and in exchange the seven sparkles take the same seven paths on every firing where
+the source re-randomizes. Recorded in §13.2.
+
+---
+
+## 10. Looks and renderers
+
+**Seven looks reused, one new.** Every reuse was checked value-by-value against §4's delta table
+before it was taken:
+
+| Source material | Look | Check |
+|---|---|---|
+| `M_VFX_DisAdd_Part01` | `PartDisAdd01` | Brightness 1, Opacity_Boldness 0.5, `SoftParticle` — the family reference, matches |
+| `M_VFX_DisAdd_Part02` | `PartDisAdd02` | Brightness 1 × Glow_Intensity 0.3 = 0.3, Opacity_Boldness 0.5, `SoftParticleBright` — matches |
+| `M_VFX_DisAdd_Rainbow` | `RainbowDisAdd` | Displacement 0.9, Gradient_Invert 2, Boldness 1.5, `RingFlare`/`SoftParticle` — matches |
+| `M_VFX_DisAdd_Arrows` | `ArrowsDisAdd` | Brightness 10, Boldness 1, `ArrowChevron` — matches |
+| `M_VFX_DisAdd_Star01` | `StarDisAdd01` | Brightness 6, Gradient_Invert 0, Boldness 1, `StarFour` — matches |
+| `M_VFX_DisAdd_Part04` | `PartDisAdd04` | Brightness 6, `SparkStreak` — matches |
+| `M_VFX_DisAdd_Ring01` | `RingDisAdd01` | Brightness 10, Gradient_Invert 0, Boldness 1, `RingUneven` — matches |
+| `M_VFX_DisAdd_Trail03` | **`TrailDisAdd03`** (new) | Brightness 4, Gradient_Invert 0, Boldness 1, `LinearRamp` on shape AND dissolve |
+
+`TrailDisAdd03` opts into `_UsedWithNiagaraRibbons`. It is the third look to do so and the first from a
+system whose ribbon is event-spawned.
+
+---
+
+## 11. Tests
+
+`Test_Particles_BuffCastBehavior.cpp` (`CkTests.UnitTests.CkParticles.BuffCastBehavior`), on the CPU
+mirror — no Niagara, no template asset, no RHI, no forked engine. What it pins:
+
+- the cadence row and its ribbon emitter, by value;
+- the burst partition per VisTag (2/1/1/2/7/7/3) and its stability across 500 moduli;
+- **the event collapse**, as an identity: a trail point at (strand, step) sits exactly where the
+  sparkle layer draws sparkle `6 + strand` at age `step / 60`, over 35 samples;
+- **the emitter-clock colour**: two trail points with different spawn times, sampled at one instant,
+  carry the same colour — an implementation that indexed the point's own age fails only this;
+- the trail's ramp at both ends (green 0.664387 at emitter age 0.05, 0.341915 at 0.416541) and its
+  width taper 15 → 7.5 → gone;
+- the strand partition (7 × 43) and a seed bank that is disjoint in BOTH directions;
+- **`Ring`'s alpha peaks at a quarter** — the [P3-G3] correction, bounded two-sided so both a missing
+  scale (peaks at 1) and a dead curve (peaks at 0) fail;
+- Arrow's and BigArrow's colour at both ramp ends AND on the ramp (0.250205 vs 0.254641 at t = 0.2 —
+  two curves that a copy-paste implementation would collapse into one);
+- `Raimbow`'s flat tint;
+- emitter-clock independence over 400 seeds × 3 clocks.
+
+---
+
+## 12. Verification — A/B protocol `[HUMAN-VERIFY]`
+
+Gym: **VfxExamples**, pair **"BUFF CAST"** (behavior 38 against
+`/Game/Vefects/Anime_VFX/Shared/Skills/NS_BuffCast`). `Ck_GymVfxExamples_RestartAll` re-fires both
+sides in sync. Judge in this order:
+
+a. **The rise.** Both chevrons start about a metre below the cast point and climb — Arrow fast and
+   shrinking, BigArrow slow and fixed. If either sits still, the velocity integral is wrong.
+b. **The sparkle trails.** Seven short streamers, each one BEHIND a visible sparkle and following it.
+   A trail that floats free of any sparkle is the §9.4 identity breaking.
+c. **The trail fades TOGETHER.** All seven strands go out at the same moment, about a second in, not
+   one point at a time. That is the `Emitter.Age` colour index.
+d. **The rings.** Three shockwaves at a quarter alpha, eroding rather than fading.
+e. **The rainbow lens.** A flat grey-white lens ring, not a colour sweep — the LUT is held white by
+   [P1-D1], so a colour difference here is EXPECTED and is not a port defect.
+f. **The palette.** Deep pink-red glows, warm sparkles. If the whole thing reads white, the looks are
+   falling back to the default material.
+
+---
+
+## 13. Confirmed fidelity differences or intentional deviations
+
+1. **Trail density is quoted at 60 Hz.** The source emits one location event per FRAME per sparkle, so
+   its trail density is genuinely frame-rate dependent; the recreation states 60 as the reference rate
+   and spaces its samples at 1/60 s. At another frame rate the source's trail is denser or sparser and
+   the recreation's is not. The visual difference is point spacing along an already-continuous ribbon.
+2. **The seven sparkles repeat across firings.** Their per-particle randomness is drawn from the burst
+   SLOT rather than the UniqueID, which is what lets the trail attach to a drawn sparkle (§9.4). The
+   source re-randomizes each firing. Visible only by watching several firings in a row.
+3. **World space.** All ten source emitters are `LocalSpace: false`; the CkParticles template is
+   local-space. The C12 non-goal — visible only if the spawning actor moves during the 1.5 s life, and
+   the A/B pedestals do not move.
+4. **The Rainbow LUT is white.** `RainbowDisAdd` carries the source's displacement (0.9) and invert (2)
+   but binds `LutWhite` rather than `LutRainbow`, pending [P1-D1]'s open `Gradient_Invert` remap. Same
+   deferral every other Rainbow consumer takes.
+5. **Family parameters the look does not plumb**: `Opacty_DepthFade` (20/10/30 across these instances),
+   `Opacty_StepAdd`, `Core_Power`, `Color_CoreDifferent`. The pre-existing CkUsf gap, unchanged here.
+6. **The ribbon's `Position Offset (100, 0, 0)` is inert** in the source (`UsePositionOffset = false`)
+   and is therefore not reproduced. Documentary — a source quirk, not a difference.
+
+---
+
+## 14. Reusable lessons
+
+1. **`[values]` blocks lie about toggles, not just about disabled modules.** `Generate Location Event`
+   stores an Event Probability of 0.5 and a 0.5 s delay, and BOTH are gated off by their own `Use…`
+   booleans. The pre-implementation sheet read the values and built a story around them ("up to 30/s,
+   50 % probability, after a 0.5 s delay") that the corpus contradicts on three counts. Read the toggle
+   before the value, every time.
+2. **An event chain collapses cleanly only if the leader is a FUNCTION, not a particle.** The moment
+   the trail and the leader share one closed form, the collapse is exact and the test can assert an
+   identity. Two transcriptions of the same curves could only have been asserted within a tolerance,
+   and would have drifted at the first edit.
+3. **A per-frame source rate becomes a BURST, not a row rate.** A rate forces the behavior to read the
+   emitter clock; a burst carries its own sample index and leaves the clock unread. Where the sample
+   TIMES are solvable — from a frame cadence here, from a falling rate in NS_Lightning_Muzzle, from arc
+   length in NS_Bomb_Projectile — the burst is the better shape, and it keeps `RosterSanity`'s
+   emitter-clock independence assertion meaningful for the row.
+4. **Measure the paint before writing a generator for it.** `T_VFX_Gradient_02` looks like a texture and
+   is a two-line closed form. Ten minutes of measurement replaced what would have been a fitted bake.
