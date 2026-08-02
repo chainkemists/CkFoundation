@@ -12,7 +12,8 @@
 //
 // Every default below is quoted in a recipe's per-material delta table:
 // CkFoundation/Source/CkParticles/Cookbook/NS_Arrow_Cast.md §4.1,
-// NS_Bomb_Spawn.md §4.1 and NS_HealCast.md §4. A delta table states the FULL inherited pair, never
+// NS_Bomb_Spawn.md §4.1, NS_HealCast.md §4, NS_Gunshot_Cast.md §4.1 and
+// NS_Lightning_Cast.md §4. A delta table states the FULL inherited pair, never
 // just the changed axis — anything a table does not list resolves to the family
 // REFERENCE instance (M_VFX_DisAdd_Part01), not to zero, so every value below is
 // stated explicitly rather than defaulted.
@@ -225,5 +226,73 @@ namespace CkUsf
             "LutWhite",   // GradientMap_Tex
             0.1,          // GradientMap_Displacement
             0.0);         // Gradient_Invert
+    }
+
+    // M_VFX_DisAdd_LightStrip on a SPRITE renderer. Same instance, same parameters, as LightStripDisAdd in
+    // CkUsf_HitLooks_Assets.as — the Arrow systems draw it on SM_VFX_Plane01 while NS_Gunshot_Cast and
+    // NS_FireBall_Cast draw it as a velocity-aligned sprite, and a material declares its Niagara usage per
+    // renderer class. A mesh-only master bound to a sprite renderer silently falls back to the default
+    // material, so the two carriers need two masters; the parameters below are the same eleven values.
+    asset LightStripDisAddSprite of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/DissolveAdd.ush";
+        _UshFunctionName = n"CkUsf_Look_DissolveAdd";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        _LookName        = n"LightStripDisAddSprite";
+        _TwoSided        = true;
+
+        _UsedWithNiagaraSprites   = true;
+        _ParticleColor            = true;
+        _ParticleDynamicParameter = true;
+        _ParticleDynamicParameterNames = CkUsf::Usf_DissolveAddChannelNames();
+
+        _Parameters = CkUsf::Usf_DissolveAddParams(
+            "LightStrip", "LightStrip",
+            7.0,          // Brightness
+            0.0, 0.0,     // Dissolve_Speed
+            0.0,          // Dissolve (static bias)
+            1.0, 1.0,     // Dissolve_Scale
+            0.0,          // Distortion_Intensity — dead on this instance
+            0.0, 0.0,     // Distortion_Speed
+            1.0, 1.0,     // MainTex_Scale
+            1.0);         // Opacity_Boldness
+    }
+
+    // M_VFX_DisAdd_Lightning02 — the bolt sheet of NS_Lightning_Cast. Two things make it the odd instance of the
+    // whole family: it is the ONLY one whose distortion branch is live AND panning fast (Intensity 0.5 at speed
+    // 0.7 on both axes), and its Core_Power resolves to 0. Its shape is a 2x2 flipbook, divided by the row
+    // renderer's SubImageSize rather than by anything here.
+    //
+    // Core_Power 0 has no home in the look's signature — recorded in NS_Lightning_Cast.md §13.
+    asset LightningDisAdd02 of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/DissolveAdd.ush";
+        _UshFunctionName = n"CkUsf_Look_DissolveAdd";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        _LookName        = n"LightningDisAdd02";
+        _TwoSided        = true;
+
+        _UsedWithNiagaraSprites   = true;
+        _ParticleColor            = true;
+        _ParticleDynamicParameter = true;
+        _ParticleDynamicParameterNames = CkUsf::Usf_DissolveAddChannelNames();
+
+        _Parameters = CkUsf::Usf_DissolveAddParams(
+            "LightningSheet", "LightningSheet",
+            15.0,             // Brightness
+            0.0, 0.0,         // Dissolve_Speed
+            0.0,              // Dissolve (static bias)
+            1.0, 1.0,         // Dissolve_Scale
+            0.5,              // Distortion_Intensity — LIVE
+            0.7, 0.7,         // Distortion_Speed — the fastest pan in the cookbook
+            1.0, 1.0,         // MainTex_Scale
+            1.0,              // Opacity_Boldness
+            "LutWhite",
+            0.1,
+            0.0,              // Gradient_Invert — inherited from the Ring04 family reference
+            1.0,              // Distortion_Scale
+            "TileNoiseCoarse"); // Distortion_Tex — the source's T_VFX_Noise_04, distinct from Dissolve_Tex
     }
 }
