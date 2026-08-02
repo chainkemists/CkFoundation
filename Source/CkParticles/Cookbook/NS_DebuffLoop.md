@@ -5,10 +5,25 @@ Schema and evidence-tag conventions: [README.md](README.md). Exemplars: [NS_Basi
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 29, `DebuffLoop`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior id is allocated, no `.ush` exists, no cadence row was added, no look was authored, no
-asset was generated, nothing was built and nothing was rendered.
+§1–6 are archaeology against the extracted corpus, re-verified against the v3 sidecar at implementation
+time. **Two things were settled in place:**
+
+1. **`Flames`' `[unresolved]` spawn probability is RESOLVED to 1** — the value is in the emitter's
+   `[values]` block. The flag is on, the probability is 1, and the layer is ungated. Only the two arrow
+   emitters are genuinely probability-gated.
+2. **The per-emitter `Color.Scale Alpha` values were missing** (§2). Two are severe — `Flames` at **0.05**
+   and `Ring` at **0.35** — so a port that trusted §5 alone would have rendered this effect's two most
+   distinctive layers at 20x and 3x their source coverage.
+
+§6.1's `[P0-D3 STOP]` is RESOLVED: campaign decision **[P0-D4]** routed the four rate-only Loop systems
+through Phase 2's C2 spawn-rate rows. §6.5 gap 3 (sub-UV) had already been closed by Phase 1's C4, and
+gap 4 (the camera-facing row renderer) by Phase 1's C1 — both were spent by earlier batches, which is why
+this "Tier L, but only just" sheet ported as the cheapest of the four.
+
+§7 onward is what was actually built.
 
 ---
 
@@ -69,9 +84,17 @@ reduced on the two arrow emitters by their random spawn probability.
 *(Was "24/s from six infinite emitters + 3.6 one-time particles from three `Once` emitters" — that
 split came from the inert emitter Loop rows.)*
 
-`Flames` sets `Use Spawn Probability = true` but the corpus shows **no `Spawn Probability` override and
-no `SpawnRate.SpawnProbability` value** in its store `[unresolved: the effective probability]` —
-the two arrow emitters both override it explicitly with `Random Range Float 001` Min 0.5 / Max 1.0.
+`Flames` sets `Use Spawn Probability = true` with no override — **RESOLVED `[corpus]` (2026-08-02):** its
+store DOES carry `Flames.SpawnRate.Spawn Probability = 1`, so the flag is on but the probability is 1 and
+the layer is ungated. *(Was `[unresolved: the effective probability]`; the value is in the `[values]`
+block, which the earlier read did not reach.)* The two arrow emitters are the only gated layers — both
+override it with `Random Range Float 001` Min 0.5 / Max 1.0.
+
+**`Color` module `Scale Alpha` per emitter `[corpus]`** — from the `[values]` blocks, added at
+implementation time because §5 does not carry them and two of them are severe: `Sparkles_Dark` 1,
+`Ring` **0.35**, `Flames` **0.05**, `Glow_01` **0.8**, `Glow_02` **0.8**, `Arrow_Green` 1,
+`Arrow_Purple` 1. `Glow_03` and `Flares` have no `Color` module (Glow_03 has only two update modules at
+all; Flares uses `Scale Color`).
 
 > ### Lifetime — RESOLVED `[corpus-v3]` (this system is the [C-D1] discriminating case)
 > Per [P0-D2] the `Lifetime Mode` static switch selects the driving pin: `Random` ⇒ Min/Max,
@@ -383,4 +406,190 @@ finish. Its curves and forces are the simplest in the batch.
 
 ---
 
-## 7+. Reserved for implementation — sections 7–14 per [README.md](README.md) are written by the session that implements this effect.
+## 7. Textures — no new bake
+
+§6.4 asked for measurement and new bakes for four paints including a 2×2 wind ATLAS. **None were needed:**
+every one had been measured off the same corpus PNG by an earlier batch, and the atlas kind itself
+(`MaskSheet`) shipped with Phase 1's C4.
+
+| Source paint | Stand-in | Measured in |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | NS_BasicAttack §7 |
+| `T_VFX_Part_02` | `SoftParticleBright` | NS_FireBall_Hit §7 |
+| `T_VFX_Ring_01` | `RingUneven` | NS_FireBall_Hit §7 (the SDF `Ring` bake was measured and rejected there) |
+| `T_VFX_Wind_01` | `WindSheet` — the 2×2 four-frame atlas | NS_Fire §7 |
+| `T_VFX_Noise_02` | `TileNoise` | NS_BasicAttack §7 |
+| `T_VFX_Noise_04` | `TileNoiseCoarse` | NS_FireBall_Hit §7 (§6.4 listed this one as "unmeasured"; it was measured there) |
+| `T_VFX_Arrow_01` | `ArrowChevron` | **NS_BuffLoop §7.1**, this batch — the only new bake in the batch, shared with this port |
+| `T_VFX_WhitePixel` | `LutWhite` | Phase 1 C3 |
+
+§4's "this is the only Buff/Debuff/Heal system with no gradient-map dependency" holds, so this port is
+also the only one of the four with **no [P1-D1] hold** on any layer.
+
+---
+
+## 8. Mesh
+
+**None.** All nine source renderers are sprites: seven camera-facing (one of them a 2×2 flipbook) and two
+velocity-aligned.
+
+---
+
+## 9. The behavior — `Behavior_DebuffLoop.ush` + `ExecuteStage_CPU` case 29
+
+### 9.1 The cadence row
+
+| Field | Value | Source |
+|---|---|---|
+| `LoopDuration` | 2.0 s | the SYSTEM's `Loop Behavior = Infinite`, `Loop Duration = 2` ([P0-D1]) |
+| `ParticleLifetime` | 2.0 s | Glow_01's Direct-Set 2.0 and the Ring / Flames / Flares 2.0 maxima |
+| `BurstCount` | 0 | there is no burst module anywhere in the system |
+| `SpawnRate` | 36 /s | 4+3+5+2+4+4+4+4+6 |
+
+### 9.2 The partition
+
+A weighted draw against `CkParticles_Rand(Seed, 0)` over cumulative rate shares in the source's emitter
+order — see NS_PickupLoop §9.2. Worst per-layer deviation over 400 000 seeds: **0.00080**.
+
+### 9.3 Spawn probability, reproduced rather than dropped
+
+`Arrow_Green` and `Arrow_Purple` each draw a probability from `Random Range Float 001` (0.5 … 1.0) per
+spawn and then spawn against it. §6.1 prescribed the shape and the behavior follows it exactly: draw the
+probability from salt 11, draw against it with salt 12, and hide the slot that loses. That costs particles
+which render nothing — **which is precisely what the source spends**, since a Niagara spawn that fails its
+probability check is a spawn that did not happen.
+
+E[1 − P] with P uniform on [0.5, 1] is exactly **0.25**, and the measured loss over 4 000 slots per arrow
+is 0.2612 / 0.2542. §6.5 gap 5's warning stands: the *effective* particle count is non-deterministic per
+loop, which is why §11's anti-vacuity and partition checks scan several seeds per layer rather than one.
+
+### 9.4 Per-layer notes worth the reader's time
+
+- **`Sparkles_Dark`'s `Curl Noise Force` is DISABLED** — its Strength 2500 / Frequency 15 / Seed 11 values
+  are inert, and the DebuffCast sibling has the same module ENABLED. This is the one place in the batch
+  where Phase 2's C10 curl helper would have been the right tool and the source says not to use it.
+- **The two arrows are ONE look told apart by colour alone** — same cylinder, same velocity range, same
+  size, same lifetime, same size curve, same alpha envelope, same material. Only the colour curve and one
+  mid-key time differ. One body serves both.
+- **`Arrow_*` composes two placement terms**: a cylinder at radius 80 / height 130 lifted **+150** — much
+  higher than the Buff siblings' +30 — and Initialize Particle's `Position Offset (0, 0, -119.316)`. They
+  spawn high and FALL.
+- **`Flames` sits on a 20-unit sphere SHELL with no velocity at all** and turns in place at a per-particle
+  ±45 °/s, over a 2×2 flipbook whose start frame is a random draw (the same `Sub UV Animation` idiom the
+  four earlier sub-UV ports use).
+- **`Glow_03` is the only layer in the cookbook with no curve of any kind** — two update modules, so its
+  Initialize colour renders unchanged for its whole second. The largest sprite in the cookbook (1000
+  units) pops on and off rather than fading.
+- **`Flares` DIRECT-SETS its colour** where its BuffLoop sibling randomizes the hue; the HSV parameters in
+  its store are inert in that mode. It is also the only Flares in the batch that only GROWS.
+
+---
+
+## 10. Looks and renderers
+
+Six row-declared renderers on VisTags **91–96** — five camera-facing sprites (one a 2×2 sub-UV sheet) and
+one velocity-aligned serving BOTH arrow emitters.
+
+| VisTag | Kind | Look | Source material | Serves |
+|---|---|---|---|---|
+| 91 | CameraFacingSprite | `PartDisAdd01` | `M_VFX_DisAdd_Part01` | Glow_01, Glow_02, Glow_03 |
+| 92 | CameraFacingSprite | `PartDisAdd01Bright` | `M_VFX_DisAdd_Part01_Bright` | Sparkles_Dark |
+| 93 | CameraFacingSprite | `RingDisAdd01` | `M_VFX_DisAdd_Ring01` | Ring |
+| 94 | CameraFacingSprite, SubUV 2×2 | `FlamesDisAdd01` | `M_VFX_DisAdd_Flames01` | Flames |
+| 95 | CameraFacingSprite | `PartDisAdd02` | `M_VFX_DisAdd_Part02` | Flares |
+| 96 | VelocityAlignedSprite | `ArrowsDisAdd` | `M_VFX_DisAdd_Arrows` | Arrow_Green, Arrow_Purple |
+
+**This port authors no look of its own** — `ArrowsDisAdd` is NS_BuffLoop's, and the other five predate the
+batch. Nine source emitters, six renderers, five of them shared: §4's "the cleanest illustration in the
+batch that a layer and a look are different things" survives implementation intact.
+
+`Get_BehaviorLookName(29)` stays `NAME_None`: every look rides a row renderer that binds it explicitly.
+
+---
+
+## 11. Tests
+
+`Test_Particles_DebuffLoopBehavior.cpp` + the `NumBehaviors` 26 → 30 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+- **The rate-share sweep** over 400 000 seeds, every layer within **0.004** of its source share.
+- **Spawn probability is asserted three ways**: the behavior's gate must agree slot-for-slot with a gate
+  the test rebuilds from the source's own two draws (over 4 000 slots per arrow, counted rather than
+  asserted per sample); the loss share must land within 0.03 of the exact 0.25; and **every other layer
+  must lose nothing** — a gate applied to the wrong band shows up there rather than as a density feel.
+- **The two arrows are green-dominant and blue-dominant respectively**, through the same renderer.
+- **`Glow_03` never fades and never resizes** — the no-curve claim, made falsifiable, and the one a reader
+  is most likely to "fix" by adding an alpha envelope.
+- **`Flames` advances its flipbook, stays inside the 2×2 sheet, pins distortion at the source's 10, and
+  sits exactly on the 20-unit shell.**
+- **`Sparkles_Dark` travels DOWNWARD**, unlike every sparkle stream in the Buff and Heal siblings.
+- Plus the standard per-layer anti-vacuity and death checks, which scan eight seeds per layer rather than
+  one so the probability-gated bands cannot pass or fail on a single draw.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **DEBUFF LOOP**.
+
+> **This pair is a STEADY-STATE comparison, not a synced replay.** `NS_DebuffLoop` is an INFINITE system:
+> it never finishes, so the harness's `OnSystemFinished` re-arm never fires and the two sides are never in
+> phase. Judge density, palette and motion character over a few seconds; do NOT expect matched frames.
+> The two arrow layers are probability-gated, so the two sides' particle counts will not match instant to
+> instant even in principle.
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | a dark, oppressive column — almost every colour in this system is near-black, and the effect reads by SILHOUETTE and bloom rather than by hue |
+| b | Density | ~36/s nominal, minus about a quarter of the two arrow streams |
+| c | Arrows | chevrons FALLING from about 30 units above the spawn point, one green and one violet, stretched along their motion. They should visibly thin out relative to a steady stream |
+| d | Flames | 200–300 unit puffs on a tight 20-unit shell, turning slowly in place, cycling a four-frame flipbook, and **very faint** (5 % coverage) |
+| e | Ring | 200–300 unit halos at 35 % coverage, growing and dissolving outward |
+| f | Glows | three shells at 500 / 250 / **1000** units. The 1000 is a static dark-violet bloom that **pops on and off** rather than fading — if it fades, §13.4 is broken |
+| g | Sparkles | near-black motes FALLING out of a wide cylinder |
+| h | Flares | a very dark violet haze that only GROWS over its life (the Buff sibling's peaks early and decays) |
+| i | Palette | one green and one violet, reused everywhere — §5 notes the two endpoint colours are the same pair `NS_DebuffCast` uses as a random range |
+| j | No LUT | this is the one system in the batch with no gradient-map dependency, so nothing here is held back by [P1-D1] |
+| k | World space | move the pedestal mid-effect if you can (§13.5) |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **The layer partition is a weighted draw, not per-emitter independent spawning** — see NS_PickupLoop
+   §13.1.
+2. **Spawn probability is reproduced by hiding losing slots**, which costs particles that render nothing.
+   That matches what the source spends, but it means the port's *allocated* particle count is constant
+   where the source's varies — an internal difference with no visual consequence.
+3. **`Sparkles_Dark`'s disabled `Curl Noise Force` is NOT implemented**, deliberately, even though Phase 2
+   shipped a curl-noise helper that could express it. The DebuffCast sibling enables the same module, so
+   implementing it here would import the wrong system's behaviour.
+4. **`Glow_03` has no alpha envelope**, by design — two update modules in the source. It pops on and off.
+5. **World space.** All nine source emitters are `LocalSpace: false`; the template is local space. §6.5
+   gap 6 asks the maintainer to judge which is preferable for a debuff on a moving character.
+6. **`Arrow_*`'s authored sprite rotation is inert** on a velocity-aligned renderer and is not written.
+7. **Unplumbed family parameters:** `Core_Intensity` (1 on `Part01_Bright` and `Flames01`),
+   `Gradient_Invert` (0 on `Ring01` and `Flames01` — inert against the white ramp). **`Glow_Intensity` IS
+   reproduced** on both instances that drive it (0.3 on `Part02`, 2 on `Flames01`), folded into
+   Brightness. `Flames01`'s distortion / dissolve-scale / `Color_Core` set is fully plumbed.
+8. **`In.EmitterAge` is threaded but unread** — see NS_PickupLoop §13.7. The three emitters that store
+   `Loop Behavior = Once` on a 0.3 s loop are `Life Cycle Mode = System`.
+9. **Every stand-in texture is a statistical match of the source paint, not a copy** (§7).
+
+---
+
+## 14. Reusable lessons
+
+1. **An `[unresolved]` is often one `[values]` block away.** `Flames`' effective spawn probability was
+   marked unresolved because the module listed no override; the store carried the number all along. Read
+   the `[values]` block before recording an unknown.
+2. **A disabled module is a decision, not an omission — and a shipped capability does not change that.**
+   Phase 2 built curl noise; this layer's curl force is off; the port leaves it off. The sibling system
+   that enables it is the evidence that the difference is deliberate.
+3. **Reproduce a probability gate rather than scaling the rate to match.** Multiplying the arrows' 4/s by
+   the mean 0.75 would give the same average density and lose the variance, which is the visible part.
+4. **Make "this layer has no curve" a test.** `Glow_03` is two modules; every neighbour has an alpha
+   envelope; the pressure to add one is real. `alpha(0.01) == alpha(0.99)` costs one line and holds.
+5. **Count, do not assert, inside a four-thousand-sample loop.** The per-slot gate agreement is one
+   assertion over a counter, not four thousand formatted ones — the difference between a readable red run
+   and an unreadable one.

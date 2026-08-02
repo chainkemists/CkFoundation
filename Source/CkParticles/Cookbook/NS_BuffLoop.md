@@ -5,10 +5,27 @@ Schema and evidence-tag conventions: [README.md](README.md). Exemplars: [NS_Basi
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 28, `BuffLoop`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior id is allocated, no `.ush` exists, no cadence row was added, no look was authored, no
-asset was generated, nothing was built and nothing was rendered.
+§1–6 are archaeology against the extracted corpus, re-verified against the v3 sidecar at implementation
+time. **Two corrections were made in place:**
+
+1. **§5's Flares parenthetical had the adjust flags backwards** — it claimed only `AdjustHue` was set. The
+   corpus sets all four, so the pinned `Saturation Range (0.2, 0.2)` and `Alpha Scale Range (0.13, 0.13)`
+   are LIVE, not inert.
+2. **The per-emitter `Color.Scale Alpha` values were missing** (§2). Only `Glow_01` is off 1 here, so this
+   system escaped lightly; its Heal and Debuff siblings did not.
+
+§6.1's `[P0-D3 STOP]` is RESOLVED: campaign decision **[P0-D4]** routed the four rate-only Loop systems
+through Phase 2's C2 spawn-rate rows, and **route (A)** — a real spawn rate on the cadence row plus a
+rate-weighted partition — is what shipped. Route (B), the 96-particle burst approximation §6.1 named as
+the anti-pattern, was never on the table.
+
+§6.5 gap 5 (the vortex) resolved WITHOUT curl noise: the source force is a plain tangential vortex, so it
+has an exact closed form. See §9.4.
+
+§7 onward is what was actually built.
 
 ---
 
@@ -88,6 +105,13 @@ arithmetic, `[inferred]` from the rate × lifetime products, not a corpus value.
 
 **Two forces/modules with no CkParticles analogue appear here** — `Vortex Force` (`Sparkles_Spiral`)
 and `Scale Sprite Size by Speed` (`Sparkles_Stretched`). Both are expressible as behavior math (§6.5).
+
+**`Color` module `Scale Alpha` per emitter `[corpus]`** — from the `[values]` blocks, added at
+implementation time because §5 does not carry them: `Glow_01` **0.5**; every other emitter that has a
+`Color` module resolves **1** (`Raimbow`, `Arrow`, `Stars`, `Sparkles_Stretched`, `Glow_02`,
+`Sparkles_01`, `Sparkles_Spiral`). `Flares` has no `Color` module — its alpha comes from the HSV
+`Alpha Scale Range` and the `Scale Color` module. This system is the batch's least affected by the
+omission; its Heal and Debuff siblings are not.
 
 The `[values]` blocks again carry Rapid-Iteration entries for **disabled** modules
 (`Stars` → `Scale Sprite Size 001` and `Sprite Rotation Rate` are both DISABLED; their curve
@@ -236,7 +260,12 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
   Direct-Set its colour. Parameters: `Color RGBA(1, 0, 0.00672436, 1)` (the base),
   `Hue Shift Range (0.5, 0.8)`, `Saturation Range (0.2, 0.2)`, `Value Range (1, 1)`,
   `Alpha Scale Range (0.13, 0.13)`, `Color Minimum RGBA(0,0,0,1)`, `Color Maximum RGBA(1,1,1,1)`.
-  (`AdjustHue = true`, `AdjustSaturation/Value/Alpha = false` per the module's flags.)
+  **CORRECTED `[corpus]` (2026-08-02):** all FOUR adjust flags are `true` —
+  `AdjustHue`, `AdjustSaturation`, `AdjustValue` AND `AdjustAlpha`. The earlier parenthetical claimed the
+  last three were false, which would have made the pinned `Saturation Range (0.2, 0.2)` and
+  `Alpha Scale Range (0.13, 0.13)` inert; they are not. Since the base colour is a pure hue (saturation and
+  value both 1), the "range replaces" and "range scales" readings coincide, so the correction is
+  unambiguous: saturation resolves to 0.2 and the alpha is scaled by 0.13.
 - Lifetime `[corpus-v3]` — **`Lifetime Min 1.0 / Max 2.0` drives**; the `RandomRangeFloat 0.2 / 0.4`
   override is inert. The worst of the five conflicts resolves in favour of the **long** drifting
   flare (see §2).
@@ -424,4 +453,248 @@ recorded fidelity losses, not free simplifications.
 
 ---
 
-## 7+. Reserved for implementation — sections 7–14 per [README.md](README.md) are written by the session that implements this effect.
+## 7. Textures — one new bake, and it is the library's first polygon
+
+§6.4 asked for five new bakes plus the colour LUT. **One was needed.** Four of the five source paints had
+already been measured off the same corpus PNG by an earlier batch:
+
+| Source paint | Stand-in | Measured in |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | NS_BasicAttack §7 |
+| `T_VFX_Part_02` | `SoftParticleBright` | NS_FireBall_Hit §7 |
+| `T_VFX_Part_04` | `SparkStreak` | NS_BasicAttack §7 |
+| `T_VFX_Star_01` | `StarFour` | NS_FireBall_Hit §7 |
+| `T_VFX_Ring_02` | `RingFlare` | NS_FireBall_Hit §7 |
+| `T_VFX_Noise_02` | `TileNoise` | NS_BasicAttack §7 |
+| `T_VFX_LUT_Rainbow_01` | `LutRainbow` baked, **not bound** ([P1-D1], §13.2) | Phase 1 C3 |
+| **`T_VFX_Arrow_01`** | **`ArrowChevron` — NEW** | this recipe |
+
+### 7.1 `T_VFX_Arrow_01` → `T_CkParticles_ArrowChevron`
+
+**Reuse was measured first and there was no candidate at all.** Every mask in the library is radial,
+streaked, or noise; not one has a straight edge, and this paint has four. That is a structural
+disqualification, not a threshold call.
+
+Measured off the 512² corpus PNG (greyscale — R = G = B, alpha flat 1):
+
+| Statistic | Measured |
+|---|---|
+| Horizontal mirror correlation about u = 0.5 | **0.99999996** — symmetric to six decimals |
+| Vertical mirror correlation | **−0.024** — no vertical symmetry at all |
+| Lit extent | u 0.205 … 0.793, **v 0.207 … 0.559** — the shape occupies the UPPER HALF only |
+| Coverage above 0.02 | 23.5 % of the square |
+| Peak | 1.0, reached over a solid interior |
+
+Tracing the **half-intensity contour** gives a quadrilateral, not a curve — the arm's leading edge runs
+straight at du/dv ≈ −1.48 from the apex, turns a corner, and closes on a tip:
+
+| Corner | uv |
+|---|---|
+| outer apex (on the centreline) | (0.5000, 0.2666) |
+| outer corner where the leading edge turns | (0.2637, 0.4189) |
+| arm tip | (0.3242, 0.5010) |
+| inner apex — the notch between the arms | (0.5000, 0.3914) |
+
+Regressing intensity against the **signed distance** to that quad (mirrored into the left half) fits a
+two-term exponential over the whole −0.03 … +0.21 range:
+
+```
+I(d) = saturate(0.4222 * exp(-49.0 * d) + 0.0650 * exp(-12.5 * d))
+```
+
+**RMSE 0.0047** across 22 distance bands. The two terms are physically distinct: the fast one is the
+paint's own edge (half-value ~0.010 from the contour) and the slow one is its wide, low-amplitude halo,
+which a single exponential cannot carry — a one-term fit is 4x worse on the tail.
+
+Bake kind `Mask` (512² greyscale, `SRGB=false`, `TC_VectorDisplacementmap`), like every other shape paint.
+
+---
+
+## 8. Mesh
+
+**None.** All nine source renderers are sprites: seven camera-facing and two velocity-aligned.
+
+---
+
+## 9. The behavior — `Behavior_BuffLoop.ush` + `ExecuteStage_CPU` case 28
+
+### 9.1 The cadence row
+
+| Field | Value | Source |
+|---|---|---|
+| `LoopDuration` | 2.0 s | the SYSTEM's `Loop Behavior = Infinite`, `Loop Duration = 2` ([P0-D1]) |
+| `ParticleLifetime` | 2.0 s | Glow_01's Direct-Set 2.0 and Flares' 2.0 maximum |
+| `BurstCount` | 0 | there is no burst module anywhere in the system |
+| `SpawnRate` | 48 /s | 2+1+3+2+10+4+10+6+10 — the densest row in the cookbook |
+
+### 9.2 The partition
+
+A weighted draw against `CkParticles_Rand(Seed, 0)` over cumulative rate shares in the source's emitter
+order — see NS_PickupLoop §9.2 for why a modulus cannot serve a rate-only source. Worst per-layer
+deviation over 400 000 seeds: **0.00092**.
+
+### 9.3 Per-layer notes worth the reader's time
+
+- **`Arrow` composes TWO placement terms**: a cylinder at radius 120 / height 150 lifted +30, and
+  Initialize Particle's own `Position Offset (0, 0, -119.316)`. Dropping either puts the whole stream in
+  the wrong place; the test asserts the layer opens below the origin.
+- **`Stars` has two DISABLED modules** (`Scale Sprite Size 001` and `Sprite Rotation Rate`) whose curves
+  are in the store. The BuffCast sibling has the rotation one ENABLED, so this is a real per-system
+  difference rather than an export artefact — implementing it would import the wrong system's behaviour.
+  §11 asserts Stars never rotate.
+- **`Arrow`'s authored `Sprite Rotation` is inert** on a velocity-aligned renderer and is deliberately not
+  written.
+- **`Sparkles_Stretched`** derives its speed-driven length from the same closed-form velocity the position
+  integral uses (threshold 1000 units/s, up to 1.7x).
+- **`Flares`** now takes the corrected four-flag HSV reading: the red base rotates 0.5–0.8 around the hue
+  circle — into the cyans and blues — at a pinned 0.2 saturation.
+
+### 9.4 The Vortex Force — a plain vortex, solved in closed form, NOT curl noise
+
+§6.5 gap 5 warned this layer would "cost real derivation time or be approximated as a parametric helix".
+The source settles it: `Vortex Force` with `Vortex Axis (0,0,1)`, `Vortex Force Amount 15881.6`,
+`Influence Falloff Radius 100` and **`Origin Pull Amount 0`** is a purely TANGENTIAL acceleration about a
+fixed axis. Phase 2's C10 curl-noise helper is therefore not used here — it would model a different force.
+
+Because the pull is zero the radius is invariant, so the whole force reduces to an angle:
+
+- angular acceleration at the particle's own spawn radius, `α = 15881.6 · Falloff(r₀) / max(r₀, 10)`
+- the layer's `Scale Velocity` curve `S(u)` damps whatever velocity the force builds, so the angular
+  velocity is `α · u · S(u)` in normalized life
+- the angle is its exact integral, `θ(t) = θ₀ + α · Life² · ∫₀^u τ·S(τ) dτ`
+
+`S` is piecewise linear, so that integral has a closed form (`CkParticles_BuffLoop_SwirlIntegral`, ~15
+lines, mirrored exactly). Nothing is stepped, so the path is a pure function of (spawn, Age, Seed) and
+GPU and CPU cannot drift — the same discipline `Behavior_Slash`'s velocity integrals follow.
+
+Measured over 24 seeds, the mean swirl over the first 0.28 s is **0.66 rad ≈ 38°** — a visible quarter- to
+half-turn, not a blur and not a rounding artefact.
+
+**The falloff law is `[inferred]`**: `Falloff(r) = saturate(1 − r/100)`. Niagara's own falloff curve lives
+in a module graph the corpus does not export, and this is the simplest law consistent with the single
+exported number. Recorded in §13.3; the lever-arm floor of 10 units is a singularity guard (a tangential
+force has no defined direction ON the axis), not a tuning.
+
+---
+
+## 10. Looks and renderers
+
+Seven row-declared renderers on VisTags **84–90** — five camera-facing sprites and two velocity-aligned,
+matching the source's own alignment split.
+
+| VisTag | Kind | Look | Source material | New? |
+|---|---|---|---|---|
+| 84 | CameraFacingSprite | `PartDisAdd01` | `M_VFX_DisAdd_Part01` | reused |
+| 85 | CameraFacingSprite | `RainbowDisAdd` | `M_VFX_DisAdd_Rainbow` | reused |
+| 86 | VelocityAlignedSprite | `ArrowsDisAdd` | `M_VFX_DisAdd_Arrows` | **NEW** — `CkUsf_LoopLooks_Assets.as` |
+| 87 | CameraFacingSprite | `StarDisAdd01` | `M_VFX_DisAdd_Star01` | reused |
+| 88 | VelocityAlignedSprite | `PartDisAdd04` | `M_VFX_DisAdd_Part04` | reused |
+| 89 | CameraFacingSprite | `PartDisAdd01Bright` | `M_VFX_DisAdd_Part01_Bright` | reused |
+| 90 | CameraFacingSprite | `PartDisAdd02` | `M_VFX_DisAdd_Part02` | reused |
+
+`ArrowsDisAdd` is Brightness 10 / Opacity_Boldness 1 over the new `ArrowChevron` paint, everything else
+inherited from the `Part01` reference. It is **shared with NS_DebuffLoop**, where two more emitters draw
+through it — three source emitters, one look.
+
+`Get_BehaviorLookName(28)` stays `NAME_None`: every look rides a row renderer that binds it explicitly.
+
+---
+
+## 11. Tests
+
+`Test_Particles_BuffLoopBehavior.cpp` + the `NumBehaviors` 26 → 30 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+- **The rate-share sweep** over 400 000 seeds, every layer within **0.004** of its source share.
+- **The vortex is asserted in two halves, and both can fail independently:** the planar radius must be
+  invariant between t = 0.01 and t = 0.29 (Origin Pull 0 — a curl-noise or inward-pulling implementation
+  fails this), and the polar angle must actually advance on every sampled particle (an inert one fails
+  that). The mean swirl is required above 0.1 rad, and **`Sparkles_01` is the control** — same cylinder
+  shape, same velocity range, no force, so its total swirl must be zero.
+- **`Stars` never rotates** — the disabled-module claim made falsifiable, and it is the one the BuffCast
+  sibling would tempt a reader to break.
+- **`Arrow` spawns below the origin** (the two composed placement terms) and draws a taller-than-wide quad.
+- **Flares**: hue varies per particle — asserted on the **recovered hue**, not on a colour channel
+  (§14.7). The brightest channel is exactly 1 and the darkest exactly 0.8, which is the corrected pinned
+  0.2 saturation. Alpha bounded both sides against 0.13 × 0.125.
+- Plus the standard per-layer anti-vacuity and death checks.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **BUFF LOOP**.
+
+> **This pair is a STEADY-STATE comparison, not a synced replay.** `NS_BuffLoop` is an INFINITE system: it
+> never finishes, so the harness's `OnSystemFinished` re-arm never fires and the two sides are never in
+> phase. Judge density, palette and motion character over a few seconds; do NOT expect matched frames.
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | a dense warm buff column rising off the ground — the busiest effect in the batch, and still not pulsing |
+| b | Density | ~48 live particles; three of the nine layers spawn at 10/s each |
+| c | **Spiral** | one of the three sparkle streams visibly WINDS around the vertical axis while the other two go straight up. Roughly a third to a half turn over a particle's life. **If nothing spirals, the vortex is inert; if the spiral also drifts inward or outward, the radius is not being preserved** |
+| d | Arrows | chevrons rising and stretching along their motion, warm at spawn and deep orange as they fade |
+| e | Sparkles | one round stream and one stretched stream, the stretched one collapsing to a fifth of its length by 10 % of life |
+| f | Stars | four-point stars rising fast — and **not rotating** (§13.6) |
+| g | Glows | two shells at 500 and 300 units, the 500 at half coverage |
+| h | Flares | a faint PALE CYAN-TO-BLUE haze. The source's base colour is red; the hue shift of 0.5–0.8 is what turns it. If it reads red, the hue randomization is not running |
+| i | Rainbow ring | ships against a WHITE ramp (§13.2) — the known [P1-D1] hold |
+| j | World space | move the pedestal mid-effect if you can (§13.5) |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **The layer partition is a weighted draw, not per-emitter independent spawning** — see NS_PickupLoop
+   §13.1.
+2. **The Rainbow layer ships against a WHITE ramp** — campaign decision **[P1-D1]**. Reverses in one token.
+3. **The vortex falloff law is `[inferred]`** (§9.4): `saturate(1 − r/100)` from the single exported
+   `Influence Falloff Radius 100`. Niagara's own curve is in an unexported module graph. The swirl's
+   CHARACTER (tangential, radius-preserving, decaying with the velocity curve) is exact; its magnitude
+   scales with this law, so it is the one dial to reach for if the spiral reads too tight or too slack.
+4. **The swirl is positional.** `O.Velocity` carries the source's Add-Velocity climb, as the source's own
+   velocity attribute does; the vortex's tangential contribution is folded into position rather than
+   written back into velocity. Nothing downstream in this port reads velocity for this layer (its renderer
+   is camera-facing), so the difference is not observable here — but it would be on a velocity-aligned one.
+5. **World space.** All nine source emitters are `LocalSpace: false`; the template is local space. §6.5
+   gap 7 asks the maintainer to judge which is preferable for a buff attached to a moving character.
+6. **`Stars`' two disabled modules are NOT implemented**, deliberately — including the rotation rate its
+   BuffCast sibling enables.
+7. **Unplumbed family parameters:** `Core_Intensity` (1 on `Part01_Bright`, which serves two layers — §6.3
+   flags this as the one that matters most here), `Gradient_Invert`, `Opacty_StepAdd`, `Opacty_DepthFade`.
+   **`Glow_Intensity 0.3` on `Part02` IS reproduced**, folded into Brightness.
+8. **`In.EmitterAge` is threaded but unread** — see NS_PickupLoop §13.7.
+9. **Every stand-in texture is a statistical match of the source paint, not a copy** (§7).
+
+---
+
+## 14. Reusable lessons
+
+1. **Read the force's parameters before reaching for the noise solver.** C10's curl noise was built for
+   this phase and this layer did not need it: `Origin Pull Amount 0` on a fixed-axis vortex collapses the
+   whole force to an angle, and the angle has a closed form. A capability existing is not a reason to
+   spend it.
+2. **A closed form beats a step count even when a step count is available.** C10's `CurlPath` is stateless
+   but still costs 16 iterations of 12 Fbm evaluations; this layer's exact integral is fifteen lines and
+   is not an approximation at all.
+3. **Assert a force in two halves that can fail independently.** "Radius invariant" and "angle advances"
+   together pin down a tangential vortex; either alone is satisfied by something wrong.
+4. **A control layer is worth more than a tighter tolerance.** `Sparkles_01` shares the spiral's cylinder
+   and velocity range and carries no force, so "only Sparkles_Spiral swirls" is a claim about the
+   PARTITION as much as about the force.
+5. **A structural statistic can disqualify every reuse candidate at once.** `T_VFX_Arrow_01` has straight
+   edges; nothing in the library does. That is one sentence of measurement instead of eight correlations.
+6. **Two exponentials, not one, for a paint with a halo.** The chevron's edge and its wide low-amplitude
+   glow have decay rates 4x apart; fitting them together is what got the RMSE to 0.0047.
+7. **Never assert "the hue varies" on a colour CHANNEL.** This batch's one gate failure was exactly that,
+   and the assertion was UNSATISFIABLE rather than merely tight. HSV→RGB hands the pinned Value to a
+   different channel in each 60° sector, so a layer whose hue band sits inside one or two sectors holds a
+   channel exactly constant while the hue varies fine — this layer's band is [0.4989, 0.7989], which is
+   sectors 3 and 4 plus 0.37 % of sector 2, and **blue is the Value across all of it** (measured minimum
+   0.99867 over 20 000 seeds, so the bucket key was a single value for every possible seed). The trap has a
+   second edge the failure did not show: on a layer whose `Saturation Range` is a real range, a channel key
+   varies even when the hue does NOT, so it would have passed against a dead hue shift. **Invert the
+   conversion and bucket the recovered hue** — saturation- and value-independent by construction. Measured
+   after the fix: 82 / 102 / 93 distinct half-degree hues on the three HSV layers, and exactly **1** with
+   the shift removed. The Cast siblings in batch D carry the same colour mode; use the same key.
