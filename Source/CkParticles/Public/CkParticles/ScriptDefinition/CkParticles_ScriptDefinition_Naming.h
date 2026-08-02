@@ -89,11 +89,12 @@ namespace ck::particles
     // renderers the shared set cannot express declares its OWN renderers on its cadence row instead, and the
     // builder emits them for that row only — no other template gains a renderer it never asked for.
     //
-    // Four kinds cover what a recreation actually needs beyond the shared set: a mesh renderer carrying ONE named
-    // generated mesh drawn with ONE named CkUsf look, and the three sprite quads Niagara distinguishes by its
-    // alignment/facing pair. Every kind binds the look master EXPLICITLY (not through User.SpriteMaterial),
-    // because a row that declares several renderers needs a different material on each and one user parameter
-    // cannot carry them.
+    // Five kinds cover what a recreation actually needs beyond the shared set: a mesh renderer carrying ONE named
+    // generated mesh drawn with ONE named CkUsf look, the three sprite quads Niagara distinguishes by its
+    // alignment/facing pair, and the ribbon (which a row declares on its SECOND emitter — see the ribbon-emitter
+    // spec below, never in this list). Every kind binds the look master EXPLICITLY (not through
+    // User.SpriteMaterial), because a row that declares several renderers needs a different material on each and
+    // one user parameter cannot carry them.
     // ----------------------------------------------------------------------------------------------------------
     enum class ECk_ParticlesRenderer_Kind : uint8
     {
@@ -101,6 +102,7 @@ namespace ck::particles
         CameraFacingSprite,    // billboarded at the camera; Particles.SpriteRotation spins it in screen space
         VelocityAlignedSprite, // stretch is Particles.SpriteSize.y along motion
         CustomFacingSprite,    // quad fixed in SIM space: SpriteAlignment is its up axis, SpriteFacing its normal
+        Ribbon,                // trail linking the emitter's particles in spawn order; ribbon-emitter specs ONLY
     };
 
     struct FCk_ParticlesRendererSpec
@@ -115,6 +117,50 @@ namespace ck::particles
         // Particles.SubImageIndex over an X*Y sheet whose valid frames are 0 .. (X*Y - 1).
         FIntPoint    SubImageSize = FIntPoint(0, 0);
     };
+
+    // ----------------------------------------------------------------------------------------------------------
+    // Ribbon emitter.
+    //
+    // A ribbon renderer has NO RendererVisibility and no RendererVisibilityTagBinding (verified against
+    // NiagaraRibbonRendererProperties.h in the 5.7 fork — the whole class carries neither), so it cannot be
+    // VisTag-gated the way every other kind is: one added to the shared emitter would link EVERY particle on that
+    // template into ribbons. A ribbon-bearing row therefore declares a SECOND emitter that carries only the ribbon
+    // spawn stack and the ribbon renderer(s) — separate emitter, separate particle population, which is Niagara's
+    // own answer to the same question.
+    //
+    // The two populations run the SAME behavior id off the same User parameters; they are told apart by a SEED
+    // BANK. The ribbon emitter's graph adds RibbonSeedBase to the UniqueID -> Seed wire, so a behavior detects the
+    // bank from the Seed it already receives and no DI signature changes; its per-particle math then runs on
+    // LocalSeed = Seed - RibbonSeedBase, which is the ribbon particle's own spawn index.
+    //
+    // Cadence: the loop duration and particle lifetime are the ROW's (both emitters run the same template clock);
+    // only the spawn stack differs, so a ribbon spec states its own burst and/or rate and nothing else.
+    //
+    // Renderer bindings the builder makes, both onto attributes the DI ALREADY writes:
+    //   - width  <- Particles.SpriteSize. RibbonWidthBinding reads ONE float at the bound attribute's offset, so
+    //     binding the Vec2 gives the ribbon Size.x and a behavior sizes its trail the way it sizes a sprite.
+    //   - ribbon id <- Particles.MeshIndex. A ribbon renderer separates concurrent trails by RibbonIdBinding, and
+    //     MeshIndex is the only per-particle int the stage already outputs that no ribbon renderer otherwise reads
+    //     (it selects a carrier mesh, and ribbons have none). A ribbon behavior writes its trail index there.
+    // Link order stays Niagara's default bLinkOrderUseUniqueID, so link order IS spawn order IS path order.
+    // A ribbon renderer has no SubImageSize at all, so no ribbon row can carry a flipbook.
+    // ----------------------------------------------------------------------------------------------------------
+    struct FCk_ParticlesRibbonEmitterSpec
+    {
+        float SpawnRate  = 0.0f;
+        int32 BurstCount = 0;
+
+        // Ribbon-kind renderers only. Empty means the row declares no ribbon emitter at all.
+        TArrayView<const FCk_ParticlesRendererSpec> Renderers;
+
+        auto Get_IsDeclared() const -> bool { return Renderers.Num() > 0; }
+    };
+
+    // Bit 30: high enough that no plausible Particles.UniqueID reaches it, low enough that base + id stays a
+    // POSITIVE int32 (the Seed wire is an int pin, and a negative seed would hash into the main emitter's bank).
+    // Mirrored as CKPARTICLES_RIBBON_SEED_BASE in Shaders/CkParticles/Common.ush and in the CPU mirror's
+    // NDICkParticlesLocal::IsRibbonSeed / LocalSeed — the three must move together.
+    inline constexpr int32 RibbonSeedBase = 0x40000000;
 
     // Vefects NS_BasicAttack: four crescent-mesh slash layers, each with its own DissolveAdd look, plus the
     // velocity-aligned spark sprite. VisTags continue after the shared set (recipe Cookbook/NS_BasicAttack.md §6).
@@ -495,6 +541,10 @@ namespace ck::particles
         // the sub-particle remainder across frames. Trails the renderer list so adding it left every existing row's
         // aggregate initializer untouched.
         float        SpawnRate = 0.0f;
+
+        // The row's SECOND emitter, carrying its ribbon spawn stack and ribbon renderers (see the spec above).
+        // Default-empty, and trailing for the same reason SpawnRate is: a row that draws no trail states nothing.
+        FCk_ParticlesRibbonEmitterSpec RibbonEmitter;
     };
 
     inline auto Get_TemplateSpecs() -> TArrayView<const FCk_ParticlesTemplateSpec>
@@ -570,6 +620,11 @@ namespace ck::particles
         for (const auto& Spec : Get_TemplateSpecs())
         {
             for (const auto& Renderer : Spec.RendererOverrides)
+            { Max = FMath::Max(Max, Renderer.VisTag); }
+
+            // Niagara does not gate a ribbon renderer on the tag, but its particles still write one, so the
+            // ribbon emitter's renderers allocate from the same ledger as every other row renderer.
+            for (const auto& Renderer : Spec.RibbonEmitter.Renderers)
             { Max = FMath::Max(Max, Renderer.VisTag); }
         }
         return Max;

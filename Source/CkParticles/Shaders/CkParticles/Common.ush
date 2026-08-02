@@ -85,6 +85,31 @@ float CkParticles_Rand(int Seed, int Salt)
     return float(n & 0x00FFFFFFu) / 16777216.0; // 24-bit -> [0,1), float-exact
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Seed bank — which EMITTER a particle came from.
+//
+// A ribbon-bearing template carries a second emitter (the ribbon renderer has no visibility tag, so it cannot share
+// the main emitter's particle soup). Both emitters run the same behavior id, and the ribbon one's graph adds this
+// base to its UniqueID -> Seed wire, so a behavior reads the bank straight off the Seed it already receives.
+//
+// LOCKSTEP: the same value is ck::particles::RibbonSeedBase in CkParticles_ScriptDefinition_Naming.h (the builder
+// wires it) and NDICkParticlesLocal::IsRibbonSeed / LocalSeed in CkParticles_DataInterface.cpp (the CPU mirror).
+// Bit 30, so base + UniqueID stays a positive int and the two banks never overlap.
+// --------------------------------------------------------------------------------------------------------------------
+#define CKPARTICLES_RIBBON_SEED_BASE 1073741824
+
+bool CkParticles_IsRibbonSeed(int Seed)
+{
+    return Seed >= CKPARTICLES_RIBBON_SEED_BASE;
+}
+
+// The particle's index WITHIN its own bank — a ribbon particle's spawn order along its trail, unchanged for
+// everything on the main emitter.
+int CkParticles_LocalSeed(int Seed)
+{
+    return Seed >= CKPARTICLES_RIBBON_SEED_BASE ? Seed - CKPARTICLES_RIBBON_SEED_BASE : Seed;
+}
+
 // Uniformly distributed unit vector on the sphere, deterministic per Seed.
 float3 CkParticles_RandDir(int Seed)
 {
