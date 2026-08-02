@@ -965,6 +965,22 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
+    // T_VFX_Noise_06 stand-in — the sparsest paint in the pack. Measured against all four noises already baked and
+    // none of them fits: the best roll-aligned correlation to any of them is 0.11, against 1.000 for the Wind pair.
+    // What sets it apart is a hard FLOOR, not a spectrum: 42.8% of it is exactly black, so a dissolve driven by it
+    // clears in isolated patches rather than eroding everywhere at once, and its p99 sits at 0.84 where the other
+    // noises sit near white. The bake is therefore the library's ordinary value-noise Fbm CUT at a threshold and
+    // re-gained, with both constants fitted to the measured distribution rather than chosen.
+    static auto Px_TileNoiseSparse(float U, float V) -> FLinearColor
+    {
+        constexpr float Tiles     = 32.0f; // measured 7 px (u) / 11 px correlation half-decay, isotropic within a bin
+        constexpr float Threshold = 0.47f; // lands the measured 0.428 black fraction
+        constexpr float Gain      = 1.90f; // lands the measured p90 0.459 and 8.5% coverage above 0.5
+        const float N = Fbm(U * Tiles, V * Tiles, 2, int32(Tiles));
+        const float I = Saturate((N - Threshold) * Gain);
+        return FLinearColor(I, I, I, I);
+    }
+
     // ---- Bake one texture asset from a per-pixel function -----------------------------------------------------------
     using FPxFn = FLinearColor (*)(float, float);
 
@@ -1125,6 +1141,10 @@ namespace ck::particles_editor
             // NS_Lightning_Cast.md §7). One new bake again: the bolt atlas, and it is the first sheet in the
             // library whose four frames are independent realizations rather than one shape stepping.
             { TEXT("T_CkParticles_LightningSheet"),     ECk_VfxTextureKind::MaskSheet, &Px_LightningSheet },
+            // The Vefects projectile-trail paints (recipes NS_FireBall_Projectile.md §7, NS_Bomb_Projectile.md §7).
+            // One new bake: the sparse dissolve noise. The trail's SHAPE paint needed none — T_VFX_Wind_02 is
+            // T_VFX_Wind_03 rolled 141 rows, which WindBandMid already carries.
+            { TEXT("T_CkParticles_TileNoiseSparse"),    ECk_VfxTextureKind::Mask,      &Px_TileNoiseSparse },
         };
 
         auto Ok = 0;
