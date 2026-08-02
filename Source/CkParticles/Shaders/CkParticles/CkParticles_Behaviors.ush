@@ -52,6 +52,7 @@
 #include "/CkParticles/Behaviors/Behavior_ExplosionOmni.ush"
 #include "/CkParticles/Behaviors/Behavior_ExplosionOmniIce.ush"
 #include "/CkParticles/Behaviors/Behavior_BombExplosion.ush"
+#include "/CkParticles/Behaviors/Behavior_LightningHit.ush"
 
 FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
 {
@@ -99,6 +100,7 @@ FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
     if (In.BehaviorId == 42) { return CkParticles_Behavior_ExplosionOmni(In); }
     if (In.BehaviorId == 43) { return CkParticles_Behavior_ExplosionOmniIce(In); }
     if (In.BehaviorId == 44) { return CkParticles_Behavior_BombExplosion(In); }
+    if (In.BehaviorId == 45) { return CkParticles_Behavior_LightningHit(In); }
 
     // BehaviorId 0 (and any unknown id) -> Gravity.
     return CkParticles_Behavior_Gravity(In);

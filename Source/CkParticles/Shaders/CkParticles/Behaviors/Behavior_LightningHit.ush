@@ -1,0 +1,771 @@
+// /CkParticles/Behaviors/Behavior_LightningHit.ush — BehaviorId 45.
+//
+// Faithful re-port of Vefects NS_Lightning_Hit. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Lightning_Hit.md — every number below is a source value from §2/§5, not a tuning.
+//
+// Twenty-two emitters over a Loop-Once 2.0 s system: the widest single system in the cookbook. It draws
+// through every renderer class the pipeline has — eight camera sprites, four of them on 2x2 flipbooks in the
+// source's TWO different sub-UV modes; three custom-facing ground quads; one velocity-aligned streak; four
+// meshes over three carriers; and the LightningArc ribbon pair.
+// PS_CkParticles_Template_LightningHit is 2.0 s loop / 1.3 s lifetime / burst 84, with a ribbon emitter
+// bursting 30 arc points.
+//
+// The impact sprays along +Z, the roster's ImpactBurst convention. The two arcs are the exception and fire
+// along +X, exactly as they do in NS_Lightning_Muzzle.
+//
+// ---- Two populations that are NOT bursts in the source -----------------------------------------------------
+//
+// Lightning_02 has no burst module at all: its Spawn Rate falls 10 -> 0 across its own 0.5 s window, which
+// integrates to 2.5 particles. [P3-G8] inverts that CDF instead of reading the emitter clock — point i of
+// three is released at 0.5*(1 - sqrt(1 - (i + 0.5)/2.5)), the same midpoint convention the arcs use, so the
+// third point lands exactly at the window edge where the source's rate has already reached zero.
+//
+// The arcs are byte-identical to NS_Lightning_Muzzle's (verified emitter-block diff: zero lines), so their
+// branch is a direct transcription of Behavior_LightningMuzzle.ush's — the same solved release times, the
+// same curl advection, the same ribbon-id split. Their 45 degree cone mask and 1000 unit/s Speed Limit are
+// both inert (`Mask Curl Noise = false`, `Clamp Velocity = false`).
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 45) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_LH_BURST_SLOTS   84
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2). 241 rides the row's
+// SECOND emitter, the ribbon one.
+#define CKP_LH_VIS_GROUNDGLOW  225
+#define CKP_LH_VIS_PART01      226
+#define CKP_LH_VIS_PART01BR    227
+#define CKP_LH_VIS_FLARE       228
+#define CKP_LH_VIS_PART04      229
+#define CKP_LH_VIS_LIGHTNING   230
+#define CKP_LH_VIS_SPIKE       231
+#define CKP_LH_VIS_STRIP       232
+#define CKP_LH_VIS_IMPACT      233
+#define CKP_LH_VIS_RAINBOW     234
+#define CKP_LH_VIS_RING        235
+#define CKP_LH_VIS_CRACK       236
+#define CKP_LH_VIS_STAR        237
+#define CKP_LH_VIS_BUBBLE      238
+#define CKP_LH_VIS_SPIKE01     239
+#define CKP_LH_VIS_FLAMES      240
+#define CKP_LH_VIS_ARC         241
+
+#define CKP_LH_HALF_PI 1.57079632679
+
+// Lightning_02's solved trio: three release points inverted out of a rate that integrates to 2.5 particles.
+#define CKP_LH_L02_COUNT     2.5
+#define CKP_LH_L02_WINDOW    0.5
+
+// The arc ribbon. Twelve solved rate points per arc on top of one and five burst points.
+#define CKP_LH_ARC_POINTS       30
+#define CKP_LH_ARC1_COUNT       13   // 1 burst + 12 solved rate points
+#define CKP_LH_ARC_RATE_POINTS  12
+#define CKP_LH_ARC_WINDOW      0.3
+#define CKP_LH_ARC_CURL_SEED     11u  // the source's own Random Seed
+// The source figure is an ACCELERATION where CurlPath advects with a VELOCITY: the strength curve falls
+// 10000 -> 0 over the life, so its time average is 5000 and the constant-velocity path covering the same
+// ground over a life L is 0.5 * 5000 * L, divided by the MEASURED mean magnitude of this plugin's own curl
+// field over the region the arcs visit. Both figures are NS_Lightning_Muzzle's, for the same two emitters.
+#define CKP_LH_ARC_CURL_ACCEL  5000.0
+#define CKP_LH_ARC1_CURL_FREQ     0.5
+#define CKP_LH_ARC2_CURL_FREQ     1.0
+#define CKP_LH_ARC1_FIELD_MEAN 0.7400
+#define CKP_LH_ARC2_FIELD_MEAN 0.7426
+
+FCkParticles_StageOutput CkParticles_LightningHit_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// Seven emitters carry no Color module: their Initialize colour survives and one Scale Color ramps the alpha
+// linearly to zero, under one shared size curve. Byte-identical to NS_Lightning_Cast's shared fade.
+float CkParticles_LightningHit_SharedFade(float T)
+{
+    return CkParticles_Key2(T, 0.0, 1.0, 1.0, 0.0);
+}
+
+float CkParticles_LightningHit_SharedGrow(float T)
+{
+    return CkParticles_Key3(T, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+}
+
+// The five-key white -> blue-white -> deep-blue ramp seven emitters share. Emitters 7 and 12 store the SAME
+// keys at six-digit precision and are transcribed separately, verbatim, rather than folded into this.
+float3 CkParticles_LightningHit_Ramp(float T)
+{
+    return float3(
+        CkParticles_Key5(T, 0.0, 1.0,      0.074857, 1.0, 0.598853, 1.0,      0.811349, 0.287441, 1.0, 0.051269),
+        CkParticles_Key5(T, 0.0, 0.745404, 0.074857, 1.0, 0.598853, 0.147027, 0.811349, 0.040915, 1.0, 0.040915),
+        CkParticles_Key5(T, 0.0, 0.304987, 0.074857, 1.0, 0.598853, 0.982251, 0.811349, 1.0,      1.0, 1.0));
+}
+
+// The Lightning layers' Sprite Rotation Rate in degrees per second: 0 until t = 0.1, 90 until t = 0.9, then 0.
+// The accumulated angle is its exact integral in units of normalized life.
+float CkParticles_LightningHit_SpinIntegral(float T)
+{
+    const float t = saturate(T);
+    const float A = min(t, 0.1);
+    float Sum = 0.5 * A * (90.0 * A / 0.1);
+
+    if (t > 0.1)
+    {
+        const float B = min(t, 0.9);
+        Sum += 0.5 * (B - 0.1) * (90.0 + 90.0 * (0.9 - B) / 0.8);
+    }
+    return Sum;
+}
+
+// A point through the VOLUME of a +Z hemisphere (Surface Only false, so the radius takes a cube root), then
+// squashed by the module's Non Uniform Scale. A caller whose emitter leaves UseNonUniformScale false passes
+// ones — the pin is stored on several emitters here and is inert on all but Spikes and the arcs.
+float3 CkParticles_LightningHit_HemiZPoint(int Seed, float Radius, float3 Scale)
+{
+    float3 Dir = CkParticles_RandDir(Seed);
+    Dir.z = abs(Dir.z);
+
+    const float R = Radius * pow(CkParticles_Rand(Seed, 3), 1.0 / 3.0);
+    return Dir * R * Scale;
+}
+
+// Lightning_01 is the one emitter here whose Sphere Location is Surface Only, so its radius is fixed.
+float3 CkParticles_LightningHit_HemiZSurface(int Seed, float Radius)
+{
+    float3 Dir = CkParticles_RandDir(Seed);
+    Dir.z = abs(Dir.z);
+    return Dir * Radius;
+}
+
+// The +X hemisphere volume the two arcs spawn through — the only emitters in this system aimed down X.
+float3 CkParticles_LightningHit_HemiXPoint(int Seed, float3 Scale)
+{
+    float3 Dir = CkParticles_RandDir(Seed);
+    Dir.x = abs(Dir.x);
+
+    const float R = 10.0 * pow(CkParticles_Rand(Seed, 3), 1.0 / 3.0);
+    return Dir * R * Scale;
+}
+
+// Add Velocity from Point launches along the spawn offset, so the squashed shape — not the unit sphere it was
+// drawn on — sets the direction. A point drawn exactly at the origin has none, and +Z is the only direction
+// that degenerate case can mean for this system's aim axis.
+float3 CkParticles_LightningHit_RadialZ(float3 Spawn)
+{
+    const float L = length(Spawn);
+    return L > 1.0e-6 ? Spawn / L : float3(0.0, 0.0, 1.0);
+}
+
+float3 CkParticles_LightningHit_RadialX(float3 Spawn)
+{
+    const float L = length(Spawn);
+    return L > 1.0e-6 ? Spawn / L : float3(1.0, 0.0, 0.0);
+}
+
+// The quaternion carrying the carrier's local +X onto Dir. The Vefects plane mesh is built with its width on
+// X and its length on Z, and Initial Mesh Orientation aims its +X — so the strip's WIDTH axis is what the
+// source's random Orientation Vector points. CkParticles_QuatFromZTo aims +Z, so this undoes the quarter turn
+// that carries +X onto +Z first.
+float4 CkParticles_LightningHit_QuatFromXTo(float3 Dir)
+{
+    return CkParticles_QuatMul(CkParticles_QuatFromZTo(Dir),
+                               CkParticles_QuatFromAxisAngle(float3(0.0, 1.0, 0.0), -CKP_LH_HALF_PI));
+}
+
+// Where along its own 0.5 s window Lightning_02's point i is released, inverting its falling spawn rate.
+float CkParticles_LightningHit_L02Time(int Point)
+{
+    const float Fraction = (float(Point) + 0.5) / CKP_LH_L02_COUNT;
+    return CKP_LH_L02_WINDOW * (1.0 - sqrt(saturate(1.0 - Fraction)));
+}
+
+// Where along its own 0.3 s window an arc point is released. Point 0 is the burst; the rest invert the
+// source's falling spawn rate.
+float CkParticles_LightningHit_ArcTime(int RatePoint)
+{
+    if (RatePoint < 0)
+    { return 0.0; }
+
+    const float Fraction = (float(RatePoint) + 0.5) / float(CKP_LH_ARC_RATE_POINTS);
+    return CKP_LH_ARC_WINDOW * (1.0 - sqrt(saturate(1.0 - Fraction)));
+}
+
+// The two Lightning emitters are one layer drawn twice: identical size, rotation, sub-UV, colour, dissolve
+// and velocity curves, differing only in their spawn sphere and in when they are released.
+FCkParticles_StageOutput CkParticles_LightningHit_Bolt(FCkParticles_StageInput In, FCkParticles_StageOutput O,
+                                                       float PointAge, float SpawnRadius)
+{
+    const float Life = lerp(0.3, 0.5, CkParticles_Rand(In.Seed, 1));
+
+    if (PointAge < 0.0 || PointAge > Life)
+    { return CkParticles_LightningHit_Hidden(O); }
+
+    const float t = saturate(PointAge / Life);
+
+    const float3 Spawn = CkParticles_LightningHit_HemiZSurface(In.Seed, SpawnRadius);
+    const float3 V0    = CkParticles_LightningHit_RadialZ(Spawn) * lerp(350.0, 500.0, CkParticles_Rand(In.Seed, 6));
+
+    O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 3.91223e-08) * Life);
+    O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 3.91223e-08);
+
+    O.Color = float4(
+        CkParticles_Key5(t, 0.0, 1.0,      0.0748566, 1.0, 0.598853, 1.0,      0.811349, 0.287441,  1.0, 0.0512695),
+        CkParticles_Key5(t, 0.0, 0.745404, 0.0748566, 1.0, 0.598853, 0.147027, 0.811349, 0.0409152, 1.0, 0.0409152),
+        CkParticles_Key5(t, 0.0, 0.304987, 0.0748566, 1.0, 0.598853, 0.982251, 0.811349, 1.0,       1.0, 1.0),
+        CkParticles_Key5(t, 0.162994, 1.0, 0.329611, 0.0, 0.504679, 1.0, 0.746152, 0.0, 0.959855, 1.0));
+
+    // Uniform Sprite Size Min 130 / Max 100 is authored INVERTED and is transcribed as authored.
+    const float Base = lerp(130.0, 100.0, CkParticles_Rand(In.Seed, 8));
+    const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 0.8, 1.0, 1.0);
+    O.Size = float2(Base * Grow, Base * Grow);
+
+    O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+               + Life * CkParticles_LightningHit_SpinIntegral(t);
+
+    // Sub UV Animation in LINEAR mode: the run starts at frame 0 on every particle, and its declared End
+    // Frame of 4 on a four-frame sheet wraps the fifth step back onto frame 0.
+    O.SubImageIndex = fmod(min(floor(t * 5.0), 4.0), 4.0);
+
+    O.Dynamic = float4(CkParticles_Key4(t, 0.0, 1.0, 0.2, -1.0, 0.3, 0.875, 1.0, -1.0), 0.0, 0.0, 0.0);
+    O.VisTag  = CKP_LH_VIS_LIGHTNING;
+    return O;
+}
+
+// The two Flames emitters differ only in how they are launched and in two colour keys.
+FCkParticles_StageOutput CkParticles_LightningHit_Flames(FCkParticles_StageInput In, FCkParticles_StageOutput O,
+                                                        int IsFlames02)
+{
+    const float PointAge = In.Age - 0.05;
+    const float Life     = lerp(0.2, 0.7, CkParticles_Rand(In.Seed, 1));
+
+    if (PointAge < 0.0 || PointAge > Life)
+    { return CkParticles_LightningHit_Hidden(O); }
+
+    const float  t     = saturate(PointAge / Life);
+    const float3 Spawn = CkParticles_LightningHit_HemiZPoint(In.Seed, 20.0, float3(1.0, 1.0, 1.0));
+
+    // Flames_01 pushes outward off the spawn shape; Flames_02 is a straight upward jet instead.
+    const float3 V0 = IsFlames02 == 0
+        ? CkParticles_LightningHit_RadialZ(Spawn) * lerp(100.0, 700.0, CkParticles_Rand(In.Seed, 6))
+        : float3(0.0, 0.0, lerp(800.0, 1200.0, CkParticles_Rand(In.Seed, 6)));
+
+    O.Position = Spawn + V0 * (CkParticles_Int2(t, 1.0, 0.0) * Life);
+    O.Velocity = V0 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+
+    const float Head = IsFlames02 == 0 ? 0.269242 : 0.245095;
+    const float GTail = IsFlames02 == 0 ? 0.00749903 : 0.007499;
+
+    O.Color = float4(
+        CkParticles_Key2(t, Head, 0.387163,  0.82946, 0.066626),
+        CkParticles_Key2(t, Head, 0.0708376, 0.82946, GTail),
+        CkParticles_Key2(t, Head, 0.708376,  0.82946, 0.250158),
+        0.5 * CkParticles_Key3(t, 0.0, 0.0, 0.455177, 1.0, 1.0, 0.0));
+
+    const float Base = lerp(200.0, 300.0, CkParticles_Rand(In.Seed, 8));
+    const float Grow = CkParticles_Key2(t, 0.0, 0.5, 1.0, 1.0);
+    O.Size = float2(Base * Grow, Base * Grow);
+
+    // No initial Sprite Rotation on either emitter — only a rate, so the spin starts from zero.
+    O.Rotation = lerp(-45.0, 45.0, CkParticles_Rand(In.Seed, 5)) * PointAge;
+
+    // Sub UV Animation in RANDOM mode over one loop: a random start frame stepping forward through the sheet.
+    const float Start = floor(CkParticles_Rand(In.Seed, 14) * 4.0);
+    O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+    // Dynamic parameter 2 is the family's `distortion` channel, and 10 here is the only non-zero write to it
+    // anywhere in the cookbook.
+    O.Dynamic = float4(CkParticles_Key2(t, 0.0, -4.10064e-08, 1.0, -1.0), 10.0, 0.0, 0.0);
+    O.VisTag  = CKP_LH_VIS_FLAMES;
+    return O;
+}
+
+// The arc branch. Runs on the RIBBON emitter's particles only. Transcribed from Behavior_LightningMuzzle.ush,
+// whose two arc emitters diff to ZERO lines against these.
+FCkParticles_StageOutput CkParticles_LightningHit_Arc(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    // M_VFX_DisAdd_Flat02's parent declares no dynamic parameters, so the source's writes are inert.
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+    O.VisTag   = CKP_LH_VIS_ARC;
+
+    const int LocalSeed = CkParticles_LocalSeed(In.Seed);
+    const int Point     = ((LocalSeed % CKP_LH_ARC_POINTS) + CKP_LH_ARC_POINTS) % CKP_LH_ARC_POINTS;
+    const int IsArc02   = Point < CKP_LH_ARC1_COUNT ? 0 : 1;
+
+    O.MeshIndex = IsArc02;
+
+    const int Within    = IsArc02 == 0 ? Point : Point - CKP_LH_ARC1_COUNT;
+    const int BurstHead = IsArc02 == 0 ? 1 : 5;
+    const int RatePoint = Within - BurstHead;
+
+    const float SpawnTime = CkParticles_LightningHit_ArcTime(RatePoint);
+    const float Life      = lerp(0.2, 0.3, CkParticles_Rand(In.Seed, 1));
+
+    // Burst at loop start, so the particle's own age IS the loop clock the arc window is measured against.
+    const float PointAge = In.Age - SpawnTime;
+
+    const float3 Spawn = CkParticles_LightningHit_HemiXPoint(In.Seed, float3(1.0, 0.2, 0.2));
+    const float3 V0    = CkParticles_LightningHit_RadialX(Spawn) * lerp(10.0, 50.0, CkParticles_Rand(In.Seed, 6))
+                       + float3(IsArc02 == 0
+                            ? lerp(700.0,  1500.0, CkParticles_Rand(In.Seed, 11))
+                            : lerp(2500.0, 3000.0, CkParticles_Rand(In.Seed, 11)), 0.0, 0.0);
+
+    const float t = saturate(max(PointAge, 0.0) / Life);
+
+    // Arc_01 brakes to a standstill; Arc_02 keeps a fifth of its launch speed.
+    const float Tail   = IsArc02 == 0 ? 0.0 : 0.2;
+    const float Travel = CkParticles_Int2(t, 1.0, Tail) * Life;
+
+    const float Freq      = IsArc02 == 0 ? CKP_LH_ARC1_CURL_FREQ  : CKP_LH_ARC2_CURL_FREQ;
+    const float FieldMean = IsArc02 == 0 ? CKP_LH_ARC1_FIELD_MEAN : CKP_LH_ARC2_FIELD_MEAN;
+    const float Strength  = 0.5 * CKP_LH_ARC_CURL_ACCEL * Life / FieldMean;
+
+    O.Position = Spawn + V0 * Travel
+               + (CkParticles_CurlPath(Spawn, max(PointAge, 0.0), Freq, Strength, CKP_LH_ARC_CURL_SEED) - Spawn);
+    O.Velocity = V0 * CkParticles_Key2(t, 0.0, 1.0, 1.0, Tail);
+
+    if (PointAge < 0.0 || PointAge > Life)
+    { return CkParticles_LightningHit_Hidden(O); }
+
+    const float A = CkParticles_Key4(t, 0.0, 0.0, 0.220948, 1.0, 0.51313, 1.0, 1.0, 0.0);
+
+    if (IsArc02 == 0)
+    {
+        O.Color = float4(
+            CkParticles_Key2(t, 0.511923, 1.0, 0.813764, 0.584079),
+            CkParticles_Key2(t, 0.511923, 1.0, 0.813764, 0.06301),
+            1.0,
+            A);
+    }
+    else
+    {
+        O.Color = float4(
+            CkParticles_Key2(t, 0.511923, 0.135751, 0.813764, 0.570314),
+            CkParticles_Key2(t, 0.511923, 0.036,    0.813764, 0.0319999),
+            1.0,
+            0.5 * A);
+    }
+
+    // Ribbon width is ONE float read at Particles.SpriteSize's offset, i.e. Size.x.
+    const float Base  = IsArc02 == 0
+        ? lerp(7.0, 12.0, CkParticles_Rand(In.Seed, 8))
+        : lerp(2.0,  4.0, CkParticles_Rand(In.Seed, 8));
+    const float Width = Base * CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.0, 1.0, 0.4);
+
+    O.Size = float2(Width, Width);
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_LightningHit(FCkParticles_StageInput In)
+{
+    if (CkParticles_IsRibbonSeed(In.Seed))
+    { return CkParticles_LightningHit_Arc(In); }
+
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // Burst UniqueIDs are sequential, so the modulo draws exactly the source's per-emitter counts. This row
+    // declares no spawn rate, so there is one population and no spawn phase to read.
+    const int Slot = ((In.Seed % CKP_LH_BURST_SLOTS) + CKP_LH_BURST_SLOTS) % CKP_LH_BURST_SLOTS;
+
+    // ---- GroundGlow_01 / GroundGlow_02: the two flat ground decals, drawn on quads fixed in sim space by
+    // the source's Align Sprite to Mesh Orientation triple rather than billboarded ----
+    if (Slot < 2)
+    {
+        if (In.Age > 0.2)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.2);
+        const float Grow = CkParticles_LightningHit_SharedGrow(t);
+
+        O.SpriteAlignment = float3(0.0, 1.0, 0.0);
+        O.SpriteFacing    = float3(0.0, 0.0, 1.0);
+        O.VisTag          = CKP_LH_VIS_GROUNDGLOW;
+
+        if (Slot == 0)
+        {
+            // GroundGlow_01 is the only one of the two with a Color module: the ground-glow curve.
+            O.Color = float4(
+                CkParticles_Key2(t, 0.0, 0.752942, 1.0, 0.327778),
+                CkParticles_Key2(t, 0.0, 0.162029, 1.0, 0.0466651),
+                1.0,
+                CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+            O.Size    = float2(2600.0 * Grow, 2600.0 * Grow);
+            O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+            return O;
+        }
+
+        O.Color = float4(0.043735, 0.0451862, 1.0, 0.5 * CkParticles_LightningHit_SharedFade(t));
+        O.Size  = float2(4000.0 * Grow, 4000.0 * Grow);
+        return O;
+    }
+
+    // ---- Glow_01: the deep blue-violet shell. No Color module, so it holds its Initialize colour ----
+    if (Slot == 2)
+    {
+        if (In.Age > 0.25)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.25);
+        const float Grow = CkParticles_LightningHit_SharedGrow(t);
+
+        O.Color   = float4(0.0781874, 0.043735, 1.0, 0.5 * CkParticles_LightningHit_SharedFade(t));
+        O.Size    = float2(160.0 * Grow, 160.0 * Grow);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_LH_VIS_PART01;
+        return O;
+    }
+
+    // ---- Sparkles: twenty motes off a +Z hemisphere, on the STROBING seven-key alpha that blinks them out
+    // twice mid-life. Their lifetime pins are authored INVERTED (Min 1.0, Max 0.5) and the range is taken as
+    // authored — Niagara's Random Range lerps Min -> Max whichever way round they sit ----
+    if (Slot < 23)
+    {
+        const float Life = lerp(1.0, 0.5, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_LightningHit_HemiZPoint(In.Seed, 100.0, float3(1.0, 1.0, 1.0));
+        const float3 V0    = CkParticles_LightningHit_RadialZ(Spawn)
+                           * lerp(500.0, 2000.0, CkParticles_Rand(In.Seed, 6));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.05, 3.91223e-08) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.05, 1.0, 3.91223e-08);
+
+        const float3 Rgb = CkParticles_LightningHit_Ramp(t);
+
+        O.Color = float4(Rgb,
+            CkParticles_Key7(t, 0.162994, 1.0, 0.29339, 0.0, 0.347721, 0.0, 0.504679, 1.0,
+                             0.69182, 0.0, 0.767884, 0.0, 0.959855, 1.0));
+
+        const float Base = lerp(5.0, 20.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+
+        O.Size     = float2(Base * Grow, Base * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_LH_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Flare_01: the cyan lens pip, on the ground-glow colour at four tenths alpha, off a 0.1 s beat ----
+    if (Slot == 23)
+    {
+        const float PointAge = In.Age - 0.1;
+
+        if (PointAge < 0.0 || PointAge > 0.1)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t    = saturate(PointAge / 0.1);
+        const float Grow = CkParticles_LightningHit_SharedGrow(t);
+
+        O.Color = float4(
+            CkParticles_Key2(t, 0.0, 0.752942, 1.0, 0.327778),
+            CkParticles_Key2(t, 0.0, 0.162029, 1.0, 0.046665),
+            1.0,
+            0.4 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+        O.Size    = float2(320.0 * Grow, 320.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_LH_VIS_FLARE;
+        return O;
+    }
+
+    // ---- Sparkles_Stretched: ten velocity-aligned streaks. Three size modules MULTIPLY on this emitter —
+    // a uniform grow curve, a non-uniform taper on the length only, and a speed stretch that doubles the
+    // length at or past 1000 units/s. Its Sphere Location's (1, 0.2, 0.2) squash is INERT
+    // (`UseNonUniformScale = false`), so the cloud is a full hemisphere ----
+    if (Slot < 34)
+    {
+        const float Life = lerp(0.2, 0.4, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_LightningHit_HemiZPoint(In.Seed, 100.0, float3(1.0, 1.0, 1.0));
+        const float3 V0    = CkParticles_LightningHit_RadialZ(Spawn)
+                           * lerp(200.0, 2000.0, CkParticles_Rand(In.Seed, 6));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.25, -9.09372e-09) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.25, 1.0, -9.09372e-09);
+
+        O.Color = float4(CkParticles_LightningHit_Ramp(t), 1.0);
+
+        const float Width  = lerp(30.0, 50.0,  CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(120.0, 130.0, CkParticles_Rand(In.Seed, 12));
+        const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float Taper  = CkParticles_Key3(t, 0.0, 1.0, 0.3, 0.25, 1.0, 0.2);
+
+        // Scale Sprite Size by Speed: Min Scale Factor (1, 1), Max (1, 2), Velocity Threshold 1000 — length
+        // only, and the width factor is one at both ends.
+        const float SpeedFactor = lerp(1.0, 2.0, saturate(length(O.Velocity) / 1000.0));
+
+        O.Size   = float2(Width * Grow, Length * Grow * Taper * SpeedFactor);
+        O.VisTag = CKP_LH_VIS_PART04;
+        return O;
+    }
+
+    // ---- Lightning_01: three bolts on the 2x2 sheet off a SURFACE-only sphere of radius 100 ----
+    if (Slot < 37)
+    { return CkParticles_LightningHit_Bolt(In, O, In.Age, 100.0); }
+
+    // ---- Spikes: five pyramids thrown up and outward, pointed along their own velocity. They carry NO Color
+    // module, so the violet is constant for the whole 0.15 s and only the mesh scale animates — and its Z
+    // curve has no third key, so the spikes FLATTEN rather than shrinking away ----
+    if (Slot < 42)
+    {
+        if (In.Age > 0.15)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float  t     = saturate(In.Age / 0.15);
+        const float3 Spawn = CkParticles_LightningHit_HemiZPoint(In.Seed, 10.0, float3(1.0, 0.2, 0.2));
+        // The velocity-strength range is authored INVERTED (Min 200, Max 50) and is transcribed as authored.
+        const float3 V0    = CkParticles_LightningHit_RadialZ(Spawn) * lerp(200.0, 50.0, CkParticles_Rand(In.Seed, 6))
+                           + float3(0.0, 0.0, lerp(100.0, 500.0, CkParticles_Rand(In.Seed, 13)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 3.91223e-08) * 0.15);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 3.91223e-08);
+
+        // Mesh Scale's Z range is authored inverted (0.6 down to 0.4) and is transcribed as authored.
+        const float BaseZ = lerp(0.6, 0.4, CkParticles_Rand(In.Seed, 15));
+        const float Flat  = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.0, 1.0, 0.0);
+        const float Along = CkParticles_Key2(t, 0.0, 0.0, 0.2, 1.0);
+
+        O.Scale       = float3(0.1 * Flat, 0.1 * Flat, BaseZ * Along);
+        O.Orientation = CkParticles_QuatFromZTo(CkParticles_LightningHit_RadialZ(V0));
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+        O.Color       = float4(0.871367, 0.06301, 1.0, 0.5);
+        O.VisTag      = CKP_LH_VIS_SPIKE;
+        return O;
+    }
+
+    // ---- LightningStrip: three randomly oriented cards at the impact point. Its Sphere Location module is
+    // DISABLED, so every strip sits at the origin, and it adds no velocity at all — the random Orientation
+    // Vector is the only thing that separates them ----
+    if (Slot < 45)
+    {
+        if (In.Age > 0.3)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t = saturate(In.Age / 0.3);
+
+        // Orientation Vector = Random Range Vector, Minimum (1, 1, 0) ... Maximum (-1, -1, -1), authored
+        // inverted on X and Y and transcribed as authored.
+        const float3 Aim = float3(lerp(1.0, -1.0, CkParticles_Rand(In.Seed, 18)),
+                                  lerp(1.0, -1.0, CkParticles_Rand(In.Seed, 19)),
+                                  lerp(0.0, -1.0, CkParticles_Rand(In.Seed, 20)));
+
+        O.Color       = float4(0.354443, 0.2, 1.0,
+                               0.3 * CkParticles_Key3(t, 0.0, 0.0, 0.317537, 1.0, 1.0, 0.0));
+        O.Scale       = float3(lerp(2.0, 3.0, CkParticles_Rand(In.Seed, 16))
+                                   * CkParticles_Key3(t, 0.0, 0.5, 0.2, 1.0, 1.0, -1.44926e-08),
+                               1.0 * CkParticles_Key2(t, 0.0, -2.4747e-08, 1.0, 1.0),
+                               lerp(2.0, 4.0, CkParticles_Rand(In.Seed, 17))
+                                   * CkParticles_Key3(t, 0.0, -5.68323e-08, 0.2, 0.75, 1.0, 1.0));
+        O.Orientation = CkParticles_LightningHit_QuatFromXTo(CkParticles_LightningHit_RadialZ(Aim));
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+        O.VisTag      = CKP_LH_VIS_STRIP;
+        return O;
+    }
+
+    // ---- Lightning_02: the same bolt layer as a TRICKLE. Its source emitter has no burst module at all —
+    // a Spawn Rate falling 10 -> 0 over 0.5 s — so its three points carry solved release times ----
+    if (Slot < 48)
+    { return CkParticles_LightningHit_Bolt(In, O, In.Age - CkParticles_LightningHit_L02Time(Slot - 45), 30.0); }
+
+    // ---- FlareImpact: the shortest layer in the system at 0.05 s, off a 0.1 s beat. Its alpha HOLDS at one
+    // until t = 0.237851 and only then falls ----
+    if (Slot == 48)
+    {
+        const float PointAge = In.Age - 0.1;
+
+        if (PointAge < 0.0 || PointAge > 0.05)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t = saturate(PointAge / 0.05);
+
+        O.Color   = float4(0.644888, 0.2, 1.0, CkParticles_Key2(t, 0.237851, 1.0, 1.0, 0.0));
+        O.Size    = float2(130.0 * CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0),
+                           130.0 * CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0));
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_LH_VIS_IMPACT;
+        return O;
+    }
+
+    // ---- Raimbow: the lens ring, off a 0.05 s beat. Its Scale Color halves the RGB for the WHOLE life (a
+    // single key) on top of an already near-white Initialize colour ----
+    if (Slot == 49)
+    {
+        const float PointAge = In.Age - 0.05;
+
+        if (PointAge < 0.0 || PointAge > 0.1)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t    = saturate(PointAge / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+
+        const float Half = 0.5 * 0.913099;
+
+        O.Color    = float4(Half, Half, Half,
+                            0.2 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+        O.Size     = float2(500.0 * Grow, 500.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_LH_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Ring: the shockwave, off the same 0.05 s beat. It has NO colour animation at all — it holds its
+    // Initialize colour and its 0.608 alpha and leaves entirely through the dissolve ramp 0 -> -1 ----
+    if (Slot == 50)
+    {
+        const float PointAge = In.Age - 0.05;
+
+        if (PointAge < 0.0 || PointAge > 0.3)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t    = saturate(PointAge / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color    = float4(0.913099, 0.191202, 1.0, 0.608);
+        O.Size     = float2(230.0 * Grow, 230.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_LH_VIS_RING;
+        return O;
+    }
+
+    // ---- GroundCrack_01: the longest layer at a flat 1 s, flat on the ground. Its whole colour read happens
+    // in the first 13 % of that: white -> blue -> black, and then it sits there fading out ----
+    if (Slot == 51)
+    {
+        const float PointAge = In.Age - 0.1;
+
+        if (PointAge < 0.0 || PointAge > 1.0)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t    = saturate(PointAge / 1.0);
+        const float Grow = CkParticles_LightningHit_SharedGrow(t);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0, 1.0,      0.0494285, 0.361307, 0.12975, 0.00518152),
+            CkParticles_Key3(t, 0.0, 0.89627,  0.0494285, 0.152926, 0.12975, 0.00518152),
+            CkParticles_Key3(t, 0.0, 0.520996, 0.0494285, 1.0,      0.12975, 0.00913406),
+            CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+
+        O.Size            = float2(600.0 * Grow, 600.0 * Grow);
+        O.Rotation        = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic         = float4(1.0, 0.0, 0.0, 0.0);
+        O.SpriteAlignment = float3(0.0, 1.0, 0.0);
+        O.SpriteFacing    = float3(0.0, 0.0, 1.0);
+        O.VisTag          = CKP_LH_VIS_CRACK;
+        return O;
+    }
+
+    // ---- Star02: five four-point stars thrown wide, and the longest-lived layer in the system at up to
+    // 1.3 s. Its Sphere Location squash is INERT (`UseNonUniformScale = false`) ----
+    if (Slot < 57)
+    {
+        const float Life = lerp(0.9, 1.3, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_LightningHit_HemiZPoint(In.Seed, 70.0, float3(1.0, 1.0, 1.0));
+        const float3 V0    = CkParticles_LightningHit_RadialZ(Spawn)
+                           * lerp(200.0, 1500.0, CkParticles_Rand(In.Seed, 6));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.05, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.05, 1.0, 0.0);
+
+        const float Base = lerp(30.0, 50.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, -3.11599e-08, 0.1, 1.0, 1.0, 0.0);
+
+        O.Color   = float4(CkParticles_LightningHit_Ramp(t), 1.0);
+        O.Size    = float2(Base * Grow, Base * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_LH_VIS_STAR;
+        return O;
+    }
+
+    // ---- Glow_02: the magenta shell, Glow_01's twin at half its size ----
+    if (Slot == 57)
+    {
+        if (In.Age > 0.25)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.25);
+        const float Grow = CkParticles_LightningHit_SharedGrow(t);
+
+        O.Color   = float4(1.0, 0.043735, 0.83077, 0.5 * CkParticles_LightningHit_SharedFade(t));
+        O.Size    = float2(80.0 * Grow, 80.0 * Grow);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_LH_VIS_PART01;
+        return O;
+    }
+
+    // ---- Bubble_First_Explo: the single shock sphere. Its scale OVERSHOOTS to 1.5x at a fifth of its life
+    // and settles back to 1; the source's Mesh Uniform Scale 0.8 is a renderer constant, not part of this ----
+    if (Slot == 58)
+    {
+        if (In.Age > 0.15)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.15);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 1.0);
+
+        O.Color     = float4(CkParticles_LightningHit_Ramp(t), 1.0);
+        O.Scale     = float3(Grow, Grow, Grow);
+        O.MeshIndex = 0;
+        O.Size      = float2(0.0, 0.0);
+        O.VisTag    = CKP_LH_VIS_BUBBLE;
+        return O;
+    }
+
+    // ---- Spike01: five upward pyramids at the impact point. Its Cone Location is DISABLED so they all spawn
+    // at the origin, and they never move; only a near-identity per-particle tilt separates them. X and Y
+    // collapse to zero at death while Z has no third key and HOLDS at 1.5 ----
+    if (Slot < 64)
+    {
+        if (In.Age > 0.15)
+        { return CkParticles_LightningHit_Hidden(O); }
+
+        const float t     = saturate(In.Age / 0.15);
+        const float GrowX = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 4.17233e-08);
+        const float GrowY = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 5.66244e-08);
+        const float GrowZ = CkParticles_Key2(t, 0.0, 0.0, 0.2, 1.5);
+
+        // Initial Mesh Orientation carries mesh +X onto (1, 0, 0) — an identity — and then applies a Random
+        // Range Vector rotation in DEGREES, Minimum (0, 0, 1) ... Maximum (0, 0.5, -1).
+        const float4 Pitch = CkParticles_QuatFromAxisAngle(float3(0.0, 1.0, 0.0),
+            lerp(0.0, 0.5, CkParticles_Rand(In.Seed, 18)) * 0.01745329252);
+        const float4 Yaw   = CkParticles_QuatFromAxisAngle(float3(0.0, 0.0, 1.0),
+            lerp(1.0, -1.0, CkParticles_Rand(In.Seed, 19)) * 0.01745329252);
+
+        O.Color       = float4(CkParticles_LightningHit_Ramp(t), 1.0);
+        O.Scale       = float3(lerp(0.2, 0.4, CkParticles_Rand(In.Seed, 15)) * GrowX,
+                               lerp(0.2, 0.4, CkParticles_Rand(In.Seed, 16)) * GrowY,
+                               lerp(0.5, 1.5, CkParticles_Rand(In.Seed, 17)) * GrowZ);
+        O.Orientation = CkParticles_QuatMul(Yaw, Pitch);
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+        O.VisTag      = CKP_LH_VIS_SPIKE01;
+        return O;
+    }
+
+    // ---- Flames_01 / Flames_02: twenty sub-UV puffs off a 0.05 s beat, in the source's OTHER sub-UV mode
+    // (Random, not Linear) and carrying the only live `distortion` write in the cookbook ----
+    return CkParticles_LightningHit_Flames(In, O, Slot < 74 ? 0 : 1);
+}
