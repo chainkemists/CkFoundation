@@ -29,7 +29,7 @@ struct CKASSETEXPORTER_API FCk_MaterialExportResult
 class CKASSETEXPORTER_API FCk_MaterialExporter
 {
 public:
-    // Set InOutputDir for VFX-corpus mode; empty writes the sibling <Asset>.json next to the source .uasset.
+    // Set InOutputDir for VFX-corpus mode; empty writes the sibling <Asset>.ckexport next to the source .uasset.
     static auto ExportMaterial (UMaterialInterface* InMaterial, const FString& InOutputDir = FString{}) -> FCk_MaterialExportResult;
     static auto ExportMaterials(const TArray<UMaterialInterface*>& InMaterials) -> TArray<FCk_MaterialExportResult>;
 

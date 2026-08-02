@@ -113,9 +113,9 @@ auto
 
             InSection.AddMenuEntry(
                 "ExportEQS_JsonAndText",
-                LOCTEXT("ExportEQS_Label", "Export EQS to JSON && Text"),
+                LOCTEXT("ExportEQS_Label", "Export EQS to JSON"),
                 LOCTEXT("ExportEQS_Tooltip",
-                    "Export selected EQS Queries to .json and .txt files next to the asset"),
+                    "Export selected EQS Queries to a .ckexport file next to the asset"),
                 FSlateIcon(),
                 FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                 {

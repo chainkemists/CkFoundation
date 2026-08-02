@@ -112,9 +112,9 @@ auto
 
             InSection.AddMenuEntry(
                 "ExportUDS_JsonAndText",
-                LOCTEXT("ExportUDS_Label", "Export Struct to JSON && Text"),
+                LOCTEXT("ExportUDS_Label", "Export Struct to JSON"),
                 LOCTEXT("ExportUDS_Tooltip",
-                    "Export selected Blueprint structs to .json and .txt files next to the asset"),
+                    "Export selected Blueprint structs to a .ckexport file next to the asset"),
                 FSlateIcon(),
                 FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                 {

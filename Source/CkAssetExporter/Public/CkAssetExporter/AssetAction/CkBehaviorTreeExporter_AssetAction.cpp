@@ -113,9 +113,9 @@ auto
 
             InSection.AddMenuEntry(
                 "ExportBT_JsonAndText",
-                LOCTEXT("ExportBT_Label", "Export to JSON && Text"),
+                LOCTEXT("ExportBT_Label", "Export to JSON"),
                 LOCTEXT("ExportBT_Tooltip",
-                    "Export selected Behavior Trees to .json and .txt files next to the asset"),
+                    "Export selected Behavior Trees to a .ckexport file next to the asset"),
                 FSlateIcon(),
                 FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                 {

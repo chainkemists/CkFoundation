@@ -141,9 +141,9 @@ auto
 
             InSection.AddMenuEntry(
                 "ExportDA_JsonAndText",
-                LOCTEXT("ExportDA_Label", "Export DataAsset to JSON && Text"),
+                LOCTEXT("ExportDA_Label", "Export DataAsset to JSON"),
                 LOCTEXT("ExportDA_Tooltip",
-                    "Export selected DataAssets to .json and .txt files next to the asset"),
+                    "Export selected DataAssets to a .ckexport file next to the asset"),
                 FSlateIcon(),
                 FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                 {

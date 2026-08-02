@@ -33,7 +33,7 @@ public:
     static auto
     ExportEQS(
         UEnvQuery* InQuery,
-        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_EQSExportResult;
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_EQSExportResult;
 
     static auto
     ExportEQSQueries(

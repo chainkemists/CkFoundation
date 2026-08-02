@@ -226,7 +226,7 @@ bool FCk_AssetExporter_Dispatch_SummaryTextFormatGate_Test::RunTest(const FStrin
     TestFalse(TEXT("JsonOnly (the on-save auto path) writes NO summary text"),
         ck::asset_exporter::ShouldWrite_SummaryText(ECk_AssetExporter_SidecarFormats::JsonOnly));
 
-    TestTrue(TEXT("JsonAndText (every manual path) writes the summary text"),
+    TestTrue(TEXT("JsonAndText (explicit opt-in) writes the summary text"),
         ck::asset_exporter::ShouldWrite_SummaryText(ECk_AssetExporter_SidecarFormats::JsonAndText));
 
     return true;
