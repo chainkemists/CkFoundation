@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 45;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 46;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -769,6 +769,48 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_Lightning_Hit: sixteen renderers for the twenty sprite/mesh emitters, the widest spread in the
+    // cookbook. Part01 alone serves four of them across TWO quad kinds (the two flat ground decals and the two
+    // round glows), the Lightning paint serves both bolt emitters and the Flames paint both puff emitters, and
+    // the pyramid carrier is declared TWICE because the source draws it once pointed along velocity and once
+    // sitting still. The arc pair lives on the ribbon spec below (recipe Cookbook/NS_Lightning_Hit.md §6.2).
+    inline auto Get_LightningHitRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CustomFacingSprite,    225, nullptr,          TEXT("PartDisAdd01")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    226, nullptr,          TEXT("PartDisAdd01")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    227, nullptr,          TEXT("PartDisAdd01Bright") },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    228, nullptr,          TEXT("FlareDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 229, nullptr,          TEXT("PartDisAdd04")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    230, nullptr,          TEXT("LightningDisAdd02"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  231, TEXT("Spike"),    TEXT("FlatAdd02")          },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  232, TEXT("Card"),     TEXT("LightStripDisAdd")   },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    233, nullptr,          TEXT("ImpactDisAdd01")     },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    234, nullptr,          TEXT("RainbowDisAdd")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    235, nullptr,          TEXT("RingDisAdd01")       },
+            { ECk_ParticlesRenderer_Kind::CustomFacingSprite,    236, nullptr,          TEXT("ExpGroundMarkDisAdd")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    237, nullptr,          TEXT("StarDisAdd01")       },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  238, TEXT("UvSphere"), TEXT("FlatAdd02"), FIntPoint(0, 0),
+              ECk_ParticlesRenderer_MeshFacing::Default, FVector(0.8, 0.8, 0.8) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  239, TEXT("Spike"),    TEXT("FlatAdd02")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    240, nullptr,          TEXT("FlamesDisAdd01"), FIntPoint(2, 2) },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // The hit's arc pair: the SAME two emitters NS_Lightning_Muzzle carries, verified byte-identical against
+    // the corpus, so they share that row's shape exactly — ONE ribbon renderer carrying two ribbons split by
+    // ribbon id (which rides MeshIndex).
+    inline auto Get_LightningHitRibbonRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::Ribbon, 241, nullptr, TEXT("FlatAdd02Ribbon") },
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -909,6 +951,15 @@ namespace ck::particles
             // BuffCast ribbon emitter already drives that same code path at 301.
             { TEXT("PS_CkParticles_Template_BombExplosion"), 2.0f, 0.5f, 162,
               Get_BombExplosionRendererSpecs() },
+            // NS_Lightning_Hit: twenty-two emitters, the widest system in the cookbook. Loop-Once 2.0 s system
+            // again; the longest layer is Star02 at its resolved 1.3 s maximum. Its burst is the twenty
+            // sprite/mesh emitters' own counts (81) plus the three solved release points of Lightning_02, whose
+            // source emitter carries a falling Spawn Rate and NO burst module at all. The arcs' six burst
+            // particles are NOT in that number — they are ribbon particles on the row's second emitter, which
+            // bursts their thirty points exactly as NS_Lightning_Muzzle's does.
+            { TEXT("PS_CkParticles_Template_LightningHit"), 2.0f, 1.3f, 84,
+              Get_LightningHitRendererSpecs(), 0.0f,
+              { 0.0f, 30, Get_LightningHitRibbonRendererSpecs() } },
         };
         return MakeArrayView(Specs);
     }
@@ -1081,6 +1132,11 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_BombExplosion"));
     }
 
+    inline auto Get_LightningHitTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_LightningHit"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -1125,6 +1181,8 @@ namespace ck::particles
             case 42: return Get_ExplosionOmniTemplateSystemObjectPath();      // 2.0s loop, 1.3s, 65 + ribbon 301
             case 43: return Get_ExplosionOmniIceTemplateSystemObjectPath();   // the Omni palette twin
             case 44: return Get_BombExplosionTemplateSystemObjectPath();      // 2.0s loop, 0.5s, burst 162
+            // The everything-effect: every renderer class the pipeline has, on one row.
+            case 45: return Get_LightningHitTemplateSystemObjectPath();       // 2.0s loop, 1.3s, 84 + ribbon 30
             default: break;
         }
 
