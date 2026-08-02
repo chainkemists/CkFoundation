@@ -1,86 +1,212 @@
 // /CkParticles/Behaviors/Behavior_Slash.ush — BehaviorId 7.
-// Anime swipe REPLICATED from Vefects NS_BasicAttack (corpus recipe + material M_VFX_DisAdd_Slash01): a burst of
-// oriented sweep MESHES whose SweepErode material pans + dissolves the streak texture along the arc (the mesh
-// itself never moves — the motion is all UV), a delayed ring of velocity-streak sparkles (recipe: 15-burst torus,
-// 0.06 s delay), and a large dim wind-ghost sweep (recipe: Slash_Wind, uniform scale 1.1, alpha 0.2).
-// Spawns through the BURST template: real Age, one swipe per ~1.2 s loop. Keep the CPU mirror in lockstep.
+//
+// Faithful re-port of Vefects NS_BasicAttack. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_BasicAttack.md — every number below is a source curve key from §5, not a tuning.
+//
+// The source is FIVE emitters that all burst at loop start: three crescent-mesh slash layers, one larger dim
+// wind ghost, and fifteen velocity-aligned spark streaks delayed 0.06 s. One CkParticles burst of 19 carries
+// all of them: the layer is Seed % 19, so every loop draws exactly one of each. It therefore spawns through
+// PS_CkParticles_Template_Slash (1.0 s loop / 0.5 s particle lifetime / burst 19) and reads a REAL Age —
+// no frac(Age/Cycle) fake.
+//
+// Each layer runs on its OWN lifetime, shorter than the template particle's 0.5 s, and outputs nothing at all
+// once past it. The four mesh layers draw through the row-declared crescent renderers (VisTag 5..8, one CkUsf
+// DissolveAdd look each) and the sparks through the row's velocity-aligned sprite (VisTag 9).
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 7) in lockstep.
 #pragma once
 #include "/CkParticles/Common.ush"
+
+// Layer partition — 19 particles per burst, one per source emitter particle (recipe §2/§5).
+#define CKP_SL_NUM_LAYERS      19
+#define CKP_SL_LAYER_SLASH01    0
+#define CKP_SL_LAYER_SLASH02    1
+#define CKP_SL_LAYER_SLASH03    2
+#define CKP_SL_LAYER_WIND       3
+#define CKP_SL_FIRST_SPARK      4
+
+// Per-layer lifetimes (recipe §2). The template particle outlives all of them.
+#define CKP_SL_LIFE_SLASH     0.3
+#define CKP_SL_LIFE_WIND      0.5
+#define CKP_SL_SPARK_DELAY    0.06
+
+// Spark spawn ring (recipe §5): radius 209.769 on a torus whose axis is (0,1,0), so the ring lies in the XZ
+// plane; Direct U Position puts all 15 at ONE point, angle -6.5 degrees.
+#define CKP_SL_SPARK_RING_R   209.769
+#define CKP_SL_SPARK_RING_ANG -0.11344640138  // -6.5 degrees in radians
+
+// Piecewise-linear key evaluation. Every source curve key is clamped or linear, so a plain clamped lerp between
+// neighbouring keys IS the curve — no smoothing, no invention.
+float CkParticles_Slash_Key2(float T, float T0, float V0, float T1, float V1)
+{
+    return lerp(V0, V1, saturate((T - T0) / max(T1 - T0, 1e-6)));
+}
+
+float CkParticles_Slash_Key3(float T, float T0, float V0, float T1, float V1, float T2, float V2)
+{
+    return T <= T1
+        ? CkParticles_Slash_Key2(T, T0, V0, T1, V1)
+        : CkParticles_Slash_Key2(T, T1, V1, T2, V2);
+}
+
+// Integral of the source's 3-key velocity-scale curve (1 at s=0, C1 at s=0.2, C2 at s=1) over [0,s], in units of
+// normalized life. Closed form on purpose: a stepwise integration would drift between the GPU and the CPU mirror.
+float CkParticles_Slash_VelScaleIntegral(float S, float C1, float C2)
+{
+    const float Knee = 0.2;
+    const float A    = min(S, Knee);
+    // Segment 1: linear 1 -> C1 across [0, Knee].
+    float Sum = A * (1.0 + CkParticles_Slash_Key2(A, 0.0, 1.0, Knee, C1)) * 0.5;
+
+    if (S > Knee)
+    {
+        // Segment 2: linear C1 -> C2 across [Knee, 1].
+        const float B = S - Knee;
+        Sum += B * (C1 + CkParticles_Slash_Key2(S, Knee, C1, 1.0, C2)) * 0.5;
+    }
+    return Sum;
+}
+
+// The four mesh layers share one Initial Mesh Orientation: mesh local Z -> world (0,1,0). Written as an
+// axis/angle so the C++ mirror produces the identical quaternion component-wise.
+float4 CkParticles_Slash_MeshOrientation()
+{
+    return CkParticles_QuatFromAxisAngle(float3(-1.0, 0.0, 0.0), 1.57079632679);
+}
+
+// Everything a dead or not-yet-visible layer must write: no colour, no quad, no mesh.
+FCkParticles_StageOutput CkParticles_Slash_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
 
 FCkParticles_StageOutput CkParticles_Behavior_Slash(FCkParticles_StageInput In)
 {
     FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
 
-    const float k = CkParticles_Rand(In.Seed, 0);
+    // Burst UniqueIDs are sequential, so the modulo partitions each burst into exactly one particle per layer.
+    // Double-modulo because a negative Seed is representable even though UniqueID never is.
+    const int Layer = ((In.Seed % CKP_SL_NUM_LAYERS) + CKP_SL_NUM_LAYERS) % CKP_SL_NUM_LAYERS;
 
-    if (k < 0.05) // sweep mesh layers — the swipe itself (recipe: one mesh particle per slash emitter, x3 layers)
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+
+    if (Layer < CKP_SL_FIRST_SPARK)
     {
-        const float t     = saturate(In.Age / 0.42);
-        const float Pitch = 1.5707963 + (CkParticles_Rand(In.Seed, 2) - 0.5) * 0.35; // stand the arc upright
-        const float Roll  = (CkParticles_Rand(In.Seed, 1) - 0.5) * 0.7;              // fan the layers
+        const float Life = (Layer == CKP_SL_LAYER_WIND) ? CKP_SL_LIFE_WIND : CKP_SL_LIFE_SLASH;
+        if (In.Age > Life)
+        { return CkParticles_Slash_Hidden(O); }
 
-        O.Orientation = CkParticles_QuatMul(
-            CkParticles_QuatFromAxisAngle(float3(0.0, 1.0, 0.0), Roll),
-            CkParticles_QuatFromAxisAngle(float3(1.0, 0.0, 0.0), Pitch));
-        O.Position  = float3(0.0, 0.0, 90.0);
-        O.Velocity  = float3(0.0, 0.0, 0.0);
-        O.VisTag    = 3;
-        O.MeshIndex = 0;
-        O.Scale     = float3(1.0, 1.0, 1.0) * lerp(1.35, 1.75, CkParticles_Rand(In.Seed, 3));
+        const float t = saturate(In.Age / Life);
 
-        // Material drive (recipe dyn-param curves): streak head pans along the arc, dissolve eats it late,
-        // emissive boost front-loads the flash.
-        O.Dynamic = float4(max(0.0, t - 0.5) * 2.0, 0.35, lerp(-0.55, 0.45, t), 2.2 * (1.0 - t));
+        O.Orientation = CkParticles_Slash_MeshOrientation();
+        O.MeshIndex   = 0; // each row-declared crescent renderer carries a single mesh
+        O.Size        = float2(0.0, 0.0); // mesh layers do not draw a quad
 
-        const float  Vis = saturate(1.0 - max(0.0, In.Age - 0.30) / 0.12);
-        const float3 c   = lerp(float3(5.0, 3.9, 2.0), float3(5.0, 0.35, 0.75), saturate(t * 1.3)); // white -> hot pink
-        O.Color = float4(c * Vis, 0.6 * Vis);
+        if (Layer == CKP_SL_LAYER_SLASH01 || Layer == CKP_SL_LAYER_SLASH02)
+        {
+            // Slash_01 and Slash_02 share one colour curve; only their dynamic params and look differ.
+            O.VisTag = (Layer == CKP_SL_LAYER_SLASH01) ? 5 : 6;
+            O.Scale  = float3(1.0, 1.0, 1.0);
+            O.Color  = float4(1.0,
+                              CkParticles_Slash_Key2(t, 0.0, 0.7835, 1.0, 0.4564),
+                              CkParticles_Slash_Key2(t, 0.0, 0.0976, 1.0, 0.0018),
+                              1.0);
+
+            if (Layer == CKP_SL_LAYER_SLASH01)
+            {
+                O.Dynamic = float4(CkParticles_Slash_Key2(t, 0.4, -0.1, 1.0, -1.0),
+                                   0.5,
+                                   CkParticles_Slash_Key2(t, 0.0, -1.0, 1.0, 0.4),
+                                   0.0);
+            }
+            else
+            {
+                O.Dynamic = float4(1.0,
+                                   0.0,
+                                   CkParticles_Slash_Key2(t, 0.0, -1.0, 1.0, 0.7),
+                                   CkParticles_Slash_Key2(t, 0.4, 0.0, 1.0, -0.5));
+            }
+            return O;
+        }
+
+        if (Layer == CKP_SL_LAYER_SLASH03)
+        {
+            // Constant colour, then the module's Scale Alpha 0.2.
+            O.VisTag  = 7;
+            O.Scale   = float3(1.0, 1.0, 1.0);
+            O.Color   = float4(0.3813, 0.1946, 0.0006, 0.2);
+            O.Dynamic = float4(1.0,
+                               0.0,
+                               CkParticles_Slash_Key2(t, 0.0, -1.0, 1.0, 0.6),
+                               CkParticles_Slash_Key2(t, 0.4, 0.0, 1.0, -0.4));
+            return O;
+        }
+
+        // Slash_Wind: mesh scale 1.1, an RGB ramp that settles by t=0.880, and a rise-hold-fall alpha envelope
+        // that the module then scales by 0.2.
+        const float WindRamp  = saturate(t / 0.880);
+        const float WindAlpha = (t <= 0.157) ? CkParticles_Slash_Key2(t, 0.0,   0.0, 0.157, 1.0)
+                              : (t <= 0.316) ? 1.0
+                                             : CkParticles_Slash_Key2(t, 0.316, 1.0, 1.0,   0.0);
+
+        O.VisTag  = 8;
+        O.Scale   = float3(1.1, 1.1, 1.1);
+        O.Color   = float4(lerp(1.0, 0.2623, WindRamp),
+                           lerp(1.0, 0.1384, WindRamp),
+                           lerp(1.0, 0.0887, WindRamp),
+                           WindAlpha * 0.2);
+        O.Dynamic = float4(-0.27,
+                           0.0,
+                           CkParticles_Slash_Key2(t, 0.0, -0.375, 0.8, 0.375),
+                           CkParticles_Slash_Key2(t, 0.4, 0.0, 1.0, -0.4));
+        return O;
     }
-    else if (k < 0.30) // sparkle ring — velocity streaks off the swipe plane (recipe: torus ring, 0.06 s delay)
-    {
-        const float Life = lerp(0.30, 0.50, CkParticles_Rand(In.Seed, 4));
-        const float td   = max(0.0, In.Age - 0.06);
-        const float Arc  = saturate(td / Life);
-        const float a    = 6.28318530718 * CkParticles_Rand(In.Seed, 5);
-        const float jy   = (CkParticles_Rand(In.Seed, 6) - 0.5);
 
-        const float3 P0 = float3(cos(a) * 55.0, jy * 14.0, 90.0 + sin(a) * 55.0);
-        const float3 d  = float3(cos(a), jy * 0.6, sin(a));
-        const float  s  = lerp(250.0, 550.0, CkParticles_Rand(In.Seed, 7));
-        const float  kd = (1.0 - exp(-2.4 * td)) / 2.4;
+    // ---- Sparkles_01: 15 velocity-aligned streaks, spawn-delayed 0.06 s ----
+    // Each spark is its own particle with its own UniqueID, so the per-particle randoms come straight off Seed.
+    const float SparkLife = lerp(0.2, 0.4, CkParticles_Rand(In.Seed, 1));
+    const float td        = In.Age - CKP_SL_SPARK_DELAY;
 
-        O.Position = P0 + d * s * kd;
-        O.Velocity = d * s * exp(-2.4 * td);
-        O.VisTag   = 1;
-        O.Size     = float2(3.5, lerp(20.0, 6.0, Arc));
+    // The source spawns these 0.06 s into the loop; inside one burst that is a hide, not a late spawn.
+    if (td < 0.0 || td > SparkLife)
+    { return CkParticles_Slash_Hidden(O); }
 
-        const float  Vis = step(0.06, In.Age) * saturate(1.0 - Arc);
-        const float3 c   = lerp(float3(4.0, 3.8, 2.7), float3(4.0, 1.8, 0.16), saturate((Arc - 0.15) / 0.5)); // white -> orange (recipe curve)
-        O.Color = float4(c * Vis, Vis);
-    }
-    else if (k < 0.36) // wind ghost — the big dim trailing sweep (recipe: Slash_Wind, scale 1.1, alpha 0.2)
-    {
-        const float tw   = saturate(max(0.0, In.Age - 0.05) / 0.55);
-        const float Roll = (CkParticles_Rand(In.Seed, 1) - 0.5) * 0.5;
+    const float s = saturate(td / SparkLife);
 
-        O.Orientation = CkParticles_QuatMul(
-            CkParticles_QuatFromAxisAngle(float3(0.0, 1.0, 0.0), Roll),
-            CkParticles_QuatFromAxisAngle(float3(1.0, 0.0, 0.0), 1.5707963));
-        O.Position  = float3(0.0, 0.0, 90.0);
-        O.Velocity  = float3(0.0, 0.0, 0.0);
-        O.VisTag    = 3;
-        O.MeshIndex = 0;
-        O.Scale     = float3(1.0, 1.0, 1.0) * (1.95 * (1.0 + 0.1 * tw));
-        O.Dynamic   = float4(tw * 0.9, 0.30, lerp(-0.38, 0.38, tw), 0.3);
+    const float3 V0 = float3(lerp(-1500.0, -3500.0, CkParticles_Rand(In.Seed, 2)),
+                             lerp( -500.0,   500.0, CkParticles_Rand(In.Seed, 3)),
+                             lerp( 1500.0,  3000.0, CkParticles_Rand(In.Seed, 4)));
 
-        const float Vis = saturate(tw / 0.25) * saturate(1.0 - max(0.0, tw - 0.6) / 0.4);
-        O.Color = float4(float3(1.0, 0.62, 0.72) * Vis, 0.22 * Vis);
-    }
-    else // surplus burst particles — fully hidden (burst count is shared across all behaviors)
-    {
-        O.Color = float4(0.0, 0.0, 0.0, 0.0);
-        O.Size  = float2(0.0, 0.0);
-        O.Scale = float3(0.0, 0.0, 0.0);
-    }
+    // Velocity scale over life: X,Y 1 -> 0.35 (s=0.2) -> 0.05; Z 1 -> 0.25 (s=0.2) -> -0.25 (it falls at the end).
+    const float ScaleXy = CkParticles_Slash_Key3(s, 0.0, 1.0, 0.2, 0.35, 1.0,  0.05);
+    const float ScaleZ  = CkParticles_Slash_Key3(s, 0.0, 1.0, 0.2, 0.25, 1.0, -0.25);
+
+    // Position is the exact integral of V0 * scale, so GPU and CPU agree to the bit at every Age.
+    const float IntXy = CkParticles_Slash_VelScaleIntegral(s, 0.35,  0.05) * SparkLife;
+    const float IntZ  = CkParticles_Slash_VelScaleIntegral(s, 0.25, -0.25) * SparkLife;
+
+    const float3 Spawn = float3(CKP_SL_SPARK_RING_R * cos(CKP_SL_SPARK_RING_ANG),
+                                0.0,
+                                CKP_SL_SPARK_RING_R * sin(CKP_SL_SPARK_RING_ANG));
+
+    O.Position = Spawn + float3(V0.x * IntXy, V0.y * IntXy, V0.z * IntZ);
+    O.Velocity = float3(V0.x * ScaleXy, V0.y * ScaleXy, V0.z * ScaleZ);
+    O.VisTag   = 9;
+
+    // Sprite size: random non-uniform width x length, a uniform 0 -> 1 (s=0.1) -> 0 envelope, and the
+    // non-uniform Y curve tapering the streak's length to 0.6 over life.
+    const float Width  = lerp(10.0, 30.0, CkParticles_Rand(In.Seed, 5));
+    const float Length = lerp(50.0, 70.0, CkParticles_Rand(In.Seed, 6));
+    const float Grow   = CkParticles_Slash_Key3(s, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+    O.Size = float2(Width * Grow, Length * Grow * CkParticles_Slash_Key2(s, 0.0, 1.0, 1.0, 0.6));
+
+    O.Color = float4(1.0,
+                     CkParticles_Slash_Key3(s, 0.0, 0.9473, 0.4576, 0.6939, 1.0, 0.4508),
+                     CkParticles_Slash_Key3(s, 0.0, 0.6654, 0.4576, 0.1470, 1.0, 0.0409),
+                     1.0);
     return O;
 }

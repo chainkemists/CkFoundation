@@ -26,6 +26,10 @@ struct FCkParticles_StageInput
 //   4 = custom-facing sprite (a quad fixed in SIM space, not camera-facing; SpriteAlignment = its "up"
 //       axis, SpriteFacing = its plane normal). For ground decals/range rings, whose source systems use
 //       Niagara's CustomAlignment + CustomFacingVector pair. Material comes from User.SpriteMaterial.
+//   5+ = ROW-DECLARED renderers. A cadence row may declare extra renderers of its own
+//       (ck::particles::FCk_ParticlesRendererSpec), each with a named generated mesh and/or a named CkUsf
+//       look bound explicitly. They exist only on that row's template, so a behavior writing one of these
+//       tags renders nothing anywhere else. Behavior 7 (Slash) owns 5..9.
 //
 // Dynamic -> Particles.DynamicMaterialParameter, read by the VFX master materials as
 //   x = dissolve/erosion threshold [0..1], y = distortion strength, z = UV pan offset, w = emissive boost.

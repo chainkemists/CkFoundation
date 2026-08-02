@@ -161,12 +161,142 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
-    // Dissolve-threshold and UV-distortion source: a billow/cell blend that wraps seamlessly.
+    // Dissolve-threshold and UV-distortion source, tuned to T_VFX_Noise_02's measured spectrum — 70.7% of AC
+    // energy at 1-8 cyc, 22.6% at 8-16, 6.3% at 16-32, so the cell/grain content must sit at 13 and 40 per
+    // tile — under the measured percentile stretch (median 0.353, p1 0.059, rms contrast 0.148, skewed bright).
+    // The per-component centering constants are frozen statistics of the fixed noise lattices, so the mix
+    // stays a pure per-pixel function.
     static auto Px_TileNoise(float U, float V) -> FLinearColor
     {
-        const float Billow = Fbm(U * 5.0f, V * 5.0f, 4, 5);
-        const float Cells  = Saturate(Voronoi(U * 5.0f, V * 5.0f, 5) * 0.85f);
-        const float I = Saturate((0.60f * Billow + 0.40f * Cells) * 1.20f - 0.06f);
+        constexpr float SourceMedian      = 0.3529f;
+        constexpr float SourceRmsContrast = 0.1476f;
+        constexpr float SourceSkew        = 0.08f; // p99 sits 2.7 sigma above the median, p1 only 2.0 below
+
+        const float Billow = Fbm(U * 5.0f, V * 5.0f, 2, 5);
+        const float Cells  = Saturate(Voronoi(U * 13.0f + 3.0f, V * 13.0f + 3.0f, 13) * 0.85f);
+        const float Grain  = Fbm(U * 40.0f + 5.0f, V * 40.0f + 17.0f, 1, 40);
+
+        const float Mix = 3.9617f * (Billow - 0.4257f)
+                        + 3.6941f * (Cells  - 0.3676f)
+                        + 1.6485f * (Grain  - 0.4896f); // unit-variance blend weighted onto the measured bands
+        const float Skewed = Mix + SourceSkew * (Mix * Mix - 1.0f);
+        const float I = Saturate(Skewed * SourceRmsContrast + SourceMedian);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // ---- NS_BasicAttack stand-ins ---------------------------------------------------------------------------------
+    //
+    // The Vefects slash paints are NOT imported (maintainer decision, recipe Cookbook/NS_BasicAttack.md §6.5).
+    // Each function below is parameterized from characteristics MEASURED off the corpus PNGs — per-axis intensity
+    // profiles, streak counts, radial falloff exponents — quoted in recipe §7. No pixel is ever copied.
+    //
+    // All five are sampled through the crescent's UV convention where relevant: u runs ALONG the arc, v ACROSS the
+    // band from the outer edge (v=0) to the inner one (v=1).
+
+    // T_VFX_Slash_01 stand-in. Measured: content spans u as a cos bell covering 73% of the axis (FWHM 0.418);
+    // across v a bright rim peaking at v~0.07, a body at 0.63 of the rim in the central columns falling to
+    // ~0.36-0.46 toward the bell's edges (the paint's body fades along u faster than its rim), 5-6 shallow
+    // motion-line ridges at 3-13% of peak, and a cut-off whose steepest fall (|dI/dv| 2.26) sits at v~0.63.
+    // A body left flat at ~0.42 of the rim reads as a SEPARATE thin arc over a dark plateau instead of the
+    // source's single merged swoosh, and overshoots the 4-8 cyc v-band energy by 56%.
+    static auto Px_SlashArc01(float U, float V) -> FLinearColor
+    {
+        constexpr float PeakGain      = 1.08f;  // lands the measured 0.004 saturated fraction
+        constexpr float ToneGamma     = 1.6f;   // compresses midtones onto the measured p50/p75/mean/coverage
+        constexpr float BodyLevel     = 0.68f;  // post-gamma body/rim 0.627 in the central columns (measured 0.631)
+        constexpr float RimAmp        = 0.30f;
+        constexpr float BodyBellExtra = 0.8f;   // extra u-falloff on the body only — the measured per-column
+                                                // body/rim ratio drops 0.63 -> 0.36-0.46 toward the bell edges
+        constexpr float LineHalfWidthV = 0.024f;
+        constexpr float MotionLineV[]   = { 0.235f, 0.337f, 0.431f, 0.489f, 0.577f }; // measured ridge positions
+        constexpr float MotionLineAmp[] = { 0.080f, 0.045f, 0.065f, 0.035f, 0.055f }; // 5-11% of peak post-gamma
+        constexpr int32 NumMotionLines  = 5;
+
+        const float Bell     = FMath::Pow(FMath::Cos(HALF_PI * Saturate(FMath::Abs(U - 0.5f) / 0.43f)), 1.1f);
+        const float BodyBell = FMath::Pow(Bell, BodyBellExtra);
+        const float Cut      = 1.0f - Smooth(0.585f, 0.765f, V);
+
+        float Lines = 0.0f;
+        for (int32 Index = 0; Index < NumMotionLines; ++Index)
+        { Lines += MotionLineAmp[Index] * Saturate(1.0f - FMath::Abs(V - MotionLineV[Index]) / LineHalfWidthV); }
+
+        const float Body = (BodyLevel + Lines) * Cut * BodyBell;
+        const float Rim  = RimAmp * FMath::Pow(Saturate(1.0f - FMath::Abs(V - 0.075f) / 0.15f), 1.5f);
+        const float I = FMath::Pow(Saturate(Bell * (Body + Rim) * PeakGain), ToneGamma);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Slash_02 stand-in. Measured: the paint is SEPARABLE and piecewise LINEAR — a triangle bell along u
+    // (a linear ramp's constant small u-gradient is what keeps the structure-tensor anisotropy at the measured
+    // 26) times a sawtooth across v: attack from 0.38 of peak at the v=0 edge up to full at v=0.018, then a
+    // linear decay to zero by v~0.135. Peak intensity 0.867. A cos bell + smoothstep reads far too isotropic.
+    static auto Px_SlashArc02(float U, float V) -> FLinearColor
+    {
+        constexpr float BellHalfWidth = 0.37f;
+        constexpr float AttackEndV    = 0.018f; // the measured v-peak of the line
+        constexpr float EdgeStartFrac = 0.38f;  // intensity at the v=0 border relative to peak
+        constexpr float DecayEndV     = 0.135f;
+        constexpr float Peak          = 0.867f; // the measured maximum
+        const float Bell = Saturate(1.0f - FMath::Abs(U - 0.5f) / BellHalfWidth);
+        const float P = V < AttackEndV
+            ? EdgeStartFrac + (1.0f - EdgeStartFrac) * (V / AttackEndV)
+            : Saturate(1.0f - (V - AttackEndV) / (DecayEndV - AttackEndV));
+        const float I = Saturate(Peak * Bell * P);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Wind_03 stand-in. Measured: the band is SOLID — no in-band pixel drops below 2% — so there is no
+    // streak floor and no breakup to zero. A generalized-Gaussian envelope at v=0.215 (sigma 0.0836, falloff
+    // exponent 2.5 reproduces both the 54 px 10-90 shoulder and the fast tail), carved by sparse paint dabs
+    // and textured by a fine 20-cycle 2D noise that carries the measured 8-16/16-32 cyc band energy and pulls
+    // the structure tensor down to the measured 4.5 (a bare envelope reads 30+).
+    static auto Px_WindBand(float U, float V) -> FLinearColor
+    {
+        constexpr float BandCenterV    = 0.215f;  // the measured v-peak
+        constexpr float BandSigma      = 0.0836f; // from the measured FWHM 0.20
+        constexpr float BandFalloffExp = 2.5f;
+        constexpr float DabDepth       = 0.45f;
+        constexpr float TexAmp         = 0.72f;
+        const float Band = FMath::Exp(-0.5f * FMath::Pow(FMath::Abs(V - BandCenterV) / BandSigma, BandFalloffExp));
+        const float Dab  = Smooth(0.55f, 0.85f, Fbm(U * 7.0f + 13.0f, V * 7.0f + 5.0f, 2, 7));
+        const float Tex  = 1.0f + TexAmp * (Fbm(U * 20.0f + 29.0f, V * 20.0f + 17.0f, 2, 20) - 0.5f);
+        const float I = Saturate(Band * (1.0f - DabDepth * Dab) * Tex);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Part_01 stand-in. Measured: perfectly radially symmetric (u and v profiles identical), falloff fitting
+    // pow(1 - r, 2.2) to within a bin across all ten radial rings, r normalized to the half-width.
+    static auto Px_SoftParticle(float U, float V) -> FLinearColor
+    {
+        const float Dx = U - 0.5f, Dy = V - 0.5f;
+        const float R  = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float I  = FMath::Pow(Saturate(1.0f - R), 2.2f);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Part_04 stand-in — the velocity-aligned spark streak, hence narrow in u (width) and long in v (length),
+    // matching the source's width x length sprite sizing. Measured: a hard-clipped WHITE capsule (interior is
+    // noise-free, 8.1% of all pixels saturated) behind a soft glow. The wall into the white core is a near-step
+    // at 0.52 of the 0.156 half-width whose position wobbles slowly along the length — the local step carries
+    // the high-band energy while the wobble smears the mean-profile rise to the measured 29 px. The capsule's
+    // v-ends are sharp (they hold the v-gradient energy that puts the anisotropy at the measured 5.2); the
+    // glow's ends stay soft and reach past the nominal half-width.
+    static auto Px_SparkStreak(float U, float V) -> FLinearColor
+    {
+        constexpr float HalfWidthU = 0.156f; // measured
+        constexpr float WobbleAmp  = 0.30f;
+        constexpr float WallStart  = 0.52f;  // white plateau extent, fraction of the half-width
+        constexpr float WallEnd    = 0.63f;
+        constexpr float GlowAmp    = 0.40f;  // glow intensity where it meets the wall
+        constexpr float GlowReach  = 1.22f;
+        const float Wobble = Fbm(V * 3.0f + 9.0f, 3.0f, 1, 3);
+        const float H = HalfWidthU * (1.0f + WobbleAmp * (Wobble - 0.5f));
+        const float X = FMath::Abs(U - 0.5f) / H;
+        const float Wall = 1.0f - Smooth(WallStart, WallEnd, X);
+        const float Glow = GlowAmp * (1.0f - Smooth(WallStart, GlowReach, X));
+        const float WallCap = Smooth(0.09f, 0.145f, V) * (1.0f - Smooth(0.75f, 0.775f, V));
+        const float GlowCap = Smooth(0.06f, 0.13f, V)  * (1.0f - Smooth(0.60f, 0.84f, V));
+        const float I = Saturate(FMath::Max(Wall * WallCap, Glow * GlowCap));
         return FLinearColor(I, I, I, I);
     }
 
@@ -246,7 +376,7 @@ namespace ck::particles_editor
     {
         using namespace TexGenLocal;
 
-        constexpr int32 Size = 256;
+        constexpr int32 Size = 512; // the source pack's uniform size — below it the 16-32 cyc content cannot survive
 
         int32 Ok = 0, Total = 0;
         const auto BakeOne = [&](const TCHAR* InName, FPxFn InFn)
@@ -264,6 +394,11 @@ namespace ck::particles_editor
         BakeOne(TEXT("T_CkParticles_Ring"),        &Px_Ring);
         BakeOne(TEXT("T_CkParticles_SweepStreak"), &Px_SweepStreak);
         BakeOne(TEXT("T_CkParticles_TileNoise"),   &Px_TileNoise);
+        BakeOne(TEXT("T_CkParticles_SlashArc01"),  &Px_SlashArc01);
+        BakeOne(TEXT("T_CkParticles_SlashArc02"),  &Px_SlashArc02);
+        BakeOne(TEXT("T_CkParticles_WindBand"),    &Px_WindBand);
+        BakeOne(TEXT("T_CkParticles_SoftParticle"),&Px_SoftParticle);
+        BakeOne(TEXT("T_CkParticles_SparkStreak"), &Px_SparkStreak);
 
         Log(TEXT("Generated {}/{} CkParticles VFX textures under {}."),
             FString::FromInt(Ok), FString::FromInt(Total), FString(TexDir));

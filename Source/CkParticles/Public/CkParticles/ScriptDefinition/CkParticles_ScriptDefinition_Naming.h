@@ -64,7 +64,6 @@ namespace ck::particles
     {
         switch (InBehaviorId)
         {
-            case 7:  // Slash
             case 10: // ImpactBurst
             case 13: // SparksBurst
             case 14: // GroundRing
@@ -83,6 +82,48 @@ namespace ck::particles
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
+    // Row-level renderer overrides.
+    //
+    // The shared renderer set (VisTags 0..SharedRendererVisTag_Max) is behavior-agnostic on purpose: every
+    // template carries it, so nothing effect-specific may be added to it. A recreation whose source draws through
+    // renderers the shared set cannot express declares its OWN renderers on its cadence row instead, and the
+    // builder emits them for that row only — no other template gains a renderer it never asked for.
+    //
+    // Two kinds cover what a recreation actually needs beyond the shared set: a mesh renderer carrying ONE named
+    // generated mesh drawn with ONE named CkUsf look, and a velocity-aligned sprite drawn with a look. Both bind
+    // the look master EXPLICITLY (not through User.SpriteMaterial), because a row that declares several renderers
+    // needs a different material on each and one user parameter cannot carry them.
+    // ----------------------------------------------------------------------------------------------------------
+    enum class ECk_ParticlesRenderer_Kind : uint8
+    {
+        Mesh,                  // MeshName -> SM_CkParticles_<MeshName>; Particles.Scale + MeshOrientation apply
+        VelocityAlignedSprite, // stretch is Particles.SpriteSize.y along motion
+    };
+
+    struct FCk_ParticlesRendererSpec
+    {
+        ECk_ParticlesRenderer_Kind Kind;
+        int32        VisTag;
+        const TCHAR* MeshName; // Mesh kind only
+        const TCHAR* LookName; // generated CkUsf master, via Get_GeneratedLookMasterObjectPath
+    };
+
+    // Vefects NS_BasicAttack: four crescent-mesh slash layers, each with its own DissolveAdd look, plus the
+    // velocity-aligned spark sprite. VisTags continue after the shared set (recipe Cookbook/NS_BasicAttack.md §6).
+    inline auto Get_SlashRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::Mesh,                  5, TEXT("Crescent"), TEXT("SlashDisAdd01") },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  6, TEXT("Crescent"), TEXT("SlashDisAdd02") },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  7, TEXT("Crescent"), TEXT("SlashDisAdd04") },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  8, TEXT("Crescent"), TEXT("WindDisAdd02")  },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 9, nullptr,          TEXT("PartDisAdd04")  },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
     // A recreation is only as faithful as its spawn cadence: the source system's loop duration, particle lifetime
@@ -98,6 +139,9 @@ namespace ck::particles
         float        LoopDuration;
         float        ParticleLifetime;
         int32        BurstCount;
+
+        // Empty on every row that is satisfied by the shared renderer set.
+        TArrayView<const FCk_ParticlesRendererSpec> RendererOverrides;
     };
 
     inline auto Get_TemplateSpecs() -> TArrayView<const FCk_ParticlesTemplateSpec>
@@ -111,8 +155,29 @@ namespace ck::particles
             // Single-particle burst: Vefects NS_Lightning_Range's exact cadence (Loop Duration 1.0, Lifetime 1.1,
             // Spawn Count 1). Reusable by any recreation of a one-sprite, one-second-loop system.
             { TEXT("PS_CkParticles_Template_Single"), 1.0f, 1.1f, 1  },
+            // Vefects NS_BasicAttack: five emitters burst together at loop start, 19 particles per loop, longest
+            // layer 0.5 s on a 1.0 s loop. Its five renderers are row-declared rather than shared.
+            { TEXT("PS_CkParticles_Template_Slash"),  1.0f, 0.5f, 19, Get_SlashRendererSpecs() },
         };
         return MakeArrayView(Specs);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------
+    // VisTag bounds. The shared set every template carries is 0..SharedRendererVisTag_Max; row-declared renderers
+    // allocate above it. A VisTag past the roster maximum draws through NO renderer — invisible, and silent — so
+    // tests bound against Get_RosterVisTag_Max() rather than restating a literal that then drifts.
+    // ----------------------------------------------------------------------------------------------------------
+    inline constexpr int32 SharedRendererVisTag_Max = 4;
+
+    inline auto Get_RosterVisTag_Max() -> int32
+    {
+        auto Max = SharedRendererVisTag_Max;
+        for (const auto& Spec : Get_TemplateSpecs())
+        {
+            for (const auto& Renderer : Spec.RendererOverrides)
+            { Max = FMath::Max(Max, Renderer.VisTag); }
+        }
+        return Max;
     }
 
     inline auto Get_TemplateSystemObjectPath(const TCHAR* InAssetName) -> FString
@@ -125,12 +190,21 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_Single"));
     }
 
-    // Which template a behavior spawns through. Behaviors whose source system is one instantaneous particle on a
-    // fixed loop route to the single-burst template; the multi-particle one-shots keep the shared burst template.
+    inline auto Get_SlashTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_Slash"));
+    }
+
+    // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
+    // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
     {
-        if (InBehaviorId == 17) // LightningRange — one sprite, 1.0s loop, 1.1s lifetime
-        { return Get_SingleBurstTemplateSystemObjectPath(); }
+        switch (InBehaviorId)
+        {
+            case 7:  return Get_SlashTemplateSystemObjectPath();       // Slash — 1.0s loop, 0.5s lifetime, 19 burst
+            case 17: return Get_SingleBurstTemplateSystemObjectPath(); // LightningRange — 1.0s loop, 1.1s lifetime, 1
+            default: break;
+        }
 
         return Get_BehaviorUsesBurstTemplate(InBehaviorId)
             ? Get_BurstTemplateSystemObjectPath()
@@ -143,6 +217,9 @@ namespace ck::particles
     // A behavior whose visual identity is a hand-authored shader binds a generated CkUsf master here; the spawn path
     // resolves it and binds it through User.SpriteMaterial, the SAME mechanism the procedural-texture material
     // instances use. NAME_None means the behavior keeps the procedural-texture path.
+    //
+    // A behavior drawing through ROW-DECLARED renderers stays NAME_None: those renderers each bind their own look
+    // explicitly (Get_SlashRendererSpecs), because one User.SpriteMaterial cannot carry five different materials.
     //
     // The path convention is CkUsf's (ck::usf::Get_GeneratedMasterObjectPath). It is mirrored rather than called so
     // CkParticles need not depend on CkUsf/CkEcs/CkGraphics; the CkParticles binding test asserts the mirrored path

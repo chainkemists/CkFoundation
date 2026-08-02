@@ -184,6 +184,81 @@ namespace ck::particles_editor::MeshGenLocal
         const float R = FMath::Lerp(InnerRadius, OuterRadius, T);
         return { FVector3f(FMath::Cos(Alpha) * R, FMath::Sin(Alpha) * R, 0.0f), FVector2f(S, T) };
     }
+
+    // ---- Crescent: the Vefects NS_BasicAttack slash carrier, from the recipe's MEASURED profile ----------------
+    //
+    // A flat tapered annulus in XY sweeping the full 360 degrees, widest radially at 0 degrees and narrowing to
+    // its thinnest at +/-180. The knots below are corpus measurements of the source .obj at every 30 degrees
+    // (+/-4 degree windows; the +/-angle halves agree exactly), quoted in
+    // CkParticles/Cookbook/NS_BasicAttack.md §3; the profile is piecewise-linear between them and symmetric in
+    // +/-angle. The generator never reads the .obj at bake time — these numbers ARE the source of truth. A
+    // coarser 60-degree table read the tail band 1.3-2.4x too wide past 120 degrees (recipe §13).
+    struct FCrescentKnot { float AngleDegrees; float InnerRadius; float OuterRadius; };
+    struct FCrescentBand { float InnerRadius; float OuterRadius; };
+
+    static constexpr FCrescentKnot CrescentKnots[] =
+    {
+        {   0.0f, 21.2f, 169.0f },
+        {  30.0f, 23.4f, 165.4f },
+        {  60.0f, 30.0f, 156.8f },
+        {  90.0f, 44.1f, 147.1f },
+        { 120.0f, 67.3f, 132.5f },
+        { 150.0f, 88.5f, 117.4f },
+        { 180.0f, 98.6f, 101.2f },
+    };
+    static constexpr int32 NumCrescentKnots = 7;
+
+    static auto Get_CrescentBand(float InAbsAngleDegrees) -> FCrescentBand
+    {
+        const auto Clamped = FMath::Clamp(InAbsAngleDegrees, 0.0f, 180.0f);
+        for (auto Index = 1; Index < NumCrescentKnots; ++Index)
+        {
+            const auto& Lo = CrescentKnots[Index - 1];
+            const auto& Hi = CrescentKnots[Index];
+            if (Clamped > Hi.AngleDegrees)
+            { continue; }
+
+            const auto Alpha = (Clamped - Lo.AngleDegrees) / (Hi.AngleDegrees - Lo.AngleDegrees);
+            return { FMath::Lerp(Lo.InnerRadius, Hi.InnerRadius, Alpha),
+                     FMath::Lerp(Lo.OuterRadius, Hi.OuterRadius, Alpha) };
+        }
+        return { CrescentKnots[NumCrescentKnots - 1].InnerRadius, CrescentKnots[NumCrescentKnots - 1].OuterRadius };
+    }
+
+    // u along the arc is measured, not derived: the source spreads its texture non-uniformly over the sweep
+    // (arc-length-like — the belly u 0.25..0.75 covers ~215 degrees, not 180). Mean u per 30-degree station
+    // from the source .obj, symmetrized (the +/- station pairs agree within uv quantization, 0.0015).
+    static constexpr float CrescentUKnots[] =
+    {
+        0.0f, 0.1031f, 0.2092f, 0.3064f, 0.3666f, 0.4263f, 0.5f,
+        0.5737f, 0.6334f, 0.6936f, 0.7908f, 0.8969f, 1.0f,
+    };
+
+    static auto Get_CrescentU(float InSweepDegrees) -> float
+    {
+        const auto Station = FMath::Clamp(InSweepDegrees / 30.0f, 0.0f, 12.0f);
+        const auto Index   = FMath::Clamp(FMath::FloorToInt32(Station), 0, 11);
+        return FMath::Lerp(CrescentUKnots[Index], CrescentUKnots[Index + 1], Station - Index);
+    }
+
+    // T sweeps the arc counter-clockwise from -180 degrees; S crosses the band. UV is the fact that fixes
+    // sweep direction: u runs ALONG the arc CCW covering the full 360 degrees (u=0 at -180, u=1 back at +180,
+    // through the measured station table above) and v runs ACROSS it, v=0 OUTER edge to v=1 INNER edge. The
+    // material's offset channel pans along u, wrapping through the seam exactly as it does on the source mesh.
+    static auto Surface_Crescent(float S, float T) -> FGridPoint
+    {
+        constexpr auto StartDegrees = -180.0f;
+
+        const float SweepDegrees = 360.0f * T;
+        const float AngleDegrees = StartDegrees + SweepDegrees;
+        const float Angle        = FMath::DegreesToRadians(AngleDegrees);
+
+        const auto  Band = Get_CrescentBand(FMath::Abs(FMath::UnwindDegrees(AngleDegrees)));
+        const float R    = FMath::Lerp(Band.OuterRadius, Band.InnerRadius, S); // S = v: 0 outer, 1 inner
+
+        return { FVector3f(FMath::Cos(Angle) * R, FMath::Sin(Angle) * R, 0.0f),
+                 FVector2f(Get_CrescentU(SweepDegrees), S) };
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -206,6 +281,10 @@ namespace ck::particles_editor
         BakeOne(TEXT("SM_CkParticles_Tube"),  &Surface_Tube,  32, 8,  TEXT("SweepErode"));
         BakeOne(TEXT("SM_CkParticles_Shell"), &Surface_Shell, 32, 16, TEXT("FresnelShell"));
         BakeOne(TEXT("SM_CkParticles_Disc"),  &Surface_Disc,  48, 3,  TEXT("SweepErode"));
+
+        // 3 band segments x 160 arc segments = 960 triangles, the source mesh's own count. Its slot material is
+        // only a fallback: the Slash row's four crescent renderers each override it with their own CkUsf look.
+        BakeOne(TEXT("SM_CkParticles_Crescent"), &Surface_Crescent, 3, 160, TEXT("SweepErode"));
 
         Log(TEXT("Generated {}/{} CkParticles VFX carrier meshes under {}."),
             FString::FromInt(Ok), FString::FromInt(Total), FString(MeshDir));

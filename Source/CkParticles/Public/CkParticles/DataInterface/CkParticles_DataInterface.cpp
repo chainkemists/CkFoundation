@@ -104,6 +104,34 @@ namespace NDICkParticlesLocal
             InA.W * InB.W - InA.X * InB.X - InA.Y * InB.Y - InA.Z * InB.Z);
     }
 
+    // ---- Behavior 7 (Slash) helpers. Mirrors of Behavior_Slash.ush's CkParticles_Slash_* functions ----------------
+
+    static auto Slash_Key2(float InT, float InT0, float InV0, float InT1, float InV1) -> float
+    {
+        return FMath::Lerp(InV0, InV1, Saturate((InT - InT0) / FMath::Max(InT1 - InT0, 1.0e-6f)));
+    }
+
+    static auto Slash_Key3(float InT, float InT0, float InV0, float InT1, float InV1, float InT2, float InV2) -> float
+    {
+        return InT <= InT1
+            ? Slash_Key2(InT, InT0, InV0, InT1, InV1)
+            : Slash_Key2(InT, InT1, InV1, InT2, InV2);
+    }
+
+    static auto Slash_VelScaleIntegral(float InS, float InC1, float InC2) -> float
+    {
+        constexpr auto Knee = 0.2f;
+        const auto A = FMath::Min(InS, Knee);
+        auto Sum = A * (1.0f + Slash_Key2(A, 0.0f, 1.0f, Knee, InC1)) * 0.5f;
+
+        if (InS > Knee)
+        {
+            const auto B = InS - Knee;
+            Sum += B * (InC1 + Slash_Key2(InS, Knee, InC1, 1.0f, InC2)) * 0.5f;
+        }
+        return Sum;
+    }
+
     static auto ExecuteStage_CPU(
         int32 InBehaviorId, float InDeltaTime, float InAge, float InLifetime,
         FVector3f InPosition, FVector3f InVelocity, int32 InSeed) -> FStageIO
@@ -210,76 +238,141 @@ namespace NDICkParticlesLocal
                 Out.Color    = FMath::Lerp(FLinearColor(3.0f, 3.0f, 2.2f, 1.0f), FLinearColor(0.2f, 0.5f, 2.0f, 1.0f), NormalizedAge);
                 break;
             }
-            case 7: // Slash — Vefects NS_BasicAttack swipe: sweep meshes + sparkle ring + wind ghost. Mirrors Behavior_Slash.ush.
+            case 7: // Slash — Vefects NS_BasicAttack. Mirrors Behavior_Slash.ush; recipe Cookbook/NS_BasicAttack.md.
             {
-                const float k = Rand(InSeed, 0);
+                constexpr auto NumLayers    = 19;
+                constexpr auto LayerSlash01 = 0;
+                constexpr auto LayerSlash02 = 1;
+                constexpr auto LayerSlash03 = 2;
+                constexpr auto LayerWind    = 3;
+                constexpr auto FirstSpark   = 4;
 
-                if (k < 0.05f)
-                {
-                    const float t     = Saturate(InAge / 0.42f);
-                    const float Pitch = 1.5707963f + (Rand(InSeed, 2) - 0.5f) * 0.35f;
-                    const float Roll  = (Rand(InSeed, 1) - 0.5f) * 0.7f;
+                constexpr auto LifeSlash  = 0.3f;
+                constexpr auto LifeWind   = 0.5f;
+                constexpr auto SparkDelay = 0.06f;
 
-                    Out.Orientation = QuatMul(
-                        QuatFromAxisAngle(FVector3f(0.0f, 1.0f, 0.0f), Roll),
-                        QuatFromAxisAngle(FVector3f(1.0f, 0.0f, 0.0f), Pitch));
-                    Out.Position  = FVector3f(0.0f, 0.0f, 90.0f);
-                    Out.Velocity  = FVector3f::ZeroVector;
-                    Out.VisTag    = 3;
-                    Out.MeshIndex = 0;
-                    Out.Scale     = FVector3f(1.0f, 1.0f, 1.0f) * FMath::Lerp(1.35f, 1.75f, Rand(InSeed, 3));
-                    Out.Dynamic   = FVector4f(FMath::Max(0.0f, t - 0.5f) * 2.0f, 0.35f, FMath::Lerp(-0.55f, 0.45f, t), 2.2f * (1.0f - t));
+                constexpr auto SparkRingRadius = 209.769f;
+                constexpr auto SparkRingAngle  = -0.11344640138f; // -6.5 degrees
 
-                    const float     Vis = Saturate(1.0f - FMath::Max(0.0f, InAge - 0.30f) / 0.12f);
-                    const FVector3f c   = FMath::Lerp(FVector3f(5.0f, 3.9f, 2.0f), FVector3f(5.0f, 0.35f, 0.75f), Saturate(t * 1.3f));
-                    Out.Color = FLinearColor(c.X * Vis, c.Y * Vis, c.Z * Vis, 0.6f * Vis);
-                }
-                else if (k < 0.30f)
-                {
-                    const float Life = FMath::Lerp(0.30f, 0.50f, Rand(InSeed, 4));
-                    const float td   = FMath::Max(0.0f, InAge - 0.06f);
-                    const float Arc  = Saturate(td / Life);
-                    const float a    = 6.28318530718f * Rand(InSeed, 5);
-                    const float jy   = (Rand(InSeed, 6) - 0.5f);
-
-                    const FVector3f P0(FMath::Cos(a) * 55.0f, jy * 14.0f, 90.0f + FMath::Sin(a) * 55.0f);
-                    const FVector3f d(FMath::Cos(a), jy * 0.6f, FMath::Sin(a));
-                    const float     s  = FMath::Lerp(250.0f, 550.0f, Rand(InSeed, 7));
-                    const float     kd = (1.0f - FMath::Exp(-2.4f * td)) / 2.4f;
-
-                    Out.Position = P0 + d * s * kd;
-                    Out.Velocity = d * s * FMath::Exp(-2.4f * td);
-                    Out.VisTag   = 1;
-                    Out.Size     = FVector2f(3.5f, FMath::Lerp(20.0f, 6.0f, Arc));
-
-                    const float     Vis = Step(0.06f, InAge) * Saturate(1.0f - Arc);
-                    const FVector3f c   = FMath::Lerp(FVector3f(4.0f, 3.8f, 2.7f), FVector3f(4.0f, 1.8f, 0.16f), Saturate((Arc - 0.15f) / 0.5f));
-                    Out.Color = FLinearColor(c.X * Vis, c.Y * Vis, c.Z * Vis, Vis);
-                }
-                else if (k < 0.36f)
-                {
-                    const float tw   = Saturate(FMath::Max(0.0f, InAge - 0.05f) / 0.55f);
-                    const float Roll = (Rand(InSeed, 1) - 0.5f) * 0.5f;
-
-                    Out.Orientation = QuatMul(
-                        QuatFromAxisAngle(FVector3f(0.0f, 1.0f, 0.0f), Roll),
-                        QuatFromAxisAngle(FVector3f(1.0f, 0.0f, 0.0f), 1.5707963f));
-                    Out.Position  = FVector3f(0.0f, 0.0f, 90.0f);
-                    Out.Velocity  = FVector3f::ZeroVector;
-                    Out.VisTag    = 3;
-                    Out.MeshIndex = 0;
-                    Out.Scale     = FVector3f(1.0f, 1.0f, 1.0f) * (1.95f * (1.0f + 0.1f * tw));
-                    Out.Dynamic   = FVector4f(tw * 0.9f, 0.30f, FMath::Lerp(-0.38f, 0.38f, tw), 0.3f);
-
-                    const float Vis = Saturate(tw / 0.25f) * Saturate(1.0f - FMath::Max(0.0f, tw - 0.6f) / 0.4f);
-                    Out.Color = FLinearColor(1.0f * Vis, 0.62f * Vis, 0.72f * Vis, 0.22f * Vis);
-                }
-                else
+                const auto HideLayer = [&Out]() -> void
                 {
                     Out.Color = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
                     Out.Size  = FVector2f(0.0f, 0.0f);
                     Out.Scale = FVector3f(0.0f, 0.0f, 0.0f);
+                };
+
+                const auto Layer = ((InSeed % NumLayers) + NumLayers) % NumLayers;
+
+                Out.Velocity = FVector3f::ZeroVector;
+                Out.Position = FVector3f::ZeroVector;
+
+                if (Layer < FirstSpark)
+                {
+                    const auto Life = Layer == LayerWind ? LifeWind : LifeSlash;
+                    if (InAge > Life)
+                    {
+                        HideLayer();
+                        break;
+                    }
+
+                    const auto t = Saturate(InAge / Life);
+
+                    Out.Orientation = QuatFromAxisAngle(FVector3f(-1.0f, 0.0f, 0.0f), 1.57079632679f);
+                    Out.MeshIndex   = 0;
+                    Out.Size        = FVector2f(0.0f, 0.0f);
+
+                    if (Layer == LayerSlash01 || Layer == LayerSlash02)
+                    {
+                        Out.VisTag = Layer == LayerSlash01 ? 5 : 6;
+                        Out.Scale  = FVector3f(1.0f, 1.0f, 1.0f);
+                        Out.Color  = FLinearColor(1.0f,
+                            Slash_Key2(t, 0.0f, 0.7835f, 1.0f, 0.4564f),
+                            Slash_Key2(t, 0.0f, 0.0976f, 1.0f, 0.0018f),
+                            1.0f);
+
+                        Out.Dynamic = Layer == LayerSlash01
+                            ? FVector4f(Slash_Key2(t, 0.4f, -0.1f, 1.0f, -1.0f),
+                                        0.5f,
+                                        Slash_Key2(t, 0.0f, -1.0f, 1.0f, 0.4f),
+                                        0.0f)
+                            : FVector4f(1.0f,
+                                        0.0f,
+                                        Slash_Key2(t, 0.0f, -1.0f, 1.0f, 0.7f),
+                                        Slash_Key2(t, 0.4f, 0.0f, 1.0f, -0.5f));
+                        break;
+                    }
+
+                    if (Layer == LayerSlash03)
+                    {
+                        Out.VisTag  = 7;
+                        Out.Scale   = FVector3f(1.0f, 1.0f, 1.0f);
+                        Out.Color   = FLinearColor(0.3813f, 0.1946f, 0.0006f, 0.2f);
+                        Out.Dynamic = FVector4f(1.0f,
+                            0.0f,
+                            Slash_Key2(t, 0.0f, -1.0f, 1.0f, 0.6f),
+                            Slash_Key2(t, 0.4f, 0.0f, 1.0f, -0.4f));
+                        break;
+                    }
+
+                    const auto WindRamp  = Saturate(t / 0.880f);
+                    const auto WindAlpha = t <= 0.157f ? Slash_Key2(t, 0.0f,   0.0f, 0.157f, 1.0f)
+                                         : t <= 0.316f ? 1.0f
+                                                       : Slash_Key2(t, 0.316f, 1.0f, 1.0f,   0.0f);
+
+                    Out.VisTag  = 8;
+                    Out.Scale   = FVector3f(1.1f, 1.1f, 1.1f);
+                    Out.Color   = FLinearColor(
+                        FMath::Lerp(1.0f, 0.2623f, WindRamp),
+                        FMath::Lerp(1.0f, 0.1384f, WindRamp),
+                        FMath::Lerp(1.0f, 0.0887f, WindRamp),
+                        WindAlpha * 0.2f);
+                    Out.Dynamic = FVector4f(-0.27f,
+                        0.0f,
+                        Slash_Key2(t, 0.0f, -0.375f, 0.8f, 0.375f),
+                        Slash_Key2(t, 0.4f, 0.0f, 1.0f, -0.4f));
+                    break;
                 }
+
+                const auto SparkLife = FMath::Lerp(0.2f, 0.4f, Rand(InSeed, 1));
+                const auto td        = InAge - SparkDelay;
+
+                if (td < 0.0f || td > SparkLife)
+                {
+                    HideLayer();
+                    break;
+                }
+
+                const auto s = Saturate(td / SparkLife);
+
+                const auto V0 = FVector3f(
+                    FMath::Lerp(-1500.0f, -3500.0f, Rand(InSeed, 2)),
+                    FMath::Lerp( -500.0f,   500.0f, Rand(InSeed, 3)),
+                    FMath::Lerp( 1500.0f,  3000.0f, Rand(InSeed, 4)));
+
+                const auto ScaleXy = Slash_Key3(s, 0.0f, 1.0f, 0.2f, 0.35f, 1.0f,  0.05f);
+                const auto ScaleZ  = Slash_Key3(s, 0.0f, 1.0f, 0.2f, 0.25f, 1.0f, -0.25f);
+
+                const auto IntXy = Slash_VelScaleIntegral(s, 0.35f,  0.05f) * SparkLife;
+                const auto IntZ  = Slash_VelScaleIntegral(s, 0.25f, -0.25f) * SparkLife;
+
+                const auto Spawn = FVector3f(
+                    SparkRingRadius * FMath::Cos(SparkRingAngle),
+                    0.0f,
+                    SparkRingRadius * FMath::Sin(SparkRingAngle));
+
+                Out.Position = Spawn + FVector3f(V0.X * IntXy, V0.Y * IntXy, V0.Z * IntZ);
+                Out.Velocity = FVector3f(V0.X * ScaleXy, V0.Y * ScaleXy, V0.Z * ScaleZ);
+                Out.VisTag   = 9;
+
+                const auto Width  = FMath::Lerp(10.0f, 30.0f, Rand(InSeed, 5));
+                const auto Length = FMath::Lerp(50.0f, 70.0f, Rand(InSeed, 6));
+                const auto Grow   = Slash_Key3(s, 0.0f, 0.0f, 0.1f, 1.0f, 1.0f, 0.0f);
+                Out.Size = FVector2f(Width * Grow, Length * Grow * Slash_Key2(s, 0.0f, 1.0f, 1.0f, 0.6f));
+
+                Out.Color = FLinearColor(1.0f,
+                    Slash_Key3(s, 0.0f, 0.9473f, 0.4576f, 0.6939f, 1.0f, 0.4508f),
+                    Slash_Key3(s, 0.0f, 0.6654f, 0.4576f, 0.1470f, 1.0f, 0.0409f),
+                    1.0f);
                 break;
             }
             case 8: // Nova — Shell dome + Disc shockwave + rim sparks. Mirrors Behavior_Nova.ush.
