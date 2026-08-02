@@ -51,11 +51,11 @@ emitter cadences and is the only one with a mesh renderer, a sub-UV flipbook, an
 | 2 | `Bomb_Glow_03` | **DISABLED** | System / Infinite | 1.0 | Burst 1 @ 0 | 1.0 | Sprite, Unaligned/FaceCamera | `Part02` |
 | 3 | `Raimbow` *(sic)* | **DISABLED** | System / Infinite | 1.0 | Burst 1 @ 0 | 1.0 | Sprite, Unaligned/FaceCamera | `Rainbow` |
 | 4 | `BigArrow` | yes | **System / Infinite** | **1.0** | Burst **1** @ 0 | **1.5** | Sprite, **VelocityAligned**/FaceCamera | `Arrows` |
-| 5 | `Sparkles_Dark` | yes | **Self / Once** | **0.3** | Burst **7** @ 0 **+ Rate 20/s** | rand `[unresolved]` | Sprite, Unaligned/FaceCamera | `Part01_Bright` |
+| 5 | `Sparkles_Dark` | yes | **Self / Once** | **0.3** | Burst **7** @ 0 **+ Rate 20/s** | rand **1.0–1.5** `[corpus-v3]` | Sprite, Unaligned/FaceCamera | `Part01_Bright` |
 | 6 | `Ring` | yes | **Self / Once** | **0.3** | Burst **3** @ 0 **+ Rate 5/s** | rand 0.3–0.7 | Sprite, Unaligned/FaceCamera | `Ring01` |
-| 7 | `Sparkles_Bright` | yes | **Self / Once** | **0.3** | Burst **7** @ 0 **+ Rate 20/s** | rand `[unresolved]` | Sprite, Unaligned/FaceCamera | `Part03_Bright` |
-| 8 | `Flames` | yes | **Self / Once** | **0.3** | Burst **5** @ 0 | rand `[unresolved]` | Sprite, Unaligned/FaceCamera, **SubUV 2×2** | `Flames01` |
-| 9 | `Slash` | yes | **Self / Once** | **0.3** | Burst **7** @ 0 **+ Rate 20/s** | rand `[unresolved]` | **Mesh** (`SM_VFX_Slash02`), Facing Default | `Slash04` (renderer override) |
+| 7 | `Sparkles_Bright` | yes | **Self / Once** | **0.3** | Burst **7** @ 0 **+ Rate 20/s** | rand **1.0–1.5** `[corpus-v3]` | Sprite, Unaligned/FaceCamera | `Part03_Bright` |
+| 8 | `Flames` | yes | **Self / Once** | **0.3** | Burst **5** @ 0 | rand **1.0–2.0** `[corpus-v3]` | Sprite, Unaligned/FaceCamera, **SubUV 2×2** | `Flames01` |
+| 9 | `Slash` | yes | **Self / Once** | **0.3** | Burst **7** @ 0 **+ Rate 20/s** | rand **1.0–1.5** `[corpus-v3]` | **Mesh** (`SM_VFX_Slash02`), Facing Default | `Slash04` (renderer override) |
 
 **The four disabled emitters are listed deliberately.** They are the *entire* `Bomb_Glow_*` + `Raimbow`
 stack that `NS_BuffCast` and `NS_HealCast` run enabled, with identical parameters — the Debuff variant
@@ -65,8 +65,11 @@ session that wants the enabled variant does not re-do the archaeology.
 
 ### Cadence: three different shapes in one system
 
-- **`BigArrow`** — `Life Cycle Mode = System`, `Loop Behavior = Infinite`, Loop Duration 1.0, one burst
-  particle per loop, lifetime 1.5. Loops forever.
+- **System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+  `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+- **`BigArrow`** (and the four disabled `Life Cycle Mode = System` emitters) — governed by the system
+  per [P0-D1], so it bursts **once** over that 2.0 s window. Its stored `Infinite / 1.0 s` row is
+  inert. *(Was read as "loops forever" on a 1.0 s cycle.)* One burst particle, lifetime 1.5.
 - **Five one-shot emitters** (`Sparkles_Dark`, `Ring`, `Sparkles_Bright`, `Flames`, `Slash`) —
   `Life Cycle Mode = **Self**`, `Loop Behavior = **Once**`, Loop Duration **0.3**. They fire once and
   stop.
@@ -81,21 +84,23 @@ burst 1 + 7 + 3 + 7 + 5 + 7 = **30**, plus ≈ 6 + 1.5 + 6 + 6 ≈ **19.5** from
 `Loop Count Limit = 1` with `UseLoopCountLimit = false` again everywhere — inert, same trap as the
 siblings.
 
-> ### `[unresolved: lifetime on five emitters]`
+> ### Lifetime — RESOLVED `[corpus-v3]`
 > `Sparkles_Dark`, `Sparkles_Bright`, `Flames`, `Slash` all carry `Lifetime Mode = Random` with
-> `Initialize Particle.Lifetime Min/Max` **and** `[override] Lifetime = dyn:Random Range Float` whose
-> `RandomRangeFloat Min/Max` is `0.2 / 0.4` on all four. The module's own ranges are:
+> `Initialize Particle.Lifetime Min/Max` **and** `[override] Lifetime = dyn:Random Range Float`
+> (`0.2 / 0.4` on all four). Per [P0-D2] `Random` selects the **Min/Max** pins, so those DRIVE and
+> the override on the unselected Direct-Set pin is INERT (`lifetimeResolved.source = minmax` on all
+> four, override under `inertOverrides`). The 3–7× gap resolves in favour of the LONG lifetimes; no
+> editor check needed.
 >
-> | Emitter | `Lifetime Min/Max` | override `RandomRangeFloat` |
+> | Emitter | LIVE (Random mode) | inert override |
 > |---|---|---|
-> | `Sparkles_Dark` | **1 / 1.5** | 0.2 / 0.4 |
-> | `Sparkles_Bright` | **1 / 1.5** | 0.2 / 0.4 |
-> | `Flames` | **1 / 2** | 0.2 / 0.4 |
-> | `Slash` | **1 / 1.5** | 0.2 / 0.4 |
+> | `Sparkles_Dark` | **1.0 / 1.5** | ~~0.2 / 0.4~~ |
+> | `Sparkles_Bright` | **1.0 / 1.5** | ~~0.2 / 0.4~~ |
+> | `Flames` | **1.0 / 2.0** | ~~0.2 / 0.4~~ |
+> | `Slash` | **1.0 / 1.5** | ~~0.2 / 0.4~~ |
 >
-> Random mode reads `Lifetime Min/Max`, so **1–1.5 / 1–2 is the likely truth** and the dynamic input
-> is a leftover `[inferred]`. The gap is 3–7×, so this must be settled in the editor before any
-> behavior is authored. `Ring` is unambiguous: Random mode, Min 0.3 / Max 0.7, no override.
+> `Ring` is unambiguous and confirmed: Random mode, Min 0.3 / Max 0.7, no override (its stored
+> `Lifetime = 1` sits under `inertValues`).
 
 ---
 
@@ -236,7 +241,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 - Dynamic params: **`[0, 0, 0, 0]`** constant.
 
 ### Layer 5 — `Sparkles_Dark` (burst 7 @ 0 + rate 20/s, Self/Once 0.3 s)
-- Lifetime `[unresolved]` — `Lifetime Min 1 / Max 1.5` vs override `RandomRangeFloat 0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`Lifetime Min 1.0 / Max 1.5` drives**; the `RandomRangeFloat 0.2 / 0.4` override is inert.
 - **`Sphere Location`, `Surface Only = true`, `Surface Expansion Mode = Outside`,
   `Sphere Radius` 200**, `Radius Position 1`, `U Position 0`, `V Position 0.5`,
   `Uniform Distribution 1`, `Uniform Spiral Amount 1`, Random distribution, Spawn Only,
@@ -277,7 +282,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
   `Color Minimum RGBA(0.093059, 0.181164, 0.0953075, 1)` (a dark green) and
   `Color Maximum RGBA(0.111932, 0.0409152, 0.3564, 1)` (a dark violet).
   (`InitializeParticle.Color RGBA(1,1,1,1)` is present but not used in Random Range mode.)
-- Lifetime `[unresolved]` — `Lifetime Min 1 / Max 1.5` vs override `RandomRangeFloat 0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`Lifetime Min 1.0 / Max 1.5` drives**; the `RandomRangeFloat 0.2 / 0.4` override is inert.
 - `Sphere Location`: **`Surface Only = false`**, `Sphere Radius` **5** (a near-point, unlike layer 5's 200),
   `Surface Expansion Mode = Outside`, Random, Spawn Only.
 - `Add Velocity from Point` = `Random Range Float 001` **Min 300 → Max 1000** (outward).
@@ -292,7 +297,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 - Dynamic params: **`[0, 0, 0, 0]`** constant.
 
 ### Layer 8 — `Flames` (burst 5 @ 0, Self/Once 0.3 s) — **the sub-UV layer**
-- Lifetime `[unresolved]` — `Lifetime Min 1 / Max 2` vs override `RandomRangeFloat 0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`Lifetime Min 1.0 / Max 2.0` drives**; the `RandomRangeFloat 0.2 / 0.4` override is inert.
 - `Sphere Location`: `Surface Only = true`, `Surface Expansion Mode = Outside`,
   **`Sphere Radius` 20**, `Radius Position 1`, `V Position 0.5`, `Uniform Distribution 1`, `Uniform Spiral Amount 1`.
 - **`Sub UV Animation`, `SubUV Animation Mode = Random`**, `Start Frame 0`, `End Frame 3`,
@@ -316,7 +321,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 ### Layer 9 — `Slash` (burst 7 @ 0 + rate 20/s, Self/Once 0.3 s) — **the mesh layer**
 - **`Color Mode = Random Range`**: `Color Minimum RGBA(0.0154102, 0.03, 0.0157825, 0.45)` (dark green),
   `Color Maximum RGBA(0.00942192, 0.00344404, 0.03, 0.45)` (dark violet). Note **alpha 0.45 on both ends**.
-- Lifetime `[unresolved]` — `Lifetime Min 1 / Max 1.5` vs override `RandomRangeFloat 0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`Lifetime Min 1.0 / Max 1.5` drives**; the `RandomRangeFloat 0.2 / 0.4` override is inert.
 - **`Mesh Scale Mode = Random Non-Uniform`**: `Mesh Scale Min (0.5, 1, 0.5)` → `Max (1.5, 1, 1.5)`
   (Y is pinned at 1). `Mesh Uniform Scale Min 1 / Max 2` present but not selected.
 - **`Initial Mesh Orientation`, `Rotation Coordinate Space = Mesh`,
@@ -358,7 +363,8 @@ dynamic param 1 = 1 / 0 / 2 / 0.5. **All four are disabled — do not recreate t
 **A new row is required, and the source's cadence does not fit the table's shape.** The enabled
 emitters split into two incompatible cadences:
 
-- `BigArrow`: infinite 1.0 s loop, 1 particle, lifetime 1.5.
+- `BigArrow`: system-governed — one burst over the system's `Once / 2.0 s` loop `[corpus-v3]`,
+  1 particle, lifetime 1.5. *(Was read as an infinite 1.0 s loop.)*
 - Five one-shot `Self / Once` emitters on a 0.3 s single loop, four of them adding a spawn *rate* on
   top of their burst.
 
@@ -368,7 +374,9 @@ forever while five fire once".
 
 The pragmatic plan:
 
-- **Row**: loop **1.0 s**, particle lifetime **1.5 s** (the longest layer), burst **30** (the exact
+- **Row `[corpus-v3]`, per [P0-D3]**: loop **2.0 s** (the system's `Once` loop duration — *was
+  1.0 s*), particle lifetime **2.0 s** (max resolved — `Flames`' 2.0 Max; *was 1.5 s under the
+  override-wins assumption, which capped every randomised layer at 0.4 s*), burst **30** (the exact
   corpus burst total across enabled emitters). Partition `Seed % 30`:
   1 = BigArrow, 7 = Sparkles_Dark, 3 = Ring, 7 = Sparkles_Bright, 5 = Flames, 7 = Slash.
 - **The four `Spawn Rate` modules are DROPPED** in that plan, costing ≈ 19.5 particles per firing
@@ -377,8 +385,9 @@ The pragmatic plan:
   approximation either way, and the burst-vs-stream difference is exactly the kind of cadence fake
   `CkParticles/CLAUDE.md` warns against. **Make it a recorded decision.**
 - **The `Self / Once` semantics are LOST**: the CkParticles template loops. The recreation will re-fire
-  every 1.0 s where the source fires once. For a "Cast" effect that is spawned per-cast and destroyed,
-  this may not matter — but it must be checked against how the caller spawns it.
+  every 2.0 s where the source fires once. Milder than the pre-v3 reading assumed — `[corpus-v3]` the
+  system itself is `Loop Once`, so one firing of the source plays exactly one 2.0 s cycle and even
+  `BigArrow` bursts only once. It must still be checked against how the caller spawns it.
 
 ### 6.2 VisTag / renderer needs
 

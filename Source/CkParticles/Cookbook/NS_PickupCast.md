@@ -57,7 +57,7 @@ No mesh renderers, no ribbons, no sub-UV, no light renderers, no events, no GPU 
 | 2 | Bomb_Glow_02 | 1 | 0 | 1 | Uniform **230** | **0** | `M_VFX_DisAdd_Part01` |
 | 3 | Bomb_Glow_03 | **3** | **0.05** | 0.5 | Uniform **100** | 1 | `M_VFX_DisAdd_Part02` |
 | 4 | Raimbow *(sic)* | 1 | 0 | 0.5 | Uniform **250** | **0.5** | `M_VFX_DisAdd_Rainbow` |
-| 5 | Sparkles | **10** | **0.05** | rand — §5 | Random Uniform **7 … 10** | 1 | `M_VFX_DisAdd_Part01_Bright` |
+| 5 | Sparkles | **10** | **0.05** | rand **0.5 … 1.0** `[corpus-v3]` | Random Uniform **7 … 10** | 1 | `M_VFX_DisAdd_Part01_Bright` |
 | 6 | Ring01 | 1 | 0 | 1 | Uniform **120** | curve (§5) | `M_VFX_DisAdd_Ring01` |
 | 7 | Flash_Glow_01 | 1 | **0.05** | **0.2** | Uniform **800** | 1 | `M_VFX_DisAdd_Part01` |
 | 8 | Flash_Glow_02 | 1 | **0.05** | **0.1** | Uniform **150** | 1 | `M_VFX_DisAdd_Part03_Bright` |
@@ -78,10 +78,11 @@ system. Every emitter nevertheless stores `Loop Behavior = Infinite`, `Loop Dura
 `Loop Duration = 1`, `Loop Delay = 0`, `UseLoopDelay = false`, `UseLoopCountLimit = false`,
 `Loop Count Limit = 1` (inert — the same authored leftover NS_Lightning_Range §4 documents),
 `Spawn Probability = 1`, `Use Spawn Probability = false`.
-`[unresolved: the system-level loop duration is NOT in the corpus export — CkAssetExporter writes
-emitter stacks only. 1.0 s is what every emitter stores and what the two shipped recipes took at face
-value; the fact that Star01 bursts at t = 0.2 and Sparkles/Flash at t = 0.05 is consistent with a
-≥ 0.2 s cycle but does not pin 1.0 s.]`
+
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+This is the authority per [P0-D1]; the emitter "Infinite / 1.0 s" rows above are inert leftovers.
+*(Was `[unresolved]` — the pre-v3 export wrote emitter stacks only, and 1.0 s was the working guess.)*
 
 ---
 
@@ -191,10 +192,10 @@ animation — those layers keep their Initialize Particle colour and just fade.
 
 ### 5 · Sparkles — **10** @ t=**0.05**, size Random Uniform 7 … 10
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins `Lifetime Min 0.5 / Max 1`.
-  `[unresolved: which pin is live — `Lifetime Mode = Random` reads Min/Max, but the Direct-Set pin
-  carries the override. NS_BasicAttack §2 resolved the identical shape in favour of the override;
-  follow that precedent knowingly.]`
+- Lifetime `[corpus-v3]`: **`Lifetime Mode = Random` ⇒ `Lifetime Min 0.5 / Max 1.0` DRIVES.** The
+  `Random Range Float` override **0.2 … 0.4** sits on the unselected Direct-Set pin and is INERT
+  (`lifetimeResolved.source = minmax`, override listed under `inertOverrides`).
+  *Was misread as 0.2 … 0.4 under the override-wins assumption — corrected per [P0-D2].*
 - Spawn shape: **Sphere Location**, `Sphere Radius **0.5**` (effectively a point),
   `Non Uniform Scale (1,1,1)`, `Offset (0,0,0)`, `Surface Only false`, `Sphere Distribution Random`
 - **`Add Velocity from Point` is ENABLED here** (it is DISABLED in NS_PickupLoop's Sparkles):
@@ -280,16 +281,18 @@ animation — those layers keep their Initialize Particle colour and just fade.
 
 ### 6.1 Cadence row
 
-**A new burst row is required: loop 1.0 s, burst 22.** This is the same shape as
+**A new burst row is required: loop 2.0 s, lifetime 1.0 s, burst 22 `[corpus-v3]`.** Same shape as
 `PS_CkParticles_Template_Slash` (1.0 / 0.5 / 19) and routes the same way.
+Per [P0-D3]: loop = the v3 `systemState` loop duration (2.0 s, `Once`); lifetime = max resolved
+emitter lifetime (1.0 s); burst = §2 counts (22). *Was loop 1.0 s under the pre-v3 guess.*
 
 Particle lifetime for the row must be **1.0 s** — the longest source lifetime (Bomb_Glow_01/02,
-Ring01, Ring02). Every shorter layer zeroes its colour, size and scale past its own lifetime, exactly
+Ring01, Ring02, and Sparkles' resolved 1.0 s max). Every shorter layer zeroes its colour, size and scale past its own lifetime, exactly
 as `Behavior_Slash` does (NS_BasicAttack §8). Spawn delays (0.05 s on three emitters, 0.1 s on two,
 0.2 s on one) are handled the same way NS_BasicAttack §5 handles its 0.06 s spark delay: hide the
 layer for `age < delay` and run its curves on `(age − delay) / lifetime`.
 
-`[unresolved: the loop duration — see §2's cadence caveat.]` 1.0 s is the working figure.
+Loop duration resolved — see §2's cadence block.
 
 ### 6.2 VisTag / renderer needs
 

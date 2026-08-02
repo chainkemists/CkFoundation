@@ -64,13 +64,15 @@ Per-emitter `Emitter State`: `Loop Behavior = Infinite`, `Loop Duration Mode = F
 
 > **`Life Cycle Mode = System` on all three emitters `[corpus]`.** The per-emitter Loop
 > Behavior / Loop Duration values above are therefore **driven by the system**, not by the emitter,
-> and the numbers stored on the module are leftovers. `[unresolved: the system-level System State
-> stack is NOT exported by CkAssetExporter — the JSON carries only Emitter Update / Particle Spawn /
-> Particle Update per emitter. The system's true loop duration and loop behavior are unknown from
-> the corpus.]` Do not assume 1.0 s. Spawn **times** and burst **counts** are live and are quoted
-> as read.
+> and the numbers stored on the module are leftovers.
+>
+> **System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.5 s`, `Loop Delay = 0`,
+> `UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+> Per [P0-D1] this is the authority. Note **2.5 s, not the 2.0 s every other Vefects Skills system
+> uses** — it matches this system's 2.5 s particle lifetimes exactly. *(Was `[unresolved]`.)*
+> Spawn **times** and burst **counts** are live and are quoted as read.
 
-Total burst particles per loop: **4** (3 glow + 1 bomb). Ribbon points are emitted per 20 units of
+Total burst particles per firing: **4** (3 glow + 1 bomb). Ribbon points are emitted per 20 units of
 travel (see §5), so a projectile that never moves emits no trail at all.
 
 `Bomb_Trail`'s disabled `Add Velocity` carries `Velocity = (-3000, 0, 0)`, `Scale Added Velocity =
@@ -314,19 +316,18 @@ Update module order: 1 Solve Forces and Velocity, 2 Particle State, 3 Dynamic Ma
 
 | Field | Value | Why |
 |---|---|---|
-| Loop duration | `[unresolved: system-level loop, see §2]` — **must be resolved before the row is written** | `Life Cycle Mode = System` makes the exported per-emitter `Loop Duration = 1` a leftover |
-| Particle lifetime | **2.5 s** | both burst emitters use 2.5; the template particle must outlive the longest layer |
-| Burst count | **4** | 3 `Bomb_Glow` + 1 `Bomb` |
+| Loop duration | **2.5 s** `[corpus-v3]` | the system's `Once` loop duration ([P0-D3]); the exported per-emitter `Loop Duration = 1` is a leftover. *Was `[unresolved]`.* |
+| Particle lifetime | **2.5 s** | max resolved lifetime — both burst emitters use 2.5 |
+| Burst count | **4** | 3 `Bomb_Glow` + 1 `Bomb` (§2) |
 
 Layer partition would be `Seed % 4` (0–2 = glow, 3 = bomb), exactly the NS_BasicAttack §8 pattern.
 **Do not approximate onto `PS_CkParticles_Template_Burst` (1.2 / 1.2 / 96)** — wrong in all three
 numbers, the same mistake NS_BasicAttack §14.1 records.
 
-Resolving the loop duration is a prerequisite, not a detail. The two options are (a) re-export the
-corpus with a CkAssetExporter that emits the System Spawn / System Update stacks, or (b) an
-`[EDITOR-VERIFY]` read of the system's `System State` module by a human. Guessing 1.0 s because the
-inert emitter fields say 1 would be exactly the "approximate the cadence" failure the cookbook
-exists to prevent.
+The loop duration is now resolved mechanically `[corpus-v3]` — the v3 exporter emits the System
+Update stack's `System State` module (Phase 0, unit 0.1). No `[EDITOR-VERIFY]` needed. Note the
+system loop (2.5 s) and the particle lifetime (2.5 s) coincide here, so a bomb that has not exploded
+by the end of its flight is killed by lifetime and by loop end at the same instant.
 
 ### 6.2 VisTag / renderer needs
 

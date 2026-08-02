@@ -86,10 +86,12 @@ inert). `Bounds: Dynamic`, `Determinism: false`. **Every emitter's `Position Off
 — all spatial spread comes from Sphere Location modules and velocity.
 
 > **`Life Cycle Mode = System` on all 23 emitters `[corpus]`.** The stored Loop Behavior / Loop
-> Duration are **inert leftovers**; the system drives the cadence. `[unresolved: the system-level
-> System State stack is NOT exported by CkAssetExporter — the JSON carries only Emitter Update /
-> Particle Spawn / Particle Update. The system's loop duration and loop behavior are unknown from
-> the corpus.]` Spawn **times** and burst **counts** are live.
+> Duration are **inert leftovers**; the system drives the cadence.
+>
+> **System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+> `UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+> Per [P0-D1] this is the authority — one 162-particle burst over a single 2.0 s cycle, all of it
+> over by t ≈ 0.5 s. *(Was `[unresolved]`.)* Spawn **times** and burst **counts** are live.
 
 **Three spawn beats**: t = 0 (Glow_01/02, Ring01, Ground_Glow_01, all 30 spikes, FlareImpact,
 LightningStrip, Bubble_First_Explo = 45 particles), t = 0.05 (Glow_03/04/05, both 50-sparkle
@@ -470,7 +472,7 @@ both carry **two** `Scale Sprite Size` modules.
 
 | | `Sparkles_01` | `Sparkles_02` |
 |---|---|---|
-| Lifetime | `Random`, `Lifetime Min/Max = 0.3 / 0.5`; pin override `Random Range Float` min **0.2** max **0.4** `[unresolved: which is live — the pin override normally wins]` | `Random`, `Lifetime Min/Max = 0.2 / 0.3`; same override 0.2/0.4 `[unresolved]` |
+| Lifetime | `[corpus-v3]` `Random` ⇒ **`Lifetime Min/Max = 0.3 / 0.5` DRIVES**; the `Random Range Float` override (0.2 / 0.4) is INERT. *Was read as "the pin override normally wins".* | `[corpus-v3]` `Random` ⇒ **`0.2 / 0.3` DRIVES**; same override inert |
 | `Velocity Strength` | `Random Range Float 001` **min 2000, max 7000** | **min 4000, max 8000** |
 | `Sprite Size Min/Max` | `(20, 120)` / `(35, 140)` | `(20, 60)` / `(30, 80)` |
 | Init colour | `RGBA(1, 1, 1, 1)` | **`Random Range Linear Color`, min `RGBA(0, 0.136094, 1, 1)`, max `RGBA(1, 1, 1, 1)`** |
@@ -619,8 +621,8 @@ Update order: 1 Particle State, 2 Scale Mesh Size, 3 Dynamic Material Parameters
 
 | Field | Value | Why |
 |---|---|---|
-| Loop duration | `[unresolved: system-level loop, §2]` — **resolve before writing the row** | `Life Cycle Mode = System` |
-| Particle lifetime | **0.3 s** | the longest layer (`Glow_03/04`, `Bubble_Noise02`, `Bubble_Fresnel`, `Sparkles_01` if 0.3–0.5 is live) |
+| Loop duration | **2.0 s** `[corpus-v3]` | the system's `Once` loop duration ([P0-D3]). *Was `[unresolved]`.* |
+| Particle lifetime | **0.5 s** `[corpus-v3]` | max resolved lifetime — `Sparkles_01`'s resolved `Lifetime Max` 0.5. *Was 0.3 s, which assumed the 0.2/0.4 override drove `Sparkles_01`; [P0-D2] flips that.* |
 | Burst count | **162** | the §2 total |
 
 162 is well above the current maximum row (96 on `_Burst`), but it is the *same kind* of number —
@@ -699,7 +701,7 @@ vs `TileNoise`, `T_VFX_LightStrip_01` vs `Streak`. **New bakes:** `T_VFX_Part_02
 | 7 | **World space on 19 of 23 emitters.** The template is local-space (NS_BasicAttack §13.2). For an explosion at a fixed point this is low-risk. | Low |
 | 8 | **`Opacty_DepthFade`** 20 / 30 / 0 across instances; and `DephFade_Dist` 30 on one FresnelBomb. CkUsf surface looks do not wire scene depth (known gap). **This matters more here than elsewhere** — the two `Ground_Glow_*` decals are 2700–4000 units wide and lie flat on the ground, exactly where a hard intersection line reads badly. | Medium |
 | 9 | **A colour shape texture** (`T_VFX_Gradient_03`, `TSF_BGRA8`) in a slot the CkUsf look treats as a greyscale mask tinted by `ParticleColor`. | Medium |
-| 10 | **Two `[unresolved]` sparkle lifetime ranges** (§5.7): module `Lifetime Min/Max` and a pin override carry different numbers. Resolve before implementing. | Prerequisite |
+| 10 | ~~Two `[unresolved]` sparkle lifetime ranges~~ — **RESOLVED `[corpus-v3]`** (§5.7): `Lifetime Mode = Random` ⇒ Min/Max drives on both ([P0-D2]); `Sparkles_01` 0.3–0.5, `Sparkles_02` 0.2–0.3. | Closed |
 | 11 | **`Sparkles_02`'s `Random Range Linear Color`** spawn colour. Expressible as `CkParticles_Rand` per channel; not a gap, but it must stay bit-identical GPU↔CPU. | Low |
 
 **Complexity tier: L**, driven by gaps 2/3 (mesh facing) and 4 (a new material family). Without

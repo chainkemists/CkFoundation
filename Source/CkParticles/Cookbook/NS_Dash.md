@@ -66,8 +66,15 @@ Corpus evidence (regenerate per [README.md](README.md); `Saved/` is machine-loca
 ## 2. System anatomy `[corpus]`
 
 **4 CPU emitters, all enabled, all bounds Dynamic, `determinism: false`.
-6 particles per 1.0 s loop from the three wind emitters, plus a 13-particle burst and a continuous
-50 /s rate from `Add_Lines` on its own 0.3 s self-loop** (≈ 28 particles in the first 0.3 s).
+6 particles from the three wind emitters, plus a 13-particle burst and a continuous 50 /s rate from
+`Add_Lines` on its own 0.3 s self-loop** (≈ 28 particles in the first 0.3 s).
+
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+Per [P0-D1] this RULES the three `Life Cycle Mode = System` wind emitters — their stored
+`Infinite / 1.0 s` rows are inert, and they burst **once** over a single 2.0 s cycle rather than
+looping every second. *(Was read as a 1.0 s infinite loop.)* `Add_Lines` is `Life Cycle Mode = Self`,
+so its own `Once / 0.3 s` row stays LIVE.
 
 **Coordinate space is MIXED and that is the point of the effect** `[corpus]`:
 
@@ -95,7 +102,8 @@ under `Life Cycle Mode = Self` is what makes it fire once.
 **`Add_Lines` is the only emitter in the entire batch with `Life Cycle Mode = Self`.** Every other
 emitter across all six systems is `System`. That matters: for `Add_Lines` the emitter-local
 `Loop Behavior = Once` / `Loop Duration = 0.3` **are** the values that run, whereas for the other
-three the system life cycle drives (see §6.0's unresolved item).
+three the system life cycle drives — which `[corpus-v3]` is `Once / 2.0 s` (see the system-loop
+block above).
 
 ### 2.1 Spawn shapes, velocity and forces `[corpus]`
 
@@ -358,26 +366,29 @@ Items that are **work, not gaps**:
   velocity in closed form, so the size scale is a direct evaluation of §5's 3-key curve at
   `|v| / 1500`.
 
-**`[unresolved: which loop duration is authoritative for the three wind emitters]`** — `Wind_01`,
-`Wind_Smokes` and `Wind_Speed` are `Life Cycle Mode = System`, under which the *system* life cycle
-drives looping and their emitter-local `Loop Behavior = Infinite` / `Loop Duration = 1.0` are not the
-values that run. The exporter records no system-level state. All three agree on 1.0 s, so the risk is
-low — but `Add_Lines` (`Self`, `Once`, 0.3) genuinely does run its own, which is the whole reason the
-distinction matters here.
+**Loop authority — RESOLVED `[corpus-v3]`.** `Wind_01`, `Wind_Smokes` and `Wind_Speed` are
+`Life Cycle Mode = System`, so per [P0-D1] the system's `Loop Once / 2.0 s` drives them and their
+emitter-local `Infinite / 1.0 s` rows are inert. `Add_Lines` (`Self`, `Once`, 0.3 s) genuinely does
+run its own — which is why the distinction matters here. *(Was `[unresolved]`; the working figure
+was the emitters' 1.0 s.)*
 
 ### 6.1 Cadence row
 
 **A new row is required.**
 
 ```
-{ TEXT("PS_CkParticles_Template_Dash"), 1.0f, 1.5f, 34, Get_DashRendererSpecs() }
+{ TEXT("PS_CkParticles_Template_Dash"), 2.0f, 1.5f, 34, Get_DashRendererSpecs() }
 ```
 
-- `LoopDuration` **1.0** — the three wind emitters' Loop Duration.
-- `ParticleLifetime` **1.5** — `Wind_01`, the longest-lived layer. Every shorter layer writes zero
-  colour, zero size and zero scale past its own lifetime (`NS_BasicAttack.md` §8). **No lifetime
-  ambiguity in this system** — `Add_Lines` is the only randomized-lifetime emitter and it carries no
-  `[override] Lifetime`, so its 0.8–1.0 range is unambiguous (§5.4).
+Per [P0-D3]: loop = the system loop duration, lifetime = max resolved lifetime, burst = §2 counts.
+
+- `LoopDuration` **2.0** `[corpus-v3]` — the system's `Once` loop duration. *Was 1.0, taken from the
+  three wind emitters' inert Loop rows.*
+- `ParticleLifetime` **1.5** — `Wind_01`, the longest-lived layer (max resolved). Every shorter layer
+  writes zero colour, zero size and zero scale past its own lifetime (`NS_BasicAttack.md` §8).
+  **No lifetime ambiguity in this system, confirmed `[corpus-v3]`** — `Add_Lines` is the only
+  randomized-lifetime emitter, `Lifetime Mode = Random` with no override, so its 0.8–1.0 range drives
+  (§5.4).
 - `BurstCount` **34** = 1 (`Wind_01`) + 4 (`Wind_Smokes`) + 1 (`Wind_Speed`) + 28 (`Add_Lines`:
   13 burst + ~15 from the 50 /s rate over its 0.3 s window, per §6.0 G6). Layer index = `Seed % 34`
   (double-modulo): 0 `Wind_01`, 1–4 `Wind_Smokes`, 5 `Wind_Speed`, 6–33 `Add_Lines`.

@@ -68,7 +68,11 @@ Burst particles at loop start: **13** (1 + 5 + 5 + 1 + 1 + 1 + 1 − wait: 1+5+5
 everywhere, `Determinism: false`.
 
 > **`Life Cycle Mode = Self` on all 9 emitters `[corpus]` — this system is the batch's exception.**
-> The per-emitter Loop Behavior / Loop Duration values below are therefore **live**, not leftovers:
+> The per-emitter Loop Behavior / Loop Duration values below are therefore **live**, not leftovers.
+> [P0-D1]'s "the system rows rule" does NOT apply here — it is scoped to system-governed emitters.
+> For the record, the system's own rows `[corpus-v3]` are **`Loop Behavior = Infinite`,
+> `Loop Duration = 10.0 s`, `Loop Delay = 0`, `Inactive Response = Complete`**, which AGREES with the
+> per-emitter 10 s; the two readings coincide, so nothing moves.
 >
 > | Emitter | Loop Behavior | Loop Duration Mode | Loop Duration | Inactive Response |
 > |---|---|---|---|---|
@@ -232,7 +236,7 @@ Update order: 1 Particle State, 2 Dynamic Material Parameters, 3 Scale Sprite Si
 | Fact | Value |
 |---|---|
 | Position offset | `(-27.6096, 0, 0)` |
-| Lifetime | `Lifetime Mode = Random`; `InitializeParticle.Lifetime Min/Max = **0.2 / 0.3**`; the `Lifetime` pin is overridden by `Random Range Float` with **min 0.2 / max 0.4** `[unresolved: which of the two ranges is live — the pin override normally wins, giving 0.2–0.4]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min/Max = 0.2 / 0.3` DRIVES** (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 / 0.4) sits on the unselected Direct-Set pin and is INERT. *Was read as "the pin override normally wins, giving 0.2–0.4"; corrected per [P0-D2].* |
 | Spawn shape | **Sphere Location**, `Sphere Radius = 10`, `Sphere Orientation Axis = (1,0,0)`, `Non Uniform Scale = (1,1,1)`, `Radius Position = 1`, `U Position = 0`, `V Position = 0.5`, `Uniform Distribution = 1`, `Uniform Spiral Amount = 1`, `Uniform Endpoint Offset = 0`, `Surface Only = true` (`Surface Expansion Mode = Outside`, `Band Thickness = 0`), **`Hemisphere Z = false`**, `Sphere Distribution = Random`, `Random Seed = 0` |
 | Velocity | `Add Velocity` ← `Random Range Vector 001`, **min `(-20, -10, -10)`, max `(-100, 10, 10)`**, `Scale Added Velocity = (1,1,1)` — note min.x > max.x; treat as per-axis lo/hi |
 | Size | `Sprite Size Mode = Random Uniform`, min **30**, max **50** |
@@ -266,7 +270,7 @@ Update order: 1 Scale Velocity, 2 Solve Forces and Velocity, 3 Particle State, 4
 | Fact | Value |
 |---|---|
 | Position offset | `(-24.8649, 0, 0)` |
-| Lifetime | `Random`; `InitializeParticle.Lifetime Min/Max = **0.3 / 0.4**`; pin override `Random Range Float` min 0.2 / max 0.4 `[unresolved: same ambiguity as §5.2]` |
+| Lifetime | `[corpus-v3]` `Random` ⇒ **`Lifetime Min/Max = 0.3 / 0.4` DRIVES**; the 0.2 / 0.4 override is INERT ([P0-D2], same resolution as §5.2). |
 | Spawn shape | Sphere Location, `Sphere Radius = 20`, **`Non Uniform Scale = (1, 1, 0)`** — a flattened disc in XY, `Surface Only = true` / `Outside`, `Hemisphere Z = false`, `Radius Position = 1`, `V Position = 0.5` |
 | Velocity | `Add Velocity` ← `Random Range Vector 001`, **min `(-50, -10, -10)`, max `(-150, 10, 10)`** |
 | Size | `Random Uniform`, min **150**, max **200** |
@@ -395,7 +399,7 @@ spawn-rate stack (`BurstCount = 0`), or an instantaneous burst of N per loop. Th
 
 | Requirement | Value |
 |---|---|
-| Loop duration | **10 s** (live — `Life Cycle Mode = Self`, §2) |
+| Loop duration | **10 s** (live — `Life Cycle Mode = Self`, §2; the system's own `Infinite / 10.0 s` agrees `[corpus-v3]`) |
 | Longest particle lifetime | **10 s** (`Projectile_01/02/03`) |
 | Burst at loop start | 13–15 particles across 4 emitters, at t = 0 / 0.04 / 0.05 |
 | Sustained sprite rate | **408 /s** (5 + 200 + 200 + 3) |
@@ -458,7 +462,7 @@ Textures: `SoftParticle` / `SparkStreak` / `TileNoise` already cover `T_VFX_Part
 | 7 | **`Smoke01` uses different `Main_Tex` and `Color_Tex`**; the CkUsf family collapses them into one `ShapeTex`. Small, real. | Low |
 | 8 | **`CamOffset`, `Glow_Intensity`, `Core_Intensity` unplumbed** in the CkUsf DissolveAdd family. | Medium |
 | 9 | **`Opacty_DepthFade`** 20 / 30 across instances; CkUsf surface looks do not wire scene depth (known gap, NS_Lightning_Range §13.4). | Low (known) |
-| 10 | **Two `[unresolved]` lifetime ranges** (§5.2, §5.3): `Lifetime Mode = Random` with `Lifetime Min/Max` on the module *and* a `Random Range Float` override on the `Lifetime` pin, carrying different numbers. Resolve before implementing. | Prerequisite |
+| 10 | ~~Two `[unresolved]` lifetime ranges~~ — **RESOLVED `[corpus-v3]`** (§5.2, §5.3): `Lifetime Mode = Random` ⇒ the module's `Lifetime Min/Max` drives on both ([P0-D2]); `Flames01` 0.2–0.3, `Smokes` 0.3–0.4. | Closed |
 
 **Complexity tier: L.** Three independent capabilities are missing (camera-facing row sprite,
 sub-UV flipbooks, ribbons), the cadence needs composition rather than a row, and world-space
