@@ -46,13 +46,25 @@ public:
 private:
     // ---- JSON ----
     static auto DoSerializeToJson      (const UNiagaraSystem* InSystem) -> TSharedPtr<FJsonObject>;
-    static auto DoSerializeEmitter_Json(const FVersionedNiagaraEmitterData* InData, const FString& InName, bool bInEnabled) -> TSharedPtr<FJsonObject>;
+    static auto DoSerializeEmitter_Json(const FVersionedNiagaraEmitterData* InData, const FString& InName, bool bInEnabled, const TMap<FGuid, FString>& InEmitterNamesById) -> TSharedPtr<FJsonObject>;
     static auto DoSerializeStack_Json  (UNiagaraScript* InScript, const FString& InStageName) -> TSharedPtr<FJsonObject>;
     static auto DoSerializeModule_Json (const UNiagaraNodeFunctionCall* InModule, const TArray<TSharedPtr<FJsonObject>>& InOverrides) -> TSharedPtr<FJsonObject>;
     static auto DoSerializeRenderer_Json(const UNiagaraRendererProperties* InRenderer) -> TSharedPtr<FJsonObject>;
 
+    // The system's own module stacks. Emitter-level Loop rows are inert while an emitter's Life Cycle Mode is System,
+    // so the authored cadence is only readable here.
+    static auto DoSerializeSystemState_Json(UNiagaraSystem* InSystem) -> TSharedPtr<FJsonObject>;
+
+    // Always emitted, empty when the emitter handles no events — absence of the key means "not exported".
+    static auto DoSerializeEventHandlers_Json(const FVersionedNiagaraEmitterData* InData, const TMap<FGuid, FString>& InEmitterNamesById) -> TArray<TSharedPtr<FJsonValue>>;
+
+    // Which source actually drives Initialize Particle's Lifetime pin: the module's Lifetime Mode static switch selects
+    // between the "Lifetime" and the "Lifetime Min"/"Lifetime Max" pins, and an override on the UNSELECTED pin is inert.
+    static auto DoResolveLifetime_Json (UNiagaraScript* InSpawnScript) -> TSharedPtr<FJsonObject>;
+
     // ---- Plain text ----
     static auto DoSerializeToText      (const UNiagaraSystem* InSystem) -> FString;
+    static auto DoFormatLifetime_Text  (const TSharedPtr<FJsonObject>& InLifetimeResolved) -> FString;
 
     // ---- Stack walking ----
     // Override nodes are plain UEdGraphNode because UNiagaraNodeParameterMapSet lives in a Private NiagaraEditor

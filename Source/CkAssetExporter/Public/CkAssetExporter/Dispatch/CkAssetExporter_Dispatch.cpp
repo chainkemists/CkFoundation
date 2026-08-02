@@ -193,7 +193,7 @@ namespace ck_asset_exporter_dispatch
             Fill_Entry(InOutEntry, FCk_BlueprintExporter::ExportBlueprint(Blueprint, InFormats));
             return;
         }
-        if (auto* NiagaraSystem = Cast<UNiagaraSystem>(InAsset)) // no versioned meta — never skips
+        if (auto* NiagaraSystem = Cast<UNiagaraSystem>(InAsset)) // stamps a version but is not freshness-gated — never skips
         {
             Fill_Entry(InOutEntry, FCk_NiagaraExporter::ExportNiagaraSystem(NiagaraSystem, FString{}, InFormats));
             return;

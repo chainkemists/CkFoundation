@@ -23,6 +23,10 @@ namespace ck::asset_exporter::version
     inline constexpr int32 UserDefinedEnum = 2;
     inline constexpr int32 UserDefinedStruct = 2;
     inline constexpr int32 Material = 2;
+
+    // First stamped at 3, the shape that added systemState / eventHandlers / lifetimeResolved: earlier Niagara
+    // sidecars carried no "_meta" at all, so a consumer cannot tell 1 from 2 and must not be told it can.
+    inline constexpr int32 Niagara = 3;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
