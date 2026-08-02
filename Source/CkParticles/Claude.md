@@ -98,8 +98,8 @@ pair) share 10–11 on one cadence row; every Vefects port from 20 up owns its o
 those — 12–14 (20), 15–27 (21), 28–36 (22), 37–49 (23), 50–61 (24), 62–70 (25), 71–76 (26), 77–83 (27),
 84–90 (28), 91–96 (29), 97–104 (30), 105–112 (31), 113–118 (32), 119–130 (33), 131–146 (34) and
 147–156 (35), 157–163 (36, the last of them the ribbon emitter's), 164–166 (37), 167–174 (38),
-175–184 (39), 185–197 (40 AND 41 — the palette twins share their band), 198–209 (42 and 43) and
-210–224 (44) — and 19
+175–184 (39), 185–197 (40 AND 41 — the palette twins share their band), 198–209 (42 and 43),
+210–224 (44) and 225–241 (45) — and 19
 additionally binds a look, because its one camera-facing layer draws on the shared VisTag 0 where
 `User.SpriteMaterial` is the only material channel.
 **The roster-wide ceiling is DERIVED** — `ck::particles::Get_RosterVisTag_Max()` walks the
@@ -171,6 +171,7 @@ Shipped recipes:
 | [`NS_ExplosionOmni.md`](Cookbook/NS_ExplosionOmni.md) | Vefects `NS_ExplosionOmni` + 9 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `ExplosionOmni` (42) |
 | [`NS_ExplosionIceOmni.md`](Cookbook/NS_ExplosionIceOmni.md) | Vefects `NS_ExplosionIceOmni` — the same asset set, recoloured | `ExplosionOmniIce` (43) |
 | [`NS_Bomb_Explosion.md`](Cookbook/NS_Bomb_Explosion.md) | Vefects `NS_Bomb_Explosion` + 9 `M_VFX_DisAdd_*` + `M_VFX_FlatAdd` + 3 `MI_VFX_FresnelBomb_*` | `BombExplosion` (44) |
+| [`NS_Lightning_Hit.md`](Cookbook/NS_Lightning_Hit.md) | Vefects `NS_Lightning_Hit` + 12 `M_VFX_DisAdd_*` + `M_VFX_FlatAdd` — the widest system in the pack, and the only port that added ZERO new assets of any kind | `LightningHit` (45) |
 
 ---
 
@@ -291,7 +292,7 @@ FireBurst=20, FireBallHit=21, GunshotHit=22, ArrowCast=23, ArrowHit=24, BombSpaw
 HealLoop=27, BuffLoop=28, DebuffLoop=29, PickupCast=30, HealCast=31, DebuffCast=32, GunshotCast=33,
 FireBallCast=34, LightningCast=35, FireBallProjectile=36, BombProjectile=37, BuffCast=38,
 LightningMuzzle=39, ExplosionGround=40, ExplosionGroundIce=41, ExplosionOmni=42,
-ExplosionOmniIce=43, BombExplosion=44.
+ExplosionOmniIce=43, BombExplosion=44, LightningHit=45.
 
 Ids 40-43 are the explosion FAMILY: two structural variants of one effect in two palettes, sharing one
 implementation (`Behaviors/Behavior_ExplosionShared.ush` + one `Explosion_Run` in the CPU mirror) behind
@@ -357,6 +358,7 @@ neither is the legacy seed template, whose cadence comes from the emitter factor
 | `PS_CkParticles_Template_ExplosionOmni` | 2 s | 1.3 s | 65 | Vefects `NS_ExplosionOmni` (42) — 11 row renderers + the same ribbon emitter |
 | `PS_CkParticles_Template_ExplosionOmniIce` | 2 s | 1.3 s | 65 | Vefects `NS_ExplosionIceOmni` (43) — the second palette twin |
 | `PS_CkParticles_Template_BombExplosion` | 2 s | 0.5 s | **162** | Vefects `NS_Bomb_Explosion` (44) — the cookbook's largest burst; 15 row renderers, SEVEN of them meshes, and the only row that uses every C8 facing mode |
+| `PS_CkParticles_Template_LightningHit` | 2 s | 1.3 s | 84 | Vefects `NS_Lightning_Hit` (45) — 16 row renderers, the widest spread in the cookbook (two 2x2 sheets in Niagara's TWO different sub-UV modes, two custom-facing ground quads, four meshes over three carriers) + a ribbon emitter carrying the same arc PAIR NS_Lightning_Muzzle draws |
 
 Rows verified 2026-08-01 against `ck::particles::Get_TemplateSpecs()` and against `Add_SpawnEmitterStack`,
 which reads `LoopDuration` / `ParticleLifetime` / `BurstCount` straight off the spec — so the table above is
