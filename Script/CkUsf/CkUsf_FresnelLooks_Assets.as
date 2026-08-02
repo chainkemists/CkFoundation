@@ -80,9 +80,9 @@ namespace CkUsf
         _ParticleDynamicParameterNames = CkUsf::Usf_DissolveAddChannelNames();
 
         _Parameters = CkUsf::Usf_FresnelBombParams(
-            // T_VFX_Noise_05 stand-in. NS_Bomb_Explosion.md §6.4 lists it as measure-then-decide against the
-            // existing TileNoise bake — that measurement belongs to the port, not to this capability landing.
-            "TileNoise",
+            // T_VFX_Noise_05, MEASURED at the port (NS_Bomb_Explosion.md §7): rejected against all four existing
+            // noise bakes' sources — best correlation at any roll 0.11 — so it carries its own TileNoiseFine bake.
+            "TileNoiseFine",
             FLinearColor(2.0, 2.20833, 2.5, 1.0),   // Color_Int
             FLinearColor(0.0, 0.566667, 1.0, 1.0),  // Color_Ext
             0.5,                                     // Fresnel_01_Expo
@@ -109,7 +109,7 @@ namespace CkUsf
         _ParticleDynamicParameterNames = CkUsf::Usf_DissolveAddChannelNames();
 
         _Parameters = CkUsf::Usf_FresnelBombParams(
-            "TileNoise",
+            "TileNoiseFine",
             FLinearColor(2.0, 2.20833, 2.5, 1.0),
             FLinearColor(0.0, 0.566667, 1.0, 1.0),
             2.0,
@@ -136,7 +136,7 @@ namespace CkUsf
         _ParticleDynamicParameterNames = CkUsf::Usf_DissolveAddChannelNames();
 
         _Parameters = CkUsf::Usf_FresnelBombParams(
-            "TileNoise",
+            "TileNoiseFine",
             FLinearColor(0.0, 0.05,     1.5, 1.0),
             FLinearColor(0.0, 0.166665, 2.0, 1.0),
             3.0,

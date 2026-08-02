@@ -311,6 +311,55 @@ namespace ck::particles_editor::MeshGenLocal
                  FVector2f(S, T) };
     }
 
+    // ---- UvSphere: the Vefects SM_VFX_Sphere01 / SM_VFX_Sphere02 carrier -----------------------------------------
+    //
+    // Both source assets measure IDENTICAL (559 verts, 960 tris, radius-from-origin constant 100.000, the same nine
+    // discrete v levels), so one carrier serves all six explosion bubbles across two ports. The existing Shell is
+    // NOT this mesh: it is radius 50 with u starting at angle 0, where the source is radius 100 with its seam at
+    // +-180 degrees.
+    //
+    // Measured UV: v runs pole to pole, 0 at +Z and 1 at -Z; u wraps longitudinally with u = 0 at -180 degrees and
+    // u = 1 at +180. The dissolve pans in that space, so both signs are load-bearing.
+    //
+    // The pole gap is the Shell's own reason: a grid surface whose top row collapses to a point emits degenerate
+    // triangles. The source closes its poles exactly and therefore carries 960 triangles where this carries
+    // 32 x 16 x 2 = 1024; the difference is two rings of slivers at the poles, 0.05 rad across.
+    static auto Surface_UvSphere(float S, float T) -> FGridPoint
+    {
+        constexpr auto Radius  = 100.0f;
+        constexpr auto PoleGap = 0.05f;
+
+        const float Phi   = FMath::Lerp(PoleGap, PI - PoleGap, T);
+        const float Angle = -PI + 2.0f * PI * S;
+        const float SinPhi = FMath::Sin(Phi);
+
+        return { FVector3f(SinPhi * FMath::Cos(Angle), SinPhi * FMath::Sin(Angle), FMath::Cos(Phi)) * Radius,
+                 FVector2f(S, T) };
+    }
+
+    // ---- FlatAnnulus: the Vefects SM_VFX_Ring03 carrier, the bomb explosion's expanding shock ring ---------------
+    //
+    // A flat annulus in XY. The three measured radii 53.96 / 76.98 / 100.00 are EVENLY spaced (both gaps 23.02), so
+    // the two radial bands are one lerp; 64 segments around at an 11.25 degree step gives the source's own 256
+    // triangles exactly. Its 0.5-unit Z thickness is 0.25% of the span and is collapsed to a single sheet with a
+    // two-sided look, exactly as the card and the crescent were.
+    //
+    // Both UV signs are measured and both are load-bearing: v runs INNER (0) to OUTER (1) -- the opposite of the
+    // crescent's -- and u decreases with polar angle from a seam at +-180 degrees, u = frac(0.75 - angle/360),
+    // which is the Cylinder carrier's convention. (The sheet's SS3.3 states that formula with a plus sign; its own
+    // three measured samples -- 0.25 at -180, 0.75 at 0, 0.2812 at +168.75 -- all agree on the minus.)
+    static auto Surface_FlatAnnulus(float S, float T) -> FGridPoint
+    {
+        constexpr auto InnerRadius = 53.96f;
+        constexpr auto OuterRadius = 100.0f;
+
+        const float AngleDegrees = 360.0f * (0.75f - S);
+        const float Angle        = FMath::DegreesToRadians(AngleDegrees);
+        const float R            = FMath::Lerp(InnerRadius, OuterRadius, T);
+
+        return { FVector3f(FMath::Cos(Angle) * R, FMath::Sin(Angle) * R, 0.0f), FVector2f(S, T) };
+    }
+
     // ---- Crescent: the Vefects NS_BasicAttack slash carrier, from the recipe's MEASURED profile ----------------
     //
     // A flat tapered annulus in XY sweeping the full 360 degrees, widest radially at 0 degrees and narrowing to
@@ -513,6 +562,11 @@ namespace ck::particles_editor
         // The Vefects cast carrier. 1 band segment x 48 arc segments IS the source sheet's own topology, so the
         // rim table lands on knots exactly and the surface reproduces it rather than resampling it.
         BakeOne(TEXT("SM_CkParticles_SlashClaw"), &Surface_SlashClaw, 1, NumSlashClawSegments, TEXT("SweepErode"));
+
+        // The Vefects explosion carriers. 32 x 16 is the source sphere's own lat/long grid; 64 x 2 is the source
+        // annulus's own segment and band count, so the ring reproduces its 256 triangles exactly.
+        BakeOne(TEXT("SM_CkParticles_UvSphere"),    &Surface_UvSphere,    32, 16, TEXT("FresnelShell"));
+        BakeOne(TEXT("SM_CkParticles_FlatAnnulus"), &Surface_FlatAnnulus, 64, 2,  TEXT("SweepErode"));
 
         Log(TEXT("Generated {}/{} CkParticles VFX carrier meshes under {}."),
             FString::FromInt(Ok), FString::FromInt(Total), FString(MeshDir));

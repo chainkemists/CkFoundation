@@ -1,0 +1,19 @@
+// /CkParticles/Behaviors/Behavior_ExplosionOmniIce.ush — BehaviorId 43.
+//
+// Faithful re-port of Vefects NS_ExplosionIceOmni, the Omni pair's palette twin. Same finding as the Ground
+// pair's: the diff against NS_ExplosionOmni is eleven colour tables, two direct-set lifetimes, two scalars, one
+// curve-index binding and one inert authored leftover, and nothing structural.
+//
+// Recipe + corpus evidence: CkParticles/Cookbook/NS_ExplosionIceOmni.md.
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 43) in lockstep.
+#pragma once
+#include "/CkParticles/Behaviors/Behavior_ExplosionShared.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_ExplosionOmniIce(FCkParticles_StageInput In)
+{
+    FCkParticles_ExplosionParams P;
+    P.Variant = CKP_EXP_VARIANT_OMNI;
+    P.Palette = CKP_EXP_PALETTE_ICE;
+
+    return CkParticles_Explosion_Run(In, P);
+}

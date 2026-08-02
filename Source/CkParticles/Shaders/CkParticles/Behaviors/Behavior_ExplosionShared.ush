@@ -1,0 +1,1097 @@
+// /CkParticles/Behaviors/Behavior_ExplosionShared.ush — the layer math of BehaviorIds 40-43.
+//
+// FOUR Vefects systems, ONE implementation. NS_ExplosionGround, NS_ExplosionIceGround, NS_ExplosionOmni and
+// NS_ExplosionIceOmni are two structural variants of one effect, each shipped in a fire and an ice palette.
+// A full textual diff of either palette pair against its original produces ZERO renderer, material, mesh,
+// spawn-shape, count, spawn-time or module-structure differences (verified at implementation against the
+// corpus .txt exports) — every difference is a colour table plus a handful of scalars. Duplicating this file
+// per palette would therefore duplicate the layer math for a recolour, which the campaign fences as a defect.
+//
+// So the four thin behavior files carry an entry point and two ids, and everything else lives here:
+//   - Variant (Ground / Omni) selects the spawn SHAPES, the layer partition and three counts;
+//   - Palette (Fire / Ice)    selects the colour tables and four per-layer scalars.
+//
+// The palette TABLES live here rather than in the twin files for a language reason, not a design one: HLSL has
+// no function pointers, so shared layer math cannot call back into a per-twin table. Keeping both palettes side
+// by side is also where they are most reviewable — they are read directly off one diff.
+//
+// Recipes + corpus evidence: CkParticles/Cookbook/NS_ExplosionGround.md (the family reference sheet),
+// NS_ExplosionIceGround.md, NS_ExplosionOmni.md, NS_ExplosionIceOmni.md. Every number below is a source value
+// from those sheets' §2/§5, not a tuning.
+//
+// ---- What is NOT reproduced ------------------------------------------------------------------------------
+//
+// The source's `Light` emitter carries a NiagaraLightRendererProperties alongside its sprite. A Niagara light
+// renderer is CPU-sim only and every CkParticles emitter is GPU, so the renderer would be silently skipped;
+// campaign ruling [P4-D2] DROPS the light layer and keeps the sprite. The emitter's 1e6 Scale RGB is that
+// light's intensity channel, and with the light gone it now only drives the 9-unit sprite's bloom.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::Explosion_Run) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_EXP_VARIANT_GROUND 0
+#define CKP_EXP_VARIANT_OMNI   1
+
+#define CKP_EXP_PALETTE_FIRE   0
+#define CKP_EXP_PALETTE_ICE    1
+
+// The family's layers, named for their source emitters. Both variants draw from this one set; Omni simply has
+// no Glow_01, Glow_02 or Ground_Mark emitter.
+#define CKP_EXP_L_BUBBLE       0
+#define CKP_EXP_L_FLARE        1
+#define CKP_EXP_L_GLOW01       2
+#define CKP_EXP_L_SPARK02      3
+#define CKP_EXP_L_SPARK01      4
+#define CKP_EXP_L_SMOKES       5
+#define CKP_EXP_L_SMOKECENTER  6
+#define CKP_EXP_L_SPIKE        7
+#define CKP_EXP_L_GLOW02       8
+#define CKP_EXP_L_RING         9
+#define CKP_EXP_L_SPARK02001  10
+#define CKP_EXP_L_GLOW03      11
+#define CKP_EXP_L_GLOW04      12
+#define CKP_EXP_L_MARK        13
+#define CKP_EXP_L_RAINBOW     14
+#define CKP_EXP_L_LIGHT       15
+#define CKP_EXP_L_FLAMES      16
+
+// Renderer ROLES. Both variants declare the same renderers in the same order; Omni omits the scorch decal, so
+// every role above it shifts down by one. The two VisTag bases are the two rows' own bands.
+#define CKP_EXP_R_PART01CAM    0
+#define CKP_EXP_R_FLARE        1
+#define CKP_EXP_R_STAR         2
+#define CKP_EXP_R_SMOKE        3
+#define CKP_EXP_R_RING         4
+#define CKP_EXP_R_RAINBOW      5
+#define CKP_EXP_R_FLAMES       6
+#define CKP_EXP_R_PART04VEL    7
+#define CKP_EXP_R_PART01CUSTOM 8
+#define CKP_EXP_R_MARK         9
+#define CKP_EXP_R_SPHERE      10
+#define CKP_EXP_R_SPIKE       11
+#define CKP_EXP_R_RIBBON      12
+
+#define CKP_EXP_VIS_GROUND_BASE 185
+#define CKP_EXP_VIS_OMNI_BASE   198
+
+// The event ribbon, per [P3-G8]: an every-frame location event becomes a BURST whose points carry SOLVED
+// sample times, so the behavior never reads the emitter clock. Sparkles_02's longest resolved life is 0.7 s,
+// which at the 60 Hz the source's Send Rate is quoted against is 43 samples per strand across its 7 particles.
+#define CKP_EXP_RIBBON_STRANDS   7
+#define CKP_EXP_RIBBON_STEPS    43
+#define CKP_EXP_RIBBON_POINTS  301
+#define CKP_EXP_RIBBON_RATE    60.0
+#define CKP_EXP_RIBBON_LIFE     0.2
+
+struct FCkParticles_ExplosionParams
+{
+    int Variant;
+    int Palette;
+};
+
+FCkParticles_StageOutput CkParticles_Explosion_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+int CkParticles_Explosion_VisTag(FCkParticles_ExplosionParams P, int Role)
+{
+    const int Base = P.Variant == CKP_EXP_VARIANT_GROUND ? CKP_EXP_VIS_GROUND_BASE : CKP_EXP_VIS_OMNI_BASE;
+    const int Shift = (P.Variant == CKP_EXP_VARIANT_OMNI && Role > CKP_EXP_R_MARK) ? 1 : 0;
+    return Base + Role - Shift;
+}
+
+// Burst UniqueIDs are sequential, so the modulo draws exactly the source's per-emitter counts (recipe §6.1).
+int CkParticles_Explosion_Layer(int Variant, int Slot)
+{
+    if (Variant == CKP_EXP_VARIANT_GROUND)
+    {
+        if (Slot <  1) { return CKP_EXP_L_BUBBLE;      }
+        if (Slot <  2) { return CKP_EXP_L_FLARE;       }
+        if (Slot <  4) { return CKP_EXP_L_GLOW01;      }
+        if (Slot < 11) { return CKP_EXP_L_SPARK02;     }
+        if (Slot < 31) { return CKP_EXP_L_SPARK01;     }
+        if (Slot < 36) { return CKP_EXP_L_SMOKES;      }
+        if (Slot < 41) { return CKP_EXP_L_SMOKECENTER; }
+        if (Slot < 46) { return CKP_EXP_L_SPIKE;       }
+        if (Slot < 49) { return CKP_EXP_L_GLOW02;      }
+        if (Slot < 50) { return CKP_EXP_L_RING;        }
+        if (Slot < 60) { return CKP_EXP_L_SPARK02001;  }
+        if (Slot < 61) { return CKP_EXP_L_GLOW03;      }
+        if (Slot < 62) { return CKP_EXP_L_GLOW04;      }
+        if (Slot < 63) { return CKP_EXP_L_MARK;        }
+        if (Slot < 64) { return CKP_EXP_L_RAINBOW;     }
+        if (Slot < 65) { return CKP_EXP_L_LIGHT;       }
+        return CKP_EXP_L_FLAMES;
+    }
+
+    if (Slot <  1) { return CKP_EXP_L_BUBBLE;      }
+    if (Slot <  2) { return CKP_EXP_L_FLARE;       }
+    if (Slot <  9) { return CKP_EXP_L_SPARK02;     }
+    if (Slot < 29) { return CKP_EXP_L_SPARK01;     }
+    if (Slot < 32) { return CKP_EXP_L_SMOKES;      }
+    if (Slot < 37) { return CKP_EXP_L_SMOKECENTER; }
+    if (Slot < 42) { return CKP_EXP_L_SPIKE;       }
+    if (Slot < 43) { return CKP_EXP_L_RING;        }
+    if (Slot < 53) { return CKP_EXP_L_SPARK02001;  }
+    if (Slot < 55) { return CKP_EXP_L_GLOW03;      }
+    if (Slot < 58) { return CKP_EXP_L_GLOW04;      }
+    if (Slot < 59) { return CKP_EXP_L_RAINBOW;     }
+    if (Slot < 60) { return CKP_EXP_L_LIGHT;       }
+    return CKP_EXP_L_FLAMES;
+}
+
+// ---- Spawn shapes ------------------------------------------------------------------------------------------
+//
+// Niagara's Sphere Location, in the three configurations this family uses. Surface Only false fills the VOLUME,
+// which takes a cube root of the radial draw; Hemisphere Z restricts to +Z; a (1, 1, 0) non-uniform scale
+// flattens the shell into a ground ring. Salts 1 and 2 are RandDir's own, 3 is the radial draw.
+float3 CkParticles_Explosion_SpherePoint(int Seed, float Radius, bool HemiZ, bool SurfaceOnly, bool FlatZ)
+{
+    float3 Dir = CkParticles_RandDir(Seed);
+    if (HemiZ)
+    { Dir.z = abs(Dir.z); }
+
+    const float R = SurfaceOnly ? Radius : Radius * pow(CkParticles_Rand(Seed, 3), 1.0 / 3.0);
+    float3 Point = Dir * R;
+
+    if (FlatZ)
+    { Point.z = 0.0; }
+    return Point;
+}
+
+// Add Velocity from Point launches along the spawn offset. A point drawn exactly at the origin has no
+// direction, and +Z is the only one an explosion can mean there.
+float3 CkParticles_Explosion_Radial(float3 Spawn)
+{
+    const float L = length(Spawn);
+    return L > 1.0e-6 ? Spawn / L : float3(0.0, 0.0, 1.0);
+}
+
+// Niagara's Cone Location, the shape only Ground's SmokesCenter uses: angle 25 degrees about +Z, length 130,
+// Point Distribution 0 (the whole volume rather than the surface).
+float3 CkParticles_Explosion_ConePoint(int Seed)
+{
+    const float Angle  = radians(25.0);
+    const float Length = 130.0;
+
+    // Salts 19-21 rather than the sphere's 1-3: this layer also draws its lifetime from salt 1, and the two
+    // would otherwise correlate the cone's radius with how long the puff lives.
+    const float H    = Length * CkParticles_Rand(Seed, 19);
+    const float Turn = 6.28318530718 * CkParticles_Rand(Seed, 20);
+    const float Rad  = H * tan(Angle) * sqrt(CkParticles_Rand(Seed, 21));
+
+    return float3(Rad * cos(Turn), Rad * sin(Turn), H);
+}
+
+// ---- The palette tables ------------------------------------------------------------------------------------
+//
+// One function per layer whose colour differs across the four systems. `t` is the layer's own normalized age
+// unless a comment says otherwise. Every key is transcribed verbatim from the sheets' §5, including the
+// source's own float noise and its inconsistent precision (0.04588 and 0.0458799 are one authored key exported
+// twice; both are kept as authored so a transcription check can compare against the corpus text).
+
+float4 CkParticles_Explosion_BubbleColor(FCkParticles_ExplosionParams P, float t)
+{
+    if (P.Palette == CKP_EXP_PALETTE_FIRE)
+    {
+        return float4(1.0,
+                      CkParticles_Key2(t, 0.0, 0.698996, 1.0, 0.272849),
+                      0.016,
+                      1.0);
+    }
+
+    // The two ice variants differ in the third digit of the Bubble's red start; transcribed per variant.
+    return float4(CkParticles_Key2(t, 0.0, 0.036, 1.0, 0.057),
+                  CkParticles_Key2(t, 0.0, 0.828877, 1.0, 0.298116),
+                  1.0,
+                  1.0);
+}
+
+float4 CkParticles_Explosion_SpikeColor(FCkParticles_ExplosionParams P, float t)
+{
+    if (P.Palette == CKP_EXP_PALETTE_FIRE)
+    {
+        // Byte-identical to the bubble's in both fire variants.
+        return float4(1.0,
+                      CkParticles_Key2(t, 0.0, 0.698996, 1.0, 0.272849),
+                      0.016,
+                      1.0);
+    }
+
+    const float R = P.Variant == CKP_EXP_VARIANT_GROUND ? 0.0356013 : 0.036;
+    const float G = P.Variant == CKP_EXP_VARIANT_GROUND ? 0.83077   : 0.828877;
+
+    return float4(CkParticles_Key2(t, 0.0, R, 1.0, 0.057),
+                  CkParticles_Key2(t, 0.0, G, 1.0, 0.298116),
+                  1.0,
+                  1.0);
+}
+
+float4 CkParticles_Explosion_FlareColor(FCkParticles_ExplosionParams P, float t)
+{
+    const float A = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+
+    if (P.Palette == CKP_EXP_PALETTE_FIRE)
+    {
+        return float4(1.0,
+                      CkParticles_Key2(t, 0.0, 0.708376, 1.0, 0.341915),
+                      CkParticles_Key2(t, 0.0, 0.046665, 1.0, 0.109462),
+                      A);
+    }
+
+    const float R = P.Variant == CKP_EXP_VARIANT_GROUND ? 0.0466651 : 0.046665;
+
+    return float4(CkParticles_Key2(t, 0.0, R, 1.0, 0.109462),
+                  CkParticles_Key2(t, 0.0, 0.783538, 1.0, 0.366253),
+                  1.0,
+                  A);
+}
+
+// Sparkles_02, and — verbatim in both palettes — the ribbon strand behind it. The fire tables carry THREE keys
+// per channel and the ice ones carry two: the ice variants drop the middle key at t = 0.416541 entirely, which
+// is why a palette cannot be a hue transform.
+float4 CkParticles_Explosion_Spark02Color(FCkParticles_ExplosionParams P, float t)
+{
+    if (P.Palette == CKP_EXP_PALETTE_FIRE)
+    {
+        return float4(1.0,
+                      CkParticles_Key3(t, 0.0, 0.708376, 0.416541, 0.341915, 1.0, 0.109462),
+                      CkParticles_Key3(t, 0.0, 0.0466651, 0.416541, 0.109462, 1.0, 0.130136),
+                      1.0);
+    }
+
+    return float4(CkParticles_Key2(t, 0.0, 0.046665, 1.0, 0.109462),
+                  CkParticles_Key2(t, 0.0, 0.879623, 1.0, 0.287441),
+                  1.0,
+                  1.0);
+}
+
+// Sparkles_01 and Sparkles_02001 share this table in every one of the four systems.
+float4 CkParticles_Explosion_Spark01Color(FCkParticles_ExplosionParams P, float t)
+{
+    if (P.Palette == CKP_EXP_PALETTE_FIRE)
+    {
+        return float4(1.0,
+                      CkParticles_Key3(t, 0.0, 0.69869, 0.416541, 0.30758, 1.0, 0.109462),
+                      CkParticles_Key3(t, 0.0, 0.0149999, 0.416541, 0.063, 1.0, 0.130136),
+                      1.0);
+    }
+
+    return float4(CkParticles_Key2(t, 0.0, 0.046665, 1.0, 0.109462),
+                  CkParticles_Key2(t, 0.0, 0.879623, 1.0, 0.287441),
+                  1.0,
+                  1.0);
+}
+
+// Both smoke layers share one alpha ramp and one key schedule; only the RGB values move.
+float CkParticles_Explosion_SmokeAlpha(float t)
+{
+    return CkParticles_Key2(t, 0.15575, 1.0, 0.591609, 0.35);
+}
+
+float4 CkParticles_Explosion_SmokesColor(FCkParticles_ExplosionParams P, float t)
+{
+    const float A = CkParticles_Explosion_SmokeAlpha(t);
+
+    if (P.Palette == CKP_EXP_PALETTE_FIRE)
+    {
+        // Identical in both fire variants: the batch's brightest HDR overdrive, R and G at 5 and 2.33892.
+        return float4(
+            CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 5.0,     0.162994, 5.0,       0.433444, 1.0, 0.591609, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 2.33892, 0.162994, 1.0684,    0.433444, 0.0, 0.591609, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 0.0649151, 0.162994, 0.0149998, 0.433444, 0.0, 0.591609, 0.0),
+            A);
+    }
+
+    if (P.Variant == CKP_EXP_VARIANT_GROUND)
+    {
+        // The ice ground smoke is the one layer in the family that stays entirely inside [0, 1].
+        return float4(
+            CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 0.168269, 0.162994, 0.0343398, 0.433444, 0.0,      0.591609, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 0.991102, 0.162994, 0.658375,  0.433444, 0.318547, 0.591609, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 1.0,      0.162994, 1.0,       0.433444, 1.0,      0.591609, 0.0),
+            A);
+    }
+
+    // ...and the ice OMNI smoke is the one place the ice palette overdrives harder than the fire one.
+    return float4(
+        CkParticles_Key5(t, 0.0, 1.0, 0.04588, 0.841345, 0.162994, 0.03434,  0.433444, 0.0,      0.591609, 0.0),
+        CkParticles_Key5(t, 0.0, 1.0, 0.04588, 4.95551,  0.162994, 0.658375, 0.433444, 0.318547, 0.591609, 0.0),
+        CkParticles_Key5(t, 0.0, 1.0, 0.04588, 5.0,      0.162994, 1.0,      0.433444, 1.0,      0.591609, 0.0),
+        A);
+}
+
+float4 CkParticles_Explosion_SmokeCenterColor(FCkParticles_ExplosionParams P, float t)
+{
+    const float A = CkParticles_Explosion_SmokeAlpha(t);
+
+    if (P.Palette == CKP_EXP_PALETTE_ICE)
+    {
+        // Both ice variants make SmokesCenter byte-identical to Smokes; the fire variants do not.
+        return CkParticles_Explosion_SmokesColor(P, t);
+    }
+
+    if (P.Variant == CKP_EXP_VARIANT_GROUND)
+    {
+        // The LDR variant: red holds at 1 through the whole flash instead of spiking to 5.
+        return float4(
+            CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 1.0,      0.162994, 1.0,       0.433444, 1.0, 0.591609, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 0.467784, 0.162994, 0.238398,  0.433444, 0.0, 0.591609, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 0.012983, 0.162994, 0.0343398, 0.433444, 0.0, 0.591609, 0.0),
+            A);
+    }
+
+    // Fire omni: Smokes' overdrive, with two different mid keys.
+    return float4(
+        CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 5.0,     0.162994, 5.0,       0.433444, 1.0, 0.591609, 0.0),
+        CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 2.33892, 0.162994, 1.19199,   0.433444, 0.0, 0.591609, 0.0),
+        CkParticles_Key5(t, 0.0, 1.0, 0.0458799, 0.0649151, 0.162994, 0.171699, 0.433444, 0.0, 0.591609, 0.0),
+        A);
+}
+
+float4 CkParticles_Explosion_RingColor(FCkParticles_ExplosionParams P, float t)
+{
+    if (P.Palette == CKP_EXP_PALETTE_ICE)
+    {
+        const float R = P.Variant == CKP_EXP_VARIANT_GROUND ? 0.0409152 : 0.040915;
+
+        return float4(CkParticles_Key3(t, 0.0, 1.0, 0.165409, 0.147027, 1.0, R),
+                      CkParticles_Key3(t, 0.0, 1.0, 0.165409, 0.89627,  1.0, 0.318547),
+                      CkParticles_Key3(t, 0.0, 1.0, 0.165409, 1.0,      1.0, 1.0),
+                      1.0);
+    }
+
+    if (P.Variant == CKP_EXP_VARIANT_GROUND)
+    {
+        return float4(1.0,
+                      CkParticles_Key3(t, 0.0, 1.0, 0.165409, 0.561483,  1.0, 0.441672),
+                      CkParticles_Key3(t, 0.0, 1.0, 0.165409, 0.0691788, 1.0, 0.025),
+                      1.0);
+    }
+
+    return float4(1.0,
+                  CkParticles_Key3(t, 0.0, 1.0, 0.165409, 0.550878,  1.0, 0.389792),
+                  CkParticles_Key3(t, 0.0, 1.0, 0.165409, 0.0261113, 1.0, 0.0328193),
+                  1.0);
+}
+
+// Glow_01 (Ground only) and Glow_03 carry no Color module at all: their Initialize colour survives and only a
+// Scale Color ramp moves. The blue in the ice variants is entirely this value.
+float3 CkParticles_Explosion_Glow01Base(FCkParticles_ExplosionParams P)
+{
+    return P.Palette == CKP_EXP_PALETTE_FIRE
+        ? float3(1.0, 0.0908417, 0.0437351)
+        : float3(0.043735, 0.313989, 1.0);
+}
+
+float3 CkParticles_Explosion_Glow03Base(FCkParticles_ExplosionParams P)
+{
+    if (P.Palette == CKP_EXP_PALETTE_ICE)
+    { return float3(0.043735, 0.313989, 1.0); }
+
+    return P.Variant == CKP_EXP_VARIANT_GROUND
+        ? float3(0.55, 0.0499629, 0.0240543)
+        : float3(1.0,  0.153251,  0.0335489);
+}
+
+float3 CkParticles_Explosion_LightBase(FCkParticles_ExplosionParams P)
+{
+    return P.Palette == CKP_EXP_PALETTE_FIRE
+        ? float3(1.0, 0.464488, 0.031026)
+        : float3(0.0356013, 0.83077, 1.0);
+}
+
+float4 CkParticles_Explosion_Glow02Color(FCkParticles_ExplosionParams P, float t)
+{
+    const float A = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+
+    if (P.Palette == CKP_EXP_PALETTE_FIRE)
+    {
+        return float4(CkParticles_Key2(t, 0.0, 10.0,    1.0, 1.0),
+                      CkParticles_Key2(t, 0.0, 7.00525, 1.0, 0.341915),
+                      CkParticles_Key2(t, 0.0, 0.21,    1.0, 0.109462),
+                      A);
+    }
+
+    return float4(CkParticles_Key2(t, 0.0, 0.0466651, 1.0, 0.109462),
+                  CkParticles_Key2(t, 0.0, 1.0,       1.0, 0.434154),
+                  1.0,
+                  A);
+}
+
+float4 CkParticles_Explosion_Glow04Color(FCkParticles_ExplosionParams P, float t)
+{
+    const float A = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+
+    if (P.Palette == CKP_EXP_PALETTE_ICE)
+    {
+        return float4(CkParticles_Key2(t, 0.0, 0.046665, 1.0, 0.109462),
+                      CkParticles_Key2(t, 0.0, 1.0,      1.0, 0.434154),
+                      1.0,
+                      A);
+    }
+
+    if (P.Variant == CKP_EXP_VARIANT_GROUND)
+    {
+        return float4(1.0,
+                      CkParticles_Key2(t, 0.0, 0.708376, 1.0, 0.341915),
+                      CkParticles_Key2(t, 0.0, 0.046665, 1.0, 0.109462),
+                      A);
+    }
+
+    // Fire omni opens three times brighter on the same endpoints.
+    return float4(CkParticles_Key2(t, 0.0, 3.0,      1.0, 1.0),
+                  CkParticles_Key2(t, 0.0, 2.12513,  1.0, 0.341915),
+                  CkParticles_Key2(t, 0.0, 0.139995, 1.0, 0.109462),
+                  A);
+}
+
+// Ground_Mark — Ground only, and the family's only six-key colour table.
+float4 CkParticles_Explosion_MarkColor(FCkParticles_ExplosionParams P, float t)
+{
+    const float A = CkParticles_Key2(t, 0.00123571, 1.0, 1.0, 0.0);
+
+    if (P.Palette == CKP_EXP_PALETTE_FIRE)
+    {
+        return float4(
+            CkParticles_Key6(t, 0.0, 1.0, 0.0296571, 1.0,      0.0518999, 1.0,      0.0803213, 0.428,     0.133457, 0.019,      0.289157, 0.002372),
+            CkParticles_Key6(t, 0.0, 1.0, 0.0296571, 0.467784, 0.0518999, 0.238398, 0.0803213, 0.0272904, 0.133457, 0.00252532, 0.289157, 0.002372),
+            CkParticles_Key6(t, 0.0, 1.0, 0.0296571, 0.012983, 0.0518999, 0.03434,  0.0803213, 0.0272904, 0.133457, 0.0111253,  0.289157, 0.004),
+            A);
+    }
+
+    return float4(
+        CkParticles_Key6(t, 0.0, 1.0, 0.0296571, 0.109462, 0.0518999, 0.0356013, 0.0803213, 0.0356013, 0.133457, 0.00182116, 0.289157, 0.000664557),
+        CkParticles_Key6(t, 0.0, 1.0, 0.0296571, 0.791298, 0.0518999, 0.226966,  0.0803213, 0.226966,  0.133457, 0.00518152, 0.289157, 0.00189078),
+        CkParticles_Key6(t, 0.0, 1.0, 0.0296571, 1.0,      0.0518999, 0.558341,  0.0803213, 0.558341,  0.133457, 0.0137021,  0.289157, 0.005),
+        A);
+}
+
+float4 CkParticles_Explosion_FlamesColor(FCkParticles_ExplosionParams P, float t)
+{
+    if (P.Palette == CKP_EXP_PALETTE_FIRE)
+    {
+        return float4(
+            CkParticles_Key3(t, 0.269242, 5.0,     0.464835, 5.0,       0.854814, 1.0),
+            CkParticles_Key3(t, 0.269242, 2.30392, 0.464835, 0.845833,  0.854814, 0.0),
+            CkParticles_Key3(t, 0.269242, 0.0,     0.464835, 0.0149998, 0.854814, 0.0),
+            CkParticles_Key3(t, 0.0, 0.0, 0.452762, 1.0, 0.992454, 0.0));
+    }
+
+    // The ice flames move their key TIMES as well as their values, and the ice OMNI ones alone carry an HDR
+    // mid key where the ice ground ones stay inside [0, 1].
+    const float MidR = P.Variant == CKP_EXP_VARIANT_GROUND ? 0.03434   : 0.1717;
+    const float MidG = P.Variant == CKP_EXP_VARIANT_GROUND ? 0.658375  : 3.29188;
+    const float MidB = P.Variant == CKP_EXP_VARIANT_GROUND ? 1.0       : 5.0;
+
+    return float4(
+        CkParticles_Key3(t, 0.254754, 0.168269, 0.475702, MidR, 0.858436, 0.0),
+        CkParticles_Key3(t, 0.254754, 0.991102, 0.475702, MidG, 0.858436, 0.318547),
+        CkParticles_Key3(t, 0.254754, 1.0,      0.475702, MidB, 0.858436, 1.0),
+        CkParticles_Key3(t, 0.0, 0.0, 0.482946, 1.0, 1.0, 0.0));
+}
+
+// ---- Per-palette and per-variant scalars ---------------------------------------------------------------
+//
+// The four values that differ across the family and are NOT colour tables. Each is one cell of a sheet's §5.0.
+
+// Flames' module-level Color.Scale Alpha: the ice variants show the flames at 40% opacity.
+float CkParticles_Explosion_FlamesAlphaScale(FCkParticles_ExplosionParams P)
+{
+    return P.Palette == CKP_EXP_PALETTE_FIRE ? 1.0 : 0.4;
+}
+
+// Glow_02's dissolve channel (Ground only).
+float CkParticles_Explosion_Glow02Dissolve(FCkParticles_ExplosionParams P)
+{
+    return P.Palette == CKP_EXP_PALETTE_FIRE ? 0.4 : 0.6;
+}
+
+// Bubble_First_Explo and Spike01 share one lifetime, and it is the only lifetime the palette axis moves —
+// on the Omni pair only.
+float CkParticles_Explosion_MeshLife(FCkParticles_ExplosionParams P)
+{
+    if (P.Variant == CKP_EXP_VARIANT_GROUND)
+    { return 0.15; }
+
+    return P.Palette == CKP_EXP_PALETTE_FIRE ? 0.1 : 0.15;
+}
+
+// The ribbon's colour curve is indexed by Emitter.Age in the FIRE variants and by particle age in the ICE
+// ones — the one non-colour, non-scalar difference the palette diff turns up, and a real behavioural one:
+// under Emitter.Age the whole trail fades together, under particle age each point fades on its own clock.
+bool CkParticles_Explosion_RibbonColorOnEmitterAge(FCkParticles_ExplosionParams P)
+{
+    return P.Palette == CKP_EXP_PALETTE_FIRE;
+}
+
+// ---- Sparkles_02, the ribbon's leader --------------------------------------------------------------------
+//
+// The trail points are SAMPLES of this trajectory, so it is a function rather than inline code: the ribbon
+// branch calls the same closed form the sprite layer draws itself with, which makes the event collapse an
+// IDENTITY the tests assert at exactly 0.0 rather than a tolerance (C6c, the NS_BuffCast shape).
+//
+// Ground throws the sparkles through a Random Range Vector whose X and Y are authored INVERTED (min holds the
+// larger value); it is transcribed as authored, per-axis lo to hi. Omni replaces the whole module with an
+// isotropic Add Velocity from Point. Both then fall under a (0, 0, -4000) Acceleration Force.
+float3 CkParticles_Explosion_Spark02Velocity(FCkParticles_ExplosionParams P, int Seed, float3 Spawn)
+{
+    if (P.Variant == CKP_EXP_VARIANT_GROUND)
+    {
+        return float3(lerp(1500.0, -1500.0, CkParticles_Rand(Seed, 6)),
+                      lerp(1500.0, -1500.0, CkParticles_Rand(Seed, 11)),
+                      lerp(500.0,   2000.0, CkParticles_Rand(Seed, 12)));
+    }
+
+    return CkParticles_Explosion_Radial(Spawn) * lerp(500.0, 2000.0, CkParticles_Rand(Seed, 6));
+}
+
+float3 CkParticles_Explosion_Spark02Spawn(FCkParticles_ExplosionParams P, int Seed)
+{
+    const bool HemiZ = P.Variant == CKP_EXP_VARIANT_GROUND;
+    return CkParticles_Explosion_SpherePoint(Seed, 40.0, HemiZ, false, false);
+}
+
+float CkParticles_Explosion_Spark02Life(int Seed)
+{
+    return lerp(0.4, 0.7, CkParticles_Rand(Seed, 1));
+}
+
+// Position of the sparkle whose burst slot is Seed, AgeIn seconds after its own spawn.
+float3 CkParticles_Explosion_Spark02Pos(FCkParticles_ExplosionParams P, int Seed, float AgeIn)
+{
+    const float3 Spawn = CkParticles_Explosion_Spark02Spawn(P, Seed);
+    const float3 V0    = CkParticles_Explosion_Spark02Velocity(P, Seed, Spawn);
+    const float  Life  = CkParticles_Explosion_Spark02Life(Seed);
+    const float  Age   = max(AgeIn, 0.0);
+    const float  t     = saturate(Age / Life);
+
+    return Spawn
+         + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.3, 0.0) * Life)
+         + float3(0.0, 0.0, -0.5 * 4000.0 * Age * Age);
+}
+
+// The main emitter's burst slot that carries strand k. The two emitters keep separate UniqueID counters, so
+// the leader is named by its SLOT rather than by a shared particle identity — the cost, that the seven
+// sparkles repeat across firings, is the same one NS_BuffCast records.
+int CkParticles_Explosion_StrandLeader(int Variant, int Strand)
+{
+    return (Variant == CKP_EXP_VARIANT_GROUND ? 4 : 2) + Strand;
+}
+
+// ---- The ribbon branch -------------------------------------------------------------------------------------
+FCkParticles_StageOutput CkParticles_Explosion_Trail(FCkParticles_StageInput In, FCkParticles_ExplosionParams P)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+    O.VisTag   = CkParticles_Explosion_VisTag(P, CKP_EXP_R_RIBBON);
+
+    const int LocalSeed = CkParticles_LocalSeed(In.Seed);
+    const int Point     = ((LocalSeed % CKP_EXP_RIBBON_POINTS) + CKP_EXP_RIBBON_POINTS) % CKP_EXP_RIBBON_POINTS;
+    const int Strand    = Point / CKP_EXP_RIBBON_STEPS;
+    const int Step      = Point - Strand * CKP_EXP_RIBBON_STEPS;
+
+    O.MeshIndex = Strand;
+
+    const int   Leader     = CkParticles_Explosion_StrandLeader(P.Variant, Strand);
+    const float LeaderLife = CkParticles_Explosion_Spark02Life(Leader);
+
+    // Sparkles_02 bursts at 0.05 s, so a sample taken Step/60 into ITS life lands here in loop time. The
+    // ribbon emitter bursts at loop start, so the ribbon particle's own age IS that loop clock.
+    const float SampleAge = float(Step) / CKP_EXP_RIBBON_RATE;
+    const float SpawnTime = 0.05 + SampleAge;
+    const float PointAge  = In.Age - SpawnTime;
+
+    O.Position = CkParticles_Explosion_Spark02Pos(P, Leader, SampleAge);
+
+    // A strand stops emitting when its own sparkle dies, and each point lives 0.2 s from its event.
+    if (SampleAge > LeaderLife || PointAge < 0.0 || PointAge > CKP_EXP_RIBBON_LIFE)
+    { return CkParticles_Explosion_Hidden(O); }
+
+    const float PointT = saturate(PointAge / CKP_EXP_RIBBON_LIFE);
+
+    if (CkParticles_Explosion_RibbonColorOnEmitterAge(P))
+    {
+        // CurveIndex = linked:Emitter.Age. A burst ribbon particle's own age IS the emitter clock, so the
+        // colour is sampled in SECONDS on In.Age and the whole trail fades together.
+        const float4 Rgb = CkParticles_Explosion_Spark02Color(P, saturate(In.Age));
+        O.Color = float4(Rgb.rgb, CkParticles_Key3(In.Age, 0.0, 1.0, 0.119529, 1.0, 0.997283, 0.0));
+    }
+    else
+    {
+        const float  Head = P.Variant == CKP_EXP_VARIANT_GROUND ? 0.0929671 : 0.092967;
+        const float4 Rgb  = CkParticles_Explosion_Spark02Color(P, CkParticles_Key2(PointT, Head, 0.0, 1.0, 1.0));
+        O.Color = float4(Rgb.rgb, CkParticles_Key3(PointT, 0.0, 1.0, 0.101419, 1.0, 1.0, 0.0));
+    }
+
+    // Ribbon width is ONE float read at Particles.SpriteSize's offset, i.e. Size.x. Initialize Ribbon sets 10
+    // and Scale Ribbon Width ramps it to nothing over the point's own life.
+    const float Width = 10.0 * CkParticles_Key2(PointT, 0.0, 1.0, 1.0, 0.0);
+    O.Size = float2(Width, Width);
+
+    return O;
+}
+
+// ---- The main emitter --------------------------------------------------------------------------------------
+FCkParticles_StageOutput CkParticles_Explosion_Run(FCkParticles_StageInput In, FCkParticles_ExplosionParams P)
+{
+    if (CkParticles_IsRibbonSeed(In.Seed))
+    { return CkParticles_Explosion_Trail(In, P); }
+
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    const int Slots = P.Variant == CKP_EXP_VARIANT_GROUND ? 70 : 65;
+    const int Slot  = ((In.Seed % Slots) + Slots) % Slots;
+    const int Layer = CkParticles_Explosion_Layer(P.Variant, Slot);
+
+    // Every custom-facing emitter in this family authors its alignment AND its facing as (0, 0, 1), which is a
+    // DEGENERATE pair — the sprite's up axis is the alignment projected off the facing plane, and that
+    // projection is zero. A ground-flat quad with a well-defined up is the only non-collapsing reading, and
+    // the decal's in-plane angle is randomized per particle by the source anyway (recipe §13).
+    const float3 GroundAlign  = float3(0.0, 1.0, 0.0);
+    const float3 GroundFacing = float3(0.0, 0.0, 1.0);
+
+    // ---- Bubble_First_Explo: the first shell, a UV sphere blown to 1.5x by t = 0.2 and settling back ----
+    if (Layer == CKP_EXP_L_BUBBLE)
+    {
+        const float Life = CkParticles_Explosion_MeshLife(P);
+
+        if (In.Age > Life)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t     = saturate(In.Age / Life);
+        const float Grow  = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 1.0);
+
+        // The renderer carries the source's constant Mesh Uniform Scale 0.8; this is the animated curve only.
+        O.Scale     = float3(Grow, Grow, Grow);
+        O.Color     = CkParticles_Explosion_BubbleColor(P, t);
+        O.Size      = float2(0.0, 0.0);
+        O.MeshIndex = 0;
+        O.VisTag    = CkParticles_Explosion_VisTag(P, CKP_EXP_R_SPHERE);
+        return O;
+    }
+
+    // ---- Flare01: the lens pip, off a 0.1 s beat ----
+    if (Layer == CKP_EXP_L_FLARE)
+    {
+        const float Age = In.Age - 0.1;
+
+        if (Age < 0.0 || Age > 0.1)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t    = saturate(Age / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+        const float4 C   = CkParticles_Explosion_FlareColor(P, t);
+
+        O.Color   = float4(C.rgb, 0.8 * C.a);
+        O.Size    = float2(320.0 * Grow, 320.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CkParticles_Explosion_VisTag(P, CKP_EXP_R_FLARE);
+        return O;
+    }
+
+    // ---- Glow_01 (Ground only): the two widest core shells, flat on the ground and opening 3x bright ----
+    if (Layer == CKP_EXP_L_GLOW01)
+    {
+        if (In.Age > 0.2)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t     = saturate(In.Age / 0.2);
+        const float Grow  = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+        const float Scale = CkParticles_Key2(t, 0.0, 3.0, 1.0, 1.0);
+        const float A     = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+
+        O.Color           = float4(CkParticles_Explosion_Glow01Base(P) * Scale, 0.3 * A);
+        O.Size            = float2(3500.0 * Grow, 3500.0 * Grow);
+        O.Dynamic         = float4(0.6, 0.0, 0.0, 0.0);
+        O.SpriteAlignment = GroundAlign;
+        O.SpriteFacing    = GroundFacing;
+        O.VisTag          = CkParticles_Explosion_VisTag(P, CKP_EXP_R_PART01CUSTOM);
+        return O;
+    }
+
+    // ---- Sparkles_02: the seven spinning motes that also emit the trail events ----
+    if (Layer == CKP_EXP_L_SPARK02)
+    {
+        const float Life = CkParticles_Explosion_Spark02Life(In.Seed);
+        const float Age  = In.Age - 0.05;
+
+        if (Age < 0.0 || Age > Life)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float  t     = saturate(Age / Life);
+        const float3 Spawn = CkParticles_Explosion_Spark02Spawn(P, In.Seed);
+        const float3 V0    = CkParticles_Explosion_Spark02Velocity(P, In.Seed, Spawn);
+
+        O.Position = CkParticles_Explosion_Spark02Pos(P, In.Seed, Age);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.3, 1.0, 0.0)
+                   + float3(0.0, 0.0, -4000.0 * Age);
+
+        O.Color = CkParticles_Explosion_Spark02Color(P, t);
+
+        const float Base = lerp(40.0, 70.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+
+        O.Size = float2(Base * Grow, Base * Grow);
+        // Sprite Rotation Rate 720 -> 0 deg/s over the life: the accumulated angle is its exact integral.
+        O.Rotation = 720.0 * Life * CkParticles_Int2(t, 1.0, 0.0);
+        O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag   = CkParticles_Explosion_VisTag(P, CKP_EXP_R_STAR);
+        return O;
+    }
+
+    // ---- Sparkles_01 and Sparkles_02001: the two velocity-aligned streak layers. Same colour table, same
+    // velocity curve; they differ in radius, launch speed, size, the timing of their length taper — and
+    // Sparkles_02001 alone is bent by a Curl Noise Force ----
+    if (Layer == CKP_EXP_L_SPARK01 || Layer == CKP_EXP_L_SPARK02001)
+    {
+        const bool  IsSwirl = Layer == CKP_EXP_L_SPARK02001;
+        const float Life    = IsSwirl
+            ? lerp(0.4, 0.7, CkParticles_Rand(In.Seed, 1))
+            : lerp(0.2, 0.4, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float  t      = saturate(In.Age / Life);
+        const bool   HemiZ  = P.Variant == CKP_EXP_VARIANT_GROUND;
+        const float  Radius = IsSwirl ? 100.0 : 80.0;
+        const float3 Spawn  = CkParticles_Explosion_SpherePoint(In.Seed, Radius, HemiZ, false, false);
+        const float3 V0     = CkParticles_Explosion_Radial(Spawn)
+                            * (IsSwirl ? lerp(50.0, 200.0, CkParticles_Rand(In.Seed, 6))
+                                       : lerp(1000.0, 4000.0, CkParticles_Rand(In.Seed, 6)));
+
+        const float Travel = CkParticles_Int3(t, 0.2, 1.0, 0.35, 0.05) * Life;
+
+        O.Position = Spawn + V0 * Travel;
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.35, 1.0, 0.05);
+
+        if (IsSwirl)
+        {
+            // Curl Noise Force, frequency 10 and strength 5000. The frequency is the source figure read as
+            // METRES (the NS_DebuffCast conversion), and the strength is an ACCELERATION where CurlPath
+            // advects with a VELOCITY: the equal-ground constant velocity over a life L is 0.5 * 5000 * L,
+            // divided by the MEASURED mean magnitude of this plugin's own curl field over the region these
+            // embers visit (0.7329, 4000 samples within +-400 units at frequency 0.01, seed 7; the same field
+            // sampled within +-200 measures 0.7262, so the region is not what sets it).
+            const float Strength = 0.5 * 5000.0 * Life / 0.7329;
+            O.Position += CkParticles_CurlPath(Spawn, In.Age, 0.01, Strength, 7u) - Spawn;
+        }
+
+        O.Color = CkParticles_Explosion_Spark01Color(P, t);
+
+        const float2 SizeMin = IsSwirl ? float2(25.0, 40.0)  : float2(35.0, 120.0);
+        const float2 SizeMax = IsSwirl ? float2(40.0, 50.0)  : float2(50.0, 140.0);
+        const float  Width   = lerp(SizeMin.x, SizeMax.x, CkParticles_Rand(In.Seed, 8));
+        const float  Length  = lerp(SizeMin.y, SizeMax.y, CkParticles_Rand(In.Seed, 12));
+        const float  Grow    = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float  Taper   = IsSwirl
+            ? CkParticles_Key2(t, 0.5, 1.0, 1.0, 0.4)
+            : CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.6);
+
+        O.Size   = float2(Width * Grow, Length * Grow * Taper);
+        O.VisTag = CkParticles_Explosion_VisTag(P, CKP_EXP_R_PART04VEL);
+        return O;
+    }
+
+    // ---- Smokes and SmokesCenter: the two long-lived puff layers, 0.7-1.3 s off a 0.05 s beat. They share
+    // every curve but their colour, their spawn shape and their size range ----
+    if (Layer == CKP_EXP_L_SMOKES || Layer == CKP_EXP_L_SMOKECENTER)
+    {
+        const bool  IsCenter = Layer == CKP_EXP_L_SMOKECENTER;
+        const float Life     = lerp(0.7, 1.3, CkParticles_Rand(In.Seed, 1));
+        const float Age      = In.Age - 0.05;
+
+        if (Age < 0.0 || Age > Life)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t = saturate(Age / Life);
+
+        float3 Spawn;
+        float3 V0;
+
+        if (P.Variant == CKP_EXP_VARIANT_GROUND)
+        {
+            if (IsCenter)
+            {
+                Spawn = CkParticles_Explosion_ConePoint(In.Seed);
+                V0    = float3(lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 6)),
+                               lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 11)),
+                               lerp(100.0, 200.0, CkParticles_Rand(In.Seed, 12)));
+            }
+            else
+            {
+                // Surface Only on a shell flattened to (1, 1, 0): a ground ring, not a dome.
+                Spawn = CkParticles_Explosion_SpherePoint(In.Seed, 70.0, true, true, true);
+                V0    = float3(lerp(-100.0, 100.0, CkParticles_Rand(In.Seed, 6)),
+                               lerp(-100.0, 100.0, CkParticles_Rand(In.Seed, 11)),
+                               lerp(100.0,  200.0, CkParticles_Rand(In.Seed, 12)));
+            }
+        }
+        else
+        {
+            Spawn = IsCenter
+                ? CkParticles_Explosion_SpherePoint(In.Seed, 20.0, false, true, true)
+                : CkParticles_Explosion_SpherePoint(In.Seed, 50.0, false, true, false);
+            V0 = CkParticles_Explosion_Radial(Spawn)
+               * (IsCenter ? lerp(0.0, 150.0, CkParticles_Rand(In.Seed, 6))
+                           : lerp(50.0, 200.0, CkParticles_Rand(In.Seed, 6)));
+        }
+
+        O.Position = Spawn + V0 * (CkParticles_Int2(t, 1.0, 0.2) * Life);
+        O.Velocity = V0 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.2);
+
+        const float4 C = IsCenter
+            ? CkParticles_Explosion_SmokeCenterColor(P, t)
+            : CkParticles_Explosion_SmokesColor(P, t);
+
+        O.Color = float4(C.rgb, 0.4 * C.a);
+
+        const float2 SizeRange = IsCenter ? float2(100.0, 200.0) : float2(200.0, 300.0);
+        const float  Base      = lerp(SizeRange.x, SizeRange.y, CkParticles_Rand(In.Seed, 8));
+        const float  Grow      = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+
+        O.Size     = float2(Base * Grow, Base * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+                   + lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 5)) * Age;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.4, 0.0, 1.0, -1.0), 0.0, 0.0,
+                            CkParticles_Key2(t, 0.0, -1.0, 0.3, 1.0));
+        O.VisTag   = CkParticles_Explosion_VisTag(P, CKP_EXP_R_SMOKE);
+        return O;
+    }
+
+    // ---- Spike01: five pyramids fanned out of the centre. Their mesh-scale Z curve has no third key, so the
+    // spikes hold their length and pinch to needles instead of shrinking away ----
+    if (Layer == CKP_EXP_L_SPIKE)
+    {
+        const float Life = CkParticles_Explosion_MeshLife(P);
+
+        if (In.Age > Life)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t     = saturate(In.Age / Life);
+        const float Flat  = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 0.0);
+        const float Along = CkParticles_Key2(t, 0.0, 0.0, 0.2, 1.5);
+
+        const float BaseXY = lerp(0.2, 0.4, CkParticles_Rand(In.Seed, 13));
+        const float BaseZ  = lerp(0.5, 1.5, CkParticles_Rand(In.Seed, 14));
+
+        // Initial Mesh Orientation carries the mesh's own axis onto a random rotation vector. Ground draws it
+        // from a constrained, mostly-upward range; Omni from the full cube, which is the whole Omni idea.
+        float3 Dir;
+        if (P.Variant == CKP_EXP_VARIANT_GROUND)
+        {
+            Dir = float3(0.0,
+                         lerp(0.0, 0.5, CkParticles_Rand(In.Seed, 15)),
+                         lerp(1.0, -1.0, CkParticles_Rand(In.Seed, 16)));
+        }
+        else
+        {
+            Dir = float3(lerp(-1.0, 1.0, CkParticles_Rand(In.Seed, 15)),
+                         lerp(-1.0, 1.0, CkParticles_Rand(In.Seed, 16)),
+                         lerp(-1.0, 1.0, CkParticles_Rand(In.Seed, 17)));
+        }
+
+        O.Scale       = float3(BaseXY * Flat, BaseXY * Flat, BaseZ * Along);
+        O.Orientation = CkParticles_QuatFromZTo(CkParticles_Explosion_Radial(Dir));
+        O.Color       = CkParticles_Explosion_SpikeColor(P, t);
+        O.Size        = float2(0.0, 0.0);
+        O.MeshIndex   = 0;
+        O.VisTag      = CkParticles_Explosion_VisTag(P, CKP_EXP_R_SPIKE);
+        return O;
+    }
+
+    // ---- Glow_02 (Ground only): the three hot inner shells. Fire opens them at 10x; ice does not ----
+    if (Layer == CKP_EXP_L_GLOW02)
+    {
+        if (In.Age > 0.2)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.2);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+        const float4 C   = CkParticles_Explosion_Glow02Color(P, t);
+
+        O.Color           = float4(C.rgb, 0.3 * C.a);
+        O.Size            = float2(2400.0 * Grow, 2400.0 * Grow);
+        O.Dynamic         = float4(CkParticles_Explosion_Glow02Dissolve(P), 0.0, 0.0, 0.0);
+        O.SpriteAlignment = GroundAlign;
+        O.SpriteFacing    = GroundFacing;
+        O.VisTag          = CkParticles_Explosion_VisTag(P, CKP_EXP_R_PART01CUSTOM);
+        return O;
+    }
+
+    // ---- Ring: the shockwave. Its dissolve channel is the family's only POSITIVE start, and only on Ground:
+    // the ring is eroded early and re-forms, where the Omni one only ever intensifies ----
+    if (Layer == CKP_EXP_L_RING)
+    {
+        const float Age = In.Age - 0.05;
+
+        if (Age < 0.0 || Age > 0.3)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t    = saturate(Age / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.5, 0.975, 1.0, 1.0);
+        const float Base = P.Variant == CKP_EXP_VARIANT_GROUND ? 500.0 : 400.0;
+        const float Head = P.Variant == CKP_EXP_VARIANT_GROUND ? 0.15  : -0.1;
+        const float4 C   = CkParticles_Explosion_RingColor(P, t);
+
+        O.Color    = float4(C.rgb, 0.5 * C.a);
+        O.Size     = float2(Base * Grow, Base * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.5, Head, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag   = CkParticles_Explosion_VisTag(P, CKP_EXP_R_RING);
+        return O;
+    }
+
+    // ---- Glow_03: the 100x emissive core. Its own Scale Color is flat on Ground and opens 5x on Omni ----
+    if (Layer == CKP_EXP_L_GLOW03)
+    {
+        if (In.Age > 0.25)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t     = saturate(In.Age / 0.25);
+        const float Grow  = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+        const float Head  = P.Variant == CKP_EXP_VARIANT_GROUND ? 1.0 : 5.0;
+        const float Scale = CkParticles_Key2(t, 0.0, Head, 1.0, 1.0);
+        const float A     = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+        const float Base  = P.Variant == CKP_EXP_VARIANT_GROUND ? 1600.0 : 1300.0;
+
+        // ScaleColor.Scale RGB is (100, 100, 100) on both variants.
+        O.Color           = float4(CkParticles_Explosion_Glow03Base(P) * Scale * 100.0, A);
+        O.Size            = float2(Base * Grow, Base * Grow);
+        O.Dynamic         = float4(1.0, 0.0, 0.0, 0.0);
+        O.SpriteAlignment = GroundAlign;
+        O.SpriteFacing    = GroundFacing;
+        O.VisTag          = CkParticles_Explosion_VisTag(P, CKP_EXP_R_PART01CUSTOM);
+        return O;
+    }
+
+    // ---- Glow_04: the small billboarded core pip ----
+    if (Layer == CKP_EXP_L_GLOW04)
+    {
+        if (In.Age > 0.2)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.2);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color   = CkParticles_Explosion_Glow04Color(P, t);
+        O.Size    = float2(800.0 * Grow, 800.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CkParticles_Explosion_VisTag(P, CKP_EXP_R_PART01CAM);
+        return O;
+    }
+
+    // ---- Ground_Mark (Ground only): the scorch decal, the system's longest-lived layer at 1.5 s ----
+    if (Layer == CKP_EXP_L_MARK)
+    {
+        if (In.Age > 1.5)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t    = saturate(In.Age / 1.5);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.0, 1.0, 1.0);
+        const float4 C   = CkParticles_Explosion_MarkColor(P, t);
+
+        O.Color           = float4(C.rgb, 0.4 * C.a);
+        O.Size            = float2(1500.0 * Grow, 1500.0 * Grow);
+        O.Rotation        = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic         = float4(1.0, 0.0, 0.0, 0.0);
+        O.SpriteAlignment = GroundAlign;
+        O.SpriteFacing    = GroundFacing;
+        O.VisTag          = CkParticles_Explosion_VisTag(P, CKP_EXP_R_MARK);
+        return O;
+    }
+
+    // ---- Raimbow (sic): the lens ring. Its Color module carries no override, so the particle colour is a
+    // constant white that Scale Color halves — identical in all four systems ----
+    if (Layer == CKP_EXP_L_RAINBOW)
+    {
+        const float Delay = P.Variant == CKP_EXP_VARIANT_GROUND ? 0.1 : 0.05;
+        const float Age   = In.Age - Delay;
+
+        if (Age < 0.0 || Age > 0.2)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t    = saturate(Age / 0.2);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+        const float Base = P.Variant == CKP_EXP_VARIANT_GROUND ? 800.0 : 600.0;
+
+        O.Color    = float4(0.5, 0.5, 0.5, CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+        O.Size     = float2(Base * Grow, Base * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CkParticles_Explosion_VisTag(P, CKP_EXP_R_RAINBOW);
+        return O;
+    }
+
+    // ---- Light: the sprite that rode alongside the dropped light renderer ([P4-D2]). Its Scale Color runs in
+    // "RGB and Alpha Separately" mode, which makes the Vector4 curve's own alpha INERT and the float Scale
+    // Alpha the live one — so the fade happens once, not twice ----
+    if (Layer == CKP_EXP_L_LIGHT)
+    {
+        if (In.Age > 0.25)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t = saturate(In.Age / 0.25);
+        const float A = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+
+        O.Color   = float4(CkParticles_Explosion_LightBase(P) * 1.0e6, A);
+        O.Size    = float2(9.16604, 9.16604);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CkParticles_Explosion_VisTag(P, CKP_EXP_R_PART01CAM);
+        return O;
+    }
+
+    // ---- Flames: five sub-UV puffs off a 0.1 s beat, on the 2x2 sheet ----
+    {
+        const float Life = lerp(0.35, 0.7, CkParticles_Rand(In.Seed, 1));
+        const float Age  = In.Age - 0.1;
+
+        if (Age < 0.0 || Age > Life)
+        { return CkParticles_Explosion_Hidden(O); }
+
+        const float t     = saturate(Age / Life);
+        const bool  Ground = P.Variant == CKP_EXP_VARIANT_GROUND;
+
+        const float3 Spawn = CkParticles_Explosion_SpherePoint(In.Seed, 50.0, Ground, true, false);
+        const float3 V0    = Ground
+            ? float3(lerp(-100.0, 100.0, CkParticles_Rand(In.Seed, 11)),
+                     lerp(-100.0, 100.0, CkParticles_Rand(In.Seed, 12)),
+                     lerp(100.0,  200.0, CkParticles_Rand(In.Seed, 17)))
+            : CkParticles_Explosion_Radial(Spawn) * lerp(130.0, 200.0, CkParticles_Rand(In.Seed, 17));
+
+        O.Position = Spawn + V0 * (CkParticles_Int2(t, 1.0, 0.2) * Life);
+        O.Velocity = V0 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.2);
+
+        const float4 C = CkParticles_Explosion_FlamesColor(P, t);
+        O.Color = float4(C.rgb, CkParticles_Explosion_FlamesAlphaScale(P) * C.a);
+
+        const float SizeMin = Ground ? 50.0 : 100.0;
+        const float Base    = lerp(SizeMin, 200.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow    = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+
+        O.Size     = float2(Base * Grow, Base * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+                   + lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 5)) * Age;
+
+        // Sub UVAnimation, mode Random, frames 0..3 over ONE loop: a random start frame stepping forward
+        // through the sheet, the idiom every flipbook layer in the cookbook shares.
+        const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+        O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 5.0, 0.0, 0.0);
+        O.VisTag  = CkParticles_Explosion_VisTag(P, CKP_EXP_R_FLAMES);
+        return O;
+    }
+}
