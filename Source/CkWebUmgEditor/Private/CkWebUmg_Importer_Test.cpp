@@ -40,4 +40,45 @@ bool
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// The full HTML -> extractor -> bundle -> asset chain, live: extract the smoke page with the real
+// Node/Chrome toolchain and import it. Gates on success + node-count agreement with the committed
+// golden import; byte-identity vs the golden is reported (per-browser-version determinism means it
+// can legitimately drift when Chrome updates - informational, never a gate).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCkWebUmg_HtmlImport_Test,
+    "CkTests.UnitTests.CkWebUmg.HtmlImport",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool
+    FCkWebUmg_HtmlImport_Test::
+    RunTest(
+        const FString&)
+{
+    const auto Plugin = IPluginManager::Get().FindPlugin(TEXT("CkFoundation"));
+    if (NOT TestTrue(TEXT("plugin found"), Plugin != nullptr))
+    { return false; }
+    const auto CorpusDir = FPaths::Combine(Plugin->GetBaseDir(),
+        TEXT("Tools"), TEXT("ckwebumg-extract"), TEXT("corpus"));
+
+    constexpr auto SaveToDisk = false;
+    auto* FromHtml = ck::webumg::editor::ImportPageAssetFromHtml(
+        FPaths::Combine(CorpusDir, TEXT("smoke.html")), TEXT("/Temp/CkWebUmgHtmlTest"), SaveToDisk);
+    if (NOT TestTrue(TEXT("html imports end-to-end (node + Chrome toolchain)"), FromHtml != nullptr))
+    { return false; }
+
+    auto* FromGolden = ck::webumg::editor::ImportPageAsset(
+        FPaths::Combine(CorpusDir, TEXT("golden"), TEXT("smoke.ckui.json")),
+        TEXT("/Temp/CkWebUmgGoldenTest"), SaveToDisk);
+    if (NOT TestTrue(TEXT("golden imports"), FromGolden != nullptr))
+    { return false; }
+
+    TestTrue(TEXT("live extraction and committed golden agree on node count"),
+        FromHtml->Get_Nodes().Num() == FromGolden->Get_Nodes().Num());
+    AddInfo(FString::Printf(TEXT("live-vs-golden source hash: %s (equal=%d)"),
+        *FromHtml->Get_SourceHash(),
+        FromHtml->Get_SourceHash() == FromGolden->Get_SourceHash() ? 1 : 0));
+    return true;
+}
+
 #endif // WITH_AUTOMATION_TESTS

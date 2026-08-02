@@ -20,4 +20,15 @@ namespace ck::webumg::editor
         const FString& InPackageFolder,
         bool InSaveToDisk)
         -> UCk_WebUmg_PageAsset_UE*;
+
+    // The full toolchain in one call: runs the Node extractor (headless Chrome) on the .html,
+    // then imports the produced bundle. Requires node + Chrome on the machine (the extractor's
+    // own contract); fails loudly on a non-zero extractor exit. Extraction output lands under
+    // Saved/CkWebUmg/<page>/ so reruns overwrite deterministically.
+    CKWEBUMGEDITOR_API auto
+    ImportPageAssetFromHtml(
+        const FString& InHtmlPath,
+        const FString& InPackageFolder,
+        bool InSaveToDisk)
+        -> UCk_WebUmg_PageAsset_UE*;
 }

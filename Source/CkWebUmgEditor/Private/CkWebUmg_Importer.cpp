@@ -9,6 +9,8 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Misc/SecureHash.h"
+#include "HAL/PlatformProcess.h"
+#include "Interfaces/IPluginManager.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 
@@ -95,6 +97,52 @@ namespace ck::webumg::editor
                 AssetName, Entry.Get_NodeId(), Entry.Get_Property(), Entry.Get_Value(), Entry.Get_Source());
         }
         return Asset;
+    }
+
+    auto
+    ImportPageAssetFromHtml(
+        const FString& InHtmlPath,
+        const FString& InPackageFolder,
+        bool InSaveToDisk)
+        -> UCk_WebUmg_PageAsset_UE*
+    {
+        const auto Plugin = IPluginManager::Get().FindPlugin(TEXT("CkFoundation"));
+        CK_ENSURE_IF_NOT(Plugin != nullptr, TEXT("CkFoundation plugin not found"))
+        {}
+        if (Plugin == nullptr)
+        { return nullptr; }
+
+        const auto ExtractScript = FPaths::Combine(Plugin->GetBaseDir(),
+            TEXT("Tools"), TEXT("ckwebumg-extract"), TEXT("src"), TEXT("extract.mjs"));
+        const auto HtmlExists = FPaths::FileExists(InHtmlPath) && FPaths::FileExists(ExtractScript);
+        CK_ENSURE_IF_NOT(HtmlExists, TEXT("ImportPageAssetFromHtml: missing html [{}] or extractor [{}]"),
+            InHtmlPath, ExtractScript)
+        {}
+        if (NOT HtmlExists)
+        { return nullptr; }
+
+        const auto BaseName = FPaths::GetBaseFilename(InHtmlPath);
+        const auto OutDir = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("CkWebUmg"), BaseName);
+        IFileManager::Get().MakeDirectory(*OutDir, true);
+
+        auto ReturnCode = 0;
+        auto StdOut = FString{};
+        auto StdErr = FString{};
+        const auto Params = FString::Printf(TEXT("\"%s\" \"%s\" \"%s\""),
+            *ExtractScript, *FPaths::ConvertRelativePathToFull(InHtmlPath), *OutDir);
+        const auto Launched = FPlatformProcess::ExecProcess(
+            TEXT("node"), *Params, &ReturnCode, &StdOut, &StdErr);
+
+        const auto ExtractionSucceeded = Launched && ReturnCode == 0;
+        CK_ENSURE_IF_NOT(ExtractionSucceeded,
+            TEXT("ImportPageAssetFromHtml: extractor failed (launched [{}], exit [{}]) out [{}] err [{}]"),
+            Launched, ReturnCode, StdOut, StdErr)
+        {}
+        if (NOT ExtractionSucceeded)
+        { return nullptr; }
+
+        return ImportPageAsset(
+            FPaths::Combine(OutDir, BaseName + TEXT(".ckui.json")), InPackageFolder, InSaveToDisk);
     }
 }
 
