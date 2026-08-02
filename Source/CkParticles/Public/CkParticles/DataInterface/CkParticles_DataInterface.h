@@ -80,6 +80,10 @@ public:
     // test-only shim — exposed so behavior math can be asserted without Niagara, a template asset, or an RHI.
     // That matters: the template-shaped gates (asset loads, component spawned) cannot tell a correct behavior
     // from one that does nothing, so this is where a behavior's numbers actually get checked.
+    //
+    // InEmitterAge is the emitter's clock (Emitter.Age), deliberately WITHOUT a default: a behavior that reads
+    // the spawn phase is silently wrong if a caller omits it, and a stage evaluation whose whole purpose is
+    // exact mirroring must not let an input default itself into existence.
     static FCk_Particles_StageResult
     Execute_Stage_CPU(
         int32     InBehaviorId,
@@ -88,7 +92,8 @@ public:
         float     InLifetime,
         FVector3f InPosition,
         FVector3f InVelocity,
-        int32     InSeed);
+        int32     InSeed,
+        float     InEmitterAge);
 
 protected:
 #if WITH_EDITORONLY_DATA

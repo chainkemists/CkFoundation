@@ -429,8 +429,11 @@ namespace ck::particles_editor
             InEmitter->AddRenderer(MeshRenderer, InVersion);
         }
 
-        // ---- Burst emitter stack (built from an empty emitter so no continuous SpawnRate is left behind) -------
-        static auto Add_BurstEmitterStack(
+        // ---- Declared spawn stack (built from an EMPTY emitter, so the factory's own SpawnRate 10 never
+        // survives underneath a row that states its own cadence) -------------------------------------------------
+        // A row may declare a burst, a continuous rate, or both; the two modules compose on one emitter exactly as
+        // they do on the source emitters this recreates.
+        static auto Add_SpawnEmitterStack(
             UNiagaraEmitter*                                InEmitter,
             FVersionedNiagaraEmitterData*                   InEmitterData,
             const ck::particles::FCk_ParticlesTemplateSpec& InSpec) -> bool
@@ -448,16 +451,29 @@ namespace ck::particles_editor
             Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, EmitterStateNode,
                 TEXT("Loop Duration"), FNiagaraTypeDefinition::GetFloatDef(), InSpec.LoopDuration);
 
-            auto* BurstNode = Add_ModuleFromAssetPath(TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous.SpawnBurst_Instantaneous"), *EmitterUpdateOut);
-            if (BurstNode == nullptr)
-            { return false; }
-            // The module's input variable name has drifted across engine versions ("Spawn Count" in the assets the
-            // corpus captured; "SpawnCount" in newer wizard code) — write both spellings; the compile binds whichever
-            // the module graph declares and the other stays an inert orphan constant.
-            Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("Spawn Count"), FNiagaraTypeDefinition::GetIntDef(),   InSpec.BurstCount);
-            Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("SpawnCount"),  FNiagaraTypeDefinition::GetIntDef(),   InSpec.BurstCount);
-            Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("Spawn Time"),  FNiagaraTypeDefinition::GetFloatDef(), 0.0f);
-            Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("SpawnTime"),   FNiagaraTypeDefinition::GetFloatDef(), 0.0f);
+            if (InSpec.BurstCount > 0)
+            {
+                auto* BurstNode = Add_ModuleFromAssetPath(TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous.SpawnBurst_Instantaneous"), *EmitterUpdateOut);
+                if (BurstNode == nullptr)
+                { return false; }
+                // The module's input variable name has drifted across engine versions ("Spawn Count" in the assets the
+                // corpus captured; "SpawnCount" in newer wizard code) — write both spellings; the compile binds whichever
+                // the module graph declares and the other stays an inert orphan constant.
+                Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("Spawn Count"), FNiagaraTypeDefinition::GetIntDef(),   InSpec.BurstCount);
+                Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("SpawnCount"),  FNiagaraTypeDefinition::GetIntDef(),   InSpec.BurstCount);
+                Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("Spawn Time"),  FNiagaraTypeDefinition::GetFloatDef(), 0.0f);
+                Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, BurstNode, TEXT("SpawnTime"),   FNiagaraTypeDefinition::GetFloatDef(), 0.0f);
+            }
+
+            if (InSpec.SpawnRate > 0.0f)
+            {
+                auto* RateNode = Add_ModuleFromAssetPath(TEXT("/Niagara/Modules/Emitter/SpawnRate.SpawnRate"), *EmitterUpdateOut);
+                if (RateNode == nullptr)
+                { return false; }
+                // One spelling only, unlike the burst module: the engine's SpawnRate.uasset declares its input as
+                // Module.SpawnRate, verified on disk.
+                Set_ModuleRapidIterationValue(UniqueEmitterName, EmitterUpdateScript, RateNode, TEXT("SpawnRate"), FNiagaraTypeDefinition::GetFloatDef(), InSpec.SpawnRate);
+            }
 
             Add_ModuleFromAssetPath(TEXT("/Niagara/Modules/Spawn/Location/SystemLocation.SystemLocation"), *ParticleSpawnOut);
 
@@ -591,6 +607,9 @@ namespace ck::particles_editor
             UEdGraphPin* GetPosition = MapGet->RequestNewTypedPin(EGPD_Output, FNiagaraTypeDefinition::GetPositionDef(), TEXT("Particles.Position"));
             UEdGraphPin* GetVelocity = MapGet->RequestNewTypedPin(EGPD_Output, FNiagaraTypeDefinition::GetVec3Def(),     TEXT("Particles.Velocity"));
             UEdGraphPin* GetSeed     = MapGet->RequestNewTypedPin(EGPD_Output, FNiagaraTypeDefinition::GetIntDef(),      TEXT("Particles.UniqueID"));
+            // The EMITTER's clock, which keeps running as particles are born and die — a particle's own Age
+            // subtracted from it is the moment in the loop it spawned.
+            UEdGraphPin* GetEmitterAge = MapGet->RequestNewTypedPin(EGPD_Output, FNiagaraTypeDefinition::GetFloatDef(), TEXT("Emitter.Age"));
 
             // ---- Write pins on Map Set (inputs = values written TO the map) ----
             UEdGraphPin* SetPosition    = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetPositionDef(), TEXT("Particles.Position"));
@@ -633,7 +652,8 @@ namespace ck::particles_editor
             Wire(GetLifetime, Find_PinByName(FuncNode, TEXT("Lifetime"),       EGPD_Input));
             Wire(GetPosition, Find_PinByName(FuncNode, TEXT("Position"),       EGPD_Input));
             Wire(GetVelocity, Find_PinByName(FuncNode, TEXT("Velocity"),       EGPD_Input));
-            Wire(GetSeed,     Find_PinByName(FuncNode, TEXT("Seed"),           EGPD_Input));
+            Wire(GetSeed,       Find_PinByName(FuncNode, TEXT("Seed"),         EGPD_Input));
+            Wire(GetEmitterAge, Find_PinByName(FuncNode, TEXT("EmitterAge"),   EGPD_Input));
 
             // ---- Wire ExecuteStage outputs -> Map Set writes ----
             Wire(Find_PinByName(FuncNode, TEXT("OutPosition"),    EGPD_Output), SetPosition);
@@ -759,7 +779,20 @@ namespace ck::particles_editor
             }
         }
 
-        // ---- One template system (continuous or burst) ---------------------------------------------------------
+        // Names the spawn stack the row asked for; "factory rate" is the one this builder does not emit itself.
+        static auto Get_SpawnCadenceLabel(
+            const ck::particles::FCk_ParticlesTemplateSpec& InSpec) -> FString
+        {
+            const auto HasBurst = InSpec.BurstCount > 0;
+            const auto HasRate  = InSpec.SpawnRate > 0.0f;
+
+            if (HasBurst && HasRate) { return FString::Printf(TEXT("burst %d + rate %g/s"), InSpec.BurstCount, InSpec.SpawnRate); }
+            if (HasBurst)            { return FString::Printf(TEXT("burst %d"), InSpec.BurstCount); }
+            if (HasRate)             { return FString::Printf(TEXT("rate %g/s"), InSpec.SpawnRate); }
+            return TEXT("factory rate");
+        }
+
+        // ---- One template system (declared burst/rate cadence, or the factory's own) ----------------------------
         static auto DoBuild_OneTemplateSystem(
             const ck::particles::FCk_ParticlesTemplateSpec& InSpec,
             UMaterialInterface* InSpriteMaterial) -> UNiagaraSystem*
@@ -767,7 +800,7 @@ namespace ck::particles_editor
             const auto* AssetName = InSpec.AssetName;
             const auto  PkgPathStr    = FString::Printf(TEXT("/CkFoundation/CkParticles/Templates/%s"), AssetName);
             const auto* PkgPath   = *PkgPathStr;
-            const auto  UsesBurstSpawn = InSpec.BurstCount > 0;
+            const auto  DeclaresOwnSpawn = InSpec.BurstCount > 0 || InSpec.SpawnRate > 0.0f;
 
             // ---- Package (idempotent refresh) ----
             UPackage* Package = FPackageName::DoesPackageExist(PkgPath)
@@ -782,13 +815,14 @@ namespace ck::particles_editor
             }
 
             // ---- System + GPU emitter ----
-            // Continuous: factory defaults (spawn-rate 10 + init modules + a sprite renderer we then retag).
-            // Burst: an EMPTY stack (output nodes only) so no continuous SpawnRate survives.
+            // No declared cadence: factory defaults (spawn-rate 10 + init modules + a sprite renderer we then retag).
+            // Declared cadence: an EMPTY stack (output nodes only) so the factory's own SpawnRate never survives
+            // underneath the row's burst and/or rate modules.
             constexpr auto CreateDefaultNodes = true;
             auto* System = NewObject<UNiagaraSystem>(Package, AssetName, RF_Public | RF_Standalone);
             UNiagaraSystemFactoryNew::InitializeSystem(System, CreateDefaultNodes);
 
-            const auto AddDefaultModulesAndRenderers = NOT UsesBurstSpawn;
+            const auto AddDefaultModulesAndRenderers = NOT DeclaresOwnSpawn;
             auto* Emitter = NewObject<UNiagaraEmitter>(GetTransientPackage(), TEXT("CkParticles"), RF_Transactional);
             UNiagaraEmitterFactoryNew::InitializeEmitter(Emitter, AddDefaultModulesAndRenderers);
 
@@ -828,11 +862,11 @@ namespace ck::particles_editor
             Configure_Renderers(SystemEmitter, Handle.GetInstance().Version, SystemEmitterData, InSpriteMaterial);
             Configure_RowRenderers(SystemEmitter, Handle.GetInstance().Version, InSpec);
 
-            if (UsesBurstSpawn)
+            if (DeclaresOwnSpawn)
             {
-                if (NOT Add_BurstEmitterStack(SystemEmitter, SystemEmitterData, InSpec))
+                if (NOT Add_SpawnEmitterStack(SystemEmitter, SystemEmitterData, InSpec))
                 {
-                    ck::particles_editor::Log(TEXT("Template builder [{}]: burst emitter stack failed"), FString(AssetName));
+                    ck::particles_editor::Log(TEXT("Template builder [{}]: spawn emitter stack failed"), FString(AssetName));
                     return nullptr;
                 }
             }
@@ -876,7 +910,7 @@ namespace ck::particles_editor
             UPackage::SavePackage(Package, System, *FileName, SaveArgs);
 
             ck::particles_editor::Log(TEXT("Built template [{}] ({})"),
-                FString(AssetName), UsesBurstSpawn ? FString(TEXT("burst-spawn")) : FString(TEXT("continuous-rate")));
+                FString(AssetName), Get_SpawnCadenceLabel(InSpec));
             return System;
         }
     }

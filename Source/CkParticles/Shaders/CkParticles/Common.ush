@@ -13,6 +13,11 @@ struct FCkParticles_StageInput
     float3 Position;     // current particle position (sim space)
     float3 Velocity;     // current particle velocity
     int    Seed;         // stable per-particle id (Particles.UniqueID) — hash for per-particle randomness
+    // Emitter.Age — the emitter's own clock, which keeps running while individual particles are born and die.
+    // Age is measured on the particle; this is measured on the emitter, so their difference is the moment in the
+    // loop the particle spawned: SpawnPhase = fmod(EmitterAge - Age, LoopDuration). Burst particles land at
+    // phase ~0, rate particles spread across the loop, and a windowed sub-layer gates on it.
+    float  EmitterAge;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -86,6 +91,131 @@ float3 CkParticles_RandDir(int Seed)
     const float t = 6.28318530718 * CkParticles_Rand(Seed, 2);
     const float r = sqrt(saturate(1.0 - z * z));
     return float3(r * cos(t), r * sin(t), z);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Deterministic curl noise.
+//
+// The field is this plugin's tileable value-noise Fbm lifted to 3D: CkParticles_Rand's avalanche over an integer
+// lattice cell (so the 24-bit normalization keeps it float-exact against the C++ mirror), smoothstep-interpolated,
+// summed over octaves that halve amplitude, double frequency and double the wrap period — the same schedule the
+// texture generator's 2D Fbm uses. Lattice coordinates wrap, so the field tiles.
+//
+// Curl is taken by CENTRAL FINITE DIFFERENCE at a fixed eps. Analytic gradients would have to be derived a second
+// time for the CPU mirror and would drift apart the first time either side is edited; a difference quotient is the
+// same three lines on both.
+//
+// Curl-driven motion stays STATELESS: CkParticles_CurlPath re-integrates the whole path from the spawn position on
+// every evaluation with a FIXED step count, so a particle's position is a function of (spawn, Age, Seed) alone and
+// never of the frame cadence that led there. The step count is a fidelity constant, not a tunable — changing it
+// moves every curl-driven effect.
+// --------------------------------------------------------------------------------------------------------------------
+float CkParticles_NoiseHash3(int3 Cell, uint Salt)
+{
+    uint n = uint(Cell.x) * 747796405u + uint(Cell.y) * 2654435761u + uint(Cell.z) * 805459861u
+           + Salt * 2891336453u + 1u;
+    n ^= n >> 16;
+    n *= 2246822519u;
+    n ^= n >> 13;
+    n *= 3266489917u;
+    n ^= n >> 16;
+    return float(n & 0x00FFFFFFu) / 16777216.0; // 24-bit -> [0,1), float-exact
+}
+
+int CkParticles_NoiseWrap(int V, int Period)
+{
+    return ((V % Period) + Period) % Period;
+}
+
+float CkParticles_ValueNoise3(float3 P, int Period, uint Salt)
+{
+    const int3   Ci = int3(floor(P));
+    const float3 Cf = P - float3(Ci);
+    const float3 W  = Cf * Cf * (3.0 - 2.0 * Cf);
+
+    const int X0 = CkParticles_NoiseWrap(Ci.x,     Period);
+    const int Y0 = CkParticles_NoiseWrap(Ci.y,     Period);
+    const int Z0 = CkParticles_NoiseWrap(Ci.z,     Period);
+    const int X1 = CkParticles_NoiseWrap(Ci.x + 1, Period);
+    const int Y1 = CkParticles_NoiseWrap(Ci.y + 1, Period);
+    const int Z1 = CkParticles_NoiseWrap(Ci.z + 1, Period);
+
+    const float N000 = CkParticles_NoiseHash3(int3(X0, Y0, Z0), Salt);
+    const float N100 = CkParticles_NoiseHash3(int3(X1, Y0, Z0), Salt);
+    const float N010 = CkParticles_NoiseHash3(int3(X0, Y1, Z0), Salt);
+    const float N110 = CkParticles_NoiseHash3(int3(X1, Y1, Z0), Salt);
+    const float N001 = CkParticles_NoiseHash3(int3(X0, Y0, Z1), Salt);
+    const float N101 = CkParticles_NoiseHash3(int3(X1, Y0, Z1), Salt);
+    const float N011 = CkParticles_NoiseHash3(int3(X0, Y1, Z1), Salt);
+    const float N111 = CkParticles_NoiseHash3(int3(X1, Y1, Z1), Salt);
+
+    const float Near = lerp(lerp(N000, N100, W.x), lerp(N010, N110, W.x), W.y);
+    const float Far  = lerp(lerp(N001, N101, W.x), lerp(N011, N111, W.x), W.y);
+    return lerp(Near, Far, W.z);
+}
+
+// Three octaves over a base wrap period of 16 lattice cells.
+float CkParticles_NoiseFbm3(float3 P, uint Salt)
+{
+    float Sum = 0.0, Amp = 0.5, Freq = 1.0, Norm = 0.0;
+    int   Period = 16;
+
+    for (int i = 0; i < 3; ++i)
+    {
+        Sum  += Amp * CkParticles_ValueNoise3(P * Freq, Period, Salt);
+        Norm += Amp;
+        Amp  *= 0.5;
+        Freq *= 2.0;
+        Period *= 2;
+    }
+    return Sum / Norm;
+}
+
+// Curl of the vector potential (Fbm(Seed), Fbm(Seed+1), Fbm(Seed+2)) sampled at P * Freq. Divergence-free by
+// construction, which is what makes curl noise read as swirling flow rather than as jitter.
+float3 CkParticles_CurlNoise(float3 P, float Freq, uint Seed)
+{
+    const float3 Q = P * Freq;
+    const float  E = 0.01;
+
+    const float3 Dx = float3(E, 0.0, 0.0);
+    const float3 Dy = float3(0.0, E, 0.0);
+    const float3 Dz = float3(0.0, 0.0, E);
+
+    const float PsiX_Yp = CkParticles_NoiseFbm3(Q + Dy, Seed);
+    const float PsiX_Yn = CkParticles_NoiseFbm3(Q - Dy, Seed);
+    const float PsiX_Zp = CkParticles_NoiseFbm3(Q + Dz, Seed);
+    const float PsiX_Zn = CkParticles_NoiseFbm3(Q - Dz, Seed);
+
+    const float PsiY_Xp = CkParticles_NoiseFbm3(Q + Dx, Seed + 1u);
+    const float PsiY_Xn = CkParticles_NoiseFbm3(Q - Dx, Seed + 1u);
+    const float PsiY_Zp = CkParticles_NoiseFbm3(Q + Dz, Seed + 1u);
+    const float PsiY_Zn = CkParticles_NoiseFbm3(Q - Dz, Seed + 1u);
+
+    const float PsiZ_Xp = CkParticles_NoiseFbm3(Q + Dx, Seed + 2u);
+    const float PsiZ_Xn = CkParticles_NoiseFbm3(Q - Dx, Seed + 2u);
+    const float PsiZ_Yp = CkParticles_NoiseFbm3(Q + Dy, Seed + 2u);
+    const float PsiZ_Yn = CkParticles_NoiseFbm3(Q - Dy, Seed + 2u);
+
+    const float Inv = 1.0 / (2.0 * E);
+    return float3(
+        ((PsiZ_Yp - PsiZ_Yn) - (PsiY_Zp - PsiY_Zn)) * Inv,
+        ((PsiX_Zp - PsiX_Zn) - (PsiZ_Xp - PsiZ_Xn)) * Inv,
+        ((PsiY_Xp - PsiY_Xn) - (PsiX_Yp - PsiX_Yn)) * Inv);
+}
+
+// Position after advecting from SpawnPosition through the curl field over [0, Age] in 16 equal Euler steps.
+float3 CkParticles_CurlPath(float3 SpawnPosition, float Age, float Freq, float Strength, uint Seed)
+{
+    const float Dt = Age / 16.0;
+
+    // [loop], not unrolled: each step is twelve Fbm evaluations, and sixteen inlined copies of that is a shader
+    // the compiler chews on for minutes and then spills registers over.
+    float3 P = SpawnPosition;
+    [loop]
+    for (int i = 0; i < 16; ++i)
+    { P += CkParticles_CurlNoise(P, Freq, Seed) * Strength * Dt; }
+    return P;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

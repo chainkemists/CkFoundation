@@ -630,7 +630,7 @@ no new mechanism, just a bigger burst. Layer partition `Seed % 162` with the lay
 §2. Spawn beats (0 / 0.05 / 0.1 s) are reproduced by hiding a layer for `Age < SpawnDelay` and
 running its curves on `(Age − SpawnDelay) / Lifetime`, per NS_BasicAttack §5's spark-delay mechanism.
 
-**Verify the burst-count ceiling before committing.** `Add_BurstEmitterStack` reads `BurstCount`
+**Verify the burst-count ceiling before committing.** `Add_SpawnEmitterStack` reads `BurstCount`
 straight off the spec, but nothing in the cookbook records a template that has been built at 162,
 and Niagara's CPU/GPU allocation behaviour at that count on this template shape is unverified
 `[unresolved: no evidence either way in the corpus or the module docs]`.

@@ -85,6 +85,123 @@ namespace NDICkParticlesLocal
         return FVector3f(r * FMath::Cos(t), r * FMath::Sin(t), z);
     }
 
+    // ---- Deterministic curl noise. Mirrors Common.ush's CkParticles_Noise*/CurlNoise/CurlPath -------------------
+    // Read the .ush's header comment for the design (24-bit lattice hash, central differences at a fixed eps,
+    // stateless fixed-step advection). Every constant below is the same literal on the GPU side.
+
+    static auto NoiseHash3(int32 InX, int32 InY, int32 InZ, uint32 InSalt) -> float
+    {
+        uint32 n = uint32(InX) * 747796405u + uint32(InY) * 2654435761u + uint32(InZ) * 805459861u
+                 + InSalt * 2891336453u + 1u;
+        n ^= n >> 16;
+        n *= 2246822519u;
+        n ^= n >> 13;
+        n *= 3266489917u;
+        n ^= n >> 16;
+        return float(n & 0x00FFFFFFu) / 16777216.0f;
+    }
+
+    static auto NoiseWrap(int32 InV, int32 InPeriod) -> int32
+    {
+        return ((InV % InPeriod) + InPeriod) % InPeriod;
+    }
+
+    static auto ValueNoise3(FVector3f InP, int32 InPeriod, uint32 InSalt) -> float
+    {
+        const auto Cix = FMath::FloorToInt(InP.X);
+        const auto Ciy = FMath::FloorToInt(InP.Y);
+        const auto Ciz = FMath::FloorToInt(InP.Z);
+
+        const auto Cfx = InP.X - float(Cix);
+        const auto Cfy = InP.Y - float(Ciy);
+        const auto Cfz = InP.Z - float(Ciz);
+
+        const auto Wx = Cfx * Cfx * (3.0f - 2.0f * Cfx);
+        const auto Wy = Cfy * Cfy * (3.0f - 2.0f * Cfy);
+        const auto Wz = Cfz * Cfz * (3.0f - 2.0f * Cfz);
+
+        const auto X0 = NoiseWrap(Cix,     InPeriod);
+        const auto Y0 = NoiseWrap(Ciy,     InPeriod);
+        const auto Z0 = NoiseWrap(Ciz,     InPeriod);
+        const auto X1 = NoiseWrap(Cix + 1, InPeriod);
+        const auto Y1 = NoiseWrap(Ciy + 1, InPeriod);
+        const auto Z1 = NoiseWrap(Ciz + 1, InPeriod);
+
+        const auto N000 = NoiseHash3(X0, Y0, Z0, InSalt);
+        const auto N100 = NoiseHash3(X1, Y0, Z0, InSalt);
+        const auto N010 = NoiseHash3(X0, Y1, Z0, InSalt);
+        const auto N110 = NoiseHash3(X1, Y1, Z0, InSalt);
+        const auto N001 = NoiseHash3(X0, Y0, Z1, InSalt);
+        const auto N101 = NoiseHash3(X1, Y0, Z1, InSalt);
+        const auto N011 = NoiseHash3(X0, Y1, Z1, InSalt);
+        const auto N111 = NoiseHash3(X1, Y1, Z1, InSalt);
+
+        const auto Near = FMath::Lerp(FMath::Lerp(N000, N100, Wx), FMath::Lerp(N010, N110, Wx), Wy);
+        const auto Far  = FMath::Lerp(FMath::Lerp(N001, N101, Wx), FMath::Lerp(N011, N111, Wx), Wy);
+        return FMath::Lerp(Near, Far, Wz);
+    }
+
+    static auto NoiseFbm3(FVector3f InP, uint32 InSalt) -> float
+    {
+        auto Sum = 0.0f, Amp = 0.5f, Freq = 1.0f, Norm = 0.0f;
+        auto Period = 16;
+
+        for (auto i = 0; i < 3; ++i)
+        {
+            Sum  += Amp * ValueNoise3(InP * Freq, Period, InSalt);
+            Norm += Amp;
+            Amp  *= 0.5f;
+            Freq *= 2.0f;
+            Period *= 2;
+        }
+        return Sum / Norm;
+    }
+
+    // These two are the pair a behavior actually calls, and they carry EXTERNAL linkage on purpose: until the
+    // first curl-driven port lands they have no caller in this translation unit, and an unreferenced internal
+    // function is a /W4 diagnostic. The lattice helpers above stay internal.
+    auto CurlNoise(FVector3f InP, float InFreq, uint32 InSeed) -> FVector3f
+    {
+        const auto Q = InP * InFreq;
+        constexpr auto E = 0.01f;
+
+        const auto Dx = FVector3f(E, 0.0f, 0.0f);
+        const auto Dy = FVector3f(0.0f, E, 0.0f);
+        const auto Dz = FVector3f(0.0f, 0.0f, E);
+
+        const auto PsiX_Yp = NoiseFbm3(Q + Dy, InSeed);
+        const auto PsiX_Yn = NoiseFbm3(Q - Dy, InSeed);
+        const auto PsiX_Zp = NoiseFbm3(Q + Dz, InSeed);
+        const auto PsiX_Zn = NoiseFbm3(Q - Dz, InSeed);
+
+        const auto PsiY_Xp = NoiseFbm3(Q + Dx, InSeed + 1u);
+        const auto PsiY_Xn = NoiseFbm3(Q - Dx, InSeed + 1u);
+        const auto PsiY_Zp = NoiseFbm3(Q + Dz, InSeed + 1u);
+        const auto PsiY_Zn = NoiseFbm3(Q - Dz, InSeed + 1u);
+
+        const auto PsiZ_Xp = NoiseFbm3(Q + Dx, InSeed + 2u);
+        const auto PsiZ_Xn = NoiseFbm3(Q - Dx, InSeed + 2u);
+        const auto PsiZ_Yp = NoiseFbm3(Q + Dy, InSeed + 2u);
+        const auto PsiZ_Yn = NoiseFbm3(Q - Dy, InSeed + 2u);
+
+        const auto Inv = 1.0f / (2.0f * E);
+        return FVector3f(
+            ((PsiZ_Yp - PsiZ_Yn) - (PsiY_Zp - PsiY_Zn)) * Inv,
+            ((PsiX_Zp - PsiX_Zn) - (PsiZ_Xp - PsiZ_Xn)) * Inv,
+            ((PsiY_Xp - PsiY_Xn) - (PsiX_Yp - PsiX_Yn)) * Inv);
+    }
+
+    auto CurlPath(FVector3f InSpawnPosition, float InAge, float InFreq, float InStrength, uint32 InSeed)
+        -> FVector3f
+    {
+        const auto Dt = InAge / 16.0f;
+
+        auto P = InSpawnPosition;
+        for (auto i = 0; i < 16; ++i)
+        { P += CurlNoise(P, InFreq, InSeed) * InStrength * Dt; }
+        return P;
+    }
+
     // HLSL intrinsic mirrors: keeps the C++ textually parallel to the .ush so review is a line-by-line diff.
     static auto Saturate(float InX) -> float { return FMath::Clamp(InX, 0.0f, 1.0f); }
     static auto Frac(float InX) -> float { return FMath::Frac(InX); }
@@ -206,7 +323,7 @@ namespace NDICkParticlesLocal
 
     static auto ExecuteStage_CPU(
         int32 InBehaviorId, float InDeltaTime, float InAge, float InLifetime,
-        FVector3f InPosition, FVector3f InVelocity, int32 InSeed) -> FStageIO
+        FVector3f InPosition, FVector3f InVelocity, int32 InSeed, float InEmitterAge) -> FStageIO
     {
         FStageIO Out;
         Out.Position = InPosition;
@@ -3100,6 +3217,7 @@ void
     Sig.Inputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),     TEXT("Position")));
     Sig.Inputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),     TEXT("Velocity")));
     Sig.Inputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetIntDef(),      TEXT("Seed")));
+    Sig.Inputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(),    TEXT("EmitterAge")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),    TEXT("OutPosition")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),    TEXT("OutVelocity")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetColorDef(),   TEXT("OutColor")));
@@ -3141,10 +3259,11 @@ FCk_Particles_StageResult
         float     InLifetime,
         FVector3f InPosition,
         FVector3f InVelocity,
-        int32     InSeed)
+        int32     InSeed,
+        float     InEmitterAge)
 {
     return NDICkParticlesLocal::ExecuteStage_CPU(
-        InBehaviorId, InDeltaTime, InAge, InLifetime, InPosition, InVelocity, InSeed);
+        InBehaviorId, InDeltaTime, InAge, InLifetime, InPosition, InVelocity, InSeed, InEmitterAge);
 }
 
 void
@@ -3160,6 +3279,7 @@ void
     FNDIInputParam<FVector3f>     InPosition(Context);
     FNDIInputParam<FVector3f>     InVelocity(Context);
     FNDIInputParam<int32>         Seed(Context);
+    FNDIInputParam<float>         EmitterAge(Context);
 
     FNDIOutputParam<FVector3f>    OutPosition(Context);
     FNDIOutputParam<FVector3f>    OutVelocity(Context);
@@ -3184,7 +3304,8 @@ void
             Lifetime.GetAndAdvance(),
             InPosition.GetAndAdvance(),
             InVelocity.GetAndAdvance(),
-            Seed.GetAndAdvance());
+            Seed.GetAndAdvance(),
+            EmitterAge.GetAndAdvance());
 
         OutPosition.SetAndAdvance(Result.Position);
         OutVelocity.SetAndAdvance(Result.Velocity);
