@@ -1,0 +1,368 @@
+// /CkParticles/Behaviors/Behavior_FireBallProjectile.ush — BehaviorId 36.
+//
+// Faithful re-port of Vefects NS_FireBall_Projectile. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_FireBall_Projectile.md — every number below is a source value from §2/§5,
+// not a tuning.
+//
+// The cookbook's first RIBBON-bearing port, and its heaviest continuous system. Nine emitters: three
+// static velocity-aligned core sprites that live the whole flight, two camera-facing glows, a 200/s
+// flame stream on a 2x2 sheet, a 200/s smoke stream, and a MIRRORED PAIR of ribbons whose only
+// difference is the sign of their curl-noise strength.
+//
+// Cadence is the batch's exception: every emitter is `Life Cycle Mode = Self` with its own 10 s loop,
+// and the system's own `Infinite / 10 s` agrees, so the two readings coincide. The row is 10 s loop /
+// 10 s lifetime / burst 15 / rate 408 per second, plus a ribbon emitter at 100 points per second.
+//
+// Burst and rate particles are told apart by SPAWN PHASE (see Behavior_HealCast.ush's header for the
+// idiom). The two EMITTERS are told apart by the SEED BANK: the ribbon emitter's graph adds
+// CKPARTICLES_RIBBON_SEED_BASE to its UniqueID, so the trail branch is selected off the Seed and the
+// stage signature never moved.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 36) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_FP_LOOP            10.0
+#define CKP_FP_BURST_SLOTS      15
+#define CKP_FP_RATE_TOTAL     408.0
+#define CKP_FP_CUM_SECONDGLOW   5.0   // SecondGlow   5/s
+#define CKP_FP_CUM_FLAMES     205.0   // Flames01   200/s
+#define CKP_FP_CUM_SMOKES     405.0   // Smokes     200/s
+                                      // FirstGlow    3/s -> the remainder
+
+// Every emitter's own loop duration IS the row's, so no layer here has a spawn WINDOW to be gated on —
+// unlike the Cast ports, whose Self emitters run a 0.2-0.3 s slice of a 2 s loop.
+
+#define CKP_FP_LAYER_SECONDGLOW 0
+#define CKP_FP_LAYER_FLAMES     1
+#define CKP_FP_LAYER_SMOKES     2
+#define CKP_FP_LAYER_FIRSTGLOW  3
+#define CKP_FP_LAYER_PROJ01     4
+#define CKP_FP_LAYER_PROJ02     5
+#define CKP_FP_LAYER_PROJ03     6
+
+// The two staggered burst beats. Only the BURST module carries a spawn time; the rate stream starts
+// with the emitter, so a rate particle of either layer takes no delay.
+#define CKP_FP_DELAY_SMOKES     0.04
+#define CKP_FP_DELAY_FIRSTGLOW  0.05
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2). The ribbon tag is
+// carried by the row's SECOND emitter; Niagara does not gate a ribbon on it, but its particles still
+// write one so the ledger stays single.
+#define CKP_FP_VIS_PART04      157
+#define CKP_FP_VIS_PART01_VEL  158
+#define CKP_FP_VIS_PART03BR    159
+#define CKP_FP_VIS_PART01_CAM  160
+#define CKP_FP_VIS_FLAMES      161
+#define CKP_FP_VIS_SMOKE       162
+#define CKP_FP_VIS_TRAIL       163
+
+// ---- The trail pair ------------------------------------------------------------------------------------------
+//
+// Both ribbons spawn at the emitter origin, stream backwards at 1000 units/s and are bent by a Curl Noise
+// Force of equal and opposite strength. Their Scale Velocity module is DISABLED, so the backward run is
+// exactly linear and the only thing separating the two streamers is the sign below.
+//
+// Curl conversion, stated rather than tuned, following the NS_DebuffCast precedent (recipe §9):
+//   Frequency: the module authors its field in metres, so the source's 3 becomes 0.003 per unit
+//              [inferred — the position scaling inside the module graph is not in the corpus].
+//   Strength:  the source figure is an ACCELERATION where CurlPath advects with a VELOCITY, and this
+//              layer has no Scale Velocity plateau to crush it. Mean displacement over a life L is
+//              0.5 * A * L^2, so the constant-velocity path covering the same ground is 0.5 * A * L —
+//              divided by the measured mean magnitude of this plugin's own curl field over the region
+//              the trail visits (0.8139 over 4000 samples within +-300 units at this frequency and seed).
+#define CKP_FP_TRAIL_LIFE          0.25
+#define CKP_FP_TRAIL_WIDTH         8.0
+#define CKP_FP_TRAIL_SPEED      1000.0
+#define CKP_FP_TRAIL_ALPHA         0.3   // the layer's Color.Scale Alpha
+#define CKP_FP_CURL_FREQ           0.003
+#define CKP_FP_CURL_SRC_STRENGTH 5000.0
+#define CKP_FP_CURL_FIELD_MEAN     0.8139
+#define CKP_FP_CURL_SEED             11u  // the source's own Random Seed
+
+FCkParticles_StageOutput CkParticles_FireBallProjectile_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// Niagara's Random Range Vector draws each axis independently, so the three components take their own
+// salts rather than one shared draw.
+float3 CkParticles_FireBallProjectile_RangeVector(int Seed, float3 Minimum, float3 Maximum)
+{
+    return float3(
+        lerp(Minimum.x, Maximum.x, CkParticles_Rand(Seed, 11)),
+        lerp(Minimum.y, Maximum.y, CkParticles_Rand(Seed, 12)),
+        lerp(Minimum.z, Maximum.z, CkParticles_Rand(Seed, 15)));
+}
+
+int CkParticles_FireBallProjectile_BurstLayer(int Seed)
+{
+    const int S = ((Seed % CKP_FP_BURST_SLOTS) + CKP_FP_BURST_SLOTS) % CKP_FP_BURST_SLOTS;
+
+    if (S == 0)  { return CKP_FP_LAYER_SECONDGLOW; }
+    if (S < 6)   { return CKP_FP_LAYER_FLAMES; }     //  1..5
+    if (S < 11)  { return CKP_FP_LAYER_SMOKES; }     //  6..10
+    if (S == 11) { return CKP_FP_LAYER_FIRSTGLOW; }
+    if (S == 12) { return CKP_FP_LAYER_PROJ01; }
+    if (S == 13) { return CKP_FP_LAYER_PROJ02; }
+    return CKP_FP_LAYER_PROJ03;
+}
+
+int CkParticles_FireBallProjectile_RateLayer(int Seed)
+{
+    const float R = CkParticles_Rand(Seed, 0) * CKP_FP_RATE_TOTAL;
+
+    if (R < CKP_FP_CUM_SECONDGLOW) { return CKP_FP_LAYER_SECONDGLOW; }
+    if (R < CKP_FP_CUM_FLAMES)     { return CKP_FP_LAYER_FLAMES; }
+    if (R < CKP_FP_CUM_SMOKES)     { return CKP_FP_LAYER_SMOKES; }
+    return CKP_FP_LAYER_FIRSTGLOW;
+}
+
+// The trail branch. Runs on the RIBBON emitter's particles only; LocalSeed is the point's own spawn
+// index along its streamer, which is also Niagara's link order.
+FCkParticles_StageOutput CkParticles_FireBallProjectile_Trail(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int LocalSeed = CkParticles_LocalSeed(In.Seed);
+
+    // Trail_01 and Trail_02 are one renderer and two RIBBON IDS. The id rides MeshIndex, which is what
+    // the builder binds RibbonIdBinding to, and it is also the sign of the curl.
+    const int   Ribbon = ((LocalSeed % 2) + 2) % 2;
+    const float Sign   = Ribbon == 0 ? 1.0 : -1.0;
+
+    // The position is evaluated at the CLAMPED age so the dead tail of the ribbon stops travelling once
+    // its curves have run out, instead of streaming away for the rest of the row's 10 s lifetime.
+    const float TrailAge = min(In.Age, CKP_FP_TRAIL_LIFE);
+    const float t        = saturate(TrailAge / CKP_FP_TRAIL_LIFE);
+
+    const float3 Spawn    = float3(0.0, 0.0, 0.0);
+    const float3 V0       = float3(-CKP_FP_TRAIL_SPEED, 0.0, 0.0);
+    const float  Strength = Sign * 0.5 * CKP_FP_CURL_SRC_STRENGTH * CKP_FP_TRAIL_LIFE
+                          / CKP_FP_CURL_FIELD_MEAN;
+
+    O.Position = Spawn + V0 * TrailAge
+               + (CkParticles_CurlPath(Spawn, TrailAge, CKP_FP_CURL_FREQ, Strength, CKP_FP_CURL_SEED) - Spawn);
+    O.Velocity = V0;
+
+    O.Color = float4(
+        CkParticles_Key4(t, 0.0, 2.0,       0.1617869, 2.0,       0.3597947, 1.0,      0.96227, 0.913099),
+        CkParticles_Key4(t, 0.0, 1.877372,  0.1617869, 1.5058839, 0.3597947, 0.341915, 0.96227, 0.024158),
+        CkParticles_Key4(t, 0.0, 1.5825959, 0.1617869, 0.218924,  0.3597947, 0.109462, 0.96227, 0.024158),
+        CKP_FP_TRAIL_ALPHA * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+
+    // Ribbon width is ONE float read at Particles.SpriteSize's offset, i.e. Size.x. The y component is
+    // written to the same value so a width of zero cannot read as a live quad anywhere else.
+    const float Width = CKP_FP_TRAIL_WIDTH * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+    O.Size      = float2(Width, Width);
+    O.MeshIndex = Ribbon;
+    O.VisTag    = CKP_FP_VIS_TRAIL;
+
+    // M_VFX_FlatAdd declares no dynamic parameters, so the source's writes are inert and nothing is plumbed.
+    O.Dynamic = float4(0.0, 0.0, 0.0, 0.0);
+
+    if (In.Age > CKP_FP_TRAIL_LIFE)
+    { return CkParticles_FireBallProjectile_Hidden(O); }
+
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_FireBallProjectile(FCkParticles_StageInput In)
+{
+    if (CkParticles_IsRibbonSeed(In.Seed))
+    { return CkParticles_FireBallProjectile_Trail(In); }
+
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    const float Phase   = CkParticles_SpawnPhase(In.EmitterAge, In.Age, CKP_FP_LOOP);
+    const bool  IsBurst = CkParticles_IsBurstSpawn(Phase, CKP_FP_LOOP);
+
+    int   Layer      = CKP_FP_LAYER_SECONDGLOW;
+    float LayerDelay = 0.0;
+
+    if (IsBurst)
+    {
+        Layer = CkParticles_FireBallProjectile_BurstLayer(In.Seed);
+
+        if (Layer == CKP_FP_LAYER_SMOKES)         { LayerDelay = CKP_FP_DELAY_SMOKES; }
+        else if (Layer == CKP_FP_LAYER_FIRSTGLOW) { LayerDelay = CKP_FP_DELAY_FIRSTGLOW; }
+    }
+    else
+    {
+        Layer = CkParticles_FireBallProjectile_RateLayer(In.Seed);
+    }
+
+    const float Aged = In.Age - LayerDelay;
+
+    if (Aged < 0.0)
+    { return CkParticles_FireBallProjectile_Hidden(O); }
+
+    // ---- SecondGlow: the inner blue-to-orange core flare. Its Scale Sprite Size runs in UNIFORM CURVE
+    // mode, so the non-uniform pair authored beside it is inert ----
+    if (Layer == CKP_FP_LAYER_SECONDGLOW)
+    {
+        const float Life = 0.5;
+
+        if (Aged > Life)
+        { return CkParticles_FireBallProjectile_Hidden(O); }
+
+        const float t = saturate(Aged / Life);
+
+        O.Position = float3(-16.6948, 0.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key2(t, 0.6181709, 2.0,       0.9634772, 3.0),
+            CkParticles_Key2(t, 0.6181709, 0.6838289, 0.9634772, 2.258827),
+            CkParticles_Key2(t, 0.6181709, 0.2189234, 0.9634772, 0.3283852),
+            0.5 * CkParticles_Key4(t, 0.0, 0.0, 0.2463024, 1.0, 0.6181709, 1.0, 1.0, 0.0));
+
+        const float Size = 130.0 * CkParticles_Key2(t, 0.0, 0.5, 1.0, 1.0);
+        O.Size    = float2(Size, Size);
+        O.Dynamic = float4(3.5, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FP_VIS_PART03BR;
+        return O;
+    }
+
+    // ---- Flames01: the 200/s fire stream off a 10-unit shell, blown backwards and decelerating to a
+    // fifth of its launch speed, on the 2x2 sheet ----
+    if (Layer == CKP_FP_LAYER_FLAMES)
+    {
+        const float Life = lerp(0.2, 0.3, CkParticles_Rand(In.Seed, 1));
+
+        if (Aged > Life)
+        { return CkParticles_FireBallProjectile_Hidden(O); }
+
+        const float  t     = saturate(Aged / Life);
+        const float3 Spawn = float3(-27.6096, 0.0, 0.0) + CkParticles_RandDir(In.Seed) * 10.0;
+        const float3 V0    = CkParticles_FireBallProjectile_RangeVector(In.Seed,
+            float3(-20.0, -10.0, -10.0), float3(-100.0, 10.0, 10.0));
+
+        O.Position = Spawn + V0 * (CkParticles_Int2(t, 1.0, 0.2) * Life);
+        O.Velocity = V0 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.2);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0796861, 5.0,       0.3682463, 3.0,       0.7389073, 0.2501584),
+            CkParticles_Key3(t, 0.0796861, 3.4334278, 0.3682463, 0.6722696, 0.7389073, 0.007499),
+            CkParticles_Key3(t, 0.0796861, 0.1157668, 0.3682463, 0.0841786, 0.7389073, 0.007499),
+            CkParticles_Key3(t, 0.0, 0.0, 0.3030486, 1.0, 0.992454, 0.0));
+
+        const float Base = lerp(30.0, 50.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.2, 0.2, 0.75, 1.0, 1.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+                   + lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 5)) * Aged;
+
+        const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+        O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 5.0, 0.0, 0.0);
+        O.VisTag  = CKP_FP_VIS_FLAMES;
+        return O;
+    }
+
+    // ---- Smokes: the 200/s smoke stream off a FLATTENED 20-unit disc (the shape's Non Uniform Scale
+    // zeroes z), thrown further back than the flames and braking harder ----
+    if (Layer == CKP_FP_LAYER_SMOKES)
+    {
+        const float Life = lerp(0.3, 0.4, CkParticles_Rand(In.Seed, 1));
+
+        if (Aged > Life)
+        { return CkParticles_FireBallProjectile_Hidden(O); }
+
+        const float  t   = saturate(Aged / Life);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+        const float3 Spawn = float3(-24.8649, 0.0, 0.0) + float3(Dir.x, Dir.y, 0.0) * 20.0;
+        const float3 V0    = CkParticles_FireBallProjectile_RangeVector(In.Seed,
+            float3(-50.0, -10.0, -10.0), float3(-150.0, 10.0, 10.0));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.2, 0.1) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.2, 1.0, 0.1);
+
+        // The source's colour curve carries TWO keys at t=0; the second one wins for every reachable t,
+        // so the first is dropped rather than transcribed into a zero-width segment.
+        O.Color = float4(
+            CkParticles_Key5(t, 0.0, 1.0, 0.0603682, 1.0,      0.2245699, 1.0,      0.3634169, 0.391573, 0.5276185, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0603682, 0.693872, 0.2245699, 0.040915, 0.3634169, 0.003677, 0.5276185, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0603682, 0.147027, 0.2245699, 0.045186, 0.3634169, 0.022174, 0.5276185, 0.0),
+            0.6 * CkParticles_Key2(t, 0.1267733, 1.0, 0.5143375, 0.35));
+
+        const float Base = lerp(150.0, 200.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.2, 0.2, 0.4, 1.0, 1.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+                   + lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 5)) * Aged;
+
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 0.0, 0.0,
+                           CkParticles_Key2(t, 0.0, -1.0, 0.25, 1.0));
+        O.VisTag  = CKP_FP_VIS_SMOKE;
+        return O;
+    }
+
+    // ---- FirstGlow: the big outer halo. Its Scale Sprite Size runs in NON-UNIFORM CURVE mode, so the
+    // uniform curve authored beside it is inert and the quad squeezes to a horizontal sliver ----
+    if (Layer == CKP_FP_LAYER_FIRSTGLOW)
+    {
+        const float Life = 1.0;
+
+        if (Aged > Life)
+        { return CkParticles_FireBallProjectile_Hidden(O); }
+
+        const float t = saturate(Aged / Life);
+
+        O.Position = float3(-17.223, 0.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key4(t, 0.0, 1.0,       0.1328101, 1.0,       0.3223664, 1.0,       0.9622698, 0.913099),
+            CkParticles_Key4(t, 0.0, 0.938686,  0.1328101, 0.7529424, 0.3223664, 0.3419145, 0.9622698, 0.0241576),
+            CkParticles_Key4(t, 0.0, 0.7912982, 0.1328101, 0.1094617, 0.3223664, 0.1094617, 0.9622698, 0.0241576),
+            0.1 * CkParticles_Key4(t, 0.0, 0.0, 0.2764866, 1.0, 0.6737096, 1.0, 1.0, 0.0));
+
+        O.Size    = float2(500.0 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.4),
+                           500.0 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FP_VIS_PART01_CAM;
+        return O;
+    }
+
+    // ---- Projectile_01/02/03: the hard core. Three static velocity-aligned quads at fixed size and
+    // colour, living the whole 10 s flight — both Scale Sprite Size modules on all three are DISABLED,
+    // so not one curve runs on them. The 0.01 unit/s drift exists only to give VelocityAligned an axis.
+    if (In.Age > 10.0)
+    { return CkParticles_FireBallProjectile_Hidden(O); }
+
+    O.Position = float3(-20.1693, 0.0, 0.0);
+    O.Velocity = float3(0.01, 0.0, 0.0);
+
+    if (Layer == CKP_FP_LAYER_PROJ01)
+    {
+        O.Color   = float4(1.0, 0.672443, 0.376262, 1.0);
+        O.Size    = float2(50.0, 50.0);
+        O.Dynamic = float4(0.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FP_VIS_PART04;
+        return O;
+    }
+
+    O.VisTag = CKP_FP_VIS_PART01_VEL;
+
+    if (Layer == CKP_FP_LAYER_PROJ02)
+    {
+        O.Color   = float4(1.0, 0.205079, 0.0168074, 0.3);
+        O.Size    = float2(250.0, 500.0);
+        O.Dynamic = float4(3.0, 0.0, 0.0, 0.0);
+        return O;
+    }
+
+    O.Color   = float4(0.130136, 0.00477695, 0.00477695, 0.5);
+    O.Size    = float2(100.0, 400.0);
+    O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+    return O;
+}

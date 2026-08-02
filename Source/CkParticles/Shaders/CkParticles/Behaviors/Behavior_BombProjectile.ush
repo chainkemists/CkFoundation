@@ -1,0 +1,159 @@
+// /CkParticles/Behaviors/Behavior_BombProjectile.ush — BehaviorId 37.
+//
+// Faithful re-port of Vefects NS_Bomb_Projectile. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Bomb_Projectile.md — every number below is a source value from §2/§5, not a
+// tuning.
+//
+// Three emitters: three coincident blue glow shells, the toon bomb prop, and a DISTANCE-driven ribbon
+// trail. PS_CkParticles_Template_BombProjectile is a Loop-Once 2.5 s system — the only 2.5 in the
+// cookbook, matching its own 2.5 s lifetimes exactly — bursting four particles, with a ribbon emitter
+// carrying a burst of seventeen trail points.
+//
+// The trail is the cookbook's only `Spawn Per Unit` source: it emits one point per 20 units the emitter
+// TRAVELS, holds it in world space for 0.6 s and never moves it again. That collapses to C11's
+// arc-length placement — the point at fraction i/16 of the leader's path holds the leader's position at
+// the time the leader had covered that fraction — which is what CkParticles_BombProjectile_LeaderPos
+// below feeds. See the note on that function for what a stationary leader means.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 37) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_BP_LOOP           2.5
+#define CKP_BP_BURST_SLOTS      4
+#define CKP_BP_LIFE           2.5
+
+// Renderer tags, row-declared on this behavior's own cadence row (recipe §6.2). 166 rides the row's
+// SECOND emitter, the ribbon one.
+#define CKP_BP_VIS_PART01     164
+#define CKP_BP_VIS_BOMB       165
+#define CKP_BP_VIS_TRAIL      166
+
+// The trail: seventeen points, one per arc-length sample of the leader's path, each holding its position
+// for 0.6 s at a constant 200-unit width while its alpha runs 0.2 -> 0 and its dissolve 0.5 -> -0.5.
+#define CKP_BP_TRAIL_POINTS    17
+#define CKP_BP_TRAIL_LIFE      0.6
+#define CKP_BP_TRAIL_WIDTH   200.0
+
+#define CKP_BP_TAU 6.28318530718
+
+FCkParticles_StageOutput CkParticles_BombProjectile_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// The leader the trail is deposited behind: the bomb prop itself, in the template's own local space.
+//
+// This recreation renders the projectile where it is spawned — nothing in CkParticles moves a system
+// along a flight path, and world-space emitters are not a capability the cookbook has (C12). So the
+// leader is STATIONARY, its path has zero length, and `Spawn Per Unit` therefore emits nothing at all —
+// which is exactly what the SOURCE does at a stationary spawn point, because the module gates on the
+// emitter's own movement delta against a 0.5-unit tolerance. Both sides of the A/B pedestal draw no
+// trail, and drawing one here would be the parity error.
+//
+// Everything downstream is written against a general path, so a leader with real travel lights the trail
+// up without touching the trail branch.
+float3 CkParticles_BombProjectile_LeaderPos(float Time)
+{
+    return float3(0.0, 0.0, 0.0);
+}
+
+// The trail branch. Runs on the RIBBON emitter's particles only.
+FCkParticles_StageOutput CkParticles_BombProjectile_Trail(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity  = float3(0.0, 0.0, 0.0);
+    O.Dynamic   = float4(0.0, 0.0, 0.0, 0.0);
+    O.MeshIndex = 0; // one ribbon, so one ribbon id
+    O.VisTag    = CKP_BP_VIS_TRAIL;
+
+    const int LocalSeed = CkParticles_LocalSeed(In.Seed);
+    const int Point     = ((LocalSeed % CKP_BP_TRAIL_POINTS) + CKP_BP_TRAIL_POINTS) % CKP_BP_TRAIL_POINTS;
+
+    // The leader's path, resampled at C11's fixed 16-step resolution on every evaluation. HLSL has no
+    // lambdas, so the caller fills the slots inline — the same shape CkParticles_CurlPath already ships.
+    float3 Samples[17];
+    [unroll]
+    for (int i = 0; i < 17; ++i)
+    { Samples[i] = CkParticles_BombProjectile_LeaderPos(float(i) * (CKP_BP_LOOP / 16.0)); }
+
+    float Lengths[17];
+    CkParticles_ArcLengthTable(Samples, Lengths);
+
+    // A leader that never moved covers no distance, so a per-unit trail has nothing to place.
+    if (Lengths[16] <= 0.0)
+    { return CkParticles_BombProjectile_Hidden(O); }
+
+    const float Fraction  = float(Point) / 16.0;
+    const float SpawnTime = CkParticles_ArcLengthTime(Lengths, CKP_BP_LOOP, Fraction);
+    const float TrailAge  = In.Age - SpawnTime;
+
+    O.Position = CkParticles_BombProjectile_LeaderPos(SpawnTime);
+
+    if (TrailAge < 0.0 || TrailAge > CKP_BP_TRAIL_LIFE)
+    { return CkParticles_BombProjectile_Hidden(O); }
+
+    const float t = saturate(TrailAge / CKP_BP_TRAIL_LIFE);
+
+    // Initialize Ribbon's colour, under a Scale Color whose RGB curve is flat 1 and whose alpha runs
+    // 0.2 -> 0. There is no Scale Ribbon Width module on this emitter, so the width never tapers.
+    O.Color = float4(0.0865005, 0.254152, 0.838799, CkParticles_Key2(t, 0.0, 0.2, 1.0, 0.0));
+    O.Size  = float2(CKP_BP_TRAIL_WIDTH, CKP_BP_TRAIL_WIDTH);
+
+    O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.5, 1.0, -0.5), 0.0, 0.0, 0.0);
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_BombProjectile(FCkParticles_StageInput In)
+{
+    if (CkParticles_IsRibbonSeed(In.Seed))
+    { return CkParticles_BombProjectile_Trail(In); }
+
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // Burst UniqueIDs are sequential, so the modulo draws exactly three glows and one prop per loop.
+    // This row declares no spawn rate, so there is one population and no spawn phase to read.
+    const int Slot = ((In.Seed % CKP_BP_BURST_SLOTS) + CKP_BP_BURST_SLOTS) % CKP_BP_BURST_SLOTS;
+
+    if (In.Age > CKP_BP_LIFE)
+    { return CkParticles_BombProjectile_Hidden(O); }
+
+    const float t = saturate(In.Age / CKP_BP_LIFE);
+
+    // ---- Bomb_Glow: three coincident shells. Their Scale Color module is DISABLED, so nothing about
+    // them changes over the 2.5 s — the source is stacking one additive alpha three times ----
+    if (Slot < 3)
+    {
+        O.Color   = float4(0.0368895, 0.184475, 1.0, 0.5);
+        O.Size    = float2(300.0, 300.0);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BP_VIS_PART01;
+        return O;
+    }
+
+    // ---- Bomb: the prop, at a fixed random yaw. Its Scale Color holds RGB at a quarter for the first
+    // 91.4% of the flight and then ramps to 5x in the last 0.215 s — the fuse burning down ----
+    const float Flash = CkParticles_Key2(t, 0.9139752, 0.25, 1.0, 5.0);
+
+    // Initial Mesh Orientation randomizes Z through a Random Range Vector of -1..1, read as TURNS by the
+    // NS_Bomb_Spawn precedent (the same module on the same prop). Nothing spins it afterwards: this
+    // emitter carries no Update Mesh Orientation, unlike its Bomb_Spawn twin.
+    const float InitTurns = lerp(-1.0, 1.0, CkParticles_Rand(In.Seed, 3));
+    O.Orientation = CkParticles_QuatFromAxisAngle(float3(0.0, 0.0, 1.0), CKP_BP_TAU * InitTurns);
+
+    O.MeshIndex = 0;
+    O.Size      = float2(0.0, 0.0);
+    O.Scale     = float3(0.45, 0.45, 0.45);
+    O.Color     = float4(Flash, Flash, Flash, 1.0);
+    // MI_VFX_Bomb reads no dynamic parameters, so the source's Index 0 Param 1 is inert and nothing is written.
+    O.VisTag    = CKP_BP_VIS_BOMB;
+    return O;
+}

@@ -58,6 +58,8 @@ namespace NDICkParticlesLocal
         TEXT("/CkParticles/Behaviors/Behavior_GunshotCast.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_FireBallCast.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_LightningCast.ush"),
+        TEXT("/CkParticles/Behaviors/Behavior_FireBallProjectile.ush"),
+        TEXT("/CkParticles/Behaviors/Behavior_BombProjectile.ush"),
     };
 }
 
@@ -6917,6 +6919,420 @@ namespace NDICkParticlesLocal
                     Out.Size   = FVector2f(Width * Grow, Length * Grow * Taper * SpeedFactor);
                     Out.VisTag = VisPart04;
                 }
+                break;
+            }
+            case 36: // FireBallProjectile — Vefects NS_FireBall_Projectile. Mirrors Behavior_FireBallProjectile.ush;
+                     // recipe Cookbook/NS_FireBall_Projectile.md.
+            {
+                constexpr auto Loop           = 10.0f;
+                constexpr auto BurstSlots     = 15;
+                constexpr auto RateTotal      = 408.0f;
+                constexpr auto CumSecondGlow  = 5.0f;
+                constexpr auto CumFlames      = 205.0f;
+                constexpr auto CumSmokes      = 405.0f;
+
+                constexpr auto LayerSecondGlow = 0;
+                constexpr auto LayerFlames     = 1;
+                constexpr auto LayerSmokes     = 2;
+                constexpr auto LayerFirstGlow  = 3;
+                constexpr auto LayerProj01     = 4;
+                constexpr auto LayerProj02     = 5;
+                constexpr auto LayerProj03     = 6;
+
+                constexpr auto DelaySmokes    = 0.04f;
+                constexpr auto DelayFirstGlow = 0.05f;
+
+                constexpr auto VisPart04     = 157;
+                constexpr auto VisPart01Vel  = 158;
+                constexpr auto VisPart03Br   = 159;
+                constexpr auto VisPart01Cam  = 160;
+                constexpr auto VisFlames     = 161;
+                constexpr auto VisSmoke      = 162;
+                constexpr auto VisTrail      = 163;
+
+                constexpr auto TrailLife        = 0.25f;
+                constexpr auto TrailWidth       = 8.0f;
+                constexpr auto TrailSpeed       = 1000.0f;
+                constexpr auto TrailAlpha       = 0.3f;
+                constexpr auto CurlFreq         = 0.003f;
+                constexpr auto CurlSrcStrength  = 5000.0f;
+                constexpr auto CurlFieldMean    = 0.8139f;
+                constexpr auto CurlSeed         = 11u;
+
+                const auto Hide = [&Out]() -> void
+                {
+                    Out.Color = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.Size  = FVector2f(0.0f, 0.0f);
+                    Out.Scale = FVector3f(0.0f, 0.0f, 0.0f);
+                };
+
+                // ---- The ribbon emitter's population, told apart by the SEED BANK ----
+                if (IsRibbonSeed(InSeed))
+                {
+                    const auto Local  = LocalSeed(InSeed);
+                    const auto Ribbon = ((Local % 2) + 2) % 2;
+                    const auto Sign   = Ribbon == 0 ? 1.0f : -1.0f;
+
+                    const auto TrailAge = FMath::Min(InAge, TrailLife);
+                    const auto t        = Saturate(TrailAge / TrailLife);
+
+                    const auto Spawn    = FVector3f(0.0f, 0.0f, 0.0f);
+                    const auto V0       = FVector3f(-TrailSpeed, 0.0f, 0.0f);
+                    const auto Strength = Sign * 0.5f * CurlSrcStrength * TrailLife / CurlFieldMean;
+
+                    Out.Position = Spawn + V0 * TrailAge
+                                 + (CurlPath(Spawn, TrailAge, CurlFreq, Strength, CurlSeed) - Spawn);
+                    Out.Velocity = V0;
+
+                    Out.Color = FLinearColor(
+                        Key4(t, 0.0f, 2.0f,       0.1617869f, 2.0f,       0.3597947f, 1.0f,      0.96227f, 0.913099f),
+                        Key4(t, 0.0f, 1.877372f,  0.1617869f, 1.5058839f, 0.3597947f, 0.341915f, 0.96227f, 0.024158f),
+                        Key4(t, 0.0f, 1.5825959f, 0.1617869f, 0.218924f,  0.3597947f, 0.109462f, 0.96227f, 0.024158f),
+                        TrailAlpha * Key2(t, 0.0f, 1.0f, 1.0f, 0.0f));
+
+                    const auto Width = TrailWidth * Key2(t, 0.0f, 1.0f, 1.0f, 0.0f);
+                    Out.Size      = FVector2f(Width, Width);
+                    Out.MeshIndex = Ribbon;
+                    Out.VisTag    = VisTrail;
+                    Out.Dynamic   = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+
+                    if (InAge > TrailLife)
+                    { Hide(); }
+
+                    break;
+                }
+
+                const auto RangeVector = [](int32 InS, FVector3f InMin, FVector3f InMax) -> FVector3f
+                {
+                    return FVector3f(
+                        FMath::Lerp(InMin.X, InMax.X, Rand(InS, 11)),
+                        FMath::Lerp(InMin.Y, InMax.Y, Rand(InS, 12)),
+                        FMath::Lerp(InMin.Z, InMax.Z, Rand(InS, 15)));
+                };
+
+                const auto BurstLayer = [](int32 InS) -> int32
+                {
+                    const auto S = ((InS % BurstSlots) + BurstSlots) % BurstSlots;
+
+                    if (S == 0)  { return LayerSecondGlow; }
+                    if (S < 6)   { return LayerFlames; }
+                    if (S < 11)  { return LayerSmokes; }
+                    if (S == 11) { return LayerFirstGlow; }
+                    if (S == 12) { return LayerProj01; }
+                    if (S == 13) { return LayerProj02; }
+                    return LayerProj03;
+                };
+
+                const auto RateLayer = [](int32 InS) -> int32
+                {
+                    const auto R = Rand(InS, 0) * RateTotal;
+
+                    if (R < CumSecondGlow) { return LayerSecondGlow; }
+                    if (R < CumFlames)     { return LayerFlames; }
+                    if (R < CumSmokes)     { return LayerSmokes; }
+                    return LayerFirstGlow;
+                };
+
+                Out.Velocity = FVector3f(0.0f, 0.0f, 0.0f);
+                Out.Position = FVector3f(0.0f, 0.0f, 0.0f);
+                Out.Dynamic  = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+
+                const auto Phase   = SpawnPhase(InEmitterAge, InAge, Loop);
+                const auto IsBurst = IsBurstSpawn(Phase, Loop);
+
+                auto Layer      = LayerSecondGlow;
+                auto LayerDelay = 0.0f;
+
+                if (IsBurst)
+                {
+                    Layer = BurstLayer(InSeed);
+
+                    if (Layer == LayerSmokes)         { LayerDelay = DelaySmokes; }
+                    else if (Layer == LayerFirstGlow) { LayerDelay = DelayFirstGlow; }
+                }
+                else
+                {
+                    Layer = RateLayer(InSeed);
+                }
+
+                const auto Aged = InAge - LayerDelay;
+
+                if (Aged < 0.0f)
+                {
+                    Hide();
+                    break;
+                }
+
+                if (Layer == LayerSecondGlow)
+                {
+                    constexpr auto Life = 0.5f;
+
+                    if (Aged > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t = Saturate(Aged / Life);
+
+                    Out.Position = FVector3f(-16.6948f, 0.0f, 0.0f);
+
+                    Out.Color = FLinearColor(
+                        Key2(t, 0.6181709f, 2.0f,       0.9634772f, 3.0f),
+                        Key2(t, 0.6181709f, 0.6838289f, 0.9634772f, 2.258827f),
+                        Key2(t, 0.6181709f, 0.2189234f, 0.9634772f, 0.3283852f),
+                        0.5f * Key4(t, 0.0f, 0.0f, 0.2463024f, 1.0f, 0.6181709f, 1.0f, 1.0f, 0.0f));
+
+                    const auto Size = 130.0f * Key2(t, 0.0f, 0.5f, 1.0f, 1.0f);
+                    Out.Size    = FVector2f(Size, Size);
+                    Out.Dynamic = FVector4f(3.5f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = VisPart03Br;
+                    break;
+                }
+
+                if (Layer == LayerFlames)
+                {
+                    const auto Life = FMath::Lerp(0.2f, 0.3f, Rand(InSeed, 1));
+
+                    if (Aged > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t     = Saturate(Aged / Life);
+                    const auto Spawn = FVector3f(-27.6096f, 0.0f, 0.0f) + RandDir(InSeed) * 10.0f;
+                    const auto V0    = RangeVector(InSeed,
+                        FVector3f(-20.0f, -10.0f, -10.0f), FVector3f(-100.0f, 10.0f, 10.0f));
+
+                    Out.Position = Spawn + V0 * (Int2(t, 1.0f, 0.2f) * Life);
+                    Out.Velocity = V0 * Key2(t, 0.0f, 1.0f, 1.0f, 0.2f);
+
+                    Out.Color = FLinearColor(
+                        Key3(t, 0.0796861f, 5.0f,       0.3682463f, 3.0f,       0.7389073f, 0.2501584f),
+                        Key3(t, 0.0796861f, 3.4334278f, 0.3682463f, 0.6722696f, 0.7389073f, 0.007499f),
+                        Key3(t, 0.0796861f, 0.1157668f, 0.3682463f, 0.0841786f, 0.7389073f, 0.007499f),
+                        Key3(t, 0.0f, 0.0f, 0.3030486f, 1.0f, 0.992454f, 0.0f));
+
+                    const auto Base = FMath::Lerp(30.0f, 50.0f, Rand(InSeed, 8));
+                    const auto Grow = Key3(t, 0.0f, 0.2f, 0.2f, 0.75f, 1.0f, 1.0f);
+                    Out.Size = FVector2f(Base * Grow, Base * Grow);
+
+                    Out.Rotation = Rand(InSeed, 4) * 360.0f
+                                 + FMath::Lerp(-30.0f, 30.0f, Rand(InSeed, 5)) * Aged;
+
+                    const auto Start = FMath::FloorToFloat(Rand(InSeed, 6) * 4.0f);
+                    Out.SubImageIndex = FMath::Fmod(Start + FMath::Min(FMath::FloorToFloat(t * 4.0f), 3.0f), 4.0f);
+
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 0.0f, 1.0f, -1.0f), 5.0f, 0.0f, 0.0f);
+                    Out.VisTag  = VisFlames;
+                    break;
+                }
+
+                if (Layer == LayerSmokes)
+                {
+                    const auto Life = FMath::Lerp(0.3f, 0.4f, Rand(InSeed, 1));
+
+                    if (Aged > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t     = Saturate(Aged / Life);
+                    const auto Dir   = RandDir(InSeed);
+                    const auto Spawn = FVector3f(-24.8649f, 0.0f, 0.0f) + FVector3f(Dir.X, Dir.Y, 0.0f) * 20.0f;
+                    const auto V0    = RangeVector(InSeed,
+                        FVector3f(-50.0f, -10.0f, -10.0f), FVector3f(-150.0f, 10.0f, 10.0f));
+
+                    Out.Position = Spawn + V0 * (Int3(t, 0.2f, 1.0f, 0.2f, 0.1f) * Life);
+                    Out.Velocity = V0 * Key3(t, 0.0f, 1.0f, 0.2f, 0.2f, 1.0f, 0.1f);
+
+                    Out.Color = FLinearColor(
+                        Key5(t, 0.0f, 1.0f, 0.0603682f, 1.0f,      0.2245699f, 1.0f,      0.3634169f, 0.391573f, 0.5276185f, 0.0f),
+                        Key5(t, 0.0f, 1.0f, 0.0603682f, 0.693872f, 0.2245699f, 0.040915f, 0.3634169f, 0.003677f, 0.5276185f, 0.0f),
+                        Key5(t, 0.0f, 1.0f, 0.0603682f, 0.147027f, 0.2245699f, 0.045186f, 0.3634169f, 0.022174f, 0.5276185f, 0.0f),
+                        0.6f * Key2(t, 0.1267733f, 1.0f, 0.5143375f, 0.35f));
+
+                    const auto Base = FMath::Lerp(150.0f, 200.0f, Rand(InSeed, 8));
+                    const auto Grow = Key3(t, 0.0f, 0.2f, 0.2f, 0.4f, 1.0f, 1.0f);
+                    Out.Size = FVector2f(Base * Grow, Base * Grow);
+
+                    Out.Rotation = Rand(InSeed, 4) * 360.0f
+                                 + FMath::Lerp(-30.0f, 30.0f, Rand(InSeed, 5)) * Aged;
+
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 0.0f, 1.0f, -1.0f), 0.0f, 0.0f,
+                                            Key2(t, 0.0f, -1.0f, 0.25f, 1.0f));
+                    Out.VisTag  = VisSmoke;
+                    break;
+                }
+
+                if (Layer == LayerFirstGlow)
+                {
+                    constexpr auto Life = 1.0f;
+
+                    if (Aged > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t = Saturate(Aged / Life);
+
+                    Out.Position = FVector3f(-17.223f, 0.0f, 0.0f);
+
+                    Out.Color = FLinearColor(
+                        Key4(t, 0.0f, 1.0f,       0.1328101f, 1.0f,       0.3223664f, 1.0f,       0.9622698f, 0.913099f),
+                        Key4(t, 0.0f, 0.938686f,  0.1328101f, 0.7529424f, 0.3223664f, 0.3419145f, 0.9622698f, 0.0241576f),
+                        Key4(t, 0.0f, 0.7912982f, 0.1328101f, 0.1094617f, 0.3223664f, 0.1094617f, 0.9622698f, 0.0241576f),
+                        0.1f * Key4(t, 0.0f, 0.0f, 0.2764866f, 1.0f, 0.6737096f, 1.0f, 1.0f, 0.0f));
+
+                    Out.Size    = FVector2f(500.0f * Key2(t, 0.0f, 1.0f, 1.0f, 0.4f),
+                                            500.0f * Key2(t, 0.0f, 1.0f, 1.0f, 0.0f));
+                    Out.Dynamic = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = VisPart01Cam;
+                    break;
+                }
+
+                if (InAge > 10.0f)
+                {
+                    Hide();
+                    break;
+                }
+
+                Out.Position = FVector3f(-20.1693f, 0.0f, 0.0f);
+                Out.Velocity = FVector3f(0.01f, 0.0f, 0.0f);
+
+                if (Layer == LayerProj01)
+                {
+                    Out.Color   = FLinearColor(1.0f, 0.672443f, 0.376262f, 1.0f);
+                    Out.Size    = FVector2f(50.0f, 50.0f);
+                    Out.Dynamic = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = VisPart04;
+                    break;
+                }
+
+                Out.VisTag = VisPart01Vel;
+
+                if (Layer == LayerProj02)
+                {
+                    Out.Color   = FLinearColor(1.0f, 0.205079f, 0.0168074f, 0.3f);
+                    Out.Size    = FVector2f(250.0f, 500.0f);
+                    Out.Dynamic = FVector4f(3.0f, 0.0f, 0.0f, 0.0f);
+                    break;
+                }
+
+                Out.Color   = FLinearColor(0.130136f, 0.00477695f, 0.00477695f, 0.5f);
+                Out.Size    = FVector2f(100.0f, 400.0f);
+                Out.Dynamic = FVector4f(2.0f, 0.0f, 0.0f, 0.0f);
+                break;
+            }
+            case 37: // BombProjectile — Vefects NS_Bomb_Projectile. Mirrors Behavior_BombProjectile.ush;
+                     // recipe Cookbook/NS_Bomb_Projectile.md.
+            {
+                constexpr auto Loop        = 2.5f;
+                constexpr auto BurstSlots  = 4;
+                constexpr auto Life        = 2.5f;
+
+                constexpr auto VisPart01   = 164;
+                constexpr auto VisBomb     = 165;
+                constexpr auto VisTrail    = 166;
+
+                constexpr auto TrailPoints = 17;
+                constexpr auto TrailLife   = 0.6f;
+                constexpr auto TrailWidth  = 200.0f;
+
+                constexpr auto Tau = 6.28318530718f;
+
+                const auto Hide = [&Out]() -> void
+                {
+                    Out.Color = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.Size  = FVector2f(0.0f, 0.0f);
+                    Out.Scale = FVector3f(0.0f, 0.0f, 0.0f);
+                };
+
+                // The leader the trail is deposited behind — see the .ush's comment on why a stationary
+                // one is the faithful reading and not a placeholder.
+                const auto LeaderPos = [](float /*InTime*/) -> FVector3f
+                {
+                    return FVector3f(0.0f, 0.0f, 0.0f);
+                };
+
+                if (IsRibbonSeed(InSeed))
+                {
+                    Out.Velocity  = FVector3f(0.0f, 0.0f, 0.0f);
+                    Out.Dynamic   = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.MeshIndex = 0;
+                    Out.VisTag    = VisTrail;
+
+                    const auto Local = LocalSeed(InSeed);
+                    const auto Point = ((Local % TrailPoints) + TrailPoints) % TrailPoints;
+
+                    FVector3f Samples[17];
+                    for (auto i = 0; i < 17; ++i)
+                    { Samples[i] = LeaderPos(float(i) * (Loop / 16.0f)); }
+
+                    float Lengths[17];
+                    ArcLengthTable(Samples, Lengths);
+
+                    if (Lengths[16] <= 0.0f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto Fraction  = float(Point) / 16.0f;
+                    const auto SpawnTime = ArcLengthTime(Lengths, Loop, Fraction);
+                    const auto TrailAge  = InAge - SpawnTime;
+
+                    Out.Position = LeaderPos(SpawnTime);
+
+                    if (TrailAge < 0.0f || TrailAge > TrailLife)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t = Saturate(TrailAge / TrailLife);
+
+                    Out.Color   = FLinearColor(0.0865005f, 0.254152f, 0.838799f, Key2(t, 0.0f, 0.2f, 1.0f, 0.0f));
+                    Out.Size    = FVector2f(TrailWidth, TrailWidth);
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 0.5f, 1.0f, -0.5f), 0.0f, 0.0f, 0.0f);
+                    break;
+                }
+
+                Out.Velocity = FVector3f(0.0f, 0.0f, 0.0f);
+                Out.Position = FVector3f(0.0f, 0.0f, 0.0f);
+                Out.Dynamic  = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+
+                const auto Slot = ((InSeed % BurstSlots) + BurstSlots) % BurstSlots;
+
+                if (InAge > Life)
+                {
+                    Hide();
+                    break;
+                }
+
+                const auto t = Saturate(InAge / Life);
+
+                if (Slot < 3)
+                {
+                    Out.Color   = FLinearColor(0.0368895f, 0.184475f, 1.0f, 0.5f);
+                    Out.Size    = FVector2f(300.0f, 300.0f);
+                    Out.Dynamic = FVector4f(2.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = VisPart01;
+                    break;
+                }
+
+                const auto Flash     = Key2(t, 0.9139752f, 0.25f, 1.0f, 5.0f);
+                const auto InitTurns = FMath::Lerp(-1.0f, 1.0f, Rand(InSeed, 3));
+
+                Out.Orientation = QuatFromAxisAngle(FVector3f(0.0f, 0.0f, 1.0f), Tau * InitTurns);
+                Out.MeshIndex   = 0;
+                Out.Size        = FVector2f(0.0f, 0.0f);
+                Out.Scale       = FVector3f(0.45f, 0.45f, 0.45f);
+                Out.Color       = FLinearColor(Flash, Flash, Flash, 1.0f);
+                Out.VisTag      = VisBomb;
                 break;
             }
             case 0: // Gravity — constant downward accel, integrate, tint warm->dark over life.
