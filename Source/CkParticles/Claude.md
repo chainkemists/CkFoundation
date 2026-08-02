@@ -72,7 +72,11 @@ generated mesh drawn with one named CkUsf look; `Scale` + `Orientation` apply), 
 Niagara distinguishes by its alignment/facing pair — `CameraFacingSprite`, `VelocityAlignedSprite` and
 `CustomFacingSprite` — and `Ribbon`. A sprite/mesh kind may additionally declare a `SubImageSize` flipbook
 grid, which makes its renderer read `Particles.SubImageIndex` over an X×Y sheet; a row that declares none
-divides nothing (a ribbon renderer has no `SubImageSize` at all).
+divides nothing (a ribbon renderer has no `SubImageSize` at all). A `Mesh` kind may additionally declare
+`MeshFacingMode` (`Default` / `Velocity` / `CameraPosition`, mirroring `ENiagaraMeshFacingMode`) and
+`MeshScale` (a constant multiplier on the carrier, on top of `Particles.Scale`); both default to Niagara's
+own defaults, and RosterSanity rejects either on a non-mesh kind because the builder writes them nowhere
+else. `CameraPosition` is the mode a behavior cannot fake — the stage has no camera.
 
 **Ribbons ride a SECOND emitter.** `UNiagaraRibbonRendererProperties` carries no `RendererVisibility`, so a
 ribbon renderer cannot be VisTag-gated and one added to the shared emitter would link *every* particle on the

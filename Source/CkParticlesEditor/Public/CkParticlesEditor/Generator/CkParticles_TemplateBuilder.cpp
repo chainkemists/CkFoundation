@@ -279,6 +279,19 @@ namespace ck::particles_editor
             }
         }
 
+        static auto Get_MeshFacingMode(
+            const ck::particles::ECk_ParticlesRenderer_MeshFacing InFacing) -> ENiagaraMeshFacingMode
+        {
+            using EFacing = ck::particles::ECk_ParticlesRenderer_MeshFacing;
+
+            switch (InFacing)
+            {
+                case EFacing::Velocity:       return ENiagaraMeshFacingMode::Velocity;
+                case EFacing::CameraPosition: return ENiagaraMeshFacingMode::CameraPosition;
+                default:                      return ENiagaraMeshFacingMode::Default;
+            }
+        }
+
         // Niagara's own default is (1,1) — one frame, no division. A row that declares no sheet must keep it,
         // because a (0,0) written through would divide the quad's UVs by zero.
         static auto Get_RendererSubImageSize(const FIntPoint& InSubImageSize) -> FVector2D
@@ -339,12 +352,15 @@ namespace ck::particles_editor
                 auto* MeshRenderer = NewObject<UNiagaraMeshRendererProperties>(
                     InEmitter, *FString::Printf(TEXT("MeshRenderer_Row%d"), Index));
                 MeshRenderer->RendererVisibility = Renderer.VisTag;
-                MeshRenderer->FacingMode = ENiagaraMeshFacingMode::Default;
+                MeshRenderer->FacingMode = Get_MeshFacingMode(Renderer.MeshFacingMode);
                 MeshRenderer->SubImageSize = Get_RendererSubImageSize(Renderer.SubImageSize);
                 MeshRenderer->Meshes.Empty();
 
                 auto MeshEntry = FNiagaraMeshRendererMeshProperties{};
                 MeshEntry.Mesh = Mesh;
+                // The renderer-level constant scale lives on the MESH ENTRY, not the renderer
+                // (FNiagaraMeshRendererMeshPropertiesBase::Scale) — a row's MeshScale multiplies Particles.Scale.
+                MeshEntry.Scale = Renderer.MeshScale;
                 MeshRenderer->Meshes.Add(MeshEntry);
 
                 if (LookMaster != nullptr)

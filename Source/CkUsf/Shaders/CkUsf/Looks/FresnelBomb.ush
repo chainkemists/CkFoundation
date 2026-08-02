@@ -1,0 +1,72 @@
+// /CkUsf/Looks/FresnelBomb.ush
+//
+// Recreation of the Vefects "FresnelBomb" material family — the parent graph M_VFX_FresnelBomb, of which
+// MI_VFX_FresnelBomb_FirstExplo01 / _FirstExplo02 / _BubbleNoise02 are the three shipped instances. It draws
+// the explosion's SHELL: a translucent bubble whose colour is a Fresnel lerp between an interior tint and a
+// grazing-angle tint, eaten away by a panning noise dissolve.
+//
+// It is a genuinely different graph from DissolveAdd, not a parameterization of it: no Main_Tex, no
+// Color_Tex, no Distortion_Tex, no gradient chain. It samples ONE texture (the dissolve noise) and replaces
+// the whole colour chain with the two-colour Fresnel (NS_Bomb_Explosion.md §4.3).
+//
+// Dynamic parameter channels — the source declares the same four names as DissolveAdd, and this family reads
+// only the first:
+//   x = dissolve    signed integrity ADDED to the dissolve noise; +1 = fully intact, -1 = fully dissolved
+//   y = distortion  unread here (the family samples no distortion texture)
+//   z = offset      unread here (the family samples no shape texture to pan)
+//   w = core_color  unread here — see the core-chain note below
+//
+// Deliberate omissions, each with its evidence (NS_Bomb_Explosion.md §4.3 delta table + §5.9):
+//   - The core chain (Color_CoreDifferent / Core_Intensity / Core_Power) is a family-wide CkUsf gap recorded
+//     in §6.4, and it is INERT on every consumer here: all five Bubble emitters write Dynamic Param 4 = 0.
+//   - Glow_Intensity resolves to 1 on all three instances and multiplies where Brightness already does, so it
+//     is folded into Brightness (the NS_Gunshot_Hit batch-A precedent).
+//   - Dissolve_Invert resolves to 0 on all three.
+//   - DephFade_Dist (sic) needs scene depth, which CkUsf surface looks do not wire (§6.5 gap 8).
+//
+// Known difference: the source's dissolve threshold is a pair of Step nodes; this uses the DissolveAdd
+// family's settled smoothstep(0, Edge, Noise + dissolve), so the erosion front is feathered by DissolveEdge
+// rather than hard-cut. One semantics across both cookbook families beats two readings of the same idea.
+//
+// Recipe + provenance: CkParticles/Cookbook/NS_Bomb_Explosion.md
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Look_FresnelBomb(
+    FCkUsf_SurfaceInput In,
+    Texture2D DissolveTex, SamplerState DissolveTexSampler,
+    float3    ColorInt,
+    float3    ColorExt,
+    float     FresnelExponent,
+    float     FresnelBaseReflect,
+    float     Brightness,
+    float     DissolveEdge,
+    float     DissolveBias,
+    float3    DissolveScale,
+    float3    DissolveSpeed)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    // AddDiss is the instance's own static bias riding on top of the animated channel — FirstExplo01 sits at
+    // -0.6 for its whole life while the other two resolve 0.
+    const float Dissolve = In.DynamicParameter.x + DissolveBias;
+
+    // UE's Fresnel node verbatim: pow(1 - dot(N, V), Exponent), lifted off the floor by the base-reflect
+    // fraction. 0 at the silhouette's centre, 1 at grazing angles — which is why Color_Int reads INSIDE and
+    // Color_Ext reads at the rim.
+    const float Facing  = saturate(dot(normalize(In.VertexNormal), normalize(In.CameraVector)));
+    const float Fresnel = FresnelBaseReflect
+                        + (1.0 - FresnelBaseReflect) * pow(1.0 - Facing, max(FresnelExponent, 1e-4));
+
+    const float3 Rim = lerp(ColorInt, ColorExt, saturate(Fresnel));
+
+    const float2 DissolveUv = In.UV * DissolveScale.rg + In.Time * DissolveSpeed.rg;
+    const float  Noise      = CkUsf_SampleTexture2D(DissolveTex, DissolveTexSampler, DissolveUv).r;
+
+    const float Mask = smoothstep(0.0, max(DissolveEdge, 1e-4), Noise + Dissolve);
+
+    O.EmissiveColor = Rim * In.ParticleColor.rgb * Mask * Brightness;
+    O.Opacity       = saturate(Mask * In.ParticleColor.a);
+
+    return O;
+}
