@@ -1,20 +1,26 @@
-# Translation sheet: NS_Dash (Vefects Anime VFX)
+# Recipe: NS_Dash → CkParticles (IMPLEMENTED)
 
 Schema and evidence-tag conventions: [README.md](README.md). Exemplars: [NS_BasicAttack.md](NS_BasicAttack.md),
 [NS_Lightning_Range.md](NS_Lightning_Range.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTED as `BehaviorId 46` (2026-08-02) — the true final port of the pack's Skills set.**
 
-No behavior, no `.ush`, no look, no mesh, no texture, no cadence row, no test, no gym station exists
-for this effect. No behavior id is allocated. Nothing has been rendered or looked at. Sections 1–6 are
-archaeology and a plan; everything in them comes from the extracted corpus and is tagged `[corpus]`.
+`Behavior_Dash.ush` + `ExecuteStage_CPU` case 46, the `PS_CkParticles_Template_Dash` cadence row
+(2.0 s loop / 1.55 s lifetime / burst 19 **+ rate 50 per second**), four row renderers on VisTags
+**242–245**, `Test_Particles_DashBehavior.cpp`, and the VfxExamples gym pair.
 
-**This is the only system in the batch with a MIXED coordinate space and a MIXED spawn mode.** Three
-emitters are local-space and one is world-space; one emitter carries a burst **and** a continuous
-spawn rate **and** its own `Self` life cycle. Both facts are load-bearing for a dash effect and both
-are §6 capability items. Read §6.0 before scheduling.
+**It added ONE look and ONE mesh, and ZERO textures.** Three of its four material instances were
+already carried by earlier ports — matched by INSTANCE against the corpus rather than by name — and
+all three of the "new bakes required" its §6.5 called for turned out to be already served by measured
+stand-ins. Only `M_VFX_DisAdd_Wind03` and `SM_VFX_Ring04` are unique to this system in the whole pack
+(§10, §8).
+
+**It is the pack's only system with a MIXED coordinate space and a MIXED spawn mode.** Three emitters
+are local-space and one is world-space; one emitter carries a burst **and** a continuous spawn rate
+**and** its own `Self` life cycle. The second of those is expressed exactly (the C2 both-stacks row);
+the first is the C12 non-goal and is recorded in §13.1.
 
 ---
 
@@ -25,7 +31,7 @@ are §6 capability items. Read §6.0 before scheduling.
 | Source object | `/Game/Vefects/Anime_VFX/Shared/Skills/NS_Dash` |
 | Pack | Vefects — *Anime VFX* (third-party marketplace content) |
 | User parameters | **none** — `userParameters: []` `[corpus]` |
-| Behavior id | **not allocated** — take the next free id at implementation time from `ck::particles::NumBehaviors` |
+| Behavior id | **46** (`Dash`) — allocated at implementation time from `ck::particles::NumBehaviors`, per [C-D6] |
 
 Corpus evidence (regenerate per [README.md](README.md); `Saved/` is machine-local and gitignored):
 
@@ -148,11 +154,13 @@ Both carriers are built along **+Z** (§3) and both are oriented onto **world +X
 second `[inferred — the units of Niagara's `Rotation Rate` are revolutions per second; the exporter
 records the number, not the unit]`.
 
-**`[unresolved: the units of `Rotation` and `Rotation Rate`]`** — `Rotation (0, 0.25, 0)` reads as a
-quarter turn about Y if the field is in revolutions and as 0.25° if it is in degrees. Niagara's
-`Initial/Update Mesh Orientation` modules take **rotations** (1.0 = a full turn) for both
-`[inferred]`, which makes 0.25 and 0.75 a quarter and three-quarter turn — a plausible pair for
-"same mesh, rolled differently". Confirm before writing the quaternion.
+**RESOLVED — the units are TURNS `[P6-A4]`.** `Rotation (0, 0.25, 0)` is a quarter turn about Y and
+`Rotation Rate 0.3` is 0.3 turns per second. This is not a fresh inference: `NS_Arrow_Cast`'s own
+`Wind_01` emitter carries the IDENTICAL pair — `Rotation (0, 0.25, 0)` with `Rotation Rate 0.3` on the
+same `SM_VFX_Ring01` carrier — and behavior 23 shipped and was gated on the turns reading
+(`Behavior_ArrowCast.ush`, the WINDMESH layer). A degrees reading would leave the tube's own +Z axis
+pointing at the sky instead of down the -X travel direction, which is visibly wrong on both systems.
+*(Was `[unresolved]`.)*
 
 ---
 
@@ -337,160 +345,345 @@ lengths. That shared shape is the effect's signature.
 
 ---
 
-## 6. Translation plan (CkParticles / CkUsf)
+## 6. Translation plan (CkParticles / CkUsf) — AS IMPLEMENTED
 
-### 6.0 Capability-gap callout — READ BEFORE SCHEDULING
+### 6.0 Capability gaps — all four answered, three of them by capabilities that landed after this sheet
 
-**No ribbon, no light renderer, no events, no collision, no GPU sim, no user parameters** — the three
-heaviest explosion-family gaps are all absent. What remains:
+The sheet was written 2026-08-01, before Phases 1–2 of the porting campaign. Three of its four gaps
+were already closed by the time the port ran, and the fourth is the campaign's standing non-goal.
 
-| # | Gap | Why the pipeline can't express it | Cheapest honest options |
-|---|---|---|---|
-| **G3** | **Sub-UV flipbook** — `Wind_Smokes` renders `SubUV: 2x2` with `Sub UVAnimation` in mode **Random**, frames 0–3 | No `SubImageIndex` output on `FCkParticles_StageOutput`; the shared sprite renderers declare no `SubImageSize`; no CkUsf look samples a flipbook atlas | (a) Bake a single smoke texture and drop the flipbook — visible as less per-particle variety across only 4 particles; (b) add `SubImageIndex` to the DI contract + `SubImageSize` on the renderer spec + atlas UV maths in the look. **Shared with `NS_Fire`** — do it once for both |
-| **G6** | **Burst AND continuous rate in one emitter** — `Add_Lines` runs `Spawn Burst Instantaneous` (13 at t = 0) **and** `Spawn Rate` (50 /s) simultaneously | `FCk_ParticlesTemplateSpec` has ONE `BurstCount`; `BurstCount 0` selects the continuous spawn-rate stack, any other value selects the burst stack. **The template cannot do both** | (a) Approximate: burst `13 + round(50 × 0.3) = 28` at t = 0 and stagger the extra 15 slots' effective spawn times inside the behavior via a per-slot delay (the `NS_BasicAttack.md` §5 spawn-delay technique generalized). Cheap, and visually close since the rate runs for only 0.3 s. (b) Extend the template builder to emit both stacks on one row. **(a) is the honest recommendation** — but it IS an approximation and belongs in the fidelity-gap section, not hidden |
-| **G7** | **Mixed coordinate space** — three local-space emitters + one WORLD-space emitter, in one system | A CkParticles template is a single local-space emitter. Both prior recreations recorded local-vs-world as a deviation (`NS_BasicAttack.md` §13.2), but there the whole source was world-space, so the deviation was uniform | This one is **not** uniform and it is **not** cosmetic: `Add_Lines` being world-space is what makes speed lines stay behind a moving dasher while the wind shapes ride with it. Forcing everything local makes the lines travel WITH the actor — the opposite of the intended read. Options: (a) accept it and record it prominently; (b) spawn two components (one local for the wind, one world for the lines) from one call; (c) have the behavior write world-relative positions for the line layer using the component's own transform, which the DI does not currently expose. **Decide before implementing — this is the fidelity risk of this port.** |
-| **G8** | **Emitter-level `Life Cycle Mode = Self`** — `Add_Lines` runs its own `Once` / 0.3 s loop while the other three run the system's | The cadence row has one loop duration for the whole template | Fold into the single 1.0 s loop and give the line layer a 0.3 s window inside it (hide past `age > 0.3`). Mechanically the same as the per-layer-lifetime treatment; call it out because "Once" means it does **not** repeat every loop in the source, and a naive port will re-fire it every second |
+| # | Gap as written | What shipped |
+|---|---|---|
+| **G3** | Sub-UV flipbook — no `SubImageIndex`, no `SubImageSize`, no atlas maths | **CLOSED by C4 (Phase 1).** The row's smoke renderer declares `SubImageSize (2, 2)` and the behavior writes `SubImageIndex`; the `WindSheet` atlas already existed |
+| **G6** | Burst AND continuous rate in one emitter — "the template cannot do both" | **CLOSED by C2 (Phase 2).** `Add_SpawnEmitterStack` composes both stacks on one row, so the row states burst 19 AND rate 50/s and the behavior splits the two populations by SPAWN PHASE. The sheet's own option (b) — the honest one — rather than its option (a) fold `[P6-A1]` |
+| **G7** | Mixed coordinate space — three local emitters + one WORLD emitter | **NOT closed.** C12 is the campaign's declared non-goal. All four layers are LOCAL; §13.1 records it, and the option-(b)/option-(c) ideas the sheet floated stay unbuilt |
+| **G8** | Emitter-level `Life Cycle Mode = Self` | **CLOSED by C5 + [P2-D5] (Phase 2).** `EmitterAge` reaches the behavior, so `Add_Lines`' 0.3 s window is a real gate on spawn phase rather than an age hack. It still RE-FIRES every loop where the source fires once (§13.2) |
 
-Items that are **work, not gaps**:
+Items that were **work, not gaps** — all four shipped as described:
 
-- **Animated mesh orientation** (`Update Mesh Orientation`, rates 0.3 and 0.05 about +X) — the
-  behavior writes a time-varying `O.Orientation` quaternion. Straightforward, but see §2.3's
-  `[unresolved]` on the rotation units.
-- **Renderer-level mesh scale (1, 1, 5)** on both mesh emitters — `FCk_ParticlesRendererSpec` has no
-  mesh-scale field, but the multiplier folds into the behavior's `O.Scale` exactly. Fold it; do not
-  add a field for it.
-- **Linear drag with random per-particle drag and mass** (`Add_Lines`) — first-order drag integrates
-  in closed form (`v(t) = v0·exp(−k·t/m)`), so both position and velocity stay exact and GPU/CPU
-  lockstep is preserved. Do **not** step-integrate it (`NS_BasicAttack.md` §14.7).
-- **Speed-dependent sprite size** (`Scale Sprite Size by Speed`) — the behavior already computes
-  velocity in closed form, so the size scale is a direct evaluation of §5's 3-key curve at
-  `|v| / 1500`.
+- **Animated mesh orientation** — `CkParticles_QuatFromAxisAngle` + `CkParticles_QuatMul`, in turns (§2.3).
+- **Renderer-level mesh scale (1, 1, 5)** — folded into the behavior's `O.Scale`, no new field.
+- **Linear drag with random drag and mass** — closed form `v(t) = v0·exp(-k·t/m)`, asserted
+  DeltaTime-independent in the test rather than merely commented (§11).
+- **Speed-dependent sprite size** — a direct evaluation of §5.4's three-key curve at `|v| / 1500`.
 
-**Loop authority — RESOLVED `[corpus-v3]`.** `Wind_01`, `Wind_Smokes` and `Wind_Speed` are
-`Life Cycle Mode = System`, so per [P0-D1] the system's `Loop Once / 2.0 s` drives them and their
-emitter-local `Infinite / 1.0 s` rows are inert. `Add_Lines` (`Self`, `Once`, 0.3 s) genuinely does
-run its own — which is why the distinction matters here. *(Was `[unresolved]`; the working figure
-was the emitters' 1.0 s.)*
-
-### 6.1 Cadence row
-
-**A new row is required.**
+### 6.1 Cadence row — AS SHIPPED
 
 ```
-{ TEXT("PS_CkParticles_Template_Dash"), 2.0f, 1.5f, 34, Get_DashRendererSpecs() }
+{ TEXT("PS_CkParticles_Template_Dash"), 2.0f, 1.55f, 19, Get_DashRendererSpecs(), 50.0f }
 ```
 
-Per [P0-D3]: loop = the system loop duration, lifetime = max resolved lifetime, burst = §2 counts.
-
-- `LoopDuration` **2.0** `[corpus-v3]` — the system's `Once` loop duration. *Was 1.0, taken from the
-  three wind emitters' inert Loop rows.*
-- `ParticleLifetime` **1.5** — `Wind_01`, the longest-lived layer (max resolved). Every shorter layer
-  writes zero colour, zero size and zero scale past its own lifetime (`NS_BasicAttack.md` §8).
-  **No lifetime ambiguity in this system, confirmed `[corpus-v3]`** — `Add_Lines` is the only
-  randomized-lifetime emitter, `Lifetime Mode = Random` with no override, so its 0.8–1.0 range drives
-  (§5.4).
-- `BurstCount` **34** = 1 (`Wind_01`) + 4 (`Wind_Smokes`) + 1 (`Wind_Speed`) + 28 (`Add_Lines`:
-  13 burst + ~15 from the 50 /s rate over its 0.3 s window, per §6.0 G6). Layer index = `Seed % 34`
-  (double-modulo): 0 `Wind_01`, 1–4 `Wind_Smokes`, 5 `Wind_Speed`, 6–33 `Add_Lines`.
-  **The 28 is the approximation** — record it in the fidelity-gap section, do not present it as the
-  source's number.
+- `LoopDuration` **2.0** `[corpus-v3]` — the system's `Once` loop duration, unchanged from the sheet.
+- `ParticleLifetime` **1.55** — `[P6-A2] correction, arithmetic class.` The sheet said 1.5 ("max
+  resolved lifetime"), which is the PRE-[P0-D5] formula. [P0-D5] is max over layers of
+  *(spawn delay + resolved lifetime)*: `Wind_01` is 0.05 + 1.5 = **1.55**, `Wind_Smokes` 0.1 + 1.0 =
+  1.1, `Wind_Speed` 0.05 + 0.6 = 0.65, `Add_Lines` 0 + 1.0 = 1.0. `NS_Arrow_Cast`'s row is 1.55 for
+  exactly this reason and for the same wind pair. At 1.5 the template would kill the tube 50 ms before
+  its own fade finished.
+- `BurstCount` **19** + `SpawnRate` **50.0** — `[P6-A1] correction, capability class.` The sheet's 34
+  is `1 + 4 + 1 + 28`, where the 28 folds `Add_Lines`' 13-particle burst together with ~15 staggered
+  stand-ins for its 50/s rate, because at authoring time a row could carry only one spawn stack. C2
+  landed in Phase 2 and the fold is no longer needed: the row carries the source's exact burst
+  (1 + 4 + 1 + 13 = **19**) and the source's exact rate (**50/s**), which is the sheet's own §6.0 G6
+  option (b). This removes the approximation the sheet told its implementer to record as a fidelity
+  gap — §6.7's second bullet no longer applies.
+  Layer index for a BURST particle = `Seed % 19` (double-modulo): 0 `Wind_01`, 1–4 `Wind_Smokes`,
+  5 `Wind_Speed`, 6–18 `Add_Lines`. A RATE particle is always `Add_Lines` — it is the system's only
+  Spawn Rate — and is hidden if its spawn phase is past 0.3 s.
 - **Spawn-time offsets are layer state**: `Wind_01` and `Wind_Speed` at 0.05, `Wind_Smokes` at 0.1,
-  `Add_Lines` slots 6–18 at 0 and slots 19–33 staggered across 0 .. 0.3 s. Each hides
-  (colour/size/scale 0) before its delay and runs its curves on `(age − delay) / lifetime`.
+  `Add_Lines` at 0. Each layer hides before its beat and runs its curves on `(age − delay)`.
 
-### 6.2 Renderer / VisTag needs
+### 6.2 Renderers and VisTags — AS SHIPPED
 
-Four distinct materials across four emitters, so **four row-declared renderers**
-(`NS_BasicAttack.md` §8.1 — one `User.SpriteMaterial` cannot carry four materials):
+Four distinct materials across four emitters, so four row-declared renderers
+(`Get_DashRendererSpecs`, naming header). **`CameraFacingSprite` is not a new kind** — `[P6-A6]`, it
+landed with C1 in Phase 1 and eleven rows already declare one.
 
-| Row renderer | Kind | Mesh | Look | Source emitter |
+| VisTag | Kind | Mesh | Look | Source emitter |
 |---|---|---|---|---|
-| 1 | **`Mesh`** (exists) | `Cylinder` (new, §6.3) | `WindDisAdd02` (new) | `Wind_01` |
-| 2 | **`CameraFacingSprite`** (NEW KIND) | — | `WindDisAdd01` (new) | `Wind_Smokes` |
-| 3 | **`Mesh`** (exists) | `Cone` (new, §6.3) | `WindDisAdd03` (new) | `Wind_Speed` |
-| 4 | **`VelocityAlignedSprite`** (exists) | — | `PartDisAdd02` (new) | `Add_Lines` |
+| 242 | `Mesh` | `Cylinder` (existing) | `WindDisAdd02Mesh` (existing) | `Wind_01` |
+| 243 | `CameraFacingSprite`, `SubImageSize (2, 2)` | — | `WindDisAdd01` (existing) | `Wind_Smokes` |
+| 244 | `Mesh` | `Cone` (**new**) | `WindDisAdd03` (**new**) | `Wind_Speed` |
+| 245 | `VelocityAlignedSprite` | — | `PartDisAdd02` (existing) | `Add_Lines` |
 
-**One new renderer kind is required**: `CameraFacingSprite` with an explicitly bound look. Same
-requirement as `NS_Fire` §6.2 and the explosion family — do it once.
+The name collision the sheet warned about is real and was avoided the way `NS_Arrow_Cast` avoided it:
+behavior 7's `WindDisAdd02` is a parameterization of `M_VFX_DisAdd_Pan_Wind02` and is untouched; this
+system's tube draws `M_VFX_DisAdd_Wind02`, which is `WindDisAdd02Mesh`.
 
-Name collision to avoid: **behavior 7 already ships a look called `WindDisAdd02`**
-(`NS_BasicAttack.md` §9, a parameterization of `M_VFX_DisAdd_Pan_Wind02`). This system's `Wind_01`
-draws `M_VFX_DisAdd_Wind02`, a **different material**. Pick a distinct look name — the existing one is
-bound to behavior 7's row renderers and must not be repointed.
+### 6.3 Meshes — one reused, one new
 
-VisTags: four, allocated above `Get_RosterVisTag_Max()` (9 as of 2026-08-01). Read the ceiling from
-`Get_RosterVisTag_Max()`; never restate a literal (`NS_BasicAttack.md` §14.4).
+- **`SM_CkParticles_Cylinder` — REUSED.** Checked against §3 before reuse: the generator builds radius
+  100, Z 0..50, 32 segments, `v = 0` at the TOP and `u = frac(0.75 − angle/360)` — every one of §3's
+  measured facts for `SM_VFX_Ring01`. Same carrier, same source mesh, same renderer scale (1, 1, 5).
+- **`SM_CkParticles_Cone` — NEW** (`Surface_Cone`, `CkParticles_MeshGenerator.cpp`). Built in SOURCE
+  units, as every other carrier is: narrow radius **53.956** at Z −0.25, wide radius **100.000** at
+  Z 32.047, 32 columns × 1 band. `[P6-A5]` the sheet's normalized figures (0.5396 / 1.0 / 0.328) are
+  not what shipped — carriers keep source dimensions so the behavior's scale curve stays the source's
+  own, and 32.30/100 is 0.323 rather than 0.328 in any case. The source has exactly two vertex rings
+  and nothing between them, so one band IS its topology; its 0.5-unit wall (two coaxial cone sheets
+  offset in Z) is collapsed to a single two-sided sheet, the Cylinder/Card/FlatAnnulus precedent, and
+  the Z values above are those two walls' midplane.
 
-### 6.3 Mesh needs
+### 6.4 Looks — three reused instances, one new
 
-Two procedural carriers, generated from §3's measurements — never imported:
+`[P6-A3] correction.` The sheet asked for four new `Dash*`-prefixed looks. Three of the four source
+materials are already carried, matched by INSTANCE path against the corpus rather than by name, and
+each was checked value-by-value against §4 before reuse (§10). Only `M_VFX_DisAdd_Wind03` is new, and
+it takes the plain name `WindDisAdd03` because nothing collides with it.
 
-- **`SM_CkParticles_Cylinder`** — open tube, radius 1, height 1 (scaled by the behavior), wall
-  thickness 0.005 of the radius (or a single sheet with `_TwoSided`, the `NS_BasicAttack.md` §13.5
-  precedent), 128 triangles. **UV: `v` along the axis, v = 0 at the TOP, v = 1 at the BOTTOM;
-  `u` around the circumference with the seam at −Y.** The v direction is load-bearing — the dissolve
-  and the panning `Color_Speed_X` run along it.
-  **Check the existing `Tube` carrier first**; if it already matches, this costs a UV assertion rather
-  than a new mesh.
-- **`SM_CkParticles_Cone`** — truncated cone, narrow-end radius **0.5396** and wide-end radius **1.0**
-  over a height of **0.328** (§3's 53.96 / 100 / 32.30 normalized), open at both ends, 128 triangles.
-  **UV: v = 0 at the NARROW end, v = 1 at the WIDE end; u around the circumference, seam at −Y.**
+The family-parameter extension §6.4 proposed (a separate `ColorTex` sampler with its own
+scale/offset/speed, `MainTexOffset`, `DissolveOffset`, `CoreIntensity`, `GlowIntensity`) was **not**
+built: `DissolveAdd.ush` is shared by 36 looks across ten ports and this batch's mandate is to leave
+it untouched. The consequence is real on `Wind03` and only on `Wind03` — it is the one instance in the
+cookbook where folding `Color_Tex` into the shape is not a no-op — and is recorded in §13.3.
 
-### 6.4 Look needs
+### 6.5 Textures — ZERO new bakes
 
-Four new `DissolveAdd` parameterizations (names must not collide with behavior 7's — §6.2):
+`[P6-A7] correction.` The sheet said "Three new bakes required". All three were already served, which
+measurement (not naming) established — see §7.
 
-| Look | ShapeTex | DissolveTex | Brightness | Notable, from §4 |
-|---|---|---|---|---|
-| `DashWindDisAdd01` | (new Wind01 bake) | TileNoise | **3** | `DissolveSpeed` (0, −0.15); `DistortIntensity` **0.5**; `CoreIntensity` **1** |
-| `DashWindDisAdd02` | (new Wind02 bake) | (same) | **7** | `DissolveScale` (0.7, 0.95); `DissolveSpeed` (−0.1, 0); `DistortScale_Y` 0.6; `DistortSpeed` (0.1, 0.1); `Color_Speed_X` **−0.3**; `DistortIntensity` **1** |
-| `DashWindDisAdd03` | (new Wind02 bake) | (same) | **2** | `MainTexScale` (**4, 0.2**), `MainTexOffset_Y` 0.35; `ColorScale` (3, 0.15) + `ColorOffset` (0.5, 0.41) + `Color_Speed_X` −0.3; `DissolveScale` (3, 0.15) + `DissolveOffset` (0.5, 0.41); `CoreIntensity` **20** |
-| `DashPartDisAdd02` | (new Part02 bake) | (same) | **1** | `DistortIntensity` 0; `GlowIntensity` **0.3**; `OpacityBoldness` **0.5** |
+### 6.6 Behavior id and aim axis
 
-The family entry point needs **five new parameters** to serve these faithfully: `CoreIntensity`,
-`GlowIntensity`, `MainTexOffset`, `DissolveOffset`, and a **separate `ColorTex` sampler with its own
-scale/offset/speed**. The last is the significant one: the current look folds `Main_Tex` and
-`Color_Tex` into one `ShapeTex`, which is a no-op on every prior recreation but **not** on `Wind03`,
-where the two are tiled differently (4, 0.2 vs 3, 0.15). All five are inert on existing looks, so the
-extension follows the `NS_BasicAttack.md` §9 precedent: extend the shared shader, then prove every
-existing look regenerates unchanged.
+**Id 46**, taken from `ck::particles::NumBehaviors` at implementation time (46 → 47).
 
-### 6.5 Texture needs
+**Aim axis: forward is −X, declared and transcribed rather than negated.** §2.1's four independent
+facts all point the same way and the two carriers are laid onto +X by their own
+`Orientation Axis (1,0,0)`. The roster's MuzzleFlash/Tracer/Beam convention is +X-forward, and this
+effect reads as a dash TOWARD +X with everything trailing to −X — the natural reading. Negating would
+have inverted the carriers' lay quaternions for no gain, and `NS_Arrow_Cast`/`NS_Gunshot_Cast` already
+ship the identical wind pair travelling −X. Stated in the `.ush` header so a caller passing a rotation
+knows which way the effect faces.
 
-Three new measurement-driven bakes (§4.1): stand-ins for `T_VFX_Wind_01` (shared with `NS_Fire`),
-`T_VFX_Wind_02` (drives both mesh emitters — the most important one) and `T_VFX_Part_02`
-(clamp-addressed, so a single centred feature). `T_VFX_Noise_02` is already served by
-`T_CkParticles_TileNoise`. Parameterize from measurements of the corpus PNGs the way
-`NS_BasicAttack.md` §7 did — derive numbers, never copy pixels.
+### 6.7 Known deviations — as they stand after implementation
 
-### 6.6 Behavior id
-
-**Do NOT allocate an id in this document.** At implementation time take the next free id from
-`ck::particles::NumBehaviors` (18 as of 2026-08-01, ids 0..17) and bump it.
-
-**Aim-axis convention to declare**: this effect's forward is **−X** (§2.1 — the constant velocity, the
-random box, the cone axis and the position offset all point −X, and both carriers are oriented onto
-+X). The roster's existing conventions are MuzzleFlash/Tracer/Beam forward = **+X**
-(`CkParticles/CLAUDE.md`). Either negate into the roster convention (+X forward, effect trails −X — the
-natural reading for "dash forward") or document the exception. **Do not leave it undeclared** — an
-undeclared aim axis is a defect that only shows up when a caller passes a rotation.
-
-### 6.7 Known deviations already implied
-
-- **Mixed coordinate space collapses to local** — see §6.0 G7. **This is the largest fidelity risk in
-  this port** and it is not the usual cosmetic local-vs-world note: it inverts the speed lines'
-  behaviour relative to a moving actor.
-- **`Add_Lines`' continuous 50 /s spawn is approximated as 15 staggered burst slots** (§6.0 G6, §6.1).
-- **`Add_Lines`' `Once` life cycle becomes a per-loop 0.3 s window** (§6.0 G8) — in the source it
-  fires once, in the recreation it re-fires every loop.
-- **`Opacty_DepthFade` (20 on all four materials) is dropped** — CkUsf surface looks do not wire
-  scene depth.
-- **`Color_Tex`'s independent tiling** is lost unless §6.4's `ColorTex` parameter is added; on
-  `Wind03` that is a visible difference, not a no-op.
-- **Mesh wall thickness** — `SM_VFX_Ring01`'s 0.5-unit wall on a radius-100 tube is 0.5%. Building it
-  as a single `_TwoSided` sheet renders identically and halves the triangle count, the same call
-  `NS_BasicAttack.md` §13.5 made for the crescent.
+- **Mixed coordinate space collapses to local** — still true, §13.1. Unchanged.
+- ~~`Add_Lines`' continuous 50/s spawn is approximated as 15 staggered burst slots~~ — **no longer
+  applies**, §6.1 `[P6-A1]`: the rate is expressed exactly.
+- **`Add_Lines`' `Once` life cycle becomes a per-loop 0.3 s window** — still true, §13.2.
+- **`Opacty_DepthFade` (20 on all four materials) is dropped** — still true, §13.3.
+- **`Color_Tex`'s independent tiling is lost** — still true and visible on `Wind03` only, §13.3.
+- **Mesh wall thickness collapsed** on both carriers — still true, §13.5.
 
 ---
 
-## 7+. Reserved for implementation.
+## 7. Textures — ZERO new bakes, and that is a measurement result
+
+§4.1 called for three new bakes. Every one of them was already in the library, because two
+neighbouring systems paint with the same textures:
+
+| Source paint | Already-baked stand-in | How it was established |
+|---|---|---|
+| `T_VFX_Wind_01` | `T_CkParticles_WindSheet` | The generator's own comment cites it as the `T_VFX_Wind_01` stand-in — a 2×2 flipbook of one wind puff, measured off the source sheet for `NS_Arrow_Cast`, whose `Wind_02` emitter draws the SAME `M_VFX_DisAdd_Wind01` instance |
+| `T_VFX_Wind_02` | `T_CkParticles_WindBandMid` | Cited as the `T_VFX_Wind_02` stand-in; measured against the `Wind_03` paint and found to be the same image rolled 141 rows in v (correlation 1.0 after the roll), so it carries both |
+| `T_VFX_Part_02` | `T_CkParticles_SoftParticleBright` | Cited as the `T_VFX_Part_02` stand-in — radially symmetric to machine precision, the shoulder-and-fall bell measured for `NS_Gunshot_Hit` |
+| `T_VFX_Noise_02` | `T_CkParticles_TileNoise` | The family default, since `NS_BasicAttack` §7 |
+| `T_VFX_WhitePixel` | `LutWhite` | The gradient chain's inert white default |
+
+The sheet's "PARTIAL / needs measurement" column was written before the wind and hit texture sets
+existed; the correction is `[P6-A7]`. **The lesson is that the check is by PAINT, not by effect** —
+`T_VFX_Wind_02` reached the library through a system (`NS_Arrow_Cast`) whose name shares nothing with
+this one.
+
+## 8. Meshes — one reused, one new
+
+- **`SM_CkParticles_Cylinder`** carries `Wind_01`. Verified against §3 (radius, height, v direction,
+  seam) before reuse, not assumed from the shared source-asset name.
+- **`SM_CkParticles_Cone`** is this port's only new carrier, and `SM_VFX_Ring04` is referenced by no
+  other system in the pack (`grep -l SM_VFX_Ring04` over the corpus returns `NS_Dash` alone). Its
+  numbers are §3's measurements, re-derived from the `.obj` at port time: 132 verts in exactly two
+  rings, radius 53.956 → 100.000, Z −0.5..32.2965, `corr(v, radius) = +1.000`, seam at ±180°.
+
+Both slot materials are the generator's `SweepErode` fallback; the row renderers override them with
+their own CkUsf looks.
+
+## 9. The behavior — `Behavior_Dash.ush` + `ExecuteStage_CPU` case 46
+
+Four layers behind one spawn-phase split. The GPU file and the CPU mirror were transcribed
+independently and their numeric-literal multisets compared: **difference 0** (244 GPU / 245 CPU, the
+single CPU-only literal being the `case 46:` label — the established discount).
+
+| Layer | Beat | Life | Motion | Notable |
+|---|---|---|---|---|
+| `Wind_01` (242) | 0.05 | 1.5 | constant −150 X under a 1 → 0.15 → 0 velocity-scale curve, integrated in closed form | quarter-turn lay + 0.3 turn/s spin about +X; X/Y hold at 2× while Z grows to 5× |
+| `Wind_Smokes` (243) | 0.1 | 1.0 | random box (−300..−100, ±10, ±10) off a (−20, 0, 0) offset | 2×2 sub-UV in RANDOM mode; 555–777 × 130–230 quads that only grow |
+| `Wind_Speed` (244) | 0.05 | 0.6 | none at all | the only layer with a CONSTANT dissolve (−0.92719) and the only envelope with the short hold |
+| `Add_Lines` (245) | — | 0.8–1.0 | cone launch + closed-form linear drag | the cookbook's only drag layer, and its only `Add Velocity in Cone` |
+
+Three shapes are worth naming:
+
+- **The spawn-phase split** is the [P2-D5] shape HealCast established: `CkParticles_SpawnPhase` /
+  `CkParticles_IsBurstSpawn` classify the particle, a burst particle takes the 19-slot modulo, and a
+  rate particle is always a line and dies unborn past 0.3 s.
+- **The drag is closed form**, never stepped: `v(t) = v0·e^(−λt)` and `p(t) = spawn + v0·(1 − e^(−λt))/λ`
+  with `λ = drag/mass`, both randoms per particle. §11 asserts that the same age evaluated at 1/120 s
+  and at 1/15 s produces bit-identical position and velocity, which a step integration cannot do.
+- **The cone launch** is the one place this port infers rather than transcribes — see §13.4.
+
+## 10. Looks — three reuses proven value-by-value, one new
+
+Reuse was established by comparing the shipped look's parameters against the corpus instance's, not by
+name. All three matches are exact on every parameter the look plumbs:
+
+| Source instance | Shipped look | Checked |
+|---|---|---|
+| `M_VFX_DisAdd_Wind01` | `WindDisAdd01` (CastLooks) | ShapeTex/DissolveTex `WindSheet`/`TileNoise`; Brightness 3; Dissolve_Speed (0, −0.15); Dissolve_Scale (1, 1); Distortion_Intensity 0.5; MainTex_Scale (1, 1); Boldness 1; Gradient_Invert 0 — every one matches §4's row |
+| `M_VFX_DisAdd_Wind02` | `WindDisAdd02Mesh` (CastLooks) | `WindBandMid` both; Brightness 7; Dissolve_Speed (−0.1, 0); Dissolve_Scale (0.7, 0.95); Distortion_Intensity 1; Distortion_Speed (0.1, 0.1); Distortion_Scale 1; Distortion_Tex `TileNoise` — matches, including the mesh usage flag |
+| `M_VFX_DisAdd_Part02` | `PartDisAdd02` (HitLooks) | `SoftParticleBright` both; Brightness 0.3 (the source's Brightness 1 × Glow_Intensity 0.3, the family's folding rule); Opacity_Boldness 0.5; Gradient_Invert 0.5 (the helper's default, and the source's value) — matches |
+
+**New: `WindDisAdd03`** (`CkUsf_DashLooks_Assets.as`) — `M_VFX_DisAdd_Wind03`, the speed cone.
+Brightness 2, Dissolve_Speed (−0.1, 0), Dissolve_Scale (3, 0.15), MainTex_Scale (4, 0.2),
+Distortion_Intensity 0 with the source's Distortion_Scale 1 and `TileNoise` behind the dead branch,
+`LutWhite` / displacement 0.1 / invert 0, mesh usage flag. It is the most heavily re-tiled instance in
+the pack, and the five parameters it drives that the look does not plumb are §13.3.
+
+A velocity-aligned quad and a camera-facing one are both `UNiagaraSpriteRendererProperties`, so
+`PartDisAdd02`'s sprite usage flag serves this row unchanged — the mesh-vs-sprite split
+`LightStripDisAddSprite` exists for does not arise here.
+
+## 11. Tests
+
+`Test_Particles_DashBehavior.cpp` (`CkTests.UnitTests.CkParticles.DashBehavior`) drives the CPU mirror
+directly — no Niagara system, no RHI, no forked engine. It asserts:
+
+- **the cadence row**: template path, `NAME_None` look binding, 2.0 / 1.55 / 19 / 50, no ribbon
+  emitter, four renderers, two meshes by carrier name, one 2×2 sheet on the CAMERA-facing quad, one
+  velocity-aligned quad, and the four look names (three reuses + the new one);
+- **the burst partition**, read while each slot is ALIVE across the loop (the batch-H lesson):
+  1 / 4 / 1 / 13 exactly, zero never-drawn, zero slots that change renderer mid-life, and the modulus
+  holding past one period;
+- **the spawn-phase split**, against its own opposite: every streamed particle is a line, every
+  particle born past 0.3 s is hidden, and one seed proves both paths — it draws the TUBE when it
+  bursts and a LINE when it streams;
+- **the two beats**, each asserted hidden 1 ms before and alive 10 ms after, plus that a burst line
+  carries no delay at all;
+- **the tube's two-axis scale** (0.6 at the t = 0.2 knot on X/Y and holding; 3.25 on Z at the same
+  instant, growing past it), its three colour constants, its 0.3 alpha plateau with both ends of the
+  envelope at zero, its −0.36 dissolve at the knot, its −X travel and its advancing spin;
+- **the cone's stillness** (position and velocity exactly zero at twenty ages), its constant
+  −0.92719 dissolve, its non-uniform 0.8 / 0.8 / 3.0 scale at the knot, and the discriminator that
+  matters: at the same normalized age its envelope has left the plateau (0.05 × 0.797544) while the
+  wind's is still on it (0.3);
+- **the smokes**: the exact (−20, 0, 0) spawn offset, −X travel, wide-not-tall quads, ±30° rotation,
+  all four flipbook frames seen and every sampled particle advancing, the 0.2 alpha plateau, and the
+  0.5 → 1 uniform growth curve pinned at 1.95× over the life;
+- **the lines**: spawn inside the 50-unit sphere, every launch direction inside the 10° cone
+  (worst observed dot 0.997388 against cos 5° = 0.996194), speed inside the falloff-scaled 350–750
+  range with its upper reach exercised, drag that slows without bending, streaks four times longer
+  than wide that shorten as they slow, the recovered colour ranges with BOTH ends of each channel
+  reached to within 1 % of the channel's own span (the exported min sits ABOVE the max on R and G),
+  the 0.7 alpha ceiling, and the 0.8–1.0 lifetime range with both ends reached;
+- **DeltaTime independence** at 1/120 s vs 1/15 s, bit-identical — the closed-form drag proof;
+- **anti-vacuity** per layer (light AND extent), and **death** past the row's 1.55 s on both paths.
+
+`Test_Particles_RosterSanity.cpp` moves 46 → 47. The AS autotests
+(`CkAutoTest_Particles_SpawnAllBehaviors`, `CkAutoTest_VfxExamples_PairStationsSpawn`) pick the id and
+the pair up from `NumBehaviors` and `Get_Pairs()` without an edit.
+
+## 12. Verification — A/B protocol `[HUMAN-VERIFY]`
+
+VfxExamples gym, station pair **DASH** (`Gym.VfxExamples.Dash.Ck` / `.Original`), spawn offset
+(0, 0, 60). `Ck_GymVfxExamples_RestartAll` re-fires both sides in sync. Judge in this order, and judge
+from the SIDE — everything in this effect travels −X, so a head-on view hides its whole structure:
+
+a. **The tube's stretch.** One long cylinder around the −X axis that grows lengthwise for a second and
+   a half while its cross-section stops growing at 0.2 of its life. If it inflates uniformly, the
+   two-axis scale collapsed into one.
+b. **The tube's spin.** 0.3 turns per second about the travel axis — slow and continuous. Watch the
+   dissolve pattern rotate rather than the silhouette.
+c. **The speed cone.** A very faint (peak alpha 0.05) flared skirt that does NOT move, fading out
+   noticeably earlier than the wind around it. If it drifts backwards with the tube, its
+   no-velocity reading was wrong.
+d. **The smokes.** Four very wide, short puffs sprayed backwards, each on its own flipbook frame,
+   growing to twice their spawn size. Four is the whole population — if you see a stream, the burst
+   and rate paths are crossed.
+e. **The speed lines.** The dominant element: ~28 pale blue-white streaks per firing (13 at once, then
+   a 0.3-second stream), each launched in a tight 10° cone down −X out of a 50-unit ball, visibly
+   decelerating, and getting SHORTER as they slow. If they keep a constant length, the
+   speed-driven size is not running.
+f. **The stream's end.** The lines must stop arriving 0.3 s in, while the wind layers are still
+   alive. A stream that runs the whole loop means the window gate is off.
+g. **What NOT to judge:** the speed lines are WORLD-space in the source and LOCAL here — at a
+   stationary pedestal the two are identical (§13.1), so any difference you see there is not this.
+   Nor is `Wind_03`'s colour-sampler tiling (§13.3): expect the cone's streak pattern to differ in
+   detail from the original's and do not chase it.
+
+## 13. Confirmed fidelity differences or intentional deviations
+
+1. **Mixed coordinate space — the C12 non-goal, and the sharpest case of it in the pack.**
+   `Add_Lines` is `localSpace: false` where the three wind layers are `true`. A CkParticles template's
+   `LocalSpace` is an emitter property, so one template cannot be both; all four layers are LOCAL.
+   **At a stationary pedestal the two are identical** — a world-space emitter separates from a local
+   one only when the system MOVES. On a moving dasher they do not: the source leaves its speed lines
+   behind in the world while the wind rides along, and the recreation drags the lines with the actor.
+   This is the one port where the C12 gap changes the effect's meaning rather than its look, and it is
+   the reason to revisit C12 first if it is ever revisited. The same honesty as [P3-F5]: the pedestal
+   A/B cannot show it, so it is stated rather than judged.
+2. **`Add_Lines`' `Life Cycle Mode = Self / Loop Once` becomes a per-loop window.** In the source that
+   emitter fires ONCE, ever, per activation; here its 0.3 s window is gated inside every 2.0 s loop,
+   so it re-fires each loop. The gym's re-arm loop makes the two indistinguishable; a caller who lets
+   the system loop sees the difference.
+3. **Five `M_VFX_DissolveAdd` parameters the CkUsf look does not plumb**, all on `Wind03` except the
+   last two: `MainTex_Offset_Y` 0.35; `Dissolve_Offset` (0.5, 0.41); the separate `Color_Tex` chain
+   (`Color_Scale` (3, 0.15), `Color_Offset` (0.5, 0.41), `Color_Speed_X` −0.3) — **the one instance in
+   the cookbook where folding `Color_Tex` into the shape is not a no-op**, because the two are tiled
+   differently (4 × 0.2 vs 3 × 0.15); `Core_Intensity` (1 on `Wind01`, **20** on `Wind03`); and
+   `Opacty_DepthFade` 20 on all four instances, the known CkUsf gap. `Color_Speed_X` −0.3 and
+   `Distortion_Scale_Y` 0.6 are the same pre-existing gaps `NS_Arrow_Cast` records for `Wind02`.
+   Closing them means extending `DissolveAdd.ush`, which this batch deliberately did not touch.
+4. **`Add Velocity in Cone` is the pack's only use of that module, and its graph is not in the
+   corpus.** The exporter dumps the inputs (`Cone Angle 10`, `Cone Axis (−1,0,0)`,
+   `Velocity Distribution Along Cone Axis 0.75`, `Velocity Falloff Away From Cone Axis 0.333`,
+   `Use Velocity Falloff On Cone Axis true`) but not the maths behind them, so the shipped reading is
+   `[inferred]`: the polar draw is uniform in `cos θ` biased toward the axis by the distribution
+   exponent, and the falloff scales the SPEED linearly from 1 on the axis to 1 − 0.333 at the rim.
+   **The reach of the ambiguity is bounded by the aperture** — over a 10° cone every plausible reading
+   moves a direction by at most five degrees; only the speed thinning is judgeable at A/B, and it is
+   at most a third. Recorded here rather than guessed at silently, the `NS_DebuffCast` §13.2 shape.
+5. **Both carriers collapse their wall thickness.** `SM_VFX_Ring01` is two coaxial walls 0.5 apart in
+   radius (0.5 % of it) and `SM_VFX_Ring04` two cone sheets 0.5 apart in Z; both are built as single
+   two-sided sheets, halving the triangle count and rendering identically — the `NS_BasicAttack` §13.5
+   call, already made for the Cylinder by `NS_Arrow_Cast`.
+6. **The speed lines' width is FLOORED at zero where the source's would go very slightly negative.**
+   The source's `Scale Factor Curve` starts at −0.000593 and `Min Scale Factor.x` is 0, so a line
+   slowed below |v| = 187 — which happens to every heavily-dragged line in its last third — earns a
+   width of about −0.009 units. The roster's own contract forbids a negative quad extent (it flips
+   winding rather than shrinking, and `Test_Particles_RosterSanity` asserts it across every behavior),
+   so the width is clamped. The length axis never reaches the sign change and is untouched. The
+   deviation is 0.009 units on a 30-unit quad, at the one moment the layer is nearly invisible anyway
+   — but it IS a deviation from the authored curve rather than a transcription of it.
+7. **[P4-D2] does not apply.** `NS_Dash` has no light renderer at all `[corpus]` — `renderers` is
+   length 1 on every emitter, two mesh and two sprite. Recorded so a reader comparing the family does
+   not go looking for the clause.
+8. **`WindDisAdd01` and `PartDisAdd02` ship `DistortScale 0.1` against the family reference's 1.0** —
+   the pre-existing batch-B adjacent finding, inert on both because their `Distortion_Intensity` is
+   0 and 0.5-with-no-scale-dependence respectively. Untouched here: repointing a shared look to serve
+   this port would have changed four other rows.
+
+## 14. Reusable lessons
+
+1. **A sheet written before a capability landed encodes a WORKAROUND, and shipping it would be a
+   deliberate regression.** §6.1's burst 34 exists only because a row could not carry two spawn stacks
+   in August's first week; C2 landed a phase later and the sheet's own §6.0 G6 names the better option
+   it unlocked. Re-read a sheet's §6 against the CURRENT capability matrix, not against its own
+   recommendation. `[P6-A1]`
+2. **Re-apply [P0-D5] to any §6.1 that predates it.** "Max resolved lifetime" and "max over layers of
+   (delay + lifetime)" differ by exactly the beat, and the beat is what gets clipped. `[P6-A2]`
+3. **Match materials and textures by INSTANCE, not by name.** Three of this port's four looks were
+   already carried under names (`WindDisAdd01`, `WindDisAdd02Mesh`, `PartDisAdd02`) that mention
+   neither this effect nor its emitters, and all three of its "required" new bakes were already served
+   by stand-ins measured for a system whose name shares nothing with it. The check that found them was
+   a grep for the source ASSET path across the corpus. `[P6-A3]`, `[P6-A7]`
+4. **The inverse check is just as valuable.** `grep -l SM_VFX_Ring04` and `grep -l DisAdd_Wind03` over
+   the corpus each return exactly one file, which is how the two genuinely new assets were identified
+   as new in one command rather than by exhausting the library.
+5. **When a module has no other user in the pack, say so and bound the inference.** `Add Velocity in
+   Cone` appears once in 30 systems; its graph is unexported. Stating the reading, its bound (a 10°
+   aperture) and the one judgeable consequence (speed thinning) is worth more than a confident
+   transcription that cannot be checked. §13.4
+6. **A DeltaTime-independence assertion is cheap and it is the only real proof of a closed form.**
+   Two evaluations of the same age at different frame rates, compared bit-for-bit, catch a step
+   integration that no curve assertion would.
+7. **A precedent can resolve an `[unresolved]` without new evidence.** §2.3's rotation units were
+   settled by finding the identical parameter pair on `NS_Arrow_Cast`'s `Wind_01` — the same carrier,
+   the same numbers, already shipped and gated. Check whether a neighbouring port has already answered
+   the question before designing an experiment. `[P6-A4]`
