@@ -55,6 +55,10 @@ sync.ffs_db
 # one must not depend on remembering to force-add it
 !Source/CkParticles/Cookbook/**/*.md
 
+# ...and campaign doc sets — PROGRESS.md moves every session and new PHASE_N.md files appear at
+# phase boundaries; neither may silently fall out of tracking
+!docs/**/*.md
+
 # Precompiled Assets
 SourceArt/**/*.png
 SourceArt/**/*.tga
