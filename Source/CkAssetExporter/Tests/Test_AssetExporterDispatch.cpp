@@ -13,7 +13,9 @@
 #include <Materials/MaterialInterface.h>
 #include <Misc/AutomationTest.h>
 #include <Misc/FileHelper.h>
+#include <Misc/PackageName.h>
 #include <Misc/Paths.h>
+#include <UObject/Package.h>
 #include <Serialization/JsonSerializer.h>
 #include <Serialization/JsonWriter.h>
 
@@ -188,18 +190,82 @@ bool FCk_AssetExporter_Dispatch_SidecarExtensionUnclaimed_Test::RunTest(const FS
 
     TestTrue(TEXT("factory extension enumeration returned something"), NOT FactoryExtensions.IsEmpty());
 
+    // Every element of the enumeration ends in ';', so prepending one bounds each element as ";ext;" and a
+    // substring match cannot hit inside a longer extension (e.g. "json" inside "geojson").
+    const auto DelimitedExtensions = TEXT(";") + FactoryExtensions;
+
     // Control assertion: json IS a claimed import format (UReimportDataTableFactory) — that is precisely why the
     // sidecar had to stop being a .json. Without this, a broken enumeration would let the real assertion below pass
     // vacuously and the test would guard nothing.
     TestTrue(TEXT("control: 'json' is claimed by an import factory"),
-        FactoryExtensions.Contains(TEXT("json;"), ESearchCase::IgnoreCase));
+        DelimitedExtensions.Contains(TEXT(";json;"), ESearchCase::IgnoreCase));
 
     const auto SidecarWithoutDot = ck::asset_exporter::extension::Sidecar.RightChop(1);
     TestTrue(TEXT("sidecar extension is a terminal extension starting with a dot"),
         ck::asset_exporter::extension::Sidecar.StartsWith(TEXT(".")) && NOT SidecarWithoutDot.Contains(TEXT(".")));
 
     TestFalse(TEXT("NO import factory claims the sidecar extension"),
-        FactoryExtensions.Contains(SidecarWithoutDot + TEXT(";"), ESearchCase::IgnoreCase));
+        DelimitedExtensions.Contains(TEXT(";") + SidecarWithoutDot + TEXT(";"), ESearchCase::IgnoreCase));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// The on-save hook passes JsonOnly so an editor save refreshes the committed .ckexport without churning the lossy,
+// gitignored .txt summary. All nine sibling-writing exporters gate their .txt through ShouldWrite_SummaryText — this
+// test pins the single shared gate, so no exporter can silently resume writing .txt on the auto path.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCk_AssetExporter_Dispatch_SummaryTextFormatGate_Test,
+    "Ck.AssetExporter.Dispatch.SummaryTextFormatGate",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FCk_AssetExporter_Dispatch_SummaryTextFormatGate_Test::RunTest(const FString& InParameters)
+{
+    TestFalse(TEXT("JsonOnly (the on-save auto path) writes NO summary text"),
+        ck::asset_exporter::ShouldWrite_SummaryText(ECk_AssetExporter_SidecarFormats::JsonOnly));
+
+    TestTrue(TEXT("JsonAndText (every manual path) writes the summary text"),
+        ck::asset_exporter::ShouldWrite_SummaryText(ECk_AssetExporter_SidecarFormats::JsonAndText));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCk_AssetExporter_Dispatch_SiblingSidecarPath_Test,
+    "Ck.AssetExporter.Dispatch.SiblingSidecarPath",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FCk_AssetExporter_Dispatch_SiblingSidecarPath_Test::RunTest(const FString& InParameters)
+{
+    // An in-memory package under a mounted root resolves to a disk path without any asset existing on disk, and the
+    // function only reads the outermost package name — so the package itself is a sufficient probe (instantiating
+    // an object inside a saveable package would trip the engine's abstract-class allocation ensure).
+    const auto PackageName = FString{TEXT("/Game/__CkAssetExporterTest_SidecarPath")};
+    auto* Package = CreatePackage(*PackageName);
+    TestNotNull(TEXT("test package created"), Package);
+    if (Package == nullptr)
+    { return false; }
+
+    const auto SidecarPath = FCk_AssetExporter_Dispatch::Get_SiblingSidecarPathForAsset(Package);
+    TestTrue(TEXT("sidecar path resolves"), NOT SidecarPath.IsEmpty());
+    TestTrue(TEXT("sidecar path ends with the sidecar extension"),
+        SidecarPath.EndsWith(ck::asset_exporter::extension::Sidecar));
+    TestFalse(TEXT("sidecar path does NOT end in .json"), SidecarPath.EndsWith(TEXT(".json")));
+
+    auto ExpectedBase = FString{};
+    if (TestTrue(TEXT("package name converts to a filename"),
+        FPackageName::TryConvertLongPackageNameToFilename(PackageName, ExpectedBase)))
+    {
+        TestEqual(TEXT("sidecar path is the package's disk path plus the sidecar extension"),
+            SidecarPath, ExpectedBase + ck::asset_exporter::extension::Sidecar);
+    }
+
+    TestTrue(TEXT("null asset resolves to an empty sidecar path"),
+        FCk_AssetExporter_Dispatch::Get_SiblingSidecarPathForAsset(nullptr).IsEmpty());
 
     return true;
 }
