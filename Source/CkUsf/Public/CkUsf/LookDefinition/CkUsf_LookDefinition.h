@@ -199,10 +199,15 @@ public:
     bool _UsedWithNiagaraSprites = false;
 
     // Niagara MESH-PARTICLE renderers (MATUSAGE_NiagaraMeshParticles) — the same silent packaged-build
-    // fallback as the sprite flag, on the renderer that draws a carrier mesh per particle. Ribbon usage is
-    // still deliberately absent; add it when a look actually needs it, not speculatively.
+    // fallback as the sprite flag, on the renderer that draws a carrier mesh per particle.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _UsedWithNiagaraMeshParticles = false;
+
+    // Niagara RIBBON renderers (MATUSAGE_NiagaraRibbons) — the trail renderer that links particles into a strip.
+    // The three Niagara usages are INDEPENDENT engine bits, so a material drawn on a ribbon in one system and on
+    // a sprite in another needs two generated masters, not one carrying both flags.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _UsedWithNiagaraRibbons = false;
 
     // Surface-only: wire the renderer's per-particle color into the PIXEL Custom node (In.ParticleColor).
     // Opt-in because it costs an interpolator and reads as opaque white outside a particle renderer.
