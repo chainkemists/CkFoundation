@@ -4,11 +4,15 @@ Schema and evidence-tag conventions: [README.md](README.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 24, `ArrowHit`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior id is allocated, no `.ush` exists, no look exists, no cadence row exists, no mesh or texture
-has been baked, and nothing has ever been rendered. Sections 7+ are reserved for the implementation
-session.
+§1–6 are archaeology against the extracted corpus, re-verified against the v3 sidecar at implementation
+time: every §2 row, every §5 curve and every delta in the §2 comparison table survived unchanged. §7
+onward is what was actually built.
+
+**This port added ZERO looks, ZERO textures and ZERO meshes** — everything it needs was already carried by
+batch A or by `NS_Arrow_Cast`, which is exactly the payoff §6.3 predicted for porting the Cast first.
 
 **Read [NS_Arrow_Cast.md](NS_Arrow_Cast.md) first.** `NS_Arrow_Hit` is the *same construction* with two
 emitters removed, one added, and a dozen numbers changed. This sheet carries the full data but points
@@ -534,4 +538,195 @@ parameters.
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures
+
+**Zero new bakes.** Every paint in §4.3 was already carried, and the two §4.3 marked "NEW, unmeasured"
+were resolved by earlier ports of the SAME source paints:
+
+| Source paint | Verdict | Stand-in |
+|---|---|---|
+| `T_VFX_Part_01` | reuse | `SoftParticle` |
+| `T_VFX_Part_02` | reuse | `SoftParticleBright` (batch A) |
+| `T_VFX_Part_04` | reuse | `SparkStreak` |
+| `T_VFX_Ring_01` | reuse | `RingUneven` (batch A; the SDF `Ring` was measured and rejected there) |
+| `T_VFX_Ring_02` | reuse | `RingFlare` (batch A) |
+| `T_VFX_Impact_01` | reuse | `ImpactStar` (batch A) |
+| `T_VFX_Star_01` | reuse | `StarFour` (batch A) |
+| `T_VFX_Star_02` | reuse | `StarFourTight` — measured and baked for `NS_Arrow_Cast`, §7.2 there |
+| `T_VFX_LightStrip_01` | reuse | `LightStrip` (batch A; the `Streak` bake was measured and rejected — correlation 0.02) |
+| `T_VFX_Noise_02` | **not needed** | `Distortion_Intensity` is 0 on every instance in this system (§4.1), so the distortion branch is dead and the family slot resolves to the dissolve paint |
+| `T_VFX_LUT_Rainbow_01` | present, unused | the Rainbow look ships against `LutWhite` pending [P1-D1] (§13.2) |
+| `T_VFX_WhitePixel` | no-op | the family's `LutWhite` ramp |
+
+---
+
+## 8. Meshes
+
+**Zero new meshes.** `SM_CkParticles_Spike` and `SM_CkParticles_Card` were both built in batch A from
+these exact source meshes (`SM_VFX_Spike01`, `SM_VFX_Plane01`) and their measured UVs; construction and
+the apex-gap rationale are in [NS_FireBall_Hit.md](NS_FireBall_Hit.md) §8. §3's observation holds —
+`SM_VFX_Ring01` is not used by this system, so the tube `NS_Arrow_Cast` needed is absent here.
+
+---
+
+## 9. The behavior
+
+`Shaders/CkParticles/Behaviors/Behavior_ArrowHit.ush` + the CPU mirror at
+`CkParticles_DataInterface.cpp` case 24.
+
+### 9.1 Cadence row
+
+```
+{ TEXT("PS_CkParticles_Template_ArrowHit"), 2.0f, 0.55f, 34, Get_ArrowHitRendererSpecs() }
+```
+
+- **Loop 2.0 s** — the system's own Loop-Once duration `[corpus-v3]`.
+- **Lifetime 0.55 s**, not §6.1's 0.5: [P0-D5]'s formula is max over layers of (spawn delay + resolved
+  lifetime), and both rings live 0.5 s off the 0.05 s beat. §6.1's own prose already said "the last layer
+  dies at t ≈ 0.55 s".
+- **Burst 34** — the §2 count, confirmed against the corpus `Spawn Count` values
+  (1+1+5+1+5+1+5+1+1+5+5+1+1+1).
+
+§6.1 noted this is a near sibling of `PS_CkParticles_Template_Slash` (1.0 / 0.5 / 19) — same lifetime,
+different loop and burst. It is NOT shared: the loop and the burst are both load-bearing.
+
+### 9.2 Layer partition
+
+`Seed % 34`: 0 `Glow_01`, 1 `Glow_02`, 2–6 `Glow_03`, 7 `Raimbow`, 8–12 `Sparkles_01`, 13 `Ring_01`,
+14–18 `Glow_04`, 19 `Glow_05`, 20 `FlareImpact`, 21–25 `Spike01`, 26–30 `LightningStrip`, 31 `Star01`,
+32 `Star02`, 33 `Ring_02`.
+
+### 9.3 `Ring_02` — the §6.2 fork, RESOLVED toward a ROW-DECLARED custom-facing renderer
+
+§6.2 offered two ways to draw the custom-aligned ring: bind `RingDisAdd01` to the SHARED VisTag 4 through
+`Get_BehaviorLookName` (which would make this the first behavior to combine row renderers *and* a bound
+look — an untested combination), or row-declare a custom-facing sprite "once §6.7 #1 adds sprite kinds to
+the row spec". Phase 1's C1 added `CustomFacingSprite` as a row-renderer kind, so **the second option was
+taken**: VisTag 61 is a row-declared `CustomFacingSprite` and `Get_BehaviorLookName(24)` stays `NAME_None`.
+
+Its alignment/facing pair is derived rather than guessed. `Align Sprite to Mesh Orientation` supplies a
+relative alignment vector of `(0, 0, 1)` and a relative facing vector of `(0, 10, 0)` (magnitude 10 is an
+authoring artifact — Niagara normalizes it), and `Initial Mesh Orientation` applies a quarter turn about X.
+That rotation carries +Z onto −Y and +Y onto +Z, so the port writes `SpriteAlignment (0, −1, 0)` and
+`SpriteFacing (0, 0, 1)`: a quad lying in the XY plane with a +Z normal. **Both vectors must always be
+written and never degenerate** — a missing `Particles.SpriteAlignment` makes `CustomAlignment` silently
+fall back to Unaligned, which would draw Ring_02 exactly on top of Ring_01 and delete the whole point of
+the emitter.
+
+### 9.4 Mesh facing
+
+`Spike01` and `LightningStrip` render with `Facing: Velocity`; the behavior writes
+`CkParticles_QuatFromZTo(Dir)` from the velocity it owns. Same workaround as behaviors 21, 22 and 23.
+
+### 9.5 The two `[unresolved]`s, ruled
+
+- **§6.7 #6, `Add Velocity from Point` at zero offset.** `LightningStrip`'s `Sphere Location` is DISABLED,
+  so all five cards sit at the impact point with no direction to work from. Ruled as in behaviors 21 and
+  23: the cards stay at the origin and are separated only by their randomized facing.
+- **§6.7 #7, `Spike01`'s inverted X mesh-scale range** (min 0.1 > max 0.05). Copied verbatim:
+  `lerp(0.1, 0.05, r)` spans the identical set of values as `lerp(0.05, 0.1, r)`, so whatever Niagara does
+  with the inversion cannot change the distribution of results. The identical inversion in
+  `NS_Gunshot_Hit` was ported the same way.
+
+---
+
+## 10. Looks and renderers
+
+**Twelve row renderers, VisTags 50–61.** The ceiling stays derived from `Get_RosterVisTag_Max()`.
+
+| VisTag | Kind | Look | Status | Source emitters |
+|---|---|---|---|---|
+| 50 | CameraFacingSprite | `PartDisAdd01` | reused | `Glow_01`, `Glow_02`, `Glow_04` |
+| 51 | CameraFacingSprite | `PartDisAdd02` | reused | `Glow_03` |
+| 52 | CameraFacingSprite | `RainbowDisAdd` | reused | `Raimbow` |
+| 53 | VelocityAlignedSprite | `PartDisAdd04` | reused | `Sparkles_01` |
+| 54 | CameraFacingSprite | `RingDisAdd01` | reused | `Ring_01` |
+| 55 | CameraFacingSprite | `PartDisAdd01Bright` | reused | `Glow_05` |
+| 56 | CameraFacingSprite | `ImpactDisAdd01` | reused | `FlareImpact` |
+| 57 | Mesh `Spike` | `FlatAdd02` | reused | `Spike01` |
+| 58 | Mesh `Card` | `LightStripDisAdd` | reused | `LightningStrip` |
+| 59 | CameraFacingSprite | `StarDisAdd01` | reused | `Star01` |
+| 60 | CameraFacingSprite | `StarDisAdd02` | reused (from `NS_Arrow_Cast`) | `Star02` |
+| 61 | **CustomFacingSprite** | `RingDisAdd01` | reused | `Ring_02` |
+
+**Ten source materials, twelve renderers, ZERO new looks.** `RingDisAdd01` appears twice on purpose —
+same look, two renderer kinds, which is what "the same ring drawn twice" means in this pipeline.
+
+---
+
+## 11. Tests
+
+`Test_Particles_ArrowHitBehavior.cpp` + the `NumBehaviors` 23 → 26 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+Because the system IS the Cast variant with a dozen numbers changed, the gate concentrates on the deltas —
+a port that copied the Cast wholesale would pass a partition check and fail every one of these:
+
+- **The ring pair is byte-equal in size, colour and dissolve, and differs only in facing.** The test
+  compares Ring_01 and Ring_02 field by field, then asserts the derived `(0,−1,0)` / `(0,0,1)` pair, its
+  non-degeneracy and its perpendicularity.
+- **The row declares NO sub-UV grid** (the Wind layers are gone) and **one custom-facing renderer** (Ring_02
+  is new). Both are structural claims about what this system is not.
+- **`Glow_01` opens cooler** (G 0.947307, B 0.665387 against the Cast's flat white).
+- **`Glow_02` runs a full colour curve** — blue-dominant at spawn, white by t ≈ 0.097 — on a 200-unit quad
+  rather than the Cast's 300.
+- **`Glow_04` at 0.2 alpha**, **`Glow_05` alive at 0.05 s and dead at 0.0701 s** (its 0.07 s life, against
+  the Cast's 0.1).
+- **`Spike01`'s UNIFORM 1.5× pop** and both ends of its inverted X range.
+- **`LightningStrip` never exceeds 0.15 alpha** (the Cast's is 0.4).
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **ARROW HIT**:
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | a compact impact flash entirely over inside ~0.55 s, with NO wind trailing away — that is the clearest difference from ARROW CAST |
+| b | The ring pair | TWO rings at the same place and size: one always facing you, one lying flat on the ground plane. If you only ever see one, the custom-facing renderer has fallen back to Unaligned |
+| c | Ring behaviour | both ASSEMBLE (dissolve −0.325 → −1) rather than eroding |
+| d | `Glow_02` | a cool blue-white core that snaps to pure white almost immediately, then warms — not a steady warm glow |
+| e | Directionality | the sparkle spray fires evenly in all directions from the impact point |
+| f | Spikes | five pyramids pointing outward along their travel, popping uniformly at a fifth of their life |
+| g | Lightning | five flat cards at the impact point, each facing differently, and noticeably DIMMER than the cast variant's |
+| h | Beats | three pops 40–50 ms apart, then Star02 alone at 0.1 s |
+
+Judge (a), (b) and (g) side by side with the ARROW CAST pair — the two systems share most of their layers,
+and their differences are the fidelity claim.
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **`LightningStrip` at zero offset** (§9.5) — the five cards do not travel.
+2. **The Rainbow layer ships against a WHITE ramp** — [P1-D1], identical to `NS_Arrow_Cast` §13.2. 1 of 34
+   particles, reversible in one token.
+3. **Unplumbed family parameters.** `Glow_Intensity` (0.3 on `Part02`) IS reproduced, folded into
+   Brightness. Not reproduced: `Core_Intensity` (1 on `Part01_Bright`), `Core_Power` (0 on `Impact01` and
+   `LightStrip`), `Opacty_StepAdd` (0.3 on `Rainbow`), `Opacty_DepthFade` (10 / 20 / 30).
+4. **`Spike01`'s inverted X mesh-scale range is copied verbatim** (§9.5) — the `[unresolved]` cannot change
+   the result.
+5. **The card carrier is single-sheeted** with a two-sided look, against `SM_VFX_Plane01`'s doubled quad —
+   inherited from batch A's mesh.
+6. **`Velocity Falloff Distance` 100 is not reproduced**; the authored strength applies undiminished at the
+   spawn radius `[inferred]`.
+7. **Local space matches** on every emitter — §6.7 #9's "no gap" holds.
+8. **Every stand-in texture is a statistical match, not a copy** — see §7 and the recipes it points at.
+
+---
+
+## 14. Reusable lessons
+
+1. **Sequencing a sibling pair is worth real money.** §6.3 predicted "if `NS_Arrow_Cast` is implemented
+   first, nine of the ten looks are already done". The realized number was better: with batch A's looks in
+   place, this port added **zero** looks, textures and meshes, and took only a behavior, a row and a test.
+2. **A pre-enumerated fork resolves itself once the capability lands.** §6.2 offered the shared-VisTag-4
+   route only as a workaround for a missing row-renderer kind. C1 shipped that kind, so the untested
+   "row renderers AND a bound look" combination never had to be exercised.
+3. **When a port is a sibling, test the DELTAS.** Every assertion in §11 is a number that differs from
+   `NS_Arrow_Cast`. A copied port passes a partition check, an anti-vacuity check and a death check; it
+   fails all seven of those.
+4. **The same look on two renderer kinds is normal, not a smell.** `RingDisAdd01` sits on both a
+   camera-facing and a custom-facing row renderer here, because the source draws one material through two
+   emitters with different alignment. Deduplicating that would have deleted the effect's whole point.

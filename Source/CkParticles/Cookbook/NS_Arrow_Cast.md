@@ -4,15 +4,17 @@ Schema and evidence-tag conventions: [README.md](README.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 23, `ArrowCast`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior id is allocated, no `.ush` exists, no look exists, no cadence row exists, no mesh or texture
-has been baked, and nothing has ever been rendered. Every section below is archaeology out of the
-extracted corpus plus a translation *plan*. Sections 7+ are reserved for the implementation session.
+§1–6 are archaeology against the extracted corpus, re-verified against the v3 sidecar at implementation
+time: every §2 row, every §5 curve and every §4 delta survived unchanged. §7 onward is what was actually
+built.
 
-**This is the largest system in the Arrow/Gunshot batch: 15 emitters, 42 particles per loop, three
-renderer kinds, and at least three capability gaps that do not exist in the pipeline today
-(§6.7).** Read §6.7 before estimating it.
+**This is the largest system in the Arrow/Gunshot batch: 15 emitters, 42 particles per firing, three
+renderer kinds and thirteen row renderers — the heaviest renderer demand in the cookbook.** Every
+capability §6.7 listed as missing had landed by implementation time (Phase 1's C1/C3/C4), so the port
+needed no pipeline work of its own; §13 records what remains unplumbed.
 
 ---
 
@@ -650,4 +652,260 @@ Nothing here needs ribbons, GPU simulation, collision, events, light renderers, 
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures
+
+Eleven paints touched, **eight reused, one new bake, one reuse of an existing paint at a measured offset,
+one present-but-held-back** — every §4.3 candidate was measured against its stand-in before being trusted.
+
+| Source paint | Verdict | Stand-in |
+|---|---|---|
+| `T_VFX_Part_01` | reuse | `SoftParticle` (measured in NS_FireBall_Hit §7: MAE 0.0026, corr 0.99990) |
+| `T_VFX_Part_02` | reuse | `SoftParticleBright`, baked in batch A from this same source paint |
+| `T_VFX_Part_04` | reuse | `SparkStreak` |
+| `T_VFX_Ring_01` | reuse | `RingUneven`, baked in batch A (the SDF `Ring` was measured and REJECTED there) |
+| `T_VFX_Ring_02` | reuse | `RingFlare`, baked in batch A |
+| `T_VFX_Impact_01` | reuse | `ImpactStar`, baked in batch A |
+| `T_VFX_Star_01` | reuse | `StarFour`, baked in batch A |
+| `T_VFX_Noise_02` | reuse | `TileNoise` |
+| `T_VFX_LUT_Rainbow_01` | present, unused | `LutRainbow` is baked; the Rainbow look ships against `LutWhite` pending [P1-D1] (§13.2) |
+| `T_VFX_Wind_01` | **reuse, measured** | `WindSheet` — see §7.1 |
+| `T_VFX_Star_02` | **NEW** | `StarFourTight` — see §7.2 |
+| `T_VFX_Wind_02` | **NEW, from an existing paint** | `WindBandMid` — see §7.3 |
+
+### 7.1 `T_VFX_Wind_01` reuses `WindSheet`, and the measurement PROVES it rather than assuming it
+
+§4.3 marked this "NEW bake needed". Re-measured, it is the paint `WindSheet` was already built from:
+peak **0.4706** (never saturating), per-frame coverage above 0.02 of **0.2237 / 0.2261 / 0.2308 / 0.2389**,
+per-frame mean **0.0381–0.0404**, per-frame centroid **(0.50, 0.51)** — the numbers frozen in
+`Px_WindSheet`'s own comment since the NS_Fire port. The reuse is exact by provenance, not by resemblance.
+
+### 7.2 `T_VFX_Star_02` is NOT `StarFour`, and the radial law says so
+
+Both are four-lobe cardinal stars (dominant angular harmonic 4; u-profile and v-profile identical to
+0.0002) — exactly the trap batch A's lesson warns about, where the *family* matches and the *law* does not.
+Measured against `T_VFX_Star_01`:
+
+| Statistic | `Star_01` (→ `StarFour`) | `Star_02` |
+|---|---|---|
+| radial annuli 1–3 | 0.979 / 0.890 / 0.793 | **0.748 / 0.284 / 0.143** |
+| saturated fraction | 0.0076 | 0.0043, all inside r 0.08 |
+| ray reach at the 0.05 level | ~0.6 | **0.85** |
+| angular lobe FWHM, r 0.15 → 0.55 | broad, barely tapering | **26° → 2°** |
+| pixelwise correlation | — | 0.636 |
+
+The paint is a saturated core a tenth of the radius wide behind long, thin, slowly-dimming rays (0.78 at
+r 0.18 falling to 0.58 at 0.70, then a cliff between 0.75 and 0.88). `Px_StarFourTight` bakes the measured
+diagonal and cardinal profiles verbatim as piecewise-linear anchors — the idiom `Px_LightStrip`
+established — under the family's `exp(slope·r + bias)` angular taper. **Fit residual: mean absolute
+0.0072, correlation 0.979.**
+
+### 7.3 `T_VFX_Wind_02` is `T_VFX_Wind_03` ROLLED, and that is a measurement, not a guess
+
+The two source PNGs have identical global statistics to four decimals (mean 0.1844, median 0, max 1,
+zero-fraction 0.594, coverage 0.3431, saturated 0.0276, rms 0.324) and a histogram intersection of
+**1.000**, while their radial profiles disagree completely and their pixelwise correlation is **−0.305**.
+That combination has one explanation, and a search confirmed it: **rolling `Wind_03` down 141 of its 512
+rows reproduces `Wind_02` to a mean absolute 1.3 × 10⁻⁶** — quantization noise. Their band centres are
+v 0.2148 and v 0.4902, exactly 141/512 apart.
+
+So `WindBandMid` is not a second paint. `Px_WindBand` was split into a core function plus two thin
+wrappers, and the shifted one samples the SAME function at `frac(V − 141/512)`. `WindBand`'s own output is
+unchanged by the split. Both textures address Wrap, so the offset is load-bearing: it decides where along
+the tube's height the band lands.
+
+---
+
+## 8. Meshes
+
+Three carriers, **two reused and one new**.
+
+| Generated mesh | From | Status |
+|---|---|---|
+| `SM_CkParticles_Spike` | `SM_VFX_Spike01` | reused — built in batch A from the same source mesh and the same measured UV |
+| `SM_CkParticles_Card` | `SM_VFX_Plane01` | reused — built in batch A |
+| `SM_CkParticles_Cylinder` | `SM_VFX_Ring01` | **NEW** |
+
+`SM_CkParticles_Cylinder` is the open tube of §3.3 at its source dimensions: radius 100, Z 0..50, 32
+circumferential segments, `u = frac(0.75 − angle/360)`, v = 1 at Z = 0. The source's two coaxial walls
+0.5 apart — 0.5 % of its radius — collapse to one sheet with a two-sided look, the same simplification the
+card and the crescent already made.
+
+**§6.4's "decide once and record it" fork, RESOLVED: the renderer's `(1, 1, 5)` mesh scale is applied in
+the BEHAVIOR, not baked into the mesh.** The generated asset stays a faithful record of `SM_VFX_Ring01`'s
+own dimensions and is reusable by any other port of that mesh; behavior 23 multiplies its Z by 5 exactly
+once, and the test asserts the resulting 7.5 so the "doing both is a 5× error" failure mode reds
+immediately.
+
+The existing `SM_CkParticles_Tube` is NOT this mesh — it is radius 30 along +X, a different carrier
+entirely. `Cylinder` was chosen to avoid the collision.
+
+---
+
+## 9. The behavior
+
+`Shaders/CkParticles/Behaviors/Behavior_ArrowCast.ush` + the CPU mirror at
+`CkParticles_DataInterface.cpp` case 23.
+
+### 9.1 Cadence row
+
+```
+{ TEXT("PS_CkParticles_Template_ArrowCast"), 2.0f, 1.55f, 42, Get_ArrowCastRendererSpecs() }
+```
+
+- **Loop 2.0 s** — the system's own Loop-Once duration `[corpus-v3]`.
+- **Lifetime 1.55 s**, not §6.1's 1.5: [P0-D5] refined the formula to max over layers of (spawn delay +
+  resolved lifetime), and the Wind pair lives 1.5 s off the 0.05 s beat. Every other layer is dead by
+  t ≈ 0.55 s and hides itself past its own life.
+- **Burst 42** — the §2 count, confirmed against the corpus `Spawn Count` values
+  (1+1+5+1+5+1+5+3+1+5+5+1+1+1+6).
+
+No existing row is close, and nothing else in the cookbook shares it.
+
+### 9.2 Layer partition
+
+`Seed % 42`: 0 `Glow_01`, 1 `Glow_02`, 2–6 `Glow_03`, 7 `Raimbow`, 8–12 `Sparkles_01`, 13 `Ring`,
+14–18 `Glow_04`, 19–21 `Glow_05`, 22 `FlareImpact`, 23–27 `Spike01`, 28–32 `LightningStrip`, 33 `Star01`,
+34 `Star02`, 35 `Wind_01`, 36–41 `Wind_02`.
+
+### 9.3 Raimbow runs TWO colour modules, and the order matters
+
+Unlike the FireBall_Hit variant — where a lone Scale Color halves the Initialize grey to 0.4565 — this
+system's `Raimbow` runs `Color` (which writes `RGBA(1,1,1,1)`, REPLACING the Initialize grey) and then
+`Scale Color` (which halves RGB). The layer is a flat **0.5** grey. The two readings are one module apart
+and neither is obvious in a still frame, so the test pins the value.
+
+### 9.4 Mesh facing, and the one layer that spins
+
+`Spike01` and `LightningStrip` render with `Facing: Velocity`, which a row-declared `Mesh` renderer cannot
+express; the behavior owns the velocity, so it writes `CkParticles_QuatFromZTo(Dir)` — the same workaround
+both hit ports use.
+
+`Wind_01` renders with `Facing: Default` and carries real orientation data instead: an Initial Mesh
+Orientation of a quarter turn about Y (the pack authors rotations in TURNS) laying the tube's +Z axis down
+its −X travel, and an Update Mesh Orientation spinning it about world X at 0.3 turns/s for the whole 1.5 s
+life. The behavior composes the two as `QuatMul(Spin, Lay)`.
+
+### 9.5 `LightningStrip` at zero offset — the §6.7 #9 `[unresolved]`, ruled
+
+Its `Sphere Location` module is DISABLED, so all five particles sit at the origin, and `Add Velocity from
+Point` has no direction to work from there. What Niagara produces at zero distance is not recoverable from
+the corpus. **Ruled the way behavior 21 ruled the identical case:** the cards stay at the origin with zero
+velocity, and the Initial Mesh Orientation randomization becomes the only thing separating them — five
+differently-oriented cards is what every reading of the module produces.
+
+---
+
+## 10. Looks and renderers
+
+**Thirteen row renderers, VisTags 37–49.** The ceiling stays derived from `Get_RosterVisTag_Max()`.
+
+| VisTag | Kind | Look | Status | Source emitters |
+|---|---|---|---|---|
+| 37 | CameraFacingSprite | `PartDisAdd01` | reused | `Glow_01`, `Glow_02`, `Glow_04` |
+| 38 | CameraFacingSprite | `PartDisAdd02` | reused (batch A) | `Glow_03` |
+| 39 | CameraFacingSprite | `RainbowDisAdd` | reused (batch A) | `Raimbow` |
+| 40 | VelocityAlignedSprite | `PartDisAdd04` | reused | `Sparkles_01` |
+| 41 | CameraFacingSprite | `RingDisAdd01` | reused (batch A) | `Ring` |
+| 42 | CameraFacingSprite | `PartDisAdd01Bright` | reused (batch A) | `Glow_05` |
+| 43 | CameraFacingSprite | `ImpactDisAdd01` | reused (batch A) | `FlareImpact` |
+| 44 | Mesh `Spike` | `FlatAdd02` | reused | `Spike01` |
+| 45 | Mesh `Card` | `LightStripDisAdd` | reused (batch A) | `LightningStrip` |
+| 46 | CameraFacingSprite | `StarDisAdd01` | reused (batch A) | `Star01` |
+| 47 | CameraFacingSprite | `StarDisAdd02` | **new** | `Star02` |
+| 48 | Mesh `Cylinder` | `WindDisAdd02Mesh` | **new** | `Wind_01` |
+| 49 | CameraFacingSprite + `SubImageSize (2,2)` | `WindDisAdd01` | **new** | `Wind_02` |
+
+§6.3 predicted "one new family + eleven new looks". Batch A had already shipped the `FlatAdd` family and
+nine of the eleven from the SAME source instances, so this port adds **three**, all in the new
+`Script/CkUsf/CkUsf_CastLooks_Assets.as`. §6.3's naming caution held: `WindDisAdd02` already exists from
+`M_VFX_DisAdd_Pan_Wind02`, a different material, so this one is `WindDisAdd02Mesh`.
+
+`Get_BehaviorLookName(23)` is `NAME_None` — every layer draws through a row renderer.
+
+---
+
+## 11. Tests
+
+`Test_Particles_ArrowCastBehavior.cpp` + the `NumBehaviors` 23 → 26 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+Beyond the standard partition / anti-vacuity / spawn-beat / death checks, it gates what makes this system
+what it is:
+
+- **The row's 1.55 s lifetime, its 2×2 sub-UV grid and its three mesh carriers.** A lifetime cut back to
+  the visible majority would truncate the wind silently.
+- **Raimbow's 0.5 grey** (§9.3) — the one-module-apart reading.
+- **`Glow_03`'s flat 150-unit quad**, the only layer in the system with no size curve at all.
+- **`Wind_01`'s Z scale of 7.5** — §8's arithmetic, and the assertion that reds if the `(1,1,5)` is ever
+  applied twice.
+- **`Wind_02` sprays down −X** (mean unit velocity X < −0.8) while **`Sparkles_01` fires radially** (mean
+  unit velocity near zero). The two sprays are the system's directional signature.
+- **`Spike01` spawns on the 20-unit SHELL** (`Surface Only = true`), not inside a volume.
+- **The wind alpha envelope fades IN** — no other layer in the system starts invisible.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **ARROW CAST**:
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | a single pink-white flash at t=0, over inside ~0.15 s, followed by a long wind streak trailing away — NOT a sustained burst |
+| b | Beats | three distinct pops 40–50 ms apart, then Star02 arriving alone at 0.1 s |
+| c | Wind tube | one long tube travelling left (local −X), stretching to ~5× along its own axis while spinning slowly about it; still visible at ~1.5 s |
+| d | Wind puffs | six soft puffs following it, each on its own flipbook frame, FADING IN over the first quarter of their life rather than popping |
+| e | Sparkles | five bright streaks fired evenly in all directions, decelerating hard after the first fifth |
+| f | Spikes | five small pyramids pointing outward along their own travel, growing then thinning |
+| g | Lightning | five flat cards at the cast point, each facing differently, gone inside 0.2 s |
+| h | Ring | one thin ring at 60 units that ASSEMBLES (its dissolve runs −0.325 → −1) rather than eroding |
+| i | Rainbow layer | a dim grey lens ring — NOT a rainbow. See §13.2 |
+| j | Scale | the two 1000-unit glows should dominate the frame at t≈0; if the effect reads small, the shells are wrong |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **`LightningStrip` at zero offset** (§9.5) — the five cards do not travel. `[unresolved]` in the source;
+   ruled consistently with behavior 21.
+2. **The Rainbow layer ships against a WHITE ramp, not the rainbow one** — [P1-D1]. `LutRainbow` is baked
+   and correct (10 measured stops, max error 4.39/255), but `Gradient_Invert`'s exact remap is not
+   recoverable from the corpus and `M_VFX_DisAdd_Rainbow` resolves it to **2**. Against a white ramp the
+   whole chain is a provable multiply by one, so the layer renders as it would with no gradient chain at
+   all. This is 1 of 42 particles and reverses in one token once [P1-D1] lands.
+3. **Unplumbed family parameters.** `Glow_Intensity` (0.3 on `Part02`) IS reproduced, folded into
+   Brightness. Not reproduced: `Core_Intensity` (1 on `Part01_Bright` and `Wind01`), `Core_Power` (0 on
+   `Impact01` and `LightStrip`), `Color_Speed_X` (−0.3 on `Wind02` — its colour-tex UV does not pan),
+   `Opacty_StepAdd` (0.3 on `Rainbow`), `Opacty_DepthFade` (10 / 20 / 30), and the family's per-axis
+   `Distortion_Scale` — `Wind02` resolves X 1 / Y 0.6 where the look carries a single scalar, so the port
+   passes the X and drops the Y anisotropy.
+4. **The look helper's `DistortScale` default is 0.1 where the family reference resolves 1.0.**
+   Pre-existing, and inert on every look whose `Distortion_Intensity` is 0; `WindDisAdd02Mesh` drives a LIVE
+   distortion, so it passes the source's 1.0 explicitly. Flagged rather than changed — retuning the default
+   would move every existing look.
+5. **The tube is single-walled** (§8) with a two-sided look, against the source's 0.5-unit double wall.
+6. **`Velocity Falloff Distance` 100 is not reproduced**; the authored strength applies undiminished at the
+   spawn radius `[inferred]`.
+7. **Local space matches** on every emitter — §6.7 #10's "no gap" holds.
+8. **Every stand-in texture is a statistical match, not a copy** (§7).
+
+---
+
+## 14. Reusable lessons
+
+1. **"Same family, different law" is the texture-reuse trap, and only the numbers catch it.**
+   `T_VFX_Star_02` and `T_VFX_Star_01` are both four-lobe cardinal stars with identical symmetry — and
+   their first three radial annuli differ by 0.23 / 0.61 / 0.65. Measuring the *shape class* is not
+   measuring the paint.
+2. **Two paints with identical histograms and NEGATIVE correlation are the same image, moved.** That
+   signature is worth testing for before authoring a second bake: here it turned a "new bake needed" into a
+   one-constant offset of an existing paint function, provable to 1.3 × 10⁻⁶.
+3. **The same check cuts the other way — measure the reuse you EXPECT to be new.** §4.3 called
+   `T_VFX_Wind_01` a new bake; it is the paint an earlier port already measured, and the recorded constants
+   matched to the digit. Two of this port's three "new bakes" evaporated under measurement.
+4. **When a sheet says "decide once and record it", the decision belongs in the recipe, not just the
+   code.** The tube's `(1,1,5)` could live in the mesh or the behavior; putting it in the behavior keeps the
+   generated asset a faithful record of the source, and a test asserting 7.5 turns "doing both" from a
+   silent 5× error into a red.
+5. **Port the Cast before the Hit.** §6.3's prediction held in the strongest possible form: `NS_Arrow_Hit`
+   added ZERO looks, ZERO textures and ZERO meshes.
