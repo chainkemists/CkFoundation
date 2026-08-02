@@ -1,0 +1,26 @@
+// /CkUsf/Looks/FlatAdd.ush
+//
+// Recreation of the Vefects "FlatAdd" material family — the parent graph M_VFX_FlatAdd, of which
+// M_VFX_DisAdd_Flat02 is an instance.
+//
+// NAMING TRAP: that instance is prefixed `DisAdd_` but its parent is M_VFX_FlatAdd, NOT M_VFX_DissolveAdd.
+// It carries none of the dissolve family's textures, channels or erosion — folding it into DissolveAdd.ush
+// would hand it fifteen parameters it does not have and a dissolve mask it never applies.
+//
+// The whole family is Particle Color lifted by a Brightness: no textures, no dynamic parameters, no dissolve.
+//
+// Recipes + provenance: CkParticles/Cookbook/NS_Arrow_Cast.md, CkParticles/Cookbook/NS_Arrow_Hit.md
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Look_FlatAdd(
+    FCkUsf_SurfaceInput In,
+    float               Brightness)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    O.EmissiveColor = In.ParticleColor.rgb * Brightness;
+    O.Opacity       = In.ParticleColor.a;
+
+    return O;
+}
