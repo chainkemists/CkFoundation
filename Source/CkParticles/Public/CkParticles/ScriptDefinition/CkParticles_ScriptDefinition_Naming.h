@@ -89,15 +89,18 @@ namespace ck::particles
     // renderers the shared set cannot express declares its OWN renderers on its cadence row instead, and the
     // builder emits them for that row only — no other template gains a renderer it never asked for.
     //
-    // Two kinds cover what a recreation actually needs beyond the shared set: a mesh renderer carrying ONE named
-    // generated mesh drawn with ONE named CkUsf look, and a velocity-aligned sprite drawn with a look. Both bind
-    // the look master EXPLICITLY (not through User.SpriteMaterial), because a row that declares several renderers
-    // needs a different material on each and one user parameter cannot carry them.
+    // Four kinds cover what a recreation actually needs beyond the shared set: a mesh renderer carrying ONE named
+    // generated mesh drawn with ONE named CkUsf look, and the three sprite quads Niagara distinguishes by its
+    // alignment/facing pair. Every kind binds the look master EXPLICITLY (not through User.SpriteMaterial),
+    // because a row that declares several renderers needs a different material on each and one user parameter
+    // cannot carry them.
     // ----------------------------------------------------------------------------------------------------------
     enum class ECk_ParticlesRenderer_Kind : uint8
     {
         Mesh,                  // MeshName -> SM_CkParticles_<MeshName>; Particles.Scale + MeshOrientation apply
+        CameraFacingSprite,    // billboarded at the camera; Particles.SpriteRotation spins it in screen space
         VelocityAlignedSprite, // stretch is Particles.SpriteSize.y along motion
+        CustomFacingSprite,    // quad fixed in SIM space: SpriteAlignment is its up axis, SpriteFacing its normal
     };
 
     struct FCk_ParticlesRendererSpec
@@ -106,6 +109,11 @@ namespace ck::particles
         int32        VisTag;
         const TCHAR* MeshName; // Mesh kind only
         const TCHAR* LookName; // generated CkUsf master, via Get_GeneratedLookMasterObjectPath
+
+        // Flipbook grid the bound look's textures are laid out on. (0,0) leaves Niagara's own (1,1) SubUV default
+        // untouched, so a row that declares no sheet never divides its quad; anything else makes the renderer read
+        // Particles.SubImageIndex over an X*Y sheet whose valid frames are 0 .. (X*Y - 1).
+        FIntPoint    SubImageSize = FIntPoint(0, 0);
     };
 
     // Vefects NS_BasicAttack: four crescent-mesh slash layers, each with its own DissolveAdd look, plus the

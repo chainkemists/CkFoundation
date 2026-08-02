@@ -66,7 +66,12 @@ namespace CkUsf
         float   InMainTexScaleX,
         float   InMainTexScaleY,
         // Trailing so the five NS_BasicAttack looks, which all resolve the family default, stay unchanged.
-        float   InOpacityBoldness = 1.0)
+        float   InOpacityBoldness = 1.0,
+        // The gradient-map chain. Its defaults are the PARENT graph's (a flat white ramp, displacement 0.1,
+        // invert 0.5), so every look that does not name one renders exactly as it did before the chain existed.
+        FString InGradientTexture = "LutWhite",
+        float   InGradientMapDisplacement = 0.1,
+        float   InGradientInvert = 0.5)
     {
         auto Params = TArray<FCk_Usf_ParamDesc>();
 
@@ -90,6 +95,10 @@ namespace CkUsf
         Params.Add(CkUsf::Usf_Scalar(n"DistortIntensity", InDistortIntensity));
         Params.Add(CkUsf::Usf_Vector(n"DistortSpeed", FLinearColor(InDistortSpeedX, InDistortSpeedY, 0.0, 1.0)));
         Params.Add(CkUsf::Usf_Vector(n"MainTexScale", FLinearColor(InMainTexScaleX, InMainTexScaleY, 0.0, 1.0)));
+
+        Params.Add(CkUsf::Usf_ParticlesTexture(n"GradientMap", InGradientTexture));
+        Params.Add(CkUsf::Usf_Scalar(n"GradientMapDisplacement", InGradientMapDisplacement));
+        Params.Add(CkUsf::Usf_Scalar(n"GradientInvert", InGradientInvert));
 
         return Params;
     }

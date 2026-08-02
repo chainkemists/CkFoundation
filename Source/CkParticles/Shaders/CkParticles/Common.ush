@@ -34,6 +34,10 @@ struct FCkParticles_StageInput
 //
 // Dynamic -> Particles.DynamicMaterialParameter, read by the VFX master materials as
 //   x = dissolve/erosion threshold [0..1], y = distortion strength, z = UV pan offset, w = emissive boost.
+//
+// SubImageIndex -> Particles.SubImageIndex, the flipbook frame a renderer whose cadence row declared a
+// SubImageSize grid draws. Frames run 0 .. (X*Y - 1) across the sheet, row-major. A renderer with no declared
+// grid divides nothing and ignores the attribute, so a behavior that never writes it renders as before.
 // --------------------------------------------------------------------------------------------------------------------
 struct FCkParticles_StageOutput
 {
@@ -49,6 +53,7 @@ struct FCkParticles_StageOutput
     int    VisTag;      // renderer selection -> Particles.VisibilityTag (see header comment)
     float3 SpriteAlignment; // -> Particles.SpriteAlignment, the sprite's "up" axis (VisTag 4 only)
     float3 SpriteFacing;    // -> Particles.SpriteFacing, the sprite's plane normal   (VisTag 4 only)
+    float  SubImageIndex;   // -> Particles.SubImageIndex, the flipbook frame; see the header comment
 };
 
 // 0..1 over the particle's lifetime (0 when lifetime is unset).
@@ -123,5 +128,6 @@ FCkParticles_StageOutput CkParticles_DefaultOutput(FCkParticles_StageInput In)
     // alignment/facing pair collapses the sprite instead of failing visibly.
     O.SpriteAlignment = float3(0.0, 1.0, 0.0);
     O.SpriteFacing    = float3(0.0, 0.0, 1.0);
+    O.SubImageIndex   = 0.0;
     return O;
 }

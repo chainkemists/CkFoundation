@@ -26,6 +26,7 @@ struct FCk_Particles_StageResult
     int32        VisTag      = 0;
     FVector3f    SpriteAlignment = FVector3f(0.0f, 1.0f, 0.0f);
     FVector3f    SpriteFacing    = FVector3f(0.0f, 0.0f, 1.0f);
+    float        SubImageIndex   = 0.0f;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

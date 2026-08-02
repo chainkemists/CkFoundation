@@ -17,6 +17,13 @@
 //   z = offset      UV pan offset applied to the shape ALONG U
 //   w = core_color  blend toward CoreColor; <= 0 disables the core tint
 //
+// The gradient-map chain (GradientMap / GradientMapDisplacement / GradientInvert) is DEFAULT-INERT: the family
+// ramp is flat white, so it multiplies the emissive by one and every look authored before it renders unchanged.
+// GradientInvert is read as a blend toward the mirrored ramp coordinate, which is the only reading recoverable
+// from the source: its parent graph is not in the extracted corpus, and the values the instances resolve
+// (0, 0.5, 0.847619, 2) constrain nothing further. A look that drives it against a real ramp must be judged
+// against the original before that reading is trusted.
+//
 // Recipes + provenance: CkParticles/Cookbook/NS_Lightning_Range.md, CkParticles/Cookbook/NS_BasicAttack.md
 #pragma once
 #include "/CkUsf/Common.ush"
@@ -37,7 +44,10 @@ FCkUsf_SurfaceOutput CkUsf_Look_DissolveAdd(
     float3    DissolveScale,
     float     DistortIntensity,
     float3    DistortSpeed,
-    float3    MainTexScale)
+    float3    MainTexScale,
+    Texture2D GradientMap, SamplerState GradientMapSampler,
+    float     GradientMapDisplacement,
+    float     GradientInvert)
 {
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
 
@@ -77,7 +87,16 @@ FCkUsf_SurfaceOutput CkUsf_Look_DissolveAdd(
     // particle's own colour untouched.
     const float3 Tint = lerp(In.ParticleColor.rgb, CoreColor, saturate(CoreAmount));
 
-    O.EmissiveColor = Tint * Shape * Mask * Brightness;
+    // Gradient map: the tint's own luminance indexes a 1-D colour ramp, displaced along the ramp by
+    // GradientMap_Displacement and optionally read backwards. The family DEFAULT ramp is flat white, which
+    // samples (1,1,1) at every coordinate — so the chain is a multiply by one and every look that predates it
+    // renders bit-identically no matter what the two scalars resolve to.
+    const float  GradientLuma = dot(Tint, float3(0.299, 0.587, 0.114));
+    const float  GradientRead = saturate(GradientLuma + GradientMapDisplacement);
+    const float2 GradientUv   = float2(lerp(GradientRead, 1.0 - GradientRead, saturate(GradientInvert)), 0.5);
+    const float3 Gradient     = CkUsf_SampleTexture2D(GradientMap, GradientMapSampler, GradientUv).rgb;
+
+    O.EmissiveColor = Tint * Gradient * Shape * Mask * Brightness;
     O.Opacity       = saturate(Shape * Mask * In.ParticleColor.a * OpacityBoldness);
 
     return O;

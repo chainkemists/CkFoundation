@@ -1,0 +1,41 @@
+// /CkUsf/Looks/ToonBand.ush
+//
+// Recreation of the Vefects "Bomb" prop material family — M_VFX_Bomb, of which MI_VFX_Bomb is the shipped
+// instance. Unlike the two particle families this one draws a PROP, so it is opaque and unlit: a cel-shaded
+// solid whose surface is quantized into three flat colour bands rather than shaded continuously.
+//
+// The banding is two hard `step` cuts along the surface's V axis, matching the source graph's pair of Step
+// nodes over three colour parameters; a shadow tint darkens the whole result and a Glow scalar lifts it.
+// The two band edges are NOT recoverable — the source keeps them as unnamed graph constants, which the corpus
+// export records only as a count — so they are parameters rather than literals, defaulted to an even split
+// and meant to be judged against the original.
+//
+// Recipe + provenance: CkParticles/Cookbook/NS_Bomb_Spawn.md
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Look_ToonBand(
+    FCkUsf_SurfaceInput In,
+    float3              BandColorA,
+    float3              BandColorB,
+    float3              BandColorC,
+    float               BandEdgeAB,
+    float               BandEdgeBC,
+    float3              ShadowColor,
+    float               ShadowAmount,
+    float3              MainColor,
+    float               Glow)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    // Hard steps, not smoothsteps: the whole point of the look is that the bands do not blend into each other.
+    const float  Band   = In.UV.y;
+    const float3 Upper  = lerp(BandColorA, BandColorB, step(BandEdgeAB, Band));
+    const float3 Banded = lerp(Upper,      BandColorC, step(BandEdgeBC, Band));
+
+    const float3 Shaded = lerp(Banded, Banded * ShadowColor, saturate(ShadowAmount));
+
+    O.EmissiveColor = Shaded * MainColor * In.ParticleColor.rgb * Glow;
+
+    return O;
+}

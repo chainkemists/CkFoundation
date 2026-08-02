@@ -934,6 +934,7 @@ void
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetIntDef(),     TEXT("OutVisTag")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),    TEXT("OutSpriteAlignment")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),    TEXT("OutSpriteFacing")));
+    Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(),   TEXT("OutSubImageIndex")));
     Sig.SetDescription(LOCTEXT("ExecuteStageDesc",
         "Runs the CkParticles behavior selected by BehaviorId. Logic lives in /CkParticles/*.ush (GPU) and the CPU mirror."));
     OutFunctions.Add(Sig);
@@ -994,6 +995,7 @@ void
     FNDIOutputParam<int32>       OutVisTag(Context);
     FNDIOutputParam<FVector3f>   OutSpriteAlignment(Context);
     FNDIOutputParam<FVector3f>   OutSpriteFacing(Context);
+    FNDIOutputParam<float>       OutSubImageIndex(Context);
 
     for (int32 i = 0; i < Context.GetNumInstances(); ++i)
     {
@@ -1018,6 +1020,7 @@ void
         OutVisTag.SetAndAdvance(Result.VisTag);
         OutSpriteAlignment.SetAndAdvance(Result.SpriteAlignment);
         OutSpriteFacing.SetAndAdvance(Result.SpriteFacing);
+        OutSubImageIndex.SetAndAdvance(Result.SubImageIndex);
     }
 }
 
