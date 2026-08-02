@@ -5,12 +5,17 @@ Exemplars this sheet copies: [NS_BasicAttack.md](NS_BasicAttack.md) §1–6, [NS
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 25, `BombSpawn`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior, no `.ush`, no CPU mirror, no look, no mesh, no texture, no cadence row, no test, no gym
-station exists for this effect. No behavior id has been allocated. Nothing has been rendered or
-visually compared. Sections 1–6 are archaeology and a plan; everything below `## 7+` is reserved for
-the implementation session.
+§1–6 are archaeology against the extracted corpus, re-verified against the v3 sidecar at implementation
+time. **One stale figure was found and CORRECTED in place:** §2's prose total said 27 particles where its
+own itemization — and the corpus `Spawn Count` values — sum to **28**. The per-emitter counts were right;
+only the addition was wrong, and §6.1's burst count inherited the slip. Everything else survived unchanged.
+§7 onward is what was actually built.
+
+§6.3's "maintainer decision required" on the bomb mesh was ruled before this session by campaign decision
+**[C-D2]**: a procedural stylized stand-in, no import. §8 records what that produced and what it costs.
 
 ---
 
@@ -66,7 +71,9 @@ continuous rate anywhere. 27 particles per loop. 13 sprite renderers + 1 mesh re
 | 12 | `Flare_Stretched_02` | 1 | 0 | 0.5 | Non-Uniform **(500, 100)** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part03_Bright` |
 | 13 | `Flare_Stretched_01` | 1 | 0 | 0.5 | Non-Uniform **(500, 100)** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part01` |
 
-**Total per firing: 27 particles** (1+1+3+1+10+1+1+1+3+1+1+2+1+1).
+**Total per firing: 28 particles** (1+1+3+1+10+1+1+1+3+1+1+2+1+1). *(This line read "27" until the
+implementation session: the itemization was always right and the sum was not. The corpus `Spawn Count`
+values confirm 28, and the cadence row in §6.1 was corrected with it.)*
 
 Per-emitter `Emitter State` on all 14: `Loop Behavior = Infinite`, `Loop Duration Mode = Fixed`,
 `Loop Duration = 1`, `Loop Delay = 0`, `UseLoopDelay = false`, `UseLoopCountLimit = false`
@@ -403,9 +410,9 @@ Update order on all four: 1 Particle State, 2 Scale Color, 3 Dynamic Material Pa
 |---|---|---|
 | Loop duration | **2.0 s** `[corpus-v3]` | the system's `Once` loop duration ([P0-D3]); the exported `Loop Duration = 1` is a leftover. *Was `[unresolved]`.* |
 | Particle lifetime | **1.0 s** | max resolved lifetime — `Glow_01/02/03`, `Bomb_Glow`, `Bomb` at 1.0, and `Sparkles`' resolved `Lifetime Max` is also 1.0 (§5.5) |
-| Burst count | **27** | the §2 total |
+| Burst count | **28** | the §2 total *(was 27 — an arithmetic slip against §2's own itemization, corrected at implementation time)* |
 
-Layer partition `Seed % 27` — the NS_BasicAttack §8 pattern, with the layer→emitter map straight off
+Layer partition `Seed % 28` — the NS_BasicAttack §8 pattern, with the layer→emitter map straight off
 the §2 table (indices 0…26 in emitter order). Layers past their **own** lifetime write zero colour,
 zero size and zero scale, exactly as NS_BasicAttack §8 requires; the three spawn beats (0, 0.05,
 0.1 s) are reproduced by hiding a layer for `Age < SpawnDelay` and running its curves on
@@ -493,7 +500,220 @@ tier is L**, because there is no honest way to draw eight materials through one 
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures
 
-Sections 7–14 of the recipe schema ([README.md](README.md)) are intentionally absent and are to be
-written by the implementation session, from what actually happened.
+Nine paints touched, **eight reused and one new bake** — §6.4 asked for four new bakes plus a colour-LUT
+kind; three of the four had already been baked in batch A from the SAME source paints, and the LUT kind
+landed with Phase 1's C3.
+
+| Source paint | Verdict | Stand-in |
+|---|---|---|
+| `T_VFX_Part_01` | reuse | `SoftParticle` |
+| `T_VFX_Part_02` | reuse | `SoftParticleBright` (batch A) — §6.4's first "new bake", already done |
+| `T_VFX_Part_03` | reuse | `SoftParticleFine` (batch A) — §6.4's second, already done |
+| `T_VFX_Ring_01` | reuse | `RingUneven` (batch A) — §6.4 asked for "a **check** of whether the existing SDF `Ring` bake matches"; batch A ran exactly that check and REJECTED it (the source's interior is exactly empty where the SDF ring paints a cubic inner glow over 38 % of the texture) |
+| `T_VFX_Ring_02` | reuse | `RingFlare` (batch A) — §6.4's third, already done |
+| `T_VFX_Noise_02` | reuse | `TileNoise` |
+| `T_VFX_LUT_Rainbow_01` | present, unused | `LutRainbow` is baked (C3, 10 measured stops, max error 4.39/255); the Rainbow look ships against `LutWhite` pending [P1-D1] (§13.2) |
+| `T_VFX_WhitePixel` | no-op | the family's `LutWhite` ramp |
+| `T_VFX_Star_03` | **NEW** | `StarFourSplit` — see §7.1 |
+
+### 7.1 `T_VFX_Star_03` — the only paint in the pack whose rays are ASYMMETRIC
+
+Measured against `T_VFX_Star_01` (→ `StarFour`) and against `T_VFX_Star_02` (→ `StarFourTight`, baked for
+`NS_Arrow_Cast`), it is neither:
+
+| Statistic | `Star_01` | `Star_02` | `Star_03` |
+|---|---|---|---|
+| radial annuli 1–3 | 0.979 / 0.890 / 0.793 | 0.748 / 0.284 / 0.143 | **0.493 / 0.276 / 0.150** |
+| u-profile vs v-profile max diff | 0.0001 | 0.0002 | **0.138** |
+| ray reach at the 0.05 level, ±X | ~0.6 | 0.85 | **0.805** |
+| ray reach at the 0.05 level, ±Y | ~0.6 | 0.85 | **0.414** |
+| saturated fraction | 0.0076 | 0.0043 | **0.0005** |
+| pixelwise correlation vs `Star_03` | 0.652 | 0.899 | — |
+
+The horizontal ray pair runs almost twice as far as the vertical pair, which is what puts its u-profile
+0.138 away from its v-profile where every other star in the pack matches to 0.0002. So `Px_StarFourSplit`
+models it as TWO independent two-lobe terms — `|cos θ|^K` on its own envelope and `|sin θ|^K` on another —
+rather than one four-lobe mask, with a soft core (0.44 by r 0.08, against `Star_02`'s saturated 1.0) and a
+lobe FWHM tapering 21° → 1° over r 0.15..0.55. **Fit residual: mean absolute 0.0038, correlation 0.987.**
+
+Its correlation of 0.899 against `Star_02` is the interesting number: high enough that a
+correlation-only reuse check would have passed it, and the asymmetry statistic is what refuses it.
+
+---
+
+## 8. Mesh — the [C-D2] stand-in, and what it costs
+
+`SM_CkParticles_Bomb`, built by the MeshDescription generator: a sphere of radius **82** (the measured
+mean radius-from-origin, 81.818) with a short tapered fuse on +Z, 24 × 20 grid, v running 0 at the fuse
+tip to 1 at the underside so `ToonBand`'s two `Step` cuts band it latitudinally.
+
+What is faithful: the silhouette. §3's measurements — radius min 69.2 / mean 81.8 / max 94.1, symmetric
+about Z, widest at the equator — describe a ball, and the ball is that ball.
+
+What is not, and is recorded rather than hidden:
+
+1. **The corpus `.obj` carries NO fuse.** Its Z bounds are `−81.668 … +81.668` — exactly the ball radius,
+   with no protrusion anywhere. [C-D2] rules the stand-in as "sphere + fuse", so the fuse is a deliberate
+   stylization of what a bomb prop reads as, not a measurement of this one. It is 28 units tall on an
+   82-unit ball and would be the first thing to drop if the A/B says the silhouette is wrong.
+2. **The UV is re-authored, because the source's is not derivable.** §3 measured every correlation of u and
+   v against angle, radius and Z at under 0.18 — there is no cylindrical, spherical or planar projection to
+   recover, and `MI_VFX_Bomb` bands its three flat colours by `Step` over exactly those UVs. The port
+   substitutes a latitudinal v, which turns the source's arbitrary banding into a top-lit read. The band
+   EDGES are already parameters on the `BombToon` look (the source keeps them as unnamed graph constants),
+   so both the axis and the cuts are tunable from data at inspection time.
+3. **Triangle count is 960 against the source's 3128.** A stylized ball does not need the source's density.
+
+---
+
+## 9. The behavior
+
+`Shaders/CkParticles/Behaviors/Behavior_BombSpawn.ush` + the CPU mirror at
+`CkParticles_DataInterface.cpp` case 25.
+
+### 9.1 Cadence row
+
+```
+{ TEXT("PS_CkParticles_Template_BombSpawn"), 2.0f, 1.05f, 28, Get_BombSpawnRendererSpecs() }
+```
+
+- **Loop 2.0 s** — the system's own Loop-Once duration `[corpus-v3]`.
+- **Lifetime 1.05 s**, not §6.1's 1.0: [P0-D5]'s formula is max over layers of (spawn delay + resolved
+  lifetime), and `Glow_03` / `Bomb_Glow` / `Sparkles` all reach 1.0 s off the 0.05 s beat.
+- **Burst 28**, not §6.1's 27 — see the completion state and §2.
+
+### 9.2 Layer partition
+
+`Seed % 28`: 0 `Glow_01`, 1 `Glow_02`, 2–4 `Glow_03`, 5 `Raimbow`, 6–15 `Sparkles`, 16 `Ring01`,
+17 `Flash_Glow_01`, 18 `Flash_Glow_02`, 19–21 `Bomb_Glow`, 22 `Bomb`, 23 `Flare_Stretched_04`,
+24–25 `Flare_Stretched_03`, 26 `Flare_Stretched_02`, 27 `Flare_Stretched_01`.
+
+### 9.3 The prop's spin is an exact integral, not a stepwise accumulation
+
+`Update Mesh Orientation` drives `Rotation Rate` from a curve in TURNS per second over normalized age:
+`(0, 5)C (0.5, 0)C`. Integrating that stepwise would tie the yaw to frame cadence and drift the CPU mirror
+against the GPU. The port uses the closed form the family already has —
+`CkParticles_Int3(t, 0.5, 5, 0, 0)` is exactly that curve's integral — times the layer's 1.0 s lifetime,
+composed with a random initial yaw of ±1 turn from `Initial Mesh Orientation`'s Random Range Vector.
+
+### 9.4 `Bomb_Glow`'s Scale Color module is DISABLED
+
+Every other Part01 glow in the system runs the shared 1 → 0 alpha fade; `Bomb_Glow`'s module is off, so its
+three coincident sprites hold alpha **0.5** for the whole second. Implementing the disabled module would dim
+exactly the three sprites that hug the prop — the layer whose job is to keep the bomb readable.
+
+### 9.5 The dynamic parameter the prop does NOT write
+
+`Bomb` carries `Index 0 Param 1 = 1`, and `MI_VFX_Bomb` reads no dynamic parameters at all (§4.2). The port
+writes nothing, matching the FlatAdd spike layers in the two hit ports.
+
+---
+
+## 10. Looks and renderers
+
+**Nine row renderers, VisTags 62–70** — §6.2's "honest floor" of 6–8 plus one, because
+`Flare_Stretched_02/03/04` really do wear three distinct materials.
+
+| VisTag | Kind | Look | Status | Source emitters |
+|---|---|---|---|---|
+| 62 | CameraFacingSprite | `PartDisAdd01` | reused | `Glow_01`, `Glow_02`, `Glow_03`, `Bomb_Glow`, `Flare_Stretched_01` |
+| 63 | CameraFacingSprite | `RainbowDisAdd` | reused (batch A) | `Raimbow` |
+| 64 | CameraFacingSprite | `PartDisAdd01Bright` | reused (batch A) | `Sparkles` |
+| 65 | CameraFacingSprite | `RingDisAdd01` | reused (batch A) | `Ring01` |
+| 66 | CameraFacingSprite | `PartDisAdd02` | reused (batch A) | `Flash_Glow_01`, `Flash_Glow_02` |
+| 67 | **Mesh `Bomb`** | `BombToon` | reused (the look existed; the mesh is new) | `Bomb` |
+| 68 | CameraFacingSprite | `StarDisAdd03` | **new** | `Flare_Stretched_04` |
+| 69 | CameraFacingSprite | `PartDisAdd03` | **new** | `Flare_Stretched_03` |
+| 70 | CameraFacingSprite | `PartDisAdd03Bright` | reused (batch A) | `Flare_Stretched_02` |
+
+§6.4 asked for "six to eight CkUsf looks"; seven of the nine were already carried, so the port adds **two**
+(`PartDisAdd03`, `StarDisAdd03`) in `Script/CkUsf/CkUsf_CastLooks_Assets.as`. The `BombToon` look and its
+`ToonBand.ush` family shipped with an earlier batch under [C-D2].
+
+`Get_BehaviorLookName(25)` is `NAME_None` — every layer draws through a row renderer.
+
+---
+
+## 11. Tests
+
+`Test_Particles_BombSpawnBehavior.cpp` + the `NumBehaviors` 23 → 26 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+Beyond the standard partition / anti-vacuity / spawn-beat / death checks:
+
+- **The prop** carries most of the weight: the 5× white flash held to t = 0.15, the settle to 0.25, the pop
+  from zero to the source's 0.45 uniform mesh scale, and a spin that advances early and is provably STOPPED
+  by half-life (§9.3 — a stepwise integration would keep creeping).
+- **`Bomb_Glow` holds alpha 0.5 at both ends of its life**, with `Glow_01` as the control that DOES fade
+  (§9.4).
+- **`Ring01` opens at dissolve +1** — the only layer in the cookbook that starts fully eroded — and closes
+  at −1, with blue pinned at 1 and a single constant alpha key.
+- **All five stretched flares collapse their LENGTH to zero by t = 0.9 while keeping their width**, which is
+  the shared non-uniform curve doing its job; and `Flare_Stretched_03` carries the only 0.5 dissolve.
+- **The row declares exactly one mesh renderer**, and it is `BombToon` on `Bomb`.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **BOMB SPAWN**:
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | a blue-white flash that RESOLVES into a solid prop hanging in the air, not a burst that fades to nothing |
+| b | The prop | pops from nothing over the first fifth, blown out white for ~0.15 s, then settles to a quarter of its own colour and holds; spins fast at spawn and is stopped by half-life |
+| c | Prop silhouette | a lumpy ball roughly 74 units across at this scale, with a small fuse. **The source has no fuse** (§8) — judge whether it helps or hurts |
+| d | Prop banding | three flat colour bands running latitudinally. The source bands over an unrecoverable UV atlas, so if the banding reads wrong, the `BombToon` look's two edge parameters are the dial |
+| e | Bomb glow | three coincident blue shells hugging the prop that do NOT dim over the second |
+| f | Flares | five stretched streaks laid out around the prop, their LENGTH collapsing to nothing by 90 % of their life while their width holds |
+| g | Ring | one 170-unit ring that starts fully eroded and assembles |
+| h | Sparkles | ten fine blue motes drifting evenly outward, the slowest spray in the batch (350–500 units/s) |
+| i | Beats | three beats 50 ms apart — prop and flares at 0, glows and sparkles at 0.05, rainbow and flashes at 0.1 |
+| j | World space | move the pedestal mid-effect if you can. The source is WORLD space and the port is LOCAL (§13.5); a stationary station cannot show the difference |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **The prop mesh is a stylized stand-in with a fuse the source does not have, and a re-authored UV**
+   (§8). [C-D2], recorded not silent. The band edges are look parameters, so the banding is tunable
+   without a rebuild.
+2. **The Rainbow layer ships against a WHITE ramp** — [P1-D1]. `M_VFX_DisAdd_Rainbow` is the only instance
+   in this system that engages the gradient chain with a real ramp, and §4.1 correctly noted that
+   NS_Lightning_Range's "it's a white pixel, so it's a no-op" justification does not transfer. It is held
+   back on the same decision as every other Rainbow consumer, and reverses in one token.
+3. **`CamOffset` is not implemented** — §6.5 gap 4. `Part03_Bright` resolves 50, so `Flare_Stretched_02`
+   sorts against nearby geometry differently from the source. Visually minor at a pedestal.
+4. **Other unplumbed family parameters:** `Glow_Intensity` (0.3 on `Part02`) IS reproduced, folded into
+   Brightness; `Core_Intensity` (1 on `Part01_Bright`, `Part03`, `Part03_Bright`), `Opacty_StepAdd` (0.3 on
+   `Rainbow`) and `Opacty_DepthFade` (10 / 20) are not.
+5. **World space.** All 14 source emitters are `LocalSpace: false`; the CkParticles template is local
+   space — §6.5 gap 5, and the largest structural deviation in this port. Invisible while the spawn point
+   is stationary, which is the gym's condition; visible if a moving actor ever spawns it.
+6. **`Velocity Falloff Distance` 100 is not reproduced**; the authored strength applies undiminished at the
+   spawn radius `[inferred]`.
+7. **`Bomb`'s `Index 0 Param 1 = 1` is not written** (§9.5) — the prop material reads no dynamic parameters.
+8. **Every stand-in texture is a statistical match, not a copy** (§7).
+
+---
+
+## 14. Reusable lessons
+
+1. **Check a sheet's arithmetic against its own itemization.** §2's per-emitter counts were right and its
+   total was not, and §6.1's burst count inherited the slip. The corpus settled it in seconds. A burst
+   count is not a cosmetic figure — it is the modulus of the layer partition, so an off-by-one silently
+   re-maps every layer.
+2. **High correlation is not a reuse verdict.** `T_VFX_Star_03` correlates **0.899** with `T_VFX_Star_02`
+   and is still a different paint: the discriminator is a single asymmetry statistic (u-profile vs
+   v-profile, 0.138 against 0.0002). Pick the statistic that can say NO.
+3. **A planning sheet's "new bakes needed" list ages well in the porter's favour.** §6.4 asked for four new
+   bakes and a new output kind; by implementation time three of the four and the kind itself already
+   existed, from ports of the same source paints. Re-check the list against the generator before authoring.
+4. **A curve-driven rotation rate needs its exact integral.** The prop's yaw comes from a rate curve, and
+   the family already carries the closed-form integrator its velocity curves use. Reusing it keeps the spin
+   frame-rate-independent and the CPU mirror in lockstep for free.
+5. **Record a stand-in's deviations where the A/B protocol can see them.** §8's three deviations are each
+   a row in §12 — the fuse, the banding axis, the silhouette — so the human judging the pair is told what
+   to look at rather than left to notice it.
