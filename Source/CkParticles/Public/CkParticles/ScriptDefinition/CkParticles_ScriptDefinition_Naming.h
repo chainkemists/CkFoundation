@@ -278,8 +278,10 @@ namespace ck::particles
     // and burst count are as load-bearing as its shader. Rather than approximate a source with the nearest existing
     // template, a recreation whose cadence differs adds a ROW here and the editor builder emits a template for it.
     //
-    // BurstCount 0 means the continuous spawn-rate stack (the legacy seed template) — its lifetime and loop come
-    // from the emitter factory defaults, so the cadence fields are unused for that row.
+    // A row declares its spawn cadence as a burst, a continuous rate, or BOTH — source emitters do all three, and
+    // the two stacks compose on one emitter. A row that declares NEITHER (BurstCount 0, SpawnRate 0) is the legacy
+    // seed template: its loop, lifetime and rate all come from the emitter factory defaults, so its cadence fields
+    // are unused.
     // --------------------------------------------------------------------------------------------------------------
     struct FCk_ParticlesTemplateSpec
     {
@@ -290,6 +292,11 @@ namespace ck::particles
 
         // Empty on every row that is satisfied by the shared renderer set.
         TArrayView<const FCk_ParticlesRendererSpec> RendererOverrides;
+
+        // Particles per second, spawned continuously across the loop. Fractional values are fine — Niagara carries
+        // the sub-particle remainder across frames. Trails the renderer list so adding it left every existing row's
+        // aggregate initializer untouched.
+        float        SpawnRate = 0.0f;
     };
 
     inline auto Get_TemplateSpecs() -> TArrayView<const FCk_ParticlesTemplateSpec>
