@@ -269,6 +269,35 @@ namespace ck::particles_editor::MeshGenLocal
                  FVector2f(S, T) };
     }
 
+    // ---- Cone: the Vefects SM_VFX_Ring04 carrier, from the corpus .obj measurements -----------------------------
+    //
+    // A truncated cone, open at both ends: radius 53.956 at the narrow end and 100.000 at the wide one, over a
+    // 32.3-unit rise. The source has exactly TWO rings of vertices and no intermediate ones, so the surface is a
+    // single lerp between them; like the cylinder and the annulus it is two coaxial walls half a unit apart in Z,
+    // collapsed here to one sheet with a two-sided look, and its Z values are those walls' midplane.
+    //
+    // Its UV is measured and matches the cylinder's convention on u and INVERTS it on v: v = 0 at the NARROW end
+    // and 1 at the WIDE one (the cylinder's v = 0 is its top), while u wraps once around the circumference
+    // DECREASING with polar angle -- u = frac(0.75 - angle/360), seam at +-180 degrees. Both directions are
+    // load-bearing: M_VFX_DisAdd_Wind03 stretches its paint 4 x 0.2 along them and pans it in u.
+    //
+    // The renderer's own (1, 1, 5) mesh scale is NOT baked in -- the behavior applies it, so this asset stays a
+    // faithful record of the source's dimensions.
+    static auto Surface_Cone(float S, float T) -> FGridPoint
+    {
+        constexpr auto NarrowRadius = 53.956f;
+        constexpr auto WideRadius   = 100.0f;
+        constexpr auto NarrowZ      = -0.25f;
+        constexpr auto WideZ        = 32.047f;
+
+        const float AngleDegrees = 360.0f * (0.75f - S);
+        const float Angle        = FMath::DegreesToRadians(AngleDegrees);
+        const float R            = FMath::Lerp(NarrowRadius, WideRadius, T);
+
+        return { FVector3f(FMath::Cos(Angle) * R, FMath::Sin(Angle) * R, FMath::Lerp(NarrowZ, WideZ, T)),
+                 FVector2f(S, T) };
+    }
+
     // ---- Bomb: the stylized prop stand-in for SM_VFX_Bomb_01_Small ---------------------------------------------
     //
     // A procedural sphere plus a fuse, per the campaign's [C-D2] ruling — the source mesh is NOT imported. Its
@@ -567,6 +596,10 @@ namespace ck::particles_editor
         // annulus's own segment and band count, so the ring reproduces its 256 triangles exactly.
         BakeOne(TEXT("SM_CkParticles_UvSphere"),    &Surface_UvSphere,    32, 16, TEXT("FresnelShell"));
         BakeOne(TEXT("SM_CkParticles_FlatAnnulus"), &Surface_FlatAnnulus, 64, 2,  TEXT("SweepErode"));
+
+        // The Vefects dash carrier. 32 columns is SM_VFX_Ring04's own segment count and ONE band is its own
+        // topology — the source has two vertex rings and nothing between them.
+        BakeOne(TEXT("SM_CkParticles_Cone"), &Surface_Cone, 32, 1, TEXT("SweepErode"));
 
         Log(TEXT("Generated {}/{} CkParticles VFX carrier meshes under {}."),
             FString::FromInt(Ok), FString::FromInt(Total), FString(MeshDir));

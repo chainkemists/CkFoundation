@@ -1,0 +1,292 @@
+// /CkParticles/Behaviors/Behavior_Dash.ush — BehaviorId 46.
+//
+// Faithful re-port of Vefects NS_Dash. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Dash.md — every number below is a source value from §2/§5, not a tuning.
+//
+// Four emitters over a Loop-Once 2.0 s system, in TWO cadences: three system-governed wind layers that
+// burst once, and Add_Lines, the pack's ONLY `Life Cycle Mode = Self` emitter, which carries a burst AND a
+// spawn rate over its own 0.3 s window. PS_CkParticles_Template_Dash is 2.0 s loop / 1.5 s particle
+// lifetime / burst 19 / rate 50 per second — the burst+rate composition NS_HealCast established.
+//
+// The two populations are told apart by SPAWN PHASE: burst particles land at phase 0 and take the source's
+// exact per-emitter counts through a 19-slot modulo, while rate particles are all Add_Lines and are hidden
+// once they are born past its 0.3 s one-shot window, which is what reproduces `Self / Once` on a template
+// that loops.
+//
+// AIM AXIS: this effect's forward is -X. The constant tube velocity, the smokes' random box, the speed
+// lines' cone axis and the smokes' position offset all point -X, and both mesh carriers are laid onto +X by
+// their Initial Mesh Orientation — so a dash toward +X trails its wind and its lines behind it. That is the
+// source's own convention and it is transcribed rather than negated into the roster's +X-forward one, the
+// same call NS_Arrow_Cast's identical wind pair made (recipe §13.1).
+//
+// ---- The one module in the cookbook whose graph is not recoverable ------------------------------------------
+//
+// Add_Lines is the pack's only user of `Add Velocity in Cone`, and the corpus exports its inputs but not its
+// parent graph, so the three shaping inputs are [inferred] (recipe §13.4). Their reach is bounded by the
+// aperture: at a 10 degree CONE the whole family of readings moves a direction by at most five degrees.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 46) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_DA_LOOP           2.0
+#define CKP_DA_BURST_SLOTS     19
+#define CKP_DA_WINDOW         0.3   // Add_Lines' own Self/Once loop duration
+#define CKP_DA_TAU            6.28318530718
+
+// The two beats the source bursts on: the tube and the speed cone at 50 ms, the smokes at 100 ms.
+#define CKP_DA_DELAY_WIND     0.05
+#define CKP_DA_DELAY_SMOKES   0.1
+
+#define CKP_DA_LAYER_TUBE       0
+#define CKP_DA_LAYER_SMOKES     1
+#define CKP_DA_LAYER_CONE       2
+#define CKP_DA_LAYER_LINES      3
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_DA_VIS_TUBE       242
+#define CKP_DA_VIS_SMOKES     243
+#define CKP_DA_VIS_CONE       244
+#define CKP_DA_VIS_LINES      245
+
+// Add Velocity in Cone, as authored on Add_Lines.
+#define CKP_DA_CONE_HALF_COS  0.99619469809  // cos(5 deg) — the 10 degree aperture's half angle
+#define CKP_DA_CONE_DISTRIB   0.75
+#define CKP_DA_CONE_FALLOFF   0.333
+
+FCkParticles_StageOutput CkParticles_Dash_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// The in-hold-out envelope the tube and the smokes share verbatim — the effect's signature.
+float CkParticles_Dash_WindAlpha(float T)
+{
+    return CkParticles_Key4(T, 0.0, 0.0, 0.240266, 1.0, 0.676124, 1.0, 1.0, 0.0);
+}
+
+// The speed cone wears the same shape with a HALF-LENGTH hold.
+float CkParticles_Dash_ConeAlpha(float T)
+{
+    return CkParticles_Key4(T, 0.0, 0.0, 0.240266, 1.0, 0.373076, 1.0, 1.0, 0.0);
+}
+
+// Which of the four layers a BURST particle carries: the source's own per-emitter burst counts as a
+// 19-slot modulo (1 + 4 + 1 + 13).
+int CkParticles_Dash_BurstLayer(int Seed)
+{
+    const int S = ((Seed % CKP_DA_BURST_SLOTS) + CKP_DA_BURST_SLOTS) % CKP_DA_BURST_SLOTS;
+
+    if (S == 0) { return CKP_DA_LAYER_TUBE; }
+    if (S < 5)  { return CKP_DA_LAYER_SMOKES; }  // 1..4
+    if (S == 5) { return CKP_DA_LAYER_CONE; }
+    return CKP_DA_LAYER_LINES;                   // 6..18
+}
+
+// Add_Lines' launch direction. The cone axis is exactly -X, so its two tangents are the world Y and Z axes
+// and no basis has to be built. [inferred], per the file header: the polar draw is uniform in cos(theta)
+// biased toward the axis by Velocity Distribution Along Cone Axis, and Velocity Falloff Away From Cone Axis
+// scales the SPEED from 1 on the axis to (1 - falloff) at the rim.
+float3 CkParticles_Dash_ConeDir(int Seed, out float OutEdge)
+{
+    const float U        = pow(CkParticles_Rand(Seed, 13), 1.0 - CKP_DA_CONE_DISTRIB);
+    const float CosTheta = lerp(CKP_DA_CONE_HALF_COS, 1.0, U);
+    const float SinTheta = sqrt(saturate(1.0 - CosTheta * CosTheta));
+    const float Phi      = CKP_DA_TAU * CkParticles_Rand(Seed, 14);
+
+    OutEdge = (1.0 - CosTheta) / (1.0 - CKP_DA_CONE_HALF_COS);
+    return float3(-CosTheta, SinTheta * cos(Phi), SinTheta * sin(Phi));
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_Dash(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    const float Phase   = CkParticles_SpawnPhase(In.EmitterAge, In.Age, CKP_DA_LOOP);
+    const bool  IsBurst = CkParticles_IsBurstSpawn(Phase, CKP_DA_LOOP);
+
+    int Layer = CKP_DA_LAYER_LINES;
+
+    if (IsBurst)
+    {
+        Layer = CkParticles_Dash_BurstLayer(In.Seed);
+    }
+    else
+    {
+        // Add_Lines is the system's only Spawn Rate, so every streamed particle is one of its lines — and one
+        // born past its 0.3 s window never existed in the source.
+        if (Phase > CKP_DA_WINDOW)
+        { return CkParticles_Dash_Hidden(O); }
+    }
+
+    // ---- Wind_01: the travelling tube, on SM_VFX_Ring01's open cylinder. The longest-lived layer ----
+    if (Layer == CKP_DA_LAYER_TUBE)
+    {
+        const float td = In.Age - CKP_DA_DELAY_WIND;
+
+        if (td < 0.0 || td > 1.5)
+        { return CkParticles_Dash_Hidden(O); }
+
+        const float t = saturate(td / 1.5);
+
+        const float3 V0 = float3(-150.0, 0.0, 0.0);
+        O.Position = V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * 1.5);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        // Initial Mesh Orientation is a quarter turn about Y (the pack authors rotations in TURNS — the
+        // NS_Arrow_Cast reading, whose Wind_01 carries these same two numbers), which lays the tube's own +Z
+        // down the -X travel direction; Update Mesh Orientation then spins it about world X at 0.3 turns a
+        // second for the whole 1.5 s life.
+        const float4 Spin = CkParticles_QuatFromAxisAngle(float3(1.0, 0.0, 0.0), CKP_DA_TAU * 0.3 * td);
+        const float4 Lay  = CkParticles_QuatFromAxisAngle(float3(0.0, 1.0, 0.0), CKP_DA_TAU * 0.25);
+        O.Orientation = CkParticles_QuatMul(Spin, Lay);
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+
+        // The source renderer carries a mesh scale of (1, 1, 5) on top of Particles.Scale, and the carrier
+        // keeps SM_VFX_Ring01's own 50-unit height, so that 5x is folded in here — doing it in both places
+        // would draw the tube five times too long. Its X and Y hold at 2 past t = 0.2 while Z keeps growing
+        // to 5x, which is what stretches the tube lengthwise over its whole life.
+        const float Uniform = 0.3;
+        const float Round   = CkParticles_Key2(t, 0.0, 1.5, 0.2, 2.0);
+        O.Scale = float3(
+            Uniform * Round,
+            Uniform * Round,
+            Uniform * 5.0 * CkParticles_Key3(t, 0.0, 0.5, 0.3, 3.0, 1.0, 5.0));
+
+        O.Color   = float4(0.0742136, 0.0886556, 0.111932, 0.3 * CkParticles_Dash_WindAlpha(t));
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, -0.2, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_DA_VIS_TUBE;
+        return O;
+    }
+
+    // ---- Wind_Smokes: four wide sub-UV puffs blown down -X off a 20-unit backward offset ----
+    if (Layer == CKP_DA_LAYER_SMOKES)
+    {
+        const float td = In.Age - CKP_DA_DELAY_SMOKES;
+
+        if (td < 0.0 || td > 1.0)
+        { return CkParticles_Dash_Hidden(O); }
+
+        const float t = saturate(td);
+
+        const float3 V0 = float3(
+            lerp(-100.0, -300.0, CkParticles_Rand(In.Seed, 2)),
+            lerp( -10.0,   10.0, CkParticles_Rand(In.Seed, 3)),
+            lerp( -10.0,   10.0, CkParticles_Rand(In.Seed, 5)));
+
+        O.Position = float3(-20.0, 0.0, 0.0) + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.3, 0.0) * 1.0);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.3, 1.0, 0.0);
+
+        // Random NON-UNIFORM sizes: very wide, short quads that only ever grow.
+        const float Grow = CkParticles_Key2(t, 0.0, 0.5, 1.0, 1.0);
+        O.Size = float2(lerp(555.0, 777.0, CkParticles_Rand(In.Seed, 8)) * Grow,
+                        lerp(130.0, 230.0, CkParticles_Rand(In.Seed, 12)) * Grow);
+
+        O.Rotation = lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 4));
+        O.Color    = float4(0.6, 0.743954, 1.0, 0.2 * CkParticles_Dash_WindAlpha(t));
+
+        // Sub UVAnimation in Random mode over a 2x2 sheet: a per-particle start frame that then advances
+        // once through the four frames. The declared End Frame is 3, so the sheet's own 0..3 is the range.
+        const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+        O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_DA_VIS_SMOKES;
+        return O;
+    }
+
+    // ---- Wind_Speed: the speed cone, on SM_VFX_Ring04's truncated funnel. The only layer that never moves ----
+    if (Layer == CKP_DA_LAYER_CONE)
+    {
+        const float td = In.Age - CKP_DA_DELAY_WIND;
+
+        if (td < 0.0 || td > 0.6)
+        { return CkParticles_Dash_Hidden(O); }
+
+        const float t = saturate(td / 0.6);
+
+        // No velocity module and no Scale Velocity: this layer sits at its spawn point for its whole life.
+        const float4 Spin = CkParticles_QuatFromAxisAngle(float3(1.0, 0.0, 0.0), CKP_DA_TAU * 0.05 * td);
+        const float4 Lay  = CkParticles_QuatFromAxisAngle(float3(0.0, 1.0, 0.0), CKP_DA_TAU * 0.75);
+        O.Orientation = CkParticles_QuatMul(Spin, Lay);
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+
+        // Mesh Scale is NON-uniform here — (0.4, 0.4, 0.3) — under the renderer's own (1, 1, 5), and the
+        // size curve grows all three axes together.
+        const float Grow = CkParticles_Key2(t, 0.0, 1.5, 0.2, 2.0);
+        O.Scale = float3(0.4 * Grow, 0.4 * Grow, 0.3 * 5.0 * Grow);
+
+        O.Color = float4(0.597202, 0.752942, 1.0, 0.05 * CkParticles_Dash_ConeAlpha(t));
+
+        // Its dissolve is a CONSTANT, not a curve — the only layer in the system with no dissolve animation.
+        O.Dynamic = float4(-0.92719, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_DA_VIS_CONE;
+        return O;
+    }
+
+    // ---- Add_Lines: the speed lines. Velocity-aligned, drag-damped, and sized by their own speed ----
+    {
+        const float Life = lerp(0.8, 1.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_Dash_Hidden(O); }
+
+        const float t = saturate(In.Age / Life);
+
+        // Sphere Location, radius 50, Random distribution, Surface Only false: uniform through the VOLUME,
+        // so the radius takes a cube root.
+        const float3 Spawn = CkParticles_RandDir(In.Seed) * (50.0 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+
+        float        Edge = 0.0;
+        const float3 Dir  = CkParticles_Dash_ConeDir(In.Seed, Edge);
+        const float3 V0   = Dir * (lerp(350.0, 750.0, CkParticles_Rand(In.Seed, 15))
+                                 * lerp(1.0, 1.0 - CKP_DA_CONE_FALLOFF, Edge));
+
+        // Linear Drag with a random per-particle drag AND a random mass. First-order drag has a closed form,
+        // so both velocity and position stay exact and frame-cadence-independent — never step-integrate it.
+        const float Lambda = lerp(0.8, 1.2, CkParticles_Rand(In.Seed, 16))
+                           / lerp(0.75, 2.0, CkParticles_Rand(In.Seed, 17));
+        const float Decay  = exp(-Lambda * In.Age);
+
+        O.Velocity = V0 * Decay;
+        O.Position = Spawn + V0 * ((1.0 - Decay) / Lambda);
+
+        // Random Range Linear Color under Color Channel Mode = Link RGB / Link A: ONE draw lerps the whole
+        // triple and a SECOND draws the alpha. The min's R and G sit ABOVE the max's, as exported — Niagara
+        // lerps each channel between its own pair either way round.
+        const float Krgb = CkParticles_Rand(In.Seed, 18);
+        const float Ka   = CkParticles_Rand(In.Seed, 19);
+
+        // Scale Alpha's two keys sit slightly OUTSIDE [0, 1] on both axes — an authored "1 -> 0 across the
+        // whole life" ramp with its handles pulled past the ends, sampled clamped.
+        O.Color = float4(
+            lerp(0.737095, 0.726575, Krgb),
+            lerp(0.852379, 0.816055, Krgb),
+            1.0,
+            lerp(0.3, 0.7, Ka) * CkParticles_Key2(t, -0.00459771, 1.01132, 1.00115, 0.00195575));
+
+        // Scale Sprite Size by Speed, sampling its own curve at |v| / 1500 and lerping between the authored
+        // Min (0, 1) and Max (0.5, 3) factors — which is what makes a fast line long and thin and a
+        // drag-slowed one short and stubby.
+        const float Speed01 = saturate(length(O.Velocity) / 1500.0);
+        const float Factor  = CkParticles_Key3(Speed01, 0.12466, -0.000593, 0.394801, 0.48928,
+                                               0.995789, 0.997444);
+
+        // The authored curve's first key is -0.000593, and Min Scale Factor's X is 0, so a line slowed below
+        // |v| = 187 earns a width of about -0.009 units. A negative quad extent flips winding rather than
+        // shrinking, which the roster forbids, so the WIDTH is floored at zero; the length axis never reaches
+        // the sign change. See the recipe's §13.6.
+        O.Size   = float2(max(0.0, 30.0 * lerp(0.0, 0.5, Factor)), 32.0 * lerp(1.0, 3.0, Factor));
+        O.VisTag = CKP_DA_VIS_LINES;
+        return O;
+    }
+}
