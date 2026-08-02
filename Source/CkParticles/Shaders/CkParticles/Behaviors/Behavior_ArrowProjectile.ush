@@ -1,0 +1,76 @@
+// /CkParticles/Behaviors/Behavior_ArrowProjectile.ush — BehaviorId 19.
+//
+// Faithful re-port of Vefects NS_Arrow_Projectile: the in-flight arrow body — a camera-facing warm glow head
+// with two velocity-aligned tails behind it along local -X. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Arrow_Projectile.md — every number below is a source value from §5, not a tuning.
+//
+// Same construction as behavior 18 (NS_Gunshot_Projectile) with different numbers: shorter offsets, shorter
+// tails, a cooler palette, and a Glow_01 that is Unaligned/FaceCamera rather than VelocityAligned. Both share
+// PS_CkParticles_Template_ProjectileTrio (10 s loop / 10 s lifetime / burst 3), the cadence of the source's
+// Loop-Once 10 s SYSTEM (corpus v3: every emitter is Life Cycle Mode = System, so its own loop rows are inert).
+//
+// No age-driven curve exists anywhere in this system: every layer is a constant for its whole life.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 19) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — three particles per burst, one per source emitter (recipe §2).
+#define CKP_AP_NUM_LAYERS   3
+#define CKP_AP_LAYER_GLOW   0
+#define CKP_AP_LAYER_BRIGHT 1
+
+// Lifetime Mode = Direct Set, Lifetime 10 on all three emitters; Particle State kills on elapse.
+#define CKP_AP_LIFE 10.0
+
+// Add Velocity 0.01 units/second on the two Projectile emitters only — visually zero, but non-zero so
+// VelocityAligned has a defined axis. Glow_01 has no Add Velocity module at all and is camera-facing.
+#define CKP_AP_DRIFT 0.01
+
+FCkParticles_StageOutput CkParticles_Behavior_ArrowProjectile(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = ((In.Seed % CKP_AP_NUM_LAYERS) + CKP_AP_NUM_LAYERS) % CKP_AP_NUM_LAYERS;
+
+    if (In.Age > CKP_AP_LIFE)
+    {
+        O.Velocity = float3(0.0, 0.0, 0.0);
+        O.Color    = float4(0.0, 0.0, 0.0, 0.0);
+        O.Size     = float2(0.0, 0.0);
+        O.Scale    = float3(0.0, 0.0, 0.0);
+        return O;
+    }
+
+    if (Layer == CKP_AP_LAYER_GLOW)
+    {
+        // Glow_01, on M_VFX_DisAdd_Part01, Unaligned / FaceCamera — a plain billboard, so it draws on the
+        // SHARED camera sprite (VisTag 0), whose material is the behavior's bound look. It is also the only
+        // layer this system erodes (dissolve = 1) and the only one with no velocity at all.
+        O.Position = float3(-5.0, 0.0, 0.0);
+        O.Velocity = float3(0.0, 0.0, 0.0);
+        O.Color    = float4(1.0, 0.775394, 0.257, 0.3);
+        O.Size     = float2(120.0, 120.0); // source: Sprite Size Mode = Uniform, Uniform Sprite Size 120
+        O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag   = 0;
+        return O;
+    }
+
+    // Projectile_Bright and Projectile_Dark, both on M_VFX_DisAdd_Part04, every dynamic channel zero.
+    O.Velocity = float3(CKP_AP_DRIFT, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+    O.VisTag   = 11;
+
+    if (Layer == CKP_AP_LAYER_BRIGHT)
+    {
+        O.Position = float3(-20.1693, 0.0, 0.0);
+        O.Color    = float4(1.0, 0.558341, 0.102242, 0.5);
+        O.Size     = float2(20.0, 50.0);
+        return O;
+    }
+
+    O.Position = float3(-66.0904, 0.0, 0.0);
+    O.Color    = float4(0.06, 0.0470123, 0.0270472, 0.2);
+    O.Size     = float2(35.0, 150.0);
+    return O;
+}

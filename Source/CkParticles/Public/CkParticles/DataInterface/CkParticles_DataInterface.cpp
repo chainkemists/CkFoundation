@@ -38,6 +38,8 @@ namespace NDICkParticlesLocal
         TEXT("/CkParticles/Behaviors/Behavior_LightningStrike.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_AuraSwirl.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_LightningRange.ush"),
+        TEXT("/CkParticles/Behaviors/Behavior_GunshotProjectile.ush"),
+        TEXT("/CkParticles/Behaviors/Behavior_ArrowProjectile.ush"),
     };
 }
 
@@ -769,6 +771,102 @@ namespace NDICkParticlesLocal
                 Out.VisTag          = 4;
                 Out.SpriteAlignment = FVector3f(0.0f, 1.0f, 0.0f);
                 Out.SpriteFacing    = FVector3f(0.0f, 0.0f, 1.0f);
+                break;
+            }
+            case 18: // GunshotProjectile — Vefects NS_Gunshot_Projectile. Mirrors Behavior_GunshotProjectile.ush.
+            {
+                constexpr auto NumLayers   = 3;
+                constexpr auto LayerGlow   = 0;
+                constexpr auto LayerBright = 1;
+
+                constexpr auto Life  = 10.0f;
+                constexpr auto Drift = 0.01f;
+
+                const auto Layer = ((InSeed % NumLayers) + NumLayers) % NumLayers;
+
+                Out.Velocity = FVector3f(Drift, 0.0f, 0.0f);
+
+                if (InAge > Life)
+                {
+                    Out.Velocity = FVector3f::ZeroVector;
+                    Out.Color    = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.Size     = FVector2f(0.0f, 0.0f);
+                    Out.Scale    = FVector3f(0.0f, 0.0f, 0.0f);
+                    break;
+                }
+
+                if (Layer == LayerGlow)
+                {
+                    Out.Position = FVector3f(-52.048f, 0.0f, 0.0f);
+                    Out.Color    = FLinearColor(1.0f, 0.194618f, 0.021219f, 0.5f);
+                    Out.Size     = FVector2f(80.0f, 300.0f);
+                    Out.Dynamic  = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag   = 10;
+                    break;
+                }
+
+                Out.Dynamic = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+                Out.VisTag  = 11;
+
+                if (Layer == LayerBright)
+                {
+                    Out.Position = FVector3f(-77.6262f, 0.0f, 0.0f);
+                    Out.Color    = FLinearColor(1.0f, 0.552046f, 0.147f, 1.0f);
+                    Out.Size     = FVector2f(20.0f, 200.0f);
+                    break;
+                }
+
+                Out.Position = FVector3f(-194.751f, 0.0f, 0.0f);
+                Out.Color    = FLinearColor(0.1f, 0.0171441f, 0.00865005f, 0.2f);
+                Out.Size     = FVector2f(35.0f, 500.0f);
+                break;
+            }
+            case 19: // ArrowProjectile — Vefects NS_Arrow_Projectile. Mirrors Behavior_ArrowProjectile.ush.
+            {
+                constexpr auto NumLayers   = 3;
+                constexpr auto LayerGlow   = 0;
+                constexpr auto LayerBright = 1;
+
+                constexpr auto Life  = 10.0f;
+                constexpr auto Drift = 0.01f;
+
+                const auto Layer = ((InSeed % NumLayers) + NumLayers) % NumLayers;
+
+                if (InAge > Life)
+                {
+                    Out.Velocity = FVector3f::ZeroVector;
+                    Out.Color    = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.Size     = FVector2f(0.0f, 0.0f);
+                    Out.Scale    = FVector3f(0.0f, 0.0f, 0.0f);
+                    break;
+                }
+
+                if (Layer == LayerGlow)
+                {
+                    Out.Position = FVector3f(-5.0f, 0.0f, 0.0f);
+                    Out.Velocity = FVector3f::ZeroVector;
+                    Out.Color    = FLinearColor(1.0f, 0.775394f, 0.257f, 0.3f);
+                    Out.Size     = FVector2f(120.0f, 120.0f);
+                    Out.Dynamic  = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag   = 0;
+                    break;
+                }
+
+                Out.Velocity = FVector3f(Drift, 0.0f, 0.0f);
+                Out.Dynamic  = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+                Out.VisTag   = 11;
+
+                if (Layer == LayerBright)
+                {
+                    Out.Position = FVector3f(-20.1693f, 0.0f, 0.0f);
+                    Out.Color    = FLinearColor(1.0f, 0.558341f, 0.102242f, 0.5f);
+                    Out.Size     = FVector2f(20.0f, 50.0f);
+                    break;
+                }
+
+                Out.Position = FVector3f(-66.0904f, 0.0f, 0.0f);
+                Out.Color    = FLinearColor(0.06f, 0.0470123f, 0.0270472f, 0.2f);
+                Out.Size     = FVector2f(35.0f, 150.0f);
                 break;
             }
             case 0: // Gravity — constant downward accel, integrate, tint warm->dark over life.
