@@ -67,14 +67,22 @@ back to Unaligned, so `CkParticles_DefaultOutput` seeds a valid Z-up pair rather
 **VisTags 0–4 are the SHARED set — nothing behavior-specific may be added to it**, because every template
 carries it. A recreation whose source draws through renderers the shared set cannot express declares its own
 on its **cadence row** instead (`FCk_ParticlesRendererSpec` + `FCk_ParticlesTemplateSpec::RendererOverrides`
-in the naming header): either a `Mesh` renderer carrying one named generated mesh drawn with one named CkUsf
-look, or a `VelocityAlignedSprite` drawn with a look. Row renderers bind their look master **explicitly**
+in the naming header). **Four kinds** cover what a recreation needs beyond the shared set: `Mesh` (one named
+generated mesh drawn with one named CkUsf look; `Scale` + `Orientation` apply), and the three sprite quads
+Niagara distinguishes by its alignment/facing pair — `CameraFacingSprite`, `VelocityAlignedSprite` and
+`CustomFacingSprite`. Any kind may additionally declare a `SubImageSize` flipbook grid, which makes its
+renderer read `Particles.SubImageIndex` over an X×Y sheet; a row that declares none divides nothing.
+Row renderers bind their look master **explicitly**
 (`bOverrideMaterials` / `Material`) rather than through `User.SpriteMaterial`, because one user parameter
 cannot carry several materials — so a behavior drawing ONLY through row renderers keeps
 `Get_BehaviorLookName` at `NAME_None`. They are emitted for that row's template only. Behavior 7 (Slash)
 owns 5–9: four crescent-mesh slash layers and one spark sprite. Behaviors 18/19 (the Vefects projectile
-pair) share 10–11 on one cadence row — and 19 additionally binds a look, because its one camera-facing
-layer draws on the shared VisTag 0 where `User.SpriteMaterial` is the only material channel.
+pair) share 10–11 on one cadence row; every Vefects port from 20 up owns its own contiguous band above
+those — 12–14 (20), 15–27 (21), 28–36 (22), 37–49 (23), 50–61 (24), 62–70 (25), 71–76 (26), 77–83 (27),
+84–90 (28), 91–96 (29), 97–104 (30), 105–112 (31), 113–118 (32), 119–130 (33), 131–146 (34) and
+147–156 (35) — and 19
+additionally binds a look, because its one camera-facing layer draws on the shared VisTag 0 where
+`User.SpriteMaterial` is the only material channel.
 **The roster-wide ceiling is DERIVED** — `ck::particles::Get_RosterVisTag_Max()` walks the
 cadence table on top of `SharedRendererVisTag_Max`; tests read it and never restate a literal.
 Ordering consequence: **generate the CkUsf looks BEFORE rebuilding templates** — row renderers resolve their
@@ -119,6 +127,22 @@ Shipped recipes:
 | [`NS_BasicAttack.md`](Cookbook/NS_BasicAttack.md) | Vefects `NS_BasicAttack` + the `M_VFX_DisAdd_{Slash01,Slash02,Slash04,Pan_Wind02,Part04}` set | `Slash` (7) |
 | [`NS_Gunshot_Projectile.md`](Cookbook/NS_Gunshot_Projectile.md) | Vefects `NS_Gunshot_Projectile` + `M_VFX_DisAdd_{Part01,Part04}` | `GunshotProjectile` (18) |
 | [`NS_Arrow_Projectile.md`](Cookbook/NS_Arrow_Projectile.md) | Vefects `NS_Arrow_Projectile` + the same two instances | `ArrowProjectile` (19) |
+| [`NS_Fire.md`](Cookbook/NS_Fire.md) | Vefects `NS_Fire` + `M_VFX_DisAdd_{Part01,Part04,Flames01}` | `FireBurst` (20) |
+| [`NS_FireBall_Hit.md`](Cookbook/NS_FireBall_Hit.md) | Vefects `NS_FireBall_Hit` + 12 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `FireBallHit` (21) |
+| [`NS_Gunshot_Hit.md`](Cookbook/NS_Gunshot_Hit.md) | Vefects `NS_Gunshot_Hit` + 8 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `GunshotHit` (22) |
+| [`NS_Arrow_Cast.md`](Cookbook/NS_Arrow_Cast.md) | Vefects `NS_Arrow_Cast` + 12 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `ArrowCast` (23) |
+| [`NS_Arrow_Hit.md`](Cookbook/NS_Arrow_Hit.md) | Vefects `NS_Arrow_Hit` + 10 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `ArrowHit` (24) |
+| [`NS_Bomb_Spawn.md`](Cookbook/NS_Bomb_Spawn.md) | Vefects `NS_Bomb_Spawn` + 8 `M_VFX_DisAdd_*` instances + `MI_VFX_Bomb` | `BombSpawn` (25) |
+| [`NS_PickupLoop.md`](Cookbook/NS_PickupLoop.md) | Vefects `NS_PickupLoop` + 6 `M_VFX_DisAdd_*` instances | `PickupLoop` (26) |
+| [`NS_HealLoop.md`](Cookbook/NS_HealLoop.md) | Vefects `NS_HealLoop` + 7 `M_VFX_DisAdd_*` instances | `HealLoop` (27) |
+| [`NS_BuffLoop.md`](Cookbook/NS_BuffLoop.md) | Vefects `NS_BuffLoop` + 7 `M_VFX_DisAdd_*` instances | `BuffLoop` (28) |
+| [`NS_DebuffLoop.md`](Cookbook/NS_DebuffLoop.md) | Vefects `NS_DebuffLoop` + 6 `M_VFX_DisAdd_*` instances | `DebuffLoop` (29) |
+| [`NS_PickupCast.md`](Cookbook/NS_PickupCast.md) | Vefects `NS_PickupCast` + 8 `M_VFX_DisAdd_*` instances | `PickupCast` (30) |
+| [`NS_HealCast.md`](Cookbook/NS_HealCast.md) | Vefects `NS_HealCast` + 8 `M_VFX_DisAdd_*` instances | `HealCast` (31) |
+| [`NS_DebuffCast.md`](Cookbook/NS_DebuffCast.md) | Vefects `NS_DebuffCast` + 6 `M_VFX_DisAdd_*` instances + `SM_VFX_Slash02` | `DebuffCast` (32) |
+| [`NS_Gunshot_Cast.md`](Cookbook/NS_Gunshot_Cast.md) | Vefects `NS_Gunshot_Cast` + 10 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `GunshotCast` (33) |
+| [`NS_FireBall_Cast.md`](Cookbook/NS_FireBall_Cast.md) | Vefects `NS_FireBall_Cast` + 15 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `FireBallCast` (34) |
+| [`NS_Lightning_Cast.md`](Cookbook/NS_Lightning_Cast.md) | Vefects `NS_Lightning_Cast` + 10 `M_VFX_DisAdd_*` instances | `LightningCast` (35) |
 
 ---
 
@@ -156,7 +180,7 @@ system is spawned. **Velocity-integrating** behaviors (Gravity) work in either s
 env `CK_PARTICLES_REBUILD_TEMPLATES=1` + toolbox `--test --test-pattern RebuildTemplateAssets`). With
 `CK_WITH_PARTICLES=1` this runs the full asset pipeline — procedural textures → VFX master materials
 (`CkParticles_MaterialGenerator.cpp`) → carrier meshes (`CkParticles_MeshGenerator.cpp`, MeshDescription-built) →
-BOTH templates (`PS_CkParticles_Template` continuous + `PS_CkParticles_Template_Burst`) — entirely from C++
+every cadence-table template — entirely from C++
 (`CkParticles_TemplateBuilder.cpp`):
 
 - GPU emitter, **local space**, generous **fixed bounds** (`±3000`) so self-driving behaviors render at the spawn
@@ -186,10 +210,23 @@ Idempotent — re-run any time; it overwrites in place.
 **`Generate VFX Textures`** (same subsystem; also called by `Create Template System`) bakes a `UTexture2D` library
 under `/CkFoundation/CkParticles/Textures/` **purely from noise/SDF/radial math** (`CkParticles_TextureGenerator.cpp`)
 — no imported art: `Glow`, `Flare` (star), `Smoke` (FBM + erosion in A), `Electric` (ridged), `Streak`, `Ring` (SDF),
-`SweepStreak`, `TileNoise`, and the NS_BasicAttack stand-in set `SlashArc01` / `SlashArc02` / `WindBand` /
-`SoftParticle` / `SparkStreak`, whose constants come from characteristics MEASURED off the corpus PNGs
-(profiles, streak counts, falloff exponents — never copied pixels; see that recipe's §7).
-They are **grayscale** (so Particle Color tints them), `SRGB=false`, uncompressed (`TC_VectorDisplacementmap`).
+`SweepStreak`, `TileNoise`; the NS_BasicAttack stand-in set `SlashArc01` / `SlashArc02` / `WindBand` /
+`SoftParticle` / `SparkStreak`; and the Vefects hit/impact set `SoftParticleBright` / `SoftParticleFine` /
+`RingUneven` / `RingFlare` / `StarFour` / `LightStrip` / `Cloud04` / `Cloud05` / `TileNoiseCoarse` /
+`TileNoiseBanded` / `ImpactStar`; and the arrow/bomb set `StarFourTight` / `StarFourSplit` / `WindBandMid`; and the idle-loop set's single
+addition, `ArrowChevron` — the library's only POLYGONAL mask, an SDF over a measured quadrilateral; and the
+cast set's single addition, `LensSheet` — the only 2x2 atlas in the library that is a plain decaying puff
+rather than a directional burst; and the attack-cast set's single addition, `LightningSheet` — the only atlas
+whose four frames are INDEPENDENT paintings rather than one shape stepping, so its frame index reseeds the
+field instead of advancing it.
+Their constants come from characteristics MEASURED off the corpus PNGs
+(profiles, streak counts, falloff exponents, band splits — never copied pixels; see each recipe's §7).
+
+Three of them are not plain masks, and the **kind** decides that (`ECk_VfxTextureKind`): `Mask` is the
+512² greyscale default; `MaskSheet` lays the same out as a 2×2 flipbook of 256² frames (`WindSheet`,
+`ImpactSheet`), read by a row renderer that declares a matching `SubImageSize`; `ColorLut` is a 512×2 sRGB
+colour ramp sampled along u (`LutWhite` — the family's inert white default — and `LutRainbow`).
+Masks are **grayscale** (so Particle Color tints them), `SRGB=false`, uncompressed (`TC_VectorDisplacementmap`).
 
 `M_CkParticles_VfxMaster` samples a **`BaseTexture`** parameter × **Particle Color**, additive + unlit (sampler type
 auto-picked via `GetSamplerTypeForTexture`). Per-effect looks come from swapping `BaseTexture` — material instances or
@@ -211,7 +248,13 @@ a per-component override (`UNiagaraComponent::SetVariableMaterial`) bound to a `
 
 **Behavior roster (the `BehaviorId` a caller passes):** Gravity=0, Swirl=1, Explosion=2, Fire=3, Fireworks=4,
 Galaxy=5, Beam=6, Slash=7, Nova=8, MuzzleFlash=9, ImpactBurst=10, Tracer=11, SmokePlume=12, SparksBurst=13,
-GroundRing=14, LightningStrike=15, AuraSwirl=16, LightningRange=17, GunshotProjectile=18, ArrowProjectile=19.
+GroundRing=14, LightningStrike=15, AuraSwirl=16, LightningRange=17, GunshotProjectile=18, ArrowProjectile=19,
+FireBurst=20, FireBallHit=21, GunshotHit=22, ArrowCast=23, ArrowHit=24, BombSpawn=25, PickupLoop=26,
+HealLoop=27, BuffLoop=28, DebuffLoop=29, PickupCast=30, HealCast=31, DebuffCast=32, GunshotCast=33,
+FireBallCast=34, LightningCast=35.
+
+`FireBurst` (20) is the Vefects `NS_Fire` re-port and is unrelated to `Fire` (3), the procedural rising column
+that predates the cookbook — the two only share a source-asset name.
 
 The roster SIZE has one definition — `ck::particles::NumBehaviors`, exposed to BP/AS as
 `UCk_Utils_Particles_UE::Get_NumBehaviors()`. Tests and gyms iterate that; never re-state a maximum id.
@@ -232,18 +275,35 @@ texture path unchanged for behaviors that use it. CkParticles deliberately does 
 generated-master path convention is mirrored in the naming header and a test asserts it still resolves.
 
 **Template cadence is a TABLE, not code.** `ck::particles::Get_TemplateSpecs()` lists one row per cadence
-(asset name, loop duration, particle lifetime, burst count; count 0 = the continuous spawn-rate stack) and the
-editor builder emits one template per row:
+(asset name, loop duration, particle lifetime, burst count, renderer overrides, spawn rate) and the editor
+builder emits one template per row. A row may declare a burst, a continuous rate, or BOTH; declaring
+neither is the legacy seed template, whose cadence comes from the emitter factory defaults:
 
-| Template | Loop | Lifetime | Burst | Used by |
+| Template | Loop | Lifetime | Spawn | Used by |
 |---|---|---|---|---|
 | `PS_CkParticles_Template` | — | — | continuous | the default roster |
 | `PS_CkParticles_Template_Burst` | 1.2 s | 1.2 s | 96 | the multi-particle one-shots (10, 13, 14, 15) |
 | `PS_CkParticles_Template_Single` | 1.0 s | 1.1 s | 1 | one-sprite, one-second-loop recreations (17) |
 | `PS_CkParticles_Template_Slash` | 1.0 s | 0.5 s | 19 | Vefects `NS_BasicAttack`'s exact cadence (7); declares 5 row renderers |
 | `PS_CkParticles_Template_ProjectileTrio` | 10 s | 10 s | 3 | Vefects `NS_Gunshot_Projectile` + `NS_Arrow_Projectile` (18, 19) — a Loop-Once 10 s SYSTEM; declares 2 row renderers |
+| `PS_CkParticles_Template_FireBurst` | 2 s | 1 s | 10 | Vefects `NS_Fire` (20) — declares 3 row renderers, one of them a 2×2 sub-UV sheet |
+| `PS_CkParticles_Template_FireBallHit` | 2 s | 1.34 s | 47 | Vefects `NS_FireBall_Hit` (21) — declares 13 row renderers |
+| `PS_CkParticles_Template_GunshotHit` | 2 s | 0.65 s | 40 | Vefects `NS_Gunshot_Hit` (22) — declares 9 row renderers |
+| `PS_CkParticles_Template_ArrowCast` | 2 s | 1.55 s | 42 | Vefects `NS_Arrow_Cast` (23) — declares 13 row renderers, one a 2×2 sub-UV sheet |
+| `PS_CkParticles_Template_ArrowHit` | 2 s | 0.55 s | 34 | Vefects `NS_Arrow_Hit` (24) — declares 12 row renderers, one custom-facing |
+| `PS_CkParticles_Template_BombSpawn` | 2 s | 1.05 s | 28 | Vefects `NS_Bomb_Spawn` (25) — declares 9 row renderers, one an opaque prop mesh |
+| `PS_CkParticles_Template_PickupLoop` | 2 s | 4 s | rate 27.5/s | Vefects `NS_PickupLoop` (26) — declares 6 row renderers |
+| `PS_CkParticles_Template_HealLoop` | 1 s | 2 s | rate 34.5/s | Vefects `NS_HealLoop` (27) — declares 7 row renderers |
+| `PS_CkParticles_Template_BuffLoop` | 2 s | 2 s | rate 48/s | Vefects `NS_BuffLoop` (28) — declares 7 row renderers |
+| `PS_CkParticles_Template_DebuffLoop` | 2 s | 2 s | rate 36/s | Vefects `NS_DebuffLoop` (29) — declares 6 row renderers, one a 2x2 sub-UV sheet |
+| `PS_CkParticles_Template_PickupCast` | 2 s | 1.05 s | 22 | Vefects `NS_PickupCast` (30) — declares 8 row renderers, every one camera-facing |
+| `PS_CkParticles_Template_HealCast` | 2 s | 1.55 s | 17 **+ rate 50/s** | Vefects `NS_HealCast` (31) — the first row to carry BOTH spawn stacks; 8 row renderers, one a velocity-aligned 2x2 sheet |
+| `PS_CkParticles_Template_DebuffCast` | 2 s | 2 s | 30 **+ rate 65/s** | Vefects `NS_DebuffCast` (32) — 6 row renderers, one a 2x2 sheet and one the claw mesh |
+| `PS_CkParticles_Template_GunshotCast` | 2 s | 1.55 s | 40 | Vefects `NS_Gunshot_Cast` (33) — 12 row renderers, THREE of them 2x2 sheets |
+| `PS_CkParticles_Template_FireBallCast` | 2 s | **2.05 s** | 50 | Vefects `NS_FireBall_Cast` (34) — 16 row renderers; the only row whose lifetime exceeds its loop |
+| `PS_CkParticles_Template_LightningCast` | 2 s | 1.55 s | 30 **+ rate 40/s** | Vefects `NS_Lightning_Cast` (35) — 10 row renderers; the row rate is a PEAK the behavior thins |
 
-Rows verified 2026-08-01 against `ck::particles::Get_TemplateSpecs()` and against `Add_BurstEmitterStack`,
+Rows verified 2026-08-01 against `ck::particles::Get_TemplateSpecs()` and against `Add_SpawnEmitterStack`,
 which reads `LoopDuration` / `ParticleLifetime` / `BurstCount` straight off the spec — so the table above is
 the generator's input, not a transcription of it. A row may additionally declare its own renderers (see the
 VisTag paragraph above). The first three templates were regenerated 2026-08-01 and each carries a non-zero

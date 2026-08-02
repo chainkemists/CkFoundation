@@ -4,15 +4,17 @@ Schema and evidence-tag conventions: [README.md](README.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTED (2026-08-02) — `GunshotCast`, BehaviorId 33. `[HUMAN-VERIFY]` open.**
 
-No behavior id is allocated, no `.ush` exists, no look exists, no cadence row exists, no mesh or texture
-has been baked, and nothing has ever been rendered. Sections 7+ are reserved for the implementation
-session.
+`Behavior_GunshotCast.ush` + `ExecuteStage_CPU` case 33, cadence row
+`PS_CkParticles_Template_GunshotCast` (2.0 s / 1.55 s / burst 40), twelve row renderers on VisTags
+119–130, one new CkUsf look (`LightStripDisAddSprite`), no new texture and no new mesh. Gym pair staged in
+VfxExamples. §12's human A/B walk has NOT been performed — it belongs to the campaign's inspection stage.
 
-**This system carries the batch's two hardest capability gaps: THREE sub-UV flipbook emitters, and one
-emitter whose Loop Behavior is `Once` with its own 0.3 s loop duration while the other thirteen loop
-infinitely at 1.0 s.** Neither is expressible today. Read §6.7 before estimating.
+**Both capability gaps this sheet flagged are CLOSED:** sub-UV flipbooks landed with C4 (Phase 1) and the
+`Life Cycle Mode = Self` emitter needs no window at all, because it only ever BURSTS — a burst-only
+one-shot fires exactly once per system activation, which is exactly what a template burst does. See §6.1
+and §14.1.
 
 ---
 
@@ -268,9 +270,11 @@ Two curves recur; naming them once avoids re-transcription:
 
 - `Lifetime Mode = Random` via `Random Range Float`; `Lifetime Min/Max = 0.1 / 0.2`.
 - `Sphere Location`: **radius 100**, `Non Uniform Scale = (0.1, 0.1, 0.1)`,
-  **`Hemisphere X = true`** (an override), `Surface Only = false`, `Offset = (0,0,0)`. Net: a flat
-  disc-ish half-volume 10 units thick in Y and Z, 100 in X `[inferred from radius × non-uniform
-  scale]`.
+  **`Hemisphere X = true`** (an override), `Surface Only = false`, `Offset = (0,0,0)`. Net: a uniformly
+  filled **10-unit half-ball opening down +X** — the scale is the same 0.1 on all three axes, so it shrinks
+  the sphere rather than flattening it. *(Corrected 2026-08-02 `[P2-E2]`: the itemization was right and the
+  derived reading — "a flat disc 10 units thick in Y and Z, 100 in X" — was wrong. Layers 6 and 12 read the
+  identical module correctly.)*
 - `Add Velocity` = **`Random Range Vector` min `(2000, -100, -100)` max `(7000, 100, 100)`** — a hard
   +X cone.
 - `Sprite Size Mode = Random Non-Uniform`, **min (20, 130) / max (25, 150)**.
@@ -404,8 +408,10 @@ Two curves recur; naming them once avoids re-transcription:
 
 - **`Emitter State`: Loop Behavior `Once`, Loop Duration Mode `Fixed`, Loop Duration `0.3`.**
   Every other emitter in the system is Infinite / 1.0. §6.7 #2.
-- `Lifetime Mode = Random` via `Random Range Float` **min 0.2 / max 0.4** (the module's own
-  `Lifetime Min/Max = 0.3 / 0.6` are inert — the dynamic input wins).
+- `Lifetime Mode = Random` ⇒ the module's own **`Lifetime Min 0.3 / Max 0.6` DRIVES**; the
+  `Random Range Float` override (0.2 / 0.4) sits on the unselected Direct-Set pin and is INERT.
+  *(Corrected 2026-08-02: this bullet still carried the pre-[P0-D2] override-wins reading, contradicting its
+  own `[corpus-v3]` header two lines above.)*
 - `Sphere Location`: **radius 100**, `Non Uniform Scale = (0.1, 0.1, 0.1)`,
   **`Hemisphere X = true`**, `Surface Only = false`.
 - `Add Velocity` = **`Random Range Vector` min `(500, -50, -50)` max `(4000, 50, 50)`**.
@@ -478,21 +484,21 @@ Two curves recur; naming them once avoids re-transcription:
 
 ### 6.1 Cadence row
 
-**New row `[corpus-v3]`, per [P0-D3]: loop 2.0 s, particle lifetime 1.5 s, burst 33.**
-Loop = the system's `Once` loop duration (*was 1.0 s, from the inert emitter rows*); lifetime = max
-resolved emitter lifetime (the three Wind layers); burst = the §2 count. Every shorter layer hides
-past its own lifetime (NS_BasicAttack §8's rule).
+**New row `[corpus-v3]`, per [P0-D3] + [P0-D5]: loop 2.0 s, particle lifetime 1.55 s, burst 40.**
+Loop = the system's `Once` loop duration (*was 1.0 s, from the inert emitter rows*); lifetime = max over
+layers of (spawn delay + resolved lifetime) — the three Wind layers spawn on the 0.05 s beat and live 1.5 s
+(*corrected 2026-08-02 `[P2-E1]`: the sheet derived 1.5 from the lifetime alone, the [P2-D5a] class*);
+burst = the §2 count plus the 7 one-shot `Sparkles_01`. Every shorter layer hides past its own lifetime
+(NS_BasicAttack §8's rule).
 
-**The 7 one-shot `Sparkles_01` particles are NOT in the 33.** Options, decide explicitly:
+**Option (a) RATIFIED (2026-08-02): the 7 `Sparkles_01` fold in, burst 40, and it is EXACT rather than an
+approximation.** That emitter is `Life Cycle Mode = Self / Loop Once`, but it carries only a
+`Spawn Burst Instantaneous` and no spawn rate — so it fires exactly once per system activation, which is
+precisely what one template burst does. The gym's re-arm re-activates the whole component, so it re-fires
+there too. No window, no deviation. (The same reasoning applies to `Big_Star` in NS_Lightning_Cast and to
+the five `Once` emitters of NS_FireBall_Cast; recorded once as §14.1.)
 
-- **(a)** Fold them in — burst 40. `[corpus-v3]` the re-fire cost is smaller than the sheet assumed:
-  the SYSTEM is `Loop Once`, so on a single firing every layer including `Sparkles_01` fires exactly
-  once; the deviation only shows on the gym's looping re-arm.
-- **(b)** Drop them and record the deviation. Loses the fine gold spark spray.
-
-Either way it is a **recorded deviation, not a silent one** — §6.7 #2.
-
-Layer index = **`Seed % 33`** (or 40 under option (a)). Partition under option (b):
+Layer index = **`Seed % 40`**. Partition:
 
 | Layer band | Source emitter | Count |
 |---|---|---|
@@ -509,6 +515,7 @@ Layer index = **`Seed % 33`** (or 40 under option (a)). Partition under option (
 | 24–29 | `Wind_02` | 6 |
 | 30–31 | `Wind_03` | 2 |
 | 32 | `Impact_01` | 1 |
+| 33–39 | `Sparkles_01` | 7 |
 
 Per-layer spawn delay (0 / 0.04 / 0.05 s) handled as in NS_BasicAttack: hide while `Age < delay`, run
 the curves on `(Age - delay) / layerLifetime`.
@@ -638,4 +645,228 @@ Nothing here needs ribbons, GPU simulation, collision, events, light renderers, 
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures — ZERO new bakes
+
+Every paint this system needs was measured and baked by an earlier batch, and every reuse below was checked
+against §4.3's own texture identity before being taken (same source asset ⇒ same stand-in):
+
+| Source texture | Existing stand-in | Reached through |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | `PartDisAdd01` |
+| `T_VFX_Part_02` | `SoftParticleBright` | `PartDisAdd01Bright`, `PartDisAdd02` |
+| `T_VFX_Part_03` | `SoftParticleFine` | `PartDisAdd03Bright` |
+| `T_VFX_Part_04` | `SparkStreak` | `PartDisAdd04` |
+| `T_VFX_Star_01` | `StarFour` | `StarDisAdd01` |
+| `T_VFX_Wind_01` | `WindSheet` (2×2) | `WindDisAdd01` |
+| `T_VFX_Wind_02` | `WindBandMid` | `WindDisAdd02Mesh` |
+| `T_VFX_Impact_02` | `ImpactSheet` (2×2) | `ImpactDisAdd02` |
+| `T_VFX_LightStrip_01` | `LightStrip` | `LightStripDisAddSprite` |
+| `T_VFX_Noise_02` | `TileNoise` | the `WindDisAdd01` dissolve + distortion slots |
+| `T_VFX_Star_02` | — | **not needed**: its only consumer is the DISABLED `Star02` emitter |
+| `T_VFX_WhitePixel` | `LutWhite` | every instance's gradient map — inert by construction |
+
+The §4.3 "candidate reuse" guesses the sheet listed (`Flare` for the star, `Streak` for the light strip,
+`WindBand` for the wind band, `SoftParticle` for `T_VFX_Part_02`) were all **wrong**, and all four were
+already measured and rejected by NS_Gunshot_Hit §7 / NS_Arrow_Cast §7 in favour of the bakes above. Nothing
+was re-measured here; the identity is the source asset name, not a similarity judgement.
+
+---
+
+## 8. Meshes — ZERO new builds
+
+| Source mesh | Generated carrier | Notes |
+|---|---|---|
+| `SM_VFX_Spike01` | `SM_CkParticles_Spike` | the square pyramid, built for NS_FireBall_Hit |
+| `SM_VFX_Ring01` | `SM_CkParticles_Cylinder` | the open tube, built for NS_Arrow_Cast; radius 100, Z 0..50, 32 segments, `u = frac(0.75 − angle/360)`, `v = 1` at Z = 0 — §3.2's measurement exactly |
+
+`SM_VFX_Plane01` is **not** used by this system (§2), so no card carrier is involved.
+
+---
+
+## 9. The behavior — `Behavior_GunshotCast.ush` + `ExecuteStage_CPU` case 33
+
+One burst of 40, partitioned by `Seed % 40` over §6.1's table. Everything else is per-layer transcription.
+
+### 9.1 The three spawn beats
+
+`Glow_01`/`Glow_02` open at t = 0, `Glow_03` at 0.04, the other eleven at 0.05. A layer is hidden while
+`Age < Delay` and runs its curves on `(Age − Delay) / LayerLifetime` — the NS_BasicAttack §5 mechanism,
+unchanged.
+
+### 9.2 The half-ball spawn shape
+
+`Sparkles_02`, `Spike01` and `Sparkles_01` all draw from a Sphere Location whose Non Uniform Scale is a flat
+`(0.1, 0.1, 0.1)` with `Hemisphere X`, so the shared helper is `Dir = RandDir(Seed)` with `Dir.x = abs(Dir.x)`
+scaled by `Radius × 0.1 × cbrt(Rand(Seed, 7))` — the cube root is what fills the volume uniformly instead of
+piling every particle at the centre.
+
+### 9.3 Sub-UV: three flipbooks, two of them declaring a frame past the sheet
+
+`Wind_02` declares `Start 0 / End 3` (four steps over the life); `Wind_03` and `Impact_01` declare
+`Start 0 / End 4` on the same four-frame sheet. All three run Niagara's **Random** mode, so the start frame
+is per-particle and the run advances from it. The implementation is one helper taking the step count:
+
+```
+Start = floor(Rand(Seed, 6) * 4)
+SubImageIndex = fmod(Start + min(floor(t * Steps), Steps − 1), 4)
+```
+
+with `Steps = 4` for `Wind_02` and `5` for the other two. The fifth step therefore WRAPS back onto the start
+frame rather than sampling a frame that does not exist — recorded as §13.1.
+
+### 9.4 The two mesh layers
+
+`Spike01`'s source renderer faces **Velocity** while a row-declared mesh renderer draws with Facing Default,
+so the behavior writes `QuatFromZTo(normalize(V0))` — the carrier is built along +Z and the pyramid's apex
+lands down its own travel. `Wind_01` composes a static quarter-turn about Y (the pack authors rotations in
+TURNS) with a 0.3-turns-per-second spin about X, and folds the renderer's `(1, 1, 5)` mesh scale into
+`Scale.z` — the generated tube keeps `SM_VFX_Ring01`'s own 50-unit height, so applying the 5× in both places
+would draw it five times too long.
+
+### 9.5 What is NOT here
+
+No spawn rate, no `EmitterAge` read, no curl noise. Every source emitter bursts, so this is the batch's one
+port that stays on the pre-C5 shape; `RosterSanity`'s derived rule (a behavior may read the emitter clock
+only on a burst-AND-rate row) covers it, and the port's own test asserts the same thing by name.
+
+---
+
+## 10. Looks and renderers
+
+Twelve row renderers on VisTags **119–130**, one per distinct (material, quad kind) pair:
+
+| VisTag | Kind | Look | Source emitters |
+|---|---|---|---|
+| 119 | CameraFacingSprite | `PartDisAdd01` | `Glow_01`, `Glow_02`, `Glow_04` |
+| 120 | CameraFacingSprite | `PartDisAdd02` | `Glow_03` |
+| 121 | VelocityAlignedSprite | `PartDisAdd04` | `Sparkles_02` |
+| 122 | CameraFacingSprite | `PartDisAdd03Bright` | `Glow_05` |
+| 123 | Mesh `Spike` | `FlatAdd02` | `Spike01` |
+| 124 | VelocityAlignedSprite | **`LightStripDisAddSprite`** | `LightningStrip` |
+| 125 | CameraFacingSprite | `StarDisAdd01` | `Star01` |
+| 126 | Mesh `Cylinder` | `WindDisAdd02Mesh` | `Wind_01` |
+| 127 | CameraFacingSprite, 2×2 | `WindDisAdd01` | `Wind_02` |
+| 128 | VelocityAlignedSprite, 2×2 | `WindDisAdd01` | `Wind_03` |
+| 129 | VelocityAlignedSprite, 2×2 | `ImpactDisAdd02` | `Impact_01` |
+| 130 | CameraFacingSprite | `PartDisAdd01Bright` | `Sparkles_01` |
+
+**Eleven of the twelve looks already existed.** Rows 127 and 128 are the cookbook's first case of ONE look
+carried by TWO renderers — the source draws `M_VFX_DisAdd_Wind01` on both a billboarded and a
+velocity-aligned quad, and a renderer kind is a property of the renderer, not of the material.
+
+**The one new look, `LightStripDisAddSprite`, is not a new parameterization.** It is the same eleven values
+as the existing `LightStripDisAdd`; what differs is the Niagara USAGE flag. `LightStripDisAdd` was authored
+for the Arrow systems, which draw `M_VFX_DisAdd_LightStrip` on `SM_VFX_Plane01`, so it declares
+`_UsedWithNiagaraMeshParticles` alone — and a material whose sprite usage is unset falls back to the DEFAULT
+material on a sprite renderer rather than failing visibly. Two carriers therefore need two masters. Shared
+with NS_FireBall_Cast, whose `LightningStrip` is a sprite for the same reason.
+
+---
+
+## 11. Tests
+
+`Test_Particles_GunshotCastBehavior.cpp` (`CkTests.UnitTests.CkParticles.GunshotCastBehavior`) drives the CPU
+mirror directly — no Niagara, no RHI, no forked engine. It asserts:
+
+- **The cadence row**: loop 2.0, lifetime 1.55, burst 40, rate **0**, twelve renderers, two of them meshes,
+  four velocity-aligned, three declaring a 2×2 grid; and that the derived roster ceiling covers VisTag 130.
+- **The partition**: the layer table sums to 40, each of the forty slots draws through its own renderer, and
+  slot 40 wraps back onto slot 0.
+- **The beats**: every delayed layer is hidden one millisecond before its own beat, and both opening glows
+  are alive on the first frame.
+- **Emitter-clock independence**, by name: 1200 samples across three ages with the clock shifted 7.3 s must
+  be bit-identical. A burst-only row that started reading the clock would silently repartition.
+- **The three flipbooks**: the index never leaves 0..3, every particle sees all four frames, and every
+  particle's frame MOVES at some point in its life (the two End-Frame-4 sheets return to their start frame on
+  the last step, so "ended elsewhere" would be the wrong assertion).
+- **The mesh layers**: `Spike01`'s rotated +Z lands on its own velocity direction to within 1e-3, and
+  `Wind_01` spins, stretches along Z and drives the distortion channel.
+- **HDR**: `Glow_05` reaches 3 and `Impact_01` reaches 5 through the CPU mirror. Any clamp added between the
+  behavior and `Particles.Color` reds here.
+- **Anti-vacuity**: every one of the fourteen layers emits nonzero light somewhere in its life.
+- **Death**: no seed survives past the row's 1.55 s.
+
+`RosterSanity` covers the rest: `NumBehaviors` 36, the template route, the renderer-set invariants, and the
+roster-wide finite/renderable sweep.
+
+---
+
+## 12. Verification — A/B protocol
+
+Gym pair `GUNSHOT CAST` in VfxExamples (`Gym.VfxExamples.GunshotCast.{Ck,Original}`), spawn offset
+`(0, 0, 120)`, scale 1. Both sides re-arm together on completion, so the A/B is a synced replay from t = 0.
+In-PIE: `Ck_GymVfxExamples_RestartAll`.
+
+`[HUMAN-VERIFY]` — what to judge, in the order the effect happens. **Stand to the SIDE**: everything in this
+system aims down local +X.
+
+- (a) t = 0: two nested white-hot shells, 700 and 300 units, gone within a tenth of a second.
+- (b) t = 0.04: five 150-unit near-white flickers, alive for 50 ms only.
+- (c) t = 0.05: the main blast — an 800-unit dim shell, three small white-hot pips, and the single blue-white
+  IMPACT flash 133 units out, which should be the brightest thing on screen for about 100 ms.
+- (d) the +X spray: three fast streaks (2000–7000 u/s) and seven fine gold motes.
+- (e) the 800-unit lightning card, 354 units out along +X, at a tenth opacity.
+- (f) the long tail: a faint spinning tube travelling +X and eight wind puffs, all three wind layers fading in
+  by t ≈ 0.4 s and out by 1.55 s. This is the only part of the effect still alive after a quarter second.
+- (g) the flipbooks: the wind puffs and the impact flash should CHANGE SHAPE as they age, not hold one frame.
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **`End Frame = 4` on a four-frame sheet** (`Wind_03`, `Impact_01`). §6.7's `[unresolved]` is resolved by
+   implementation choice, not by evidence: the run takes five steps and the fifth wraps back onto the start
+   frame. `[inferred]` The alternative reading — clamp, holding the last frame for the final 40 % of life —
+   is equally consistent with the corpus. The visible difference is one frame at the end of a 1.5 s (or
+   0.2 s) life on nine of forty particles.
+2. **`CamOffset = 50` on `M_VFX_DisAdd_Part03_Bright`** is not wired (§6.7 #7). `Glow_05` sorts against
+   nearby geometry differently from the source. Pre-existing family gap, shared with every port that uses
+   this instance.
+3. **`Opacty_DepthFade`** (10 / 20 / 30) is not wired. Known pre-existing CkUsf gap
+   (NS_Lightning_Range §13.4).
+4. **`Core_Intensity` / `Core_Power` / `Color_Speed_X`** (§6.7 #6) are not in the family look's signature.
+   `Color_Speed_X = −0.3` on `Wind02` is the one that is NOT at an inert value: the source's colour sampler
+   pans and the recreation's does not.
+5. **World-space vs local-space** does not apply here — every emitter in this system is `LocalSpace: true`,
+   matching the template. This is the only Cast port in the batch without that deviation.
+6. **`Star02` is not recreated** — the source emitter is DISABLED. Its values are transcribed in §5 layer 9
+   so the omission stays a decision.
+7. **`Wind_02`'s spin on a velocity-aligned quad**: `Wind_03` and `Impact_01` randomize `Sprite Rotation`,
+   which on a velocity-aligned renderer is a roll about the motion axis rather than a screen-space spin. The
+   behavior writes it either way; whether Niagara consumes it on that renderer kind is not asserted.
+
+---
+
+## 14. Reusable lessons
+
+1. **A `Life Cycle Mode = Self` emitter that only BURSTS needs no window.** The whole point of C5's spawn
+   phase is telling two populations apart on one template; an emitter with no spawn rate has one population,
+   fires once per activation, and folds into the row's burst count exactly. Check for a `SpawnRate` module
+   before reaching for a window — three of this batch's `Self` emitters (`Sparkles_01` here, `Big_Star` in
+   NS_Lightning_Cast, the five `Once` emitters of NS_FireBall_Cast) needed nothing.
+2. **A look is bound to a RENDERER KIND, not just to a material.** `_UsedWithNiagaraSprites` and
+   `_UsedWithNiagaraMeshParticles` are separate UMaterial usage flags, and a miss falls back to the default
+   material rather than failing loudly. When a source draws the same `M_VFX_*` instance on a sprite in one
+   system and a mesh in another, that is TWO generated masters — check the flag before assuming a reuse.
+3. **One look, two renderers is legal and sometimes required.** A row may declare the same `LookName` twice
+   under different kinds. Consolidating renderers by material alone would have collapsed `Wind_02` and
+   `Wind_03` onto one quad and lost the velocity alignment.
+4. **A "flat" Non Uniform Scale is still a scale.** `(0.1, 0.1, 0.1)` on a Sphere Location shrinks the radius
+   tenfold; reading it as an axis-flattener produced a spawn volume ten times too long in X (§5 layer 3,
+   corrected `[P2-E2]`). The give-away is that the same triple appears on emitters the sheet read correctly.
+5. **Derive the row lifetime from `delay + life`, not from `life`.** [P0-D5] again; this sheet's 1.5 would
+   have killed all three wind layers 50 ms early (`[P2-E1]`).
+6. **Never assert a ROUNDED restatement of a curve key — assert the corpus value at the sample point.**
+   This port's first gate failed on exactly that: `Impact_01`'s blue opens at 5, so the test asserted
+   `> 4.9` — but it sampled 0.5 ms in, and that curve loses 4.67 across the first 9.4 % of its life, so the
+   true value there is **4.875984**. The bar was not merely imprecise, it was wrong in the dangerous
+   direction: "roughly the key" silently accepts a sample taken after a steep ramp has started, so the
+   assertion was measuring nothing it named. The fix asserts the derived value at BOTH ends — the exact key
+   at t = 0 (proving nothing clamps HDR) and the exact fallen value 0.5 ms later (proving the ramp runs) —
+   which a constant-head implementation now fails. **A tolerance is only defensible when it is smaller than
+   the smallest key delta in the curve it guards** (here 1e-4 against 0.045).
+7. **A self-check must enumerate what it did NOT reproduce.** This batch's self-check claimed to have
+   "re-run every test assertion"; it had reproduced the structural ones (partitions, windows, thinning,
+   sub-UV, strobe, lifetimes) and evaluated no colour curve at all — which is where the one defect was.
+   The cheap fix is to make the reproduction parse its constants OUT OF THE SHIPPED SOURCE rather than
+   re-transcribing them, so it also catches code-vs-belief drift instead of only re-deriving the belief.
