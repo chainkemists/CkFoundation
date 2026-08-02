@@ -36,7 +36,7 @@ class CKASSETEXPORTER_API FCk_CascadeExporter
 {
 public:
     // InOutputDir: when set, writes <AssetName>.ckexport/.txt into that directory instead of next to the asset.
-    static auto ExportParticleSystem (UParticleSystem* InSystem, const FString& InOutputDir = FString{}, ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_CascadeExportResult;
+    static auto ExportParticleSystem (UParticleSystem* InSystem, const FString& InOutputDir = FString{}, ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_CascadeExportResult;
     static auto ExportParticleSystems(const TArray<UParticleSystem*>& InSystems) -> TArray<FCk_CascadeExportResult>;
 
 private:

@@ -100,9 +100,9 @@ namespace ck::asset_exporter
 
                 InSection.AddMenuEntry(
                     "ExportNiagara_JsonAndText",
-                    LOCTEXT("ExportNiagara_Label", "Export Niagara System to JSON && Text"),
+                    LOCTEXT("ExportNiagara_Label", "Export Niagara System to JSON"),
                     LOCTEXT("ExportNiagara_Tooltip",
-                        "Export selected Niagara Systems (emitters, module stacks, renderers) to .json and .txt next to the asset"),
+                        "Export selected Niagara Systems (emitters, module stacks, renderers) to a .ckexport file next to the asset"),
                     FSlateIcon(),
                     FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                     {

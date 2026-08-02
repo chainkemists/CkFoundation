@@ -34,7 +34,7 @@ public:
     static auto
     ExportStateTree(
         UStateTree* InStateTree,
-        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_StateTreeExportResult;
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_StateTreeExportResult;
 
     static auto
     ExportStateTrees(

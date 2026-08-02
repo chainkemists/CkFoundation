@@ -30,7 +30,7 @@ public:
     static auto
     ExportDataAsset(
         UDataAsset* InDataAsset,
-        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_DataAssetExportResult;
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_DataAssetExportResult;
 
     static auto
     ExportDataAssets(

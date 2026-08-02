@@ -33,7 +33,7 @@ public:
     static auto
     ExportUserDefinedEnum(
         UUserDefinedEnum* InEnum,
-        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_UserDefinedEnumExportResult;
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_UserDefinedEnumExportResult;
 
     static auto
     ExportUserDefinedEnums(

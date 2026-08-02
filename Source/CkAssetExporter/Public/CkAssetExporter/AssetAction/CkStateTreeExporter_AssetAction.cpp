@@ -113,9 +113,9 @@ auto
 
             InSection.AddMenuEntry(
                 "ExportStateTree_JsonAndText",
-                LOCTEXT("ExportStateTree_Label", "Export StateTree to JSON && Text"),
+                LOCTEXT("ExportStateTree_Label", "Export StateTree to JSON"),
                 LOCTEXT("ExportStateTree_Tooltip",
-                    "Export selected State Trees to .json and .txt files next to the asset"),
+                    "Export selected State Trees to a .ckexport file next to the asset"),
                 FSlateIcon(),
                 FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                 {

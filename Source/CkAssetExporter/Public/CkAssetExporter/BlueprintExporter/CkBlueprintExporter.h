@@ -42,7 +42,7 @@ public:
     static auto
     ExportBlueprint(
         UBlueprint* InBlueprint,
-        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_BlueprintExportResult;
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_BlueprintExportResult;
 
     static auto
     ExportBlueprints(

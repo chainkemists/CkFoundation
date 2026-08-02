@@ -38,7 +38,7 @@ public:
     static auto
     ExportBehaviorTree(
         UBehaviorTree* InBehaviorTree,
-        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_BehaviorTreeExportResult;
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_BehaviorTreeExportResult;
 
     static auto
     ExportBehaviorTrees(
