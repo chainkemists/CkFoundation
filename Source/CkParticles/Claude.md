@@ -92,7 +92,8 @@ owns 5–9: four crescent-mesh slash layers and one spark sprite. Behaviors 18/1
 pair) share 10–11 on one cadence row; every Vefects port from 20 up owns its own contiguous band above
 those — 12–14 (20), 15–27 (21), 28–36 (22), 37–49 (23), 50–61 (24), 62–70 (25), 71–76 (26), 77–83 (27),
 84–90 (28), 91–96 (29), 97–104 (30), 105–112 (31), 113–118 (32), 119–130 (33), 131–146 (34) and
-147–156 (35), 157–163 (36, the last of them the ribbon emitter's) and 164–166 (37) — and 19
+147–156 (35), 157–163 (36, the last of them the ribbon emitter's), 164–166 (37), 167–174 (38)
+and 175–184 (39) — and 19
 additionally binds a look, because its one camera-facing layer draws on the shared VisTag 0 where
 `User.SpriteMaterial` is the only material channel.
 **The roster-wide ceiling is DERIVED** — `ck::particles::Get_RosterVisTag_Max()` walks the
@@ -157,6 +158,8 @@ Shipped recipes:
 | [`NS_Lightning_Cast.md`](Cookbook/NS_Lightning_Cast.md) | Vefects `NS_Lightning_Cast` + 10 `M_VFX_DisAdd_*` instances | `LightningCast` (35) |
 | [`NS_FireBall_Projectile.md`](Cookbook/NS_FireBall_Projectile.md) | Vefects `NS_FireBall_Projectile` + 5 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `FireBallProjectile` (36) |
 | [`NS_Bomb_Projectile.md`](Cookbook/NS_Bomb_Projectile.md) | Vefects `NS_Bomb_Projectile` + `M_VFX_DisAdd_{Part01,Trail01}` + `MI_VFX_Bomb` | `BombProjectile` (37) |
+| [`NS_BuffCast.md`](Cookbook/NS_BuffCast.md) | Vefects `NS_BuffCast` + 8 `M_VFX_DisAdd_*` instances | `BuffCast` (38) |
+| [`NS_Lightning_Muzzle.md`](Cookbook/NS_Lightning_Muzzle.md) | Vefects `NS_Lightning_Muzzle` + 9 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `LightningMuzzle` (39) |
 
 ---
 
@@ -234,7 +237,11 @@ rather than a directional burst; and the attack-cast set's single addition, `Lig
 whose four frames are INDEPENDENT paintings rather than one shape stepping, so its frame index reseeds the
 field instead of advancing it; and the projectile-trail set's single addition, `TileNoiseSparse` — the only
 noise in the library with a hard black FLOOR (42.8% of it is exactly zero), so a dissolve driven by it clears
-in patches rather than eroding everywhere at once.
+in patches rather than eroding everywhere at once; and the event-ribbon set's three, `LinearRamp` — the only
+texture that is a TRANSCRIPTION rather than a stand-in, because `T_VFX_Gradient_02` measures as exactly
+`1 - u` — plus `LightningBolt` and `LightningBand`, the first paints whose whole structure is carried by
+MEASURED PROFILES (a wandering centre line, a per-row peak and width, a cross-section, a band shape) rather
+than by a fitted closed form.
 Their constants come from characteristics MEASURED off the corpus PNGs
 (profiles, streak counts, falloff exponents, band splits — never copied pixels; see each recipe's §7).
 
@@ -267,7 +274,8 @@ Galaxy=5, Beam=6, Slash=7, Nova=8, MuzzleFlash=9, ImpactBurst=10, Tracer=11, Smo
 GroundRing=14, LightningStrike=15, AuraSwirl=16, LightningRange=17, GunshotProjectile=18, ArrowProjectile=19,
 FireBurst=20, FireBallHit=21, GunshotHit=22, ArrowCast=23, ArrowHit=24, BombSpawn=25, PickupLoop=26,
 HealLoop=27, BuffLoop=28, DebuffLoop=29, PickupCast=30, HealCast=31, DebuffCast=32, GunshotCast=33,
-FireBallCast=34, LightningCast=35, FireBallProjectile=36, BombProjectile=37.
+FireBallCast=34, LightningCast=35, FireBallProjectile=36, BombProjectile=37, BuffCast=38,
+LightningMuzzle=39.
 
 `FireBurst` (20) is the Vefects `NS_Fire` re-port and is unrelated to `Fire` (3), the procedural rising column
 that predates the cookbook — the two only share a source-asset name.
@@ -320,6 +328,8 @@ neither is the legacy seed template, whose cadence comes from the emitter factor
 | `PS_CkParticles_Template_LightningCast` | 2 s | 1.55 s | 30 **+ rate 40/s** | Vefects `NS_Lightning_Cast` (35) — 10 row renderers; the row rate is a PEAK the behavior thins |
 | `PS_CkParticles_Template_FireBallProjectile` | 10 s | 10 s | 15 **+ rate 408/s** | Vefects `NS_FireBall_Projectile` (36) — 6 row renderers + a RIBBON emitter at 100 points/s carrying the mirrored trail pair |
 | `PS_CkParticles_Template_BombProjectile` | **2.5 s** | 2.5 s | 4 | Vefects `NS_Bomb_Projectile` (37) — 2 row renderers + a ribbon emitter whose 17-point BURST is placed by arc length, not by time |
+| `PS_CkParticles_Template_BuffCast` | 2 s | 1.5 s | 23 | Vefects `NS_BuffCast` (38) — 7 row renderers + a ribbon emitter bursting 301 EVENT samples across seven strands |
+| `PS_CkParticles_Template_LightningMuzzle` | 2 s | 0.6 s | 24 | Vefects `NS_Lightning_Muzzle` (39) — 9 row renderers, three of them meshes, + a ribbon emitter carrying the arc PAIR |
 
 Rows verified 2026-08-01 against `ck::particles::Get_TemplateSpecs()` and against `Add_SpawnEmitterStack`,
 which reads `LoopDuration` / `ParticleLifetime` / `BurstCount` straight off the spec — so the table above is
