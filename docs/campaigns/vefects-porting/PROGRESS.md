@@ -296,6 +296,30 @@ two Done claims against their cited artifacts.**
 - Next: batch H — ExplosionGround (40), GroundIce (41), ExplosionOmni (42), OmniIce (43),
   Bomb_Explosion (44) per [P4-D1]'s id allocation.
 
+## Phase 4 — batch H DONE; PHASE 4 CLOSED (2026-08-02)
+
+- Behaviors 40–44 committed (CkFoundation `cf4beec58`+`2a67466ac`+`341b48564`; CkTests
+  `461fafb5`). Palette twins share ALL math via one include (tables co-located — HLSL has no
+  fn pointers; ratified); twins' renderer-spec pointers compare equal by assertion; fire/ice
+  diffs classified color-only against the sidecars (88/86 lines).
+- **The batch-H red cycle, fully root-caused** (4 layers): (1) tests bucketed hidden particles
+  (default VisTag 0) at one instant — strengthened to while-alive sweeps with never-drawn
+  proofs; behavior untouched; (2) six mechanical type errors (double-FVector vs float
+  tolerances); (3) toolbox idle watchdog killed silent first-compile stalls — warm-server run
+  banked the FresnelBomb permutations (live 35/35); (4) the roster autotest kept 45 IMMORTAL
+  LOOPING systems alive across staggered frames (~2 min/frame, likely a DeltaSeconds feedback
+  into 400/s rate emitters) and its final red was harness-escalated CONNECTIVITY-PROBE warnings
+  in a 15-min window — all 45 assertions had passed. Fix: destroy-in-frame after validity
+  capture (the VfxExamples control: 58 systems, 12 s). Gate of record: **fresh-boot Particles
+  35/35 in 38 s**; VfxExamples 1/1 (**29 pairs**); 30 templates non-inert (four explosion rows
+  80–82 dual-emitter, Bomb 41).
+- **Follow-up queued (perf, non-blocking):** ~110–140 s frames with a few dozen live CkParticles
+  systems under a real RHI deserves a targeted measurement (suspect: unclamped DeltaSeconds
+  feeding rate emitters — a 130 s frame hands 130 s of spawn budget). Also still queued: the
+  mesh generator's regen-all churn; Cookbook/README.md index sweep at close.
+- **Ported: 28 of 29** (7, 17, 18–44). Phase 4 exit criteria VERIFIED. Next: Phase 5 —
+  Lightning_Hit (45), campaign close.
+
 ## Phase 4 — capabilities PARTIAL (2026-08-02): C8 + FresnelBomb authored, **C7 STOPPED on an engine fact**
 
 **The orchestrator owns build + lanes.** Nothing consumes any of this yet, so every lane gates on UNCHANGED
@@ -1394,6 +1418,125 @@ still derived (`Get_RosterVisTag_Max()` → 184).
 - **Adjacent finding (not acted on):** `Cookbook/README.md`'s recipe index stops at behavior 19 and
   has not been maintained since batch A. Adding only this batch's two rows would make it more
   misleading, not less; it wants one sweep across all 24 ports.
+
+## Phase 5 — NS_Lightning_Hit (45) AUTHORED (2026-08-02); orchestrator owns build + lanes — CLOSES THE PORT SET
+
+Behavior **45 LightningHit** implementation-complete in the tree. `NumBehaviors` 45 → 46; VisTags
+**225–240** plus the ribbon emitter's **241**; ceiling still derived (`Get_RosterVisTag_Max()` → 241).
+**Ported: 29 of 29.**
+
+### The integration proof: ZERO new assets
+
+No look, no texture bake, no mesh. All thirteen material instances and all three meshes were already
+carried, and every one was checked value-by-value against the sheet's §4/§3 before reuse (recipe §10
+carries the table). The two verified-inert differences are pre-existing and untouched: `PartDisAdd01`
+/ `PartDisAdd04` ship `DistortScale 0.1` against the family reference's 1.0 (dead branch —
+`Distortion_Intensity 0`, the batch-B adjacent finding) and `PartDisAdd04` ships `Gradient_Invert 0.5`
+against the Ring04 reference's 0 (inert under the white LUT — the Phase-1 exact-0.0 proof).
+`ExpGroundMarkDisAdd` IS this system's `Star04` instance; matching by INSTANCE rather than by name is
+what made the zero-new result a finding instead of an assumption.
+
+### Row — the widest in the cookbook
+
+| id | template | loop | lifetime | burst | rate | ribbon | renderers |
+|---|---|---|---|---|---|---|---|
+| 45 | `PS_CkParticles_Template_LightningHit` | 2.0 | 1.3 | **84** | — | burst 30 | 16 + 1 |
+
+### Capability inventory — every prior capability consumed, none added
+
+C1 (camera + custom-facing sprite kinds — 2 custom-facing ground quads), C3 + **C4** (two 2×2 atlases
+driving `SubImageIndex` in BOTH of Niagara's modes on one row), **C8** (`MeshScale` 0.8 on the bubble
+carrier; facing modes deliberately NOT mirrored — see the ruling below), **C10** (the arcs' curl),
+**C6a/[P3-D1]** (second emitter + seed bank + `RibbonIdBinding`, the fifth consumer), **[P3-G8]**
+(CDF inversion, used TWICE — the arcs and Lightning_02), **[P2-E7]** (burst-only `Self/Once` needs no
+window — six of the eight one-shots), **[P0-D2]/[P0-D7]** (lifetime rules), **[P0-D5]** (cadence
+formula), **[P0-D1]/[P0-D3]** (system-stack authority). **C2/C5/C11 unused** — the row declares no
+rate, so behavior 45 is asserted emitter-clock INDEPENDENT. **No new capability requirement surfaced;
+the phase charter's STOP was never reached.**
+
+### Rulings taken in-batch
+
+- **[P5-H1] the [P3-G6] class, second sighting.** §2's burst of 87 includes the two arc emitters' six
+  burst particles, which are RIBBON particles on the row's second emitter. Main burst is **84**
+  (81 sprite/mesh + Lightning_02's three solved points); the ribbon emitter carries **30**. Identical
+  error, identical two emitters, as NS_Lightning_Muzzle's §6.1.
+- **Facing modes are NOT portable across mesh axes.** The source's Spikes and LightningStrip
+  renderers face VELOCITY; Niagara's `Velocity` mode aligns mesh-local **+X** and every CkParticles
+  carrier is built along **+Z**, so mirroring the flag would point the pyramids broadside to their own
+  motion. Both are reproduced through the particle's own orientation with the renderer left at
+  `Default`, the NS_Lightning_Muzzle precedent for the identical Spikes emitter. **This also answers
+  NS_Bomb_Explosion §13.6's open question for the zero-velocity case:** LightningStrip adds no
+  velocity at all, so its authored `Initial Mesh Orientation` is the only thing that can win.
+- **The arcs are a TRANSCRIPTION.** `diff` of both `LightningArc` emitter blocks against
+  NS_Lightning_Muzzle's is **ZERO lines** with nothing normalized, so the branch is that port's
+  verbatim — same 13/17 split, same release times, same curl frequencies and measured field means.
+- **[P4-D2] does not apply**: `NS_Lightning_Hit` has no light renderer at all `[corpus]`. Recorded in
+  §13.3 so a reader comparing the family does not go looking for the clause.
+
+### Sheet corrections applied in place (all the ratified transcription / arithmetic / TOGGLE class)
+
+- **[P5-H1]** burst 87 → row burst 84 + ribbon 30 (above).
+- **[P5-H2]** §6.1's `t_k = 0.5(1 − sqrt(1 − k/2.5))` did not state where `k` starts; `k = i + 0.5` is
+  [P3-G8]'s midpoint convention and is what shipped.
+- **[P5-H3]** Sparkles_Stretched's `Non Uniform Scale (1, 0.2, 0.2)` is INERT
+  (`UseNonUniformScale = false`) — face value would have collapsed the streak cloud to a thin cigar.
+- **[P5-H4]** Star02's `(1, 0.2, 0.2)` is INERT for the same reason.
+- **[P5-H5]** Lightning_01's `Sphere Location` is `Surface Only = true` — the only one in the system.
+- **[P5-H6]** the Flames pair's `Surface Expansion Mode = Outside` is INERT (`Surface Only = false`).
+- **[P5-H7]** §6.2 said "6 distinct looks" beside a list of SEVEN.
+- **[P5-H8]** documentary: Sparkles' `Speed Limit 1000` is inert (`Clamp Velocity = false`).
+
+**Three of the six substantive corrections are TOGGLE reads** — the [P2-E5]/[P3-G4]/[P3-G5] class, now
+in five consecutive batches. A stored spawn-shape pin is worth nothing until its toggle is read.
+
+### Self-check numbers (Python, both sides transcribed SEPARATELY from the shipped files)
+
+- **GPU/CPU numeric-literal MULTISET difference 0** (862 GPU / 863 CPU); the single CPU-only literal
+  is the `case 45:` label, the established discount. The check CAUGHT one real defect on its first
+  run — an unused `CKP_LH_L02_POINTS` define, removed.
+- Brace / paren / bracket balance **0** on all seven new or edited code files.
+- **Self-diff audit PASSED, proven with `difflib` opcodes rather than eyeballed:**
+  `CkParticles_DataInterface.cpp` **+701 lines, ZERO deletions, ZERO replacements**; `Common.ush`
+  (+7) and `CkParticles_Behaviors.ush` (+2) pure insertions; the gym registry (+21) a pure insertion;
+  the naming header +58 with **ONE** replaced line (`NumBehaviors` 45 → 46) and `RosterSanity` with
+  **ONE** (the same bump). **Behaviors 0–44, every existing `.ush`, `DissolveAdd.ush`, every existing
+  look, texture bake, mesh surface and cadence row are byte-untouched.**
+- **Independent Python model of `ExecuteStage_CPU` case 45, re-running EVERY assertion in the shipped
+  test: 0 failures** (89 checks). Highlights: partition exact by VisTag
+  (2/2/20/1/10/6/5/3/1/1/1/1/5/1/5/20 = 84) with never-drawn **0** and inconsistent **0** on the
+  while-alive sweep; band sweep 1778 live samples, 0 out of band, 0 leaky hidden samples;
+  Lightning_02's solved releases **0.053 / 0.184 / 0.500** against the exact 0.052786 / 0.183772 /
+  0.5; the inverted lifetime range spans **0.5125 … 0.9795** inside [0.5, 1.0] (both ends reached);
+  sparkle strobe 3 peaks / 2 troughs with both plateaus at exactly 0; bolt start-frame set exactly
+  {0} and all four frames walked (LINEAR) against 4 distinct flame start frames (RANDOM); arc
+  release times monotone with **9 of 12** in the first window half and both ends at 0.00640 /
+  0.23880 against the exact 0.00632 / 0.23876; ribbon split **13 / 17**, one tag on the ribbon bank,
+  and **no** main-bank particle reaching the arc renderer over 5040 seeds; crack alpha 0.870250 at
+  its collapse key; strip alpha peak 0.299965; flames alpha peak 0.499887 and `distortion` exactly 10.
+
+**NOT reproduced by the self-check (stated per the batch-E lesson):** the template builder's ribbon
+renderer bindings and the seed-bank `Numeric::Add` wiring on the new ribbon row (asset facts, first
+observable at `RebuildTemplates`); whether the two CustomFacingSprite renderers on ONE row emit
+distinct materials as intended (an asset fact — this is the first row with two of that kind); the
+CkUsf look resolution for the fourteen reused masters at template build time; how a Niagara ribbon
+tessellates the arc pair; the `Get_RosterVisTag_Max()` walk as the BUILDER sees it; and every §12
+visual criterion. **No new asset is generated by this port, so the sandwich is NOT required.**
+
+### Expected gates (orchestrator's, all `--parallel 1 --discover-fresh --no-nullrhi --no-live`)
+
+Build; **`RebuildTemplates` is REQUIRED (a new row) and its FIRST run is expected to PASS** — this
+batch adds no look, so no master can be missing and the CkUsf sandwich is not needed. **31 templates
+non-inert** (`grep -ac ExecuteStage` non-zero), the new one by name
+(`PS_CkParticles_Template_LightningHit`). **It carries TWO emitters, so it should grep roughly DOUBLE
+the ~41 a single-emitter row carries — expect ~80–82, the band batches F/G/H's ribbon rows landed in.
+~41 means the ribbon emitter's behavior module did not attach and IS the [P3-D1] failure mode to STOP
+on.** **Particles 35 → 36**; **CkUsf 4/4** (unchanged — no new look); VfxExamples 1/1 → **30 pairs**.
+
+- `[HUMAN-VERIFY]` the pair is open, per [C-D8]; recipe §12 lists what to judge, in order, and its
+  row (h) names the one difference NOT to chase (the Raimbow layer's [P1-D1] LUT).
+- **Adjacent finding, still not acted on:** `Cookbook/README.md`'s recipe index stops at behavior 19
+  and now trails by eleven ports. It wants one sweep at campaign close, alongside VALIDATION.md's
+  full protocol.
 
 ## Decisions
 
