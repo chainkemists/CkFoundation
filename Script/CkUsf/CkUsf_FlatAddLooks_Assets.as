@@ -41,4 +41,23 @@ namespace CkUsf
 
         _Parameters.Add(CkUsf::Usf_Scalar(n"Brightness", 10.0));
     }
+
+    // M_VFX_DisAdd_Flat02 on a RIBBON renderer — the same instance, the same single Brightness delta, and a third
+    // master. The usage flags are per-master and independent: NS_Lightning_Muzzle draws this material on the spike
+    // pyramids AND on both LightningArc ribbons, and a master that declares only the sprite/mesh usages falls back
+    // to the engine default under a ribbon renderer. Same rule that produced LightStripDisAddSprite.
+    asset FlatAdd02Ribbon of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/FlatAdd.ush";
+        _UshFunctionName = n"CkUsf_Look_FlatAdd";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        _LookName        = n"FlatAdd02Ribbon";
+        _TwoSided        = true;
+
+        _UsedWithNiagaraRibbons = true;
+        _ParticleColor          = true;
+
+        _Parameters.Add(CkUsf::Usf_Scalar(n"Brightness", 10.0));
+    }
 }

@@ -981,6 +981,112 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
+    // T_VFX_Gradient_02 transcription — the shape, colour AND dissolve paint of the buff cast's sparkle trail, and
+    // the only texture in the library that is not a painting at all. Measured: it is the linear ramp 1 - u, constant
+    // in v to 1.4e-14, and the largest deviation from that closed form anywhere in the image is 0.0024 — under one
+    // 8-bit quantum, i.e. the difference between the source's u = X/511 sampling and this baker's (X + 0.5)/512.
+    // A ramp is functional CONFIG rather than art, so it is transcribed exactly, the same call Px_LutWhite made.
+    static auto Px_LinearRamp(float U, float /*V*/) -> FLinearColor
+    {
+        const float I = Saturate(1.0f - U);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Lightning_01 stand-in — the bolt strip the muzzle's beam plane wears, and the sparsest directional paint
+    // in the library: 87.9% of it is exactly black and every lit pixel sits in a 66-px corridor around u = 0.54.
+    //
+    // Measured off the corpus PNG: ONE filament spanning all 512 rows, whose centre WANDERS between u 0.513 and
+    // 0.568 (std 0.0150, spectrum dominated by the first two harmonics along v); whose peak brightness varies
+    // 0.067 to 0.712 with two bright stretches; and whose cross-section is a sharp core with a long tail (the
+    // normalized profile below, in u). All three are MEASURED PROFILES rather than fitted closed forms, the idiom
+    // Px_LightStrip established and Surface_SlashClaw scaled up — the paint has no closed form to fit.
+    //
+    // The one fitted constant is the 0.70 on the width: the measured widths are thresholded at 5% of full scale on
+    // rows whose peak varies, so they overstate the profile's own scale. 0.70 lands the global statistics — bake
+    // vs source mean 0.00694 / 0.00704, coverage above 0.05 0.0354 / 0.0357, black fraction 0.891 / 0.879, and a
+    // PIXELWISE correlation of 0.930.
+    static auto Px_LightningBolt(float U, float V) -> FLinearColor
+    {
+        constexpr float WidthScale = 0.70f;
+        constexpr float MeanWidth  = 17.9563f; // the mean of the width anchors below, in pixels
+
+        static const FCk_ProfileAnchor Centre[] =
+        {
+            {0.03125f, 0.5633f}, {0.09375f, 0.5613f}, {0.15625f, 0.5492f}, {0.21875f, 0.5318f},
+            {0.28125f, 0.5219f}, {0.34375f, 0.5215f}, {0.40625f, 0.5165f}, {0.46875f, 0.5322f},
+            {0.53125f, 0.5385f}, {0.59375f, 0.5417f}, {0.65625f, 0.5465f}, {0.71875f, 0.5350f},
+            {0.78125f, 0.5242f}, {0.84375f, 0.5459f}, {0.90625f, 0.5578f}, {0.96875f, 0.5567f},
+        };
+
+        static const FCk_ProfileAnchor Peak[] =
+        {
+            {0.03125f, 0.1685f}, {0.09375f, 0.1391f}, {0.15625f, 0.0874f}, {0.21875f, 0.2026f},
+            {0.28125f, 0.7120f}, {0.34375f, 0.5397f}, {0.40625f, 0.2827f}, {0.46875f, 0.2919f},
+            {0.53125f, 0.1402f}, {0.59375f, 0.1105f}, {0.65625f, 0.0670f}, {0.71875f, 0.2021f},
+            {0.78125f, 0.6025f}, {0.84375f, 0.0922f}, {0.90625f, 0.1007f}, {0.96875f, 0.0914f},
+        };
+
+        static const FCk_ProfileAnchor Width[] =
+        {
+            {0.03125f, 15.2f}, {0.09375f, 15.5f}, {0.15625f, 15.4f}, {0.21875f, 22.0f},
+            {0.28125f, 37.5f}, {0.34375f, 34.4f}, {0.40625f, 24.9f}, {0.46875f, 18.0f},
+            {0.53125f, 14.2f}, {0.59375f, 11.3f}, {0.65625f,  6.7f}, {0.71875f, 14.9f},
+            {0.78125f, 28.8f}, {0.84375f, 11.6f}, {0.90625f, 11.3f}, {0.96875f, 10.6f},
+        };
+
+        // Distance from the filament centre, in u, against the normalized brightness there.
+        static const FCk_ProfileAnchor CrossSection[] =
+        {
+            {0.0000f, 1.0000f}, {0.0078f, 0.7134f}, {0.0156f, 0.3277f}, {0.0234f, 0.1966f},
+            {0.0312f, 0.1348f}, {0.0391f, 0.0883f}, {0.0469f, 0.0541f}, {0.0547f, 0.0244f},
+            {0.0625f, 0.0062f}, {0.0703f, 0.0006f}, {0.0781f, 0.0000f},
+        };
+
+        const float C = Sample_Profile(V, Centre, UE_ARRAY_COUNT(Centre));
+        const float P = Sample_Profile(V, Peak,   UE_ARRAY_COUNT(Peak));
+        const float W = Sample_Profile(V, Width,  UE_ARRAY_COUNT(Width)) * WidthScale;
+
+        const float D = FMath::Abs(U - C) * (MeanWidth / FMath::Max(W, 1.0e-3f));
+        const float I = Saturate(P * Sample_Profile(D, CrossSection, UE_ARRAY_COUNT(CrossSection)));
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Lightning_02 stand-in — the DISSOLVE paint behind that same bolt, and the library's only horizontal
+    // band. Measured: symmetric about v = 0.5 (top-vs-flipped-bottom correlation 0.958), half-maximum between
+    // v 0.318 and 0.680, a long soft shoulder outside it that never quite reaches zero until the edges, and inside
+    // the band a SMOOTH low-frequency modulation (mean 0.5395, std 0.1344, no pixel above 0.8314) rather than
+    // grain — neighbouring columns correlate at 0.99 and columns an eighth of the image apart still at 0.77.
+    //
+    // The band is the measured v-profile verbatim; the modulation is the library's own Fbm at the coarsest tiling
+    // that reproduces the measured spread. Bake vs source: in-band mean 0.584 / 0.540, in-band std 0.140 / 0.134,
+    // maximum 0.814 / 0.831, global mean 0.226 / 0.223. The residual is correlation LENGTH — the bake's columns
+    // stay correlated further than the source's (0.85 vs 0.77 at a 64-px separation).
+    static auto Px_LightningBand(float U, float V) -> FLinearColor
+    {
+        constexpr float Plateau  = 0.5424f; // the measured in-band level the profile below is normalized against
+        constexpr float TilesU   = 6.0f;
+        constexpr float TilesV   = 4.0f;
+        constexpr int32 Octaves  = 2;
+        constexpr float ModDepth = 0.7f;
+
+        static const FCk_ProfileAnchor Band[] =
+        {
+            {0.01562f, 0.0000f}, {0.04688f, 0.0023f}, {0.07812f, 0.0095f}, {0.10938f, 0.0185f},
+            {0.14062f, 0.0334f}, {0.17188f, 0.0524f}, {0.20312f, 0.0786f}, {0.23438f, 0.1166f},
+            {0.26562f, 0.1772f}, {0.29688f, 0.3213f}, {0.32812f, 0.7619f}, {0.35938f, 0.9818f},
+            {0.39062f, 0.9474f}, {0.42188f, 0.9739f}, {0.45312f, 1.0237f}, {0.48438f, 1.0390f},
+            {0.51562f, 1.0047f}, {0.54688f, 0.9712f}, {0.57812f, 0.9794f}, {0.60938f, 1.0192f},
+            {0.64062f, 1.0596f}, {0.67188f, 0.7572f}, {0.70312f, 0.3213f}, {0.73438f, 0.1772f},
+            {0.76562f, 0.1166f}, {0.79688f, 0.0786f}, {0.82812f, 0.0524f}, {0.85938f, 0.0334f},
+            {0.89062f, 0.0185f}, {0.92188f, 0.0095f}, {0.95312f, 0.0023f}, {0.98438f, 0.0000f},
+        };
+
+        const float N = Fbm(U * TilesU + 5.3f, V * TilesV + 2.7f, Octaves, int32(TilesU));
+        const float I = Saturate(Sample_Profile(V, Band, UE_ARRAY_COUNT(Band)) * Plateau
+                               * (1.0f + ModDepth * (N - 0.5f) * 2.0f));
+        return FLinearColor(I, I, I, I);
+    }
+
     // ---- Bake one texture asset from a per-pixel function -----------------------------------------------------------
     using FPxFn = FLinearColor (*)(float, float);
 
@@ -1145,6 +1251,12 @@ namespace ck::particles_editor
             // One new bake: the sparse dissolve noise. The trail's SHAPE paint needed none — T_VFX_Wind_02 is
             // T_VFX_Wind_03 rolled 141 rows, which WindBandMid already carries.
             { TEXT("T_CkParticles_TileNoiseSparse"),    ECk_VfxTextureKind::Mask,      &Px_TileNoiseSparse },
+            // The Vefects event-ribbon paints (recipes NS_BuffCast.md §7, NS_Lightning_Muzzle.md §7). Three bakes:
+            // the library's first pure RAMP, which is a transcription rather than a stand-in, and the bolt strip and
+            // its dissolve band, which are the first paints whose structure lives entirely in measured PROFILES.
+            { TEXT("T_CkParticles_LinearRamp"),         ECk_VfxTextureKind::Mask,      &Px_LinearRamp      },
+            { TEXT("T_CkParticles_LightningBolt"),      ECk_VfxTextureKind::Mask,      &Px_LightningBolt   },
+            { TEXT("T_CkParticles_LightningBand"),      ECk_VfxTextureKind::Mask,      &Px_LightningBand   },
         };
 
         auto Ok = 0;

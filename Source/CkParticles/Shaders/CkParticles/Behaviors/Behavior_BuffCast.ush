@@ -1,0 +1,369 @@
+// /CkParticles/Behaviors/Behavior_BuffCast.ush — BehaviorId 38.
+//
+// Faithful re-port of Vefects NS_BuffCast. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_BuffCast.md — every number below is a source value from §2/§5, not a tuning.
+//
+// Ten emitters over a Loop-Once 2.0 s system: three coincident support glows, a rainbow lens ring, two
+// rising arrow streaks, two sparkle bursts, three shockwave rings — and the cookbook's first EVENT-SPAWNED
+// ribbon. PS_CkParticles_Template_BuffCast is 2.0 s loop / 1.5 s lifetime / burst 23, with a ribbon emitter
+// bursting 301 trail points.
+//
+// ---- The event collapse (C6c), consumed here for the first time ------------------------------------------
+//
+// The source's trail is not self-driven: `Sparkles_02` runs a `Generate Location Event` in EVERY-FRAME mode,
+// and every event spawns one ribbon particle that INHERITS the emitting sparkle's position and ribbon id and
+// then never moves (the handler passes Velocity through as an Output, not an Apply, and the emitter's own
+// Add Velocity from Point is disabled). A ribbon point is therefore a SAMPLE of the leader's trajectory,
+// taken at the instant the event fired and held for 0.2 s.
+//
+// A stateless behavior reproduces that by evaluating the leader's closed form at the sample time instead of
+// receiving it: trail point `Step` of strand `Strand` is the event the source's frame `Step` would have sent,
+// so it holds CkParticles_BuffCast_SparklePos(Strand, Step / 60) — the SAME function the sparkle layer draws
+// itself with. The 60 is the reference frame rate the source's per-frame emission is quoted at (recipe §13);
+// nothing else about the trail is frame-dependent.
+//
+// The two populations share a leader identity through the BURST SLOT rather than through the UniqueID: the
+// main emitter's slot 6+Strand and the ribbon emitter's strand index name the same sparkle, which is what
+// makes the trail sit ON a drawn sparkle. The cost is that the seven sparkles take the same seven paths on
+// every firing (recipe §13) — there is no cross-emitter particle identity that does not assume UniqueID
+// arithmetic the CPU mirror cannot verify.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 38) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_BC_BURST_SLOTS    23
+#define CKP_BC_LIFE          1.5
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2). 174 rides the row's
+// SECOND emitter, the ribbon one.
+#define CKP_BC_VIS_PART01    167
+#define CKP_BC_VIS_PART02    168
+#define CKP_BC_VIS_RAINBOW   169
+#define CKP_BC_VIS_ARROWS    170
+#define CKP_BC_VIS_STAR01    171
+#define CKP_BC_VIS_PART04    172
+#define CKP_BC_VIS_RING01    173
+#define CKP_BC_VIS_TRAIL     174
+
+// Sparkles_02 is the only emitter with a spawn beat, and it is also the trail's leader.
+#define CKP_BC_SPARKLE_DELAY  0.05
+#define CKP_BC_SPARKLE_SLOT      6
+#define CKP_BC_SPARKLE_COUNT     7
+#define CKP_BC_SPARKLE_SPEED 1000.0
+#define CKP_BC_SPARKLE_RADIUS  0.5
+
+// The trail. 43 steps at the reference 60 Hz cover the 0.7 s a sparkle can live; seven strands, one per
+// sparkle, separated by RIBBON ID (which rides MeshIndex).
+#define CKP_BC_TRAIL_STEPS      43
+#define CKP_BC_TRAIL_HZ       60.0
+#define CKP_BC_TRAIL_POINTS    301   // CKP_BC_TRAIL_STEPS * CKP_BC_SPARKLE_COUNT
+#define CKP_BC_TRAIL_LIFE      0.2
+#define CKP_BC_TRAIL_WIDTH    15.0
+
+FCkParticles_StageOutput CkParticles_BuffCast_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// Three of the four glow layers share one Scale Color (RGB flat, alpha linear to zero) and one size curve.
+float CkParticles_BuffCast_GlowFade(float T)
+{
+    return CkParticles_Key2(T, 0.0, 1.0, 1.0, 0.0);
+}
+
+float CkParticles_BuffCast_GlowGrow(float T)
+{
+    return CkParticles_Key3(T, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+}
+
+// A sparkle's own lifetime, drawn per SLOT so the trail and the sprite agree on which particle they describe.
+float CkParticles_BuffCast_SparkleLife(int LeaderSeed)
+{
+    return lerp(0.4, 0.7, CkParticles_Rand(LeaderSeed, 1));
+}
+
+// The leader trajectory the trail samples, and the position the sparkle sprite itself draws at.
+//
+// Sphere Location radius 0.5 gives the launch direction; Add Velocity from Point drives a CONSTANT 1000
+// units/s along it (its Random Range Float has Min = Max), and Scale Velocity brakes to a fifth at t = 0.2
+// and to zero at death. The position is that curve's exact integral, so it never depends on frame cadence.
+float3 CkParticles_BuffCast_SparklePos(int LeaderSeed, float LeaderAge)
+{
+    const float  Life = CkParticles_BuffCast_SparkleLife(LeaderSeed);
+    const float3 Dir  = CkParticles_RandDir(LeaderSeed);
+    const float  t    = saturate(LeaderAge / Life);
+
+    return Dir * CKP_BC_SPARKLE_RADIUS
+         + Dir * CKP_BC_SPARKLE_SPEED * (CkParticles_Int3(t, 0.2, 1.0, 0.2, 0.0) * Life);
+}
+
+// The trail branch. Runs on the RIBBON emitter's particles only.
+FCkParticles_StageOutput CkParticles_BuffCast_Trail(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.VisTag   = CKP_BC_VIS_TRAIL;
+    O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+
+    const int LocalSeed = CkParticles_LocalSeed(In.Seed);
+    const int Point     = ((LocalSeed % CKP_BC_TRAIL_POINTS) + CKP_BC_TRAIL_POINTS) % CKP_BC_TRAIL_POINTS;
+    const int Strand    = Point / CKP_BC_TRAIL_STEPS;
+    const int SampleStep = Point - Strand * CKP_BC_TRAIL_STEPS;
+
+    // One ribbon per sparkle: the source's handler applies the emitting particle's Ribbon ID, and the builder
+    // binds RibbonIdBinding to MeshIndex.
+    O.MeshIndex = Strand;
+
+    const int   LeaderSeed = CKP_BC_SPARKLE_SLOT + Strand;
+    const float LeaderAge  = float(SampleStep) / CKP_BC_TRAIL_HZ;
+
+    O.Position = CkParticles_BuffCast_SparklePos(LeaderSeed, LeaderAge);
+
+    // An event past the leader's own death was never sent.
+    if (LeaderAge > CkParticles_BuffCast_SparkleLife(LeaderSeed))
+    { return CkParticles_BuffCast_Hidden(O); }
+
+    // Burst at loop start, so the particle's own age IS the loop clock — which is what the source's
+    // Emitter.Age-indexed colour curve reads, and what the point's own 0.2 s window is measured against.
+    const float LoopTime  = In.Age;
+    const float SpawnTime = CKP_BC_SPARKLE_DELAY + LeaderAge;
+    const float PointAge  = LoopTime - SpawnTime;
+
+    if (PointAge < 0.0 || PointAge > CKP_BC_TRAIL_LIFE)
+    { return CkParticles_BuffCast_Hidden(O); }
+
+    // Color from Curve with CurveIndex linked to Emitter.Age, not to the particle's own age — every live
+    // trail point therefore carries the SAME colour at any instant, and the whole trail fades together.
+    O.Color = float4(
+        1.0,
+        CkParticles_Key3(LoopTime, 0.0, 0.708376,  0.416541, 0.341915, 1.0, 0.109462),
+        CkParticles_Key3(LoopTime, 0.0, 0.0466651, 0.416541, 0.109462, 1.0, 0.130136),
+        CkParticles_Key3(LoopTime, 0.0, 1.0, 0.119529, 1.0, 0.997283, 0.0));
+
+    // Ribbon width is ONE float read at Particles.SpriteSize's offset, i.e. Size.x. The y component takes the
+    // same value so a zero width cannot read as a live quad anywhere else.
+    const float Width = CKP_BC_TRAIL_WIDTH
+                      * CkParticles_Key2(saturate(PointAge / CKP_BC_TRAIL_LIFE), 0.0, 1.0, 1.0, 0.0);
+    O.Size = float2(Width, Width);
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_BuffCast(FCkParticles_StageInput In)
+{
+    if (CkParticles_IsRibbonSeed(In.Seed))
+    { return CkParticles_BuffCast_Trail(In); }
+
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // Burst UniqueIDs are sequential, so the modulo draws exactly the source's per-emitter counts. This row
+    // declares no spawn rate, so there is one population and no spawn phase to read.
+    const int Slot = ((In.Seed % CKP_BC_BURST_SLOTS) + CKP_BC_BURST_SLOTS) % CKP_BC_BURST_SLOTS;
+
+    // ---- Bomb_Glow_01/02/03: three coincident shells, identical but for colour, size and dissolve ----
+    if (Slot < 3)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_BuffCast_Hidden(O); }
+
+        const float t    = saturate(In.Age);
+        const float Grow = CkParticles_BuffCast_GlowGrow(t);
+        const float A    = CkParticles_BuffCast_GlowFade(t);
+
+        if (Slot == 0)
+        {
+            O.Color   = float4(1.0, 0.184475, 0.386429, 0.4 * A);
+            O.Size    = float2(500.0 * Grow, 500.0 * Grow);
+            O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+            O.VisTag  = CKP_BC_VIS_PART01;
+            return O;
+        }
+
+        if (Slot == 1)
+        {
+            O.Color  = float4(0.913099, 0.0193824, 0.130136, 0.4 * A);
+            O.Size   = float2(400.0 * Grow, 400.0 * Grow);
+            O.VisTag = CKP_BC_VIS_PART01;
+            return O;
+        }
+
+        O.Color   = float4(0.313989, 0.0, 0.00227652, 0.483 * A);
+        O.Size    = float2(200.0 * Grow, 200.0 * Grow);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BC_VIS_PART02;
+        return O;
+    }
+
+    // ---- Raimbow: the lens ring. Its Scale Color carries a SINGLE RGB key, so the tint is a flat half
+    // rather than a ramp, and it spins to a fixed random angle ----
+    if (Slot == 3)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_BuffCast_Hidden(O); }
+
+        const float t    = saturate(In.Age);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+        const float Tint = 0.913099 * 0.5;
+
+        O.Color    = float4(Tint, Tint, Tint, 0.1 * CkParticles_BuffCast_GlowFade(t));
+        O.Size     = float2(450.0 * Grow, 450.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_BC_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Arrow / BigArrow: the two rising chevrons. Both start a metre or so BELOW the cast point and
+    // climb, Arrow four times faster and with a size curve BigArrow does not carry at all ----
+    if (Slot == 4 || Slot == 5)
+    {
+        if (In.Age > CKP_BC_LIFE)
+        { return CkParticles_BuffCast_Hidden(O); }
+
+        const float t = saturate(In.Age / CKP_BC_LIFE);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.VisTag   = CKP_BC_VIS_ARROWS;
+
+        const float A = CkParticles_Key2(t, 0.0869303, 1.0, 1.0, 0.0);
+
+        if (Slot == 4)
+        {
+            const float3 V0 = float3(0.0, 0.0, 550.0);
+
+            O.Position = float3(0.0, 0.0, -119.316)
+                       + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.3, 0.05) * CKP_BC_LIFE);
+            O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.3, 1.0, 0.05);
+
+            O.Color = float4(
+                CkParticles_Key5(t, 0.0, 1.0,      0.0784787, 1.0,       0.283731, 1.0,       0.625415, 0.672443,  0.947781, 0.223228),
+                CkParticles_Key5(t, 0.0, 0.913099, 0.0784787, 0.501026,  0.283731, 0.0773835, 0.625415, 0.021219,  0.947781, 0.0),
+                CkParticles_Key5(t, 0.0, 0.584079, 0.0784787, 0.0559999, 0.283731, 0.025,     0.625415, 0.0168074, 0.947781, 0.116971),
+                A);
+
+            // Two size modules compose: a uniform curve and a non-uniform one that squeezes the quad's width
+            // to a fifth at spawn and stretches its length past the authored value by death.
+            const float Uniform = CkParticles_Key3(t, 0.0, 0.4, 0.1, 1.0, 1.0, 0.4);
+            O.Size = float2(170.0 * Uniform * CkParticles_Key2(t, 0.0, 0.2, 0.3, 0.7),
+                            170.0 * Uniform * CkParticles_Key2(t, 0.2, 1.0, 1.0, 1.2));
+            return O;
+        }
+
+        const float3 V0 = float3(0.0, 0.0, 150.0);
+
+        O.Position = float3(0.0, 0.0, -52.2087)
+                   + V0 * (CkParticles_Int3(t, 0.3, 1.0, 0.05, 0.05) * CKP_BC_LIFE);
+        O.Velocity = V0 * CkParticles_Key2(t, 0.0, 1.0, 0.3, 0.05);
+
+        O.Color = float4(
+            CkParticles_Key5(t, 0.0, 1.0,      0.0784787, 1.0,       0.283731, 1.0,       0.625415, 0.672443,  0.947781, 0.223228),
+            CkParticles_Key5(t, 0.0, 0.913099, 0.0784787, 0.489926,  0.283731, 0.0925239, 0.625415, 0.021219,  0.947781, 0.0),
+            CkParticles_Key5(t, 0.0, 0.584079, 0.0784787, 0.035,     0.283731, 0.0409999, 0.625415, 0.0168074, 0.947781, 0.116971),
+            A);
+
+        // No Scale Sprite Size module anywhere on this emitter — BigArrow holds its authored size for life.
+        O.Size = float2(150.0, 240.0);
+        return O;
+    }
+
+    // ---- Sparkles_02: the seven motes the trail is deposited behind. Everything per-particle here is drawn
+    // from the SLOT rather than the UniqueID, because the ribbon emitter names its leader the same way ----
+    if (Slot < CKP_BC_SPARKLE_SLOT + CKP_BC_SPARKLE_COUNT)
+    {
+        const float Aged = In.Age - CKP_BC_SPARKLE_DELAY;
+        const float Life = CkParticles_BuffCast_SparkleLife(Slot);
+
+        if (Aged < 0.0 || Aged > Life)
+        { return CkParticles_BuffCast_Hidden(O); }
+
+        const float t = saturate(Aged / Life);
+
+        O.Position = CkParticles_BuffCast_SparklePos(Slot, Aged);
+        O.Velocity = CkParticles_RandDir(Slot) * CKP_BC_SPARKLE_SPEED
+                   * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.2, 1.0, 0.0);
+
+        // Alpha is a single key — the sparkles do not fade, they shrink out.
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.0, 0.708376,  0.416541, 0.341915, 1.0, 0.109462),
+            CkParticles_Key3(t, 0.0, 0.0466651, 0.416541, 0.109462, 1.0, 0.130136),
+            1.0);
+
+        const float Base = lerp(40.0, 70.0, CkParticles_Rand(Slot, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        // Sprite Rotation Rate is 720 deg/s decaying to 0 across the life; the accumulated angle is that
+        // curve's exact integral in units of normalized life.
+        O.Rotation = CkParticles_Rand(Slot, 4) * 360.0
+                   + Life * 720.0 * (t - 0.5 * t * t);
+
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BC_VIS_STAR01;
+        return O;
+    }
+
+    // ---- Sparkles_01: the fast velocity-aligned streaks, thrown twice as hard as Sparkles_02 off a tenth
+    // of its radius and shortening to 0.6 of their length as they go ----
+    if (Slot < 20)
+    {
+        const float Life = lerp(0.2, 0.4, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_BuffCast_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Dir   = CkParticles_RandDir(In.Seed);
+        const float3 V0    = Dir * lerp(1300.0, 2000.0, CkParticles_Rand(In.Seed, 6));
+
+        O.Position = Dir * 0.1 + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.35, 0.05) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.35, 1.0, 0.05);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.0, 0.69869,   0.416541, 0.30758, 1.0, 0.109462),
+            CkParticles_Key3(t, 0.0, 0.0149999, 0.416541, 0.063,   1.0, 0.130136),
+            1.0);
+
+        const float Width  = lerp(35.0, 50.0, CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(80.0, 90.0, CkParticles_Rand(In.Seed, 12));
+        const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+
+        O.Size   = float2(Width * Grow, Length * Grow * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.6));
+        O.VisTag = CKP_BC_VIS_PART04;
+        return O;
+    }
+
+    // ---- Ring: three shockwaves, the only layer in the system whose dissolve channel ANIMATES and the only
+    // one carrying a Color.Scale Alpha below one ----
+    {
+        const float Life = lerp(0.3, 0.7, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_BuffCast_Hidden(O); }
+
+        const float t    = saturate(In.Age / Life);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+        const float Base = lerp(150.0, 160.0, CkParticles_Rand(In.Seed, 8));
+
+        O.Color = float4(
+            CkParticles_Key5(t, 0.0446725, 1.0,      0.216118, 1.0,       0.418956, 1.0,      0.814971, 0.672443, 0.988832, 0.223228),
+            CkParticles_Key5(t, 0.0446725, 0.913099, 0.216118, 0.502887,  0.418956, 0.501026, 0.814971, 0.021219, 0.988832, 0.0),
+            CkParticles_Key5(t, 0.0446725, 0.584079, 0.216118, 0.0561285, 0.418956, 0.056,    0.814971, 0.016807, 0.988832, 0.116971),
+            0.25 * CkParticles_Key3(t, 0.0, 0.0, 0.076064, 1.0, 1.0, 0.0));
+
+        O.Size     = float2(Base * Grow, Base * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, -0.325, 1.0, -0.5), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_BC_VIS_RING01;
+        return O;
+    }
+}
