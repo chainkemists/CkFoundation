@@ -57,11 +57,20 @@ namespace ck::pathnetwork
     // ----------------------------------------------------------------------------------------------------------------
 
     CKPATHNETWORK_API auto
+    Build_RouteGraphStaticData(
+        const FBuiltNetwork& InNetwork,
+        const FRouteCostPolicy& InCostPolicy)
+        -> TSharedPtr<const FRouteGraphStaticData>;
+
+    CKPATHNETWORK_API auto
     Build_RouteGraphSharedData(
         const FBuiltNetwork& InNetwork,
         const FVector& InStartLocation,
         const FVector& InGoalLocation,
-        const FRouteCostPolicy& InCostPolicy) -> TSharedPtr<FRouteGraphSharedData>;
+        const FRouteCostPolicy& InCostPolicy,
+        const TSharedPtr<const FRouteGraphStaticData>&
+            InStaticData = {})
+        -> TSharedPtr<FRouteGraphSharedData>;
 
     CKPATHNETWORK_API auto
     Search_RouteGraph(

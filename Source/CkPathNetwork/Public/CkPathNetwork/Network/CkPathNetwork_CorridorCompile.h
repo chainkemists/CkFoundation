@@ -7,6 +7,9 @@
 
 namespace ck::pathnetwork
 {
+    inline constexpr auto RibbonContainmentSampleSpacingCm = 10.0f;
+    inline constexpr auto RibbonContainmentToleranceCm = 2.0f;
+
     // Pure, world-free controls for compiling one contiguous on-ribbon route run. The compiler
     // preserves the selected source geometry, so large waypoint spacing cannot delete a corner.
     struct CKPATHNETWORK_API FCorridorCompileParams
@@ -18,12 +21,28 @@ namespace ck::pathnetwork
         bool _RampSideOffsetAtEnd = true;
     };
 
+    // Filled only when segment containment fails. The nearest ribbon sample separates a planar
+    // escape from a vertical navmesh projection mismatch without changing corridor behavior.
+    struct CKPATHNETWORK_API FRibbonContainmentFailure
+    {
+        FVector _Sample = FVector::ZeroVector;
+        FVector _ClosestRibbonPoint = FVector::ZeroVector;
+        int32 _SampleIndex = INDEX_NONE;
+        int32 _SampleCount = 0;
+        int32 _SpanIndex = INDEX_NONE;
+        int32 _EdgeId = INDEX_NONE;
+        float _Distance3D = 0.0f;
+        float _Distance2D = 0.0f;
+        float _VerticalDistance = 0.0f;
+        float _AllowedDistance = 0.0f;
+    };
+
     CKPATHNETWORK_API auto
     Is_PointInsideRibbonRun(
         const FBuiltNetwork& InNetwork,
         TConstArrayView<FRouteLegSpan> InSpans,
         const FVector& InPoint,
-        float InTolerance = 1.0f)
+        float InTolerance = RibbonContainmentToleranceCm)
         -> bool;
 
     CKPATHNETWORK_API auto
@@ -32,8 +51,9 @@ namespace ck::pathnetwork
         TConstArrayView<FRouteLegSpan> InSpans,
         const FVector& InFrom,
         const FVector& InTo,
-        float InSampleSpacing = 10.0f,
-        float InTolerance = 1.0f)
+        float InSampleSpacing = RibbonContainmentSampleSpacingCm,
+        float InTolerance = RibbonContainmentToleranceCm,
+        FRibbonContainmentFailure* OutFailure = nullptr)
         -> bool;
 
     // Compiles all adjacent on-ribbon spans together. Eligible corners receive bounded quadratic

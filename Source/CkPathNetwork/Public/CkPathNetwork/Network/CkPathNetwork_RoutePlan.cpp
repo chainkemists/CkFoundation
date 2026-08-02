@@ -1,8 +1,20 @@
 #include "CkPathNetwork_RoutePlan.h"
 
+#include "CkPathNetwork/CkPathNetwork_Stats.h"
 #include "CkPathNetwork/Settings/CkPathNetwork_ProjectSettings.h"
 
 #include "CkAStar/Algorithm/CkAStar_Search.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(
+    TEXT("PathNetwork::StaticAugmentation"),
+    STAT_CkPathNetwork_StaticAugmentation,
+    STATGROUP_CkPathNetwork);
+DECLARE_CYCLE_STAT(
+    TEXT("PathNetwork::EndpointOverlay"),
+    STAT_CkPathNetwork_EndpointOverlay,
+    STATGROUP_CkPathNetwork);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -133,7 +145,7 @@ namespace ck_pathnetwork_routeplan
 
     auto
     Build_LocalNetworkShortcuts(
-        FRouteGraphSharedData& InOutShared,
+        FRouteGraphStaticData& InOutShared,
         const FBuiltNetwork& InNetwork,
         const FRouteCostPolicy& InCostPolicy) -> void
     {
@@ -369,12 +381,12 @@ namespace ck_pathnetwork_routeplan
 
     auto
     FindOrAdd_OverlayPoint(
-        FRouteGraphSharedData& InOutShared,
+        FRouteGraphStaticData& InOutShared,
         const FRouteOverlayPoint& InCandidate) -> int32;
 
     auto
     Build_ComponentTransfers(
-        FRouteGraphSharedData& InOutShared,
+        FRouteGraphStaticData& InOutShared,
         const FBuiltNetwork& InNetwork,
         const FRouteCostPolicy& InCostPolicy) -> void
     {
@@ -941,7 +953,7 @@ namespace ck_pathnetwork_routeplan
 
     auto
     FindOrAdd_OverlayPoint(
-        FRouteGraphSharedData& InOutShared,
+        FRouteGraphStaticData& InOutShared,
         const FRouteOverlayPoint& InCandidate) -> int32
     {
         constexpr auto DedupeDistAlong = 1.0f;
@@ -974,7 +986,7 @@ namespace ck_pathnetwork_routeplan
 
     auto
     Merge_CandidatesIntoOverlay(
-        FRouteGraphSharedData& InOutShared,
+        FRouteGraphStaticData& InOutShared,
         const TArray<FRouteOverlayPoint>& InCandidates) -> void
     {
         for (const auto& Candidate : InCandidates)
@@ -1232,7 +1244,38 @@ namespace ck::pathnetwork
             InParams.Get_CornerSmoothingDistance());
         Tuning.Set_DesiredNavmeshClearance(
             InParams.Get_DesiredNavmeshClearance());
+        Tuning.Set_NavmeshResolvedRibbonTolerance(
+            InParams.Get_NavmeshResolvedRibbonTolerance());
         return Resolve_RouteCostPolicy(Tuning);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+    Build_RouteGraphStaticData(
+        const FBuiltNetwork& InNetwork,
+        const FRouteCostPolicy& InCostPolicy)
+        -> TSharedPtr<const FRouteGraphStaticData>
+    {
+        using namespace ck_pathnetwork_routeplan;
+
+        SCOPE_CYCLE_COUNTER(
+            STAT_CkPathNetwork_StaticAugmentation);
+
+        auto StaticData = MakeShared<FRouteGraphStaticData>();
+        if (InNetwork._Edges.IsEmpty()
+            || NOT Is_PolicyValid(InCostPolicy))
+        { return StaticData; }
+
+        Build_ComponentTransfers(
+            *StaticData,
+            InNetwork,
+            InCostPolicy);
+        Build_LocalNetworkShortcuts(
+            *StaticData,
+            InNetwork,
+            InCostPolicy);
+        return StaticData;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -1242,7 +1285,9 @@ namespace ck::pathnetwork
         const FBuiltNetwork& InNetwork,
         const FVector& InStartLocation,
         const FVector& InGoalLocation,
-        const FRouteCostPolicy& InCostPolicy)
+        const FRouteCostPolicy& InCostPolicy,
+        const TSharedPtr<const FRouteGraphStaticData>&
+            InStaticData)
         -> TSharedPtr<FRouteGraphSharedData>
     {
         using namespace ck_pathnetwork_routeplan;
@@ -1256,14 +1301,18 @@ namespace ck::pathnetwork
         if (NOT InputsAreValid)
         { return Shared; }
 
-        Build_ComponentTransfers(
-            *Shared,
-            InNetwork,
-            InCostPolicy);
-        Build_LocalNetworkShortcuts(
-            *Shared,
-            InNetwork,
-            InCostPolicy);
+        auto StaticData = InStaticData;
+        if (NOT StaticData.IsValid())
+        {
+            StaticData = Build_RouteGraphStaticData(
+                InNetwork,
+                InCostPolicy);
+        }
+        static_cast<FRouteGraphStaticData&>(*Shared) =
+            *StaticData;
+
+        SCOPE_CYCLE_COUNTER(
+            STAT_CkPathNetwork_EndpointOverlay);
         Merge_CandidatesIntoOverlay(
             *Shared,
             Gather_RouteEndpointCandidates(

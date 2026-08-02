@@ -21,6 +21,8 @@
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 #include "CkEcs/Tag/CkTag_EditorOnly.h"
 
+#include <HAL/IConsoleManager.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_SpawnEntity_HandleRequests);
@@ -32,6 +34,46 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_PendingReplicationRetry);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_BeginPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_EntityScript_EndPlay);
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_entity_script_spawn_trace
+{
+    static TAutoConsoleVariable<int32>
+        CVar_LogSpawnRequestVisits(
+            TEXT("ck.EntityScript.LogSpawnRequestVisits"),
+            0,
+            TEXT(
+                "Logs every EntityScript spawn-request visit with its class, "
+                "owner, new entity, request entity, frame, and disposition. "
+                "Diagnostic only; leave disabled during performance capture."),
+            ECVF_Default);
+
+    auto
+    LogVisit(
+        const TCHAR* InDisposition,
+        const FCk_Handle& InRequestEntity,
+        const FCk_Request_EntityScript_SpawnEntity&
+            InRequest)
+        -> void
+    {
+        if (CVar_LogSpawnRequestVisits
+                .GetValueOnGameThread()
+            <= 0)
+        { return; }
+
+        ck::ecs::Display(
+            TEXT(
+                "[EntityScript SpawnTrace] frame=[{}] disposition=[{}] "
+                "script=[{}] entity=[{}] owner=[{}] request=[{}]"),
+            GFrameCounter,
+            InDisposition,
+            InRequest.Get_EntityScriptClassArchetype(),
+            InRequest.Get_NewEntity(),
+            InRequest.Get_Owner(),
+            InRequestEntity);
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -54,6 +96,11 @@ namespace ck
             LifetimeOwner.Has_Any<FTag_DestroyEntity_Initiate, FTag_DestroyEntity_EndPlay,
                 FTag_DestroyEntity_Teardown, FTag_DestroyEntity_Await, FTag_DestroyEntity_Finalize>())
         {
+            ck_entity_script_spawn_trace::LogVisit(
+                TEXT("cancelled"),
+                InHandle,
+                InRequestFragment);
+
             ck::ecs::Verbose(TEXT("Cancelling EntityScript spawn of [{}] — lifetime owner [{}] is destroyed or "
                 "pending-destroy (owner cascade applied late)"),
                 InRequestFragment.Get_EntityScriptClassArchetype(), LifetimeOwner);
@@ -74,8 +121,18 @@ namespace ck
         // finish its own pipeline — these two tags are the true "construction in progress" markers.
         if (const auto& LifetimeOwner = InRequestFragment.Get_Owner();
             LifetimeOwner.Has_Any<FTag_EntityScript_ContinueConstruction, FTag_EntityScript_FinishConstruction>())
-        { return; }
+        {
+            ck_entity_script_spawn_trace::LogVisit(
+                TEXT("deferred"),
+                InHandle,
+                InRequestFragment);
+            return;
+        }
 
+        ck_entity_script_spawn_trace::LogVisit(
+            TEXT("execute"),
+            InHandle,
+            InRequestFragment);
         DoHandleRequest(InHandle, InRequestFragment);
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
         InHandle.Remove<MarkedDirtyBy>();

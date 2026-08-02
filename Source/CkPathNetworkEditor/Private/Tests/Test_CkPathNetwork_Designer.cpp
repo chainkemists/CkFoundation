@@ -55,6 +55,7 @@ namespace ck::pathnetwork_editor::designer::test
         RecommendedTuning.Set_CorridorWaypointSpacing(175.0f);
         RecommendedTuning.Set_CornerSmoothingDistance(90.0f);
         RecommendedTuning.Set_DesiredNavmeshClearance(55.0f);
+        RecommendedTuning.Set_NavmeshResolvedRibbonTolerance(12.0f);
         Preset._RecommendedFollowerTuning = RecommendedTuning;
         Preset._SortPriority = InSortPriority;
         return Preset;
@@ -479,6 +480,8 @@ bool FCk_PathNetworkEditor_Designer_SessionClearsPreviewCacheOnLifecycleReset_Te
         RecommendedTuning.Get_CornerSmoothingDistance(), 90.0f);
     TestEqual(TEXT("preset copies desired navmesh clearance"),
         RecommendedTuning.Get_DesiredNavmeshClearance(), 55.0f);
+    TestEqual(TEXT("preset copies post-nav ribbon tolerance"),
+        RecommendedTuning.Get_NavmeshResolvedRibbonTolerance(), 12.0f);
     TestTrue(
         TEXT("session previews in the editor world"),
         Session->Run_Preview());

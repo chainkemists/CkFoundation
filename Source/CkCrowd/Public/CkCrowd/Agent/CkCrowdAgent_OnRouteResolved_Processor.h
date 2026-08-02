@@ -27,6 +27,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadOnly<FFragment_PathNetworkFollower_Corridor>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
+            ck::TReadWrite<FFragment_CrowdAgent_PathTrouble>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -47,7 +48,8 @@ namespace ck
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_PathNetworkFollower_Corridor& InCorridor,
-            FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_PathTrouble& InPathTrouble) -> void;
     };
 }
 

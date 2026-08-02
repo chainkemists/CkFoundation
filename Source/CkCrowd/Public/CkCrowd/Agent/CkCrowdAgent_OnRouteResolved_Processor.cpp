@@ -12,6 +12,8 @@
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
+#include "HAL/PlatformTime.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_OnRouteResolved);
@@ -32,7 +34,8 @@ namespace ck
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
             const FFragment_PathNetworkFollower_Corridor& InCorridor,
-            FFragment_CrowdAgent_PathFollow& InPathFollow)
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_PathTrouble& InPathTrouble)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_OnRouteResolvedProc);
@@ -151,16 +154,32 @@ namespace ck
                 if (NOT IsPathPending)
                 { break; }
 
+                // The failed corridor persists. Without this guard the fallback would enqueue a
+                // fresh nav request every frame until OnPathResolved consumed one of them.
+                if (InHandle.Has<FTag_CrowdAgent_PathNetworkFallbackPending>())
+                { break; }
+
+                InPathTrouble._AgentLocation = InTransform.Get_Transform().GetLocation();
+                InPathTrouble._GoalLocation = InPathFollow.Get_ActiveGoal();
+                InPathTrouble._EventTimeSeconds = FPlatformTime::Seconds();
+                InPathTrouble._PathNetworkFailReason = Result.Get_FailReason();
+                InPathTrouble._NavigationStatus = ECk_Nav_PathStatus::Pending;
+                InPathTrouble._NavigationFailReason = ECk_Nav_PathFailReason::None;
+                InPathTrouble._HasEvent = true;
+                InPathTrouble._HadPathNetworkFailure = true;
+                InPathTrouble._UsedNavigationFallback = true;
+
                 auto NonConstHandle = InHandle;
-                NonConstHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
-                NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
-
-                UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
+                NonConstHandle.AddOrGet<FTag_CrowdAgent_PathNetworkFallbackPending>();
+                FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                     NonConstHandle,
-                    MakePayload(NonConstHandle));
+                    InParams,
+                    InPathFollow.Get_ActiveGoal());
 
-                ck::crowd::Warning(TEXT("CrowdAgent [{}] network route failed ({}) — PathPending → Idle"),
-                    InHandle, Result.Get_FailReason());
+                ck::crowd::Display(
+                    TEXT("CrowdAgent [{}] network route failed ({}) — trying CkNavigation fallback"),
+                    InHandle,
+                    Result.Get_FailReason());
                 break;
             }
             case ECk_PathNetwork_RouteStatus::None:

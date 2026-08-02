@@ -34,6 +34,8 @@ namespace ck_pathnetwork_utils
         const auto Spacing = InTuning.Get_CorridorWaypointSpacing();
         const auto Smoothing = InTuning.Get_CornerSmoothingDistance();
         const auto Clearance = InTuning.Get_DesiredNavmeshClearance();
+        const auto ResolvedRibbonTolerance =
+            InTuning.Get_NavmeshResolvedRibbonTolerance();
         return FMath::IsFinite(Multiplier) && Multiplier >= 1.0f
             && FMath::IsFinite(NearEndpointMultiplier)
             && (NearEndpointMultiplier == 0.0f || NearEndpointMultiplier >= 1.0f)
@@ -50,7 +52,10 @@ namespace ck_pathnetwork_utils
             && FMath::IsFinite(SideKeeping) && SideKeeping >= 0.0f && SideKeeping <= 0.9f
             && FMath::IsFinite(Spacing) && Spacing >= 50.0f
             && FMath::IsFinite(Smoothing) && Smoothing >= 0.0f && Smoothing <= 1000.0f
-            && FMath::IsFinite(Clearance) && Clearance >= 0.0f && Clearance <= 1000.0f;
+            && FMath::IsFinite(Clearance) && Clearance >= 0.0f && Clearance <= 1000.0f
+            && FMath::IsFinite(ResolvedRibbonTolerance)
+            && ResolvedRibbonTolerance >= 0.0f
+            && ResolvedRibbonTolerance <= 100.0f;
     }
 
     auto
@@ -73,6 +78,8 @@ namespace ck_pathnetwork_utils
         Tuning.Set_CorridorWaypointSpacing(InParams.Get_CorridorWaypointSpacing());
         Tuning.Set_CornerSmoothingDistance(InParams.Get_CornerSmoothingDistance());
         Tuning.Set_DesiredNavmeshClearance(InParams.Get_DesiredNavmeshClearance());
+        Tuning.Set_NavmeshResolvedRibbonTolerance(
+            InParams.Get_NavmeshResolvedRibbonTolerance());
         return Tuning;
     }
 }
@@ -616,6 +623,7 @@ auto
     Corridor._Network = ck::IsValid(Request.Get_Network())
         ? Request.Get_Network()
         : Params.Get_Network();
+    Corridor._NavQueryFilter = Request.Get_NavQueryFilter();
     auto& Result = Corridor._Result;
     Result._Status = ECk_PathNetwork_RouteStatus::Pending;
     Result._GoalLocation = Request.Get_GoalLocation();
@@ -663,14 +671,16 @@ auto
     const auto Spacing = InTuning.Get_CorridorWaypointSpacing();
     const auto Smoothing = InTuning.Get_CornerSmoothingDistance();
     const auto Clearance = InTuning.Get_DesiredNavmeshClearance();
+    const auto ResolvedRibbonTolerance =
+        InTuning.Get_NavmeshResolvedRibbonTolerance();
     const bool TuningIsValid = Is_PathNetworkFollowerTuningValid(InTuning);
     CK_ENSURE_IF_NOT(TuningIsValid,
         TEXT("Request_UpdateTuningAndReplan received invalid tuning "
              "(far/direct multiplier [{}], near multiplier [{}], network gap multiplier [{}], join max [{}], transfer max [{}], local shortcut max [{}], direct grace [{}], minimum direct savings [{}], "
-             "side [{}], spacing [{}], smoothing [{}], clearance [{}])"),
+             "side [{}], spacing [{}], smoothing [{}], clearance [{}], resolved ribbon tolerance [{}])"),
         Multiplier, NearEndpointMultiplier, NetworkGapMultiplier, JoinMaxDistance, TransferMaxDistance,
         LocalShortcutMaxDistance, DirectGraceDistance, DirectMinimumSavings,
-        SideKeeping, Spacing, Smoothing, Clearance)
+        SideKeeping, Spacing, Smoothing, Clearance, ResolvedRibbonTolerance)
     {}
     if (NOT TuningIsValid)
     { return InFollower; }

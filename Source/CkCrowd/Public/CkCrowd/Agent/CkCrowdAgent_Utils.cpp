@@ -38,6 +38,7 @@ auto
     InOwner.Add<ck::FFragment_CrowdAgent_BlockDetect>();
     InOwner.Add<ck::FFragment_CrowdAgent_PendingDisplacement>();
     InOwner.Add<ck::FFragment_CrowdAgent_NavMarkup>();
+    InOwner.Add<ck::FFragment_CrowdAgent_PathTrouble>();
     InOwner.Add<ck::FTag_CrowdAgent_NeedsSetup>();
     InOwner.Add<ck::FTag_CrowdAgent_Idle>();
 
