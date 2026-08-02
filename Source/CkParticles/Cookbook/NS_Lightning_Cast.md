@@ -4,12 +4,18 @@ Schema and evidence-tag conventions: [README.md](README.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTED (2026-08-02) — `LightningCast`, BehaviorId 35. `[HUMAN-VERIFY]` open.**
 
-No behavior `.ush`, no CPU mirror, no CkUsf look, no cadence row, no texture bake, no test, no gym
-station exists for this effect. Every number below is archaeology read out of the extracted corpus;
-nothing here has been compiled, generated, rendered, or looked at. Sections 7+ are reserved for the
-implementation session.
+`Behavior_LightningCast.ush` + `ExecuteStage_CPU` case 35, cadence row
+`PS_CkParticles_Template_LightningCast` (2.0 s / 1.55 s / burst 30 **+ rate 40/s**), ten row renderers on
+VisTags 147–156, **one** new CkUsf look (`LightningDisAdd02`) and **one** new texture bake
+(`T_CkParticles_LightningSheet`). Gym pair staged in VfxExamples. §12's human A/B walk has NOT been
+performed — it belongs to the campaign's inspection stage.
+
+**This port carries the cookbook's first NON-CONSTANT source spawn rate**, and the way a flat row rate is
+turned back into a falling one is the reusable result — see §9.2 and §14.1. §6.5's gaps 1 (camera-facing
+kinds), 2 (one template = one cadence) and 3 (sub-UV) are all closed; gap 5 (the Rainbow LUT) stays open
+under [P1-D1].
 
 ---
 
@@ -371,8 +377,11 @@ a horizontal "lens flare" streak that pinches shut.
 - Size: Random Uniform **30 … 100**
 - Spawn shape: `Sphere Location`, `Sphere Radius **0**` — every particle spawns at the origin
 - `Add Velocity from Point`: strength `Random Range Float 001` **350 … 500** — but from a
-  zero-radius sphere the direction is whatever the module produces at the origin
-  `[unresolved: the emitted direction for a radius-0 point source is not derivable from the corpus]`
+  zero-radius sphere the module has no `Position − Origin` to normalize, so it produces NO velocity.
+  *(Resolved 2026-08-02 by the NS_Arrow_Cast precedent: its `LightningStrip` layer has the identical
+  configuration — a disabled/degenerate location module under Add Velocity from Point — and was ruled to
+  leave every particle at the cast point, separated only by its own randomized orientation. Applied
+  identically here; §13.2.)*
 - Sprite rotation: `Random`, 0 … 360; **Sprite Rotation Rate** = `Float from Curve 002`
   `(0, 1.68162e-07)C (0.1, **90**)C (0.9, 1.43051e-06)C` — spins at 90 °/s between t = 0.1 and 0.9
 - **Sub UV Animation**: `SubUV Animation Mode = Linear`, `Start Frame 0`, `End Frame **4**`,
@@ -407,24 +416,30 @@ a horizontal "lens flare" streak that pinches shut.
 
 ### 6.1 Cadence row
 
-**A new burst row is required `[corpus-v3]`, per [P0-D3]: loop 2.0 s, particle lifetime 1.5 s,
-burst 30.** Loop = the system's `Once` loop duration (*was 1.0 s, from the inert emitter rows*);
-lifetime = max resolved emitter lifetime — **`Sparkles`' resolved 1.5 s Max** (*was 1.2 s, the four
-Flare_Stretched layers, under the override-wins assumption that capped Sparkles at 0.4 s*);
-burst = the §2 count. Every shorter layer zeroes colour, size and scale
-past its own lifetime, and spawn delays (0.05 / 0.1 / 0.85 / 0.95 s) hide the layer for
-`age < delay` and run its curves on `(age − delay) / lifetime` — the NS_BasicAttack §5 mechanism.
+**A new BURST + RATE row `[corpus-v3]`, per [P0-D3] + [P0-D5] + [P2-D5]: loop 2.0 s, particle lifetime
+1.55 s, burst 30, spawn rate 40 per second.** Loop = the system's `Once` loop duration (*was 1.0 s, from the
+inert emitter rows*); lifetime = max over layers of (spawn delay + resolved lifetime) — **`Sparkles`' 0.05 s
+beat plus its resolved 1.5 s Max** (*was 1.2 s under the override-wins assumption, then 1.5 s from the
+lifetime alone; corrected 2026-08-02 `[P2-E6]`, the [P2-D5a] class*); burst = the §2 count. Every shorter
+layer zeroes colour, size and scale past its own lifetime, and spawn delays (0.05 / 0.1 / 0.85 / 0.95 s)
+hide the layer for `age < delay` and run its curves on `(age − delay) / lifetime` — the NS_BasicAttack §5
+mechanism.
 
-Two things this row **cannot** carry, both of which need a decision before HLSL is written:
+**Both of this section's "cannot carry" items are SUPERSEDED by C2 + C5 (Phase 2), which landed after this
+sheet was written.** The burst-slot approximation it recommended is NOT what shipped:
 
-- The **two rate-spawned emitters** (Sparkles_Stretched 20/s over 0.4 s; Lightning's decaying
-  20 → 0 /s over 0.5 s) are not a burst. Approximating them as extra burst slots (8 and 5) at
-  staggered spawn delays is expressible with the delay mechanism above and is the recommended
-  approximation — **record it as a deviation, do not present it as faithful**. The Lightning rate
-  curve is linear, so 5 slots at delays `t_k = 0.5·(1 − sqrt(1 − k/5))` reproduces its arrival
-  distribution exactly; Sparkles_Stretched's constant rate is 8 slots evenly spaced over 0.4 s.
-- The **three `Self` one-shot emitters** (Sparkles_Stretched, Big_Star, Lightning) run ONCE and never
-  repeat, while the other 18 cycle. A single CkParticles template loops everything. See §6.5, gap 2.
+- **The two rate-spawned emitters are a real rate stack.** The row declares `SpawnRate = 40`, the behavior
+  splits burst from rate particles by `SpawnPhase = fmod(EmitterAge − Age, Loop)` ([P2-D5]), and a rate
+  particle draws its layer by rate share — 20/40 each, since both emitters carry a nominal 20/s.
+- **`Self / Once` becomes a spawn-phase WINDOW.** A rate particle born past its own emitter's window
+  (0.4 s for `Sparkles_Stretched`, 0.5 s for `Lightning`) is hidden, which is exactly what "runs once and
+  never repeats" means on a template that loops.
+- **`Big_Star` needs nothing.** It is `Self / Once` too, but it carries only a burst — and a burst-only
+  one-shot fires exactly once per activation, which is what a template burst is (NS_Gunshot_Cast §14.1).
+- **`Lightning`'s rate is a CURVE (20 → 0 over its 0.5 s window), and a row rate is a constant.** The row
+  declares its PEAK and the behavior THINS the stream: a bolt rate particle at phase `p` survives with
+  probability `1 − p/0.5`. Thinning a uniform stream by that factor reproduces the source's arrival density
+  exactly and integrates to the same ≈ 5 particles per firing. §9.2.
 
 Loop duration resolved `[corpus-v3]` — see §2. The 2.0 s `Once` cycle leaves Star_02's t = 0.95
 burst plenty of room.
@@ -530,4 +545,247 @@ material-binding indirection.
 
 ---
 
-## 7+. Reserved for implementation.
+## 7. Textures — ONE new bake
+
+Nine of the ten needed paints already existed as identity reuses; only the bolt sheet is new.
+
+| Source texture | Stand-in | Status |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | existing |
+| `T_VFX_Part_02` | `SoftParticleBright` | existing |
+| `T_VFX_Part_03` | `SoftParticleFine` | existing |
+| `T_VFX_Part_04` | `SparkStreak` | existing |
+| `T_VFX_Ring_01` | `RingUneven` | existing |
+| `T_VFX_Ring_02` | `RingFlare` | existing |
+| `T_VFX_Star_02` / `_03` | `StarFourTight` / `StarFourSplit` | existing |
+| `T_VFX_Noise_02` / `_04` | `TileNoise` / `TileNoiseCoarse` | existing |
+| **`T_VFX_Lightning_03`** | **`LightningSheet`** | **NEW — `ECk_VfxTextureKind::MaskSheet`** |
+| `T_VFX_LUT_Rainbow_01` | `LutWhite` | held back by [P1-D1], §13.5 |
+| `T_VFX_Arrow_01` | — | not needed; both consumers are DISABLED emitters |
+
+### 7.1 `LightningSheet` — measured, and structurally unlike the other two atlases
+
+The corpus PNG is `TSF_BGRA8` with a FLAT alpha, so the greyscale RGB carries the mask — the same reading
+`T_VFX_Impact_02` already took (NS_Gunshot_Hit §7). Measured on the 512² file, per 256² frame:
+
+| Measurement | Frame 0 | Frame 1 | Frame 2 | Frame 3 |
+|---|---|---|---|---|
+| Peak | 0.9961 | 0.9922 | 0.9843 | 0.9922 |
+| Mean | 0.0810 | 0.0478 | 0.0477 | 0.0636 |
+| Coverage > 0.05 | 0.156 | 0.110 | 0.105 | 0.145 |
+| Coverage > 0.5 | 0.077 | 0.041 | 0.044 | 0.059 |
+| Annulus peak radius | ≈ 0.45 | ≈ 0.65 | ≈ 0.65 | ≈ 0.65 |
+| Empty inside r | 0.30 | 0.05 | 0.05 | 0.10 |
+
+**The load-bearing measurement is the frame-to-frame correlation: −0.01 … 0.25.** `WindSheet` measures
+0.79–0.88 and `ImpactSheet` 0.51–0.78 — those two are ONE shape evolving, and their bakes step a noise
+offset per frame. This one is four INDEPENDENT paintings, so the frame index has to RESEED the field
+instead of nudging it (stride 53 over a 3-tile base period). Building it like the other two would have
+produced four near-identical bolts.
+
+Second measurement that shaped the bake: the radially averaged power spectrum peaks at 1–2 cycles per frame
+and is down to ~5 % by 8, so these are BROAD ragged arcs, not hairline filaments — a fine-frequency ridged
+noise reads as static rather than as lightning.
+
+Recipe: ridged value noise `1 − |2·Fbm − 1|` at 3 tiles / 4 octaves, thresholded at **0.92** (fitted against
+the measured coverage), windowed by a per-frame Gaussian annulus with an inner hole and an outer fade, and
+scaled by a per-frame gain fitted so the bake's mean equals the measured mean EXACTLY. Result: coverage
+> 0.05 within 0.02–0.05 of measured, coverage > 0.5 within 0.01, peaks 0.95–1.0 against 0.98–1.0, and bake
+frame-to-frame correlation 0.02–0.15 against the source's −0.01–0.25.
+
+---
+
+## 8. Mesh
+
+**N/A** — all twenty-one source renderers are sprites (§3). This is the only Cast port in the batch with no
+carrier mesh at all.
+
+---
+
+## 9. The behavior — `Behavior_LightningCast.ush` + `ExecuteStage_CPU` case 35
+
+### 9.1 Burst and rate on one row
+
+`SpawnPhase = fmod(EmitterAge − Age, 2.0)`; phase ≈ 0 ⇒ a burst particle taking the exact `Seed % 30`
+partition; anything else ⇒ a rate particle taking a rate-weighted draw over the two streaming emitters, then
+gated on its own emitter's window. The idiom is HealCast's ([P2-D5]); what is new is §9.2.
+
+Burst partition (§2 emitter order, enabled only): `Glow_01` 0, `Glow_02` 1, `Glow_03` 2, `Raimbow` 3,
+`Ring` 4, `Sparkles` 5–14, `Flare_01` 15, `Flare_02` 16, `Big_Star` 17, `Flare_Stretched_01…04` 18–21,
+`Star_01` 22, `Star_02` 23, `Lightning` 24–26, `Flare_03` 27–28, `Flare_04` 29.
+
+### 9.2 Thinning a flat rate back into a falling one
+
+The source's `Lightning` emitter overrides its Spawn Rate with `Float from Curve 001` = `(0, 20)C (1, 0)C`
+over its own 0.5 s window — a linear decay to zero, integrating to 5 particles. A cadence row carries a
+CONSTANT rate, so the row declares the PEAK (20/s, plus `Sparkles_Stretched`'s flat 20/s = 40 total) and the
+behavior removes the surplus:
+
+```
+survive  ⟺  Rand(Seed, 14) < 1 − Phase / 0.5
+```
+
+Thinning a uniform stream of density `R` by a factor `f(p)` yields density `R·f(p)`, so this IS the source's
+`20·(1 − p/0.5)` exactly, and its integral over the window is `20 · 0.5 / 2 = 5`. It is stateless, per-Seed
+deterministic, and costs one hash. Measured over 4000 draws per band: survival 0.901 / 0.698 / 0.495 /
+0.296 / 0.095 against the exact 0.9 / 0.7 / 0.5 / 0.3 / 0.1, mean 0.497.
+
+`Sparkles_Stretched`'s rate is genuinely flat, so it is NOT thinned — and that makes it the test's dead
+control (§11).
+
+### 9.3 The strobe
+
+`Lightning`'s alpha is `(0.162994, 1) (0.329611, 0) (0.504679, 1) (0.746152, 0) (0.959855, 1)` — on, off,
+on, off, on across ONE life — and its dissolve channel carries a second, faster strobe
+`(0, 1) (0.2, −1) (0.3, 0.875) (1, −1)`. Both are transcribed verbatim. A "fade to zero" simplification
+would pass every luminance check and destroy the effect.
+
+### 9.4 Sub-UV in LINEAR mode
+
+`Lightning` is the cookbook's only flipbook in Niagara's **Linear** mode rather than Random: every particle
+starts on frame 0. Its declared `End Frame` is 4 on a four-frame sheet, so the run takes five steps and the
+fifth wraps back onto frame 0 — `fmod(min(floor(t·5), 4), 4)`. §13.1.
+
+### 9.5 The spin
+
+`Sprite Rotation Rate` is `(0, ~0)C (0.1, 90)C (0.9, ~0)C` in degrees per second. The accumulated angle is
+that curve's exact integral in normalized-life units times the particle's own life — written out as a
+three-line closed form rather than accumulated per frame, because a stepwise sum would tie the spin to frame
+cadence and drift against the CPU mirror.
+
+---
+
+## 10. Looks and renderers
+
+Ten row renderers on VisTags **147–156**; nine looks already existed.
+
+| VisTag | Kind | Look | Source emitters |
+|---|---|---|---|
+| 147 | CameraFacingSprite | `PartDisAdd01` | `Glow_01`, `Glow_03`, `Flare_Stretched_01` |
+| 148 | CameraFacingSprite | `PartDisAdd02` | `Glow_02`, `Flare_01`, `Flare_02` |
+| 149 | CameraFacingSprite | `RainbowDisAdd` | `Raimbow` |
+| 150 | CameraFacingSprite | `RingDisAdd01` | `Ring` |
+| 151 | CameraFacingSprite | `PartDisAdd01Bright` | `Sparkles`, `Flare_04` |
+| 152 | VelocityAlignedSprite | `PartDisAdd04` | `Sparkles_Stretched` |
+| 153 | CameraFacingSprite | `StarDisAdd02` | `Big_Star`, `Star_01`, `Star_02` |
+| 154 | CameraFacingSprite | `PartDisAdd03Bright` | `Flare_Stretched_02/03`, `Flare_03` |
+| 155 | CameraFacingSprite | `StarDisAdd03` | `Flare_Stretched_04` |
+| 156 | CameraFacingSprite, 2×2 | **`LightningDisAdd02`** | `Lightning` |
+
+The nine reuses were each checked value-by-value against §4's delta table before being taken. Note that §4's
+reference instance is `M_VFX_DisAdd_Ring04` (not `Part01`), so several rows that LOOK like deltas are
+inherited values — e.g. `Gradient_Invert 0` on `Ring01`/`Star02`/`Star03` is Ring04's own, and matches the
+existing looks exactly.
+
+**`LightningDisAdd02` is the port's one new look** and the family's oddest instance: the ONLY one whose
+distortion branch is both live AND fast-panning (`Distortion_Intensity 0.5` at speed 0.7/0.7 on both axes),
+and the only one whose `Core_Power` resolves to 0. Its shape is the new `LightningSheet` atlas, divided by
+the row renderer's `SubImageSize` rather than by anything in the look.
+
+`Arrows` is deliberately not authored — both of its emitters are disabled (§13.6).
+
+---
+
+## 11. Tests
+
+`Test_Particles_LightningCastBehavior.cpp` (`CkTests.UnitTests.CkParticles.LightningCastBehavior`):
+
+- **The cadence row**: 2.0 / 1.55 / 30 / rate 40, ten renderers, **zero** meshes, one velocity-aligned, one
+  2×2 sheet.
+- **The burst partition**: the re-implemented 30-slot map reproduces the source's per-emitter counts
+  (1,1,1,1,1,10,1,1,1,1,1,1,1,1,1,3,2,1 and 0 for the rate-only emitter), and each layer's seeds draw
+  through its own renderer.
+- **The rate draw**: 400 000 seeds split 0.4994 / 0.5006 against the exact half, and both streams reachable.
+- **The spawn-phase split, three ways**: a particle at phase 0 takes the burst table, one at the head of its
+  window takes the rate table, and one past its window is hidden — 2000 seeds, each of the three counted
+  against its own opposite.
+- **The thinning, two-sided and with a live control**: the bolt stream's surviving fraction is compared band
+  by band against the source's own ramp (bar 0.03, observed max error 0.005), asserted MONOTONE FALLING, and
+  asserted to integrate to a half (bar 0.02, observed 0.497) — while `Sparkles_Stretched`, whose source rate
+  is flat, must survive at > 0.999 in every band. Without that control the test would pass against a
+  behavior that thinned both streams, or neither.
+- **The strobe**: the bolt alpha must cross the 0.25 line at least three times in one life. A monotone fade
+  scores one.
+- **The flipbook**: LINEAR mode starts every particle on frame 0, the index stays in 0..3, and all four
+  frames are used.
+- **The closing beats**: `Star_01` hidden at 0.5 and alive at 0.86, `Star_02` still hidden at 0.86 and alive
+  at 0.96, and `Star_01`'s fixed 45° tilt.
+- **Anti-vacuity** over all nineteen layers (burst seeds for eighteen, rate seeds for the streaming one) and
+  **death** past 1.55 s on BOTH spawn paths.
+
+---
+
+## 12. Verification — A/B protocol
+
+Gym pair `LIGHTNING CAST` (`Gym.VfxExamples.LightningCast.{Ck,Original}`), offset `(0, 0, 120)`, scale 1.
+Loop-Once, so both sides re-arm together and the A/B is a synced replay from t = 0.
+
+`[HUMAN-VERIFY]` — this effect's palette is its identity: deep blue, magenta and warm white, never orange.
+
+- (a) t = 0: three second-long shells — a 550-unit deep blue, a 200-unit magenta and a 250-unit warm white —
+  plus a 200-unit star and four horizontal lens streaks (400–1400 units) that pinch shut along X by t ≈ 1.1.
+- (b) t = 0.05: the magenta shockwave ring, which holds ONE colour and one alpha for its whole 0.75 s and
+  leaves purely by dissolve — if it fades, the no-colour-module reading is wrong.
+- (c) t = 0.05: ten blue motes thrown omnidirectionally at 350–500 u/s, living up to 1.5 s. These are the
+  longest-lived thing in the system.
+- (d) **the bolts**: three at t = 0 plus roughly five more streamed over the next half second, arriving
+  DENSELY at first and thinning to nothing — that decay is §9.2's whole claim. Each bolt sits at the cast
+  point, spins at 90 °/s between t = 0.1 and 0.9 of its life, plays four frames, and **strobes on/off/on/
+  off/on**. If they read as steady sprites, the alpha curve is not running.
+- (e) t = 0.1: the lens ring at a TENTH opacity (the faintest Raimbow in the cookbook), two small cyan/mint
+  pips and two overlaid orange pips.
+- (f) the velocity-aligned streak stream, 20/s over the first 0.4 s only, stretching up to 2× at speed.
+- (g) t = 0.85 and 0.95: two 70-unit stars, one tilted 45°, closing the cycle. They are easy to miss and easy
+  to delete — their stored 0.3 s loop is INERT (§2).
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **`End Frame = 4` on a four-frame sheet.** The bolt run takes five steps and the fifth wraps to frame 0.
+   `[inferred]` — clamping instead is equally consistent with the corpus. One frame at the end of a
+   0.3–0.5 s life.
+2. **The bolts have NO velocity.** `Sphere Radius = 0` leaves `Add Velocity from Point` nothing to
+   normalize, so every bolt sits at the cast point (§5.19, resolved by the NS_Arrow_Cast precedent). If the
+   source's module happens to emit a default direction there, the recreation's bolts will be more clustered
+   than the original's.
+3. **The rate thinning is exact in DENSITY, not in count per firing.** The source spawns a deterministic
+   ~5 bolts; the recreation spawns a Binomial draw with the same mean. Firing to firing, the bolt count
+   varies where the source's does not.
+4. **World space on all 21 emitters**; the template is local space. Same known deviation as every Cast port.
+5. **`RainbowDisAdd` ships against `LutWhite`**, pending [P1-D1]. `Raimbow` is the only consumer here and it
+   runs at 0.1 alpha, so this is the least visible instance of that gap in the cookbook.
+6. **`Arrow` / `BigArrow` are not recreated** — both DISABLED. Their values are transcribed in §5.5–5.6 so
+   the omission stays a decision; re-enabling them needs the `Arrows` look, `T_VFX_Arrow_01` and two more
+   velocity-aligned renderers.
+7. **Unplumbed family parameters** (§6.5 #8): `Core_Power 0` on `Lightning02`, `Core_Intensity`,
+   `Opacty_StepAdd 0.3` on Rainbow, `CamOffset 50` on `Part03_Bright` (three layers), `Opacty_DepthFade`.
+   `Core_Power 0` is the one specific to this port — the source disables the bolt paint's core-power curve
+   and the recreation cannot.
+8. **Sprite rotation on a camera-facing renderer** is assumed to bind `Particles.SpriteRotation`. §6.5 #6
+   flagged this as `[unresolved]`; the C1 camera-facing renderer kind writes the attribute, but that it is
+   consumed is `[EDITOR-VERIFY]` at the inspection stage — the bolts' 90 °/s spin is the visible test.
+
+---
+
+## 14. Reusable lessons
+
+1. **A time-varying source spawn rate becomes PEAK + thinning, not an averaged constant.** Declaring the
+   mean (10/s) would have produced the right particle count with a flat arrival distribution; declaring the
+   peak and thinning by the curve's own shape reproduces the density at every instant, costs one hash, and
+   stays stateless. Any `Float from Curve` on a Spawn Rate is expressible this way as long as the curve is
+   bounded by the declared peak.
+2. **A thinning test needs an unthinned control on the SAME row.** `Sparkles_Stretched`'s flat rate is the
+   dead control that makes the assertion discriminating: without it, thinning both streams or neither would
+   still pass a per-band ratio check. This is §14.7's lesson from NS_BuffLoop in a new shape — the bar is
+   not "does the number look right", it is "does an obvious wrong implementation fail".
+3. **Frame-to-frame correlation decides how a flipbook atlas is BUILT.** Three sheets in this library, three
+   different constructions: one shape nudged (`WindSheet`, corr 0.79–0.88), one shape stepped through
+   measured per-frame constants (`ImpactSheet`/`LensSheet`, 0.51–0.93), four independent realizations
+   (`LightningSheet`, −0.01–0.25). Measure the correlation before writing the paint function.
+4. **`Life Cycle Mode = Self` does not by itself mean "window".** Three Self emitters here: two carry rates
+   and need windows, one carries only a burst and needs nothing. The discriminator is the presence of a
+   `SpawnRate` module.
+5. **A delta table's reference instance matters.** §4 diffs against `M_VFX_DisAdd_Ring04`, not the family's
+   usual `Part01`, so values that read as deltas (`Gradient_Invert 0`, `Opacity_Boldness 1`) are inherited.
+   Checking a reuse means resolving both tables to absolute values first.
