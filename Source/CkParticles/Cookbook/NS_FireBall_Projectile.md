@@ -5,12 +5,14 @@ Exemplars this sheet copies: [NS_BasicAttack.md](NS_BasicAttack.md) §1–6, [NS
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02, Phase 3 batch F). Behavior id 36. Not yet A/B'd.**
 
-No behavior, no `.ush`, no CPU mirror, no look, no mesh, no texture, no cadence row, no test, no gym
-station exists for this effect. No behavior id has been allocated. Nothing has been rendered or
-visually compared. Sections 1–6 are archaeology and a plan; everything below `## 7+` is reserved for
-the implementation session.
+`Behavior_FireBallProjectile.ush` + `ExecuteStage_CPU` case 36, the
+`PS_CkParticles_Template_FireBallProjectile` cadence row (10 s / 10 s / burst 15 / rate 408 per second
+**plus a ribbon emitter at 100 points per second** — the cookbook's first), one new CkUsf look
+(`TrailFlatAdd`, the first to opt into `_UsedWithNiagaraRibbons`), zero new textures, zero new meshes,
+`Test_Particles_FireBallProjectileBehavior.cpp`, and a VfxExamples gym pair. **Nothing has been rendered
+or visually compared** — §12 is open.
 
 ---
 
@@ -20,8 +22,8 @@ the implementation session.
 |---|---|
 | Source object | `/Game/Vefects/Anime_VFX/Shared/Skills/NS_FireBall_Projectile` |
 | Pack | Vefects — *Anime VFX* (third-party marketplace content) |
-| Behavior id | **not allocated** — take the next free id at implementation time |
-| Recreation status | not started |
+| Behavior id | **36** (`FireBallProjectile`) |
+| Recreation status | implementation-complete; `[HUMAN-VERIFY]` open |
 
 Corpus evidence (all `[corpus]`, exported 2026-08-01):
 
@@ -62,8 +64,9 @@ a one-shot** — six emitters carry a `Spawn Rate` module in addition to (or ins
 | 7 | `Trail_01` | World | Rate only | — | — | **50** | 0.25 | **Ribbon** | `Parents/M_VFX_FlatAdd` |
 | 8 | `Trail_02` | World | Rate only | — | — | **50** | 0.25 | **Ribbon** | `Parents/M_VFX_FlatAdd` |
 
-Burst particles at loop start: **13** (1 + 5 + 5 + 1 + 1 + 1 + 1 − wait: 1+5+5+1+1+1+1 = 15;
-`Smokes`'s 5 land at t = 0.04, `FirstGlow`'s 1 at t = 0.05). Sustained rate afterwards:
+Burst particles at loop start: **15** (1 + 5 + 5 + 1 + 1 + 1 + 1; `Smokes`'s 5 land at t = 0.04,
+`FirstGlow`'s 1 at t = 0.05). *(The sheet stated 13 beside its own itemization and then caught itself
+mid-sentence — corrected to 15 at implementation, [P3-F1].)* Sustained rate afterwards:
 **408 sprites/s** (5 + 200 + 200 + 3) plus **100 ribbon points/s** (50 + 50). Bounds `Dynamic`
 everywhere, `Determinism: false`.
 
@@ -216,9 +219,11 @@ Position`, `Particle State → Kill Particles When Lifetime Has Elapsed = true`,
 | Size | `Sprite Size Mode = Uniform`, `Uniform Sprite Size = 130` |
 | Dyn params | `Index 0 Param 1 = 3.5`, `2/3/4 = 0` |
 
-`Scale Sprite Size` carries **both** curves:
-- `Uniform Curve Sprite Scale`: `(0, 0.5)C (1, 1)C`
-- `Non-Uniform Curve Sprite Scale`: `X: (0, 1)C (1, 0.4)C | Y: (0, 1)C (1, 0)C`
+`Scale Sprite Size` carries both curves, but `Scale Sprite Size Mode = **Uniform Curve**`, so only the
+first is live and the non-uniform pair is INERT `[corpus]` *(the mode was not stated — [P3-F2], the [P2-E5]
+class)*:
+- `Uniform Curve Sprite Scale` — **LIVE**: `(0, 0.5)C (1, 1)C`
+- `Non-Uniform Curve Sprite Scale` — *inert*: `X: (0, 1)C (1, 0.4)C | Y: (0, 1)C (1, 0)C`
 
 `Color` (`Color from Curve`) — note the **over-1 RGB**, an HDR ramp:
 
@@ -307,9 +312,11 @@ Update order: 1 Scale Velocity, 2 Solve Forces and Velocity, 3 Particle State, 4
 | Size | Uniform **500** |
 | Dyn params | `Index 0 Param 1 = 1`, `2/3/4 = 0` |
 
-`Scale Sprite Size` (both curves):
-- `Uniform Curve Sprite Scale`: `(0, 0.5)C (0.1, 0.9)C (1, 1)C`
-- `Non-Uniform Curve Sprite Scale`: `X: (0, 1)C (1, 0.4)C | Y: (0, 1)C (1, 0)C`
+`Scale Sprite Size` carries both curves, but `Scale Sprite Size Mode = **Non-Uniform Curve**` — the
+opposite of `SecondGlow` — so the uniform curve is INERT `[corpus]` *(the mode was not stated — [P3-F3])*:
+- `Uniform Curve Sprite Scale` — *inert*: `(0, 0.5)C (0.1, 0.9)C (1, 1)C`
+- `Non-Uniform Curve Sprite Scale` — **LIVE**: `X: (0, 1)C (1, 0.4)C | Y: (0, 1)C (1, 0)C`
+  (the quad squeezes to a 200-unit-wide horizontal sliver by the end of life)
 
 `Color` (`Color from Curve`):
 
@@ -408,11 +415,14 @@ spawn-rate stack (`BurstCount = 0`), or an instantaneous burst of N per loop. Th
 A 10-second loop at 408 sprites/s is **~4080 live sprites at steady state**, ignoring the ribbons.
 That is a different order of magnitude from every existing row (largest burst today: 96).
 
-**Honest reading: this is not a "recreate as one behavior" job.** The three `Projectile_*` core
-sprites plus one glow are a small, cheap, high-value recreation; the 200/s flames and 200/s smoke
-are a continuous-rate emitter pair that needs its own row; the ribbons need a renderer class that
-does not exist. Scope it as: **core + glow now, flames/smoke as a second row, trails behind a
-ribbon capability.**
+**SUPERSEDED at implementation (Phase 3, batch F).** The reading above predates C2 (a row may declare a
+burst AND a continuous rate on one emitter), C5 (the spawn-phase split that tells the two populations
+apart) and C6a (a ribbon-bearing row's SECOND emitter). All nine emitters land on ONE row and ONE
+behavior: `PS_CkParticles_Template_FireBallProjectile` at 10 s / 10 s / burst 15 / rate 408 per second,
+with a ribbon emitter at 100 points per second. The `~4080 live sprites` figure above is the
+RECREATION's allocation, not the source's — the source's own steady state is ~126 live sprites, because
+every emitter there carries its own short lifetime where the template gives all of them the row's 10 s.
+That cost is recorded in §13.
 
 ### 6.2 VisTag / renderer needs
 
@@ -480,7 +490,280 @@ needs only gap 1 — and that subset is the right first delivery.
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures — ZERO new bakes
 
-Sections 7–14 of the recipe schema ([README.md](README.md)) are intentionally absent and are to be
-written by the implementation session, from what actually happened.
+Every paint this port needs was measured and baked by an earlier batch, and every one of them is reached
+through a look that already binds it (§10):
+
+| Source texture | Existing bake | Reached through |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | `PartDisAdd01` |
+| `T_VFX_Part_03` | `SoftParticleFine` | `PartDisAdd03Bright` |
+| `T_VFX_Part_04` | `SparkStreak` | `PartDisAdd04` |
+| `T_VFX_Wind_01` | `WindSheet` (2×2) | `FlamesDisAdd01` |
+| `T_VFX_Cloud_05` | `Cloud05` | `SmokeDisAdd01` |
+| `T_VFX_Noise_02` | `TileNoise` | `PartDisAdd01` / `PartDisAdd04` distortion |
+| `T_VFX_Noise_04` | `TileNoiseCoarse` | `FlamesDisAdd01` dissolve |
+| `T_VFX_Noise_07` | `TileNoiseBanded` | `SmokeDisAdd01` dissolve |
+| `T_VFX_WhitePixel` | `LutWhite` | the family's inert gradient default |
+
+**§4.3's "new bakes needed" list is discharged, not skipped.** It named `T_VFX_Part_03`, `T_VFX_Cloud_04`,
+`T_VFX_Cloud_05` and `T_VFX_Noise_07`; batches A and E measured and baked all four (as
+`SoftParticleFine`, `Cloud04`, `Cloud05` and `TileNoiseBanded`) for the FireBall_Hit / FireBall_Cast ports,
+which draw the **same material instances** this system does. Reuse here is therefore not an approximation —
+it is the same paint through the same look. The two candidates §4.3 flagged for measurement,
+`T_VFX_Wind_01` and `T_VFX_Noise_04`, were likewise resolved by batch A rather than assumed.
+
+The trail's own material carries **no textures at all** (§4.2), so the ribbon adds none either.
+
+---
+
+## 8. Mesh
+
+**None.** This is the only port in the cookbook with no mesh dependency of any kind: two sprite quads
+(camera-facing and velocity-aligned) and one ribbon.
+
+---
+
+## 9. The behavior — `Behavior_FireBallProjectile.ush` + `ExecuteStage_CPU` case 36
+
+### 9.1 One row, two emitters, three populations
+
+The row is `PS_CkParticles_Template_FireBallProjectile`: **loop 10 s / lifetime 10 s / burst 15 / rate
+408 per second**, plus a **ribbon emitter at 100 points per second**. Three populations reach the
+behavior and each is selected by data it already receives:
+
+| Population | Selector | Source |
+|---|---|---|
+| Ribbon trail | `CkParticles_IsRibbonSeed(Seed)` | the ribbon emitter's graph adds `RibbonSeedBase` to its `UniqueID` |
+| Burst layer | `SpawnPhase ≈ 0`, then `Seed % 15` | the four burst emitters' own counts |
+| Rate layer | `SpawnPhase ≠ 0`, then a weighted draw on `Rand(Seed, 0)` | the four Spawn Rates, 5 / 200 / 200 / 3 |
+
+The burst partition is exact by construction (burst `UniqueID`s are sequential, so one modulus period
+carries 1 SecondGlow, 5 Flames01, 5 Smokes, 1 FirstGlow and one of each `Projectile_*`). The rate draw is
+weighted rather than a modulus, because a modulus cannot express a 3-per-second layer against a
+200-per-second one.
+
+**No layer here needs a WINDOW.** Every source emitter's `Life Cycle Mode = Self` loop duration is 10 s —
+the row's own — so nothing streams for a slice of the loop the way the Cast ports' emitters do. The only
+timing structure is the two burst **beats**: `Smokes` at 0.04 s and `FirstGlow` at 0.05 s. Those belong to
+the `Spawn Burst Instantaneous` module, so they apply to the burst population **only** and a streamed
+particle of the same layer takes no delay.
+
+### 9.2 The trail: what the ribbon particles actually do
+
+The source's `Trail_01` / `Trail_02` are not event-spawned (`eventHandlers: []` on all nine emitters
+`[corpus]`), so C6c's leader-path collapse is not needed here at all. They are ordinary rate-spawned
+particles with:
+
+- `Add Velocity = (-1000, 0, 0)` — enabled, world space,
+- a `Curl Noise Force` of strength **+5000** / **−5000** at frequency 3, seed 11,
+- `Scale Velocity` **DISABLED**, so the backward run is exactly linear,
+- lifetime 0.25 s, ribbon width 8 tapering to 0, alpha scaled by 0.3.
+
+That means the streamer is **self-driven** and is reproduced exactly at a stationary spawn point: the
+ribbon links its particles in spawn order (Niagara's default `bLinkOrderUseUniqueID`), the youngest sits
+at the head and the oldest 250 units back, and the two mirrored curls twist them apart. This is why the
+FireBall trail renders at the A/B pedestal and the Bomb trail does not.
+
+**The two ribbons are ONE renderer and two ribbon IDs.** They share `M_VFX_FlatAdd` and every curve; only
+the curl sign differs. `RibbonIdBinding` reads `Particles.MeshIndex`, so the behavior writes
+`LocalSeed % 2` there and Niagara links two independent streamers out of one particle soup — which is
+[P3-D1] option (c) doing the job it was ruled in for.
+
+### 9.3 Curl conversion — derived, not tuned
+
+Same two-step conversion the NS_DebuffCast port established (§9.3 there), with one simplification:
+
+- **Frequency** — the module authors its field in metres, so the source's `3` becomes `0.003` per unit
+  `[inferred]`.
+- **Strength** — the source figure is an ACCELERATION where `CkParticles_CurlPath` advects with a
+  VELOCITY. DebuffCast's layers crushed that acceleration through their own `Scale Velocity` plateau;
+  **this layer's Scale Velocity is DISABLED**, so there is no plateau and the conversion is the bare one:
+  mean displacement over a life `L` under constant acceleration `A` is `0.5·A·L²`, so the constant-velocity
+  path covering the same ground is `0.5·A·L`. That is divided by the **measured** mean magnitude of this
+  plugin's own curl field over the region the trail visits — **0.8139**, over 4000 samples within ±300
+  units at frequency 0.003 and seed 11.
+
+Net: `Strength = ±0.5 × 5000 × 0.25 / 0.8139 = ±767.9` units/s, giving a curl displacement of ~27 units
+on one streamer and ~94 on the other by end of life, against the 250-unit linear run. The asymmetry is
+real and expected — the two paths advect into different parts of the field, so the mirror is near-exact
+early (cosine −0.92 at 0.05 s) and only approximate later (−0.67 at 0.25 s).
+
+### 9.4 The dead tail is frozen, not streaming
+
+The row gives every particle a 10 s lifetime because the three `Projectile_*` cores need it. A trail point
+whose 0.25 s is up therefore survives another 9.75 s. It is hidden (width 0, colour 0) **and** its position
+is evaluated at a clamped age, so the ribbon's dead tail stops where it died instead of streaming 10 000
+units down −X and dragging the ribbon's bounds with it. Same for the sprite layers: `Hidden()` zeroes
+colour, size and scale.
+
+### 9.5 What the sheet's inert curves cost
+
+Three of §5's curves are authored and never run, and each would change the read if transcribed anyway:
+
+- `SecondGlow`'s non-uniform curve (mode is **Uniform Curve** — [P3-F2]) would squash the glow to a
+  sliver; the live uniform curve only grows it 0.5 → 1.
+- `FirstGlow`'s uniform curve (mode is **Non-Uniform Curve** — [P3-F3]) would hold a 500-unit square where
+  the live pair squeezes it to 200 × 0.
+- All six `Scale Sprite Size` modules on the three `Projectile_*` emitters are DISABLED, so not one curve
+  runs on the fireball's core. A "pop then fade" reading of them would animate the one thing in this
+  system that is deliberately static.
+
+---
+
+## 10. Looks and renderers
+
+**Six row renderers on the main emitter, one on the ribbon emitter. ZERO new looks on the main emitter —
+one new look for the trail.**
+
+| VisTag | Kind | Look | Source emitter |
+|---|---|---|---|
+| 157 | VelocityAlignedSprite | `PartDisAdd04` | `Projectile_01` |
+| 158 | VelocityAlignedSprite | `PartDisAdd01` | `Projectile_02`, `Projectile_03` |
+| 159 | CameraFacingSprite | `PartDisAdd03Bright` | `SecondGlow` |
+| 160 | CameraFacingSprite | `PartDisAdd01` | `FirstGlow` |
+| 161 | CameraFacingSprite, 2×2 | `FlamesDisAdd01` | `Flames01` |
+| 162 | CameraFacingSprite | `SmokeDisAdd01` | `Smokes` |
+| 163 | **Ribbon** | `TrailFlatAdd` *(new)* | `Trail_01` + `Trail_02` |
+
+Every reused look was checked value-by-value against §4.1's delta table before reuse and is an **exact**
+match — not a near miss — because this system draws the *same material instances* (`M_VFX_DisAdd_Part01`,
+`Part03_Bright`, `Part04`, `Flames01`, `Smoke01`) the FireBall_Hit / FireBall_Cast ports already carry.
+`PartDisAdd01` appears twice because the source draws it on two different renderer classes; per the
+batch-E rule that is two ROW RENDERERS, but one look — the usage flags are the same (`Sprites`) for both,
+unlike the `LightStripDisAddSprite` case where one was a mesh.
+
+**`TrailFlatAdd` is the cookbook's first ribbon-drawn look.** It is `M_VFX_FlatAdd` used *directly* — the
+parent graph, not an instance — so `Brightness = 1`, against `FlatAdd02`'s 10. It opts into
+`_UsedWithNiagaraRibbons`, the third independent usage flag; a master without it draws as the engine
+default under a ribbon renderer, which is why the template builder refuses to emit the renderer in that
+case.
+
+---
+
+## 11. Tests
+
+`Test_Particles_FireBallProjectileBehavior.cpp` — `CkTests.UnitTests.CkParticles.FireBallProjectileBehavior`.
+It drives the CPU mirror only (no Niagara, no RHI, no forked engine) and asserts:
+
+- the cadence row's four numbers AND the itemization they are derived from (per-emitter bursts sum to 15,
+  per-emitter rates sum to 408), plus the ribbon emitter's rate, its single `Ribbon`-kind renderer, its
+  look name and its VisTag;
+- the burst partition reproduces every source emitter's own count exactly;
+- each layer reaches its own renderer;
+- the rate stream's per-layer share against the source's rate share (bar 0.004; measured worst deviation
+  **0.00076**), and that the three `Projectile_*` layers never appear in it;
+- both burst **beats**, each against its own opposite, plus the dead control that a *streamed* particle of
+  the same layer takes no delay;
+- colour ramps at BOTH ends and a point in between, at corpus-derived values with a 1e-4 tolerance —
+  `SecondGlow` R 2.0 → 3.0 (2.5265734 at t = 0.8), `Flames01` R 5.0 → 3.0 (4.1661088 at t = 0.2),
+  `Smokes` alpha 0.6 → 0.21, `FirstGlow` alpha 0 → 0.1 and its blue 0.7912982 → 0.1094617;
+- `FirstGlow`'s live non-uniform size curve (200 × 0 at end of life), which a uniform-curve reading fails;
+- the three cores' exact size, colour, dissolve and VisTag at three ages, and their death at 10 s;
+- every `Flames01` particle plays all four sub-UV frames (**300/300**);
+- **the seed bank, both ways**: no main-bank id reaches VisTag 163 over 5000 seeds, every ribbon-bank id
+  reaches it and alternates `MeshIndex` 0/1, and a main-bank id's population is unaffected;
+- the trail's width taper 8 → 0, its alpha 0.3 → 0, its hidden-and-FROZEN state past 0.25 s;
+- **the mirrored pair**: the two trails' curl offsets point to opposite sides at three ages (cosine < 0)
+  and are near-exactly opposite early (cosine < −0.9). A single-signed curl, or a dropped second ribbon,
+  fails this outright.
+
+`Test_Particles_RosterSanity.cpp` covers the rest generically: `NumBehaviors` 38, the template route, the
+VisTag ceiling (now walking ribbon renderers), and the emitter-clock rule — behavior 36 rides a burst+rate
+row, so it is REQUIRED to move with the clock.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` Open the **VfxExamples** gym, cycle to **FIREBALL PROJECTILE**, and run
+`Ck_GymVfxExamples_RestartAll`. In order:
+
+a. **The core reads as a single hard object**, not three sprites. Three velocity-aligned quads
+   (50×50 warm, 250×500 orange, 100×400 dark red) stacked at the same point, static for the whole 10 s.
+b. **Two blue glows behind it** — a small one pulsing to a 3× cyan-white peak late in its half-second, and
+   a large faint halo that squeezes to a horizontal sliver as it fades.
+c. **A continuous fire wash streaming backwards**, brightest right at the core, with visible 4-frame
+   flipbook motion inside individual puffs.
+d. **Smoke behind the fire**, larger, greyer, thrown further and braking harder.
+e. **TWO thin bright streamers** trailing to −X and twisting to opposite sides of the axis. This is the
+   port's headline; if there is only one, or if they overlap without separating, the ribbon id is not
+   reaching `RibbonIdBinding`.
+f. Overall brightness: the whole thing should read hotter than the original ONLY if `Opacty_DepthFade` is
+   the culprit (§13) — otherwise the two should sit at the same exposure.
+
+## 13. Confirmed fidelity differences or intentional deviations
+
+**The visual gate in §12 has NOT been executed.** Everything below is a *known* difference derived from
+the source data, or *unverified*.
+
+### Known differences — deliberate
+
+1. **Population cost: the recreation allocates ~32× the source's live sprites.** The template gives every
+   particle the ROW's lifetime, and this row's is 10 s because the three cores need it. At 408/s that is
+   **4080 live sprites** where the source's own per-emitter lifetimes (0.2–1.0 s) give it **~126**; the
+   ribbon emitter likewise allocates 1000 points where the source holds ~25. Every surplus particle is
+   hidden (colour, size, scale zero; ribbon width zero) and frozen in place, so the *image* is right — the
+   cost is GPU allocation and ribbon tessellation, not pixels. This is the same class as HealCast's
+   "~14 of 100 streamed per loop", scaled up by the 10 s row. A per-emitter lifetime on the ribbon spec
+   would fix half of it and is not a capability the cookbook has.
+2. **World space on 4 of 9 emitters** (`Flames01`, `Smokes`, `Trail_01/02`) — the C12 non-goal. At a
+   stationary pedestal the local and world frames coincide, so the difference is unobservable here;
+   attached to a MOVING spawner the source's fire, smoke and trails would be left behind in world space
+   while ours follow rigidly.
+3. **`CamOffset = 50` on `Part03_Bright` is not plumbed.** The family's camera-toward world-position push;
+   `SecondGlow` is the only layer in this system that drives it. Recorded by the `PartDisAdd03Bright` look
+   itself since batch A.
+4. **`Glow_Intensity` (2 on `Flames01`) is folded into Brightness** — `FlamesDisAdd01` carries 20, i.e.
+   10 × 2. `Core_Intensity` (1 on `Flames01` and `Smoke01`) is NOT plumbed, nor is `Color_CoreDifferent`.
+5. **`Smoke01`'s separate `Main_Tex` and `Color_Tex`** (`T_VFX_Cloud_05` vs `T_VFX_Cloud_04`) collapse into
+   the family's one `ShapeTex` slot; the shape carries `Main_Tex`. Recorded by the look since batch A.
+6. **`Opacty_DepthFade`** (20 / 30 across instances, 0 on the trail's `M_VFX_FlatAdd`) is not wired —
+   CkUsf surface looks have no scene-depth input. Visible only where a sprite intersects geometry.
+7. **The curl field is sampled along the curl-only path**, not along the true path that includes the
+   −1000 units/s backward run. `CkParticles_CurlPath` advects from the spawn position through the field
+   alone, which is the shared stateless helper's contract and the same approximation NS_DebuffCast
+   records. Here the linear run (250 units) is an order of magnitude larger than the curl displacement, so
+   the two streamers sample a *narrower* slice of the field than the source's particles would.
+8. **The mirror is only near-exact early.** Equal-and-opposite strength does not give equal-and-opposite
+   displacement once the two paths advect into different field regions — measured cosine −0.92 at 0.05 s,
+   −0.67 at 0.25 s, with magnitudes 27 and 94 units. The source has exactly the same property (its two
+   emitters are also nonlinear advections of one field), so this is a *shape* difference, not a structural
+   one, but the two are not guaranteed to diverge identically.
+9. **`Trail_01/02`'s dynamic-parameter writes are dropped.** `M_VFX_FlatAdd` declares no dynamic
+   parameters (§5.7), so nothing reads them.
+10. **The recreation loops; the source completes.** Same as every projectile port — the row loops its 10 s
+    forever while the source's `Inactive Response = Complete` lets it die. The A/B harness re-arms the
+    original on `OnSystemFinished`, so the two pedestals stay in phase.
+11. **The source's colour curve on `Smokes` carries two keys at t = 0**; the second wins for every
+    reachable `t`, and the cookbook's `KeyN` family cannot express a zero-width segment, so the first is
+    dropped. The only value that differs is at exactly t = 0.
+
+### Unverified
+
+- Every visual criterion in §12. Nothing has been rendered.
+- Whether 4080 allocated particles per instance is acceptable in a real scene. It has not been profiled.
+- Whether the curl conversion's field-mean divisor lands the streamers at the source's amplitude. The
+  arithmetic is confirmed; the perceptual result is not.
+
+---
+
+## 14. Reusable lessons
+
+1. **A sheet that says "not one behavior" may just predate the capability.** §6.1's three-way split was
+   correct against the Phase-0 pipeline and wrong against the Phase-3 one. Re-read a plan section against
+   the capability matrix before executing it, and rewrite it in place when it is superseded.
+2. **`Scale Sprite Size Mode` decides which of the two authored curves is live, and the two emitters here
+   choose OPPOSITE modes.** Transcribing both, or guessing one, changes the silhouette. Any sheet §5 that
+   lists two size curves without naming the mode is under-specified — the [P2-E5] class, now seen three
+   times.
+3. **`eventHandlers` being empty is itself evidence.** C6c's leader-path collapse exists for event-spawned
+   trails; a rate-spawned trail with its own velocity needs none of it, and reaching for the machinery
+   anyway would have replaced a faithful self-driven streamer with a synthetic one.
+4. **Two ribbons with one material are one renderer and two ribbon ids.** `RibbonIdBinding` is the cheap
+   separator; a second renderer would have cost a second VisTag and a second master for no gain.
+5. **A row lifetime chosen for the longest layer is paid by every layer.** When a row's lifetime is set by
+   a 10 s core, a 0.25 s trail point survives 40× longer than it should. Hiding it is necessary but not
+   sufficient — its POSITION must be frozen too, or the invisible tail drags the ribbon's geometry across
+   the map.
