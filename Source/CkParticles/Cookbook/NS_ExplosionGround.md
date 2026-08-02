@@ -5,7 +5,11 @@ Schema and evidence-tag conventions: [README.md](README.md). Exemplars: [NS_Basi
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) — BehaviorId 40.** `Behavior_ExplosionGround.ush`
+(a thin entry point over `Behavior_ExplosionShared.ush`) + `ExecuteStage_CPU` case 40, the
+`PS_CkParticles_Template_ExplosionGround` cadence row, twelve row renderers + a ribbon emitter,
+one new look, three new textures, two new carrier meshes, an automation test and a VfxExamples
+pair. Sections 7-14 record what actually happened. `[HUMAN-VERIFY]` open — §12.
 
 No behavior, no `.ush`, no look, no mesh, no texture, no cadence row, no test, no gym station exists for
 this effect. No behavior id is allocated. Nothing has been rendered or looked at. Sections 1–6 are
@@ -434,7 +438,25 @@ Identical module set to `Smokes` except the location module (Cone, §2.1) and th
 
 ## 6. Translation plan (CkParticles / CkUsf)
 
-### 6.0 Capability-gap callout — READ BEFORE SCHEDULING
+### 6.0 Capability-gap callout — SUPERSEDED (2026-08-02), kept for its evidence
+
+**Every gap in the table below is CLOSED or RULED, and §8-§11 record what was actually built.**
+The table is left in place because its per-emitter evidence is still the archaeology of record.
+
+- **G1 ribbon renderer — CLOSED by [P3-D1]** (a second GPU emitter + the seed bank). The trail is
+  a ribbon renderer on the row's own ribbon emitter, VisTag 197.
+- **G2 light renderer — RULED [P4-D2]: DROPPED.** A Niagara light renderer is CPU-sim only
+  (`NiagaraLightRendererProperties.h:37`) and every CkParticles emitter is GPU, so one would be
+  silently skipped. The emitter's SPRITE is kept; only the light is gone (§13).
+- **G3 sub-UV flipbook — CLOSED by C4.** `Flames` draws a 2x2 sheet on VisTag 191.
+- **G4 event chain — CLOSED by [P3-G8]**: the every-frame location event becomes a BURST of 301
+  points carrying solved sample times, and the trail point calls the SAME closed form the sparkle
+  layer draws itself with (C6c, an identity — §11).
+- **G5 — was never a gap** (`[corpus-v3]`, already recorded below).
+
+**The original table:**
+
+#### The archaeology (as written 2026-08-01)
 
 Five things this source does that the pipeline **cannot express today**. Each is a real engineering
 item, not a tuning knob. Be conservative: a wrong "we can do this" costs an implementation session.
@@ -571,4 +593,368 @@ That is a design fork for the implementation session, not a decision this sheet 
 
 ---
 
-## 7+. Reserved for implementation.
+## 7. Textures — THREE new bakes for the whole batch, and one gap that measured itself away
+
+Reused, each measured off this very paint by an earlier batch: `T_VFX_Part_01` → `SoftParticle`,
+`T_VFX_Part_04` → `SparkStreak`, `T_VFX_Noise_02` → `TileNoise`, `T_VFX_Noise_04` →
+`TileNoiseCoarse`, `T_VFX_Noise_07` → `TileNoiseBanded`, `T_VFX_Cloud_04/05` → `Cloud04`/`Cloud05`,
+`T_VFX_Ring_01` → `RingUneven`, `T_VFX_Ring_02` → `RingFlare`, `T_VFX_Star_01` → `StarFour`,
+`T_VFX_Wind_01` → `WindSheet`, `T_VFX_Gradient_02` → `LinearRamp`, `T_VFX_LUT_Rainbow_01` →
+`LutWhite` (held white pending [P1-D1], as every Rainbow consumer does). Every one of those reaches
+this port through a look an earlier batch already carries, so none of them was re-measured.
+
+### 7.1 `ExpGroundScorch` — the paint whose NAME is the trap
+
+`T_VFX_Star_04` is not a star. Measured against `T_VFX_Star_01` (the source of the existing
+`StarFour` bake), the two look close by the crude statistic — **pixelwise correlation 0.870**, the
+second-closest near-miss the cookbook has seen — and are structurally different by the discriminating
+one:
+
+| Statistic (annulus r 0.30-0.40) | `T_VFX_Star_01` | `T_VFX_Star_04` |
+|---|---|---|
+| angular harmonic 4 | **0.165**, and harmonics 1/2/3/5/6/7 are all exactly **0.000** | 0.098, buried in a flat spectrum where every harmonic is 0.05-0.16 |
+| min/max angular ratio | 1.94 | **6.54** |
+| p90 over the whole image | 0.6118 | **0.3216** |
+| mean at r 0.60-0.65 | 0.055 | **0.006** |
+
+A clean isolated k=4 spike IS a four-point star; a flat spectrum with a 6.5x lumpiness ratio is an
+irregular hand-painted blob. Rejected — for scale, the one reuse this campaign has ACCEPTED on a
+correlation measured **1.00000**, `T_VFX_Lightning_02` was rejected at 0.72 and `LensSheet` at 0.56.
+
+The bake is the `Px_LightningBolt` MEASURED-PROFILE idiom: **24 angular anchors of the measured
+half-maximum radius** (min 0.2871, mean 0.3718, max 0.5091) give the blob its lumpy outline, and one
+radial falloff `saturate(1.60 - rho*0.90)^3.75` in the rim-normalized radius gives it its softness.
+Bake vs source: **pixelwise correlation 0.9677** — the highest any bake in this library has reached —
+mean 0.0932 / 0.0974, p90 0.327 / 0.3216.
+
+### 7.2 `GradientTrapezoid` — a transcription, and the death of §6.5's colour-texture gap
+
+`T_VFX_Gradient_03` (the bomb explosion's shape paint, baked in this batch and shared with it) is
+recorded by its sidecar as `TSF_BGRA8`, which is why `NS_Bomb_Explosion.md` §6.5 lists "a COLOUR shape
+texture in a slot the look treats as a greyscale mask" as gap 9. **Measured, its channel spread is
+exactly 0.0000 over all 262 144 pixels.** There is no colour in it, so there is no gap.
+
+What it is instead: constant in u to a variance of **4.9e-32**, and a symmetric TRAPEZOID in v — 0 at
+row 0, rising linearly to 1 at row 129, flat to row 382, falling to 0 at row 511. So it is functional
+config rather than art and is transcribed exactly, the way `LinearRamp` was:
+`saturate(min(v, 1-v) * 511/129)`. Largest deviation from the closed form: **0.008**, two 8-bit quanta,
+at the two rows next to the ends.
+
+### 7.3 `TileNoiseFine` — the first paint that needs TWO Fbm scales
+
+`T_VFX_Noise_05` (the FresnelBomb dissolve, and the bomb's first noise bubble) was measured against
+every existing noise bake's source and rejected by all four: best correlation at ANY roll is **0.11**
+(against `T_VFX_Noise_02`, i.e. `TileNoise`), and 0.00 to 0.07 direct against Noise_02/04/06/07.
+
+What separates it is its autocorrelation TAIL. It decays to 0.49 by 8 px like a fine noise but is
+still at 0.233 by 32 px and 0.096 by 64 — which a single-base Fbm cannot do, because a fine base has
+decayed away by 32 and a coarse one has not decayed at all by 8. So the bake is a weighted sum of
+both, 0.6 fine (48 tiles) + 0.4 coarse (6 tiles), rescaled about the mixed field's own mean.
+
+| | bake | source |
+|---|---|---|
+| mean / std | 0.3651 / 0.1338 | 0.3650 / 0.1341 |
+| coverage > 0.5 / > 0.25 | 0.1587 / 0.8024 | 0.1491 / 0.8051 |
+| autocorrelation at 4/8/16/32/64 px | 0.814 / 0.543 / 0.329 / 0.243 / 0.098 | 0.648 / 0.492 / 0.369 / 0.233 / 0.096 |
+
+The FresnelBomb family's three looks were repointed from their capability-landing placeholder
+(`TileNoise`) onto this bake — that measurement was explicitly deferred to this batch and is now made.
+
+---
+
+## 8. Meshes — TWO new carriers
+
+- **`SM_CkParticles_UvSphere`** — `SM_VFX_Sphere01`. The existing `Shell` is NOT this mesh: it is
+  radius 50 with u starting at angle 0, where the source is radius 100 with its seam at ±180°. The
+  new carrier is a 32×16 lat/long sphere, v pole-to-pole (0 at +Z), u wrapping from −180° to +180°.
+  Both signs are load-bearing — the bubbles' dissolve pans in that space. It carries 1024 triangles
+  against the source's 960; the difference is two rings of pole slivers 0.05 rad across, the same
+  pole-gap trade the `Shell` carrier already makes (§13).
+- **`SM_CkParticles_FlatAnnulus`** — `SM_VFX_Ring03`, used by the bomb explosion in this batch. Its
+  three measured radii 53.96 / 76.98 / 100.00 are EVENLY spaced (both gaps 23.02), so the two radial
+  bands are one lerp, and 64 segments at an 11.25° step reproduces the source's **256 triangles
+  exactly**.
+
+Reused unchanged: `SM_CkParticles_Spike` IS `SM_VFX_Spike01` — the same 4-sided pyramid the hit ports
+already generate, apex at +Z, base ±100, v = 0 at the tip.
+
+---
+
+## 9. The behavior — `Behavior_ExplosionShared.ush` + `ExecuteStage_CPU`'s `Explosion_Run`
+
+**This port did not get its own layer math.** Behaviors 40, 41, 42 and 43 are four thin entry points
+over ONE shared implementation, per the campaign's [P4-D1] fence, because the four source systems are
+two structural variants of one effect in two palettes. The shared file takes a two-field
+`FCkParticles_ExplosionParams` — a VARIANT axis (Ground / Omni: spawn shapes, layer partition, three
+counts) and a PALETTE axis (Fire / Ice: colour tables plus four scalars) — and the CPU mirror is one
+`Explosion_Run` function with four two-line cases.
+
+**Where the palette tables live, and why it is not the twins' own files.** [P4-D1] asks for "a thin
+file: include + palette table + entry function". HLSL has no function pointers, so shared layer math
+cannot call back into a per-twin table; putting the tables in the twin would mean duplicating the
+layer code that reads them, which is the exact defect the fence exists to prevent. Both palettes
+therefore sit side by side in the shared file — which is also where they are most reviewable, because
+they are read directly off one corpus diff.
+
+### 9.1 The corpus diff this port rests on
+
+Re-run at implementation against the `.txt` exports (`NS_ExplosionGround` vs `NS_ExplosionIceGround`,
+with the light emitter's two names normalized): **zero renderer, material, mesh, spawn-shape, count,
+lifetime, spawn-time or module-structure differences.** What the diff produces is twelve
+`Color from Curve` tables, three scalars (`Glow_01`/`Glow_03`/`Light` initialize colours are colour
+values; `Glow_02`'s dissolve 0.4 → 0.6 and `Flames`' `Color.Scale Alpha` 1 → 0.4 are not) and ONE
+curve-index binding. Nothing contradicts the sheets. That diff is what the batch's palette tests
+assert, in both directions.
+
+### 9.2 The one difference that is neither a colour nor a scalar
+
+The ribbon's colour curve carries `CurveIndex = linked:Emitter.Age` in the FIRE variants and carries
+no binding at all in the ICE ones. It is a real behavioural difference: under the emitter binding the
+whole trail fades together, under particle age each point fades on its own clock. It rides the palette
+as a boolean (`CkParticles_Explosion_RibbonColorOnEmitterAge`) and both readings are pinned by a test.
+
+### 9.3 The event ribbon, per [P3-G8]
+
+`Sparkles_02` runs `Generate Location Event` with `Event Type = Every Frame` and both `Use*` booleans
+false, so it sends ONE event per particle per frame unconditionally — the `[P3-G1]` reading, second
+sighting. A rate on the ribbon emitter would force the behavior to read the emitter clock to know when
+each point spawned, so the emitter BURSTS instead and each point carries a solved sample time:
+**43 steps × 7 strands = 301**, 43 being `Sparkles_02`'s longest resolved life (0.7 s) at the 60 Hz
+the source's Send Rate is quoted against. Point (strand k, step s) holds
+`CkParticles_Explosion_Spark02Pos(P, 4 + k, s/60)` — the SAME closed form the sparkle sprite layer
+draws itself with, which makes the collapse an IDENTITY the test asserts at exactly 0.0.
+
+`Initialize Ribbon`'s `Position Offset (100, 0, 0)` is INERT: the handler's `Receive Location Event`
+applies Position, and the handler stack runs after the spawn stack, so the offset is overwritten.
+
+### 9.4 Curl, and the one measured conversion
+
+`Sparkles_02001` carries a `Curl Noise Force` at frequency 10 / strength 5000. The frequency is the
+source figure read as METRES ⇒ **0.01/unit** (the `NS_DebuffCast` §9.3 conversion); the strength is an
+ACCELERATION where `CkParticles_CurlPath` advects with a VELOCITY, so the equal-ground constant
+velocity over a life L is `0.5 × 5000 × L`, divided by the MEASURED mean magnitude of this plugin's own
+curl field over the region these embers visit — **0.7329**, from 4000 samples within ±400 units at
+frequency 0.01, seed 7. (The same field sampled within ±200 measures 0.7262, so the sampling region is
+not what sets it.)
+
+### 9.5 Closed forms the layers use
+
+- `Sparkles_02`: `Spawn + V0 × Int3(t, 0.2, 1, 0.3, 0) × Life + ½·(0,0,−4000)·Age²` — the
+  `NS_BasicAttack` §8 spark pattern with the quadratic term the `Acceleration Force` adds. Its
+  Sprite Rotation Rate 720 → 0 deg/s integrates exactly to `720 × Life × Int2(t, 1, 0)`.
+- `Smokes`/`SmokesCenter`/`Flames`: `Spawn + V0 × Int2(t, 1, 0.2) × Life`.
+- `Spike01`: no velocity at all; its `Initial Mesh Orientation` rotation vector is carried onto the
+  mesh's +Z by `CkParticles_QuatFromZTo`, drawn from the source's constrained (0, [0, 0.5], [1, −1])
+  range — a mostly-upward fan.
+
+---
+
+## 10. Looks and renderers
+
+**ONE new look for the whole Ground pair**, and it is the only new DissolveAdd parameterization in the
+batch: `ExpGroundMarkDisAdd` (`M_VFX_DisAdd_Star04`) — the scorch decal, shape `ExpGroundScorch`,
+dissolve `SoftParticle`, distortion `TileNoise`, Brightness 1, Opacity_Boldness 1, Gradient_Invert 0.
+It is the batch's only instance whose shape, dissolve and distortion paints are three different assets.
+
+Every other material this system wears was already carried, checked value-by-value against §4.1 before
+reuse: `Part01` → `PartDisAdd01`, `Part04` → `PartDisAdd04`, `Star01` → `StarDisAdd01`, `Ring01` →
+`RingDisAdd01`, `Rainbow` → `RainbowDisAdd`, `Flare01` → `FlareDisAdd01`, `Smoke01` → `SmokeDisAdd01`,
+`Flames01` → `FlamesDisAdd01`, `Trail03` → `TrailDisAdd03`, `Flat02` → `FlatAdd02`. Ten of eleven.
+
+**Twelve row renderers + one ribbon renderer, VisTags 185-197**, and the palette twin declares the
+SAME array — literally the same function, so the two rows' `RendererOverrides` pointers compare equal
+(a test asserts that). A VisTag is compared against `Particles.VisibilityTag` within one emitter of one
+system, so two templates may carry the same numbers.
+
+| VisTag | Kind | Look | Source emitters |
+|---|---|---|---|
+| 185 | CameraFacingSprite | `PartDisAdd01` | `Glow_04`, `Light`'s sprite |
+| 186 | CameraFacingSprite | `FlareDisAdd01` | `Flare01` |
+| 187 | CameraFacingSprite | `StarDisAdd01` | `Sparkles_02` |
+| 188 | CameraFacingSprite | `SmokeDisAdd01` | `Smokes`, `SmokesCenter` |
+| 189 | CameraFacingSprite | `RingDisAdd01` | `Ring` |
+| 190 | CameraFacingSprite | `RainbowDisAdd` | `Raimbow` |
+| 191 | CameraFacingSprite, 2×2 | `FlamesDisAdd01` | `Flames` |
+| 192 | VelocityAlignedSprite | `PartDisAdd04` | `Sparkles_01`, `Sparkles_02001` |
+| 193 | CustomFacingSprite | `PartDisAdd01` | `Glow_01`, `Glow_02`, `Glow_03` |
+| 194 | CustomFacingSprite | `ExpGroundMarkDisAdd` | `Ground_Mark` |
+| 195 | Mesh `UvSphere`, MeshScale 0.8 | `FlatAdd02` | `Bubble_First_Explo` |
+| 196 | Mesh `Spike` | `FlatAdd02` | `Spike01` |
+| 197 | Ribbon (2nd emitter) | `TrailDisAdd03` | `Sparkles_02_Trail` |
+
+**C8's `MeshScale` earns its keep here**: the source's per-emitter `Mesh Uniform Scale 0.8` is a
+CONSTANT on the carrier, so it belongs on the renderer and not folded into the behavior's animated
+`Scale Mesh Size` curve. The spike's scale IS per-particle random, so its renderer stays at unit scale
+and the behavior writes it.
+
+**Cadence row:** `{ "PS_CkParticles_Template_ExplosionGround", 2.0f, 1.5f, 70, …, 0.0f, { 0.0f, 301, … } }`.
+
+---
+
+## 11. Tests
+
+`CkTests.UnitTests.CkParticles.ExplosionGroundBehavior` drives `Execute_Stage_CPU` directly — no
+Niagara system, no template asset, no RHI, no forked engine. What it pins:
+
+- the cadence row's four numbers and its ribbon emitter's shape, plus the renderer-level mesh scales
+  (0.8 on the bubble carrier, 1.0 on the spike one);
+- the burst partition as the source's per-emitter counts, held across 200 moduli;
+- **the event collapse at exactly 0.0** — a trail point sits on its leader's path, an identity rather
+  than a tolerance, because both sides evaluate the same closed form;
+- the emitter-age curve index (two trail points of different ages carry one colour at one instant);
+- a sample past its leader's death drawing nothing;
+- `Smokes`' HDR peak of 5.0 AND its `Color.Scale Alpha` of 0.4 — the [P2-D2] class, where a missing
+  scale reads 2.5x too bright;
+- `Ground_Mark`'s 1.5 s life, its six-key table's first knee, its 0.4 alpha scale, and a decal facing
+  pair that is not degenerate;
+- `Glow_03`'s 100x multiplier and the light sprite's 1e6 one surviving unclamped;
+- emitter-clock INDEPENDENCE over 400 seeds — the row declares no rate, so nothing may read it.
+
+---
+
+## 12. Verification — A/B protocol `[HUMAN-VERIFY]`
+
+VfxExamples gym, station **EXPLOSION GROUND**, spawn offset (0, 0, 20) — this effect is judged from
+the FLOOR up. `Ck_GymVfxExamples_RestartAll` re-fires both sides in sync.
+
+| # | What to compare | What "right" looks like |
+|---|---|---|
+| a | the first 0.05 s | one bubble shell blowing to 1.5x and three flat ground-plane glows opening under it |
+| b | the sparkle spray | hemispherical — nothing goes BELOW the pedestal plane. If it does, the Omni variant's shapes leaked in |
+| c | the trails | one strand behind each of the seven `Sparkles_02` motes, all fading TOGETHER rather than each on its own clock |
+| d | the smoke | five ring puffs at radius 70 plus five up a cone, both HDR-hot for their first sixth and then falling to black |
+| e | the scorch decal | still visible at 1.5 s, long after everything else is gone, lying flat and fading |
+| f | the floor illumination | **DROPPED** — the original lights the ground and the recreation does not (§13.1). Judge the sprite layers, not this |
+| g | the flames | five sub-UV puffs, each on a random start frame |
+
+## 13. Confirmed fidelity differences or intentional deviations
+
+1. **The dynamic light is DROPPED** ([P4-D2]). A Niagara light renderer is CPU-sim only
+   (`NiagaraLightRendererProperties.h:37`, enforced through every `ForEachEnabledRenderer`) and every
+   CkParticles emitter is `GPUComputeSim` (`CkParticles_TemplateBuilder.cpp:917`), so a light renderer
+   on one is silently skipped — the exact class of invisible failure the C6a stop existed to prevent.
+   The emitter's SPRITE is kept, including its ×1e6 `Scale RGB`; that multiplier is the light's
+   intensity channel, so with the light gone it now drives only a 9-unit sprite's bloom. Revisit
+   clause: if the A/B shows the original's floor illumination as a visible gap, the options are a
+   first CPU light emitter or a proxy glow, decided on that evidence.
+2. **The custom-facing pair is corrected.** All four `Align Sprite to Mesh Orientation` emitters
+   author alignment AND facing as `(0, 0, 1)`, which is DEGENERATE — the sprite's up axis is the
+   alignment projected off the facing plane, and that projection is zero. The recreation writes
+   alignment `(0, 1, 0)` / facing `(0, 0, 1)`: a ground-flat quad with a well-defined up. The decal's
+   in-plane angle is randomized 0-360° by the source anyway.
+3. **World space → local space**, the standing deviation (`NS_BasicAttack.md` §13.2). Visible only if
+   the spawning actor moves during the effect; the A/B pedestals do not.
+4. **`Opacty_DepthFade`** (30 / 10 / 0 across §4.1) is dropped — CkUsf surface looks do not wire scene
+   depth. It matters most on `Ground_Mark`, a 1500-unit quad lying on the floor.
+5. **`Core_Intensity` / `Color_Core`** on `Smoke01`, `Flames01` and `Star04` are not plumbed: the
+   family exposes `CoreColor` but blends toward it by the `core_color` dynamic channel, and only
+   `Smokes`/`SmokesCenter` drive that channel at all.
+6. **The Rainbow gradient chain** ships against the flat white ramp pending [P1-D1], as every Rainbow
+   consumer does — a provable multiply by one.
+7. **`SM_CkParticles_UvSphere` carries 1024 triangles against the source's 960**, because a grid
+   surface whose pole row collapses emits degenerate triangles. The difference is two rings of slivers
+   0.05 rad across.
+8. **The seven trail strands repeat across firings.** The two emitters keep separate UniqueID
+   counters, so a strand's leader is named by its BURST SLOT rather than by a shared particle
+   identity — the same cost `NS_BuffCast` §13.2 records.
+
+## 14. Reusable lessons
+
+1. **A palette twin is an id, not a file.** Four systems, one implementation, four two-line entry
+   points. The thing that made it work is that the VARIANT axis (shapes/counts/partition) and the
+   PALETTE axis (colour tables/scalars) are ORTHOGONAL — check that before reaching for a shared
+   include, because a shared file whose two axes interact is worse than two files.
+2. **HLSL has no function pointers, so "the table lives in the thin file" is not always available.**
+   When it is not, the tables belong in the shared file next to each other, not duplicated into the
+   twins along with the code that reads them.
+3. **A palette twin's test is a DIFFERENTIAL test.** Driving both ids over the same seeds and ages and
+   asserting field-by-field identity outside the diff catches both failure directions at once: a
+   structural field that moved (the sharing broke) and a colour that did not (the palette was not
+   wired). It is also the only test in the cookbook whose subject is the implementation rather than
+   the source.
+4. **`0.870` correlation is still a rejection.** Two paints of the same family correlate highly by
+   construction; the discriminating statistic is structural (here, whether the angular spectrum has an
+   isolated harmonic at all). Run the structural statistic before the correlation, not after.
+5. **A partition census must read each slot WHILE IT IS ALIVE.** A layer outside its own
+   [delay, delay + life] window leaves its branch through the early `Hide(); return;`, which runs BEFORE
+   that branch assigns `Out.VisTag` — so the sample carries the switch's pre-branch default of 0, not the
+   layer's tag. That is true of every behavior in the cookbook and it is harmless on screen (the particle
+   has zero colour, size and scale). It is NOT harmless in a test: this port's first gate bucketed the
+   partition at one convenient instant and every layer with a 0.05 or 0.1 s beat landed in bucket 0. Sweep
+   the loop instead — it is also strictly stronger, because it proves every slot draws at some point and
+   that each keeps ONE renderer for its whole life. §14.7 has the full write-up.
+6. **A sidecar's pixel format is not a measurement.** `T_VFX_Gradient_03` is recorded `TSF_BGRA8` and
+   is greyscale to 0.0000. One `numpy` line dissolved a capability gap that had been on the sheet
+   since the archaeology pass.
+
+### 14.7 The first gate went 31/35: THREE reds from one test defect, and one editor death
+
+`Particles` returned **31/35** on this batch's first run. Three tests failed on assertions —
+`ExplosionGroundBehavior`, `ExplosionOmniBehavior` and `BombExplosionBehavior`, with both palette twins
+GREEN — and those nineteen failing assertions share ONE root cause and **no behavior defect**. The fourth
+red is unrelated and is covered at the end of this section.
+
+**The signature.** In the Ground test exactly six buckets read 0 — `Flare01`, `Sparkles_02`, `Smokes` +
+`SmokesCenter`, `Ring`, `Raimbow`, `Flames` — and every other bucket was exactly right (`Part01Custom` 6,
+`Part04` 30, `Spike` 5, `Mark` 1, `Sphere` 1). The failing set is precisely the set of layers with a SPAWN
+BEAT; the passing set is precisely the beat-free ones. Bomb failed on `Ring01` (life 0.1 s, sampled at
+0.12), `FlareImpact` (life 0.05 s) and `LightningStrip` (read 2 of 5 — its life is a random 0.1-0.15 s, so
+some seeds had died and some had not). That pattern cannot be produced by drift; it is structural.
+
+**The cause.** The census read `Evaluate(age, Seed).VisTag` at ONE age. A layer outside its window returns
+through the early hide, before its branch assigns the tag, so it reports 0.
+
+**What was ruled OUT, with evidence.** Seed banking was not implicated: the event-collapse identity, the
+ribbon-bank partition assertions and BOTH palette-twin differential tests passed, and they share the same
+`Evaluate` path and the same `RibbonSeedBase + n` construction. A wrong variant/palette id was not
+implicated either: the Omni test's Ground-vs-Omni discriminators (hemispherical vs full-sphere spawn, the
+constrained vs isotropic spike fan) passed, and each variant's variant-SPECIFIC counts passed — Ground's
+custom-facing quad at 6 against Omni's at 2, and Omni's "no scorch decal" at 0.
+
+**The fix (tests only, three files).** Bucket by the tag a slot reports while ALIVE, swept across the loop,
+and assert additionally that no slot is never-drawn and that each keeps ONE renderer for its whole life.
+Two Bomb assertions were separately WRONG and were corrected against the corpus rather than relaxed:
+
+- *"almost nothing survives to 0.45 s"* contradicted this system's own §6.1. The row's 0.5 s lifetime IS
+  `Sparkles_01`'s resolved `Lifetime Max`, and `Sparkles_01` fires off the 0.05 s beat, so the true tail is
+  **0.55 s**. It now asserts that something IS alive at 0.45, that it is ONLY the sparkle layer, and that
+  nothing at all survives 0.56 — three claims where there was one wrong one.
+- the VisTag-band assertion counted hidden samples as band violations (261 of them). It now checks the band
+  on DRAWING samples only and asserts hidden samples are fully INERT, which is the property that matters.
+
+**The process lesson, and it is the batch-E lesson again.** The v1 self-check reproduced the PARTITION
+FUNCTION (`Seed % N` → layer) and was correct; the tests assert something else — the `StageResult` the CPU
+mirror returns AT AN AGE. A sim that does not model the harness's own evaluation path cannot catch a defect
+that lives in it. The self-check now models `ExecuteStage_CPU`'s output including hide-semantics and tag
+defaulting, driven by the real `Rand(Seed, Salt)` so random lifetimes are per-seed correct. It reproduces
+the lane exactly: the same six failing roles on Ground and Omni, the same three on Bomb, and **261** hidden
+band samples against the lane's reported 261.
+
+**The FOURTH red is a different animal, and it is not an assertion.** The lane reported 35 discovered,
+31 Success, 3 Fail — and `Ck_AutoTest_Particles_SpawnAllBehaviors` never completed at all: it "was in
+flight when the editor died (exit=0x1)" after the harness saw no output inside its idle window. The log
+says exactly what it was doing:
+
+```
+LogStaticMesh: Display: Waiting for static meshes to be ready 0/1 (/CkFoundation/.../SM_CkParticles_Spike) ...
+LogStaticMesh: Display: Waiting for static meshes to be ready 0/1 (/CkFoundation/.../SM_CkParticles_Bomb) ...
+LogStaticMesh: Display: Waiting for static meshes to be ready 0/1 (/CkFoundation/.../SM_CkParticles_SlashClaw) ...
+=== utb: editor produced no output within the idle window — treated as HUNG ===
+```
+
+It was blocking on a COLD STATIC-MESH BUILD, 8-30 s per carrier. `RebuildTemplateAssets` runs earlier in
+the same lane and re-bakes and re-SAVES every carrier mesh, which invalidates each one's DDC; this test
+then spawns the whole roster and is the first thing to load them all back. That has been true of every
+lane, and this batch pushed it over the edge: **thirteen carriers instead of eleven, thirty templates
+instead of twenty-five, four of them dual-emitter, and the run is `--no-nullrhi` so the spawns are real.**
+
+Its `_TimeoutSeconds` was **10**, which the mesh builds alone blew past. Raised to **120** with the
+measurement in the comment — headroom, not a tuning: the test still asserts every one of the 45 spawns
+returns a live component, and a genuine hang still fails it. **That change cannot rescue a run whose
+EDITOR is killed first**, and tuning the harness idle window is the orchestrator's, not this batch's.
+
+**Adjacent finding, flagged not fixed:** `Generate_AllVfxMeshes` re-bakes and re-saves all thirteen
+carriers on every `RebuildTemplateAssets`, whether or not their surface changed — which is both the
+`.uasset` churn every batch has seen in `git status` and the cause of this cold-DDC stall. Skipping
+unchanged meshes would remove both. It is a generator change with real blast radius and it belongs to
+whoever owns the regen path, not to a port batch.

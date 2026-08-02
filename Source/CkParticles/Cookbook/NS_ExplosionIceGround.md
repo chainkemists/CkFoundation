@@ -7,7 +7,10 @@ meshes, identical cadence. This sheet carries the deltas and its own exact colou
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) — BehaviorId 41.** A PALETTE TWIN: it shares every
+line of layer math with behavior 40 through `Behavior_ExplosionShared.ush` and differs only by a
+palette id. Its own `PS_CkParticles_Template_ExplosionGroundIce` row, its own automation test (the
+one that proves the sharing), and its own VfxExamples pair. `[HUMAN-VERIFY]` open — §12.
 
 No behavior, no `.ush`, no look, no mesh, no texture, no cadence row, no test, no gym station. No
 behavior id allocated. Nothing rendered or looked at.
@@ -240,4 +243,107 @@ colour path unclamped.
 
 ---
 
-## 7+. Reserved for implementation.
+## 7. Textures, 8. Meshes, 9. The behavior — SHARED, not duplicated
+
+**This port added no texture, no mesh, no look, no shader file and no CPU mirror function.** It is
+BehaviorId 41: two lines in `Behavior_ExplosionGroundIce.ush` (include + entry point) and two lines in
+`ExecuteStage_CPU` case 41, over the same `Behavior_ExplosionShared.ush` /
+`NDICkParticlesLocal::Explosion_Run` that behavior 40 runs. Read
+[NS_ExplosionGround.md](NS_ExplosionGround.md) §7-§9 for the implementation of record.
+
+What this file adds is the ice palette's own key tables, which live beside the fire ones in the shared
+file (see NS_ExplosionGround.md §9 for why they cannot live here) and are transcribed verbatim from
+§5.1-5.18 above.
+
+### 9.1 The corpus diff, re-run at implementation
+
+`diff NS_ExplosionGround.txt NS_ExplosionIceGround.txt`, with the light emitter's two names
+normalized, produces **88 lines and nothing structural**:
+
+| Class | Count | Notes |
+|---|---|---|
+| `Color from Curve` overrides | 12 | including the two-key collapses on `Sparkles_02`/`Sparkles_01` and the moved key TIMES on `Flames` |
+| Initialize colours | 3 | `Glow_01`, `Glow_03`, `Light` |
+| Non-colour scalars | 2 | `Glow_02`'s dissolve 0.4 → **0.6**; `Flames`' `Color.Scale Alpha` 1 → **0.4** |
+| Curve-index bindings | 1 | the ribbon loses `CurveIndex = linked:Emitter.Age` |
+| Renderers / materials / meshes / spawn shapes / counts / lifetimes / spawn times / module structure | **0** | |
+
+§5.0's "exactly four, and nothing else" non-colour list is confirmed with one clarification: the
+ribbon's curve-index binding is a fifth non-colour difference, and §5.6 already records it in prose
+(it is simply not in the §5.0 table). That is the port's only correction to this sheet.
+
+---
+
+## 10. Looks and renderers
+
+**Zero new looks.** The twin declares the SAME renderer array as behavior 40 — literally
+`Get_ExplosionGroundRendererSpecs()`, so the two rows' `RendererOverrides` data pointers compare equal,
+which the test asserts. VisTags **185-197**, the same band; a VisTag is compared against
+`Particles.VisibilityTag` within one emitter of one system, so two templates may carry the same
+numbers, and the twins sharing them is what lets the shared include name one set of tag constants
+instead of taking them as a parameter.
+
+**Cadence row:** `{ "PS_CkParticles_Template_ExplosionGroundIce", 2.0f, 1.5f, 70, …, 0.0f, { 0.0f, 301, … } }`
+— identical to its original's in every field but the asset name. It needs its own row because a
+behavior id resolves to exactly one template path and that path IS the spawn contract.
+
+---
+
+## 11. Tests
+
+`CkTests.UnitTests.CkParticles.ExplosionGroundIceBehavior` is not a second copy of behavior 40's gate.
+It is a DIFFERENTIAL test whose subject is the IMPLEMENTATION: it drives behaviors 40 and 41 over the
+same 70 seeds × 61 ages and asserts
+
+- every one of VisTag, Position, Velocity, Size, Scale, Rotation, MeshIndex, the sprite facing pair,
+  the flipbook frame and (outside `Glow_02`) the dynamic parameter is IDENTICAL — **a recolour moves
+  nothing structural**, which is the [P4-D1] fence made executable;
+- colour DIFFERS on every layer the corpus diff lists, and is IDENTICAL on `Raimbow`, the one layer
+  with no `Color` override in either variant;
+- the two rows share the same renderer array POINTER and the same cadence;
+- `Glow_02`'s dissolve is 0.4 in fire and 0.6 in ice while its size is untouched;
+- `Flames`' alpha PEAKS at 1.0 in fire and 0.4 in ice — pinned at the peak, because a missing
+  `Color.Scale Alpha` reads 2.5x too bright and nothing else would catch it;
+- the ribbon's curve index flips: two trail points of different ages share one colour under the fire
+  binding and do not under the ice one, while their geometry stays identical.
+
+Both failure directions are real defects: a structural field that moved means the twins stopped
+sharing; a colour that did not move means the palette was never wired and the ice port renders fire.
+
+---
+
+## 12. Verification — A/B protocol `[HUMAN-VERIFY]`
+
+VfxExamples gym, station **EXPLOSION GROUND (ICE)**, spawn offset (0, 0, 20).
+
+| # | What to compare | What "right" looks like |
+|---|---|---|
+| a | against its own original | the same blast, in blue-cyan |
+| b | against the FIRE Ck pedestal | the same SHAPES, frame for frame — if the two Ck pedestals differ in silhouette, timing or spray, the twins are not sharing their math |
+| c | the smoke | stays inside [0, 1] here, where the fire smoke flashes to 5x. The ice ground smoke is the one layer in the family with no overdrive at all |
+| d | the flames | noticeably fainter than the fire ones — 40 % alpha |
+| e | the trails | each point fading on its OWN clock rather than the strand fading together; this is the ice binding, and it is the difference easiest to lose |
+| f | the floor illumination | **DROPPED**, as on the fire variant (§13) |
+
+## 13. Confirmed fidelity differences or intentional deviations
+
+**All eight of [NS_ExplosionGround.md](NS_ExplosionGround.md) §13 apply verbatim** — the light drop,
+the corrected custom-facing pair, world→local space, the dropped depth fade, the unplumbed core chain,
+the white Rainbow ramp, the sphere's pole slivers and the repeating trail strands. This variant adds
+none of its own: it is the same implementation.
+
+The [P4-D2] light-drop clause, verbatim: *a Niagara light renderer is CPU-sim only and every
+CkParticles emitter is GPU, so the layer is dropped and recorded here; if the maintainer's A/B shows
+the original's floor illumination as a visible gap, the options are a first CPU light emitter or a
+proxy glow, decided on real evidence at inspection rather than speculatively.*
+
+## 14. Reusable lessons
+
+1. **The strongest evidence for a shared implementation is a diff you re-ran.** The sheet said
+   "byte-identical recolour"; the port re-ran the diff before relying on it, found 88 lines, and
+   classified every one. That classification is what the differential test encodes.
+2. **A "colour-only" difference is rarely only colour.** Three of the five non-colour differences here
+   (a dissolve scalar, an alpha scale, a curve-index binding) would each have been invisible in a test
+   that only compared RGB.
+3. **Two rows may share a renderer array.** Asserting the POINTERS are equal is a cheap, exact way to
+   prove a twin did not fork its renderer set — much stronger than comparing contents.

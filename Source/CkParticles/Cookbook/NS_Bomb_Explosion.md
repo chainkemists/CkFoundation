@@ -5,7 +5,10 @@ Exemplars this sheet copies: [NS_BasicAttack.md](NS_BasicAttack.md) §1–6, [NS
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) — BehaviorId 44.** `Behavior_BombExplosion.ush` +
+`ExecuteStage_CPU` case 44, the `PS_CkParticles_Template_BombExplosion` row (the cookbook's
+largest burst at 162), fifteen row renderers, two new looks, and the batch's only consumer of
+every C8 facing mode. `[HUMAN-VERIFY]` open — §12.
 
 No behavior, no `.ush`, no CPU mirror, no look, no mesh, no texture, no cadence row, no test, no gym
 station exists for this effect. No behavior id has been allocated. Nothing has been rendered or
@@ -720,7 +723,239 @@ majority of the visible effect; the five Bubbles are the shell/shockwave layer a
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures — TWO new bakes, and a gap that measured itself away
 
-Sections 7–14 of the recipe schema ([README.md](README.md)) are intentionally absent and are to be
-written by the implementation session, from what actually happened.
+Reused, each measured off this very paint by an earlier batch: `T_VFX_Part_01` → `SoftParticle`,
+`T_VFX_Part_02` → `SoftParticleBright`, `T_VFX_Part_03` → `SoftParticleFine`, `T_VFX_Part_04` →
+`SparkStreak`, `T_VFX_Ring_01` → `RingUneven`, `T_VFX_Ring_02` → `RingFlare`, `T_VFX_Impact_01` →
+`ImpactStar`, `T_VFX_LightStrip_01` → `LightStrip`, `T_VFX_Noise_02` → `TileNoise`, `T_VFX_Noise_06` →
+`TileNoiseSparse`. All ten reach this port through looks that already exist.
+
+Both new bakes are generated in this batch and shared with the four explosion variants; the full
+measurements are in [NS_ExplosionGround.md](NS_ExplosionGround.md) §7.2-§7.3. In short:
+
+- **`GradientTrapezoid`** (`T_VFX_Gradient_03`) — **§6.5's gap 9 does not exist.** The sidecar records
+  `TSF_BGRA8`, but the paint's channel spread is exactly **0.0000** over all 262 144 pixels; it is
+  greyscale, and constant in u to a variance of 4.9e-32. It is a symmetric trapezoid in v (0 at row 0,
+  1 by row 129, flat to 382, 0 by 511), transcribed as `saturate(min(v, 1-v) * 511/129)` with a
+  largest deviation of 0.008 — two 8-bit quanta.
+- **`TileNoiseFine`** (`T_VFX_Noise_05`) — rejected against all four existing noise bakes' sources
+  (best correlation at any roll **0.11**). Its autocorrelation tail belongs to neither a fine nor a
+  coarse Fbm, so the bake mixes both (0.6 × 48 tiles + 0.4 × 6 tiles). The three `ExpFresnelBomb`
+  looks, which the capability landing parked on `TileNoise` pending exactly this measurement, were
+  repointed onto it.
+
+Not needed: `T_VFX_WhitePixel` (the family's no-op gradient map, already `LutWhite`).
+
+---
+
+## 8. Meshes — one new carrier, three reused
+
+- **`SM_CkParticles_FlatAnnulus`** (new, §6.3's `FlatAnnulus`) — `SM_VFX_Ring03`. Its three measured
+  radii 53.96 / 76.98 / 100.00 are EVENLY spaced, so the two bands are one lerp; 64 segments at 11.25°
+  reproduces the source's **256 triangles exactly**. Both UV signs are load-bearing and both are
+  measured: v runs INNER → OUTER (the opposite of the crescent's) and u DECREASES with polar angle,
+  `frac(0.75 − angle/360)`, which is the `Cylinder` carrier's convention.
+  **Sheet correction:** §3.3 states that formula with a PLUS sign; its own three measured samples
+  (0.25 at −180°, 0.75 at 0°, 0.2812 at +168.75°) all agree on the MINUS. Arithmetic class; the
+  itemization was right and the derived formula was wrong.
+- **`SM_CkParticles_UvSphere`** (new in this batch, shared with the explosion variants) — serves ALL
+  FOUR sphere bubbles. §3.4's `[inferred]` that `SM_VFX_Sphere01` and `SM_VFX_Sphere02` are duplicates
+  is taken as read: their measured geometry is identical and one carrier draws both.
+- **`SM_CkParticles_Spike`** and **`SM_CkParticles_Card`** already existed — §6.3 planned to generate
+  both and the answer was two names, the same finding `NS_Lightning_Muzzle` §7 made.
+
+---
+
+## 9. The behavior — `Behavior_BombExplosion.ush` + `ExecuteStage_CPU` case 44
+
+The cookbook's largest single burst: 23 emitters, **162 particles**, three spawn beats (0 / 0.05 /
+0.1 s), and the whole effect over by t ≈ 0.5 s of a Loop-Once 2.0 s system. Nothing here is shared with
+the explosion family — the palette axis belongs to `Behavior_ExplosionShared.ush` and this effect has
+no palette variant.
+
+### 9.1 §6.5's gap 6 (a burst of 162) is CLOSED, and it needed no mechanism
+
+`Add_SpawnEmitterStack` writes `BurstCount` as one rapid-iteration int, and it is the SAME function the
+ribbon emitters use — `NS_BuffCast`'s ribbon emitter has been driving it at **301** since batch G, and
+`NS_Lightning_Muzzle`'s at 30, both gated green with non-inert templates. 162 is not a new kind of
+number, it is a smaller one than the pipeline already ships. The sheet's "verify the burst-count
+ceiling before committing" is discharged by that precedent rather than by a new experiment.
+
+### 9.2 §6.5's gaps 1, 2 and 3 are CLOSED by C1 and C8
+
+- gap 1 (no row-declared camera-facing sprite kind) closed by C1 in Phase 1;
+- gap 2 (mesh facing not expressible) closed by C8: `MeshFacingMode` is a renderer property, so the
+  lightning card declares `Velocity` and all five bubbles declare `CameraPosition`;
+- gap 3 (how much CameraPosition matters) is answered rather than worked around — `Bubble_Out` is a
+  flat annulus and a non-billboarded flat annulus edge-on is invisible, which is exactly why C8 exists.
+
+This row is the batch's only consumer of every facing mode, and `CameraPosition` is the one orientation
+a behavior cannot fake because the stage has no camera.
+
+### 9.3 The layers worth naming
+
+- **`Sparkles_02` is the DEBRIS pass** and its `Color` module is DISABLED, so its colour is the
+  spawn-time `Random Range Linear Color` and nothing else. `Color Channel Mode = Link RGB / Link A`
+  (`[corpus]`, the [P2-D5d] ruling) makes that ONE draw lerping the whole triple, not three
+  independent ones — so the debris runs a blue-to-white line rather than a colour cube. On top of it:
+  gravity `(0, 0, −7000)`, a 0.7 XY damping on the shared velocity curve, and a faster ejection
+  (4000-8000 against `Sparkles_01`'s 2000-7000). It arcs and falls where `Sparkles_01` flashes.
+- **`LightningStrip`'s velocity is UNIT scale** (`Random Range Vector` min (−1,−1,0.1) max (1,1,1)).
+  Its only job is to give the Velocity-facing renderer an axis, which is why the layer barely moves.
+- **`Spike01`/`02`/`03`** all spawn at the ORIGIN — their `Cone Location` module is disabled — and are
+  separated only by orientation and by how thin they are (0.02 / 0.04 / 0.1-0.15 in cross-section).
+  Only `Spike03` carries a colour ramp, opening at 2x white-blue.
+- **The five bubbles** are single mesh particles at the origin with no rotation and no randomness.
+  `Bubble_First_Explo`'s alpha ramps UP over life, so the shell ASSEMBLES rather than fading;
+  `Bubble_Out`'s scale curve has no third key, so it holds at 1.5x past t = 0.7 while its dissolve
+  drives to −2 and clears it; `Bubble_Noise02`'s RGB fades to black by t = 0.749 while its alpha
+  ramps up.
+
+### 9.4 Sheet corrections applied in place
+
+- **§5.7's `Sprite Rotation Angle = 90`** on both sparkle emitters is INERT: `Sprite Rotation Mode =
+  Unset` `[corpus]`. The [P2-D5c] class, second sighting. Neither sparkle layer writes a rotation.
+- **§5.7's `Scale Sprite Size 001` mode** was unstated for `Sparkles_01`; it is `Non-Uniform Curve`
+  `[corpus]`, so the non-uniform pair (X (1,1)L | Y (0,1)C (0.9,0.3)C) is live and the uniform curve
+  beside it is inert — the [P2-E5] class.
+- §3.3's u formula sign (see §8).
+
+---
+
+## 10. Looks and renderers
+
+**TWO new looks**, both DissolveAdd parameterizations of the shape paint measured in §7:
+
+- `ExpBubbleNoiseDisAdd` (`M_VFX_DisAdd_BubbleNoise_01`) — shape `GradientTrapezoid`, dissolve
+  `TileNoiseFine`, Brightness 10, `Dissolve_Speed` (0, −0.1). The only look in the cookbook that pans
+  its dissolve UPWARDS along V while the behavior holds the channel at a static −0.5, so the shell
+  erodes continuously rather than on a curve.
+- `ExpBubbleOutDisAdd` (`M_VFX_DisAdd_BubbleOut_01`) — shape `GradientTrapezoid`, dissolve
+  `TileNoiseSparse`, Brightness 4, `Dissolve_Scale` (0.3, 0.5), `Dissolve_Speed` (0, 1).
+
+Everything else was already carried: `Part01/02/03/04`, `Ring01`, `Impact01`, `Flare01`,
+`LightStrip`, `Flat02`, and the three `ExpFresnelBomb` looks the Phase-4 capability landing built from
+this sheet's own §4.3.
+
+**Fifteen row renderers, VisTags 210-224** — seven of them meshes, the heaviest mesh load in the
+cookbook.
+
+| VisTag | Kind | Look | Source emitters |
+|---|---|---|---|
+| 210 | CameraFacingSprite | `PartDisAdd01` | `Glow_01`, `Glow_02`, `Glow_03`, `Glow_04` |
+| 211 | CameraFacingSprite | `PartDisAdd03` | `Glow_05` |
+| 212 | CameraFacingSprite | `PartDisAdd02` | `Flare_01`, `Flare_02` |
+| 213 | CameraFacingSprite | `FlareDisAdd01` | `Flare03` |
+| 214 | CameraFacingSprite | `RingDisAdd01` | `Ring01` |
+| 215 | CameraFacingSprite | `ImpactDisAdd01` | `FlareImpact` |
+| 216 | CustomFacingSprite | `PartDisAdd01` | `Ground_Glow_01`, `Ground_Glow_02` |
+| 217 | VelocityAlignedSprite | `PartDisAdd04` | `Sparkles_01`, `Sparkles_02` |
+| 218 | Mesh `Spike` | `FlatAdd02` | `Spike01/02/03` |
+| 219 | Mesh `Card`, facing **Velocity** | `LightStripDisAdd` | `LightningStrip` |
+| 220 | Mesh `UvSphere`, facing **CameraPosition**, scale 2 | `ExpBubbleNoiseDisAdd` | `Bubble_Noise01` |
+| 221 | Mesh `UvSphere`, facing **CameraPosition**, scale 2 | `ExpFresnelBomb01` | `Bubble_First_Explo` |
+| 222 | Mesh `FlatAnnulus`, facing **CameraPosition**, scale 3 | `ExpBubbleOutDisAdd` | `Bubble_Out` |
+| 223 | Mesh `UvSphere`, facing **CameraPosition**, scale 2 | `ExpFresnelBomb02` | `Bubble_Noise02` |
+| 224 | Mesh `UvSphere`, facing **CameraPosition**, scale 2 | `ExpFresnelBomb03` | `Bubble_Fresnel` |
+
+**Cadence row:** `{ "PS_CkParticles_Template_BombExplosion", 2.0f, 0.5f, 162, … }` — no rate, no ribbon.
+
+The `Ground_Glow` pair's custom-facing pair is authored `(1,0,0)` / `(0,0,1)`, which is
+non-degenerate, so it is written as authored (unlike the explosion family's — see
+[NS_ExplosionGround.md](NS_ExplosionGround.md) §13.2).
+
+---
+
+## 11. Tests
+
+`CkTests.UnitTests.CkParticles.BombExplosionBehavior` pins:
+
+- the row's four numbers, that it declares NO ribbon, and — on the renderer specs, because these are
+  renderer facts a behavior cannot express — that seven renderers are meshes, five face
+  `CameraPosition`, exactly one faces `Velocity`, and **no sprite renderer states a facing mode or a
+  mesh scale**;
+- the 162-slot partition as the source's per-emitter counts, summing to 162 and holding across 40
+  moduli;
+- the three spawn beats gating their layers, and nothing surviving to 0.45 s;
+- `Ring01`'s 0.1 s life running the full +1 → −1 dissolve sweep inside it, at 0.6 alpha;
+- `Spike03`'s 2x opening ramp and the two-key Z curve that flattens the spikes instead of shrinking
+  them;
+- the debris pass: a constant colour where `Sparkles_01` ramps, a blue pinned at 1, the LINKED single
+  draw (recovering K from red and predicting green from it), and gravity pulling its velocity down;
+- each bubble's own shape: `Bubble_First_Explo` assembling, `Bubble_Out` holding at 1.5x,
+  `Bubble_Noise01`'s static dissolve, `Bubble_Noise02` fading to black, `Bubble_Fresnel` replacing its
+  initialize colour;
+- that no particle ever writes a VisTag outside 210-224, and emitter-clock independence.
+
+---
+
+## 12. Verification — A/B protocol `[HUMAN-VERIFY]`
+
+VfxExamples gym, station **BOMB EXPLOSION**, spawn offset (0, 0, 60). **Walk around this one** — five
+of its layers are camera-facing meshes, so a single viewing angle judges half the effect.
+
+| # | What to compare | What "right" looks like |
+|---|---|---|
+| a | the first frame | a 4000-unit ground decal and a 1500-unit shell opening together, both deep blue |
+| b | t ≈ 0.05 s | a violet flashbulb (`FlareImpact`) already gone, and 100 streaks leaving the upper hemisphere |
+| c | the debris | half the streaks arcing and FALLING (gravity −7000), in colours running blue → white |
+| d | the spikes | thirty needles from one point, flattening into slivers rather than shrinking away |
+| e | t ≈ 0.1-0.4 s | the shell stack: a noise bubble, an assembling Fresnel shell, an expanding flat RING, and two more shells — all of them turning to face you as you orbit |
+| f | `Bubble_Out` specifically | a flat annulus that stays readable from every angle. If it disappears edge-on, the CameraPosition facing did not take |
+| g | the whole thing | over by half a second |
+
+## 13. Confirmed fidelity differences or intentional deviations
+
+1. **`Opacty_DepthFade`** (20 / 30 / 0 across §4.1) and the FresnelBomb family's `DephFade_Dist` (30 on
+   one instance) are dropped — CkUsf surface looks do not wire scene depth. §6.5 gap 8 rates this as
+   mattering more here than elsewhere, and it does: the two ground decals are 2700-4000 units wide and
+   lie flat on the floor, exactly where a hard intersection line reads badly.
+2. **The `Color_Core` chain is not plumbed**: `Core_Intensity` (1 / 20 / 5 across the instances),
+   `Color_CoreDifferent` (1 on `BubbleOut_01`), `Core_Power` (0 on `Impact01`) and `BubbleOut_01`'s
+   `Color_Core` tint. The tint is the one that WOULD be reachable — the family exposes `CoreColor` —
+   and it is provably INERT anyway: the family blends toward it by the `core_color` dynamic channel,
+   and every Bubble emitter writes that channel as 0 (§5.9). So the family helper was left alone
+   rather than gaining a parameter no look could make visible.
+3. **The FresnelBomb family's four documented omissions** stand as the capability landing recorded
+   them: the `Color_CoreDifferent`/`Core_Intensity`/`Core_Power` core chain (inert here), `Glow_Intensity`
+   (1 on all three, folded into Brightness by the batch-A precedent), `Dissolve_Invert` (0 on all
+   three) and `DephFade_Dist`. Its `DissolveEdge` 0.15 remains INFERRED — the source cuts with a pair
+   of `Step` nodes whose thresholds are unnamed graph constants, so the DissolveAdd family's own
+   inferred edge is reused rather than a second reading invented.
+4. **Four of the 23 emitters are LOCAL space** where the other nineteen are world space
+   (`FlareImpact`, `LightningStrip`, `Flare_01`, `Flare_02`). The template is local-space throughout,
+   so at a stationary pedestal the two are indistinguishable; §6.5 gap 7 rates this low-risk for a
+   fixed-point explosion and that reading is unchanged.
+5. **`SM_CkParticles_UvSphere` carries 1024 triangles against the source's 960** — see
+   [NS_ExplosionGround.md](NS_ExplosionGround.md) §13.7.
+6. **`LightningStrip`'s `Initial Mesh Orientation` composes with the renderer's Velocity facing**, and
+   which of the two wins is a Niagara ordering fact this port did not verify: the behavior writes the
+   authored orientation and the renderer declares `Velocity`. If the card reads mis-oriented at A/B,
+   this is the first thing to check.
+7. **The mesh renderers' `MeshScale` carries the source's per-emitter `Mesh Uniform Scale`** (2 / 2 /
+   3 / 2 / 2) rather than the behavior folding it into `Particles.Scale`. Numerically identical; it is
+   recorded because the split is a convention, not a derivation.
+
+## 14. Reusable lessons
+
+1. **A "verify before committing" flag can be discharged by precedent instead of by an experiment.**
+   162 looked like the batch's risk and was already beaten by a 301-point ribbon emitter driving the
+   same function. Check what the pipeline already ships before designing a probe for it.
+2. **Renderer facts belong in renderer assertions.** Facing modes and mesh scales are invisible to the
+   CPU mirror, so the test reads them off `Get_TemplateSpecs()` — including the NEGATIVE (no sprite
+   renderer states either), which is what catches a copy-paste into the wrong row.
+3. **`Link RGB / Link A` is worth a dedicated assertion.** Recovering the single draw K from one
+   channel and predicting another from it fails loudly if someone re-implements the range as three
+   independent lerps, which is the natural reading of "Random Range Linear Color".
+4. **The 0.5 s row lifetime is not the longest LAYER, it is the longest layer's DEATH.** This port's first
+   gate carried an assertion that "almost nothing survives to 0.45 s", which contradicted the row's own
+   §6.1: `Sparkles_01` resolves to a 0.5 s max life and fires off the 0.05 s beat, so the effect runs to
+   **0.55 s**. Derived prose in a §12 table is not evidence; the cadence number is. (Full write-up in
+   [NS_ExplosionGround.md](NS_ExplosionGround.md) §14.7, which this port shares.)
+5. **This is the worst system in the cookbook for a single-instant partition census** — three spawn beats,
+   a 0.05 s layer, a 0.1 s layer and five cards on a random 0.1-0.15 s life, so NO instant sees all 23
+   emitters. Sweep the loop.
+6. **A disabled `Color` module is a load-bearing fact.** `Sparkles_02` keeps its spawn colour for its
+   whole life; a port that transcribed the authored-but-disabled curve would have given the debris a
+   ramp the source does not have.
