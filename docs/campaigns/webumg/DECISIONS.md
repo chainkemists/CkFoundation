@@ -57,6 +57,18 @@ Gate proof: 33/33 pattern lane with all gates live; 908/908 full suite. **Gate 4
 
 Delivered per D2/D3: reflected PageAsset (flattened tree, read-only, source-hash stamped), atomic emission (duplicate data-ck-name hard error, proven on H1), idempotence at projection AND package level, CkWebUmgEditor importer, WidgetsByCkName binding surface, and the pixel suite rendering THROUGH the projection with a scoreboard identical to the direct path (the exit criterion, now permanently gated). 931/931 full suite. Deferred to Gate 5 with Adam's visibility: real AS consumption script, editor UX (factory/context-menu). "Also emit WBP?" (D2's re-examination clause) — NOT pursued: the through-projection pixel evidence shows the DataAsset-runtime path meets the fidelity contract without WBP emission; revisit only if Gate 5's real-screen work surfaces a designer-visibility need.
 
+## Harness-home deviation — **RESOLVED 2026-08-01: harness stays in CkWebUmg (migration declined)**
+
+The Gate-2 deviation ("move the harness to CkTests when the sibling's work lands") was written when
+the harness was one rect suite. Its trigger is now met (CkTests clean), but the price changed: the
+harness is five suites whose pixel lane needs UMG/RHI/ImageWrapper/Slate — six NEW engine deps on
+CkTests, a shared module half the framework links, to host tests that are inseparable from CkWebUmg
+internals (corpus paths, ratified budgets, builder policies). Tests-next-to-module wins.
+The AS layer DOES live in CkTests (its Script tree is where AutoTest discovery works —
+`Script/CkWebUmg/`, side-branch feature/webumg-campaign). Revert hook: if CkTests ever grows a
+UI-testing tier that wants those deps anyway, move the suites then — names are stable
+(`CkTests.UnitTests.CkWebUmg.*`), so the move stays invisible to automation.
+
 ## Standing evidence notes (carried from Phase 0)
 
 - Yoga vendoring cautions: pin `c766885`; `UseWebDefaults` on; never expose inert grid setters; extractor pre-sorts children by computed `order`; fix `pointScaleFactor` for deterministic harness comparisons (PriorArt §3).
