@@ -5,12 +5,14 @@ Exemplars this sheet copies: [NS_BasicAttack.md](NS_BasicAttack.md) §1–6, [NS
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02, Phase 3 batch F). Behavior id 37. Not yet A/B'd.**
 
-No behavior, no `.ush`, no CPU mirror, no look, no mesh, no texture, no cadence row, no test, no gym
-station exists for this effect. No behavior id has been allocated. Nothing has been rendered or
-visually compared. Sections 1–6 are archaeology and a plan; everything below `## 7+` is reserved for
-the implementation session.
+`Behavior_BombProjectile.ush` + `ExecuteStage_CPU` case 37, the `PS_CkParticles_Template_BombProjectile`
+cadence row (2.5 s / 2.5 s / burst 4, plus a ribbon emitter whose 17-point burst is placed by ARC LENGTH),
+one new CkUsf look (`TrailDisAdd01`, ribbon-drawn), one new texture (`TileNoiseSparse`), zero new meshes,
+`Test_Particles_BombProjectileBehavior.cpp`, and a VfxExamples gym pair. **Read §13.1 first: the trail is
+structurally present and draws nothing, because the source draws nothing either at a stationary spawn
+point.** Nothing has been rendered or visually compared — §12 is open.
 
 ---
 
@@ -20,8 +22,8 @@ the implementation session.
 |---|---|
 | Source object | `/Game/Vefects/Anime_VFX/Shared/Skills/NS_Bomb_Projectile` |
 | Pack | Vefects — *Anime VFX* (third-party marketplace content) |
-| Behavior id | **not allocated** — take the next free id at implementation time from `ck::particles::NumBehaviors` |
-| Recreation status | not started |
+| Behavior id | **37** (`BombProjectile`) |
+| Recreation status | implementation-complete; `[HUMAN-VERIFY]` open |
 
 Corpus evidence (all `[corpus]`, exported 2026-08-01; `Saved/` is machine-local and regenerable):
 
@@ -350,20 +352,17 @@ the cheapest fix** and it generalizes: every other sheet in this batch hits the 
 
 ### 6.3 Mesh needs
 
-`SM_VFX_Bomb_01_Small` — **the hard problem of this effect.** §3 proves the UVs are a hand-authored
-atlas with no re-derivable projection, and §4.2 proves `MI_VFX_Bomb` bands its three flat colours by
-`Step` over those exact UVs. Three honest options, in increasing fidelity:
+`SM_VFX_Bomb_01_Small` — **RULED and already SHIPPED.** [C-D2] chose option 1: a procedural stylized
+stand-in (a sphere with a fuse) under the toon-banded material, no mesh import. NS_Bomb_Spawn (behavior
+25) built it — `SM_CkParticles_Bomb` plus the `BombToon` look — from the same source mesh and the same
+`MI_VFX_Bomb` instance, so this port reuses both unchanged and adds no mesh work at all. The shape gap
+(§3's authored UV atlas, which no re-UV'd sphere can band in the same places) is recorded in §13.
 
-1. **Procedural sphere + re-authored banding.** Generate a UV sphere (the generator already builds
-   MeshDescription carriers) and rewrite the look to band by *object-space Z* instead of by `v`.
-   Loses the atlas detail; gains zero pack dependency. Cheapest, and visibly different.
-2. **Import the mesh**, as NS_Lightning_Range §10 imported two textures — skip-if-present,
-   skip-if-source-absent, into `/CkFoundation/CkParticles/Imported/Vefects/NS_Bomb_Projectile/`.
-   Full fidelity; costs a pack dependency on dev hosts and a licensing posture decision.
-3. **Defer**: ship the effect without the bomb prop (glow + trail only) and record it in §13.
+The three options this sheet listed are kept below for the record; only the first was taken.
 
-This is a **maintainer decision**, exactly like the NS_BasicAttack §6.5 texture decision. It must be
-made before the implementation session starts, not during it.
+1. *(TAKEN)* Procedural sphere + re-authored banding — banded by object-space Z rather than by `v`.
+2. Import the mesh — rejected by [C-D2] (pack dependency + licensing posture).
+3. Defer the prop entirely — rejected; the prop is the effect's subject.
 
 ### 6.4 Look / texture needs
 
@@ -386,12 +385,12 @@ kind** for `T_VFX_LUT_Bomb_01` (the generator bakes greyscale masks only).
 
 | # | Gap | Severity |
 |---|---|---|
-| 1 | **Ribbon renderer does not exist in CkParticles.** The DI writes sprite/mesh attributes; the template builder emits sprite and mesh renderers only; the row-renderer spec has no ribbon kind; and CkUsf deliberately does **not** ship a Niagara *ribbon* usage flag (NS_Lightning_Range §9: "Ribbon and mesh-particle usages were deliberately not added"). `Bomb_Trail` is 1 of 3 emitters and is the projectile's signature read. **There is no approximation that is honest** — a chain of velocity-aligned sprites is a different effect and should be labelled as such if chosen. | **BLOCKING** |
-| 2 | **`Spawn Per Unit` (distance-driven spawn) does not exist.** Every CkParticles cadence row is time-driven (loop / lifetime / burst, or a continuous rate). A trail that emits per 20 units of *travel* cannot be expressed; at constant speed it degenerates to a rate, but the source's whole point is that a stationary projectile emits nothing. | **BLOCKING** for the trail |
-| 3 | **World-space emitter.** `Bomb_Trail` is `LocalSpace: false` while the other two are `true`. The CkParticles template is local-space for the whole system (NS_BasicAttack §13.2). A trail that must stay behind a moving projectile is precisely the case where that deviation is visible. | **BLOCKING** for the trail |
-| 4 | **System-level loop parameters are not in the corpus** (§2). Cadence cannot be finalized from the corpus alone. | **Prerequisite** |
-| 5 | **No row-declared camera-facing sprite kind** (§6.2). Small, additive fix. | Medium |
-| 6 | **Gradient-map LUT chain unimplemented in the CkUsf DissolveAdd family**, and the texture generator has no colour-LUT bake (§6.4). | Medium |
+| 1 | ~~Ribbon renderer does not exist~~ — **CLOSED by C6a/C6b** ([P3-D1]): a ribbon-bearing row declares a SECOND emitter carrying the ribbon spawn stack and `Ribbon`-kind renderers, and `_UsedWithNiagaraRibbons` is a real CkUsf usage flag. | Closed |
+| 2 | ~~`Spawn Per Unit` does not exist~~ — **CLOSED by C11**: per-unit spawn is arc-length placement along the leader's path (`CkParticles_ArcLengthTable` / `ArcLengthTime`). Its LAST clause is exactly right and survives: a stationary projectile emits nothing, and this recreation reproduces that rather than papering over it. §13. | Closed |
+| 3 | **World-space emitter** — the C12 non-goal. `Bomb_Trail` is `LocalSpace: false` while the other two are `true`, and its points are deposited where the projectile *was*. At a STATIONARY pedestal the difference is unobservable, because a stationary emitter's local and world frames coincide and Spawn Per Unit fires in neither. §13. | Known difference |
+| 4 | ~~System-level loop parameters are not in the corpus~~ — **CLOSED `[corpus-v3]`**: the v3 exporter dumps the System Update stack, giving `Loop Once / 2.5 s` (§2). | Closed |
+| 5 | ~~No row-declared camera-facing sprite kind~~ — **CLOSED by C1** (`ECk_ParticlesRenderer_Kind::CameraFacingSprite`). | Closed |
+| 6 | **Gradient-map LUT chain**: the CHAIN is implemented (C3) and the generator bakes `ColorLut` textures, but `T_VFX_LUT_Bomb_01` itself is not baked — the look holds the family's white ramp pending **[P1-D1]**, the open `Gradient_Invert` remap question, exactly as `RainbowDisAdd` does. §13. | Medium (deferred) |
 | 7 | **Mesh renderer facing modes are not expressible** on a row-declared `Mesh` renderer — the spec carries `Kind`, `VisTag`, `MeshName`, `LookName` and nothing else. `Bomb` uses `Facing: Default`, which happens to be the builder's default, so **this effect is not blocked by it** — but the sibling sheets in this batch are. | None *here* |
 | 8 | **Hand-authored prop mesh with a non-derivable UV atlas** (§3, §6.3). Not a pipeline gap — a content decision. | Decision required |
 
@@ -410,7 +409,250 @@ collide.
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures — ONE new bake
 
-Sections 7–14 of the recipe schema ([README.md](README.md)) are intentionally absent and are to be
-written by the implementation session, from what actually happened.
+| Source texture | Bake | Status |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | existing (NS_BasicAttack §7) |
+| `T_VFX_Noise_02` | `TileNoise` | existing (NS_BasicAttack §7) |
+| `T_VFX_Wind_02` | `WindBandMid` | existing (NS_Arrow_Cast §7.3) |
+| `T_VFX_Noise_06` | **`TileNoiseSparse`** | **new** |
+| `T_VFX_LUT_Bomb_01` | `LutWhite` (held) | deferred behind **[P1-D1]**, §13 |
+| `T_VFX_WhitePixel` | `LutWhite` | existing |
+
+### 7.1 `T_VFX_Wind_02` — measured, and it is not a new paint
+
+Measured independently at implementation, reproducing NS_Arrow_Cast §7.3's finding from scratch: rolling
+`T_VFX_Wind_03` **down by 141 of its 512 rows** reproduces `T_VFX_Wind_02` to a **maximum absolute
+difference of 0.0039** (one 8-bit quantum) and a mean absolute difference of 1e-6, with a Pearson
+correlation of **1.00000**. Their column-mean profiles and their coverage above 0.5 are identical to four
+decimals. `WindBandMid` already IS that roll (`Px_WindBandAt(U, frac(V − 141/512))`), so the shape paint
+needed no work.
+
+Their unrolled correlation is **−0.31**, so a naive reuse of `WindBand` — the same paint at its original
+phase — would have been *worse than uncorrelated*. Measuring the roll is what turns a rejection into an
+exact reuse.
+
+### 7.2 `TileNoiseSparse` — measured from `T_VFX_Noise_06`
+
+Rejected against all four existing noise bakes first: the best roll-aligned correlation to any of them is
+**0.11** (`TileNoiseBanded`), against 1.000 for the Wind pair. What sets this paint apart is not its
+spectrum but a hard **floor**: 42.8 % of it is exactly black, so a dissolve driven by it clears in
+isolated patches instead of eroding everywhere at once — and its p99 sits at 0.84 where every other noise
+in the pack runs to white.
+
+| Measured on `T_VFX_Noise_06` | Source | Bake |
+|---|---|---|
+| fraction exactly 0 | 0.4283 | 0.4345 |
+| mean | 0.1354 | 0.1525 |
+| p75 / p90 / p95 | 0.208 / 0.459 / 0.612 | 0.264 / 0.457 / 0.571 |
+| coverage > 0.25 / > 0.5 | 0.217 / 0.085 | 0.265 / 0.079 |
+| correlation half-decay (u / v, px) | 7 / 11 | 9 / 8 |
+
+The bake is the library's ordinary tileable value-noise Fbm at **32 tiles, 2 octaves**, cut at a
+**threshold of 0.47** and re-gained by **1.90** — both constants fitted to the distribution above, not
+chosen.
+
+---
+
+## 8. Mesh — reused, not rebuilt
+
+`SM_CkParticles_Bomb` and the `BombToon` look already exist: NS_Bomb_Spawn (behavior 25) built them from
+the SAME source mesh (`SM_VFX_Bomb_01_Small`) and the SAME material instance (`Parents/MI_VFX_Bomb`) under
+[C-D2]. Every one of `BombToon`'s nine parameter defaults was checked against §4.2's table before reuse
+and matches exactly. This port adds no mesh work and no material work for the prop.
+
+The shape gap §3 identified — the source's hand-authored UV atlas, which `MI_VFX_Bomb` bands by `Step`
+over `TextureCoordinate` and which no re-UV'd procedural sphere can reproduce in the same places — carries
+over unchanged from NS_Bomb_Spawn §13 and is restated in §13 below.
+
+---
+
+## 9. The behavior — `Behavior_BombProjectile.ush` + `ExecuteStage_CPU` case 37
+
+### 9.1 The row
+
+`PS_CkParticles_Template_BombProjectile`: **loop 2.5 s / lifetime 2.5 s / burst 4**, and **no spawn
+rate** — nothing in this source streams. 2.5 s is the only such loop in the cookbook and it is the
+system's own `Loop Once` duration `[corpus-v3]`, which coincides exactly with both burst emitters'
+lifetimes.
+
+Partition is a plain `Seed % 4`: slots 0–2 are `Bomb_Glow`, slot 3 is `Bomb`. With no rate stack there is
+one population, so the behavior reads **no spawn phase and no emitter clock** — asserted, because
+`RosterSanity`'s derived rule says a behavior on a burst-only row must be clock-independent.
+
+### 9.2 The fuse
+
+`Bomb`'s `Scale Color` (RGBA Together) holds RGB at **0.25** from t = 0 to **t = 0.9139752** and then ramps
+to **5.0** at t = 1 — a hard bright flash in the last ~0.215 s of the 2.5 s flight, over a base colour of
+white. Alpha is a single key at 1 and never moves. Reading this as a fade would invert the entire effect;
+the test pins 0.25 at the key, 5.0 at the end, and 2.2391682 at t = 0.95 so a step cannot pass for a ramp.
+
+`Bomb_Glow`'s `Scale Color` is **DISABLED**, so all three shells hold `RGBA(0.0368895, 0.184475, 1, 0.5)`
+at 300 units for the entire 2.5 s. Its authored curve fades alpha 1 → 0; running it would dissolve the
+glow the source keeps constant. Asserted at both ends of life.
+
+### 9.3 Orientation
+
+`Initial Mesh Orientation` randomizes Z through a `Random Range Vector` of −1 … 1, read as **turns** by the
+NS_Bomb_Spawn precedent (the same module on the same prop), so the yaw is `TAU × lerp(−1, 1, Rand(Seed, 3))`.
+Unlike its Bomb_Spawn twin this emitter carries **no** `Update Mesh Orientation`, so the prop never spins —
+asserted by comparing the quaternion at two ages.
+
+### 9.4 The trail — C11, and why it draws nothing here
+
+`Bomb_Trail` is the cookbook's only `Spawn Per Unit` emitter: one ribbon point per **20 units of travel**,
+held in world space for 0.6 s at a constant 200-unit width, alpha 0.2 → 0, dissolve +0.5 → −0.5. Its
+`Add Velocity` is DISABLED and no force acts on it, so a trail point never moves after it is deposited.
+
+C11 expresses that exactly: the point at arc-length fraction `i/16` of the leader's path holds the
+**leader's position at the time the leader had covered that fraction**. The behavior builds the leader's
+17-slot path, takes `CkParticles_ArcLengthTable` / `CkParticles_ArcLengthTime`, and evaluates
+`LeaderPos(SpawnTime)`. Verified against a control leader travelling at a constant 800 units/s: the 17
+placements come out **exactly equidistant** (spacing spread 0.00e+00 over a 2000-unit path).
+
+**And in this recreation the leader is stationary, so the trail places nothing — which is what the SOURCE
+does under the same conditions.** `Spawn Per Unit` gates on the emitter's own movement delta against a
+0.5-unit `Movement Tolerance`; at a stationary spawn point the original emits zero trail particles too. A
+world-space trail behind a moving projectile is the C12 non-goal, and the campaign's standing ruling is
+that at a stationary A/B pedestal the difference is unobservable — here it is unobservable in the strong
+sense that **both sides draw nothing**. Placing a synthetic trail would therefore be a parity *regression*,
+not a fix: our pedestal would show a streamer the original does not.
+
+The behavior is written against a general path and the degenerate case is a guard, not a special case:
+`CkParticles_BombProjectile_LeaderPos` is a single function, and a leader with real travel lights the whole
+branch up without touching it. The ribbon emitter, renderer and look all ship for the same reason — the
+source has them, and the structure is what makes the difference recoverable later.
+
+---
+
+## 10. Looks and renderers
+
+**Two row renderers on the main emitter, one on the ribbon emitter. ONE new look.**
+
+| VisTag | Kind | Look | Source emitter |
+|---|---|---|---|
+| 164 | CameraFacingSprite | `PartDisAdd01` | `Bomb_Glow` |
+| 165 | Mesh (`Bomb`) | `BombToon` | `Bomb` |
+| 166 | **Ribbon** | `TrailDisAdd01` *(new)* | `Bomb_Trail` |
+
+`PartDisAdd01` and `BombToon` are exact reuses — the same source instances, checked value-by-value.
+
+`TrailDisAdd01` is `M_VFX_DisAdd_Trail01`: Brightness 6, `Dissolve_Speed_X = −1` (the only look in the
+cookbook that pans its dissolve at unit speed), `Distortion_Intensity 0.3` LIVE, `Gradient_Invert 0`,
+`Opacity_Boldness 1`, shape `WindBandMid`, dissolve `TileNoiseSparse`, distortion `TileNoise` (the
+instance's `Distortion_Tex` is `T_VFX_Noise_02`, inherited from the reference and distinct from its
+dissolve paint). It opts into `_UsedWithNiagaraRibbons`.
+
+---
+
+## 11. Tests
+
+`Test_Particles_BombProjectileBehavior.cpp` — `CkTests.UnitTests.CkParticles.BombProjectileBehavior`. CPU
+mirror only. It asserts:
+
+- the cadence row's four numbers, that the row declares **no** spawn rate, and the ribbon emitter's
+  17-point burst, its zero rate, its single `Ribbon`-kind renderer, its look name and its VisTag;
+- the 3:1 burst partition, over one modulus and over 500;
+- `Bomb_Glow` is constant at three ages — colour, alpha 0.5, size 300 and dissolve 2 — which is the
+  disabled-`Scale Color` claim, and would fail against its authored 1 → 0 alpha curve;
+- the FUSE at both ends and on the ramp: 0.25 at t = 0 and at t = 0.9139752, **2.2391682** at t = 0.95,
+  **5.0** at t = 1, alpha pinned at 1;
+- the prop's mesh index, its 0.45 uniform scale, a normalized orientation, no sprite quad, and a yaw that
+  does NOT change between two ages;
+- both layers dying at 2.5 s;
+- the trail branch is REACHED (every ribbon-bank id writes VisTag 166 and nothing else) and produces
+  nothing at five ages across 51 ids — the "no travel, no trail" contract, stated as an assertion rather
+  than left as an absence;
+- **emitter-clock independence**: 400 seeds × 3 clocks, zero movement. The row declares one population, so
+  reading the clock at all would be a defect.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` Open the **VfxExamples** gym, cycle to **BOMB PROJECTILE**, and run
+`Ck_GymVfxExamples_RestartAll`. In order:
+
+a. **A toon bomb hanging in the air**, banded into flat colour zones, at a random yaw that does not change.
+b. **A soft blue halo around it** that does NOT fade — three coincident 300-unit shells stacking additive
+   alpha, constant for the whole 2.5 s. If it fades out, the disabled `Scale Color` was transcribed anyway.
+c. **A bright white flash on the prop in the last fifth of a second**, from a quarter brightness straight
+   to 5×. This is the whole point of the effect and it is easy to miss if you blink; restart and watch the
+   end of the cycle specifically.
+d. **NEITHER side draws a trail.** The source's trail is spawned per unit of travel and the pedestal does
+   not move. If the ORIGINAL shows one, the pedestal is moving and §13.1 needs revisiting; if OURS shows
+   one and the original does not, that is a defect.
+e. The bomb's silhouette against the original's: ours is a stylized stand-in (sphere + fuse) and the
+   banding lands in different places (§13.2). Judge the *read*, not the geometry.
+
+## 13. Confirmed fidelity differences or intentional deviations
+
+**The visual gate in §12 has NOT been executed.** Everything below is a *known* difference derived from
+the source data, or *unverified*.
+
+### Known differences — deliberate
+
+1. **The trail is structurally present and visually absent.** The source spawns it per 20 units of TRAVEL;
+   this recreation renders at a fixed point, so the leader path has zero length and no point is placed.
+   The original behaves identically at a stationary spawn point, so this is parity rather than a gap — but
+   it means the C11 arc-length machinery, though correct and exercised by its own control, contributes
+   nothing to the rendered image of THIS port. A leader with real travel (the C12 non-goal, or a future
+   moving-spawner capability) lights it up with no change to the trail branch.
+2. **The bomb prop is a procedural stand-in** ([C-D2]) — a sphere with a fuse, banded by object-space Z.
+   The source mesh is a 6066-vertex sculpt whose UVs are a hand-authored atlas with no re-derivable
+   projection (§3), and `MI_VFX_Bomb` bands its three flat colours by `Step` over exactly those UVs, so the
+   bands land in different places. Same gap NS_Bomb_Spawn §13 records.
+3. **`MI_VFX_Bomb`'s band EDGES are not in the corpus** (unnamed graph constants), so `BombToon` starts at
+   an even three-way split. Inherited from NS_Bomb_Spawn.
+4. **The gradient-map LUT is held white.** `M_VFX_DisAdd_Trail01` is the only instance in the cookbook that
+   points `GradientMap_Tex` at a REAL 512×2 ramp (`T_VFX_LUT_Bomb_01`) rather than the family's white
+   pixel. The chain is implemented (C3) and the generator can bake a `ColorLut`, but **[P1-D1]** — the
+   exact `Gradient_Invert` remap, unrecoverable from the corpus — is still open, and the campaign's
+   standing rule holds every real ramp at `LutWhite` until it is ruled. `RainbowDisAdd` is held the same
+   way. Inert today; a colour shift on the trail once the trail draws.
+5. **`Core_Intensity` (2), `Color_CoreDifferent` (1) and the `Color_Core` tint
+   `RGBA(0.057805, 0.313989, 0.590619, 1)` are not plumbed.** The family helper pins `CoreColor` white.
+   Trail01 drives all three; every other DissolveAdd instance in the cookbook leaves them at the reference.
+6. **`Opacty_DepthFade` (20 on Part01, 30 on Trail01) is not wired.** CkUsf surface looks have no
+   scene-depth input.
+7. **The shape paint is an exact reuse, but the family's `MainTex_Offset` is still unplumbed.** It is
+   (0, 0) on this instance, so nothing is lost here — but the reason `WindBandMid` exists as a second bake
+   at all is that the look cannot offset a texture, so a third phase of the same paint would cost a third
+   bake rather than a parameter.
+8. **World space on 1 of 3 emitters** (`Bomb_Trail`) — the C12 non-goal, subsumed by (1).
+9. **`Bomb`'s `Index 0 Param 1 = 1` is dropped**: `MI_VFX_Bomb` declares no dynamic parameters, so the
+   write is inert in the source too.
+10. **The recreation loops; the source completes.** The row loops its 2.5 s forever; the source's
+    `Inactive Response = Complete` lets it die and the harness re-arms it.
+
+### Unverified
+
+- Every visual criterion in §12. Nothing has been rendered.
+- Whether the stand-in prop reads as the same object at gym distance. NS_Bomb_Spawn's identical prop has
+  not been A/B'd either.
+- Whether `TrailDisAdd01` renders correctly under a ribbon renderer at all — nothing in this port makes it
+  draw, so its first real exercise will be a future port or a moving leader.
+
+---
+
+## 14. Reusable lessons
+
+1. **"The source draws nothing here" can be the correct implementation.** A distance-driven spawn at a
+   stationary pedestal emits zero particles on BOTH sides. Synthesizing a trail to make the port look
+   complete would have introduced a visible A/B mismatch in the name of fixing an invisible one. Check what
+   the ORIGINAL does under the gym's own conditions before deciding a branch is missing.
+2. **Write the degenerate case as a guard on a general function, not as a special case.** The whole trail
+   branch is written against `LeaderPos(t)`; the only thing that makes it inert is that this port's leader
+   returns a constant. That keeps the C11 code honest, testable and one edit away from live.
+3. **Measure the ROLL, not just the correlation.** Two paints correlating at −0.31 can be the same image
+   at a different phase. A phase sweep turned a rejection into an exact reuse and saved a bake — and the
+   same sweep is what proves a genuinely different paint (`T_VFX_Noise_06`, best 0.11 at any roll) really
+   does need one.
+4. **A hard floor is a property a percentile fit will miss.** `T_VFX_Noise_06`'s defining feature is that
+   43 % of it is exactly zero, not where its median sits. Fitting a threshold-and-gain to the zero fraction
+   first, and the percentiles second, reproduces the paint's *behaviour* under a dissolve rather than its
+   histogram.
+5. **A shipped look is a shipped asset, independent of whether the port that introduced it draws it.**
+   `TrailDisAdd01` is invisible in this port and still had to be right — including its dissolve paint, its
+   distortion texture and the [P1-D1] deferral — because the next consumer inherits it.
