@@ -123,7 +123,7 @@ Every emitter with a velocity module also runs `Solve Forces and Velocity` with
 `Acceleration Limit 9999`, `Speed Limit 1000` — the limits are authored but **not engaged**
 (`Clamp`/`Limit` both false), so treat them as inert.
 
-### 2.2 The event chain `[corpus]` + `[unresolved]`
+### 2.2 The event chain `[corpus]` + `[corpus-v3]`
 
 `Sparkles_02` runs a **`Generate Location Event`** module in Particle Update:
 `Event Type = Every Frame`, `Event Probability Evaluation Type = Every Frame`,
@@ -136,40 +136,46 @@ false, so they are inert.)
 `Initialize Ribbon` — which means its particles are spawned by an **event-handler stack** consuming
 `Sparkles_02`'s location events.
 
-**`[unresolved: the event-handler stack is NOT exported]`** — `CkAssetExporter` writes exactly three
-stacks per emitter (Emitter Update / Particle Spawn / Particle Update); `stacks` is length 3 on every
-emitter of every system in this batch and none of them is an event handler. The ribbon's spawn count,
-its event-handler mode (Spawn / Copy / Direct Set), and its binding back to `Sparkles_02` are
-therefore **not determinable from the corpus**. Do not guess them; the ribbon is a §6 capability gap
-regardless.
+**The event-handler stack IS exported now `[corpus-v3]`** (`emitters[].eventHandlers`):
 
-### 2.3 ⚠ Randomized lifetimes — the reading, and the alternative `[corpus]` + `[unresolved]`
+| Field | Value |
+|---|---|
+| `sourceEmitter` | `Sparkles_02` |
+| `eventName` | `LocationEvent` |
+| `executionMode` | `SpawnedParticles` |
+| `spawnCount` | **1 per event** (`randomSpawnCount = false`) |
+| `maxEventsPerFrame` | **0** (unbounded) |
+| handler module | `Receive Location Event` — `Position`, `Velocity`, `Acceleration`, `Ribbon ID`, `Ribbon UV Distance`, `Coordinate Space Transform` = **Apply**; `Color`, `Normalized Age`, `Random Normalized Float` = Output; `Interpolate Spawned Positions = true` |
+
+So each `Sparkles_02` particle emits location events at up to 30/s and each event spawns exactly one
+ribbon particle inheriting its position/velocity and **Ribbon ID** — one strand per sparkle. Ribbon
+particle lifetime is **0.2 s** (`Initialize Ribbon.Lifetime`, `Lifetime Mode = Direct Set`); note the
+emitter's `lifetimeResolved` reads `NO_MODULE` because that field only inspects `Initialize Particle`.
+*(Was `[unresolved]` — the pre-v3 exporter wrote only three stacks per emitter.)* The ribbon is still
+a §6 capability gap, but it is no longer an archaeology gap.
+
+### 2.3 Randomized lifetimes — RESOLVED `[corpus-v3]`
 
 Six emitters (`Sparkles_02`, `Sparkles_01`, `Smokes`, `SmokesCenter`, `Sparkles_02001`, `Flames`) set
-`Lifetime Mode = Random` **and** carry `[override] Lifetime = dyn:Random Range Float`. The corpus
-exports two candidate ranges for each:
+`Lifetime Mode = Random` **and** carry `[override] Lifetime = dyn:Random Range Float`. Per [P0-D2]
+the mode's static switch selects the driving pin: `Random` ⇒ **`Lifetime Min / Max` DRIVES**, and the
+override on the unselected Direct-Set pin is INERT (`lifetimeResolved.source = minmax` on all six,
+override under `inertOverrides`).
 
-| Emitter | `InitializeParticle.Lifetime Min / Max` | `RandomRangeFloat.Minimum / Maximum` |
+| Emitter | LIVE `Lifetime Min / Max` | inert `RandomRangeFloat` |
 |---|---|---|
-| `Sparkles_02` | 0.4 / 0.7 | **0.2 / 0.4** |
-| `Sparkles_01` | 0.2 / 0.4 | **0.2 / 0.4** |
-| `Smokes` | 0.7 / 1.3 | **0.2 / 0.4** |
-| `SmokesCenter` | 0.7 / 1.3 | **0.2 / 0.4** |
-| `Sparkles_02001` | 0.4 / 0.7 | **0.2 / 0.4** |
-| `Flames` | 0.35 / 0.7 | **0.2 / 0.4** |
+| `Sparkles_02` | **0.4 / 0.7** | ~~0.2 / 0.4~~ |
+| `Sparkles_01` | **0.2 / 0.4** | ~~0.2 / 0.4~~ *(coincide)* |
+| `Smokes` | **0.7 / 1.3** | ~~0.2 / 0.4~~ |
+| `SmokesCenter` | **0.7 / 1.3** | ~~0.2 / 0.4~~ |
+| `Sparkles_02001` | **0.4 / 0.7** | ~~0.2 / 0.4~~ |
+| `Flames` | **0.35 / 0.7** | ~~0.2 / 0.4~~ |
 
-**The reading this sheet takes: the `[override]` wins, so every one of them is rand 0.2–0.4 and the
-`Lifetime Min / Max` pins are dead.** An explicit override on the `Lifetime` input replaces whatever
-the mode's own pins would have supplied, and **`NS_BasicAttack.md` §2 set the precedent**: its
-`Sparkles_01` exports `Lifetime Min / Max` 0.3 / 0.5 alongside `RandomRangeFloat` 0.2 / 0.4, and the
-shipped recipe records "rand 0.2–0.4".
-
-**`[unresolved: which of the two ranges actually drives lifetime]`** — the exporter does not record
-which pin the override is wired to, and the 0.2 / 0.4 pair is byte-identical on **every** such emitter
-in **every** system in this batch, which is exactly what an unbound dynamic-input default looks like.
-The two readings differ by more than 3× on `Smokes`/`SmokesCenter` and they change the cadence row
-(§6.1). **Resolve this against the asset before writing any HLSL.** Under the alternative reading the
-per-emitter ranges are the `Lifetime Min / Max` column above.
+**This sheet previously took the OPPOSITE reading** — "the `[override]` wins, so every one of them is
+rand 0.2–0.4 and the `Lifetime Min / Max` pins are dead", following the `NS_BasicAttack.md` §2
+precedent. That reading is WRONG under [P0-D2]. `Smokes` / `SmokesCenter` are more than 3× longer
+than the sheet assumed. (It does not move THIS sheet's cadence row — `Ground_Mark`'s Direct-Set 1.5 s
+is still the longest layer — but it does move the Omni pair's; see those sheets.)
 
 ---
 
@@ -438,16 +444,14 @@ item, not a tuning knob. Be conservative: a wrong "we can do this" costs an impl
 | G1 | **Ribbon renderer** (`Sparkles_02_Trail`, `NiagaraRibbonRendererProperties` + `M_VFX_DisAdd_Trail03` + `Scale Ribbon Width`) | `FCkParticles_StageOutput` has no ribbon attributes (`RibbonWidth`, `RibbonID`, `RibbonLinkOrder`); `ECk_ParticlesRenderer_Kind` has only `Mesh` and `VelocityAlignedSprite`; and **CkUsf deliberately does not ship a ribbon usage flag** (`NS_Lightning_Range.md` §9: "Ribbon and mesh-particle usages were deliberately NOT added" — the mesh one has since been added, the ribbon one has not) | (a) **Drop the emitter** and record it in the fidelity-gap section; (b) approximate with a chain of velocity-aligned sprites; (c) build ribbon support end to end (DI attributes + renderer kind + CkUsf ribbon usage flag + a ribbon look). (c) is its own project. |
 | G2 | **Light renderer** (`Light` emitter, `NiagaraLightRendererProperties`, RadiusScale 10) | No light-renderer kind exists on the cadence row and the DI writes nothing a light renderer reads | (a) Drop it — the effect loses a dynamic point light but keeps every visible sprite; (b) add a `Light` renderer kind to `FCk_ParticlesRendererSpec` (small, self-contained, reusable across the whole explosion family and probably many future ports) |
 | G3 | **Sub-UV flipbook** (`Flames`, SubUV **2×2**, `Sub UVAnimation` mode Random, frames 0–3) — also `NS_Dash`'s `Wind_Smokes` | No `SubImageIndex` output on `FCkParticles_StageOutput`; the shared sprite renderers declare no `SubImageSize`; no CkUsf look samples a flipbook atlas | (a) Bake a single non-atlased flame texture and drop the flipbook (visible as less variety, not as breakage); (b) add `SubImageIndex` to the DI contract + a `SubImageSize` on the renderer spec + atlas UV maths in the look. Reusable, but it touches the DI contract (GPU + CPU mirror + template builder) |
-| G4 | **Event generation + event-handler spawn** (`Sparkles_02` → `Sparkles_02_Trail`) | CkParticles has no event bus; and the handler stack is **not even exported** (§2.2), so the source behaviour is unknown | Moot if G1 is dropped. If the ribbon is ever built, the event chain must be re-derived from the asset — this corpus cannot answer it |
-| G5 | **Per-emitter cadence divergence** | A cadence row is ONE `(LoopDuration, ParticleLifetime, BurstCount)` triple for the whole template. This system has emitters at Loop Duration **1.0 (Infinite)**, **0.3 (Once)** and **0.4 (Once)**, and particle lifetimes spanning **0.1 … 1.5 s** | Route through one row with `ParticleLifetime` = the longest layer (1.5 s) and let each layer die at its own lifetime (the `NS_BasicAttack` §8 pattern: layers past their own lifetime write zero colour/size/scale). **But see the unresolved item below before assuming 1.0 s is the loop.** |
+| G4 | **Event generation + event-handler spawn** (`Sparkles_02` → `Sparkles_02_Trail`) | CkParticles has no event bus. The handler stack IS exported now `[corpus-v3]` (§2.2), so this is a pure capability gap — the source behaviour is fully specified | Moot if G1 is dropped. If the ribbon is ever built, §2.2 carries the complete contract (1 particle per `LocationEvent`, unbounded, Position/Velocity/Acceleration/RibbonID applied) |
+| G5 | ~~**Per-emitter cadence divergence**~~ — **NOT A GAP `[corpus-v3]`** | Every emitter is `Life Cycle Mode = System`, so the stored per-emitter Loop rows (1.0 Infinite / 0.3 Once / 0.4 Once) are ALL inert; the system's single `Once / 2.0 s` governs uniformly. Only the particle lifetimes still span **0.1 … 1.5 s** | Route through one row with `ParticleLifetime` = the longest layer (1.5 s) and let each layer die at its own lifetime (the `NS_BasicAttack` §8 pattern: layers past their own lifetime write zero colour/size/scale) |
 
-**`[unresolved: which loop duration is authoritative]`** — every emitter here has
-`Life Cycle Mode = System`, under which Niagara's *system* life cycle drives emitter looping and the
-emitter-local `Loop Behavior` / `Loop Duration` are not the values that run. The exporter dumps the
-emitter-local values regardless (1.0 / 0.3 / 0.4) and **does not export any system-level state at
-all**. `NS_BasicAttack` and `NS_Lightning_Range` were unaffected because every emitter there agreed on
-1.0 s. Here they do not. Resolve this against the asset before choosing the cadence row — picking
-wrong is exactly the "much slower / much faster" defect `NS_BasicAttack.md` §14.1 exists to prevent.
+**Loop authority — RESOLVED `[corpus-v3]`.** Every emitter here has `Life Cycle Mode = System`, so per
+[P0-D1] the SYSTEM's rows rule: **`Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+The emitter-local 1.0 / 0.3 / 0.4 values are inert leftovers and their disagreement is irrelevant.
+*(Was `[unresolved]`, with the emitters' 1.0 s as the working figure.)*
 
 Two further items that are **work, not gaps** — expressible with the current contract:
 
@@ -461,18 +465,20 @@ Two further items that are **work, not gaps** — expressible with the current c
 
 ### 6.1 Cadence row
 
-**A new row is required** — no existing row matches. Assuming the emitter-local 1.0 s Infinite loop is
-authoritative (pending the unresolved item above):
+**A new row is required** — no existing row matches. Per [P0-D3] (loop = system loop duration,
+lifetime = max resolved lifetime, burst = §2 counts):
 
 ```
-{ TEXT("PS_CkParticles_Template_Explosion"), 1.0f, 1.5f, 70, Get_ExplosionRendererSpecs() }
+{ TEXT("PS_CkParticles_Template_Explosion"), 2.0f, 1.5f, 70, Get_ExplosionRendererSpecs() }
 ```
 
-- `LoopDuration` **1.0** — every Infinite emitter's Loop Duration.
-- `ParticleLifetime` **1.5** — `Ground_Mark`, the longest-lived layer. Every shorter layer must write
-  zero colour, zero size and zero scale past its own lifetime, or dead layers hang in the air.
-  **§2.3's unresolved lifetime reading does not move this number here** — `Ground_Mark` is a Direct-Set
-  1.5 s and is the longest layer under both readings. (It DOES move the Omni pair's row; see that sheet.)
+- `LoopDuration` **2.0** `[corpus-v3]` — the system's `Once` loop duration. *Was 1.0, taken from the
+  inert emitter rows.*
+- `ParticleLifetime` **1.5** — `Ground_Mark`, the longest-lived layer (max resolved). Every shorter
+  layer must write zero colour, zero size and zero scale past its own lifetime, or dead layers hang in
+  the air. **§2.3's corrected lifetime reading does not move this number here** — `Ground_Mark` is a
+  Direct-Set 1.5 s and is the longest layer either way. (It DOES move the Omni pair's row; see those
+  sheets.)
 - `BurstCount` **70** — the §2 total. Layer index = `Seed % 70`, the `NS_BasicAttack` §8 partition
   (double-modulo so a negative Seed still lands in range). Ranges: 0 `Bubble`, 1 `Flare01`,
   2–3 `Glow_01`, 4–10 `Sparkles_02`, 11–30 `Sparkles_01`, 31–35 `Smokes`, 36–40 `SmokesCenter`,

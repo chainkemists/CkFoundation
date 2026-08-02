@@ -103,10 +103,11 @@ The three `Self` emitters are genuine one-shots: they run once for 0.4 / 0.3 / 0
 repeat, inside a system whose other 18 emitters cycle. **This is the fact that decides §6.1** —
 see §6.5, gap 2.
 
-`[unresolved: the system-level loop duration is NOT in the corpus export — CkAssetExporter writes
-emitter stacks only. 1.0 s is what the System-mode emitters store; the Star_01 burst at t = 0.85 and
-Star_02 at t = 0.95 only fire if the cycle is ≥ 0.95 s, which is consistent with 1.0 s and is the
-strongest evidence available for it.]`
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+Per [P0-D1] this rules the 18 `Life Cycle Mode = System` emitters; the three `Self` emitters keep
+their own rows. *(Was `[unresolved]` with 1.0 s as the working figure.)* The Star_01 burst at
+t = 0.85 and Star_02 at t = 0.95 fire comfortably inside a 2.0 s cycle.
 
 > **Star_01 / Star_02 are NOT dead emitters, even though their stored `Loop Duration` (0.3) is
 > shorter than their stored `Spawn Time` (0.85 / 0.95).** Both run `Life Cycle Mode = System`, so
@@ -261,10 +262,11 @@ Those layers have **no `Color` module at all** — they keep their Initialize Pa
 
 ### 8 · Sparkles — burst **10** @ t=**0.05**, size Random Uniform 10 … 20
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins
-  `Lifetime Min 0.5 / Max 1.5`.
-  `[unresolved: which pin is live — `Lifetime Mode = Random` reads Min/Max, but the Direct-Set pin
-  carries the override. NS_BasicAttack §2 resolved the identical shape in favour of the override.]`
+- Lifetime `[corpus-v3]`: **`Lifetime Mode = Random` ⇒ `Lifetime Min 0.5 / Max 1.5` DRIVES**
+  (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 … 0.4) sits on the
+  unselected Direct-Set pin and is INERT. *Was read as 0.2 … 0.4 following the NS_BasicAttack §2
+  precedent; corrected per [P0-D2]. This is a 3.75× lifetime increase and it moves the cadence row
+  (§6.1) — `Sparkles` is now the longest layer in the system.*
 - Spawn shape: **Sphere Location**, `Sphere Radius **0.2**` (effectively a point),
   `Non Uniform Scale (1,1,1)`, `Sphere Orientation Axis (1,0,0)`, `Surface Only false`
 - `Add Velocity from Point`: `Velocity Strength = Random Range Float 001` **350 … 500**,
@@ -292,8 +294,8 @@ Those layers have **no `Color` module at all** — they keep their Initialize Pa
 ### 11 · Sparkles_Stretched — **rate 20/s**, loop **0.4 s Once** (`Life Cycle Mode = Self`)
 
 - Velocity-aligned sprite, material `Part04`
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins
-  `Lifetime Min 0.3 / Max 0.6` `[unresolved — same shape as above]`
+- Lifetime `[corpus-v3]`: **`Lifetime Min 0.3 / Max 0.6` drives**; the 0.2 … 0.4 override is inert
+  (same resolution as above, [P0-D2])
 - Sprite Size Mode **Random Non-Uniform**: `Sprite Size Min **(25, 70)**`,
   `Sprite Size Max **(40, 60)**` — note Min.y > Max.y, an authored inversion; the exporter reports
   them verbatim `[corpus]`
@@ -364,8 +366,8 @@ a horizontal "lens flare" streak that pinches shut.
 
 - Spawn Rate override: `Float from Curve 001` `(0, **20**)C (1, **0**)C` — spawn rate decays from
   20/s to 0 across the 0.5 s loop, ≈ 5 extra particles
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins
-  `Lifetime Min 0.3 / Max 0.5` `[unresolved — same shape as above]`
+- Lifetime `[corpus-v3]`: **`Lifetime Min 0.3 / Max 0.5` drives**; the 0.2 … 0.4 override is inert
+  (same resolution as above, [P0-D2])
 - Size: Random Uniform **30 … 100**
 - Spawn shape: `Sphere Location`, `Sphere Radius **0**` — every particle spawns at the origin
 - `Add Velocity from Point`: strength `Random Range Float 001` **350 … 500** — but from a
@@ -405,8 +407,11 @@ a horizontal "lens flare" streak that pinches shut.
 
 ### 6.1 Cadence row
 
-**A new burst row is required: loop 1.0 s, particle lifetime 1.2 s, burst 30.** 1.2 s is the longest
-source lifetime (the four Flare_Stretched layers); every shorter layer zeroes colour, size and scale
+**A new burst row is required `[corpus-v3]`, per [P0-D3]: loop 2.0 s, particle lifetime 1.5 s,
+burst 30.** Loop = the system's `Once` loop duration (*was 1.0 s, from the inert emitter rows*);
+lifetime = max resolved emitter lifetime — **`Sparkles`' resolved 1.5 s Max** (*was 1.2 s, the four
+Flare_Stretched layers, under the override-wins assumption that capped Sparkles at 0.4 s*);
+burst = the §2 count. Every shorter layer zeroes colour, size and scale
 past its own lifetime, and spawn delays (0.05 / 0.1 / 0.85 / 0.95 s) hide the layer for
 `age < delay` and run its curves on `(age − delay) / lifetime` — the NS_BasicAttack §5 mechanism.
 
@@ -421,8 +426,8 @@ Two things this row **cannot** carry, both of which need a decision before HLSL 
 - The **three `Self` one-shot emitters** (Sparkles_Stretched, Big_Star, Lightning) run ONCE and never
   repeat, while the other 18 cycle. A single CkParticles template loops everything. See §6.5, gap 2.
 
-`[unresolved: the system-level loop duration — see §2.]` 1.0 s is the working figure and is
-corroborated by Star_02's t = 0.95 burst.
+Loop duration resolved `[corpus-v3]` — see §2. The 2.0 s `Once` cycle leaves Star_02's t = 0.95
+burst plenty of room.
 
 ### 6.2 VisTag / renderer needs
 

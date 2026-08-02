@@ -60,21 +60,30 @@ Corpus evidence:
 
 **Identical to [NS_ExplosionGround.md](NS_ExplosionGround.md) §2 in every structural respect** —
 18 CPU emitters, all enabled, all WORLD space, bounds Dynamic, `determinism: false`,
-**70 particles per loop** across the 17 non-ribbon emitters, every burst module carrying an inert
+**70 particles per firing** across the 17 non-ribbon emitters, every burst module carrying an inert
 `Loop Count Limit = 1` under `UseLoopCountLimit = false`.
+
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`** —
+identical to the Ground variant's. All 18 emitters are `Life Cycle Mode = System`, so per [P0-D1]
+this rules and every per-emitter Loop row is inert.
 
 The emitter table (counts, spawn times, loop behaviours, lifetimes, renderers, meshes, materials) is
 reproduced there and is unchanged here, with the single exception that emitter #17 is named
 **`Glow_01001`** rather than `Light`.
 
-§2.3 (**⚠ the unresolved randomized-lifetime reading** — six emitters carry both a `Lifetime Min /
-Max` pair and an `[override] Lifetime = dyn:Random Range Float` at 0.2 / 0.4) transfers verbatim and
-**must be resolved before any HLSL is written**. It does not move this system's cadence row
-(`Ground_Mark` is a Direct-Set 1.5 s and is the longest layer under both readings), but it changes
-every smoke and spark layer's own death time by up to 3×.
+§2.3 (**randomized lifetimes — RESOLVED `[corpus-v3]`**) transfers verbatim: six emitters carry both
+a `Lifetime Min / Max` pair and an `[override] Lifetime = dyn:Random Range Float` at 0.2 / 0.4, and
+per [P0-D2] `Lifetime Mode = Random` ⇒ **Min/Max drives, the override is inert**. Live ranges:
+`Sparkles_02` **0.4/0.7**, `Sparkles_01` **0.2/0.4**, `Smokes` **0.7/1.3**, `SmokesCenter`
+**0.7/1.3**, `Sparkles_02001` **0.4/0.7**, `Flames` **0.35/0.7**. It does not move this system's
+cadence row (`Ground_Mark` is a Direct-Set 1.5 s and is the longest layer either way), but it makes
+every smoke and spark layer live up to 3× longer than the sheet's original override-wins reading.
 
-§2.1 (spawn shapes and forces) and §2.2 (the event chain, including the
-**`[unresolved: the event-handler stack is NOT exported]`** finding) also transfer verbatim: the
+§2.1 (spawn shapes and forces) and §2.2 (the event chain, whose handler stack is now **exported and
+resolved `[corpus-v3]`** — `LocationEvent` from `Sparkles_02`, `SpawnedParticles`, 1 particle per
+event, unbounded, `Receive Location Event` applying Position/Velocity/Acceleration/RibbonID; ribbon
+lifetime 0.2 s from `Initialize Ribbon`) also transfer verbatim: the
 `Hemisphere Z = true` hemispherical spawns, `Smokes`' flat (1,1,0) ring, `SmokesCenter`'s Cone
 Location (angle 25 / axis (0,0,1) / length 130), `Sparkles_02`'s `Acceleration Force (0,0,−4000)`,
 `Sparkles_02001`'s Curl Noise Force (frequency 10, strength 5000, randomization (0.65, 0.125, 0.37)),
@@ -177,20 +186,23 @@ The `Color from Curve` overrides, in full:
 **The same five gaps as [NS_ExplosionGround.md](NS_ExplosionGround.md) §6.0, all present here
 unchanged** — G1 ribbon renderer (`Sparkles_02_Trail` + `M_VFX_DisAdd_Trail03` + `Scale Ribbon
 Width`), G2 light renderer (`Glow_01001`, RadiusScale 10), G3 sub-UV flipbook (`Flames`, 2×2, mode
-Random, frames 0–3), G4 event generation → event-handler spawn (still
-`[unresolved: handler stack not exported]`), G5 per-emitter cadence divergence (1.0 Infinite vs
-0.3 / 0.4 Once; particle lifetimes 0.1 … 1.5 s).
+Random, frames 0–3), G4 event generation → event-handler spawn (**now a pure capability gap** — the
+handler stack IS exported `[corpus-v3]`, §2.2), and ~~G5 per-emitter cadence divergence~~ which
+`[corpus-v3]` is **NOT a gap**: every emitter is `Life Cycle Mode = System`, so the stored
+1.0 Infinite / 0.3 / 0.4 Once rows are all inert and the system's `Once / 2.0 s` governs uniformly.
+Only the particle lifetimes still span 0.1 … 1.5 s.
 
-The **`[unresolved: which loop duration is authoritative]`** item in Ground §6.0 applies verbatim:
-every emitter is `Life Cycle Mode = System` and no system-level state is exported.
+Ground §6.0's loop-authority item applies verbatim and is likewise **RESOLVED `[corpus-v3]`**: the
+system's own rows are `Loop Once / 2.0 s`.
 
 `Curl Noise Force` and `Acceleration Force` remain **work, not gaps** (closed-form in the `.ush` plus
 its exact C++ mirror).
 
 ### 6.1 Cadence row
 
-**IDENTICAL to `NS_ExplosionGround` §6.1** — 1.0 s loop, 1.5 s longest lifetime (`Ground_Mark`), 70
-particles, same `Seed % 70` layer partition and the same layer-index ranges. **One row serves both
+**IDENTICAL to `NS_ExplosionGround` §6.1** — per [P0-D3]: **2.0 s loop** (the system's `Once` loop
+duration `[corpus-v3]`; *was 1.0 s*), **1.5 s** particle lifetime (max resolved — `Ground_Mark`),
+**70** burst, same `Seed % 70` layer partition and the same layer-index ranges. **One row serves both
 systems.** Do not add a second.
 
 ### 6.2–6.5 Renderer, mesh, look and texture needs

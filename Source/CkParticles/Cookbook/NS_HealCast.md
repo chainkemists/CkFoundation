@@ -54,8 +54,8 @@ Two cadence groups, exactly as in `NS_DebuffCast`:
 | 1 | `Bomb_Glow_02` | System / Infinite | 1.0 | 1 | 0 | — | 1.0 | Sprite, Unaligned/FaceCamera | `Part01` |
 | 2 | `Raimbow` *(sic)* | System / Infinite | 1.0 | 1 | 0 | — | 1.0 | Sprite, Unaligned/FaceCamera | `Rainbow` |
 | 3 | `Ring` | System / Infinite | 1.0 | 1 | **0.05** | — | **0.5** | Sprite, Unaligned/FaceCamera | `Ring01` |
-| 4 | `Sparkles_01` | **Self / Once** | **0.3** | **3** | **0.05** | **20** | rand `[unresolved]` | Sprite, Unaligned/FaceCamera | `Part01_Bright` |
-| 5 | `Sparkles_Stretched` | **Self / Once** | **0.3** | **5** | **0.05** | **10** | rand `[unresolved]` | Sprite, **VelocityAligned**/FaceCamera | `Part04` |
+| 4 | `Sparkles_01` | **Self / Once** | **0.3** | **3** | **0.05** | **20** | rand **0.3–0.6** `[corpus-v3]` | Sprite, Unaligned/FaceCamera | `Part01_Bright` |
+| 5 | `Sparkles_Stretched` | **Self / Once** | **0.3** | **5** | **0.05** | **10** | rand **0.3–0.6** `[corpus-v3]` | Sprite, **VelocityAligned**/FaceCamera | `Part04` |
 | 6 | `Star01` | **Self / Once** | **0.3** | **1** | **0.05** | **5** | rand 0.3–0.6 | Sprite, Unaligned/FaceCamera | `Star02` |
 | 7 | `Star02` | **Self / Once** | **0.3** | **1** | **0.05** | **5** | rand 0.3–0.6 | Sprite, Unaligned/FaceCamera | `Star01` |
 | 8 | `Lens` | **Self / Once** | **0.2** | **3** | **0.05** | **10** | rand 1.0–1.5 | Sprite, **VelocityAligned**/FaceCamera, **SubUV 2×2** | `Part07` |
@@ -66,22 +66,31 @@ skew as NS_BasicAttack's `Slash_03` → `M_VFX_DisAdd_Slash04`.
 
 **Particles per firing (burst only, the exact `[corpus]` number): 1+1+1+1+3+5+1+1+3 = 17.**
 The five `Spawn Rate` modules add ≈ 20×0.3 + 10×0.3 + 5×0.3 + 5×0.3 + 10×0.2 = **≈ 17 more**
-`[inferred — rate × loop-duration arithmetic]`, so ≈ **34 total per firing**. The four
-infinite-loop emitters re-burst every 1.0 s; the five `Once` emitters fire only on the first loop.
+`[inferred — rate × loop-duration arithmetic]`, so ≈ **34 total per firing**. `[corpus-v3]` The
+system is `Loop Once / 2.0 s`, so the four `Life Cycle Mode = System` emitters burst **once** over
+that 2.0 s window, not once per second; the five `Self / Once` emitters likewise fire only once.
+*(Was stated as "re-burst every 1.0 s" from the inert emitter rows.)*
 
 `Loop Count Limit = 1` with `UseLoopCountLimit = false` throughout — inert, same trap as the siblings.
 
-> ### `[unresolved: lifetime on two emitters]`
-> Same `Random`-mode-vs-`[override] Lifetime` conflict the whole batch has:
+> ### Lifetime — RESOLVED `[corpus-v3]`
+> Both ambiguous emitters are `Lifetime Mode = Random`, so per [P0-D2] the **Min/Max pins drive** and
+> the Direct-Set `RandomRangeFloat` override is INERT (`lifetimeResolved.source = minmax`):
 >
-> | Emitter | `Lifetime Min/Max` (Random mode) | override `RandomRangeFloat` |
+> | Emitter | LIVE (Random mode) | inert override |
 > |---|---|---|
-> | `Sparkles_01` | **0.3 / 0.6** | 0.2 / 0.4 |
-> | `Sparkles_Stretched` | **0.3 / 0.6** | 0.2 / 0.4 |
+> | `Sparkles_01` | **0.3 / 0.6** | ~~0.2 / 0.4~~ |
+> | `Sparkles_Stretched` | **0.3 / 0.6** | ~~0.2 / 0.4~~ |
 >
-> `Star01`, `Star02` (0.3 / 0.6) and `Lens` (1.0 / 1.5) have **no `Lifetime` override** and are
-> unambiguous. `Ring` is `Lifetime Mode = Direct Set` with `Lifetime = 0.5` — its `Lifetime Min 0.3 /
-> Max 0.7` entries are inert leftovers.
+> `Star01`, `Star02` (0.3 / 0.6) and `Lens` (1.0 / 1.5) have no `Lifetime` override and were already
+> unambiguous — v3 confirms all three (their stored `Lifetime = 1` sits under `inertValues`).
+> `Ring` is `Lifetime Mode = Direct Set` with `Lifetime = 0.5` — its `Lifetime Min 0.3 / Max 0.7`
+> entries are inert leftovers, also confirmed.
+>
+> **System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+> `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.** Per [P0-D1] this rules
+> the four `Life Cycle Mode = System` emitters — their stored `Infinite / 1.0 s` rows are inert. The
+> five `Life Cycle Mode = Self` emitters keep their OWN live `Once / 0.3 s` (0.2 s for `Lens`) rows.
 
 Three emitters (`Sparkles_01`, `Star01`, `Star02`, `Lens`) carry an **empty `Lathe Profile` curve
 override** on their `Cylinder Location`. Several carry `InitializeParticle.Lifetime = 1` alongside
@@ -195,7 +204,7 @@ differ even where the head is identical.
   `[inferred]` — the two write disjoint attributes.
 
 ### Layer 4 — `Sparkles_01` (Self/Once 0.3 s; burst 3 @ 0.05 + rate 20/s)
-- Lifetime `[unresolved]` — `0.3 / 0.6` vs override `0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`0.3 / 0.6` drives** (Random mode); the `0.2 / 0.4` override is inert.
 - **`Cylinder Location`**: Radius **80**, Height **130**, Midpoint 0.5, **Offset `(0, 0, 0)`**,
   Random, Spawn Only, `Surface Only = false`, `Override Local Rotation = true`.
 - `Add Velocity` = `Random Range Vector` **Min `(0, 0, 1000)` → Max `(0, 0, 2000)`** — upward.
@@ -213,7 +222,7 @@ differ even where the head is identical.
 - Dynamic params: **`[3, 0, 0, 0]`** constant.
 
 ### Layer 5 — `Sparkles_Stretched` (Self/Once 0.3 s; burst 5 @ 0.05 + rate 10/s)
-- Lifetime `[unresolved]` — `0.3 / 0.6` vs override `0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`0.3 / 0.6` drives** (Random mode); the `0.2 / 0.4` override is inert.
 - `Cylinder Location`: Radius **80**, Height **120**, Midpoint 0.5, Offset **(0, 0, 0)**.
 - `Add Velocity` = `Random Range Vector` **Min `(0, 0, 1000)` → Max `(0, 0, 1700)`**.
 - Sprite Size Mode **Random Non-Uniform**: `Sprite Size Min (25, 70)` → `Max (40, 60)`.
@@ -282,8 +291,9 @@ shape.** Four emitters loop forever bursting 1 each; five fire once on a 0.2–0
 
 Plan:
 
-- **Row**: loop **1.0 s**, particle lifetime **1.5 s** (the longest layer, `Lens`), burst **17** (the
-  exact corpus burst total). Partition `Seed % 17`:
+- **Row `[corpus-v3]`, per [P0-D3]**: loop **2.0 s** (the system's `Once` loop duration — *was 1.0 s
+  under the pre-v3 emitter-row reading*), particle lifetime **1.5 s** (max resolved, `Lens`), burst
+  **17** (the exact corpus burst total). Partition `Seed % 17`:
   0 = Bomb_Glow_01, 1 = Bomb_Glow_02, 2 = Raimbow, 3 = Ring, 4–6 = Sparkles_01,
   7–11 = Sparkles_Stretched, 12 = Star01, 13 = Star02, 14–16 = Lens.
 - **Spawn delays are per-layer and must be honoured**: `Ring`, `Sparkles_01`, `Sparkles_Stretched`,
@@ -292,8 +302,10 @@ Plan:
 - **The five `Spawn Rate` modules are DROPPED** in that plan, costing ≈ 17 particles — **half the
   visible count**. Widening the burst to ≈ 34 with `frac`-derived delays across each layer's 0.2–0.3 s
   window is closer but still an approximation. **Record whichever is chosen as a maintainer decision.**
-- **The `Self / Once` semantics are LOST**: five layers will re-fire every 1.0 s where the source fires
-  once. Check how the caller spawns "Cast" effects before deciding whether that matters.
+- **The `Self / Once` semantics are LOST**: five layers will re-fire every 2.0 s where the source fires
+  once. Check how the caller spawns "Cast" effects before deciding whether that matters. (Milder than
+  the pre-v3 reading assumed — the system itself is `Loop Once`, so a single firing of the source
+  plays exactly one 2.0 s cycle and the four System emitters burst once, not repeatedly.)
 
 ### 6.2 VisTag / renderer needs
 

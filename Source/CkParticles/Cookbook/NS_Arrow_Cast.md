@@ -54,11 +54,17 @@ Corpus evidence:
 ## 2. System anatomy `[corpus]`
 
 **15 CPU emitters, all enabled, all `LocalSpace: true`, `Determinism: false`, `Bounds: Dynamic`,
-no user parameters.** Every emitter runs `Emitter State` with Loop Behavior **Infinite**, Loop Duration
-Mode **Fixed**, **Loop Duration 1.0 s**, and one `Spawn Burst Instantaneous`
+no user parameters.** Every emitter runs `Emitter State` with `Life Cycle Mode = System`, a stored
+Loop Behavior **Infinite** / Loop Duration **1.0 s**, and one `Spawn Burst Instantaneous`
 (`UseLoopCountLimit = false`, so the stored `Loop Count Limit = 1` is inert on all 15).
 
-**42 particles per loop. Longest lifetime 1.5 s > the 1.0 s loop, so generations overlap.**
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+Per [P0-D1] this RULES all 15 emitters — **the stored per-emitter `Infinite / 1.0 s` rows are inert.**
+*(Was read as a 1.0 s infinite loop.)*
+
+**42 particles per burst. Longest lifetime 1.5 s < the 2.0 s system loop, and the system fires
+`Once` — so generations do NOT overlap.** *(Was "1.5 s > the 1.0 s loop, so generations overlap".)*
 
 | # | Emitter | Count | Spawn t | Lifetime | Renderer | Alignment / Facing | Material | Size / Scale |
 |---|---|---|---|---|---|---|---|---|
@@ -82,9 +88,10 @@ Mode **Fixed**, **Loop Duration 1.0 s**, and one `Spawn Burst Instantaneous`
 No emitter is disabled in this system.
 
 **Spawn-time structure.** `Glow_01` and `Glow_02` fire at t=0; `Glow_03` at t=0.04; everything else at
-t=0.05 except `Star02` at t=0.10. Within one 1.0 s loop the whole effect is therefore over in
-0.05 + 1.5 = 1.55 s, i.e. **the two Wind layers survive past the next loop start** and every other
-layer is dead by t ≈ 0.55 s.
+t=0.05 except `Star02` at t=0.10. The whole effect is over in 0.05 + 1.5 = **1.55 s**, comfortably
+inside the 2.0 s system loop `[corpus-v3]`; every layer other than the two Wind layers is dead by
+t ≈ 0.55 s. *(Was "the two Wind layers survive past the next loop start" — an artefact of the inert
+1.0 s emitter rows.)*
 
 **Position offsets.** `UsePositionOffset` is **false** on every emitter except `Sparkles_01` and
 `LightningStrip`, and both of those carry `Position Offset = (0,0,0)`. **No layer in this system is
@@ -471,7 +478,9 @@ Five colour curves recur across many emitters. Naming them once avoids ten trans
 
 ### 6.1 Cadence row
 
-**New row required: loop 1.0 s, particle lifetime 1.5 s, burst 42.** No existing row is close
+**New row required `[corpus-v3]`, per [P0-D3]: loop 2.0 s, particle lifetime 1.5 s, burst 42.**
+Loop = the system's `Once` loop duration (*was 1.0 s, taken from the inert emitter rows*); lifetime =
+max resolved emitter lifetime; burst = the §2 count. No existing row is close
 (`_Burst` is 1.2/1.2/96, `_Slash` 1.0/0.5/19, `_Single` 1.0/1.1/1).
 
 Lifetime **1.5 s**, not 0.55 s: the template particle must outlive the longest source layer

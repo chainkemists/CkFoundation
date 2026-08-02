@@ -53,13 +53,17 @@ Corpus evidence:
 ## 2. System anatomy `[corpus]`
 
 **14 CPU emitters, all enabled, all `LocalSpace: true`, `Determinism: false`, `Bounds: Dynamic`,
-no user parameters.** Every emitter: Loop Behavior **Infinite**, Loop Duration Mode **Fixed**,
-**Loop Duration 1.0 s**, one `Spawn Burst Instantaneous` with `UseLoopCountLimit = false` (stored
+no user parameters.** Every emitter: `Life Cycle Mode = System`, a stored Loop Behavior **Infinite** /
+Loop Duration **1.0 s**, one `Spawn Burst Instantaneous` with `UseLoopCountLimit = false` (stored
 `Loop Count Limit = 1` inert on all 14).
 
-**34 particles per loop. Longest lifetime 0.5 s; last spawn at t = 0.1 s — so the whole effect is
-over by t ≈ 0.55 s and generations NEVER overlap.** (Contrast `NS_Arrow_Cast`, whose 1.5 s Wind layers
-run past the loop boundary.)
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+Per [P0-D1] this RULES all 14 emitters — the stored per-emitter `Infinite / 1.0 s` rows are inert.
+*(Was read as a 1.0 s infinite loop.)*
+
+**34 particles per burst. Longest lifetime 0.5 s; last spawn at t = 0.1 s — so the whole effect is
+over by t ≈ 0.55 s, well inside the 2.0 s `Once` system loop, and generations NEVER overlap.**
 
 | # | Emitter | Count | Spawn t | Lifetime | Renderer | Alignment / Facing | Material | Size / Scale |
 |---|---|---|---|---|---|---|---|---|
@@ -391,14 +395,16 @@ point of the emitter and must survive the port.
 
 ### 6.1 Cadence row
 
-**New row: loop 1.0 s, particle lifetime 0.5 s, burst 34.**
+**New row `[corpus-v3]`, per [P0-D3]: loop 2.0 s, particle lifetime 0.5 s, burst 34.**
+Loop = the system's `Once` loop duration (*was 1.0 s, taken from the inert emitter rows*); lifetime =
+max resolved emitter lifetime (0.5 s); burst = the §2 count.
 
-Lifetime 0.5 s covers the longest source layer (`Ring_01` / `Ring_02`), and — unlike
-`NS_Arrow_Cast` — **the last layer dies at t ≈ 0.55 s, well inside the 1.0 s loop, so generations
-never overlap.** That is a materially simpler cadence than the Cast variant's.
+Lifetime 0.5 s covers the longest source layer (`Ring_01` / `Ring_02`), and **the last layer dies at
+t ≈ 0.55 s, well inside the 2.0 s loop, so generations never overlap** — a materially simpler cadence
+than the Cast variant's.
 
-Note the coincidence: `PS_CkParticles_Template_Slash` is **1.0 / 0.5 / 19** — same loop, same
-lifetime, different burst. A `1.0 / 0.5 / 34` row is a sibling of it, not a novel shape.
+`PS_CkParticles_Template_Slash` is **1.0 / 0.5 / 19** — same lifetime, different loop and burst; a
+`2.0 / 0.5 / 34` row is a near sibling of it, not a novel shape.
 
 Layer index = **`Seed % 34`**. Partition:
 

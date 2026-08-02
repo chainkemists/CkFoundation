@@ -45,10 +45,17 @@ plan; §6's capability-gap callout is the part an implementer must read before c
 ## 2. System anatomy `[corpus]`
 
 **10 CPU emitters, ALL enabled, ALL world-space (`LocalSpace: false`), `Bounds: Dynamic`,
-`Determinism: false`, zero user parameters.** Nine are sprite emitters that burst at loop start on a
-**1.0 s** loop; the tenth is a **ribbon**.
+`Determinism: false`, zero user parameters.** Nine are sprite emitters that burst at loop start; the
+tenth is a **ribbon**.
 
-**23 sprite particles per loop** (1+1+1+1+1+1+7+7+3), plus the ribbon (count `[unresolved]`, see below).
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.** All ten emitters are
+`Life Cycle Mode = System`, so per [P0-D1] this RULES and **every per-emitter Loop row below is
+inert** — including the ribbon's `Once / 0.4 s`. *(Was read as a 1.0 s loop from the inert emitter
+rows.)*
+
+**23 sprite particles per loop** (1+1+1+1+1+1+7+7+3), plus the ribbon (event-spawned, unbounded —
+see below).
 
 | # | Emitter | Spawn | Spawn t | Lifetime | Loop | Renderer / alignment | Material | Size |
 |---|---|---|---|---|---|---|---|---|
@@ -58,32 +65,43 @@ plan; §6's capability-gap callout is the part an implementer must read before c
 | 3 | `Raimbow` *(sic)* | Burst 1 | 0 | 1.0 | 1.0 | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Rainbow` | uniform 450 |
 | 4 | `Arrow` | Burst 1 | 0 | **1.5** | 1.0 | Sprite, **VelocityAligned** / FaceCamera | `M_VFX_DisAdd_Arrows` | non-uniform (170, 170) |
 | 5 | `BigArrow` | Burst 1 | 0 | **1.5** | 1.0 | Sprite, **VelocityAligned** / FaceCamera | `M_VFX_DisAdd_Arrows` | non-uniform (150, 240) |
-| 6 | `Sparkles_02` | Burst **7** | **0.05** | rand — **`[unresolved]`**, see §5 | 1.0 | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Star01` | rand uniform 40–70 |
+| 6 | `Sparkles_02` | Burst **7** | **0.05** | rand **0.4–0.7** `[corpus-v3]` | ~~1.0~~ | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Star01` | rand uniform 40–70 |
 | 7 | `Sparkles_01` | Burst **7** | 0 | rand 0.2–0.4 | 1.0 | Sprite, **VelocityAligned** / FaceCamera | `M_VFX_DisAdd_Part04` | rand non-uniform (35,80)–(50,90) |
 | 8 | `Ring` | Burst **3** | 0 | rand 0.3–0.7 | 1.0 | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Ring01` | rand uniform 150–160 |
-| 9 | `Sparkles_02_Trail` | `[unresolved]` | — | 0.2 | **0.4, Loop Behavior = Once** | **Ribbon** | `M_VFX_DisAdd_Trail03` | ribbon width 15 |
+| 9 | `Sparkles_02_Trail` | **event-spawned, 1/event** `[corpus-v3]` | — | 0.2 *(`Initialize Ribbon`)* | ~~0.4, Once~~ *(inert)* | **Ribbon** | `M_VFX_DisAdd_Trail03` | ribbon width 15 |
 
 `Spawn Burst Instantaneous.Loop Count Limit = 1` on all nine sprite emitters, but
 `UseLoopCountLimit = false` on all nine — the value is an authored leftover and **never fires**
-`[corpus]`. Same trap NS_Lightning_Range records. Every sprite emitter really bursts once per 1.0 s
-loop, forever.
+`[corpus]`. Same trap NS_Lightning_Range records. `[corpus-v3]` Every sprite emitter bursts **once**
+over the system's single 2.0 s `Once` loop — *not* "once per 1.0 s loop, forever", which was the
+inert-emitter-row reading.
 
-> ### `[unresolved: how the ribbon emitter spawns]`
-> `Sparkles_02_Trail`'s `Emitter Update` stack contains **one** module — `Emitter State` — with **no
-> spawn module at all**, and its `Particle Spawn` stack's only enabled module is `Initialize Ribbon`
-> (`Add Velocity from Point` is present but **disabled**). Meanwhile `Sparkles_02` runs a
-> **`Generate Location Event`** module (Event Send Rate 30, Event Probability 0.5, Delay Before
-> Sending Events 0.5, Movement Tolerance 0.5, Unit Spacing 20, evaluation "Every Frame").
+> ### The ribbon's spawn chain — RESOLVED `[corpus-v3]`
+> `Sparkles_02_Trail` has **no spawn module in `Emitter Update`** because it is spawned from an
+> **event handler**, which the v3 exporter now dumps:
 >
-> **The corpus exporter emits only three stages per emitter** — `Emitter Update`, `Particle Spawn`,
-> `Particle Update` (verified against `NS_BuffCast.json`: every emitter reports exactly those three).
-> An **Event Handler stack is therefore not exported at all.** The overwhelmingly likely reading is
-> that `Sparkles_02_Trail` is event-spawned from `Sparkles_02`'s location events `[inferred]`, but
-> the linkage, the receiving module, and the spawn count per event are **not in the corpus** and must
-> not be guessed. Confirming it requires either an exporter change or a human opening the asset.
+> | Field | Value |
+> |---|---|
+> | `sourceEmitter` | `Sparkles_02` |
+> | `eventName` | `LocationEvent` |
+> | `executionMode` | `SpawnedParticles` |
+> | `spawnCount` | **1 per event** (`randomSpawnCount = false`) |
+> | `maxEventsPerFrame` | **0** (unbounded) |
+> | handler module | `Receive Location Event` — `Position`, `Velocity`, `Acceleration`, `Ribbon ID`, `Ribbon UV Distance`, `Coordinate Space Transform` = **Apply**; `Color`, `Normalized Age`, `Random Normalized Float` = Output; `Interpolate Spawned Positions = true` |
 >
-> Also unresolved: whether the ribbon's `Loop Behavior = Once` (duration 0.4 s) means the trail plays
-> only on the system's first loop while the nine sprite emitters loop forever.
+> The sender is `Sparkles_02`'s `Generate Location Event` (Send Rate 30, Event Probability 0.5, Delay
+> Before Sending Events 0.5, Movement Tolerance 0.5, Unit Spacing 20, "Every Frame"). So each of the
+> 7 `Sparkles_02` particles emits location events at up to 30/s (50 % probability, after a 0.5 s
+> delay) from t = 0.05, and each accepted event spawns exactly one ribbon particle that inherits the
+> emitting particle's position/velocity and **Ribbon ID** — one ribbon strand per sparkle.
+>
+> Ribbon particle lifetime is **0.2 s**, from `Initialize Ribbon.Lifetime` — note the emitter's
+> `lifetimeResolved` reads `NO_MODULE` because it only inspects `Initialize Particle`.
+>
+> The ribbon's `Loop Behavior = Once` / duration 0.4 s is **inert**: the emitter is
+> `Life Cycle Mode = System`, so the system's `Once / 2.0 s` governs (see the system loop block above).
+> *(Was `[unresolved]` — the pre-v3 exporter emitted only three stages per emitter and no event
+> handler stack at all.)*
 
 `Sparkles_02`'s `[values]` block additionally carries a full set of `GenerateLocationEvent.*` entries
 **and** `Sparkles_02_Trail` carries `RandomRangeFloat001.*` entries for its disabled module — the
@@ -230,17 +248,12 @@ Every curve samples **NormalizedAge** (age / that emitter's own lifetime) unless
 - Dynamic params: **`[0, 0, 0, 0]`** constant.
 
 ### Layer 6 — `Sparkles_02` (7 particles, spawn t = 0.05)
-- **`[unresolved: this emitter's particle lifetime]`** — the corpus states two different ranges and
-  which one the engine evaluates is not decidable from the export:
-  - `Initialize Particle` has `Lifetime Mode = Random` with `Lifetime Min 0.4` / `Lifetime Max 0.7`
-    (Random mode reads these two inputs);
-  - the same module carries `[override] Lifetime = dyn:Random Range Float`, and
-    `RandomRangeFloat.Minimum = 0.2` / `Maximum = 0.4` (Random Seed 0) — but the `Lifetime` pin an
-    override drives is the **Direct Set** input, which Random mode does not read.
-  The likely reading is that **0.4–0.7 wins** and the `Random Range Float` dynamic input is a leftover
-  from an earlier Direct-Set configuration `[inferred]`. Do not encode either range without confirming
-  in the editor; the ranges do not overlap except at a single point, so guessing wrong is visible.
-  *(The same shape recurs on every `Sparkles_*` emitter across this batch — see the sibling sheets.)*
+- **Lifetime `[corpus-v3]`: `Lifetime Min 0.4` / `Lifetime Max 0.7` DRIVES.** `Lifetime Mode = Random`,
+  so per [P0-D2] the Min/Max pins are the driving pins and the `[override] Lifetime = dyn:Random Range
+  Float` (0.2 / 0.4) sits on the unselected Direct-Set input and is INERT
+  (`lifetimeResolved.source = minmax`, override under `inertOverrides`). The sheet's `[inferred]`
+  guess that 0.4–0.7 wins is now MECHANICALLY CONFIRMED; no editor check needed.
+  *(The same shape recurs on every `Sparkles_*` emitter across this batch — all resolve the same way.)*
 - `Sphere Location`: `Sphere Radius` **0.5**, Random distribution, Spawn Only, `Surface Only = false`,
   Offset (0,0,0), Non Uniform Scale (1,1,1). A 0.5-unit sphere — effectively a point.
 - `Add Velocity from Point`: strength from `Random Range Float 001` **Min 1000, Max 1000** (a constant
@@ -257,7 +270,7 @@ Every curve samples **NormalizedAge** (age / that emitter's own lifetime) unless
 - **Scale Sprite Size 001 is DISABLED** — its `X: (0, 0.2)C (0.3, 0.7)C | Y: (0.2, 1)L (1, 1.2)L` is inert.
 - `Sprite Rotation Rate` (Float from Curve): **`(0, 720)C (1, 0)C`** — 720 °/s spin decaying to 0.
 - `Generate Location Event` (Every Frame): Send Rate 30, Event Probability 0.5, Delay Before Sending 0.5,
-  Movement Tolerance 0.5, Unit Spacing 20. **This is the ribbon's presumed driver — see §2's unresolved box.**
+  Movement Tolerance 0.5, Unit Spacing 20. **This IS the ribbon's driver, confirmed `[corpus-v3]` — see §2's event-chain box.**
 - Dynamic params: **`[1, 0, 0, 0]`** constant.
 
 ### Layer 7 — `Sparkles_01` (7 particles, spawn t = 0)
@@ -323,9 +336,10 @@ Every curve samples **NormalizedAge** (age / that emitter's own lifetime) unless
 | `PS_CkParticles_Template_Burst` | 1.2 | 1.2 | 96 |
 | `PS_CkParticles_Template_Single` | 1.0 | 1.1 | 1 |
 | `PS_CkParticles_Template_Slash` | 1.0 | 0.5 | 19 |
-| **needed here** | **1.0** | **1.5** | **23** |
+| **needed here `[corpus-v3]`** | **2.0** | **1.5** | **23** |
 
-Loop 1.0 s (every sprite emitter), template particle lifetime **1.5 s** (the longest source layer —
+Per [P0-D3]: loop **2.0 s** (the system's `Once` loop duration — *was 1.0 s, taken from the inert
+emitter rows*), template particle lifetime **1.5 s** (max resolved lifetime — the longest source layer —
 `Arrow`/`BigArrow`; every shorter layer must self-hide past its own lifetime the way `Behavior_Slash`
 does), burst **23** (1+1+1+1+1+1+7+7+3). The ribbon is **not** in that count — it cannot be expressed
 at all (§6.5).
@@ -430,12 +444,13 @@ at implementation time.
    or (c) drop the layer and record it. **Do not assume (b) is free** — a sprite chain does not
    reproduce a continuous ribbon's width taper or its `Emitter.Age`-indexed colour.
 
-2. **EVENT-DRIVEN SPAWNING — not expressible, and not even fully readable from the corpus.**
+2. **EVENT-DRIVEN SPAWNING — not expressible (but now fully readable `[corpus-v3]`).**
    `Generate Location Event` on `Sparkles_02` is a Niagara event, and CkParticles has no event
    mechanism at all: the DI's `ExecuteStage` is a **pure, stateless per-particle function** with no
-   inter-particle or inter-emitter channel. The event handler stack is additionally **not exported**
-   (§2), so the spawn contract is unknown. Both facts point the same way: layer 9 cannot be faithfully
-   ported without new capability AND new archaeology.
+   inter-particle or inter-emitter channel. The spawn contract itself is **no longer unknown** — v3
+   exports the handler stack (§2: `LocationEvent`, `SpawnedParticles`, 1 particle per event,
+   unbounded events/frame, `Receive Location Event` applying Position/Velocity/Acceleration/RibbonID).
+   *This gap is now purely a CAPABILITY gap; the archaeology half is closed.*
 
 3. **CAMERA-FACING SPRITE ROW RENDERER — does not exist.** Five of this system's nine sprite layers
    need one each with a distinct look. Additive and small, but it is a code change, not data. **All six

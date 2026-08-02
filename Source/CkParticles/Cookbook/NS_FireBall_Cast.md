@@ -98,9 +98,9 @@ between the two release beats.
 > Behavior / Loop Duration are therefore **inert leftovers** — including the three distinct values
 > the corpus exports (1.0 s on 21 emitters, **5.0 s** on `Sparkles_Stretched`, **0.3 s** on
 > `Star_01`, `Star_02`, `Flames`, `Smokes`) and the `Loop Behavior = Once` on those same five.
-> `[unresolved: the system-level System State stack is NOT exported by CkAssetExporter — only
-> Emitter Update / Particle Spawn / Particle Update. The system's loop duration and loop behavior
-> are unknown from the corpus.]`
+> **System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+> `UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+> Per [P0-D1] this is the authority. *(Was `[unresolved]`.)*
 >
 > **This resolves an apparent contradiction, and it is worth stating explicitly**: `Star_01` spawns
 > at t = 0.55 while carrying `Loop Duration = 0.3`, and `Flames`/`Smokes` spawn at 0.5 with the
@@ -303,7 +303,7 @@ Update order: 1 Particle State, 2 Dynamic Material Parameters, 3 Scale Sprite Si
 
 | Fact | Value |
 |---|---|
-| Lifetime | `Lifetime Mode = Random`; `InitializeParticle.Lifetime Min/Max = **0.3 / 0.6**`; pin override `Random Range Float` min **0.2** max **0.4** `[unresolved: which is live — the pin override normally wins]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min/Max = 0.3 / 0.6` DRIVES** (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 / 0.4) sits on the unselected Direct-Set pin and is INERT. *Was read as "the pin override normally wins"; corrected per [P0-D2].* |
 | Spawn shape | Sphere Location, `Sphere Radius = 20`, `Sphere Orientation Axis = (1,0,0)`, `Non Uniform Scale = (1,1,1)`, `Offset = (0,0,0)`, `Surface Only = false`, `Sphere Distribution = Random`, `Random Seed = 0` |
 | Velocity | `Add Velocity` ← `Random Range Vector` **min `(500, −300, −300)`, max `(2500, 300, 300)`** — a strong **+X** cone |
 | Size | `Sprite Size Mode = Random Uniform`, min **10**, max **20** |
@@ -330,7 +330,7 @@ Update order: 1 Scale Velocity, 2 Solve Forces and Velocity, 3 Particle State, 4
 
 | Fact | Value |
 |---|---|
-| Lifetime | `Random`; `Lifetime Min/Max = **0.1 / 0.2**`; pin override `Random Range Float` min 0.2 max 0.4 `[unresolved: same ambiguity]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min/Max = 0.1 / 0.2` DRIVES** (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 / 0.4) sits on the unselected Direct-Set pin and is INERT. *Was read as "the pin override normally wins"; corrected per [P0-D2].* |
 | Spawn shape | Sphere Location, `Sphere Radius = 10`, `Surface Only = false`, `Random Seed = 0` |
 | Velocity | `Add Velocity` ← `Random Range Vector` **min `(3000, −800, −800)`, max `(5000, 800, 800)`** — a very fast **+X** spray |
 | Size | `Sprite Size Mode = Random Non-Uniform`, **min `(25, 70)`, max `(40, 60)`** *(note min.y > max.y; treat as per-axis lo/hi)* |
@@ -631,7 +631,7 @@ Update order: 1 Solve Forces and Velocity, 2 Particle State, 3 Color, 4 Scale Me
 
 | Fact | Value |
 |---|---|
-| Lifetime | `Random`; `Lifetime Min/Max = **0.2 / 0.7**`; pin override `Random Range Float` min 0.2 max 0.4 `[unresolved]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min/Max = 0.2 / 0.7` DRIVES** (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 / 0.4) sits on the unselected Direct-Set pin and is INERT. *Was read as "the pin override normally wins"; corrected per [P0-D2].* |
 | Spawn shape | Sphere Location, `Sphere Radius = 20`, `Surface Only = true` (`Surface Expansion Mode = Outside`, `Band Thickness = 0`), **`Hemisphere Z = true`**, `Radius Position = 1`, `U Position = 0`, `V Position = 0.5`, `Uniform Distribution = 1`, `Uniform Spiral Amount = 1` |
 | Velocity | `Add Velocity` ← `Random Range Vector`, **min `(100, −100, −100)`, max `(700, 100, 100)`** — a **+X** cone |
 | Size | `Random Uniform`, min **50**, max **100** |
@@ -660,7 +660,7 @@ Update order: 1 Scale Velocity, 2 Solve Forces and Velocity, 3 Particle State, 4
 
 | Fact | Value |
 |---|---|
-| Lifetime | `Random`; `Lifetime Min/Max = **0.7 / 1.3**`; pin override `Random Range Float` min 0.2 max 0.4 `[unresolved]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min/Max = 0.7 / 1.3` DRIVES** (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 / 0.4) sits on the unselected Direct-Set pin and is INERT. *Was read as "the pin override normally wins"; corrected per [P0-D2].* |
 | Spawn shape | Sphere Location, `Sphere Radius = 20`, **`Non Uniform Scale = (1, 1, 0)`** (a flattened XY disc), `Surface Only = true` / `Outside`, **`Hemisphere Z = true`** |
 | Velocity | `Add Velocity` ← `Random Range Vector`, **min `(100, −100, −100)`, max `(500, 100, 100)`** |
 | Size | `Random Uniform`, min **100**, max **200** |
@@ -716,15 +716,19 @@ Update order: 1 Particle State, 2 Dynamic Material Parameters, 3 Scale Sprite Si
 
 | Field | Value | Why |
 |---|---|---|
-| Loop duration | `[unresolved: system-level loop, §2]` — **resolve before writing the row** | `Life Cycle Mode = System`; the three per-emitter values (1.0 / 5.0 / 0.3) are all leftovers |
-| Particle lifetime | **1.5 s** at minimum | the two `Wind_*` emitters live 1.5 s from a spawn at t = 0.55, i.e. they are alive until t ≈ 2.05 s of the loop; a `Smokes` particle at the 1.3 s upper bound reaches t ≈ 1.8 s |
+| Loop duration | **2.0 s** `[corpus-v3]` | the system's `Once` loop duration ([P0-D3]); the three per-emitter values (1.0 / 5.0 / 0.3) are all leftovers. *Was `[unresolved]`.* |
+| Particle lifetime | **1.5 s** by the [P0-D3] formula — **but see the STOP below** | max resolved emitter lifetime (`Wind_01`/`Wind_02`); `Smokes` resolves to 0.7–1.3 (§5.14) |
 | Burst count | **50** | the §2 total |
 
-**The lifetime/loop relationship is the risky number here.** A template particle must outlive
-`SpawnDelay + LayerLifetime` for the longest layer — that is **0.55 + 1.5 = 2.05 s**. If the system
-loop turns out to be shorter than that, the source overlaps generations (exactly as
-NS_Lightning_Range §4 records for its 1.1 s life on a 1.0 s loop) and the recreation must too.
-**Do not set the template lifetime from the longest emitter lifetime alone — add the spawn delay.**
+**`[P0-D3 STOP: loop = 2.0 s (system, Once); lifetime = 1.5 s (max resolved, Wind_01/Wind_02);
+burst = 50 (§2) — but the longest layer is alive until SpawnDelay + Lifetime = 0.55 + 1.5 =
+2.05 s, which exceeds BOTH the formula's 1.5 s template lifetime AND the 2.0 s system loop]`.**
+A template particle must outlive `SpawnDelay + LayerLifetime`, so the row needs ≥ 2.05 s, which the
+[P0-D3] formula does not produce. The source itself has a layer outliving its own `Once` loop
+(`Inactive Response = Complete` lets it finish). Orchestrator ruling required — do not improvise the
+lifetime. **Do not set the template lifetime from the longest emitter lifetime alone — add the spawn
+delay.** (`NS_FireBall_Hit` shares the two `Wind_*` emitters but has them DISABLED, so it does not
+hit this overshoot.)
 
 Layer partition `Seed % 50` with the layer→emitter map from §2. The 0 / 0.5 / 0.54 / 0.55 spawn
 beats are reproduced by hiding a layer for `Age < SpawnDelay` and running its curves on
@@ -794,7 +798,7 @@ colour-LUT kind and a 2×2 sub-UV atlas shape.
 | 7 | **World space on 21 of 26 emitters**; the template is local-space (NS_BasicAttack §13.2). A cast effect is usually anchored to a caster who may be moving during the 2 s window. Medium risk, unlike the fixed-point explosions. | Medium |
 | 8 | **Nine unplumbed CkUsf family parameters** (§6.4), including the gradient-map LUT chain and a separate `GradientShape_Tex`. | Medium |
 | 9 | **A colour-LUT texture output kind** and a **2×2 sub-UV atlas shape** are both new *kinds* of bake, not new functions (§4.3). | Medium |
-| 10 | **Four `[unresolved]` lifetime ranges** (§5.3, §5.4, §5.13, §5.14): `Lifetime Mode = Random` with module `Lifetime Min/Max` *and* a `Random Range Float` pin override carrying different numbers. Resolve all four before implementing. | Prerequisite |
+| 10 | ~~Four `[unresolved]` lifetime ranges~~ — **RESOLVED `[corpus-v3]`** (§5.3, §5.4, §5.13, §5.14): `Lifetime Mode = Random` ⇒ the module's `Lifetime Min/Max` drives on all four ([P0-D2]); `Sparkles` 0.3–0.6, `Sparkles_Stretched` 0.1–0.2, `Flames` 0.2–0.7, `Smokes` 0.7–1.3. | Closed |
 | 11 | **Inert modules that look load-bearing.** `Wind_02`'s `Initial Mesh Orientation` and `LightningStrip`'s `Mesh Scale` / `Scale Mesh Size` write mesh attributes on **sprite** renderers. Do not implement them. Recorded in §5.10 / §5.11. | None (trap) |
 | 12 | **`Opacty_DepthFade`** 20 / 30 / 10 / 0 across instances; CkUsf surface looks do not wire scene depth (known gap, NS_Lightning_Range §13.4). | Low (known) |
 

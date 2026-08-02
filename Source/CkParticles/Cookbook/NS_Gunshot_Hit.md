@@ -53,23 +53,28 @@ Corpus evidence:
 ## 2. System anatomy `[corpus]`
 
 **11 CPU emitters, all enabled, all `LocalSpace: true`, `Determinism: false`, `Bounds: Dynamic`,
-no user parameters.** Ten emitters run Loop Behavior **Infinite** / Loop Duration Mode **Fixed** /
-**Loop Duration 1.0 s**; **`Sparkles_01` runs Loop Behavior `Once` with Loop Duration 0.3 s**.
+no user parameters.** Ten emitters are `Life Cycle Mode = System` and store Loop Behavior
+**Infinite** / **Loop Duration 1.0 s** — all inert per [P0-D1]. **`Sparkles_01` is the one
+`Life Cycle Mode = Self` emitter**, so its `Loop Behavior = Once` / `Loop Duration 0.3 s` is LIVE.
 `UseLoopCountLimit = false` everywhere (every `Loop Count Limit = 1` is inert).
 
-**33 particles per loop, plus a one-time 7 on the first activation. Longest lifetime 0.4 s and the
-last spawn is at t = 0.05 s — the whole effect is over by t ≈ 0.45 s and generations NEVER overlap.**
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+
+**33 particles per firing, plus the 7 one-shot `Sparkles_01`. Longest lifetime 0.6 s `[corpus-v3]`
+and the last spawn is at t = 0.05 s — the whole effect is over by t ≈ 0.65 s, well inside the 2.0 s
+`Once` loop, and generations NEVER overlap.**
 
 | # | Emitter | Count | Spawn t | Lifetime | Renderer | Alignment / Facing | Material | Size / Scale |
 |---|---|---|---|---|---|---|---|---|
 | 0 | `Glow_01` | 1 | 0 | 0.1 | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Part01` | Uniform **700** |
 | 1 | `Glow_02` | 1 | 0 | 0.1 | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Part01` | Uniform **300** |
 | 2 | `Glow_03` | 5 | **0.04** | 0.05 | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Part02` | Uniform **150** |
-| 3 | `Sparkles_02` | 5 | 0.05 | **rand 0.2–0.4** | Sprite | **`VelocityAligned`** | `M_VFX_DisAdd_Part04` | rand non-uniform **(20,130)–(25,150)** |
+| 3 | `Sparkles_02` | 5 | 0.05 | **rand 0.3–0.6** `[corpus-v3]` | Sprite | **`VelocityAligned`** | `M_VFX_DisAdd_Part04` | rand non-uniform **(20,130)–(25,150)** |
 | 4 | `Glow_04` | 5 | 0.05 | 0.2 | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Part01` | Uniform **800** |
 | 5 | `Glow_05` | 3 | 0.05 | 0.1 | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Part03_Bright` | Uniform **250** |
 | 6 | `Star01` | 1 | 0.05 | 0.2 | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Star01` | Uniform **20** |
-| 7 | `Sparkles_01` | 7 | 0.05 | **rand 0.2–0.4** | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Part01_Bright` | rand uniform **6–10** |
+| 7 | `Sparkles_01` | 7 | 0.05 | **rand 0.3–0.6** `[corpus-v3]` | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Part01_Bright` | rand uniform **6–10** |
 | 8 | `Impact_01` | **6** | 0.05 | 0.2 | Sprite, **SubUV 2×2** | **`VelocityAligned`** | `M_VFX_DisAdd_Impact02` | rand non-uniform **(60,110)–(80,160)** |
 | 9 | `FlareImpact` | 1 | 0.05 | 0.05 | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Impact01` | Uniform **150** |
 | 10 | `Spike01` | 5 | 0.05 | 0.1 | **Mesh** `SM_VFX_Spike01` | **Facing `Velocity`** | `M_VFX_DisAdd_Flat02` (renderer override) | mesh scale rand **(0.1,0.1,0.2)–(0.05,0.2,0.5)** |
@@ -88,7 +93,7 @@ Byte-identical emitters: `Glow_01`, `Glow_02`, `Star01`.
 | Emitter | Change vs `NS_Gunshot_Cast` |
 |---|---|
 | `Glow_03` | `Color.Scale Alpha 1 → **4**`; the colour curve is replaced by **CURVE-S** (§5) |
-| `Sparkles_02` | count `3 → **5**`; lifetime `rand 0.1–0.2 → **rand 0.2–0.4**`; **`Add Velocity` (a +X cone) → `Add Velocity from Point`** (radial, strength rand 1300–2000); `Sphere Location` radius `100 → **0.1**`, non-uniform scale `(0.1,0.1,0.1) → (1,1,1)`, `Hemisphere X` **removed**; `Scale Velocity` knee `0.35 → 0.2`; the `Y` taper curve gains a middle key |
+| `Sparkles_02` | count `3 → **5**`; lifetime `rand 0.1–0.2 → **rand 0.3–0.6** `[corpus-v3]``; **`Add Velocity` (a +X cone) → `Add Velocity from Point`** (radial, strength rand 1300–2000); `Sphere Location` radius `100 → **0.1**`, non-uniform scale `(0.1,0.1,0.1) → (1,1,1)`, `Hemisphere X` **removed**; `Scale Velocity` knee `0.35 → 0.2`; the `Y` taper curve gains a middle key |
 | `Glow_04` | `Color.Scale Alpha 0.3 → **0.2**`; colour curve `G` and `B` start much darker (§5) |
 | `Glow_05` | `Color.Scale Alpha 1 → **0.8**`; colour curve collapses to single constant keys (§5) |
 | `Sparkles_01` | **`Add Velocity` → `Add Velocity from Point`** (strength rand **800–1700**); `Sphere Location` radius `100 → **0.1**`, non-uniform `(0.1,0.1,0.1) → (1,1,1)`, `Hemisphere X` **removed** |
@@ -261,7 +266,9 @@ emitters in this system do it (`Glow_03`, `FlareImpact`, `Spike01`); no other sy
 exceeds 1. It is a deliberate over-brighten on a translucent additive-reading material, and any clamp
 introduced in the port would flatten it.
 
-### Layer 3 — `Sparkles_02` (5, t=0.05, life **random 0.2–0.4**)
+### Layer 3 — `Sparkles_02` (5, t=0.05, life **random 0.3–0.6** `[corpus-v3]`)
+
+*Was misread as 0.2–0.4 under the override-wins assumption; `Random` ⇒ Min/Max drives ([P0-D2]).*
 
 - `Lifetime Mode = Random` via `Random Range Float` **min 0.2 / max 0.4**.
 - `Sphere Location`: **radius 0.1**, `Non Uniform Scale = (1,1,1)`, `Surface Only = false`,
@@ -313,7 +320,9 @@ introduced in the port would flatten it.
 - **Scale Sprite Size**: `None: (0, 0)C (0.4, 1)C (1, 0)C`
 - Dynamic params `[1, 0, 0, 0]`.
 
-### Layer 7 — `Sparkles_01` (7, t=0.05, life **random 0.2–0.4**) — **ONE-SHOT**
+### Layer 7 — `Sparkles_01` (7, t=0.05, life **random 0.3–0.6** `[corpus-v3]`) — **ONE-SHOT**
+
+*Was misread as 0.2–0.4 under the override-wins assumption; `Random` ⇒ Min/Max drives ([P0-D2]).*
 
 - **`Emitter State`: Loop Behavior `Once`, Loop Duration Mode `Fixed`, Loop Duration `0.3`.**
   Every other emitter is Infinite / 1.0. §6.7 #2.
@@ -405,14 +414,16 @@ introduced in the port would flatten it.
 
 ### 6.1 Cadence row
 
-**New row: loop 1.0 s, particle lifetime 0.4 s, burst 33.** The longest source layer is 0.4 s
-(`Sparkles_01` / `Sparkles_02` at the top of their random range), the last spawn is t = 0.05 s, and
-**nothing survives past t ≈ 0.45 s — generations never overlap.** Shorter layers hide past their own
-lifetime (NS_BasicAttack §8's rule).
+**New row `[corpus-v3]`, per [P0-D3]: loop 2.0 s, particle lifetime 0.6 s, burst 33.**
+Loop = the system's `Once` loop duration (*was 1.0 s*); lifetime = max resolved emitter lifetime
+(*was 0.4 s under the override-wins assumption — `Sparkles_01`/`Sparkles_02` resolve to 0.3–0.6*);
+burst = the §2 count. The last spawn is t = 0.05 s, so **nothing survives past t ≈ 0.65 s —
+generations never overlap.** Shorter layers hide past their own lifetime (NS_BasicAttack §8's rule).
 
 **The 7 one-shot `Sparkles_01` particles are NOT in the 33.** Same fork as `NS_Gunshot_Cast` §6.1:
-(a) fold them in at burst 40 and accept a per-loop re-fire, or (b) drop them and record the deviation.
-**Whichever is chosen must be recorded, not silent.**
+(a) fold them in at burst 40, or (b) drop them and record the deviation. `[corpus-v3]` the system is
+`Loop Once`, so on a single firing every layer fires once and the (a) deviation only shows on the
+gym's looping re-arm. **Whichever is chosen must be recorded, not silent.**
 
 Layer index = **`Seed % 33`** (or 40 under option (a)). Partition under option (b):
 

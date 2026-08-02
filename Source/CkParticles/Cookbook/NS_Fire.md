@@ -63,21 +63,28 @@ Corpus evidence (regenerate per [README.md](README.md); `Saved/` is machine-loca
 ## 2. System anatomy `[corpus]`
 
 **4 CPU emitters, all enabled, all WORLD space (`localSpace: false`), all bounds Dynamic,
-`determinism: false`. 8–10 particles per loop** (the count is randomized — §2.3).
+`determinism: false`. 8–10 particles per burst** (the count is randomized — §2.3).
 
 All four are sprite emitters; **there is no mesh renderer, no ribbon, and no light renderer in this
 system.**
 
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+All four emitters are `Life Cycle Mode = System`, so per [P0-D1] this RULES and **every per-emitter
+Loop row in the table below is inert** — including `Flames`' `Once / 0.3`. The whole system fires one
+burst over a single 2.0 s cycle. *(Was read as a 1.0 s infinite loop with one divergent emitter.)*
+
 | # | Emitter | Count | Spawn t | Loop behav. / dur. | Lifetime | Renderer | Material |
 |---|---|---|---|---|---|---|---|
-| 1 | `Bomb_Glow_01` | 1 | 0.05 | Infinite / 1.0 | 0.25 | Sprite, Unaligned + FaceCamera | `M_VFX_DisAdd_Part01` |
-| 2 | `Bomb_Glow_02` | 1 | 0.05 | Infinite / 1.0 | 0.2 | Sprite, Unaligned + FaceCamera | `M_VFX_DisAdd_Part01` |
-| 3 | `Flames` | 3 | 0.05 | **Once / 0.3** | rand 0.2–0.4 **⚠§2.4** | Sprite, Unaligned + FaceCamera, **SubUV 2×2** | `M_VFX_DisAdd_Flames01` |
-| 4 | `Sparkles` | **rand 3–5** | 0 | Infinite / 1.0 | rand 0.2–0.4 **⚠§2.4** | Sprite, **VelocityAligned** + FaceCamera | `M_VFX_DisAdd_Part04` |
+| 1 | `Bomb_Glow_01` | 1 | 0.05 | ~~Infinite / 1.0~~ *(inert)* | 0.25 | Sprite, Unaligned + FaceCamera | `M_VFX_DisAdd_Part01` |
+| 2 | `Bomb_Glow_02` | 1 | 0.05 | ~~Infinite / 1.0~~ *(inert)* | 0.2 | Sprite, Unaligned + FaceCamera | `M_VFX_DisAdd_Part01` |
+| 3 | `Flames` | 3 | 0.05 | ~~Once / 0.3~~ *(inert)* | rand **0.2–0.7** `[corpus-v3]` | Sprite, Unaligned + FaceCamera, **SubUV 2×2** | `M_VFX_DisAdd_Flames01` |
+| 4 | `Sparkles` | **rand 3–5** | 0 | ~~Infinite / 1.0~~ *(inert)* | rand **0.3–1.0** `[corpus-v3]` | Sprite, **VelocityAligned** + FaceCamera | `M_VFX_DisAdd_Part04` |
 
 Every `Spawn Burst Instantaneous` carries `UseLoopCountLimit = false`, so the stored
 `Loop Count Limit = 1` is an **inert authored leftover** — same trap `NS_Lightning_Range.md` §4
-records. Each emitter bursts once per loop, forever.
+records. `[corpus-v3]` Each emitter bursts **once**, over the system's single 2.0 s `Once` loop —
+*not* "once per loop, forever".
 
 ### 2.1 Spawn shapes and forces `[corpus]`
 
@@ -106,31 +113,28 @@ event/ribbon/light machinery.
 
 `Sparkles` overrides its spawn count: `[override] Spawn Count = dyn:Random Range Int` with
 `Sparkles.RandomRangeInt.Minimum = 3`, `Maximum = 5`. So the system emits **8, 9 or 10 particles per
-loop**, re-rolled each loop.
+firing**, re-rolled each time the system runs.
 
 Every other burst count in the batch is a literal. This one is not, and the cadence table's
 `BurstCount` is an `int32` literal (§6.1).
 
-### 2.4 ⚠ Randomized lifetimes — the reading, and the alternative `[corpus]` + `[unresolved]`
+### 2.4 Randomized lifetimes — RESOLVED `[corpus-v3]`
 
 `Flames` and `Sparkles` both set `Lifetime Mode = Random` **and** carry
-`[override] Lifetime = dyn:Random Range Float`. Two candidate ranges are exported for each:
+`[override] Lifetime = dyn:Random Range Float`. Per [P0-D2] the mode's static-switch selects the
+driving pin: `Random` ⇒ **`Lifetime Min / Max` DRIVES**, and the override — which sits on the
+unselected Direct-Set pin — is INERT (`lifetimeResolved.source = minmax` on both, override under
+`inertOverrides`).
 
-| Emitter | `InitializeParticle.Lifetime Min / Max` | `RandomRangeFloat.Minimum / Maximum` |
+| Emitter | LIVE `InitializeParticle.Lifetime Min / Max` | inert `RandomRangeFloat` |
 |---|---|---|
-| `Flames` | 0.2 / 0.7 | **0.2 / 0.4** |
-| `Sparkles` | 0.3 / 1.0 | **0.2 / 0.4** |
+| `Flames` | **0.2 / 0.7** | ~~0.2 / 0.4~~ |
+| `Sparkles` | **0.3 / 1.0** | ~~0.2 / 0.4~~ |
 
-**The reading this sheet takes: the `[override]` wins, so both are rand 0.2–0.4 and the
-`Lifetime Min / Max` pins are dead.** `NS_BasicAttack.md` §2 set the precedent — its `Sparkles_01`
-exports `Lifetime Min / Max` 0.3 / 0.5 alongside `RandomRangeFloat` 0.2 / 0.4 and the shipped recipe
-records "rand 0.2–0.4".
-
-**`[unresolved: which of the two ranges actually drives lifetime]`** — the exporter does not record
-which pin the override is wired to, and the 0.2 / 0.4 pair is byte-identical on every such emitter in
-every system in this batch, which is also what an unbound dynamic-input default looks like. Under the
-alternative reading the longest layer is 1.0 s rather than 0.4 s, which **changes the cadence row**
-(§6.1). Resolve it against the asset before writing any HLSL.
+**This sheet previously took the OPPOSITE reading** — "the `[override]` wins, so both are rand
+0.2–0.4 and the `Lifetime Min / Max` pins are dead", following the `NS_BasicAttack.md` §2 precedent.
+That reading is WRONG under [P0-D2]. The consequence is real: the longest layer is **1.0 s, not
+0.4 s**, which changes the cadence row (§6.1).
 
 ---
 
@@ -216,7 +220,7 @@ Structurally identical to `Bomb_Glow_01`; three values differ:
 - Dynamic params **[0, 0, 0, 0]** — `dissolve` pinned at **0**, not 1
 - Same curves: Vector4 R, G, B (0, 1)L (1, 1)L | A (0, 1)L (1, 0)L; size (0, 0.5)C (0.1, 1)L (1, 1)L
 
-### 3. `Flames` — sprite, SubUV 2×2, 3 particles, spawn t 0.05, lifetime rand 0.2–0.4 (⚠§2.4)
+### 3. `Flames` — sprite, SubUV 2×2, 3 particles, spawn t 0.05, lifetime rand **0.2–0.7** `[corpus-v3]` (§2.4)
 - **Scale Velocity** (Vector from Curve): X, Y, Z all (0, 1)C (1, 0.2)C
 - **Color** (Color from Curve, HDR, and the curves do NOT start at t = 0):
   R (**0.0796861**, **5**)L (**0.368246**, **3**)L (**0.738907**, 0.250158)L |
@@ -236,7 +240,7 @@ Structurally identical to `Bomb_Glow_01`; three values differ:
   `Sprite Size Max (50, 90)`, `Uniform Sprite Size 50` — the size mode is Random **Uniform**, so only
   the `Uniform Sprite Size Min/Max` pair drives
 
-### 4. `Sparkles` — velocity-aligned sprite, rand 3–5 particles, spawn t 0, lifetime rand 0.2–0.4 (⚠§2.4)
+### 4. `Sparkles` — velocity-aligned sprite, rand 3–5 particles, spawn t 0, lifetime rand **0.3–1.0** `[corpus-v3]` (§2.4)
 - **Scale Velocity**: X, Y, Z all (0, 1)C (0.2, 0.35)C (1, 0.05)C
 - **Color**: R (0, 1)C (**0.327196**, 1)L (**0.779958**, 1)C | G (0, 0.703584)C (0.327196, 0.288367)L (0.779958, 0.0419999)C | B (0, 0.031)C (0.327196, 0.0369999)L (0.779958, 0.0642406)C | A (0, 1)C
   — a warm yellow-white that reddens over life; R never leaves 1
@@ -270,20 +274,18 @@ family are all absent here.
 
 Two further items that are **work, not gaps**:
 
-- **Per-emitter cadence divergence (mild).** `Flames` is `Loop Behavior = Once` / `Loop Duration 0.3`;
-  the other three are `Infinite` / `1.0`. Same shape as the explosion family's G5, but with only one
-  divergent emitter. See the unresolved item below.
+- ~~**Per-emitter cadence divergence (mild).**~~ **GONE `[corpus-v3]`** — all four emitters are
+  `Life Cycle Mode = System`, so `Flames`' `Once / 0.3` and the others' `Infinite / 1.0` are all
+  inert; the system's `Once / 2.0 s` governs uniformly. There is no per-emitter cadence divergence in
+  this system.
 - **Position integration.** Both moving emitters drive velocity through a piecewise-linear
   `Vector from Curve` scale with no drag and no acceleration, so position integrates **exactly** in
   closed form — the `NS_BasicAttack.md` §8 spark pattern applies unchanged, and GPU/CPU lockstep is
   straightforward here.
 
-**`[unresolved: which loop duration is authoritative]`** — every emitter has `Life Cycle Mode =
-System`, under which Niagara's *system* life cycle drives emitter looping and the emitter-local
-`Loop Behavior` / `Loop Duration` are not the values that run. The exporter dumps the emitter-local
-values regardless (1.0 and 0.3) and **does not export any system-level state at all**. Three of four
-emitters agree on 1.0 s, so the risk is lower than in the explosion family — but confirm before
-committing the cadence row.
+**Loop authority — RESOLVED `[corpus-v3]`.** Every emitter has `Life Cycle Mode = System`, so per
+[P0-D1] the system's `Loop Once / 2.0 s` drives them and the emitter-local `Infinite / 1.0` and
+`Once / 0.3` rows are inert. *(Was `[unresolved]`; the working figure was 1.0 s.)*
 
 ### 6.1 Cadence row
 
@@ -291,15 +293,17 @@ committing the cadence row.
 1.0 / 0.5 / 19; `_Burst` is 1.2 / 1.2 / 96).
 
 ```
-{ TEXT("PS_CkParticles_Template_Fire"), 1.0f, <LIFETIME>, 10, Get_FireRendererSpecs() }
+{ TEXT("PS_CkParticles_Template_Fire"), 2.0f, 1.0f, 10, Get_FireRendererSpecs() }
 ```
 
-- `LoopDuration` **1.0** — the three Infinite emitters' Loop Duration.
-- `ParticleLifetime` — **`[unresolved]`, resolve §2.4 first.** Under this sheet's reading the longest
-  layer is **0.4 s** (the randomized `Flames` / `Sparkles` maximum, against `Bomb_Glow_01`'s Direct-Set
-  0.25); under the alternative it is **1.0 s** (`Sparkles`' `Lifetime Max`). Every shorter layer must
-  write zero colour, zero size and zero scale past its own lifetime, or dead layers hang in the air
-  (`NS_BasicAttack.md` §8).
+Per [P0-D3]: loop = the system loop duration, lifetime = max resolved lifetime, burst = §2 counts.
+
+- `LoopDuration` **2.0** `[corpus-v3]` — the system's `Once` loop duration. *Was 1.0, taken from the
+  three Infinite emitters' inert Loop rows.*
+- `ParticleLifetime` **1.0** `[corpus-v3]` — `Sparkles`' resolved `Lifetime Max`. *Was `[unresolved]`
+  with 0.4 s as this sheet's working reading; §2.4's override-wins assumption is corrected, so the
+  longest layer is 2.5× what the sheet assumed.* Every shorter layer must write zero colour, zero
+  size and zero scale past its own lifetime, or dead layers hang in the air (`NS_BasicAttack.md` §8).
 - `BurstCount` **10** — the MAXIMUM per-loop count (1 + 1 + 3 + 5). Layer index = `Seed % 10`
   (double-modulo so a negative Seed still lands in range): 0 `Bomb_Glow_01`, 1 `Bomb_Glow_02`,
   2–4 `Flames`, 5–9 `Sparkles`. Slots 5–9 are gated by the per-loop roll of §6.0 G3b, so 0–2 of them

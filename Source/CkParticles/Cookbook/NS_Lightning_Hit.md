@@ -121,10 +121,12 @@ The two ribbon emitters are the exception: they keep `Hemisphere X = true` and f
 
 Eight `Self` one-shots — more than a third of the system. See §6.5, gap 3.
 
-`[unresolved: the system-level loop duration is NOT in the corpus export — CkAssetExporter writes
-emitter stacks only. 1.0 s is what every System-mode emitter stores; GroundCrack_01's 1.0 s lifetime
-plus its 0.1 s spawn delay implies a cycle of at least 1.1 s if generations are not to overlap,
-which is weak evidence AGAINST 1.0 s being the whole story.]`
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+Per [P0-D1] this rules the 14 `Life Cycle Mode = System` emitters; the eight `Self` emitters keep
+their own rows. *(Was `[unresolved]` with 1.0 s as the working figure — the sheet's suspicion that
+1.0 s was too short is confirmed: GroundCrack_01's 0.1 + 1.0 s fits comfortably in 2.0 s and nothing
+overlaps.)*
 
 ---
 
@@ -292,9 +294,12 @@ Initialize color `RGBA(0.0781874, 0.043735, 1, 0.5)` · shared fade · dyn `[**2
 
 ### 4 · Sparkles — burst **20** @0, size Random Uniform 5 … 20
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins
-  `Lifetime Min **1** / Max **0.5**` — **inverted**, recorded verbatim
-  `[unresolved: which pin is live, and how Niagara resolves an inverted range]`
+- Lifetime `[corpus-v3]`: **`Lifetime Mode = Random` ⇒ the Min/Max pins DRIVE**
+  (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 … 0.4) is INERT
+  ([P0-D2]). The live pins are `Lifetime Min **1.0** / Max **0.5**` — **inverted**, recorded
+  verbatim; `[unresolved: how Niagara resolves an inverted range]` (see §14 #8). *Was read as
+  0.2 … 0.4 under the override-wins assumption, which sidestepped the inversion; the inversion is
+  now load-bearing.*
 - Spawn shape: `Sphere Location`, radius **100**, `Non Uniform Scale (1,1,1)`,
   **`Hemisphere Z = true`, `Hemisphere X = false`**
 - `Add Velocity from Point`: strength `Random Range Float 001` **500 … 2000**
@@ -314,8 +319,8 @@ Initialize color `RGBA(0.0781874, 0.043735, 1, 0.5)` · shared fade · dyn `[**2
 
 ### 6 · Sparkles_Stretched — burst **10** @0, loop **0.4 s Once** (`Self`), velocity-aligned
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; pins `Lifetime Min 0.2 / Max 0.4`
-  (these agree for once)
+- Lifetime `[corpus-v3]`: **`Lifetime Min 0.2 / Max 0.4` drives** (`Random` mode, [P0-D2]); the
+  `Random Range Float` override happens to carry the same range, so nothing moves here
 - Sprite Size Mode **Random Non-Uniform**: `Sprite Size Min **(30, 120)**`, `Max **(50, 130)**`
 - Spawn shape: `Sphere Location`, radius **100**, `Non Uniform Scale (1, 0.2, 0.2)`,
   `Hemisphere Z = true`, `Hemisphere X = false`
@@ -332,7 +337,7 @@ Initialize color `RGBA(0.0781874, 0.043735, 1, 0.5)` · shared fade · dyn `[**2
 
 ### 7 · Lightning_01 — burst **3** @0, loop **0.5 s Once** (`Self`), camera sprite, **SubUV 2×2**
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; pins `Lifetime Min 0.3 / Max 0.5`
+- Lifetime `[corpus-v3]`: **`Lifetime Min 0.3 / Max 0.5` drives** (`Random` mode, [P0-D2]); the `Random Range Float` override (0.2 … 0.4) is inert
 - Size: Random Uniform `Min **130** / Max **100**` — **inverted**, recorded verbatim
 - Spawn shape: `Sphere Location`, radius **100**, `Hemisphere Z = true`
 - `Add Velocity from Point`: strength **350 … 500**
@@ -423,7 +428,7 @@ Identical to Arc_01 except:
 
 - Spawn: `Spawn Rate` override `Float from Curve 001` `(0, **10**)C (1, 0)C` — **no burst module at
   all**, ≈ 2.5 particles over the 0.5 s loop
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; pins `Lifetime Min 0.3 / Max 0.5`
+- Lifetime `[corpus-v3]`: **`Lifetime Min 0.3 / Max 0.5` drives** (`Random` mode, [P0-D2]); the `Random Range Float` override (0.2 … 0.4) is inert
 - Size: Random Uniform `Min **130** / Max **100**` (inverted, verbatim)
 - Spawn shape: `Sphere Location`, radius **30**, `Hemisphere Z = true`
 - `Add Velocity from Point`: strength **350 … 500**
@@ -520,7 +525,7 @@ Initialize color `RGBA(1, 0.043735, 0.83077, 0.5)` (magenta) · shared fade · d
 
 ### 21 · Flames_01 — **WORLD**, burst **10** @ t=**0.05**, loop **0.3 s Once** (`Self`), **SubUV 2×2**
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; pins `Lifetime Min 0.2 / Max 0.7`
+- Lifetime `[corpus-v3]`: **`Lifetime Min 0.2 / Max 0.7` drives** (`Random` mode, [P0-D2]); the `Random Range Float` override (0.2 … 0.4) is inert
 - Size: Random Uniform **200 … 300**
 - Spawn shape: `Sphere Location`, radius **20**, **`Surface Expansion Mode = Outside`**,
   `Hemisphere Z = true`
@@ -556,9 +561,11 @@ Identical to Flames_01 except:
 
 ### 6.1 Cadence row
 
-**A new burst row is required: loop 1.0 s, particle lifetime 1.3 s, burst 87.** 1.3 s is the longest
-source lifetime (Star02's `Lifetime Max`); GroundCrack_01's flat 1.0 s is the longest deterministic
-one. Every shorter layer zeroes colour, size and scale past its own lifetime, and the four delayed
+**A new burst row is required `[corpus-v3]`, per [P0-D3]: loop 2.0 s, particle lifetime 1.3 s,
+burst 87.** Loop = the system's `Once` loop duration (*was 1.0 s, from the inert emitter rows*);
+lifetime = max resolved emitter lifetime — 1.3 s, Star02's `Lifetime Max` (unchanged by [P0-D2]:
+Star02 was already read from its Min/Max pins); burst = the §2 count. GroundCrack_01's flat 1.0 s is
+the longest deterministic one. Every shorter layer zeroes colour, size and scale past its own lifetime, and the four delayed
 emitters (0.05 s on Raimbow/Ring/Flames pair, 0.1 s on Flare_01/FlareImpact/GroundCrack_01) hide for
 `age < delay` and run their curves on `(age − delay) / lifetime` (NS_BasicAttack §5).
 
@@ -575,7 +582,7 @@ What the row cannot carry:
 - The **eight `Self` one-shot emitters** run ONCE and never repeat while the other 14 cycle.
   See gap 3.
 
-`[unresolved: the system-level loop duration — see §2.]`
+Loop duration resolved `[corpus-v3]` — see §2.
 
 ### 6.2 VisTag / renderer needs
 

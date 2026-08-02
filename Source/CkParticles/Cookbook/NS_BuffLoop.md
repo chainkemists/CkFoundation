@@ -41,45 +41,50 @@ asset was generated, nothing was built and nothing was rendered.
 `Determinism: false`, zero user parameters.**
 
 **Structurally this is NOT a burst system.** Every one of the nine emitters uses **`Spawn Rate`**
-(continuous), Loop Behavior **Infinite**, Loop Duration 1.0 s. There is no `Spawn Burst
-Instantaneous` module anywhere in the system — the `Loop Duration = 1` only resets `Emitter.Age`,
-it does not gate spawning. This is the fundamental difference from its `NS_BuffCast` sibling and it
-drives the whole §6 plan.
+(continuous). There is no `Spawn Burst Instantaneous` module anywhere in the system. This is the
+fundamental difference from its `NS_BuffCast` sibling and it drives the whole §6 plan.
+
+**System loop `[corpus-v3]`: `Loop Behavior = Infinite`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`** (no `Recalculate Duration Each Loop`
+override on this system). All nine emitters are `Life Cycle Mode = System`, so per [P0-D1] the
+system rules and the per-emitter `Infinite / 1.0 s` rows are inert leftovers. *(Was read as a 1.0 s
+loop.)* The loop duration only resets `Emitter.Age`; it does not gate spawning, so the correction is
+low-risk here.
 
 | # | Emitter | Spawn Rate (/s) | Lifetime | Renderer / alignment | Material | Size |
 |---|---|---|---|---|---|---|
 | 0 | `Glow_01` | **2** | 2.0 | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Part01` | uniform 500 |
 | 1 | `Raimbow` *(sic)* | **1** | 0.5 | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Rainbow` | uniform 300 |
 | 2 | `Arrow` | **3** | 1.5 | Sprite, **VelocityAligned** / FaceCamera | `M_VFX_DisAdd_Arrows` | non-uniform (80, 130) |
-| 3 | `Stars` | **2** | rand `[unresolved]` | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Star01` | rand uniform 40–70 |
-| 4 | `Sparkles_Stretched` | **10** | rand `[unresolved]` | Sprite, **VelocityAligned** / FaceCamera | `M_VFX_DisAdd_Part04` | rand non-uniform (35,130)–(50,140) |
+| 3 | `Stars` | **2** | rand **0.3–0.6** `[corpus-v3]` | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Star01` | rand uniform 40–70 |
+| 4 | `Sparkles_Stretched` | **10** | rand **0.3–0.6** `[corpus-v3]` | Sprite, **VelocityAligned** / FaceCamera | `M_VFX_DisAdd_Part04` | rand non-uniform (35,130)–(50,140) |
 | 5 | `Glow_02` | **4** | 1.0 | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Part01` | uniform 300 |
-| 6 | `Sparkles_01` | **10** | rand `[unresolved]` | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Part01_Bright` | rand uniform 10–15 |
-| 7 | `Flares` | **6** | rand `[unresolved]` | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Part02` | rand uniform 50–200 |
-| 8 | `Sparkles_Spiral` | **10** | rand `[unresolved]` | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Part01_Bright` | rand uniform 10–15 |
+| 6 | `Sparkles_01` | **10** | rand **0.3–0.6** `[corpus-v3]` | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Part01_Bright` | rand uniform 10–15 |
+| 7 | `Flares` | **6** | rand **1.0–2.0** `[corpus-v3]` | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Part02` | rand uniform 50–200 |
+| 8 | `Sparkles_Spiral` | **10** | rand **0.3–0.6** `[corpus-v3]` | Sprite, Unaligned / FaceCamera | `M_VFX_DisAdd_Part01_Bright` | rand uniform 10–15 |
 
-**Total spawn rate 48 particles/second.** Steady-state live count ≈ **36** using the shorter
-(`Random Range Float`) lifetime reading, ≈ 40 using the longer one — arithmetic, `[inferred]` from the
-rate × lifetime products, not a corpus value.
+**Total spawn rate 48 particles/second.** Steady-state live count ≈ **48** using the `[corpus-v3]`
+resolved lifetimes (Σ rate × mean lifetime: 4 + 0.5 + 4.5 + 0.9 + 4.5 + 4 + 4.5 + 9 + 4.5) —
+arithmetic, `[inferred]` from the rate × lifetime products, not a corpus value.
+*(Was ≈ 36 under the shorter override-wins reading.)*
 
-> ### `[unresolved: the lifetime of every randomised emitter]`
-> `Stars`, `Sparkles_Stretched`, `Sparkles_01`, `Sparkles_Spiral` and `Flares` all carry BOTH:
-> `Lifetime Mode = Random` with `Initialize Particle.Lifetime Min/Max`, **and**
-> `[override] Lifetime = dyn:Random Range Float` whose `RandomRangeFloat Min/Max` differ. Niagara's
-> Random lifetime mode reads `Lifetime Min/Max`; the `Lifetime` pin an override drives is the
-> **Direct Set** input. So the likely reading is that the module's own Min/Max wins and the dynamic
-> input is a leftover `[inferred]` — but the corpus cannot settle it.
+> ### Lifetime — RESOLVED `[corpus-v3]`
+> `Stars`, `Sparkles_Stretched`, `Sparkles_01`, `Sparkles_Spiral` and `Flares` all carry BOTH
+> `Lifetime Mode = Random` with `Initialize Particle.Lifetime Min/Max` **and** an
+> `[override] Lifetime = dyn:Random Range Float`. Per [P0-D2] the mode selects the driving pin:
+> `Random` ⇒ **Min/Max drives**, and the override — which sits on the unselected **Direct Set**
+> input — is INERT (`lifetimeResolved.source = minmax`, override under `inertOverrides`) on all five.
+> The sheet's `[inferred]` guess is now MECHANICALLY CONFIRMED.
 >
-> | Emitter | `Lifetime Min/Max` (Random mode) | `RandomRangeFloat Min/Max` (override) |
+> | Emitter | LIVE (Random mode) | inert override |
 > |---|---|---|
-> | `Stars` | 0.3 / 0.6 | 0.2 / 0.4 |
-> | `Sparkles_Stretched` | 0.3 / 0.6 | 0.2 / 0.4 |
-> | `Sparkles_01` | 0.3 / 0.6 | 0.2 / 0.4 |
-> | `Sparkles_Spiral` | 0.3 / 0.6 | 0.2 / 0.4 |
-> | `Flares` | **1 / 2** | 0.2 / 0.4 |
+> | `Stars` | **0.3 / 0.6** | ~~0.2 / 0.4~~ |
+> | `Sparkles_Stretched` | **0.3 / 0.6** | ~~0.2 / 0.4~~ |
+> | `Sparkles_01` | **0.3 / 0.6** | ~~0.2 / 0.4~~ |
+> | `Sparkles_Spiral` | **0.3 / 0.6** | ~~0.2 / 0.4~~ |
+> | `Flares` | **1.0 / 2.0** | ~~0.2 / 0.4~~ |
 >
-> `Flares` is the one where the two readings are wildly different (a 1–2 s drifting flare vs a
-> 0.2–0.4 s blink) — resolve this one before authoring anything.
+> `Flares` — the worst conflict — resolves to the **1–2 s drifting flare**, not the 0.2–0.4 s blink.
 
 **Two forces/modules with no CkParticles analogue appear here** — `Vortex Force` (`Sparkles_Spiral`)
 and `Scale Sprite Size by Speed` (`Sparkles_Stretched`). Both are expressible as behavior math (§6.5).
@@ -172,7 +177,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 - Dynamic params: **`[0, 0, 0, 0]`** constant.
 
 ### Layer 3 — `Stars` (rate 2/s)
-- Lifetime `[unresolved]` — `Lifetime Min 0.3 / Max 0.6` vs `RandomRangeFloat 0.2 / 0.4` (see §2).
+- Lifetime `[corpus-v3]` — **`Lifetime Min 0.3 / Max 0.6` drives**; the `RandomRangeFloat 0.2 / 0.4` override is inert (see §2).
 - `Cylinder Location`: Radius **80**, Height **120**, Midpoint 0.5, Offset **(0, 0, 30)**, Random, Spawn Only.
 - `Add Velocity` = `Random Range Vector` **Min `(0, 0, 500)` → Max `(0, 0, 1300)`**.
 - Sprite Size Mode Random Uniform: **Min 40, Max 70**. Initialize Color `RGBA(1, 1, 1, 1)`.
@@ -189,7 +194,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 - Dynamic params: **`[1, 0, 0, 0]`** constant.
 
 ### Layer 4 — `Sparkles_Stretched` (rate 10/s)
-- Lifetime `[unresolved]` — `0.3 / 0.6` vs `0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`0.3 / 0.6` drives**; the `0.2 / 0.4` override is inert.
 - `Cylinder Location`: Radius **120**, Height **150**, Midpoint 0.5, Offset **(0, 0, 30)**.
 - `Add Velocity` = `Random Range Vector` **Min `(0, 0, 1000)` → Max `(0, 0, 2000)`**.
 - Sprite Size Mode **Random Non-Uniform**: `Sprite Size Min (35, 130)` / `Max (50, 140)` — width × length streaks.
@@ -217,7 +222,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 - Dynamic params: **`[1, 0, 0, 0]`** constant.
 
 ### Layer 6 — `Sparkles_01` (rate 10/s)
-- Lifetime `[unresolved]` — `0.3 / 0.6` vs `0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`0.3 / 0.6` drives**; the `0.2 / 0.4` override is inert.
 - `Cylinder Location`: Radius **120**, Height **150**, Midpoint 0.5, Offset **(0, 0, 30)**.
 - `Add Velocity` = `Random Range Vector` **Min `(0, 0, 1000)` → Max `(0, 0, 2000)`**.
 - Sprite Size Mode Random Uniform: **Min 10, Max 15**. Initialize Color `RGBA(1, 1, 1, 1)`.
@@ -232,8 +237,9 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
   `Hue Shift Range (0.5, 0.8)`, `Saturation Range (0.2, 0.2)`, `Value Range (1, 1)`,
   `Alpha Scale Range (0.13, 0.13)`, `Color Minimum RGBA(0,0,0,1)`, `Color Maximum RGBA(1,1,1,1)`.
   (`AdjustHue = true`, `AdjustSaturation/Value/Alpha = false` per the module's flags.)
-- Lifetime `[unresolved]` — `Lifetime Min 1 / Max 2` vs `RandomRangeFloat 0.2 / 0.4`. **This is the
-  worst of the five conflicts** (see §2).
+- Lifetime `[corpus-v3]` — **`Lifetime Min 1.0 / Max 2.0` drives**; the `RandomRangeFloat 0.2 / 0.4`
+  override is inert. The worst of the five conflicts resolves in favour of the **long** drifting
+  flare (see §2).
 - `Cylinder Location`: Radius **110**, Height **130**, Midpoint 0.5, Offset **(0, 0, 30)**.
 - **No velocity module at all** — Flares do not move; only Cylinder Location places them.
 - Sprite Size Mode Random Uniform: **Min 50, Max 200** (the widest size spread in the system).
@@ -247,7 +253,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 - Dynamic params: **`[8, 0, 0, 0]`** constant — the largest dissolve constant anywhere in this batch.
 
 ### Layer 8 — `Sparkles_Spiral` (rate 10/s)
-- Lifetime `[unresolved]` — `0.3 / 0.6` vs `0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`0.3 / 0.6` drives**; the `0.2 / 0.4` override is inert.
 - `Cylinder Location`: Radius **80**, Height **120**, Midpoint 0.5, **Offset `(0, 0, 0)`** (the only
   cylinder in the system without the +30 Z lift).
 - `Add Velocity` = `Random Range Vector` **Min `(0, 0, 3500)` → Max `(0, 0, 5000)`** — by far the fastest layer.
@@ -267,6 +273,12 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 
 ### 6.1 Cadence — the hard problem for this effect
 
+**`[P0-D3 STOP: loop = 2.0 s (system, Infinite/Fixed); lifetime = 2.0 s (max resolved — Glow_01
+direct 2.0 and Flares' 2.0 Max); burst = 0 — rate-only system, no burst module anywhere and §2
+carries no burst count]`.** The formula yields a `BurstCount == 0` continuous row that the cadence
+table cannot parameterize today. Orchestrator ruling required before a row is written; routes (A)
+and (B) below are the candidate shapes.
+
 **No existing row fits, and neither does a new burst row without changing what the effect IS.**
 The source is nine *continuous* streams at nine different rates with five different lifetimes:
 
@@ -275,12 +287,12 @@ The source is nine *continuous* streams at nine different rates with five differ
 | Glow_01 | 2 | 2.0 |
 | Raimbow | 1 | 0.5 |
 | Arrow | 3 | 1.5 |
-| Stars | 2 | rand |
-| Sparkles_Stretched | 10 | rand |
+| Stars | 2 | rand 0.3–0.6 `[corpus-v3]` |
+| Sparkles_Stretched | 10 | rand 0.3–0.6 `[corpus-v3]` |
 | Glow_02 | 4 | 1.0 |
-| Sparkles_01 | 10 | rand |
-| Flares | 6 | rand |
-| Sparkles_Spiral | 10 | rand |
+| Sparkles_01 | 10 | rand 0.3–0.6 `[corpus-v3]` |
+| Flares | 6 | rand 1.0–2.0 `[corpus-v3]` |
+| Sparkles_Spiral | 10 | rand 0.3–0.6 `[corpus-v3]` |
 
 The existing continuous row (`PS_CkParticles_Template`, `BurstCount 0`) takes its lifetime and loop
 **from the emitter factory defaults** — `FCk_ParticlesTemplateSpec`'s `LoopDuration` /
@@ -295,7 +307,7 @@ Two honest routes, both of which are decisions a maintainer must make, not defau
   itself past its own lifetime, exactly as `Behavior_Slash` does. **Cost:** a new field on
   `FCk_ParticlesTemplateSpec` plus builder support; the emission becomes rate-uniform rather than
   per-emitter-independent, which is visually equivalent at these rates `[inferred]`.
-- **(B) Fake it with a burst row** of 48 on a 1.0 s loop. **This is the anti-pattern
+- **(B) Fake it with a burst row** of 96 on the 2.0 s system loop `[corpus-v3]` (*was 48 on 1.0 s*). **This is the anti-pattern
   `CkParticles/CLAUDE.md` explicitly names** ("never approximate onto the nearest template"), and it
   is worse here than usual: 48 particles appearing on the same frame every second reads as a pulse,
   and the source has no pulse. Do not do this silently.

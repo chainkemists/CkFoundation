@@ -95,10 +95,12 @@ wind.
 > **`Life Cycle Mode = System` on all 20 emitters `[corpus]`.** The stored per-emitter Loop
 > Behavior / Loop Duration are **inert leftovers** — including `Loop Duration = 5.0` on
 > `Sparkles_Stretched`, `0.3` on `Star_01`/`Star_02`/`Flames01`/`Smokes`, and the
-> `Loop Behavior = Once` on those five. `[unresolved: the system-level System State stack is NOT
-> exported by CkAssetExporter — only Emitter Update / Particle Spawn / Particle Update. The
-> system's loop duration and loop behavior are unknown from the corpus.]` Spawn **times** and burst
-> **counts** are live.
+> `Loop Behavior = Once` on those five.
+>
+> **System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+> `UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+> Per [P0-D1] this is the authority. *(Was `[unresolved]`.)* Spawn **times** and burst **counts** are
+> live.
 
 ---
 
@@ -280,7 +282,7 @@ Update order: 1 Particle State, 2 Dynamic Material Parameters, 3 Scale Sprite Si
 
 | Fact | Value |
 |---|---|
-| Lifetime | `Random`; `Lifetime Min/Max = **0.3 / 0.6**`; pin override `Random Range Float` min **0.2** max **0.4** `[unresolved: which is live — the pin override normally wins]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min/Max = 0.3 / 0.6` DRIVES** (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 / 0.4) is on the unselected Direct-Set pin and is INERT. *Was read as "the pin override normally wins"; corrected per [P0-D2].* |
 | Spawn shape | Sphere Location, `Sphere Radius = 20`, `Sphere Orientation Axis = (1,0,0)`, `Non Uniform Scale = (1,1,1)`, `Surface Only = false`, `Sphere Distribution = Random`, `Random Seed = 0` |
 | Velocity | **`Add Velocity from Point`**, `Origin Offset = (0,0,0)`, `Velocity Falloff Distance = 100`, `Velocity Strength` ← `Random Range Float 001` **min 200, max 1200** |
 | Size | `Random Uniform`, min **10**, max **20** |
@@ -302,7 +304,7 @@ Update order: 1 Scale Velocity, 2 Solve Forces and Velocity, 3 Particle State, 4
 
 | Fact | Value |
 |---|---|
-| Lifetime | `Random`; `Lifetime Min/Max = **0.3 / 0.5**`; pin override `Random Range Float` min 0.2 max 0.4 `[unresolved]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min/Max = 0.3 / 0.5` DRIVES** (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 / 0.4) is on the unselected Direct-Set pin and is INERT. *Was read as "the pin override normally wins"; corrected per [P0-D2].* |
 | Spawn shape | Sphere Location, `Sphere Radius = 10`, `Surface Only = false` |
 | Velocity | **`Add Velocity from Point`**, `Velocity Falloff Distance = 100`, `Velocity Strength` ← `Random Range Float 001` **min 800, max 2000** |
 | Size | `Random Non-Uniform`, **min `(25, 70)`, max `(40, 60)`** *(min.y > max.y; per-axis lo/hi)* |
@@ -515,7 +517,7 @@ Update order: 1 Scale Velocity, 2 Solve Forces and Velocity, 3 Color, 4 Particle
 
 | Fact | Value |
 |---|---|
-| Lifetime | `Random`; `Lifetime Min/Max = **0.2 / 0.7**`; pin override `Random Range Float` min 0.2 max 0.4 `[unresolved]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min/Max = 0.2 / 0.7` DRIVES** (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 / 0.4) is on the unselected Direct-Set pin and is INERT. *Was read as "the pin override normally wins"; corrected per [P0-D2].* |
 | Spawn shape | Sphere Location, `Sphere Radius = 20`, `Surface Only = true` (`Surface Expansion Mode = Outside`, `Band Thickness = 0`), **`Hemisphere Z = false`** *(the Cast's is `true`)*, `Radius Position = 1`, `U Position = 0`, `V Position = 0.5`, `Uniform Distribution = 1`, `Uniform Spiral Amount = 1` |
 | Velocity | **`Add Velocity from Point`**, `Velocity Strength` ← `Random Range Float 002` **min 50, max 300** |
 | Size | `Random Uniform`, min **50**, max **100** |
@@ -544,7 +546,7 @@ Update order: 1 Scale Velocity, 2 Solve Forces and Velocity, 3 Particle State, 4
 
 | Fact | Value |
 |---|---|
-| Lifetime | `Random`; `Lifetime Min/Max = **0.7 / 1.3**`; pin override `Random Range Float` min 0.2 max 0.4 `[unresolved]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min/Max = 0.7 / 1.3` DRIVES** (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 / 0.4) is on the unselected Direct-Set pin and is INERT. *Was read as "the pin override normally wins"; corrected per [P0-D2].* |
 | Spawn shape | Sphere Location, `Sphere Radius = 20`, **`Non Uniform Scale = (1, 1, 0)`**, `Surface Only = true` / `Outside`, **`Hemisphere Z = false`** *(the Cast's is `true`)* |
 | Velocity | **`Add Velocity from Point`**, `Velocity Strength` ← `Random Range Float 002` **min 50, max 200** |
 | Size | `Random Uniform`, min **100**, max **200** |
@@ -595,8 +597,8 @@ Update order: 1 Scale Velocity, 2 Solve Forces and Velocity, 3 Particle State, 4
 
 | Field | Value | Why |
 |---|---|---|
-| Loop duration | `[unresolved: system-level loop, §2]` — **resolve before writing the row** | `Life Cycle Mode = System` |
-| Particle lifetime | **≥ 1.34 s** | the longest layer is `Smokes` at up to 1.3 s from a spawn at t = 0.04 → alive to t ≈ 1.34 s. **If the `[unresolved]` lifetime override (0.2–0.4) is the live one, this drops to ≈ 0.44 s** — resolve §5.13 first, the answer changes the row by 3× |
+| Loop duration | **2.0 s** `[corpus-v3]` | the system's `Once` loop duration ([P0-D3]). *Was `[unresolved]`.* |
+| Particle lifetime | **1.3 s** by the [P0-D3] formula (max resolved, `Smokes`); **≥ 1.34 s** in practice | `Smokes` lives up to 1.3 s from a spawn at t = 0.04 → alive to t ≈ 1.34 s, comfortably inside the 2.0 s loop. *The override-wins reading that would have dropped this to ≈ 0.44 s is corrected per [P0-D2] (§5.13) — the 3× swing resolves in favour of the LONG lifetime.* |
 | Burst count | **47** (enabled only) | the §2 total; 54 if the three disabled emitters are restored |
 
 Layer partition `Seed % 47` with the layer→emitter map from §2. The 0 / 0.04 / 0.05 spawn beats are
@@ -656,8 +658,8 @@ and a 2×2 sub-UV atlas shape.
 | 1 | **No row-declared camera-facing sprite kind.** 12 of the 17 enabled emitters are `Unaligned`/`FaceCamera` across **8 materials**; one `User.SpriteMaterial` binding cannot carry them. Additive fix to `ECk_ParticlesRenderer_Kind`; shared with every sheet in this batch. | **BLOCKING** |
 | 2 | **No sub-UV / flipbook support anywhere in CkParticles.** `Flames01` renders `SubUV: 2x2` driven by `Sub UVAnimation` (frames 0–3, 1 loop). The DI writes no sub-image index, the builder sets no `SubImageSize`, the generator bakes no atlases. Without it the flames read as static sprites. | **BLOCKING** for 1 emitter |
 | 3 | **Mesh renderer facing mode is not expressible** on a row-declared `Mesh` renderer (`Kind`/`VisTag`/`MeshName`/`LookName` only). Three emitters (`Spike01`, `Spike02`, `LightningStrip`) need `Facing: Velocity`. **Workaroundable** — the behavior owns the velocity and can write an `Orientation` quat from it. | Medium |
-| 4 | **System-level loop parameters absent from the corpus** (§2). Cadence cannot be finalized. | **Prerequisite** |
-| 5 | **Four `[unresolved]` lifetime ranges** (§5.3, §5.4, §5.12, §5.13). `Smokes`' resolution changes the template lifetime by 3× (§6.1) — this is the highest-leverage unresolved item in the sheet. | **Prerequisite** |
+| 4 | ~~System-level loop parameters absent from the corpus~~ — **RESOLVED `[corpus-v3]`** (§2): system `Loop Once / 2.0 s`. | Closed |
+| 5 | ~~Four `[unresolved]` lifetime ranges~~ — **RESOLVED `[corpus-v3]`** (§5.3, §5.4, §5.12, §5.13): `Random` ⇒ module `Lifetime Min/Max` drives ([P0-D2]); `Sparkles` 0.3–0.6, `Sparkles_Stretched` 0.3–0.5, `Flames01` 0.2–0.7, `Smokes` 0.7–1.3. The 3× template-lifetime swing resolves to the LONG value. | Closed |
 | 6 | **World space on 12 of 17 enabled emitters**; the template is local-space (NS_BasicAttack §13.2). A hit effect fires at a fixed impact point, so risk is **low** — unlike the projectile sheet. | Low |
 | 7 | **Eight unplumbed CkUsf family parameters** (§6.4), including the gradient-map LUT chain and a separate `GradientShape_Tex`. | Medium |
 | 8 | **A colour-LUT texture output kind** and a **2×2 sub-UV atlas shape** are new *kinds* of bake, not new functions. | Medium |

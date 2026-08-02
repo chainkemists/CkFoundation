@@ -55,7 +55,7 @@ continuous rate anywhere. 27 particles per loop. 13 sprite renderers + 1 mesh re
 | 1 | `Glow_02` | 1 | 0 | 1 | Uniform **250** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part01` |
 | 2 | `Glow_03` | **3** | **0.05** | 1 | Uniform **200** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part01` |
 | 3 | `Raimbow` | 1 | **0.1** | 0.3 | Uniform **300** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Rainbow` |
-| 4 | `Sparkles` | **10** | **0.05** | rand 0.5–1.0 | Random Uniform **7–10** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part01_Bright` |
+| 4 | `Sparkles` | **10** | **0.05** | rand **0.5–1.0** `[corpus-v3]` | Random Uniform **7–10** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part01_Bright` |
 | 5 | `Ring01` | 1 | **0.05** | 0.75 | Uniform **170** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Ring01` |
 | 6 | `Flash_Glow_01` | 1 | **0.1** | 0.5 | Uniform **30** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part02` |
 | 7 | `Flash_Glow_02` | 1 | **0.1** | 0.5 | Uniform **50** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part02` |
@@ -66,7 +66,7 @@ continuous rate anywhere. 27 particles per loop. 13 sprite renderers + 1 mesh re
 | 12 | `Flare_Stretched_02` | 1 | 0 | 0.5 | Non-Uniform **(500, 100)** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part03_Bright` |
 | 13 | `Flare_Stretched_01` | 1 | 0 | 0.5 | Non-Uniform **(500, 100)** | Sprite, Unaligned/FaceCamera | `M_VFX_DisAdd_Part01` |
 
-**Total per loop: 27 particles** (1+1+3+1+10+1+1+1+3+1+1+2+1+1).
+**Total per firing: 27 particles** (1+1+3+1+10+1+1+1+3+1+1+2+1+1).
 
 Per-emitter `Emitter State` on all 14: `Loop Behavior = Infinite`, `Loop Duration Mode = Fixed`,
 `Loop Duration = 1`, `Loop Delay = 0`, `UseLoopDelay = false`, `UseLoopCountLimit = false`
@@ -77,9 +77,12 @@ Per-emitter `Emitter State` on all 14: `Loop Behavior = Infinite`, `Loop Duratio
 
 > **`Life Cycle Mode = System` on all 14 emitters `[corpus]`.** The stored per-emitter Loop
 > Behavior / Loop Duration are therefore **inert leftovers**; the system drives the cadence.
-> `[unresolved: the system-level System State stack is NOT exported by CkAssetExporter — only
-> Emitter Update / Particle Spawn / Particle Update are. The system's loop duration and loop
-> behavior are unknown from the corpus.]` Spawn **times** and burst **counts** are live.
+>
+> **System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+> `UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+> Per [P0-D1] this is the authority — the effect fires ONE 27-particle burst over a single 2.0 s
+> cycle, it does not re-burst every second. *(Was `[unresolved]`.)* Spawn **times** and burst
+> **counts** are live.
 
 **Spawn-time clustering is the effect's structure**: t = 0 (Glow_01, Glow_02, Bomb, all four
 Flare_Stretched), t = 0.05 (Glow_03, Sparkles, Ring01, Bomb_Glow), t = 0.1 (Raimbow,
@@ -299,7 +302,7 @@ Update order on both: 1 Particle State, 2 Scale Color, 3 Dynamic Material Parame
 
 | Fact | Value |
 |---|---|
-| Lifetime | `Lifetime Mode = Random`, **min 0.5, max 1** *(note: `RandomRangeFloat.Minimum/Maximum = 0.2/0.4` is a stale leftover on a different node — the live values are `InitializeParticle.Lifetime Min/Max`)* `[unresolved: which node feeds Lifetime — the override is `dyn:Random Range Float` whose node values are 0.2/0.4, while InitializeParticle carries 0.5/1.0. The override wins in Niagara, so 0.2–0.4 is the more likely live range. Confirm before implementing.]` |
+| Lifetime | `[corpus-v3]` `Lifetime Mode = Random` ⇒ **`Lifetime Min 0.5 / Max 1.0` DRIVES** (`lifetimeResolved.source = minmax`). The `dyn:Random Range Float` override (0.2 / 0.4) sits on the unselected Direct-Set pin and is INERT (`inertOverrides`). *The sheet's parenthetical was right and its `[unresolved]` note — "the override wins in Niagara, so 0.2–0.4 is the more likely live range" — was WRONG; corrected per [P0-D2].* |
 | Spawn shape | **Sphere Location**, `Sphere Radius = 0.5`, `Sphere Orientation Axis = (1,0,0)`, `Non Uniform Scale = (1,1,1)`, `Offset = (0,0,0)`, `Surface Only = false`, `Sphere Distribution = Random`, `Random Seed = 0` — effectively a **point** |
 | Velocity | **Add Velocity from Point**, `Origin Offset = (0,0,0)`, `Velocity Falloff Distance = 100`, `Velocity Strength = Random Range Float 001` **min 350, max 500** |
 | Size | `Sprite Size Mode = Random Uniform`, min **7**, max **10** |
@@ -398,8 +401,8 @@ Update order on all four: 1 Particle State, 2 Scale Color, 3 Dynamic Material Pa
 
 | Field | Value | Why |
 |---|---|---|
-| Loop duration | `[unresolved: system-level loop, §2]` — **resolve before writing the row** | `Life Cycle Mode = System` makes the exported `Loop Duration = 1` a leftover |
-| Particle lifetime | **1.0 s** | the longest layer is 1.0 (`Glow_01/02/03`, `Bomb_Glow`, `Bomb`); `Sparkles` can reach 1.0 if its lifetime range is 0.5–1.0 (see §5.5's unresolved) |
+| Loop duration | **2.0 s** `[corpus-v3]` | the system's `Once` loop duration ([P0-D3]); the exported `Loop Duration = 1` is a leftover. *Was `[unresolved]`.* |
+| Particle lifetime | **1.0 s** | max resolved lifetime — `Glow_01/02/03`, `Bomb_Glow`, `Bomb` at 1.0, and `Sparkles`' resolved `Lifetime Max` is also 1.0 (§5.5) |
 | Burst count | **27** | the §2 total |
 
 Layer partition `Seed % 27` — the NS_BasicAttack §8 pattern, with the layer→emitter map straight off
