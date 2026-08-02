@@ -1,0 +1,22 @@
+// /CkParticles/Behaviors/Behavior_ExplosionGround.ush — BehaviorId 40.
+//
+// Faithful re-port of Vefects NS_ExplosionGround, the reference system of the four-variant explosion family.
+// Eighteen emitters over a Loop-Once 2.0 s system, 70 burst particles plus an event-driven ribbon.
+//
+// This file is deliberately THIN: every layer, curve and constant lives in Behavior_ExplosionShared.ush, which
+// the palette twin (41) and the Omni pair (42, 43) share. A second copy of that math for a recolour is what the
+// campaign's [P4-D1] fence exists to prevent.
+//
+// Recipe + corpus evidence: CkParticles/Cookbook/NS_ExplosionGround.md.
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 40) in lockstep.
+#pragma once
+#include "/CkParticles/Behaviors/Behavior_ExplosionShared.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_ExplosionGround(FCkParticles_StageInput In)
+{
+    FCkParticles_ExplosionParams P;
+    P.Variant = CKP_EXP_VARIANT_GROUND;
+    P.Palette = CKP_EXP_PALETTE_FIRE;
+
+    return CkParticles_Explosion_Run(In, P);
+}

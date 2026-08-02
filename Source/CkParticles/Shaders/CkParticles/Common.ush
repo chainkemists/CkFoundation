@@ -412,6 +412,13 @@ float CkParticles_Key5(float T, float T0, float V0, float T1, float V1, float T2
                    : CkParticles_Key4(T, T1, V1, T2, V2, T3, V3, T4, V4);
 }
 
+float CkParticles_Key6(float T, float T0, float V0, float T1, float V1, float T2, float V2, float T3, float V3,
+                       float T4, float V4, float T5, float V5)
+{
+    return T <= T1 ? CkParticles_Key2(T, T0, V0, T1, V1)
+                   : CkParticles_Key5(T, T1, V1, T2, V2, T3, V3, T4, V4, T5, V5);
+}
+
 // Integral over [0, S] of the 2-key curve (0, V0) -> (1, V1), in units of normalized life.
 float CkParticles_Int2(float S, float V0, float V1)
 {

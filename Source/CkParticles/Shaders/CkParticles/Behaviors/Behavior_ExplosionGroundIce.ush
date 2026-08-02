@@ -1,0 +1,23 @@
+// /CkParticles/Behaviors/Behavior_ExplosionGroundIce.ush — BehaviorId 41.
+//
+// Faithful re-port of Vefects NS_ExplosionIceGround. A full textual diff against NS_ExplosionGround produces
+// ZERO renderer, material, mesh, spawn-shape, count, lifetime, spawn-time or module-structure differences: the
+// twelve colour tables, three scalars and one curve-index binding that DO differ are the palette, and they live
+// beside their fire counterparts in Behavior_ExplosionShared.ush.
+//
+// Its own behavior id exists because a behavior id resolves to exactly one template asset path and that path is
+// the spawn contract; the row it names declares the same renderers and the same cadence as behavior 40's.
+//
+// Recipe + corpus evidence: CkParticles/Cookbook/NS_ExplosionIceGround.md.
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 41) in lockstep.
+#pragma once
+#include "/CkParticles/Behaviors/Behavior_ExplosionShared.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_ExplosionGroundIce(FCkParticles_StageInput In)
+{
+    FCkParticles_ExplosionParams P;
+    P.Variant = CKP_EXP_VARIANT_GROUND;
+    P.Palette = CKP_EXP_PALETTE_ICE;
+
+    return CkParticles_Explosion_Run(In, P);
+}

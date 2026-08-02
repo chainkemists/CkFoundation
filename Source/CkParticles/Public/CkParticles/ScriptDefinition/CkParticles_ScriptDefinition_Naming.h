@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 40;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 45;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -651,6 +651,124 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // ----------------------------------------------------------------------------------------------------------
+    // The Vefects EXPLOSION family — four systems, two structural variants, two palettes.
+    //
+    // NS_ExplosionGround and NS_ExplosionIceGround are the same system recoloured, and so are NS_ExplosionOmni
+    // and NS_ExplosionIceOmni: a full textual diff of either pair produces ZERO renderer, material, mesh,
+    // spawn-shape, count or module-structure differences. A palette twin therefore declares the SAME renderer
+    // set as its fire original — literally this function — and differs only in the template asset it is built
+    // into, because a behavior id resolves to exactly one template path and the spawn contract is that path.
+    //
+    // A VisTag is compared against Particles.VisibilityTag WITHIN one emitter of one system, so two templates
+    // may carry the same numbers; the twins do, which is what lets the shared behavior include name one set of
+    // tag constants instead of taking them as a parameter.
+    // ----------------------------------------------------------------------------------------------------------
+
+    // Twelve renderers for the eighteen emitters of BOTH Ground variants. Part01 alone serves five of them
+    // across two quad kinds — three custom-facing glows and two billboarded ones — and the two smoke emitters
+    // share one paint. The mesh pair is the batch's first use of a renderer-level MeshScale: the source's
+    // per-emitter Mesh Uniform Scale 0.8 is a constant on the carrier, so it does not belong in the behavior's
+    // animated scale curve (recipe Cookbook/NS_ExplosionGround.md §6.2).
+    inline auto Get_ExplosionGroundRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    185, nullptr,          TEXT("PartDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    186, nullptr,          TEXT("FlareDisAdd01")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    187, nullptr,          TEXT("StarDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    188, nullptr,          TEXT("SmokeDisAdd01")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    189, nullptr,          TEXT("RingDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    190, nullptr,          TEXT("RainbowDisAdd")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    191, nullptr,          TEXT("FlamesDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 192, nullptr,          TEXT("PartDisAdd04")   },
+            { ECk_ParticlesRenderer_Kind::CustomFacingSprite,    193, nullptr,          TEXT("PartDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::CustomFacingSprite,    194, nullptr,          TEXT("ExpGroundMarkDisAdd") },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  195, TEXT("UvSphere"), TEXT("FlatAdd02"), FIntPoint(0, 0),
+              ECk_ParticlesRenderer_MeshFacing::Default, FVector(0.8, 0.8, 0.8) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  196, TEXT("Spike"),    TEXT("FlatAdd02")      },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // The ground explosion's sparkle trails: ONE ribbon renderer carrying SEVEN ribbons, one behind each
+    // Sparkles_02 particle. The source's handler applies the emitting particle's Ribbon ID, so the strands are
+    // separated by RibbonIdBinding (Particles.MeshIndex) rather than by seven renderers — the NS_BuffCast shape.
+    inline auto Get_ExplosionGroundRibbonRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::Ribbon, 197, nullptr, TEXT("TrailDisAdd03") },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Eleven renderers for the fifteen emitters of BOTH Omni variants — the Ground set minus the scorch decal,
+    // whose emitter does not exist here, and with only one custom-facing glow instead of three.
+    inline auto Get_ExplosionOmniRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    198, nullptr,          TEXT("PartDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    199, nullptr,          TEXT("FlareDisAdd01")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    200, nullptr,          TEXT("StarDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    201, nullptr,          TEXT("SmokeDisAdd01")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    202, nullptr,          TEXT("RingDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    203, nullptr,          TEXT("RainbowDisAdd")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    204, nullptr,          TEXT("FlamesDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 205, nullptr,          TEXT("PartDisAdd04")   },
+            { ECk_ParticlesRenderer_Kind::CustomFacingSprite,    206, nullptr,          TEXT("PartDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  207, TEXT("UvSphere"), TEXT("FlatAdd02"), FIntPoint(0, 0),
+              ECk_ParticlesRenderer_MeshFacing::Default, FVector(0.8, 0.8, 0.8) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  208, TEXT("Spike"),    TEXT("FlatAdd02")      },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    inline auto Get_ExplosionOmniRibbonRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::Ribbon, 209, nullptr, TEXT("TrailDisAdd03") },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_Bomb_Explosion: fifteen renderers for twenty-three emitters, and the heaviest MESH load in the
+    // cookbook — seven of the fifteen. It is also the only row that consumes every C8 facing mode: the lightning
+    // card faces VELOCITY and all five bubbles face CAMERAPOSITION, which is the one orientation a behavior
+    // cannot fake because the stage has no camera. The four sphere bubbles share one carrier (SM_VFX_Sphere01
+    // and SM_VFX_Sphere02 measure identical) and differ only in look and in their renderer-level mesh scale
+    // (recipe Cookbook/NS_Bomb_Explosion.md §6.2).
+    inline auto Get_BombExplosionRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    210, nullptr,             TEXT("PartDisAdd01")    },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    211, nullptr,             TEXT("PartDisAdd03")    },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    212, nullptr,             TEXT("PartDisAdd02")    },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    213, nullptr,             TEXT("FlareDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    214, nullptr,             TEXT("RingDisAdd01")    },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    215, nullptr,             TEXT("ImpactDisAdd01")  },
+            { ECk_ParticlesRenderer_Kind::CustomFacingSprite,    216, nullptr,             TEXT("PartDisAdd01")    },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 217, nullptr,             TEXT("PartDisAdd04")    },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  218, TEXT("Spike"),       TEXT("FlatAdd02")       },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  219, TEXT("Card"),        TEXT("LightStripDisAdd"), FIntPoint(0, 0),
+              ECk_ParticlesRenderer_MeshFacing::Velocity },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  220, TEXT("UvSphere"),    TEXT("ExpBubbleNoiseDisAdd"), FIntPoint(0, 0),
+              ECk_ParticlesRenderer_MeshFacing::CameraPosition, FVector(2.0, 2.0, 2.0) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  221, TEXT("UvSphere"),    TEXT("ExpFresnelBomb01"), FIntPoint(0, 0),
+              ECk_ParticlesRenderer_MeshFacing::CameraPosition, FVector(2.0, 2.0, 2.0) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  222, TEXT("FlatAnnulus"), TEXT("ExpBubbleOutDisAdd"), FIntPoint(0, 0),
+              ECk_ParticlesRenderer_MeshFacing::CameraPosition, FVector(3.0, 3.0, 3.0) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  223, TEXT("UvSphere"),    TEXT("ExpFresnelBomb02"), FIntPoint(0, 0),
+              ECk_ParticlesRenderer_MeshFacing::CameraPosition, FVector(2.0, 2.0, 2.0) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  224, TEXT("UvSphere"),    TEXT("ExpFresnelBomb03"), FIntPoint(0, 0),
+              ECk_ParticlesRenderer_MeshFacing::CameraPosition, FVector(2.0, 2.0, 2.0) },
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -765,6 +883,32 @@ namespace ck::particles
             { TEXT("PS_CkParticles_Template_LightningMuzzle"), 2.0f, 0.6f, 24,
               Get_LightningMuzzleRendererSpecs(), 0.0f,
               { 0.0f, 30, Get_LightningMuzzleRibbonRendererSpecs() } },
+            // The Vefects EXPLOSION family. Four rows for four systems: a palette twin needs its own row because
+            // a behavior id resolves to exactly one template path, but it declares the SAME renderers and the
+            // SAME cadence as its fire original, so the two rows differ only in AssetName. All four sources are
+            // Loop-Once 2.0 s systems; the Ground pair's longest layer is the 1.5 s scorch decal and the Omni
+            // pair's is the 1.3 s smoke, which is the only cadence number the Ground/Omni axis moves.
+            //
+            // Each carries a ribbon emitter bursting 301 points — seven strands of 43 samples, the source's
+            // every-frame location events at the 60 Hz they are quoted against, which is the same count and the
+            // same derivation NS_BuffCast's trail uses.
+            { TEXT("PS_CkParticles_Template_ExplosionGround"), 2.0f, 1.5f, 70,
+              Get_ExplosionGroundRendererSpecs(), 0.0f,
+              { 0.0f, 301, Get_ExplosionGroundRibbonRendererSpecs() } },
+            { TEXT("PS_CkParticles_Template_ExplosionGroundIce"), 2.0f, 1.5f, 70,
+              Get_ExplosionGroundRendererSpecs(), 0.0f,
+              { 0.0f, 301, Get_ExplosionGroundRibbonRendererSpecs() } },
+            { TEXT("PS_CkParticles_Template_ExplosionOmni"), 2.0f, 1.3f, 65,
+              Get_ExplosionOmniRendererSpecs(), 0.0f,
+              { 0.0f, 301, Get_ExplosionOmniRibbonRendererSpecs() } },
+            { TEXT("PS_CkParticles_Template_ExplosionOmniIce"), 2.0f, 1.3f, 65,
+              Get_ExplosionOmniRendererSpecs(), 0.0f,
+              { 0.0f, 301, Get_ExplosionOmniRibbonRendererSpecs() } },
+            // NS_Bomb_Explosion: the cookbook's largest single burst at 162, over by t = 0.5 s of a 2.0 s loop.
+            // The count needs no new mechanism — Add_SpawnEmitterStack writes BurstCount as one int, and the
+            // BuffCast ribbon emitter already drives that same code path at 301.
+            { TEXT("PS_CkParticles_Template_BombExplosion"), 2.0f, 0.5f, 162,
+              Get_BombExplosionRendererSpecs() },
         };
         return MakeArrayView(Specs);
     }
@@ -912,6 +1056,31 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_LightningMuzzle"));
     }
 
+    inline auto Get_ExplosionGroundTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_ExplosionGround"));
+    }
+
+    inline auto Get_ExplosionGroundIceTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_ExplosionGroundIce"));
+    }
+
+    inline auto Get_ExplosionOmniTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_ExplosionOmni"));
+    }
+
+    inline auto Get_ExplosionOmniIceTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_ExplosionOmniIce"));
+    }
+
+    inline auto Get_BombExplosionTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_BombExplosion"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -949,6 +1118,13 @@ namespace ck::particles
             // path taken at times the behavior solves, not a stream.
             case 38: return Get_BuffCastTemplateSystemObjectPath();        // 2.0s loop, 1.5s, 23 + ribbon burst 301
             case 39: return Get_LightningMuzzleTemplateSystemObjectPath(); // 2.0s loop, 0.6s, 24 + ribbon burst 30
+            // The explosion family. A palette twin takes its OWN template path — that path IS the spawn
+            // contract — even though its row is otherwise identical to its fire original's.
+            case 40: return Get_ExplosionGroundTemplateSystemObjectPath();    // 2.0s loop, 1.5s, 70 + ribbon 301
+            case 41: return Get_ExplosionGroundIceTemplateSystemObjectPath(); // the Ground palette twin
+            case 42: return Get_ExplosionOmniTemplateSystemObjectPath();      // 2.0s loop, 1.3s, 65 + ribbon 301
+            case 43: return Get_ExplosionOmniIceTemplateSystemObjectPath();   // the Omni palette twin
+            case 44: return Get_BombExplosionTemplateSystemObjectPath();      // 2.0s loop, 0.5s, burst 162
             default: break;
         }
 

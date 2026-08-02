@@ -1087,6 +1087,95 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
+    // T_VFX_Star_04 stand-in — the scorch decal under the ground explosion, and the paint whose NAME is the trap.
+    //
+    // It is not a star. Measured against the existing StarFour bake's source: T_VFX_Star_01's angular spectrum at
+    // r 0.30-0.40 is a CLEAN four-fold spike (harmonic 4 at 0.165, harmonics 1/2/3/5/6/7 all exactly 0.000), while
+    // this paint's spectrum is flat noise (every harmonic 0.05-0.16, none dominant) over a 6.5x min/max angular
+    // ratio. Its pixelwise correlation with Star_01 is 0.870 — the closest near-miss the library has measured after
+    // T_VFX_Wind_02, which was an EXACT roll at 1.00000 — but it carries half Star_01's p90 (0.3216 vs 0.6118) and
+    // dies by r 0.6 where Star_01 still reads 0.055. Rejected; it gets its own bake.
+    //
+    // The structure is an IRREGULAR RIM plus one radial falloff, the Px_LightningBolt idiom: the anchors below are
+    // the measured half-maximum radius in 24 angular sectors, and rho is the radius normalized by that rim, so the
+    // blob's lumpy outline is the measurement itself rather than a fitted shape. Bake vs source: pixelwise
+    // correlation 0.9677, mean 0.0932 / 0.0974, p90 0.327 / 0.3216.
+    static auto Px_ExpGroundScorch(float U, float V) -> FLinearColor
+    {
+        constexpr float FalloffBias  = 1.60f; // I = saturate(Bias - rho * Slope) ^ Exponent
+        constexpr float FalloffSlope = 0.90f;
+        constexpr float Exponent     = 3.75f;
+
+        static const FCk_ProfileAnchor Rim[] =
+        {
+            {0.00000f, 0.3542f}, {0.04167f, 0.4376f}, {0.08333f, 0.3680f}, {0.12500f, 0.3700f},
+            {0.16667f, 0.4698f}, {0.20833f, 0.4344f}, {0.25000f, 0.3587f}, {0.29167f, 0.3625f},
+            {0.33333f, 0.4133f}, {0.37500f, 0.3121f}, {0.41667f, 0.3398f}, {0.45833f, 0.4006f},
+            {0.50000f, 0.3927f}, {0.54167f, 0.3299f}, {0.58333f, 0.3336f}, {0.62500f, 0.3370f},
+            {0.66667f, 0.5091f}, {0.70833f, 0.3502f}, {0.75000f, 0.3934f}, {0.79167f, 0.3916f},
+            {0.83333f, 0.2871f}, {0.87500f, 0.3007f}, {0.91667f, 0.3238f}, {1.00000f, 0.3542f},
+        };
+
+        const float Dx  = U - 0.5f, Dy = V - 0.5f;
+        const float R   = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang = FMath::Atan2(Dy, Dx);
+
+        const float Turn   = (Ang + PI) / (2.0f * PI);
+        const float Radius = Sample_Profile(Turn, Rim, UE_ARRAY_COUNT(Rim));
+        const float Rho    = R / FMath::Max(Radius, 1.0e-6f);
+
+        const float I = FMath::Pow(Saturate(FalloffBias - Rho * FalloffSlope), Exponent);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Gradient_03 transcription — the shape and colour paint of both of the bomb explosion's noise bubbles.
+    //
+    // Two measurements collapse this one. First, it is GREYSCALE: the sidecar reports TSF_BGRA8, which is why the
+    // NS_Bomb_Explosion sheet flags "a colour shape texture in a slot the look treats as a mask" as a gap, but the
+    // paint's max channel spread over all 262 144 pixels is exactly 0.0000. There is no colour in it and the gap
+    // does not exist. Second, it is constant in u to a variance of 4.9e-32 and a SYMMETRIC TRAPEZOID in v: 0 at
+    // row 0, rising linearly to 1 at row 129, flat to row 382, falling to 0 at row 511.
+    //
+    // So it is functional config rather than art, transcribed exactly the way Px_LinearRamp was. Largest deviation
+    // from the closed form is 0.008 — two 8-bit quanta, at the two rows next to the ends.
+    static auto Px_GradientTrapezoid(float /*U*/, float V) -> FLinearColor
+    {
+        constexpr float Slope = 511.0f / 129.0f; // the measured rise: full scale over 129 of 511 rows
+
+        const float I = Saturate(FMath::Min(V, 1.0f - V) * Slope);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Noise_05 stand-in — the dissolve paint of all three FresnelBomb instances and of the first noise bubble.
+    //
+    // Measured against every existing noise bake's source and rejected by all four: best correlation at ANY roll is
+    // 0.11 (against T_VFX_Noise_02, i.e. TileNoise), and 0.00 to 0.07 direct against Noise_02/04/06/07. What
+    // separates it is its autocorrelation TAIL — it decays to 0.49 by 8 px like a fine noise but is still at 0.233
+    // by 32 px and 0.096 by 64, which a single-base Fbm cannot do: a fine base decays away by 32 and a coarse one
+    // has not decayed at all by 8.
+    //
+    // So it is a WEIGHTED SUM of two, 0.6 fine + 0.4 coarse, then rescaled about its own mean to the measured
+    // distribution. Bake vs source: mean 0.3651 / 0.3650, std 0.1338 / 0.1341, coverage above 0.5 0.1587 / 0.1491,
+    // above 0.25 0.8024 / 0.8051, and autocorrelation at 4/8/16/32/64 px 0.814/0.543/0.329/0.243/0.098 against the
+    // source's 0.648/0.492/0.369/0.233/0.096.
+    static auto Px_TileNoiseFine(float U, float V) -> FLinearColor
+    {
+        constexpr float FineTiles   = 48.0f;
+        constexpr float CoarseTiles = 6.0f;
+        constexpr int32 Octaves     = 2;
+        constexpr float FineWeight  = 0.6f;
+        constexpr float Pivot       = 0.478178f; // the mixed field's own mean, measured over the full 512 grid
+        constexpr float Contrast    = 1.0718f;
+        constexpr float Mean        = 0.365f;    // the source's measured mean
+
+        const float Fine   = Fbm(U * FineTiles,   V * FineTiles,   Octaves, int32(FineTiles));
+        const float Coarse = Fbm(U * CoarseTiles, V * CoarseTiles, Octaves, int32(CoarseTiles));
+        const float Mixed  = FineWeight * Fine + (1.0f - FineWeight) * Coarse;
+
+        const float I = Saturate((Mixed - Pivot) * Contrast + Mean);
+        return FLinearColor(I, I, I, I);
+    }
+
     // ---- Bake one texture asset from a per-pixel function -----------------------------------------------------------
     using FPxFn = FLinearColor (*)(float, float);
 
@@ -1257,6 +1346,14 @@ namespace ck::particles_editor
             { TEXT("T_CkParticles_LinearRamp"),         ECk_VfxTextureKind::Mask,      &Px_LinearRamp      },
             { TEXT("T_CkParticles_LightningBolt"),      ECk_VfxTextureKind::Mask,      &Px_LightningBolt   },
             { TEXT("T_CkParticles_LightningBand"),      ECk_VfxTextureKind::Mask,      &Px_LightningBand   },
+            // The Vefects explosion paints (recipes NS_ExplosionGround.md §7, NS_Bomb_Explosion.md §7). Three bakes
+            // for five ports: the scorch decal, whose name says star and whose spectrum says blob; the trapezoid
+            // ramp, which is a transcription and which also DISSOLVES the batch's "colour shape texture" gap by
+            // measuring greyscale; and the fine dissolve noise, the first paint in the library that needs two
+            // Fbm scales because its autocorrelation tail belongs to neither alone.
+            { TEXT("T_CkParticles_ExpGroundScorch"),    ECk_VfxTextureKind::Mask,      &Px_ExpGroundScorch  },
+            { TEXT("T_CkParticles_GradientTrapezoid"),  ECk_VfxTextureKind::Mask,      &Px_GradientTrapezoid},
+            { TEXT("T_CkParticles_TileNoiseFine"),      ECk_VfxTextureKind::Mask,      &Px_TileNoiseFine    },
         };
 
         auto Ok = 0;

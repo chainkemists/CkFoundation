@@ -1,0 +1,22 @@
+// /CkParticles/Behaviors/Behavior_ExplosionOmni.ush — BehaviorId 42.
+//
+// Faithful re-port of Vefects NS_ExplosionOmni: NS_ExplosionGround with Glow_01, Glow_02 and Ground_Mark
+// removed, every hemispherical spawn opened to a full sphere, and three emitters trading a directional velocity
+// module for an isotropic outward one. 65 burst particles plus the same event-driven ribbon.
+//
+// "Omni" is literal, and the Ground/Omni axis is the VARIANT axis of Behavior_ExplosionShared.ush — orthogonal
+// to the fire/ice palette axis, which is why one shared file expresses all four systems.
+//
+// Recipe + corpus evidence: CkParticles/Cookbook/NS_ExplosionOmni.md.
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 42) in lockstep.
+#pragma once
+#include "/CkParticles/Behaviors/Behavior_ExplosionShared.ush"
+
+FCkParticles_StageOutput CkParticles_Behavior_ExplosionOmni(FCkParticles_StageInput In)
+{
+    FCkParticles_ExplosionParams P;
+    P.Variant = CKP_EXP_VARIANT_OMNI;
+    P.Palette = CKP_EXP_PALETTE_FIRE;
+
+    return CkParticles_Explosion_Run(In, P);
+}

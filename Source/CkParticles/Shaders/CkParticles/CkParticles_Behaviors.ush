@@ -45,6 +45,13 @@
 #include "/CkParticles/Behaviors/Behavior_BombProjectile.ush"
 #include "/CkParticles/Behaviors/Behavior_BuffCast.ush"
 #include "/CkParticles/Behaviors/Behavior_LightningMuzzle.ush"
+// The explosion family. The four variants share ONE implementation file, which the thin per-variant headers
+// below include; a second copy of that layer math for a recolour is the [P4-D1] fence.
+#include "/CkParticles/Behaviors/Behavior_ExplosionGround.ush"
+#include "/CkParticles/Behaviors/Behavior_ExplosionGroundIce.ush"
+#include "/CkParticles/Behaviors/Behavior_ExplosionOmni.ush"
+#include "/CkParticles/Behaviors/Behavior_ExplosionOmniIce.ush"
+#include "/CkParticles/Behaviors/Behavior_BombExplosion.ush"
 
 FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
 {
@@ -87,6 +94,11 @@ FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
     if (In.BehaviorId == 37) { return CkParticles_Behavior_BombProjectile(In); }
     if (In.BehaviorId == 38) { return CkParticles_Behavior_BuffCast(In); }
     if (In.BehaviorId == 39) { return CkParticles_Behavior_LightningMuzzle(In); }
+    if (In.BehaviorId == 40) { return CkParticles_Behavior_ExplosionGround(In); }
+    if (In.BehaviorId == 41) { return CkParticles_Behavior_ExplosionGroundIce(In); }
+    if (In.BehaviorId == 42) { return CkParticles_Behavior_ExplosionOmni(In); }
+    if (In.BehaviorId == 43) { return CkParticles_Behavior_ExplosionOmniIce(In); }
+    if (In.BehaviorId == 44) { return CkParticles_Behavior_BombExplosion(In); }
 
     // BehaviorId 0 (and any unknown id) -> Gravity.
     return CkParticles_Behavior_Gravity(In);
