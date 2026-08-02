@@ -448,6 +448,7 @@ namespace ck::usf_editor
         Material->bUsedWithMorphTargets = InDef->_UsedWithMorphTargets;
         Material->bUsedWithNiagaraSprites = InDef->_UsedWithNiagaraSprites;
         Material->bUsedWithNiagaraMeshParticles = InDef->_UsedWithNiagaraMeshParticles;
+        Material->bUsedWithNiagaraRibbons = InDef->_UsedWithNiagaraRibbons;
 
         // The Refraction pin is inert unless RefractionMethod is set; a look wanting no bend outputs 1.0 (air).
         if (WantsRefraction) { Material->RefractionMethod = RM_IndexOfRefraction; }

@@ -125,6 +125,7 @@ defaults off, so looks that predate the contract regenerate byte-identically —
 |---|---|
 | `_UsedWithNiagaraSprites` | bakes `bUsedWithNiagaraSprites` (engine `Material.h:721`) onto the generated master |
 | `_UsedWithNiagaraMeshParticles` | bakes `bUsedWithNiagaraMeshParticles` — the same contract for a MESH-particle renderer |
+| `_UsedWithNiagaraRibbons` | bakes `bUsedWithNiagaraRibbons` (engine `Material.h:724`) — the same contract for a RIBBON renderer |
 | `_ParticleColor` | wires `UMaterialExpressionParticleColor` → `In.ParticleColor` (float4) |
 | `_ParticleDynamicParameter` | wires `UMaterialExpressionDynamicParameter` (index 0) → `In.DynamicParameter` (float4) |
 | `_ParticleDynamicParameterNames` | up to 4 channel names, for readability in the generated master |
@@ -133,9 +134,10 @@ Both inputs are **Surface-domain only** — the generator wires them nowhere els
 errors rather than leaving them silently inert. Reading them on a non-particle mesh is safe:
 `In.ParticleColor` defaults to opaque white and `In.DynamicParameter` to zero.
 
-Sprite and mesh-particle usages exist and are INDEPENDENT: the flag decides which renderer accepts the
-master, not what the shader may read, so a look reading `ParticleColor` needs whichever one matches its
-renderer. Ribbon usage is still deliberately absent — add it when a look actually needs it.
+The three usages are INDEPENDENT engine bits: the flag decides which renderer accepts the master, not what
+the shader may read, so a look reading `ParticleColor` needs whichever one matches its renderer. A material
+the source draws on two renderer classes across systems is therefore TWO generated masters, not one master
+carrying both flags (`LightStripDisAdd` / `LightStripDisAddSprite` is the shipped instance of that).
 
 Three engine facts the generator depends on (verified against the checked-out 5.7 source):
 

@@ -292,6 +292,67 @@ float3 CkParticles_CurlPath(float3 SpawnPosition, float Age, float Freq, float S
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// Arc-length reparameterization.
+//
+// A source emitter spawning per DISTANCE TRAVELLED rather than per second wants its particles equidistant ALONG the
+// leader's path, not equidistant in time — the two agree only where the leader's speed is constant. Solving that
+// needs the path's cumulative length, and a stateless behavior cannot accumulate one across frames, so the path is
+// RESAMPLED at a fixed step count on every evaluation, exactly as CkParticles_CurlPath re-integrates its advection.
+//
+// The pair splits at the only line where a shared helper is possible: the caller evaluates its OWN leader
+// trajectory into the 17 sample slots (16 steps over [0, Duration], the same fidelity constant CurlPath uses), and
+// everything after that is path-independent. HLSL has no lambdas, so the evaluation stays an inlined loop in the
+// caller rather than a callback — the same shape CurlPath already ships.
+//
+// The chord table is a POLYLINE approximation of the true arc length: exact for a straight leader at any speed,
+// and the documented approximation everywhere else. Raising the step count moves every distance-driven effect, so
+// it is a fidelity constant, not a tunable.
+// --------------------------------------------------------------------------------------------------------------------
+void CkParticles_ArcLengthTable(float3 Samples[17], out float OutLengths[17])
+{
+    float Accum = 0.0;
+    OutLengths[0] = 0.0;
+
+    [loop]
+    for (int i = 1; i < 17; ++i)
+    {
+        Accum += length(Samples[i] - Samples[i - 1]);
+        OutLengths[i] = Accum;
+    }
+}
+
+// Time at which the leader has travelled Fraction of its total path length. A degenerate (zero-length) path has no
+// distance to distribute along, so it falls back to uniform time rather than to a single point — a stationary
+// leader then still spawns its N particles across the loop instead of stacking them all at t = 0.
+float CkParticles_ArcLengthTime(float Lengths[17], float Duration, float Fraction)
+{
+    const float Total = Lengths[16];
+    const float F     = saturate(Fraction);
+
+    if (Total <= 0.0)
+    { return F * Duration; }
+
+    const float Target = F * Total;
+    const float Dt     = Duration / 16.0;
+
+    [loop]
+    for (int i = 0; i < 16; ++i)
+    {
+        const float Lo = Lengths[i];
+        const float Hi = Lengths[i + 1];
+
+        if (Target > Hi)
+        { continue; }
+
+        const float Seg = Hi - Lo;
+        const float S   = Seg > 0.0 ? (Target - Lo) / Seg : 0.0;
+        return (float(i) + S) * Dt;
+    }
+
+    return Duration;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Source-curve transcription.
 //
 // Every marketplace curve key the cookbook transcribes is a clamped or linear key, so a clamped lerp between

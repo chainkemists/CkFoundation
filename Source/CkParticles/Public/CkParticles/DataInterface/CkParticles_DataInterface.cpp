@@ -264,6 +264,50 @@ namespace NDICkParticlesLocal
         return S * S * (3.0f - 2.0f * S);
     }
 
+    // ---- Arc-length reparameterization. Mirrors Common.ush's CkParticles_ArcLength* ------------------------------
+    // Read the .ush's header comment for the design (caller-evaluated 17-slot path, chord-table approximation, the
+    // 16 steps as a fidelity constant). The caller supplies the samples on both sides, so nothing here knows what
+    // trajectory it is measuring. Declared below Saturate because it calls it.
+
+    auto ArcLengthTable(const FVector3f (&InSamples)[17], float (&OutLengths)[17]) -> void
+    {
+        auto Accum = 0.0f;
+        OutLengths[0] = 0.0f;
+
+        for (auto i = 1; i < 17; ++i)
+        {
+            Accum += (InSamples[i] - InSamples[i - 1]).Size();
+            OutLengths[i] = Accum;
+        }
+    }
+
+    auto ArcLengthTime(const float (&InLengths)[17], float InDuration, float InFraction) -> float
+    {
+        const auto Total = InLengths[16];
+        const auto F     = Saturate(InFraction);
+
+        if (Total <= 0.0f)
+        { return F * InDuration; }
+
+        const auto Target = F * Total;
+        const auto Dt     = InDuration / 16.0f;
+
+        for (auto i = 0; i < 16; ++i)
+        {
+            const auto Lo = InLengths[i];
+            const auto Hi = InLengths[i + 1];
+
+            if (Target > Hi)
+            { continue; }
+
+            const auto Seg = Hi - Lo;
+            const auto S   = Seg > 0.0f ? (Target - Lo) / Seg : 0.0f;
+            return (float(i) + S) * Dt;
+        }
+
+        return InDuration;
+    }
+
     // Component-wise on purpose: engine quat helpers could reorder the float math and break GPU/CPU lockstep.
     static auto QuatFromAxisAngle(FVector3f InAxis, float InAngle) -> FQuat4f
     {
