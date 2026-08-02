@@ -1,15 +1,16 @@
-# Recipe: NS_PickupCast → CkParticles (PLANNED)
+# Recipe: NS_PickupCast → CkParticles (IMPLEMENTED)
 
 Schema and evidence-tag conventions: [README.md](README.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) — behavior 30. Human A/B parity NOT yet judged.**
 
-No behavior `.ush`, no CPU mirror, no CkUsf look, no cadence row, no texture bake, no test, no gym
-station exists for this effect. Every number below is archaeology read out of the extracted corpus;
-nothing here has been compiled, generated, rendered, or looked at. Sections 7+ are reserved for the
-implementation session.
+`Behavior_PickupCast.ush` + `ExecuteStage_CPU` case 30, the `PS_CkParticles_Template_PickupCast`
+cadence row with eight row renderers on VisTags 97–104, `Test_Particles_PickupCastBehavior.cpp`, and
+the **PICKUP CAST** pair in the VfxExamples gym all exist. This port adds **no** look and **no**
+texture: all eight of its DissolveAdd instances were already carried by an earlier batch. §12's walk
+is `[HUMAN-VERIFY]` and open.
 
 ---
 
@@ -281,13 +282,21 @@ animation — those layers keep their Initialize Particle colour and just fade.
 
 ### 6.1 Cadence row
 
-**A new burst row is required: loop 2.0 s, lifetime 1.0 s, burst 22 `[corpus-v3]`.** Same shape as
+**A new burst row is required: loop 2.0 s, lifetime 1.05 s, burst 22 `[corpus-v3]`.** Same shape as
 `PS_CkParticles_Template_Slash` (1.0 / 0.5 / 19) and routes the same way.
-Per [P0-D3]: loop = the v3 `systemState` loop duration (2.0 s, `Once`); lifetime = max resolved
-emitter lifetime (1.0 s); burst = §2 counts (22). *Was loop 1.0 s under the pre-v3 guess.*
+Per [P0-D3]: loop = the v3 `systemState` loop duration (2.0 s, `Once`); lifetime = max over layers of
+(spawn delay + resolved lifetime) per [P0-D5]; burst = §2 counts (22). *Was loop 1.0 s under the
+pre-v3 guess.*
 
-Particle lifetime for the row must be **1.0 s** — the longest source lifetime (Bomb_Glow_01/02,
-Ring01, Ring02, and Sparkles' resolved 1.0 s max). Every shorter layer zeroes its colour, size and scale past its own lifetime, exactly
+> **Correction applied at implementation (2026-08-02):** this section originally derived the row's
+> particle lifetime as **1.0 s**, the longest resolved emitter lifetime taken on its own. [P0-D5]
+> resolves lifetime as `max(spawn delay + resolved lifetime)`, and `Sparkles` bursts at **0.05 s**
+> with a resolved maximum of **1.0 s**, so the row is **1.05 s**. Same arithmetic-only shape as the
+> corrections batches B and C ratified: the itemization was right and the derived number was not.
+> At 1.0 s the last 50 ms of every sparkle would have been culled by the template rather than by the
+> layer.
+
+Every shorter layer zeroes its colour, size and scale past its own lifetime, exactly
 as `Behavior_Slash` does (NS_BasicAttack §8). Spawn delays (0.05 s on three emitters, 0.1 s on two,
 0.2 s on one) are handled the same way NS_BasicAttack §5 handles its 0.06 s spark delay: hide the
 layer for `age < delay` and run its curves on `(age − delay) / lifetime`.
@@ -380,4 +389,184 @@ eight materials).
 
 ---
 
-## 7+. Reserved for implementation.
+## 7. Textures — no new bake
+
+§6.3 asked for measurement and up to seven new bakes. **None were needed:** every paint this system
+uses had already been measured off the same corpus PNG by an earlier batch, and the whole eight-material
+set resolves through looks that already exist.
+
+| Source paint | Stand-in | Measured in |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | NS_BasicAttack §7 |
+| `T_VFX_Part_02` | `SoftParticleBright` | NS_FireBall_Hit §7 |
+| `T_VFX_Part_03` | `SoftParticleFine` | NS_FireBall_Hit §7 |
+| `T_VFX_Ring_01` | `RingUneven` | NS_FireBall_Hit §7 (the SDF `Ring` bake was measured and rejected there) |
+| `T_VFX_Ring_02` | `RingFlare` | NS_FireBall_Hit §7 |
+| `T_VFX_Star_01` | `StarFour` | NS_FireBall_Hit §7 |
+| `T_VFX_Star_02` | `StarFourTight` | NS_Arrow_Cast §7 |
+| `T_VFX_Noise_02` | `TileNoise` | NS_BasicAttack §7 |
+| `T_VFX_LUT_Rainbow_01` | `LutWhite` | Phase 1 C3 — held back by [P1-D1], see §13 |
+| `T_VFX_WhitePixel` | `LutWhite` | Phase 1 C3 |
+
+---
+
+## 8. Mesh
+
+**None.** All eleven source renderers are camera-facing sprites — the only port in the Cast batch with
+no mesh and no flipbook.
+
+---
+
+## 9. The behavior — `Behavior_PickupCast.ush` + `ExecuteStage_CPU` case 30
+
+### 9.1 The cadence row
+
+| Field | Value | Source |
+|---|---|---|
+| `LoopDuration` | 2.0 s | the SYSTEM's `Loop Behavior = Once`, `Loop Duration = 2` ([P0-D1]) |
+| `ParticleLifetime` | 1.05 s | Sparkles' 0.05 s beat + its resolved 1.0 s maximum ([P0-D5]) |
+| `BurstCount` | 22 | 1+1+3+1+10+1+1+1+1+1+1, the exact per-emitter counts |
+| `SpawnRate` | 0 | there is no `Spawn Rate` module anywhere in the system |
+
+**This is the batch's only burst-ONLY port**, which is what makes its partition exact rather than
+statistical: `Seed % 22` reproduces the source's per-emitter counts by construction, where the two
+siblings' streamed layers can only match in expectation.
+
+### 9.2 The partition
+
+`Seed % 22`, in the source's own emitter order: 0 Bomb_Glow_01, 1 Bomb_Glow_02, 2–4 Bomb_Glow_03,
+5 Raimbow, 6–15 Sparkles, 16 Ring01, 17 Flash_Glow_01, 18 Flash_Glow_02, 19 Star01, 20 Star02,
+21 Ring02.
+
+### 9.3 Per-layer notes worth the reader's time
+
+- **Four spawn beats, not one.** Bomb_Glow_01/02, Raimbow and both rings fire at loop start;
+  Bomb_Glow_03, Sparkles and both flashes at **0.05 s**; Star02 at **0.1 s**; Star01 at **0.2 s**.
+  Each layer hides for `Age < delay` and runs its curves on `(Age − delay) / life` — the
+  `Behavior_Slash` idiom (NS_BasicAttack §5).
+- **`Flash_Glow_02` is the cookbook's only HDR layer.** Its Initialize colour is
+  `RGBA(3, 1.91279, 0.458779, 1)`. Nothing on the output path saturates it, and §11 asserts the 3
+  survives — a `saturate()` added anywhere would cost a 3× overbright flash and nothing else would
+  look wrong.
+- **`Raimbow`'s Initialize colour never shows.** A live `Color` module writes `RGBA(1,1,1,1)` over
+  the 0.913 grey and the Scale Color module behind it halves the RGB, so the layer is a flat 0.5
+  grey. The same reading NS_Arrow_Cast §5 records for its own Raimbow, and the corpus confirms the
+  module is present and enabled with its default white pin.
+- **The two rings never FADE.** Both carry a single alpha key, so the dissolve channel sliding
+  `1 → −1` is their only disappearance mechanism. `Ring02` differs from `Ring01` in exactly two
+  things: 140 units instead of 120, and a `Color.Scale Alpha` of **0.2** against `Ring01`'s 1.
+- **`Bomb_Glow_03`'s three particles are identical.** The source emitter carries no randomness at
+  all, so all three overlay exactly; the behavior gives them no per-Seed draw either, and §11 asserts
+  the overlay.
+- **`Sparkles` hold WHITE for three fifths of their life.** Their colour curve's first key sits at
+  `t = 0.6158`, and a clamped-key lerp holds the first key's value before it — so the crossover to
+  blue happens late rather than immediately.
+
+---
+
+## 10. Looks and renderers
+
+Eight row-declared renderers on VisTags **97–104**, every one a `CameraFacingSprite` — the source has
+no mesh renderer, no ribbon, no sub-UV and no velocity-aligned quad.
+
+| VisTag | Look | Source material | Serves |
+|---|---|---|---|
+| 97 | `PartDisAdd01` | `M_VFX_DisAdd_Part01` | Bomb_Glow_01, Bomb_Glow_02, Flash_Glow_01 |
+| 98 | `PartDisAdd02` | `M_VFX_DisAdd_Part02` | Bomb_Glow_03 |
+| 99 | `RainbowDisAdd` | `M_VFX_DisAdd_Rainbow` | Raimbow |
+| 100 | `PartDisAdd01Bright` | `M_VFX_DisAdd_Part01_Bright` | Sparkles |
+| 101 | `RingDisAdd01` | `M_VFX_DisAdd_Ring01` | Ring01, Ring02 |
+| 102 | `PartDisAdd03Bright` | `M_VFX_DisAdd_Part03_Bright` | Flash_Glow_02 |
+| 103 | `StarDisAdd01` | `M_VFX_DisAdd_Star01` | Star01 |
+| 104 | `StarDisAdd02` | `M_VFX_DisAdd_Star02` | Star02 |
+
+**This port authors no look of its own.** §4's delta table was checked value-by-value against each
+existing look's defaults before reuse, and all eight matched — including the two that quote a
+different family REFERENCE (§4 measures deltas against `M_VFX_DisAdd_Ring04`, the hit/cast batches
+against `M_VFX_DisAdd_Part01`), because the ABSOLUTE values agree.
+
+`Get_BehaviorLookName(30)` stays `NAME_None`: every look rides a row renderer that binds it explicitly.
+
+---
+
+## 11. Tests
+
+`Test_Particles_PickupCastBehavior.cpp` + the `NumBehaviors` 30 → 33 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+- **The partition is asserted as an exact modulo**, slot by slot: every one of the 22 residue classes
+  belongs to exactly one source emitter and resolves to that emitter's renderer. A probability-band
+  partition would pass a share test and fail this one.
+- **Every delayed layer is hidden a millisecond before its own beat and visible after it** — the
+  cheapest way to get this port wrong is to start all eleven layers on frame 0.
+- **`Flash_Glow_02`'s peak red is asserted to be exactly 3** — the HDR claim, made falsifiable.
+- **Both rings hold their alpha across the whole life while their dissolve runs 1 → −1**, and Ring02
+  is asserted to be exactly a fifth of Ring01's opacity.
+- **`Bomb_Glow_03`'s three slots are asserted identical** in size and position.
+- **Sparkles are asserted WHITE inside their curve's clamped head** (R = 1, B < 0.25).
+- Plus the standard per-layer anti-vacuity and death checks.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **PICKUP CAST**.
+`NS_PickupCast` is a `Loop Once` system, so the harness re-arms both sides on completion and the two
+pedestals replay in sync from t = 0. Use `Ck_GymVfxExamples_RestartAll` to re-fire them together.
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | a warm orange-red pop with a white core, two expanding rings and a brief spray of motes |
+| b | Beat structure | the body glows and rings open first; 50 ms later the flash, the pips and the sparkles; the two stars arrive last (0.1 s and 0.2 s) |
+| c | The flash | an **800-unit** pale-yellow sheet — the biggest sprite in the system — gone inside 0.2 s |
+| d | The HDR pop | a small very bright pip at 0.05–0.15 s. If it reads the same brightness as the others, the 3× red has been clamped (§9.3) |
+| e | Rings | two concentric rings, one at 120 and one at 140 units, the outer one much dimmer. They should ERODE away rather than fade |
+| f | Ring phase | both rings take a random rotation, so they must NOT sit in identical phase |
+| g | Sparkles | ten motes thrown omnidirectionally at 350–500 u/s, white at first and turning blue late in their flight |
+| h | Stars | a small four-point star at 0.2 s and a larger, differently-painted one at 0.1 s |
+| i | Rainbow layer | a flat mid-grey lens ring, NOT a rainbow — held back by [P1-D1] (§13.1) |
+| j | World space | move the pedestal mid-effect if you can (§13.4) |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **The `Raimbow` layer is grey, not a rainbow.** `M_VFX_DisAdd_Rainbow` is the family's one live
+   gradient-map chain, and `RainbowDisAdd` ships against the flat white ramp pending [P1-D1] — the
+   family's `Gradient_Invert` remap is not recoverable from the corpus. §6.5 gap 4's warning stands
+   and is DISCHARGED as a recorded loss rather than silently inherited: the chain is a provable
+   multiply-by-one against a white ramp, so the layer renders exactly as it would with no chain at
+   all. This is the same hold NS_FireBall_Hit §13 records.
+2. **Unplumbed family parameters.** `Core_Intensity` (0 on six of eight), `Core_Power`,
+   `Opacty_StepAdd` (0.3 on Rainbow), `Opacty_DepthFade` (10–20), and **`CamOffset 50`** on
+   `Part03_Bright` — a camera-ward world-position push that CkUsf has no equivalent for. Omitting it
+   changes only that one layer's depth sorting against the rest. `Glow_Intensity` IS reproduced,
+   folded into Brightness (`PartDisAdd02` ships 0.3).
+3. **`Distortion_Intensity` is 0 on all eight materials**, so the whole distortion branch is dead in
+   this system — the looks carry the parameter but nothing drives it.
+4. **World space.** All eleven source emitters are `LocalSpace: false`; the template is local space.
+   Same recorded deviation as NS_BasicAttack §13.2 — visible only if the spawner moves during the
+   1.05 s life, which a one-shot pickup cast at a fixed point does not.
+5. **Salt reuse between `CkParticles_RandDir` and the lifetime/speed draws.** `RandDir` consumes
+   salts 1 and 2, which are also the layer's lifetime and speed draws, so a sparkle's direction is
+   correlated with how long and how fast it flies. Every shipped port in the cookbook has this
+   property; it is recorded once here rather than treated as new.
+
+---
+
+## 14. Reusable lessons
+
+1. **A burst-only source is the cheapest kind to port, and the strictest to test.** With no rate
+   stack there is no draw and no share — the modulo IS the source's per-emitter counts, so the test
+   can assert slot-by-slot exactness instead of a tolerance. Reach for that assertion whenever a row
+   declares `SpawnRate 0`.
+2. **Check a candidate look against ABSOLUTE values, not against the delta table's arithmetic.**
+   This sheet's §4 measures deltas from `M_VFX_DisAdd_Ring04`; the hit and cast batches measured
+   theirs from `M_VFX_DisAdd_Part01`. Two different references cannot be compared row by row — only
+   the resolved absolutes can, and all eight matched once resolved.
+3. **"A Color module is present but carries no override" means the module RUNS with its default
+   pin.** For `Raimbow` that pin is white, so it overwrites the Initialize colour entirely. Reading
+   it as inert would have shipped a 0.913 grey where the source draws 0.5.
+4. **[P0-D5] is not optional arithmetic.** A row whose lifetime ignores a layer's spawn delay culls
+   the tail of that layer with the template rather than with the behavior, and nothing in the code
+   says so — the particle simply stops existing. Recompute `max(delay + life)` every time.
