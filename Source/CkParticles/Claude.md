@@ -67,11 +67,23 @@ back to Unaligned, so `CkParticles_DefaultOutput` seeds a valid Z-up pair rather
 **VisTags 0–4 are the SHARED set — nothing behavior-specific may be added to it**, because every template
 carries it. A recreation whose source draws through renderers the shared set cannot express declares its own
 on its **cadence row** instead (`FCk_ParticlesRendererSpec` + `FCk_ParticlesTemplateSpec::RendererOverrides`
-in the naming header). **Four kinds** cover what a recreation needs beyond the shared set: `Mesh` (one named
-generated mesh drawn with one named CkUsf look; `Scale` + `Orientation` apply), and the three sprite quads
+in the naming header). **Five kinds** cover what a recreation needs beyond the shared set: `Mesh` (one named
+generated mesh drawn with one named CkUsf look; `Scale` + `Orientation` apply), the three sprite quads
 Niagara distinguishes by its alignment/facing pair — `CameraFacingSprite`, `VelocityAlignedSprite` and
-`CustomFacingSprite`. Any kind may additionally declare a `SubImageSize` flipbook grid, which makes its
-renderer read `Particles.SubImageIndex` over an X×Y sheet; a row that declares none divides nothing.
+`CustomFacingSprite` — and `Ribbon`. A sprite/mesh kind may additionally declare a `SubImageSize` flipbook
+grid, which makes its renderer read `Particles.SubImageIndex` over an X×Y sheet; a row that declares none
+divides nothing (a ribbon renderer has no `SubImageSize` at all).
+
+**Ribbons ride a SECOND emitter.** `UNiagaraRibbonRendererProperties` carries no `RendererVisibility`, so a
+ribbon renderer cannot be VisTag-gated and one added to the shared emitter would link *every* particle on the
+template into ribbons. A ribbon-bearing row therefore declares
+`FCk_ParticlesTemplateSpec::RibbonEmitter` (its own burst/rate + `Ribbon`-kind renderers); the builder emits a
+second GPU emitter on the row's own loop and lifetime, wired to the same DI, `User.BehaviorId` and
+`User.SpriteMaterial`. The two populations are told apart by a **seed bank**: the ribbon emitter's graph adds
+`ck::particles::RibbonSeedBase` to the `UniqueID → Seed` wire, so a behavior reads the bank off the Seed it
+already receives (`CkParticles_IsRibbonSeed` / `CkParticles_LocalSeed`, lockstepped GPU/CPU) and the DI
+signature never moves. Ribbon width reads `Particles.SpriteSize` (one float at its offset, i.e. `Size.x`) and
+the ribbon id rides `Particles.MeshIndex` — inert on ribbons, which have no carrier mesh.
 Row renderers bind their look master **explicitly**
 (`bOverrideMaterials` / `Material`) rather than through `User.SpriteMaterial`, because one user parameter
 cannot carry several materials — so a behavior drawing ONLY through row renderers keeps

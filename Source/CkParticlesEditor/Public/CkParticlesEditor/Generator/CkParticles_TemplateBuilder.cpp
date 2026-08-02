@@ -25,11 +25,13 @@
 #include "EdGraph/EdGraph.h"
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
 #include "NiagaraNodeFunctionCall.h"
+#include "NiagaraNodeOp.h"
 #include "NiagaraNodeWithDynamicPins.h"
 #include "NiagaraDataInterface.h"
 
 #include "NiagaraSpriteRendererProperties.h"
 #include "NiagaraMeshRendererProperties.h"
+#include "NiagaraRibbonRendererProperties.h"
 
 #include "CkParticlesEditor/Generator/CkParticles_MaterialGenerator.h"
 #include "CkParticlesEditor/Generator/CkParticles_MeshGenerator.h"
@@ -296,6 +298,18 @@ namespace ck::particles_editor
             auto Index = 0;
             for (const auto& Renderer : InSpec.RendererOverrides)
             {
+                // A ribbon renderer belongs to the row's SECOND emitter and has no visibility tag to gate it, so one
+                // listed here would link every particle on this emitter into ribbons. Falling through would emit a
+                // MESH renderer instead — wrong, and silent.
+                if (Renderer.Kind == ck::particles::ECk_ParticlesRenderer_Kind::Ribbon)
+                {
+                    ck::particles_editor::Error(TEXT("Template builder: row [{}] lists a Ribbon renderer among its "
+                        "shared-emitter overrides — ribbon renderers belong to the row's RibbonEmitter spec"),
+                        FString(InSpec.AssetName));
+                    ++Index;
+                    continue;
+                }
+
                 auto* LookMaster = Load_LookMaster(Renderer.LookName);
 
                 if (const auto FacingPair = Get_SpriteFacingPair(Renderer.Kind);
@@ -342,6 +356,44 @@ namespace ck::particles_editor
                 }
 
                 InEmitter->AddRenderer(MeshRenderer, InVersion);
+                ++Index;
+            }
+        }
+
+        // The ribbon emitter's whole renderer set. It carries NONE of the shared set: this emitter exists so the
+        // ribbon has a particle population of its own, and every particle in it is trail geometry.
+        //
+        // Both bindings read attributes the stage already writes (see the naming header's ribbon-emitter block):
+        // width takes one float at Particles.SpriteSize's offset, i.e. Size.x, and the ribbon id rides
+        // Particles.MeshIndex, which a ribbon renderer otherwise ignores because ribbons have no carrier mesh.
+        static auto Configure_RibbonRenderers(
+            UNiagaraEmitter*                                     InEmitter,
+            const FGuid&                                         InVersion,
+            const ck::particles::FCk_ParticlesRibbonEmitterSpec& InSpec) -> void
+        {
+            auto Index = 0;
+            for (const auto& Renderer : InSpec.Renderers)
+            {
+                auto* LookMaster = Load_LookMaster(Renderer.LookName);
+
+                // MATUSAGE_NiagaraRibbons is its own usage flag: a master that never opted in draws as the DEFAULT
+                // material, which is the same silent miss a missing master would be.
+                if (const auto* BaseMaterial = LookMaster != nullptr ? LookMaster->GetMaterial() : nullptr;
+                    BaseMaterial != nullptr && NOT BaseMaterial->bUsedWithNiagaraRibbons)
+                {
+                    ck::particles_editor::Error(TEXT("Template builder: CkUsf look [{}] is drawn by a ribbon renderer "
+                        "but its master does not declare _UsedWithNiagaraRibbons — set the flag on the look "
+                        "definition and regenerate the looks (Ck_Usf_GenerateLooks), or the ribbon draws the default "
+                        "material"), FString(Renderer.LookName));
+                }
+
+                auto* Ribbon = NewObject<UNiagaraRibbonRendererProperties>(
+                    InEmitter, *FString::Printf(TEXT("RibbonRenderer_Row%d"), Index));
+                Ribbon->Material = LookMaster;
+                Ribbon->RibbonWidthBinding = FNiagaraConstants::GetAttributeDefaultBinding(SYS_PARAM_PARTICLES_SPRITE_SIZE);
+                Ribbon->RibbonIdBinding    = FNiagaraConstants::GetAttributeDefaultBinding(SYS_PARAM_PARTICLES_MESH_INDEX);
+
+                InEmitter->AddRenderer(Ribbon, InVersion);
                 ++Index;
             }
         }
@@ -545,13 +597,51 @@ namespace ck::particles_editor
             return nullptr;
         }
 
+        // Seed bank adder: Particles.UniqueID + ck::particles::RibbonSeedBase, the one graph difference between the
+        // ribbon emitter's behavior call and the main emitter's.
+        //
+        // Every pin is retyped to int. The Add op is authored over GENERIC NUMERIC pins, and a numeric pin carries
+        // no literal the translator can read — the resolved type is what a graph stores once the operand types are
+        // known, which here they are on both sides.
+        static auto Create_SeedBankAddNode(
+            UNiagaraGraph*                InGraph,
+            const UEdGraphSchema_Niagara* InSchema,
+            int32                         InSeedBank) -> UNiagaraNodeOp*
+        {
+            FGraphNodeCreator<UNiagaraNodeOp> OpCreator(*InGraph);
+            auto* OpNode = OpCreator.CreateNode();
+            OpNode->OpName = TEXT("Numeric::Add");
+            OpCreator.Finalize();
+
+            auto* PinA      = Find_PinByName(OpNode, TEXT("A"),      EGPD_Input);
+            auto* PinB      = Find_PinByName(OpNode, TEXT("B"),      EGPD_Input);
+            auto* PinResult = Find_PinByName(OpNode, TEXT("Result"), EGPD_Output);
+            if (PinA == nullptr || PinB == nullptr || PinResult == nullptr)
+            { return nullptr; }
+
+            const auto IntPinType = InSchema->TypeDefinitionToPinType(FNiagaraTypeDefinition::GetIntDef());
+            PinA->PinType      = IntPinType;
+            PinB->PinType      = IntPinType;
+            PinResult->PinType = IntPinType;
+
+            PinB->DefaultValue              = FString::FromInt(InSeedBank);
+            PinB->AutogeneratedDefaultValue = PinB->DefaultValue;
+
+            return OpNode;
+        }
+
         // A Module-usage script whose graph is Input -> Map Get (reads DI + params) -> ExecuteStage (DI member fn)
         // -> Map Set (Particles.*) -> Output. The Particles.Position (LWC) vs DI Vec3 difference is auto-bridged
         // by TryCreateConnection.
+        //
+        // InSeedBank is 0 on the main emitter and ck::particles::RibbonSeedBase on the ribbon emitter, which is the
+        // ONLY thing that tells the two populations apart — same DI, same signature, same behavior id.
         static auto Build_BehaviorModuleScript(
-            UObject* InOuter) -> UNiagaraScript*
+            UObject*     InOuter,
+            const TCHAR* InScriptName,
+            int32        InSeedBank) -> UNiagaraScript*
         {
-            auto* Script = NewObject<UNiagaraScript>(InOuter, TEXT("CkParticles_ApplyBehavior_Module"), RF_Transactional);
+            auto* Script = NewObject<UNiagaraScript>(InOuter, InScriptName, RF_Transactional);
             Script->SetUsage(ENiagaraScriptUsage::Module);
 
             auto* Source = NewObject<UNiagaraScriptSource>(Script, NAME_None, RF_Transactional);
@@ -652,7 +742,19 @@ namespace ck::particles_editor
             Wire(GetLifetime, Find_PinByName(FuncNode, TEXT("Lifetime"),       EGPD_Input));
             Wire(GetPosition, Find_PinByName(FuncNode, TEXT("Position"),       EGPD_Input));
             Wire(GetVelocity, Find_PinByName(FuncNode, TEXT("Velocity"),       EGPD_Input));
-            Wire(GetSeed,       Find_PinByName(FuncNode, TEXT("Seed"),         EGPD_Input));
+
+            auto* SeedSource = GetSeed;
+            if (InSeedBank != 0)
+            {
+                auto* SeedBankAdd = Create_SeedBankAddNode(Graph, Schema, InSeedBank);
+                if (SeedBankAdd == nullptr)
+                { return nullptr; }
+
+                Wire(GetSeed, Find_PinByName(SeedBankAdd, TEXT("A"), EGPD_Input));
+                SeedSource = Find_PinByName(SeedBankAdd, TEXT("Result"), EGPD_Output);
+            }
+
+            Wire(SeedSource,    Find_PinByName(FuncNode, TEXT("Seed"),         EGPD_Input));
             Wire(GetEmitterAge, Find_PinByName(FuncNode, TEXT("EmitterAge"),   EGPD_Input));
 
             // ---- Wire ExecuteStage outputs -> Map Set writes ----
@@ -676,12 +778,15 @@ namespace ck::particles_editor
         }
 
         static auto Try_AddCodeBuiltBehaviorModule(
-            UNiagaraSystem* InSystem) -> bool
+            UNiagaraSystem* InSystem,
+            int32           InEmitterHandleIndex,
+            const TCHAR*    InScriptName,
+            int32           InSeedBank) -> bool
         {
-            if (InSystem->GetEmitterHandles().Num() == 0)
+            if (InSystem->GetEmitterHandles().Num() <= InEmitterHandleIndex)
             { return false; }
 
-            const auto& Handle = InSystem->GetEmitterHandle(0);
+            const auto& Handle = InSystem->GetEmitterHandle(InEmitterHandleIndex);
             auto* EmitterData = Handle.GetEmitterData();
             if (EmitterData == nullptr)
             { return false; }
@@ -699,7 +804,7 @@ namespace ck::particles_editor
             if (OutputNode == nullptr)
             { return false; }
 
-            auto* ModuleScript = Build_BehaviorModuleScript(InSystem);
+            auto* ModuleScript = Build_BehaviorModuleScript(InSystem, InScriptName, InSeedBank);
             if (ModuleScript == nullptr)
             { return false; }
 
@@ -779,17 +884,103 @@ namespace ck::particles_editor
             }
         }
 
-        // Names the spawn stack the row asked for; "factory rate" is the one this builder does not emit itself.
+        // Names a declared spawn stack; "factory rate" is the one this builder does not emit itself. Takes the two
+        // cadence numbers rather than a row, because a ribbon emitter declares the same pair on its own spec.
         static auto Get_SpawnCadenceLabel(
-            const ck::particles::FCk_ParticlesTemplateSpec& InSpec) -> FString
+            int32 InBurstCount,
+            float InSpawnRate) -> FString
         {
-            const auto HasBurst = InSpec.BurstCount > 0;
-            const auto HasRate  = InSpec.SpawnRate > 0.0f;
+            const auto HasBurst = InBurstCount > 0;
+            const auto HasRate  = InSpawnRate > 0.0f;
 
-            if (HasBurst && HasRate) { return FString::Printf(TEXT("burst %d + rate %g/s"), InSpec.BurstCount, InSpec.SpawnRate); }
-            if (HasBurst)            { return FString::Printf(TEXT("burst %d"), InSpec.BurstCount); }
-            if (HasRate)             { return FString::Printf(TEXT("rate %g/s"), InSpec.SpawnRate); }
+            if (HasBurst && HasRate) { return FString::Printf(TEXT("burst %d + rate %g/s"), InBurstCount, InSpawnRate); }
+            if (HasBurst)            { return FString::Printf(TEXT("burst %d"), InBurstCount); }
+            if (HasRate)             { return FString::Printf(TEXT("rate %g/s"), InSpawnRate); }
             return TEXT("factory rate");
+        }
+
+        // The emitter shape every template emitter shares, attached to the system. Returns its handle index, or
+        // INDEX_NONE if the attach failed.
+        //
+        // The editor utility, not the raw runtime UNiagaraSystem::AddEmitterHandle: it rebuilds the system-script
+        // emitter nodes AND creates the System Overview node, so the emitter is wired and visible.
+        static auto Add_TemplateEmitter(
+            UNiagaraSystem* InSystem,
+            const TCHAR*    InEmitterName,
+            bool            InAddFactoryDefaults) -> int32
+        {
+            auto* Emitter = NewObject<UNiagaraEmitter>(GetTransientPackage(), InEmitterName, RF_Transactional);
+            UNiagaraEmitterFactoryNew::InitializeEmitter(Emitter, InAddFactoryDefaults);
+
+            if (auto* EmitterData = Emitter->GetLatestEmitterData())
+            {
+                EmitterData->SimTarget = ENiagaraSimTarget::GPUComputeSim;
+
+                // LOCAL space: behaviors write absolute positions, so in world space every spawned system would
+                // collapse onto the world origin instead of rendering where it was spawned.
+                EmitterData->bLocalSpace = true;
+
+                // GPU emitters don't auto-compute bounds cheaply; without generous fixed bounds the whole system is
+                // frustum-culled when its (tiny default) box leaves view.
+                EmitterData->CalculateBoundsMode = ENiagaraEmitterCalculateBoundMode::Fixed;
+                EmitterData->FixedBounds = FBox(FVector(-3000.0), FVector(3000.0));
+            }
+
+            const auto HandleCountBefore = InSystem->GetEmitterHandles().Num();
+
+            constexpr auto CreateCopy = true;
+            FNiagaraEditorUtilities::AddEmitterToSystem(*InSystem, *Emitter, FGuid(), CreateCopy);
+
+            return InSystem->GetEmitterHandles().Num() > HandleCountBefore ? HandleCountBefore : INDEX_NONE;
+        }
+
+        // The row's SECOND emitter — the ribbon population. It shares the template's clock (loop duration and
+        // particle lifetime come from the row) and the system's User parameters with the main emitter; what differs
+        // is its spawn stack, its renderer set, and the seed bank its behavior call adds.
+        static auto Add_RibbonEmitter(
+            UNiagaraSystem*                                 InSystem,
+            const ck::particles::FCk_ParticlesTemplateSpec& InSpec) -> int32
+        {
+            const auto& RibbonSpec = InSpec.RibbonEmitter;
+
+            const auto DeclaresOwnSpawn = RibbonSpec.BurstCount > 0 || RibbonSpec.SpawnRate > 0.0f;
+            if (NOT DeclaresOwnSpawn)
+            {
+                ck::particles_editor::Error(TEXT("Template builder: row [{}] declares a ribbon emitter with neither a "
+                    "burst nor a rate — it would spawn nothing and the trail would never appear"), FString(InSpec.AssetName));
+                return INDEX_NONE;
+            }
+
+            // The ribbon emitter's cadence IS the row's, with the ribbon spec's spawn stack swapped in and the main
+            // emitter's renderers dropped — so the one stack builder serves both emitters.
+            auto RibbonRowSpec = InSpec;
+            RibbonRowSpec.RendererOverrides = {};
+            RibbonRowSpec.BurstCount        = RibbonSpec.BurstCount;
+            RibbonRowSpec.SpawnRate         = RibbonSpec.SpawnRate;
+
+            constexpr auto AddFactoryDefaults = false;
+            const auto EmitterIndex = Add_TemplateEmitter(InSystem, TEXT("CkParticlesRibbon"), AddFactoryDefaults);
+            if (EmitterIndex == INDEX_NONE)
+            {
+                ck::particles_editor::Log(TEXT("Template builder [{}]: ribbon emitter failed to attach"), FString(InSpec.AssetName));
+                return INDEX_NONE;
+            }
+
+            const auto& Handle = InSystem->GetEmitterHandle(EmitterIndex);
+            auto* RibbonEmitter     = Handle.GetInstance().Emitter.Get();
+            auto* RibbonEmitterData = Handle.GetEmitterData();
+            if (RibbonEmitter == nullptr || RibbonEmitterData == nullptr)
+            { return INDEX_NONE; }
+
+            Configure_RibbonRenderers(RibbonEmitter, Handle.GetInstance().Version, RibbonSpec);
+
+            if (NOT Add_SpawnEmitterStack(RibbonEmitter, RibbonEmitterData, RibbonRowSpec))
+            {
+                ck::particles_editor::Log(TEXT("Template builder [{}]: ribbon spawn emitter stack failed"), FString(InSpec.AssetName));
+                return INDEX_NONE;
+            }
+
+            return EmitterIndex;
         }
 
         // ---- One template system (declared burst/rate cadence, or the factory's own) ----------------------------
@@ -823,29 +1014,9 @@ namespace ck::particles_editor
             UNiagaraSystemFactoryNew::InitializeSystem(System, CreateDefaultNodes);
 
             const auto AddDefaultModulesAndRenderers = NOT DeclaresOwnSpawn;
-            auto* Emitter = NewObject<UNiagaraEmitter>(GetTransientPackage(), TEXT("CkParticles"), RF_Transactional);
-            UNiagaraEmitterFactoryNew::InitializeEmitter(Emitter, AddDefaultModulesAndRenderers);
+            const auto MainEmitterIndex = Add_TemplateEmitter(System, TEXT("CkParticles"), AddDefaultModulesAndRenderers);
 
-            if (auto* EmitterData = Emitter->GetLatestEmitterData())
-            {
-                EmitterData->SimTarget = ENiagaraSimTarget::GPUComputeSim;
-
-                // LOCAL space: behaviors write absolute positions, so in world space every spawned system would
-                // collapse onto the world origin instead of rendering where it was spawned.
-                EmitterData->bLocalSpace = true;
-
-                // GPU emitters don't auto-compute bounds cheaply; without generous fixed bounds the whole system is
-                // frustum-culled when its (tiny default) box leaves view.
-                EmitterData->CalculateBoundsMode = ENiagaraEmitterCalculateBoundMode::Fixed;
-                EmitterData->FixedBounds = FBox(FVector(-3000.0), FVector(3000.0));
-            }
-
-            // The editor utility, not the raw runtime UNiagaraSystem::AddEmitterHandle: it rebuilds the
-            // system-script emitter nodes AND creates the System Overview node, so the emitter is wired and visible.
-            constexpr auto CreateCopy = true;
-            FNiagaraEditorUtilities::AddEmitterToSystem(*System, *Emitter, FGuid(), CreateCopy);
-
-            if (System->GetEmitterHandles().Num() == 0)
+            if (MainEmitterIndex == INDEX_NONE)
             {
                 ck::particles_editor::Log(TEXT("Template builder [{}]: emitter failed to attach"), FString(AssetName));
                 return nullptr;
@@ -853,7 +1024,7 @@ namespace ck::particles_editor
 
             // Everything below configures the SYSTEM's copy of the emitter (renderers, burst modules, RIP values),
             // so the unique-emitter-name-scoped rapid-iteration constants land on the scripts that actually compile.
-            const auto& Handle = System->GetEmitterHandle(0);
+            const auto& Handle = System->GetEmitterHandle(MainEmitterIndex);
             auto* SystemEmitter = Handle.GetInstance().Emitter.Get();
             auto* SystemEmitterData = Handle.GetEmitterData();
             if (SystemEmitter == nullptr || SystemEmitterData == nullptr)
@@ -871,7 +1042,17 @@ namespace ck::particles_editor
                 }
             }
 
+            // ---- The row's ribbon emitter, if it declares one. Added after the main emitter is fully configured:
+            // a handle reference is into the system's own array, which attaching another emitter may move. ----
+            const auto RibbonEmitterIndex = InSpec.RibbonEmitter.Get_IsDeclared()
+                ? Add_RibbonEmitter(System, InSpec)
+                : INDEX_NONE;
+
+            if (InSpec.RibbonEmitter.Get_IsDeclared() && RibbonEmitterIndex == INDEX_NONE)
+            { return nullptr; }
+
             // ---- User parameters: BehaviorId int + the DI as ParticleScript + the swappable sprite material ----
+            // Both emitters read these: the ribbon population runs the same behavior id and the same DI instance.
             auto& Exposed = System->GetExposedParameters();
 
             const FNiagaraVariable BehaviorVar(FNiagaraTypeDefinition::GetIntDef(), TEXT("User.BehaviorId"));
@@ -889,9 +1070,20 @@ namespace ck::particles_editor
 
             // ---- Code-built behavior module (forked engine only; inert on stock via CK_WITH_PARTICLES) ----
 #if CK_WITH_PARTICLES
-            const auto bModuleAdded = Try_AddCodeBuiltBehaviorModule(System);
+            constexpr auto MainSeedBank = 0;
+            const auto bModuleAdded = Try_AddCodeBuiltBehaviorModule(
+                System, MainEmitterIndex, TEXT("CkParticles_ApplyBehavior_Module"), MainSeedBank);
             ck::particles_editor::Log(TEXT("[{}] Code-built behavior module added to Particle Update: {}"),
                 FString(AssetName), bModuleAdded ? FString(TEXT("YES")) : FString(TEXT("NO")));
+
+            if (RibbonEmitterIndex != INDEX_NONE)
+            {
+                const auto bRibbonModuleAdded = Try_AddCodeBuiltBehaviorModule(
+                    System, RibbonEmitterIndex, TEXT("CkParticles_ApplyBehavior_Module_Ribbon"),
+                    ck::particles::RibbonSeedBase);
+                ck::particles_editor::Log(TEXT("[{}] Code-built behavior module added to the ribbon emitter: {}"),
+                    FString(AssetName), bRibbonModuleAdded ? FString(TEXT("YES")) : FString(TEXT("NO")));
+            }
 #endif
 
             // ---- Compile (incl. GPU) + save ----
@@ -909,8 +1101,13 @@ namespace ck::particles_editor
             SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
             UPackage::SavePackage(Package, System, *FileName, SaveArgs);
 
-            ck::particles_editor::Log(TEXT("Built template [{}] ({})"),
-                FString(AssetName), Get_SpawnCadenceLabel(InSpec));
+            ck::particles_editor::Log(TEXT("Built template [{}] ({}{})"),
+                FString(AssetName), Get_SpawnCadenceLabel(InSpec.BurstCount, InSpec.SpawnRate),
+                RibbonEmitterIndex == INDEX_NONE
+                    ? FString()
+                    : FString::Printf(TEXT("; ribbon emitter %s over %d renderer(s)"),
+                        *Get_SpawnCadenceLabel(InSpec.RibbonEmitter.BurstCount, InSpec.RibbonEmitter.SpawnRate),
+                        InSpec.RibbonEmitter.Renderers.Num()));
             return System;
         }
     }
