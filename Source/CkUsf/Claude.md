@@ -159,7 +159,7 @@ Consumer examples: CkParticles behavior 17 (`RingDissolveAdd`, sprite) — recip
 `CkParticles/Cookbook/NS_Lightning_Range.md` — and behavior 7's five `DissolveAdd` looks (four mesh-particle
 + one sprite) in `CkParticles/Cookbook/NS_BasicAttack.md`.
 
-**Three Vefects material FAMILIES live here, and each is ONE shader with N parameterizations** — the source
+**Four Vefects material FAMILIES live here, and each is ONE shader with N parameterizations** — the source
 ships one parent graph and one material instance per emitter, so a look is a set of parameter defaults, never
 a second copy of the math:
 
@@ -168,6 +168,7 @@ a second copy of the math:
 | `DissolveAdd` | `/CkUsf/Looks/DissolveAdd.ush` | `Script/CkUsf/CkUsf_SlashLooks_Assets.as` (the family helper `Usf_DissolveAddParams` + the NS_BasicAttack/projectile looks), `CkUsf_HitLooks_Assets.as` (the hit/impact looks) and `CkUsf_CastLooks_Assets.as` (the cast/spawn looks) | 23 looks. Additive-reading unlit translucency: a shape mask tinted by Particle Color, eroded by a panning noise whose threshold rides the Niagara dynamic parameter |
 | `FlatAdd` | `/CkUsf/Looks/FlatAdd.ush` | `Script/CkUsf/CkUsf_FlatAddLooks_Assets.as` | `ParticleColor × Brightness` and nothing else. **Naming trap:** its one source instance is called `M_VFX_DisAdd_Flat02` but its parent is `M_VFX_FlatAdd`, NOT `M_VFX_DissolveAdd` |
 | `ToonBand` | `/CkUsf/Looks/ToonBand.ush` | `Script/CkUsf/CkUsf_ToonLooks_Assets.as` | Stylized banded shading for the cookbook's prop stand-ins |
+| `FresnelBomb` | `/CkUsf/Looks/FresnelBomb.ush` | `Script/CkUsf/CkUsf_FresnelLooks_Assets.as` (helper `Usf_FresnelBombParams`) | 3 looks. The explosion shell: a Fresnel lerp between an interior and a grazing-angle colour, eroded by a panning noise. Reads the same dynamic-parameter channel names as DissolveAdd but samples ONE texture and has no shape/distortion/gradient chain |
 
 A family's parameter helper states the list in the ORDER the look declares it, because the validator enforces
 that order positionally — so the helper is the single place it is stated, and a new parameter goes at the END

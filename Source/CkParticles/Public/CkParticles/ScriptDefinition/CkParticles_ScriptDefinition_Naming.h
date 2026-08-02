@@ -105,6 +105,17 @@ namespace ck::particles
         Ribbon,                // trail linking the emitter's particles in spawn order; ribbon-emitter specs ONLY
     };
 
+    // How a Mesh-kind renderer orients its carrier, mirroring UNiagaraMeshFacingMode's first three members
+    // (NiagaraMeshRendererProperties.h). Default ignores the camera and uses the particle's own orientation;
+    // Velocity aligns the mesh's local +X with Particles.Velocity; CameraPosition points it at the camera —
+    // the one mode a behavior cannot fake, because the stage has no camera.
+    enum class ECk_ParticlesRenderer_MeshFacing : uint8
+    {
+        Default,
+        Velocity,
+        CameraPosition,
+    };
+
     struct FCk_ParticlesRendererSpec
     {
         ECk_ParticlesRenderer_Kind Kind;
@@ -116,6 +127,16 @@ namespace ck::particles
         // untouched, so a row that declares no sheet never divides its quad; anything else makes the renderer read
         // Particles.SubImageIndex over an X*Y sheet whose valid frames are 0 .. (X*Y - 1).
         FIntPoint    SubImageSize = FIntPoint(0, 0);
+
+        // Mesh kind only, both of them, and both defaulted to what Niagara itself defaults to — so every row
+        // authored before they existed emits a byte-identical renderer. A sprite or ribbon row that sets either
+        // is declaring something nothing reads, which RosterSanity rejects rather than letting it read as intent.
+        ECk_ParticlesRenderer_MeshFacing MeshFacingMode = ECk_ParticlesRenderer_MeshFacing::Default;
+
+        // Constant scale applied to the carrier on top of Particles.Scale — the source's per-emitter
+        // "Mesh Uniform Scale", which is a RENDERER property there and must not be folded into the behavior's
+        // per-particle scale curve.
+        FVector      MeshScale = FVector::OneVector;
     };
 
     // ----------------------------------------------------------------------------------------------------------
