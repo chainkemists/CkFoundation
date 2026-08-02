@@ -185,6 +185,68 @@ namespace ck::particles_editor::MeshGenLocal
         return { FVector3f(FMath::Cos(Alpha) * R, FMath::Sin(Alpha) * R, 0.0f), FVector2f(S, T) };
     }
 
+    // ---- Spike: the Vefects SM_VFX_Spike01 carrier, from the corpus .obj measurements ---------------------------
+    //
+    // A square pyramid: base (+-100, +-100, 0), apex (0, 0, 200), the source's own dimensions. Its UV is the
+    // measured fact that matters — corr(v, Z) = -1.000 and corr(v, radius) = +1.000, so v runs TIP (0) to BASE
+    // (1), and u is derived from Y alone (corr(u, Y) = -1.000): 0 on the +Y side, 1 on -Y, 0.5 at the apex.
+    //
+    // The apex is a 1-unit square rather than a point, exactly as Surface_Shell stops short of its poles: a
+    // grid surface whose top row collapses emits degenerate triangles. 1 unit on a 200-unit pyramid is 0.5%.
+    // The base is closed by a second band that runs the perimeter back to the centre at Z = 0.
+    static auto Surface_Spike(float S, float T) -> FGridPoint
+    {
+        constexpr auto HalfExtent = 100.0f;
+        constexpr auto Height     = 200.0f;
+        constexpr auto TipScale   = 0.01f;
+        constexpr auto SideEnd    = 0.75f; // T past this closes the base cap
+
+        // The unit square's perimeter, parameterized counter-clockwise from (+1, -1).
+        const float Q = S * 4.0f;
+        auto Px = 0.0f;
+        auto Py = 0.0f;
+        if      (Q < 1.0f) { Px =  1.0f;            Py = -1.0f + 2.0f * Q; }
+        else if (Q < 2.0f) { Px =  1.0f - 2.0f * (Q - 1.0f); Py =  1.0f; }
+        else if (Q < 3.0f) { Px = -1.0f;            Py =  1.0f - 2.0f * (Q - 2.0f); }
+        else               { Px = -1.0f + 2.0f * (Q - 3.0f); Py = -1.0f; }
+
+        auto RadiusScale = 0.0f;
+        auto Z           = 0.0f;
+        auto V           = 0.0f;
+
+        if (T <= SideEnd)
+        {
+            const float K = T / SideEnd;
+            RadiusScale = FMath::Lerp(TipScale, 1.0f, K);
+            Z           = FMath::Lerp(Height, 0.0f, K);
+            V           = K;
+        }
+        else
+        {
+            const float K = (T - SideEnd) / (1.0f - SideEnd);
+            RadiusScale = FMath::Lerp(1.0f, TipScale, K);
+            Z           = 0.0f;
+            V           = 1.0f;
+        }
+
+        return { FVector3f(Px * HalfExtent * RadiusScale, Py * HalfExtent * RadiusScale, Z),
+                 FVector2f(0.5f - 0.5f * Py * RadiusScale, V) };
+    }
+
+    // ---- Card: the Vefects SM_VFX_Plane01 carrier -------------------------------------------------------------
+    //
+    // A flat quad in the XZ plane, X +-100 and Z 0..200. Measured UV: corr(u, X) = 1.000 and corr(v, Z) = -1.000,
+    // so u runs -X to +X and v runs TOP (0) to BOTTOM (1). The source is two coincident quads 0.0643 apart in Y —
+    // 0.03% of the 200-unit span — collapsed here to one sheet with a two-sided look, exactly as the crescent did.
+    static auto Surface_Card(float S, float T) -> FGridPoint
+    {
+        constexpr auto HalfWidth = 100.0f;
+        constexpr auto Height    = 200.0f;
+
+        return { FVector3f(FMath::Lerp(-HalfWidth, HalfWidth, S), 0.0f, FMath::Lerp(Height, 0.0f, T)),
+                 FVector2f(S, T) };
+    }
+
     // ---- Crescent: the Vefects NS_BasicAttack slash carrier, from the recipe's MEASURED profile ----------------
     //
     // A flat tapered annulus in XY sweeping the full 360 degrees, widest radially at 0 degrees and narrowing to
@@ -285,6 +347,12 @@ namespace ck::particles_editor
         // 3 band segments x 160 arc segments = 960 triangles, the source mesh's own count. Its slot material is
         // only a fallback: the Slash row's four crescent renderers each override it with their own CkUsf look.
         BakeOne(TEXT("SM_CkParticles_Crescent"), &Surface_Crescent, 3, 160, TEXT("SweepErode"));
+
+        // The Vefects hit carriers. 4 perimeter columns is the source pyramid's own facet count; 8 rows keeps
+        // the base cap and the side band on their own quads. The card needs a single quad and nothing more —
+        // both slot materials are fallbacks, overridden by each row renderer's own CkUsf look.
+        BakeOne(TEXT("SM_CkParticles_Spike"), &Surface_Spike, 4, 8, TEXT("SweepErode"));
+        BakeOne(TEXT("SM_CkParticles_Card"),  &Surface_Card,  1, 1, TEXT("SweepErode"));
 
         Log(TEXT("Generated {}/{} CkParticles VFX carrier meshes under {}."),
             FString::FromInt(Ok), FString::FromInt(Total), FString(MeshDir));

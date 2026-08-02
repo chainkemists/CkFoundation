@@ -25,6 +25,9 @@
 #include "/CkParticles/Behaviors/Behavior_LightningRange.ush"
 #include "/CkParticles/Behaviors/Behavior_GunshotProjectile.ush"
 #include "/CkParticles/Behaviors/Behavior_ArrowProjectile.ush"
+#include "/CkParticles/Behaviors/Behavior_FireBurst.ush"
+#include "/CkParticles/Behaviors/Behavior_FireBallHit.ush"
+#include "/CkParticles/Behaviors/Behavior_GunshotHit.ush"
 
 FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
 {
@@ -47,6 +50,9 @@ FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
     if (In.BehaviorId == 17) { return CkParticles_Behavior_LightningRange(In); }
     if (In.BehaviorId == 18) { return CkParticles_Behavior_GunshotProjectile(In); }
     if (In.BehaviorId == 19) { return CkParticles_Behavior_ArrowProjectile(In); }
+    if (In.BehaviorId == 20) { return CkParticles_Behavior_FireBurst(In); }
+    if (In.BehaviorId == 21) { return CkParticles_Behavior_FireBallHit(In); }
+    if (In.BehaviorId == 22) { return CkParticles_Behavior_GunshotHit(In); }
 
     // BehaviorId 0 (and any unknown id) -> Gravity.
     return CkParticles_Behavior_Gravity(In);

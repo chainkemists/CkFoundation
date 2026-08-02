@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 20;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 23;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -145,6 +145,65 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_Fire: two round core glows on one look, three sub-UV flame puffs on a 2x2 sheet, and the
+    // velocity-aligned sparkles on the Part04 look the Slash row already established
+    // (recipe Cookbook/NS_Fire.md §6.2).
+    inline auto Get_FireBurstRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    12, nullptr, TEXT("PartDisAdd01")   },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    13, nullptr, TEXT("FlamesDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 14, nullptr, TEXT("PartDisAdd04")   },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_FireBall_Hit: thirteen renderers for seventeen enabled emitters — ten camera-facing looks (three
+    // emitters share Part01 and two share Part03_Bright), one velocity-aligned sprite, and two mesh carriers whose
+    // source renderers face VELOCITY, which the behavior reproduces by writing an orientation from its own
+    // velocity (recipe Cookbook/NS_FireBall_Hit.md §6.2).
+    inline auto Get_FireBallHitRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    15, nullptr,         TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    16, nullptr,         TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    17, nullptr,         TEXT("PartDisAdd03Bright")},
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 18, nullptr,         TEXT("PartDisAdd04")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    19, nullptr,         TEXT("RingDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    20, nullptr,         TEXT("RainbowDisAdd")     },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    21, nullptr,         TEXT("StarDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    22, nullptr,         TEXT("FlareDisAdd01")     },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    23, nullptr,         TEXT("ImpactDisAdd01")    },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    24, nullptr,         TEXT("FlamesDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    25, nullptr,         TEXT("SmokeDisAdd01")     },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  26, TEXT("Spike"),   TEXT("FlatAdd02")         },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  27, TEXT("Card"),    TEXT("LightStripDisAdd")  },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_Gunshot_Hit: nine renderers for eleven emitters (three glows share Part01), one of them a
+    // velocity-aligned sub-UV sheet — the effect's dominant element — and one mesh carrier
+    // (recipe Cookbook/NS_Gunshot_Hit.md §6.2).
+    inline auto Get_GunshotHitRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    28, nullptr,       TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    29, nullptr,       TEXT("PartDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 30, nullptr,       TEXT("PartDisAdd04")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    31, nullptr,       TEXT("PartDisAdd03Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    32, nullptr,       TEXT("StarDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 33, nullptr,       TEXT("ImpactDisAdd02"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    34, nullptr,       TEXT("ImpactDisAdd01")    },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  35, TEXT("Spike"), TEXT("FlatAdd02")         },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    36, nullptr,       TEXT("PartDisAdd01Bright")},
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -184,6 +243,13 @@ namespace ck::particles
             // t=0 of a Loop-Once 10 s SYSTEM, every particle living the full 10 s. Named for the cadence, not for
             // either effect — both recreations route here and differ only in per-layer constants.
             { TEXT("PS_CkParticles_Template_ProjectileTrio"), 10.0f, 10.0f, 3, Get_ProjectileTrioRendererSpecs() },
+            // The three Vefects hit/burst ports. All three sources are Loop-Once 2.0 s SYSTEMS, so they share a
+            // loop duration and differ only in how long their longest layer lives and how many particles a firing
+            // carries — which is exactly what a cadence row is, so each needs its own.
+            // Lifetime is max over layers of (spawn delay + resolved lifetime).
+            { TEXT("PS_CkParticles_Template_FireBurst"),   2.0f, 1.0f,  10, Get_FireBurstRendererSpecs()   },
+            { TEXT("PS_CkParticles_Template_FireBallHit"), 2.0f, 1.34f, 47, Get_FireBallHitRendererSpecs() },
+            { TEXT("PS_CkParticles_Template_GunshotHit"),  2.0f, 0.65f, 40, Get_GunshotHitRendererSpecs()  },
         };
         return MakeArrayView(Specs);
     }
@@ -226,6 +292,21 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_ProjectileTrio"));
     }
 
+    inline auto Get_FireBurstTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_FireBurst"));
+    }
+
+    inline auto Get_FireBallHitTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_FireBallHit"));
+    }
+
+    inline auto Get_GunshotHitTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_GunshotHit"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -237,6 +318,9 @@ namespace ck::particles
             // GunshotProjectile + ArrowProjectile share one row — 10s loop, 10s lifetime, burst 3.
             case 18:
             case 19: return Get_ProjectileTrioTemplateSystemObjectPath();
+            case 20: return Get_FireBurstTemplateSystemObjectPath();   // FireBurst    — 2.0s loop, 1.0s,  burst 10
+            case 21: return Get_FireBallHitTemplateSystemObjectPath(); // FireBallHit  — 2.0s loop, 1.34s, burst 47
+            case 22: return Get_GunshotHitTemplateSystemObjectPath();  // GunshotHit   — 2.0s loop, 0.65s, burst 40
             default: break;
         }
 
