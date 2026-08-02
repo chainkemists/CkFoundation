@@ -141,6 +141,91 @@ namespace ck::asset_exporter::niagara
         const auto* Property = FindFProperty<FObjectProperty>(UNiagaraNodeInput::StaticClass(), InPropertyName);
         return Property != nullptr ? Property->GetObjectPropertyValue_InContainer(InNode) : nullptr;
     }
+
+    // Asset names of the two engine modules this exporter resolves by identity rather than by authored node title,
+    // which an author may rename: /Niagara/Modules/System/SystemState and /Niagara/Modules/Spawn/Initialization[/V2]/InitializeParticle.
+    inline const FString ScriptName_SystemState        = TEXT("SystemState");
+    inline const FString ScriptName_InitializeParticle = TEXT("InitializeParticle");
+
+    static auto Get_LifetimePinNames() -> TArray<FString>
+    { return { TEXT("Lifetime"), TEXT("Lifetime Min"), TEXT("Lifetime Max") }; }
+
+    static auto Get_ModuleScriptName(const UNiagaraNodeFunctionCall* InModule) -> FString
+    {
+        return InModule != nullptr && InModule->FunctionScript != nullptr
+            ? InModule->FunctionScript->GetName()
+            : FString{};
+    }
+
+    static auto Find_ModuleByScriptName(
+        const TArray<UNiagaraNodeFunctionCall*>& InModules,
+        const FString& InScriptName)
+        -> const UNiagaraNodeFunctionCall*
+    {
+        for (const auto* Module : InModules)
+        {
+            if (Get_ModuleScriptName(Module) == InScriptName)
+            { return Module; }
+        }
+        return nullptr;
+    }
+
+    // Rapid-iteration names read "Constants.[Emitter].[Function].[Input]" (system scripts use "System" for the emitter
+    // segment); a caller knows only the function, so the segment before it is matched rather than reconstructed.
+    static auto Get_RapidIterationValues(
+        const FNiagaraParameterStore& InStore,
+        const FString& InFunctionName)
+        -> TArray<TPair<FString, FString>>
+    {
+        auto Values = TArray<TPair<FString, FString>>{};
+        const auto Marker = ck::Format_UE(TEXT(".{}."), InFunctionName);
+
+        for (const auto& Var : InStore.ReadParameterVariables())
+        {
+            const auto Formatted = FormatStoreValue(InStore, Var);
+            if (NOT Formatted.IsSet())
+            { continue; }
+
+            const auto Name = Var.GetName().ToString();
+            const auto MarkerIndex = Name.Find(Marker, ESearchCase::CaseSensitive);
+            if (MarkerIndex == INDEX_NONE)
+            { continue; }
+
+            Values.Add({ Name.RightChop(MarkerIndex + Marker.Len()), Formatted.GetValue() });
+        }
+        return Values;
+    }
+
+    static auto Find_Value(
+        const TArray<TPair<FString, FString>>& InValues,
+        const FString& InName)
+        -> TOptional<FString>
+    {
+        for (const auto& Pair : InValues)
+        {
+            if (Pair.Key == InName)
+            { return Pair.Value; }
+        }
+        return {};
+    }
+
+    static auto MakeNameValue_Json(const FString& InName, const FString& InValue) -> TSharedPtr<FJsonObject>
+    {
+        auto Obj = MakeShared<FJsonObject>();
+        Obj->SetStringField(TEXT("name"), InName);
+        Obj->SetStringField(TEXT("value"), InValue);
+        return Obj;
+    }
+
+    // "NewEnumerator1 (Random)" -> "Random". Empty when the pin value carries no display name, which the caller must
+    // treat as unreadable rather than guess a mode from.
+    static auto Get_EnumDisplay(const FString& InPinValue) -> FString
+    {
+        auto OpenIndex = int32{0};
+        if (NOT InPinValue.FindChar(TEXT('('), OpenIndex) || NOT InPinValue.EndsWith(TEXT(")")))
+        { return {}; }
+        return InPinValue.Mid(OpenIndex + 1, InPinValue.Len() - OpenIndex - 2);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -498,6 +583,41 @@ auto
 
 auto
     FCk_NiagaraExporter::
+    DoFormatLifetime_Text(
+        const TSharedPtr<FJsonObject>& InLifetimeResolved)
+    -> FString
+{
+    const auto ReadEntries = [](const TSharedPtr<FJsonObject>& InObject, const TCHAR* InField) -> TArray<FString>
+    {
+        auto Entries = TArray<FString>{};
+        const auto* Array = static_cast<const TArray<TSharedPtr<FJsonValue>>*>(nullptr);
+        if (NOT InObject->TryGetArrayField(InField, Array))
+        { return Entries; }
+
+        for (const auto& Value : *Array)
+        {
+            const auto& Entry = Value->AsObject();
+            Entries.Add(ck::Format_UE(TEXT("{} = {}"), Entry->GetStringField(TEXT("name")), Entry->GetStringField(TEXT("value"))));
+        }
+        return Entries;
+    };
+
+    auto Text = InLifetimeResolved->GetStringField(TEXT("source"));
+
+    const auto Values = ReadEntries(InLifetimeResolved, TEXT("values"));
+    if (Values.Num() > 0)
+    { Text += ck::Format_UE(TEXT("  ({})"), FString::Join(Values, TEXT("; "))); }
+
+    auto Inert = ReadEntries(InLifetimeResolved, TEXT("inertValues"));
+    Inert.Append(ReadEntries(InLifetimeResolved, TEXT("inertOverrides")));
+    if (Inert.Num() > 0)
+    { Text += ck::Format_UE(TEXT("   [inert: {}]"), FString::Join(Inert, TEXT("; "))); }
+
+    return Text;
+}
+
+auto
+    FCk_NiagaraExporter::
     DoGetModuleInputs(
         const UNiagaraNodeFunctionCall* InModule)
     -> TArray<TPair<FString, FString>>
@@ -531,6 +651,122 @@ auto
         Inputs.Add({ Name, Value });
     }
     return Inputs;
+}
+
+auto
+    FCk_NiagaraExporter::
+    DoResolveLifetime_Json(
+        UNiagaraScript* InSpawnScript)
+    -> TSharedPtr<FJsonObject>
+{
+    auto Obj = MakeShared<FJsonObject>();
+
+    auto Modules = TArray<UNiagaraNodeFunctionCall*>{};
+    auto OverrideNodes = TArray<UEdGraphNode*>{};
+    DoWalkStack(InSpawnScript, Modules, OverrideNodes);
+
+    const auto* InitializeParticle = ck::asset_exporter::niagara::Find_ModuleByScriptName(
+        Modules, ck::asset_exporter::niagara::ScriptName_InitializeParticle);
+
+    if (InitializeParticle == nullptr)
+    {
+        Obj->SetStringField(TEXT("source"), TEXT("NO_MODULE"));
+        return Obj;
+    }
+
+    const auto FunctionName = InitializeParticle->GetFunctionName();
+    Obj->SetStringField(TEXT("module"), FunctionName);
+
+    const auto ModePin = ck::asset_exporter::niagara::Find_Value(DoGetModuleInputs(InitializeParticle), TEXT("Lifetime Mode"));
+    if (ModePin.IsSet())
+    { Obj->SetStringField(TEXT("mode"), ModePin.GetValue()); }
+
+    const auto Mode = ModePin.IsSet() ? ck::asset_exporter::niagara::Get_EnumDisplay(ModePin.GetValue()) : FString{};
+
+    auto DrivingPins = TArray<FString>{};
+    if (Mode == TEXT("Direct Set"))
+    { DrivingPins = { TEXT("Lifetime") }; }
+    else if (Mode == TEXT("Random"))
+    { DrivingPins = { TEXT("Lifetime Min"), TEXT("Lifetime Max") }; }
+    else
+    {
+        // The static switch is the ONLY thing that says which pin the compiled module reads; without a readable one
+        // the stores cannot disambiguate, and a guess here would be indistinguishable from evidence downstream.
+        Obj->SetStringField(TEXT("source"), TEXT("AMBIGUOUS"));
+        return Obj;
+    }
+
+    const auto AllOverrides = DoHarvestOverrides(OverrideNodes);
+    auto ModuleOverrides = TArray<TSharedPtr<FJsonObject>>{};
+    constexpr auto MaintainOrder = true;
+    AllOverrides.MultiFind(FunctionName, ModuleOverrides, MaintainOrder);
+    auto ConsumedKeys = TSet<FString>{ FunctionName };
+    DoExpandDynamicInputOverrides(AllOverrides, ModuleOverrides, ConsumedKeys);
+
+    const auto LifetimePins = ck::asset_exporter::niagara::Get_LifetimePinNames();
+    auto OverrideByPin = TMap<FString, TSharedPtr<FJsonObject>>{};
+    auto InertOverrides = TArray<TSharedPtr<FJsonValue>>{};
+    for (const auto& Override : ModuleOverrides)
+    {
+        const auto Path = Override->GetStringField(TEXT("path"));
+        if (DrivingPins.Contains(Path))
+        { OverrideByPin.Add(Path, Override); }
+        else if (LifetimePins.Contains(Path))
+        { InertOverrides.Add(MakeShared<FJsonValueObject>(ck::asset_exporter::niagara::MakeNameValue_Json(Path, DoFormatOverride_Text(Override)))); }
+    }
+
+    const auto& Rip = InSpawnScript->RapidIterationParameters;
+    const auto ModuleValues = ck::asset_exporter::niagara::Get_RapidIterationValues(Rip, FunctionName);
+
+    Obj->SetStringField(TEXT("source"), OverrideByPin.Num() > 0
+        ? TEXT("override")
+        : (DrivingPins.Num() == 1 ? TEXT("direct") : TEXT("minmax")));
+
+    auto Values = TArray<TSharedPtr<FJsonValue>>{};
+    for (const auto& Pin : DrivingPins)
+    {
+        const auto* Override = OverrideByPin.Find(Pin);
+        if (Override == nullptr)
+        {
+            const auto Value = ck::asset_exporter::niagara::Find_Value(ModuleValues, Pin);
+            if (Value.IsSet())
+            { Values.Add(MakeShared<FJsonValueObject>(ck::asset_exporter::niagara::MakeNameValue_Json(Pin, Value.GetValue()))); }
+            continue;
+        }
+
+        Values.Add(MakeShared<FJsonValueObject>(ck::asset_exporter::niagara::MakeNameValue_Json(Pin, DoFormatOverride_Text(*Override))));
+
+        auto DynamicInputId = FString{};
+        if (NOT (*Override)->TryGetStringField(TEXT("id"), DynamicInputId) || DynamicInputId.IsEmpty())
+        { continue; }
+
+        for (const auto& Value : ck::asset_exporter::niagara::Get_RapidIterationValues(Rip, DynamicInputId))
+        {
+            Values.Add(MakeShared<FJsonValueObject>(ck::asset_exporter::niagara::MakeNameValue_Json(
+                ck::Format_UE(TEXT("{}.{}"), DynamicInputId, Value.Key), Value.Value)));
+        }
+    }
+    Obj->SetArrayField(TEXT("values"), Values);
+
+    // The store keeps every lifetime constant the emitter was EVER authored with; the ones this mode does not read are
+    // surfaced as such rather than dropped, because their presence reads like evidence to anyone diffing the stack.
+    auto InertValues = TArray<TSharedPtr<FJsonValue>>{};
+    for (const auto& Pin : LifetimePins)
+    {
+        if (DrivingPins.Contains(Pin) && NOT OverrideByPin.Contains(Pin))
+        { continue; }
+
+        const auto Value = ck::asset_exporter::niagara::Find_Value(ModuleValues, Pin);
+        if (NOT Value.IsSet())
+        { continue; }
+        InertValues.Add(MakeShared<FJsonValueObject>(ck::asset_exporter::niagara::MakeNameValue_Json(Pin, Value.GetValue())));
+    }
+    if (InertValues.Num() > 0)
+    { Obj->SetArrayField(TEXT("inertValues"), InertValues); }
+    if (InertOverrides.Num() > 0)
+    { Obj->SetArrayField(TEXT("inertOverrides"), InertOverrides); }
+
+    return Obj;
 }
 
 auto
@@ -652,8 +888,45 @@ auto
     }
     Out += TEXT("\n");
 
+    // ---- System-level System State: an emitter's Loop rows are inert while its Life Cycle Mode is System ----
+    Out += TEXT("SYSTEM STATE\n");
+    const auto SystemState = DoSerializeSystemState_Json(System);
+    const auto& SystemStateModule = SystemState->GetObjectField(TEXT("systemStateModule"));
+    if (NOT SystemStateModule->GetBoolField(TEXT("found")))
+    { Out += TEXT("  <no System State module in the System Update stack>\n"); }
+    else
+    {
+        Out += ck::Format_UE(TEXT("  {}{}\n"),
+            SystemStateModule->GetStringField(TEXT("name")),
+            SystemStateModule->GetBoolField(TEXT("enabled")) ? TEXT("") : TEXT("  (DISABLED)"));
+
+        for (const auto& Input : SystemStateModule->GetArrayField(TEXT("inputs")))
+        {
+            Out += ck::Format_UE(TEXT("       {} = {}\n"),
+                Input->AsObject()->GetStringField(TEXT("name")), Input->AsObject()->GetStringField(TEXT("value")));
+        }
+        for (const auto& Value : SystemStateModule->GetArrayField(TEXT("values")))
+        {
+            Out += ck::Format_UE(TEXT("       {} = {}\n"),
+                Value->AsObject()->GetStringField(TEXT("name")), Value->AsObject()->GetStringField(TEXT("value")));
+        }
+
+        const auto* Overrides = static_cast<const TArray<TSharedPtr<FJsonValue>>*>(nullptr);
+        if (SystemStateModule->TryGetArrayField(TEXT("overrides"), Overrides))
+        {
+            for (const auto& Override : *Overrides)
+            { Out += ck::Format_UE(TEXT("       [override] {}\n"), DoFormatOverride_Text(Override->AsObject())); }
+        }
+    }
+    Out += TEXT("\n");
+
     // ---- Emitters ----
     const auto& Handles = System->GetEmitterHandles();
+
+    auto EmitterNamesById = TMap<FGuid, FString>{};
+    for (const auto& Handle : Handles)
+    { EmitterNamesById.Add(Handle.GetId(), Handle.GetName().ToString()); }
+
     Out += ck::Format_UE(TEXT("EMITTERS ({})\n"), FString::FromInt(Handles.Num()));
     Out += TEXT("--------------------------------------------------------------------\n");
 
@@ -677,6 +950,28 @@ auto
             Data->CalculateBoundsMode == ENiagaraEmitterCalculateBoundMode::Fixed
                 ? *ck::Format_UE(TEXT("  {} to {}"), Data->FixedBounds.Min.ToString(), Data->FixedBounds.Max.ToString())
                 : TEXT(""));
+
+        Out += ck::Format_UE(TEXT("  Lifetime (resolved): {}\n"),
+            DoFormatLifetime_Text(DoResolveLifetime_Json(Data->SpawnScriptProps.Script)));
+
+        const auto& EventHandlers = Data->GetEventHandlers();
+        Out += ck::Format_UE(TEXT("  Event Handlers ({})\n"), FString::FromInt(EventHandlers.Num()));
+        for (const auto& Handler : EventHandlers)
+        {
+            const auto* SourceName = EmitterNamesById.Find(Handler.SourceEmitterID);
+            const auto Source = NOT Handler.SourceEmitterID.IsValid()
+                ? FString{TEXT("<self>")}
+                : (SourceName != nullptr ? *SourceName : FString{TEXT("<unknown>")});
+            const auto SpawnCount = Handler.bRandomSpawnNumber
+                ? ck::Format_UE(TEXT("{}..{} (random)"),
+                    FString::FromInt(static_cast<int32>(Handler.MinSpawnNumber)), FString::FromInt(static_cast<int32>(Handler.SpawnNumber)))
+                : FString::FromInt(static_cast<int32>(Handler.SpawnNumber));
+
+            Out += ck::Format_UE(TEXT("    - event: {}   source: {}   mode: {}   spawn: {}   maxPerFrame: {}\n"),
+                Handler.SourceEventName.ToString(), Source,
+                StaticEnum<EScriptExecutionMode>()->GetNameStringByValue(static_cast<int64>(Handler.ExecutionMode)),
+                SpawnCount, FString::FromInt(static_cast<int32>(Handler.MaxEventsPerFrame)));
+        }
 
         for (const auto& Stage : ck::asset_exporter::niagara::Get_Stages_InEditorDisplayOrder())
         {
@@ -890,6 +1185,116 @@ auto
 
 auto
     FCk_NiagaraExporter::
+    DoSerializeSystemState_Json(
+        UNiagaraSystem* InSystem)
+    -> TSharedPtr<FJsonObject>
+{
+    struct FSystemStage { const TCHAR* Name; UNiagaraScript* Script; };
+    const FSystemStage Stages[] =
+    {
+        { TEXT("System Spawn"),  InSystem->GetSystemSpawnScript() },
+        { TEXT("System Update"), InSystem->GetSystemUpdateScript() },
+    };
+
+    auto Obj = MakeShared<FJsonObject>();
+
+    auto Stacks = TArray<TSharedPtr<FJsonValue>>{};
+    for (const auto& Stage : Stages)
+    {
+        if (auto Stack = DoSerializeStack_Json(Stage.Script, Stage.Name))
+        { Stacks.Add(MakeShared<FJsonValueObject>(Stack)); }
+    }
+    Obj->SetArrayField(TEXT("stacks"), Stacks);
+
+    auto* UpdateScript = InSystem->GetSystemUpdateScript();
+    auto Modules = TArray<UNiagaraNodeFunctionCall*>{};
+    auto OverrideNodes = TArray<UEdGraphNode*>{};
+    DoWalkStack(UpdateScript, Modules, OverrideNodes);
+
+    const auto* SystemState = ck::asset_exporter::niagara::Find_ModuleByScriptName(
+        Modules, ck::asset_exporter::niagara::ScriptName_SystemState);
+
+    auto Resolved = MakeShared<FJsonObject>();
+    Resolved->SetBoolField(TEXT("found"), SystemState != nullptr);
+    Obj->SetObjectField(TEXT("systemStateModule"), Resolved);
+
+    if (SystemState == nullptr)
+    { return Obj; }
+
+    const auto FunctionName = SystemState->GetFunctionName();
+    Resolved->SetStringField(TEXT("module"), FunctionName);
+    Resolved->SetStringField(TEXT("name"), SystemState->GetNodeTitle(ENodeTitleType::ListView).ToString());
+    Resolved->SetBoolField(TEXT("enabled"), SystemState->IsNodeEnabled());
+
+    auto Inputs = TArray<TSharedPtr<FJsonValue>>{};
+    for (const auto& Input : DoGetModuleInputs(SystemState))
+    {
+        if (Input.Value.IsEmpty())
+        { continue; }
+        Inputs.Add(MakeShared<FJsonValueObject>(ck::asset_exporter::niagara::MakeNameValue_Json(Input.Key, Input.Value)));
+    }
+    Resolved->SetArrayField(TEXT("inputs"), Inputs);
+
+    auto Values = TArray<TSharedPtr<FJsonValue>>{};
+    for (const auto& Value : ck::asset_exporter::niagara::Get_RapidIterationValues(UpdateScript->RapidIterationParameters, FunctionName))
+    { Values.Add(MakeShared<FJsonValueObject>(ck::asset_exporter::niagara::MakeNameValue_Json(Value.Key, Value.Value))); }
+    Resolved->SetArrayField(TEXT("values"), Values);
+
+    const auto AllOverrides = DoHarvestOverrides(OverrideNodes);
+    auto ModuleOverrides = TArray<TSharedPtr<FJsonObject>>{};
+    constexpr auto MaintainOrder = true;
+    AllOverrides.MultiFind(FunctionName, ModuleOverrides, MaintainOrder);
+    auto ConsumedKeys = TSet<FString>{ FunctionName };
+    DoExpandDynamicInputOverrides(AllOverrides, ModuleOverrides, ConsumedKeys);
+
+    if (ModuleOverrides.Num() > 0)
+    {
+        auto Overrides = TArray<TSharedPtr<FJsonValue>>{};
+        for (const auto& Override : ModuleOverrides)
+        { Overrides.Add(MakeShared<FJsonValueObject>(Override)); }
+        Resolved->SetArrayField(TEXT("overrides"), Overrides);
+    }
+
+    return Obj;
+}
+
+auto
+    FCk_NiagaraExporter::
+    DoSerializeEventHandlers_Json(
+        const FVersionedNiagaraEmitterData* InData,
+        const TMap<FGuid, FString>& InEmitterNamesById)
+    -> TArray<TSharedPtr<FJsonValue>>
+{
+    auto Handlers = TArray<TSharedPtr<FJsonValue>>{};
+
+    for (const auto& Handler : InData->GetEventHandlers())
+    {
+        auto Obj = MakeShared<FJsonObject>();
+
+        // An all-zero source id means the emitter handles its own events (FNiagaraEventScriptProperties::SourceEmitterID).
+        const auto* SourceName = InEmitterNamesById.Find(Handler.SourceEmitterID);
+        Obj->SetStringField(TEXT("sourceEmitter"), NOT Handler.SourceEmitterID.IsValid()
+            ? FString{TEXT("<self>")}
+            : (SourceName != nullptr ? *SourceName : FString{TEXT("<unknown>")}));
+        Obj->SetStringField(TEXT("sourceEmitterId"), Handler.SourceEmitterID.ToString());
+        Obj->SetStringField(TEXT("eventName"), Handler.SourceEventName.ToString());
+        Obj->SetStringField(TEXT("executionMode"), StaticEnum<EScriptExecutionMode>()->GetNameStringByValue(static_cast<int64>(Handler.ExecutionMode)));
+        Obj->SetNumberField(TEXT("spawnCount"), Handler.SpawnNumber);
+        Obj->SetBoolField(TEXT("randomSpawnCount"), Handler.bRandomSpawnNumber);
+        if (Handler.bRandomSpawnNumber)
+        { Obj->SetNumberField(TEXT("minSpawnCount"), Handler.MinSpawnNumber); }
+        Obj->SetNumberField(TEXT("maxEventsPerFrame"), Handler.MaxEventsPerFrame);
+
+        if (auto Stack = DoSerializeStack_Json(Handler.Script, TEXT("Particle Event Handler")))
+        { Obj->SetObjectField(TEXT("stack"), Stack); }
+
+        Handlers.Add(MakeShared<FJsonValueObject>(Obj));
+    }
+    return Handlers;
+}
+
+auto
+    FCk_NiagaraExporter::
     DoSerializeRenderer_Json(
         const UNiagaraRendererProperties* InRenderer)
     -> TSharedPtr<FJsonObject>
@@ -945,7 +1350,8 @@ auto
     DoSerializeEmitter_Json(
         const FVersionedNiagaraEmitterData* InData,
         const FString& InName,
-        bool bInEnabled)
+        bool bInEnabled,
+        const TMap<FGuid, FString>& InEmitterNamesById)
     -> TSharedPtr<FJsonObject>
 {
     auto Obj = MakeShared<FJsonObject>();
@@ -973,6 +1379,9 @@ auto
     }
     Obj->SetArrayField(TEXT("stacks"), Stacks);
 
+    Obj->SetArrayField(TEXT("eventHandlers"), DoSerializeEventHandlers_Json(InData, InEmitterNamesById));
+    Obj->SetObjectField(TEXT("lifetimeResolved"), DoResolveLifetime_Json(InData->SpawnScriptProps.Script));
+
     auto Renderers = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto* Renderer : InData->GetRenderers())
     {
@@ -991,6 +1400,7 @@ auto
 {
     auto* System = const_cast<UNiagaraSystem*>(InSystem);
     auto Root = MakeShared<FJsonObject>();
+    Root->SetObjectField(TEXT("_meta"), FCk_AssetExportMeta::MakeMetaObject(System, ck::asset_exporter::version::Niagara));
     Root->SetStringField(TEXT("system"), System->GetName());
     Root->SetStringField(TEXT("packagePath"), System->GetOutermost()->GetName());
 
@@ -1012,11 +1422,17 @@ auto
     }
     Root->SetArrayField(TEXT("userParameters"), Params);
 
+    Root->SetObjectField(TEXT("systemState"), DoSerializeSystemState_Json(System));
+
+    auto EmitterNamesById = TMap<FGuid, FString>{};
+    for (const auto& Handle : System->GetEmitterHandles())
+    { EmitterNamesById.Add(Handle.GetId(), Handle.GetName().ToString()); }
+
     auto Emitters = TArray<TSharedPtr<FJsonValue>>{};
     for (const auto& Handle : System->GetEmitterHandles())
     {
         Emitters.Add(MakeShared<FJsonValueObject>(
-            DoSerializeEmitter_Json(Handle.GetEmitterData(), Handle.GetName().ToString(), Handle.GetIsEnabled())));
+            DoSerializeEmitter_Json(Handle.GetEmitterData(), Handle.GetName().ToString(), Handle.GetIsEnabled(), EmitterNamesById)));
     }
     Root->SetArrayField(TEXT("emitters"), Emitters);
     return Root;
