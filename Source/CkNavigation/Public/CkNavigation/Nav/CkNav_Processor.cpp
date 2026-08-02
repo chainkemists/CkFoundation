@@ -17,6 +17,7 @@
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include <NavigationSystem.h>
+#include <NavFilters/NavigationQueryFilter.h>
 #include <NavMesh/RecastNavMesh.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -260,12 +261,30 @@ namespace ck
                         InResult,
                         FilterClass);
 
-                    ck::nav::Verbose(TEXT("FindPathSync on [{}] -> target [{}]: {} (waypoints={} reason={})"),
+                    const auto& Diagnostics = InResult.Get_Diagnostics();
+                    const auto FilterName = FilterClass.Get() != nullptr
+                        ? GetNameSafe(FilterClass.Get())
+                        : FString{TEXT("NavDataDefault")};
+                    ck::nav::Verbose(
+                        TEXT("[PNDiag] FindPathSync on [{}]: raw [{}] -> [{}], "
+                             "startOverride [{}], allowPartial [{}], filterTag [{}], filter [{}], "
+                             "projected [{}:{}] -> [{}:{}], status [{}], waypoints [{}], "
+                             "reason [{}], queryMs [{}]"),
                         InHandle,
+                        QueryStart,
                         InFindPath.Get_TargetLocation(),
+                        InFindPath.Get_StartOverride() == ECk_EnableDisable::Enable,
+                        InFindPath.Get_AllowPartialPath(),
+                        InFindPath.Get_QueryFilter().ToString(),
+                        FilterName,
+                        Diagnostics.Get_StartProjected(),
+                        Diagnostics.Get_LastProjectedStart(),
+                        Diagnostics.Get_EndProjected(),
+                        Diagnostics.Get_LastProjectedEnd(),
                         InResult._Status,
                         InResult._Waypoints.Num(),
-                        InResult._Diagnostics._LastFailReason);
+                        Diagnostics.Get_LastFailReason(),
+                        Diagnostics.Get_LastQueryDurationMs());
 
                     if (bSucceeded)
                     {

@@ -43,6 +43,12 @@ namespace ck
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_MoveRequests& InRequests) const -> void;
 
+        static auto
+        Request_NavigationPath(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            const FVector& InGoal) -> void;
+
     private:
         static auto
         DoHandleRequest(

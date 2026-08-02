@@ -15,6 +15,7 @@ namespace ck_crowd_debug_settings_cvars
     static int32 GDrawSeparation    = 0;
     static int32 GDrawBreadcrumbs   = 0;
     static int32 GDrawPlannedPaths  = 0;
+    static int32 GDrawPathTrouble   = 1;
     static int32 GDrawNavProjection = 0;
     static int32 GDrawAgentRings    = 0;
 
@@ -100,6 +101,21 @@ namespace ck_crowd_debug_settings_cvars
         }),
         ECVF_Cheat);
 
+    static FAutoConsoleVariableRef CVarDrawPathTrouble(
+        TEXT("ck.Crowd.DrawPathTrouble"),
+        GDrawPathTrouble,
+        TEXT("Draw path-trouble diagnostics in the game world.\n")
+        TEXT("  0 = off\n")
+        TEXT("  1 = on (default) — marker, sidewalk/Unreal-nav status, attempted goal, dashed line, and distance"),
+        FConsoleVariableDelegate::CreateLambda([](IConsoleVariable* InCVar)
+        {
+            WriteToSettings(
+                [](UCk_Crowd_DebugSettings_UE* InS) { return InS->Get_DrawPathTrouble(); },
+                [](UCk_Crowd_DebugSettings_UE* InS, bool InV) { InS->Set_DrawPathTrouble(InV); },
+                InCVar);
+        }),
+        ECVF_Cheat);
+
     static FAutoConsoleVariableRef CVarDrawNavProjection(
         TEXT("ck.Crowd.DrawNavProjection"),
         GDrawNavProjection,
@@ -154,6 +170,8 @@ auto
     { CVar->SetWithCurrentPriority(_DrawBreadcrumbs  ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawPlannedPaths")))
     { CVar->SetWithCurrentPriority(_DrawPlannedPaths ? 1 : 0); }
+    if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawPathTrouble")))
+    { CVar->Set(_DrawPathTrouble ? 1 : 0, ECVF_SetByGameSetting); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawNavProjection")))
     { CVar->SetWithCurrentPriority(_DrawNavProjection ? 1 : 0); }
     if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawAgentRings")))
@@ -190,6 +208,17 @@ auto
     {
         if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawPlannedPaths")))
         { CVar->SetWithCurrentPriority(_DrawPlannedPaths ? 1 : 0); }
+    }
+    else if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawPathTrouble))
+    {
+        if (auto* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.Crowd.DrawPathTrouble")))
+        {
+            CVar->SetWithCurrentPriority(
+                _DrawPathTrouble ? 1 : 0,
+                NAME_None,
+                ECVF_SetByConsole,
+                ECVF_SetByScalability);
+        }
     }
     else if (Name == GET_MEMBER_NAME_CHECKED(UCk_Crowd_DebugSettings_UE, _DrawNavProjection))
     {
@@ -248,6 +277,17 @@ auto
     if (ck::Is_NOT_Valid(Settings))
     { return false; }
     return Settings->Get_DrawPlannedPaths();
+}
+
+auto
+    UCk_Utils_Crowd_DebugSettings_UE::
+    Get_DrawPathTrouble()
+    -> bool
+{
+    const auto* Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Crowd_DebugSettings_UE>();
+    if (ck::Is_NOT_Valid(Settings))
+    { return false; }
+    return Settings->Get_DrawPathTrouble();
 }
 
 auto

@@ -44,18 +44,18 @@ namespace ck::pathnetwork
         FVector _Location = FVector::ZeroVector;
     };
 
-    struct CKPATHNETWORK_API FRouteGraphSharedData
+    // Network- and construction-policy-dependent augmentation. Component
+    // transfers, their edge-interior overlay points, and local shortcuts do not
+    // depend on a route's start or goal, so runtime followers may safely share
+    // this immutable seed across queries.
+    struct CKPATHNETWORK_API FRouteGraphStaticData
     {
         TArray<FRouteOverlayPoint> _OverlayPoints;
         TMap<int32, TArray<int32>> _OverlayPointsByEdge;
 
-        // The default preserves the runtime direct-fallback route. Editor diagnostics can
-        // explicitly omit this synthetic edge when asking whether the network is connected.
-        bool _AllowDirectStartToGoal = true;
-
         // Optional, symmetric off-network transfers between nodes in distinct
         // connected components. The route-node map is canonical and can join
-        // query-local edge-interior overlay points as well as authored nodes.
+        // static edge-interior overlay points as well as authored nodes.
         // The node-only map remains as a compatibility/diagnostic view.
         TMap<FRouteNodeId, TArray<FRouteNodeId>>
             _ComponentTransfersByRouteNode;
@@ -65,12 +65,22 @@ namespace ck::pathnetwork
         int32 _ComponentTransferRejectedByCellCapCount = 0;
 
         // Optional, symmetric off-network shortcuts between nearby nodes in the
-        // same connected component. Built per query from an independently opt-in
-        // local-gap policy.
+        // same connected component.
         TMap<int32, TArray<int32>> _LocalNetworkShortcutsByNode;
         int32 _LocalNetworkShortcutCandidateCount = 0;
         int32 _LocalNetworkShortcutCandidateSourceCount = 0;
         bool _LocalNetworkShortcutBudgetExceeded = false;
+    };
+
+    // Per-query data starts as a copy of FRouteGraphStaticData, then adds
+    // start/goal overlay points and navmesh-derived repricing. It must never be
+    // retained as the network-static cache value.
+    struct CKPATHNETWORK_API FRouteGraphSharedData
+        : FRouteGraphStaticData
+    {
+        // The default preserves the runtime direct-fallback route. Editor diagnostics can
+        // explicitly omit this synthetic edge when asking whether the network is connected.
+        bool _AllowDirectStartToGoal = true;
 
         // Off-path hops repriced by the navmesh validation pass. Key = PackOffPathKey(from, to).
         TMap<uint64, float> _RepricedOffPathCosts;
@@ -95,6 +105,76 @@ namespace ck::pathnetwork
         Get_IsEndpointJoinPermitted(float InDistance) const -> bool
         {
             return _EndpointJoinMaxDistance <= 0.0f || InDistance <= _EndpointJoinMaxDistance;
+        }
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // Exact key for the subset of route policy that constructs static graph
+    // augmentation. Zero is canonicalized so +0 and -0 obey TMap's equal-key
+    // hash contract.
+    struct CKPATHNETWORK_API FRouteGraphStaticDataKey
+    {
+        float _NetworkGapCostMultiplier = 0.0f;
+        float _ComponentTransferMaxDistance = 0.0f;
+        float _LocalNetworkShortcutMaxDistance = 0.0f;
+
+        static auto
+        TryFromPolicy(
+            const FRouteCostPolicy& InPolicy)
+            -> TOptional<FRouteGraphStaticDataKey>
+        {
+            const bool InputsAreValid =
+                FMath::IsFinite(
+                    InPolicy._NetworkGapCostMultiplier)
+                && InPolicy._NetworkGapCostMultiplier
+                    >= 1.0f
+                && FMath::IsFinite(
+                    InPolicy._ComponentTransferMaxDistance)
+                && InPolicy._ComponentTransferMaxDistance
+                    >= 0.0f
+                && FMath::IsFinite(
+                    InPolicy._LocalNetworkShortcutMaxDistance)
+                && InPolicy._LocalNetworkShortcutMaxDistance
+                    >= 0.0f;
+            if (NOT InputsAreValid)
+            { return {}; }
+
+            const auto CanonicalizeZero =
+                [](const float InValue)
+                {
+                    return InValue == 0.0f
+                        ? 0.0f
+                        : InValue;
+                };
+            return TOptional<FRouteGraphStaticDataKey>{
+                FRouteGraphStaticDataKey{
+                    CanonicalizeZero(
+                        InPolicy._NetworkGapCostMultiplier),
+                    CanonicalizeZero(
+                        InPolicy._ComponentTransferMaxDistance),
+                    CanonicalizeZero(
+                        InPolicy._LocalNetworkShortcutMaxDistance)}};
+        }
+
+        auto
+        operator==(
+            const FRouteGraphStaticDataKey&) const
+            -> bool = default;
+
+        friend auto
+        GetTypeHash(
+            const FRouteGraphStaticDataKey& InKey)
+            -> uint32
+        {
+            return HashCombineFast(
+                HashCombineFast(
+                    ::GetTypeHash(
+                        InKey._NetworkGapCostMultiplier),
+                    ::GetTypeHash(
+                        InKey._ComponentTransferMaxDistance)),
+                ::GetTypeHash(
+                    InKey._LocalNetworkShortcutMaxDistance));
         }
     };
 

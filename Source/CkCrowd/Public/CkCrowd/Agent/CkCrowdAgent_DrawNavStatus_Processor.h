@@ -13,14 +13,14 @@
 
 namespace ck
 {
-    // Draws an X + fail-reason label above any agent whose nav request resolved to Failed or is
-    // stuck Pending. Deliberately NOT CVar-gated: an agent that cannot path is broken, and that
-    // must be visible the moment PIE starts.
+    // Draws the current or retained path-trouble evidence when the per-user world-overlay toggle is on.
     class CKCROWD_API FProcessor_CrowdAgent_DrawNavStatus : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_DrawNavStatus,
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_Nav_PathResult>,
+            ck::TReadOnly<FFragment_CrowdAgent_PathFollow>,
+            ck::TReadOnly<FFragment_CrowdAgent_PathTrouble>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -32,7 +32,9 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_Nav_PathResult& InPathResult) -> void;
+            const FFragment_Nav_PathResult& InPathResult,
+            const FFragment_CrowdAgent_PathFollow& InPathFollow,
+            const FFragment_CrowdAgent_PathTrouble& InPathTrouble) -> void;
     };
 }
 

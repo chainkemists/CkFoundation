@@ -319,6 +319,19 @@ private:
             ToolTip = "Soft clearance from navmesh boundaries while compiling on-network routes. Zero disables the preference."))
     float _DesiredNavmeshClearance = 75.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (
+            AllowPrivateAccess = true,
+            ClampMin = "0.0",
+            ClampMax = "100.0",
+            UIMin = "0.0",
+            UIMax = "100.0",
+            Delta = "1.0",
+            Units = "cm",
+            DisplayName = "Post-Nav Ribbon Tolerance",
+            ToolTip = "Additional ribbon allowance for small detours introduced by Unreal navmesh resolution after the compiled sidewalk path already passed strict containment. Zero disables the additional allowance."))
+    float _NavmeshResolvedRibbonTolerance = 10.0f;
+
 public:
     CK_PROPERTY(_OffPathCostMultiplier);
     CK_PROPERTY(_NearEndpointCostMultiplier);
@@ -332,6 +345,7 @@ public:
     CK_PROPERTY(_CorridorWaypointSpacing);
     CK_PROPERTY(_CornerSmoothingDistance);
     CK_PROPERTY(_DesiredNavmeshClearance);
+    CK_PROPERTY(_NavmeshResolvedRibbonTolerance);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -444,6 +458,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
     float _DesiredNavmeshClearance = 75.0f;
 
+    // Additional ribbon allowance applied only after Unreal navmesh resolution has altered an
+    // already-contained on-ribbon path. It does not relax graph search or corridor compilation.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true, ClampMin="0.0", ClampMax="100.0"))
+    float _NavmeshResolvedRibbonTolerance = 10.0f;
+
     // The network this follower routes on. Assign at Add() time (spawn code holds the network
     // handle) or later via Request_SetNetwork; may also be supplied per-request.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
@@ -473,6 +493,7 @@ public:
     CK_PROPERTY(_CorridorWaypointSpacing);
     CK_PROPERTY(_CornerSmoothingDistance);
     CK_PROPERTY(_DesiredNavmeshClearance);
+    CK_PROPERTY(_NavmeshResolvedRibbonTolerance);
     CK_PROPERTY(_Network);
     CK_PROPERTY(_OwnerToken);
     CK_PROPERTY_GET(_TuningRevision);
@@ -519,11 +540,15 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FCk_Handle_PathNetwork _Network;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    FGameplayTag _NavQueryFilter;
+
     int32 _TuningRevision = 0;
 
 public:
     CK_PROPERTY_GET(_GoalLocation);
     CK_PROPERTY(_Network);
+    CK_PROPERTY(_NavQueryFilter);
     CK_PROPERTY(_TuningRevision);
 
 public:

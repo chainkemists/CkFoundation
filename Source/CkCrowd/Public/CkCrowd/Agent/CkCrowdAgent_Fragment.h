@@ -6,6 +6,9 @@
 #include "CkEcs/Signal/CkSignal_Macros.h"
 
 #include "CkNavigation/NavAreaMarkup/CkNavAreaMarkup_Utils.h"
+#include "CkNavigation/Nav/CkNav_Fragment_Data.h"
+
+#include "CkPathNetwork/Network/CkPathNetwork_Fragment_Data.h"
 
 #include <variant>
 
@@ -76,6 +79,44 @@ namespace ck
         CK_PROPERTY_GET(_GoalLocation);
         CK_PROPERTY_GET(_NetworkEpoch);
         CK_PROPERTY_GET(_TuningRevision);
+    };
+
+    // Value-only record of the last pathfinding problem in the current movement episode. A
+    // PathNetwork failure survives the CkNavigation fallback overwriting FFragment_Nav_PathResult,
+    // so both the in-world overlay and the Crowd Debugger can explain which layer had trouble.
+    // Reset only when a genuinely new MoveTo is accepted or Stop abandons the goal.
+    struct CKCROWD_API FFragment_CrowdAgent_PathTrouble
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_PathTrouble);
+
+        friend class FProcessor_CrowdAgent_HandleRequests;
+        friend class FProcessor_CrowdAgent_OnRouteResolved;
+        friend class FProcessor_CrowdAgent_OnPathResolved;
+
+        static constexpr auto FadeDurationSeconds = 5.0;
+
+    private:
+        FVector _AgentLocation = FVector::ZeroVector;
+        FVector _GoalLocation = FVector::ZeroVector;
+        double _EventTimeSeconds = -1.0;
+        ECk_PathNetwork_RouteFailReason _PathNetworkFailReason = ECk_PathNetwork_RouteFailReason::None;
+        ECk_Nav_PathStatus _NavigationStatus = ECk_Nav_PathStatus::None;
+        ECk_Nav_PathFailReason _NavigationFailReason = ECk_Nav_PathFailReason::None;
+        bool _HasEvent = false;
+        bool _HadPathNetworkFailure = false;
+        bool _UsedNavigationFallback = false;
+
+    public:
+        CK_PROPERTY_GET(_AgentLocation);
+        CK_PROPERTY_GET(_GoalLocation);
+        CK_PROPERTY_GET(_EventTimeSeconds);
+        CK_PROPERTY_GET(_PathNetworkFailReason);
+        CK_PROPERTY_GET(_NavigationStatus);
+        CK_PROPERTY_GET(_NavigationFailReason);
+        CK_PROPERTY_GET(_HasEvent);
+        CK_PROPERTY_GET(_HadPathNetworkFailure);
+        CK_PROPERTY_GET(_UsedNavigationFallback);
     };
 
     // Per-frame displacement staging, consumed solely by FProcessor_CrowdAgent_ConstrainToNavmesh.
@@ -150,6 +191,10 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Idle);
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_PathPending);
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Walking);
+
+    // One-shot guard while an initial PathNetwork failure is being retried through CkNavigation.
+    // Cleared when that nav request resolves, or when a new movement episode replaces it.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_PathNetworkFallbackPending);
 
     // Nothing stamps this today; the steering views carry TExclude<> for it so a future sleep pass
     // is wire-compatible without retro-fitting every view.

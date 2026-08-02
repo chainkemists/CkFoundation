@@ -68,6 +68,7 @@ namespace ck::pathnetwork_editor::authoring::test
         Tuning.Set_CorridorWaypointSpacing(175.0f);
         Tuning.Set_CornerSmoothingDistance(90.0f);
         Tuning.Set_DesiredNavmeshClearance(55.0f);
+        Tuning.Set_NavmeshResolvedRibbonTolerance(12.0f);
         return Tuning;
     }
 
@@ -517,6 +518,8 @@ bool FCk_PathNetworkEditor_Authoring_ApplyCreationIsUndoable_Test::RunTest(
         PersistedTuning.Get_CornerSmoothingDistance(), 90.0f);
     TestEqual(TEXT("apply persists desired navmesh clearance"),
         PersistedTuning.Get_DesiredNavmeshClearance(), 55.0f);
+    TestEqual(TEXT("apply persists post-nav ribbon tolerance"),
+        PersistedTuning.Get_NavmeshResolvedRibbonTolerance(), 12.0f);
 
     TestTrue(TEXT("editor accepts undo for path-network creation"),
         GEditor->UndoTransaction());
@@ -625,6 +628,9 @@ bool FCk_PathNetworkEditor_Authoring_InvalidEnabledRoutePreferencesAreAtomic_Tes
         TuningAfter.Get_CornerSmoothingDistance(), TuningBefore.Get_CornerSmoothingDistance());
     TestEqual(TEXT("invalid apply preserves desired navmesh clearance"),
         TuningAfter.Get_DesiredNavmeshClearance(), TuningBefore.Get_DesiredNavmeshClearance());
+    TestEqual(TEXT("invalid apply preserves post-nav ribbon tolerance"),
+        TuningAfter.Get_NavmeshResolvedRibbonTolerance(),
+        TuningBefore.Get_NavmeshResolvedRibbonTolerance());
     TestEqual(TEXT("invalid apply preserves generated ribbons"),
         Actor->Get_WorldRibbons().Num(), RibbonCountBefore);
     TestEqual(TEXT("invalid apply leaves world dirty state unchanged"),
