@@ -1,0 +1,528 @@
+# Recipe: NS_Lightning_Cast → CkParticles (PLANNED)
+
+Schema and evidence-tag conventions: [README.md](README.md).
+
+## Completion state — READ FIRST
+
+**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+
+No behavior `.ush`, no CPU mirror, no CkUsf look, no cadence row, no texture bake, no test, no gym
+station exists for this effect. Every number below is archaeology read out of the extracted corpus;
+nothing here has been compiled, generated, rendered, or looked at. Sections 7+ are reserved for the
+implementation session.
+
+---
+
+## 1. Source system and provenance
+
+| | |
+|---|---|
+| Source object | `/Game/Vefects/Anime_VFX/Shared/Skills/NS_Lightning_Cast` |
+| Pack | Vefects — *Anime VFX* (third-party marketplace content) |
+| Behavior ID | **not allocated** — take the next free id at implementation time from `ck::particles::NumBehaviors` |
+| CkUsf looks | none yet |
+
+Corpus evidence (regenerate per [README.md](README.md); `Saved/` is machine-local):
+
+- `systems/Vefects/Anime_VFX/Shared/Skills/NS_Lightning_Cast.{json,txt}`
+- `materials/Vefects/Anime_VFX/Shared/Materials/M_VFX_DisAdd_{Part01,Part01_Bright,Part02,Part03_Bright,Part04,Rainbow,Ring01,Star02,Star03,Lightning02,Arrows}.json`
+- `materials/Vefects/Anime_VFX/Shared/Materials/M_VFX_DisAdd_Ring04.json` (family reference for the diff)
+- `textures/Vefects/Anime_VFX/Shared/Textures/T_VFX_{Part_01,Part_02,Part_03,Part_04,Ring_01,Ring_02,Star_02,Star_03,Lightning_03,Noise_02,LUT_Rainbow_01,WhitePixel}.json`
+
+**The source Niagara asset was never opened in the Niagara editor.** Every fact below is `[corpus]`
+unless tagged otherwise.
+
+> ### TWO SYSTEMS SHARE THIS NAME — take the right one
+> `[corpus]` The pack ships a second `NS_Lightning_Cast` at
+> `Vefects/Anime_Stylized_VFX/VFX/Particles/`. It is a different, **parameterized** system:
+> 19 emitters, and a **19-entry `userParameters` list** (`User.Glow Color 01..03`,
+> `User.Flare Color 01..04`, `User.Flare Stretched Color 01..04`, `User.Rainbow Color`,
+> `User.Ring Color 01`, `User.Star Color 01`, `User.Star Big Color 01`, three colour-curve data
+> interfaces, and `User.Scale Overall`). It renders through `MI_VFX_*` instances
+> (`MI_VFX_Glow_01`, `MI_VFX_Lightning_02`, `MI_VFX_Lens_Rainbow_01`, …).
+>
+> **Fastest one-line discriminator:** `userParameters` is **empty** on the system this recipe
+> documents and **19 entries long** on the sibling. Second check: `M_VFX_DisAdd_*` materials (this
+> one) vs `MI_VFX_*` materials (sibling).
+>
+> This recipe recreates the **`Anime_VFX/Shared/Skills`** one.
+
+---
+
+## 2. System anatomy `[corpus]`
+
+**21 CPU emitters — 19 enabled, 2 disabled. All `LocalSpace: false` (WORLD space),
+`Determinism: false`, `Bounds: Dynamic`.** `userParameters` is **empty**.
+
+Renderers: **18 camera-facing sprites** (`Unaligned` / `FaceCamera` / `Sort: None`),
+**1 velocity-aligned sprite** (Sparkles_Stretched), **1 camera sprite with `SubUV: 2x2`**
+(Lightning), and 2 velocity-aligned sprites on the DISABLED Arrow emitters.
+No mesh renderers, no ribbons, no light renderers, no events, no GPU sims.
+
+**≈ 30 burst particles per loop plus ≈ 13 rate-spawned** (see the arithmetic under the table).
+
+| # | Emitter | Enabled | Spawn | t (s) | Lifetime (s) | Sprite size (effective) | Dyn 1 | Renderer | Material |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | Glow_01 | yes | burst 1 | 0 | 1 | Uniform **550** | 1 | camera sprite | `Part01` |
+| 2 | Glow_02 | yes | burst 1 | 0 | 1 | Uniform **200** | **0** | camera sprite | `Part02` |
+| 3 | Glow_03 | yes | burst 1 | 0 | 1 | Uniform **250** | **2** | camera sprite | `Part01` |
+| 4 | Raimbow *(sic)* | yes | burst 1 | 0.1 | 0.3 | Uniform **350** | **0.5** | camera sprite | `Rainbow` |
+| 5 | **Arrow** | **DISABLED** | burst 1 | 0 | 1.5 | Non-Uniform (170, 170) | 0 | velocity-aligned | `Arrows` |
+| 6 | **BigArrow** | **DISABLED** | burst 1 | 0 | 1.5 | Non-Uniform (150, 240) | 0 | velocity-aligned | `Arrows` |
+| 7 | Ring | yes | burst 1 | 0.05 | 0.75 | Uniform **150** | curve | camera sprite | `Ring01` |
+| 8 | Sparkles | yes | burst **10** | 0.05 | rand — §5 | Random Uniform **10 … 20** | 1 | camera sprite | `Part01_Bright` |
+| 9 | Flare_01 | yes | burst 1 | 0.1 | 0.5 | Uniform **50** | 1 | camera sprite | `Part02` |
+| 10 | Flare_02 | yes | burst 1 | 0.1 | 0.5 | Uniform **50** | 1 | camera sprite | `Part02` |
+| 11 | Sparkles_Stretched | yes | **rate 20/s**, loop **0.4 s, Once** | — | rand — §5 | Random Non-Uniform (25, 70) … (40, 60) | **0** | **velocity-aligned** | `Part04` |
+| 12 | Big_Star | yes | burst 1, loop **0.3 s, Once** | 0 | 0.3 | Uniform **200** | **0** | camera sprite | `Star02` |
+| 13 | Flare_Stretched_01 | yes | burst 1 | 0 | 1.2 | Non-Uniform **(700, 100)** | 1 | camera sprite | `Part01` |
+| 14 | Flare_Stretched_02 | yes | burst 1 | 0 | 1.2 | Non-Uniform **(700, 100)** | 1 | camera sprite | `Part03_Bright` |
+| 15 | Flare_Stretched_03 | yes | burst 1 | 0 | 1.2 | Non-Uniform **(1400, 180)** | 1 | camera sprite | `Part03_Bright` |
+| 16 | Flare_Stretched_04 | yes | burst 1 | 0 | 1.2 | Non-Uniform **(400, 70)** | 1 | camera sprite | `Star03` |
+| 17 | Star_01 | yes | burst 1 | **0.85** | **0.1** | Uniform **70** | **0** | camera sprite | `Star02` |
+| 18 | Star_02 | yes | burst 1 | **0.95** | **0.1** | Uniform **70** | **0** | camera sprite | `Star02` |
+| 19 | Lightning | yes | burst **3** @0 **+ rate curve**, loop **0.5 s, Once** | 0 | rand — §5 | Random Uniform **30 … 100** | curve | camera sprite, **SubUV 2×2** | `Lightning02` |
+| 20 | Flare_03 | yes | burst **2** | 0.1 | 0.4 | Uniform **250** | 1 | camera sprite | `Part03_Bright` |
+| 21 | Flare_04 | yes | burst 1 | 0 | 0.3 | Uniform **80** | **2** | camera sprite | `Part01_Bright` |
+
+Dynamic material parameters 2, 3 and 4 are **0 on every emitter**; only `Write Parameter Index 0` is
+true anywhere.
+
+**Per-loop count arithmetic** `[inferred, from the table]`: burst = 1+1+1+1+1+10+1+1+1+1+1+1+1+1+1+3+2+1 = **30**;
+rate-spawned = Sparkles_Stretched 20/s × 0.4 s = **8**, Lightning ∫(20 → 0 linear over 0.5 s) = **5**.
+Total ≈ **43** particles per system cycle, of which 30 are deterministic burst slots.
+
+**Cadence — this system has THREE distinct loop cadences and two life-cycle modes.** `[corpus]`
+
+| Life Cycle Mode | Emitters | Loop Behavior | Loop Duration |
+|---|---|---|---|
+| **System** (own loop rows are inert) | 18 of 21 | stored `Infinite` (14) / stored `Once` (4: Star_01, Star_02, and both disabled Arrows are `Infinite`; Star_01/Star_02 store `Once`) | stored 1.0 (most) or 0.3 (Star_01, Star_02) |
+| **Self** (own loop rows apply) | **Sparkles_Stretched, Big_Star, Lightning** | **Once** | **0.4 / 0.3 / 0.5** |
+
+The three `Self` emitters are genuine one-shots: they run once for 0.4 / 0.3 / 0.5 s and do not
+repeat, inside a system whose other 18 emitters cycle. **This is the fact that decides §6.1** —
+see §6.5, gap 2.
+
+`[unresolved: the system-level loop duration is NOT in the corpus export — CkAssetExporter writes
+emitter stacks only. 1.0 s is what the System-mode emitters store; the Star_01 burst at t = 0.85 and
+Star_02 at t = 0.95 only fire if the cycle is ≥ 0.95 s, which is consistent with 1.0 s and is the
+strongest evidence available for it.]`
+
+> **Star_01 / Star_02 are NOT dead emitters, even though their stored `Loop Duration` (0.3) is
+> shorter than their stored `Spawn Time` (0.85 / 0.95).** Both run `Life Cycle Mode = System`, so
+> their own loop rows are inert and the system's cycle governs. Reading the rows at face value would
+> wrongly delete two visible layers.
+
+---
+
+## 3. Mesh geometry
+
+**N/A — no mesh renderers.** All 21 renderers are `NiagaraSpriteRendererProperties`.
+
+---
+
+## 4. Material family + delta table `[corpus]`
+
+All eleven materials (including the two on the disabled Arrow emitters) are instances of ONE parent,
+`/Game/Vefects/Anime_VFX/Shared/Materials/Parents/M_VFX_DissolveAdd` — the family CkUsf already
+implements as `CkUsf_Look_DissolveAdd` in `/CkUsf/Looks/DissolveAdd.ush`.
+
+Every one: `MD_Surface`, `BLEND_Translucent`, `MSM_Unlit`, `twoSided: false`, outputs
+`EmissiveColor` + `Opacity` only, dynamic-parameter channels **`dissolve`, `distortion`, `offset`,
+`core_color`**, expression histogram identical to the family reference.
+
+Deltas versus `M_VFX_DisAdd_Ring04` (reference: `Brightness 30`, `Color_CoreDifferent 1`,
+`Core_Intensity 1`, `Core_Power 1`, `Glow_Intensity 1`, `Opacity_Boldness 1`, `Opacty_DepthFade 10`,
+`Opacty_StepAdd 0.1`, `Gradient_Invert 0`, `GradientMap_Displacement 0.1`, `Dissolve_Speed_X/Y 0.2`,
+`Distortion_Scale_X/Y 0.1`, `Distortion_Intensity 0`, `Dissolve 0`, all `*_Speed`/`*_Offset` 0,
+`Color_Core RGBA(1,1,1,0)`, `GradientMap_Tex T_VFX_WhitePixel`, `GradientShape_Tex T_VFX_Noise_02`):
+
+| Material | Main_Tex / Color_Tex | Dissolve_Tex | Distortion_Tex | Brightness | Other deltas |
+|---|---|---|---|---|---|
+| `Part01` | `T_VFX_Part_01` | `T_VFX_Part_01` | `T_VFX_Noise_02` | **1** | `Color_CoreDifferent 0`; `Core_Intensity 0`; `Dissolve_Speed_X/Y 0`; `Distortion_Scale_X/Y 1`; `Gradient_Invert 0.5`; `Opacity_Boldness 0.5`; `Opacty_DepthFade 20` |
+| `Part01_Bright` | `T_VFX_Part_02` | `T_VFX_Part_02` | `T_VFX_Noise_02` | **10** | `Color_CoreDifferent 0`; `Dissolve_Speed_X/Y 0`; `Distortion_Scale_X/Y 1`; `Gradient_Invert 0.5`; `Opacty_DepthFade 20` |
+| `Part02` | `T_VFX_Part_02` | `T_VFX_Part_02` | `T_VFX_Noise_02` | **1** | as `Part01_Bright` plus `Core_Intensity 0`, **`Glow_Intensity 0.3`**, `Opacity_Boldness 0.5` |
+| `Part03_Bright` | `T_VFX_Part_03` | `T_VFX_Part_03` | `T_VFX_Noise_02` | **10** | `Color_CoreDifferent 0`; **`CamOffset 50`**; `Dissolve_Speed_X/Y 0`; `Distortion_Scale_X/Y 1`; `Gradient_Invert 0.5`; `Opacty_DepthFade 20` |
+| `Part04` | `T_VFX_Part_04` | `T_VFX_Part_04` | `T_VFX_Noise_02` | **6** | `Color_CoreDifferent 0`; `Core_Intensity 0`; `Dissolve_Speed_X/Y 0`; `Distortion_Scale_X/Y 1`; **`Opacty_DepthFade 30`** |
+| `Rainbow` | **`T_VFX_Ring_02`** (Color_Tex `T_VFX_Part_01`) | `T_VFX_Part_01` | `T_VFX_Noise_02` | **1** | `Color_CoreDifferent 0`; `Core_Intensity 0`; `Dissolve_Speed_X/Y 0`; `Distortion_Scale_X/Y 1`; **`GradientMap_Tex T_VFX_LUT_Rainbow_01`**; **`GradientMap_Displacement 0.9`**; **`GradientShape_Tex T_VFX_Part_01`**; **`Gradient_Invert 2`**; **`Opacity_Boldness 1.5`**; **`Opacty_StepAdd 0.3`**; `Opacty_DepthFade 20` |
+| `Ring01` | `T_VFX_Ring_01` | `T_VFX_Ring_01` | `T_VFX_Noise_02` | **10** | `Color_CoreDifferent 0`; `Core_Intensity 0`; `Dissolve_Speed_X/Y 0`; `Distortion_Scale_X/Y 1`; `Opacty_DepthFade 20` |
+| `Star02` | `T_VFX_Star_02` | `T_VFX_Star_02` | `T_VFX_Noise_02` | **6** | `Color_CoreDifferent 0`; `Core_Intensity 0`; `Dissolve_Speed_X/Y 0`; `Distortion_Scale_X/Y 1` |
+| `Star03` | `T_VFX_Star_03` | `T_VFX_Star_03` | `T_VFX_Noise_02` | **10** | `Color_CoreDifferent 0`; `Core_Intensity 0`; `Dissolve_Speed_X/Y 0`; `Distortion_Scale_X/Y 1` |
+| `Lightning02` | `T_VFX_Lightning_03` | `T_VFX_Lightning_03` | *(reference `T_VFX_Noise_04`)* | **15** | `Color_CoreDifferent 0`; `Core_Intensity 0`; **`Core_Power 0`**; `Dissolve_Speed_X/Y 0`; **`Distortion_Intensity 0.5`**; `Distortion_Scale_X/Y 1`; **`Distortion_Speed_X/Y 0.7`**; `Opacty_DepthFade 20` |
+| `Arrows` *(disabled emitters only)* | `T_VFX_Arrow_01` | `T_VFX_Arrow_01` | `T_VFX_Noise_02` | **10** | `Color_CoreDifferent 0`; `Core_Intensity 0`; `Dissolve_Speed_X/Y 0`; `Distortion_Scale_X/Y 1`; `Gradient_Invert 0.5`; `Opacty_DepthFade 20` |
+
+Two instances carry live branches the rest do not:
+
+1. **`Lightning02` is the only instance with live distortion** (`Distortion_Intensity 0.5`,
+   `Distortion_Speed 0.7/0.7`) — a fast-panning UV warp on the lightning bolts. It is also the only
+   one with `Core_Power 0`.
+2. **`Rainbow` is the only instance with a live gradient-map (LUT) chain.** Everywhere else in the
+   family the `GradientMap_Tex` is `T_VFX_WhitePixel` and both shipped recipes dropped the chain as a
+   provable no-op. That justification does not hold here. See §6.5, gap 5.
+
+Referenced textures `[corpus]` (all 512×512, `sRGB: false`, `TC_Alpha`, `TEXTUREGROUP_World`
+greyscale masks unless noted):
+
+| Texture | Format | Address | Role |
+|---|---|---|---|
+| `T_VFX_Part_01` | `TSF_G8` | `TA_Clamp`/`TA_Clamp` | Part01; Rainbow dissolve + gradient shape |
+| `T_VFX_Part_02` | `TSF_G8` | `TA_Clamp`/`TA_Clamp` | Part01_Bright, Part02 |
+| `T_VFX_Part_03` | `TSF_G8` | `TA_Wrap`/`TA_Wrap` | Part03_Bright |
+| `T_VFX_Part_04` | `TSF_G16` | `TA_Wrap`/`TA_Wrap` | Part04 (the velocity-aligned streak) |
+| `T_VFX_Ring_01` | `TSF_G16` | `TA_Wrap`/`TA_Wrap` | Ring01 |
+| `T_VFX_Ring_02` | `TSF_G16` | `TA_Wrap`/`TA_Wrap` | Rainbow main |
+| `T_VFX_Star_02` | `TSF_G16` | `TA_Wrap`/`TA_Wrap` | Star02 |
+| `T_VFX_Star_03` | `TSF_G16` | `TA_Wrap`/`TA_Wrap` | Star03 |
+| **`T_VFX_Lightning_03`** | **`TSF_BGRA8`** — a **colour** texture, not a mask | `TA_Wrap`/`TA_Wrap` | Lightning02 main + dissolve; **this is the 2×2 sub-UV flipbook sheet** |
+| `T_VFX_Noise_02` | `TSF_G16` | `TA_Wrap`/`TA_Wrap` | Distortion_Tex on ten of eleven (**dead branch on all but Lightning02**) + GradientShape_Tex on ten |
+| `T_VFX_LUT_Rainbow_01` | `TSF_BGRA8`, **512×2**, `sRGB: true`, `TC_Default` | `TA_Wrap`/`TA_Wrap` | Rainbow's gradient LUT |
+| `T_VFX_WhitePixel` | `TSF_RGBA16`, 1×1, `sRGB: true`, `TC_Default` | `TA_Wrap` | no-op GradientMap on ten |
+
+---
+
+## 5. Per-layer runtime curves `[corpus]`
+
+`t` = NormalizedAge (0 → 1 over that emitter's own lifetime). `C` = constant key, `L` = linear key —
+transcribed verbatim.
+
+**Ten emitters share one Scale Color + one Scale Sprite Size shape.** Where an emitter is listed as
+using "the shared fade", it means exactly:
+
+- Scale Color · `Scale RGBA = R (0,1)L (1,1)L | G (0,1)L (1,1)L | B (0,1)L (1,1)L | A (0,1)L (1,0)L`
+  (RGB untouched; **alpha ramps linearly 1 → 0 over the whole life**), `Scale Alpha 1`,
+  `Scale RGB (1,1,1)`
+- Scale Sprite Size · Uniform Curve `(0, 0.5)C (0.1, 1)L (1, 1)L`
+
+Those layers have **no `Color` module at all** — they keep their Initialize Particle colour and fade.
+
+### 1 · Glow_01 — burst 1 @ t=0, life 1 s, size 550
+
+- Initialize color `RGBA(0.0648033, 0.0307135, 1, 1)` — deep blue
+- Shared fade · dyn params `[1, 0, 0, 0]`
+
+### 2 · Glow_02 — burst 1 @ t=0, life 1 s, size 200
+
+- Initialize color `RGBA(0.863157, 0.0262412, 1, 1)` — magenta
+- Shared fade · dyn params `[**0**, 0, 0, 0]`
+
+### 3 · Glow_03 — burst 1 @ t=0, life 1 s, size 250
+
+- Initialize color `RGBA(1, 0.819765, 0.499, 1)` — warm white
+- A `Color` module is present with no override (stored `Scale Alpha 1`, `Scale Color (1,1,1)`);
+  the Scale Color module below is what animates it
+- Shared fade · dyn params `[**2**, 0, 0, 0]` — the highest static dissolve in the system
+
+### 4 · Raimbow — burst 1 @ t=**0.1**, life 0.3 s, size 350
+
+- Initialize color `RGBA(0.913099, 0.913099, 0.913099, **0.1**)`
+- Sprite rotation: `Sprite Rotation Mode = Random`, angle **0 … 360**
+- Scale Color: `Scale RGBA = R (0.328403, 0.5)L | G (0.328403, 0.5)L | B (0.328403, 0.5)L |`
+  `A (0, 0)L (0.328403, 1)L (1, 0)L` — RGB halved for the whole life (single key), alpha rises to 1
+  at t = 0.328403 then falls
+- Scale Sprite Size, Uniform Curve: `(0, 0.5)C (0.2, 0.9)C (1, 1)L`
+- Dyn params `[**0.5**, 0, 0, 0]`
+
+### 5 · Arrow — **DISABLED** (recorded so its absence is a decision, not an oversight)
+
+- burst 1 @ t=0, life 1.5 s, Sprite Size Mode Non-Uniform **(170, 170)**,
+  `Position Offset (0, 0, **−119.316**)`, `Add Velocity (0, 0, **550**)`, velocity-aligned,
+  material `Arrows`
+- Velocity Scale: `X/Y/Z (0, 1)C (0.2, 0.3)C (1, 0.05)C`
+- Color from Curve:
+  R `(0, 1)C (0.0784787, 1)L (0.283731, 1)L (0.625415, 0.672443)L (0.947781, 0.223228)C` ·
+  G `(0, 0.913099)C (0.0784787, 0.501026)L (0.283731, 0.0773835)L (0.625415, 0.021219)L (0.947781, 0)C` ·
+  B `(0, 0.584079)C (0.0784787, 0.0559999)L (0.283731, 0.025)L (0.625415, 0.0168074)L (0.947781, 0.116971)C` ·
+  A `(0.0869303, 1)C (1, 0)C`
+- Two stacked size curves: Uniform `(0, 0.4)C (0.1, 1)C (1, 0.4)C`; Non-Uniform
+  `X (0, 0.2)C (0.3, 0.7)C | Y (0.2, 1)L (1, 1.2)L`
+
+### 6 · BigArrow — **DISABLED**
+
+- burst 1 @ t=0, life 1.5 s, Sprite Size Non-Uniform **(150, 240)**,
+  `Position Offset (0, 0, **−52.2087**)`, `Add Velocity (0, 0, **150**)`, velocity-aligned, `Arrows`
+- Velocity Scale: `X/Y/Z (0, 1)C (0.3, 0.05)C`
+- Color from Curve: same key times as Arrow, values
+  R `(0,1)C (0.0784787,1)L (0.283731,1)L (0.625415,0.672443)L (0.947781,0.223228)C` ·
+  G `(0,0.913099)C (0.0784787,0.489926)L (0.283731,0.0925239)L (0.625415,0.021219)L (0.947781,0)C` ·
+  B `(0,0.584079)C (0.0784787,0.035)L (0.283731,0.0409999)L (0.625415,0.0168074)L (0.947781,0.116971)C` ·
+  A `(0.0869303, 1)C (1, 0)C`
+
+### 7 · Ring — burst 1 @ t=**0.05**, life 0.75 s, size 150
+
+- Initialize color `RGBA(0.913099, 0.191202, 1, 0.608)`
+- Sprite rotation: `Random`, 0 … 360
+- Dyn param 1 (`dissolve`) — Float from Curve: `(0, 0)C (1, -1)C`; params 2/3/4 = 0
+- Scale Sprite Size, Uniform Curve: `(0, 0.5)C (0.1, 0.9)C (1, 1)C`
+- **No colour animation at all** — Particle Update is
+  `Particle State → Dynamic Material Parameters → Scale Sprite Size`. The ring holds its initialize
+  colour and alpha 0.608 for its whole life and disappears purely by dissolve.
+- Inert pins present in the export: `Lifetime Min 0.3 / Max 0.7`,
+  `Uniform Sprite Size Min 150 / Max 160`
+
+### 8 · Sparkles — burst **10** @ t=**0.05**, size Random Uniform 10 … 20
+
+- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins
+  `Lifetime Min 0.5 / Max 1.5`.
+  `[unresolved: which pin is live — `Lifetime Mode = Random` reads Min/Max, but the Direct-Set pin
+  carries the override. NS_BasicAttack §2 resolved the identical shape in favour of the override.]`
+- Spawn shape: **Sphere Location**, `Sphere Radius **0.2**` (effectively a point),
+  `Non Uniform Scale (1,1,1)`, `Sphere Orientation Axis (1,0,0)`, `Surface Only false`
+- `Add Velocity from Point`: `Velocity Strength = Random Range Float 001` **350 … 500**,
+  `Origin Offset (0,0,0)`, `Velocity Falloff Distance 100` → an omnidirectional 350–500 u/s spray
+- Sprite rotation: `Random`, 0 … 360
+- Velocity Scale (all three axes identical): `(0, 1)C (0.2, 0.15)C (1, 3.91223e-08)C`
+- Color from Curve:
+  - R `(0.615756, 0.50417)C (0.936915, 0)C`
+  - G `(0.615756, 0.104)C (0.936915, 0.0896671)C`
+  - B `(0.615756, 1)C (0.936915, 1)C`
+  - A `(0.613341, 1)C (1, 0)L`
+- Scale Sprite Size, Uniform Curve: `(0, 0)C (0.1, 1)C (1, 0)C`
+- `Color.Scale Alpha 1`, dyn params `[1, 0, 0, 0]`
+
+### 9 · Flare_01 — burst 1 @ t=**0.1**, life 0.5 s, size 50
+
+- Initialize color `RGBA(0.102242, 0.658375, 1, 0.2)` — cyan
+- Shared fade · dyn params `[1, 0, 0, 0]`
+
+### 10 · Flare_02 — burst 1 @ t=**0.1**, life 0.5 s, size 50
+
+- Initialize color `RGBA(0.102242, 1, 0.838799, 0.258)` — mint
+- Shared fade · dyn params `[1, 0, 0, 0]`
+
+### 11 · Sparkles_Stretched — **rate 20/s**, loop **0.4 s Once** (`Life Cycle Mode = Self`)
+
+- Velocity-aligned sprite, material `Part04`
+- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins
+  `Lifetime Min 0.3 / Max 0.6` `[unresolved — same shape as above]`
+- Sprite Size Mode **Random Non-Uniform**: `Sprite Size Min **(25, 70)**`,
+  `Sprite Size Max **(40, 60)**` — note Min.y > Max.y, an authored inversion; the exporter reports
+  them verbatim `[corpus]`
+- Spawn shape: **Sphere Location**, `Sphere Radius **0.1**`, `Non Uniform Scale (1,1,1)`
+- `Add Velocity from Point`: strength `Random Range Float 001` **500 … 1500**
+- Velocity Scale: `X/Y/Z (0, 1)C (0.2, 0.15)C (1, **−9.09372e-09**)C`
+- Color from Curve:
+  - R `(0, 1)C (0.079686, 1)L (0.290975, 0.646925)L (1, 0.223228)C`
+  - G `(0, 0.913099)C (0.079686, 0.134)L (0.290975, 0.14)L (1, 0)C`
+  - B `(0, 0.584079)C (0.079686, 0.731716)L (0.290975, 1)L (1, 0.116971)C`
+  - A `(0.080893, 1)L (1, 0)C`
+- **Three stacked size modules** (order matters — they multiply):
+  1. Scale Sprite Size (Uniform Curve mode): uniform `(0, 0)C (0.1, 1)C (1, 0)C`; the non-uniform
+     curve `X (0,0)L (1,1)L | Y (0,0)L (1,1)L` is present but inert under Uniform mode
+  2. Scale Sprite Size 001 (Non-Uniform Curve mode): `X (1, 1)L | Y (0, 1)C (0.3, 0.25)C (1, 0.2)C`
+     (its uniform curve `(0,0)L (1,1)L` is inert under Non-Uniform mode)
+  3. **Scale Sprite Size by Speed**: `Scale Factor Curve (0, 0)L (1, 1)L`,
+     `Velocity Threshold 1000`, `Min Scale Factor (1, 1)`, `Max Scale Factor (1, 2)` — stretches the
+     streak up to 2× along its length at ≥1000 u/s
+- `Color.Scale Alpha **0.8**`, dyn params `[**0**, 0, 0, 0]`
+
+### 12 · Big_Star — burst 1 @ t=0, loop **0.3 s Once** (`Self`), life 0.3 s, size 200
+
+- Initialize color `RGBA(1, 0.184475, 0.386429, 0.4)`
+- Velocity Scale: `X/Y/Z (0, 1)C (0.2, 0.25)C (1, −0)C` — inert, the emitter adds no velocity
+- Scale Sprite Size, Uniform Curve: `(0, **−3.11599e-08**)C (0.1, 1)C (1, 0)C`
+- **No colour animation** — Particle Update is
+  `Scale Velocity → Solve Forces → Particle State → Dynamic Material Parameters → Scale Sprite Size`
+- Dyn params `[**0**, 0, 0, 0]`
+
+### 13–16 · Flare_Stretched_01 … 04 — burst 1 @ t=0 each, life **1.2 s**, Sprite Size Mode Non-Uniform
+
+All four share one Scale Color and one Uniform size curve, and differ in colour, size and material:
+
+- Scale Color · `Scale RGBA = R (0.218533, 1)L (1, 1)L | G (0.218533, 1)L (1, 1)L |`
+  `B (0.218533, 1)L (1, 1)L | A (0.225777, 1)L (1, 0)L` — alpha holds 1 until t = 0.225777, then
+  falls linearly to 0
+- Scale Sprite Size is in **Non-Uniform Curve** mode; its uniform curve `(0, 0.5)C (0.1, 1)L (1, 1)L`
+  is therefore inert, and the non-uniform curve below is what applies
+- Dyn params `[1, 0, 0, 0]` on all four
+
+| # | Emitter | Initialize color | Sprite Size | Non-Uniform Curve Sprite Scale | Material |
+|---|---|---|---|---|---|
+| 13 | Flare_Stretched_01 | `RGBA(0.491021, 0.00182116, 1, 0.5)` | (700, 100) | `X (0, 1)C (0.9, 2.30968e-08)C \| Y (0, 0.3)C (0.2, 1)C` | `Part01` |
+| 14 | Flare_Stretched_02 | `RGBA(1, 0.508881, 0.982251, 0.3)` | (700, 100) | `X (0, 1)C (0.9, 2.30968e-08)C \| Y (0, 0.3)C (0.2, 1)C (0.9, 0.2)L` | `Part03_Bright` |
+| 15 | Flare_Stretched_03 | `RGBA(0.0185002, 0.00402472, 0.130136, 1)` | **(1400, 180)** | `X (0, 1)C (0.9, 2.30968e-08)C \| Y (0, 0.3)C (0.2, 1)C` | `Part03_Bright` |
+| 16 | Flare_Stretched_04 | `RGBA(1, 0.854993, 0.508881, 0.6)` | (400, 70) | `X (0, 1)C (0.9, 2.30968e-08)C \| Y (0, 0.3)C (0.2, 1)C (0.9, 0.0999999)L` | `Star03` |
+
+All four collapse to zero width (`X → ~0` by t = 0.9) while holding or slightly shrinking height —
+a horizontal "lens flare" streak that pinches shut.
+
+### 17 · Star_01 — burst 1 @ t=**0.85**, life **0.1 s**, size 70
+
+- Initialize color `RGBA(1, 0.184475, 0.386429, 0.4)`
+- `Sprite Rotation Angle **45**` (Sprite Rotation Mode is not Random here — a fixed 45° tilt)
+- Scale Sprite Size, Uniform Curve: `(0, 1)C (1, 0)C`
+- **No colour animation** · dyn params `[**0**, 0, 0, 0]`
+- Inert pins: `Lifetime Min 0.3 / Max 0.6`, `Uniform Sprite Size Min 40 / Max 50`,
+  `Sprite Size (10, 10)`
+
+### 18 · Star_02 — burst 1 @ t=**0.95**, life **0.1 s**, size 70
+
+- Identical to Star_01 except `Sprite Rotation Angle **0.1**` and the later spawn time — the two
+  form a two-beat sparkle at the very end of the cycle
+- Scale Sprite Size, Uniform Curve: `(0, 1)C (1, 0)C` · dyn params `[0, 0, 0, 0]`
+
+### 19 · Lightning — burst **3** @ t=0 **+ rate curve**, loop **0.5 s Once** (`Self`)
+
+- Spawn Rate override: `Float from Curve 001` `(0, **20**)C (1, **0**)C` — spawn rate decays from
+  20/s to 0 across the 0.5 s loop, ≈ 5 extra particles
+- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins
+  `Lifetime Min 0.3 / Max 0.5` `[unresolved — same shape as above]`
+- Size: Random Uniform **30 … 100**
+- Spawn shape: `Sphere Location`, `Sphere Radius **0**` — every particle spawns at the origin
+- `Add Velocity from Point`: strength `Random Range Float 001` **350 … 500** — but from a
+  zero-radius sphere the direction is whatever the module produces at the origin
+  `[unresolved: the emitted direction for a radius-0 point source is not derivable from the corpus]`
+- Sprite rotation: `Random`, 0 … 360; **Sprite Rotation Rate** = `Float from Curve 002`
+  `(0, 1.68162e-07)C (0.1, **90**)C (0.9, 1.43051e-06)C` — spins at 90 °/s between t = 0.1 and 0.9
+- **Sub UV Animation**: `SubUV Animation Mode = Linear`, `Start Frame 0`, `End Frame **4**`,
+  `SubUV Loop Count 1`, renderer `SubUV: 2x2`
+- Velocity Scale: `X/Y/Z (0, 1)C (0.2, 0.15)C (1, 3.91223e-08)C`
+- Color from Curve — **five keys, with a strobing alpha**:
+  - R `(0, 1)L (0.0748566, 1)L (0.598853, 1)C (0.811349, 0.287441)L (1, 0.0512695)C`
+  - G `(0, 0.745404)L (0.0748566, 1)L (0.598853, 0.147027)C (0.811349, 0.0409152)L (1, 0.0409152)C`
+  - B `(0, 0.304987)L (0.0748566, 1)L (0.598853, 0.982251)C (0.811349, 1)L (1, 1)C`
+  - A `(0.162994, 1)L (0.329611, **0**)L (0.504679, 1)C (0.746152, **0**)L (0.959855, 1)L`
+    — **the alpha strobes on/off/on/off/on over one life.** This is the flicker that makes the bolts
+    read as lightning; a "fade to zero" simplification destroys the effect.
+- Dyn param 1 (`dissolve`) — Float from Curve: `(0, 1)C (0.2, **−1**)C (0.3, **0.875**)C (1, −1)C`
+  — a second, faster strobe on the dissolve channel; params 2/3/4 = 0
+- Scale Sprite Size, Uniform Curve: `(0, 0)C (0.1, 0.8)C (1, 1)C`
+- `Color.Scale Alpha 1`
+
+### 20 · Flare_03 — burst **2** @ t=**0.1**, life 0.4 s, size 250
+
+- Initialize color `RGBA(1, 0.4563, 0.111, 0.737104)` — orange
+- Shared fade · dyn params `[1, 0, 0, 0]`
+- Both particles are identical (no randomness in this emitter) and overlay exactly
+
+### 21 · Flare_04 — burst 1 @ t=0, life 0.3 s, size 80
+
+- Initialize color `RGBA(1, 0.384719, 0.0889999, 0.0371041)` — near-transparent orange
+- Shared fade · dyn params `[**2**, 0, 0, 0]`
+
+---
+
+## 6. Translation plan (CkParticles / CkUsf)
+
+### 6.1 Cadence row
+
+**A new burst row is required: loop 1.0 s, particle lifetime 1.2 s, burst 30.** 1.2 s is the longest
+source lifetime (the four Flare_Stretched layers); every shorter layer zeroes colour, size and scale
+past its own lifetime, and spawn delays (0.05 / 0.1 / 0.85 / 0.95 s) hide the layer for
+`age < delay` and run its curves on `(age − delay) / lifetime` — the NS_BasicAttack §5 mechanism.
+
+Two things this row **cannot** carry, both of which need a decision before HLSL is written:
+
+- The **two rate-spawned emitters** (Sparkles_Stretched 20/s over 0.4 s; Lightning's decaying
+  20 → 0 /s over 0.5 s) are not a burst. Approximating them as extra burst slots (8 and 5) at
+  staggered spawn delays is expressible with the delay mechanism above and is the recommended
+  approximation — **record it as a deviation, do not present it as faithful**. The Lightning rate
+  curve is linear, so 5 slots at delays `t_k = 0.5·(1 − sqrt(1 − k/5))` reproduces its arrival
+  distribution exactly; Sparkles_Stretched's constant rate is 8 slots evenly spaced over 0.4 s.
+- The **three `Self` one-shot emitters** (Sparkles_Stretched, Big_Star, Lightning) run ONCE and never
+  repeat, while the other 18 cycle. A single CkParticles template loops everything. See §6.5, gap 2.
+
+`[unresolved: the system-level loop duration — see §2.]` 1.0 s is the working figure and is
+corroborated by Star_02's t = 0.95 burst.
+
+### 6.2 VisTag / renderer needs
+
+- **18 camera-facing sprite layers over 9 distinct materials** (Part01 ×3, Part02 ×3,
+  Part01_Bright ×2, Part03_Bright ×3, Rainbow, Ring01, Star02 ×3, Star03, Lightning02) →
+  **9 row-declared camera-facing sprite renderers**, a renderer kind that **does not exist**
+  (§6.5, gap 1).
+- **1 velocity-aligned sprite** (Sparkles_Stretched, `Part04`) → the existing
+  `VelocityAlignedSprite` row-renderer kind covers this. ✔
+- **1 of the camera sprites needs `SubUV: 2x2`** (Lightning) → no sub-UV support anywhere in the
+  pipeline (§6.5, gap 3).
+
+VisTag ids: allocate at implementation time above `Get_RosterVisTag_Max()`; never restate a literal.
+
+### 6.3 Mesh / texture / look needs
+
+- **Meshes: none.**
+- **CkUsf looks: 10 new** (9 camera-sprite + 1 velocity-aligned), all parameterizations of
+  `CkUsf_Look_DissolveAdd` per §4 — except `Rainbow` (needs the LUT chain, gap 5) and `Lightning02`
+  (needs sub-UV, gap 3, and is the only instance whose distortion branch is live).
+  `Arrows` is NOT needed — both emitters using it are disabled.
+- **Textures: 9 procedural stand-ins**, following the NS_BasicAttack §7 method (measure the corpus
+  PNGs, bake from the numbers, never copy pixels):
+  - `T_VFX_Part_01` → **`T_CkParticles_SoftParticle` already exists**, measured off this exact asset. Reuse.
+  - `T_VFX_Part_04` → **`T_CkParticles_SparkStreak` already exists**, measured off this exact asset
+    (NS_BasicAttack §7). Reuse — and note its u/v orientation is load-bearing for a velocity-aligned
+    quad, exactly as that recipe records.
+  - `T_VFX_Noise_02` → existing `T_CkParticles_TileNoise`.
+  - `T_VFX_Part_02`, `T_VFX_Part_03`, `T_VFX_Ring_01`, `T_VFX_Ring_02`, `T_VFX_Star_02`,
+    `T_VFX_Star_03` — **new bakes**; measure each, do not assume they match the existing library.
+  - `T_VFX_Lightning_03` — a **2×2 flipbook sheet in `TSF_BGRA8` colour**, four bolt frames. Neither
+    "greyscale mask" nor "single shape" — a new class of procedural bake (four distinct branching
+    bolt patterns in one atlas). See gap 3.
+  - `T_VFX_LUT_Rainbow_01` — a 512×2 colour LUT; procedurally regenerable as a hue sweep but a new
+    asset shape for the generator (`sRGB: true`, `TC_Default`, non-square). See gap 5.
+
+### 6.4 Behavior id
+
+**Do NOT allocate an id in this document.** Take the next free id from `ck::particles::NumBehaviors`
+at implementation time and bump it. This batch contains five planned effects; whoever implements
+second must re-read the roster, not this sheet.
+
+Layer partition: `Seed % 30` over the 30 deterministic burst slots (plus whatever slots the two
+rate emitters are approximated into — 43 total if both are folded in). A modulo over a burst of
+exactly N gives the source's partition by construction; never `Rand(Seed) < k` probability bands
+(NS_BasicAttack lesson 2).
+
+### 6.5 CAPABILITY GAPS — what the pipeline cannot express today
+
+Conservative list. Each is a real blocker or a real approximation.
+
+1. **No row-level camera-facing-sprite renderer.** `FCk_ParticlesRendererSpec` supports `Mesh` and
+   `VelocityAlignedSprite` only; this effect needs nine camera-facing sprite renderers with nine
+   looks. **Blocking.** Additive fix, mirrors `VelocityAlignedSprite`. Same gap in all five effects
+   in this batch.
+2. **One template = one cadence; this source has four.** The 18 System-mode emitters cycle on the
+   system clock; Sparkles_Stretched (0.4 s), Big_Star (0.3 s) and Lightning (0.5 s) are
+   `Life Cycle Mode = Self` + `Loop Behavior = Once` — they play **once and never repeat**. A
+   CkParticles template replays everything every loop. Options: (a) accept the replay and record it
+   as a deviation (the three layers become part of the loop — visually this turns a one-shot cast
+   flash into a repeating pulse); (b) split into two behaviors/templates and have the caller spawn
+   both. `CkParticles/CLAUDE.md` explicitly forbids faking cadence with `frac(Age/Cycle)` inside the
+   behavior, so (a) must be an honest deviation, not a hidden hack. **Decide before writing HLSL.**
+3. **No sub-UV / flipbook support anywhere in the pipeline.** The Lightning layer is a `SubUV: 2x2`
+   sheet driven by `Sub UV Animation` (Linear, frames 0 → 4, loop count 1). The DI's stage output has
+   no `SubImageIndex`, `FCk_ParticlesRendererSpec` has no `SubImageSize`, and the texture generator
+   has never baked an atlas. Without it the lightning bolts are one static frame instead of four.
+   **This is the second-largest gap in this effect** and it recurs in NS_Lightning_Hit and
+   NS_Lightning_Muzzle.
+4. **`Scale Sprite Size by Speed` needs velocity at shade time** — expressible (the behavior owns
+   velocity and can fold the factor into `O.Size`), listed only so it is not mistaken for a gap.
+   Not a blocker.
+5. **The gradient-map (LUT) chain is not implemented in `CkUsf_Look_DissolveAdd`.** `Rainbow` uses a
+   real 512×2 colour LUT with `GradientMap_Displacement 0.9` / `Gradient_Invert 2`. Both shipped
+   recipes dropped this chain **because their GradientMap was a white pixel**; that justification does
+   not hold here. Either extend the family shader or record the Raimbow layer as a deliberate
+   fidelity loss.
+6. **Per-particle sprite rotation and rotation RATE on a camera-facing sprite are unconfirmed.**
+   Raimbow, Ring, Sparkles and Lightning all randomize rotation 0–360°, Star_01/Star_02 set fixed
+   angles (45° / 0.1°), and Lightning additionally spins at 90 °/s. The DI writes `OutRotation`, but
+   `CkParticles/CLAUDE.md` documents `Rotation` as applying on **VisTag 2** (smoke) only.
+   `[unresolved: whether the shared camera-sprite renderer binds `Particles.SpriteRotation`.]`
+   If it does not, the renderer kind from gap 1 must.
+7. **World space vs the template's local space.** All 21 emitters are `LocalSpace: false`; the
+   CkParticles template is local-space. Same known deviation NS_BasicAttack §13.2 records — visible
+   if the caster moves during the 1.2 s life, which for a *cast* animation is plausible.
+8. **Material parameters not plumbed through the family look**: `Core_Intensity` (0 on eight of
+   eleven), `Core_Power` (**0** on Lightning02), `Glow_Intensity` (**0.3** on Part02),
+   `Gradient_Invert` (0.5 on five, **2** on Rainbow), `Opacty_StepAdd` (**0.3** on Rainbow),
+   `CamOffset` (**50** on Part03_Bright — three layers use it), `Opacty_DepthFade` (20 on eight,
+   **30** on Part04). `DepthFade` is a pre-existing documented CkUsf gap. `CamOffset 50` on three
+   large flare layers is the one most likely to change sorting/occlusion visibly.
+9. **Two disabled emitters are deliberately not recreated** (Arrow, BigArrow). Recorded here so the
+   omission is a decision. If they are ever re-enabled they need the `Arrows` material,
+   `T_VFX_Arrow_01`, and two more velocity-aligned sprite renderers.
+
+**Not gaps — confirmed absent from this source, so nothing to build:** no mesh renderers, no ribbon
+renderers, no light renderers, no GPU sims, no collision, no event handlers, no user parameters, no
+material-binding indirection.
+
+---
+
+## 7+. Reserved for implementation.
