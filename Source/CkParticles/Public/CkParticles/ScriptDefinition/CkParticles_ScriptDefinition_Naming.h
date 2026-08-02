@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 33;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 36;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -396,6 +396,79 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_Gunshot_Cast: twelve renderers for the fourteen ENABLED emitters — Part01 serves three glows and
+    // the wind paint is drawn twice, once billboarded and once velocity-aligned, because the source draws the same
+    // material on two different quads. THREE of the twelve are 2x2 sub-UV sheets, the heaviest flipbook load in the
+    // cookbook (recipe Cookbook/NS_Gunshot_Cast.md §6.2).
+    inline auto Get_GunshotCastRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    119, nullptr,          TEXT("PartDisAdd01")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    120, nullptr,          TEXT("PartDisAdd02")          },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 121, nullptr,          TEXT("PartDisAdd04")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    122, nullptr,          TEXT("PartDisAdd03Bright")    },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  123, TEXT("Spike"),    TEXT("FlatAdd02")             },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 124, nullptr,          TEXT("LightStripDisAddSprite")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    125, nullptr,          TEXT("StarDisAdd01")          },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  126, TEXT("Cylinder"), TEXT("WindDisAdd02Mesh")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    127, nullptr,          TEXT("WindDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 128, nullptr,          TEXT("WindDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 129, nullptr,          TEXT("ImpactDisAdd02"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    130, nullptr,          TEXT("PartDisAdd01Bright")    },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_FireBall_Cast: sixteen renderers for twenty-six emitters — the cookbook's largest system, and the
+    // one where consolidation by material matters most (Part01 alone serves seven emitters, Part03_Bright four).
+    // Two mesh carriers, one velocity-aligned sprite, two 2x2 sheets, and thirteen camera-facing paints
+    // (recipe Cookbook/NS_FireBall_Cast.md §6.2).
+    inline auto Get_FireBallCastRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    131, nullptr,          TEXT("PartDisAdd01")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    132, nullptr,          TEXT("PartDisAdd01Bright")    },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    133, nullptr,          TEXT("PartDisAdd03Bright")    },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 134, nullptr,          TEXT("PartDisAdd04")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    135, nullptr,          TEXT("RainbowDisAdd")         },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    136, nullptr,          TEXT("RingDisAdd01")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    137, nullptr,          TEXT("StarDisAdd01")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    138, nullptr,          TEXT("StarDisAdd02")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    139, nullptr,          TEXT("StarDisAdd03")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    140, nullptr,          TEXT("WindDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  141, TEXT("Cylinder"), TEXT("WindDisAdd02Mesh")      },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 142, nullptr,          TEXT("LightStripDisAddSprite")},
+            { ECk_ParticlesRenderer_Kind::Mesh,                  143, TEXT("Spike"),    TEXT("FlatAdd02")             },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    144, nullptr,          TEXT("FlamesDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    145, nullptr,          TEXT("SmokeDisAdd01")         },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    146, nullptr,          TEXT("FlareDisAdd01")         },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_Lightning_Cast: ten renderers for the nineteen ENABLED emitters — no mesh anywhere, one
+    // velocity-aligned sprite, and one 2x2 sheet carrying the bolt paint that is the port's only new look
+    // (recipe Cookbook/NS_Lightning_Cast.md §6.2).
+    inline auto Get_LightningCastRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    147, nullptr, TEXT("PartDisAdd01")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    148, nullptr, TEXT("PartDisAdd02")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    149, nullptr, TEXT("RainbowDisAdd")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    150, nullptr, TEXT("RingDisAdd01")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    151, nullptr, TEXT("PartDisAdd01Bright") },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 152, nullptr, TEXT("PartDisAdd04")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    153, nullptr, TEXT("StarDisAdd02")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    154, nullptr, TEXT("PartDisAdd03Bright") },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    155, nullptr, TEXT("StarDisAdd03")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    156, nullptr, TEXT("LightningDisAdd02"), FIntPoint(2, 2) },
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -471,6 +544,15 @@ namespace ck::particles
             { TEXT("PS_CkParticles_Template_PickupCast"),  2.0f, 1.05f, 22, Get_PickupCastRendererSpecs()        },
             { TEXT("PS_CkParticles_Template_HealCast"),    2.0f, 1.55f, 17, Get_HealCastRendererSpecs(),   50.0f },
             { TEXT("PS_CkParticles_Template_DebuffCast"),  2.0f, 2.0f,  30, Get_DebuffCastRendererSpecs(), 65.0f },
+            // The three Vefects attack Casts. Same Loop-Once 2.0 s system again. Gunshot and FireBall burst only
+            // — every one of their emitters is a Spawn Burst Instantaneous, including the `Self / Once` ones,
+            // and a burst-only one-shot fires exactly once per activation, which is what a template burst is.
+            // Lightning is the first row whose SOURCE rate is not constant: its bolt emitter's Spawn Rate falls
+            // 20 -> 0 across a 0.5 s window, so the row declares the PEAK and the behavior thins the stream.
+            // FireBall's lifetime EXCEEDS its loop ([P0-D5]) — its wind layers spawn at 0.55 and live 1.5 s.
+            { TEXT("PS_CkParticles_Template_GunshotCast"),   2.0f, 1.55f, 40, Get_GunshotCastRendererSpecs()          },
+            { TEXT("PS_CkParticles_Template_FireBallCast"),  2.0f, 2.05f, 50, Get_FireBallCastRendererSpecs()         },
+            { TEXT("PS_CkParticles_Template_LightningCast"), 2.0f, 1.55f, 30, Get_LightningCastRendererSpecs(), 40.0f },
         };
         return MakeArrayView(Specs);
     }
@@ -578,6 +660,21 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_DebuffCast"));
     }
 
+    inline auto Get_GunshotCastTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_GunshotCast"));
+    }
+
+    inline auto Get_FireBallCastTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_FireBallCast"));
+    }
+
+    inline auto Get_LightningCastTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_LightningCast"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -604,6 +701,10 @@ namespace ck::particles
             case 30: return Get_PickupCastTemplateSystemObjectPath();  // PickupCast   — 2.0s loop, 1.05s, burst 22
             case 31: return Get_HealCastTemplateSystemObjectPath();    // HealCast     — 2.0s loop, 1.55s, 17 + 50/s
             case 32: return Get_DebuffCastTemplateSystemObjectPath();  // DebuffCast   — 2.0s loop, 2.0s,  30 + 65/s
+            // The three attack Casts. Only Lightning streams.
+            case 33: return Get_GunshotCastTemplateSystemObjectPath();   // GunshotCast   — 2.0s loop, 1.55s, burst 40
+            case 34: return Get_FireBallCastTemplateSystemObjectPath();  // FireBallCast  — 2.0s loop, 2.05s, burst 50
+            case 35: return Get_LightningCastTemplateSystemObjectPath(); // LightningCast — 2.0s loop, 1.55s, 30 + 40/s
             default: break;
         }
 
