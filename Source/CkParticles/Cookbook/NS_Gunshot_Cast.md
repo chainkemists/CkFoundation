@@ -50,13 +50,18 @@ Corpus evidence:
 ## 2. System anatomy `[corpus]`
 
 **15 CPU emitters (14 enabled, 1 disabled), all `LocalSpace: true`, `Determinism: false`,
-`Bounds: Dynamic`, no user parameters.** Thirteen emitters run Loop Behavior **Infinite** / Loop
-Duration Mode **Fixed** / **Loop Duration 1.0 s**; **`Sparkles_01` runs Loop Behavior `Once` with
-Loop Duration 0.3 s** — the only such emitter in this batch. `UseLoopCountLimit = false` everywhere,
-so every stored `Loop Count Limit = 1` is inert.
+`Bounds: Dynamic`, no user parameters.** Fourteen emitters are `Life Cycle Mode = System` and store
+Loop Behavior **Infinite** / **Loop Duration 1.0 s** — all inert per [P0-D1]. **`Sparkles_01` is the
+one `Life Cycle Mode = Self` emitter**, so its `Loop Behavior = Once` / `Loop Duration 0.3 s` is
+LIVE. `UseLoopCountLimit = false` everywhere, so every stored `Loop Count Limit = 1` is inert.
 
-**33 particles per loop, plus a one-time 7 on the first activation. Longest lifetime 1.5 s > the
-1.0 s loop, so the three Wind layers overlap the next loop.**
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+
+**33 particles per firing, plus the 7 one-shot `Sparkles_01`. Longest lifetime 1.5 s from a spawn at
+t = 0.05 → over by t ≈ 1.55 s, inside the 2.0 s `Once` loop, so generations do NOT overlap.**
+*(Was "1.5 s > the 1.0 s loop, so the three Wind layers overlap the next loop" — an artefact of the
+inert emitter rows.)*
 
 | # | Emitter | Count | Spawn t | Lifetime | Renderer | Alignment / Facing | Material | Size / Scale |
 |---|---|---|---|---|---|---|---|---|
@@ -72,7 +77,7 @@ so every stored `Loop Count Limit = 1` is inert.
 | 9 | `Star02` **(DISABLED)** | 1 | 0.1 | 0.3 | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Star02` | Uniform **70** |
 | 10 | `Wind_01` | 1 | 0.05 | **1.5** | **Mesh** `SM_VFX_Ring01` (renderer mesh scale **(1,1,5)**) | **Facing `Default`** | `M_VFX_DisAdd_Wind02` (renderer override) | mesh uniform scale **0.3** |
 | 11 | `Wind_02` | 6 | 0.05 | **1.5** | Sprite, **SubUV 2×2** | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Wind01` | rand uniform **130–230**, rotation random 0–360 |
-| 12 | `Sparkles_01` | 7 | 0.05 | **rand 0.2–0.4** | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Part01_Bright` | rand uniform **6–10** |
+| 12 | `Sparkles_01` | 7 | 0.05 | **rand 0.3–0.6** `[corpus-v3]` | Sprite | `Unaligned` / `FaceCamera` | `M_VFX_DisAdd_Part01_Bright` | rand uniform **6–10** |
 | 13 | `Wind_03` | 2 | 0.05 | **1.5** | Sprite, **SubUV 2×2** | **`VelocityAligned`** | `M_VFX_DisAdd_Wind01` | rand non-uniform **(60,400)–(80,500)**, offset **(70, 0, 0)** |
 | 14 | `Impact_01` | 1 | 0.05 | 0.2 | Sprite, **SubUV 2×2** | **`VelocityAligned`** | `M_VFX_DisAdd_Impact02` | rand non-uniform **(100,170)–(120,200)**, offset **(132.846, 0, 0)**, rotation random 0–360 |
 
@@ -392,7 +397,10 @@ Two curves recur; naming them once avoids re-transcription:
 - **Dynamic param 1 (`dissolve`) from Curve:** `None: (0, -5.88215e-08)C (1, -1)C`. Params 2–4 `0`.
 - **Scale Sprite Size**: `None: (0, 0.5)C (1, 1)C`
 
-### Layer 12 — `Sparkles_01` (7, t=0.05, life **random 0.2–0.4**) — **ONE-SHOT**
+### Layer 12 — `Sparkles_01` (7, t=0.05, life **random 0.3–0.6** `[corpus-v3]`) — **ONE-SHOT**
+
+*Lifetime was misread as 0.2–0.4 under the override-wins assumption; `Lifetime Mode = Random` ⇒
+`Lifetime Min 0.3 / Max 0.6` drives ([P0-D2]), the `Random Range Float` override is inert.*
 
 - **`Emitter State`: Loop Behavior `Once`, Loop Duration Mode `Fixed`, Loop Duration `0.3`.**
   Every other emitter in the system is Infinite / 1.0. §6.7 #2.
@@ -470,13 +478,16 @@ Two curves recur; naming them once avoids re-transcription:
 
 ### 6.1 Cadence row
 
-**New row: loop 1.0 s, particle lifetime 1.5 s, burst 33.** Lifetime 1.5 s because the three Wind
-layers run that long; every shorter layer hides past its own lifetime (NS_BasicAttack §8's rule).
+**New row `[corpus-v3]`, per [P0-D3]: loop 2.0 s, particle lifetime 1.5 s, burst 33.**
+Loop = the system's `Once` loop duration (*was 1.0 s, from the inert emitter rows*); lifetime = max
+resolved emitter lifetime (the three Wind layers); burst = the §2 count. Every shorter layer hides
+past its own lifetime (NS_BasicAttack §8's rule).
 
-**The 7 one-shot `Sparkles_01` particles are NOT in the 33.** Options, both bad, decide explicitly:
+**The 7 one-shot `Sparkles_01` particles are NOT in the 33.** Options, decide explicitly:
 
-- **(a)** Fold them in — burst 40, and accept that they re-fire every loop where the source fires
-  once. A visible fidelity deviation on a looping preview, invisible on a per-shot spawn.
+- **(a)** Fold them in — burst 40. `[corpus-v3]` the re-fire cost is smaller than the sheet assumed:
+  the SYSTEM is `Loop Once`, so on a single firing every layer including `Sparkles_01` fires exactly
+  once; the deviation only shows on the gym's looping re-arm.
 - **(b)** Drop them and record the deviation. Loses the fine gold spark spray.
 
 Either way it is a **recorded deviation, not a silent one** — §6.7 #2.

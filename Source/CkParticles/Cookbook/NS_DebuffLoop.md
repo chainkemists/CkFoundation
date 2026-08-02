@@ -42,46 +42,53 @@ asset was generated, nothing was built and nothing was rendered.
 `Determinism: false`, zero user parameters.**
 
 **Every emitter uses `Spawn Rate` (continuous) — there is no burst module anywhere in the system.**
-Three of them run `Loop Behavior = Once` on a 0.3 s loop (a short one-shot burst-of-stream at the
-start), the other six run `Loop Behavior = Infinite` on a 1.0 s loop. All nine are
-`Life Cycle Mode = System`.
+Three of them *store* `Loop Behavior = Once` on a 0.3 s loop, the other six store
+`Loop Behavior = Infinite` on a 1.0 s loop. All nine are `Life Cycle Mode = System`.
 
-| # | Emitter | Loop | Loop dur | Rate (/s) | Spawn probability | Lifetime | Renderer | Material |
+**System loop `[corpus-v3]`: `Loop Behavior = Infinite`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+Per [P0-D1] this RULES all nine — **every per-emitter Loop row in the table below is inert, including
+the three `Once / 0.3 s` rows.** All nine therefore stream continuously on the system's 2.0 s
+infinite loop; "three fire once and stop" was an artefact of trusting the inert emitter rows. The
+rows are kept in the table as authored leftovers, struck through.
+
+| # | Emitter | Loop *(stored, INERT)* | Loop dur *(inert)* | Rate (/s) | Spawn probability | Lifetime | Renderer | Material |
 |---|---|---|---|---|---|---|---|---|
-| 0 | `Sparkles_Dark` | **Once** | **0.3** | 4 | — | rand `[unresolved]` | Sprite, Unaligned/FaceCamera | `Part01_Bright` |
-| 1 | `Ring` | **Once** | **0.3** | 3 | — | rand 1.0–2.0 | Sprite, Unaligned/FaceCamera | `Ring01` |
-| 2 | `Flames` | **Once** | **0.3** | 5 | **enabled** (value `[unresolved]`) | rand `[unresolved]` | Sprite, Unaligned/FaceCamera, **SubUV 2×2** | `Flames01` |
+| 0 | `Sparkles_Dark` | ~~Once~~ | ~~0.3~~ | 4 | — | rand **1.0–1.5** `[corpus-v3]` | Sprite, Unaligned/FaceCamera | `Part01_Bright` |
+| 1 | `Ring` | ~~Once~~ | ~~0.3~~ | 3 | — | rand 1.0–2.0 `[corpus-v3]` | Sprite, Unaligned/FaceCamera | `Ring01` |
+| 2 | `Flames` | ~~Once~~ | ~~0.3~~ | 5 | **enabled** (value `[unresolved]`) | rand **1.0–2.0** `[corpus-v3]` | Sprite, Unaligned/FaceCamera, **SubUV 2×2** | `Flames01` |
 | 3 | `Glow_01` | Infinite | 1.0 | 2 | — | 2.0 | Sprite, Unaligned/FaceCamera | `Part01` |
 | 4 | `Glow_02` | Infinite | 1.0 | 4 | — | 1.0 | Sprite, Unaligned/FaceCamera | `Part01` |
 | 5 | `Glow_03` | Infinite | 1.0 | 4 | — | 1.0 | Sprite, Unaligned/FaceCamera | `Part01` |
 | 6 | `Arrow_Green` | Infinite | 1.0 | 4 | **rand 0.5–1.0** | rand 0.6–1.0 | Sprite, **VelocityAligned**/FaceCamera | `Arrows` |
 | 7 | `Arrow_Purple` | Infinite | 1.0 | 4 | **rand 0.5–1.0** | rand 0.6–1.0 | Sprite, **VelocityAligned**/FaceCamera | `Arrows` |
-| 8 | `Flares` | Infinite | 1.0 | 6 | — | rand `[unresolved]` | Sprite, Unaligned/FaceCamera | `Part02` |
+| 8 | `Flares` | ~~Infinite~~ | ~~1.0~~ | 6 | — | rand **1.0–2.0** `[corpus-v3]` | Sprite, Unaligned/FaceCamera | `Part02` |
 
-**Steady-state rate from the six infinite emitters: 24 particles/second** (2+4+4+4+4+6), reduced on the
-two arrow emitters by their random spawn probability. The three `Once` emitters contribute
-≈ 4×0.3 + 3×0.3 + 5×0.3 = **3.6 particles total, one time only** `[inferred]`.
+**Steady-state rate `[corpus-v3]`: all nine emitters stream — 4+3+5+2+4+4+4+4+6 = 36 particles/second**,
+reduced on the two arrow emitters by their random spawn probability.
+*(Was "24/s from six infinite emitters + 3.6 one-time particles from three `Once` emitters" — that
+split came from the inert emitter Loop rows.)*
 
 `Flames` sets `Use Spawn Probability = true` but the corpus shows **no `Spawn Probability` override and
 no `SpawnRate.SpawnProbability` value** in its store `[unresolved: the effective probability]` —
 the two arrow emitters both override it explicitly with `Random Range Float 001` Min 0.5 / Max 1.0.
 
-> ### `[unresolved: lifetime on four emitters]`
-> Same `Lifetime Mode = Random` vs `[override] Lifetime = dyn:Random Range Float` conflict as the rest
-> of the batch:
+> ### Lifetime — RESOLVED `[corpus-v3]` (this system is the [C-D1] discriminating case)
+> Per [P0-D2] the `Lifetime Mode` static switch selects the driving pin: `Random` ⇒ Min/Max,
+> `Direct Set` ⇒ the `Lifetime` pin (or an override sitting on it). This system contains BOTH shapes,
+> which is what made it the discriminator:
 >
-> | Emitter | `Lifetime Min/Max` (Random mode) | override `RandomRangeFloat` |
-> |---|---|---|
-> | `Sparkles_Dark` | **1 / 1.5** | 0.2 / 0.4 |
-> | `Flames` | **1 / 2** | 0.2 / 0.4 |
-> | `Flares` | **1 / 2** | 0.2 / 0.4 |
-> | `Ring` | 1 / 2 | *(no override — unambiguous)* |
-> | `Arrow_Green` / `Arrow_Purple` | `Lifetime Mode = **Direct Set**` (no Min/Max) | **0.6 / 1.0** — the override IS the source here |
+> | Emitter | Mode | LIVE | inert |
+> |---|---|---|---|
+> | `Sparkles_Dark` | Random | **1.0 / 1.5** | ~~override 0.2 / 0.4~~ |
+> | `Flames` | Random | **1.0 / 2.0** | ~~override 0.2 / 0.4~~ |
+> | `Flares` | Random | **1.0 / 2.0** | ~~override 0.2 / 0.4~~ |
+> | `Ring` | Random | **1.0 / 2.0** | stored `Lifetime = 1` |
+> | `Arrow_Green` / `Arrow_Purple` | **Direct Set** | **override `Random Range Float` 0.6 / 1.0** | — |
 >
-> The arrows are the useful counter-example: with `Lifetime Mode = Direct Set` the `Lifetime` pin
-> **is** what the module reads, so the `Random Range Float` override unambiguously wins there
-> (0.6–1.0). That strengthens the reading that on `Random`-mode emitters the override does **not**
-> apply `[inferred]`.
+> The arrows export as `lifetimeResolved.source = "override"`; the four Random-mode emitters export as
+> `source = "minmax"` with the override under `inertOverrides`. The sheet's `[inferred]` reading is
+> MECHANICALLY CONFIRMED.
 
 `Ring` also carries `InitializeParticle.Lifetime = 1` alongside its Random Min 1 / Max 2 — inert in
 Random mode. `Sparkles_Dark`'s `Curl Noise Force` is present but **DISABLED** (unlike its
@@ -141,7 +148,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 `Dynamic Material Parameters` writes **Index 0 only** on every emitter.
 
 ### Layer 0 — `Sparkles_Dark` (Once, 0.3 s, rate 4/s)
-- Lifetime `[unresolved]` — `1 / 1.5` vs `0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`1.0 / 1.5` drives**; the `0.2 / 0.4` override is inert.
 - **`Cylinder Location`**: Radius **120**, Height **150**, Midpoint 0.5, Offset **(0, 0, 30)**,
   Random, Spawn Only, `Surface Only = false`, `Override Local Rotation = true`,
   `Use Endcaps In Surface Only Mode = true`, Non Uniform Scale (1,1,1), Apply Owner Scale (0,0,0),
@@ -173,7 +180,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 - Scale Sprite Size (Uniform Curve): `(0, 0.5)C (0.1, 0.9)C (1, 1)C`.
 
 ### Layer 2 — `Flames` (Once, 0.3 s, rate 5/s, spawn probability enabled) — **the sub-UV layer**
-- Lifetime `[unresolved]` — `1 / 2` vs `0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`1.0 / 2.0` drives**; the `0.2 / 0.4` override is inert.
 - `Sphere Location`: `Surface Only = true`, `Surface Expansion Mode = Outside`, **Radius 20**,
   `Radius Position 1`, `U Position 0`, `V Position 0.5`, `Uniform Distribution 1`, `Uniform Spiral Amount 1`.
 - **`Sub UV Animation`, `Mode = Random`**, `Start Frame 0`, `End Frame 3`, `SubUV Loop Count 1`.
@@ -258,7 +265,7 @@ same size (90, 150), same lifetime 0.6–1.0, same size curve, same alpha envelo
   `Random Hue/Saturation/Value`. The HSV parameters are still present in the store
   (`Hue Shift Range (0.5, 0.8)`, `Saturation Range (0.2, 0.2)`, `Value Range (1, 1)`,
   `Alpha Scale Range (0.13, 0.13)`, `Color Min/Max` black/white) but are **inert in Direct Set mode**.
-- Lifetime `[unresolved]` — `Lifetime Min 1 / Max 2` vs override `RandomRangeFloat 0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`Lifetime Min 1.0 / Max 2.0` drives**; the `RandomRangeFloat 0.2 / 0.4` override is inert.
 - `Cylinder Location`: Radius **90**, Height **130**, Midpoint 0.5, Offset **(0, 0, 30)**.
 - **No velocity module.**
 - Sprite Size Mode Random Uniform: **Min 50, Max 200**.
@@ -277,16 +284,22 @@ same size (90, 150), same lifetime 0.6–1.0, same size curve, same alpha envelo
 
 ### 6.1 Cadence
 
-**Same continuous-cadence problem as [NS_BuffLoop.md](NS_BuffLoop.md) §6.1, plus a mixed-loop wrinkle.**
-Six emitters stream forever at a combined 24/s (two of them probability-gated); three stream for a
-single 0.3 s window and stop. The existing continuous row ignores `LoopDuration`/`ParticleLifetime`
-and has no spawn-rate field; no row can express "some layers loop, some fire once".
+**`[P0-D3 STOP: loop = 2.0 s (system, Infinite/Fixed); lifetime = 2.0 s (max resolved — Glow_01
+direct 2.0, Ring/Flames/Flares 2.0 Max); burst = 0 — rate-only system, no burst module anywhere and
+§2 carries no burst count]`.** The formula yields a `BurstCount == 0` continuous row that the cadence
+table cannot parameterize today. Orchestrator ruling required before a row is written.
+
+**Same continuous-cadence problem as [NS_BuffLoop.md](NS_BuffLoop.md) §6.1.** `[corpus-v3]` The
+mixed-loop wrinkle is GONE: all nine emitters are system-governed and the system loops
+`Infinite / 2.0 s`, so this is one uniform continuous stream at **36/s** (two layers
+probability-gated), not six loops plus three one-shots. The existing continuous row still ignores
+`LoopDuration`/`ParticleLifetime` and has no spawn-rate field.
 
 Recommendation, same as its Buff sibling: **extend `FCk_ParticlesTemplateSpec` with a spawn rate and a
-real lifetime for continuous rows**, then run one 24/s stream with lifetime 2.0 and partition by a
-rate-weighted `Seed % N` (Glow_01 2, Glow_02 4, Glow_03 4, Arrow_Green 4, Arrow_Purple 4, Flares 6 ⇒
-N = 24). The three `Once` layers then have to be either dropped or folded into the first loop only —
-neither is expressible today, and the fold is not visually equivalent.
+real lifetime for continuous rows**, then run one **36/s** stream with lifetime 2.0 and partition by a
+rate-weighted `Seed % N` (Sparkles_Dark 4, Ring 3, Flames 5, Glow_01 2, Glow_02 4, Glow_03 4,
+Arrow_Green 4, Arrow_Purple 4, Flares 6 ⇒ N = 36). *(Was a 24/s six-layer stream with the three
+`Once` layers "dropped or folded" — they are ordinary streaming layers.)*
 
 **Spawn probability** (`Arrow_Green` / `Arrow_Purple`, random 0.5–1.0 per spawn) is expressible inside
 a behavior: a slot whose `CkParticles_Rand(Seed, salt)` exceeds the drawn probability writes zero

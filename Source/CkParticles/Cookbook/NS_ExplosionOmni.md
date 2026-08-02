@@ -104,21 +104,28 @@ Unchanged from Ground: `Bubble_First_Explo`, `Flare01`, `Ring`, `Glow_03`, `Glow
 
 ### 2.2 The event chain
 
-Identical to `NS_ExplosionGround.md` §2.2, including the
-**`[unresolved: the event-handler stack is NOT exported]`** finding. `Sparkles_02` runs
-`Generate Location Event` (Every Frame, send rate 30, unit spacing 20); `Sparkles_02_Trail` has only
-`Initialize Ribbon` in its spawn stack (`Ribbon Width 10`, `Position Offset (100, 0, 0)`).
+Identical to `NS_ExplosionGround.md` §2.2, including its **RESOLVED `[corpus-v3]`** event-handler
+block — read the contract there. `Sparkles_02` runs `Generate Location Event` (Every Frame, send
+rate 30, unit spacing 20); `Sparkles_02_Trail` has only `Initialize Ribbon` in its spawn stack
+(`Ribbon Width 10`, `Position Offset (100, 0, 0)`) because it is **event-spawned**: `LocationEvent`
+from `Sparkles_02`, `executionMode = SpawnedParticles`, **1 particle per event**, unbounded
+events/frame, `Receive Location Event` applying Position/Velocity/Acceleration/**Ribbon ID**.
+Ribbon particle lifetime **0.2 s** (`Initialize Ribbon.Lifetime`, Direct Set).
+*(Was `[unresolved: the event-handler stack is NOT exported]`.)*
 
-### 2.3 ⚠ Randomized lifetimes
+### 2.3 Randomized lifetimes — RESOLVED `[corpus-v3]`
 
 **Identical situation, identical numbers, to [NS_ExplosionGround.md](NS_ExplosionGround.md) §2.3** —
-read it there. Six emitters carry both a `Lifetime Min / Max` pair and an `[override] Lifetime =
-dyn:Random Range Float` whose range is **0.2 / 0.4** on every one of them. This sheet takes the
-override as authoritative (the `NS_BasicAttack.md` §2 precedent); the alternative per-emitter ranges
-are `Sparkles_02` 0.4/0.7, `Sparkles_01` 0.2/0.4, `Smokes` 0.7/1.3, `SmokesCenter` 0.7/1.3,
-`Sparkles_02001` 0.4/0.7, `Flames` 0.35/0.7.
+read the resolution there. Six emitters carry both a `Lifetime Min / Max` pair and an
+`[override] Lifetime = dyn:Random Range Float` (0.2 / 0.4 on every one). Per [P0-D2]
+`Lifetime Mode = Random` ⇒ **Min/Max DRIVES** and the override is INERT
+(`lifetimeResolved.source = minmax` on all six). The live ranges are `Sparkles_02` **0.4/0.7**,
+`Sparkles_01` **0.2/0.4**, `Smokes` **0.7/1.3**, `SmokesCenter` **0.7/1.3**, `Sparkles_02001`
+**0.4/0.7**, `Flames` **0.35/0.7**.
 
-**`[unresolved]`, and here it MOVES THE CADENCE ROW** — see §6.1.
+**This sheet previously took the override as authoritative** (the `NS_BasicAttack.md` §2 precedent).
+That is WRONG, **and here it MOVES THE CADENCE ROW** — the longest layer becomes 1.3 s, not 0.4 s.
+See §6.1.
 
 ---
 
@@ -210,11 +217,13 @@ read that table:
 | G1 | Ribbon renderer (`Sparkles_02_Trail` + `M_VFX_DisAdd_Trail03` + `Scale Ribbon Width`) | **YES** — identical emitter |
 | G2 | Light renderer (`Glow_01001`, RadiusScale 10) | **YES** — identical emitter, different name |
 | G3 | Sub-UV flipbook (`Flames`, 2×2, mode Random, frames 0–3) | **YES** |
-| G4 | Event generation → event-handler spawn | **YES**, and still `[unresolved: handler stack not exported]` |
-| G5 | Per-emitter cadence divergence (1.0 Infinite vs 0.3 / 0.4 Once) | **YES**. `Ground_Mark`'s 1.5 s layer is absent here, so the longest layer is **0.4 s** under §2.3's reading and **1.3 s** under its alternative — a 3× swing in the cadence row |
+| G4 | Event generation → event-handler spawn | **YES** — pure capability gap now; the handler stack IS exported `[corpus-v3]` (§2.2) |
+| G5 | ~~Per-emitter cadence divergence~~ | **NO — NOT A GAP `[corpus-v3]`**: every emitter is `Life Cycle Mode = System`, so the stored 1.0 Infinite / 0.3 / 0.4 Once rows are all inert and the system's `Once / 2.0 s` governs uniformly. `Ground_Mark`'s 1.5 s layer is absent here, so the longest layer is **1.3 s** (`Smokes` / `SmokesCenter`, §2.3 resolved) — *not the 0.4 s this sheet assumed* |
 
-The **`[unresolved: which loop duration is authoritative]`** item in Ground §6.0 applies verbatim:
-every emitter is `Life Cycle Mode = System`, and no system-level state is exported.
+Ground §6.0's loop-authority item applies verbatim, and is **RESOLVED `[corpus-v3]`**: every emitter
+is `Life Cycle Mode = System`, and the system's own rows are **`Loop Behavior = Once`,
+`Loop Duration = 2.0 s`, `Loop Delay = 0`, `Inactive Response = Complete`,
+`Recalculate Duration Each Loop = false`** — the authority per [P0-D1].
 
 Also as in Ground: `Curl Noise Force` (`Sparkles_02001`) and the
 `Acceleration Force (0,0,−4000)` on `Sparkles_02` are **work, not gaps** — closed-form in the `.ush`
@@ -222,26 +231,29 @@ plus its exact C++ mirror.
 
 ### 6.1 Cadence row
 
-No existing row matches. Assuming the emitter-local 1.0 s Infinite loop is authoritative:
+No existing row matches. Per [P0-D3] (loop = system loop duration, lifetime = max resolved lifetime,
+burst = §2 counts):
 
 ```
-{ TEXT("PS_CkParticles_Template_ExplosionOmni"), 1.0f, <LIFETIME>, 65, Get_ExplosionOmniRendererSpecs() }
+{ TEXT("PS_CkParticles_Template_ExplosionOmni"), 2.0f, 1.3f, 65, Get_ExplosionOmniRendererSpecs() }
 ```
 
-- `ParticleLifetime` — **`[unresolved]`, resolve §2.3 FIRST.** Under this sheet's reading the longest
-  layer is **0.4 s** (`Ring` at 0.3 and the randomized layers at 0.4 max); under the alternative it is
-  **1.3 s** (`Smokes` / `SmokesCenter`). Picking the wrong one is the exact defect `NS_BasicAttack.md`
-  §14.1 exists to prevent. Shorter layers write zero colour/size/scale past their own lifetime, per
-  `NS_BasicAttack.md` §8.
+- `LoopDuration` **2.0** `[corpus-v3]` — the system's `Once` loop duration. *Was 1.0, taken from the
+  inert emitter rows.*
+- `ParticleLifetime` **1.3** `[corpus-v3]` — `Smokes` / `SmokesCenter`'s resolved `Lifetime Max`.
+  *Was `[unresolved]` with 0.4 s as this sheet's working reading; §2.3's override-wins assumption is
+  corrected per [P0-D2], so the longest layer is 3.25× what the sheet assumed.* Shorter layers write
+  zero colour/size/scale past their own lifetime, per `NS_BasicAttack.md` §8.
 - `BurstCount` **65**, layer index = `Seed % 65` (double-modulo). Ranges: 0 `Bubble`, 1 `Flare01`,
   2–8 `Sparkles_02`, 9–28 `Sparkles_01`, 29–31 `Smokes`, 32–36 `SmokesCenter`, 37–41 `Spike01`,
   42 `Ring`, 43–52 `Sparkles_02001`, 53–54 `Glow_03`, 55–57 `Glow_04`, 58 `Raimbow`, 59 `Glow_01001`,
   60–64 `Flames`.
 - Late-spawn layers (0.05 / 0.1 s) hide before their delay and run curves on `(age − delay) / lifetime`.
 
-**`NS_ExplosionIceOmni` has the IDENTICAL cadence** (65 particles, same lifetimes bar the two
-0.1 → 0.15 direct-set bumps) — one row serves both. Whether the Ground pair (70 particles, 1.5 s)
-shares it is a §6.6 decision.
+**`NS_ExplosionIceOmni` has the IDENTICAL cadence** (2.0 s loop, 1.3 s lifetime, 65 particles — same
+lifetimes bar the two 0.1 → 0.15 direct-set bumps) — one row serves both. Whether the Ground pair
+(2.0 s / 1.5 s / 70 particles) shares it is a §6.6 decision; `[corpus-v3]` all four variants now
+agree on the 2.0 s loop, so only lifetime and burst differ.
 
 ### 6.2 Renderer / VisTag needs
 

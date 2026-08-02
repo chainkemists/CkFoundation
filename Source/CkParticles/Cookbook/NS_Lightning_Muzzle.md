@@ -106,9 +106,11 @@ four), and all four velocity emitters add `Random Range Vector` velocity along *
 
 The four `Self` emitters are genuine one-shots. See §6.5, gap 2.
 
-`[unresolved: the system-level loop duration is NOT in the corpus export — CkAssetExporter writes
-emitter stacks only. 1.0 s is what every System-mode emitter stores. Unlike NS_Lightning_Cast, this
-system has no late-spawning emitter to corroborate it: **every** burst here is at t = 0.]`
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+Per [P0-D1] this rules the 13 `Life Cycle Mode = System` emitters; the four `Self` emitters keep
+their own rows. *(Was `[unresolved]` with 1.0 s as the working figure; no corroborating late burst
+was available, and the true value is 2×.)*
 
 ---
 
@@ -261,9 +263,11 @@ dyn `[**2**, 0, 0, 0]`
 
 ### 6 · Sparkles — burst **4** @0, size Random Uniform 10 … 20
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins `Lifetime Min 0.3 / Max 0.6`
-  `[unresolved: which pin is live — `Lifetime Mode = Random` reads Min/Max, but the Direct-Set pin
-  carries the override. NS_BasicAttack §2 resolved the identical shape in favour of the override.]`
+- Lifetime `[corpus-v3]`: **`Lifetime Mode = Random` ⇒ `Lifetime Min 0.3 / Max 0.6` DRIVES**
+  (`lifetimeResolved.source = minmax`); the `Random Range Float` override (0.2 … 0.4) sits on the
+  unselected Direct-Set pin and is INERT. *Was read as 0.2 … 0.4 following the NS_BasicAttack §2
+  precedent; corrected per [P0-D2]. `Sparkles` is now the longest ENABLED layer and it moves the
+  cadence row (§6.1).*
 - Spawn shape: `Sphere Location`, `Sphere Radius **10**`, `Non Uniform Scale **(1, 0.1, 0.1)**`,
   `Sphere Orientation Axis (1,0,0)`, **`Hemisphere X = true`**, `Surface Only false` — a thin
   half-cigar pointing +X
@@ -292,8 +296,8 @@ Initialize color `RGBA(0.102242, 1, 0.838799, 0.258)` (mint) · shared fade · d
 
 ### 9 · Sparkles_Stretched — burst **3** @0, loop **0.4 s Once** (`Self`), velocity-aligned
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; pins `Lifetime Min 0.3 / Max 0.4`
-  `[unresolved — same shape as above]`
+- Lifetime `[corpus-v3]`: **`Lifetime Min 0.3 / Max 0.4` drives**; the 0.2 … 0.4 override is inert
+  ([P0-D2], same resolution as above)
 - Sprite Size Mode **Random Non-Uniform**: `Sprite Size Min **(25, 80)**`, `Max **(40, 90)**`
 - Spawn shape: `Sphere Location`, radius **10**, `Non Uniform Scale (1, 0.2, 0.2)`,
   **`Hemisphere X = true`**
@@ -315,8 +319,8 @@ Initialize color `RGBA(0.102242, 1, 0.838799, 0.258)` (mint) · shared fade · d
 
 ### 10 · Lightning — burst **3** @0, loop **0.5 s Once** (`Self`), camera sprite, **SubUV 2×2**
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; pins `Lifetime Min 0.3 / Max 0.5`
-  `[unresolved — same shape as above]`
+- Lifetime `[corpus-v3]`: **`Lifetime Min 0.3 / Max 0.5` drives**; the 0.2 … 0.4 override is inert
+  ([P0-D2], same resolution as above)
 - Size: Random Uniform **30 … 100**
 - Spawn shape: `Sphere Location`, `Sphere Radius **0**` — every particle at the origin
 - `Add Velocity from Point`: strength `Random Range Float 001` **350 … 500**
@@ -450,8 +454,12 @@ wide bright core; Arc_02 is five thin, faster, dimmer blue-violet filaments.
 
 ### 6.1 Cadence row
 
-**A new burst row is required: loop 1.0 s, particle lifetime 0.5 s, burst 30.** 0.5 s is the longest
-source lifetime (Flare_01/02); every shorter layer zeroes colour, size and scale past its own
+**A new burst row is required `[corpus-v3]`, per [P0-D3]: loop 2.0 s, particle lifetime 0.6 s,
+burst 30.** Loop = the system's `Once` loop duration (*was 1.0 s, from the inert emitter rows*);
+lifetime = max resolved lifetime among the **enabled** emitters — `Sparkles`' resolved 0.6 s Max
+(*was 0.5 s, Flare_01/02, under the override-wins assumption that capped Sparkles at 0.4 s; the
+disabled `Arrow`/`BigArrow` pair at 1.5 s is excluded because it is not recreated*); burst = the §2
+count. Every shorter layer zeroes colour, size and scale past its own
 lifetime (the NS_BasicAttack §8 mechanism). **Every burst in this system is at t = 0**, so no spawn
 delay machinery is needed for the burst layers.
 
@@ -462,8 +470,7 @@ What the row cannot carry:
 - The **four `Self` one-shot emitters** (Sparkles_Stretched 0.4 s, Lightning 0.5 s,
   LightningArc_01/02 0.3 s) run ONCE and never repeat while the other 11 cycle. See gap 3.
 
-`[unresolved: the system-level loop duration — see §2. 1.0 s is what every System-mode emitter
-stores, and unlike NS_Lightning_Cast there is no late burst to corroborate it.]`
+Loop duration resolved `[corpus-v3]` — see §2.
 
 ### 6.2 VisTag / renderer needs
 

@@ -59,8 +59,13 @@ Corpus evidence:
 
 **Identical to [NS_ExplosionOmni.md](NS_ExplosionOmni.md) §2 in every structural respect** — 15 CPU
 emitters, all enabled, all WORLD space, bounds Dynamic, `determinism: false`, **65 particles per
-loop** across the 14 non-ribbon emitters, every burst module carrying an inert `Loop Count Limit = 1`
-under `UseLoopCountLimit = false`.
+firing** across the 14 non-ribbon emitters, every burst module carrying an inert
+`Loop Count Limit = 1` under `UseLoopCountLimit = false`.
+
+**System loop `[corpus-v3]`: `Loop Behavior = Once`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`** —
+identical to the other three explosion variants'. All 15 emitters are `Life Cycle Mode = System`, so
+per [P0-D1] this rules and every per-emitter Loop row is inert.
 
 Two lifetime values differ (both back to the Ground-variant value):
 
@@ -81,14 +86,21 @@ plus `Acceleration Force (0, 0, −4000)`, `Smokes`' sphere r 50 with from-point
 `Sparkles_02001`'s Curl Noise Force (frequency 10, strength 5000, randomization (0.65, 0.125, 0.37)),
 `Flames`' sphere r 50 with from-point rand 130–200.
 
-§2.2 (event chain, `Generate Location Event` → the ribbon, and the
-**`[unresolved: the event-handler stack is NOT exported]`** finding) also transfers verbatim.
+§2.2 (event chain, `Generate Location Event` → the ribbon) also transfers verbatim, including its
+**RESOLVED `[corpus-v3]`** handler contract: `LocationEvent` from `Sparkles_02`,
+`executionMode = SpawnedParticles`, **1 particle per event**, unbounded events/frame,
+`Receive Location Event` applying Position/Velocity/Acceleration/**Ribbon ID**; ribbon particle
+lifetime **0.2 s** from `Initialize Ribbon`. *(Was `[unresolved: the event-handler stack is NOT
+exported]`.)*
 
-§2.3 (**⚠ the unresolved randomized-lifetime reading**) transfers verbatim from
+§2.3 (**randomized lifetimes — RESOLVED `[corpus-v3]`**) transfers verbatim from
 [NS_ExplosionGround.md](NS_ExplosionGround.md) §2.3: `Sparkles_02`, `Sparkles_01`, `Smokes`,
 `SmokesCenter`, `Sparkles_02001` and `Flames` each carry a `Lifetime Min / Max` pair AND an
-`[override] Lifetime = dyn:Random Range Float` whose range is **0.2 / 0.4** on every one of them.
-This sheet takes the override as authoritative. **Here it MOVES THE CADENCE ROW** — see §6.1.
+`[override] Lifetime = dyn:Random Range Float` at **0.2 / 0.4**. Per [P0-D2]
+`Lifetime Mode = Random` ⇒ **Min/Max drives and the override is inert**: `Sparkles_02` **0.4/0.7**,
+`Sparkles_01` **0.2/0.4**, `Smokes` **0.7/1.3**, `SmokesCenter` **0.7/1.3**, `Sparkles_02001`
+**0.4/0.7**, `Flames` **0.35/0.7**. *This sheet previously took the override as authoritative*, and
+the correction **MOVES THE CADENCE ROW** — see §6.1.
 
 **One inert export artefact worth naming so nobody chases it:** `[corpus]` this system exports
 `Flare01.InitializeParticle.Mesh Uniform Scale = 1`, which the other three variants do not.
@@ -200,25 +212,29 @@ The `Color from Curve` overrides, in full:
 **The same five gaps as [NS_ExplosionGround.md](NS_ExplosionGround.md) §6.0, all present here
 unchanged** — G1 ribbon renderer (`Sparkles_02_Trail` + `M_VFX_DisAdd_Trail03` + `Scale Ribbon
 Width`), G2 light renderer (`Light`, RadiusScale 10), G3 sub-UV flipbook (`Flames`, 2×2, mode Random,
-frames 0–3), G4 event generation → event-handler spawn (still
-`[unresolved: handler stack not exported]`), G5 per-emitter cadence divergence (1.0 Infinite vs
-0.3 / 0.4 Once; longest particle lifetime **0.4 s or 1.3 s depending on §2.3**).
+frames 0–3), G4 event generation → event-handler spawn (**now a pure capability gap** — the handler
+stack IS exported `[corpus-v3]`, §2.2), and ~~G5 per-emitter cadence divergence~~ which
+`[corpus-v3]` is **NOT a gap**: every emitter is `Life Cycle Mode = System`, so the stored
+1.0 Infinite / 0.3 / 0.4 Once rows are all inert and the system's `Once / 2.0 s` governs uniformly.
+Longest particle lifetime is **1.3 s** (§2.3 resolved), not 0.4 s.
 
-The **`[unresolved: which loop duration is authoritative]`** item in Ground §6.0 applies verbatim.
+Ground §6.0's loop-authority item applies verbatim and is likewise **RESOLVED `[corpus-v3]`**: the
+system's own rows are `Loop Once / 2.0 s`.
 
 `Curl Noise Force` and `Acceleration Force` remain **work, not gaps**.
 
 ### 6.1 Cadence row
 
-**IDENTICAL to `NS_ExplosionOmni` §6.1** — 1.0 s loop, 65 particles, same `Seed % 65` layer partition
-and the same layer-index ranges
+**IDENTICAL to `NS_ExplosionOmni` §6.1** — per [P0-D3]: **2.0 s loop** `[corpus-v3]` (*was 1.0 s*),
+**65** burst, same `Seed % 65` layer partition and the same layer-index ranges
 (0 `Bubble`, 1 `Flare01`, 2–8 `Sparkles_02`, 9–28 `Sparkles_01`, 29–31 `Smokes`, 32–36 `SmokesCenter`,
 37–41 `Spike01`, 42 `Ring`, 43–52 `Sparkles_02001`, 53–54 `Glow_03`, 55–57 `Glow_04`, 58 `Raimbow`,
 59 `Light`, 60–64 `Flames`). **One row serves both Omni systems.**
 
-`ParticleLifetime` is **`[unresolved]` — resolve §2.3 FIRST**: **0.4 s** under this sheet's reading,
-**1.3 s** under the alternative. The two 0.1 → 0.15 direct-set bumps on `Bubble_First_Explo` and
-`Spike01` (§5.0) do not reach either figure and so do not affect the row.
+`ParticleLifetime` is **1.3 s** `[corpus-v3]` — `Smokes` / `SmokesCenter`'s resolved `Lifetime Max`
+(max resolved lifetime, per [P0-D3]). *Was `[unresolved]` with 0.4 s as this sheet's working
+reading.* The two 0.1 → 0.15 direct-set bumps on `Bubble_First_Explo` and `Spike01` (§5.0) do not
+reach that figure and so do not affect the row.
 
 ### 6.2–6.5 Renderer, mesh, look and texture needs
 

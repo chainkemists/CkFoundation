@@ -42,46 +42,52 @@ asset was generated, nothing was built and nothing was rendered.
 `Determinism: false`, zero user parameters.**
 
 **Every emitter uses `Spawn Rate` (continuous) — no burst module anywhere.** All nine are
-`Life Cycle Mode = System`. Four of them run `Loop Behavior = Once` on a 0.3 s loop; five run
+`Life Cycle Mode = System`. Four of them *store* `Loop Behavior = Once` on a 0.3 s loop; five store
 `Infinite` on a 1.0 s loop. Structurally this is `NS_DebuffLoop`'s shape with different content.
 
-| # | Emitter | Loop | Loop dur | Rate (/s) | Lifetime | Renderer | Material | Size |
+**System loop `[corpus-v3]`: `Loop Behavior = Infinite`, `Loop Duration = 1.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+Per [P0-D1] this RULES all nine emitters — **every per-emitter Loop row in the table below is inert,
+including the four `Once / 0.3 s` rows.** All nine therefore spawn continuously on the system's
+1.0 s infinite loop; the "four fire once and stop" reading was an artefact of trusting the inert
+emitter rows. The rows are kept in the table as authored leftovers, marked inert.
+
+| # | Emitter | Loop *(stored, INERT)* | Loop dur *(inert)* | Rate (/s) | Lifetime | Renderer | Material | Size |
 |---|---|---|---|---|---|---|---|---|
 | 0 | `Raimbow` *(sic)* | Infinite | 1.0 | **0.5** | 1.0 | Sprite, Unaligned/FaceCamera | `Rainbow` | uniform 450 |
-| 1 | `Sparkles_01` | **Once** | **0.3** | 10 | rand `[unresolved]` | Sprite, Unaligned/FaceCamera | `Part01_Bright` | rand uniform 6–10 |
-| 2 | `Sparkles_Stretched` | **Once** | **0.3** | 10 | rand `[unresolved]` | Sprite, **VelocityAligned**/FaceCamera | `Part04` | rand non-uniform (25,70)–(40,60) |
-| 3 | `Star01` | **Once** | **0.3** | 1 | rand 0.3–0.6 | Sprite, Unaligned/FaceCamera | **`Star02`** | rand uniform 40–50 |
-| 4 | `Star02` | **Once** | **0.3** | 1 | rand 0.3–0.6 | Sprite, Unaligned/FaceCamera | **`Star01`** | rand uniform 30–40 |
+| 1 | `Sparkles_01` | ~~Once~~ | ~~0.3~~ | 10 | rand **0.3–0.6** `[corpus-v3]` | Sprite, Unaligned/FaceCamera | `Part01_Bright` | rand uniform 6–10 |
+| 2 | `Sparkles_Stretched` | ~~Once~~ | ~~0.3~~ | 10 | rand **0.3–0.6** `[corpus-v3]` | Sprite, **VelocityAligned**/FaceCamera | `Part04` | rand non-uniform (25,70)–(40,60) |
+| 3 | `Star01` | ~~Once~~ | ~~0.3~~ | 1 | rand 0.3–0.6 `[corpus-v3]` | Sprite, Unaligned/FaceCamera | **`Star02`** | rand uniform 40–50 |
+| 4 | `Star02` | ~~Once~~ | ~~0.3~~ | 1 | rand 0.3–0.6 `[corpus-v3]` | Sprite, Unaligned/FaceCamera | **`Star01`** | rand uniform 30–40 |
 | 5 | `Glow_01` | Infinite | 1.0 | 2 | 2.0 | Sprite, Unaligned/FaceCamera | `Part01` | uniform 550 |
 | 6 | `Glow_02` | Infinite | 1.0 | 2 | 2.0 | Sprite, Unaligned/FaceCamera | `Part01` | uniform 250 |
-| 7 | `Flares` | Infinite | 1.0 | 6 | rand `[unresolved]` | Sprite, Unaligned/FaceCamera | `Part02` | rand uniform 50–200 |
+| 7 | `Flares` | ~~Infinite~~ | ~~1.0~~ | 6 | rand **1.0–2.0** `[corpus-v3]` | Sprite, Unaligned/FaceCamera | `Part02` | rand uniform 50–200 |
 | 8 | `Glow_03` | Infinite | 1.0 | 2 | 2.0 | Sprite, Unaligned/FaceCamera | `Part02` | uniform 220 |
 
 **Note the same naming inversion as `NS_HealCast` `[corpus]`, do not "fix" it:** emitter `Star01`
 draws with `M_VFX_DisAdd_Star02` and emitter `Star02` draws with `M_VFX_DisAdd_Star01`.
 
-**Steady-state rate from the five infinite emitters: 12.5 particles/second** (0.5+2+2+6+2).
-The four `Once` emitters contribute 10×0.3 + 10×0.3 + 1×0.3 + 1×0.3 = **6.6 particles, one time only**
-`[inferred]`. **This is by far the sparsest system in the batch** — `Raimbow` spawns one particle every
-two seconds.
+**Steady-state rate `[corpus-v3]`: all nine emitters spawn continuously — 0.5+10+10+1+1+2+2+6+2 =
+32.5 particles/second.** *(Was stated as "12.5/s from five infinite emitters + 6.6 one-time
+particles from four `Once` emitters" — that split came from the inert emitter Loop rows.)*
+`Raimbow` at 0.5/s is still the sparsest layer: one particle every two seconds.
 
-Steady-state live count from the infinite emitters ≈ 0.5×1 + 2×2 + 2×2 + 6×lifetime(Flares) + 2×2
-≈ **12.5 + 6×L** `[inferred]`, which is 21 if `Flares` lives ~1.4 s.
+Steady-state live count ≈ Σ(rate × mean lifetime) = 0.5×1 + 10×0.45 + 10×0.45 + 1×0.45 + 1×0.45 +
+2×2 + 2×2 + 6×1.5 + 2×2 ≈ **28.9** `[inferred, on the corpus-v3 lifetimes]`.
 
-> ### `[unresolved: lifetime on three emitters]`
-> Same `Lifetime Mode = Random` vs `[override] Lifetime = dyn:Random Range Float` conflict as the rest
-> of the batch. Niagara's Random mode reads `Lifetime Min/Max`; an override drives the **Direct Set**
-> pin. The likely reading is that Min/Max wins `[inferred]`:
+> ### Lifetime — RESOLVED `[corpus-v3]`
+> All three ambiguous emitters are `Lifetime Mode = Random`, so per [P0-D2] the **Min/Max pins drive**
+> and the Direct-Set `RandomRangeFloat` override is INERT (`lifetimeResolved.source = minmax`). The
+> sheet's `[inferred]` guess that Min/Max wins is now MECHANICALLY CONFIRMED:
 >
-> | Emitter | `Lifetime Min/Max` (Random mode) | override `RandomRangeFloat` |
+> | Emitter | LIVE (Random mode) | inert override |
 > |---|---|---|
-> | `Sparkles_01` | **0.3 / 0.6** | 0.2 / 0.4 |
-> | `Sparkles_Stretched` | **0.3 / 0.6** | 0.2 / 0.4 |
-> | `Flares` | **1 / 2** | 0.2 / 0.4 |
+> | `Sparkles_01` | **0.3 / 0.6** | ~~0.2 / 0.4~~ |
+> | `Sparkles_Stretched` | **0.3 / 0.6** | ~~0.2 / 0.4~~ |
+> | `Flares` | **1.0 / 2.0** | ~~0.2 / 0.4~~ |
 >
-> `Star01` / `Star02` are `Random` with Min 0.3 / Max 0.6 and **no override** — unambiguous.
-> `Raimbow`, `Glow_01/02/03` are `Direct Set` — unambiguous (1.0, 2.0, 2.0, 2.0).
-> `Flares` is again the worst conflict (1–2 s vs 0.2–0.4 s); resolve it first.
+> `Star01` / `Star02` are `Random` with Min 0.3 / Max 0.6 and no override — confirmed.
+> `Raimbow`, `Glow_01/02/03` are `Direct Set` — confirmed (1.0, 2.0, 2.0, 2.0).
 
 `Star01`, `Star02` carry an **empty `Lathe Profile` curve override** on their `Cylinder Location`.
 `Star01`/`Star02` also carry `InitializeParticle.Lifetime = 1` alongside their Random ranges — inert.
@@ -150,7 +156,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 - Dynamic params: **`[0.5, 0, 0, 0]`** constant.
 
 ### Layer 1 — `Sparkles_01` (Once, 0.3 s, rate 10/s)
-- Lifetime `[unresolved]` — `0.3 / 0.6` vs override `0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`0.3 / 0.6` drives**; the `0.2 / 0.4` override is inert ([P0-D2]).
 - **`Cylinder Location`**: Radius **80**, Height **130**, Midpoint 0.5, **Offset `(0, 0, 0)`**,
   Random, Spawn Only, `Surface Only = false`, `Override Local Rotation = true`,
   `Use Endcaps In Surface Only Mode = true`, Non Uniform Scale (1,1,1), Apply Owner Scale (0,0,0).
@@ -171,7 +177,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 0.05 + rate 20 there). One behavior layer and one look serve both.
 
 ### Layer 2 — `Sparkles_Stretched` (Once, 0.3 s, rate 10/s)
-- Lifetime `[unresolved]` — `0.3 / 0.6` vs override `0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`0.3 / 0.6` drives**; the `0.2 / 0.4` override is inert ([P0-D2]).
 - `Cylinder Location`: Radius **80**, Height **120**, Midpoint 0.5, Offset **(0, 0, 0)**.
 - `Add Velocity` = `Random Range Vector` **Min `(0, 0, 1000)` → Max `(0, 0, 1600)`**
   (`NS_HealCast`'s is 1000 → 1700).
@@ -234,7 +240,7 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
   `Color Minimum RGBA(0,0,0,1)`, `Color Maximum RGBA(1,1,1,1)`.
   (The `NS_BuffLoop` sibling uses the same mode with a red base and `Saturation Range (0.2, 0.2)` /
   `Alpha Scale Range (0.13, 0.13)`.)
-- Lifetime `[unresolved]` — `Lifetime Min 1 / Max 2` vs override `RandomRangeFloat 0.2 / 0.4`.
+- Lifetime `[corpus-v3]` — **`Lifetime Min 1.0 / Max 2.0` drives**; the `RandomRangeFloat 0.2 / 0.4` override is inert ([P0-D2]).
 - `Cylinder Location`: Radius **80**, Height **100**, Midpoint 0.5, **Offset `(0, 0, -10)`**.
 - **No velocity module** — flares hold their spawn position.
 - Sprite Size Mode Random Uniform: **Min 50, Max 200**.
@@ -258,21 +264,30 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
 
 ### 6.1 Cadence
 
+**`[P0-D3 STOP: loop = 1.0 s (system, Infinite/Fixed); lifetime = 2.0 s (max resolved,
+Glow_01/02/03); burst = 0 — rate-only system, no burst module anywhere and §2 carries no burst
+count]`.** The formula yields a `BurstCount == 0` continuous row, which the cadence table cannot
+parameterize today (no per-row spawn rate). Orchestrator ruling required before a row is written.
+
 **Same continuous-cadence problem as [NS_BuffLoop.md](NS_BuffLoop.md) §6.1 and
 [NS_DebuffLoop.md](NS_DebuffLoop.md) §6.1** — nine `Spawn Rate` emitters, no burst; the existing
 continuous template row ignores `LoopDuration`/`ParticleLifetime` and has no rate field at all.
-Plus the same mixed `Once` / `Infinite` split (four vs five).
+`[corpus-v3]` The mixed `Once` / `Infinite` split is GONE: all nine emitters are system-governed and
+the system loops `Infinite / 1.0 s`, so this is one uniform continuous stream, not four one-shots
+plus five loops.
 
 This system makes the gap most acute because **its rates are fractional and very low**: `Raimbow` at
 0.5/s means one particle every two seconds. Approximating it as a per-loop burst would turn a slow,
 sparse drift into a metronome.
 
 Recommendation, identical to the two sibling Loop sheets: **extend `FCk_ParticlesTemplateSpec` with a
-real spawn rate and lifetime for continuous rows**, then run one 12.5/s stream (the five infinite
-emitters) with lifetime 2.0 and a rate-weighted partition. Because 12.5 is fractional, the weights are
-not integers — `Raimbow` 0.5, `Glow_01` 2, `Glow_02` 2, `Flares` 6, `Glow_03` 2. Either scale the
-partition by 2 (25 slots: Raimbow 1, Glows 4/4/4, Flares 12) or drive `Raimbow` on an every-other-loop
-gate. **The four `Once` layers are not expressible today.**
+real spawn rate and lifetime for continuous rows**, then run one **32.5/s** stream (all nine emitters
+`[corpus-v3]`) with lifetime **2.0 s** and a rate-weighted partition. Because 32.5 is fractional,
+the weights are not integers — `Raimbow` 0.5, `Sparkles_01` 10, `Sparkles_Stretched` 10, `Star01` 1,
+`Star02` 1, `Glow_01` 2, `Glow_02` 2, `Flares` 6, `Glow_03` 2. Either scale the partition by 2
+(65 slots: Raimbow 1, Sparkles 20/20, Stars 2/2, Glows 4/4/4, Flares 12) or drive `Raimbow` on an
+every-other-loop gate. *(Was a 12.5/s five-emitter stream plus "four `Once` layers not expressible" —
+the `Once` rows are inert, so all nine layers belong to the one stream.)*
 
 ### 6.2 VisTag / renderer needs
 

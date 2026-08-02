@@ -70,9 +70,12 @@ on its **cadence row** instead (`FCk_ParticlesRendererSpec` + `FCk_ParticlesTemp
 in the naming header): either a `Mesh` renderer carrying one named generated mesh drawn with one named CkUsf
 look, or a `VelocityAlignedSprite` drawn with a look. Row renderers bind their look master **explicitly**
 (`bOverrideMaterials` / `Material`) rather than through `User.SpriteMaterial`, because one user parameter
-cannot carry several materials — so such a behavior keeps `Get_BehaviorLookName` at `NAME_None`. They are
-emitted for that row's template only. Behavior 7 (Slash) owns 5–9: four crescent-mesh slash layers and one
-spark sprite. **The roster-wide ceiling is DERIVED** — `ck::particles::Get_RosterVisTag_Max()` walks the
+cannot carry several materials — so a behavior drawing ONLY through row renderers keeps
+`Get_BehaviorLookName` at `NAME_None`. They are emitted for that row's template only. Behavior 7 (Slash)
+owns 5–9: four crescent-mesh slash layers and one spark sprite. Behaviors 18/19 (the Vefects projectile
+pair) share 10–11 on one cadence row — and 19 additionally binds a look, because its one camera-facing
+layer draws on the shared VisTag 0 where `User.SpriteMaterial` is the only material channel.
+**The roster-wide ceiling is DERIVED** — `ck::particles::Get_RosterVisTag_Max()` walks the
 cadence table on top of `SharedRendererVisTag_Max`; tests read it and never restate a literal.
 Ordering consequence: **generate the CkUsf looks BEFORE rebuilding templates** — row renderers resolve their
 masters at build time, and a miss logs an Error rather than failing the build.
@@ -114,6 +117,8 @@ Shipped recipes:
 |---|---|---|
 | [`NS_Lightning_Range.md`](Cookbook/NS_Lightning_Range.md) | Vefects `NS_Lightning_Range` + `M_VFX_DisAdd_Ring04` | `LightningRange` (17) |
 | [`NS_BasicAttack.md`](Cookbook/NS_BasicAttack.md) | Vefects `NS_BasicAttack` + the `M_VFX_DisAdd_{Slash01,Slash02,Slash04,Pan_Wind02,Part04}` set | `Slash` (7) |
+| [`NS_Gunshot_Projectile.md`](Cookbook/NS_Gunshot_Projectile.md) | Vefects `NS_Gunshot_Projectile` + `M_VFX_DisAdd_{Part01,Part04}` | `GunshotProjectile` (18) |
+| [`NS_Arrow_Projectile.md`](Cookbook/NS_Arrow_Projectile.md) | Vefects `NS_Arrow_Projectile` + the same two instances | `ArrowProjectile` (19) |
 
 ---
 
@@ -206,7 +211,7 @@ a per-component override (`UNiagaraComponent::SetVariableMaterial`) bound to a `
 
 **Behavior roster (the `BehaviorId` a caller passes):** Gravity=0, Swirl=1, Explosion=2, Fire=3, Fireworks=4,
 Galaxy=5, Beam=6, Slash=7, Nova=8, MuzzleFlash=9, ImpactBurst=10, Tracer=11, SmokePlume=12, SparksBurst=13,
-GroundRing=14, LightningStrike=15, AuraSwirl=16, LightningRange=17.
+GroundRing=14, LightningStrike=15, AuraSwirl=16, LightningRange=17, GunshotProjectile=18, ArrowProjectile=19.
 
 The roster SIZE has one definition — `ck::particles::NumBehaviors`, exposed to BP/AS as
 `UCk_Utils_Particles_UE::Get_NumBehaviors()`. Tests and gyms iterate that; never re-state a maximum id.
@@ -236,6 +241,7 @@ editor builder emits one template per row:
 | `PS_CkParticles_Template_Burst` | 1.2 s | 1.2 s | 96 | the multi-particle one-shots (10, 13, 14, 15) |
 | `PS_CkParticles_Template_Single` | 1.0 s | 1.1 s | 1 | one-sprite, one-second-loop recreations (17) |
 | `PS_CkParticles_Template_Slash` | 1.0 s | 0.5 s | 19 | Vefects `NS_BasicAttack`'s exact cadence (7); declares 5 row renderers |
+| `PS_CkParticles_Template_ProjectileTrio` | 10 s | 10 s | 3 | Vefects `NS_Gunshot_Projectile` + `NS_Arrow_Projectile` (18, 19) — a Loop-Once 10 s SYSTEM; declares 2 row renderers |
 
 Rows verified 2026-08-01 against `ck::particles::Get_TemplateSpecs()` and against `Add_BurstEmitterStack`,
 which reads `LoopDuration` / `ParticleLifetime` / `BurstCount` straight off the spec — so the table above is
@@ -253,7 +259,7 @@ resolver the spawn path calls.
 - `Spawn_SystemAtLocation(WorldContext, System, BehaviorId, ...)` — same for an explicit (e.g. generated) system.
 
 The **CkParticles gym** lives in CkTests (`Script/CkParticles/`, registered as "Particles" in `CkTests_GymRegistry.as`):
-**one station per behavior, EXCEPT the faithful Vefects ports (7, 17)** — those live in the **VfxExamples gym**
+**one station per behavior, EXCEPT the faithful Vefects ports (7, 17, 18, 19)** — those live in the **VfxExamples gym**
 (`Script/CkVfxExamples/`), which shows each port as a PAIR of pedestals: the CkParticles recreation next to the
 ORIGINAL Niagara system, soft-loaded by path string at runtime (no package dependency — an absent Vefects install
 shows a placard instead). In-PIE exec there: `Ck_GymVfxExamples_RestartAll` (re-fires both sides in sync).
@@ -261,7 +267,7 @@ The Particles gym's remaining stations spawn each behavior's template with a fit
 marketplace-recreation stations credit their exemplars in the station description. In-PIE exec:
 `Ck_GymParticles_RestartAll`. The composition pattern for richer VFX (spells/trails) is multiple
 `Spawn_BehaviorAtLocation` calls at one transform. Automated coverage: the PIE autotest
-`CkAutoTest_Particles_SpawnAllBehaviors.as` loops the FULL roster (including 7 and 17) and asserts a live
+`CkAutoTest_Particles_SpawnAllBehaviors.as` loops the FULL roster (including the ports) and asserts a live
 component per id; `CkAutoTest_VfxExamples_PairStationsSpawn.as` covers the pair harness.
 **Never restate a maximum id in a gym or test** — that is exactly the drift `NumBehaviors` exists to prevent.
 

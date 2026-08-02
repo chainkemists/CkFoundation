@@ -58,30 +58,32 @@ Every emitter renders one camera-facing sprite (`Alignment: Unaligned`, `Facing:
 | Bomb_Glow_02 | 2 | 1 | Uniform **220** | 0.5 | 1 | `M_VFX_DisAdd_Part01` |
 | Bomb_Glow_03 | 4 | 1 | Uniform **350** | 1 | 1 | `M_VFX_DisAdd_Part01` |
 | Bomb_Glow_04 | 4 | 1 | Uniform **100** | 0.3 | 1 | `M_VFX_DisAdd_Part02` |
-| Sparkles | 5 | rand — see §5 note | Random Uniform **7 … 10** | 1 | 1 | `M_VFX_DisAdd_Part01_Bright` |
+| Sparkles | 5 | rand **0.6 … 1.0** `[corpus-v3]` | Random Uniform **7 … 10** | 1 | 1 | `M_VFX_DisAdd_Part01_Bright` |
 | Ring01 | 0.5 | **4** | Uniform **160** | 0.25 | curve (§5) | `M_VFX_DisAdd_Ring03` |
 | Star01 | 2 | 1 | Uniform **40** | 1 | 1 | `M_VFX_DisAdd_Star01` |
 | Star02 | 2 | 0.8 | Uniform **80** | 1 | **0.745454** | `M_VFX_DisAdd_Star02` |
-| Flares | 6 | rand — see §5 note | Random Uniform **50 … 200** | via curve | **8** | `M_VFX_DisAdd_Part02` |
+| Flares | 6 | rand **1.0 … 2.0** `[corpus-v3]` | Random Uniform **50 … 200** | via curve | **8** | `M_VFX_DisAdd_Part02` |
 
 Dynamic material parameters 2, 3 and 4 are **0 on every emitter**; only `Write Parameter Index 0` is
 true anywhere.
 
-**Steady-state particle count** `[inferred, arithmetic on the table]`: Σ(rate × lifetime) ≈
-4 + 2 + 4 + 4 + 1.5 + 2 + 2 + 1.6 + 1.8 ≈ **23 live particles** at any instant (using the
-override lifetimes for Sparkles/Flares — see the §5 note; using the Random-mode pins instead gives
-≈ 33).
+**Steady-state particle count** `[inferred, arithmetic on the table]`: Σ(rate × mean lifetime) ≈
+4 + 2 + 4 + 4 + 4 + 2 + 2 + 1.6 + 9 ≈ **33 live particles** at any instant, using the `[corpus-v3]`
+resolved Min/Max lifetimes for Sparkles (0.6…1.0) and Flares (1.0…2.0).
+*Was ≈ 23 under the override-wins assumption (0.2…0.4 on both) — corrected per [P0-D2].*
 
 **Cadence caveat — the "Loop Duration = 1" rows are inert here.** `[corpus]` All 9 emitters run
 `Life Cycle Mode = System`, which means the emitter's own `Loop Behavior` / `Loop Duration` are
 driven by the system, not by the emitter. Every emitter nevertheless stores
 `Loop Behavior = Infinite`, `Loop Duration Mode = Fixed`, `Loop Duration = 1`, `Loop Delay = 0`,
-`UseLoopDelay = false`. `[unresolved: the system-level loop duration is NOT in the corpus export —
-`CkAssetExporter` writes emitter stacks only, no system stack. 1.0 s is the value every emitter
-stores, and the sibling recipe NS_Lightning_Range took the same emitter-level row at face value; treat
-1.0 s as the working figure and re-confirm before pinning a cadence row.]` For a pure spawn-rate
-system the loop duration does not gate spawning at all — it only wraps emitter Age — so this
-ambiguity is low-risk **for this effect specifically**.
+`UseLoopDelay = false`.
+
+**System loop `[corpus-v3]`: `Loop Behavior = Infinite`, `Loop Duration = 2.0 s`, `Loop Delay = 0`,
+`UseLoopDelay = false`, `Inactive Response = Complete`, `Recalculate Duration Each Loop = false`.**
+Authority per [P0-D1]; the emitter "Infinite / 1.0 s" rows are inert leftovers.
+*(Was `[unresolved]` with 1.0 s as the working figure.)* For a pure spawn-rate system the loop
+duration does not gate spawning at all — it only wraps emitter Age — so the correction is low-risk
+**for this effect specifically**.
 
 ---
 
@@ -151,12 +153,11 @@ Referenced textures `[corpus]` (all `Texture2D`, `sRGB: false`, `TC_Alpha`, `TEX
 `t` = NormalizedAge (0 → 1 over that emitter's own lifetime). `C` = constant key, `L` = linear key —
 transcribed verbatim from the corpus `[override]` lines.
 
-> **`[unresolved: which lifetime pin is live on Sparkles and Flares.]`** Both emitters have
-> `Lifetime Mode = Random` (which reads `Lifetime Min`/`Lifetime Max`) **and** an
-> `[override] Lifetime = dyn:Random Range Float` on the Direct-Set pin. Both value sets are recorded
-> below. NS_BasicAttack §2 resolved the identical shape in favour of the **override**
-> (it reported "rand 0.2–0.4" where `Lifetime Min/Max` read 0.3/0.5); follow that precedent
-> knowingly, not silently.
+> **RESOLVED `[corpus-v3]` — Sparkles and Flares read `Lifetime Min`/`Lifetime Max`.** Both emitters
+> are `Lifetime Mode = Random`, so per [P0-D2] the Min/Max pins DRIVE and the
+> `[override] Lifetime = dyn:Random Range Float` sitting on the unselected Direct-Set pin is INERT
+> (`lifetimeResolved.source = minmax`, override under `inertOverrides`).
+> *Was read as the override (0.2 … 0.4 on both) under the override-wins assumption.*
 
 ### Bomb_Glow_01 — rate 2/s, lifetime 2 s, size 220, `Color.Scale Alpha = 0.5`
 
@@ -196,8 +197,8 @@ transcribed verbatim from the corpus `[override]` lines.
 
 ### Sparkles — rate 5/s, size Random Uniform 7 … 10, `Color.Scale Alpha = 1`
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins `Lifetime Min 0.6 / Max 1`
-  (see the unresolved note above)
+- Lifetime `[corpus-v3]`: **`Lifetime Min 0.6 / Max 1.0` drives**; the `Random Range Float`
+  override 0.2 … 0.4 is inert (see the resolved note above)
 - Spawn shape: **Sphere Location**, `Sphere Radius 70`, `Non Uniform Scale (1,1,1)`,
   `Sphere Orientation Axis (1,0,0)`, `Offset (0,0,0)`, `Surface Only false`,
   `Sphere Distribution Random`
@@ -253,8 +254,8 @@ transcribed verbatim from the corpus `[override]` lines.
 
 ### Flares — rate 6/s, size Random Uniform 50 … 200
 
-- Lifetime: override `Random Range Float` **0.2 … 0.4**; Random-mode pins `Lifetime Min 1 / Max 2`
-  (see the unresolved note above)
+- Lifetime `[corpus-v3]`: **`Lifetime Min 1.0 / Max 2.0` drives**; the `Random Range Float`
+  override 0.2 … 0.4 is inert (see the resolved note above)
 - Spawn shape: **Sphere Location**, `Sphere Radius 100`, `Non Uniform Scale (1,1,1)`, `Offset (0,0,0)`,
   `Surface Only false`
 - Initialize color `RGBA(1, 0.329981, 0, 1)`, with the InitializeParticle randomizers authored:
@@ -287,6 +288,12 @@ lifetimes from 0.8 s to 4 s. The cadence table's row shape today is
 spawn-rate stack" — the continuous stack's **rate is not a row field**, and one row carries exactly
 one particle lifetime.
 
+**`[P0-D3 STOP: loop = 2.0 s (system, Infinite/Fixed); lifetime = 4.0 s (max resolved, Ring01);
+burst = 0 — rate-only system, every emitter spawns through Spawn Rate and §2 carries no burst
+count]`.** The [P0-D3] formula produces a `BurstCount == 0` continuous row, which the cadence table
+cannot parameterize today (no per-row spawn rate). Orchestrator ruling required before a row is
+written; the two candidate shapes below are unchanged, now with the resolved numbers.
+
 Two viable shapes, both of which need a decision before any HLSL is written:
 
 - **(a) One continuous row + in-behavior sub-lifetimes.** Add a row with count 0 and a particle
@@ -295,8 +302,9 @@ Two viable shapes, both of which need a decision before any HLSL is written:
   0.3/0.5/0.06+rand layers. Costs: the effective per-layer rate becomes (template rate ÷ number of
   layers), which is a knob the table does not currently expose, and 4 s of dead template particles
   for the 0.8 s layers.
-- **(b) One burst row at the 1.0 s system cycle** with a burst count matching the per-second totals
-  (≈ 27 or 28) and per-layer lifetimes handled as in (a). This trades the source's *continuous,
+- **(b) One burst row at the 2.0 s system cycle `[corpus-v3]`** with a burst count matching the
+  per-cycle totals (2× the per-second totals, ≈ 55) and per-layer lifetimes handled as in (a).
+  *Was stated as a 1.0 s cycle / ≈ 27–28.* This trades the source's *continuous,
   uncorrelated* spawn stream for a synchronized once-per-second pulse. **That is a visible change** —
   this effect's whole identity is a calm, non-pulsing idle loop — so (b) should be rejected unless
   (a) is blocked.
