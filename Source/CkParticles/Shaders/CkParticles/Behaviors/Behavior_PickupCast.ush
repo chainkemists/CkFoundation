@@ -1,0 +1,306 @@
+// /CkParticles/Behaviors/Behavior_PickupCast.ush — BehaviorId 30.
+//
+// Faithful re-port of Vefects NS_PickupCast. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_PickupCast.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is ELEVEN camera-facing emitters bursting over a Loop-Once 2.0 s system in four beats: three body
+// glows, a lens ring, a ten-particle sparkle spray, two concentric shockwave rings, two flash pops and two
+// stars. Every one spawns through Spawn Burst Instantaneous and nothing streams, so one CkParticles burst of 22
+// carries the whole system (Seed % 22) through PS_CkParticles_Template_PickupCast
+// (2.0 s loop / 1.05 s particle lifetime / burst 22).
+//
+// Nothing here reads In.EmitterAge: there is no rate stack and no windowed sub-layer, so every particle is a
+// burst particle and the modulo partition is exact by construction.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 30) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — 22 slots, in the source's own emitter order (recipe §2/§6.1).
+#define CKP_PC_NUM_LAYERS      22
+#define CKP_PC_LAYER_GLOW01     0
+#define CKP_PC_LAYER_GLOW02     1
+#define CKP_PC_FIRST_GLOW03     2   //  2..4   Bomb_Glow_03 (3)
+#define CKP_PC_LAYER_RAINBOW    5
+#define CKP_PC_FIRST_SPARKLE    6   //  6..15  Sparkles     (10)
+#define CKP_PC_LAYER_RING01    16
+#define CKP_PC_LAYER_FLASH01   17
+#define CKP_PC_LAYER_FLASH02   18
+#define CKP_PC_LAYER_STAR01    19
+#define CKP_PC_LAYER_STAR02    20
+                                    // 21 is Ring02 — the fallthrough
+
+// The four spawn beats (recipe §2). Glow_01/02, Raimbow and both rings fire on the first.
+#define CKP_PC_DELAY_MID        0.05
+#define CKP_PC_DELAY_STAR02     0.1
+#define CKP_PC_DELAY_STAR01     0.2
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_PC_VIS_PART01      97
+#define CKP_PC_VIS_PART02      98
+#define CKP_PC_VIS_RAINBOW     99
+#define CKP_PC_VIS_PART01BR   100
+#define CKP_PC_VIS_RING01     101
+#define CKP_PC_VIS_PART03BR   102
+#define CKP_PC_VIS_STAR01     103
+#define CKP_PC_VIS_STAR02     104
+
+FCkParticles_StageOutput CkParticles_PickupCast_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// The "warm ring" ramp Ring01 and Ring02 share verbatim — white through amber to a deep orange, with the RED
+// channel pinned at 1 for the whole life. Its alpha is a SINGLE key, so neither ring fades: they dissolve.
+float3 CkParticles_PickupCast_RingRamp(float T)
+{
+    return float3(
+        1.0,
+        CkParticles_Key3(T, 0.0, 0.912198, 0.405675, 0.752942, 1.0, 0.450786),
+        CkParticles_Key3(T, 0.0, 0.753,    0.405675, 0.304987, 1.0, 0.040915));
+}
+
+// The star ramp, shared by Star01 and Star02 — white holding to t=0.406 and then falling to the same deep
+// orange the rings end on.
+float3 CkParticles_PickupCast_StarRamp(float T)
+{
+    return float3(
+        1.0,
+        CkParticles_Key3(T, 0.0, 1.0, 0.405675, 0.74985, 1.0, 0.450786),
+        CkParticles_Key3(T, 0.0, 1.0, 0.405675, 0.303,   1.0, 0.0409152));
+}
+
+// The five "Scale Color in RGBA-Together mode" glows share one envelope: RGB untouched, alpha ramping straight
+// down over the whole life on top of the Initialize colour's own alpha.
+float CkParticles_PickupCast_GlowFade(float T)
+{
+    return CkParticles_Key2(T, 0.0, 1.0, 1.0, 0.0);
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_PickupCast(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = ((In.Seed % CKP_PC_NUM_LAYERS) + CKP_PC_NUM_LAYERS) % CKP_PC_NUM_LAYERS;
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // ---- Bomb_Glow_01: the 500-unit body glow, the widest thing on the first beat ----
+    if (Layer == CKP_PC_LAYER_GLOW01)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(In.Age);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color   = float4(1.0, 0.266356, 0.184475, 0.35 * CkParticles_PickupCast_GlowFade(t));
+        O.Size    = float2(500.0 * Grow, 500.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PC_VIS_PART01;
+        return O;
+    }
+
+    // ---- Bomb_Glow_02: the hot core, and the only glow in the system whose dissolve channel is 0 ----
+    if (Layer == CKP_PC_LAYER_GLOW02)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(In.Age);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color  = float4(0.913099, 0.184475, 0.0193824, 0.7 * CkParticles_PickupCast_GlowFade(t));
+        O.Size   = float2(230.0 * Grow, 230.0 * Grow);
+        O.VisTag = CKP_PC_VIS_PART01;
+        return O;
+    }
+
+    // ---- Bomb_Glow_03: three identical pale pips on the second beat, growing from ZERO ----
+    // The source emitter carries no randomness of any kind, so all three overlay exactly — reproduced here by
+    // giving them no per-Seed draw either.
+    if (Layer >= CKP_PC_FIRST_GLOW03 && Layer < CKP_PC_LAYER_RAINBOW)
+    {
+        const float td = In.Age - CKP_PC_DELAY_MID;
+
+        if (td < 0.0 || td > 0.5)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.5);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.0, 1.0, 1.0);
+
+        O.Color   = float4(1.0, 0.947307, 0.520996, 0.3 * CkParticles_PickupCast_GlowFade(t));
+        O.Size    = float2(100.0 * Grow, 100.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PC_VIS_PART02;
+        return O;
+    }
+
+    // ---- Raimbow: the lens ring. Its Color module writes WHITE over the Initialize grey and the Scale Color
+    // module behind it halves the RGB, so the layer is a flat 0.5 grey — the 0.913 init colour never shows.
+    if (Layer == CKP_PC_LAYER_RAINBOW)
+    {
+        if (In.Age > 0.5)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.5);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+
+        O.Color    = float4(0.5, 0.5, 0.5, CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+        O.Size     = float2(250.0 * Grow, 250.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_PC_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Sparkles: ten motes sprayed omnidirectionally off a half-unit sphere at 350-500 units/s ----
+    if (Layer >= CKP_PC_FIRST_SPARKLE && Layer < CKP_PC_LAYER_RING01)
+    {
+        const float Life = lerp(0.5, 1.0, CkParticles_Rand(In.Seed, 1));
+        const float td   = In.Age - CKP_PC_DELAY_MID;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float  t   = saturate(td / Life);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        // Sphere Location radius 0.5, volume-filled — a point source in all but name.
+        const float3 Spawn = Dir * (0.5 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+        const float3 V0    = Dir * lerp(350.0, 500.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        // The colour curve's first key sits at t=0.616, so the mote is WHITE for the first three fifths of its
+        // life and only then crosses to blue — a clamped-key lerp reproduces that hold for free.
+        O.Color = float4(
+            CkParticles_Key2(t, 0.615756, 1.0,      0.936915, 0.0),
+            CkParticles_Key2(t, 0.615756, 0.508881, 0.936915, 0.0896671),
+            CkParticles_Key2(t, 0.615756, 0.191202, 0.936915, 1.0),
+            CkParticles_Key2(t, 0.613341, 1.0,      1.0,      0.0));
+
+        const float Base = lerp(7.0, 10.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_PC_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Ring01: the inner shockwave. Its alpha is a single key at 1, so it never fades — the dissolve
+    // channel sliding 1 -> -1 is the only thing that removes it.
+    if (Layer == CKP_PC_LAYER_RING01)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(In.Age);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.7, 1.0, 1.0);
+
+        O.Color    = float4(CkParticles_PickupCast_RingRamp(t), 1.0);
+        O.Size     = float2(120.0 * Grow, 120.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 1.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_PC_VIS_RING01;
+        return O;
+    }
+
+    // ---- Flash_Glow_01: the cast flash. The biggest sprite in the system by 1.6x, gone in a fifth of a second.
+    if (Layer == CKP_PC_LAYER_FLASH01)
+    {
+        const float td = In.Age - CKP_PC_DELAY_MID;
+
+        if (td < 0.0 || td > 0.2)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.2);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color   = float4(1.0, 0.916066, 0.467, 0.1 * CkParticles_PickupCast_GlowFade(t));
+        O.Size    = float2(800.0 * Grow, 800.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PC_VIS_PART01;
+        return O;
+    }
+
+    // ---- Flash_Glow_02: the HDR pop. Its Initialize colour has RED at 3, the only above-1 channel in the
+    // cookbook, so nothing on this path may saturate the colour before the look sees it.
+    if (Layer == CKP_PC_LAYER_FLASH02)
+    {
+        const float td = In.Age - CKP_PC_DELAY_MID;
+
+        if (td < 0.0 || td > 0.1)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color   = float4(3.0, 1.91279, 0.458779, CkParticles_PickupCast_GlowFade(t));
+        O.Size    = float2(150.0 * Grow, 150.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PC_VIS_PART03BR;
+        return O;
+    }
+
+    // ---- Star01: the last layer to spawn, on its own 0.2 s beat ----
+    if (Layer == CKP_PC_LAYER_STAR01)
+    {
+        const float td = In.Age - CKP_PC_DELAY_STAR01;
+
+        if (td < 0.0 || td > 0.3)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.4, 1.0, 1.0, 0.0);
+
+        O.Color   = float4(CkParticles_PickupCast_StarRamp(t), 1.0);
+        O.Size    = float2(40.0 * Grow, 40.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PC_VIS_STAR01;
+        return O;
+    }
+
+    // ---- Star02: the same paint 2.5x wider on its own 0.1 s beat, starting PARTLY eroded ----
+    if (Layer == CKP_PC_LAYER_STAR02)
+    {
+        const float td = In.Age - CKP_PC_DELAY_STAR02;
+
+        if (td < 0.0 || td > 0.3)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.4, 1.0, 1.0, 0.0);
+
+        O.Color   = float4(CkParticles_PickupCast_StarRamp(t), 1.0);
+        O.Size    = float2(100.0 * Grow, 100.0 * Grow);
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, -0.125, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PC_VIS_STAR02;
+        return O;
+    }
+
+    // ---- Ring02: Ring01's paint, wider and much dimmer. Its Color module's Scale Alpha is 0.2 where every
+    // other layer's is 1, which is the whole difference between the two rings.
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_PickupCast_Hidden(O); }
+
+        const float t    = saturate(In.Age);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.7, 1.0, 1.0);
+
+        O.Color    = float4(CkParticles_PickupCast_RingRamp(t), 0.2);
+        O.Size     = float2(140.0 * Grow, 140.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 1.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_PC_VIS_RING01;
+        return O;
+    }
+}

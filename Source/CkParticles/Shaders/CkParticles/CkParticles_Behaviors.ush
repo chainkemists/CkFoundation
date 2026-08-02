@@ -35,6 +35,9 @@
 #include "/CkParticles/Behaviors/Behavior_HealLoop.ush"
 #include "/CkParticles/Behaviors/Behavior_BuffLoop.ush"
 #include "/CkParticles/Behaviors/Behavior_DebuffLoop.ush"
+#include "/CkParticles/Behaviors/Behavior_PickupCast.ush"
+#include "/CkParticles/Behaviors/Behavior_HealCast.ush"
+#include "/CkParticles/Behaviors/Behavior_DebuffCast.ush"
 
 FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
 {
@@ -67,6 +70,9 @@ FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
     if (In.BehaviorId == 27) { return CkParticles_Behavior_HealLoop(In); }
     if (In.BehaviorId == 28) { return CkParticles_Behavior_BuffLoop(In); }
     if (In.BehaviorId == 29) { return CkParticles_Behavior_DebuffLoop(In); }
+    if (In.BehaviorId == 30) { return CkParticles_Behavior_PickupCast(In); }
+    if (In.BehaviorId == 31) { return CkParticles_Behavior_HealCast(In); }
+    if (In.BehaviorId == 32) { return CkParticles_Behavior_DebuffCast(In); }
 
     // BehaviorId 0 (and any unknown id) -> Gravity.
     return CkParticles_Behavior_Gravity(In);

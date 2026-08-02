@@ -1,0 +1,320 @@
+// /CkParticles/Behaviors/Behavior_DebuffCast.ush — BehaviorId 32.
+//
+// Faithful re-port of Vefects NS_DebuffCast. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_DebuffCast.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source ships TEN emitters and DISABLES four of them: the whole warm Bomb_Glow + Raimbow stack its Buff
+// and Heal siblings run. The six that remain are a falling dark arrow, two sparkle clouds under a curl-noise
+// field, a near-black halo, a sub-UV flame shell, and the batch's only MESH layer — a claw carrier sweeping a
+// UV streak along its own arc. One system-governed emitter bursts once; the other five are
+// `Life Cycle Mode = Self / Loop Once` on a 0.3 s window, and four of those add a spawn RATE on top of their
+// burst. PS_CkParticles_Template_DebuffCast is 2.0 s loop / 2.0 s particle lifetime / burst 30 / rate 65 per
+// second.
+//
+// Burst and rate particles are told apart by SPAWN PHASE (see Behavior_HealCast.ush's header for the idiom).
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 32) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_DC_LOOP            2.0
+#define CKP_DC_BURST_SLOTS      30
+#define CKP_DC_RATE_TOTAL     65.0
+#define CKP_DC_CUM_SPARKDARK  20.0   // Sparkles_Dark   20/s
+#define CKP_DC_CUM_RING       25.0   // Ring             5/s
+#define CKP_DC_CUM_SPARKBR    45.0   // Sparkles_Bright 20/s
+                                     // Slash           20/s -> the remainder
+
+// The one-shot window every streaming emitter runs for. Flames carries no rate, so it never uses one.
+#define CKP_DC_WINDOW          0.3
+
+#define CKP_DC_LAYER_BIGARROW   0
+#define CKP_DC_LAYER_SPARKDARK  1
+#define CKP_DC_LAYER_RING       2
+#define CKP_DC_LAYER_SPARKBR    3
+#define CKP_DC_LAYER_FLAMES     4
+#define CKP_DC_LAYER_SLASH      5
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_DC_VIS_ARROWS     113
+#define CKP_DC_VIS_PART01BR   114
+#define CKP_DC_VIS_RING01     115
+#define CKP_DC_VIS_PART03BR   116
+#define CKP_DC_VIS_FLAMES     117
+#define CKP_DC_VIS_SLASH      118
+
+// ---- The Curl Noise Force, mapped onto CkParticles_CurlPath -------------------------------------------------------
+//
+// The source drives Sparkles_Dark and Sparkles_Bright with a `Curl Noise Force` of Strength 2500 and Frequency
+// 15. Neither number can be used raw: the module's own position scaling is not exported, and the force is an
+// ACCELERATION where CurlPath advects with a VELOCITY. Both conversions are stated rather than tuned.
+//
+// Frequency: the module authors its field in metres, so 15 becomes 0.015 per unit. [inferred — the position
+// scaling inside the module graph is not in the corpus.]
+//
+// Strength: the accumulated curl velocity is multiplied every frame by the layer's OWN Scale Velocity curve,
+// which crushes it to that curve's 0.1 plateau by t = 0.2. Mean displacement over a life of L is therefore
+// 0.5 * 2500 * 0.1 * L^2, and the constant-velocity path that covers the same ground in the same time is
+// 0.5 * 2500 * 0.1 * L. CurlPath multiplies that velocity by the FIELD, whose mean magnitude is a measured
+// property of this plugin's own Fbm (0.736 over 400 samples at this frequency and spawn scale), so the
+// velocity is divided by it.
+#define CKP_DC_CURL_FREQ            0.015
+#define CKP_DC_CURL_SRC_STRENGTH  2500.0
+#define CKP_DC_CURL_VEL_PLATEAU      0.1
+#define CKP_DC_CURL_FIELD_MEAN     0.736
+#define CKP_DC_CURL_SEED             11u   // the source's own Random Seed
+
+FCkParticles_StageOutput CkParticles_DebuffCast_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+float3 CkParticles_DebuffCast_CurlOffset(float3 Spawn, float Age, float Life)
+{
+    const float Strength = 0.5 * CKP_DC_CURL_SRC_STRENGTH * CKP_DC_CURL_VEL_PLATEAU * Life
+                         / CKP_DC_CURL_FIELD_MEAN;
+
+    return CkParticles_CurlPath(Spawn, Age, CKP_DC_CURL_FREQ, Strength, CKP_DC_CURL_SEED) - Spawn;
+}
+
+// The two `Color Mode = Random Range` layers share a channel mode of Link RGB / Link A, so RGB takes ONE
+// random and alpha its own — a single-t lerp between the dark green and the dark violet, not three.
+float3 CkParticles_DebuffCast_RandomRangeRgb(int Seed, float3 Minimum, float3 Maximum)
+{
+    return lerp(Minimum, Maximum, CkParticles_Rand(Seed, 13));
+}
+
+int CkParticles_DebuffCast_BurstLayer(int Seed)
+{
+    const int S = ((Seed % CKP_DC_BURST_SLOTS) + CKP_DC_BURST_SLOTS) % CKP_DC_BURST_SLOTS;
+
+    if (S == 0) { return CKP_DC_LAYER_BIGARROW; }
+    if (S < 8)  { return CKP_DC_LAYER_SPARKDARK; }  //  1..7
+    if (S < 11) { return CKP_DC_LAYER_RING; }       //  8..10
+    if (S < 18) { return CKP_DC_LAYER_SPARKBR; }    // 11..17
+    if (S < 23) { return CKP_DC_LAYER_FLAMES; }     // 18..22
+    return CKP_DC_LAYER_SLASH;                      // 23..29
+}
+
+int CkParticles_DebuffCast_RateLayer(int Seed)
+{
+    const float R = CkParticles_Rand(Seed, 0) * CKP_DC_RATE_TOTAL;
+
+    if (R < CKP_DC_CUM_SPARKDARK) { return CKP_DC_LAYER_SPARKDARK; }
+    if (R < CKP_DC_CUM_RING)      { return CKP_DC_LAYER_RING; }
+    if (R < CKP_DC_CUM_SPARKBR)   { return CKP_DC_LAYER_SPARKBR; }
+    return CKP_DC_LAYER_SLASH;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_DebuffCast(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    const float Phase   = CkParticles_SpawnPhase(In.EmitterAge, In.Age, CKP_DC_LOOP);
+    const bool  IsBurst = CkParticles_IsBurstSpawn(Phase, CKP_DC_LOOP);
+
+    int Layer = CKP_DC_LAYER_BIGARROW;
+
+    if (IsBurst)
+    {
+        Layer = CkParticles_DebuffCast_BurstLayer(In.Seed);
+    }
+    else
+    {
+        Layer = CkParticles_DebuffCast_RateLayer(In.Seed);
+
+        // A rate particle born past its emitter's one-shot window never existed in the source.
+        if (Phase > CKP_DC_WINDOW)
+        { return CkParticles_DebuffCast_Hidden(O); }
+    }
+
+    // Every enabled emitter bursts at loop start — this system has no staggered beat at all.
+
+    // ---- BigArrow: the falling chevron. Its Buff sibling's arrow starts BELOW the origin and rises; this one
+    // starts 50 units above it and sinks, which is the whole Buff/Debuff read.
+    if (Layer == CKP_DC_LAYER_BIGARROW)
+    {
+        if (In.Age > 1.5)
+        { return CkParticles_DebuffCast_Hidden(O); }
+
+        const float t  = saturate(In.Age / 1.5);
+        const float3 V0 = float3(0.0, 0.0, -150.0);
+
+        O.Position = float3(0.0, 0.0, 50.0) + V0 * (CkParticles_Int3(t, 0.3, 1.0, 0.05, 0.05) * 1.5);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.3, 0.05, 1.0, 0.05);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0, 0.00233049, 0.460006, 0.00116306, 1.0, 0.00182116),
+            CkParticles_Key3(t, 0.0, 0.00139829, 0.460006, 0.00132921, 1.0, 0.00182116),
+            CkParticles_Key3(t, 0.0, 0.005,      0.460006, 0.005,      1.0, 0.00212469),
+            CkParticles_Key4(t, 0.0, 0.0, 0.15575, 1.0, 0.557803, 1.0, 1.0, 0.0));
+
+        // No size curve: the authored (170, 240) quad holds for the whole life.
+        O.Size   = float2(170.0, 240.0);
+        O.VisTag = CKP_DC_VIS_ARROWS;
+        return O;
+    }
+
+    // ---- Sparkles_Dark: near-black motes IMPLODING from a 200-unit shell at 700 units/s, wandering under
+    // the curl field. The negative Velocity Strength is the Debuff signature and is easy to get backwards.
+    if (Layer == CKP_DC_LAYER_SPARKDARK)
+    {
+        const float Life = lerp(1.0, 1.5, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffCast_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Dir   = CkParticles_RandDir(In.Seed);
+        const float3 Spawn = Dir * 200.0;
+        const float3 V0    = Dir * -700.0;
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.1, 0.0) * Life)
+                   + CkParticles_DebuffCast_CurlOffset(Spawn, In.Age, Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.1, 1.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key2(t, 0.113492, 0.00102734, 0.385149, 0.000465223),
+            CkParticles_Key2(t, 0.113492, 0.002,      0.385149, 0.000531684),
+            CkParticles_Key2(t, 0.113492, 0.00105217, 0.385149, 0.002),
+            CkParticles_Key3(t, 0.0, 0.0, 0.0857229, 1.0, 1.0, 0.0));
+
+        const float Base = lerp(7.0, 20.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.VisTag   = CKP_DC_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Ring: the halo. A flat near-black colour under an alpha TRIANGLE that peaks exactly halfway ----
+    if (Layer == CKP_DC_LAYER_RING)
+    {
+        const float Life = lerp(0.3, 0.7, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffCast_Hidden(O); }
+
+        const float t    = saturate(In.Age / Life);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+        const float Base = lerp(220.0, 250.0, CkParticles_Rand(In.Seed, 8));
+
+        O.Color = float4(0.00182116, 0.00182116, 0.00212469,
+                         0.45 * CkParticles_Key3(t, 0.0, 0.0, 0.499849, 1.0, 1.0, 0.0));
+        O.Size     = float2(Base * Grow, Base * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -0.5), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_DC_VIS_RING01;
+        return O;
+    }
+
+    // ---- Sparkles_Bright: the outward spray off a 5-unit point, coloured by a per-particle draw between a
+    // dark green and a dark violet rather than by any curve. Same curl field as Sparkles_Dark.
+    if (Layer == CKP_DC_LAYER_SPARKBR)
+    {
+        const float Life = lerp(1.0, 1.5, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffCast_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Dir   = CkParticles_RandDir(In.Seed);
+        const float3 Spawn = Dir * (5.0 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+        const float3 V0    = Dir * lerp(300.0, 1000.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.1, 0.0) * Life)
+                   + CkParticles_DebuffCast_CurlOffset(Spawn, In.Age, Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.1, 1.0, 0.0);
+
+        const float3 Rgb = CkParticles_DebuffCast_RandomRangeRgb(In.Seed,
+            float3(0.093059, 0.181164, 0.0953075), float3(0.111932, 0.0409152, 0.3564));
+
+        O.Color = float4(Rgb, CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.0, 1.0, 0.0));
+
+        const float Base = lerp(20.0, 70.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.5);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.VisTag   = CKP_DC_VIS_PART03BR;
+        return O;
+    }
+
+    // ---- Flames: the sub-UV shell. The largest sprites in the system, pinned to a 20-unit shell with no
+    // velocity at all, turning in place, and driving the batch's strongest distortion at a constant 10.
+    if (Layer == CKP_DC_LAYER_FLAMES)
+    {
+        const float Life = lerp(1.0, 2.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffCast_Hidden(O); }
+
+        const float t = saturate(In.Age / Life);
+
+        O.Position = CkParticles_RandDir(In.Seed) * 20.0;
+
+        // Alpha is a single key at 1, so the flames never fade — the dissolve channel removes them.
+        O.Color = float4(
+            CkParticles_Key3(t, 0.113492, 0.175111, 0.545729, 0.0144, 0.984002, 0.00560539),
+            CkParticles_Key3(t, 0.113492, 0.250158, 0.545729, 0.0144, 0.984002, 0.00802319),
+            CkParticles_Key3(t, 0.113492, 0.175111, 0.545729, 0.048,  0.984002, 0.00560539),
+            1.0);
+
+        const float Base = lerp(200.0, 300.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key2(t, 0.0, 0.5, 1.0, 1.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        // A random start angle plus a per-particle constant rate in degrees per second.
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+                   + lerp(-45.0, 45.0, CkParticles_Rand(In.Seed, 5)) * In.Age;
+
+        const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+        O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 10.0, 0.0, 0.0);
+        O.VisTag  = CKP_DC_VIS_FLAMES;
+        return O;
+    }
+
+    // ---- Slash: the claw meshes. Its Sphere Location module is DISABLED, so every one sits at the cast point
+    // and the only thing separating them is a per-particle orientation and a non-uniform mesh scale.
+    {
+        const float Life = lerp(1.0, 1.5, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffCast_Hidden(O); }
+
+        const float t = saturate(In.Age / Life);
+
+        // The source randomizes Initial Mesh Orientation through a Random Range Vector whose units are not
+        // recoverable from the corpus. Every reading of it produces differently-facing claws, so each takes
+        // its own random facing — the same call NS_Arrow_Cast's LightningStrip layer already makes.
+        O.Orientation = CkParticles_QuatFromZTo(CkParticles_RandDir(In.Seed));
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+
+        // Mesh Scale Random Non-Uniform, with Y pinned at 1 by the source's own bounds.
+        O.Scale = float3(lerp(0.5, 1.5, CkParticles_Rand(In.Seed, 3)),
+                         1.0,
+                         lerp(0.5, 1.5, CkParticles_Rand(In.Seed, 5)));
+
+        const float3 Rgb = CkParticles_DebuffCast_RandomRangeRgb(In.Seed,
+            float3(0.0154102, 0.03, 0.0157825), float3(0.00942192, 0.00344404, 0.03));
+
+        O.Color = float4(Rgb, 0.45 * CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.0, 1.0, 0.0));
+
+        // Param 3 is the look's UV-pan channel and the mesh's u runs ALONG the arc, so this sweep IS the
+        // streak travelling down the claw.
+        O.Dynamic = float4(0.1, 0.0, CkParticles_Key3(t, 0.0, -0.5, 0.3, 0.3, 1.0, 0.5), 0.0);
+        O.VisTag  = CKP_DC_VIS_SLASH;
+        return O;
+    }
+}
