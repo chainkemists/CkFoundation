@@ -100,7 +100,7 @@ auto
         FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
     }
 
-    const auto WriteText = InFormats == ECk_AssetExporter_SidecarFormats::JsonAndText;
+    const auto WriteText = ck::asset_exporter::ShouldWrite_SummaryText(InFormats);
 
     const auto TextString = WriteText ? DoSerializeToText(JsonObject) : FString{};
 
