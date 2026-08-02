@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 26;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 30;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -271,6 +271,74 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_PickupLoop: six renderers for nine emitters — four bomb glows share two paints, and the ring is
+    // the only instance in the system with a LIVE distortion branch (recipe Cookbook/NS_PickupLoop.md §6.2).
+    inline auto Get_PickupLoopRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 71, nullptr, TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 72, nullptr, TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 73, nullptr, TEXT("PartDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 74, nullptr, TEXT("RingDisAdd03")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 75, nullptr, TEXT("StarDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 76, nullptr, TEXT("StarDisAdd02")      },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_HealLoop: seven renderers for nine emitters, and the cookbook's only pair whose emitter names and
+    // materials are SWAPPED — emitter Star01 draws with the Star02 paint and vice versa. Every look is already
+    // carried by another row (recipe Cookbook/NS_HealLoop.md §6.2).
+    inline auto Get_HealLoopRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    77, nullptr, TEXT("RainbowDisAdd")     },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    78, nullptr, TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 79, nullptr, TEXT("PartDisAdd04")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    80, nullptr, TEXT("StarDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    81, nullptr, TEXT("StarDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    82, nullptr, TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    83, nullptr, TEXT("PartDisAdd02")      },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_BuffLoop: seven renderers for nine emitters — two of them velocity-aligned, and the arrow paint is
+    // the batch's only new sprite look (recipe Cookbook/NS_BuffLoop.md §6.2).
+    inline auto Get_BuffLoopRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    84, nullptr, TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    85, nullptr, TEXT("RainbowDisAdd")     },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 86, nullptr, TEXT("ArrowsDisAdd")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    87, nullptr, TEXT("StarDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 88, nullptr, TEXT("PartDisAdd04")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    89, nullptr, TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    90, nullptr, TEXT("PartDisAdd02")      },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_DebuffLoop: six renderers for nine emitters — three glows share one paint and the two arrow
+    // streams share one look, differing only in their colour curve. One row is a 2x2 sub-UV sheet
+    // (recipe Cookbook/NS_DebuffLoop.md §6.2).
+    inline auto Get_DebuffLoopRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    91, nullptr, TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    92, nullptr, TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    93, nullptr, TEXT("RingDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    94, nullptr, TEXT("FlamesDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    95, nullptr, TEXT("PartDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 96, nullptr, TEXT("ArrowsDisAdd")      },
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -330,6 +398,14 @@ namespace ck::particles
             { TEXT("PS_CkParticles_Template_ArrowCast"),   2.0f, 1.55f, 42, Get_ArrowCastRendererSpecs()   },
             { TEXT("PS_CkParticles_Template_ArrowHit"),    2.0f, 0.55f, 34, Get_ArrowHitRendererSpecs()    },
             { TEXT("PS_CkParticles_Template_BombSpawn"),   2.0f, 1.05f, 28, Get_BombSpawnRendererSpecs()   },
+            // The four Vefects "Loop" ports. Their sources are INFINITE systems that spawn only through Spawn Rate
+            // — no burst module anywhere — so each row states a rate and leaves BurstCount at zero. Lifetime is the
+            // longest layer's resolved life, and the loop is the SYSTEM's own (1.0 s on HealLoop, 2.0 s on the
+            // other three); on a rate-only source the loop wraps Emitter.Age rather than gating a spawn.
+            { TEXT("PS_CkParticles_Template_PickupLoop"),  2.0f, 4.0f, 0, Get_PickupLoopRendererSpecs(), 27.5f },
+            { TEXT("PS_CkParticles_Template_HealLoop"),    1.0f, 2.0f, 0, Get_HealLoopRendererSpecs(),   34.5f },
+            { TEXT("PS_CkParticles_Template_BuffLoop"),    2.0f, 2.0f, 0, Get_BuffLoopRendererSpecs(),   48.0f },
+            { TEXT("PS_CkParticles_Template_DebuffLoop"),  2.0f, 2.0f, 0, Get_DebuffLoopRendererSpecs(), 36.0f },
         };
         return MakeArrayView(Specs);
     }
@@ -402,6 +478,26 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_BombSpawn"));
     }
 
+    inline auto Get_PickupLoopTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_PickupLoop"));
+    }
+
+    inline auto Get_HealLoopTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_HealLoop"));
+    }
+
+    inline auto Get_BuffLoopTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_BuffLoop"));
+    }
+
+    inline auto Get_DebuffLoopTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_DebuffLoop"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -419,6 +515,11 @@ namespace ck::particles
             case 23: return Get_ArrowCastTemplateSystemObjectPath();   // ArrowCast    — 2.0s loop, 1.55s, burst 42
             case 24: return Get_ArrowHitTemplateSystemObjectPath();    // ArrowHit     — 2.0s loop, 0.55s, burst 34
             case 25: return Get_BombSpawnTemplateSystemObjectPath();   // BombSpawn    — 2.0s loop, 1.05s, burst 28
+            // The rate-only Loop sources: a continuous stream, no burst.
+            case 26: return Get_PickupLoopTemplateSystemObjectPath();  // PickupLoop   — 2.0s loop, 4.0s, rate 27.5/s
+            case 27: return Get_HealLoopTemplateSystemObjectPath();    // HealLoop     — 1.0s loop, 2.0s, rate 34.5/s
+            case 28: return Get_BuffLoopTemplateSystemObjectPath();    // BuffLoop     — 2.0s loop, 2.0s, rate 48/s
+            case 29: return Get_DebuffLoopTemplateSystemObjectPath();  // DebuffLoop   — 2.0s loop, 2.0s, rate 36/s
             default: break;
         }
 
