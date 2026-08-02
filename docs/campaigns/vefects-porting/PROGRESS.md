@@ -3,17 +3,25 @@
 **Read me first on every resume. Trust this file over memory; distrust it enough to spot-check
 two Done claims against their cited artifacts.**
 
-## Status board
+## Status board — BUILD-OUT COMPLETE (2026-08-02)
 
 | Phase | State |
 |---|---|
 | Pre-campaign (method proof: behaviors 7 + 17, harness, sheets, plan) | **Done** |
-| Phase 0 — exporter ground truth + 2 zero-capability ports | **In progress** (unit 0.1 dispatched 2026-08-02) |
-| Phase 1 — C1/C3/C4/C9-FlatAdd + 6 M-tier ports | Pending |
-| Phase 2 — continuous cadence + lifecycle → Loops/Casts (10) | **Authored through batch E (33–35); awaiting the orchestrator's closing lanes** |
-| Phase 3 — ribbons → trails (4) | **Batch G AUTHORED (38, 39) — all four ports authored; C6c CONSUMED.** Awaiting the orchestrator's closing lanes |
-| Phase 4 — light/facings/palettes → explosions (5 behaviors / 5 pairs) | **Batch H AUTHORED (40–44) — all five ports authored; [P4-D1] shared include CONSUMED; [P4-D2] recorded per port. Closes Phase 4's port set.** Awaiting the orchestrator's lanes |
-| Phase 5 — Lightning_Hit + campaign close | Chartered |
+| Phase 0 — exporter ground truth + ports 18–19 | **Done** |
+| Phase 1 — C1/C3/C4/C9 capabilities + ports 20–25 | **Done** |
+| Phase 2 — C2/C5/C10 + ports 26–35 | **Done** |
+| Phase 3 — ribbons ([P3-D1] second emitter + seed bank) + ports 36–39 | **Done** |
+| Phase 4 — C8/FresnelBomb/palettes ([P4-D2] light drop) + ports 40–44 | **Done** |
+| Phase 5 — Lightning_Hit (45) | **Done** — commits CkFoundation `7d2718c88`+`e2ca0aea9`+`8b59ed63c`, CkTests `f5749f57`; gate of record Particles **36/36 (38 s)**, 31 templates non-inert, VfxExamples 1/1 (**30 pairs**) |
+| **INSPECTION STAGE (maintainer)** | **OPEN — the campaign's remaining work.** 30 A/B pairs in the VfxExamples gym; per-pair parity verdicts per VALIDATION.md; misses drive Slash-style measured iterations |
+
+**Final build-out state:** all 29 Vefects Skills systems ported as behaviors 7, 17, 18–45
+(fire/ice palettes as twins). All commits LOCAL — pushes remain the maintainer's. Open
+non-blocking follow-ups: perf measurement of multi-live-system frame cost (unclamped
+DeltaSeconds → rate emitters suspected); mesh-generator regen-all churn; [P1-D1]
+Gradient_Invert ruling before any real-LUT look; the LightningRange formal §12 walk;
+Cookbook README index + PORTING_PLAN census sweep (dispatched at close).
 
 ## Done (evidence-backed)
 
@@ -1618,3 +1626,14 @@ on.** **Particles 35 → 36**; **CkUsf 4/4** (unchanged — no new look); VfxExa
 - 2026-08-01/02 — Fable orchestrator: method proof (7+17), harness, 3 A/B iterations to Slash
   parity, 29 sheets + plan, campaign doc set authored, [C-D1..7] ruled, Phase 0 opened, unit 0.1
   dispatched to Opus.
+- 2026-08-02 — Fable orchestrator, Opus executors (batches A–H + finale), Sonnet doc sweep: ENTIRE BUILD-OUT in one session — exporter v3, reconciliation, 27 ports (18–45), 9 capabilities, 4 red cycles root-caused, campaign closed to the inspection stage.
+
+## CORRECTION (2026-08-02, post-close sweep): NS_Dash was NEVER PORTED
+
+The close-out index sweep caught it: NS_Dash.md carries no behavior id. Root cause: the
+2026-08-01 PORTING_PLAN wave table omitted Dash between the tier census (which listed it,
+M-tier) and the port order; every phase then executed its wave list faithfully and the
+orchestrator's per-phase counts summed to the wave lists, not the pack roster. The earlier
+"build-out complete / 29 of 29" status was WRONG — true state 28 of 29. Lesson: a roster
+completion claim must be verified against the SOURCE inventory, not the plan's own tables.
+Dash ports now as behavior 46.

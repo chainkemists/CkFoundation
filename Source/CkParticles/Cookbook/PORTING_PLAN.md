@@ -7,6 +7,22 @@ Per-effect facts live in the sheets; this file owns the cross-effect picture: ca
 matrix, port order, shared assets, open questions. **Behavior ids are allocated only at
 implementation time, in port order — never in a sheet.**
 
+## Status (2026-08-02) — EXECUTED
+
+All 29 systems this plan scoped are now **implementation-complete**: every sheet below
+carries an allocated behavior id (18–45) with its `.ush` + CPU mirror, cadence row, row
+renderers, looks/textures/meshes and automation test authored — see
+[README.md](README.md)'s recipe index for the per-recipe id/status roster. Combined with
+the two pre-campaign ports (`NS_BasicAttack` 7, `NS_Lightning_Range` 17), the roster is
+**31 of 31 behaviors ported** (incl. `NS_Dash` as 46 — omitted from this plan's own wave
+table between the tier census and the port order, caught by the close-out index sweep and
+ported last; the lesson — verify completion claims against the SOURCE inventory, not the
+plan's internal tables — is recorded in the campaign PROGRESS). The tier census, capability
+matrix and port-order tables
+below are the plan's historical record and are left as originally synthesized; they no
+longer describe remaining work. **Open stage: inspection** — the `[HUMAN-VERIFY]` §12 A/B
+walk is outstanding on most ports (README index has the per-recipe detail).
+
 ## Tier census
 
 | Tier | Meaning | Effects |
