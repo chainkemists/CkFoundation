@@ -41,6 +41,8 @@
 #include "/CkParticles/Behaviors/Behavior_GunshotCast.ush"
 #include "/CkParticles/Behaviors/Behavior_FireBallCast.ush"
 #include "/CkParticles/Behaviors/Behavior_LightningCast.ush"
+#include "/CkParticles/Behaviors/Behavior_FireBallProjectile.ush"
+#include "/CkParticles/Behaviors/Behavior_BombProjectile.ush"
 
 FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
 {
@@ -79,6 +81,8 @@ FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
     if (In.BehaviorId == 33) { return CkParticles_Behavior_GunshotCast(In); }
     if (In.BehaviorId == 34) { return CkParticles_Behavior_FireBallCast(In); }
     if (In.BehaviorId == 35) { return CkParticles_Behavior_LightningCast(In); }
+    if (In.BehaviorId == 36) { return CkParticles_Behavior_FireBallProjectile(In); }
+    if (In.BehaviorId == 37) { return CkParticles_Behavior_BombProjectile(In); }
 
     // BehaviorId 0 (and any unknown id) -> Gravity.
     return CkParticles_Behavior_Gravity(In);

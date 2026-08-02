@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 36;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 38;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -515,6 +515,59 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_FireBall_Projectile: six renderers for the seven sprite emitters — the two identically-painted
+    // core streaks share one velocity-aligned row. The seventh and eighth source emitters are the mirrored ribbon
+    // pair, which lives on the ribbon spec below (recipe Cookbook/NS_FireBall_Projectile.md §6.2).
+    inline auto Get_FireBallProjectileRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 157, nullptr, TEXT("PartDisAdd04")      },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 158, nullptr, TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    159, nullptr, TEXT("PartDisAdd03Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    160, nullptr, TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    161, nullptr, TEXT("FlamesDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    162, nullptr, TEXT("SmokeDisAdd01")     },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // The fireball's trail: ONE ribbon renderer carrying BOTH source ribbons. Trail_01 and Trail_02 are the same
+    // material and the same curves, mirrored only in the sign of their curl strength, so they differ by ribbon ID
+    // rather than by renderer — which is exactly what RibbonIdBinding (Particles.MeshIndex) exists for.
+    inline auto Get_FireBallProjectileRibbonRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::Ribbon, 163, nullptr, TEXT("TrailFlatAdd") },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_Bomb_Projectile: two renderers for the two burst emitters — the coincident glow shells and the
+    // toon prop, both already carried by the NS_Bomb_Spawn row (recipe Cookbook/NS_Bomb_Projectile.md §6.2).
+    inline auto Get_BombProjectileRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 164, nullptr,      TEXT("PartDisAdd01") },
+            { ECk_ParticlesRenderer_Kind::Mesh,               165, TEXT("Bomb"), TEXT("BombToon")     },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // The bomb's trail: the cookbook's only DISTANCE-driven ribbon. Its points are placed along the leader's own
+    // path by arc length rather than by time (CkParticles_ArcLengthTable / ArcLengthTime), so the burst count is a
+    // capacity — one point per arc-length sample — and not a rate.
+    inline auto Get_BombProjectileRibbonRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::Ribbon, 166, nullptr, TEXT("TrailDisAdd01") },
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -603,6 +656,20 @@ namespace ck::particles
             { TEXT("PS_CkParticles_Template_GunshotCast"),   2.0f, 1.55f, 40, Get_GunshotCastRendererSpecs()          },
             { TEXT("PS_CkParticles_Template_FireBallCast"),  2.0f, 2.05f, 50, Get_FireBallCastRendererSpecs()         },
             { TEXT("PS_CkParticles_Template_LightningCast"), 2.0f, 1.55f, 30, Get_LightningCastRendererSpecs(), 40.0f },
+            // The two Vefects projectile TRAILS — the cookbook's first rows to declare a ribbon emitter.
+            //
+            // FireBall is the heaviest row here: a 10 s Self-governed loop (every emitter runs its own 10 s
+            // cycle, and the system agrees), fifteen burst particles, and 408 sprites a second on top. Its
+            // ribbon emitter streams 100 points a second, 50 for each of the mirrored pair. Bomb is a Loop-Once
+            // 2.5 s system — the only 2.5 in the cookbook, matching its own 2.5 s lifetimes — bursting four.
+            // Its ribbon spec states a BURST because the source spawns per unit of travel, not per second: the
+            // behavior places its 17 points along the leader's path by arc length.
+            { TEXT("PS_CkParticles_Template_FireBallProjectile"), 10.0f, 10.0f, 15,
+              Get_FireBallProjectileRendererSpecs(), 408.0f,
+              { 100.0f, 0, Get_FireBallProjectileRibbonRendererSpecs() } },
+            { TEXT("PS_CkParticles_Template_BombProjectile"), 2.5f, 2.5f, 4,
+              Get_BombProjectileRendererSpecs(), 0.0f,
+              { 0.0f, 17, Get_BombProjectileRibbonRendererSpecs() } },
         };
         return MakeArrayView(Specs);
     }
@@ -730,6 +797,16 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_LightningCast"));
     }
 
+    inline auto Get_FireBallProjectileTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_FireBallProjectile"));
+    }
+
+    inline auto Get_BombProjectileTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_BombProjectile"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -760,6 +837,9 @@ namespace ck::particles
             case 33: return Get_GunshotCastTemplateSystemObjectPath();   // GunshotCast   — 2.0s loop, 1.55s, burst 40
             case 34: return Get_FireBallCastTemplateSystemObjectPath();  // FireBallCast  — 2.0s loop, 2.05s, burst 50
             case 35: return Get_LightningCastTemplateSystemObjectPath(); // LightningCast — 2.0s loop, 1.55s, 30 + 40/s
+            // The two projectile trails. Both rows carry a ribbon emitter on top of the sprite/mesh one.
+            case 36: return Get_FireBallProjectileTemplateSystemObjectPath(); // 10s loop, 10s, 15 + 408/s + ribbon 100/s
+            case 37: return Get_BombProjectileTemplateSystemObjectPath();     // 2.5s loop, 2.5s, 4 + ribbon burst 17
             default: break;
         }
 
