@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 30;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 33;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -339,6 +339,63 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_PickupCast: eight renderers for eleven emitters — Part01 alone serves three of them and the two
+    // concentric shockwave rings share a ninth. Every layer is camera-facing; the source has no mesh, no ribbon
+    // and no sub-UV anywhere (recipe Cookbook/NS_PickupCast.md §6.2).
+    inline auto Get_PickupCastRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,  97, nullptr, TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,  98, nullptr, TEXT("PartDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,  99, nullptr, TEXT("RainbowDisAdd")     },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 100, nullptr, TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 101, nullptr, TEXT("RingDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 102, nullptr, TEXT("PartDisAdd03Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 103, nullptr, TEXT("StarDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 104, nullptr, TEXT("StarDisAdd02")      },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_HealCast: eight renderers for nine emitters — the two body glows share Part01, the emitter names
+    // and their star paints are SWAPPED (emitter Star01 draws with the Star02 paint), and the lens layer is the
+    // cookbook's first sub-UV sheet on a VELOCITY-ALIGNED quad rather than a camera-facing one
+    // (recipe Cookbook/NS_HealCast.md §6.2).
+    inline auto Get_HealCastRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    105, nullptr, TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    106, nullptr, TEXT("RainbowDisAdd")     },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    107, nullptr, TEXT("RingDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    108, nullptr, TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 109, nullptr, TEXT("PartDisAdd04")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    110, nullptr, TEXT("StarDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    111, nullptr, TEXT("StarDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 112, nullptr, TEXT("PartDisAdd07"), FIntPoint(2, 2) },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_DebuffCast: six renderers for the six ENABLED emitters — the source disables its whole warm
+    // glow stack. One velocity-aligned arrow, three camera-facing sprites, a 2x2 sub-UV flame sheet, and the
+    // batch's only mesh: the claw carrier whose UV streak sweeps along its own arc
+    // (recipe Cookbook/NS_DebuffCast.md §6.2).
+    inline auto Get_DebuffCastRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 113, nullptr,            TEXT("ArrowsDisAdd")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    114, nullptr,            TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    115, nullptr,            TEXT("RingDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    116, nullptr,            TEXT("PartDisAdd03Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    117, nullptr,            TEXT("FlamesDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  118, TEXT("SlashClaw"),  TEXT("SlashDisAdd04")     },
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -406,6 +463,14 @@ namespace ck::particles
             { TEXT("PS_CkParticles_Template_HealLoop"),    1.0f, 2.0f, 0, Get_HealLoopRendererSpecs(),   34.5f },
             { TEXT("PS_CkParticles_Template_BuffLoop"),    2.0f, 2.0f, 0, Get_BuffLoopRendererSpecs(),   48.0f },
             { TEXT("PS_CkParticles_Template_DebuffLoop"),  2.0f, 2.0f, 0, Get_DebuffLoopRendererSpecs(), 36.0f },
+            // The three Vefects "Cast" ports. All three sources are Loop-Once 2.0 s SYSTEMS again, but two of
+            // them mix cadences: emitters governed by the system burst once, while `Life Cycle Mode = Self`
+            // emitters fire a burst AND a spawn rate over their own 0.2-0.3 s window. Those rows carry BOTH
+            // stacks; the behavior splits the two populations by spawn phase and gates the streamed ones on the
+            // window. PickupCast bursts only, so its rate stays zero.
+            { TEXT("PS_CkParticles_Template_PickupCast"),  2.0f, 1.05f, 22, Get_PickupCastRendererSpecs()        },
+            { TEXT("PS_CkParticles_Template_HealCast"),    2.0f, 1.55f, 17, Get_HealCastRendererSpecs(),   50.0f },
+            { TEXT("PS_CkParticles_Template_DebuffCast"),  2.0f, 2.0f,  30, Get_DebuffCastRendererSpecs(), 65.0f },
         };
         return MakeArrayView(Specs);
     }
@@ -498,6 +563,21 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_DebuffLoop"));
     }
 
+    inline auto Get_PickupCastTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_PickupCast"));
+    }
+
+    inline auto Get_HealCastTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_HealCast"));
+    }
+
+    inline auto Get_DebuffCastTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_DebuffCast"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -520,6 +600,10 @@ namespace ck::particles
             case 27: return Get_HealLoopTemplateSystemObjectPath();    // HealLoop     — 1.0s loop, 2.0s, rate 34.5/s
             case 28: return Get_BuffLoopTemplateSystemObjectPath();    // BuffLoop     — 2.0s loop, 2.0s, rate 48/s
             case 29: return Get_DebuffLoopTemplateSystemObjectPath();  // DebuffLoop   — 2.0s loop, 2.0s, rate 36/s
+            // The Cast sources: a burst, and on two of the three a spawn rate composed on top of it.
+            case 30: return Get_PickupCastTemplateSystemObjectPath();  // PickupCast   — 2.0s loop, 1.05s, burst 22
+            case 31: return Get_HealCastTemplateSystemObjectPath();    // HealCast     — 2.0s loop, 1.55s, 17 + 50/s
+            case 32: return Get_DebuffCastTemplateSystemObjectPath();  // DebuffCast   — 2.0s loop, 2.0s,  30 + 65/s
             default: break;
         }
 

@@ -1,0 +1,356 @@
+// /CkParticles/Behaviors/Behavior_HealCast.ush — BehaviorId 31.
+//
+// Faithful re-port of Vefects NS_HealCast. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_HealCast.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is NINE emitters over a Loop-Once 2.0 s system in TWO cadences: four system-governed emitters that
+// burst once, and five `Life Cycle Mode = Self / Loop Once` emitters that each carry a burst AND a spawn rate
+// over their own 0.3 s window (0.2 s for the lens flare). The cookbook's first row to declare BOTH stacks:
+// PS_CkParticles_Template_HealCast is 2.0 s loop / 1.55 s particle lifetime / burst 17 / rate 50 per second.
+//
+// The two populations are told apart by SPAWN PHASE, not by a flag: burst particles land at phase 0 and take
+// the source's exact per-emitter counts through a 17-slot modulo, while rate particles spread across the loop
+// and take a rate-weighted draw over the five streaming layers. A rate particle born past its own emitter's
+// one-shot window is hidden, which is what reproduces `Self / Once` on a template that loops.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 31) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_HC_LOOP            2.0
+#define CKP_HC_BURST_SLOTS      17
+#define CKP_HC_RATE_TOTAL     50.0
+#define CKP_HC_CUM_SPARKLES   20.0   // Sparkles_01        20/s
+#define CKP_HC_CUM_STRETCH    30.0   // Sparkles_Stretched 10/s
+#define CKP_HC_CUM_STAR01     35.0   // Star01              5/s
+#define CKP_HC_CUM_STAR02     40.0   // Star02              5/s
+                                     // Lens               10/s -> the remainder
+
+// The one-shot window each streaming emitter runs for, measured from loop start.
+#define CKP_HC_WINDOW          0.3
+#define CKP_HC_WINDOW_LENS     0.2
+
+// Every emitter but the three that open the effect bursts on the same 50 ms beat.
+#define CKP_HC_DELAY           0.05
+
+#define CKP_HC_LAYER_GLOW01     0
+#define CKP_HC_LAYER_GLOW02     1
+#define CKP_HC_LAYER_RAINBOW    2
+#define CKP_HC_LAYER_RING       3
+#define CKP_HC_LAYER_SPARKLES   4
+#define CKP_HC_LAYER_STRETCH    5
+#define CKP_HC_LAYER_STAR01     6
+#define CKP_HC_LAYER_STAR02     7
+#define CKP_HC_LAYER_LENS       8
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_HC_VIS_PART01     105
+#define CKP_HC_VIS_RAINBOW    106
+#define CKP_HC_VIS_RING01     107
+#define CKP_HC_VIS_PART01BR   108
+#define CKP_HC_VIS_PART04     109
+#define CKP_HC_VIS_STAR02     110
+#define CKP_HC_VIS_STAR01     111
+#define CKP_HC_VIS_PART07     112
+
+FCkParticles_StageOutput CkParticles_HealCast_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// The heal ramp four layers wear verbatim — cyan-white, through white, into a saturated green, ending near
+// black-red. Glow_02, Ring, Sparkles_01 and Sparkles_Stretched share every key of it.
+float3 CkParticles_HealCast_HealRamp(float T)
+{
+    return float3(
+        CkParticles_Key4(T, 0.0, 0.715694, 0.079686, 1.0,      0.290975, 0.109462, 0.713553, 0.0241576),
+        CkParticles_Key4(T, 0.0, 0.89627,  0.079686, 0.854993, 0.290975, 1.0,      0.713553, 0.913099),
+        CkParticles_Key4(T, 0.0, 1.0,      0.079686, 0.376262, 0.290975, 0.617207, 0.713553, 0.141263));
+}
+
+// The star ramp — the same head, but its green peak arrives later and it never reaches the deep tail.
+float3 CkParticles_HealCast_StarRamp(float T)
+{
+    return float3(
+        CkParticles_Key4(T, 0.0, 0.715694, 0.0796861, 1.0,      0.234229, 0.921582, 0.80652, 0.109462),
+        CkParticles_Key4(T, 0.0, 0.89627,  0.0796861, 0.854993, 0.234229, 0.723055, 0.80652, 1.0),
+        CkParticles_Key4(T, 0.0, 1.0,      0.0796861, 0.376262, 0.234229, 0.462077, 0.80652, 0.617207));
+}
+
+// Five of the nine layers fade in over the same 81 ms and out over the rest of their life.
+float CkParticles_HealCast_FadeInOut(float T)
+{
+    return CkParticles_Key3(T, 0.0, 0.0, 0.0808934, 1.0, 1.0, 0.0);
+}
+
+// The two sparkle streams skip the fade-in: their first alpha key already sits at 1.
+float CkParticles_HealCast_FadeOut(float T)
+{
+    return CkParticles_Key2(T, 0.0808934, 1.0, 1.0, 0.0);
+}
+
+// Which of the nine layers a BURST particle carries: the source's own per-emitter counts, as a 17-slot modulo.
+int CkParticles_HealCast_BurstLayer(int Seed)
+{
+    const int S = ((Seed % CKP_HC_BURST_SLOTS) + CKP_HC_BURST_SLOTS) % CKP_HC_BURST_SLOTS;
+
+    if (S == 0)  { return CKP_HC_LAYER_GLOW01; }
+    if (S == 1)  { return CKP_HC_LAYER_GLOW02; }
+    if (S == 2)  { return CKP_HC_LAYER_RAINBOW; }
+    if (S == 3)  { return CKP_HC_LAYER_RING; }
+    if (S < 7)   { return CKP_HC_LAYER_SPARKLES; }  //  4..6
+    if (S < 12)  { return CKP_HC_LAYER_STRETCH; }   //  7..11
+    if (S == 12) { return CKP_HC_LAYER_STAR01; }
+    if (S == 13) { return CKP_HC_LAYER_STAR02; }
+    return CKP_HC_LAYER_LENS;                       // 14..16
+}
+
+// Which layer a RATE particle carries: a weighted draw over the five streaming emitters' own Spawn Rates. A
+// modulus cannot express these shares, so this is a draw, not a slot.
+int CkParticles_HealCast_RateLayer(int Seed)
+{
+    const float R = CkParticles_Rand(Seed, 0) * CKP_HC_RATE_TOTAL;
+
+    if (R < CKP_HC_CUM_SPARKLES) { return CKP_HC_LAYER_SPARKLES; }
+    if (R < CKP_HC_CUM_STRETCH)  { return CKP_HC_LAYER_STRETCH; }
+    if (R < CKP_HC_CUM_STAR01)   { return CKP_HC_LAYER_STAR01; }
+    if (R < CKP_HC_CUM_STAR02)   { return CKP_HC_LAYER_STAR02; }
+    return CKP_HC_LAYER_LENS;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_HealCast(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    const float Phase   = CkParticles_SpawnPhase(In.EmitterAge, In.Age, CKP_HC_LOOP);
+    const bool  IsBurst = CkParticles_IsBurstSpawn(Phase, CKP_HC_LOOP);
+
+    int   Layer = CKP_HC_LAYER_GLOW01;
+    float Delay = 0.0;
+
+    if (IsBurst)
+    {
+        Layer = CkParticles_HealCast_BurstLayer(In.Seed);
+        // The three layers that open the effect burst at loop start; every other emitter is on the 50 ms beat.
+        Delay = Layer > CKP_HC_LAYER_RAINBOW ? CKP_HC_DELAY : 0.0;
+    }
+    else
+    {
+        Layer = CkParticles_HealCast_RateLayer(In.Seed);
+
+        // A rate particle born past its emitter's one-shot window never existed in the source.
+        const float Window = Layer == CKP_HC_LAYER_LENS ? CKP_HC_WINDOW_LENS : CKP_HC_WINDOW;
+        if (Phase > Window)
+        { return CkParticles_HealCast_Hidden(O); }
+    }
+
+    const float td = In.Age - Delay;
+
+    if (td < 0.0)
+    { return CkParticles_HealCast_Hidden(O); }
+
+    // ---- Bomb_Glow_01: the 500-unit body glow, on its own ramp with the darkest tail in the system ----
+    if (Layer == CKP_HC_LAYER_GLOW01)
+    {
+        if (td > 1.0)
+        { return CkParticles_HealCast_Hidden(O); }
+
+        const float t    = saturate(td);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key4(t, 0.0, 0.715694, 0.0796861, 1.0,      0.234229, 0.109462, 1.0, 0.017642),
+            CkParticles_Key4(t, 0.0, 0.89627,  0.0796861, 0.854993, 0.234229, 1.0,      1.0, 0.323143),
+            CkParticles_Key4(t, 0.0, 1.0,      0.0796861, 0.376262, 0.234229, 0.814847, 1.0, 0.0648033),
+            0.5 * CkParticles_HealCast_FadeInOut(t));
+        O.Size    = float2(500.0 * Grow, 500.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_HC_VIS_PART01;
+        return O;
+    }
+
+    // ---- Bomb_Glow_02: the inner core on the shared ramp, and the only glow with dissolve 0 ----
+    if (Layer == CKP_HC_LAYER_GLOW02)
+    {
+        if (td > 1.0)
+        { return CkParticles_HealCast_Hidden(O); }
+
+        const float t    = saturate(td);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color  = float4(CkParticles_HealCast_HealRamp(t), 0.5 * CkParticles_HealCast_FadeInOut(t));
+        O.Size   = float2(260.0 * Grow, 260.0 * Grow);
+        O.VisTag = CKP_HC_VIS_PART01;
+        return O;
+    }
+
+    // ---- Raimbow: the lens ring. Its Color module writes WHITE over the Initialize grey and the Scale Color
+    // module behind it halves the RGB, so the layer is a flat 0.5 grey for its whole second.
+    if (Layer == CKP_HC_LAYER_RAINBOW)
+    {
+        if (td > 1.0)
+        { return CkParticles_HealCast_Hidden(O); }
+
+        const float t    = saturate(td);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+
+        O.Color    = float4(0.5, 0.5, 0.5, CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+        O.Size     = float2(350.0 * Grow, 350.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_HC_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Ring: the shockwave, starting partly eroded and sliding only to -0.5 rather than off the mesh ----
+    if (Layer == CKP_HC_LAYER_RING)
+    {
+        if (td > 0.5)
+        { return CkParticles_HealCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.5);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color    = float4(CkParticles_HealCast_HealRamp(t), 0.15 * CkParticles_HealCast_FadeInOut(t));
+        O.Size     = float2(140.0 * Grow, 140.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, -0.325, 1.0, -0.5), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_HC_VIS_RING01;
+        return O;
+    }
+
+    // ---- Sparkles_01: the fine motes, thrown straight up out of a wide cylinder ----
+    if (Layer == CKP_HC_LAYER_SPARKLES)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (td > Life)
+        { return CkParticles_HealCast_Hidden(O); }
+
+        const float  t     = saturate(td / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 80.0, 130.0, float3(0.0, 0.0, 0.0));
+        const float3 V0    = float3(0.0, 0.0, lerp(1000.0, 2000.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.1, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.1, 0.15, 1.0, 0.0);
+
+        O.Color = float4(CkParticles_HealCast_HealRamp(t), 0.15 * CkParticles_HealCast_FadeOut(t));
+
+        const float Base = lerp(6.0, 10.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        // Its authored 90-degree Sprite Rotation is INERT: the module's rotation mode is Unset, so it never
+        // writes Particles.SpriteRotation at all.
+        O.Dynamic = float4(3.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_HC_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Sparkles_Stretched: the velocity-aligned streaks, lengthening up to 2x with speed ----
+    if (Layer == CKP_HC_LAYER_STRETCH)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (td > Life)
+        { return CkParticles_HealCast_Hidden(O); }
+
+        const float  t     = saturate(td / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 80.0, 120.0, float3(0.0, 0.0, 0.0));
+        const float3 V0    = float3(0.0, 0.0, lerp(1000.0, 1700.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        O.Color = float4(CkParticles_HealCast_HealRamp(t), 0.15 * CkParticles_HealCast_FadeOut(t));
+
+        // The source's Sprite Size Min (25, 70) / Max (40, 60) has its Y bounds INVERTED. Niagara lerps each
+        // component between its own pair, so Y draws in [60, 70] descending — transcribed as authored.
+        const float Width  = lerp(25.0, 40.0, CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(70.0, 60.0, CkParticles_Rand(In.Seed, 3));
+        const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float Taper  = CkParticles_Key3(t, 0.0, 1.0, 0.3, 0.25, 1.0, 0.2);
+
+        // Scale Sprite Size by Speed: length only, 1x up to the 1000-unit threshold and 2x at or past it.
+        const float SpeedFactor = lerp(1.0, 2.0, saturate(length(O.Velocity) / 1000.0));
+
+        O.Size   = float2(Width * Grow, Length * Grow * Taper * SpeedFactor);
+        O.VisTag = CKP_HC_VIS_PART04;
+        return O;
+    }
+
+    // ---- Star01 / Star02: the same four-point flare on two paints, spawned BELOW the origin and rising ----
+    // The source's emitter names and their materials are SWAPPED: emitter Star01 draws with the Star02 paint.
+    if (Layer == CKP_HC_LAYER_STAR01 || Layer == CKP_HC_LAYER_STAR02)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (td > Life)
+        { return CkParticles_HealCast_Hidden(O); }
+
+        const float  t     = saturate(td / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 30.0, 60.0, float3(0.0, 0.0, -30.0));
+        const float3 V0    = float3(0.0, 0.0, 500.0);
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.25, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.25, 1.0, 0.0);
+
+        const bool  IsStar01 = Layer == CKP_HC_LAYER_STAR01;
+        const float Alpha    = IsStar01 ? 1.0 : 0.7;
+        const float Base     = IsStar01 ? lerp(40.0, 50.0, CkParticles_Rand(In.Seed, 8))
+                                        : lerp(30.0, 40.0, CkParticles_Rand(In.Seed, 8));
+
+        O.Color = float4(CkParticles_HealCast_StarRamp(t), Alpha * CkParticles_HealCast_FadeOut(t));
+
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = IsStar01 ? CKP_HC_VIS_STAR02 : CKP_HC_VIS_STAR01;
+        return O;
+    }
+
+    // ---- Lens: the sub-UV flare streaks. The only layer in the cookbook that is BOTH velocity-aligned and a
+    // flipbook, and the only one whose dissolve erodes at its midpoint and then RE-FORMS.
+    {
+        const float Life = lerp(1.0, 1.5, CkParticles_Rand(In.Seed, 1));
+
+        if (td > Life)
+        { return CkParticles_HealCast_Hidden(O); }
+
+        const float  t     = saturate(td / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 40.0, 70.0, float3(0.0, 0.0, -70.0));
+        const float3 V0    = float3(0.0, 0.0, lerp(150.0, 300.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.25, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.25, 1.0, 0.0);
+
+        // No key at t=0 on any channel, and the alpha is a SINGLE key — so the flare holds full opacity from
+        // t=0.081 to death rather than fading out.
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0350136, 1.0,      0.200423, 0.109462, 0.776336, 0.0241576),
+            CkParticles_Key3(t, 0.0350136, 0.854993, 0.200423, 1.0,      0.776336, 0.913099),
+            CkParticles_Key3(t, 0.0350136, 0.376262, 0.200423, 0.617207, 0.776336, 0.141263),
+            0.7);
+
+        // No size curve at all — the spawn-time random size holds for the whole life.
+        O.Size = float2(lerp(80.0, 100.0, CkParticles_Rand(In.Seed, 8)),
+                        lerp(350.0, 400.0, CkParticles_Rand(In.Seed, 3)));
+
+        // Sub UV Animation in Random mode over a 2x2 sheet: a per-particle start frame that then advances once
+        // through the four frames. The declared End Frame is 3, so the sheet's own 0..3 is the range.
+        const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+        O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+        O.Dynamic = float4(CkParticles_Key3(t, 0.0, -1.0, 0.2, 0.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_HC_VIS_PART07;
+        return O;
+    }
+}

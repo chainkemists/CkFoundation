@@ -11,8 +11,8 @@
 // per emitter. Nothing here is a second copy of the math.
 //
 // Every default below is quoted in a recipe's per-material delta table:
-// CkFoundation/Source/CkParticles/Cookbook/NS_Arrow_Cast.md §4.1 and
-// NS_Bomb_Spawn.md §4.1. A delta table states the FULL inherited pair, never
+// CkFoundation/Source/CkParticles/Cookbook/NS_Arrow_Cast.md §4.1,
+// NS_Bomb_Spawn.md §4.1 and NS_HealCast.md §4. A delta table states the FULL inherited pair, never
 // just the changed axis — anything a table does not list resolves to the family
 // REFERENCE instance (M_VFX_DisAdd_Part01), not to zero, so every value below is
 // stated explicitly rather than defaulted.
@@ -190,5 +190,40 @@ namespace CkUsf
             0.0,          // Gradient_Invert
             1.0,          // Distortion_Scale — the source's X; its Y of 0.6 has no home in the signature
             "TileNoise"); // Distortion_Tex, the family default, distinct from this instance's Dissolve_Tex
+    }
+
+    // M_VFX_DisAdd_Part07 — the lens-flare streaks of NS_HealCast, and the ONLY instance in the cookbook that is
+    // both a 2x2 flipbook AND drawn on a velocity-aligned quad: its sheet is divided by the row renderer's
+    // SubImageSize, and its long axis tracks the particle's climb rather than the screen.
+    //
+    // Its CamOffset of 30 is the family's camera-ward world-position push and is not plumbed here — see
+    // NS_HealCast.md §13.
+    asset PartDisAdd07 of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/DissolveAdd.ush";
+        _UshFunctionName = n"CkUsf_Look_DissolveAdd";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        _LookName        = n"PartDisAdd07";
+        _TwoSided        = true;
+
+        _UsedWithNiagaraSprites   = true;
+        _ParticleColor            = true;
+        _ParticleDynamicParameter = true;
+        _ParticleDynamicParameterNames = CkUsf::Usf_DissolveAddChannelNames();
+
+        _Parameters = CkUsf::Usf_DissolveAddParams(
+            "LensSheet", "LensSheet",
+            2.0,          // Brightness
+            0.0, 0.0,     // Dissolve_Speed
+            0.0,          // Dissolve (static bias)
+            1.0, 1.0,     // Dissolve_Scale
+            0.0,          // Distortion_Intensity — dead on this instance
+            0.0, 0.0,     // Distortion_Speed
+            1.0, 1.0,     // MainTex_Scale
+            1.0,          // Opacity_Boldness
+            "LutWhite",   // GradientMap_Tex
+            0.1,          // GradientMap_Displacement
+            0.0);         // Gradient_Invert
     }
 }
