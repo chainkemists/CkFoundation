@@ -58,7 +58,7 @@ public:
     ExportAssets(
         const TArray<FString>& InObjectPaths,
         bool InSkipFresh,
-        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_AssetExportDispatchSummary;
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_AssetExportDispatchSummary;
 
     // Recursive. Empty InClassFilters = every supported type; an unknown friendly name = summary-level failure.
     static auto
@@ -66,7 +66,7 @@ public:
         const FString& InPackageDir,
         const TArray<FString>& InClassFilters,
         bool InSkipFresh,
-        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_AssetExportDispatchSummary;
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_AssetExportDispatchSummary;
 
     // Same filter as SweepDirectory but no loading. A bad filter name returns "ok": false + "error".
     static auto

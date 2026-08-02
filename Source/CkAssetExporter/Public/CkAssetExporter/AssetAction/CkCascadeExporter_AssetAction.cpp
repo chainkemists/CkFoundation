@@ -93,9 +93,9 @@ namespace ck::asset_exporter
 
                 InSection.AddMenuEntry(
                     "ExportCascade_JsonAndText",
-                    LOCTEXT("ExportCascade_Label", "Export Cascade System to JSON && Text"),
+                    LOCTEXT("ExportCascade_Label", "Export Cascade System to JSON"),
                     LOCTEXT("ExportCascade_Tooltip",
-                        "Export selected Cascade Particle Systems (emitters, modules, distributions) to .json and .txt next to the asset"),
+                        "Export selected Cascade Particle Systems (emitters, modules, distributions) to a .ckexport file next to the asset"),
                     FSlateIcon(),
                     FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                     {

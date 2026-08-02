@@ -34,7 +34,7 @@ public:
     static auto
     ExportUserDefinedStruct(
         UUserDefinedStruct* InStruct,
-        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_UserDefinedStructExportResult;
+        ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_UserDefinedStructExportResult;
 
     static auto
     ExportUserDefinedStructs(
