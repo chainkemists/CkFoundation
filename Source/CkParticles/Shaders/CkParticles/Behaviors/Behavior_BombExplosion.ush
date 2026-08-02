@@ -1,0 +1,556 @@
+// /CkParticles/Behaviors/Behavior_BombExplosion.ush — BehaviorId 44.
+//
+// Faithful re-port of Vefects NS_Bomb_Explosion. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Bomb_Explosion.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The cookbook's largest single burst: 23 emitters, 162 particles, all of it over by t = 0.5 s of a Loop-Once
+// 2.0 s system. Three spawn beats (0 / 0.05 / 0.1 s) and no continuous rate anywhere, so there is one
+// population and no spawn phase to read.
+//
+// It is also the only port that consumes every C8 facing mode. The lightning card faces VELOCITY, and all five
+// bubbles face CAMERAPOSITION — the one orientation a behavior cannot fake, because the stage has no camera and
+// the bubbles' dissolve pans in a UV space tied to the carrier's own pole. Both live on the row's renderers;
+// this file writes only what the particle owns.
+//
+// The whole effect is BLUE. Its palette is not a parameter and there is no ice variant of it — the explosion
+// family's fire/ice axis belongs to Behavior_ExplosionShared.ush and nothing here is shared with it.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 44) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_BX_BURST_SLOTS 162
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_BX_VIS_PART01      210
+#define CKP_BX_VIS_PART03      211
+#define CKP_BX_VIS_PART02      212
+#define CKP_BX_VIS_FLARE       213
+#define CKP_BX_VIS_RING        214
+#define CKP_BX_VIS_IMPACT      215
+#define CKP_BX_VIS_GROUNDGLOW  216
+#define CKP_BX_VIS_PART04      217
+#define CKP_BX_VIS_SPIKE       218
+#define CKP_BX_VIS_STRIP       219
+#define CKP_BX_VIS_BUBNOISE01  220
+#define CKP_BX_VIS_BUBFIRST    221
+#define CKP_BX_VIS_BUBOUT      222
+#define CKP_BX_VIS_BUBNOISE02  223
+#define CKP_BX_VIS_BUBFRESNEL  224
+
+FCkParticles_StageOutput CkParticles_BombExplosion_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// Five of the six glow/decal layers share one Scale Color: flat RGB and a linear alpha fade. The layer's own
+// Initialize colour is what survives, which is why this effect's identity lives in six init colours.
+float CkParticles_BombExplosion_Fade(float T)
+{
+    return CkParticles_Key2(T, 0.0, 1.0, 1.0, 0.0);
+}
+
+// The two size curves the glows draw from: the sharp one opens at half scale, the soft one from nothing.
+float CkParticles_BombExplosion_GrowSharp(float T)
+{
+    return CkParticles_Key3(T, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+}
+
+float CkParticles_BombExplosion_GrowSoft(float T)
+{
+    return CkParticles_Key3(T, 0.0, 0.0, 0.2, 1.0, 1.0, 1.0);
+}
+
+// Sphere Location r 80, Hemisphere Z, Surface Only false — the upper-hemisphere VOLUME both sparkle bursts
+// fill, so the radial draw takes a cube root.
+float3 CkParticles_BombExplosion_SparkSpawn(int Seed)
+{
+    float3 Dir = CkParticles_RandDir(Seed);
+    Dir.z = abs(Dir.z);
+
+    return Dir * (80.0 * pow(CkParticles_Rand(Seed, 3), 1.0 / 3.0));
+}
+
+float3 CkParticles_BombExplosion_Radial(float3 Spawn)
+{
+    const float L = length(Spawn);
+    return L > 1.0e-6 ? Spawn / L : float3(0.0, 0.0, 1.0);
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_BombExplosion(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // Burst UniqueIDs are sequential, so the modulo draws exactly the source's per-emitter counts. 162 is the
+    // §2 total and the cadence row's own BurstCount.
+    const int Slot = ((In.Seed % CKP_BX_BURST_SLOTS) + CKP_BX_BURST_SLOTS) % CKP_BX_BURST_SLOTS;
+
+    // ---- Glow_01 / Glow_02: the two shells that open the flash at t = 0. Neither carries a Color module, so
+    // each holds its Initialize colour and only the alpha moves ----
+    if (Slot < 2)
+    {
+        if (In.Age > 0.2)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.2);
+        const float Grow = CkParticles_BombExplosion_GrowSharp(t);
+        const float A    = CkParticles_BombExplosion_Fade(t);
+
+        if (Slot == 0)
+        {
+            O.Color   = float4(0.0368895, 0.184475, 1.0, 0.5 * A);
+            O.Size    = float2(1500.0 * Grow, 1500.0 * Grow);
+            O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        }
+        else
+        {
+            O.Color = float4(0.0193824, 0.0451862, 0.913099, A);
+            O.Size  = float2(800.0 * Grow, 800.0 * Grow);
+        }
+
+        O.VisTag = CKP_BX_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_03: two wider shells off the 0.05 s beat, on the soft size curve ----
+    if (Slot < 4)
+    {
+        const float Age = In.Age - 0.05;
+
+        if (Age < 0.0 || Age > 0.3)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t    = saturate(Age / 0.3);
+        const float Grow = CkParticles_BombExplosion_GrowSoft(t);
+
+        O.Color   = float4(0.043735, 0.291771, 1.0, 0.3 * CkParticles_BombExplosion_Fade(t));
+        O.Size    = float2(1200.0 * Grow, 1200.0 * Grow);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BX_VIS_PART01;
+        return O;
+    }
+
+    // ---- Ring01: the shockwave, and the shortest-lived sprite in the system at 0.1 s. Its dissolve runs the
+    // full +1 -> -1 sweep inside that tenth of a second ----
+    if (Slot == 4)
+    {
+        if (In.Age > 0.1)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.7, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key2(t, 0.0, 0.351533, 1.0, 0.0159963),
+            CkParticles_Key2(t, 0.0, 0.947307, 1.0, 0.0382044),
+            CkParticles_Key2(t, 0.0, 1.0,      1.0, 0.165132),
+            0.6);
+        O.Size     = float2(230.0 * Grow, 230.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 1.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_BX_VIS_RING;
+        return O;
+    }
+
+    // ---- Ground_Glow_01: the 4000-unit floor decal, the largest particle in the effect ----
+    if (Slot == 5)
+    {
+        if (In.Age > 0.2)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.2);
+        const float Grow = CkParticles_BombExplosion_GrowSharp(t);
+
+        O.Color           = float4(0.043735, 0.291771, 1.0, 0.6 * CkParticles_BombExplosion_Fade(t));
+        O.Size            = float2(4000.0 * Grow, 4000.0 * Grow);
+        O.Dynamic         = float4(1.0, 0.0, 0.0, 0.0);
+        // Alignment (1,0,0) and facing (0,0,1) as authored: a quad lying flat in world XY facing +Z.
+        O.SpriteAlignment = float3(1.0, 0.0, 0.0);
+        O.SpriteFacing    = float3(0.0, 0.0, 1.0);
+        O.VisTag          = CKP_BX_VIS_GROUNDGLOW;
+        return O;
+    }
+
+    // ---- Spike01 / Spike02 / Spike03: thirty pyramids fanned out of the origin. Their Cone Location module is
+    // DISABLED, so every one of them spawns at the same point and is separated only by orientation and by how
+    // thin it is. The mesh-scale Z curve has no third key, so they FLATTEN into slivers rather than shrink ----
+    if (Slot < 36)
+    {
+        if (In.Age > 0.15)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const int   Band  = (Slot - 6) / 10;
+        const float t     = saturate(In.Age / 0.15);
+        const float Flat  = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 0.0);
+        const float Along = CkParticles_Key2(t, 0.0, 0.0, 0.2, 1.5);
+
+        // Only Spike03 randomizes its cross-section; the first two are fixed needles at 0.02 and 0.04.
+        const float BaseXY = Band == 0 ? 0.02
+                           : Band == 1 ? 0.04
+                                       : lerp(0.1, 0.15, CkParticles_Rand(In.Seed, 13));
+        const float BaseZ  = lerp(1.0, 3.0, CkParticles_Rand(In.Seed, 14));
+
+        // Initial Mesh Orientation: rotation drawn from min (0, -0.25, 1) to max (0, 0.25, -1) — a fan in the
+        // YZ plane, tipping from straight up to straight down.
+        const float3 Dir = float3(0.0,
+                                  lerp(-0.25, 0.25, CkParticles_Rand(In.Seed, 15)),
+                                  lerp(1.0,  -1.0,  CkParticles_Rand(In.Seed, 16)));
+
+        O.Scale       = float3(BaseXY * Flat, BaseXY * Flat, BaseZ * Along);
+        O.Orientation = CkParticles_QuatFromZTo(CkParticles_BombExplosion_Radial(Dir));
+        O.Size        = float2(0.0, 0.0);
+        O.MeshIndex   = 0;
+
+        if (Band == 2)
+        {
+            // Spike03 is the only one of the three with a colour ramp, and it opens at 2x white-blue.
+            O.Color = float4(
+                CkParticles_Key3(t, 0.0, 2.0, 0.388772, 0.095,    1.0, 0.025),
+                CkParticles_Key3(t, 0.0, 2.0, 0.388772, 0.659996, 1.0, 0.157691),
+                CkParticles_Key3(t, 0.0, 2.0, 0.388772, 1.0,      1.0, 1.0),
+                0.6);
+        }
+        else if (Band == 0)
+        {
+            O.Color = float4(0.296138, 0.571125, 1.0, 0.6);
+        }
+        else
+        {
+            O.Color = float4(0.0, 0.221441, 1.0, 0.4);
+        }
+
+        O.VisTag = CKP_BX_VIS_SPIKE;
+        return O;
+    }
+
+    // ---- Glow_04: two dimmer shells sharing Glow_03's beat and curve ----
+    if (Slot < 38)
+    {
+        const float Age = In.Age - 0.05;
+
+        if (Age < 0.0 || Age > 0.3)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t    = saturate(Age / 0.3);
+        const float Grow = CkParticles_BombExplosion_GrowSoft(t);
+
+        O.Color   = float4(0.00972122, 0.130136, 1.0, 0.8 * CkParticles_BombExplosion_Fade(t));
+        O.Size    = float2(700.0 * Grow, 700.0 * Grow);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BX_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_05: the pale core flash, the only layer on the Part03 paint and gone in a tenth of a second ----
+    if (Slot == 38)
+    {
+        const float Age = In.Age - 0.05;
+
+        if (Age < 0.0 || Age > 0.1)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t    = saturate(Age / 0.1);
+        const float Grow = CkParticles_BombExplosion_GrowSoft(t);
+
+        O.Color   = float4(0.665387, 0.768151, 1.0, CkParticles_BombExplosion_Fade(t));
+        O.Size    = float2(600.0 * Grow, 600.0 * Grow);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BX_VIS_PART03;
+        return O;
+    }
+
+    // ---- Ground_Glow_02: the second floor decal, off the 0.1 s beat ----
+    if (Slot == 39)
+    {
+        const float Age = In.Age - 0.1;
+
+        if (Age < 0.0 || Age > 0.2)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t    = saturate(Age / 0.2);
+        const float Grow = CkParticles_BombExplosion_GrowSharp(t);
+
+        O.Color           = float4(0.00972122, 0.130136, 1.0, CkParticles_BombExplosion_Fade(t));
+        O.Size            = float2(2700.0 * Grow, 2700.0 * Grow);
+        O.Dynamic         = float4(1.0, 0.0, 0.0, 0.0);
+        O.SpriteAlignment = float3(1.0, 0.0, 0.0);
+        O.SpriteFacing    = float3(0.0, 0.0, 1.0);
+        O.VisTag          = CKP_BX_VIS_GROUNDGLOW;
+        return O;
+    }
+
+    // ---- FlareImpact: the 0.05 s violet flashbulb, the shortest-lived particle in the cookbook. Its red and
+    // blue open ABOVE 1 and the whole layer is gone before the second spawn beat ----
+    if (Slot == 40)
+    {
+        if (In.Age > 0.05)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.05);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0, 1.132,   0.447932, 0.147027, 0.952611, 0.040915),
+            CkParticles_Key3(t, 0.0, 1.25624, 0.447932, 0.679543, 0.952611, 0.171441),
+            CkParticles_Key3(t, 0.0, 2.0,     0.447932, 1.0,      0.952611, 1.0),
+            CkParticles_Key2(t, 0.0, 1.0, 0.996076, 0.0));
+        O.Size    = float2(350.0 * Grow, 350.0 * Grow);
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.5, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BX_VIS_IMPACT;
+        return O;
+    }
+
+    // ---- LightningStrip: five velocity-facing cards. Their Add Velocity is UNIT scale — its only job is to
+    // give the renderer's Velocity facing an axis, which is why the layer barely moves. Their colour curves
+    // carry a SINGLE key each, so only the alpha animates ----
+    if (Slot < 46)
+    {
+        const float Life = lerp(0.1, 0.15, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float  t  = saturate(In.Age / Life);
+        const float3 V0 = float3(lerp(-1.0, 1.0, CkParticles_Rand(In.Seed, 6)),
+                                 lerp(-1.0, 1.0, CkParticles_Rand(In.Seed, 11)),
+                                 lerp(0.1,  1.0, CkParticles_Rand(In.Seed, 12)));
+
+        O.Position = V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        O.Color = float4(0.184475, 0.445201, 1.0,
+                         0.5 * CkParticles_Key2(t, 0.327196, 1.0, 1.0, 0.0));
+
+        // Mesh Scale Non-Uniform, drawn from min (1, 1, 4) to max (2, 1, 6), under a three-axis curve: X pops
+        // then collapses while Y and Z grow from nothing, so the card unfurls along its own length.
+        const float BaseX = lerp(1.0, 2.0, CkParticles_Rand(In.Seed, 13));
+        const float BaseZ = lerp(4.0, 6.0, CkParticles_Rand(In.Seed, 14));
+
+        O.Scale = float3(BaseX * CkParticles_Key3(t, 0.0, 0.5, 0.2, 1.0,  1.0, 0.0),
+                         1.0   * CkParticles_Key2(t, 0.0, 0.0, 1.0, 1.0),
+                         BaseZ * CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.75, 1.0, 1.0));
+
+        // Initial Mesh Orientation, rotation min (0, 0, 1) to max (0, 0.5, -1) — the same upward fan the
+        // explosion family's spikes use. The renderer's Velocity facing composes on top of it.
+        const float3 Dir = float3(0.0,
+                                  lerp(0.0, 0.5, CkParticles_Rand(In.Seed, 15)),
+                                  lerp(1.0, -1.0, CkParticles_Rand(In.Seed, 16)));
+
+        O.Orientation = CkParticles_QuatFromZTo(CkParticles_BombExplosion_Radial(Dir));
+        O.Size        = float2(0.0, 0.0);
+        O.MeshIndex   = 0;
+        O.VisTag      = CKP_BX_VIS_STRIP;
+        return O;
+    }
+
+    // ---- Sparkles_01 and Sparkles_02: a hundred velocity-aligned streaks, 62% of the whole effect. _01 is the
+    // bright radial flash; _02 is the DEBRIS pass — a random blue-to-white colour, no colour ramp at all
+    // (its Color module is disabled), a faster ejection with XY damping, and gravity ----
+    if (Slot < 146)
+    {
+        const bool  IsDebris = Slot >= 96;
+        const float Life     = IsDebris
+            ? lerp(0.2, 0.3, CkParticles_Rand(In.Seed, 1))
+            : lerp(0.3, 0.5, CkParticles_Rand(In.Seed, 1));
+        const float Age = In.Age - 0.05;
+
+        if (Age < 0.0 || Age > Life)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float  t     = saturate(Age / Life);
+        const float3 Spawn = CkParticles_BombExplosion_SparkSpawn(In.Seed);
+        const float3 Speed = CkParticles_BombExplosion_Radial(Spawn)
+                           * (IsDebris ? lerp(4000.0, 8000.0, CkParticles_Rand(In.Seed, 6))
+                                       : lerp(2000.0, 7000.0, CkParticles_Rand(In.Seed, 6)));
+
+        // The per-emitter Scale Curve multiplier on the shared velocity curve: _02 keeps only 70% of its XY.
+        const float3 V0 = IsDebris ? Speed * float3(0.7, 0.7, 1.0) : Speed;
+
+        const float Travel = CkParticles_Int3(t, 0.2, 1.0, 0.35, 0.05) * Life;
+
+        O.Position = Spawn + V0 * Travel;
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.35, 1.0, 0.05);
+
+        if (IsDebris)
+        {
+            // Gravity Force (0, 0, -7000) on the debris pass alone.
+            O.Position.z += -0.5 * 7000.0 * Age * Age;
+            O.Velocity.z += -7000.0 * Age;
+
+            // Random Range Linear Color under Color Channel Mode = Link RGB / Link A: ONE draw lerps the whole
+            // triple, so the debris runs a blue-to-white line rather than three independent channels.
+            const float K = CkParticles_Rand(In.Seed, 18);
+            O.Color = float4(lerp(0.0, 1.0, K), lerp(0.136094, 1.0, K), 1.0, 1.0);
+        }
+        else
+        {
+            O.Color = float4(
+                CkParticles_Key2(t, 0.0, 1.0, 0.835497, 0.0409152),
+                CkParticles_Key2(t, 0.0, 1.0, 0.835497, 0.171441),
+                1.0,
+                1.0);
+        }
+
+        const float2 SizeMin = IsDebris ? float2(20.0, 60.0)  : float2(20.0, 120.0);
+        const float2 SizeMax = IsDebris ? float2(30.0, 80.0)  : float2(35.0, 140.0);
+        const float  Width   = lerp(SizeMin.x, SizeMax.x, CkParticles_Rand(In.Seed, 8));
+        const float  Length  = lerp(SizeMin.y, SizeMax.y, CkParticles_Rand(In.Seed, 12));
+        const float  Grow    = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float  Taper   = IsDebris
+            ? CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.6)
+            : CkParticles_Key2(t, 0.0, 1.0, 0.9, 0.3);
+
+        O.Size   = float2(Width * Grow, Length * Grow * Taper);
+        O.VisTag = CKP_BX_VIS_PART04;
+        return O;
+    }
+
+    // ---- Flare_01 / Flare_02: ten coincident lens pips off the 0.1 s beat. Neither has a size curve, so each
+    // holds its full width for its whole 0.2 s and leaves entirely through the alpha ----
+    if (Slot < 156)
+    {
+        const float Age = In.Age - 0.1;
+
+        if (Age < 0.0 || Age > 0.2)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t = saturate(Age / 0.2);
+        const float A = CkParticles_Key3(t, 0.0, 0.0, 0.193178, 1.0, 1.0, 0.0);
+
+        if (Slot < 151)
+        {
+            O.Color = float4(0.102242, 0.577581, 1.0, 0.4 * A);
+            O.Size  = float2(900.0, 900.0);
+        }
+        else
+        {
+            O.Color = float4(0.0368895, 0.0908417, 1.0, 0.4 * A);
+            O.Size  = float2(1700.0, 1700.0);
+        }
+
+        O.VisTag = CKP_BX_VIS_PART02;
+        return O;
+    }
+
+    // ---- Flare03: the single warm pip, and the only layer in this effect that is not blue ----
+    if (Slot == 156)
+    {
+        const float Age = In.Age - 0.1;
+
+        if (Age < 0.0 || Age > 0.2)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t    = saturate(Age / 0.2);
+        const float Grow = CkParticles_BombExplosion_GrowSharp(t);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0, 1.0, 0.352551, 0.147027, 1.0, 0.0409152),
+            CkParticles_Key3(t, 0.0, 1.0, 0.352551, 0.679543, 1.0, 0.171441),
+            CkParticles_Key3(t, 0.0, 1.0, 0.352551, 1.0,      1.0, 1.0),
+            0.8 * CkParticles_BombExplosion_Fade(t));
+        O.Size    = float2(320.0 * Grow, 320.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BX_VIS_FLARE;
+        return O;
+    }
+
+    // ---- The five bubbles. All of them are single mesh particles at the origin with no rotation and no
+    // velocity; each carries its own scale curve, its own dissolve ramp and its own renderer, and the
+    // renderer-level Mesh Uniform Scale (2, 2, 3, 2, 2) is a constant on the carrier rather than a curve ----
+    {
+        // Bubble_First_Explo is the only one on the t = 0 beat; the other four ride the 0.1 s one.
+        const float Delay = Slot == 158 ? 0.0 : 0.1;
+        const float Life  = Slot == 157 ? 0.2
+                          : Slot == 158 ? 0.15
+                          : Slot == 159 ? 0.2
+                                        : 0.3;
+        const float Age = In.Age - Delay;
+
+        if (Age < 0.0 || Age > Life)
+        { return CkParticles_BombExplosion_Hidden(O); }
+
+        const float t = saturate(Age / Life);
+
+        O.Size      = float2(0.0, 0.0);
+        O.MeshIndex = 0;
+
+        if (Slot == 157)
+        {
+            // Bubble_Noise01 — a STATIC dissolve of -0.5 rather than a curve, so it erodes only through the
+            // look's own panning noise.
+            const float Grow = CkParticles_Key3(t, 0.0, 1.0, 0.2, 1.5, 1.0, 1.0);
+
+            O.Scale   = float3(Grow, Grow, Grow);
+            O.Color   = float4(
+                CkParticles_Key2(t, 0.0, 1.0, 0.759433, 0.035),
+                CkParticles_Key2(t, 0.0, 1.0, 0.759433, 0.0587079),
+                CkParticles_Key2(t, 0.0, 1.0, 0.759433, 0.7),
+                CkParticles_Key2(t, 0.402053, 1.0, 1.0, 0.0));
+            O.Dynamic = float4(-0.5, 0.0, 0.0, 0.0);
+            O.VisTag  = CKP_BX_VIS_BUBNOISE01;
+            return O;
+        }
+
+        if (Slot == 158)
+        {
+            // Bubble_First_Explo — grows from nothing over its whole life and its alpha ramps UP, so the shell
+            // ASSEMBLES rather than fading; its dissolve closes from -0.4 to 0 by half life.
+            const float Grow = CkParticles_Key2(t, 0.0, 0.0, 1.0, 1.0);
+
+            O.Scale   = float3(Grow, Grow, Grow);
+            O.Color   = float4(0.162029, 0.708376, 1.0, CkParticles_Key2(t, 0.0, 0.0, 1.0, 1.0));
+            O.Dynamic = float4(CkParticles_Key2(t, 0.0, -0.4, 0.5, 0.0), 0.0, 0.0, 0.0);
+            O.VisTag  = CKP_BX_VIS_BUBFIRST;
+            return O;
+        }
+
+        if (Slot == 159)
+        {
+            // Bubble_Out — the flat annulus, blown to 1.5x by t = 0.7 and then HELD (its curve has no third
+            // key), while its dissolve drives to -2 and clears it.
+            const float Grow = CkParticles_Key2(t, 0.0, 0.0, 0.7, 1.5);
+
+            O.Scale   = float3(Grow, Grow, Grow);
+            O.Color   = float4(
+                CkParticles_Key2(t, 0.0, 1.0, 0.872925, 0.035),
+                CkParticles_Key2(t, 0.0, 1.0, 0.872925, 0.0587077),
+                CkParticles_Key2(t, 0.0, 1.0, 0.872925, 0.7),
+                CkParticles_Key2(t, 0.351343, 1.0, 1.0, 0.0));
+            O.Dynamic = float4(CkParticles_Key2(t, 0.4, 0.0, 1.0, -2.0), 0.0, 0.0, 0.0);
+            O.VisTag  = CKP_BX_VIS_BUBOUT;
+            return O;
+        }
+
+        const float Grow = CkParticles_Key3(t, 0.0, 1.0, 0.2, 1.5, 1.0, 1.0);
+        O.Scale   = float3(Grow, Grow, Grow);
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, -0.2, 1.0, 1.0), 0.0, 0.0, 0.0);
+
+        if (Slot == 160)
+        {
+            // Bubble_Noise02 — RGB fades to black by t = 0.749 while the alpha ramps up, so the shell darkens
+            // into view. Its Initialize colour is over 1 in green and blue.
+            const float Rgb = CkParticles_Key2(t, 0.0, 1.0, 0.748566, 0.0);
+
+            O.Color  = float4(float3(1.0, 1.18333, 2.0) * Rgb, CkParticles_Key2(t, 0.0772714, 0.0, 1.0, 1.0));
+            O.VisTag = CKP_BX_VIS_BUBNOISE02;
+            return O;
+        }
+
+        // Bubble_Fresnel — the outermost shell, and the only bubble whose colour curve REPLACES its Initialize
+        // colour rather than scaling it.
+        O.Color = float4(
+            CkParticles_Key2(t, 0.0, 1.0, 0.614549, 0.0),
+            CkParticles_Key2(t, 0.0, 1.0, 0.614549, 0.0736187),
+            CkParticles_Key2(t, 0.0, 1.0, 0.614549, 1.0),
+            CkParticles_Key2(t, 0.0, 0.0, 1.0, 1.0));
+        O.VisTag = CKP_BX_VIS_BUBFRESNEL;
+        return O;
+    }
+}
