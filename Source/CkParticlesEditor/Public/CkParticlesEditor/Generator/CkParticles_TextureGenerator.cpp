@@ -907,6 +907,52 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
+    // T_VFX_Lightning_03 stand-in — the bolt sheet of NS_Lightning_Cast, and the first 2x2 atlas in the library
+    // whose four frames are INDEPENDENT paintings rather than one shape evolving. That is the measurement the
+    // bake is built on: frame-to-frame Pearson runs -0.01 to 0.25 here, against 0.79-0.88 on the wind sheet and
+    // 0.51-0.78 on the impact one, so the frame index has to reseed the field instead of stepping it.
+    //
+    // Measured off the corpus PNG (which is BGRA8 with a flat alpha, so the greyscale RGB carries the mask, the
+    // same reading T_VFX_Impact_02 already took): peaks saturate at 0.984-0.996; coverage above 0.05 is
+    // 0.105-0.156; the radial power spectrum peaks at 1-2 cycles per frame and is down to 5% by 8, so the bolts
+    // are BROAD ragged arcs, not hairline filaments; and every frame's mass sits in an ANNULUS - frame 0 is
+    // empty inside r 0.30 and all four die by r 1.0. A ridged value-noise field thresholded at 0.92 lands the
+    // coverage; the per-frame gain below is fitted so the bake's mean equals the measured mean exactly.
+    static auto Px_LightningSheet(float U, float V) -> FLinearColor
+    {
+        constexpr float Tiles       = 3.0f;   // the measured 1-2 cycles/frame plus its first harmonic
+        constexpr int32 Period      = 6;      // 2x Tiles, so the field wraps inside a frame
+        constexpr int32 Octaves     = 4;
+        constexpr float RidgeThr    = 0.92f;  // fitted against the measured coverage above 0.05
+        constexpr float FrameStride = 53.0f;  // wide enough to decorrelate the four frames
+        constexpr float InnerSoft   = 0.10f;
+        constexpr float OuterStart  = 0.80f;
+        constexpr float OuterEnd    = 1.00f;
+
+        constexpr float FramePeak[]  = {0.9961f, 0.9922f, 0.9843f, 0.9922f};
+        constexpr float FrameGain[]  = {3.106f,  0.958f,  1.095f,  2.545f };
+        constexpr float FrameRPeak[] = {0.45f,   0.62f,   0.62f,   0.62f  };
+        constexpr float FrameRWide[] = {0.22f,   0.24f,   0.26f,   0.24f  };
+        constexpr float FrameRHole[] = {0.30f,   0.05f,   0.05f,   0.10f  };
+
+        const auto  Sheet = Sample_Sheet2x2(U, V);
+        const float Dx    = Sheet.U - 0.5f;
+        const float Dy    = Sheet.V - 0.5f;
+        const float R     = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Off   = Sheet.Frame * FrameStride;
+
+        const float Noise = Fbm(Sheet.U * Tiles + Off + 7.0f, Sheet.V * Tiles + Off + 19.0f, Octaves, Period);
+        const float Ridge = 1.0f - FMath::Abs(2.0f * Noise - 1.0f);
+        const float Bolt  = Saturate((Ridge - RidgeThr) / (1.0f - RidgeThr));
+
+        const float Band  = FMath::Exp(-0.5f * FMath::Square((R - FrameRPeak[Sheet.Frame]) / FrameRWide[Sheet.Frame]));
+        const float Hole  = Saturate((R - FrameRHole[Sheet.Frame]) / InnerSoft);
+        const float Fade  = Saturate(1.0f - (R - OuterStart) / (OuterEnd - OuterStart));
+
+        const float I = Saturate(FramePeak[Sheet.Frame] * FrameGain[Sheet.Frame] * Bolt * Band * Hole * Fade);
+        return FLinearColor(I, I, I, I);
+    }
+
     static auto Px_Ring(float U, float V) -> FLinearColor
     {
         const float Dx = U - 0.5f, Dy = V - 0.5f;
@@ -1075,6 +1121,10 @@ namespace ck::particles_editor
             // measured and baked by an earlier batch, and both existing 2x2 sheets were measured against this
             // one and rejected.
             { TEXT("T_CkParticles_LensSheet"),          ECk_VfxTextureKind::MaskSheet, &Px_LensSheet     },
+            // The Vefects attack-Cast paints (recipes NS_Gunshot_Cast.md §7, NS_FireBall_Cast.md §7,
+            // NS_Lightning_Cast.md §7). One new bake again: the bolt atlas, and it is the first sheet in the
+            // library whose four frames are independent realizations rather than one shape stepping.
+            { TEXT("T_CkParticles_LightningSheet"),     ECk_VfxTextureKind::MaskSheet, &Px_LightningSheet },
         };
 
         auto Ok = 0;

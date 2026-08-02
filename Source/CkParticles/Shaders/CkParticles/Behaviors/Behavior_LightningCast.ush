@@ -1,0 +1,485 @@
+// /CkParticles/Behaviors/Behavior_LightningCast.ush — BehaviorId 35.
+//
+// Faithful re-port of Vefects NS_Lightning_Cast. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Lightning_Cast.md — every number below is a source value from §2/§5, not a tuning.
+//
+// TWENTY-ONE emitters over a Loop-Once 2.0 s system, two of them DISABLED (Arrow, BigArrow) and three of them
+// `Life Cycle Mode = Self / Loop Once` one-shots on their own 0.3 - 0.5 s windows. Two of those three carry a
+// SPAWN RATE, so this row declares both stacks: PS_CkParticles_Template_LightningCast is 2.0 s loop /
+// 1.55 s particle lifetime / burst 30 / rate 40 per second. Burst and rate particles are told apart by SPAWN
+// PHASE (see Behavior_HealCast.ush's header for the idiom).
+//
+// One of the two streams is the cookbook's first NON-CONSTANT source rate: Lightning's Spawn Rate is a curve
+// falling 20 -> 0 across its own 0.5 s window. A row rate is a constant, so the layer is declared at its PEAK
+// 20/s and a rate particle born at phase p survives with probability (1 - p/0.5). Thinning a uniform stream by
+// that factor reproduces the source's arrival density exactly, and integrates to the same 5 particles per
+// firing.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 35) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+#define CKP_LC_LOOP            2.0
+#define CKP_LC_BURST_SLOTS      30
+#define CKP_LC_RATE_TOTAL     40.0
+#define CKP_LC_CUM_STRETCH    20.0   // Sparkles_Stretched 20/s flat
+                                     // Lightning          20/s peak, thinned to a falling ramp
+
+// The one-shot window each streaming emitter runs for, measured from loop start.
+#define CKP_LC_WINDOW_STRETCH   0.4
+#define CKP_LC_WINDOW_LIGHTNING 0.5
+
+// Spawn beats (recipe §2). Anything not named here opens the effect at zero.
+#define CKP_LC_DELAY_RING       0.05
+#define CKP_LC_DELAY_FLARE      0.1
+#define CKP_LC_DELAY_STAR01     0.85
+#define CKP_LC_DELAY_STAR02     0.95
+
+#define CKP_LC_LAYER_GLOW01      0
+#define CKP_LC_LAYER_GLOW02      1
+#define CKP_LC_LAYER_GLOW03      2
+#define CKP_LC_LAYER_RAIMBOW     3
+#define CKP_LC_LAYER_RING        4
+#define CKP_LC_LAYER_SPARKLES    5
+#define CKP_LC_LAYER_FLARE01     6
+#define CKP_LC_LAYER_FLARE02     7
+#define CKP_LC_LAYER_BIGSTAR     8
+#define CKP_LC_LAYER_FLARES01    9
+#define CKP_LC_LAYER_FLARES02   10
+#define CKP_LC_LAYER_FLARES03   11
+#define CKP_LC_LAYER_FLARES04   12
+#define CKP_LC_LAYER_STAR01     13
+#define CKP_LC_LAYER_STAR02     14
+#define CKP_LC_LAYER_LIGHTNING  15
+#define CKP_LC_LAYER_FLARE03    16
+#define CKP_LC_LAYER_FLARE04    17
+#define CKP_LC_LAYER_STRETCH    18
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_LC_VIS_PART01      147
+#define CKP_LC_VIS_PART02      148
+#define CKP_LC_VIS_RAINBOW     149
+#define CKP_LC_VIS_RING01      150
+#define CKP_LC_VIS_PART01BR    151
+#define CKP_LC_VIS_PART04      152
+#define CKP_LC_VIS_STAR02      153
+#define CKP_LC_VIS_PART03BR    154
+#define CKP_LC_VIS_STAR03      155
+#define CKP_LC_VIS_LIGHTNING   156
+
+FCkParticles_StageOutput CkParticles_LightningCast_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// Seven emitters carry no Color module at all: their Initialize colour survives and one Scale Color module
+// ramps the alpha linearly to zero across the whole life, under one shared size curve.
+float CkParticles_LightningCast_SharedFade(float T)
+{
+    return CkParticles_Key2(T, 0.0, 1.0, 1.0, 0.0);
+}
+
+float CkParticles_LightningCast_SharedGrow(float T)
+{
+    return CkParticles_Key3(T, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+}
+
+// Lightning's Sprite Rotation Rate is a curve in degrees per second: 0 until t = 0.1, 90 until t = 0.9, then
+// 0. The accumulated angle is its exact integral, in units of normalized life — a stepwise sum would tie the
+// spin to frame cadence and drift against the CPU mirror.
+float CkParticles_LightningCast_SpinIntegral(float T)
+{
+    const float t  = saturate(T);
+    const float A  = min(t, 0.1);
+    float Sum = 0.5 * A * (90.0 * A / 0.1);
+
+    if (t > 0.1)
+    {
+        const float B = min(t, 0.9);
+        Sum += 0.5 * (B - 0.1) * (90.0 + 90.0 * (0.9 - B) / 0.8);
+    }
+    return Sum;
+}
+
+int CkParticles_LightningCast_BurstLayer(int Seed)
+{
+    const int S = ((Seed % CKP_LC_BURST_SLOTS) + CKP_LC_BURST_SLOTS) % CKP_LC_BURST_SLOTS;
+
+    if (S == 0)  { return CKP_LC_LAYER_GLOW01; }
+    if (S == 1)  { return CKP_LC_LAYER_GLOW02; }
+    if (S == 2)  { return CKP_LC_LAYER_GLOW03; }
+    if (S == 3)  { return CKP_LC_LAYER_RAIMBOW; }
+    if (S == 4)  { return CKP_LC_LAYER_RING; }
+    if (S < 15)  { return CKP_LC_LAYER_SPARKLES; }   //  5..14 (10)
+    if (S == 15) { return CKP_LC_LAYER_FLARE01; }
+    if (S == 16) { return CKP_LC_LAYER_FLARE02; }
+    if (S == 17) { return CKP_LC_LAYER_BIGSTAR; }
+    if (S == 18) { return CKP_LC_LAYER_FLARES01; }
+    if (S == 19) { return CKP_LC_LAYER_FLARES02; }
+    if (S == 20) { return CKP_LC_LAYER_FLARES03; }
+    if (S == 21) { return CKP_LC_LAYER_FLARES04; }
+    if (S == 22) { return CKP_LC_LAYER_STAR01; }
+    if (S == 23) { return CKP_LC_LAYER_STAR02; }
+    if (S < 27)  { return CKP_LC_LAYER_LIGHTNING; }  // 24..26 (3)
+    if (S < 29)  { return CKP_LC_LAYER_FLARE03; }    // 27..28 (2)
+    return CKP_LC_LAYER_FLARE04;
+}
+
+// Only two emitters stream, and they carry equal nominal rates — so the draw is a single split.
+int CkParticles_LightningCast_RateLayer(int Seed)
+{
+    return CkParticles_Rand(Seed, 0) * CKP_LC_RATE_TOTAL < CKP_LC_CUM_STRETCH
+        ? CKP_LC_LAYER_STRETCH
+        : CKP_LC_LAYER_LIGHTNING;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_LightningCast(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    const float Phase   = CkParticles_SpawnPhase(In.EmitterAge, In.Age, CKP_LC_LOOP);
+    const bool  IsBurst = CkParticles_IsBurstSpawn(Phase, CKP_LC_LOOP);
+
+    int   Layer = CKP_LC_LAYER_GLOW01;
+    float Delay = 0.0;
+
+    if (IsBurst)
+    {
+        Layer = CkParticles_LightningCast_BurstLayer(In.Seed);
+
+        if (Layer == CKP_LC_LAYER_RING || Layer == CKP_LC_LAYER_SPARKLES)
+        { Delay = CKP_LC_DELAY_RING; }
+        else if (Layer == CKP_LC_LAYER_RAIMBOW || Layer == CKP_LC_LAYER_FLARE01
+              || Layer == CKP_LC_LAYER_FLARE02 || Layer == CKP_LC_LAYER_FLARE03)
+        { Delay = CKP_LC_DELAY_FLARE; }
+        else if (Layer == CKP_LC_LAYER_STAR01)
+        { Delay = CKP_LC_DELAY_STAR01; }
+        else if (Layer == CKP_LC_LAYER_STAR02)
+        { Delay = CKP_LC_DELAY_STAR02; }
+    }
+    else
+    {
+        Layer = CkParticles_LightningCast_RateLayer(In.Seed);
+
+        // A rate particle born past its emitter's one-shot window never existed in the source.
+        const float Window = Layer == CKP_LC_LAYER_STRETCH ? CKP_LC_WINDOW_STRETCH : CKP_LC_WINDOW_LIGHTNING;
+
+        if (Phase > Window)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        // Lightning's source rate FALLS across its window; thinning the constant stream by the same ramp is
+        // what turns a flat row rate back into it.
+        if (Layer == CKP_LC_LAYER_LIGHTNING
+            && CkParticles_Rand(In.Seed, 14) >= 1.0 - Phase / CKP_LC_WINDOW_LIGHTNING)
+        { return CkParticles_LightningCast_Hidden(O); }
+    }
+
+    const float td = In.Age - Delay;
+
+    if (td < 0.0)
+    { return CkParticles_LightningCast_Hidden(O); }
+
+    // ---- Glow_01 / Glow_02 / Glow_03: the three second-long shells that open the cast. None has a Color
+    // module, so each holds its Initialize colour and only fades — the deep blue, the magenta and the warm
+    // white are the effect's whole palette statement.
+    if (Layer <= CKP_LC_LAYER_GLOW03)
+    {
+        if (td > 1.0)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t    = saturate(td);
+        const float Grow = CkParticles_LightningCast_SharedGrow(t);
+        const float A    = CkParticles_LightningCast_SharedFade(t);
+
+        if (Layer == CKP_LC_LAYER_GLOW01)
+        {
+            O.Color   = float4(0.0648033, 0.0307135, 1.0, A);
+            O.Size    = float2(550.0 * Grow, 550.0 * Grow);
+            O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+            O.VisTag  = CKP_LC_VIS_PART01;
+        }
+        else if (Layer == CKP_LC_LAYER_GLOW02)
+        {
+            O.Color  = float4(0.863157, 0.0262412, 1.0, A);
+            O.Size   = float2(200.0 * Grow, 200.0 * Grow);
+            O.VisTag = CKP_LC_VIS_PART02;
+        }
+        else
+        {
+            O.Color   = float4(1.0, 0.819765, 0.499, A);
+            O.Size    = float2(250.0 * Grow, 250.0 * Grow);
+            O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+            O.VisTag  = CKP_LC_VIS_PART01;
+        }
+        return O;
+    }
+
+    // ---- Raimbow: the lens ring, at a TENTH of the alpha its siblings in the other Cast ports carry ----
+    if (Layer == CKP_LC_LAYER_RAIMBOW)
+    {
+        if (td > 0.3)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+
+        O.Color    = float4(0.4565495, 0.4565495, 0.4565495,
+                            0.1 * CkParticles_Key3(t, 0.0, 0.0, 0.328403, 1.0, 1.0, 0.0));
+        O.Size     = float2(350.0 * Grow, 350.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_LC_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Ring: the shockwave, and the only layer in the system with NO colour animation of any kind. It
+    // holds its Initialize magenta and its 0.608 alpha for three quarters of a second and leaves purely by
+    // dissolve.
+    if (Layer == CKP_LC_LAYER_RING)
+    {
+        if (td > 0.75)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.75);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color    = float4(0.913099, 0.191202, 1.0, 0.608);
+        O.Size     = float2(150.0 * Grow, 150.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_LC_VIS_RING01;
+        return O;
+    }
+
+    // ---- Sparkles: ten motes thrown omnidirectionally off a point at 350-500 units/s, holding a saturated
+    // BLUE for their whole life — this is the layer that reads as electricity rather than fire.
+    if (Layer == CKP_LC_LAYER_SPARKLES)
+    {
+        const float Life = lerp(0.5, 1.5, CkParticles_Rand(In.Seed, 1));
+
+        if (td > Life)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float  t   = saturate(td / Life);
+        const float3 V0  = CkParticles_RandDir(In.Seed) * lerp(350.0, 500.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key2(t, 0.615756, 0.50417, 0.936915, 0.0),
+            CkParticles_Key2(t, 0.615756, 0.104,   0.936915, 0.0896671),
+            1.0,
+            CkParticles_Key2(t, 0.613341, 1.0, 1.0, 0.0));
+
+        const float Base = lerp(10.0, 20.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_LC_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Flare_01 / Flare_02: the cyan and mint pips, identical but for their Initialize colour ----
+    if (Layer == CKP_LC_LAYER_FLARE01 || Layer == CKP_LC_LAYER_FLARE02)
+    {
+        if (td > 0.5)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.5);
+        const float Grow = CkParticles_LightningCast_SharedGrow(t);
+        const float A    = CkParticles_LightningCast_SharedFade(t);
+
+        O.Color = Layer == CKP_LC_LAYER_FLARE01
+            ? float4(0.102242, 0.658375, 1.0,      0.2   * A)
+            : float4(0.102242, 1.0,      0.838799, 0.258 * A);
+        O.Size    = float2(50.0 * Grow, 50.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_LC_VIS_PART02;
+        return O;
+    }
+
+    // ---- Big_Star: the opening flash. A `Self / Once` emitter that bursts one particle, so it needs no
+    // window — a burst-only one-shot fires exactly once per activation, which is what a template burst is.
+    if (Layer == CKP_LC_LAYER_BIGSTAR)
+    {
+        if (td > 0.3)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t    = saturate(td / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+
+        O.Color  = float4(1.0, 0.184475, 0.386429, 0.4);
+        O.Size   = float2(200.0 * Grow, 200.0 * Grow);
+        O.VisTag = CKP_LC_VIS_STAR02;
+        return O;
+    }
+
+    // ---- Flare_Stretched_01..04: the four lens streaks. All four hold their Initialize colour under one
+    // alpha fall and PINCH SHUT along X by t = 0.9 while their height holds — the longest-lived burst layers
+    // in the system at 1.2 s.
+    if (Layer <= CKP_LC_LAYER_FLARES04)
+    {
+        if (td > 1.2)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t      = saturate(td / 1.2);
+        const float A      = CkParticles_Key2(t, 0.225777, 1.0, 1.0, 0.0);
+        const float ScaleX = CkParticles_Key2(t, 0.0, 1.0, 0.9, 0.0);
+
+        if (Layer == CKP_LC_LAYER_FLARES01)
+        {
+            O.Color  = float4(0.491021, 0.00182116, 1.0, 0.5 * A);
+            O.Size   = float2(700.0 * ScaleX, 100.0 * CkParticles_Key2(t, 0.0, 0.3, 0.2, 1.0));
+            O.VisTag = CKP_LC_VIS_PART01;
+        }
+        else if (Layer == CKP_LC_LAYER_FLARES02)
+        {
+            O.Color  = float4(1.0, 0.508881, 0.982251, 0.3 * A);
+            O.Size   = float2(700.0 * ScaleX, 100.0 * CkParticles_Key3(t, 0.0, 0.3, 0.2, 1.0, 0.9, 0.2));
+            O.VisTag = CKP_LC_VIS_PART03BR;
+        }
+        else if (Layer == CKP_LC_LAYER_FLARES03)
+        {
+            O.Color  = float4(0.0185002, 0.00402472, 0.130136, A);
+            O.Size   = float2(1400.0 * ScaleX, 180.0 * CkParticles_Key2(t, 0.0, 0.3, 0.2, 1.0));
+            O.VisTag = CKP_LC_VIS_PART03BR;
+        }
+        else
+        {
+            O.Color  = float4(1.0, 0.854993, 0.508881, 0.6 * A);
+            O.Size   = float2(400.0 * ScaleX, 70.0 * CkParticles_Key3(t, 0.0, 0.3, 0.2, 1.0, 0.9, 0.0999999));
+            O.VisTag = CKP_LC_VIS_STAR03;
+        }
+
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        return O;
+    }
+
+    // ---- Star_01 / Star_02: the two-beat sparkle that closes the cycle at t = 0.85 and 0.95, differing only
+    // in a fixed sprite angle and 100 ms of spawn time.
+    if (Layer == CKP_LC_LAYER_STAR01 || Layer == CKP_LC_LAYER_STAR02)
+    {
+        if (td > 0.1)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t = saturate(td / 0.1);
+
+        O.Color    = float4(1.0, 0.184475, 0.386429, 0.4);
+        O.Size     = float2(70.0, 70.0) * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+        O.Rotation = Layer == CKP_LC_LAYER_STAR01 ? 45.0 : 0.1;
+        O.VisTag   = CKP_LC_VIS_STAR02;
+        return O;
+    }
+
+    // ---- Lightning: the bolts. Its Sphere Location radius is ZERO, so Add Velocity from Point has no
+    // direction to work from and every bolt sits at the cast point — the same reading NS_Arrow_Cast's
+    // LightningStrip layer already took. What separates them is a random rotation that then SPINS, a random
+    // size, a random start frame on the 2x2 sheet, and a STROBING alpha that is the whole read: on, off, on,
+    // off, on across one life.
+    if (Layer == CKP_LC_LAYER_LIGHTNING)
+    {
+        const float Life = lerp(0.3, 0.5, CkParticles_Rand(In.Seed, 1));
+
+        if (td > Life)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t = saturate(td / Life);
+
+        O.Color = float4(
+            CkParticles_Key5(t, 0.0, 1.0,      0.0748566, 1.0, 0.598853, 1.0,      0.811349, 0.287441,  1.0, 0.0512695),
+            CkParticles_Key5(t, 0.0, 0.745404, 0.0748566, 1.0, 0.598853, 0.147027, 0.811349, 0.0409152, 1.0, 0.0409152),
+            CkParticles_Key5(t, 0.0, 0.304987, 0.0748566, 1.0, 0.598853, 0.982251, 0.811349, 1.0,       1.0, 1.0),
+            CkParticles_Key5(t, 0.162994, 1.0, 0.329611, 0.0, 0.504679, 1.0, 0.746152, 0.0, 0.959855, 1.0));
+
+        const float Base = lerp(30.0, 100.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 0.8, 1.0, 1.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+                   + Life * CkParticles_LightningCast_SpinIntegral(t);
+
+        // Sub UV Animation in LINEAR mode (not Random, unlike every other flipbook in the cookbook): the run
+        // starts at frame 0 on every particle. Its declared End Frame is 4 on a four-frame sheet, so the fifth
+        // step wraps back onto frame 0 (recipe §13).
+        O.SubImageIndex = fmod(min(floor(t * 5.0), 4.0), 4.0);
+
+        O.Dynamic = float4(CkParticles_Key4(t, 0.0, 1.0, 0.2, -1.0, 0.3, 0.875, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_LC_VIS_LIGHTNING;
+        return O;
+    }
+
+    // ---- Flare_03: two identical orange pips that overlay exactly, and Flare_04, the near-transparent one
+    // carrying the system's second dissolve of 2.
+    if (Layer == CKP_LC_LAYER_FLARE03)
+    {
+        if (td > 0.4)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t = saturate(td / 0.4);
+
+        O.Color   = float4(1.0, 0.4563, 0.111, 0.737104 * CkParticles_LightningCast_SharedFade(t));
+        O.Size    = float2(250.0, 250.0) * CkParticles_LightningCast_SharedGrow(t);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_LC_VIS_PART03BR;
+        return O;
+    }
+
+    if (Layer == CKP_LC_LAYER_FLARE04)
+    {
+        if (td > 0.3)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float t = saturate(td / 0.3);
+
+        O.Color   = float4(1.0, 0.384719, 0.0889999, 0.0371041 * CkParticles_LightningCast_SharedFade(t));
+        O.Size    = float2(80.0, 80.0) * CkParticles_LightningCast_SharedGrow(t);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_LC_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Sparkles_Stretched: the rate-only stream. Velocity-aligned streaks off a point at 500-1500
+    // units/s, lengthening up to 2x with speed, and the only layer in the system that never bursts.
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (td > Life)
+        { return CkParticles_LightningCast_Hidden(O); }
+
+        const float  t  = saturate(td / Life);
+        const float3 V0 = CkParticles_RandDir(In.Seed) * lerp(500.0, 1500.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key4(t, 0.0, 1.0,      0.079686, 1.0,      0.290975, 0.646925, 1.0, 0.223228),
+            CkParticles_Key4(t, 0.0, 0.913099, 0.079686, 0.134,    0.290975, 0.14,     1.0, 0.0),
+            CkParticles_Key4(t, 0.0, 0.584079, 0.079686, 0.731716, 0.290975, 1.0,      1.0, 0.116971),
+            0.8 * CkParticles_Key2(t, 0.080893, 1.0, 1.0, 0.0));
+
+        // The source's Sprite Size Min (25, 70) / Max (40, 60) has its Y bounds INVERTED. Niagara lerps each
+        // component between its own pair, so Y draws in [60, 70] descending — transcribed as authored.
+        const float Width  = lerp(25.0, 40.0, CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(70.0, 60.0, CkParticles_Rand(In.Seed, 12));
+        const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float Taper  = CkParticles_Key3(t, 0.0, 1.0, 0.3, 0.25, 1.0, 0.2);
+
+        // Scale Sprite Size by Speed: length only, 1x up to the 1000-unit threshold and 2x at or past it.
+        const float SpeedFactor = lerp(1.0, 2.0, saturate(length(O.Velocity) / 1000.0));
+
+        O.Size   = float2(Width * Grow, Length * Grow * Taper * SpeedFactor);
+        O.VisTag = CKP_LC_VIS_PART04;
+        return O;
+    }
+}
