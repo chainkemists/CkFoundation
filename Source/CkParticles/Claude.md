@@ -56,7 +56,8 @@ UCkParticles_DataInterface (UNiagaraDataInterface, stateless)
 template's renderers draw only their tagged particles — `0` camera sprite (per-effect texture via
 `User.SpriteMaterial`, the legacy default), `1` velocity-aligned sprite (streaks/tracers; stretch =
 `Size.y`), `2` smoke sprite (translucent `M_CkParticles_SoftSmoke`, `Rotation` applies), `3` carrier mesh
-(`MeshIndex` picks SM_CkParticles_ **Sweep/Tube/Shell/Disc**; `Scale` + `Orientation` apply; the meshes carry
+(`MeshIndex` picks SM_CkParticles_ **Sweep/Tube/Shell/Disc**; row-declared mesh renderers name their
+carrier instead; `Scale` + `Orientation` apply; the meshes carry
 `M_CkParticles_SweepErode` / `M_CkParticles_FresnelShell`), `4` **custom-facing sprite** — a quad fixed in sim
 space rather than billboarded, with `SpriteAlignment` as its up axis and `SpriteFacing` as its plane normal
 (ground decals / range rings, matching Niagara's CustomAlignment + CustomFacingVector pair). VisTag 4 shares
@@ -96,8 +97,9 @@ owns 5–9: four crescent-mesh slash layers and one spark sprite. Behaviors 18/1
 pair) share 10–11 on one cadence row; every Vefects port from 20 up owns its own contiguous band above
 those — 12–14 (20), 15–27 (21), 28–36 (22), 37–49 (23), 50–61 (24), 62–70 (25), 71–76 (26), 77–83 (27),
 84–90 (28), 91–96 (29), 97–104 (30), 105–112 (31), 113–118 (32), 119–130 (33), 131–146 (34) and
-147–156 (35), 157–163 (36, the last of them the ribbon emitter's), 164–166 (37), 167–174 (38)
-and 175–184 (39) — and 19
+147–156 (35), 157–163 (36, the last of them the ribbon emitter's), 164–166 (37), 167–174 (38),
+175–184 (39), 185–197 (40 AND 41 — the palette twins share their band), 198–209 (42 and 43) and
+210–224 (44) — and 19
 additionally binds a look, because its one camera-facing layer draws on the shared VisTag 0 where
 `User.SpriteMaterial` is the only material channel.
 **The roster-wide ceiling is DERIVED** — `ck::particles::Get_RosterVisTag_Max()` walks the
@@ -164,6 +166,11 @@ Shipped recipes:
 | [`NS_Bomb_Projectile.md`](Cookbook/NS_Bomb_Projectile.md) | Vefects `NS_Bomb_Projectile` + `M_VFX_DisAdd_{Part01,Trail01}` + `MI_VFX_Bomb` | `BombProjectile` (37) |
 | [`NS_BuffCast.md`](Cookbook/NS_BuffCast.md) | Vefects `NS_BuffCast` + 8 `M_VFX_DisAdd_*` instances | `BuffCast` (38) |
 | [`NS_Lightning_Muzzle.md`](Cookbook/NS_Lightning_Muzzle.md) | Vefects `NS_Lightning_Muzzle` + 9 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `LightningMuzzle` (39) |
+| [`NS_ExplosionGround.md`](Cookbook/NS_ExplosionGround.md) | Vefects `NS_ExplosionGround` + 10 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `ExplosionGround` (40) |
+| [`NS_ExplosionIceGround.md`](Cookbook/NS_ExplosionIceGround.md) | Vefects `NS_ExplosionIceGround` — the same asset set, recoloured | `ExplosionGroundIce` (41) |
+| [`NS_ExplosionOmni.md`](Cookbook/NS_ExplosionOmni.md) | Vefects `NS_ExplosionOmni` + 9 `M_VFX_DisAdd_*` instances + `M_VFX_FlatAdd` | `ExplosionOmni` (42) |
+| [`NS_ExplosionIceOmni.md`](Cookbook/NS_ExplosionIceOmni.md) | Vefects `NS_ExplosionIceOmni` — the same asset set, recoloured | `ExplosionOmniIce` (43) |
+| [`NS_Bomb_Explosion.md`](Cookbook/NS_Bomb_Explosion.md) | Vefects `NS_Bomb_Explosion` + 9 `M_VFX_DisAdd_*` + `M_VFX_FlatAdd` + 3 `MI_VFX_FresnelBomb_*` | `BombExplosion` (44) |
 
 ---
 
@@ -245,7 +252,11 @@ in patches rather than eroding everywhere at once; and the event-ribbon set's th
 texture that is a TRANSCRIPTION rather than a stand-in, because `T_VFX_Gradient_02` measures as exactly
 `1 - u` — plus `LightningBolt` and `LightningBand`, the first paints whose whole structure is carried by
 MEASURED PROFILES (a wandering centre line, a per-row peak and width, a cross-section, a band shape) rather
-than by a fitted closed form.
+than by a fitted closed form; and the explosion set's three, `ExpGroundScorch` — the paint whose NAME is
+the trap, since `T_VFX_Star_04` has no dominant angular harmonic at all and is a lumpy blob rather than the
+four-point star `StarFour` reproduces — plus `GradientTrapezoid`, the library's second TRANSCRIPTION, and
+`TileNoiseFine`, the only noise that needs TWO Fbm scales because its autocorrelation tail belongs to
+neither a fine nor a coarse one alone.
 Their constants come from characteristics MEASURED off the corpus PNGs
 (profiles, streak counts, falloff exponents, band splits — never copied pixels; see each recipe's §7).
 
@@ -279,7 +290,14 @@ GroundRing=14, LightningStrike=15, AuraSwirl=16, LightningRange=17, GunshotProje
 FireBurst=20, FireBallHit=21, GunshotHit=22, ArrowCast=23, ArrowHit=24, BombSpawn=25, PickupLoop=26,
 HealLoop=27, BuffLoop=28, DebuffLoop=29, PickupCast=30, HealCast=31, DebuffCast=32, GunshotCast=33,
 FireBallCast=34, LightningCast=35, FireBallProjectile=36, BombProjectile=37, BuffCast=38,
-LightningMuzzle=39.
+LightningMuzzle=39, ExplosionGround=40, ExplosionGroundIce=41, ExplosionOmni=42,
+ExplosionOmniIce=43, BombExplosion=44.
+
+Ids 40-43 are the explosion FAMILY: two structural variants of one effect in two palettes, sharing one
+implementation (`Behaviors/Behavior_ExplosionShared.ush` + one `Explosion_Run` in the CPU mirror) behind
+four thin entry points. A palette twin still needs its own id because a behavior id resolves to exactly one
+template path and that path is the spawn contract — but it declares the SAME renderers and the same
+cadence as its original, so their two rows share one renderer-spec function and one VisTag band.
 
 `FireBurst` (20) is the Vefects `NS_Fire` re-port and is unrelated to `Fire` (3), the procedural rising column
 that predates the cookbook — the two only share a source-asset name.
@@ -334,6 +352,11 @@ neither is the legacy seed template, whose cadence comes from the emitter factor
 | `PS_CkParticles_Template_BombProjectile` | **2.5 s** | 2.5 s | 4 | Vefects `NS_Bomb_Projectile` (37) — 2 row renderers + a ribbon emitter whose 17-point BURST is placed by arc length, not by time |
 | `PS_CkParticles_Template_BuffCast` | 2 s | 1.5 s | 23 | Vefects `NS_BuffCast` (38) — 7 row renderers + a ribbon emitter bursting 301 EVENT samples across seven strands |
 | `PS_CkParticles_Template_LightningMuzzle` | 2 s | 0.6 s | 24 | Vefects `NS_Lightning_Muzzle` (39) — 9 row renderers, three of them meshes, + a ribbon emitter carrying the arc PAIR |
+| `PS_CkParticles_Template_ExplosionGround` | 2 s | 1.5 s | 70 | Vefects `NS_ExplosionGround` (40) — 12 row renderers + a ribbon emitter bursting 301 event samples across seven strands |
+| `PS_CkParticles_Template_ExplosionGroundIce` | 2 s | 1.5 s | 70 | Vefects `NS_ExplosionIceGround` (41) — the palette twin: same renderers, same cadence, its own template |
+| `PS_CkParticles_Template_ExplosionOmni` | 2 s | 1.3 s | 65 | Vefects `NS_ExplosionOmni` (42) — 11 row renderers + the same ribbon emitter |
+| `PS_CkParticles_Template_ExplosionOmniIce` | 2 s | 1.3 s | 65 | Vefects `NS_ExplosionIceOmni` (43) — the second palette twin |
+| `PS_CkParticles_Template_BombExplosion` | 2 s | 0.5 s | **162** | Vefects `NS_Bomb_Explosion` (44) — the cookbook's largest burst; 15 row renderers, SEVEN of them meshes, and the only row that uses every C8 facing mode |
 
 Rows verified 2026-08-01 against `ck::particles::Get_TemplateSpecs()` and against `Add_SpawnEmitterStack`,
 which reads `LoopDuration` / `ParticleLifetime` / `BurstCount` straight off the spec — so the table above is

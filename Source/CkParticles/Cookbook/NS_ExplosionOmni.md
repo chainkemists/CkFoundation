@@ -6,7 +6,10 @@ Schema and evidence-tag conventions: [README.md](README.md). **Family reference 
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) — BehaviorId 42.** `Behavior_ExplosionOmni.ush`
+(a thin entry point over `Behavior_ExplosionShared.ush`) + `ExecuteStage_CPU` case 42, the
+`PS_CkParticles_Template_ExplosionOmni` row, eleven row renderers + a ribbon emitter, ZERO new
+assets. `[HUMAN-VERIFY]` open — §12.
 
 No behavior, no `.ush`, no look, no mesh, no texture, no cadence row, no test, no gym station. No
 behavior id allocated. Nothing rendered or looked at. Sections 1–6 are archaeology and a plan, tagged
@@ -304,4 +307,117 @@ Same as Ground §6.7 — world→local space, `Opacty_DepthFade` dropped, HDR co
 
 ---
 
-## 7+. Reserved for implementation.
+## 7. Textures, 8. Meshes — NOTHING NEW
+
+This port added **zero textures, zero meshes and zero looks**. Every paint it needs was measured and
+baked by an earlier batch and reaches it through a look that already exists; the two carriers it draws
+(`UvSphere`, `Spike`) are the Ground pair's, and `UvSphere` is generated in this same batch. See
+[NS_ExplosionGround.md](NS_ExplosionGround.md) §7-§8.
+
+---
+
+## 9. The behavior — the VARIANT axis of `Behavior_ExplosionShared.ush`
+
+BehaviorId 42 is a two-line entry point over the shared implementation, selecting
+`CKP_EXP_VARIANT_OMNI` + `CKP_EXP_PALETTE_FIRE`. Read [NS_ExplosionGround.md](NS_ExplosionGround.md)
+§9 for the design; what follows is only what the Ground/Omni axis moves.
+
+### 9.1 "Omni" is literal
+
+`Hemisphere Z` flips true → false on `Sparkles_02`, `Sparkles_01`, `Smokes` and `Sparkles_02001`, so
+those four clouds straddle the origin plane instead of sitting above it. Three emitters also swap a
+directional velocity module for an isotropic `Add Velocity from Point`:
+
+| Emitter | Ground | Omni |
+|---|---|---|
+| `Sparkles_02` | `Random Range Vector`, per-axis, X/Y authored INVERTED | radial, strength 500-2000 |
+| `Smokes` | sphere r 70 flattened to a ground ring, `Random Range Vector` | sphere r 50 full shell, radial 50-200 |
+| `SmokesCenter` | **Cone Location** (25°, length 130) | sphere r 20 flattened to a ring, radial 0-150 |
+| `Flames` | `Random Range Vector` | radial 130-200 |
+| `Spike01` orientation | rotation vector `(0, [0, 0.5], [1, −1])` — a mostly-upward fan | `([−1, 1], [−1, 1], [−1, 1])` — every direction |
+
+The shared file expresses all of this through one `CkParticles_Explosion_SpherePoint(Seed, Radius,
+HemiZ, SurfaceOnly, FlatZ)` plus a per-variant velocity branch, so the Omni shapes are a parameter of
+the same code rather than a second copy of it.
+
+### 9.2 What the layer list loses, and what that does to the cadence
+
+`Glow_01`, `Glow_02` and `Ground_Mark` do not exist here, so the burst is **65** and the partition
+shifts accordingly (recorded in §6.1). Losing `Ground_Mark` also moves the row's lifetime: the longest
+layer is now `Smokes`/`SmokesCenter` at a resolved **1.3 s**, not the scorch decal's 1.5 s. That is a
+[P0-D2] consequence — this sheet's pre-v3 reading was 0.4 s, so the corrected figure is 3.25x it.
+
+### 9.3 Three per-variant values that are not spawn shapes
+
+- `Ring`'s dissolve starts **−0.1** here and **+0.15** on Ground, so the Omni ring only ever
+  intensifies where the Ground one is eroded early and re-forms. This is a Ground/Omni difference, not
+  a fire/ice one — the palette twins agree on it.
+- `Ring`'s size is 400 (Ground: 500); `Glow_03`'s is 1300 (Ground: 1600) and it bursts two; `Glow_04`
+  bursts three; `Raimbow` fires at 0.05 s at size 600 (Ground: 0.1 s at 800).
+- `Glow_03`'s `Scale Color` opens at **5x** here and flat at 1x on Ground; `Glow_04` opens 3x.
+
+---
+
+## 10. Looks and renderers
+
+**Eleven row renderers + one ribbon renderer, VisTags 198-209** — the Ground set minus the scorch
+decal, whose emitter does not exist here. Same look bindings, same kinds, same `MeshScale 0.8` on the
+bubble carrier. The palette twin (behavior 43) declares the SAME array.
+
+**Cadence row:** `{ "PS_CkParticles_Template_ExplosionOmni", 2.0f, 1.3f, 65, …, 0.0f, { 0.0f, 301, … } }`.
+
+---
+
+## 11. Tests
+
+`CkTests.UnitTests.CkParticles.ExplosionOmniBehavior` pins the row, the 65-slot partition, the event
+collapse at 0.0 and emitter-clock independence exactly as the Ground gate does, plus the three claims
+that are this variant's alone and are asserted AGAINST behavior 40 so they cannot pass vacuously:
+
+- **the spawn hemisphere opens.** Over 4000 seeds, a real fraction of Omni streaks spawn below the
+  origin plane and **exactly zero** of Ground's do;
+- **the spike fan opens.** `QuatFromZTo` builds its axis as `cross(+Z, Dir)`, so the quaternion's Y
+  component is non-zero exactly when the rotation vector has an X component: most Omni spikes have
+  one, and **no** Ground spike does;
+- **the ring's dissolve sign flips**, pinned at −0.1 with the 400-unit size beside it.
+
+---
+
+## 12. Verification — A/B protocol `[HUMAN-VERIFY]`
+
+VfxExamples gym, station **EXPLOSION OMNI**, spawn offset (0, 0, 140) — this one is an airburst and
+wants clear air all round it.
+
+| # | What to compare | What "right" looks like |
+|---|---|---|
+| a | the spray | spherical. Sparks and smoke go DOWN as well as up; if nothing goes below the pedestal the Ground shapes leaked in |
+| b | the spikes | pointing in every direction, not fanned upward |
+| c | the ring | intensifying rather than eroding-then-reforming, and visibly smaller than the Ground one |
+| d | the smoke | a full shell at radius 50 plus a flat ring at 20, both HDR-hot for their first sixth |
+| e | the tail | something still visible at ~1.3 s — the smoke is the longest layer here, and there is no scorch decal |
+| f | the floor illumination | **DROPPED** (§13) |
+
+## 13. Confirmed fidelity differences or intentional deviations
+
+**All of [NS_ExplosionGround.md](NS_ExplosionGround.md) §13 apply**, with two notes:
+
+- §13.2's degenerate custom-facing pair applies to `Glow_03` alone here (the only such emitter);
+- §13.4's dropped depth fade matters LESS on this variant — there is no 1500-unit decal lying on the
+  floor to intersect it.
+
+The [P4-D2] light-drop clause, verbatim: *a Niagara light renderer is CPU-sim only and every
+CkParticles emitter is GPU, so the layer is dropped and recorded here; if the maintainer's A/B shows
+the original's floor illumination as a visible gap, the options are a first CPU light emitter or a
+proxy glow, decided on real evidence at inspection rather than speculatively.*
+
+## 14. Reusable lessons
+
+1. **Two structural variants of one effect are a PARAMETER, not two behaviors** — provided the
+   variant axis touches spawn shapes, counts and partition, and the palette axis touches only colour.
+   Confirm the axes are orthogonal before committing to a shared file.
+2. **Assert a variant difference against its sibling, not against a constant.** "Omni spawns below the
+   plane" is weak; "Omni spawns below the plane and Ground never does, over the same 4000 seeds" is a
+   test that fails if either half regresses.
+3. **A quaternion component can be a clean discriminator.** `cross(+Z, Dir)` has no Y part when
+   `Dir.x` is zero, which turns "is the fan constrained?" into an exact equality rather than a
+   statistical one.
