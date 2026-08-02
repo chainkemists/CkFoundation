@@ -1,0 +1,300 @@
+// /CkParticles/Behaviors/Behavior_DebuffLoop.ush — BehaviorId 29.
+//
+// Faithful re-port of Vefects NS_DebuffLoop. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_DebuffLoop.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is NINE emitters, all enabled, every one spawning through Spawn Rate: a downward sparkle fall, a
+// slow ring, a sub-UV flame shell, three glows, TWO velocity-aligned arrow streams that differ only in colour,
+// and a flare haze, on a system that loops Infinite / 2.0 s. One CkParticles emitter carries all nine as a
+// 36 particles/second stream through PS_CkParticles_Template_DebuffLoop
+// (2.0 s loop / 2.0 s particle lifetime / rate 36).
+//
+// The two arrow emitters gate their spawns behind a per-spawn probability drawn from 0.5..1.0, which a behavior
+// reproduces by hiding the slots that lose the draw — the source pays the same cost in particles that render
+// nothing. The three emitters that STORE Loop Behavior = Once are Life Cycle Mode = System, so those rows are
+// inert; nothing here reads In.EmitterAge (recipe §13).
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 29) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — cumulative spawn-rate shares in the source's own emitter order (recipe §2).
+#define CKP_DL_RATE_TOTAL      36.0
+#define CKP_DL_CUM_SPARKLES     4.0   // Sparkles_Dark 4/s
+#define CKP_DL_CUM_RING         7.0   // Ring          3/s
+#define CKP_DL_CUM_FLAMES      12.0   // Flames        5/s
+#define CKP_DL_CUM_GLOW01      14.0   // Glow_01       2/s
+#define CKP_DL_CUM_GLOW02      18.0   // Glow_02       4/s
+#define CKP_DL_CUM_GLOW03      22.0   // Glow_03       4/s
+#define CKP_DL_CUM_ARROWGREEN  26.0   // Arrow_Green   4/s
+#define CKP_DL_CUM_ARROWPURPLE 30.0   // Arrow_Purple  4/s
+                                      // Flares        6/s -> the remainder
+
+#define CKP_DL_LAYER_SPARKLES    0
+#define CKP_DL_LAYER_RING        1
+#define CKP_DL_LAYER_FLAMES      2
+#define CKP_DL_LAYER_GLOW01      3
+#define CKP_DL_LAYER_GLOW02      4
+#define CKP_DL_LAYER_GLOW03      5
+#define CKP_DL_LAYER_ARROWGREEN  6
+#define CKP_DL_LAYER_ARROWPURPLE 7
+#define CKP_DL_LAYER_FLARES      8
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_DL_VIS_PART01      91
+#define CKP_DL_VIS_PART01BR    92
+#define CKP_DL_VIS_RING01      93
+#define CKP_DL_VIS_FLAMES01    94
+#define CKP_DL_VIS_PART02      95
+#define CKP_DL_VIS_ARROWS      96
+
+FCkParticles_StageOutput CkParticles_DebuffLoop_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+int CkParticles_DebuffLoop_Layer(int Seed)
+{
+    const float R = CkParticles_Rand(Seed, 0) * CKP_DL_RATE_TOTAL;
+
+    if (R < CKP_DL_CUM_SPARKLES)    { return CKP_DL_LAYER_SPARKLES; }
+    if (R < CKP_DL_CUM_RING)        { return CKP_DL_LAYER_RING; }
+    if (R < CKP_DL_CUM_FLAMES)      { return CKP_DL_LAYER_FLAMES; }
+    if (R < CKP_DL_CUM_GLOW01)      { return CKP_DL_LAYER_GLOW01; }
+    if (R < CKP_DL_CUM_GLOW02)      { return CKP_DL_LAYER_GLOW02; }
+    if (R < CKP_DL_CUM_GLOW03)      { return CKP_DL_LAYER_GLOW03; }
+    if (R < CKP_DL_CUM_ARROWGREEN)  { return CKP_DL_LAYER_ARROWGREEN; }
+    if (R < CKP_DL_CUM_ARROWPURPLE) { return CKP_DL_LAYER_ARROWPURPLE; }
+    return CKP_DL_LAYER_FLARES;
+}
+
+// The two arrow emitters share EVERY parameter but their colour curve — the cleanest illustration in the cookbook
+// that a layer and a look are different things. One body serves both.
+FCkParticles_StageOutput CkParticles_DebuffLoop_Arrow(
+    FCkParticles_StageOutput O, FCkParticles_StageInput In, float T, float Life, float3 Rgb)
+{
+    // Cylinder radius 80, height 130, offset (0, 0, 150) — spawned HIGH, then Initialize Particle's own position
+    // offset drops the layer 119.316 units; the two compose.
+    const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 80.0, 130.0, float3(0.0, 0.0, 150.0))
+                       + float3(0.0, 0.0, -119.316);
+    const float3 V0    = float3(0.0, 0.0, lerp(-150.0, -300.0, CkParticles_Rand(In.Seed, 2)));
+
+    O.Position = Spawn + V0 * (CkParticles_Int2(T, 1.0, 0.2) * Life);
+    O.Velocity = V0 * CkParticles_Key2(T, 0.0, 1.0, 1.0, 0.2);
+
+    O.Color = float4(Rgb.x, Rgb.y, Rgb.z,
+                     CkParticles_Key3(T, 0.0, 0.0, 0.085723, 1.0, 1.0, 0.0));
+
+    const float Grow = CkParticles_Key2(T, 0.0, 1.0, 1.0, 0.4);
+    O.Size   = float2(90.0 * Grow, 150.0 * Grow);
+    O.VisTag = CKP_DL_VIS_ARROWS;
+    return O;
+}
+
+// Glow_01 and Glow_02 carry the same green<->violet palette and differ only in life, size and alpha keys.
+FCkParticles_StageOutput CkParticles_DebuffLoop_Glow(
+    FCkParticles_StageOutput O, float T, float Size, float AlphaIn, float AlphaOut)
+{
+    O.Color = float4(
+        CkParticles_Key3(T, 0.150921, 0.093059,  0.457591, 0.111932,  0.772714, 0.093059),
+        CkParticles_Key3(T, 0.150921, 0.181164,  0.457591, 0.0409152, 0.772714, 0.181164),
+        CkParticles_Key3(T, 0.150921, 0.0953075, 0.457591, 0.3564,    0.772714, 0.0953075),
+        CkParticles_Key4(T, 0.0, 0.0, AlphaIn, 1.0, AlphaOut, 1.0, 1.0, 0.0) * 0.8);
+    O.Size    = float2(Size, Size);
+    O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+    O.VisTag  = CKP_DL_VIS_PART01;
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_DebuffLoop(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = CkParticles_DebuffLoop_Layer(In.Seed);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // ---- Sparkles_Dark: near-black motes FALLING out of the cylinder ----
+    // Its Curl Noise Force is DISABLED in the source (its DebuffCast counterpart has it enabled), which is what
+    // keeps this effect off the noise-field list — the 2500/15/seed-11 values in the store are inert.
+    if (Layer == CKP_DL_LAYER_SPARKLES)
+    {
+        const float Life = lerp(1.0, 1.5, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffLoop_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 120.0, 150.0, float3(0.0, 0.0, 30.0));
+        // Min is the SMALLER magnitude and Max the larger negative, taken per-axis as exported.
+        const float3 V0    = float3(0.0, 0.0, lerp(-200.0, -700.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.1, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.1, 1.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key2(t, 0.113492, 0.00102734, 0.385149, 0.000465223),
+            CkParticles_Key2(t, 0.113492, 0.002,      0.385149, 0.000531684),
+            CkParticles_Key2(t, 0.113492, 0.00105217, 0.385149, 0.002),
+            CkParticles_Key3(t, 0.0, 0.0, 0.0857229, 1.0, 1.0, 0.0));
+
+        const float Base = lerp(7.0, 15.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.VisTag   = CKP_DL_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Ring: a near-black halo that grows to full size and dissolves outward as it goes ----
+    if (Layer == CKP_DL_LAYER_RING)
+    {
+        const float Life = lerp(1.0, 2.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffLoop_Hidden(O); }
+
+        const float t    = saturate(In.Age / Life);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color = float4(0.00182116, 0.00182116, 0.00212469,
+                         CkParticles_Key3(t, 0.0, 0.0, 0.499849, 1.0, 1.0, 0.0) * 0.35);
+
+        const float Base = lerp(200.0, 300.0, CkParticles_Rand(In.Seed, 8));
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -0.5), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_DL_VIS_RING01;
+        return O;
+    }
+
+    // ---- Flames: the sub-UV shell, the only flipbook layer in the system ----
+    // Sphere Location with Surface Only true at radius 20, and no velocity module at all: the puffs sit on the
+    // shell and turn in place.
+    if (Layer == CKP_DL_LAYER_FLAMES)
+    {
+        const float Life = lerp(1.0, 2.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffLoop_Hidden(O); }
+
+        const float t    = saturate(In.Age / Life);
+        const float Grow = CkParticles_Key2(t, 0.0, 0.5, 1.0, 1.0);
+
+        O.Position = CkParticles_RandDir(In.Seed) * 20.0;
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.113492, 0.175111, 0.545729, 0.0144, 0.984002, 0.00560539),
+            CkParticles_Key3(t, 0.113492, 0.250158, 0.545729, 0.0144, 0.984002, 0.00802319),
+            CkParticles_Key3(t, 0.113492, 0.175111, 0.545729, 0.048,  0.984002, 0.00560539),
+            0.05);
+
+        const float Base = lerp(200.0, 300.0, CkParticles_Rand(In.Seed, 8));
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = 90.0 + lerp(-45.0, 45.0, CkParticles_Rand(In.Seed, 5)) * In.Age;
+
+        const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+        O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+        // dissolve erodes to full over life; the distortion channel is pinned at the source's constant 10.
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 10.0, 0.0, 0.0);
+        O.VisTag  = CKP_DL_VIS_FLAMES01;
+        return O;
+    }
+
+    // ---- Glow_01 / Glow_02: the green -> violet -> green pulse at two sizes ----
+    if (Layer == CKP_DL_LAYER_GLOW01)
+    {
+        if (In.Age > 2.0)
+        { return CkParticles_DebuffLoop_Hidden(O); }
+
+        return CkParticles_DebuffLoop_Glow(O, saturate(In.Age / 2.0), 500.0, 0.172653, 0.754603);
+    }
+
+    if (Layer == CKP_DL_LAYER_GLOW02)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_DebuffLoop_Hidden(O); }
+
+        return CkParticles_DebuffLoop_Glow(O, saturate(In.Age), 250.0, 0.176275, 0.752188);
+    }
+
+    // ---- Glow_03: the largest sprite in the cookbook, and the only layer with NO curve of any kind ----
+    // Two update modules only, so its Initialize colour is what renders: a dark violet bloom that pops on and off
+    // with its one-second life rather than fading.
+    if (Layer == CKP_DL_LAYER_GLOW03)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_DebuffLoop_Hidden(O); }
+
+        O.Color   = float4(0.00913406, 0.00334653, 0.0331048, 0.4);
+        O.Size    = float2(1000.0, 1000.0);
+        O.Dynamic = float4(0.7, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_DL_VIS_PART01;
+        return O;
+    }
+
+    // ---- Arrow_Green / Arrow_Purple: the two falling chevrons, spawn-probability gated ----
+    if (Layer == CKP_DL_LAYER_ARROWGREEN || Layer == CKP_DL_LAYER_ARROWPURPLE)
+    {
+        // Use Spawn Probability with a per-spawn Random Range Float of 0.5..1.0: draw the probability, then draw
+        // against it. A slot that loses renders nothing, which is exactly what the source spends.
+        const float Probability = lerp(0.5, 1.0, CkParticles_Rand(In.Seed, 11));
+
+        if (CkParticles_Rand(In.Seed, 12) >= Probability)
+        { return CkParticles_DebuffLoop_Hidden(O); }
+
+        const float Life = lerp(0.6, 1.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / Life);
+
+        if (Layer == CKP_DL_LAYER_ARROWGREEN)
+        {
+            return CkParticles_DebuffLoop_Arrow(O, In, t, Life, float3(
+                CkParticles_Key2(t, 0.113492, 0.0165,    0.46725, 0.00116306),
+                CkParticles_Key2(t, 0.113492, 0.03,      0.46725, 0.00132921),
+                CkParticles_Key2(t, 0.113492, 0.0169417, 0.46725, 0.005)));
+        }
+
+        // The purple arrow's mid-key time differs from the green's as well as its colour.
+        return CkParticles_DebuffLoop_Arrow(O, In, t, Life, float3(
+            CkParticles_Key2(t, 0.113492, 0.0137272, 0.487775, 0.00116306),
+            CkParticles_Key2(t, 0.113492, 0.009,     0.487775, 0.00132921),
+            CkParticles_Key2(t, 0.113492, 0.03,      0.487775, 0.005)));
+    }
+
+    // ---- Flares: the Debuff variant DIRECT-SETS its colour where the Buff sibling randomizes the hue ----
+    // Its stored HSV parameters are inert in Direct Set mode. Unlike the Buff sibling's, this one only GROWS.
+    {
+        const float Life = lerp(1.0, 2.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_DebuffLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / Life);
+
+        O.Position = CkParticles_CylinderPoint(In.Seed, 90.0, 130.0, float3(0.0, 0.0, 30.0));
+
+        O.Color = float4(0.00802319, 0.00402472, 0.0241576,
+                         0.8 * CkParticles_Key3(t, 0.0, 0.0, 0.3, 0.125, 1.0, 0.0));
+
+        const float Base = lerp(50.0, 200.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.6, 1.0, 1.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Dynamic = float4(8.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_DL_VIS_PART02;
+        return O;
+    }
+}

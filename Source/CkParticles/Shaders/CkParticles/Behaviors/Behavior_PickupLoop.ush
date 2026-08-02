@@ -1,0 +1,291 @@
+// /CkParticles/Behaviors/Behavior_PickupLoop.ush — BehaviorId 26.
+//
+// Faithful re-port of Vefects NS_PickupLoop. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_PickupLoop.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is NINE emitters, all enabled, every one of them spawning through Spawn Rate and NOTHING through a
+// burst: four bomb glows, a sparkle spray, a slow rotating ring, two stars and a hue-randomized flare haze, on a
+// system that loops Infinite / 2.0 s. One CkParticles emitter carries all nine as a single 27.5 particles/second
+// stream through PS_CkParticles_Template_PickupLoop (2.0 s loop / 4.0 s particle lifetime / rate 27.5).
+//
+// A rate-only source has no per-loop burst to slice, so the layer partition is NOT Seed % N: a particle draws
+// CkParticles_Rand(Seed, 0) and lands in the layer whose share of the total rate covers it. Slot counting would
+// force every layer onto a multiple of 1/N and could not express Ring01's 0.5/s at all.
+//
+// Nothing here reads In.EmitterAge: all nine emitters are Life Cycle Mode = System, so their own Loop rows are
+// inert and there is no windowed sub-layer to gate (recipe §13).
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 26) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — cumulative spawn-rate shares in the source's own emitter order (recipe §2).
+#define CKP_PU_RATE_TOTAL      27.5
+#define CKP_PU_CUM_GLOW01       2.0   // Bomb_Glow_01  2/s
+#define CKP_PU_CUM_GLOW02       4.0   // Bomb_Glow_02  2/s
+#define CKP_PU_CUM_GLOW03       8.0   // Bomb_Glow_03  4/s
+#define CKP_PU_CUM_GLOW04      12.0   // Bomb_Glow_04  4/s
+#define CKP_PU_CUM_SPARKLES    17.0   // Sparkles      5/s
+#define CKP_PU_CUM_RING        17.5   // Ring01        0.5/s
+#define CKP_PU_CUM_STAR01      19.5   // Star01        2/s
+#define CKP_PU_CUM_STAR02      21.5   // Star02        2/s
+                                      // Flares        6/s -> the remainder
+
+#define CKP_PU_LAYER_GLOW01     0
+#define CKP_PU_LAYER_GLOW02     1
+#define CKP_PU_LAYER_GLOW03     2
+#define CKP_PU_LAYER_GLOW04     3
+#define CKP_PU_LAYER_SPARKLES   4
+#define CKP_PU_LAYER_RING       5
+#define CKP_PU_LAYER_STAR01     6
+#define CKP_PU_LAYER_STAR02     7
+#define CKP_PU_LAYER_FLARES     8
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_PU_VIS_PART01      71
+#define CKP_PU_VIS_PART01BR    72
+#define CKP_PU_VIS_PART02      73
+#define CKP_PU_VIS_RING03      74
+#define CKP_PU_VIS_STAR01      75
+#define CKP_PU_VIS_STAR02      76
+
+// The Flares base colour RGBA(1, 0.329981, 0) in HSV. Value and saturation are both 1 on a pure hue like this, so
+// the source's Saturation/Value ranges REPLACE them outright and the "range scales the base" reading would give
+// the same numbers — the ambiguity is inert here (recipe §13).
+#define CKP_PU_FLARE_BASE_HUE   0.05499683
+
+FCkParticles_StageOutput CkParticles_PickupLoop_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+int CkParticles_PickupLoop_Layer(int Seed)
+{
+    const float R = CkParticles_Rand(Seed, 0) * CKP_PU_RATE_TOTAL;
+
+    if (R < CKP_PU_CUM_GLOW01)   { return CKP_PU_LAYER_GLOW01; }
+    if (R < CKP_PU_CUM_GLOW02)   { return CKP_PU_LAYER_GLOW02; }
+    if (R < CKP_PU_CUM_GLOW03)   { return CKP_PU_LAYER_GLOW03; }
+    if (R < CKP_PU_CUM_GLOW04)   { return CKP_PU_LAYER_GLOW04; }
+    if (R < CKP_PU_CUM_SPARKLES) { return CKP_PU_LAYER_SPARKLES; }
+    if (R < CKP_PU_CUM_RING)     { return CKP_PU_LAYER_RING; }
+    if (R < CKP_PU_CUM_STAR01)   { return CKP_PU_LAYER_STAR01; }
+    if (R < CKP_PU_CUM_STAR02)   { return CKP_PU_LAYER_STAR02; }
+    return CKP_PU_LAYER_FLARES;
+}
+
+// The four bomb glows differ only in life, size, palette and the Color module's Scale Alpha, so one body serves
+// three of them; Bomb_Glow_01 and _02 keep their own colour curves.
+FCkParticles_StageOutput CkParticles_PickupLoop_Glow(
+    FCkParticles_StageOutput O, float T, float3 Rgb, float Alpha, float Size, int VisTag)
+{
+    O.Color   = float4(Rgb.x, Rgb.y, Rgb.z,
+                       CkParticles_Key4(T, 0.0, 0.0, 0.304256, 1.0, 0.67371, 1.0, 1.0, 0.0) * Alpha);
+    O.Size    = float2(Size, Size);
+    O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+    O.VisTag  = VisTag;
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_PickupLoop(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = CkParticles_PickupLoop_Layer(In.Seed);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // ---- Bomb_Glow_01: the long glow, 2 s of a warm ember whose green channel dips at mid-life ----
+    if (Layer == CKP_PU_LAYER_GLOW01)
+    {
+        if (In.Age > 2.0)
+        { return CkParticles_PickupLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / 2.0);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.237851, 0.708376,  0.492605, 0.527115, 0.763055, 0.708376),
+            CkParticles_Key3(t, 0.237851, 0.0466651, 0.492605, 0.109462, 0.763055, 0.0466651),
+            CkParticles_Key4(t, 0.0, 0.0, 0.231814, 1.0, 0.767884, 1.0, 1.0, 0.0) * 0.5);
+        O.Size    = float2(220.0, 220.0);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PU_VIS_PART01;
+        return O;
+    }
+
+    // ---- Bomb_Glow_02: the same paint at half the life, on a five-key curve that flickers twice ----
+    if (Layer == CKP_PU_LAYER_GLOW02)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_PickupLoop_Hidden(O); }
+
+        const float t = saturate(In.Age);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key5(t, 0.108663, 0.838799, 0.237851, 0.854993, 0.492605, 0.637597, 0.763055, 0.854993, 0.924842, 0.838799),
+            CkParticles_Key5(t, 0.108663, 0.296138, 0.237851, 0.376262, 0.492605, 0.296138, 0.763055, 0.376262, 0.924842, 0.296138),
+            CkParticles_Key4(t, 0.0, 0.0, 0.171446, 1.0, 0.835497, 1.0, 1.0, 0.0) * 0.5);
+        O.Size    = float2(220.0, 220.0);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PU_VIS_PART01;
+        return O;
+    }
+
+    // ---- Bomb_Glow_03: the widest glow in the system, a flat warm colour under one alpha envelope ----
+    if (Layer == CKP_PU_LAYER_GLOW03)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_PickupLoop_Hidden(O); }
+
+        return CkParticles_PickupLoop_Glow(O, saturate(In.Age),
+            float3(1.0, 0.266356, 0.184475), 1.0, 350.0, CKP_PU_VIS_PART01);
+    }
+
+    // ---- Bomb_Glow_04: the small pale core on the second paint, at a third of the coverage ----
+    if (Layer == CKP_PU_LAYER_GLOW04)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_PickupLoop_Hidden(O); }
+
+        return CkParticles_PickupLoop_Glow(O, saturate(In.Age),
+            float3(1.0, 0.947307, 0.520996), 0.3, 100.0, CKP_PU_VIS_PART02);
+    }
+
+    // ---- Sparkles: fine motes scattered through a 70-unit ball, warm -> blue as they die ----
+    // Add Velocity from Point is DISABLED in the source, so its 350..500 range is inert and these do not move at
+    // all. Implementing the disabled module would turn a calm idle shimmer into a spray.
+    if (Layer == CKP_PU_LAYER_SPARKLES)
+    {
+        const float Life = lerp(0.6, 1.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_PickupLoop_Hidden(O); }
+
+        const float  t   = saturate(In.Age / Life);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        // Sphere Location, Surface Only false: uniform through the VOLUME, so the radius takes the cube root.
+        O.Position = Dir * (70.0 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+
+        O.Color = float4(
+            CkParticles_Key2(t, 0.615756, 1.0,      0.936915, 0.0),
+            CkParticles_Key2(t, 0.615756, 0.508881, 0.936915, 0.0896671),
+            CkParticles_Key2(t, 0.615756, 0.191202, 0.936915, 1.0),
+            CkParticles_Key2(t, 0.613341, 1.0,      1.0,      0.0));
+
+        const float Base = lerp(7.0, 10.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key4(t, 0.0, 0.0, 0.1, 1.0, 0.2, 0.6, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_PU_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Ring01: the slow four-second halo, the only layer whose dissolve is ANIMATED ----
+    // Its dissolve curve runs -1 -> 0.5 -> -1, so the ring assembles out of nothing, holds, and erodes away.
+    if (Layer == CKP_PU_LAYER_RING)
+    {
+        if (In.Age > 4.0)
+        { return CkParticles_PickupLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / 4.0);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.0, 0.947307, 0.281316, 0.693872, 0.889828, 0.0612461),
+            CkParticles_Key3(t, 0.0, 0.665387, 0.281316, 0.147027, 0.889828, 0.00856812),
+            CkParticles_Key4(t, 0.0, 0.0, 0.261998, 1.0, 0.723212, 1.0, 1.0, 0.0) * 0.25);
+        O.Size = float2(160.0, 160.0);
+
+        // Random start angle plus a per-particle rate that can turn either way.
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+                   + lerp(-20.0, 20.0, CkParticles_Rand(In.Seed, 5)) * In.Age;
+
+        O.Dynamic = float4(CkParticles_Key3(t, 0.0, -1.0, 0.5, 0.5, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PU_VIS_RING03;
+        return O;
+    }
+
+    // ---- Star01: the small four-point star, held at full size for its whole second ----
+    if (Layer == CKP_PU_LAYER_STAR01)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_PickupLoop_Hidden(O); }
+
+        const float t = saturate(In.Age);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.141262, 0.947307, 0.429822, 0.693872, 0.84757, 0.450786),
+            CkParticles_Key3(t, 0.141262, 0.665387, 0.429822, 0.147027, 0.84757, 0.0409152),
+            CkParticles_Key4(t, 0.0, 0.0, 0.161787, 1.0, 0.839119, 1.0, 1.0, 0.0));
+        O.Size    = float2(40.0, 40.0);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PU_VIS_STAR01;
+        return O;
+    }
+
+    // ---- Star02: the larger star on its own paint, breathing between 40 % and full size ----
+    // Its dissolve is the only non-integer static value in the system.
+    if (Layer == CKP_PU_LAYER_STAR02)
+    {
+        if (In.Age > 0.8)
+        { return CkParticles_PickupLoop_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.8);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.4, 0.5, 1.0, 1.0, 0.4);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.141262, 0.947307, 0.429822, 0.693872, 0.84757, 0.450786),
+            CkParticles_Key3(t, 0.141262, 0.665387, 0.429822, 0.147027, 0.84757, 0.040915),
+            CkParticles_Key4(t, 0.0, 0.0, 0.161787, 1.0, 0.839119, 1.0, 1.0, 0.0));
+        O.Size    = float2(80.0 * Grow, 80.0 * Grow);
+        O.Dynamic = float4(0.745454, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PU_VIS_STAR02;
+        return O;
+    }
+
+    // ---- Flares: the hue-randomized haze, the largest and faintest layer in the system ----
+    // Colour Mode is Random Hue/Saturation/Value with all four adjust flags set, so the base orange is taken into
+    // HSV, its hue nudged by +-0.1, saturation drawn from 0.35..0.5 and the alpha scaled by 0.1..0.2 — then the
+    // Scale Color module's SEPARATE alpha curve (Scale Mode = RGB and Alpha Separately) drives the envelope on top,
+    // peaking at 0.125. The RGBA curve's own alpha channel is inert in that mode.
+    {
+        const float Life = lerp(1.0, 2.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_PickupLoop_Hidden(O); }
+
+        const float  t   = saturate(In.Age / Life);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        O.Position = Dir * (100.0 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+
+        const float  Hue = CKP_PU_FLARE_BASE_HUE + lerp(0.1, -0.1, CkParticles_Rand(In.Seed, 6));
+        const float  Sat = lerp(0.35, 0.5, CkParticles_Rand(In.Seed, 11));
+        const float3 Rgb = CkParticles_HsvToRgb(Hue, Sat, 1.0);
+
+        const float Alpha = lerp(0.1, 0.2, CkParticles_Rand(In.Seed, 12))
+                          * CkParticles_Key3(t, 0.0, 0.0, 0.3, 0.125, 1.0, 0.0);
+
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, Alpha);
+
+        const float Base = lerp(50.0, 200.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.8);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Dynamic = float4(8.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_PU_VIS_PART02;
+        return O;
+    }
+}

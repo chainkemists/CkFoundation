@@ -94,6 +94,53 @@ float3 CkParticles_RandDir(int Seed)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+// A point inside Niagara's Cylinder Location volume — the spawn shape every "Loop" source in the cookbook uses.
+//
+// Random distribution, Surface Only false, Height Midpoint 0.5: uniform through the volume, which means the radius
+// takes a SQUARE root (a linear draw would pile every particle at the axis). Salt 9 is the angle, 7 the radial draw
+// and 10 the height, chosen so a layer that also calls CkParticles_RandDir (salts 1-2) or sizes itself (salt 8)
+// keeps its draws independent.
+// --------------------------------------------------------------------------------------------------------------------
+float3 CkParticles_CylinderPoint(int Seed, float Radius, float Height, float3 Offset)
+{
+    const float Angle = CkParticles_Rand(Seed, 9) * 6.28318530718;
+    const float R     = Radius * sqrt(CkParticles_Rand(Seed, 7));
+    const float Z     = (CkParticles_Rand(Seed, 10) - 0.5) * Height;
+
+    return float3(R * cos(Angle), R * sin(Angle), Z) + Offset;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// HSV -> RGB, for the source's "Random Hue/Saturation/Value" colour mode.
+//
+// Niagara's Initialize Particle offers a colour mode that takes the emitter's authored base colour into HSV, shifts
+// the hue by a random amount inside a range, and replaces saturation/value from their own ranges. The base colour is
+// a per-emitter CONSTANT, so a behavior states its base HUE as a measured constant and only the inverse conversion is
+// needed here. Written out branch-by-branch rather than via a saturate/frac trick so the C++ mirror is the same six
+// lines and cannot round differently.
+//
+// H wraps (the hue circle has no ends); S and V are taken as given — a behavior that draws them from a source range
+// has already clamped them by construction.
+// --------------------------------------------------------------------------------------------------------------------
+float3 CkParticles_HsvToRgb(float H, float S, float V)
+{
+    const float Hue = frac(H) * 6.0;
+    const float Sector = floor(Hue);
+    const float F = Hue - Sector;
+
+    const float P = V * (1.0 - S);
+    const float Q = V * (1.0 - S * F);
+    const float T = V * (1.0 - S * (1.0 - F));
+
+    if (Sector < 1.0) { return float3(V, T, P); }
+    if (Sector < 2.0) { return float3(Q, V, P); }
+    if (Sector < 3.0) { return float3(P, V, T); }
+    if (Sector < 4.0) { return float3(P, Q, V); }
+    if (Sector < 5.0) { return float3(T, P, V); }
+    return float3(V, P, Q);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 // Deterministic curl noise.
 //
 // The field is this plugin's tileable value-noise Fbm lifted to 3D: CkParticles_Rand's avalanche over an integer
