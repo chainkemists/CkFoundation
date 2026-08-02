@@ -1,5 +1,7 @@
 ﻿#include "CkParticles/DataInterface/CkParticles_DataInterface.h"
 
+#include "CkParticles/ScriptDefinition/CkParticles_ScriptDefinition_Naming.h"
+
 #include "NiagaraCompileHashVisitor.h"
 #include "NiagaraTypeRegistry.h"
 
@@ -85,6 +87,19 @@ namespace NDICkParticlesLocal
         n *= 3266489917u;
         n ^= n >> 16;
         return float(n & 0x00FFFFFFu) / 16777216.0f;
+    }
+
+    // Mirrors CkParticles_IsRibbonSeed / CkParticles_LocalSeed and CKPARTICLES_RIBBON_SEED_BASE (Common.ush). The
+    // base itself has one authoritative definition — ck::particles::RibbonSeedBase, which the template builder
+    // wires into the ribbon emitter's Seed pin — so this side never restates the literal.
+    auto IsRibbonSeed(int32 InSeed) -> bool
+    {
+        return InSeed >= ck::particles::RibbonSeedBase;
+    }
+
+    auto LocalSeed(int32 InSeed) -> int32
+    {
+        return InSeed >= ck::particles::RibbonSeedBase ? InSeed - ck::particles::RibbonSeedBase : InSeed;
     }
 
     static auto RandDir(int32 InSeed) -> FVector3f
