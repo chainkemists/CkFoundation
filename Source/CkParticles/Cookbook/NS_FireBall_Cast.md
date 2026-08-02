@@ -5,15 +5,20 @@ Exemplars this sheet copies: [NS_BasicAttack.md](NS_BasicAttack.md) §1–6, [NS
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTED (2026-08-02) — `FireBallCast`, BehaviorId 34. `[HUMAN-VERIFY]` open.**
 
-No behavior, no `.ush`, no CPU mirror, no look, no mesh, no texture, no cadence row, no test, no gym
-station exists for this effect. No behavior id has been allocated. Nothing has been rendered or
-visually compared. Sections 1–6 are archaeology and a plan; everything below `## 7+` is reserved for
-the implementation session.
+`Behavior_FireBallCast.ush` + `ExecuteStage_CPU` case 34, cadence row
+`PS_CkParticles_Template_FireBallCast` (2.0 s / **2.05 s** / burst 50), sixteen row renderers on VisTags
+131–146, **zero** new looks, **zero** new textures, **zero** new meshes. Gym pair staged in VfxExamples.
+§12's human A/B walk has NOT been performed — it belongs to the campaign's inspection stage.
 
-**This is the largest system in the batch by emitter count (26) and the most heterogeneous.** Read
-§6.5 before scoping it.
+**This is the largest system in the cookbook by emitter count (26) and it turned out to be the cheapest
+port of the batch in assets**: sixteen distinct materials, and every single one of them was already carried
+by an earlier recipe. What it cost instead was transcription — 1153 source constants.
+
+All six blocking gaps §6.5 listed are CLOSED (C1 camera-facing kinds, C4 sub-UV, mesh facing by written
+orientation, renderer mesh scale folded into `Scale.z`, the system loop from corpus v3, and the [P0-D5]
+lifetime ruling).
 
 ---
 
@@ -145,7 +150,9 @@ OBJ characterization `[corpus, from the .obj]`:
 
 - **Only two distinct radii, 99.5 and 100.0, and only two distinct Z, 0 and 50** — this is a
   **thin open cylinder (a tube band)**, double-walled: an outer wall at r = 100 and an inner wall at
-  r = 99.5, 50 units tall, 64 segments around (angle step 11.25°).
+  r = 99.5, 50 units tall, **32 segments** around (angle step 11.25°). *(Corrected 2026-08-02 `[P2-E4]`:
+  the sheet said 64, which contradicts its own 11.25° step — 360/11.25 = 32 — and its own vertex count:
+  2 walls × 33 distinct u × 2 heights = 132. NS_Gunshot_Cast §3.2 measured 32 independently.)*
 - **UVs**: `corr(v, Z) = −1.000` exactly, and `v` takes only the values `{0, 1}` — **v = 0 at the
   TOP (Z = 50), v = 1 at the BOTTOM (Z = 0)**. `u` wraps once around the circumference:
   `u = 0.25` at −180°, `u = 0.75` at 0°, `u = 0.2812` at +168.75°, `u = 0.7812` at −11.25° →
@@ -424,8 +431,14 @@ Update order — `Star_02`: 1 Particle State, 2 Dynamic Material Parameters, 3 C
 | Module alpha scale | **`Color.Scale Alpha = 0.3`** | **0.5** | **0.3** | **0.5** |
 | Dyn `Param 1` | 1 | 1 | 1 | **2.69821** |
 | Material | `Part01` | `Part01` | `Part01` | `Part03_Bright` |
-| `Uniform Curve Sprite Scale` | `(0, 0.5)C (0.1, 0.9)C (1, 1)C` | same | same | **`(0, 0.5)C (1, 1)C`** |
-| `Non-Uniform Curve Sprite Scale` | — | — | `X: (0,1)C (1,0.4)C \| Y: (0,1)C (1,0)C` | same as `FirstGlow` |
+| `Uniform Curve Sprite Scale` | `(0, 0.5)C (0.1, 0.9)C (1, 1)C` | same | *(INERT — see below)* | **`(0, 0.5)C (1, 1)C`** |
+| `Non-Uniform Curve Sprite Scale` | — | — | `X: (0,1)C (1,0.4)C \| Y: (0,1)C (1,0)C` | *(INERT — see below)* |
+
+**`Scale Sprite Size Mode` differs between the two `Glow` layers and it is easy to miss** `[corpus]`:
+`FirstGlow` runs **Non-Uniform Curve**, so its uniform curve is inert and the layer squeezes to a horizontal
+sliver as it brightens; `SecondGlow` runs **Uniform Curve**, so the non-uniform curve it stores is inert and
+it simply grows. *(Corrected 2026-08-02 `[P2-E5]`: the row above read "same as `FirstGlow`" for SecondGlow,
+which would have collapsed a 150-unit pip to zero height.)*
 
 `Glow_01` `Color`:
 `Red: (0.0881376, 1)L (0.377905, 1)L (0.9345, 0.391573)C |
@@ -717,18 +730,14 @@ Update order: 1 Particle State, 2 Dynamic Material Parameters, 3 Scale Sprite Si
 | Field | Value | Why |
 |---|---|---|
 | Loop duration | **2.0 s** `[corpus-v3]` | the system's `Once` loop duration ([P0-D3]); the three per-emitter values (1.0 / 5.0 / 0.3) are all leftovers. *Was `[unresolved]`.* |
-| Particle lifetime | **1.5 s** by the [P0-D3] formula — **but see the STOP below** | max resolved emitter lifetime (`Wind_01`/`Wind_02`); `Smokes` resolves to 0.7–1.3 (§5.14) |
+| Particle lifetime | **2.05 s** `[P0-D5]` | max over layers of (spawn delay + resolved lifetime): the wind layers spawn at 0.55 and live 1.5 s. `Smokes` resolves to 0.5 + 0.7–1.3 = 1.8 max (§5.14) |
 | Burst count | **50** | the §2 total |
 
-**`[P0-D3 STOP: loop = 2.0 s (system, Once); lifetime = 1.5 s (max resolved, Wind_01/Wind_02);
-burst = 50 (§2) — but the longest layer is alive until SpawnDelay + Lifetime = 0.55 + 1.5 =
-2.05 s, which exceeds BOTH the formula's 1.5 s template lifetime AND the 2.0 s system loop]`.**
-A template particle must outlive `SpawnDelay + LayerLifetime`, so the row needs ≥ 2.05 s, which the
-[P0-D3] formula does not produce. The source itself has a layer outliving its own `Once` loop
-(`Inactive Response = Complete` lets it finish). Orchestrator ruling required — do not improvise the
-lifetime. **Do not set the template lifetime from the longest emitter lifetime alone — add the spawn
-delay.** (`NS_FireBall_Hit` shares the two `Wind_*` emitters but has them DISABLED, so it does not
-hit this overshoot.)
+**The `[P0-D3 STOP]` this sheet raised is RESOLVED by [P0-D5] (orchestrator, 2026-08-02): the row lifetime
+is 2.05 s and it deliberately EXCEEDS the 2.0 s loop.** A template particle must outlive
+`SpawnDelay + LayerLifetime`; the source does the same thing, and its `Inactive Response = Complete` is what
+lets the wind layers finish past the system's own cycle. Precedent: behavior 17's 1.1 s lifetime on a 1.0 s
+loop. (`NS_FireBall_Hit` shares the two `Wind_*` emitters but has them DISABLED, so it never hit this.)
 
 Layer partition `Seed % 50` with the layer→emitter map from §2. The 0 / 0.5 / 0.54 / 0.55 spawn
 beats are reproduced by hiding a layer for `Age < SpawnDelay` and running its curves on
@@ -818,7 +827,202 @@ right first delivery. The release act needs gaps 2, 3, 4 and most of the texture
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures — ZERO new bakes
 
-Sections 7–14 of the recipe schema ([README.md](README.md)) are intentionally absent and are to be
-written by the implementation session, from what actually happened.
+Nineteen distinct source textures (§4.3) and not one new bake. Every paint was already measured and baked by
+an earlier batch, and every reuse is an IDENTITY (same source asset ⇒ same stand-in), not a similarity call:
+
+| Source texture | Existing stand-in | Reached through |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | `PartDisAdd01`, and the Rainbow/Flare dissolve slot |
+| `T_VFX_Part_02` | `SoftParticleBright` | `PartDisAdd01Bright` |
+| `T_VFX_Part_03` | `SoftParticleFine` | `PartDisAdd03Bright` |
+| `T_VFX_Part_04` | `SparkStreak` | `PartDisAdd04` |
+| `T_VFX_Ring_01` | `RingUneven` | `RingDisAdd01` |
+| `T_VFX_Ring_02` | `RingFlare` | `RainbowDisAdd`, `FlareDisAdd01` |
+| `T_VFX_Star_01` / `_02` / `_03` | `StarFour` / `StarFourTight` / `StarFourSplit` | `StarDisAdd01` / `02` / `03` |
+| `T_VFX_Wind_01` | `WindSheet` (2×2) | `WindDisAdd01`, and `FlamesDisAdd01`'s shape |
+| `T_VFX_Wind_02` | `WindBandMid` | `WindDisAdd02Mesh` |
+| `T_VFX_LightStrip_01` | `LightStrip` | `LightStripDisAddSprite` |
+| `T_VFX_Cloud_04` / `_05` | `Cloud04` / `Cloud05` | `SmokeDisAdd01`'s shape (its separate Color_Tex is the §13 gap) |
+| `T_VFX_Noise_02` / `_04` / `_07` | `TileNoise` / `TileNoiseCoarse` / `TileNoiseBanded` | the dissolve + distortion slots |
+| `T_VFX_LUT_Rainbow_01` | `LutWhite` | `RainbowDisAdd` — held back by [P1-D1], §13.5 |
+| `T_VFX_WhitePixel` | `LutWhite` | every other instance's gradient map — inert by construction |
+
+---
+
+## 8. Meshes — ZERO new builds
+
+| Source mesh | Generated carrier |
+|---|---|
+| `SM_VFX_Spike01` | `SM_CkParticles_Spike` (built for NS_FireBall_Hit) |
+| `SM_VFX_Ring01` | `SM_CkParticles_Cylinder` (built for NS_Arrow_Cast) |
+
+§6.3 proposed a second tube (`TubeBand`) pending a UV check. The check was done: the existing `Cylinder`
+surface is radius 100, Z lerped 50 → 0 across v, and `u` swept as `360 × (0.75 − s)` — i.e. exactly
+`u = frac(0.75 − angle/360)` with `v = 1` at Z = 0, which is §3.2's measurement (once its segment count is
+read as the 32 its own angle step implies, `[P2-E4]`). No second mesh.
+
+---
+
+## 9. The behavior — `Behavior_FireBallCast.ush` + `ExecuteStage_CPU` case 34
+
+One burst of 50, partitioned by `Seed % 50` over §2's emitter order. Twenty-six layers, no rate, no curl.
+
+### 9.1 Two acts on one burst
+
+The delay mechanism carries the whole structure: the eight charge-up layers take delay 0, the eighteen
+release layers take 0.5 / 0.54 / 0.55. A layer is hidden while `Age < Delay` and runs on
+`(Age − Delay) / LayerLifetime`. `FirstFlash` at 0.54 is the only beat between the two release beats, and it
+is asserted as its own in §11.
+
+### 9.2 The row lifetime exceeds the row loop
+
+2.05 s against 2.0 s, per [P0-D5]. This is the cookbook's only row where that is true, and it is deliberate:
+`Wind_01`/`Wind_02` spawn at 0.55 and live 1.5 s.
+
+### 9.3 The six-key ramp
+
+`FirstGlow`'s green and blue channels each carry SIX distinct keys — the only curve in the cookbook that
+does. `CkParticles_KeyN` stops at five, so the behavior declares a local `Key6` (and the CPU case a matching
+lambda) rather than widening the shared header for one layer of one effect. Its red channel collapses to
+four keys because its last three are all 1.
+
+### 9.4 Reading the size modes, not the size values
+
+Six emitters store BOTH a uniform and a non-uniform Scale Sprite Size curve, and the `Scale Sprite Size Mode`
+decides which is inert. `FirstGlow` is Non-Uniform (so it pinches shut) and `SecondGlow` is Uniform (so it
+does not) — §5.7's `[P2-E5]` correction. The four `Flare_Stretched` layers are all Non-Uniform, which is
+what makes them collapse along X by t = 0.9.
+
+### 9.5 Spawn shapes
+
+Three distinct ones, all read from the module rather than guessed: a filled 20-unit ball (`Sparkles`), a
+filled 10-unit ball (`Sparkles_Stretched`), the +X half-blob of a `(0.1,0.1,0.1)`-scaled 10-unit sphere
+(`Spike01`), the UPPER half of a 20-unit shell (`Flames`, `Hemisphere Z`), and a 20-unit ring flattened to
+zero height (`Smokes`, `Non Uniform Scale = (1,1,0)`).
+
+### 9.6 The duplicated t = 0 key
+
+`Smokes`' RGB channels each carry two keys at t = 0 — a near-black one and a white one, in that order. The
+second wins, so the puff opens WHITE. Transcribed as four keys with the dead one dropped; recorded because
+reading the first key would make the smoke start black and never brighten.
+
+---
+
+## 10. Looks and renderers
+
+Sixteen row renderers on VisTags **131–146**, and every look already existed:
+
+| VisTag | Kind | Look | Source emitters |
+|---|---|---|---|
+| 131 | CameraFacingSprite | `PartDisAdd01` | `Glow_01`, `Flare_Stretched_01`, `Glow_02`, `FirstGlow`, `ShootFlash_01/02`, `SecondFlash_01` (7) |
+| 132 | CameraFacingSprite | `PartDisAdd01Bright` | `Sparkles`, `SecondFlash_02` |
+| 133 | CameraFacingSprite | `PartDisAdd03Bright` | `Flare_Stretched_02/03`, `SecondGlow`, `FirstFlash` (4) |
+| 134 | VelocityAlignedSprite | `PartDisAdd04` | `Sparkles_Stretched` |
+| 135 | CameraFacingSprite | `RainbowDisAdd` | `Raimbow` |
+| 136 | CameraFacingSprite | `RingDisAdd01` | `Ring` |
+| 137 / 138 / 139 | CameraFacingSprite | `StarDisAdd01` / `02` / `03` | `Star_01`, `Star_02`, `Flare_Stretched_04` |
+| 140 | CameraFacingSprite, 2×2 | `WindDisAdd01` | `Wind_02` |
+| 141 | Mesh `Cylinder` | `WindDisAdd02Mesh` | `Wind_01` |
+| 142 | VelocityAlignedSprite | `LightStripDisAddSprite` | `LightningStrip` |
+| 143 | Mesh `Spike` | `FlatAdd02` | `Spike01` |
+| 144 | CameraFacingSprite, 2×2 | `FlamesDisAdd01` | `Flames` |
+| 145 | CameraFacingSprite | `SmokeDisAdd01` | `Smokes` |
+| 146 | CameraFacingSprite | `FlareDisAdd01` | `Flare01` |
+
+`LightStripDisAddSprite` is the sprite-usage twin authored for NS_Gunshot_Cast (that recipe's §10); this
+system's `LightningStrip` is a velocity-aligned sprite for the same reason.
+
+Consolidation matters here more than anywhere else in the cookbook: 26 emitters over 16 materials, with
+`PartDisAdd01` alone serving seven of them.
+
+---
+
+## 11. Tests
+
+`Test_Particles_FireBallCastBehavior.cpp` (`CkTests.UnitTests.CkParticles.FireBallCastBehavior`):
+
+- **The cadence row**: 2.0 / 2.05 / 50 / rate 0, sixteen renderers, two meshes, two 2×2 sheets, and an
+  explicit assertion that the lifetime EXCEEDS the loop rather than a bare equality on 2.05.
+- **The partition**: the layer table sums to 50 and every slot draws through its own renderer, sampled at a
+  fifth of each layer's maximum life so a randomized short draw is still alive.
+- **The two acts, both ways**: at t = 0.1 exactly the eight charge-up particles are alive and NO release
+  particle is; at t = 0.6 no charge-up particle survives. Collapsing either half into the other is the
+  failure this port can have.
+- **The 0.54 s transient**: `FirstFlash` is hidden at 0.501 and alive at 0.541.
+- **Emitter-clock independence**, by name (burst-only row).
+- **`FirstGlow`'s six-key ramp**: black head, saturated red by a third of life, blue lifting only at the very
+  end, and the horizontal squeeze — four separate claims, because a three-key simplification passes the
+  first two.
+- **HDR**: the flame ramp opens at 5, `Star_02` at 2.
+- **The mesh layers**: `Spike01`'s rotated +Z lands on its velocity; `Wind_01` travels −X and stretches past
+  4× along Z.
+- **Both flipbooks**: index inside 0..3, all four frames used, and every sampled particle advances.
+- **Anti-vacuity** over all twenty-six layers, and **death** past 2.05 s.
+
+---
+
+## 12. Verification — A/B protocol
+
+Gym pair `FIREBALL CAST` (`Gym.VfxExamples.FireBallCast.{Ck,Original}`), offset `(0, 0, 120)`, scale 1.
+Loop-Once, so the harness re-arms both sides together and the A/B is a synced replay from t = 0.
+
+`[HUMAN-VERIFY]` — this pair needs the most room in the gym (a 1300-unit streak and a 1000-unit shell).
+
+- (a) **The gather, t = 0 → 0.5**: four horizontal streaks (600–1300 units wide) that PINCH SHUT along their
+  length by t ≈ 0.45, over a 1000-unit shell. `FirstGlow` is the read to watch: near-black at first, then a
+  fast rise to saturated red around t ≈ 0.11 and a warming to near-white by 0.5, squeezing horizontally as
+  it goes. If it is bright from the start, the six-key ramp is not running.
+- (b) **The discharge, t = 0.5**: a 1000-unit flash, a 354-unit lens ring, a magenta shockwave ring, four
+  blue-white pips at 0.54, and a 900-unit late shell at 0.55. Four beats inside 50 ms — judge whether it
+  reads as a staccato or as one flash.
+- (c) **The spray**: ten gold motes at 500–2500 u/s and three very fast streaks at 3000–5000 u/s, all +X.
+- (d) **Fire and smoke**: four flame puffs on the hottest ramp in the system (5 / 3.4 blue-white at the head),
+  and two large slow smoke puffs off a flat ring that last past a second.
+- (e) **The tail**: the dark wind tube travelling −X, stretching to 5× its length, plus five wind puffs. This
+  is the only thing alive between t ≈ 1.3 and 2.05.
+- (f) the two stars and the lens flare: `Star_02` at 0.5 and `Star_01` at 0.55, both opening at colour 2.
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **World space on 21 of 26 emitters** (§6.5 #7); the template is local space. A cast anchored to a moving
+   caster will drag its release act with it where the source would leave it behind. The gym's stationary
+   pedestals do not show this. Highest-risk deviation in this port.
+2. **`RainbowDisAdd` still ships against `LutWhite`** rather than `T_VFX_LUT_Rainbow_01`, pending [P1-D1].
+   Against a white ramp the gradient chain is a provable multiply by one, so the layer renders as it would
+   with no chain at all. Shared with every Rainbow consumer in the cookbook.
+3. **`SmokeDisAdd01`'s separate `Color_Tex`** (`T_VFX_Cloud_04`, the darker paint) is not plumbed; the look
+   carries `Cloud05` as its shape and samples it for both. Pre-existing (NS_FireBall_Hit §13).
+4. **`CamOffset = 50`** on `Part03_Bright` (four emitters here) and **`Opacty_DepthFade`** (10/20/30) are not
+   wired. Pre-existing family gaps.
+5. **`Color_Speed_X = −0.3` on `Wind02`** has no home in the look signature — the source's colour sampler
+   pans and the recreation's does not.
+6. **`Sparkles_Stretched`'s inverted Y size bounds** (min 70 / max 60) are transcribed AS AUTHORED rather
+   than "fixed": Niagara lerps each component between its own pair, so Y draws descending in [60, 70]. Same
+   authoring quirk as NS_HealCast's.
+7. **The five `Loop Once / 0.3 s` emitters are inert** under `Life Cycle Mode = System` ([P0-D1]) — including
+   `Star_01`, whose spawn time of 0.55 exceeds its own stored 0.3 s loop. Reading those rows at face value
+   would delete four visible layers.
+
+---
+
+## 14. Reusable lessons
+
+1. **The largest system was the cheapest in assets.** Emitter count predicts transcription cost, not asset
+   cost. Sixteen materials and nineteen textures, all already carried — because this port came LAST in a
+   family whose Hit and Cast siblings had already paid for every paint. Ordering a family Cast-then-Hit or
+   Hit-then-Cast is worth more than picking the small system first.
+2. **`Scale Sprite Size Mode` is the load-bearing field, not the curves.** Six emitters here store both
+   curves and the mode picks one; two of them differ from their obvious neighbour (`[P2-E5]`). Read the mode
+   for every layer that stores a non-uniform curve.
+3. **A stated segment count can contradict its own angle step.** §3.2 said 64 with an 11.25° step and a
+   132-vertex count, both of which say 32 (`[P2-E4]`). Cross-check derived counts against the raw
+   measurements in the same paragraph.
+4. **A duplicated key at the same time is not a typo to normalize away** — Niagara takes the later one, and
+   in `Smokes`' case that flips the puff from opening black to opening white.
+5. **Widen a local helper, not the shared header.** One layer needed a six-key curve; a `Key6` in the
+   behavior and a matching lambda in the CPU case cost two functions and touched no shared file. The GPU/CPU
+   literal multiset stayed exactly equal either way.
