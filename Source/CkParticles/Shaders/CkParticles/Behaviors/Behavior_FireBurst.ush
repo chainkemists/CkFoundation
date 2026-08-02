@@ -1,0 +1,186 @@
+// /CkParticles/Behaviors/Behavior_FireBurst.ush — BehaviorId 20.
+//
+// Faithful re-port of Vefects NS_Fire. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Fire.md — every number below is a source value from §2/§5, not a tuning.
+//
+// Named FireBurst rather than Fire: BehaviorId 3 already owns CkParticles_Behavior_Fire, the procedural rising
+// column that predates the cookbook. The two are unrelated effects that share a source-asset name.
+//
+// The source is FOUR world-space sprite emitters bursting once over a Loop-Once 2.0 s system: two round core
+// glows, three sub-UV flame puffs on a 2x2 sheet, and three-to-five velocity-aligned sparkles. One CkParticles
+// burst of 10 carries all of them (Seed % 10), spawning through PS_CkParticles_Template_FireBurst
+// (2.0 s loop / 1.0 s particle lifetime / burst 10) and reading a REAL Age.
+//
+// The sparkle count is the one RANDOMIZED burst count in the cookbook (Random Range Int 3..5, recipe §2.3). The
+// row declares the MAXIMUM and the surplus slots hide themselves: burst UniqueIDs are sequential, so the loop
+// index divides out of the Seed and one hash of it gives every particle in a loop the same roll.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 20) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — 10 slots per burst (recipe §6.1): 0 Bomb_Glow_01, 1 Bomb_Glow_02, 2..4 Flames,
+// 5..9 Sparkles.
+#define CKP_FB_NUM_LAYERS    10
+#define CKP_FB_LAYER_GLOW01   0
+#define CKP_FB_LAYER_GLOW02   1
+#define CKP_FB_FIRST_FLAME    2
+#define CKP_FB_FIRST_SPARKLE  5
+#define CKP_FB_MAX_SPARKLES   5
+
+// Spawn Time on three of the four emitters; the sparkles fire at loop start (recipe §2).
+#define CKP_FB_DELAY          0.05
+
+// Per-layer lifetimes (recipe §2, corpus v3 resolved). The template particle outlives all of them.
+#define CKP_FB_LIFE_GLOW01    0.25
+#define CKP_FB_LIFE_GLOW02    0.2
+
+// Everything a dead or not-yet-spawned layer must write.
+FCkParticles_StageOutput CkParticles_FireBurst_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// Sphere Location with Hemisphere Z: the source's upper half-sphere. Add Velocity from Point then drives the
+// particle radially outward along this same direction, so one draw serves both.
+float3 CkParticles_FireBurst_HemiDir(int Seed)
+{
+    const float3 D = CkParticles_RandDir(Seed);
+    return float3(D.x, D.y, abs(D.z));
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_FireBurst(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    // Burst UniqueIDs are sequential, so the modulo partitions each burst into exactly one particle per slot.
+    // Double-modulo because a negative Seed is representable even though UniqueID never is.
+    const int Layer = ((In.Seed % CKP_FB_NUM_LAYERS) + CKP_FB_NUM_LAYERS) % CKP_FB_NUM_LAYERS;
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+
+    // ---- Bomb_Glow_01 / Bomb_Glow_02: two stacked round cores, no colour curve at all (recipe §5.1/§5.2) ----
+    if (Layer < CKP_FB_FIRST_FLAME)
+    {
+        const float Life = (Layer == CKP_FB_LAYER_GLOW01) ? CKP_FB_LIFE_GLOW01 : CKP_FB_LIFE_GLOW02;
+        const float td   = In.Age - CKP_FB_DELAY;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_FireBurst_Hidden(O); }
+
+        const float t = saturate(td / Life);
+
+        // Their RGB comes straight from Initialize Particle under a Vector4 Scale Color whose RGB channels are
+        // flat 1; only the alpha ramps, over the module's own Initialize alpha of 0.5.
+        const float Alpha = 0.5 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+        const float Grow  = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.VisTag = 12;
+
+        if (Layer == CKP_FB_LAYER_GLOW01)
+        {
+            O.Color   = float4(1.0, 0.0908417, 0.043735, Alpha);
+            O.Size    = float2(500.0 * Grow, 500.0 * Grow);
+            O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+            return O;
+        }
+
+        O.Color   = float4(1.0, 0.496933, 0.043735, Alpha);
+        O.Size    = float2(400.0 * Grow, 400.0 * Grow);
+        O.Dynamic = float4(0.0, 0.0, 0.0, 0.0);
+        return O;
+    }
+
+    // ---- Flames: 3 sub-UV puffs off a hemisphere shell, HDR colour, dissolving to nothing (recipe §5.3) ----
+    if (Layer < CKP_FB_FIRST_SPARKLE)
+    {
+        const float Life = lerp(0.2, 0.7, CkParticles_Rand(In.Seed, 1));
+        const float td   = In.Age - CKP_FB_DELAY;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_FireBurst_Hidden(O); }
+
+        const float  t   = saturate(td / Life);
+        const float3 Dir = CkParticles_FireBurst_HemiDir(In.Seed);
+
+        // Sphere Location radius 20, Surface Only; Add Velocity from Point, strength 100..250 radially outward.
+        const float3 Spawn = Dir * 20.0;
+        const float3 V0    = Dir * lerp(100.0, 250.0, CkParticles_Rand(In.Seed, 2));
+
+        // Velocity scale is a 2-key 1 -> 0.2 ramp, so position is its exact integral.
+        O.Position = Spawn + V0 * (CkParticles_Int2(t, 1.0, 0.2) * Life);
+        O.Velocity = V0 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.2);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0796861, 5.0,      0.368246, 3.0,       0.738907, 0.250158),
+            CkParticles_Key3(t, 0.0796861, 3.43343,  0.368246, 0.67227,   0.738907, 0.00749903),
+            CkParticles_Key3(t, 0.0796861, 0.115767, 0.368246, 0.0841786, 0.738907, 0.00749903),
+            CkParticles_Key3(t, 0.0,       0.0,      0.303049, 1.0,       0.992454, 0.0));
+
+        const float Base = lerp(50.0, 200.0, CkParticles_Rand(In.Seed, 3));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        // Initial sprite rotation is Random 0..360 and the rate is Random -30..30 degrees/second.
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0 + lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 5)) * td;
+
+        // Sub UVAnimation, mode Random, frames 0..3 over ONE loop of the particle's life: a random start frame
+        // stepping forward through the 2x2 sheet. min() rather than a wrap so the last frame holds at t = 1
+        // instead of jumping back to the start frame for a single instant.
+        const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+        O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+        // dissolve rides 0 -> -1 across life; distortion is a constant 5.
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 5.0, 0.0, 0.0);
+        O.VisTag  = 13;
+        return O;
+    }
+
+    // ---- Sparkles: 3..5 velocity-aligned streaks, the system's only randomized burst count (recipe §2.3) ----
+    // Sequential burst UniqueIDs make the loop index a plain division, so every particle of one loop hashes the
+    // same value and agrees on how many sparkles that loop has.
+    const int   LoopIndex = In.Seed / CKP_FB_NUM_LAYERS;
+    const int   NumThisLoop = 3 + int(CkParticles_Rand(LoopIndex, 11) * 3.0);
+    const int   Slot        = Layer - CKP_FB_FIRST_SPARKLE;
+
+    if (Slot >= NumThisLoop)
+    { return CkParticles_FireBurst_Hidden(O); }
+
+    const float Life = lerp(0.3, 1.0, CkParticles_Rand(In.Seed, 1));
+
+    if (In.Age > Life)
+    { return CkParticles_FireBurst_Hidden(O); }
+
+    const float  t   = saturate(In.Age / Life);
+    const float3 Dir = CkParticles_FireBurst_HemiDir(In.Seed);
+
+    // Sphere Location radius 2, NOT surface-only — a volume draw, which is essentially a point at this radius.
+    const float3 Spawn = Dir * (2.0 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+    const float3 V0    = Dir * lerp(300.0, 1000.0, CkParticles_Rand(In.Seed, 2));
+
+    O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.35, 0.05) * Life);
+    O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.35, 1.0, 0.05);
+
+    // A warm yellow-white that reddens over life; red never leaves 1 and alpha is a flat 1.
+    O.Color = float4(
+        1.0,
+        CkParticles_Key3(t, 0.0, 0.703584, 0.327196, 0.288367, 0.779958, 0.0419999),
+        CkParticles_Key3(t, 0.0, 0.031,    0.327196, 0.0369999, 0.779958, 0.0642406),
+        1.0);
+
+    // Random Non-Uniform sizing: width across the streak, length along it, then a pop-in/fade-out envelope and
+    // the second module's length taper to 40%.
+    const float Width  = lerp(15.0, 30.0, CkParticles_Rand(In.Seed, 8));
+    const float Length = lerp(40.0, 50.0, CkParticles_Rand(In.Seed, 9));
+    const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+    const float Taper  = CkParticles_Key2(t, 0.1, 1.0, 1.0, 0.4);
+    O.Size = float2(Width * Grow, Length * Grow * Taper);
+
+    O.Dynamic = float4(0.0, 0.0, 0.0, 0.0);
+    O.VisTag  = 14;
+    return O;
+}

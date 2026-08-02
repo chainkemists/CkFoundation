@@ -32,8 +32,12 @@ namespace CkUsf
         _TwoSided        = true;
 
         // No dynamic parameter: the family reads Particle Color and nothing else.
-        _UsedWithNiagaraSprites = true;
-        _ParticleColor          = true;
+        // BOTH renderer usages: the source wears this instance on a MESH renderer (the spike pyramids of the two
+        // hit ports) and a usage flag is about which renderer will accept the master, not what the shader reads —
+        // a missing mesh-particle flag falls back to the default material in a packaged build only.
+        _UsedWithNiagaraSprites       = true;
+        _UsedWithNiagaraMeshParticles = true;
+        _ParticleColor                = true;
 
         _Parameters.Add(CkUsf::Usf_Scalar(n"Brightness", 10.0));
     }

@@ -1,0 +1,527 @@
+// /CkParticles/Behaviors/Behavior_FireBallHit.ush — BehaviorId 21.
+//
+// Faithful re-port of Vefects NS_FireBall_Hit. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_FireBall_Hit.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is TWENTY emitters, seventeen of them enabled, bursting over a Loop-Once 2.0 s system in two beats
+// 40-50 ms apart: a lens ring, a shockwave ring, two sparkle sprays, four glow shells, a star, six pyramid
+// spikes, five sub-UV flame puffs, five smoke puffs, two flares, four flashes, an impact flare and five
+// lightning cards. One CkParticles burst of 47 carries every ENABLED particle (Seed % 47), spawning through
+// PS_CkParticles_Template_FireBallHit (2.0 s loop / 1.34 s particle lifetime / burst 47).
+//
+// The three DISABLED emitters (Star_02, Wind_01, Wind_02 — 7 further particles) are deliberately not ported;
+// the hit has no wind. Recorded in the recipe rather than silently dropped.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 21) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — 47 slots, in the source's own emitter order over the enabled set (recipe §2/§6.1).
+#define CKP_FH_NUM_LAYERS      47
+#define CKP_FH_LAYER_RAINBOW    0
+#define CKP_FH_LAYER_RING       1
+#define CKP_FH_FIRST_SPARKLE    2   // 2..8   Sparkles           (7)
+#define CKP_FH_LAYER_GLOW01     9
+#define CKP_FH_FIRST_STRETCH   10   // 10..14 Sparkles_Stretched (5)
+#define CKP_FH_LAYER_STAR      15
+#define CKP_FH_LAYER_GLOW02    16
+#define CKP_FH_LAYER_SECONDGLOW 17
+#define CKP_FH_FIRST_SPIKE01   18   // 18..20 Spike01            (3)
+#define CKP_FH_FIRST_FLAME     21   // 21..25 Flames01           (5)
+#define CKP_FH_FIRST_SMOKE     26   // 26..30 Smokes             (5)
+#define CKP_FH_FIRST_FLARE     31   // 31..32 Flare01            (2)
+#define CKP_FH_FIRST_FLASH     33   // 33..36 FirstFlash         (4)
+#define CKP_FH_LAYER_FIRSTGLOW 37
+#define CKP_FH_LAYER_FLAREIMP  38
+#define CKP_FH_FIRST_STRIP     39   // 39..43 LightningStrip     (5)
+#define CKP_FH_FIRST_SPIKE02   44   // 44..46 Spike02            (3)
+
+// The two aftermath beats behind the impact beat (recipe §2).
+#define CKP_FH_DELAY_EARLY      0.04
+#define CKP_FH_DELAY_LATE       0.05
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_FH_VIS_PART01      15
+#define CKP_FH_VIS_PART01BR    16
+#define CKP_FH_VIS_PART03BR    17
+#define CKP_FH_VIS_PART04      18
+#define CKP_FH_VIS_RING01      19
+#define CKP_FH_VIS_RAINBOW     20
+#define CKP_FH_VIS_STAR01      21
+#define CKP_FH_VIS_FLARE01     22
+#define CKP_FH_VIS_IMPACT01    23
+#define CKP_FH_VIS_FLAMES01    24
+#define CKP_FH_VIS_SMOKE01     25
+#define CKP_FH_VIS_SPIKE       26
+#define CKP_FH_VIS_STRIP       27
+
+FCkParticles_StageOutput CkParticles_FireBallHit_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// The two pyramid emitters differ only in their mesh-scale range, so one body serves both.
+FCkParticles_StageOutput CkParticles_FireBallHit_Spike(
+    FCkParticles_StageOutput O, FCkParticles_StageInput In, float3 ScaleMin, float3 ScaleMax)
+{
+    const float Life = lerp(0.1, 0.15, CkParticles_Rand(In.Seed, 1));
+    const float td   = In.Age - CKP_FH_DELAY_LATE;
+
+    if (td < 0.0 || td > Life)
+    { return CkParticles_FireBallHit_Hidden(O); }
+
+    const float  t   = saturate(td / Life);
+    const float3 Dir = CkParticles_RandDir(In.Seed);
+
+    // Sphere Location radius 10 under a Non Uniform Scale of 0.1 — an effective 1-unit shell; Velocity Strength
+    // is a static 10 with no Scale Velocity module, so the drift is linear in age.
+    const float3 V0 = Dir * 10.0;
+    O.Position = Dir * 1.0 + V0 * td;
+    O.Velocity = V0;
+
+    // The renderer faces VELOCITY; a row-declared mesh renderer draws with Facing Default, so the behavior
+    // writes the orientation that puts the pyramid's +Z apex down its own direction of travel.
+    O.Orientation = CkParticles_QuatFromZTo(Dir);
+    O.MeshIndex   = 0;
+    O.Size        = float2(0.0, 0.0);
+
+    const float3 Base = float3(
+        lerp(ScaleMin.x, ScaleMax.x, CkParticles_Rand(In.Seed, 3)),
+        lerp(ScaleMin.y, ScaleMax.y, CkParticles_Rand(In.Seed, 4)),
+        lerp(ScaleMin.z, ScaleMax.z, CkParticles_Rand(In.Seed, 5)));
+
+    O.Scale = Base * float3(
+        CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.5, 1.0, 0.0),
+        CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.4, 1.0, 0.0),
+        CkParticles_Key2(t, 0.0, 0.0, 0.2, 1.0));
+
+    O.Color = float4(
+        CkParticles_Key5(t, 0.0, 1.0, 0.118322, 1.0,      0.515545, 1.0,      0.671295, 0.391573, 0.843948, 0.009134),
+        CkParticles_Key5(t, 0.0, 1.0, 0.118322, 0.693872, 0.515545, 0.040915, 0.671295, 0.003677, 0.843948, 0.004025),
+        CkParticles_Key5(t, 0.0, 1.0, 0.118322, 0.147027, 0.515545, 0.045186, 0.671295, 0.022174, 0.843948, 0.006995),
+        1.0);
+
+    O.VisTag = CKP_FH_VIS_SPIKE;
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_FireBallHit(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = ((In.Seed % CKP_FH_NUM_LAYERS) + CKP_FH_NUM_LAYERS) % CKP_FH_NUM_LAYERS;
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // ---- Raimbow: the lens ring. A Scale Color module, so its grey init colour is HALVED, not replaced ----
+    if (Layer == CKP_FH_LAYER_RAINBOW)
+    {
+        if (In.Age > 0.2)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t     = saturate(In.Age / 0.2);
+        const float Grow  = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+        const float Alpha = 0.2 * CkParticles_Key3(t, 0.0, 0.0, 0.328403, 1.0, 1.0, 0.0);
+
+        O.Color   = float4(0.913099 * 0.5, 0.913099 * 0.5, 0.913099 * 0.5, Alpha);
+        O.Size    = float2(250.0 * Grow, 250.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FH_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Ring: the shockwave, growing from nothing and dissolving away over its life ----
+    if (Layer == CKP_FH_LAYER_RING)
+    {
+        if (In.Age > 0.3)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.25, 0.9, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key5(t, 0.0, 1.0, 0.118322, 1.0,      0.295804, 1.0,      0.542107, 0.391573, 0.843948, 0.009134),
+            CkParticles_Key5(t, 0.0, 1.0, 0.118322, 0.693872, 0.295804, 0.040915, 0.542107, 0.003677, 0.843948, 0.004025),
+            CkParticles_Key5(t, 0.0, 1.0, 0.118322, 0.147027, 0.295804, 0.045186, 0.542107, 0.022174, 0.843948, 0.006995),
+            0.5);
+        O.Size     = float2(150.0 * Grow, 150.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_FH_VIS_RING01;
+        return O;
+    }
+
+    // ---- Sparkles: seven fine camera-facing sparks, 200..1200 units/s radial, constant warm colour ----
+    if (Layer < CKP_FH_LAYER_GLOW01)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+        const float td   = In.Age - CKP_FH_DELAY_LATE;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float  t   = saturate(td / Life);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        const float3 Spawn = Dir * (20.0 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+        const float3 V0    = Dir * lerp(200.0, 1200.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        // Every RGB key is a single constant; only the alpha animates.
+        O.Color = float4(1.0, 0.563224, 0.224, CkParticles_Key2(t, 0.613341, 1.0, 1.0, 0.0));
+
+        const float Base = lerp(10.0, 20.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_FH_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Glow_01: the widest shell in the system, 1000 units across for a tenth of a second ----
+    if (Layer == CKP_FH_LAYER_GLOW01)
+    {
+        if (In.Age > 0.1)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0881376, 1.0,      0.377905, 1.0,       0.9345, 0.391573),
+            CkParticles_Key3(t, 0.0881376, 0.693872, 0.377905, 0.0409152, 0.9345, 0.00367651),
+            CkParticles_Key3(t, 0.0881376, 0.147027, 0.377905, 0.0451862, 0.9345, 0.0221739),
+            CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0) * 0.6);
+        O.Size    = float2(1000.0 * Grow, 1000.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FH_VIS_PART01;
+        return O;
+    }
+
+    // ---- Sparkles_Stretched: five velocity-aligned streaks that also stretch with SPEED ----
+    if (Layer < CKP_FH_LAYER_STAR)
+    {
+        const float Life = lerp(0.3, 0.5, CkParticles_Rand(In.Seed, 1));
+        const float td   = In.Age - CKP_FH_DELAY_LATE;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float  t   = saturate(td / Life);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        const float3 Spawn = Dir * (10.0 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+        const float3 V0    = Dir * lerp(800.0, 2000.0, CkParticles_Rand(In.Seed, 2));
+
+        const float VelScale = CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.2, 1.0, 0.0);
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.2, 0.0) * Life);
+        O.Velocity = V0 * VelScale;
+
+        O.Color = float4(
+            CkParticles_Key4(t, 0.0, 1.0, 0.088138, 1.0,      0.615756, 1.0,       0.98038, 0.391573),
+            CkParticles_Key4(t, 0.0, 1.0, 0.088138, 0.671611, 0.615756, 0.025,     0.98038, 0.003677),
+            CkParticles_Key4(t, 0.0, 1.0, 0.088138, 0.085,    0.615756, 0.0293413, 0.98038, 0.022174),
+            CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0) * 0.6);
+
+        // Random Non-Uniform sizing; the length range is INVERTED in the source (min 70 > max 60) and copied
+        // verbatim — lerping the other way spans the identical set of values.
+        const float Width  = lerp(25.0, 40.0, CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(70.0, 60.0, CkParticles_Rand(In.Seed, 9));
+        const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float Taper  = CkParticles_Key3(t, 0.0, 1.0, 0.3, 0.35, 1.0, 0.2);
+
+        // Scale Sprite Size by Speed: length only, 1x up to the 1000-unit threshold and 2x at or past it.
+        const float SpeedFactor = lerp(1.0, 2.0, saturate(length(O.Velocity) / 1000.0));
+
+        O.Size   = float2(Width * Grow, Length * Grow * Taper * SpeedFactor);
+        O.VisTag = CKP_FH_VIS_PART04;
+        return O;
+    }
+
+    // ---- Star_01: one small four-point flare, barely rotated ----
+    if (Layer == CKP_FH_LAYER_STAR)
+    {
+        const float td = In.Age - CKP_FH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.3)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.0, 1.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key4(t, 0.0, 1.0, 0.115907, 1.0,      0.636281, 1.0,      0.9345, 0.391573),
+            CkParticles_Key4(t, 0.0, 1.0, 0.115907, 0.693872, 0.636281, 0.040915, 0.9345, 0.003677),
+            CkParticles_Key4(t, 0.0, 1.0, 0.115907, 0.147027, 0.636281, 0.045186, 0.9345, 0.022174),
+            1.0);
+        O.Size     = float2(20.0 * Grow, 20.0 * Grow);
+        O.Rotation = 0.1;
+        O.VisTag   = CKP_FH_VIS_STAR01;
+        return O;
+    }
+
+    // ---- Glow_02: the small tight core, held opaque until nearly half its life ----
+    if (Layer == CKP_FH_LAYER_GLOW02)
+    {
+        if (In.Age > 0.1)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key2(t, 0.214911, 0.693872, 0.817386, 0.0409152),
+            CkParticles_Key2(t, 0.214911, 0.147027, 0.817386, 0.0451862),
+            CkParticles_Key2(t, 0.406882, 1.0, 1.0, 0.0));
+        O.Size    = float2(100.0 * Grow, 100.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FH_VIS_PART01;
+        return O;
+    }
+
+    // ---- SecondGlow: the one layer whose colour RISES over life, into a 3x white-hot key ----
+    if (Layer == CKP_FH_LAYER_SECONDGLOW)
+    {
+        if (In.Age > 0.1)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t       = saturate(In.Age / 0.1);
+        const float Uniform = CkParticles_Key2(t, 0.0, 0.5, 1.0, 1.0);
+        const float ScaleX  = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.4);
+        const float ScaleY  = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key2(t, 0.618171, 2.0,      0.963477, 3.0),
+            CkParticles_Key2(t, 0.618171, 0.683829, 0.963477, 2.25883),
+            CkParticles_Key2(t, 0.618171, 0.218923, 0.963477, 0.328385),
+            CkParticles_Key2(t, 0.0, 0.0, 0.246302, 1.0));
+        O.Size    = float2(170.0 * Uniform * ScaleX, 170.0 * Uniform * ScaleY);
+        O.Dynamic = float4(3.5, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FH_VIS_PART03BR;
+        return O;
+    }
+
+    // ---- Spike01: three small pyramids ----
+    if (Layer < CKP_FH_FIRST_FLAME)
+    { return CkParticles_FireBallHit_Spike(O, In, float3(0.2, 0.2, 0.4), float3(0.2, 0.2, 0.7)); }
+
+    // ---- Flames01: five sub-UV puffs off a full sphere shell, HDR colour, dissolving to nothing ----
+    if (Layer < CKP_FH_FIRST_SMOKE)
+    {
+        const float Life = lerp(0.2, 0.7, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float  t   = saturate(In.Age / Life);
+        // Hemisphere Z is FALSE here, unlike the Cast variant's — this shell is the full sphere.
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        const float3 Spawn = Dir * 20.0;
+        const float3 V0    = Dir * lerp(50.0, 300.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = Spawn + V0 * (CkParticles_Int2(t, 1.0, 0.2) * Life);
+        O.Velocity = V0 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.2);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0796861, 5.0,      0.368246, 3.0,       0.738907, 0.250158),
+            CkParticles_Key3(t, 0.0796861, 3.43343,  0.368246, 0.67227,   0.738907, 0.00749903),
+            CkParticles_Key3(t, 0.0796861, 0.115767, 0.368246, 0.0841786, 0.738907, 0.00749903),
+            CkParticles_Key3(t, 0.0,       0.0,      0.303049, 1.0,       0.992454, 0.0));
+
+        const float Base = lerp(50.0, 100.0, CkParticles_Rand(In.Seed, 3));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+                   + lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 5)) * In.Age;
+
+        const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+        O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 5.0, 0.0, 0.0);
+        O.VisTag  = CKP_FH_VIS_FLAMES01;
+        return O;
+    }
+
+    // ---- Smokes: five slow puffs off a FLATTENED shell, the longest-lived layer in the system ----
+    if (Layer < CKP_FH_FIRST_FLARE)
+    {
+        const float Life = lerp(0.7, 1.3, CkParticles_Rand(In.Seed, 1));
+        const float td   = In.Age - CKP_FH_DELAY_EARLY;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t = saturate(td / Life);
+
+        // Sphere Location with a Non Uniform Scale of (1, 1, 0): the shell collapses to a ring in XY, so the
+        // smoke spreads outward along the ground plane rather than into a dome.
+        const float3 Raw    = CkParticles_RandDir(In.Seed);
+        const float2 Planar = float2(Raw.x, Raw.y);
+        const float  Len    = length(Planar);
+        // A draw that lands on the poles has no planar direction at all; +X is the arbitrary-but-stable fallback,
+        // written out explicitly on both sides so the CPU mirror cannot pick a different degenerate answer.
+        const float3 Dir    = Len > 0.000001 ? float3(Planar.x / Len, Planar.y / Len, 0.0)
+                                             : float3(1.0, 0.0, 0.0);
+        const float3 Spawn  = Dir * 20.0;
+        const float3 V0    = Dir * lerp(50.0, 200.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.2, 0.1) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.2, 1.0, 0.1);
+
+        O.Color = float4(
+            CkParticles_Key5(t, 0.0, 1.0, 0.0603682, 1.0,      0.22457, 1.0,      0.363417, 0.391573, 0.527618, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0603682, 0.693872, 0.22457, 0.040915, 0.363417, 0.003677, 0.527618, 0.0),
+            CkParticles_Key5(t, 0.0, 1.0, 0.0603682, 0.147027, 0.22457, 0.045186, 0.363417, 0.022174, 0.527618, 0.0),
+            CkParticles_Key2(t, 0.126773, 1.0, 0.514337, 0.35) * 0.3);
+
+        const float Base = lerp(100.0, 200.0, CkParticles_Rand(In.Seed, 3));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0
+                   + lerp(-30.0, 30.0, CkParticles_Rand(In.Seed, 5)) * td;
+
+        // dissolve erodes over life; core_color swings from off to fully on by a quarter of it.
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.0, 1.0, -1.0), 0.0, 0.0,
+                           CkParticles_Key2(t, 0.0, -1.0, 0.25, 1.0));
+        O.VisTag  = CKP_FH_VIS_SMOKE01;
+        return O;
+    }
+
+    // ---- Flare01: two lens flares that start at DOUBLE white and are erased across their life ----
+    if (Layer < CKP_FH_FIRST_FLASH)
+    {
+        if (In.Age > 0.2)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.2);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key4(t, 0.0, 2.0, 0.142469, 2.0,      0.47208, 1.0,      0.9345, 0.391573),
+            CkParticles_Key4(t, 0.0, 2.0, 0.142469, 1.38774,  0.47208, 0.040915, 0.9345, 0.003677),
+            CkParticles_Key4(t, 0.0, 2.0, 0.142469, 0.294054, 0.47208, 0.045186, 0.9345, 0.022174),
+            CkParticles_Key3(t, 0.0, 0.0, 0.214911, 1.0, 1.0, 0.0) * 0.6);
+        O.Size     = float2(120.0 * Grow, 120.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 1.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_FH_VIS_FLARE01;
+        return O;
+    }
+
+    // ---- FirstFlash: four cool-white flashes on the early beat ----
+    if (Layer < CKP_FH_LAYER_FIRSTGLOW)
+    {
+        const float td = In.Age - CKP_FH_DELAY_EARLY;
+
+        if (td < 0.0 || td > 0.1)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key5(t, 0.0374283, 0.715694, 0.16058, 1.0,      0.312708, 1.0,      0.659221, 0.913099,  0.96227, 0.0137021),
+            CkParticles_Key5(t, 0.0374283, 0.89627,  0.16058, 0.752942, 0.312708, 0.341915, 0.659221, 0.0241576, 0.96227, 0.00182116),
+            CkParticles_Key5(t, 0.0374283, 1.0,      0.16058, 0.109462, 0.312708, 0.109462, 0.659221, 0.0241576, 0.96227, 0.00802319),
+            1.0);
+        O.Size    = float2(300.0 * Grow, 300.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FH_VIS_PART03BR;
+        return O;
+    }
+
+    // ---- FirstGlow: the second 1000-unit shell, squashed to a wide flat band as it fades ----
+    if (Layer == CKP_FH_LAYER_FIRSTGLOW)
+    {
+        const float td = In.Age - CKP_FH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.2)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t       = saturate(td / 0.2);
+        const float Uniform = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+        const float ScaleX  = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.4);
+        const float ScaleY  = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key4(t, 0.0, 1.0,      0.111078, 1.0,      0.322366, 1.0,      0.96227, 0.913099),
+            CkParticles_Key4(t, 0.0, 0.938686, 0.111078, 0.752942, 0.322366, 0.341915, 0.96227, 0.0241576),
+            CkParticles_Key4(t, 0.0, 0.791298, 0.111078, 0.109462, 0.322366, 0.109462, 0.96227, 0.0241576),
+            CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0) * 0.6);
+        O.Size    = float2(1000.0 * Uniform * ScaleX, 1000.0 * Uniform * ScaleY);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FH_VIS_PART01;
+        return O;
+    }
+
+    // ---- FlareImpact: 0.05 s, the shortest-lived particle in the system ----
+    if (Layer == CKP_FH_LAYER_FLAREIMP)
+    {
+        const float td = In.Age - CKP_FH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.05)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.05);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key5(t, 0.0, 1.0, 0.131603, 1.0,      0.601268, 1.0,      0.828252, 0.391573, 0.997283, 0.009134),
+            CkParticles_Key5(t, 0.0, 1.0, 0.131603, 0.693872, 0.601268, 0.040915, 0.828252, 0.003677, 0.997283, 0.004025),
+            CkParticles_Key5(t, 0.0, 1.0, 0.131603, 0.147027, 0.601268, 0.045186, 0.828252, 0.022174, 0.997283, 0.006995),
+            1.0);
+        O.Size    = float2(150.0 * Grow, 150.0 * Grow);
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.5, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_FH_VIS_IMPACT01;
+        return O;
+    }
+
+    // ---- LightningStrip: five card meshes fanned out of the impact point ----
+    // Its Sphere Location module is DISABLED, so all five sit at the origin — and Add Velocity from Point has
+    // no direction to work from there, which leaves the Initial Mesh Orientation randomization as the only
+    // thing separating them. Its exact Random-Range-Vector mapping is not recoverable from the corpus, so each
+    // card takes its own random facing: five differently-oriented cards is what every reading produces.
+    if (Layer < CKP_FH_FIRST_SPIKE02)
+    {
+        if (In.Age > 0.2)
+        { return CkParticles_FireBallHit_Hidden(O); }
+
+        const float t = saturate(In.Age / 0.2);
+
+        O.Orientation = CkParticles_QuatFromZTo(CkParticles_RandDir(In.Seed));
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+
+        const float3 Base = float3(
+            lerp(0.3, 0.7, CkParticles_Rand(In.Seed, 3)),
+            lerp(0.3, 0.7, CkParticles_Rand(In.Seed, 4)),
+            lerp(1.5, 3.0, CkParticles_Rand(In.Seed, 5)));
+
+        O.Scale = Base * float3(
+            CkParticles_Key3(t, 0.0, 0.5, 0.2, 1.0,  1.0, 0.0),
+            CkParticles_Key2(t, 0.0, 0.0, 1.0, 1.0),
+            CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.75, 1.0, 1.0));
+
+        O.Color  = float4(1.0, 0.366253, 0.184475,
+                          CkParticles_Key3(t, 0.0, 0.0, 0.274072, 1.0, 1.0, 0.0) * 0.3);
+        O.VisTag = CKP_FH_VIS_STRIP;
+        return O;
+    }
+
+    // ---- Spike02: three larger pyramids, identical in every other respect to Spike01 ----
+    return CkParticles_FireBallHit_Spike(O, In, float3(0.3, 0.3, 0.6), float3(0.3, 0.3, 1.0));
+}
