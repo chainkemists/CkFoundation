@@ -375,19 +375,20 @@ namespace ck::usf_editor
                 *LookName.ToString()));
         }
 
-        if (InDef->_UsedWithNiagaraSprites && NOT IsSurfaceDomain)
+        if ((InDef->_UsedWithNiagaraSprites || InDef->_UsedWithNiagaraMeshParticles) && NOT IsSurfaceDomain)
         {
             Result.Warnings.Add(FString::Printf(
-                TEXT("Look [%s]: _UsedWithNiagaraSprites is set but the domain is not Surface — a sprite renderer cannot use this master"),
+                TEXT("Look [%s]: a Niagara usage flag is set but the domain is not Surface — a particle renderer cannot use this master"),
                 *LookName.ToString()));
         }
 
-        // A particle look whose master lacks the sprite usage renders as the DEFAULT material in a packaged
-        // build — the exact silent-fallback this flag exists to prevent.
-        if ((InDef->_ParticleColor || InDef->_ParticleDynamicParameter) && NOT InDef->_UsedWithNiagaraSprites)
+        // A particle look whose master declares NEITHER renderer usage renders as the DEFAULT material in a
+        // packaged build — the exact silent-fallback these flags exist to prevent.
+        if ((InDef->_ParticleColor || InDef->_ParticleDynamicParameter)
+            && NOT InDef->_UsedWithNiagaraSprites && NOT InDef->_UsedWithNiagaraMeshParticles)
         {
             Result.Warnings.Add(FString::Printf(
-                TEXT("Look [%s]: reads particle inputs but _UsedWithNiagaraSprites is false — a Niagara sprite renderer would fall back to the default material"),
+                TEXT("Look [%s]: reads particle inputs but declares neither _UsedWithNiagaraSprites nor _UsedWithNiagaraMeshParticles — a Niagara renderer would fall back to the default material"),
                 *LookName.ToString()));
         }
 
