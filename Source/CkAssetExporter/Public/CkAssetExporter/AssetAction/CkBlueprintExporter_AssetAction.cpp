@@ -111,9 +111,9 @@ auto
 
             InSection.AddMenuEntry(
                 "ExportBP_JsonAndText",
-                LOCTEXT("ExportBP_Label", "Export Blueprint to JSON && Text"),
+                LOCTEXT("ExportBP_Label", "Export Blueprint to JSON"),
                 LOCTEXT("ExportBP_Tooltip",
-                    "Export selected Blueprints to .json and .txt files next to the asset"),
+                    "Export selected Blueprints to a .ckexport file next to the asset"),
                 FSlateIcon(),
                 FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                 {

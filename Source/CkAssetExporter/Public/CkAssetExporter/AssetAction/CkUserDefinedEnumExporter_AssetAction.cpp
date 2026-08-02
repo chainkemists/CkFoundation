@@ -112,9 +112,9 @@ auto
 
             InSection.AddMenuEntry(
                 "ExportUDE_JsonAndText",
-                LOCTEXT("ExportUDE_Label", "Export Enum to JSON && Text"),
+                LOCTEXT("ExportUDE_Label", "Export Enum to JSON"),
                 LOCTEXT("ExportUDE_Tooltip",
-                    "Export selected Blueprint enums to .json and .txt files next to the asset"),
+                    "Export selected Blueprint enums to a .ckexport file next to the asset"),
                 FSlateIcon(),
                 FToolMenuExecuteAction::CreateLambda([](const FToolMenuContext& /*InContext*/)
                 {

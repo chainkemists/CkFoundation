@@ -40,7 +40,7 @@ class CKASSETEXPORTER_API FCk_NiagaraExporter
 {
 public:
     // InOutputDir: when set, writes <AssetName>.ckexport/.txt into that directory instead of next to the asset.
-    static auto ExportNiagaraSystem (UNiagaraSystem* InSystem, const FString& InOutputDir = FString{}, ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonAndText) -> FCk_NiagaraExportResult;
+    static auto ExportNiagaraSystem (UNiagaraSystem* InSystem, const FString& InOutputDir = FString{}, ECk_AssetExporter_SidecarFormats InFormats = ECk_AssetExporter_SidecarFormats::JsonOnly) -> FCk_NiagaraExportResult;
     static auto ExportNiagaraSystems(const TArray<UNiagaraSystem*>& InSystems) -> TArray<FCk_NiagaraExportResult>;
 
 private:

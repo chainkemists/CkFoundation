@@ -94,7 +94,7 @@ auto
             [
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected BTs")))
-                .ToolTipText(FText::FromString(TEXT("Export Behavior Trees currently selected in the Content Browser to JSON and Text files")))
+                .ToolTipText(FText::FromString(TEXT("Export Behavior Trees currently selected in the Content Browser to .ckexport files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedClicked)
                 .HAlign(HAlign_Center)
             ]
@@ -109,7 +109,7 @@ auto
             [
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected Blueprints")))
-                .ToolTipText(FText::FromString(TEXT("Export Blueprints currently selected in the Content Browser to JSON and Text files")))
+                .ToolTipText(FText::FromString(TEXT("Export Blueprints currently selected in the Content Browser to .ckexport files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedBlueprintsClicked)
                 .HAlign(HAlign_Center)
             ]
@@ -124,7 +124,7 @@ auto
             [
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected DataAssets")))
-                .ToolTipText(FText::FromString(TEXT("Export DataAssets currently selected in the Content Browser to JSON and Text files")))
+                .ToolTipText(FText::FromString(TEXT("Export DataAssets currently selected in the Content Browser to .ckexport files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedDataAssetsClicked)
                 .HAlign(HAlign_Center)
             ]
@@ -139,7 +139,7 @@ auto
             [
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected EQS")))
-                .ToolTipText(FText::FromString(TEXT("Export EQS Queries currently selected in the Content Browser to JSON and Text files")))
+                .ToolTipText(FText::FromString(TEXT("Export EQS Queries currently selected in the Content Browser to .ckexport files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedEQSClicked)
                 .HAlign(HAlign_Center)
             ]
@@ -154,7 +154,7 @@ auto
             [
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected Materials")))
-                .ToolTipText(FText::FromString(TEXT("Export Materials / Material Instances currently selected in the Content Browser to JSON files")))
+                .ToolTipText(FText::FromString(TEXT("Export Materials / Material Instances currently selected in the Content Browser to .ckexport files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedMaterialsClicked)
                 .HAlign(HAlign_Center)
             ]
@@ -169,7 +169,7 @@ auto
             [
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected StateTrees")))
-                .ToolTipText(FText::FromString(TEXT("Export State Trees currently selected in the Content Browser to JSON and Text files")))
+                .ToolTipText(FText::FromString(TEXT("Export State Trees currently selected in the Content Browser to .ckexport files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedStateTreesClicked)
                 .HAlign(HAlign_Center)
             ]
@@ -184,7 +184,7 @@ auto
             [
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected Structs")))
-                .ToolTipText(FText::FromString(TEXT("Export Blueprint structs currently selected in the Content Browser to JSON and Text files")))
+                .ToolTipText(FText::FromString(TEXT("Export Blueprint structs currently selected in the Content Browser to .ckexport files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedUserDefinedStructsClicked)
                 .HAlign(HAlign_Center)
             ]
@@ -199,7 +199,7 @@ auto
             [
                 SNew(SButton)
                 .Text(FText::FromString(TEXT("Export Selected Enums")))
-                .ToolTipText(FText::FromString(TEXT("Export Blueprint enums currently selected in the Content Browser to JSON and Text files")))
+                .ToolTipText(FText::FromString(TEXT("Export Blueprint enums currently selected in the Content Browser to .ckexport files")))
                 .OnClicked(this, &SCkAssetExporterTab::DoOnExportSelectedUserDefinedEnumsClicked)
                 .HAlign(HAlign_Center)
             ]
