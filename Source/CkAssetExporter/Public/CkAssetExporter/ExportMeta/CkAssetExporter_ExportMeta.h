@@ -62,6 +62,16 @@ enum class ECk_AssetExporter_SidecarFormats
     JsonAndText
 };
 
+namespace ck::asset_exporter
+{
+    // The single gate every exporter consults before writing its lossy .txt summary. Centralized so the JsonOnly
+    // auto path cannot regress in one exporter silently -- Ck.AssetExporter.Dispatch.SummaryTextFormatGate pins it.
+    constexpr auto ShouldWrite_SummaryText(ECk_AssetExporter_SidecarFormats InFormats) -> bool
+    {
+        return InFormats == ECk_AssetExporter_SidecarFormats::JsonAndText;
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 // The "_meta" object every sibling-writing exporter embeds. Deliberately NO timestamp and NO machine path: two
 // exports of identical input must be byte-identical, or the freshness gate and external diff tooling cannot trust it.
