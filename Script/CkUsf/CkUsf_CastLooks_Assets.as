@@ -13,7 +13,8 @@
 // Every default below is quoted in a recipe's per-material delta table:
 // CkFoundation/Source/CkParticles/Cookbook/NS_Arrow_Cast.md §4.1,
 // NS_Bomb_Spawn.md §4.1, NS_HealCast.md §4, NS_Gunshot_Cast.md §4.1 and
-// NS_Lightning_Cast.md §4. A delta table states the FULL inherited pair, never
+// NS_Lightning_Cast.md §4 and NS_Lightning_Muzzle.md §4.
+// A delta table states the FULL inherited pair, never
 // just the changed axis — anything a table does not list resolves to the family
 // REFERENCE instance (M_VFX_DisAdd_Part01), not to zero, so every value below is
 // stated explicitly rather than defaulted.
@@ -293,6 +294,48 @@ namespace CkUsf
             0.1,
             0.0,              // Gradient_Invert — inherited from the Ring04 family reference
             1.0,              // Distortion_Scale
+            "TileNoiseCoarse"); // Distortion_Tex — the source's T_VFX_Noise_04, distinct from Dissolve_Tex
+    }
+
+    // M_VFX_DisAdd_Lightning01 — the beam plane of NS_Lightning_Muzzle, and the most parameter-heavy instance the
+    // family carries: the only one that pans BOTH its main and its colour sample (MainTex_Speed_Y and
+    // Color_Speed_Y, both -0.5), the only one with a non-zero STATIC dissolve bias (0.4), and one of the two with a
+    // live distortion branch. Its shape and dissolve are two DIFFERENT paints, unlike its Lightning02 sibling.
+    //
+    // Drawn on a MESH renderer (SM_VFX_Plane01, recreated as the Card carrier), so it takes the mesh-particle
+    // usage flag rather than the sprite one.
+    //
+    // FAMILY PARAMETERS IT DRIVES THAT THE LOOK DOES NOT PLUMB: MainTex_Speed_Y and Color_Speed_Y (both -0.5 — the
+    // beam's texture does not scroll along its length here), Core_Intensity (1) and Opacty_DepthFade (20).
+    // Recorded in NS_Lightning_Muzzle.md §13.
+    asset LightningDisAdd01 of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/DissolveAdd.ush";
+        _UshFunctionName = n"CkUsf_Look_DissolveAdd";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        _LookName        = n"LightningDisAdd01";
+        _TwoSided        = true;
+
+        _UsedWithNiagaraMeshParticles = true;
+        _ParticleColor                = true;
+        _ParticleDynamicParameter     = true;
+        _ParticleDynamicParameterNames = CkUsf::Usf_DissolveAddChannelNames();
+
+        _Parameters = CkUsf::Usf_DissolveAddParams(
+            "LightningBolt", "LightningBand",
+            10.0,               // Brightness
+            0.0, 0.0,           // Dissolve_Speed
+            0.4,                // Dissolve — the family's only non-zero STATIC bias
+            1.0, 1.0,           // Dissolve_Scale
+            0.3,                // Distortion_Intensity — LIVE
+            0.7, 0.7,           // Distortion_Speed
+            1.0, 1.0,           // MainTex_Scale
+            1.0,                // Opacity_Boldness
+            "LutWhite",
+            0.1,
+            0.0,                // Gradient_Invert
+            1.0,                // Distortion_Scale
             "TileNoiseCoarse"); // Distortion_Tex — the source's T_VFX_Noise_04, distinct from Dissolve_Tex
     }
 }

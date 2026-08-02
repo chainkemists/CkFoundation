@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 38;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 40;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -568,6 +568,68 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_BuffCast: seven renderers for the nine sprite emitters (Part01 serves both large glows and the
+    // Arrows paint serves both chevrons). The tenth source emitter is the event-spawned trail, which lives on the
+    // ribbon spec below (recipe Cookbook/NS_BuffCast.md §6.2).
+    inline auto Get_BuffCastRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    167, nullptr, TEXT("PartDisAdd01")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    168, nullptr, TEXT("PartDisAdd02")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    169, nullptr, TEXT("RainbowDisAdd") },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 170, nullptr, TEXT("ArrowsDisAdd")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    171, nullptr, TEXT("StarDisAdd01")  },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 172, nullptr, TEXT("PartDisAdd04")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    173, nullptr, TEXT("RingDisAdd01")  },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // The buff's sparkle trails: ONE ribbon renderer carrying SEVEN ribbons, one behind each sparkle. The source
+    // handler applies the emitting particle's Ribbon ID, so the strands are separated by RibbonIdBinding
+    // (Particles.MeshIndex) rather than by seven renderers.
+    inline auto Get_BuffCastRibbonRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::Ribbon, 174, nullptr, TEXT("TrailDisAdd03") },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_Lightning_Muzzle: nine renderers for the thirteen enabled sprite/mesh emitters — Part02 serves
+    // three of them and Part01 two — plus the row's THREE meshes, which is the heaviest mesh load in the cookbook.
+    // The two arc ribbons live on the ribbon spec below (recipe Cookbook/NS_Lightning_Muzzle.md §6.2).
+    inline auto Get_LightningMuzzleRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    175, nullptr,       TEXT("PartDisAdd01")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    176, nullptr,       TEXT("PartDisAdd02")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    177, nullptr,       TEXT("PartDisAdd01Bright") },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 178, nullptr,       TEXT("PartDisAdd04")       },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    179, nullptr,       TEXT("LightningDisAdd02"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    180, nullptr,       TEXT("PartDisAdd03Bright") },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  181, TEXT("Spike"), TEXT("FlatAdd02")          },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  182, TEXT("Card"),  TEXT("LightStripDisAdd")   },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  183, TEXT("Card"),  TEXT("LightningDisAdd01")  },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // The muzzle's arc pair: ONE ribbon renderer carrying TWO ribbons. LightningArc_01 and LightningArc_02 draw the
+    // same M_VFX_DisAdd_Flat02 and differ only in count, width, launch speed and curl frequency, so they are
+    // separated by ribbon id exactly as the fireball's mirrored trails are.
+    inline auto Get_LightningMuzzleRibbonRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::Ribbon, 184, nullptr, TEXT("FlatAdd02Ribbon") },
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -670,6 +732,18 @@ namespace ck::particles
             { TEXT("PS_CkParticles_Template_BombProjectile"), 2.5f, 2.5f, 4,
               Get_BombProjectileRendererSpecs(), 0.0f,
               { 0.0f, 17, Get_BombProjectileRibbonRendererSpecs() } },
+            // The two Vefects EVENT-driven ribbon rows, and the pair that closes the trail phase. Both sources are
+            // Loop-Once 2.0 s systems again, and on both the ribbon population is a BURST rather than a rate: a
+            // trail point is a SAMPLE of a leader path at a solved time, so the count is a capacity and the times
+            // come out of the behavior. BuffCast bursts 43 points for each of its seven sparkles — the source's
+            // every-frame location events at the 60 Hz they are quoted against. LightningMuzzle bursts the arc
+            // pair's six burst points plus the twelve each that its falling 80 -> 0 spawn rate inverts to.
+            { TEXT("PS_CkParticles_Template_BuffCast"), 2.0f, 1.5f, 23,
+              Get_BuffCastRendererSpecs(), 0.0f,
+              { 0.0f, 301, Get_BuffCastRibbonRendererSpecs() } },
+            { TEXT("PS_CkParticles_Template_LightningMuzzle"), 2.0f, 0.6f, 24,
+              Get_LightningMuzzleRendererSpecs(), 0.0f,
+              { 0.0f, 30, Get_LightningMuzzleRibbonRendererSpecs() } },
         };
         return MakeArrayView(Specs);
     }
@@ -807,6 +881,16 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_BombProjectile"));
     }
 
+    inline auto Get_BuffCastTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_BuffCast"));
+    }
+
+    inline auto Get_LightningMuzzleTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_LightningMuzzle"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -840,6 +924,10 @@ namespace ck::particles
             // The two projectile trails. Both rows carry a ribbon emitter on top of the sprite/mesh one.
             case 36: return Get_FireBallProjectileTemplateSystemObjectPath(); // 10s loop, 10s, 15 + 408/s + ribbon 100/s
             case 37: return Get_BombProjectileTemplateSystemObjectPath();     // 2.5s loop, 2.5s, 4 + ribbon burst 17
+            // The two event-driven ribbon rows. Both ribbon emitters burst: their points are samples of a leader
+            // path taken at times the behavior solves, not a stream.
+            case 38: return Get_BuffCastTemplateSystemObjectPath();        // 2.0s loop, 1.5s, 23 + ribbon burst 301
+            case 39: return Get_LightningMuzzleTemplateSystemObjectPath(); // 2.0s loop, 0.6s, 24 + ribbon burst 30
             default: break;
         }
 
