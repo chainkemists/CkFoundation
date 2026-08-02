@@ -230,6 +230,82 @@ namespace ck::particles_editor
         // Every behavior writes Particles.VisibilityTag, so each renderer draws only its tagged particles:
         // 0 camera sprite / 1 velocity-aligned sprite / 2 smoke sprite / 3 carrier meshes (Particles.MeshIndex).
         // Were the tag attribute ever missing, Niagara would render every particle in EVERY renderer.
+        // A row-declared renderer binds a generated CkUsf master EXPLICITLY — one User.SpriteMaterial cannot carry
+        // several. A miss is an Error, not a shrug: the renderer would silently draw the default material.
+        static auto Load_LookMaster(const TCHAR* InLookName) -> UMaterialInterface*
+        {
+            if (InLookName == nullptr)
+            { return nullptr; }
+
+            const auto Path = ck::particles::Get_GeneratedLookMasterObjectPath(FName(InLookName));
+            auto* Master = LoadObject<UMaterialInterface>(nullptr, *Path);
+
+            if (Master == nullptr)
+            {
+                ck::particles_editor::Error(TEXT("Template builder: CkUsf look master [{}] missing — generate the "
+                    "looks (Ck_Usf_GenerateLooks) BEFORE rebuilding the templates, or its renderer draws the "
+                    "default material"), FString(Path));
+            }
+            return Master;
+        }
+
+        // Renderers a cadence row declares for itself, on top of the shared set. They exist only on that row's
+        // template, so nothing effect-specific reaches any other template.
+        static auto Configure_RowRenderers(
+            UNiagaraEmitter*                                InEmitter,
+            const FGuid&                                    InVersion,
+            const ck::particles::FCk_ParticlesTemplateSpec& InSpec) -> void
+        {
+            auto Index = 0;
+            for (const auto& Renderer : InSpec.RendererOverrides)
+            {
+                auto* LookMaster = Load_LookMaster(Renderer.LookName);
+
+                if (Renderer.Kind == ck::particles::ECk_ParticlesRenderer_Kind::VelocityAlignedSprite)
+                {
+                    auto* Sprite = NewObject<UNiagaraSpriteRendererProperties>(
+                        InEmitter, *FString::Printf(TEXT("SpriteRenderer_Row%d"), Index));
+                    Sprite->Alignment          = ENiagaraSpriteAlignment::VelocityAligned;
+                    Sprite->FacingMode         = ENiagaraSpriteFacingMode::FaceCamera;
+                    Sprite->RendererVisibility = Renderer.VisTag;
+                    Sprite->Material           = LookMaster;
+                    InEmitter->AddRenderer(Sprite, InVersion);
+                    ++Index;
+                    continue;
+                }
+
+                auto* Mesh = LoadObject<UStaticMesh>(nullptr, *ck::particles::Get_VfxMeshObjectPath(FName(Renderer.MeshName)));
+                if (Mesh == nullptr)
+                {
+                    ck::particles_editor::Error(TEXT("Template builder: row mesh [{}] missing — run "
+                        "Generate_AllVfxMeshes first"), FString(Renderer.MeshName));
+                    ++Index;
+                    continue;
+                }
+
+                auto* MeshRenderer = NewObject<UNiagaraMeshRendererProperties>(
+                    InEmitter, *FString::Printf(TEXT("MeshRenderer_Row%d"), Index));
+                MeshRenderer->RendererVisibility = Renderer.VisTag;
+                MeshRenderer->FacingMode = ENiagaraMeshFacingMode::Default;
+                MeshRenderer->Meshes.Empty();
+
+                auto MeshEntry = FNiagaraMeshRendererMeshProperties{};
+                MeshEntry.Mesh = Mesh;
+                MeshRenderer->Meshes.Add(MeshEntry);
+
+                if (LookMaster != nullptr)
+                {
+                    MeshRenderer->bOverrideMaterials = true;
+                    auto Override = FNiagaraMeshMaterialOverride{};
+                    Override.ExplicitMat = LookMaster;
+                    MeshRenderer->OverrideMaterials = { Override };
+                }
+
+                InEmitter->AddRenderer(MeshRenderer, InVersion);
+                ++Index;
+            }
+        }
+
         static auto Configure_Renderers(
             UNiagaraEmitter*              InEmitter,
             const FGuid&                  InVersion,
@@ -706,6 +782,7 @@ namespace ck::particles_editor
             { return nullptr; }
 
             Configure_Renderers(SystemEmitter, Handle.GetInstance().Version, SystemEmitterData, InSpriteMaterial);
+            Configure_RowRenderers(SystemEmitter, Handle.GetInstance().Version, InSpec);
 
             if (UsesBurstSpawn)
             {
