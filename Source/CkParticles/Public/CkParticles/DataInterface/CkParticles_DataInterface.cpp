@@ -69,6 +69,7 @@ namespace NDICkParticlesLocal
         TEXT("/CkParticles/Behaviors/Behavior_ExplosionOmniIce.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_BombExplosion.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_LightningHit.ush"),
+        TEXT("/CkParticles/Behaviors/Behavior_Dash.ush"),
     };
 }
 
@@ -10279,6 +10280,228 @@ namespace NDICkParticlesLocal
 
                 Flames(Slot < 74 ? 0 : 1);
                 break;
+            }
+            case 46: // Dash — Vefects NS_Dash. Mirrors Behavior_Dash.ush; recipe Cookbook/NS_Dash.md.
+            {
+                constexpr auto Loop        = 2.0f;
+                constexpr auto BurstSlots  = 19;
+                constexpr auto Window      = 0.3f;
+                constexpr auto Tau         = 6.28318530718f;
+
+                constexpr auto DelayWind   = 0.05f;
+                constexpr auto DelaySmokes = 0.1f;
+
+                constexpr auto LayerTube   = 0;
+                constexpr auto LayerSmokes = 1;
+                constexpr auto LayerCone   = 2;
+                constexpr auto LayerLines  = 3;
+
+                constexpr auto VisTube   = 242;
+                constexpr auto VisSmokes = 243;
+                constexpr auto VisCone   = 244;
+                constexpr auto VisLines  = 245;
+
+                constexpr auto ConeHalfCos = 0.99619469809f;
+                constexpr auto ConeDistrib = 0.75f;
+                constexpr auto ConeFalloff = 0.333f;
+
+                const auto Hide = [&Out]() -> void
+                {
+                    Out.Color = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.Size  = FVector2f(0.0f, 0.0f);
+                    Out.Scale = FVector3f(0.0f, 0.0f, 0.0f);
+                };
+
+                const auto WindAlpha = [](float InT) -> float
+                {
+                    return Key4(InT, 0.0f, 0.0f, 0.240266f, 1.0f, 0.676124f, 1.0f, 1.0f, 0.0f);
+                };
+
+                const auto ConeAlpha = [](float InT) -> float
+                {
+                    return Key4(InT, 0.0f, 0.0f, 0.240266f, 1.0f, 0.373076f, 1.0f, 1.0f, 0.0f);
+                };
+
+                const auto BurstLayer = [](int32 InS) -> int32
+                {
+                    const auto S = ((InS % BurstSlots) + BurstSlots) % BurstSlots;
+
+                    if (S == 0) { return LayerTube; }
+                    if (S < 5)  { return LayerSmokes; }
+                    if (S == 5) { return LayerCone; }
+                    return LayerLines;
+                };
+
+                const auto ConeDir = [ConeHalfCos, ConeDistrib, Tau](int32 InSeed, float& OutEdge) -> FVector3f
+                {
+                    const auto U        = FMath::Pow(Rand(InSeed, 13), 1.0f - ConeDistrib);
+                    const auto CosTheta = FMath::Lerp(ConeHalfCos, 1.0f, U);
+                    const auto SinTheta = FMath::Sqrt(Saturate(1.0f - CosTheta * CosTheta));
+                    const auto Phi      = Tau * Rand(InSeed, 14);
+
+                    OutEdge = (1.0f - CosTheta) / (1.0f - ConeHalfCos);
+                    return FVector3f(-CosTheta, SinTheta * FMath::Cos(Phi), SinTheta * FMath::Sin(Phi));
+                };
+
+                Out.Velocity = FVector3f(0.0f, 0.0f, 0.0f);
+                Out.Position = FVector3f(0.0f, 0.0f, 0.0f);
+                Out.Dynamic  = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+
+                const auto Phase   = SpawnPhase(InEmitterAge, InAge, Loop);
+                const auto IsBurst = IsBurstSpawn(Phase, Loop);
+
+                auto Layer = LayerLines;
+
+                if (IsBurst)
+                {
+                    Layer = BurstLayer(InSeed);
+                }
+                else if (Phase > Window)
+                {
+                    Hide();
+                    break;
+                }
+
+                if (Layer == LayerTube)
+                {
+                    const auto td = InAge - DelayWind;
+
+                    if (td < 0.0f || td > 1.5f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t = Saturate(td / 1.5f);
+
+                    const auto V0 = FVector3f(-150.0f, 0.0f, 0.0f);
+                    Out.Position = V0 * (Int3(t, 0.2f, 1.0f, 0.15f, 0.0f) * 1.5f);
+                    Out.Velocity = V0 * Key3(t, 0.0f, 1.0f, 0.2f, 0.15f, 1.0f, 0.0f);
+
+                    const auto Spin = QuatFromAxisAngle(FVector3f(1.0f, 0.0f, 0.0f), Tau * 0.3f * td);
+                    const auto Lay  = QuatFromAxisAngle(FVector3f(0.0f, 1.0f, 0.0f), Tau * 0.25f);
+                    Out.Orientation = QuatMul(Spin, Lay);
+                    Out.MeshIndex   = 0;
+                    Out.Size        = FVector2f(0.0f, 0.0f);
+
+                    constexpr auto Uniform = 0.3f;
+                    const auto     Round   = Key2(t, 0.0f, 1.5f, 0.2f, 2.0f);
+                    Out.Scale = FVector3f(
+                        Uniform * Round,
+                        Uniform * Round,
+                        Uniform * 5.0f * Key3(t, 0.0f, 0.5f, 0.3f, 3.0f, 1.0f, 5.0f));
+
+                    Out.Color   = FLinearColor(0.0742136f, 0.0886556f, 0.111932f, 0.3f * WindAlpha(t));
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, -0.2f, 1.0f, -1.0f), 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = VisTube;
+                    break;
+                }
+
+                if (Layer == LayerSmokes)
+                {
+                    const auto td = InAge - DelaySmokes;
+
+                    if (td < 0.0f || td > 1.0f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t = Saturate(td);
+
+                    const auto V0 = FVector3f(
+                        FMath::Lerp(-100.0f, -300.0f, Rand(InSeed, 2)),
+                        FMath::Lerp( -10.0f,   10.0f, Rand(InSeed, 3)),
+                        FMath::Lerp( -10.0f,   10.0f, Rand(InSeed, 5)));
+
+                    Out.Position = FVector3f(-20.0f, 0.0f, 0.0f) + V0 * (Int3(t, 0.2f, 1.0f, 0.3f, 0.0f) * 1.0f);
+                    Out.Velocity = V0 * Key3(t, 0.0f, 1.0f, 0.2f, 0.3f, 1.0f, 0.0f);
+
+                    const auto Grow = Key2(t, 0.0f, 0.5f, 1.0f, 1.0f);
+                    Out.Size = FVector2f(FMath::Lerp(555.0f, 777.0f, Rand(InSeed, 8)) * Grow,
+                                         FMath::Lerp(130.0f, 230.0f, Rand(InSeed, 12)) * Grow);
+
+                    Out.Rotation = FMath::Lerp(-30.0f, 30.0f, Rand(InSeed, 4));
+                    Out.Color    = FLinearColor(0.6f, 0.743954f, 1.0f, 0.2f * WindAlpha(t));
+
+                    const auto Start = FMath::FloorToFloat(Rand(InSeed, 6) * 4.0f);
+                    Out.SubImageIndex = FMath::Fmod(Start + FMath::Min(FMath::FloorToFloat(t * 4.0f), 3.0f), 4.0f);
+
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 0.0f, 1.0f, -1.0f), 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = VisSmokes;
+                    break;
+                }
+
+                if (Layer == LayerCone)
+                {
+                    const auto td = InAge - DelayWind;
+
+                    if (td < 0.0f || td > 0.6f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t = Saturate(td / 0.6f);
+
+                    const auto Spin = QuatFromAxisAngle(FVector3f(1.0f, 0.0f, 0.0f), Tau * 0.05f * td);
+                    const auto Lay  = QuatFromAxisAngle(FVector3f(0.0f, 1.0f, 0.0f), Tau * 0.75f);
+                    Out.Orientation = QuatMul(Spin, Lay);
+                    Out.MeshIndex   = 0;
+                    Out.Size        = FVector2f(0.0f, 0.0f);
+
+                    const auto Grow = Key2(t, 0.0f, 1.5f, 0.2f, 2.0f);
+                    Out.Scale = FVector3f(0.4f * Grow, 0.4f * Grow, 0.3f * 5.0f * Grow);
+
+                    Out.Color   = FLinearColor(0.597202f, 0.752942f, 1.0f, 0.05f * ConeAlpha(t));
+                    Out.Dynamic = FVector4f(-0.92719f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = VisCone;
+                    break;
+                }
+
+                {
+                    const auto Life = FMath::Lerp(0.8f, 1.0f, Rand(InSeed, 1));
+
+                    if (InAge > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t = Saturate(InAge / Life);
+
+                    const auto Spawn = RandDir(InSeed) * (50.0f * FMath::Pow(Rand(InSeed, 7), 1.0f / 3.0f));
+
+                    auto       Edge = 0.0f;
+                    const auto Dir  = ConeDir(InSeed, Edge);
+                    const auto V0   = Dir * (FMath::Lerp(350.0f, 750.0f, Rand(InSeed, 15))
+                                           * FMath::Lerp(1.0f, 1.0f - ConeFalloff, Edge));
+
+                    const auto Lambda = FMath::Lerp(0.8f, 1.2f, Rand(InSeed, 16))
+                                      / FMath::Lerp(0.75f, 2.0f, Rand(InSeed, 17));
+                    const auto Decay  = FMath::Exp(-Lambda * InAge);
+
+                    Out.Velocity = V0 * Decay;
+                    Out.Position = Spawn + V0 * ((1.0f - Decay) / Lambda);
+
+                    const auto Krgb = Rand(InSeed, 18);
+                    const auto Ka   = Rand(InSeed, 19);
+
+                    Out.Color = FLinearColor(
+                        FMath::Lerp(0.737095f, 0.726575f, Krgb),
+                        FMath::Lerp(0.852379f, 0.816055f, Krgb),
+                        1.0f,
+                        FMath::Lerp(0.3f, 0.7f, Ka) * Key2(t, -0.00459771f, 1.01132f, 1.00115f, 0.00195575f));
+
+                    const auto Speed01 = Saturate(Out.Velocity.Size() / 1500.0f);
+                    const auto Factor  = Key3(Speed01, 0.12466f, -0.000593f, 0.394801f, 0.48928f,
+                                              0.995789f, 0.997444f);
+
+                    Out.Size   = FVector2f(FMath::Max(0.0f, 30.0f * FMath::Lerp(0.0f, 0.5f, Factor)),
+                                           32.0f * FMath::Lerp(1.0f, 3.0f, Factor));
+                    Out.VisTag = VisLines;
+                    break;
+                }
             }
             case 0: // Gravity — constant downward accel, integrate, tint warm->dark over life.
             default:

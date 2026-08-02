@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 46;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 47;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -811,6 +811,22 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_Dash: four renderers for four emitters, one per source material — the cookbook's only row
+    // where every emitter draws its own paint. Two of them are meshes: the open cylinder NS_Arrow_Cast's wind
+    // tube already carries, and the truncated cone this port adds. The sprite pair is the same 2x2 wind sheet
+    // that row draws, plus the velocity-aligned speed lines (recipe Cookbook/NS_Dash.md §6.2).
+    inline auto Get_DashRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::Mesh,                  242, TEXT("Cylinder"), TEXT("WindDisAdd02Mesh") },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    243, nullptr,          TEXT("WindDisAdd01"), FIntPoint(2, 2) },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  244, TEXT("Cone"),     TEXT("WindDisAdd03")     },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 245, nullptr,          TEXT("PartDisAdd02")     },
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -960,6 +976,13 @@ namespace ck::particles
             { TEXT("PS_CkParticles_Template_LightningHit"), 2.0f, 1.3f, 84,
               Get_LightningHitRendererSpecs(), 0.0f,
               { 0.0f, 30, Get_LightningHitRibbonRendererSpecs() } },
+            // NS_Dash: a Loop-Once 2.0 s system again, and the third row whose source carries BOTH spawn
+            // stacks on one emitter. Its burst is the four emitters' own counts (1 + 4 + 1 + 13 = 19) and
+            // its rate is Add_Lines' own 50/s, which the behavior gates on that emitter's 0.3 s
+            // `Life Cycle Mode = Self / Once` window. Its lifetime is the wind tube's 0.05 s beat plus its
+            // 1.5 s life — the same 1.55 the ArrowCast row carries for the same wind pair.
+            { TEXT("PS_CkParticles_Template_Dash"), 2.0f, 1.55f, 19,
+              Get_DashRendererSpecs(), 50.0f },
         };
         return MakeArrayView(Specs);
     }
@@ -1137,6 +1160,11 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_LightningHit"));
     }
 
+    inline auto Get_DashTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_Dash"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -1183,6 +1211,7 @@ namespace ck::particles
             case 44: return Get_BombExplosionTemplateSystemObjectPath();      // 2.0s loop, 0.5s, burst 162
             // The everything-effect: every renderer class the pipeline has, on one row.
             case 45: return Get_LightningHitTemplateSystemObjectPath();       // 2.0s loop, 1.3s, 84 + ribbon 30
+            case 46: return Get_DashTemplateSystemObjectPath();               // 2.0s loop, 1.55s, 19 + 50/s
             default: break;
         }
 
