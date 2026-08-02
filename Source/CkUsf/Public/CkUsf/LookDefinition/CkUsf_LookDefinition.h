@@ -193,11 +193,16 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _UsedWithMorphTargets = false;
 
-    // Niagara SPRITE renderers only (MATUSAGE_NiagaraSprites). Without it a sprite renderer using this
-    // master falls back to the default material in a packaged build. Ribbon / mesh-particle usages are
-    // deliberately absent — add them when a look actually needs one, not speculatively.
+    // Niagara SPRITE renderers (MATUSAGE_NiagaraSprites). Without it a sprite renderer using this master
+    // falls back to the default material in a packaged build.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     bool _UsedWithNiagaraSprites = false;
+
+    // Niagara MESH-PARTICLE renderers (MATUSAGE_NiagaraMeshParticles) — the same silent packaged-build
+    // fallback as the sprite flag, on the renderer that draws a carrier mesh per particle. Ribbon usage is
+    // still deliberately absent; add it when a look actually needs it, not speculatively.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _UsedWithNiagaraMeshParticles = false;
 
     // Surface-only: wire the renderer's per-particle color into the PIXEL Custom node (In.ParticleColor).
     // Opt-in because it costs an interpolator and reads as opaque white outside a particle renderer.

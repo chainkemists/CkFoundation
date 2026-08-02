@@ -1,0 +1,84 @@
+// /CkUsf/Looks/DissolveAdd.ush
+//
+// Recreation of the Vefects "DissolveAdd" material family — the parent graph M_VFX_DissolveAdd that
+// M_VFX_DisAdd_Ring04, _Slash01, _Slash02, _Slash04, _Pan_Wind02 and _Part04 are all instances of.
+// Additive-reading unlit translucency: a shape texture tinted by Particle Color, lifted by a large
+// Brightness, eaten away by a panning noise dissolve whose threshold rides the Niagara Dynamic
+// Material Parameter.
+//
+// ONE entry point for the whole family. A look is the parameter DEFAULTS of one source instance; the
+// per-instance deltas (brightness, dissolve speed/scale/bias, distortion, main-tex scale) are params
+// rather than separate shaders, because the source ships one graph and six parameterizations of it.
+//
+// Dynamic parameter channels — these mirror the SOURCE material's own channel names, so the emitter
+// writing them and this look reading them agree by construction:
+//   x = dissolve    signed integrity ADDED to the dissolve noise; +1 = fully intact, -1 = fully dissolved
+//   y = distortion  UV distortion strength (scaled by DistortIntensity)
+//   z = offset      UV pan offset applied to the shape ALONG U
+//   w = core_color  blend toward CoreColor; <= 0 disables the core tint
+//
+// Recipes + provenance: CkParticles/Cookbook/NS_Lightning_Range.md, CkParticles/Cookbook/NS_BasicAttack.md
+#pragma once
+#include "/CkUsf/Common.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Look_DissolveAdd(
+    FCkUsf_SurfaceInput In,
+    Texture2D ShapeTex,    SamplerState ShapeTexSampler,
+    Texture2D DissolveTex, SamplerState DissolveTexSampler,
+    Texture2D DistortTex,  SamplerState DistortTexSampler,
+    float3    CoreColor,
+    float     Brightness,
+    float     DissolveSpeed,
+    float     DissolveEdge,
+    float     DistortScale,
+    float     OpacityBoldness,
+    float     DissolveSpeedY,
+    float     DissolveBias,
+    float3    DissolveScale,
+    float     DistortIntensity,
+    float3    DistortSpeed,
+    float3    MainTexScale)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    // The instance's own static Dissolve rides on top of the animated channel (Slash04 biases it by -0.1).
+    const float Dissolve   = In.DynamicParameter.x + DissolveBias;
+    const float Distortion = In.DynamicParameter.y * DistortIntensity;
+    const float PanOffset  = In.DynamicParameter.z;
+    const float CoreAmount = In.DynamicParameter.w;
+
+    // Distortion is a no-op whenever the instance resolves DistortIntensity to 0 — the branchless form keeps
+    // one shader permutation rather than trading a texture fetch for divergence.
+    const float2 DistortUv = In.UV * DistortScale + In.Time * DistortSpeed.rg;
+    const float2 Distort   = (CkUsf_SampleTexture2D(DistortTex, DistortTexSampler, DistortUv).rg - 0.5)
+                           * Distortion;
+
+    // The offset channel pans along U only: on the slash carrier u runs ALONG the arc, so this is what makes
+    // the streak sweep from one end of the crescent to the other. It is a CLAMPED reveal, matching the parent
+    // graph's Clamp nodes — shape U driven off either end reads as NOTHING rather than wrapping the pattern
+    // back around, which would sweep every point of the arc twice (NS_BasicAttack.md §13).
+    const float2 ShapeUv      = In.UV * MainTexScale.rg + Distort + float2(PanOffset, 0.0);
+    const float  ShapeUInside = step(0.0, ShapeUv.x) * step(ShapeUv.x, 1.0);
+    const float  Shape        = CkUsf_SampleTexture2D(ShapeTex, ShapeTexSampler,
+                                                      float2(saturate(ShapeUv.x), ShapeUv.y)).r * ShapeUInside;
+
+    // The dissolve noise pans over time; the particle's dissolve channel ADDS to it and the sum is
+    // smoothstepped at ZERO — the family's name is its math. +1 keeps the whole noise range above the edge
+    // (fully intact), -1 pushes it all below (fully dissolved), and the values between slide the erosion
+    // front across the noise from its sparsest regions inward. Reading the channel as a direct threshold on
+    // the noise instead is corpus-contradicted: it renders the dissolve=1 instances (Slash02/Slash04)
+    // invisible for their whole life and never erodes Slash01's -0.1 -> -1 curve (NS_BasicAttack.md §5).
+    const float2 DissolveUv = In.UV * DissolveScale.rg + Distort + In.Time * float2(DissolveSpeed, DissolveSpeedY);
+    const float  Noise      = CkUsf_SampleTexture2D(DissolveTex, DissolveTexSampler, DissolveUv).r;
+
+    const float Mask = smoothstep(0.0, max(DissolveEdge, 1e-4), Noise + Dissolve);
+
+    // Core tint pulls the hot centre toward CoreColor; a non-positive core_color channel leaves the
+    // particle's own colour untouched.
+    const float3 Tint = lerp(In.ParticleColor.rgb, CoreColor, saturate(CoreAmount));
+
+    O.EmissiveColor = Tint * Shape * Mask * Brightness;
+    O.Opacity       = saturate(Shape * Mask * In.ParticleColor.a * OpacityBoldness);
+
+    return O;
+}

@@ -124,6 +124,7 @@ defaults off, so looks that predate the contract regenerate byte-identically —
 | Field | Effect |
 |---|---|
 | `_UsedWithNiagaraSprites` | bakes `bUsedWithNiagaraSprites` (engine `Material.h:721`) onto the generated master |
+| `_UsedWithNiagaraMeshParticles` | bakes `bUsedWithNiagaraMeshParticles` — the same contract for a MESH-particle renderer |
 | `_ParticleColor` | wires `UMaterialExpressionParticleColor` → `In.ParticleColor` (float4) |
 | `_ParticleDynamicParameter` | wires `UMaterialExpressionDynamicParameter` (index 0) → `In.DynamicParameter` (float4) |
 | `_ParticleDynamicParameterNames` | up to 4 channel names, for readability in the generated master |
@@ -132,8 +133,9 @@ Both inputs are **Surface-domain only** — the generator wires them nowhere els
 errors rather than leaving them silently inert. Reading them on a non-particle mesh is safe:
 `In.ParticleColor` defaults to opaque white and `In.DynamicParameter` to zero.
 
-Only **sprite** usage exists. Ribbon and mesh-particle usages were deliberately not added — add one
-when a look actually needs it.
+Sprite and mesh-particle usages exist and are INDEPENDENT: the flag decides which renderer accepts the
+master, not what the shader may read, so a look reading `ParticleColor` needs whichever one matches its
+renderer. Ribbon usage is still deliberately absent — add it when a look actually needs it.
 
 Three engine facts the generator depends on (verified against the checked-out 5.7 source):
 
@@ -151,8 +153,11 @@ Three engine facts the generator depends on (verified against the checked-out 5.
   **`GetOutputs()` must be called after setting `ParamNames`** or every by-name connect silently
   no-ops — a failure that produces a working-looking material with dead inputs.
 
-Consumer example: CkParticles behavior 17 (`RingDissolveAdd`) — recipe in
-`CkParticles/Cookbook/NS_Lightning_Range.md`.
+Consumer examples: CkParticles behavior 17 (`RingDissolveAdd`, sprite) — recipe in
+`CkParticles/Cookbook/NS_Lightning_Range.md` — and behavior 7's five `DissolveAdd` looks (four mesh-particle
++ one sprite) in `CkParticles/Cookbook/NS_BasicAttack.md`. All six share ONE shader,
+`/CkUsf/Looks/DissolveAdd.ush`: the Vefects source ships one parent graph and one material instance per
+emitter, so a look here is a set of parameter defaults, never a second copy of the math.
 
 ## Anti-patterns
 

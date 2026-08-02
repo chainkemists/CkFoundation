@@ -988,8 +988,8 @@ namespace CkUsf
     // Recipe + provenance: CkFoundation/Source/CkParticles/Cookbook/NS_Lightning_Range.md
     asset RingDissolveAdd of UCkUsf_LookDefinition
     {
-        _UshIncludePath  = "/CkUsf/Looks/RingDissolveAdd.ush";
-        _UshFunctionName = n"CkUsf_Look_RingDissolveAdd";
+        _UshIncludePath  = "/CkUsf/Looks/DissolveAdd.ush";
+        _UshFunctionName = n"CkUsf_Look_DissolveAdd";
         _Domain          = ECk_Usf_Domain::SurfaceUnlit;
         _BlendMode       = ECk_Usf_BlendMode::Translucent;
         _LookName        = n"RingDissolveAdd";
@@ -1067,5 +1067,15 @@ namespace CkUsf
         OpacityBoldness._Type = ECk_Usf_ParamType::Scalar;
         OpacityBoldness._DefaultScalar = 1.0;
         _Parameters.Add(OpacityBoldness);
+
+        // The rest of the family's parameter surface, at the values THIS instance resolves: no second
+        // dissolve axis, no static dissolve bias, unit dissolve/main-tex scales, and Distortion_Intensity 0
+        // (which is what makes the distortion branch dead on the range ring).
+        _Parameters.Add(CkUsf::Usf_Scalar(n"DissolveSpeedY",   0.2));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"DissolveBias",     0.0));
+        _Parameters.Add(CkUsf::Usf_Vector(n"DissolveScale",    FLinearColor(1.0, 1.0, 0.0, 1.0)));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"DistortIntensity", 0.0));
+        _Parameters.Add(CkUsf::Usf_Vector(n"DistortSpeed",     FLinearColor(0.0, 0.0, 0.0, 1.0)));
+        _Parameters.Add(CkUsf::Usf_Vector(n"MainTexScale",     FLinearColor(1.0, 1.0, 0.0, 1.0)));
     }
 }
