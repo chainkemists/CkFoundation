@@ -1,4 +1,5 @@
 #include "CkWebUmgEditor/CkWebUmg_Importer.h"
+#include "CkWebUmgEditor/CkWebUmg_PageAssetFactory.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -78,6 +79,48 @@ bool
     AddInfo(FString::Printf(TEXT("live-vs-golden source hash: %s (equal=%d)"),
         *FromHtml->Get_SourceHash(),
         FromHtml->Get_SourceHash() == FromGolden->Get_SourceHash() ? 1 : 0));
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// The Content-Browser face: the factory imports a dropped .html through the full toolchain, the
+// asset stamps its source, and the reimport handler re-runs from that stamp (unchanged = no-op).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCkWebUmg_FactoryReimport_Test,
+    "CkTests.UnitTests.CkWebUmg.FactoryReimport",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool
+    FCkWebUmg_FactoryReimport_Test::
+    RunTest(
+        const FString&)
+{
+    const auto Plugin = IPluginManager::Get().FindPlugin(TEXT("CkFoundation"));
+    if (NOT TestTrue(TEXT("plugin found"), Plugin != nullptr))
+    { return false; }
+    const auto HtmlPath = FPaths::Combine(Plugin->GetBaseDir(),
+        TEXT("Tools"), TEXT("ckwebumg-extract"), TEXT("corpus"), TEXT("smoke.html"));
+
+    auto* Factory = NewObject<UCk_WebUmg_PageAssetFactory>();
+    auto* Package = CreatePackage(TEXT("/Temp/CkWebUmgFactoryTest/smoke"));
+    auto Cancelled = false;
+    auto* Created = Factory->FactoryCreateFile(
+        UCk_WebUmg_PageAsset_UE::StaticClass(), Package, TEXT("smoke"),
+        RF_Public | RF_Standalone, HtmlPath, nullptr, GWarn, Cancelled);
+
+    auto* Asset = Cast<UCk_WebUmg_PageAsset_UE>(Created);
+    if (NOT TestTrue(TEXT("factory imports the dropped html"), Asset != nullptr))
+    { return false; }
+    TestTrue(TEXT("html source stamped for reimport"),
+        Asset->Get_SourceHtmlPath().EndsWith(TEXT("smoke.html")));
+
+    auto ReimportSources = TArray<FString>{};
+    TestTrue(TEXT("reimport handler recognizes the asset"),
+        Factory->CanReimport(Asset, ReimportSources)
+        && ReimportSources.Num() == 1 && ReimportSources[0].EndsWith(TEXT("smoke.html")));
+
+    TestTrue(TEXT("reimport from the stamped source succeeds (unchanged = hash no-op)"),
+        Factory->Reimport(Asset) == EReimportResult::Succeeded);
     return true;
 }
 

@@ -31,4 +31,11 @@ namespace ck::webumg::editor
         const FString& InPackageFolder,
         bool InSaveToDisk)
         -> UCk_WebUmg_PageAsset_UE*;
+
+    // Re-runs the import from the asset's stamped source (html re-extracts; json re-reads).
+    // Unchanged sources no-op via the hash stamp. False (ensured) when no source is stamped.
+    CKWEBUMGEDITOR_API auto
+    ReimportPageAsset(
+        UCk_WebUmg_PageAsset_UE& InOutAsset)
+        -> bool;
 }

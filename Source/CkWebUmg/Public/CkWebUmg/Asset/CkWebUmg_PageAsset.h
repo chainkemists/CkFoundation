@@ -522,7 +522,13 @@ private:
     FString _Browser;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FString _SourceHash; // SHA1 of the source ckui.json text — the regeneration stamp
+    FString _SourceHash; // MD5 of the source ckui.json text — the regeneration stamp
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FString _SourceJsonPath; // where the bundle came from — reimport re-runs from here
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FString _SourceHtmlPath; // set when imported via the html toolchain; reimport re-extracts
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     TArray<FCk_WebUmg_NodeData> _Nodes;
@@ -540,6 +546,8 @@ public:
     CK_PROPERTY(_Viewport);
     CK_PROPERTY(_Browser);
     CK_PROPERTY(_SourceHash);
+    CK_PROPERTY(_SourceJsonPath);
+    CK_PROPERTY(_SourceHtmlPath);
     CK_PROPERTY(_Nodes);
     CK_PROPERTY(_ConversionReport);
     CK_PROPERTY(_Textures);

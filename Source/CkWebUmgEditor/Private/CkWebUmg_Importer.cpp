@@ -57,6 +57,7 @@ namespace ck::webumg::editor
 
         if (NOT ConvertIrToAsset(*Document, SourceHash, *Asset))
         { return nullptr; } // duplicate data-ck-name etc. — already ensured; existing asset untouched
+        Asset->Set_SourceJsonPath(InJsonPath);
 
         // Textures ride the same package (outered to the asset), sourced from the browser-
         // normalized ckui-assets bundle next to the json.
@@ -141,8 +142,33 @@ namespace ck::webumg::editor
         if (NOT ExtractionSucceeded)
         { return nullptr; }
 
-        return ImportPageAsset(
+        auto* Asset = ImportPageAsset(
             FPaths::Combine(OutDir, BaseName + TEXT(".ckui.json")), InPackageFolder, InSaveToDisk);
+        if (Asset != nullptr)
+        { Asset->Set_SourceHtmlPath(FPaths::ConvertRelativePathToFull(InHtmlPath)); }
+        return Asset;
+    }
+
+    auto
+    ReimportPageAsset(
+        UCk_WebUmg_PageAsset_UE& InOutAsset)
+        -> bool
+    {
+        // Html-sourced assets re-extract (design changed upstream); json-sourced re-read the bundle.
+        // Either path lands in ImportPageAsset, whose hash stamp makes unchanged sources a no-op.
+        const auto PackageFolder = FPaths::GetPath(InOutAsset.GetPackage()->GetName());
+        constexpr auto SaveToDisk = false; // the editor's reimport flow owns saving
+
+        if (NOT InOutAsset.Get_SourceHtmlPath().IsEmpty())
+        { return ImportPageAssetFromHtml(InOutAsset.Get_SourceHtmlPath(), PackageFolder, SaveToDisk) != nullptr; }
+
+        const auto JsonPathIsSet = NOT InOutAsset.Get_SourceJsonPath().IsEmpty();
+        CK_ENSURE_IF_NOT(JsonPathIsSet, TEXT("ReimportPageAsset: [{}] has no stamped source path"),
+            InOutAsset.GetName())
+        {}
+        if (NOT JsonPathIsSet)
+        { return false; }
+        return ImportPageAsset(InOutAsset.Get_SourceJsonPath(), PackageFolder, SaveToDisk) != nullptr;
     }
 }
 
