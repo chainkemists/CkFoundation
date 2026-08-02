@@ -9,6 +9,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "HAL/PlatformTime.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_OnPathResolved);
@@ -28,10 +30,61 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_Nav_PathResult& InPathResult,
-            FFragment_CrowdAgent_PathFollow& InPathFollow)
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_PathTrouble& InPathTrouble)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_OnPathResolvedProc);
+
+        const auto IsPathNetworkFallback =
+            InHandle.Has<FTag_CrowdAgent_PathNetworkFallbackPending>();
+        const auto IsTerminalPathResult =
+            InPathResult.Get_Status() == ECk_Nav_PathStatus::Ready
+            || InPathResult.Get_Status() == ECk_Nav_PathStatus::Partial
+            || InPathResult.Get_Status() == ECk_Nav_PathStatus::Failed;
+        if (IsPathNetworkFallback && IsTerminalPathResult)
+        {
+            const auto& Diagnostics = InPathResult.Get_Diagnostics();
+            ck::crowd::Display(
+                TEXT("[PNDiag] CrowdAgent [{}] PathNetwork fallback result: status [{}], "
+                     "raw [{}] -> [{}], projected [{}:{}] -> [{}:{}], destination [{}], "
+                     "waypoints [{}], reason [{}], queryMs [{}]"),
+                InHandle,
+                InPathResult.Get_Status(),
+                Diagnostics.Get_LastAgentLocation(),
+                Diagnostics.Get_LastTargetLocation(),
+                Diagnostics.Get_StartProjected(),
+                Diagnostics.Get_LastProjectedStart(),
+                Diagnostics.Get_EndProjected(),
+                Diagnostics.Get_LastProjectedEnd(),
+                InPathResult.Get_DestinationLocation(),
+                InPathResult.Get_Waypoints().Num(),
+                Diagnostics.Get_LastFailReason(),
+                Diagnostics.Get_LastQueryDurationMs());
+        }
+
+        const auto IsNavigationTrouble =
+            InPathResult.Get_Status() == ECk_Nav_PathStatus::Partial
+            || InPathResult.Get_Status() == ECk_Nav_PathStatus::Failed;
+        if (IsTerminalPathResult && (IsPathNetworkFallback || IsNavigationTrouble))
+        {
+            // Preserve the sidewalk failure already recorded by OnRouteResolved, then append the
+            // terminal fallback result. Direct CkNavigation Partial/Failed attempts start here.
+            if (NOT IsPathNetworkFallback)
+            {
+                InPathTrouble._PathNetworkFailReason = ECk_PathNetwork_RouteFailReason::None;
+                InPathTrouble._HadPathNetworkFailure = false;
+                InPathTrouble._UsedNavigationFallback = false;
+            }
+
+            InPathTrouble._AgentLocation = InTransform.Get_Transform().GetLocation();
+            InPathTrouble._GoalLocation = InPathFollow.Get_ActiveGoal();
+            InPathTrouble._EventTimeSeconds = FPlatformTime::Seconds();
+            InPathTrouble._NavigationStatus = InPathResult.Get_Status();
+            InPathTrouble._NavigationFailReason =
+                InPathResult.Get_Diagnostics().Get_LastFailReason();
+            InPathTrouble._HasEvent = true;
+        }
 
         switch (InPathResult.Get_Status())
         {
@@ -39,6 +92,7 @@ namespace ck
             case ECk_Nav_PathStatus::Partial:
             {
                 InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
+                InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
                 InHandle.AddOrGet<FTag_CrowdAgent_Walking>();
 
                 const auto& Wps = InPathResult.Get_Waypoints();
@@ -107,6 +161,7 @@ namespace ck
             case ECk_Nav_PathStatus::Failed:
             {
                 InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
+                InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
                 InHandle.AddOrGet<FTag_CrowdAgent_Idle>();
 
                 UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(

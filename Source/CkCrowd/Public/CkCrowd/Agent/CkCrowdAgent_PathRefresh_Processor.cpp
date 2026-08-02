@@ -537,8 +537,9 @@ namespace ck
             NonConstHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
-            UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower,
-                FCk_Request_PathNetworkFollower_FindRoute{Goal}, {});
+            auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
+            Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
         }
         else
         {

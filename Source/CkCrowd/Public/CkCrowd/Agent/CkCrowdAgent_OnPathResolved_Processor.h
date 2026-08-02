@@ -24,6 +24,7 @@ namespace ck
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_Nav_PathResult>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
+            ck::TReadWrite<FFragment_CrowdAgent_PathTrouble>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -42,7 +43,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_Nav_PathResult& InPathResult,
-            FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_PathTrouble& InPathTrouble) -> void;
     };
 }
 

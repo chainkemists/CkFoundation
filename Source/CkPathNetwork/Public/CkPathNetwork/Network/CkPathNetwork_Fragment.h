@@ -2,6 +2,7 @@
 
 #include "CkPathNetwork/Network/CkPathNetwork_BuiltNetwork.h"
 #include "CkPathNetwork/Network/CkPathNetwork_Fragment_Data.h"
+#include "CkPathNetwork/Network/CkPathNetwork_RouteGraph.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
@@ -31,6 +32,11 @@ namespace ck
     private:
         pathnetwork::FBuiltNetwork _Network;
         int32 _Epoch = 0;
+        TMap<
+            pathnetwork::FRouteGraphStaticDataKey,
+            TSharedPtr<
+                const pathnetwork::FRouteGraphStaticData>>
+            _RouteGraphStaticDataByPolicy;
 
     public:
         CK_PROPERTY_GET(_Network);
@@ -96,11 +102,13 @@ namespace ck
     private:
         FCk_PathNetwork_RouteResult _Result;
         FCk_Handle_PathNetwork _Network;
+        FGameplayTag _NavQueryFilter;
         int32 _NetworkEpoch = 0;
 
     public:
         CK_PROPERTY_GET(_Result);
         CK_PROPERTY_GET(_Network);
+        CK_PROPERTY_GET(_NavQueryFilter);
         CK_PROPERTY_GET(_NetworkEpoch);
     };
 

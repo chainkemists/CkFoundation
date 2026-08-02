@@ -97,12 +97,16 @@ namespace ck
         InPathFollow._ActiveArrivalRadius = ArrivalRadius;
         InPathFollow._ActiveGoal = Goal;
 
+        // The same-goal walking no-op returned above, so this is a genuinely new movement episode.
+        InHandle.Get<FFragment_CrowdAgent_PathTrouble>() = FFragment_CrowdAgent_PathTrouble{};
+
         // Intentionally do NOT zero _DesiredVelocity: re-targeting mid-walk preserves momentum and
         // the acceleration ramp reconciles direction once the new path resolves. Zeroing made
         // back-to-back MoveTos stop dead and re-accelerate. Stop DOES zero — that is its semantic.
 
         InHandle.Try_Remove<FTag_CrowdAgent_Idle>();
         InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
+        InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
         InHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
         // An external MoveTo starts a NEW episode, so OnGoalBlocked may fire again for the new goal.
@@ -118,42 +122,56 @@ namespace ck
             InHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
 
             auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
-            UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower,
-                FCk_Request_PathNetworkFollower_FindRoute{Goal}, {});
+            auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
+            Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
         }
         else
         {
-            // Park the slot at Pending BEFORE enqueueing: OnPathResolved runs after this processor
-            // in the same frame and would otherwise consume a previous move's Ready result as if
-            // it answered THIS MoveTo, walking the agent down the stale corridor.
-            FCk_Nav_Algorithm::MarkPathPending(InHandle);
-
-            auto Request = FCk_Request_Nav_FindPath{Goal};
-            Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
-
-            // A MoveTo issued while the agent stands inside painted stationary markup would plan
-            // "through" the band — see Get_EscapedQueryStart.
-            auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
-            if (ck::IsValid(TransformHandle))
-            {
-                const auto Escaped = FProcessor_CrowdAgent_PathRefresh::Get_EscapedQueryStart(
-                    InHandle,
-                    InHandle.Get_Entity(),
-                    UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle),
-                    InRequest.Get_Target(),
-                    InParams.Get_Radius());
-                if (Escaped.IsSet())
-                {
-                    Request.Set_StartOverride(ECk_EnableDisable::Enable)
-                           .Set_StartOverrideLocation(*Escaped);
-                }
-            }
-
-            UCk_Utils_Nav_UE::Request_FindPath(InHandle, Request, {});
+            Request_NavigationPath(InHandle, InParams, Goal);
         }
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} (arrival={})"),
             InHandle, Goal, ArrivalRadius);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        Request_NavigationPath(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            const FVector& InGoal)
+        -> void
+    {
+        // Park the slot at Pending BEFORE enqueueing: OnPathResolved runs after this processor
+        // in the same frame and would otherwise consume a previous move's Ready result as if
+        // it answered THIS MoveTo, walking the agent down the stale corridor.
+        FCk_Nav_Algorithm::MarkPathPending(InHandle);
+
+        auto Request = FCk_Request_Nav_FindPath{InGoal};
+        Request.Set_QueryFilter(InParams.Get_NavQueryFilter());
+
+        // A MoveTo issued while the agent stands inside painted stationary markup would plan
+        // "through" the band — see Get_EscapedQueryStart.
+        auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+        if (ck::IsValid(TransformHandle))
+        {
+            const auto Escaped = FProcessor_CrowdAgent_PathRefresh::Get_EscapedQueryStart(
+                InHandle,
+                InHandle.Get_Entity(),
+                UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle),
+                InGoal,
+                InParams.Get_Radius());
+            if (Escaped.IsSet())
+            {
+                Request.Set_StartOverride(ECk_EnableDisable::Enable)
+                       .Set_StartOverrideLocation(*Escaped);
+            }
+        }
+
+        UCk_Utils_Nav_UE::Request_FindPath(InHandle, Request, {});
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -205,10 +223,12 @@ namespace ck
     {
         InDesired._Velocity = FVector::ZeroVector;
         InPathFollow._WaypointIndex = 0;
+        InHandle.Get<FFragment_CrowdAgent_PathTrouble>() = FFragment_CrowdAgent_PathTrouble{};
 
         InHandle.Try_Remove<FFragment_CrowdAgent_FollowTarget>();
         InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
         InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
+        InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
         InHandle.AddOrGet<FTag_CrowdAgent_Idle>();
 
         // Stop abandons the goal entirely — BlockedRecheck must never resume it.
