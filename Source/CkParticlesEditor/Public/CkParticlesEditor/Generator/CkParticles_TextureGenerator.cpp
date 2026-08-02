@@ -2,6 +2,8 @@
 
 #include "CkParticlesEditor_Log.h"
 
+#include "CkCore/Macros/CkMacros.h"
+
 #include "Engine/Texture2D.h"
 #include "Engine/TextureDefines.h"
 
@@ -659,6 +661,64 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
+    // T_VFX_Arrow_01 stand-in — the chevron the Buff and Debuff loops fire as their arrow streams, and the only
+    // POLYGONAL paint in the cookbook. Measured: horizontally symmetric to a correlation of 0.99999996, no
+    // vertical symmetry at all, lit only over v 0.207..0.559, and its half-intensity contour traces a quadrilateral
+    // whose corners fall on the four points below (outer apex, outer corner, arm tip, inner apex; the right arm is
+    // the mirror). Regressing intensity against the SIGNED DISTANCE to that quad fits a two-term exponential to an
+    // RMSE of 0.0047 over the whole 0..0.21 range, which is what the falloff constants are.
+    //
+    // No existing bake was a candidate: every mask in the library is radial, streaked or noise, and none of them
+    // has a straight edge, let alone four.
+    static auto Px_ArrowChevron(float U, float V) -> FLinearColor
+    {
+        // The measured half-intensity polygon on the LEFT arm, in uv.
+        static const FVector2f Quad[] =
+        {
+            FVector2f(0.5000f, 0.2666f), // outer apex, on the centreline
+            FVector2f(0.2637f, 0.4189f), // outer corner where the arm's leading edge turns
+            FVector2f(0.3242f, 0.5010f), // arm tip
+            FVector2f(0.5000f, 0.3914f), // inner apex — the notch between the two arms
+        };
+
+        constexpr float NearAmp   = 0.4222f;
+        constexpr float NearDecay = 49.0f;
+        constexpr float FarAmp    = 0.0650f;
+        constexpr float FarDecay  = 12.5f;
+
+        // Mirror into the left half; the paint is symmetric about u = 0.5 to six decimal places.
+        const FVector2f P(0.5f - FMath::Abs(U - 0.5f), V);
+
+        auto  MinDistSq = TNumericLimits<float>::Max();
+        auto  Sign      = 1.0f;
+        const auto Count = static_cast<int32>(UE_ARRAY_COUNT(Quad));
+
+        for (auto I = 0; I < Count; ++I)
+        {
+            const auto J = (I + Count - 1) % Count;
+
+            const auto E = Quad[J] - Quad[I];
+            const auto W = P - Quad[I];
+            const auto T = FMath::Clamp(FVector2f::DotProduct(W, E)
+                                      / FMath::Max(FVector2f::DotProduct(E, E), 1.0e-9f), 0.0f, 1.0f);
+            const auto B = W - E * T;
+
+            MinDistSq = FMath::Min(MinDistSq, FVector2f::DotProduct(B, B));
+
+            // Winding test: an odd number of edge crossings puts the point inside.
+            const auto C1 = P.Y >= Quad[I].Y;
+            const auto C2 = P.Y <  Quad[J].Y;
+            const auto C3 = E.X * W.Y > E.Y * W.X;
+
+            if ((C1 && C2 && C3) || (NOT C1 && NOT C2 && NOT C3))
+            { Sign = -Sign; }
+        }
+
+        const auto D = Sign * FMath::Sqrt(MinDistSq);
+        const auto I = Saturate(NearAmp * FMath::Exp(-NearDecay * D) + FarAmp * FMath::Exp(-FarDecay * D));
+        return FLinearColor(I, I, I, I);
+    }
+
     // T_VFX_LightStrip_01 stand-in. NOT the Streak bake, which is a lobe centred at v = 0.5: this is a vertical
     // strip that RAMPS along v (centroid v 0.735, linear from 0.03 at v 0.25 to 0.99 at v 0.90, then collapsing
     // to nothing by v 0.98) with a flat-topped cross-section, where Streak's along-u term is a cusp with no
@@ -972,6 +1032,10 @@ namespace ck::particles_editor
             { TEXT("T_CkParticles_StarFourTight"),      ECk_VfxTextureKind::Mask, &Px_StarFourTight      },
             { TEXT("T_CkParticles_StarFourSplit"),      ECk_VfxTextureKind::Mask, &Px_StarFourSplit      },
             { TEXT("T_CkParticles_WindBandMid"),        ECk_VfxTextureKind::Mask, &Px_WindBandMid        },
+            // The Vefects Loop paints (recipes NS_BuffLoop.md §7, NS_DebuffLoop.md §7). Only ONE new bake: the
+            // arrow chevron. Every other texture those four ports need is a paint an earlier batch already
+            // measured and baked, reached through a look that already binds it.
+            { TEXT("T_CkParticles_ArrowChevron"),       ECk_VfxTextureKind::Mask, &Px_ArrowChevron       },
         };
 
         auto Ok = 0;

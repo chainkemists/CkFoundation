@@ -1,0 +1,305 @@
+// /CkParticles/Behaviors/Behavior_HealLoop.ush — BehaviorId 27.
+//
+// Faithful re-port of Vefects NS_HealLoop. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_HealLoop.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is NINE emitters, all enabled, every one spawning through Spawn Rate: a lens ring, two upward sparkle
+// streams (one of them velocity-stretched), two stars whose MATERIALS are swapped relative to their emitter names,
+// three glows and a hue-randomized flare haze, on a system that loops Infinite / 1.0 s. One CkParticles emitter
+// carries all nine as a 34.5 particles/second stream through PS_CkParticles_Template_HealLoop
+// (1.0 s loop / 2.0 s particle lifetime / rate 34.5).
+//
+// The four emitters that STORE Loop Behavior = Once on a 0.3 s loop are Life Cycle Mode = System like the rest, so
+// those rows are inert and all nine stream continuously — the reading that made this a "four one-shots plus five
+// loops" system came from trusting them. Nothing here reads In.EmitterAge (recipe §13).
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 27) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — cumulative spawn-rate shares in the source's own emitter order (recipe §2).
+#define CKP_HL_RATE_TOTAL      34.5
+#define CKP_HL_CUM_RAINBOW      0.5   // Raimbow             0.5/s
+#define CKP_HL_CUM_SPARKLES    10.5   // Sparkles_01        10/s
+#define CKP_HL_CUM_STRETCH     20.5   // Sparkles_Stretched 10/s
+#define CKP_HL_CUM_STAR01      21.5   // Star01              1/s
+#define CKP_HL_CUM_STAR02      22.5   // Star02              1/s
+#define CKP_HL_CUM_GLOW01      24.5   // Glow_01             2/s
+#define CKP_HL_CUM_GLOW02      26.5   // Glow_02             2/s
+#define CKP_HL_CUM_FLARES      32.5   // Flares              6/s
+                                      // Glow_03             2/s -> the remainder
+
+#define CKP_HL_LAYER_RAINBOW    0
+#define CKP_HL_LAYER_SPARKLES   1
+#define CKP_HL_LAYER_STRETCH    2
+#define CKP_HL_LAYER_STAR01     3
+#define CKP_HL_LAYER_STAR02     4
+#define CKP_HL_LAYER_GLOW01     5
+#define CKP_HL_LAYER_GLOW02     6
+#define CKP_HL_LAYER_FLARES     7
+#define CKP_HL_LAYER_GLOW03     8
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_HL_VIS_RAINBOW     77
+#define CKP_HL_VIS_PART01BR    78
+#define CKP_HL_VIS_PART04      79
+#define CKP_HL_VIS_STAR02      80
+#define CKP_HL_VIS_STAR01      81
+#define CKP_HL_VIS_PART01      82
+#define CKP_HL_VIS_PART02      83
+
+// The Flares base colour RGBA(0.0749313, 1, 0) in HSV — a pure green, so saturation and value are both 1 and the
+// source's Saturation/Value ranges replace them outright (recipe §13).
+#define CKP_HL_FLARE_BASE_HUE   0.32084478
+
+FCkParticles_StageOutput CkParticles_HealLoop_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+int CkParticles_HealLoop_Layer(int Seed)
+{
+    const float R = CkParticles_Rand(Seed, 0) * CKP_HL_RATE_TOTAL;
+
+    if (R < CKP_HL_CUM_RAINBOW)  { return CKP_HL_LAYER_RAINBOW; }
+    if (R < CKP_HL_CUM_SPARKLES) { return CKP_HL_LAYER_SPARKLES; }
+    if (R < CKP_HL_CUM_STRETCH)  { return CKP_HL_LAYER_STRETCH; }
+    if (R < CKP_HL_CUM_STAR01)   { return CKP_HL_LAYER_STAR01; }
+    if (R < CKP_HL_CUM_STAR02)   { return CKP_HL_LAYER_STAR02; }
+    if (R < CKP_HL_CUM_GLOW01)   { return CKP_HL_LAYER_GLOW01; }
+    if (R < CKP_HL_CUM_GLOW02)   { return CKP_HL_LAYER_GLOW02; }
+    if (R < CKP_HL_CUM_FLARES)   { return CKP_HL_LAYER_FLARES; }
+    return CKP_HL_LAYER_GLOW03;
+}
+
+// The "heal" ramp both sparkle streams carry, keyed identically on each.
+float3 CkParticles_HealLoop_SparkleRamp(float T)
+{
+    return float3(
+        CkParticles_Key4(T, 0.0, 0.715694, 0.079686, 1.0,      0.290975, 0.109462, 0.713553, 0.024158),
+        CkParticles_Key4(T, 0.0, 0.89627,  0.079686, 0.854993, 0.290975, 1.0,      0.713553, 0.913099),
+        CkParticles_Key4(T, 0.0, 1.0,      0.079686, 0.376262, 0.290975, 0.617207, 0.713553, 0.141263));
+}
+
+// The two star emitters share every parameter except sprite size, Scale Alpha and — because the source SWAPS them —
+// which star paint they draw with. One body serves both.
+FCkParticles_StageOutput CkParticles_HealLoop_Star(
+    FCkParticles_StageOutput O, FCkParticles_StageInput In, float T, float Life,
+    float SizeMin, float SizeMax, float ScaleAlpha, int VisTag)
+{
+    // Cylinder radius 30, height 60, offset (0, 0, -30) — spawned BELOW the origin and pushed straight up.
+    const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 30.0, 60.0, float3(0.0, 0.0, -30.0));
+    const float3 V0    = float3(0.0, 0.0, 500.0);
+
+    O.Position = Spawn + V0 * (CkParticles_Int3(T, 0.2, 1.0, 0.25, 0.0) * Life);
+    O.Velocity = V0 * CkParticles_Key3(T, 0.0, 1.0, 0.2, 0.25, 1.0, 0.0);
+
+    O.Color = float4(
+        CkParticles_Key4(T, 0.0, 0.715694, 0.0796861, 1.0,      0.234229, 0.921582, 0.80652, 0.109462),
+        CkParticles_Key4(T, 0.0, 0.89627,  0.0796861, 0.854993, 0.234229, 0.723055, 0.80652, 1.0),
+        CkParticles_Key4(T, 0.0, 1.0,      0.0796861, 0.376262, 0.234229, 0.462077, 0.80652, 0.617207),
+        CkParticles_Key2(T, 0.0808934, 1.0, 1.0, 0.0) * ScaleAlpha);
+
+    const float Base = lerp(SizeMin, SizeMax, CkParticles_Rand(In.Seed, 8));
+    const float Grow = CkParticles_Key3(T, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+    O.Size = float2(Base * Grow, Base * Grow);
+
+    O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+    O.VisTag  = VisTag;
+    return O;
+}
+
+// Glow_01 and Glow_03 carry byte-identical colour keys and differ only in size, paint and Scale Alpha.
+FCkParticles_StageOutput CkParticles_HealLoop_Glow(
+    FCkParticles_StageOutput O, float T, float Size, float ScaleAlpha, float Dissolve, int VisTag)
+{
+    O.Color = float4(
+        0.296138,
+        1.0,
+        CkParticles_Key3(T, 0.169031, 0.737911, 0.470872, 0.47932, 0.817386, 0.737911),
+        CkParticles_Key4(T, 0.0, 0.0, 0.237851, 1.0, 0.712345, 1.0, 1.0, 0.0) * ScaleAlpha);
+    O.Size    = float2(Size, Size);
+    O.Dynamic = float4(Dissolve, 0.0, 0.0, 0.0);
+    O.VisTag  = VisTag;
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_HealLoop(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = CkParticles_HealLoop_Layer(In.Seed);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // ---- Raimbow: the lens ring, one particle every two seconds. A Scale Color module in RGBA-Together mode, so
+    // its grey Initialize colour is HALVED rather than replaced, and its alpha is a TRIANGLE (the Cast variants of
+    // this layer ramp 1 -> 0 instead).
+    if (Layer == CKP_HL_LAYER_RAINBOW)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_HealLoop_Hidden(O); }
+
+        const float t     = saturate(In.Age);
+        const float Grow  = CkParticles_Key2(t, 0.0, 0.8, 1.0, 1.0);
+        const float Alpha = 0.1 * CkParticles_Key3(t, 0.0, 0.0, 0.269242, 1.0, 1.0, 0.0);
+
+        O.Color    = float4(0.913099 * 0.5, 0.913099 * 0.5, 0.913099 * 0.5, Alpha);
+        O.Size     = float2(450.0 * Grow, 450.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_HL_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Sparkles_01: fine motes fired straight up out of a wide cylinder, on the shared "heal" ramp ----
+    if (Layer == CKP_HL_LAYER_SPARKLES)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_HealLoop_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 80.0, 130.0, float3(0.0, 0.0, 0.0));
+        const float3 V0    = float3(0.0, 0.0, lerp(1000.0, 2000.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.1, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.1, 0.15, 1.0, 0.0);
+
+        const float3 Rgb = CkParticles_HealLoop_SparkleRamp(t);
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, CkParticles_Key2(t, 0.080893, 1.0, 1.0, 0.0) * 0.15);
+
+        const float Base = lerp(6.0, 10.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        // An authored angle with no Sprite Rotation Mode line: a fixed 90 degrees on every particle.
+        O.Rotation = 90.0;
+        O.Dynamic  = float4(3.0, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_HL_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Sparkles_Stretched: the same stream drawn velocity-aligned, stretching with SPEED ----
+    if (Layer == CKP_HL_LAYER_STRETCH)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_HealLoop_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 80.0, 120.0, float3(0.0, 0.0, 0.0));
+        const float3 V0    = float3(0.0, 0.0, lerp(1000.0, 1600.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        const float3 Rgb = CkParticles_HealLoop_SparkleRamp(t);
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, CkParticles_Key2(t, 0.080893, 1.0, 1.0, 0.0) * 0.15);
+
+        // Random Non-Uniform sizing whose LENGTH range is inverted in the source (min 70 > max 60); copied verbatim,
+        // since lerping the other way spans the identical set of values.
+        const float Width  = lerp(25.0, 40.0, CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(70.0, 60.0, CkParticles_Rand(In.Seed, 3));
+        const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float Taper  = CkParticles_Key3(t, 0.0, 1.0, 0.3, 0.25, 1.0, 0.2);
+
+        // Scale Sprite Size by Speed: length only, 1x up to the 1000-unit threshold and 2x at or past it.
+        const float SpeedFactor = lerp(1.0, 2.0, saturate(length(O.Velocity) / 1000.0));
+
+        O.Size   = float2(Width * Grow, Length * Grow * Taper * SpeedFactor);
+        O.VisTag = CKP_HL_VIS_PART04;
+        return O;
+    }
+
+    // ---- Star01 / Star02: the swapped pair. Emitter Star01 draws with the Star02 paint and vice versa ----
+    if (Layer == CKP_HL_LAYER_STAR01 || Layer == CKP_HL_LAYER_STAR02)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_HealLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / Life);
+
+        if (Layer == CKP_HL_LAYER_STAR01)
+        { return CkParticles_HealLoop_Star(O, In, t, Life, 40.0, 50.0, 1.0, CKP_HL_VIS_STAR02); }
+
+        return CkParticles_HealLoop_Star(O, In, t, Life, 30.0, 40.0, 0.7, CKP_HL_VIS_STAR01);
+    }
+
+    // ---- Glow_01: the largest sprite in the system, and by far the faintest — Scale Alpha 0.03 ----
+    if (Layer == CKP_HL_LAYER_GLOW01)
+    {
+        if (In.Age > 2.0)
+        { return CkParticles_HealLoop_Hidden(O); }
+
+        return CkParticles_HealLoop_Glow(O, saturate(In.Age / 2.0), 550.0, 0.03, 3.0, CKP_HL_VIS_PART01);
+    }
+
+    // ---- Glow_02: the most keyed layer here — red and blue swing twice while green holds at 1 ----
+    if (Layer == CKP_HL_LAYER_GLOW02)
+    {
+        if (In.Age > 2.0)
+        { return CkParticles_HealLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / 2.0);
+
+        O.Color = float4(
+            CkParticles_Key5(t, 0.169031, 0.0609999, 0.318744, 1.0,      0.470872, 0.077,     0.62783, 1.0,      0.817386, 0.062),
+            CkParticles_Key5(t, 0.169031, 1.0,       0.318744, 0.78728,  0.470872, 1.0,       0.62783, 0.790767, 0.817386, 1.0),
+            CkParticles_Key5(t, 0.169031, 0.650356,  0.318744, 0.085,    0.470872, 0.317213,  0.62783, 0.1,      0.817386, 0.650728),
+            CkParticles_Key4(t, 0.0, 0.0, 0.237851, 1.0, 0.712345, 1.0, 1.0, 0.0) * 0.7);
+        O.Size   = float2(250.0, 250.0);
+        O.VisTag = CKP_HL_VIS_PART01;
+        return O;
+    }
+
+    // ---- Flares: the hue-randomized haze. Random Hue/Saturation/Value with all four adjust flags set, so the
+    // green base is nudged +-0.2 around the hue circle, saturation drawn from 0.35..0.5 and alpha scaled by
+    // 0.07..0.1 before the Scale Color module's SEPARATE alpha curve (peak 0.125) shapes the envelope.
+    if (Layer == CKP_HL_LAYER_FLARES)
+    {
+        const float Life = lerp(1.0, 2.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_HealLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / Life);
+
+        O.Position = CkParticles_CylinderPoint(In.Seed, 80.0, 100.0, float3(0.0, 0.0, -10.0));
+
+        // The source's Hue Shift Range DESCENDS (0.2 -> -0.2); lerping in that order is the range as authored.
+        const float  Hue = CKP_HL_FLARE_BASE_HUE + lerp(0.2, -0.2, CkParticles_Rand(In.Seed, 6));
+        const float  Sat = lerp(0.35, 0.5, CkParticles_Rand(In.Seed, 11));
+        const float3 Rgb = CkParticles_HsvToRgb(Hue, Sat, 1.0);
+
+        const float Alpha = lerp(0.07, 0.1, CkParticles_Rand(In.Seed, 12))
+                          * CkParticles_Key3(t, 0.0, 0.0, 0.3, 0.125, 1.0, 0.0);
+
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, Alpha);
+
+        const float Base = lerp(50.0, 200.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.8);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Dynamic = float4(8.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_HL_VIS_PART02;
+        return O;
+    }
+
+    // ---- Glow_03: Glow_01's colour keys on the second paint, smaller and with no dissolve ----
+    {
+        if (In.Age > 2.0)
+        { return CkParticles_HealLoop_Hidden(O); }
+
+        return CkParticles_HealLoop_Glow(O, saturate(In.Age / 2.0), 220.0, 0.07, 0.0, CKP_HL_VIS_PART02);
+    }
+}

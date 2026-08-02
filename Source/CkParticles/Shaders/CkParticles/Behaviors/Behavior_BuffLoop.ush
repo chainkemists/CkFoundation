@@ -1,0 +1,379 @@
+// /CkParticles/Behaviors/Behavior_BuffLoop.ush — BehaviorId 28.
+//
+// Faithful re-port of Vefects NS_BuffLoop. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_BuffLoop.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is NINE emitters, all enabled, every one spawning through Spawn Rate: two glows, a lens ring, a
+// velocity-aligned arrow stream, stars, two sparkle streams, a hue-randomized flare haze and the batch's only
+// SPIRALLING layer, on a system that loops Infinite / 2.0 s. One CkParticles emitter carries all nine as a
+// 48 particles/second stream through PS_CkParticles_Template_BuffLoop
+// (2.0 s loop / 2.0 s particle lifetime / rate 48).
+//
+// Sparkles_Spiral's Vortex Force is a PLAIN tangential vortex about +Z with a radial falloff — not a curl-noise
+// field — so it is solved analytically here rather than through CkParticles_CurlPath. The source force is an
+// ACCELERATION, so the swirl angle is the exact integral of (angular acceleration x the layer's own velocity-decay
+// curve), which keeps the path a closed form of (spawn, Age, Seed) and never a stepped one (recipe §13).
+//
+// Nothing here reads In.EmitterAge: all nine emitters are Life Cycle Mode = System, so their own Loop rows are
+// inert and there is no windowed sub-layer to gate.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 28) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — cumulative spawn-rate shares in the source's own emitter order (recipe §2).
+#define CKP_BL_RATE_TOTAL      48.0
+#define CKP_BL_CUM_GLOW01       2.0   // Glow_01             2/s
+#define CKP_BL_CUM_RAINBOW      3.0   // Raimbow             1/s
+#define CKP_BL_CUM_ARROW        6.0   // Arrow               3/s
+#define CKP_BL_CUM_STARS        8.0   // Stars               2/s
+#define CKP_BL_CUM_STRETCH     18.0   // Sparkles_Stretched 10/s
+#define CKP_BL_CUM_GLOW02      22.0   // Glow_02             4/s
+#define CKP_BL_CUM_SPARKLES    32.0   // Sparkles_01        10/s
+#define CKP_BL_CUM_FLARES      38.0   // Flares              6/s
+                                      // Sparkles_Spiral    10/s -> the remainder
+
+#define CKP_BL_LAYER_GLOW01     0
+#define CKP_BL_LAYER_RAINBOW    1
+#define CKP_BL_LAYER_ARROW      2
+#define CKP_BL_LAYER_STARS      3
+#define CKP_BL_LAYER_STRETCH    4
+#define CKP_BL_LAYER_GLOW02     5
+#define CKP_BL_LAYER_SPARKLES   6
+#define CKP_BL_LAYER_FLARES     7
+#define CKP_BL_LAYER_SPIRAL     8
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_BL_VIS_PART01      84
+#define CKP_BL_VIS_RAINBOW     85
+#define CKP_BL_VIS_ARROWS      86
+#define CKP_BL_VIS_STAR01      87
+#define CKP_BL_VIS_PART04      88
+#define CKP_BL_VIS_PART01BR    89
+#define CKP_BL_VIS_PART02      90
+
+// The Flares base colour RGBA(1, 0, 0.00672436) in HSV — a hair below a pure red, so saturation and value are both
+// 1 and the source's Saturation/Value ranges replace them outright (recipe §13).
+#define CKP_BL_FLARE_BASE_HUE   0.99887927
+
+// Sparkles_Spiral's Vortex Force, verbatim from the source.
+#define CKP_BL_VORTEX_FORCE     15881.6
+#define CKP_BL_VORTEX_FALLOFF     100.0
+// The vortex axis has no tangential direction ON itself, so the lever arm the angular acceleration divides by is
+// floored. Without it a particle drawn near the axis would spin arbitrarily fast.
+#define CKP_BL_VORTEX_MIN_LEVER    10.0
+
+FCkParticles_StageOutput CkParticles_BuffLoop_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+int CkParticles_BuffLoop_Layer(int Seed)
+{
+    const float R = CkParticles_Rand(Seed, 0) * CKP_BL_RATE_TOTAL;
+
+    if (R < CKP_BL_CUM_GLOW01)   { return CKP_BL_LAYER_GLOW01; }
+    if (R < CKP_BL_CUM_RAINBOW)  { return CKP_BL_LAYER_RAINBOW; }
+    if (R < CKP_BL_CUM_ARROW)    { return CKP_BL_LAYER_ARROW; }
+    if (R < CKP_BL_CUM_STARS)    { return CKP_BL_LAYER_STARS; }
+    if (R < CKP_BL_CUM_STRETCH)  { return CKP_BL_LAYER_STRETCH; }
+    if (R < CKP_BL_CUM_GLOW02)   { return CKP_BL_LAYER_GLOW02; }
+    if (R < CKP_BL_CUM_SPARKLES) { return CKP_BL_LAYER_SPARKLES; }
+    if (R < CKP_BL_CUM_FLARES)   { return CKP_BL_LAYER_FLARES; }
+    return CKP_BL_LAYER_SPIRAL;
+}
+
+// The "warm -> deep orange" ramp four of the nine layers share, keyed at whichever times that layer authors.
+float3 CkParticles_BuffLoop_WarmRamp(float T, float K1, float K2, float K3)
+{
+    return float3(
+        CkParticles_Key5(T, 0.0, 1.0,      K1, 1.0,      K2, 1.0,       K3, 0.672443,  0.947781, 0.223228),
+        CkParticles_Key5(T, 0.0, 0.913099, K1, 0.501026, K2, 0.0773835, K3, 0.021219,  0.947781, 0.0),
+        CkParticles_Key5(T, 0.0, 0.584079, K1, 0.0559999, K2, 0.025,    K3, 0.0168074, 0.947781, 0.116971));
+}
+
+// ---- The swirl integral -----------------------------------------------------------------------------------------
+// The Vortex Force is an acceleration, and the layer's Scale Velocity curve damps whatever velocity it produces, so
+// the angular velocity at normalized life u is (alpha * u * S(u)) and the angle is its integral. Both pieces are
+// linear in u, so the integral is exact in closed form — no stepping, which is what keeps GPU and CPU identical.
+float CkParticles_BuffLoop_SegIntUS(float A, float B, float Sa, float Sb)
+{
+    const float M = (Sb - Sa) / max(B - A, 1.0e-6);
+    const float C = Sa - M * A;
+    const float Hi = M * B * B * B / 3.0 + C * B * B * 0.5;
+    const float Lo = M * A * A * A / 3.0 + C * A * A * 0.5;
+    return Hi - Lo;
+}
+
+// Integral over [0, U] of u * S(u), where S is the 3-key clamped curve (0, V0) -> (K, V1) -> (1, V2).
+float CkParticles_BuffLoop_SwirlIntegral(float U, float K, float V0, float V1, float V2)
+{
+    const float T = saturate(U);
+    const float A = min(T, K);
+
+    float Sum = CkParticles_BuffLoop_SegIntUS(0.0, A, V0, CkParticles_Key2(A, 0.0, V0, K, V1));
+
+    if (T > K)
+    { Sum += CkParticles_BuffLoop_SegIntUS(K, T, V1, CkParticles_Key2(T, K, V1, 1.0, V2)); }
+
+    return Sum;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_BuffLoop(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = CkParticles_BuffLoop_Layer(In.Seed);
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // ---- Glow_01: the 500-unit body glow, held at full size for its whole two seconds ----
+    if (Layer == CKP_BL_LAYER_GLOW01)
+    {
+        if (In.Age > 2.0)
+        { return CkParticles_BuffLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / 2.0);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.0, 0.738388, 0.457591, 0.166, 1.0, 0.735614),
+            CkParticles_Key3(t, 0.0, 0.057,    0.457591, 0.166, 1.0, 0.0469999),
+            CkParticles_Key4(t, 0.0, 0.0, 0.258376, 1.0, 0.680954, 1.0, 1.0, 0.0) * 0.5);
+        O.Size    = float2(500.0, 500.0);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BL_VIS_PART01;
+        return O;
+    }
+
+    // ---- Raimbow: the half-second lens ring. A Scale Color module in RGBA-Together mode halves its grey
+    // Initialize colour rather than replacing it, and its alpha ramps straight down.
+    if (Layer == CKP_BL_LAYER_RAINBOW)
+    {
+        if (In.Age > 0.5)
+        { return CkParticles_BuffLoop_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.5);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.3, 0.875, 1.0, 1.0);
+
+        O.Color    = float4(0.913099 * 0.5, 0.913099 * 0.5, 0.913099 * 0.5,
+                            0.2 * CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+        O.Size     = float2(300.0 * Grow, 300.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_BL_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Arrow: the rising chevrons, drawn velocity-aligned so their long axis tracks the climb ----
+    // Its authored Sprite Rotation is inert on a velocity-aligned renderer, so it is deliberately not written.
+    if (Layer == CKP_BL_LAYER_ARROW)
+    {
+        if (In.Age > 1.5)
+        { return CkParticles_BuffLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / 1.5);
+
+        // Cylinder radius 120, height 150, offset (0, 0, 30), then Initialize Particle's own position offset
+        // drops the whole layer 119.316 units — the two compose.
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 120.0, 150.0, float3(0.0, 0.0, 30.0))
+                           + float3(0.0, 0.0, -119.316);
+        const float3 V0    = float3(0.0, 0.0, lerp(350.0, 500.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.3, 0.05) * 1.5);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.3, 1.0, 0.05);
+
+        const float3 Rgb = CkParticles_BuffLoop_WarmRamp(t, 0.0784787, 0.283731, 0.625415);
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, CkParticles_Key2(t, 0.0869303, 1.0, 1.0, 0.0));
+
+        const float Grow = CkParticles_Key3(t, 0.0, 0.4, 0.1, 1.0, 1.0, 0.4);
+        O.Size   = float2(80.0 * Grow, 130.0 * Grow);
+        O.VisTag = CKP_BL_VIS_ARROWS;
+        return O;
+    }
+
+    // ---- Stars: the four-point stars, thrown up harder than the arrows and gone inside 0.6 s ----
+    if (Layer == CKP_BL_LAYER_STARS)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_BuffLoop_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 80.0, 120.0, float3(0.0, 0.0, 30.0));
+        const float3 V0    = float3(0.0, 0.0, lerp(500.0, 1300.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.2, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.2, 1.0, 0.0);
+
+        const float3 Rgb = CkParticles_BuffLoop_WarmRamp(t, 0.182618, 0.383139, 0.68034);
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, CkParticles_Key2(t, 0.08693, 1.0, 1.0, 0.0));
+
+        const float Base = lerp(40.0, 70.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        // Its Scale Sprite Size 001 and Sprite Rotation Rate modules are DISABLED in the source (the BuffCast
+        // sibling has the rotation one enabled), so neither is implemented.
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BL_VIS_STAR01;
+        return O;
+    }
+
+    // ---- Sparkles_Stretched: the velocity-aligned streaks, collapsing to a fifth of their length by t=0.1 ----
+    if (Layer == CKP_BL_LAYER_STRETCH)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_BuffLoop_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 120.0, 150.0, float3(0.0, 0.0, 30.0));
+        const float3 V0    = float3(0.0, 0.0, lerp(1000.0, 2000.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.1, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.1, 0.15, 1.0, 0.0);
+
+        const float3 Rgb = CkParticles_BuffLoop_WarmRamp(t, 0.078479, 0.283731, 0.625415);
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, CkParticles_Key2(t, 0.08693, 1.0, 1.0, 0.0));
+
+        const float Width  = lerp(35.0, 50.0, CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(130.0, 140.0, CkParticles_Rand(In.Seed, 3));
+        const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float Taper  = CkParticles_Key3(t, 0.0, 1.0, 0.1, 0.2, 1.0, 0.15);
+
+        // Scale Sprite Size by Speed: length only, 1x up to the 1000-unit threshold and 1.7x at or past it.
+        const float SpeedFactor = lerp(1.0, 1.7, saturate(length(O.Velocity) / 1000.0));
+
+        O.Size   = float2(Width * Grow, Length * Grow * Taper * SpeedFactor);
+        O.VisTag = CKP_BL_VIS_PART04;
+        return O;
+    }
+
+    // ---- Glow_02: Glow_01's paint at half the size, twice the rate and full opacity ----
+    if (Layer == CKP_BL_LAYER_GLOW02)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_BuffLoop_Hidden(O); }
+
+        const float t = saturate(In.Age);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.0, 0.737001,  0.457591, 0.155, 1.0, 0.734227),
+            CkParticles_Key3(t, 0.0, 0.0519999, 0.457591, 0.155, 1.0, 0.0419999),
+            CkParticles_Key4(t, 0.0, 0.0, 0.258376, 1.0, 0.680954, 1.0, 1.0, 0.0));
+        O.Size    = float2(300.0, 300.0);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BL_VIS_PART01;
+        return O;
+    }
+
+    // ---- Sparkles_01: the fine camera-facing motes, dissolve pinned well past full erosion ----
+    if (Layer == CKP_BL_LAYER_SPARKLES)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_BuffLoop_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 120.0, 150.0, float3(0.0, 0.0, 30.0));
+        const float3 V0    = float3(0.0, 0.0, lerp(1000.0, 2000.0, CkParticles_Rand(In.Seed, 2)));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.1, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.1, 0.15, 1.0, 0.0);
+
+        const float3 Rgb = CkParticles_BuffLoop_WarmRamp(t, 0.078479, 0.283731, 0.625415);
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, CkParticles_Key2(t, 0.08693, 1.0, 1.0, 0.0));
+
+        const float Base = lerp(10.0, 15.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Dynamic = float4(3.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BL_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Flares: the hue-randomized haze. Random Hue/Saturation/Value with all four adjust flags set, so the red
+    // base is rotated 0.5..0.8 around the hue circle (into the cyans and blues), saturation pinned at 0.2 and alpha
+    // scaled by 0.13 before the Scale Color module's SEPARATE alpha curve (peak 0.125) shapes the envelope.
+    if (Layer == CKP_BL_LAYER_FLARES)
+    {
+        const float Life = lerp(1.0, 2.0, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_BuffLoop_Hidden(O); }
+
+        const float t = saturate(In.Age / Life);
+
+        // No velocity module at all — Flares hold wherever the cylinder placed them.
+        O.Position = CkParticles_CylinderPoint(In.Seed, 110.0, 130.0, float3(0.0, 0.0, 30.0));
+
+        const float  Hue = CKP_BL_FLARE_BASE_HUE + lerp(0.5, 0.8, CkParticles_Rand(In.Seed, 6));
+        const float  Sat = lerp(0.2, 0.2, CkParticles_Rand(In.Seed, 11));
+        const float3 Rgb = CkParticles_HsvToRgb(Hue, Sat, 1.0);
+
+        const float Alpha = lerp(0.13, 0.13, CkParticles_Rand(In.Seed, 12))
+                          * CkParticles_Key3(t, 0.0, 0.0, 0.3, 0.125, 1.0, 0.0);
+
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, Alpha);
+
+        const float Base = lerp(50.0, 200.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.8);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Dynamic = float4(8.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BL_VIS_PART02;
+        return O;
+    }
+
+    // ---- Sparkles_Spiral: the fastest layer in the system, wound around +Z by the Vortex Force ----
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+
+        if (In.Age > Life)
+        { return CkParticles_BuffLoop_Hidden(O); }
+
+        const float  t     = saturate(In.Age / Life);
+        const float3 Spawn = CkParticles_CylinderPoint(In.Seed, 80.0, 120.0, float3(0.0, 0.0, 0.0));
+        const float3 V0    = float3(0.0, 0.0, lerp(3500.0, 5000.0, CkParticles_Rand(In.Seed, 2)));
+
+        const float Radius  = length(float2(Spawn.x, Spawn.y));
+        const float Angle0  = atan2(Spawn.y, Spawn.x);
+        const float Falloff = saturate(1.0 - Radius / CKP_BL_VORTEX_FALLOFF);
+
+        // Angular acceleration the vortex applies at this particle's own radius, then the exact integral of
+        // (alpha * u * S(u)) over its life. Origin Pull Amount is 0 in the source, so the radius never changes.
+        const float Alpha = CKP_BL_VORTEX_FORCE * Falloff / max(Radius, CKP_BL_VORTEX_MIN_LEVER);
+        const float Swirl = Alpha * Life * Life
+                          * CkParticles_BuffLoop_SwirlIntegral(t, 0.1, 1.0, 0.15, 0.0);
+        const float Angle = Angle0 + Swirl;
+
+        const float Rise = V0.z * (CkParticles_Int3(t, 0.1, 1.0, 0.15, 0.0) * Life);
+
+        O.Position = float3(Radius * cos(Angle), Radius * sin(Angle), Spawn.z + Rise);
+        // The vortex contributes to POSITION only: the source's Add Velocity module writes the climb, and that is
+        // the velocity any downstream consumer sees.
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.1, 0.15, 1.0, 0.0);
+
+        const float3 Rgb = CkParticles_BuffLoop_WarmRamp(t, 0.078479, 0.283731, 0.625415);
+        O.Color = float4(Rgb.x, Rgb.y, Rgb.z, CkParticles_Key2(t, 0.08693, 1.0, 1.0, 0.0));
+
+        const float Base = lerp(10.0, 15.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Dynamic = float4(3.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BL_VIS_PART01BR;
+        return O;
+    }
+}
