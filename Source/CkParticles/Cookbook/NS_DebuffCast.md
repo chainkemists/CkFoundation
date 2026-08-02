@@ -1,14 +1,18 @@
-# Translation sheet: NS_DebuffCast → CkParticles (PRE-IMPLEMENTATION)
+# Recipe: NS_DebuffCast → CkParticles (IMPLEMENTED)
 
 Schema and evidence-tag conventions: [README.md](README.md). Exemplars: [NS_BasicAttack.md](NS_BasicAttack.md),
 [NS_Lightning_Range.md](NS_Lightning_Range.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) — behavior 32. Human A/B parity NOT yet judged.**
 
-No behavior id is allocated, no `.ush` exists, no cadence row was added, no look was authored, no
-mesh or texture was generated, nothing was built and nothing was rendered.
+`Behavior_DebuffCast.ush` + `ExecuteStage_CPU` case 32, the `PS_CkParticles_Template_DebuffCast`
+cadence row (burst 30 **+ rate 65/s**) with six row renderers on VisTags 113–118, the new procedural
+`SM_CkParticles_SlashClaw` carrier, `Test_Particles_DebuffCastBehavior.cpp`, and the **DEBUFF CAST**
+pair in the VfxExamples gym. This port adds **no** look and **no** texture — every paint and paint
+parameterization it needs already existed. It is the cookbook's **first consumer of C10's curl noise**.
+§12's walk is `[HUMAN-VERIFY]` and open.
 
 ---
 
@@ -195,8 +199,11 @@ implementation time:**
 - NS_BasicAttack §4 records `Main_Tex = T_VFX_Part_01`; this export agrees
   (`Main/Color/Dissolve_Tex` are all family-default `T_VFX_Part_01` — no texture delta row appears).
 
-The look can be **reused verbatim**, but the `DissolveSpeedY` value should be re-read off the corpus
-before trusting either recipe.
+The look can be **reused verbatim**, and the `DissolveSpeedY` question is now settled
+`[corpus, checked 2026-08-02]`: the material reads `Dissolve_Speed_X = Dissolve_Speed_Y = −0.1`, and
+the shipped `SlashDisAdd04` look **already carries `(−0.1, −0.1)`**. This sheet's claim that the look
+"currently ships (−0.1, 0)" was stale — it described NS_BasicAttack §4's incomplete delta ROW, not the
+look. Nothing to change; the discrepancy was documentary.
 
 ### Referenced textures `[corpus]`
 
@@ -268,6 +275,9 @@ Curves sample **NormalizedAge** unless stated. `C` = constant (step) key, `L` = 
   (`InitializeParticle.Lifetime = 1` is present but inert in Random mode.)
 - Sprite Size Mode Random Uniform: **Min 220, Max 250** (`Uniform Sprite Size 200` not selected).
 - Sprite Rotation Random, Min 0 / Max 360. Initialize Color `RGBA(1, 1, 1, 1)`.
+- **`Color.Scale Alpha` = 0.45** `[corpus, correction 2026-08-02]` — it lives only in the `[values]`
+  block and was missing from this list; it is what keeps the halo faint under a full-height alpha
+  triangle. Same class as the four found in [NS_HealCast.md](NS_HealCast.md) §5 and as batch C's [P2-D2].
 - Color from Curve — **a constant near-black with an alpha triangle**:
   - `R: (0, 0.00182116)C` *(single key)*
   - `G: (0, 0.00182116)C` *(single key)*
@@ -379,15 +389,16 @@ The pragmatic plan:
   override-wins assumption, which capped every randomised layer at 0.4 s*), burst **30** (the exact
   corpus burst total across enabled emitters). Partition `Seed % 30`:
   1 = BigArrow, 7 = Sparkles_Dark, 3 = Ring, 7 = Sparkles_Bright, 5 = Flames, 7 = Slash.
-- **The four `Spawn Rate` modules are DROPPED** in that plan, costing ≈ 19.5 particles per firing
-  (≈ 40 % of the visible count). Alternative: widen the burst to ≈ 50 and give each rate-fed layer
-  extra slots with a `frac`-derived spawn delay across the 0.3 s window — this is *closer* but is an
-  approximation either way, and the burst-vs-stream difference is exactly the kind of cadence fake
-  `CkParticles/CLAUDE.md` warns against. **Make it a recorded decision.**
-- **The `Self / Once` semantics are LOST**: the CkParticles template loops. The recreation will re-fire
-  every 2.0 s where the source fires once. Milder than the pre-v3 reading assumed — `[corpus-v3]` the
-  system itself is `Loop Once`, so one firing of the source plays exactly one 2.0 s cycle and even
-  `BigArrow` bursts only once. It must still be checked against how the caller spawns it.
+- **The four `Spawn Rate` modules are REPRODUCED, not dropped** `[decision 2026-08-02, batch D]`.
+  Dropping them would have cost ≈ 19.5 particles per firing (≈ 40 % of the visible count), and the
+  `frac`-derived-burst alternative is exactly the cadence fake `CkParticles/CLAUDE.md` warns against.
+  Phase 2's C2 landed a real rate stack and C5 landed the spawn-phase input, so the row declares
+  **burst 30 AND rate 65/s** and the behavior splits the two populations by spawn phase. The mapping
+  and its price are in [NS_HealCast.md](NS_HealCast.md) §9.2 and §13.2; this port follows it exactly.
+- **The `Self / Once` semantics are REPRODUCED as a window**, not lost: a streamed particle whose
+  spawn phase falls past 0.3 s — every one of these emitters' own loop duration — is hidden, so each
+  streaming layer emits over exactly its own window once per system loop. `Flames` carries no rate at
+  all and so streams nothing; `BigArrow` is system-governed and bursts once.
 
 ### 6.2 VisTag / renderer needs
 
@@ -475,8 +486,9 @@ other layers. Omitting it is a real, visible deviation, not a shading nuance.
    step-integrate it.
 
 7. **`Color Mode = Random Range`** (`Sparkles_Bright`, `Slash`). Trivially expressible with
-   `CkParticles_Rand`; no gap. Note it is a **per-channel independent** lerp or a single-t lerp
-   `[unresolved: which]` — Niagara's Random Range colour mode detail is not in the corpus.
+   `CkParticles_Rand`; no gap. **`[unresolved]` RESOLVED 2026-08-02 from the corpus:** both emitters
+   carry `Color Channel Mode = Link RGB / Link A`, so RGB shares ONE random draw and alpha takes its
+   own — a single-t lerp, not three independent ones.
 
 8. **NEGATIVE `Add Velocity from Point`** (`Sparkles_Dark`, strength −700 from a 200-unit shell).
    Expressible; just note the implosion direction is the Debuff signature and easy to get backwards.
@@ -500,4 +512,243 @@ by-product: the `SlashClaw` mesh and a sub-UV capability would both serve future
 
 ---
 
-## 7+. Reserved for implementation — sections 7–14 per [README.md](README.md) are written by the session that implements this effect.
+## 7. Textures — no new bake
+
+§6.4 asked for measurement and up to five new bakes including a 2×2 flame ATLAS. **None were needed:**
+every paint had already been measured off the same corpus PNG by an earlier batch, and the atlas kind
+itself (`MaskSheet`) shipped with Phase 1's C4.
+
+| Source paint | Stand-in | Measured in |
+|---|---|---|
+| `T_VFX_Arrow_01` | `ArrowChevron` | NS_BuffLoop §7.1 |
+| `T_VFX_Part_01` | `SoftParticle` | NS_BasicAttack §7 |
+| `T_VFX_Part_02` | `SoftParticleBright` | NS_FireBall_Hit §7 |
+| `T_VFX_Part_03` | `SoftParticleFine` | NS_FireBall_Hit §7 |
+| `T_VFX_Ring_01` | `RingUneven` | NS_FireBall_Hit §7 |
+| `T_VFX_Wind_01` | `WindSheet` — the 2×2 four-frame atlas | NS_Fire §7 |
+| `T_VFX_Noise_02` | `TileNoise` | NS_BasicAttack §7 |
+| `T_VFX_Noise_04` | `TileNoiseCoarse` | NS_FireBall_Hit §7 (§6.4 listed it as "unmeasured"; it was measured there) |
+
+---
+
+## 8. Mesh — `SM_CkParticles_SlashClaw`
+
+**New, and the cookbook's second procedural carrier built from a measured source profile.** §3's
+measurement drives it directly, and the implementation went one step further than the Crescent did:
+where that mesh stores a coarse 30° knot table, this one stores **all 49 of the source sheet's own
+columns**, so the generated surface reproduces `SM_VFX_Slash02`'s flat sheet rather than resampling it.
+
+- **Topology**: 1 band segment × 48 arc segments = 96 triangles, one of the source's two flat sheets.
+  The second sheet is dropped because `M_VFX_DisAdd_Slash04` is `twoSided: true`.
+- **Rim table, not a radius pair.** §3's "band width" is the EUCLIDEAN distance between the paired
+  outer and inner vertices, and their angular positions differ — the cross-section direction ROTATES
+  along the sweep (180° over the arc, non-linearly). A radius-pair table like the Crescent's cannot
+  express that, so the generator stores `(OuterX, OuterY, InnerX, InnerY)` per column and lerps.
+- **Verified against the source**: all 98 rim vertices reproduced to a maximum error of **5 × 10⁻⁵
+  units** on a 213-unit mesh — the printed-precision floor of the table itself.
+- **UV convention preserved**: `u` runs ALONG the arc, `v` across it, `v = 0` the OUTER edge. That is
+  what makes the look's `offset` channel sweep the streak DOWN the claw rather than across it.
+
+Do **not** import `SM_VFX_Slash02`; the table is the source of truth.
+
+---
+
+## 9. The behavior — `Behavior_DebuffCast.ush` + `ExecuteStage_CPU` case 32
+
+### 9.1 The cadence row
+
+| Field | Value | Source |
+|---|---|---|
+| `LoopDuration` | 2.0 s | the SYSTEM's `Loop Behavior = Once`, `Loop Duration = 2` ([P0-D1]) |
+| `ParticleLifetime` | 2.0 s | `Flames`' resolved 2.0 s maximum on a beat of 0 ([P0-D5]) |
+| `BurstCount` | 30 | 1+7+3+7+5+7 over the SIX enabled emitters |
+| `SpawnRate` | 65 /s | 20+5+20+20 — `Flames` is the one Self/Once emitter with no rate |
+
+Every enabled emitter bursts at loop start, so unlike its two siblings this port has **no spawn beat
+at all**.
+
+### 9.2 The partition
+
+Burst particles take `Seed % 30` (0 BigArrow, 1–7 Sparkles_Dark, 8–10 Ring, 11–17 Sparkles_Bright,
+18–22 Flames, 23–29 Slash); rate particles take a weighted draw over cumulative shares 20 / 25 / 45 /
+65. The spawn-phase split and the window gate work exactly as [NS_HealCast.md](NS_HealCast.md) §9.2
+describes.
+
+### 9.3 The curl force — how 2500 and 15 became usable numbers
+
+§6.5 gap 6 ruled the approach (a deterministic Age-parameterized displacement, never step-integrated)
+and Phase 2's C10 shipped `CkParticles_CurlPath` for it. Neither of the source's two numbers can be
+used raw, and both conversions are **derived and stated** rather than tuned:
+
+- **Frequency.** The module authors its noise field in metres, so the source's `Noise Frequency 15`
+  becomes **0.015 per unit**. `[inferred — the position scaling inside the module graph is not in the
+  corpus.]`
+- **Strength.** The source's `Noise Strength 2500` is an ACCELERATION, and the accumulated curl
+  velocity is multiplied every frame by the layer's OWN `Scale Velocity` curve, which crushes it to
+  that curve's **0.1** plateau by t = 0.2. Mean displacement over a life `L` is therefore
+  `0.5 · 2500 · 0.1 · L²`; the constant-VELOCITY path that covers the same ground in the same time is
+  `0.5 · 2500 · 0.1 · L`. `CurlPath` multiplies that velocity by the field, whose mean magnitude is a
+  measured property of this plugin's own Fbm — **0.736** over 400 samples at this frequency and spawn
+  scale — so the velocity is divided by it.
+
+Measured result: a mean wander of **60 units** at Age 0.6 (min 12, max 112) on the 200-unit shell, and
+exactly **0** at Age 0 because the path re-integrates from the spawn point every evaluation.
+
+The **cone mask** (45° / 45°) is not implemented — §13.3.
+
+### 9.4 Per-layer notes worth the reader's time
+
+- **`Sparkles_Dark` IMPLODES.** `Add Velocity from Point` at a constant **−700** from a 200-unit
+  shell. Its `Sparkles_Bright` twin explodes outward at 300–1000 from a 5-unit point. The two are
+  otherwise near-identical, which makes the sign the easiest thing in the system to get backwards, so
+  §11 asserts both directions.
+- **`Slash` sits at the origin.** Its `Sphere Location` module is DISABLED, so the only things
+  separating seven claws are a per-particle orientation and a non-uniform mesh scale (Y pinned at 1).
+- **`Slash`'s `offset` channel sweeps −0.5 → 0.3 → 0.5**, and §3's UV puts `u` along the arc — so that
+  sweep IS the streak travelling down the claw, the mechanism NS_BasicAttack §3 identified.
+- **`Flames` never move.** No velocity module at all: they hold the 20-unit shell where they spawn,
+  turn in place at a per-particle ±45 °/s, cycle a 2×2 flipbook entered at a random frame, and drive
+  the distortion channel at a constant **10** — by far the largest distortion in the cookbook.
+- **`Flames`' alpha is a single key at 1**, so like the PickupCast rings they never fade; the dissolve
+  channel removes them.
+- **`BigArrow` starts 50 units ABOVE the origin and falls at 150 u/s.** Its Buff sibling starts below
+  and rises. Its authored `Sprite Rotation Angle 3.07129` is inert twice over — the mode is `Unset`
+  and the renderer is velocity-aligned.
+- **The four DISABLED emitters are not recreated.** §5 keeps their curves so a future "enabled
+  variant" needs no new archaeology; that is their only purpose.
+
+---
+
+## 10. Looks and renderers
+
+Six row-declared renderers on VisTags **113–118**, one per enabled source emitter.
+
+| VisTag | Kind | Look | Source material | Serves |
+|---|---|---|---|---|
+| 113 | VelocityAlignedSprite | `ArrowsDisAdd` | `M_VFX_DisAdd_Arrows` | BigArrow |
+| 114 | CameraFacingSprite | `PartDisAdd01Bright` | `M_VFX_DisAdd_Part01_Bright` | Sparkles_Dark |
+| 115 | CameraFacingSprite | `RingDisAdd01` | `M_VFX_DisAdd_Ring01` | Ring |
+| 116 | CameraFacingSprite | `PartDisAdd03Bright` | `M_VFX_DisAdd_Part03_Bright` | Sparkles_Bright |
+| 117 | CameraFacingSprite, SubUV 2×2 | `FlamesDisAdd01` | `M_VFX_DisAdd_Flames01` | Flames |
+| 118 | Mesh (`SlashClaw`) | `SlashDisAdd04` | `M_VFX_DisAdd_Slash04` | Slash |
+
+**This port authors no look of its own** — the richest system in the batch needed the fewest new
+assets, because every one of its six materials had already been recreated. §4's `SlashDisAdd04`
+reconciliation is settled there.
+
+`Get_BehaviorLookName(32)` stays `NAME_None`: every look rides a row renderer that binds it explicitly.
+
+---
+
+## 11. Tests
+
+`Test_Particles_DebuffCastBehavior.cpp` + the `NumBehaviors` 30 → 33 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+- **The curl force is asserted against a control that scores exactly zero.** Both sparkle clouds spawn
+  at `Dir · R` and are driven along `Dir`, so their BALLISTIC path never leaves the ray through the
+  origin — any angular deviation from the spawn direction is the curl and nothing else. Measured: mean
+  **31.4°** (min 3.7°) on `Sparkles_Dark` and **21.3°** (min 8.7°) on `Sparkles_Bright`, against
+  **0.0000°** with the term removed. The test requires every particle to deviate by more than 1° and
+  the mean to exceed 5°.
+- **The curl contributes exactly nothing at Age 0**, asserted as `Sparkles_Dark` sitting on the
+  source's 200-unit shell to within 0.01 units — the stateless-path claim, made falsifiable.
+- **Implosion versus explosion**: every dark sparkle closes on the origin (and its velocity points
+  back at its own spawn point); every bright one opens away from it.
+- **The two `Random Range` colours are keyed on the RECOVERED lerp parameter**, not on a colour
+  channel — the lesson [NS_BuffLoop.md](NS_BuffLoop.md) §14.7 records, transferred to this colour
+  mode. Live: **113** and **112** distinct half-degree buckets over 120 seeds; **dead control
+  (the draw pinned at its midpoint): exactly 1**, so the assertion fails on the defect it names.
+- **The rate shares** over 400 000 seeds, worst deviation **0.00064** against a 0.004 bar, plus the
+  stronger claim that `BigArrow` and `Flames` take **zero** stream.
+- **The spawn-phase split**, asserted both ways over 2000 seeds: inside the window a rate particle
+  draws its rate layer, past it every one is hidden.
+- **`Flames`**: on the 20-unit shell, **zero** position change over its whole life, a turn rate inside
+  ±45 °/s, the distortion channel pinned at 10, and a flipbook frame inside the 2×2 sheet.
+- **`Slash`**: no sprite size, mesh scale with Y pinned at 1 and X/Z inside 0.5–1.5, position at the
+  cast point, a non-identity per-particle orientation, dissolve pinned at 0.1, and the offset channel
+  sweeping forward by more than 0.8 over the life.
+- **`BigArrow`** starts at +50, sinks, and draws a taller-than-wide quad.
+- **The row's renderer set** is asserted to carry exactly one mesh (named `SlashClaw`) and exactly one
+  2×2 sheet.
+- Plus the standard per-layer anti-vacuity and death checks, the latter on BOTH spawn paths.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **DEBUFF CAST**.
+`NS_DebuffCast` is a `Loop Once` system, so the harness re-arms both sides on completion and the two
+pedestals replay in sync from t = 0. Use `Ck_GymVfxExamples_RestartAll` to re-fire them together.
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | a dark, oppressive implosion. Almost every colour here is near-black, so the effect reads by SILHOUETTE and by the flame shell's bloom, not by hue |
+| b | What is NOT there | no warm glow and no rainbow ring — the source disables that whole stack. If you see them, four disabled emitters were recreated (§13.6) |
+| c | The claws | seven dark comma-shaped blades at the cast point, each differently oriented and scaled, with a bright streak sweeping ALONG the blade from its tail to its tip |
+| d | Claw streak direction | the streak must run down the arc, not across it. Across = the mesh's UV is transposed (§8) |
+| e | Dark sparkles | near-black motes appearing on a wide (200-unit) shell and falling INWARD, wandering as they go |
+| f | The wander | that wander is the curl field. Straight radial lines mean the force is inert (§9.3) |
+| g | Bright sparkles | a spray outward from the centre, each particle a solid dark green or dark violet — one colour per particle, not a gradient |
+| h | Flames | 200–300 unit puffs pinned to a tight 20-unit shell, turning slowly in place, cycling a four-frame flipbook, heavily distorted |
+| i | The arrow | a single large chevron descending from 50 units above the cast point, fading in and out |
+| j | Ring | a 220–250 unit near-black halo whose opacity peaks exactly halfway through its life |
+| k | Density | ≈ 30 at t = 0 and ≈ 19 more streamed over the next 0.3 s |
+| l | World space | move the pedestal mid-effect if you can (§13.7) |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **Curl-driven motion is advected along a path from the SPAWN point, not from the particle's actual
+   position.** `CurlPath` re-integrates the whole path from spawn on every evaluation with a fixed
+   16-step Euler loop, which is what keeps the position a function of (spawn, Age, Seed) alone and
+   bit-identical between GPU and CPU. The source integrates the force onto a particle that has already
+   travelled. The step count is a fidelity constant, not a tunable.
+2. **Both curl constants are converted, not copied** — §9.3 states the derivation. The frequency
+   conversion in particular is `[inferred]`: the module's own position scaling is not exported. This
+   is the port's biggest open fidelity question and the first thing to judge at the inspection stage.
+3. **The `Curl Noise Force`'s cone mask (45° / 45°) is not implemented.** The source masks the force
+   into a cone; the port applies the field isotropically.
+4. **`Velocity Falloff Distance 100` is treated as inert.** `Sparkles_Dark` spawns at radius 200,
+   outside that distance, and the module's falloff curve is not recoverable from the corpus. The
+   layer is driven at its stated −700 throughout, which is the reading §5 already describes.
+5. **`Initial Mesh Orientation`'s `Random Range Vector (−1,−1,−1)..(1,1,1)` units are unrecoverable**,
+   so each claw takes its own random facing — every reading of that range produces differently-facing
+   claws, and this is the same call NS_Arrow_Cast §13 makes for its LightningStrip layer.
+6. **The four DISABLED emitters are not recreated**, deliberately (§5, §9.4).
+7. **World space.** All source emitters are `LocalSpace: false`; the template is local space. Same
+   recorded deviation as NS_BasicAttack §13.2.
+8. **Unplumbed family parameters**: `Core_Intensity` (1 on three of six looks), `Glow_Intensity` 2 on
+   `Flames01` (reproduced, folded into Brightness), `Gradient_Invert`, and **`CamOffset 50`** on
+   `Part03_Bright` — the geometric one, which is what stops `Sparkles_Bright` z-fighting the rest.
+   `Flames01`'s `Color_Core (0.016, 0.014, 0.014)` is NOT carried by the shared look, and does not need
+   to be: the same material sets `Color_CoreDifferent = 0`, which gates the core-colour branch off.
+9. **Streamed particles drawn outside their window are allocated and hidden** — see
+   [NS_HealCast.md](NS_HealCast.md) §13.2. At 65 /s this row allocates 130 per loop and renders ≈ 19.5
+   of them from the stream.
+
+---
+
+## 14. Reusable lessons
+
+1. **When a source force has no expressible units, derive the conversion from something the source
+   DOES state.** The curl strength here is not a free constant: the layer's own `Scale Velocity`
+   plateau bounds how much of a 2500-unit acceleration survives, and that bound plus the measured mean
+   magnitude of our own noise field determines the equivalent path velocity exactly. A tuned number
+   would have been indistinguishable at first glance and unauditable later.
+2. **Build the control INTO the geometry when you can.** Testing "the curl is running" normally needs
+   a second code path to compare against. Here the ballistic path is exactly radial by construction,
+   so the angular deviation from the spawn direction is zero without the force and nonzero with it —
+   a dead control that needs no dead code.
+3. **§14.7's lesson generalizes past HSV.** Any per-particle colour draw can be keyed on the RECOVERED
+   draw parameter instead of on a channel: invert the widest-spread channel of the declared range. It
+   is brightness- and envelope-independent by construction, and pinning the draw collapses it to one
+   bucket — which is what makes the assertion falsifiable.
+4. **A measured mesh table can be exact.** The Crescent stores a coarse angular table because its
+   measurement was noisy; this one stores all 49 source columns and reproduces the sheet to 5 × 10⁻⁵
+   units. When the source's own topology is small and clean, transcribe it rather than fitting it.
+5. **Check whether a "missing" material parameter is GATED before recording it as a difference.**
+   `Flames01`'s dark `Color_Core` looks like an unported delta until you read `Color_CoreDifferent = 0`
+   in the same instance, which switches the whole branch off. The shared look's white core is not a
+   loss.
