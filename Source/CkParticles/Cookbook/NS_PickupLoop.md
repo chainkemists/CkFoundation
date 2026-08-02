@@ -4,12 +4,22 @@ Schema and evidence-tag conventions: [README.md](README.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 26, `PickupLoop`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior `.ush`, no CPU mirror, no CkUsf look, no cadence row, no texture bake, no test, no gym
-station exists for this effect. Every number below is archaeology read out of the extracted corpus;
-nothing here has been compiled, generated, rendered, or looked at. Sections 7+ are reserved for the
-implementation session.
+§1–6 are archaeology against the extracted corpus, re-verified against the v3 sidecar at implementation
+time. **One reading was found WRONG and corrected in place:** §5's Flares layer claimed the Scale Color
+module multiplies its two alpha terms and warned that missing that makes the flares ~8x too bright. The
+corpus says `Scale Mode = RGB and Alpha Separately` on all four Loop systems' Flares, which means the
+SEPARATE Scale Alpha curve is the only alpha channel and the RGBA curve's own alpha is inert — the peak is
+0.125, not the ~0.1 product, and the warning pointed the wrong way. Its Colour Mode line was also
+incomplete: the corpus sets all FOUR adjust flags, not just `AdjustHue`.
+
+§6.1's `[P0-D3 STOP]` is RESOLVED: campaign decision **[P0-D4]** routed the four rate-only Loop systems
+through Phase 2's C2 spawn-rate rows, and route **(a)** — one continuous stream with in-behavior
+sub-lifetimes — is what shipped, with the rate carried as row data exactly as §6.1 recommended.
+
+§7 onward is what was actually built.
 
 ---
 
@@ -258,10 +268,14 @@ transcribed verbatim from the corpus `[override]` lines.
   override 0.2 … 0.4 is inert (see the resolved note above)
 - Spawn shape: **Sphere Location**, `Sphere Radius 100`, `Non Uniform Scale (1,1,1)`, `Offset (0,0,0)`,
   `Surface Only false`
-- Initialize color `RGBA(1, 0.329981, 0, 1)`, with the InitializeParticle randomizers authored:
-  `AdjustHue = true`, `Hue Shift Range (0.1, -0.1)`, `Saturation Range (0.35, 0.5)`,
+- **`Color Mode = Random Hue/Saturation/Value`** `[corpus]` over the base `RGBA(1, 0.329981, 0, 1)`, with
+  **all four adjust flags set** (`AdjustHue`, `AdjustSaturation`, `AdjustValue`, `AdjustAlpha` — the
+  earlier reading listed only the first): `Hue Shift Range (0.1, -0.1)`, `Saturation Range (0.35, 0.5)`,
   `Value Range (1, 1)`, `Alpha Scale Range (0.1, 0.2)`, `Color Minimum RGBA(0,0,0,1)`,
-  `Color Maximum RGBA(1,1,1,1)`
+  `Color Maximum RGBA(1,1,1,1)`.
+  The base is a pure hue (max 1, min 0), so its saturation and value are both 1 — which makes the
+  "range replaces" and "range scales" readings of `Saturation Range` / `Value Range` produce identical
+  numbers here. The ambiguity is inert for this instance.
 - Sprite rotation: `Sprite Rotation Mode = Unset` (no rotation)
 - Scale Sprite Size (Uniform Curve mode): uniform `(0, 0)C (0.1, 1)C (1, 0.8)C`;
   the non-uniform curve `X (0,0)L (1,1)L | Y (0,0)L (1,1)L` is present but **inert** under Uniform mode
@@ -270,9 +284,10 @@ transcribed verbatim from the corpus `[override]` lines.
     B `(0, 1)L (1, 1)L` · A `(0, 0)L (0.236644, 1)L (1, 0)L`
   - Scale Alpha (Float from Curve): `(0, 0)L (0.3, 0.125)L (1, 0)L`
   - `Scale RGB (1, 1, 1)`
-  - **Both alpha terms multiply**: the effective alpha envelope is the product of the Scale-RGBA
-    alpha curve and the Scale-Alpha curve — peak ≈ 0.125 × ≈0.79 ≈ **0.1** around t ≈ 0.25.
-    Getting this wrong makes the flares ~8× too bright.
+  - **CORRECTED `[corpus]`** — `Scale Mode = RGB and Alpha Separately`, so the SEPARATE `Scale Alpha`
+    curve is the only alpha channel and the Scale-RGBA curve's own alpha is INERT. The envelope peaks at
+    **0.125** at t = 0.3, not at the ~0.1 product the earlier reading computed. Multiplying the two, as
+    that reading prescribed, darkens the layer by ~20 %. Same mode on all four Loop systems' Flares.
 - Dyn params `[**8**, 0, 0, 0]` — by far the largest static dissolve value in the system
 
 ---
@@ -404,4 +419,187 @@ user parameters, no material-binding indirection.
 
 ---
 
-## 7+. Reserved for implementation.
+## 7. Textures — every candidate MEASURED, and not one new bake
+
+§6.3 asked for five new bakes. By implementation time **all five source paints were already covered** by
+bakes measured off the SAME corpus PNGs in earlier batches, so this port adds nothing to the library:
+
+| Source paint | Stand-in | Why it is the same paint, not a lookalike |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | measured off this exact PNG (NS_BasicAttack §7) |
+| `T_VFX_Part_02` | `SoftParticleBright` | measured off this exact PNG (NS_FireBall_Hit §7) |
+| `T_VFX_Ring_01` | `RingUneven` | measured off this exact PNG (NS_FireBall_Hit §7); §6.3's "verify before reusing `T_CkParticles_Ring`" was answered there — the SDF ring was measured and REJECTED, the source's interior being exactly empty where the SDF's is not |
+| `T_VFX_Star_01` | `StarFour` | measured off this exact PNG (NS_FireBall_Hit §7); the generic `Flare` bake was measured and rejected there |
+| `T_VFX_Star_02` | `StarFourTight` | measured off this exact PNG (NS_Arrow_Cast §7) |
+| `T_VFX_Noise_02` | `TileNoise` | NS_BasicAttack §7 |
+| `T_VFX_Noise_04` | `TileNoiseCoarse` | NS_FireBall_Hit §7 |
+| `T_VFX_WhitePixel` | `LutWhite` | the family's inert white ramp (C3) |
+
+**Identity, not resemblance, is the reuse argument here.** Every row above names the same source asset an
+earlier recipe measured; nothing was reused on a correlation.
+
+---
+
+## 8. Mesh
+
+**None.** All nine source renderers are sprites, and all six of the row's renderers are camera-facing
+sprite quads.
+
+---
+
+## 9. The behavior — `Behavior_PickupLoop.ush` + `ExecuteStage_CPU` case 26
+
+### 9.1 The cadence row, and why it is the cookbook's first CONTINUOUS one
+
+| Field | Value | Source |
+|---|---|---|
+| `LoopDuration` | 2.0 s | the SYSTEM's `Loop Behavior = Infinite`, `Loop Duration = 2` ([P0-D1]) |
+| `ParticleLifetime` | 4.0 s | Ring01's resolved Direct-Set lifetime, the longest layer |
+| `BurstCount` | 0 | there is no burst module anywhere in the system |
+| `SpawnRate` | 27.5 /s | 2+2+4+4+5+0.5+2+2+6, the nine emitters' `SpawnRate` values |
+
+On a rate-only source the loop duration does not gate spawning at all — it only wraps `Emitter.Age` — so
+the [P0-D1] correction from the inert emitter rows to the system's 2.0 s is low-risk for this effect
+specifically, exactly as §2 predicted.
+
+### 9.2 The partition is a WEIGHTED DRAW, not a modulus
+
+Every prior port slices a per-loop burst with `Seed % N`. That is unavailable here: there is no burst, and
+`Ring01` spawns **0.5 particles per second** — 1.82 % of the stream, a share no integer slot count under 55
+can express. The behavior instead draws `CkParticles_Rand(Seed, 0)` once, scales it by the total rate, and
+walks a cumulative-share cascade in the source's own emitter order. Reproducing the source's rate mix is
+then exact by construction rather than by rounding, and adding a layer never re-maps the others.
+
+Measured over 400 000 seeds, the worst per-layer deviation from the source share across all nine layers is
+**0.00092** (§11).
+
+### 9.3 Per-layer notes worth the reader's time
+
+- **The four bomb glows** differ only in life, size, palette and the `Color` module's `Scale Alpha`
+  (0.5 / 0.5 / 1 / 0.3). Those Scale Alpha values are load-bearing and appear only in §2's table and the
+  corpus `[values]` blocks, never in §5; the behavior applies each one on top of its layer's alpha curve.
+  Three of the four share one body.
+- **Sparkles do not move.** Their `Add Velocity from Point` module is DISABLED, so the 350–500 range and
+  the whole Velocity-Scale curve are inert. Implementing the disabled module would turn a calm idle
+  shimmer into a spray — the single most tempting wrong thing in this system.
+- **Ring01 is the only ANIMATED dissolve in the Loop batch**: −1 → 0.5 → −1 over four seconds, so the ring
+  assembles out of nothing, holds, and erodes away. It also carries a per-particle rotation RATE that can
+  turn either way (±20 °/s).
+- **Star02 carries the system's only non-integer static dissolve** (0.745454).
+- **Flares** take the corrected alpha reading of §5 and the full four-flag HSV randomization.
+
+---
+
+## 10. Looks and renderers
+
+Six row-declared **camera-facing sprite** renderers on VisTags **71–76**, one per distinct source material:
+
+| VisTag | Look | Source material | New? |
+|---|---|---|---|
+| 71 | `PartDisAdd01` | `M_VFX_DisAdd_Part01` | reused (NS_BasicAttack) |
+| 72 | `PartDisAdd01Bright` | `M_VFX_DisAdd_Part01_Bright` | reused (NS_FireBall_Hit) |
+| 73 | `PartDisAdd02` | `M_VFX_DisAdd_Part02` | reused (NS_FireBall_Hit) |
+| 74 | `RingDisAdd03` | `M_VFX_DisAdd_Ring03` | **NEW** — `Script/CkUsf/CkUsf_LoopLooks_Assets.as` |
+| 75 | `StarDisAdd01` | `M_VFX_DisAdd_Star01` | reused (NS_FireBall_Hit) |
+| 76 | `StarDisAdd02` | `M_VFX_DisAdd_Star02` | reused (NS_Arrow_Cast) |
+
+`RingDisAdd03` is the system's only instance with a LIVE distortion branch (`Distortion_Intensity 0.5`,
+`Distortion_Speed 0.1/0.1`, `Distortion_Scale 1`) and the only one that does NOT override `Dissolve_Tex`,
+so it erodes against the parent's coarse noise rather than against its own shape. Both facts are in the
+look's parameters, and the second is why its `DissolveTex` is `TileNoiseCoarse` while its `ShapeTex` is
+`RingUneven`.
+
+`Get_BehaviorLookName(26)` stays `NAME_None`: every look rides a row renderer that binds it explicitly.
+
+---
+
+## 11. Tests
+
+`Test_Particles_PickupLoopBehavior.cpp` + the `NumBehaviors` 26 → 30 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+The partition is the file's centre of gravity, because a rate-only port fails QUIETLY: a drifted threshold
+does not crash, it just gives one source emitter the wrong share of the stream.
+
+- **The rate-share sweep** counts 400 000 seeds through a cascade the test rebuilds from the source rate
+  table (not from the behavior's constants) and requires every layer within **0.004** of its source share.
+  Observed worst case 0.00092 — a 4.3x margin.
+- **Determinism**: the layer a seed draws must not depend on the age it is evaluated at.
+- **`CkParticles_Rand` is re-implemented in the test**, deliberately: the 24-bit avalanche IS what the
+  partition claims to use.
+- **Ring01's animated dissolve** is asserted at all three keys, and it is the only layer still alive at
+  3.9 s.
+- **Sparkles are asserted STATIONARY** — the disabled-module claim, made falsifiable.
+- **Flares' alpha is bounded on BOTH sides**: never above 0.2 × 0.125, and above 90 % of it. The floor is
+  what catches the §5 error this recipe corrected — the two-alpha reading tops out near 0.0198 and fails.
+- Plus the standard per-layer anti-vacuity and death checks.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **PICKUP LOOP**.
+
+> **This pair is a STEADY-STATE comparison, not a synced replay.** `NS_PickupLoop` is an INFINITE system:
+> it never finishes, so the harness's `OnSystemFinished` re-arm never fires and the two sides are never in
+> phase. Judge density, palette and motion character over a few seconds; do NOT expect matched frames.
+> `Ck_GymVfxExamples_RestartAll` restarts both, but they drift apart again immediately.
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | a calm, non-pulsing idle glow — a hovering pickup. **If either side reads as a metronome, the cadence is wrong**, and that is this effect's whole identity |
+| b | Density | roughly 33 live particles at any instant. The ring is the sparsest thing on screen |
+| c | Ring | ONE 160-unit halo every two seconds, rotating slowly either way, that assembles out of nothing and erodes away rather than fading |
+| d | Bomb glows | four warm shells at 220 / 220 / 350 / 100 units, the two 220s at half coverage and the 100 at a third |
+| e | Sparkles | fine motes scattered through a 70-unit ball that **do not move at all** — they twinkle in place and die |
+| f | Stars | two four-point stars, the smaller held steady, the larger breathing between 40 % and full size |
+| g | Flares | a wide, very faint warm haze, hue-varied particle to particle, peaking around 12 % opacity |
+| h | Palette | warm oranges and reds throughout, with the sparkles turning BLUE as they die |
+| i | World space | move the pedestal mid-effect if you can. The source is WORLD space and the port is LOCAL (§13.5). For a *pickup* this is the deviation most likely to matter in real use |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **The layer partition is a weighted draw, not per-emitter independent spawning.** Nine independent
+   Niagara emitters each own their own spawn accumulator; the port has ONE emitter whose particles are
+   assigned a layer on draw. Over any window the proportions match exactly, but the arrival times are
+   correlated where the source's are independent. `[inferred]` visually equivalent at these rates.
+2. **`Ring03`'s live distortion is reproduced; `Opacty_DepthFade 20` is not.** DepthFade is a pre-existing,
+   documented CkUsf gap (NS_Lightning_Range §13.4) — CkUsf surface looks do not wire scene depth.
+3. **Other unplumbed family parameters:** `Core_Intensity` (0 on five of six instances — inert there),
+   `Core_Power`, `Color_CoreDifferent`, and `Gradient_Invert 0.5` on four instances (inert against the
+   white ramp). **`Glow_Intensity 0.3` on `Part02` IS reproduced**, folded into Brightness — on an unlit
+   additive composite the two are the same emissive scale.
+4. **Sprite rotation on camera-facing row renderers** — §6.5 gap 3 asked whether `Particles.SpriteRotation`
+   is bound there. It is: the `CameraFacingSprite` kind is documented as spinning the quad in screen space,
+   and Ring01 / Sparkles / Flares write `O.Rotation` accordingly.
+5. **World space.** All nine source emitters are `LocalSpace: false`; the CkParticles template is local
+   space. §6.5 gap 4 flagged this as *more* likely to be visible here than for a one-shot, because a pickup
+   loop is attached to something that may move. Unchanged and recorded, not silent.
+6. **Every stand-in texture is a statistical match of the source paint, not a copy** (§7).
+7. **`In.EmitterAge` is threaded but unread.** Phase 2's C5 input exists for the windowed sub-loops of the
+   Cast family; this system has none — every emitter is `Life Cycle Mode = System`, so its stored `Loop`
+   rows are inert and there is nothing to gate. The roster-wide emitter-clock independence sweep in
+   `Test_Particles_RosterSanity` therefore still holds with this behavior on the roster.
+
+---
+
+## 14. Reusable lessons
+
+1. **A rate-only source cannot be partitioned by a modulus.** `Seed % N` forces every layer onto a multiple
+   of 1/N; a 0.5/s layer inside a 27.5/s stream has no such slot. Draw once and walk cumulative shares —
+   the mix is then exact, fractional rates cost nothing, and adding a layer does not re-map the others.
+2. **A planning sheet's warnings can point the wrong way, and the corpus is the arbiter.** §5's "both alpha
+   terms multiply — getting this wrong makes the flares ~8x too bright" was backwards: the module's own
+   `Scale Mode` makes one of the two inert. The three sibling sheets read the same module correctly, which
+   is what made the outlier visible.
+3. **`[values]` blocks carry load-bearing numbers the prose sections omit.** Every `Color.Scale Alpha` in
+   this batch lives only there; four of this system's nine layers would have rendered at the wrong
+   coverage if the port had trusted §5 alone.
+4. **Reuse by IDENTITY beats reuse by correlation.** All five "new bakes needed" turned out to be paints an
+   earlier batch had already measured off the same PNG. Check the source asset name against the existing
+   recipes' §7 tables before measuring anything.
+5. **Make a disabled module's absence falsifiable.** "Sparkles have no velocity" is a claim a test can hold
+   (`position(t) == position(0)`); left as a comment it is the kind of thing a later session helpfully
+   "fixes".

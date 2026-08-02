@@ -5,10 +5,25 @@ Schema and evidence-tag conventions: [README.md](README.md). Exemplars: [NS_Basi
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 27, `HealLoop`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior id is allocated, no `.ush` exists, no cadence row was added, no look was authored, no
-asset was generated, nothing was built and nothing was rendered.
+§1–6 are archaeology against the extracted corpus, re-verified against the v3 sidecar at implementation
+time. **Two corrections were made in place:**
+
+1. **The stream total was mis-added.** §2 and §6.1 both stated **32.5 /s**; the nine addends they list —
+   and the corpus `SpawnRate` values — sum to **34.5**. The itemization was right and only the addition
+   was wrong, the same failure mode NS_Bomb_Spawn hit on its burst count. The total is the denominator of
+   the rate-weighted partition, so it re-weights every layer.
+2. **The per-emitter `Color.Scale Alpha` values were missing.** They live only in the corpus `[values]`
+   blocks and four of them are far from 1 — `Glow_01` at **0.03** is a 97 % coverage cut. §2 now carries
+   them.
+
+§6.1's `[P0-D3 STOP]` is RESOLVED: campaign decision **[P0-D4]** routed the four rate-only Loop systems
+through Phase 2's C2 spawn-rate rows. §6.1's proposed workaround for the fractional 0.5 /s layer (scale
+the slot count, or gate `Raimbow` every other loop) turned out to be unnecessary — see §9.2.
+
+§7 onward is what was actually built.
 
 ---
 
@@ -68,12 +83,23 @@ emitter rows. The rows are kept in the table as authored leftovers, marked inert
 draws with `M_VFX_DisAdd_Star02` and emitter `Star02` draws with `M_VFX_DisAdd_Star01`.
 
 **Steady-state rate `[corpus-v3]`: all nine emitters spawn continuously — 0.5+10+10+1+1+2+2+6+2 =
-32.5 particles/second.** *(Was stated as "12.5/s from five infinite emitters + 6.6 one-time
-particles from four `Once` emitters" — that split came from the inert emitter Loop rows.)*
+34.5 particles/second.** *(Was stated as "12.5/s from five infinite emitters + 6.6 one-time
+particles from four `Once` emitters" — that split came from the inert emitter Loop rows; the corrected
+figure was then written as **32.5**, which is an ARITHMETIC SLIP: the nine addends above sum to 34.5. The
+itemization and the corpus `SpawnRate` values were right throughout, only the total was wrong. Corrected
+at implementation time, 2026-08-02 — the total is the denominator of the layer partition, so an error in
+it re-weights every layer.)*
 `Raimbow` at 0.5/s is still the sparsest layer: one particle every two seconds.
 
 Steady-state live count ≈ Σ(rate × mean lifetime) = 0.5×1 + 10×0.45 + 10×0.45 + 1×0.45 + 1×0.45 +
-2×2 + 2×2 + 6×1.5 + 2×2 ≈ **28.9** `[inferred, on the corpus-v3 lifetimes]`.
+2×2 + 2×2 + 6×1.5 + 2×2 ≈ **31.4** `[inferred, on the corpus-v3 lifetimes]` *(the same slip put this at
+28.9)*.
+
+**`Color` module `Scale Alpha` per emitter `[corpus]`** — these live only in the `[values]` blocks and are
+load-bearing (Glow_01's is a 97 % coverage cut): `Raimbow` 1, `Sparkles_01` **0.15**,
+`Sparkles_Stretched` **0.15**, `Star01` 1, `Star02` **0.7**, `Glow_01` **0.03**, `Glow_02` **0.7**,
+`Glow_03` **0.07**. `Flares` has no `Color` module; its alpha comes from the HSV Alpha Scale Range and the
+`Scale Color` module.
 
 > ### Lifetime — RESOLVED `[corpus-v3]`
 > All three ambiguous emitters are `Lifetime Mode = Random`, so per [P0-D2] the **Min/Max pins drive**
@@ -281,13 +307,14 @@ This system makes the gap most acute because **its rates are fractional and very
 sparse drift into a metronome.
 
 Recommendation, identical to the two sibling Loop sheets: **extend `FCk_ParticlesTemplateSpec` with a
-real spawn rate and lifetime for continuous rows**, then run one **32.5/s** stream (all nine emitters
-`[corpus-v3]`) with lifetime **2.0 s** and a rate-weighted partition. Because 32.5 is fractional,
-the weights are not integers — `Raimbow` 0.5, `Sparkles_01` 10, `Sparkles_Stretched` 10, `Star01` 1,
-`Star02` 1, `Glow_01` 2, `Glow_02` 2, `Flares` 6, `Glow_03` 2. Either scale the partition by 2
-(65 slots: Raimbow 1, Sparkles 20/20, Stars 2/2, Glows 4/4/4, Flares 12) or drive `Raimbow` on an
-every-other-loop gate. *(Was a 12.5/s five-emitter stream plus "four `Once` layers not expressible" —
-the `Once` rows are inert, so all nine layers belong to the one stream.)*
+real spawn rate and lifetime for continuous rows**, then run one **34.5/s** stream (all nine emitters
+`[corpus-v3]`) with lifetime **2.0 s** and a rate-weighted partition; the weights are the emitters' own
+rates — `Raimbow` 0.5, `Sparkles_01` 10, `Sparkles_Stretched` 10, `Star01` 1, `Star02` 1, `Glow_01` 2,
+`Glow_02` 2, `Flares` 6, `Glow_03` 2. *(Was a 12.5/s five-emitter stream plus "four `Once` layers not
+expressible" — the `Once` rows are inert, so all nine layers belong to the one stream; the total was then
+mis-added as 32.5, see §2.)* The implementation needed no slot scaling at all: a weighted DRAW carries a
+fractional rate directly, so the "scale the partition by 2 or gate `Raimbow` every other loop" workaround
+this sheet proposed is unnecessary — see §9.2.
 
 ### 6.2 VisTag / renderer needs
 
@@ -397,4 +424,185 @@ need, introduces nothing new, and is the cheapest possible validation that the s
 
 ---
 
-## 7+. Reserved for implementation — sections 7–14 per [README.md](README.md) are written by the session that implements this effect.
+## 7. Textures — the cheapest port in the cookbook
+
+§6.4 asked for five new bakes plus the colour LUT. **Zero were needed.** Every source paint this system
+touches had already been measured off the same corpus PNG by an earlier batch:
+
+| Source paint | Stand-in | Measured in |
+|---|---|---|
+| `T_VFX_Part_01` | `SoftParticle` | NS_BasicAttack §7 |
+| `T_VFX_Part_02` | `SoftParticleBright` | NS_FireBall_Hit §7 |
+| `T_VFX_Part_04` | `SparkStreak` | NS_BasicAttack §7 |
+| `T_VFX_Ring_02` | `RingFlare` | NS_FireBall_Hit §7 |
+| `T_VFX_Star_01` | `StarFour` | NS_FireBall_Hit §7 |
+| `T_VFX_Star_02` | `StarFourTight` | NS_Arrow_Cast §7 |
+| `T_VFX_Noise_02` | `TileNoise` | NS_BasicAttack §7 |
+| `T_VFX_LUT_Rainbow_01` | `LutRainbow` **baked but not bound** | Phase 1 C3, 10 measured stops, max error 4.39/255 |
+| `T_VFX_WhitePixel` | `LutWhite` | Phase 1 C3 |
+
+§6.7's recommendation to **schedule NS_HealLoop last in the batch** was followed and paid off exactly as
+predicted: it introduced no look, no texture and no capability of its own, which makes it the cheapest
+possible check that the shared C2 machinery works.
+
+The Rainbow LUT is **baked and available** but the `RainbowDisAdd` look still binds `LutWhite`, held back
+by campaign decision **[P1-D1]** (§13.2) — the same hold every other Rainbow consumer is under.
+
+---
+
+## 8. Mesh
+
+**None.** All nine source renderers are sprites: eight camera-facing and one velocity-aligned.
+
+---
+
+## 9. The behavior — `Behavior_HealLoop.ush` + `ExecuteStage_CPU` case 27
+
+### 9.1 The cadence row
+
+| Field | Value | Source |
+|---|---|---|
+| `LoopDuration` | 1.0 s | the SYSTEM's `Loop Behavior = Infinite`, `Loop Duration = 1` ([P0-D1]) — the shortest loop in the batch |
+| `ParticleLifetime` | 2.0 s | the three glows' Direct-Set 2.0 |
+| `BurstCount` | 0 | there is no burst module anywhere in the system |
+| `SpawnRate` | 34.5 /s | the corrected sum of the nine emitters' `SpawnRate` values (§2) |
+
+The particle lifetime EXCEEDS the loop duration here, which is legal and precedented ([P0-D5], behavior
+17's 1.1 / 1.0): on a rate-only source the loop only wraps `Emitter.Age`.
+
+### 9.2 A weighted DRAW makes the fractional rate free
+
+§6.1 worried that 0.5 /s inside a 34.5 /s stream cannot be an integer slot count and proposed either
+doubling the slot count to 69 or gating `Raimbow` on alternate loops. Neither is needed: the behavior
+draws `CkParticles_Rand(Seed, 0)` once, scales by the total rate, and walks a cumulative-share cascade in
+the source's emitter order. A fractional rate is just a fractional threshold — `Raimbow` occupies
+[0, 0.5) of a 34.5-wide interval, which is exactly its 1.449 % share, with no slot arithmetic at all.
+
+Measured over 400 000 seeds, the worst per-layer deviation from the source share is **0.00072** (§11).
+
+### 9.3 Per-layer notes worth the reader's time
+
+- **The star materials are SWAPPED against their emitter names** — emitter `Star01` draws with
+  `M_VFX_DisAdd_Star02` and vice versa. §2 says "do not fix it"; the behavior does not, and §11 asserts it
+  so a later session cannot helpfully correct the source.
+- **`Sparkles_01` carries an authored `Sprite Rotation Angle 90` with no `Sprite Rotation Mode` line**, so
+  it is a fixed 90° on every particle rather than a random draw `[inferred]` — unchanged from §5.
+- **`Sparkles_Stretched` has an INVERTED length range** (`Min (25, 70)` / `Max (40, 60)`). Copied verbatim:
+  lerping the other way spans the identical set of values, and "fixing" it would silently change the
+  distribution's shape only if the source ever sorted the pair, which it does not.
+- **`Scale Sprite Size by Speed`** is derived from the SAME closed-form velocity the position integral
+  uses, never from a frame delta (NS_BasicAttack §8, lesson 7). Threshold 1000 units/s, up to 2x length.
+- **`Raimbow`'s alpha is a TRIANGLE** peaking at t = 0.269, where the Cast variants of this layer ramp
+  1 → 0; and its `Scale Color` module runs in `RGBA Together` mode, so its grey Initialize colour is
+  HALVED rather than replaced.
+- **`Glow_01` is the faintest layer in the cookbook** — 550 units across at `Scale Alpha` 0.03.
+- **`Glow_02` is the most keyed layer here**: red and blue swing between ~0.06 and ~1 twice while green
+  holds at 1, a saturated-green ↔ white pulse.
+
+---
+
+## 10. Looks and renderers
+
+Seven row-declared renderers on VisTags **77–83** — six camera-facing sprites and one velocity-aligned,
+matching the source's own alignment split. **This port authors NO new look.**
+
+| VisTag | Kind | Look | Source material | Serves |
+|---|---|---|---|---|
+| 77 | CameraFacingSprite | `RainbowDisAdd` | `M_VFX_DisAdd_Rainbow` | Raimbow |
+| 78 | CameraFacingSprite | `PartDisAdd01Bright` | `M_VFX_DisAdd_Part01_Bright` | Sparkles_01 |
+| 79 | VelocityAlignedSprite | `PartDisAdd04` | `M_VFX_DisAdd_Part04` | Sparkles_Stretched |
+| 80 | CameraFacingSprite | `StarDisAdd02` | `M_VFX_DisAdd_Star02` | emitter **Star01** |
+| 81 | CameraFacingSprite | `StarDisAdd01` | `M_VFX_DisAdd_Star01` | emitter **Star02** |
+| 82 | CameraFacingSprite | `PartDisAdd01` | `M_VFX_DisAdd_Part01` | Glow_01, Glow_02 |
+| 83 | CameraFacingSprite | `PartDisAdd02` | `M_VFX_DisAdd_Part02` | Flares, Glow_03 |
+
+Rows 80 and 81 are where the swap lives, and writing them in emitter order rather than material order is
+what keeps the behavior readable.
+
+`Get_BehaviorLookName(27)` stays `NAME_None`: every look rides a row renderer that binds it explicitly.
+
+---
+
+## 11. Tests
+
+`Test_Particles_HealLoopBehavior.cpp` + the `NumBehaviors` 26 → 30 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+- **The rate-share sweep** over 400 000 seeds requires every layer within **0.004** of its source share;
+  observed worst case 0.00072. The test rebuilds the cascade from the source rate table, so a drifted
+  threshold in the behavior fails here rather than passing against itself.
+- **The SWAPPED star pair** is asserted from both ends: each emitter's VisTag, and that emitter `Star01`
+  is the LARGER of the two size ranges. Getting the swap "right" the intuitive way fails both.
+- **Both sparkle streams travel straight up with no lateral velocity**, and only the stretched one draws a
+  non-square quad.
+- **Flares**: hue varies per particle; the brightest channel reaches exactly 1 and the darkest sits inside
+  0.5–0.65, which is the source's 0.35–0.5 `Saturation Range` at value 1 — a saturation drawn from the
+  wrong end of the descending range shows up there. Alpha is bounded on both sides against
+  0.1 × 0.125.
+- **Glow_01 peaks at exactly 0.03 alpha and holds 550 units** — the `Scale Alpha` correction, made
+  falsifiable.
+- Plus the standard per-layer anti-vacuity and death checks.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **HEAL LOOP**.
+
+> **This pair is a STEADY-STATE comparison, not a synced replay.** `NS_HealLoop` is an INFINITE system: it
+> never finishes, so the harness's `OnSystemFinished` re-arm never fires and the two sides are never in
+> phase. Judge density, palette and motion character over a few seconds; do NOT expect matched frames.
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | a green healing aura rising off the ground — continuous, never pulsing |
+| b | Density | ~31 live particles; the sparkle streams dominate the count and the ring is one particle every two seconds |
+| c | Sparkles | two upward streams out of an 80-unit cylinder, one round and one STRETCHED along its motion, the stretched one lengthening with speed |
+| d | Stars | two four-point stars rising out of a small cylinder BELOW the origin, the larger one on the *other* star's paint |
+| e | Glows | three shells at 550 / 250 / 220 units. The 550 is nearly invisible (3 % alpha); the 250 flickers red↔white twice against a steady green |
+| f | Ring | one big 450-unit lens flare every two seconds, growing 0.8 → 1.0, its alpha a triangle rather than a fade |
+| g | Flares | a faint green-to-cyan haze, hue-varied particle to particle |
+| h | Palette | green-dominant throughout, with the sparkle ramp passing through white and blue near spawn |
+| i | Rainbow ring | ships against a WHITE ramp (§13.2). Judge everything else first; if the ring is the only miss, that is the known [P1-D1] hold |
+| j | World space | move the pedestal mid-effect if you can. The source is WORLD space and the port is LOCAL (§13.4) — a heal loop is normally attached to a moving character |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **The layer partition is a weighted draw, not per-emitter independent spawning** — see NS_PickupLoop
+   §13.1 for the full statement. Proportions match exactly; arrival times are correlated where the
+   source's are independent.
+2. **The Rainbow layer ships against a WHITE ramp** — campaign decision **[P1-D1]**. `LutRainbow` is baked
+   and measured (max error 4.39/255) but `Gradient_Invert`'s exact remap is not recoverable from the
+   corpus, and against a white ramp the whole chain is a provable multiply by one. Reverses in one token
+   once [P1-D1] is ruled. **This is NS_HealLoop's only hard shader gap**, exactly as §6.5 gap 5 predicted.
+3. **Unplumbed family parameters:** `Core_Intensity` (1 on `Part01_Bright`), `Gradient_Invert`
+   (0 / 0.5 / 2 — inert against the white ramp), `Opacty_StepAdd` (0.3 on Rainbow) and `Opacty_DepthFade`
+   (10 / 20 / 30). **`Glow_Intensity 0.3` on `Part02` IS reproduced**, folded into Brightness.
+4. **World space.** All nine source emitters are `LocalSpace: false`; the CkParticles template is local
+   space. §6.5 gap 9 asks the maintainer to judge which is the more desirable behaviour for this family —
+   still open, and it is a §12 row rather than a silent difference.
+5. **`Sparkles_01`'s fixed 90° sprite rotation is `[inferred]`** from an authored angle with no mode line.
+6. **`In.EmitterAge` is threaded but unread** — see NS_PickupLoop §13.7. The four emitters that store
+   `Loop Behavior = Once` on a 0.3 s loop are `Life Cycle Mode = System`, so there is no window to gate.
+7. **Every stand-in texture is a statistical match of the source paint, not a copy** (§7).
+
+---
+
+## 14. Reusable lessons
+
+1. **Re-add a sheet's own itemization before trusting its total.** Two independent totals in this sheet
+   (§2 and §6.1) carried the same wrong sum, because the second was copied from the first. On a
+   rate-weighted partition the total is the denominator — every layer's share is wrong if it is.
+2. **A fractional spawn rate is only a problem for slot counting.** The sheet proposed doubling the slot
+   count or gating a layer on alternate loops; a weighted draw against a cumulative threshold made both
+   unnecessary and is strictly more faithful.
+3. **Schedule the sheet that introduces nothing LAST.** §6.7 said so and was right: this port reused every
+   look, every texture and every capability its siblings funded, which made it a clean check that the
+   shared machinery works rather than a place to debug it.
+4. **Assert a "do not fix it" note.** The swapped star materials are the kind of oddity a later reader
+   corrects in good faith. A test that names both ends of the swap is the only durable form of that note.
+5. **Chase every `Scale Alpha` before writing a colour curve.** Four of this system's nine layers carry one
+   that is not 1, and one of them cuts coverage by 97 %. A layer at the wrong coverage reads as a palette
+   error, which is the hardest kind of miss to attribute at an A/B.
