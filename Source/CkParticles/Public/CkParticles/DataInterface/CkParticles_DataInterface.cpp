@@ -40,6 +40,9 @@ namespace NDICkParticlesLocal
         TEXT("/CkParticles/Behaviors/Behavior_LightningRange.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_GunshotProjectile.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_ArrowProjectile.ush"),
+        TEXT("/CkParticles/Behaviors/Behavior_FireBurst.ush"),
+        TEXT("/CkParticles/Behaviors/Behavior_FireBallHit.ush"),
+        TEXT("/CkParticles/Behaviors/Behavior_GunshotHit.ush"),
     };
 }
 
@@ -104,6 +107,70 @@ namespace NDICkParticlesLocal
             InA.W * InB.Y - InA.X * InB.Z + InA.Y * InB.W + InA.Z * InB.X,
             InA.W * InB.Z + InA.X * InB.Y - InA.Y * InB.X + InA.Z * InB.W,
             InA.W * InB.W - InA.X * InB.X - InA.Y * InB.Y - InA.Z * InB.Z);
+    }
+
+    // ---- Shared source-curve transcription. Mirrors Common.ush's CkParticles_KeyN / _IntN / _QuatFromZTo -----------
+
+    static auto Key2(float InT, float InT0, float InV0, float InT1, float InV1) -> float
+    {
+        return FMath::Lerp(InV0, InV1, Saturate((InT - InT0) / FMath::Max(InT1 - InT0, 1.0e-6f)));
+    }
+
+    static auto Key3(float InT, float InT0, float InV0, float InT1, float InV1, float InT2, float InV2) -> float
+    {
+        return InT <= InT1 ? Key2(InT, InT0, InV0, InT1, InV1)
+                           : Key2(InT, InT1, InV1, InT2, InV2);
+    }
+
+    static auto Key4(float InT, float InT0, float InV0, float InT1, float InV1, float InT2, float InV2,
+                     float InT3, float InV3) -> float
+    {
+        return InT <= InT1 ? Key2(InT, InT0, InV0, InT1, InV1)
+                           : Key3(InT, InT1, InV1, InT2, InV2, InT3, InV3);
+    }
+
+    static auto Key5(float InT, float InT0, float InV0, float InT1, float InV1, float InT2, float InV2,
+                     float InT3, float InV3, float InT4, float InV4) -> float
+    {
+        return InT <= InT1 ? Key2(InT, InT0, InV0, InT1, InV1)
+                           : Key4(InT, InT1, InV1, InT2, InV2, InT3, InV3, InT4, InV4);
+    }
+
+    static auto Int2(float InS, float InV0, float InV1) -> float
+    {
+        const auto A = Saturate(InS);
+        return A * (InV0 + Key2(A, 0.0f, InV0, 1.0f, InV1)) * 0.5f;
+    }
+
+    static auto Int3(float InS, float InK, float InV0, float InV1, float InV2) -> float
+    {
+        const auto T = Saturate(InS);
+        const auto A = FMath::Min(T, InK);
+        auto Sum = A * (InV0 + Key2(A, 0.0f, InV0, InK, InV1)) * 0.5f;
+
+        if (T > InK)
+        {
+            const auto B = T - InK;
+            Sum += B * (InV1 + Key2(T, InK, InV1, 1.0f, InV2)) * 0.5f;
+        }
+        return Sum;
+    }
+
+    static auto QuatFromZTo(FVector3f InDir) -> FQuat4f
+    {
+        const auto Up = FVector3f(0.0f, 0.0f, 1.0f);
+        const auto D  = FMath::Clamp(FVector3f::DotProduct(Up, InDir), -1.0f, 1.0f);
+
+        if (D < -0.999999f)
+        { return FQuat4f(1.0f, 0.0f, 0.0f, 0.0f); }
+
+        const auto Axis = FVector3f::CrossProduct(Up, InDir);
+        const auto Len  = Axis.Size();
+
+        if (Len < 1.0e-6f)
+        { return FQuat4f(0.0f, 0.0f, 0.0f, 1.0f); }
+
+        return QuatFromAxisAngle(Axis / Len, FMath::Acos(D));
     }
 
     // ---- Behavior 7 (Slash) helpers. Mirrors of Behavior_Slash.ush's CkParticles_Slash_* functions ----------------
@@ -867,6 +934,978 @@ namespace NDICkParticlesLocal
                 Out.Position = FVector3f(-66.0904f, 0.0f, 0.0f);
                 Out.Color    = FLinearColor(0.06f, 0.0470123f, 0.0270472f, 0.2f);
                 Out.Size     = FVector2f(35.0f, 150.0f);
+                break;
+            }
+            case 20: // FireBurst — Vefects NS_Fire. Mirrors Behavior_FireBurst.ush; recipe Cookbook/NS_Fire.md.
+            {
+                constexpr auto NumLayers    = 10;
+                constexpr auto LayerGlow01  = 0;
+                constexpr auto FirstFlame   = 2;
+                constexpr auto FirstSparkle = 5;
+
+                constexpr auto Delay       = 0.05f;
+                constexpr auto LifeGlow01  = 0.25f;
+                constexpr auto LifeGlow02  = 0.2f;
+
+                const auto Hide = [&Out]() -> void
+                {
+                    Out.Color = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.Size  = FVector2f(0.0f, 0.0f);
+                    Out.Scale = FVector3f(0.0f, 0.0f, 0.0f);
+                };
+
+                const auto HemiDir = [](int32 InS) -> FVector3f
+                {
+                    const auto D = RandDir(InS);
+                    return FVector3f(D.X, D.Y, FMath::Abs(D.Z));
+                };
+
+                const auto Layer = ((InSeed % NumLayers) + NumLayers) % NumLayers;
+
+                Out.Velocity = FVector3f::ZeroVector;
+                Out.Position = FVector3f::ZeroVector;
+
+                if (Layer < FirstFlame)
+                {
+                    const auto Life = Layer == LayerGlow01 ? LifeGlow01 : LifeGlow02;
+                    const auto td   = InAge - Delay;
+
+                    if (td < 0.0f || td > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t     = Saturate(td / Life);
+                    const auto Alpha = 0.5f * Key2(t, 0.0f, 1.0f, 1.0f, 0.0f);
+                    const auto Grow  = Key3(t, 0.0f, 0.5f, 0.1f, 1.0f, 1.0f, 1.0f);
+
+                    Out.VisTag = 12;
+
+                    if (Layer == LayerGlow01)
+                    {
+                        Out.Color   = FLinearColor(1.0f, 0.0908417f, 0.043735f, Alpha);
+                        Out.Size    = FVector2f(500.0f * Grow, 500.0f * Grow);
+                        Out.Dynamic = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                        break;
+                    }
+
+                    Out.Color   = FLinearColor(1.0f, 0.496933f, 0.043735f, Alpha);
+                    Out.Size    = FVector2f(400.0f * Grow, 400.0f * Grow);
+                    Out.Dynamic = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+                    break;
+                }
+
+                if (Layer < FirstSparkle)
+                {
+                    const auto Life = FMath::Lerp(0.2f, 0.7f, Rand(InSeed, 1));
+                    const auto td   = InAge - Delay;
+
+                    if (td < 0.0f || td > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t   = Saturate(td / Life);
+                    const auto Dir = HemiDir(InSeed);
+
+                    const auto Spawn = Dir * 20.0f;
+                    const auto V0    = Dir * FMath::Lerp(100.0f, 250.0f, Rand(InSeed, 2));
+
+                    Out.Position = Spawn + V0 * (Int2(t, 1.0f, 0.2f) * Life);
+                    Out.Velocity = V0 * Key2(t, 0.0f, 1.0f, 1.0f, 0.2f);
+
+                    Out.Color = FLinearColor(
+                        Key3(t, 0.0796861f, 5.0f,      0.368246f, 3.0f,       0.738907f, 0.250158f),
+                        Key3(t, 0.0796861f, 3.43343f,  0.368246f, 0.67227f,   0.738907f, 0.00749903f),
+                        Key3(t, 0.0796861f, 0.115767f, 0.368246f, 0.0841786f, 0.738907f, 0.00749903f),
+                        Key3(t, 0.0f,       0.0f,      0.303049f, 1.0f,       0.992454f, 0.0f));
+
+                    const auto Base = FMath::Lerp(50.0f, 200.0f, Rand(InSeed, 3));
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.2f, 0.9f, 1.0f, 1.0f);
+                    Out.Size = FVector2f(Base * Grow, Base * Grow);
+
+                    Out.Rotation = Rand(InSeed, 4) * 360.0f + FMath::Lerp(-30.0f, 30.0f, Rand(InSeed, 5)) * td;
+
+                    const auto Start = FMath::FloorToFloat(Rand(InSeed, 6) * 4.0f);
+                    Out.SubImageIndex = FMath::Fmod(Start + FMath::Min(FMath::FloorToFloat(t * 4.0f), 3.0f), 4.0f);
+
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 0.0f, 1.0f, -1.0f), 5.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 13;
+                    break;
+                }
+
+                const auto LoopIndex   = InSeed / NumLayers;
+                const auto NumThisLoop = 3 + static_cast<int32>(Rand(LoopIndex, 11) * 3.0f);
+                const auto Slot        = Layer - FirstSparkle;
+
+                if (Slot >= NumThisLoop)
+                {
+                    Hide();
+                    break;
+                }
+
+                const auto SparkleLife = FMath::Lerp(0.3f, 1.0f, Rand(InSeed, 1));
+
+                if (InAge > SparkleLife)
+                {
+                    Hide();
+                    break;
+                }
+
+                const auto t   = Saturate(InAge / SparkleLife);
+                const auto Dir = HemiDir(InSeed);
+
+                const auto Spawn = Dir * (2.0f * FMath::Pow(Rand(InSeed, 7), 1.0f / 3.0f));
+                const auto V0    = Dir * FMath::Lerp(300.0f, 1000.0f, Rand(InSeed, 2));
+
+                Out.Position = Spawn + V0 * (Int3(t, 0.2f, 1.0f, 0.35f, 0.05f) * SparkleLife);
+                Out.Velocity = V0 * Key3(t, 0.0f, 1.0f, 0.2f, 0.35f, 1.0f, 0.05f);
+
+                Out.Color = FLinearColor(
+                    1.0f,
+                    Key3(t, 0.0f, 0.703584f, 0.327196f, 0.288367f,  0.779958f, 0.0419999f),
+                    Key3(t, 0.0f, 0.031f,    0.327196f, 0.0369999f, 0.779958f, 0.0642406f),
+                    1.0f);
+
+                const auto Width  = FMath::Lerp(15.0f, 30.0f, Rand(InSeed, 8));
+                const auto Length = FMath::Lerp(40.0f, 50.0f, Rand(InSeed, 9));
+                const auto Grow   = Key3(t, 0.0f, 0.0f, 0.1f, 1.0f, 1.0f, 0.0f);
+                const auto Taper  = Key2(t, 0.1f, 1.0f, 1.0f, 0.4f);
+                Out.Size = FVector2f(Width * Grow, Length * Grow * Taper);
+
+                Out.Dynamic = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+                Out.VisTag  = 14;
+                break;
+            }
+            case 21: // FireBallHit — Vefects NS_FireBall_Hit. Mirrors Behavior_FireBallHit.ush; recipe Cookbook/NS_FireBall_Hit.md.
+            {
+                constexpr auto NumLayers      = 47;
+                constexpr auto LayerRainbow   = 0;
+                constexpr auto LayerRing      = 1;
+                constexpr auto LayerGlow01    = 9;
+                constexpr auto LayerStar      = 15;
+                constexpr auto LayerGlow02    = 16;
+                constexpr auto LayerSecond    = 17;
+                constexpr auto FirstFlame     = 21;
+                constexpr auto FirstSmoke     = 26;
+                constexpr auto FirstFlare     = 31;
+                constexpr auto FirstFlash     = 33;
+                constexpr auto LayerFirstGlow = 37;
+                constexpr auto LayerFlareImp  = 38;
+                constexpr auto FirstSpike02   = 44;
+
+                constexpr auto DelayEarly = 0.04f;
+                constexpr auto DelayLate  = 0.05f;
+
+                const auto Hide = [&Out]() -> void
+                {
+                    Out.Color = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.Size  = FVector2f(0.0f, 0.0f);
+                    Out.Scale = FVector3f(0.0f, 0.0f, 0.0f);
+                };
+
+                const auto Spike = [&](FVector3f InScaleMin, FVector3f InScaleMax) -> void
+                {
+                    const auto Life = FMath::Lerp(0.1f, 0.15f, Rand(InSeed, 1));
+                    const auto td   = InAge - DelayLate;
+
+                    if (td < 0.0f || td > Life)
+                    {
+                        Hide();
+                        return;
+                    }
+
+                    const auto t   = Saturate(td / Life);
+                    const auto Dir = RandDir(InSeed);
+
+                    const auto V0 = Dir * 10.0f;
+                    Out.Position = Dir * 1.0f + V0 * td;
+                    Out.Velocity = V0;
+
+                    Out.Orientation = QuatFromZTo(Dir);
+                    Out.MeshIndex   = 0;
+                    Out.Size        = FVector2f(0.0f, 0.0f);
+
+                    const auto Base = FVector3f(
+                        FMath::Lerp(InScaleMin.X, InScaleMax.X, Rand(InSeed, 3)),
+                        FMath::Lerp(InScaleMin.Y, InScaleMax.Y, Rand(InSeed, 4)),
+                        FMath::Lerp(InScaleMin.Z, InScaleMax.Z, Rand(InSeed, 5)));
+
+                    Out.Scale = Base * FVector3f(
+                        Key3(t, 0.0f, 0.0f, 0.2f, 0.5f, 1.0f, 0.0f),
+                        Key3(t, 0.0f, 0.0f, 0.2f, 0.4f, 1.0f, 0.0f),
+                        Key2(t, 0.0f, 0.0f, 0.2f, 1.0f));
+
+                    Out.Color = FLinearColor(
+                        Key5(t, 0.0f, 1.0f, 0.118322f, 1.0f,      0.515545f, 1.0f,      0.671295f, 0.391573f, 0.843948f, 0.009134f),
+                        Key5(t, 0.0f, 1.0f, 0.118322f, 0.693872f, 0.515545f, 0.040915f, 0.671295f, 0.003677f, 0.843948f, 0.004025f),
+                        Key5(t, 0.0f, 1.0f, 0.118322f, 0.147027f, 0.515545f, 0.045186f, 0.671295f, 0.022174f, 0.843948f, 0.006995f),
+                        1.0f);
+
+                    Out.VisTag = 26;
+                };
+
+                const auto Layer = ((InSeed % NumLayers) + NumLayers) % NumLayers;
+
+                Out.Velocity = FVector3f::ZeroVector;
+                Out.Position = FVector3f::ZeroVector;
+                Out.Dynamic  = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+
+                if (Layer == LayerRainbow)
+                {
+                    if (InAge > 0.2f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t     = Saturate(InAge / 0.2f);
+                    const auto Grow  = Key3(t, 0.0f, 0.5f, 0.2f, 0.9f, 1.0f, 1.0f);
+                    const auto Alpha = 0.2f * Key3(t, 0.0f, 0.0f, 0.328403f, 1.0f, 1.0f, 0.0f);
+
+                    Out.Color    = FLinearColor(0.913099f * 0.5f, 0.913099f * 0.5f, 0.913099f * 0.5f, Alpha);
+                    Out.Size     = FVector2f(250.0f * Grow, 250.0f * Grow);
+                    Out.Rotation = Rand(InSeed, 4) * 360.0f;
+                    Out.Dynamic  = FVector4f(0.5f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag   = 20;
+                    break;
+                }
+
+                if (Layer == LayerRing)
+                {
+                    if (InAge > 0.3f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(InAge / 0.3f);
+                    const auto Grow = Key3(t, 0.0f, 0.0f, 0.25f, 0.9f, 1.0f, 1.0f);
+
+                    Out.Color = FLinearColor(
+                        Key5(t, 0.0f, 1.0f, 0.118322f, 1.0f,      0.295804f, 1.0f,      0.542107f, 0.391573f, 0.843948f, 0.009134f),
+                        Key5(t, 0.0f, 1.0f, 0.118322f, 0.693872f, 0.295804f, 0.040915f, 0.542107f, 0.003677f, 0.843948f, 0.004025f),
+                        Key5(t, 0.0f, 1.0f, 0.118322f, 0.147027f, 0.295804f, 0.045186f, 0.542107f, 0.022174f, 0.843948f, 0.006995f),
+                        0.5f);
+                    Out.Size     = FVector2f(150.0f * Grow, 150.0f * Grow);
+                    Out.Rotation = Rand(InSeed, 4) * 360.0f;
+                    Out.Dynamic  = FVector4f(Key2(t, 0.0f, 0.0f, 1.0f, -1.0f), 0.0f, 0.0f, 0.0f);
+                    Out.VisTag   = 19;
+                    break;
+                }
+
+                if (Layer < LayerGlow01)
+                {
+                    const auto Life = FMath::Lerp(0.3f, 0.6f, Rand(InSeed, 1));
+                    const auto td   = InAge - DelayLate;
+
+                    if (td < 0.0f || td > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t   = Saturate(td / Life);
+                    const auto Dir = RandDir(InSeed);
+
+                    const auto Spawn = Dir * (20.0f * FMath::Pow(Rand(InSeed, 7), 1.0f / 3.0f));
+                    const auto V0    = Dir * FMath::Lerp(200.0f, 1200.0f, Rand(InSeed, 2));
+
+                    Out.Position = Spawn + V0 * (Int3(t, 0.2f, 1.0f, 0.15f, 0.0f) * Life);
+                    Out.Velocity = V0 * Key3(t, 0.0f, 1.0f, 0.2f, 0.15f, 1.0f, 0.0f);
+
+                    Out.Color = FLinearColor(1.0f, 0.563224f, 0.224f, Key2(t, 0.613341f, 1.0f, 1.0f, 0.0f));
+
+                    const auto Base = FMath::Lerp(10.0f, 20.0f, Rand(InSeed, 8));
+                    const auto Grow = Key3(t, 0.0f, 0.0f, 0.1f, 1.0f, 1.0f, 0.0f);
+                    Out.Size = FVector2f(Base * Grow, Base * Grow);
+
+                    Out.Rotation = Rand(InSeed, 4) * 360.0f;
+                    Out.Dynamic  = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag   = 16;
+                    break;
+                }
+
+                if (Layer == LayerGlow01)
+                {
+                    if (InAge > 0.1f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(InAge / 0.1f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 0.9f, 1.0f, 1.0f);
+
+                    Out.Color = FLinearColor(
+                        Key3(t, 0.0881376f, 1.0f,      0.377905f, 1.0f,       0.9345f, 0.391573f),
+                        Key3(t, 0.0881376f, 0.693872f, 0.377905f, 0.0409152f, 0.9345f, 0.00367651f),
+                        Key3(t, 0.0881376f, 0.147027f, 0.377905f, 0.0451862f, 0.9345f, 0.0221739f),
+                        Key2(t, 0.0f, 1.0f, 1.0f, 0.0f) * 0.6f);
+                    Out.Size    = FVector2f(1000.0f * Grow, 1000.0f * Grow);
+                    Out.Dynamic = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 15;
+                    break;
+                }
+
+                if (Layer < LayerStar)
+                {
+                    const auto Life = FMath::Lerp(0.3f, 0.5f, Rand(InSeed, 1));
+                    const auto td   = InAge - DelayLate;
+
+                    if (td < 0.0f || td > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t   = Saturate(td / Life);
+                    const auto Dir = RandDir(InSeed);
+
+                    const auto Spawn = Dir * (10.0f * FMath::Pow(Rand(InSeed, 7), 1.0f / 3.0f));
+                    const auto V0    = Dir * FMath::Lerp(800.0f, 2000.0f, Rand(InSeed, 2));
+
+                    const auto VelScale = Key3(t, 0.0f, 1.0f, 0.2f, 0.2f, 1.0f, 0.0f);
+                    Out.Position = Spawn + V0 * (Int3(t, 0.2f, 1.0f, 0.2f, 0.0f) * Life);
+                    Out.Velocity = V0 * VelScale;
+
+                    Out.Color = FLinearColor(
+                        Key4(t, 0.0f, 1.0f, 0.088138f, 1.0f,      0.615756f, 1.0f,       0.98038f, 0.391573f),
+                        Key4(t, 0.0f, 1.0f, 0.088138f, 0.671611f, 0.615756f, 0.025f,     0.98038f, 0.003677f),
+                        Key4(t, 0.0f, 1.0f, 0.088138f, 0.085f,    0.615756f, 0.0293413f, 0.98038f, 0.022174f),
+                        Key2(t, 0.0f, 1.0f, 1.0f, 0.0f) * 0.6f);
+
+                    const auto Width  = FMath::Lerp(25.0f, 40.0f, Rand(InSeed, 8));
+                    const auto Length = FMath::Lerp(70.0f, 60.0f, Rand(InSeed, 9));
+                    const auto Grow   = Key3(t, 0.0f, 0.0f, 0.1f, 1.0f, 1.0f, 0.0f);
+                    const auto Taper  = Key3(t, 0.0f, 1.0f, 0.3f, 0.35f, 1.0f, 0.2f);
+
+                    const auto SpeedFactor = FMath::Lerp(1.0f, 2.0f, Saturate(Out.Velocity.Size() / 1000.0f));
+
+                    Out.Size   = FVector2f(Width * Grow, Length * Grow * Taper * SpeedFactor);
+                    Out.VisTag = 18;
+                    break;
+                }
+
+                if (Layer == LayerStar)
+                {
+                    const auto td = InAge - DelayLate;
+
+                    if (td < 0.0f || td > 0.3f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(td / 0.3f);
+                    const auto Grow = Key3(t, 0.0f, 0.0f, 0.2f, 1.0f, 1.0f, 0.0f);
+
+                    Out.Color = FLinearColor(
+                        Key4(t, 0.0f, 1.0f, 0.115907f, 1.0f,      0.636281f, 1.0f,      0.9345f, 0.391573f),
+                        Key4(t, 0.0f, 1.0f, 0.115907f, 0.693872f, 0.636281f, 0.040915f, 0.9345f, 0.003677f),
+                        Key4(t, 0.0f, 1.0f, 0.115907f, 0.147027f, 0.636281f, 0.045186f, 0.9345f, 0.022174f),
+                        1.0f);
+                    Out.Size     = FVector2f(20.0f * Grow, 20.0f * Grow);
+                    Out.Rotation = 0.1f;
+                    Out.VisTag   = 21;
+                    break;
+                }
+
+                if (Layer == LayerGlow02)
+                {
+                    if (InAge > 0.1f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(InAge / 0.1f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 0.9f, 1.0f, 1.0f);
+
+                    Out.Color = FLinearColor(
+                        1.0f,
+                        Key2(t, 0.214911f, 0.693872f, 0.817386f, 0.0409152f),
+                        Key2(t, 0.214911f, 0.147027f, 0.817386f, 0.0451862f),
+                        Key2(t, 0.406882f, 1.0f, 1.0f, 0.0f));
+                    Out.Size    = FVector2f(100.0f * Grow, 100.0f * Grow);
+                    Out.Dynamic = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 15;
+                    break;
+                }
+
+                if (Layer == LayerSecond)
+                {
+                    if (InAge > 0.1f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t       = Saturate(InAge / 0.1f);
+                    const auto Uniform = Key2(t, 0.0f, 0.5f, 1.0f, 1.0f);
+                    const auto ScaleX  = Key2(t, 0.0f, 1.0f, 1.0f, 0.4f);
+                    const auto ScaleY  = Key2(t, 0.0f, 1.0f, 1.0f, 0.0f);
+
+                    Out.Color = FLinearColor(
+                        Key2(t, 0.618171f, 2.0f,      0.963477f, 3.0f),
+                        Key2(t, 0.618171f, 0.683829f, 0.963477f, 2.25883f),
+                        Key2(t, 0.618171f, 0.218923f, 0.963477f, 0.328385f),
+                        Key2(t, 0.0f, 0.0f, 0.246302f, 1.0f));
+                    Out.Size    = FVector2f(170.0f * Uniform * ScaleX, 170.0f * Uniform * ScaleY);
+                    Out.Dynamic = FVector4f(3.5f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 17;
+                    break;
+                }
+
+                if (Layer < FirstFlame)
+                {
+                    Spike(FVector3f(0.2f, 0.2f, 0.4f), FVector3f(0.2f, 0.2f, 0.7f));
+                    break;
+                }
+
+                if (Layer < FirstSmoke)
+                {
+                    const auto Life = FMath::Lerp(0.2f, 0.7f, Rand(InSeed, 1));
+
+                    if (InAge > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t   = Saturate(InAge / Life);
+                    const auto Dir = RandDir(InSeed);
+
+                    const auto Spawn = Dir * 20.0f;
+                    const auto V0    = Dir * FMath::Lerp(50.0f, 300.0f, Rand(InSeed, 2));
+
+                    Out.Position = Spawn + V0 * (Int2(t, 1.0f, 0.2f) * Life);
+                    Out.Velocity = V0 * Key2(t, 0.0f, 1.0f, 1.0f, 0.2f);
+
+                    Out.Color = FLinearColor(
+                        Key3(t, 0.0796861f, 5.0f,      0.368246f, 3.0f,       0.738907f, 0.250158f),
+                        Key3(t, 0.0796861f, 3.43343f,  0.368246f, 0.67227f,   0.738907f, 0.00749903f),
+                        Key3(t, 0.0796861f, 0.115767f, 0.368246f, 0.0841786f, 0.738907f, 0.00749903f),
+                        Key3(t, 0.0f,       0.0f,      0.303049f, 1.0f,       0.992454f, 0.0f));
+
+                    const auto Base = FMath::Lerp(50.0f, 100.0f, Rand(InSeed, 3));
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.2f, 0.9f, 1.0f, 1.0f);
+                    Out.Size = FVector2f(Base * Grow, Base * Grow);
+
+                    Out.Rotation = Rand(InSeed, 4) * 360.0f
+                                 + FMath::Lerp(-30.0f, 30.0f, Rand(InSeed, 5)) * InAge;
+
+                    const auto Start = FMath::FloorToFloat(Rand(InSeed, 6) * 4.0f);
+                    Out.SubImageIndex = FMath::Fmod(Start + FMath::Min(FMath::FloorToFloat(t * 4.0f), 3.0f), 4.0f);
+
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 0.0f, 1.0f, -1.0f), 5.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 24;
+                    break;
+                }
+
+                if (Layer < FirstFlare)
+                {
+                    const auto Life = FMath::Lerp(0.7f, 1.3f, Rand(InSeed, 1));
+                    const auto td   = InAge - DelayEarly;
+
+                    if (td < 0.0f || td > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t = Saturate(td / Life);
+
+                    const auto Raw    = RandDir(InSeed);
+                    const auto Planar = FVector2f(Raw.X, Raw.Y);
+                    const auto Len    = Planar.Size();
+                    const auto Dir    = Len > 0.000001f
+                        ? FVector3f(Planar.X / Len, Planar.Y / Len, 0.0f)
+                        : FVector3f(1.0f, 0.0f, 0.0f);
+
+                    const auto Spawn = Dir * 20.0f;
+                    const auto V0    = Dir * FMath::Lerp(50.0f, 200.0f, Rand(InSeed, 2));
+
+                    Out.Position = Spawn + V0 * (Int3(t, 0.2f, 1.0f, 0.2f, 0.1f) * Life);
+                    Out.Velocity = V0 * Key3(t, 0.0f, 1.0f, 0.2f, 0.2f, 1.0f, 0.1f);
+
+                    Out.Color = FLinearColor(
+                        Key5(t, 0.0f, 1.0f, 0.0603682f, 1.0f,      0.22457f, 1.0f,      0.363417f, 0.391573f, 0.527618f, 0.0f),
+                        Key5(t, 0.0f, 1.0f, 0.0603682f, 0.693872f, 0.22457f, 0.040915f, 0.363417f, 0.003677f, 0.527618f, 0.0f),
+                        Key5(t, 0.0f, 1.0f, 0.0603682f, 0.147027f, 0.22457f, 0.045186f, 0.363417f, 0.022174f, 0.527618f, 0.0f),
+                        Key2(t, 0.126773f, 1.0f, 0.514337f, 0.35f) * 0.3f);
+
+                    const auto Base = FMath::Lerp(100.0f, 200.0f, Rand(InSeed, 3));
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.2f, 0.9f, 1.0f, 1.0f);
+                    Out.Size = FVector2f(Base * Grow, Base * Grow);
+
+                    Out.Rotation = Rand(InSeed, 4) * 360.0f
+                                 + FMath::Lerp(-30.0f, 30.0f, Rand(InSeed, 5)) * td;
+
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 0.0f, 1.0f, -1.0f), 0.0f, 0.0f,
+                                            Key2(t, 0.0f, -1.0f, 0.25f, 1.0f));
+                    Out.VisTag  = 25;
+                    break;
+                }
+
+                if (Layer < FirstFlash)
+                {
+                    if (InAge > 0.2f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(InAge / 0.2f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 1.0f, 1.0f, 1.0f);
+
+                    Out.Color = FLinearColor(
+                        Key4(t, 0.0f, 2.0f, 0.142469f, 2.0f,      0.47208f, 1.0f,      0.9345f, 0.391573f),
+                        Key4(t, 0.0f, 2.0f, 0.142469f, 1.38774f,  0.47208f, 0.040915f, 0.9345f, 0.003677f),
+                        Key4(t, 0.0f, 2.0f, 0.142469f, 0.294054f, 0.47208f, 0.045186f, 0.9345f, 0.022174f),
+                        Key3(t, 0.0f, 0.0f, 0.214911f, 1.0f, 1.0f, 0.0f) * 0.6f);
+                    Out.Size     = FVector2f(120.0f * Grow, 120.0f * Grow);
+                    Out.Rotation = Rand(InSeed, 4) * 360.0f;
+                    Out.Dynamic  = FVector4f(Key2(t, 0.0f, 1.0f, 1.0f, -1.0f), 0.0f, 0.0f, 0.0f);
+                    Out.VisTag   = 22;
+                    break;
+                }
+
+                if (Layer < LayerFirstGlow)
+                {
+                    const auto td = InAge - DelayEarly;
+
+                    if (td < 0.0f || td > 0.1f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(td / 0.1f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 1.0f, 1.0f, 1.0f);
+
+                    Out.Color = FLinearColor(
+                        Key5(t, 0.0374283f, 0.715694f, 0.16058f, 1.0f,      0.312708f, 1.0f,      0.659221f, 0.913099f,  0.96227f, 0.0137021f),
+                        Key5(t, 0.0374283f, 0.89627f,  0.16058f, 0.752942f, 0.312708f, 0.341915f, 0.659221f, 0.0241576f, 0.96227f, 0.00182116f),
+                        Key5(t, 0.0374283f, 1.0f,      0.16058f, 0.109462f, 0.312708f, 0.109462f, 0.659221f, 0.0241576f, 0.96227f, 0.00802319f),
+                        1.0f);
+                    Out.Size    = FVector2f(300.0f * Grow, 300.0f * Grow);
+                    Out.Dynamic = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 17;
+                    break;
+                }
+
+                if (Layer == LayerFirstGlow)
+                {
+                    const auto td = InAge - DelayLate;
+
+                    if (td < 0.0f || td > 0.2f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t       = Saturate(td / 0.2f);
+                    const auto Uniform = Key3(t, 0.0f, 0.5f, 0.1f, 0.9f, 1.0f, 1.0f);
+                    const auto ScaleX  = Key2(t, 0.0f, 1.0f, 1.0f, 0.4f);
+                    const auto ScaleY  = Key2(t, 0.0f, 1.0f, 1.0f, 0.0f);
+
+                    Out.Color = FLinearColor(
+                        Key4(t, 0.0f, 1.0f,      0.111078f, 1.0f,      0.322366f, 1.0f,      0.96227f, 0.913099f),
+                        Key4(t, 0.0f, 0.938686f, 0.111078f, 0.752942f, 0.322366f, 0.341915f, 0.96227f, 0.0241576f),
+                        Key4(t, 0.0f, 0.791298f, 0.111078f, 0.109462f, 0.322366f, 0.109462f, 0.96227f, 0.0241576f),
+                        Key2(t, 0.0f, 1.0f, 1.0f, 0.0f) * 0.6f);
+                    Out.Size    = FVector2f(1000.0f * Uniform * ScaleX, 1000.0f * Uniform * ScaleY);
+                    Out.Dynamic = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 15;
+                    break;
+                }
+
+                if (Layer == LayerFlareImp)
+                {
+                    const auto td = InAge - DelayLate;
+
+                    if (td < 0.0f || td > 0.05f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(td / 0.05f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 0.9f, 1.0f, 1.0f);
+
+                    Out.Color = FLinearColor(
+                        Key5(t, 0.0f, 1.0f, 0.131603f, 1.0f,      0.601268f, 1.0f,      0.828252f, 0.391573f, 0.997283f, 0.009134f),
+                        Key5(t, 0.0f, 1.0f, 0.131603f, 0.693872f, 0.601268f, 0.040915f, 0.828252f, 0.003677f, 0.997283f, 0.004025f),
+                        Key5(t, 0.0f, 1.0f, 0.131603f, 0.147027f, 0.601268f, 0.045186f, 0.828252f, 0.022174f, 0.997283f, 0.006995f),
+                        1.0f);
+                    Out.Size    = FVector2f(150.0f * Grow, 150.0f * Grow);
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 0.5f, 1.0f, -1.0f), 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 23;
+                    break;
+                }
+
+                if (Layer < FirstSpike02)
+                {
+                    if (InAge > 0.2f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t = Saturate(InAge / 0.2f);
+
+                    Out.Orientation = QuatFromZTo(RandDir(InSeed));
+                    Out.MeshIndex   = 0;
+                    Out.Size        = FVector2f(0.0f, 0.0f);
+
+                    const auto Base = FVector3f(
+                        FMath::Lerp(0.3f, 0.7f, Rand(InSeed, 3)),
+                        FMath::Lerp(0.3f, 0.7f, Rand(InSeed, 4)),
+                        FMath::Lerp(1.5f, 3.0f, Rand(InSeed, 5)));
+
+                    Out.Scale = Base * FVector3f(
+                        Key3(t, 0.0f, 0.5f, 0.2f, 1.0f,  1.0f, 0.0f),
+                        Key2(t, 0.0f, 0.0f, 1.0f, 1.0f),
+                        Key3(t, 0.0f, 0.0f, 0.2f, 0.75f, 1.0f, 1.0f));
+
+                    Out.Color  = FLinearColor(1.0f, 0.366253f, 0.184475f,
+                                              Key3(t, 0.0f, 0.0f, 0.274072f, 1.0f, 1.0f, 0.0f) * 0.3f);
+                    Out.VisTag = 27;
+                    break;
+                }
+
+                Spike(FVector3f(0.3f, 0.3f, 0.6f), FVector3f(0.3f, 0.3f, 1.0f));
+                break;
+            }
+            case 22: // GunshotHit — Vefects NS_Gunshot_Hit. Mirrors Behavior_GunshotHit.ush; recipe Cookbook/NS_Gunshot_Hit.md.
+            {
+                constexpr auto NumLayers     = 40;
+                constexpr auto LayerGlow01   = 0;
+                constexpr auto LayerGlow02   = 1;
+                constexpr auto FirstSpark02  = 7;
+                constexpr auto FirstGlow04   = 12;
+                constexpr auto FirstGlow05   = 17;
+                constexpr auto LayerStar     = 20;
+                constexpr auto LayerFlare    = 27;
+                constexpr auto FirstSpark01  = 33;
+
+                constexpr auto DelayEarly = 0.04f;
+                constexpr auto DelayLate  = 0.05f;
+
+                const auto Hide = [&Out]() -> void
+                {
+                    Out.Color = FLinearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                    Out.Size  = FVector2f(0.0f, 0.0f);
+                    Out.Scale = FVector3f(0.0f, 0.0f, 0.0f);
+                };
+
+                const auto CurveS = [](float InT) -> FVector3f
+                {
+                    return FVector3f(
+                        Key5(InT, 0.0f, 0.715694f, 0.094174f, 1.0f,      0.21974f, 1.0f,      0.440688f, 0.854993f, 0.707516f, 0.01033f),
+                        Key5(InT, 0.0f, 0.89627f,  0.094174f, 0.752942f, 0.21974f, 0.341915f, 0.440688f, 0.135633f, 0.707516f, 0.007499f),
+                        Key5(InT, 0.0f, 1.0f,      0.094174f, 0.109462f, 0.21974f, 0.109462f, 0.440688f, 0.051269f, 0.707516f, 0.006049f));
+                };
+
+                const auto CurveA = [](float InT) -> FVector3f
+                {
+                    return FVector3f(
+                        1.0f,
+                        Key3(InT, 0.0f, 1.0f, 0.46725f, 0.693872f, 1.0f, 0.450786f),
+                        Key3(InT, 0.0f, 1.0f, 0.46725f, 0.147027f, 1.0f, 0.040915f));
+                };
+
+                const auto Layer = ((InSeed % NumLayers) + NumLayers) % NumLayers;
+
+                Out.Velocity = FVector3f::ZeroVector;
+                Out.Position = FVector3f::ZeroVector;
+                Out.Dynamic  = FVector4f(0.0f, 0.0f, 0.0f, 0.0f);
+
+                if (Layer == LayerGlow01)
+                {
+                    if (InAge > 0.1f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(InAge / 0.1f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 0.9f, 1.0f, 1.0f);
+
+                    Out.Color = FLinearColor(
+                        1.0f,
+                        Key3(t, 0.0f, 1.0f, 0.415334f, 0.693872f, 0.810142f, 0.0409152f),
+                        Key3(t, 0.0f, 1.0f, 0.415334f, 0.147027f, 0.810142f, 0.0451862f),
+                        Key2(t, 0.0f, 1.0f, 1.0f, 0.0f) * 0.3f);
+                    Out.Size    = FVector2f(700.0f * Grow, 700.0f * Grow);
+                    Out.Dynamic = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 28;
+                    break;
+                }
+
+                if (Layer == LayerGlow02)
+                {
+                    if (InAge > 0.1f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(InAge / 0.1f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 1.0f, 1.0f, 1.0f);
+
+                    Out.Color  = FLinearColor(1.0f, 0.850349f, 0.329f, Key2(t, 0.0f, 1.0f, 1.0f, 0.0f));
+                    Out.Size   = FVector2f(300.0f * Grow, 300.0f * Grow);
+                    Out.VisTag = 28;
+                    break;
+                }
+
+                if (Layer < FirstSpark02)
+                {
+                    const auto td = InAge - DelayEarly;
+
+                    if (td < 0.0f || td > 0.05f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto Rgb = CurveS(Saturate(td / 0.05f));
+
+                    Out.Color  = FLinearColor(Rgb.X, Rgb.Y, Rgb.Z, 4.0f);
+                    Out.Size   = FVector2f(150.0f, 150.0f);
+                    Out.VisTag = 29;
+                    break;
+                }
+
+                if (Layer < FirstGlow04)
+                {
+                    const auto Life = FMath::Lerp(0.3f, 0.6f, Rand(InSeed, 1));
+                    const auto td   = InAge - DelayLate;
+
+                    if (td < 0.0f || td > Life)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t   = Saturate(td / Life);
+                    const auto Dir = RandDir(InSeed);
+
+                    const auto Spawn = Dir * (0.1f * FMath::Pow(Rand(InSeed, 7), 1.0f / 3.0f));
+                    const auto V0    = Dir * FMath::Lerp(1300.0f, 2000.0f, Rand(InSeed, 2));
+
+                    Out.Position = Spawn + V0 * (Int3(t, 0.2f, 1.0f, 0.2f, 0.05f) * Life);
+                    Out.Velocity = V0 * Key3(t, 0.0f, 1.0f, 0.2f, 0.2f, 1.0f, 0.05f);
+
+                    Out.Color = FLinearColor(
+                        Key4(t, 0.0f, 1.0f,      0.297012f, 1.0f,       0.671295f, 1.0f,       0.910353f, 0.381326f),
+                        Key4(t, 0.0f, 0.913099f, 0.297012f, 0.493097f,  0.671295f, 0.24027f,   0.910353f, 0.042927f),
+                        Key4(t, 0.0f, 0.584079f, 0.297012f, 0.0409999f, 0.671295f, 0.0839999f, 0.910353f, 0.0366073f),
+                        Key2(t, 0.243888f, 1.0f, 1.0f, 0.0f));
+
+                    const auto Width  = FMath::Lerp(20.0f, 25.0f, Rand(InSeed, 8));
+                    const auto Length = FMath::Lerp(130.0f, 150.0f, Rand(InSeed, 9));
+                    const auto Grow   = Key3(t, 0.0f, 0.0f, 0.1f, 1.0f, 1.0f, 0.0f);
+                    const auto Taper  = Key3(t, 0.0f, 1.0f, 0.3f, 0.35f, 1.0f, 0.2f);
+                    Out.Size = FVector2f(Width * Grow, Length * Grow * Taper);
+
+                    Out.VisTag = 30;
+                    break;
+                }
+
+                if (Layer < FirstGlow05)
+                {
+                    const auto td = InAge - DelayLate;
+
+                    if (td < 0.0f || td > 0.2f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(td / 0.2f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 1.0f, 1.0f, 1.0f);
+
+                    Out.Color = FLinearColor(
+                        1.0f,
+                        Key3(t, 0.0f, 0.349312f,  0.414126f, 0.494059f, 0.926049f, 0.450786f),
+                        Key3(t, 0.0f, 0.0970486f, 0.414126f, 0.124008f, 0.926049f, 0.0409152f),
+                        Key2(t, 0.0f, 1.0f, 0.992454f, 0.0f) * 0.2f);
+                    Out.Size   = FVector2f(800.0f * Grow, 800.0f * Grow);
+                    Out.VisTag = 28;
+                    break;
+                }
+
+                if (Layer < LayerStar)
+                {
+                    const auto td = InAge - DelayLate;
+
+                    if (td < 0.0f || td > 0.1f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(td / 0.1f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 1.0f, 1.0f, 1.0f);
+
+                    Out.Color   = FLinearColor(3.0f, 1.49184f, 0.509197f, Key2(t, 0.312708f, 1.0f, 0.992454f, 0.0f) * 0.8f);
+                    Out.Size    = FVector2f(250.0f * Grow, 250.0f * Grow);
+                    Out.Dynamic = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 31;
+                    break;
+                }
+
+                if (Layer == LayerStar)
+                {
+                    const auto td = InAge - DelayLate;
+
+                    if (td < 0.0f || td > 0.2f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(td / 0.2f);
+                    const auto Grow = Key3(t, 0.0f, 0.0f, 0.4f, 1.0f, 1.0f, 0.0f);
+                    const auto Rgb  = CurveA(t);
+
+                    Out.Color   = FLinearColor(Rgb.X, Rgb.Y, Rgb.Z, 1.0f);
+                    Out.Size    = FVector2f(20.0f * Grow, 20.0f * Grow);
+                    Out.Dynamic = FVector4f(1.0f, 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 32;
+                    break;
+                }
+
+                if (Layer < LayerFlare)
+                {
+                    const auto td = InAge - DelayLate;
+
+                    if (td < 0.0f || td > 0.2f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t   = Saturate(td / 0.2f);
+                    const auto Dir = RandDir(InSeed);
+
+                    const auto Spawn = Dir * (10.0f * FMath::Pow(Rand(InSeed, 7), 1.0f / 3.0f));
+                    const auto V0    = Dir * 10.0f;
+
+                    Out.Position = Spawn + V0 * (Int3(t, 0.2f, 1.0f, 0.15f, 0.0f) * 0.2f);
+                    Out.Velocity = V0 * Key3(t, 0.0f, 1.0f, 0.2f, 0.15f, 1.0f, 0.0f);
+
+                    Out.Color = FLinearColor(
+                        Key5(t, 0.0f, 3.57847f, 0.094174f, 3.0f,      0.315122f, 1.0f,      0.447932f, 0.854993f, 0.606097f, 0.01033f),
+                        Key5(t, 0.0f, 4.48135f, 0.094174f, 2.25883f,  0.315122f, 0.341915f, 0.447932f, 0.135633f, 0.606097f, 0.007499f),
+                        Key5(t, 0.0f, 5.0f,     0.094174f, 0.328386f, 0.315122f, 0.109462f, 0.447932f, 0.051269f, 0.606097f, 0.006049f),
+                        1.0f);
+
+                    const auto Width  = FMath::Lerp(60.0f, 80.0f, Rand(InSeed, 8));
+                    const auto Length = FMath::Lerp(110.0f, 160.0f, Rand(InSeed, 9));
+                    Out.Size = FVector2f(Width * Key3(t, 0.0f, 0.5f, 0.2f, 1.0f, 1.0f, 0.4f), Length);
+
+                    const auto Start = FMath::FloorToFloat(Rand(InSeed, 6) * 4.0f);
+                    Out.SubImageIndex = FMath::Fmod(Start + FMath::Min(FMath::FloorToFloat(t * 4.0f), 3.0f), 4.0f);
+
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 1.0f, 1.0f, -1.0f), 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 33;
+                    break;
+                }
+
+                if (Layer == LayerFlare)
+                {
+                    const auto td = InAge - DelayLate;
+
+                    if (td < 0.0f || td > 0.05f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t    = Saturate(td / 0.05f);
+                    const auto Grow = Key3(t, 0.0f, 0.5f, 0.1f, 0.9f, 1.0f, 1.0f);
+                    const auto Rgb  = CurveS(t);
+
+                    Out.Color   = FLinearColor(Rgb.X, Rgb.Y, Rgb.Z, 4.0f);
+                    Out.Size    = FVector2f(150.0f * Grow, 150.0f * Grow);
+                    Out.Dynamic = FVector4f(Key2(t, 0.0f, 0.5f, 1.0f, -1.0f), 0.0f, 0.0f, 0.0f);
+                    Out.VisTag  = 34;
+                    break;
+                }
+
+                if (Layer < FirstSpark01)
+                {
+                    const auto td = InAge - DelayLate;
+
+                    if (td < 0.0f || td > 0.1f)
+                    {
+                        Hide();
+                        break;
+                    }
+
+                    const auto t   = Saturate(td / 0.1f);
+                    const auto Dir = RandDir(InSeed);
+
+                    const auto V0 = Dir * 10.0f;
+                    Out.Position = Dir * 20.0f + V0 * td;
+                    Out.Velocity = V0;
+
+                    Out.Orientation = QuatFromZTo(Dir);
+                    Out.MeshIndex   = 0;
+                    Out.Size        = FVector2f(0.0f, 0.0f);
+
+                    const auto Base = FVector3f(
+                        FMath::Lerp(0.1f, 0.05f, Rand(InSeed, 3)),
+                        FMath::Lerp(0.1f, 0.2f,  Rand(InSeed, 4)),
+                        FMath::Lerp(0.2f, 0.5f,  Rand(InSeed, 5)));
+
+                    Out.Scale = Base * FVector3f(
+                        Key3(t, 0.0f, 0.0f, 0.2f, 1.5f, 1.0f, 0.0f),
+                        Key3(t, 0.0f, 0.0f, 0.2f, 1.5f, 1.0f, 0.0f),
+                        Key2(t, 0.0f, 0.0f, 0.2f, 1.5f));
+
+                    const auto Rgb = CurveS(t);
+                    Out.Color  = FLinearColor(Rgb.X, Rgb.Y, Rgb.Z, 4.0f);
+                    Out.VisTag = 35;
+                    break;
+                }
+
+                const auto SparkLife = FMath::Lerp(0.3f, 0.6f, Rand(InSeed, 1));
+                const auto SparkTd   = InAge - DelayLate;
+
+                if (SparkTd < 0.0f || SparkTd > SparkLife)
+                {
+                    Hide();
+                    break;
+                }
+
+                const auto s   = Saturate(SparkTd / SparkLife);
+                const auto Dir = RandDir(InSeed);
+
+                const auto Spawn = Dir * (0.1f * FMath::Pow(Rand(InSeed, 7), 1.0f / 3.0f));
+                const auto V0    = Dir * FMath::Lerp(800.0f, 1700.0f, Rand(InSeed, 2));
+
+                Out.Position = Spawn + V0 * (Int3(s, 0.1f, 1.0f, 0.15f, 0.0f) * SparkLife);
+                Out.Velocity = V0 * Key3(s, 0.0f, 1.0f, 0.1f, 0.15f, 1.0f, 0.0f);
+
+                Out.Color = FLinearColor(
+                    Key2(s, 0.562632f, 1.0f,      0.997283f, 0.112f),
+                    Key2(s, 0.562632f, 0.603828f, 0.997283f, 0.0676287f),
+                    Key2(s, 0.562632f, 0.296138f, 0.997283f, 0.0331675f),
+                    Key2(s, 0.562632f, 1.0f, 1.0f, 0.0f) * 0.15f);
+
+                const auto Base = FMath::Lerp(6.0f, 10.0f, Rand(InSeed, 8));
+                const auto Grow = Key3(s, 0.0f, 0.0f, 0.1f, 1.0f, 1.0f, 0.0f);
+                Out.Size = FVector2f(Base * Grow, Base * Grow);
+
+                Out.Dynamic = FVector4f(3.0f, 0.0f, 0.0f, 0.0f);
+                Out.VisTag  = 36;
                 break;
             }
             case 0: // Gravity — constant downward accel, integrate, tint warm->dark over life.

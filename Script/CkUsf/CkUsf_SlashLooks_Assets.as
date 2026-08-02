@@ -71,14 +71,20 @@ namespace CkUsf
         // invert 0.5), so every look that does not name one renders exactly as it did before the chain existed.
         FString InGradientTexture = "LutWhite",
         float   InGradientMapDisplacement = 0.1,
-        float   InGradientInvert = 0.5)
+        float   InGradientInvert = 0.5,
+        // Distortion_Scale, and a Distortion_Tex that differs from Dissolve_Tex. Both are trailing and default to
+        // what every look authored before them already resolved, so none of those regenerates changed. The two
+        // Vefects hit instances that drive a LIVE distortion branch (Flames01, Smoke01) are the first to need them.
+        float   InDistortScale = 0.1,
+        FString InDistortTexture = "")
     {
         auto Params = TArray<FCk_Usf_ParamDesc>();
 
         Params.Add(CkUsf::Usf_ParticlesTexture(n"ShapeTex",    InShapeTexture));
         Params.Add(CkUsf::Usf_ParticlesTexture(n"DissolveTex", InDissolveTexture));
-        // Distortion_Tex is the same asset as Dissolve_Tex on every instance in this family.
-        Params.Add(CkUsf::Usf_ParticlesTexture(n"DistortTex",  InDissolveTexture));
+        // Distortion_Tex is the same asset as Dissolve_Tex on all but two instances in this family.
+        Params.Add(CkUsf::Usf_ParticlesTexture(n"DistortTex",
+            InDistortTexture.IsEmpty() ? InDissolveTexture : InDistortTexture));
 
         Params.Add(CkUsf::Usf_Vector(n"CoreColor", FLinearColor(1.0, 1.0, 1.0, 1.0)));
         Params.Add(CkUsf::Usf_Scalar(n"Brightness", InBrightness));
@@ -86,7 +92,7 @@ namespace CkUsf
         // Erosion edge softness — the source expresses this through a SmoothStep in the parent graph, so the
         // value is inferred rather than read. Shared with RingDissolveAdd.
         Params.Add(CkUsf::Usf_Scalar(n"DissolveEdge", 0.15));
-        Params.Add(CkUsf::Usf_Scalar(n"DistortScale", 0.1));
+        Params.Add(CkUsf::Usf_Scalar(n"DistortScale", InDistortScale));
         Params.Add(CkUsf::Usf_Scalar(n"OpacityBoldness", InOpacityBoldness));
 
         Params.Add(CkUsf::Usf_Scalar(n"DissolveSpeedY", InDissolveSpeedY));

@@ -30,7 +30,8 @@ struct FCkParticles_StageInput
 //       (ck::particles::FCk_ParticlesRendererSpec), each with a named generated mesh and/or a named CkUsf
 //       look bound explicitly. They exist only on that row's template, so a behavior writing one of these
 //       tags renders nothing anywhere else. Behavior 7 (Slash) owns 5..9; behaviors 18 and 19 (the
-//       projectile pair) share 10..11 on one cadence row.
+//       projectile pair) share 10..11 on one cadence row; the Vefects hit/burst ports own 12..14 (20),
+//       15..27 (21) and 28..36 (22).
 //
 // Dynamic -> Particles.DynamicMaterialParameter, read by the VFX master materials as
 //   x = dissolve/erosion threshold [0..1], y = distortion strength, z = UV pan offset, w = emissive boost.
@@ -87,6 +88,63 @@ float3 CkParticles_RandDir(int Seed)
     return float3(r * cos(t), r * sin(t), z);
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Source-curve transcription.
+//
+// Every marketplace curve key the cookbook transcribes is a clamped or linear key, so a clamped lerp between
+// neighbouring keys IS the curve: it holds the first key's value before it and the last key's after it, which is
+// what Niagara does with a curve whose first key sits at t > 0. CkParticles_KeyN takes N (time, value) pairs in
+// ascending time.
+//
+// CkParticles_IntN integrates the SAME piecewise-linear curve over [0, S] — velocity-scale curves need their exact
+// integral, because a stepwise integration would tie position to frame cadence and drift against the CPU mirror.
+// --------------------------------------------------------------------------------------------------------------------
+float CkParticles_Key2(float T, float T0, float V0, float T1, float V1)
+{
+    return lerp(V0, V1, saturate((T - T0) / max(T1 - T0, 1e-6)));
+}
+
+float CkParticles_Key3(float T, float T0, float V0, float T1, float V1, float T2, float V2)
+{
+    return T <= T1 ? CkParticles_Key2(T, T0, V0, T1, V1)
+                   : CkParticles_Key2(T, T1, V1, T2, V2);
+}
+
+float CkParticles_Key4(float T, float T0, float V0, float T1, float V1, float T2, float V2, float T3, float V3)
+{
+    return T <= T1 ? CkParticles_Key2(T, T0, V0, T1, V1)
+                   : CkParticles_Key3(T, T1, V1, T2, V2, T3, V3);
+}
+
+float CkParticles_Key5(float T, float T0, float V0, float T1, float V1, float T2, float V2, float T3, float V3,
+                       float T4, float V4)
+{
+    return T <= T1 ? CkParticles_Key2(T, T0, V0, T1, V1)
+                   : CkParticles_Key4(T, T1, V1, T2, V2, T3, V3, T4, V4);
+}
+
+// Integral over [0, S] of the 2-key curve (0, V0) -> (1, V1), in units of normalized life.
+float CkParticles_Int2(float S, float V0, float V1)
+{
+    const float A = saturate(S);
+    return A * (V0 + CkParticles_Key2(A, 0.0, V0, 1.0, V1)) * 0.5;
+}
+
+// Integral over [0, S] of the 3-key curve (0, V0) -> (K, V1) -> (1, V2).
+float CkParticles_Int3(float S, float K, float V0, float V1, float V2)
+{
+    const float T = saturate(S);
+    const float A = min(T, K);
+    float Sum = A * (V0 + CkParticles_Key2(A, 0.0, V0, K, V1)) * 0.5;
+
+    if (T > K)
+    {
+        const float B = T - K;
+        Sum += B * (V1 + CkParticles_Key2(T, K, V1, 1.0, V2)) * 0.5;
+    }
+    return Sum;
+}
+
 // Quaternion from a (normalized) axis and an angle in radians. Written out component-wise so the C++ CPU mirror
 // (NDICkParticlesLocal::QuatFromAxisAngle) stays bit-identical — do not swap in engine quat helpers on either side.
 float4 CkParticles_QuatFromAxisAngle(float3 Axis, float Angle)
@@ -104,6 +162,27 @@ float4 CkParticles_QuatMul(float4 A, float4 B)
         A.w * B.y - A.x * B.z + A.y * B.w + A.z * B.x,
         A.w * B.z + A.x * B.y - A.y * B.x + A.z * B.w,
         A.w * B.w - A.x * B.x - A.y * B.y - A.z * B.z);
+}
+
+// Quaternion rotating the mesh's local +Z onto Dir (assumed unit). The carrier meshes the Vefects ports use are
+// built along +Z, and a row-declared mesh renderer draws with Facing Default — so a source emitter whose renderer
+// faces VELOCITY is reproduced by handing this its own velocity direction.
+// Anti-parallel is the degenerate case: cross() vanishes there, so it takes an explicit half-turn about +X.
+float4 CkParticles_QuatFromZTo(float3 Dir)
+{
+    const float3 Up = float3(0.0, 0.0, 1.0);
+    const float  D  = clamp(dot(Up, Dir), -1.0, 1.0);
+
+    if (D < -0.999999)
+    { return float4(1.0, 0.0, 0.0, 0.0); }
+
+    const float3 Axis = cross(Up, Dir);
+    const float  Len  = length(Axis);
+
+    if (Len < 1e-6)
+    { return float4(0.0, 0.0, 0.0, 1.0); }
+
+    return CkParticles_QuatFromAxisAngle(Axis / Len, acos(D));
 }
 
 // Pass-through defaults (a behavior overrides only what it changes). Size defaults to a per-Seed-varied value that

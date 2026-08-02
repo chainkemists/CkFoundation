@@ -1,0 +1,359 @@
+// /CkParticles/Behaviors/Behavior_GunshotHit.ush — BehaviorId 22.
+//
+// Faithful re-port of Vefects NS_Gunshot_Hit. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Gunshot_Hit.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is ELEVEN local-space emitters bursting over a Loop-Once 2.0 s system: five glow shells, two
+// sparkle sprays, a star, six sub-UV impact flashes, a flare and five pyramid spikes. Its topology is
+// omnidirectional throughout — point-source sphere locations and radial Add Velocity from Point, against the
+// Cast variant's directed +X cone. One CkParticles burst of 40 carries every enabled particle (Seed % 40),
+// spawning through PS_CkParticles_Template_GunshotHit (2.0 s loop / 0.65 s particle lifetime / burst 40).
+//
+// Local space matches the template on every emitter — this is the one port in the batch with no space deviation.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 22) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — 40 slots per burst, the source's full enabled particle count (recipe §6.1 option (a)).
+#define CKP_GH_NUM_LAYERS      40
+#define CKP_GH_LAYER_GLOW01     0
+#define CKP_GH_LAYER_GLOW02     1
+#define CKP_GH_FIRST_GLOW03     2
+#define CKP_GH_FIRST_SPARK02    7
+#define CKP_GH_FIRST_GLOW04    12
+#define CKP_GH_FIRST_GLOW05    17
+#define CKP_GH_LAYER_STAR      20
+#define CKP_GH_FIRST_IMPACT    21
+#define CKP_GH_LAYER_FLARE     27
+#define CKP_GH_FIRST_SPIKE     28
+#define CKP_GH_FIRST_SPARK01   33
+
+// The two spawn beats behind the loop start (recipe §2).
+#define CKP_GH_DELAY_EARLY      0.04
+#define CKP_GH_DELAY_LATE       0.05
+
+// Renderer tags this behavior draws through — all row-declared on its own cadence row (recipe §6.2).
+#define CKP_GH_VIS_PART01      28
+#define CKP_GH_VIS_PART02      29
+#define CKP_GH_VIS_PART04      30
+#define CKP_GH_VIS_PART03BR    31
+#define CKP_GH_VIS_STAR01      32
+#define CKP_GH_VIS_IMPACT02    33
+#define CKP_GH_VIS_IMPACT01    34
+#define CKP_GH_VIS_SPIKE       35
+#define CKP_GH_VIS_PART01BR    36
+
+FCkParticles_StageOutput CkParticles_GunshotHit_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// CURVE-S, "the impact ramp" (recipe §5): cool blue-white snapping warm by t~0.094 and crushing to near-black
+// by t~0.708. Three emitters wear it, which is what makes the hit read as one unified flash.
+float3 CkParticles_GunshotHit_CurveS(float T)
+{
+    return float3(
+        CkParticles_Key5(T, 0.0, 0.715694, 0.094174, 1.0,      0.21974, 1.0,      0.440688, 0.854993, 0.707516, 0.01033),
+        CkParticles_Key5(T, 0.0, 0.89627,  0.094174, 0.752942, 0.21974, 0.341915, 0.440688, 0.135633, 0.707516, 0.007499),
+        CkParticles_Key5(T, 0.0, 1.0,      0.094174, 0.109462, 0.21974, 0.109462, 0.440688, 0.051269, 0.707516, 0.006049));
+}
+
+// CURVE-A, "the sparkle ramp" (recipe §5) — worn only by Star01 in this system.
+float3 CkParticles_GunshotHit_CurveA(float T)
+{
+    return float3(
+        1.0,
+        CkParticles_Key3(T, 0.0, 1.0, 0.46725, 0.693872, 1.0, 0.450786),
+        CkParticles_Key3(T, 0.0, 1.0, 0.46725, 0.147027, 1.0, 0.040915));
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_GunshotHit(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = ((In.Seed % CKP_GH_NUM_LAYERS) + CKP_GH_NUM_LAYERS) % CKP_GH_NUM_LAYERS;
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // ---- Glow_01: the wide pink shell, alpha-scaled to 0.3 (recipe §5 layer 0) ----
+    if (Layer == CKP_GH_LAYER_GLOW01)
+    {
+        if (In.Age > 0.1)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.0, 1.0, 0.415334, 0.693872, 0.810142, 0.0409152),
+            CkParticles_Key3(t, 0.0, 1.0, 0.415334, 0.147027, 0.810142, 0.0451862),
+            CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0) * 0.3);
+        O.Size    = float2(700.0 * Grow, 700.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_GH_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_02: Direct Set colour under a Vector4 Scale Color that only fades alpha (recipe §5 layer 1) ----
+    if (Layer == CKP_GH_LAYER_GLOW02)
+    {
+        if (In.Age > 0.1)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color  = float4(1.0, 0.850349, 0.329, CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+        O.Size   = float2(300.0 * Grow, 300.0 * Grow);
+        O.VisTag = CKP_GH_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_03: five short flashes on CURVE-S with a 4x alpha over-brighten and NO size curve ----
+    if (Layer < CKP_GH_FIRST_SPARK02)
+    {
+        const float td = In.Age - CKP_GH_DELAY_EARLY;
+
+        if (td < 0.0 || td > 0.05)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float3 Rgb = CkParticles_GunshotHit_CurveS(saturate(td / 0.05));
+
+        O.Color  = float4(Rgb, 4.0);
+        O.Size   = float2(150.0, 150.0);
+        O.VisTag = CKP_GH_VIS_PART02;
+        return O;
+    }
+
+    // ---- Sparkles_02: five velocity-aligned streaks off a point source, 1300..2000 units/s radial ----
+    if (Layer < CKP_GH_FIRST_GLOW04)
+    {
+        const float Life = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+        const float td   = In.Age - CKP_GH_DELAY_LATE;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float  t   = saturate(td / Life);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        // Sphere Location radius 0.1 — a point source; the radial direction is all it contributes.
+        const float3 Spawn = Dir * (0.1 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+        const float3 V0    = Dir * lerp(1300.0, 2000.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.2, 0.05) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.2, 1.0, 0.05);
+
+        O.Color = float4(
+            CkParticles_Key4(t, 0.0, 1.0,      0.297012, 1.0,       0.671295, 1.0,       0.910353, 0.381326),
+            CkParticles_Key4(t, 0.0, 0.913099, 0.297012, 0.493097,  0.671295, 0.24027,   0.910353, 0.042927),
+            CkParticles_Key4(t, 0.0, 0.584079, 0.297012, 0.0409999, 0.671295, 0.0839999, 0.910353, 0.0366073),
+            CkParticles_Key2(t, 0.243888, 1.0, 1.0, 0.0));
+
+        const float Width  = lerp(20.0, 25.0, CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(130.0, 150.0, CkParticles_Rand(In.Seed, 9));
+        const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float Taper  = CkParticles_Key3(t, 0.0, 1.0, 0.3, 0.35, 1.0, 0.2);
+        O.Size = float2(Width * Grow, Length * Grow * Taper);
+
+        O.VisTag = CKP_GH_VIS_PART04;
+        return O;
+    }
+
+    // ---- Glow_04: five deep-red halos that only WARM toward mid-life, alpha-scaled to 0.2 ----
+    if (Layer < CKP_GH_FIRST_GLOW05)
+    {
+        const float td = In.Age - CKP_GH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.2)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.2);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.0, 0.349312,  0.414126, 0.494059, 0.926049, 0.450786),
+            CkParticles_Key3(t, 0.0, 0.0970486, 0.414126, 0.124008, 0.926049, 0.0409152),
+            CkParticles_Key2(t, 0.0, 1.0, 0.992454, 0.0) * 0.2);
+        O.Size   = float2(800.0 * Grow, 800.0 * Grow);
+        O.VisTag = CKP_GH_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_05: three white-hot HDR cores whose ONLY animation is the alpha fade ----
+    if (Layer < CKP_GH_LAYER_STAR)
+    {
+        const float td = In.Age - CKP_GH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.1)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color   = float4(3.0, 1.49184, 0.509197, CkParticles_Key2(t, 0.312708, 1.0, 0.992454, 0.0) * 0.8);
+        O.Size    = float2(250.0 * Grow, 250.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_GH_VIS_PART03BR;
+        return O;
+    }
+
+    // ---- Star01: one small four-point flare on CURVE-A ----
+    if (Layer == CKP_GH_LAYER_STAR)
+    {
+        const float td = In.Age - CKP_GH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.2)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.2);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.4, 1.0, 1.0, 0.0);
+
+        O.Color   = float4(CkParticles_GunshotHit_CurveA(t), 1.0);
+        O.Size    = float2(20.0 * Grow, 20.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_GH_VIS_STAR01;
+        return O;
+    }
+
+    // ---- Impact_01: six sub-UV flashes, the dominant element (Brightness 15 and a 5x blue-white key) ----
+    if (Layer < CKP_GH_LAYER_FLARE)
+    {
+        const float td = In.Age - CKP_GH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.2)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float  t   = saturate(td / 0.2);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        // Sphere Location radius 10 with a static Velocity Strength of 10 — it barely drifts, but the direction
+        // is load-bearing: this layer is velocity-aligned.
+        const float3 Spawn = Dir * (10.0 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+        const float3 V0    = Dir * 10.0;
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * 0.2);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        O.Color = float4(
+            CkParticles_Key5(t, 0.0, 3.57847, 0.094174, 3.0,      0.315122, 1.0,      0.447932, 0.854993, 0.606097, 0.01033),
+            CkParticles_Key5(t, 0.0, 4.48135, 0.094174, 2.25883,  0.315122, 0.341915, 0.447932, 0.135633, 0.606097, 0.007499),
+            CkParticles_Key5(t, 0.0, 5.0,     0.094174, 0.328386, 0.315122, 0.109462, 0.447932, 0.051269, 0.606097, 0.006049),
+            1.0);
+
+        // Non-Uniform Curve mode: the width curve animates, the length curve is a single constant key.
+        const float Width  = lerp(60.0, 80.0, CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(110.0, 160.0, CkParticles_Rand(In.Seed, 9));
+        O.Size = float2(Width * CkParticles_Key3(t, 0.0, 0.5, 0.2, 1.0, 1.0, 0.4), Length);
+
+        // Sub UVAnimation, mode Random, on a 2x2 sheet. The source's End Frame is 4, one past the sheet's last
+        // valid index — recorded unresolved in the recipe and resolved here to the sheet's own last frame, the
+        // only reading that samples nothing off the end.
+        const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+        O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 1.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_GH_VIS_IMPACT02;
+        return O;
+    }
+
+    // ---- FlareImpact: the shortest-lived particle in the batch, 0.05 s on CURVE-S at 4x alpha ----
+    if (Layer == CKP_GH_LAYER_FLARE)
+    {
+        const float td = In.Age - CKP_GH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.05)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.05);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color   = float4(CkParticles_GunshotHit_CurveS(t), 4.0);
+        O.Size    = float2(150.0 * Grow, 150.0 * Grow);
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.5, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_GH_VIS_IMPACT01;
+        return O;
+    }
+
+    // ---- Spike01: five pyramid meshes thrown radially off a 20-unit shell, facing their own velocity ----
+    if (Layer < CKP_GH_FIRST_SPARK01)
+    {
+        const float td = In.Age - CKP_GH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.1)
+        { return CkParticles_GunshotHit_Hidden(O); }
+
+        const float  t   = saturate(td / 0.1);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        // Sphere Location radius 20, Surface Only; Velocity Strength a static 10 with no Scale Velocity module,
+        // so the drift is linear in age.
+        const float3 V0 = Dir * 10.0;
+        O.Position = Dir * 20.0 + V0 * td;
+        O.Velocity = V0;
+
+        // The renderer faces VELOCITY; a row-declared mesh renderer draws with Facing Default, so the behavior
+        // writes the orientation that puts the pyramid's +Z apex down its own direction of travel.
+        O.Orientation = CkParticles_QuatFromZTo(Dir);
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+
+        // Random Non-Uniform mesh scale. The X range is INVERTED in the source (min 0.1 > max 0.05); copied
+        // verbatim — lerping the other way spans the identical set of values.
+        const float3 Base = float3(
+            lerp(0.1, 0.05, CkParticles_Rand(In.Seed, 3)),
+            lerp(0.1, 0.2,  CkParticles_Rand(In.Seed, 4)),
+            lerp(0.2, 0.5,  CkParticles_Rand(In.Seed, 5)));
+
+        // A uniform 1.5x pop at t=0.2, where the Cast variant's is anisotropic.
+        O.Scale = Base * float3(
+            CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 0.0),
+            CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 0.0),
+            CkParticles_Key2(t, 0.0, 0.0, 0.2, 1.5));
+
+        O.Color  = float4(CkParticles_GunshotHit_CurveS(t), 4.0);
+        O.VisTag = CKP_GH_VIS_SPIKE;
+        return O;
+    }
+
+    // ---- Sparkles_01: seven fine camera-facing sparks, 800..1700 units/s, the largest constant dissolve ----
+    // This is the source's one Life Cycle Mode = Self emitter (Loop Once / 0.3). On a Loop-Once system every
+    // layer fires exactly once anyway, so folding it into the burst costs nothing on a single firing.
+    const float SparkLife = lerp(0.3, 0.6, CkParticles_Rand(In.Seed, 1));
+    const float SparkTd   = In.Age - CKP_GH_DELAY_LATE;
+
+    if (SparkTd < 0.0 || SparkTd > SparkLife)
+    { return CkParticles_GunshotHit_Hidden(O); }
+
+    const float  s   = saturate(SparkTd / SparkLife);
+    const float3 Dir = CkParticles_RandDir(In.Seed);
+
+    const float3 Spawn = Dir * (0.1 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+    const float3 V0    = Dir * lerp(800.0, 1700.0, CkParticles_Rand(In.Seed, 2));
+
+    // The velocity knee is at t=0.1 here, not the 0.2 every other layer uses.
+    O.Position = Spawn + V0 * (CkParticles_Int3(s, 0.1, 1.0, 0.15, 0.0) * SparkLife);
+    O.Velocity = V0 * CkParticles_Key3(s, 0.0, 1.0, 0.1, 0.15, 1.0, 0.0);
+
+    O.Color = float4(
+        CkParticles_Key2(s, 0.562632, 1.0,      0.997283, 0.112),
+        CkParticles_Key2(s, 0.562632, 0.603828, 0.997283, 0.0676287),
+        CkParticles_Key2(s, 0.562632, 0.296138, 0.997283, 0.0331675),
+        CkParticles_Key2(s, 0.562632, 1.0, 1.0, 0.0) * 0.15);
+
+    const float Base = lerp(6.0, 10.0, CkParticles_Rand(In.Seed, 8));
+    const float Grow = CkParticles_Key3(s, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+    O.Size = float2(Base * Grow, Base * Grow);
+
+    O.Dynamic = float4(3.0, 0.0, 0.0, 0.0);
+    O.VisTag  = CKP_GH_VIS_PART01BR;
+    return O;
+}

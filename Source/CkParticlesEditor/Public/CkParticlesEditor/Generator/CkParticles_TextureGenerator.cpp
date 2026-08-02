@@ -421,6 +421,272 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
+    // ---- The Vefects hit/impact paints. Every constant below is MEASURED off the corpus PNG (recipes
+    // NS_FireBall_Hit.md §7 / NS_Gunshot_Hit.md §7); none is copied art. r is the centre distance doubled, so
+    // r = 1 at the mid-edge — the same convention every function above uses.
+
+    // T_VFX_Part_02 stand-in. Radially symmetric to machine precision (12-bin anisotropy 1.00 at every radius),
+    // but its falloff is NOT a power curve: it holds 0.99/0.96/0.91 across the first three annuli and reaches
+    // exactly zero at r = 1. A cosine bell fits to 0.0034 where the best pow(1-r,k) costs 0.063 — 11x worse,
+    // because no power curve has a flat shoulder. Peak saturates over 0.25% of the texture.
+    static auto Px_SoftParticleBright(float U, float V) -> FLinearColor
+    {
+        constexpr float BellExp = 1.14f; // measured
+        const float Dx = U - 0.5f, Dy = V - 0.5f;
+        const float R  = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float I  = FMath::Pow(FMath::Cos(HALF_PI * Saturate(R)), BellExp);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Part_03 stand-in. Also radially symmetric, and EXPONENTIAL rather than power or Gaussian: successive
+    // annulus ratios are a constant 0.521/0.524/0.517/0.508, which is the signature. A Gaussian costs 4.6x the
+    // residual. Content hard-terminates at r 0.79, past which the source sits on its quantization floor.
+    static auto Px_SoftParticleFine(float U, float V) -> FLinearColor
+    {
+        constexpr float Amplitude   = 0.750f; // measured fit A
+        constexpr float DecayLength = 0.135f; // measured fit L 0.128, opened to 0.135 to land the annulus profile
+        constexpr float HardCut     = 0.79f;
+        const float Dx = U - 0.5f, Dy = V - 0.5f;
+        const float R  = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float I  = R > HardCut ? 0.0f : Amplitude * FMath::Exp(-R / DecayLength);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Ring_01 stand-in. NOT the SDF Ring bake: measured against it, the source's interior is EXACTLY empty
+    // (max 0.000000 over every pixel inside r < 0.6, where the SDF ring paints a cubic inner glow across 38% of
+    // the texture), it never saturates, and its circumference is a hand-painted 9.5:1 bright-to-dim with four to
+    // five nodes (dominant harmonic 4) against the SDF ring's flat 1.04:1.
+    static auto Px_RingUneven(float U, float V) -> FLinearColor
+    {
+        constexpr float RingRadius = 0.7698f; // measured raw 0.3849, doubled into r
+        constexpr float RingSigma  = 0.0398f; // from the measured 24 px FWHM, in r
+        constexpr float Peak       = 0.898f;  // the source never saturates
+        constexpr float NodePhase  = 0.7330f; // 42 degrees — one of the measured node angles
+        constexpr float NodeFloor  = 0.28f;   // lands the measured bright-to-dim band
+        constexpr float NodeExp    = 0.7f;
+        constexpr float BandHalfWidth = 0.10f; // the source ring is empty outside this, not merely faint
+
+        const float Dx  = U - 0.5f, Dy = V - 0.5f;
+        const float R   = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang = FMath::Atan2(Dy, Dx);
+
+        // Hard-windowed: a bare Gaussian leaves a tail everywhere, and the source measures EXACTLY zero over
+        // every pixel inside r < 0.6.
+        const float Inside = FMath::Abs(R - RingRadius) <= BandHalfWidth ? 1.0f : 0.0f;
+        const float Band   = FMath::Exp(-0.5f * FMath::Square((R - RingRadius) / RingSigma)) * Inside;
+        const float Node   = FMath::Pow(0.5f + 0.5f * FMath::Cos(4.0f * (Ang - NodePhase)), NodeExp);
+        const float I      = Peak * Band * (NodeFloor + (1.0f - NodeFloor) * Node);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Ring_02 stand-in — the lens-flare ring. A far wider, SATURATING annulus than Ring_01: 51.5% of its
+    // band sits at or above 0.99 and 9.2% of the whole texture is at white. Its outer glow carries seven
+    // irregular spokes (the flare streaks) which a clean annulus reads wrong without.
+    static auto Px_RingFlare(float U, float V) -> FLinearColor
+    {
+        constexpr float RingRadius = 0.5364f; // measured, normalized
+        constexpr float RingSigma  = 0.0890f; // measured, normalized
+        constexpr float Overdrive  = 1.22f;   // saturates the measured 51.5% of the band
+        constexpr float SpokeAmp   = 0.21f;   // measured outer-glow maximum
+        constexpr float SpokeTiles = 7.0f;    // seven measured spokes
+        constexpr float BandHalfWidth = 0.20f; // outside this the source is black, not faint
+
+        const float Dx  = U - 0.5f, Dy = V - 0.5f;
+        const float R   = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang = FMath::Atan2(Dy, Dx);
+
+        const float Inside = FMath::Abs(R - RingRadius) <= BandHalfWidth ? 1.0f : 0.0f;
+        const float Band  = FMath::Exp(-0.5f * FMath::Square((R - RingRadius) / RingSigma)) * Inside;
+        // Sampled on the unit circle so the spoke pattern is continuous across the seam at +-PI.
+        const float Spoke = Fbm(FMath::Cos(Ang) * SpokeTiles + 5.0f, FMath::Sin(Ang) * SpokeTiles + 19.0f, 2, 14);
+        const float Glow  = SpokeAmp * Spoke * Saturate(1.0f - Smooth(0.66f, 0.95f, R)) * Smooth(0.60f, 0.70f, R);
+        const float I     = Saturate(Band * Overdrive + Glow);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Star_01 stand-in. NOT the Flare bake: the source is a FOUR-lobe star on the cardinal axes (dominant
+    // angular harmonic 4, lobes at 0 / +-90 / 180, u-profile and v-profile identical to 0.0001) where Flare is a
+    // six-lobe pow(|cos 3t|, 36). Its core is LINEAR in radius, not a power curve, and its lobes TAPER — 90
+    // degrees wide at r 0.3, 20 at 0.5, 2 at 0.7 — where Flare's angular width is fixed at every radius.
+    static auto Px_StarFour(float U, float V) -> FLinearColor
+    {
+        constexpr float DiscA      = 1.1399f; // measured linear core: I = DiscA - DiscB * r
+        constexpr float DiscB      = 1.7881f;
+        constexpr float DiscCut    = 0.31f;   // where the linear fit ends
+        constexpr float DiscEnd    = 0.50f;   // the measured 54 px shoulder to zero
+        constexpr float LobeA      = 1.0811f; // measured lobe envelope: LobeA - LobeB * r
+        constexpr float LobeB      = 0.9333f;
+        // ln k of the angular exponent, fitted through the measured FWHM taper (11.1 at r 0.5, 1136 at r 0.7).
+        constexpr float TaperSlope = 23.1f;
+        constexpr float TaperBias  = -9.14f;
+
+        const float Dx  = U - 0.5f, Dy = V - 0.5f;
+        const float R   = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang = FMath::Atan2(Dy, Dx);
+
+        const float Disc = Saturate(DiscA - DiscB * R) * (1.0f - Smooth(DiscCut, DiscEnd, R));
+
+        const float K    = FMath::Clamp(FMath::Exp(TaperSlope * R + TaperBias), 0.05f, 2000.0f);
+        const float Lobe = Saturate(LobeA - LobeB * R) * FMath::Pow(FMath::Abs(FMath::Cos(2.0f * Ang)), K);
+
+        const float I = Saturate(FMath::Max(Disc, Lobe));
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_LightStrip_01 stand-in. NOT the Streak bake, which is a lobe centred at v = 0.5: this is a vertical
+    // strip that RAMPS along v (centroid v 0.735, linear from 0.03 at v 0.25 to 0.99 at v 0.90, then collapsing
+    // to nothing by v 0.98) with a flat-topped cross-section, where Streak's along-u term is a cusp with no
+    // plateau. Measured correlation between the two is 0.02 — they are different texture classes.
+    static auto Px_LightStrip(float U, float V) -> FLinearColor
+    {
+        constexpr float Peak      = 0.7569f; // the source never saturates
+        constexpr float FlatHalfU = 0.085f;  // measured >=0.99 plateau half-width
+        constexpr float EdgeHalfU = 0.235f;  // measured 0.1-level half-width
+
+        // The measured v anchors, verbatim; the strip dies between v 0.90 and 0.98.
+        float Ramp;
+        if (V <= 0.25f)      { Ramp = FMath::Lerp(0.0f,   0.033f, Saturate(V / 0.25f)); }
+        else if (V <= 0.50f) { Ramp = FMath::Lerp(0.033f, 0.281f, (V - 0.25f) / 0.25f); }
+        else if (V <= 0.70f) { Ramp = FMath::Lerp(0.281f, 0.672f, (V - 0.50f) / 0.20f); }
+        else if (V <= 0.90f) { Ramp = FMath::Lerp(0.672f, 0.989f, (V - 0.70f) / 0.20f); }
+        else                 { Ramp = FMath::Lerp(0.989f, 0.015f, Saturate((V - 0.90f) / 0.08f)); }
+
+        const float X    = FMath::Abs(U - 0.5f);
+        const float Prof = 1.0f - Smooth(FlatHalfU, EdgeHalfU, X);
+        const float I    = Saturate(Peak * Ramp * Prof);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // The two smoke paints share a form and NOT their constants: Cloud_04 has a hard 0.596 ceiling and never
+    // saturates, Cloud_05 reaches white over 1.4% of itself and carries 3.5x its 8-16 cyc energy. Both hold a
+    // real silhouette (zero fraction 0.62 / 0.58) that the generic Smoke bake does not — Smoke lights 84% of its
+    // square against these paints' 36-40%, which is why neither reuses it.
+    static auto Px_CloudPuff(float U, float V, float InPeak, float InGain, float InBias, float InGrainTiles,
+                             float InEdgeRadius) -> float
+    {
+        constexpr float RaggedAmp = 0.45f;
+
+        const float Dx  = U - 0.5f, Dy = V - 0.5f;
+        const float R   = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang = FMath::Atan2(Dy, Dx);
+
+        const float Ragged = Fbm(FMath::Cos(Ang) * 3.0f + 7.0f, FMath::Sin(Ang) * 3.0f + 23.0f, 3, 6);
+        const float Edge   = InEdgeRadius * (1.0f + RaggedAmp * (Ragged - 0.5f));
+        const float Body   = Saturate(1.0f - R / FMath::Max(Edge, 1.0e-4f));
+
+        const float Cloud = Fbm(U * InGrainTiles + 31.0f, V * InGrainTiles + 13.0f, 4, int32(InGrainTiles));
+        return InPeak * Saturate(Body * (InBias + InGain * Cloud));
+    }
+
+    // T_VFX_Cloud_04 stand-in — the darker of the smoke pair, ceilinged at 0.596 with 1.9% of its energy above
+    // 8 cyc.
+    static auto Px_Cloud04(float U, float V) -> FLinearColor
+    {
+        const float I = Px_CloudPuff(U, V, 0.596f, 2.6f, -0.45f, 3.0f, 0.80f);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Cloud_05 stand-in — the brighter one: it saturates, and it carries 3.5x Cloud_04's fine-band energy.
+    static auto Px_Cloud05(float U, float V) -> FLinearColor
+    {
+        const float I = Px_CloudPuff(U, V, 1.0f, 2.4f, -0.12f, 6.0f, 0.76f);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Noise_04 stand-in. NOT TileNoise: measured against Noise_02 (the paint TileNoise WAS measured off) it
+    // is a different family — histogram intersection 0.378, 3x the correlation length, and 98.6% of its energy in
+    // the 1-8 cyc band against Noise_02's 70.7%. It is a coarse cloud CLIPPED at white over 18% of itself, which
+    // is what makes it left-skewed where every other noise in the pack is right-skewed.
+    static auto Px_TileNoiseCoarse(float U, float V) -> FLinearColor
+    {
+        constexpr float Tiles = 5.0f;  // measured 49 px correlation half-decay
+        constexpr float Gain  = 1.50f; // lands the measured 0.251 rms and 18% clipped fraction
+        constexpr float Bias  = 0.33f; // lands the measured 0.72 median
+        const float N = Fbm(U * Tiles, V * Tiles, 2, int32(Tiles));
+        const float I = Saturate(0.5f + (N - 0.5f) * Gain + Bias);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Noise_07 stand-in. Also not TileNoise: band-limited with essentially NOTHING above 16 cyc (a 660x
+    // deficit against TileNoise's deliberate grain octave) and sitting on a hard 0.0196 black floor it never
+    // crosses — a dissolve driven by it can never fully clear, which a floor-less stand-in would get wrong.
+    static auto Px_TileNoiseBandLimited(float U, float V) -> FLinearColor
+    {
+        constexpr float Tiles = 3.0f;    // measured 28 px correlation half-decay
+        constexpr float Gain  = 0.95f;   // lands the measured 0.159 rms
+        constexpr float Bias  = 0.06f;   // lands the measured 0.502 median
+        constexpr float Floor = 0.0196f; // the measured minimum: this paint is never black
+        const float N = Fbm(U * Tiles, V * Tiles, 2, int32(Tiles));
+        const float I = FMath::Max(Floor, Saturate(0.5f + (N - 0.5f) * Gain + Bias));
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Impact_01 stand-in — a FIVE-fold star at 36 + 72k degrees over a HOLLOW core. Measured as two
+    // Gaussians rather than one radial law, because no single law fits: the core peaks at r 0.15 (not at the
+    // centre) and dies by 0.375, while the spike envelope peaks at 0.353 and reaches out to 0.86. The
+    // inter-spike floor is 0.001 of the peak — these are thin rays, not a soft star.
+    static auto Px_ImpactStar(float U, float V) -> FLinearColor
+    {
+        // The measured 0.3673 is the ISOTROPIC component (the angular MINIMUM); the annulus means the whole
+        // shape has to hit are higher, so the core amplitude is fitted against those instead.
+        constexpr float CoreA   = 0.50f;
+        constexpr float CoreR   = 0.118f;
+        constexpr float CoreS   = 0.050f;
+        constexpr float SpikeA  = 0.9887f; // measured spike envelope Gaussian
+        constexpr float SpikeR  = 0.353f;
+        constexpr float SpikeS  = 0.180f;
+        // The rays TAPER: measured anisotropy is only 2.43 at r 0.15 and 917 by r 0.55, so the angular exponent
+        // has to grow with radius. These two land the measured annulus profile to within 0.03.
+        constexpr float TaperSlope = 16.0f;
+        constexpr float TaperBias  = -2.9f;
+        constexpr float SpikePh    = 0.6283f; // 36 degrees
+
+        const float Dx  = U - 0.5f, Dy = V - 0.5f;
+        const float R   = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang = FMath::Atan2(Dy, Dx);
+
+        const float Core  = CoreA  * FMath::Exp(-0.5f * FMath::Square((R - CoreR)  / CoreS));
+        const float Env   = SpikeA * FMath::Exp(-0.5f * FMath::Square((R - SpikeR) / SpikeS));
+        const float K     = FMath::Clamp(FMath::Exp(TaperSlope * R + TaperBias), 0.05f, 2000.0f);
+        const float Rays  = FMath::Pow(FMath::Abs(FMath::Cos(2.5f * (Ang - SpikePh))), K);
+
+        const float I = Saturate(FMath::Max(Core, Env * Rays));
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Impact_02 stand-in — a 2x2 flipbook of ONE evolving impact burst, not four unrelated paints: every
+    // frame is a vertical two-lobe burst (dominant angular harmonic 2 at +-90 in all four), the radial law
+    // correlates 0.94-0.99 across frames, and the frame-ordered quantities move monotonically — centroid v
+    // 0.608 -> 0.571 -> 0.535 -> 0.420, coverage 0.136 -> 0.108. It never saturates (peak 0.71-0.88), and it
+    // evolves FASTER than the wind sheet (frame correlation 0.51-0.78 against that paint's 0.79-0.88).
+    static auto Px_ImpactSheet(float U, float V) -> FLinearColor
+    {
+        constexpr float FrameStride = 47.0f;  // wider than the wind sheet's, for the measured faster evolution
+        constexpr float LobeK       = 2.2f;   // the measured harmonic-2 vertical pair
+        constexpr float GrainDepth  = 0.22f;
+
+        const auto  Sheet = Sample_Sheet2x2(U, V);
+        const float Off   = Sheet.Frame * FrameStride;
+        const float F     = Sheet.Frame / 3.0f;
+
+        // Measured per-frame constants, interpolated across the four frames in source order.
+        const float Peak     = FMath::Lerp(0.7490f, 0.7098f, F);
+        const float Centroid = FMath::Lerp(0.6078f, 0.4195f, F);
+        const float Sigma    = FMath::Lerp(0.310f,  0.240f,  F); // tracks the measured radius of gyration
+
+        const float Dx  = Sheet.U - 0.5f;
+        const float Dy  = Sheet.V - Centroid;
+        const float R   = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang = FMath::Atan2(Dy, Dx);
+
+        const float Body  = FMath::Exp(-0.5f * FMath::Square(R / Sigma));
+        const float Lobes = FMath::Pow(FMath::Abs(FMath::Sin(Ang)), LobeK);
+        const float Grain = 1.0f - GrainDepth * Fbm(Sheet.U * 6.0f + Off + 3.0f, Sheet.V * 6.0f + Off + 29.0f, 3, 6);
+
+        const float I = Saturate(Peak * Body * Lobes * Grain);
+        return FLinearColor(I, I, I, I);
+    }
+
     static auto Px_Ring(float U, float V) -> FLinearColor
     {
         const float Dx = U - 0.5f, Dy = V - 0.5f;
@@ -558,6 +824,21 @@ namespace ck::particles_editor
             { TEXT("T_CkParticles_WindSheet"),    ECk_VfxTextureKind::MaskSheet, &Px_WindSheet    },
             { TEXT("T_CkParticles_LutWhite"),     ECk_VfxTextureKind::ColorLut,  &Px_LutWhite     },
             { TEXT("T_CkParticles_LutRainbow"),   ECk_VfxTextureKind::ColorLut,  &Px_LutRainbow   },
+            // The Vefects hit/impact paints (recipes NS_FireBall_Hit.md §7, NS_Gunshot_Hit.md §7). Each was
+            // measured against the nearest existing stand-in first; every one of them failed that comparison on a
+            // structural statistic, which is why each has its own bake rather than a reuse.
+            { TEXT("T_CkParticles_SoftParticleBright"), ECk_VfxTextureKind::Mask, &Px_SoftParticleBright },
+            { TEXT("T_CkParticles_SoftParticleFine"),   ECk_VfxTextureKind::Mask, &Px_SoftParticleFine   },
+            { TEXT("T_CkParticles_RingUneven"),         ECk_VfxTextureKind::Mask, &Px_RingUneven         },
+            { TEXT("T_CkParticles_RingFlare"),          ECk_VfxTextureKind::Mask, &Px_RingFlare          },
+            { TEXT("T_CkParticles_StarFour"),           ECk_VfxTextureKind::Mask, &Px_StarFour           },
+            { TEXT("T_CkParticles_LightStrip"),         ECk_VfxTextureKind::Mask, &Px_LightStrip         },
+            { TEXT("T_CkParticles_Cloud04"),            ECk_VfxTextureKind::Mask, &Px_Cloud04            },
+            { TEXT("T_CkParticles_Cloud05"),            ECk_VfxTextureKind::Mask, &Px_Cloud05            },
+            { TEXT("T_CkParticles_TileNoiseCoarse"),    ECk_VfxTextureKind::Mask, &Px_TileNoiseCoarse    },
+            { TEXT("T_CkParticles_TileNoiseBanded"),    ECk_VfxTextureKind::Mask, &Px_TileNoiseBandLimited },
+            { TEXT("T_CkParticles_ImpactStar"),         ECk_VfxTextureKind::Mask, &Px_ImpactStar         },
+            { TEXT("T_CkParticles_ImpactSheet"),        ECk_VfxTextureKind::MaskSheet, &Px_ImpactSheet   },
         };
 
         auto Ok = 0;
