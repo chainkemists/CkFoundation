@@ -247,6 +247,70 @@ namespace ck::particles_editor::MeshGenLocal
                  FVector2f(S, T) };
     }
 
+    // ---- Cylinder: the Vefects SM_VFX_Ring01 carrier, from the corpus .obj measurements -------------------------
+    //
+    // An open tube: radius 100, Z 0..50, 32 circumferential segments. The source is two coaxial walls 0.5 apart
+    // — 0.5% of its radius — collapsed here to one sheet with a two-sided look, exactly as the card and the
+    // crescent were.
+    //
+    // Its UV is measured and closed-form: v = 1 at Z = 0 and v = 0 at Z = 50 (and only those two values exist),
+    // while u wraps once around the circumference DECREASING with polar angle — u = frac(0.75 - angle/360), so
+    // the seam sits at -90 degrees and u = 0.75 at angle 0. The renderer's own (1, 1, 5) mesh scale is NOT
+    // baked in: the behavior applies it, so this asset stays a faithful record of the source's dimensions.
+    static auto Surface_Cylinder(float S, float T) -> FGridPoint
+    {
+        constexpr auto Radius = 100.0f;
+        constexpr auto Height = 50.0f;
+
+        const float AngleDegrees = 360.0f * (0.75f - S);
+        const float Angle        = FMath::DegreesToRadians(AngleDegrees);
+
+        return { FVector3f(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, FMath::Lerp(Height, 0.0f, T)),
+                 FVector2f(S, T) };
+    }
+
+    // ---- Bomb: the stylized prop stand-in for SM_VFX_Bomb_01_Small ---------------------------------------------
+    //
+    // A procedural sphere plus a fuse, per the campaign's [C-D2] ruling — the source mesh is NOT imported. Its
+    // silhouette is measurable and reproduced: radius-from-origin min 69.2 / mean 81.8 / max 94.1, symmetric
+    // about Z and widest at the equator, so the ball takes the measured MEAN radius. What is not reproducible
+    // is its UV, an authored atlas whose every correlation against angle, radius and Z is under 0.18 — there is
+    // no projection to re-derive, and MI_VFX_Bomb bands its three flat colours by Step over exactly those UVs.
+    // So v here is latitudinal by construction: 0 at the fuse tip, 1 at the underside, which turns the source's
+    // arbitrary banding into a top-lit read. Both the fuse and the banding axis are recorded as shape deviations
+    // in the recipe's §13 — the corpus .obj carries no fuse at all (its Z bounds are exactly the ball radius).
+    static auto Surface_Bomb(float S, float T) -> FGridPoint
+    {
+        constexpr auto Radius     = 82.0f;  // the measured mean radius-from-origin, 81.818
+        constexpr auto PoleGap    = 0.12f;  // stops short of the pole so the fuse meets a ring, not a point
+        constexpr auto FuseEnd    = 0.15f;  // T past this is the ball
+        constexpr auto FuseRadius = 10.0f;
+        constexpr auto FuseTip    = 0.10f;  // tip radius as a fraction of the fuse's, so the top is closed
+        constexpr auto FuseLength = 28.0f;
+
+        const float Alpha = 2.0f * PI * S;
+
+        auto RadiusXY = 0.0f;
+        auto Z        = 0.0f;
+
+        if (T <= FuseEnd)
+        {
+            const float K = T / FuseEnd;
+            RadiusXY = FuseRadius * FMath::Lerp(FuseTip, 1.0f, K);
+            Z        = Radius + FMath::Lerp(FuseLength, 0.0f, K);
+        }
+        else
+        {
+            const float K   = (T - FuseEnd) / (1.0f - FuseEnd);
+            const float Phi = FMath::Lerp(PoleGap, PI - PoleGap, K);
+            RadiusXY = Radius * FMath::Sin(Phi);
+            Z        = Radius * FMath::Cos(Phi);
+        }
+
+        return { FVector3f(FMath::Cos(Alpha) * RadiusXY, FMath::Sin(Alpha) * RadiusXY, Z),
+                 FVector2f(S, T) };
+    }
+
     // ---- Crescent: the Vefects NS_BasicAttack slash carrier, from the recipe's MEASURED profile ----------------
     //
     // A flat tapered annulus in XY sweeping the full 360 degrees, widest radially at 0 degrees and narrowing to
@@ -353,6 +417,11 @@ namespace ck::particles_editor
         // both slot materials are fallbacks, overridden by each row renderer's own CkUsf look.
         BakeOne(TEXT("SM_CkParticles_Spike"), &Surface_Spike, 4, 8, TEXT("SweepErode"));
         BakeOne(TEXT("SM_CkParticles_Card"),  &Surface_Card,  1, 1, TEXT("SweepErode"));
+
+        // The Vefects arrow/bomb carriers. 32 columns is SM_VFX_Ring01's own segment count; the bomb's grid is
+        // a stylization rather than a transcription (see Surface_Bomb) and is sized for a clean silhouette.
+        BakeOne(TEXT("SM_CkParticles_Cylinder"), &Surface_Cylinder, 32, 1,  TEXT("SweepErode"));
+        BakeOne(TEXT("SM_CkParticles_Bomb"),     &Surface_Bomb,     24, 20, TEXT("SweepErode"));
 
         Log(TEXT("Generated {}/{} CkParticles VFX carrier meshes under {}."),
             FString::FromInt(Ok), FString::FromInt(Total), FString(MeshDir));

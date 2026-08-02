@@ -78,7 +78,7 @@ namespace ck::particles
     // Behavior roster size. ONE definition so tests, gyms and docs can iterate the roster without each restating a
     // magic maximum id that then drifts when a behavior is added.
     // --------------------------------------------------------------------------------------------------------------
-    inline constexpr int32 NumBehaviors = 23;                    // ids [0 .. NumBehaviors-1]
+    inline constexpr int32 NumBehaviors = 26;                    // ids [0 .. NumBehaviors-1]
     inline constexpr int32 LastBehaviorId = NumBehaviors - 1;
 
     // --------------------------------------------------------------------------------------------------------------
@@ -204,6 +204,73 @@ namespace ck::particles
         return MakeArrayView(Specs);
     }
 
+    // Vefects NS_Arrow_Cast: thirteen renderers for fifteen emitters (Part01 serves three of them) — ten
+    // camera-facing looks, one velocity-aligned sprite, two mesh carriers whose source renderers face VELOCITY,
+    // and the batch's only tube. The last row is a 2x2 sub-UV sheet (recipe Cookbook/NS_Arrow_Cast.md §6.2).
+    inline auto Get_ArrowCastRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    37, nullptr,          TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    38, nullptr,          TEXT("PartDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    39, nullptr,          TEXT("RainbowDisAdd")     },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 40, nullptr,          TEXT("PartDisAdd04")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    41, nullptr,          TEXT("RingDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    42, nullptr,          TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    43, nullptr,          TEXT("ImpactDisAdd01")    },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  44, TEXT("Spike"),    TEXT("FlatAdd02")         },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  45, TEXT("Card"),     TEXT("LightStripDisAdd")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    46, nullptr,          TEXT("StarDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    47, nullptr,          TEXT("StarDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  48, TEXT("Cylinder"), TEXT("WindDisAdd02Mesh")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    49, nullptr,          TEXT("WindDisAdd01"), FIntPoint(2, 2) },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_Arrow_Hit: the Cast set minus the two Wind rows, plus the CUSTOM-FACING ring — the second half
+    // of the source's ring pair, drawn flat in sim space where its twin billboards. Every look here is already
+    // carried by another row (recipe Cookbook/NS_Arrow_Hit.md §6.2).
+    inline auto Get_ArrowHitRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    50, nullptr,       TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    51, nullptr,       TEXT("PartDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    52, nullptr,       TEXT("RainbowDisAdd")     },
+            { ECk_ParticlesRenderer_Kind::VelocityAlignedSprite, 53, nullptr,       TEXT("PartDisAdd04")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    54, nullptr,       TEXT("RingDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    55, nullptr,       TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    56, nullptr,       TEXT("ImpactDisAdd01")    },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  57, TEXT("Spike"), TEXT("FlatAdd02")         },
+            { ECk_ParticlesRenderer_Kind::Mesh,                  58, TEXT("Card"),  TEXT("LightStripDisAdd")  },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    59, nullptr,       TEXT("StarDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite,    60, nullptr,       TEXT("StarDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::CustomFacingSprite,    61, nullptr,       TEXT("RingDisAdd01")      },
+        };
+        return MakeArrayView(Specs);
+    }
+
+    // Vefects NS_Bomb_Spawn: nine renderers for fourteen emitters — Part01 alone serves five of them. The mesh
+    // row is the cookbook's only PROP: an opaque toon-banded stand-in rather than a particle carrier
+    // (recipe Cookbook/NS_Bomb_Spawn.md §6.2).
+    inline auto Get_BombSpawnRendererSpecs() -> TArrayView<const FCk_ParticlesRendererSpec>
+    {
+        static const FCk_ParticlesRendererSpec Specs[] =
+        {
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 62, nullptr,       TEXT("PartDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 63, nullptr,       TEXT("RainbowDisAdd")     },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 64, nullptr,       TEXT("PartDisAdd01Bright")},
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 65, nullptr,       TEXT("RingDisAdd01")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 66, nullptr,       TEXT("PartDisAdd02")      },
+            { ECk_ParticlesRenderer_Kind::Mesh,               67, TEXT("Bomb"),  TEXT("BombToon")          },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 68, nullptr,       TEXT("StarDisAdd03")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 69, nullptr,       TEXT("PartDisAdd03")      },
+            { ECk_ParticlesRenderer_Kind::CameraFacingSprite, 70, nullptr,       TEXT("PartDisAdd03Bright")},
+        };
+        return MakeArrayView(Specs);
+    }
+
     // --------------------------------------------------------------------------------------------------------------
     // Template cadence.
     //
@@ -250,6 +317,12 @@ namespace ck::particles
             { TEXT("PS_CkParticles_Template_FireBurst"),   2.0f, 1.0f,  10, Get_FireBurstRendererSpecs()   },
             { TEXT("PS_CkParticles_Template_FireBallHit"), 2.0f, 1.34f, 47, Get_FireBallHitRendererSpecs() },
             { TEXT("PS_CkParticles_Template_GunshotHit"),  2.0f, 0.65f, 40, Get_GunshotHitRendererSpecs()  },
+            // The Arrow cast/hit pair and the bomb spawn. Same Loop-Once 2.0 s system as the three above; the
+            // Cast row is the longest-lived in the cookbook because its two Wind layers run 1.5 s off a 0.05 s
+            // beat, where every other layer in all three is gone inside 0.55 s.
+            { TEXT("PS_CkParticles_Template_ArrowCast"),   2.0f, 1.55f, 42, Get_ArrowCastRendererSpecs()   },
+            { TEXT("PS_CkParticles_Template_ArrowHit"),    2.0f, 0.55f, 34, Get_ArrowHitRendererSpecs()    },
+            { TEXT("PS_CkParticles_Template_BombSpawn"),   2.0f, 1.05f, 28, Get_BombSpawnRendererSpecs()   },
         };
         return MakeArrayView(Specs);
     }
@@ -307,6 +380,21 @@ namespace ck::particles
         return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_GunshotHit"));
     }
 
+    inline auto Get_ArrowCastTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_ArrowCast"));
+    }
+
+    inline auto Get_ArrowHitTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_ArrowHit"));
+    }
+
+    inline auto Get_BombSpawnTemplateSystemObjectPath() -> FString
+    {
+        return Get_TemplateSystemObjectPath(TEXT("PS_CkParticles_Template_BombSpawn"));
+    }
+
     // Which template a behavior spawns through. A recreation whose source cadence differs from every existing row
     // gets its own row and is named here; the multi-particle one-shots keep the shared burst template.
     inline auto Get_BehaviorTemplateSystemObjectPath(const int32 InBehaviorId) -> FString
@@ -321,6 +409,9 @@ namespace ck::particles
             case 20: return Get_FireBurstTemplateSystemObjectPath();   // FireBurst    — 2.0s loop, 1.0s,  burst 10
             case 21: return Get_FireBallHitTemplateSystemObjectPath(); // FireBallHit  — 2.0s loop, 1.34s, burst 47
             case 22: return Get_GunshotHitTemplateSystemObjectPath();  // GunshotHit   — 2.0s loop, 0.65s, burst 40
+            case 23: return Get_ArrowCastTemplateSystemObjectPath();   // ArrowCast    — 2.0s loop, 1.55s, burst 42
+            case 24: return Get_ArrowHitTemplateSystemObjectPath();    // ArrowHit     — 2.0s loop, 0.55s, burst 34
+            case 25: return Get_BombSpawnTemplateSystemObjectPath();   // BombSpawn    — 2.0s loop, 1.05s, burst 28
             default: break;
         }
 
