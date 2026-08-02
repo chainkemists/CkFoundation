@@ -30,8 +30,8 @@ struct FCkParticles_StageInput
 //       (ck::particles::FCk_ParticlesRendererSpec), each with a named generated mesh and/or a named CkUsf
 //       look bound explicitly. They exist only on that row's template, so a behavior writing one of these
 //       tags renders nothing anywhere else. Behavior 7 (Slash) owns 5..9; behaviors 18 and 19 (the
-//       projectile pair) share 10..11 on one cadence row; the Vefects hit/burst ports own 12..14 (20),
-//       15..27 (21) and 28..36 (22).
+//       projectile pair) share 10..11 on one cadence row; the Vefects hit/burst/cast ports own 12..14 (20),
+//       15..27 (21), 28..36 (22), 37..49 (23), 50..61 (24) and 62..70 (25).
 //
 // Dynamic -> Particles.DynamicMaterialParameter, read by the VFX master materials as
 //   x = dissolve/erosion threshold [0..1], y = distortion strength, z = UV pan offset, w = emissive boost.

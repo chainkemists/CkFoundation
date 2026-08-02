@@ -28,6 +28,9 @@
 #include "/CkParticles/Behaviors/Behavior_FireBurst.ush"
 #include "/CkParticles/Behaviors/Behavior_FireBallHit.ush"
 #include "/CkParticles/Behaviors/Behavior_GunshotHit.ush"
+#include "/CkParticles/Behaviors/Behavior_ArrowCast.ush"
+#include "/CkParticles/Behaviors/Behavior_ArrowHit.ush"
+#include "/CkParticles/Behaviors/Behavior_BombSpawn.ush"
 
 FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
 {
@@ -53,6 +56,9 @@ FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
     if (In.BehaviorId == 20) { return CkParticles_Behavior_FireBurst(In); }
     if (In.BehaviorId == 21) { return CkParticles_Behavior_FireBallHit(In); }
     if (In.BehaviorId == 22) { return CkParticles_Behavior_GunshotHit(In); }
+    if (In.BehaviorId == 23) { return CkParticles_Behavior_ArrowCast(In); }
+    if (In.BehaviorId == 24) { return CkParticles_Behavior_ArrowHit(In); }
+    if (In.BehaviorId == 25) { return CkParticles_Behavior_BombSpawn(In); }
 
     // BehaviorId 0 (and any unknown id) -> Gravity.
     return CkParticles_Behavior_Gravity(In);

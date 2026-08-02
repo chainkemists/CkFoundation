@@ -1,0 +1,349 @@
+// /CkParticles/Behaviors/Behavior_BombSpawn.ush — BehaviorId 25.
+//
+// Faithful re-port of Vefects NS_Bomb_Spawn. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Bomb_Spawn.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is FOURTEEN emitters bursting over a Loop-Once 2.0 s system in three beats 50 ms apart: seven
+// blue glow shells, a lens ring, ten rising sparkles, a shockwave ring, two flash pips, five stretched lens
+// flares, and the bomb PROP itself — a spinning mesh that flashes 5x white before settling to a quarter of
+// its own colour. One CkParticles burst of 28 carries every particle (Seed % 28), spawning through
+// PS_CkParticles_Template_BombSpawn (2.0 s loop / 1.05 s particle lifetime / burst 28).
+//
+// The prop is the only mesh in the cookbook that is not a particle carrier, and the only one drawn opaque.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 25) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — 28 slots, in the source's own emitter order (recipe §2/§6.1).
+#define CKP_BS_NUM_LAYERS      28
+#define CKP_BS_LAYER_GLOW01     0
+#define CKP_BS_LAYER_GLOW02     1
+#define CKP_BS_FIRST_GLOW03     2   //  2..4   Glow_03            (3)
+#define CKP_BS_LAYER_RAINBOW     5
+#define CKP_BS_FIRST_SPARKLE     6   //  6..15  Sparkles           (10)
+#define CKP_BS_LAYER_RING       16
+#define CKP_BS_LAYER_FLASH01    17
+#define CKP_BS_LAYER_FLASH02    18
+#define CKP_BS_FIRST_BOMBGLOW   19   // 19..21  Bomb_Glow          (3)
+#define CKP_BS_LAYER_BOMB       22
+#define CKP_BS_LAYER_FLARE04    23
+#define CKP_BS_FIRST_FLARE03    24   // 24..25  Flare_Stretched_03 (2)
+#define CKP_BS_LAYER_FLARE02    26
+#define CKP_BS_LAYER_FLARE01    27
+
+// The three spawn beats (recipe §2). The prop and all five flares fire at loop start.
+#define CKP_BS_DELAY_MID        0.05
+#define CKP_BS_DELAY_LATE       0.1
+
+#define CKP_BS_TAU 6.28318530718
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_BS_VIS_PART01      62
+#define CKP_BS_VIS_RAINBOW     63
+#define CKP_BS_VIS_PART01BR    64
+#define CKP_BS_VIS_RING01      65
+#define CKP_BS_VIS_PART02      66
+#define CKP_BS_VIS_BOMB        67
+#define CKP_BS_VIS_STAR03      68
+#define CKP_BS_VIS_PART03      69
+#define CKP_BS_VIS_PART03BR    70
+
+FCkParticles_StageOutput CkParticles_BombSpawn_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// The four Part01 glows and the two flash pips share one Scale Color module: RGB untouched, alpha a straight
+// 1 -> 0 fade over life. Their Initialize colour is therefore the layer's whole hue.
+float CkParticles_BombSpawn_FadeAlpha(float T)
+{
+    return CkParticles_Key2(T, 0.0, 1.0, 1.0, 0.0);
+}
+
+// All five Flare_Stretched layers share one Scale Color, one uniform grow curve and one length-collapse
+// curve; they differ only in colour, lifetime, quad size, count and the tail of their WIDTH curve.
+FCkParticles_StageOutput CkParticles_BombSpawn_Flare(
+    FCkParticles_StageOutput O, float T, float3 InColor, float InInitialAlpha, float2 InSize,
+    float InWidth, float InDissolve)
+{
+    const float Uniform = CkParticles_Key3(T, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+    const float Length  = CkParticles_Key2(T, 0.0, 1.0, 0.9, 0.0);
+
+    O.Color   = float4(InColor, InInitialAlpha * CkParticles_Key2(T, 0.225777, 1.0, 1.0, 0.0));
+    O.Size    = float2(InSize.x * Uniform * Length, InSize.y * Uniform * InWidth);
+    O.Dynamic = float4(InDissolve, 0.0, 0.0, 0.0);
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_BombSpawn(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = ((In.Seed % CKP_BS_NUM_LAYERS) + CKP_BS_NUM_LAYERS) % CKP_BS_NUM_LAYERS;
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // ---- Glow_01: the outer 500-unit shell, at half alpha for the whole second ----
+    if (Layer == CKP_BS_LAYER_GLOW01)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t    = saturate(In.Age);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color   = float4(0.0368895, 0.184475, 1.0, 0.5 * CkParticles_BombSpawn_FadeAlpha(t));
+        O.Size    = float2(500.0 * Grow, 500.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BS_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_02: the deep-blue mid shell, the only Part01 glow that drives no dissolve ----
+    if (Layer == CKP_BS_LAYER_GLOW02)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t    = saturate(In.Age);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color  = float4(0.0193824, 0.0451862, 0.913099, CkParticles_BombSpawn_FadeAlpha(t));
+        O.Size   = float2(250.0 * Grow, 250.0 * Grow);
+        O.VisTag = CKP_BS_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_03: three cyan shells on the middle beat, growing over a fifth of their life ----
+    if (Layer < CKP_BS_LAYER_RAINBOW)
+    {
+        const float td = In.Age - CKP_BS_DELAY_MID;
+
+        if (td < 0.0 || td > 1.0)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t    = saturate(td);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.0, 1.0, 1.0);
+
+        O.Color   = float4(0.0466651, 0.491021, 1.0, CkParticles_BombSpawn_FadeAlpha(t));
+        O.Size    = float2(200.0 * Grow, 200.0 * Grow);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BS_VIS_PART01;
+        return O;
+    }
+
+    // ---- Raimbow: the lens ring. No Color module here, so its Initialize grey is HALVED by Scale Color ----
+    if (Layer == CKP_BS_LAYER_RAINBOW)
+    {
+        const float td = In.Age - CKP_BS_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.3)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t    = saturate(td / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+
+        O.Color    = float4(0.913099 * 0.5, 0.913099 * 0.5, 0.913099 * 0.5,
+                            0.15 * CkParticles_BombSpawn_FadeAlpha(t));
+        O.Size     = float2(300.0 * Grow, 300.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_BS_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Sparkles: ten fine motes off a point source, the widest layer count in the system ----
+    if (Layer < CKP_BS_LAYER_RING)
+    {
+        const float Life = lerp(0.5, 1.0, CkParticles_Rand(In.Seed, 1));
+        const float td   = In.Age - CKP_BS_DELAY_MID;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float  t   = saturate(td / Life);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        const float3 Spawn = Dir * (0.5 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+        const float3 V0    = Dir * lerp(350.0, 500.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.15, 0.0) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.15, 1.0, 0.0);
+
+        // A cool-white that cools further as it dies; blue stays pinned at 1 for the whole life.
+        O.Color = float4(
+            CkParticles_Key2(t, 0.615756, 0.296138, 0.936915, 0.0),
+            CkParticles_Key2(t, 0.615756, 0.571125, 0.936915, 0.0896671),
+            1.0,
+            CkParticles_Key2(t, 0.613341, 1.0, 1.0, 0.0));
+
+        const float Base = lerp(7.0, 10.0, CkParticles_Rand(In.Seed, 8));
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        O.Size = float2(Base * Grow, Base * Grow);
+
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_BS_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- Ring01: the shockwave, and the only layer whose dissolve starts fully eroded at +1 ----
+    if (Layer == CKP_BS_LAYER_RING)
+    {
+        const float td = In.Age - CKP_BS_DELAY_MID;
+
+        if (td < 0.0 || td > 0.75)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t    = saturate(td / 0.75);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.7, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0, 0.191202, 0.405675, 0.191202, 1.0, 0.79),
+            CkParticles_Key3(t, 0.0, 0.318547, 0.405675, 0.318547, 1.0, 0.823064),
+            1.0,
+            1.0);
+        O.Size     = float2(170.0 * Grow, 170.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(CkParticles_Key2(t, 0.0, 1.0, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_BS_VIS_RING01;
+        return O;
+    }
+
+    // ---- Flash_Glow_01 / _02: two small dim pips on the late beat, the system's only Part02 layers ----
+    if (Layer == CKP_BS_LAYER_FLASH01 || Layer == CKP_BS_LAYER_FLASH02)
+    {
+        const float td = In.Age - CKP_BS_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.5)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t    = saturate(td / 0.5);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+        const float Fade = CkParticles_BombSpawn_FadeAlpha(t);
+
+        const float3 Tint = Layer == CKP_BS_LAYER_FLASH01
+            ? float3(0.102242, 0.658375, 1.0)
+            : float3(0.102242, 1.0,      0.838799);
+        const float Alpha = Layer == CKP_BS_LAYER_FLASH01 ? 0.2 : 0.3;
+        const float Base  = Layer == CKP_BS_LAYER_FLASH01 ? 30.0 : 50.0;
+
+        O.Color   = float4(Tint, Alpha * Fade);
+        O.Size    = float2(Base * Grow, Base * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BS_VIS_PART02;
+        return O;
+    }
+
+    // ---- Bomb_Glow: three coincident shells hugging the prop. Their Scale Color module is DISABLED, so
+    // alpha HOLDS at 0.5 for the full second instead of fading — the one layer that does not dim ----
+    if (Layer < CKP_BS_LAYER_BOMB)
+    {
+        const float td = In.Age - CKP_BS_DELAY_MID;
+
+        if (td < 0.0 || td > 1.0)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t    = saturate(td);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.0, 1.0, 1.0);
+
+        O.Color   = float4(0.0368895, 0.184475, 1.0, 0.5);
+        O.Size    = float2(300.0 * Grow, 300.0 * Grow);
+        O.Dynamic = float4(2.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_BS_VIS_PART01;
+        return O;
+    }
+
+    // ---- Bomb: the prop. Pops from nothing over the first fifth, flashes 5x white to t=0.15, drops to a
+    // quarter of itself by t=0.256 and holds — while spinning about world +Z, fast at spawn and stopped by
+    // half-life on top of a random initial yaw ----
+    if (Layer == CKP_BS_LAYER_BOMB)
+    {
+        if (In.Age > 1.0)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t     = saturate(In.Age);
+        const float Flash = CkParticles_Key2(t, 0.15, 5.0, 0.255961, 0.25);
+
+        // Rotation Rate is a curve in TURNS per second over normalized age; its exact integral is the yaw, so
+        // the spin never depends on frame cadence. The 1.0 factor is the layer's own lifetime in seconds.
+        const float SpinTurns = 1.0 * CkParticles_Int3(t, 0.5, 5.0, 0.0, 0.0);
+        const float InitTurns = lerp(-1.0, 1.0, CkParticles_Rand(In.Seed, 3));
+        O.Orientation = CkParticles_QuatFromAxisAngle(float3(0.0, 0.0, 1.0),
+                                                      CKP_BS_TAU * (InitTurns + SpinTurns));
+        O.MeshIndex = 0;
+        O.Size      = float2(0.0, 0.0);
+
+        const float Pop = CkParticles_Key2(t, 0.0, 0.0, 0.2, 1.0);
+        O.Scale = float3(0.45 * Pop, 0.45 * Pop, 0.45 * Pop);
+
+        O.Color = float4(Flash, Flash, Flash, 1.0);
+        // MI_VFX_Bomb reads no dynamic parameters, so the source's Index 0 Param 1 is inert and nothing is
+        // written here.
+        O.VisTag = CKP_BS_VIS_BOMB;
+        return O;
+    }
+
+    // ---- Flare_Stretched_04: the shortest and narrowest streak, on the four-point star paint ----
+    if (Layer == CKP_BS_LAYER_FLARE04)
+    {
+        if (In.Age > 0.3)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t = saturate(In.Age / 0.3);
+
+        O = CkParticles_BombSpawn_Flare(O, t, float3(0.508881, 0.679543, 1.0), 1.0, float2(400.0, 50.0),
+                                        CkParticles_Key3(t, 0.0, 0.3, 0.2, 1.0, 0.9, 0.0999999), 1.0);
+        O.VisTag = CKP_BS_VIS_STAR03;
+        return O;
+    }
+
+    // ---- Flare_Stretched_03: two 1400-unit streaks, the widest thing in the system and the longest-lived
+    // flare, on the dimmest colour of the five ----
+    if (Layer < CKP_BS_LAYER_FLARE02)
+    {
+        if (In.Age > 0.7)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t = saturate(In.Age / 0.7);
+
+        O = CkParticles_BombSpawn_Flare(O, t, float3(0.00402472, 0.0295568, 0.130136), 1.0, float2(1400.0, 200.0),
+                                        CkParticles_Key2(t, 0.0, 0.3, 0.2, 1.0), 0.5);
+        O.VisTag = CKP_BS_VIS_PART03;
+        return O;
+    }
+
+    // ---- Flare_Stretched_02: the brightest streak paint, and the only instance in the system driving the
+    // family's camera-toward offset ----
+    if (Layer == CKP_BS_LAYER_FLARE02)
+    {
+        if (In.Age > 0.5)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t = saturate(In.Age / 0.5);
+
+        O = CkParticles_BombSpawn_Flare(O, t, float3(0.238, 0.502791, 1.0), 1.0, float2(500.0, 100.0),
+                                        CkParticles_Key3(t, 0.0, 0.3, 0.2, 1.0, 0.9, 0.2), 1.0);
+        O.VisTag = CKP_BS_VIS_PART03BR;
+        return O;
+    }
+
+    // ---- Flare_Stretched_01: the same quad on the soft Part01 paint at half alpha ----
+    {
+        if (In.Age > 0.5)
+        { return CkParticles_BombSpawn_Hidden(O); }
+
+        const float t = saturate(In.Age / 0.5);
+
+        O = CkParticles_BombSpawn_Flare(O, t, float3(0.00182116, 0.0561285, 1.0), 0.5, float2(500.0, 100.0),
+                                        CkParticles_Key2(t, 0.0, 0.3, 0.2, 1.0), 1.0);
+        O.VisTag = CKP_BS_VIS_PART01;
+        return O;
+    }
+}

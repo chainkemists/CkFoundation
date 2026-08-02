@@ -1,0 +1,404 @@
+// /CkParticles/Behaviors/Behavior_ArrowHit.ush — BehaviorId 24.
+//
+// Faithful re-port of Vefects NS_Arrow_Hit. Recipe + corpus evidence:
+// CkParticles/Cookbook/NS_Arrow_Hit.md — every number below is a source value from §2/§5, not a tuning.
+//
+// The source is the same construction as NS_Arrow_Cast with the two Wind layers removed, a second ring added
+// and a dozen numbers changed: FOURTEEN local-space emitters bursting over a Loop-Once 2.0 s system, all of
+// them dead by t ~= 0.55 s. One CkParticles burst of 34 carries every particle (Seed % 34), spawning through
+// PS_CkParticles_Template_ArrowHit (2.0 s loop / 0.55 s particle lifetime / burst 34).
+//
+// Ring_01 and Ring_02 are the SAME ring drawn twice — same paint, same size, same colour and dissolve curves —
+// one billboarded and one locked flat to a plane. That pairing is the point of the added emitter.
+//
+// Keep the CPU mirror (NDICkParticlesLocal::ExecuteStage_CPU case 24) in lockstep.
+#pragma once
+#include "/CkParticles/Common.ush"
+
+// Layer partition — 34 slots, in the source's own emitter order (recipe §2/§6.1).
+#define CKP_AH_NUM_LAYERS      34
+#define CKP_AH_LAYER_GLOW01     0
+#define CKP_AH_LAYER_GLOW02     1
+#define CKP_AH_FIRST_GLOW03     2   //  2..6   Glow_03        (5)
+#define CKP_AH_LAYER_RAINBOW    7
+#define CKP_AH_FIRST_SPARKLE    8   //  8..12  Sparkles_01    (5)
+#define CKP_AH_LAYER_RING01    13
+#define CKP_AH_FIRST_GLOW04    14   // 14..18  Glow_04        (5)
+#define CKP_AH_LAYER_GLOW05    19
+#define CKP_AH_LAYER_FLAREIMP  20
+#define CKP_AH_FIRST_SPIKE     21   // 21..25  Spike01        (5)
+#define CKP_AH_FIRST_STRIP     26   // 26..30  LightningStrip (5)
+#define CKP_AH_LAYER_STAR01    31
+#define CKP_AH_LAYER_STAR02    32
+#define CKP_AH_LAYER_RING02    33
+
+// The three spawn beats (recipe §2).
+#define CKP_AH_DELAY_EARLY      0.04
+#define CKP_AH_DELAY_LATE       0.05
+#define CKP_AH_DELAY_STAR02     0.1
+
+// Renderer tags, all row-declared on this behavior's own cadence row (recipe §6.2).
+#define CKP_AH_VIS_PART01      50
+#define CKP_AH_VIS_PART02      51
+#define CKP_AH_VIS_RAINBOW     52
+#define CKP_AH_VIS_PART04      53
+#define CKP_AH_VIS_RING01      54
+#define CKP_AH_VIS_PART01BR    55
+#define CKP_AH_VIS_IMPACT01    56
+#define CKP_AH_VIS_SPIKE       57
+#define CKP_AH_VIS_STRIP       58
+#define CKP_AH_VIS_STAR01      59
+#define CKP_AH_VIS_STAR02      60
+#define CKP_AH_VIS_RINGFLAT    61
+
+FCkParticles_StageOutput CkParticles_ArrowHit_Hidden(FCkParticles_StageOutput O)
+{
+    O.Color = float4(0.0, 0.0, 0.0, 0.0);
+    O.Size  = float2(0.0, 0.0);
+    O.Scale = float3(0.0, 0.0, 0.0);
+    return O;
+}
+
+// CURVE-A, "the sparkle ramp" (recipe §5), shared verbatim by Sparkles_01, both Rings, FlareImpact, Spike01
+// and both Stars: white cooling to a warm orange under a constant alpha.
+float3 CkParticles_ArrowHit_CurveA(float T)
+{
+    return float3(
+        1.0,
+        CkParticles_Key3(T, 0.0, 1.0, 0.46725, 0.693872, 1.0, 0.450786),
+        CkParticles_Key3(T, 0.0, 1.0, 0.46725, 0.147027, 1.0, 0.040915));
+}
+
+// Both rings run the same grow curve, the same dissolve assembly and the same 60-unit quad.
+FCkParticles_StageOutput CkParticles_ArrowHit_Ring(FCkParticles_StageOutput O, FCkParticles_StageInput In, float T)
+{
+    const float Grow = CkParticles_Key3(T, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+    O.Color    = float4(CkParticles_ArrowHit_CurveA(T), 1.0);
+    O.Size     = float2(60.0 * Grow, 60.0 * Grow);
+    O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+    O.Dynamic  = float4(CkParticles_Key2(T, 0.0, -0.325, 1.0, -1.0), 0.0, 0.0, 0.0);
+    return O;
+}
+
+FCkParticles_StageOutput CkParticles_Behavior_ArrowHit(FCkParticles_StageInput In)
+{
+    FCkParticles_StageOutput O = CkParticles_DefaultOutput(In);
+
+    const int Layer = ((In.Seed % CKP_AH_NUM_LAYERS) + CKP_AH_NUM_LAYERS) % CKP_AH_NUM_LAYERS;
+
+    O.Velocity = float3(0.0, 0.0, 0.0);
+    O.Position = float3(0.0, 0.0, 0.0);
+    O.Dynamic  = float4(0.0, 0.0, 0.0, 0.0);
+
+    // ---- Glow_01: the widest shell, opening COOLER than the Cast variant's white ----
+    if (Layer == CKP_AH_LAYER_GLOW01)
+    {
+        if (In.Age > 0.1)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.0, 0.947307, 0.447932, 0.693872, 1.0, 0.450786),
+            CkParticles_Key3(t, 0.0, 0.665387, 0.447932, 0.147027, 1.0, 0.0409152),
+            CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0) * 0.3);
+        O.Size    = float2(1000.0 * Grow, 1000.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_AH_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_02: where the Cast variant only faded, this one runs a full colour curve — a blue-white
+    // that snaps to pure white by t ~= 0.097 and warms from there ----
+    if (Layer == CKP_AH_LAYER_GLOW02)
+    {
+        if (In.Age > 0.1)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t    = saturate(In.Age / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color = float4(
+            CkParticles_Key3(t, 0.0, 0.318547, 0.0965892, 1.0, 1.0, 1.0),
+            CkParticles_Key3(t, 0.0, 0.955974, 0.0965892, 1.0, 1.0, 0.863157),
+            CkParticles_Key3(t, 0.0, 1.0,      0.0965892, 1.0, 1.0, 0.38643),
+            CkParticles_Key2(t, 0.143676, 1.0, 1.0, 0.0));
+        O.Size   = float2(200.0 * Grow, 200.0 * Grow);
+        O.VisTag = CKP_AH_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_03: five 50 ms flickers on the early beat, with no size curve at all ----
+    if (Layer < CKP_AH_LAYER_RAINBOW)
+    {
+        const float td = In.Age - CKP_AH_DELAY_EARLY;
+
+        if (td < 0.0 || td > 0.05)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t = saturate(td / 0.05);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.450786),
+            CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0409152),
+            1.0);
+        O.Size   = float2(150.0, 150.0);
+        O.VisTag = CKP_AH_VIS_PART02;
+        return O;
+    }
+
+    // ---- Raimbow: Color writes WHITE over the Initialize grey and Scale Color halves it ----
+    if (Layer == CKP_AH_LAYER_RAINBOW)
+    {
+        const float td = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.1)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.1);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.2, 0.9, 1.0, 1.0);
+
+        O.Color    = float4(0.5, 0.5, 0.5, CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.0));
+        O.Size     = float2(200.0 * Grow, 200.0 * Grow);
+        O.Rotation = CkParticles_Rand(In.Seed, 4) * 360.0;
+        O.Dynamic  = float4(0.5, 0.0, 0.0, 0.0);
+        O.VisTag   = CKP_AH_VIS_RAINBOW;
+        return O;
+    }
+
+    // ---- Sparkles_01: five velocity-aligned streaks off a point source at 1300-2000 units/s ----
+    if (Layer < CKP_AH_LAYER_RING01)
+    {
+        const float Life = lerp(0.2, 0.4, CkParticles_Rand(In.Seed, 1));
+        const float td   = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float  t   = saturate(td / Life);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        const float3 Spawn = Dir * (0.1 * pow(CkParticles_Rand(In.Seed, 7), 1.0 / 3.0));
+        const float3 V0    = Dir * lerp(1300.0, 2000.0, CkParticles_Rand(In.Seed, 2));
+
+        O.Position = Spawn + V0 * (CkParticles_Int3(t, 0.2, 1.0, 0.35, 0.05) * Life);
+        O.Velocity = V0 * CkParticles_Key3(t, 0.0, 1.0, 0.2, 0.35, 1.0, 0.05);
+
+        O.Color = float4(CkParticles_ArrowHit_CurveA(t), 1.0);
+
+        const float Width  = lerp(35.0, 50.0, CkParticles_Rand(In.Seed, 8));
+        const float Length = lerp(80.0, 90.0, CkParticles_Rand(In.Seed, 9));
+        const float Grow   = CkParticles_Key3(t, 0.0, 0.0, 0.1, 1.0, 1.0, 0.0);
+        const float Taper  = CkParticles_Key2(t, 0.0, 1.0, 1.0, 0.6);
+
+        O.Size   = float2(Width * Grow, Length * Grow * Taper);
+        O.VisTag = CKP_AH_VIS_PART04;
+        return O;
+    }
+
+    // ---- Ring_01: the billboarded half of the ring pair ----
+    if (Layer == CKP_AH_LAYER_RING01)
+    {
+        const float td = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.5)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        O = CkParticles_ArrowHit_Ring(O, In, saturate(td / 0.5));
+        O.VisTag = CKP_AH_VIS_RING01;
+        return O;
+    }
+
+    // ---- Glow_04: five 1000-unit shells, dimmer here than in the Cast variant ----
+    if (Layer < CKP_AH_LAYER_GLOW05)
+    {
+        const float td = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.2)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.2);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key2(t, 0.315122, 0.664854, 1.0, 0.450786),
+            CkParticles_Key2(t, 0.315122, 0.254571, 1.0, 0.0409152),
+            CkParticles_Key2(t, 0.0, 1.0, 0.992454, 0.0) * 0.2);
+        O.Size   = float2(1000.0 * Grow, 1000.0 * Grow);
+        O.VisTag = CKP_AH_VIS_PART01;
+        return O;
+    }
+
+    // ---- Glow_05: one hot pip on the bright paint, and the shortest full-colour layer at 0.07 s ----
+    if (Layer == CKP_AH_LAYER_GLOW05)
+    {
+        const float td = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.07)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.07);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 1.0, 1.0, 1.0);
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key2(t, 0.315122, 0.80876, 1.0, 0.450786),
+            CkParticles_Key2(t, 0.315122, 0.553,   1.0, 0.0409152),
+            CkParticles_Key2(t, 0.312708, 1.0, 0.992454, 0.0));
+        O.Size   = float2(50.0 * Grow, 50.0 * Grow);
+        O.VisTag = CKP_AH_VIS_PART01BR;
+        return O;
+    }
+
+    // ---- FlareImpact: 0.05 s, the shortest-lived particle in the system ----
+    if (Layer == CKP_AH_LAYER_FLAREIMP)
+    {
+        const float td = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.05)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.05);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.5, 0.1, 0.9, 1.0, 1.0);
+
+        O.Color   = float4(CkParticles_ArrowHit_CurveA(t), 1.0);
+        O.Size    = float2(150.0 * Grow, 150.0 * Grow);
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, 0.5, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_AH_VIS_IMPACT01;
+        return O;
+    }
+
+    // ---- Spike01: five pyramids off a 20-unit shell ----
+    // Its X mesh-scale range is INVERTED in this system (min 0.1 > max 0.05) and is copied verbatim; lerping
+    // the other way spans the identical set of values.
+    if (Layer < CKP_AH_FIRST_STRIP)
+    {
+        const float td = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.1)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float  t   = saturate(td / 0.1);
+        const float3 Dir = CkParticles_RandDir(In.Seed);
+
+        const float3 V0 = Dir * 10.0;
+        O.Position = Dir * 20.0 + V0 * td;
+        O.Velocity = V0;
+
+        O.Orientation = CkParticles_QuatFromZTo(Dir);
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+
+        const float3 Base = float3(
+            lerp(0.1, 0.05, CkParticles_Rand(In.Seed, 3)),
+            lerp(0.1, 0.2,  CkParticles_Rand(In.Seed, 4)),
+            lerp(0.2, 0.5,  CkParticles_Rand(In.Seed, 5)));
+
+        // A UNIFORM 1.5x pop, where the Cast variant's is anisotropic 0.5 / 0.4 / 1.
+        O.Scale = Base * float3(
+            CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 0.0),
+            CkParticles_Key3(t, 0.0, 0.0, 0.2, 1.5, 1.0, 0.0),
+            CkParticles_Key2(t, 0.0, 0.0, 0.2, 1.5));
+
+        O.Color  = float4(CkParticles_ArrowHit_CurveA(t), 1.0);
+        O.VisTag = CKP_AH_VIS_SPIKE;
+        return O;
+    }
+
+    // ---- LightningStrip: five card meshes at the impact point ----
+    // Its Sphere Location module is DISABLED, so all five sit at the origin and Add Velocity from Point has no
+    // direction to work from there; the Initial Mesh Orientation randomization is the only thing separating
+    // them, so each card takes its own random facing.
+    if (Layer < CKP_AH_LAYER_STAR01)
+    {
+        const float Life = lerp(0.1, 0.2, CkParticles_Rand(In.Seed, 1));
+        const float td   = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > Life)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t = saturate(td / Life);
+
+        O.Orientation = CkParticles_QuatFromZTo(CkParticles_RandDir(In.Seed));
+        O.MeshIndex   = 0;
+        O.Size        = float2(0.0, 0.0);
+
+        const float3 Base = float3(
+            lerp(0.5, 1.0, CkParticles_Rand(In.Seed, 3)),
+            lerp(0.5, 1.0, CkParticles_Rand(In.Seed, 4)),
+            lerp(1.5, 2.0, CkParticles_Rand(In.Seed, 5)));
+
+        O.Scale = Base * float3(
+            CkParticles_Key3(t, 0.0, 0.5, 0.2, 1.0,  1.0, 0.0),
+            CkParticles_Key2(t, 0.0, 0.0, 1.0, 1.0),
+            CkParticles_Key3(t, 0.0, 0.0, 0.2, 0.75, 1.0, 1.0));
+
+        O.Color = float4(
+            1.0,
+            CkParticles_Key3(t, 0.0, 0.913099, 0.319952, 0.693872, 1.0, 0.450786),
+            CkParticles_Key3(t, 0.0, 0.715694, 0.319952, 0.147027, 1.0, 0.040915),
+            CkParticles_Key2(t, 0.327196, 1.0, 1.0, 0.0) * 0.15);
+        O.VisTag = CKP_AH_VIS_STRIP;
+        return O;
+    }
+
+    // ---- Star01: one small four-point flare on a constant dissolve ----
+    if (Layer == CKP_AH_LAYER_STAR01)
+    {
+        const float td = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.3)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.4, 1.0, 1.0, 0.0);
+
+        O.Color   = float4(CkParticles_ArrowHit_CurveA(t), 1.0);
+        O.Size    = float2(20.0 * Grow, 20.0 * Grow);
+        O.Dynamic = float4(1.0, 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_AH_VIS_STAR01;
+        return O;
+    }
+
+    // ---- Star02: the last layer to spawn, on its own 0.1 s beat ----
+    if (Layer == CKP_AH_LAYER_STAR02)
+    {
+        const float td = In.Age - CKP_AH_DELAY_STAR02;
+
+        if (td < 0.0 || td > 0.3)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        const float t    = saturate(td / 0.3);
+        const float Grow = CkParticles_Key3(t, 0.0, 0.0, 0.4, 1.0, 1.0, 0.0);
+
+        O.Color   = float4(CkParticles_ArrowHit_CurveA(t), 1.0);
+        O.Size    = float2(70.0 * Grow, 70.0 * Grow);
+        O.Dynamic = float4(CkParticles_Key2(t, 0.0, -0.125, 1.0, -1.0), 0.0, 0.0, 0.0);
+        O.VisTag  = CKP_AH_VIS_STAR02;
+        return O;
+    }
+
+    // ---- Ring_02: the same ring again, locked FLAT instead of billboarded ----
+    // Align Sprite to Mesh Orientation feeds the renderer's CustomAlignment/CustomFacingVector pair from the
+    // mesh orientation: its relative alignment vector is (0, 0, 1) and its relative facing vector (0, 10, 0)
+    // — magnitude 10 is an authoring artifact, Niagara normalizes it. Initial Mesh Orientation applies a
+    // quarter turn about X (the pack authors rotations in TURNS), which carries +Z onto -Y and +Y onto +Z:
+    // the quad ends up lying in the XY plane with a +Z normal, i.e. flat on the ground.
+    {
+        const float td = In.Age - CKP_AH_DELAY_LATE;
+
+        if (td < 0.0 || td > 0.5)
+        { return CkParticles_ArrowHit_Hidden(O); }
+
+        O = CkParticles_ArrowHit_Ring(O, In, saturate(td / 0.5));
+        O.SpriteAlignment = float3(0.0, -1.0, 0.0);
+        O.SpriteFacing    = float3(0.0,  0.0, 1.0);
+        O.VisTag          = CKP_AH_VIS_RINGFLAT;
+        return O;
+    }
+}

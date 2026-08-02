@@ -88,6 +88,33 @@ namespace ck::particles_editor::TexGenLocal
     static auto Saturate(float InV) -> float { return FMath::Clamp(InV, 0.0f, 1.0f); }
     static auto Smooth(float InE0, float InE1, float InX) -> float { return FMath::SmoothStep(InE0, InE1, InX); }
 
+    // A measured profile, sampled verbatim. Where a paint's falloff fits no closed form, the honest bake is the
+    // measurement itself: the anchors below each texture ARE the numbers read off the corpus PNG, interpolated
+    // linearly and clamped to the end values outside the sampled range. Px_LightStrip established the idiom
+    // with a hand-rolled if-chain; this is the same thing with the anchors kept legible.
+    struct FCk_ProfileAnchor
+    {
+        float X;
+        float Value;
+    };
+
+    static auto Sample_Profile(float InX, const FCk_ProfileAnchor* InAnchors, int32 InNum) -> float
+    {
+        if (InX <= InAnchors[0].X)
+        { return InAnchors[0].Value; }
+
+        for (int32 Index = 1; Index < InNum; ++Index)
+        {
+            if (InX > InAnchors[Index].X)
+            { continue; }
+
+            const auto& Lo = InAnchors[Index - 1];
+            const auto& Hi = InAnchors[Index];
+            return FMath::Lerp(Lo.Value, Hi.Value, (InX - Lo.X) / FMath::Max(Hi.X - Lo.X, 1.0e-6f));
+        }
+        return InAnchors[InNum - 1].Value;
+    }
+
     // IEC 61966-2-1 decode. A paint measured off a corpus PNG is measured in ENCODED bytes; a per-pixel function
     // must hand back LINEAR colour, because an sRGB bake re-encodes on quantization and would otherwise apply the
     // curve twice.
@@ -276,7 +303,7 @@ namespace ck::particles_editor::TexGenLocal
     // exponent 2.5 reproduces both the 54 px 10-90 shoulder and the fast tail), carved by sparse paint dabs
     // and textured by a fine 20-cycle 2D noise that carries the measured 8-16/16-32 cyc band energy and pulls
     // the structure tensor down to the measured 4.5 (a bare envelope reads 30+).
-    static auto Px_WindBand(float U, float V) -> FLinearColor
+    static auto Px_WindBandAt(float U, float V) -> float
     {
         constexpr float BandCenterV    = 0.215f;  // the measured v-peak
         constexpr float BandSigma      = 0.0836f; // from the measured FWHM 0.20
@@ -286,7 +313,25 @@ namespace ck::particles_editor::TexGenLocal
         const float Band = FMath::Exp(-0.5f * FMath::Pow(FMath::Abs(V - BandCenterV) / BandSigma, BandFalloffExp));
         const float Dab  = Smooth(0.55f, 0.85f, Fbm(U * 7.0f + 13.0f, V * 7.0f + 5.0f, 2, 7));
         const float Tex  = 1.0f + TexAmp * (Fbm(U * 20.0f + 29.0f, V * 20.0f + 17.0f, 2, 20) - 0.5f);
-        const float I = Saturate(Band * (1.0f - DabDepth * Dab) * Tex);
+        return Saturate(Band * (1.0f - DabDepth * Dab) * Tex);
+    }
+
+    static auto Px_WindBand(float U, float V) -> FLinearColor
+    {
+        const float I = Px_WindBandAt(U, V);
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Wind_02 stand-in. Measured against the Wind_03 paint above rather than re-derived, because the two
+    // source PNGs are THE SAME IMAGE: rolling Wind_03 down by 141 of its 512 rows reproduces Wind_02 to a mean
+    // absolute 1.3e-06, i.e. to quantization. Their global statistics are identical to four decimals and their
+    // histogram intersection is 1.000. So this is not a new paint — it is the same paint whose band sits at
+    // v 0.4902 instead of 0.2148, which matters because both textures address WRAP and the mesh UV decides
+    // where along the carrier the band lands.
+    static auto Px_WindBandMid(float U, float V) -> FLinearColor
+    {
+        constexpr float ShiftV = 141.0f / 512.0f; // the measured roll, in v
+        const float I = Px_WindBandAt(U, FMath::Frac(V - ShiftV + 1.0f));
         return FLinearColor(I, I, I, I);
     }
 
@@ -530,6 +575,87 @@ namespace ck::particles_editor::TexGenLocal
         const float Lobe = Saturate(LobeA - LobeB * R) * FMath::Pow(FMath::Abs(FMath::Cos(2.0f * Ang)), K);
 
         const float I = Saturate(FMath::Max(Disc, Lobe));
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Star_02 stand-in. Also a four-lobe cardinal star (dominant angular harmonic 4, u-profile and
+    // v-profile identical to 0.0002) and also NOT the StarFour bake: measured against it, Star_01 holds
+    // 0.98/0.89/0.79 across its first three annuli where this paint has already fallen to 0.75/0.28/0.14, and
+    // its rays reach r 0.85 against Star_01's 0.6. What it has instead is a SATURATED core out to r 0.08 — the
+    // measured 0.43% of the texture at white — behind rays whose brightness barely decays (0.78 at r 0.18 down
+    // to 0.58 at 0.70) before a hard cliff between 0.75 and 0.88. Angular lobe FWHM tapers 26/12/8/4/2 degrees
+    // over r 0.15..0.55, which is the exponent fit below. Fit residual: mean absolute 0.0072, correlation 0.979.
+    static auto Px_StarFourTight(float U, float V) -> FLinearColor
+    {
+        // Measured along the 45-degree diagonal, where only the isotropic core survives.
+        static constexpr FCk_ProfileAnchor Core[] =
+        {
+            { 0.00f, 1.000f }, { 0.06f, 1.000f }, { 0.08f, 0.808f }, { 0.10f, 0.596f },
+            { 0.12f, 0.224f }, { 0.15f, 0.071f }, { 0.18f, 0.012f }, { 0.22f, 0.000f },
+        };
+        // Measured along the cardinal axes, where the ray is the whole signal.
+        static constexpr FCk_ProfileAnchor Ray[] =
+        {
+            { 0.10f, 0.988f }, { 0.15f, 0.820f }, { 0.18f, 0.780f }, { 0.26f, 0.753f },
+            { 0.35f, 0.718f }, { 0.50f, 0.663f }, { 0.70f, 0.584f }, { 0.80f, 0.353f },
+            { 0.85f, 0.067f }, { 0.90f, 0.000f },
+        };
+        constexpr float TaperSlope = 11.5f; // ln k of the angular exponent, fitted through the measured FWHM taper
+        constexpr float TaperBias  = 0.0f;
+
+        const float Dx  = U - 0.5f, Dy = V - 0.5f;
+        const float R   = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang = FMath::Atan2(Dy, Dx);
+
+        const float K    = FMath::Clamp(FMath::Exp(TaperSlope * R + TaperBias), 0.05f, 2000.0f);
+        const float Lobe = Sample_Profile(R, Ray, UE_ARRAY_COUNT(Ray))
+                         * FMath::Pow(FMath::Abs(FMath::Cos(2.0f * Ang)), K);
+
+        const float I = Saturate(FMath::Max(Sample_Profile(R, Core, UE_ARRAY_COUNT(Core)), Lobe));
+        return FLinearColor(I, I, I, I);
+    }
+
+    // T_VFX_Star_03 stand-in — the lens-flare streak star. Four cardinal lobes again, but the only paint in the
+    // pack whose HORIZONTAL and VERTICAL rays have different reach: measured at the 0.05 level the +-X pair runs
+    // to r 0.805 and the +-Y pair stops dead at 0.414, which is what puts its u-profile 0.138 away from its
+    // v-profile where every other star in the pack matches to 0.0002. So it is modelled as two independent
+    // two-lobe terms rather than one four-lobe mask. Its core is soft (0.44 by r 0.08 against Star_02's
+    // saturated 1.0) and it barely saturates at all (0.05% of the texture). Lobe FWHM tapers 21/9/4/2/1 degrees
+    // over r 0.15..0.55. Fit residual: mean absolute 0.0038, correlation 0.987.
+    static auto Px_StarFourSplit(float U, float V) -> FLinearColor
+    {
+        static constexpr FCk_ProfileAnchor Core[] =
+        {
+            { 0.00f, 1.000f }, { 0.04f, 0.922f }, { 0.06f, 0.733f }, { 0.08f, 0.443f },
+            { 0.10f, 0.290f }, { 0.15f, 0.192f }, { 0.22f, 0.071f }, { 0.30f, 0.004f },
+            { 0.35f, 0.000f },
+        };
+        static constexpr FCk_ProfileAnchor RayX[] =
+        {
+            { 0.00f, 1.000f }, { 0.08f, 0.847f }, { 0.12f, 0.694f }, { 0.18f, 0.549f },
+            { 0.26f, 0.506f }, { 0.40f, 0.471f }, { 0.50f, 0.408f }, { 0.70f, 0.329f },
+            { 0.80f, 0.063f }, { 0.85f, 0.000f },
+        };
+        static constexpr FCk_ProfileAnchor RayY[] =
+        {
+            { 0.00f, 1.000f }, { 0.08f, 0.792f }, { 0.12f, 0.714f }, { 0.18f, 0.651f },
+            { 0.26f, 0.553f }, { 0.35f, 0.416f }, { 0.40f, 0.122f }, { 0.45f, 0.000f },
+        };
+        constexpr float TaperSlope = 18.0f;
+        constexpr float TaperBias  = 0.3f;
+
+        const float Dx  = U - 0.5f, Dy = V - 0.5f;
+        const float R   = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang = FMath::Atan2(Dy, Dx);
+
+        const float K     = FMath::Clamp(FMath::Exp(TaperSlope * R + TaperBias), 0.05f, 2000.0f);
+        const float Horiz = Sample_Profile(R, RayX, UE_ARRAY_COUNT(RayX))
+                          * FMath::Pow(FMath::Abs(FMath::Cos(Ang)), K);
+        const float Vert  = Sample_Profile(R, RayY, UE_ARRAY_COUNT(RayY))
+                          * FMath::Pow(FMath::Abs(FMath::Sin(Ang)), K);
+
+        const float I = Saturate(FMath::Max(Sample_Profile(R, Core, UE_ARRAY_COUNT(Core)),
+                                            FMath::Max(Horiz, Vert)));
         return FLinearColor(I, I, I, I);
     }
 
@@ -839,6 +965,13 @@ namespace ck::particles_editor
             { TEXT("T_CkParticles_TileNoiseBanded"),    ECk_VfxTextureKind::Mask, &Px_TileNoiseBandLimited },
             { TEXT("T_CkParticles_ImpactStar"),         ECk_VfxTextureKind::Mask, &Px_ImpactStar         },
             { TEXT("T_CkParticles_ImpactSheet"),        ECk_VfxTextureKind::MaskSheet, &Px_ImpactSheet   },
+            // The Vefects arrow/bomb paints (recipes NS_Arrow_Cast.md §7, NS_Bomb_Spawn.md §7). Both stars were
+            // measured against the existing StarFour bake and rejected on their radial law; the wind band was
+            // measured against WindBand and turned out to be the SAME source image rolled 141 rows in v, so it
+            // reuses that paint function at the measured offset rather than inventing a second one.
+            { TEXT("T_CkParticles_StarFourTight"),      ECk_VfxTextureKind::Mask, &Px_StarFourTight      },
+            { TEXT("T_CkParticles_StarFourSplit"),      ECk_VfxTextureKind::Mask, &Px_StarFourSplit      },
+            { TEXT("T_CkParticles_WindBandMid"),        ECk_VfxTextureKind::Mask, &Px_WindBandMid        },
         };
 
         auto Ok = 0;
