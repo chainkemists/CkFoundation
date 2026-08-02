@@ -1077,5 +1077,11 @@ namespace CkUsf
         _Parameters.Add(CkUsf::Usf_Scalar(n"DistortIntensity", 0.0));
         _Parameters.Add(CkUsf::Usf_Vector(n"DistortSpeed",     FLinearColor(0.0, 0.0, 0.0, 1.0)));
         _Parameters.Add(CkUsf::Usf_Vector(n"MainTexScale",     FLinearColor(1.0, 1.0, 0.0, 1.0)));
+
+        // Gradient-map chain at the PARENT graph's defaults, whose flat white ramp makes it inert — the source
+        // instance points GradientMap_Tex at T_VFX_WhitePixel for exactly the same reason.
+        _Parameters.Add(CkUsf::Usf_ParticlesTexture(n"GradientMap", "LutWhite"));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"GradientMapDisplacement", 0.1));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"GradientInvert", 0.5));
     }
 }

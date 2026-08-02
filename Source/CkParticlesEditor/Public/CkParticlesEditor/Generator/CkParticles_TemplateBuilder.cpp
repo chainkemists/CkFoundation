@@ -249,6 +249,43 @@ namespace ck::particles_editor
             return Master;
         }
 
+        // The three sprite kinds differ ONLY in the alignment/facing pair Niagara resolves the quad with, so one
+        // emission path serves all three; an unset result means the kind is not a sprite at all.
+        struct FSpriteFacingPair
+        {
+            ENiagaraSpriteAlignment  Alignment;
+            ENiagaraSpriteFacingMode Facing;
+        };
+
+        static auto Get_SpriteFacingPair(
+            const ck::particles::ECk_ParticlesRenderer_Kind InKind) -> TOptional<FSpriteFacingPair>
+        {
+            using EKind = ck::particles::ECk_ParticlesRenderer_Kind;
+
+            switch (InKind)
+            {
+                case EKind::CameraFacingSprite:
+                    return FSpriteFacingPair{ENiagaraSpriteAlignment::Unaligned, ENiagaraSpriteFacingMode::FaceCamera};
+                case EKind::VelocityAlignedSprite:
+                    return FSpriteFacingPair{ENiagaraSpriteAlignment::VelocityAligned, ENiagaraSpriteFacingMode::FaceCamera};
+                // The VisTag-4 pair: both Particles.SpriteAlignment and Particles.SpriteFacing must exist, or
+                // Niagara silently falls back to Unaligned/FaceCamera. CkParticles_DefaultOutput seeds them.
+                case EKind::CustomFacingSprite:
+                    return FSpriteFacingPair{ENiagaraSpriteAlignment::CustomAlignment, ENiagaraSpriteFacingMode::CustomFacingVector};
+                default:
+                    return {};
+            }
+        }
+
+        // Niagara's own default is (1,1) — one frame, no division. A row that declares no sheet must keep it,
+        // because a (0,0) written through would divide the quad's UVs by zero.
+        static auto Get_RendererSubImageSize(const FIntPoint& InSubImageSize) -> FVector2D
+        {
+            return InSubImageSize.X > 0 && InSubImageSize.Y > 0
+                ? FVector2D(static_cast<double>(InSubImageSize.X), static_cast<double>(InSubImageSize.Y))
+                : FVector2D(1.0, 1.0);
+        }
+
         // Renderers a cadence row declares for itself, on top of the shared set. They exist only on that row's
         // template, so nothing effect-specific reaches any other template.
         static auto Configure_RowRenderers(
@@ -261,14 +298,16 @@ namespace ck::particles_editor
             {
                 auto* LookMaster = Load_LookMaster(Renderer.LookName);
 
-                if (Renderer.Kind == ck::particles::ECk_ParticlesRenderer_Kind::VelocityAlignedSprite)
+                if (const auto FacingPair = Get_SpriteFacingPair(Renderer.Kind);
+                    FacingPair.IsSet())
                 {
                     auto* Sprite = NewObject<UNiagaraSpriteRendererProperties>(
                         InEmitter, *FString::Printf(TEXT("SpriteRenderer_Row%d"), Index));
-                    Sprite->Alignment          = ENiagaraSpriteAlignment::VelocityAligned;
-                    Sprite->FacingMode         = ENiagaraSpriteFacingMode::FaceCamera;
+                    Sprite->Alignment          = FacingPair->Alignment;
+                    Sprite->FacingMode         = FacingPair->Facing;
                     Sprite->RendererVisibility = Renderer.VisTag;
                     Sprite->Material           = LookMaster;
+                    Sprite->SubImageSize       = Get_RendererSubImageSize(Renderer.SubImageSize);
                     InEmitter->AddRenderer(Sprite, InVersion);
                     ++Index;
                     continue;
@@ -287,6 +326,7 @@ namespace ck::particles_editor
                     InEmitter, *FString::Printf(TEXT("MeshRenderer_Row%d"), Index));
                 MeshRenderer->RendererVisibility = Renderer.VisTag;
                 MeshRenderer->FacingMode = ENiagaraMeshFacingMode::Default;
+                MeshRenderer->SubImageSize = Get_RendererSubImageSize(Renderer.SubImageSize);
                 MeshRenderer->Meshes.Empty();
 
                 auto MeshEntry = FNiagaraMeshRendererMeshProperties{};
@@ -567,6 +607,9 @@ namespace ck::particles_editor
             // makes CustomAlignment silently fall back to Unaligned (NiagaraSpriteRendererProperties.h).
             UEdGraphPin* SetSpriteAlign = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetVec3Def(),     TEXT("Particles.SpriteAlignment"));
             UEdGraphPin* SetSpriteFacing= MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetVec3Def(),     TEXT("Particles.SpriteFacing"));
+            // Niagara's SubImageIndexBinding reads this attribute by default, so writing it is the whole
+            // flipbook contract on the emitter side; the renderer's SubImageSize decides how it is divided.
+            UEdGraphPin* SetSubImage    = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetFloatDef(),    TEXT("Particles.SubImageIndex"));
 
             const auto Wire = [Schema](UEdGraphPin* InFrom, UEdGraphPin* InTo)
             {
@@ -605,6 +648,7 @@ namespace ck::particles_editor
             Wire(Find_PinByName(FuncNode, TEXT("OutVisTag"),      EGPD_Output), SetVisTag);
             Wire(Find_PinByName(FuncNode, TEXT("OutSpriteAlignment"), EGPD_Output), SetSpriteAlign);
             Wire(Find_PinByName(FuncNode, TEXT("OutSpriteFacing"),    EGPD_Output), SetSpriteFacing);
+            Wire(Find_PinByName(FuncNode, TEXT("OutSubImageIndex"),   EGPD_Output), SetSubImage);
 
             Graph->NotifyGraphChanged();
             Script->SetLatestSource(Source);

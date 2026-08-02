@@ -88,6 +88,32 @@ namespace ck::particles_editor::TexGenLocal
     static auto Saturate(float InV) -> float { return FMath::Clamp(InV, 0.0f, 1.0f); }
     static auto Smooth(float InE0, float InE1, float InX) -> float { return FMath::SmoothStep(InE0, InE1, InX); }
 
+    // IEC 61966-2-1 decode. A paint measured off a corpus PNG is measured in ENCODED bytes; a per-pixel function
+    // must hand back LINEAR colour, because an sRGB bake re-encodes on quantization and would otherwise apply the
+    // curve twice.
+    static auto SrgbToLinear(float InEncoded) -> float
+    {
+        return InEncoded <= 0.04045f
+            ? InEncoded / 12.92f
+            : FMath::Pow((InEncoded + 0.055f) / 1.055f, 2.4f);
+    }
+
+    // Frame layout of a 2x2 flipbook sheet: four frames, row-major, each a quarter of the texture. The returned
+    // UV is frame-LOCAL so one paint function serves all four frames and evolves them by the frame index.
+    struct FSheetSample
+    {
+        int32 Frame;
+        float U;
+        float V;
+    };
+
+    static auto Sample_Sheet2x2(float U, float V) -> FSheetSample
+    {
+        const int32 Fx = U < 0.5f ? 0 : 1;
+        const int32 Fy = V < 0.5f ? 0 : 1;
+        return FSheetSample{Fy * 2 + Fx, U * 2.0f - Fx, V * 2.0f - Fy};
+    }
+
     // ---- Per-pixel look functions. (u,v) in [0,1]; return packed FLinearColor (channels documented per texture). ---
 
     static auto Px_Glow(float U, float V) -> FLinearColor
@@ -300,6 +326,101 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
+    // ---- Colour LUT + flipbook sheet stand-ins ---------------------------------------------------------------
+    //
+    // T_VFX_LUT_Rainbow_01 transcription. A colour ramp is functional CONFIG, not painted art, so its stop VALUES
+    // are transcribed from the measurement rather than re-derived from a formula: ten stops reproduce all 512
+    // source texels to within 4.4/255, where dropping any single one costs 8-30. The source ramp is piecewise
+    // linear in sRGB-ENCODED space (the shape a painted gradient has), so the stops are stored encoded and
+    // interpolated there, then decoded once.
+    struct FLutStop
+    {
+        float Pos;
+        float R;
+        float G;
+        float B;
+    };
+
+    static auto Get_RainbowLutStops() -> TArrayView<const FLutStop>
+    {
+        static const FLutStop Stops[] =
+        {
+            { 0.0000f, 0.3137f, 0.1255f, 0.5294f }, // violet — the ramp wraps back to this at Pos 1
+            { 0.1624f, 1.0000f, 0.0000f, 0.0000f }, // red
+            { 0.2348f, 1.0000f, 0.4118f, 0.0000f }, // orange
+            { 0.3444f, 1.0000f, 0.7922f, 0.0000f }, // amber
+            { 0.3992f, 0.9922f, 0.9412f, 0.0000f }, // yellow
+            { 0.4384f, 0.9098f, 0.9961f, 0.0039f }, // chartreuse
+            { 0.4932f, 0.6157f, 0.9255f, 0.2745f }, // green
+            { 0.6184f, 0.1882f, 0.8431f, 0.6745f }, // spring green
+            { 0.8102f, 0.2000f, 0.3137f, 0.8471f }, // blue
+            { 1.0000f, 0.3137f, 0.1255f, 0.5294f },
+        };
+        return MakeArrayView(Stops);
+    }
+
+    // The family's default gradient map, standing in for the source pack's T_VFX_WhitePixel: a ramp that is the
+    // same colour everywhere samples to one, which is what makes the gradient chain inert wherever a look does
+    // not deliberately drive it.
+    static auto Px_LutWhite(float /*U*/, float /*V*/) -> FLinearColor
+    {
+        return FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    }
+
+    static auto Px_LutRainbow(float U, float /*V*/) -> FLinearColor
+    {
+        const auto Stops = Get_RainbowLutStops();
+
+        auto Index = 0;
+        while (Index + 2 < Stops.Num() && U > Stops[Index + 1].Pos)
+        { ++Index; }
+
+        const auto& Lo = Stops[Index];
+        const auto& Hi = Stops[Index + 1];
+        const float T  = Saturate((U - Lo.Pos) / FMath::Max(Hi.Pos - Lo.Pos, 1.0e-6f));
+
+        return FLinearColor(
+            SrgbToLinear(FMath::Lerp(Lo.R, Hi.R, T)),
+            SrgbToLinear(FMath::Lerp(Lo.G, Hi.G, T)),
+            SrgbToLinear(FMath::Lerp(Lo.B, Hi.B, T)),
+            1.0f);
+    }
+
+    // T_VFX_Wind_01 stand-in — a 2x2 flipbook of one wind puff. Measured off the source sheet: peak 0.4706 and
+    // never saturating; per-frame centroid (0.50, 0.51), coverage above 0.02 of 0.226-0.239, mean 0.038-0.040;
+    // the annulus-mean radial profile is LINEAR from 0.43 at the centre to zero at r 0.575 (a cone fits it to
+    // 0.012, where any power curve fits worse); 12-bin angular anisotropy 2.5-6.6 over r 0.25-0.65 with almost
+    // none near the centre — so the irregularity lives in the SILHOUETTE radius, not in the interior intensity;
+    // frame-to-frame correlation 0.79-0.88, i.e. one puff slowly evolving rather than four separate paints.
+    // A radially symmetric cone reads as a hard disc and drops the anisotropy to 1.
+    static auto Px_WindSheet(float U, float V) -> FLinearColor
+    {
+        constexpr float Peak        = 0.4706f; // the measured maximum; the source never reaches white
+        constexpr float EdgeRadius  = 0.60f;
+        constexpr float RaggedAmp   = 1.20f;   // silhouette wobble — lands the measured 2.5-6.6 anisotropy band
+        constexpr float RaggedTiles = 3.0f;
+        constexpr float GrainDepth  = 0.10f;   // interior breakup, from the 0.43 centre mean under a 0.4706 peak
+        constexpr float GrainTiles  = 8.0f;
+        constexpr float FrameStride = 29.0f;   // noise-domain step per frame — lands the 0.79-0.88 correlation
+
+        const auto  Sheet = Sample_Sheet2x2(U, V);
+        const float Dx    = Sheet.U - 0.5f;
+        const float Dy    = Sheet.V - 0.5f;
+        const float R     = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang   = FMath::Atan2(Dy, Dx);
+        const float Off   = Sheet.Frame * FrameStride;
+
+        // Sampled on the unit circle so the wobble is continuous across the seam at +-PI.
+        const float Ragged = Fbm(FMath::Cos(Ang) * RaggedTiles + Off + 3.0f,
+                                 FMath::Sin(Ang) * RaggedTiles + Off + 11.0f, 3, int32(RaggedTiles) * 2);
+        const float Edge   = EdgeRadius * (1.0f + RaggedAmp * (Ragged - 0.5f));
+        const float Grain  = 1.0f - GrainDepth * Fbm(Sheet.U * GrainTiles + Off + 5.0f,
+                                                     Sheet.V * GrainTiles + Off + 17.0f, 3, int32(GrainTiles));
+
+        const float I = Peak * Saturate(1.0f - R / FMath::Max(Edge, 1.0e-4f)) * Grain;
+        return FLinearColor(I, I, I, I);
+    }
+
     static auto Px_Ring(float U, float V) -> FLinearColor
     {
         const float Dx = U - 0.5f, Dy = V - 0.5f;
@@ -315,7 +436,50 @@ namespace ck::particles_editor::TexGenLocal
     // ---- Bake one texture asset from a per-pixel function -----------------------------------------------------------
     using FPxFn = FLinearColor (*)(float, float);
 
-    static auto Bake(const TCHAR* InName, int32 InSize, FPxFn InFn) -> bool
+    // What a texture IS, as opposed to what it looks like. Dimensions, colour space and compression are properties
+    // of the kind, so a new texture only ever has to write its per-pixel paint — and two textures of one kind
+    // cannot drift apart in format.
+    enum class ECk_VfxTextureKind : uint8
+    {
+        Mask,      // 512x512 linear greyscale — Particle Color tints it; uncompressed so SDF edges stay crisp
+        MaskSheet, // the same, laid out as a 2x2 flipbook of 256x256 frames (see Sample_Sheet2x2)
+        ColorLut,  // 512x2 sRGB colour ramp read along u; a gradient map, not a mask, so it carries real colour
+    };
+
+    struct FCk_VfxTextureFormat
+    {
+        int32                      Width;
+        int32                      Height;
+        bool                       Srgb;
+        TextureCompressionSettings Compression;
+    };
+
+    static auto Get_TextureFormat(ECk_VfxTextureKind InKind) -> FCk_VfxTextureFormat
+    {
+        // 512 is the source pack's uniform size — below it the 16-32 cyc content cannot survive.
+        constexpr int32 MaskSize = 512;
+
+        switch (InKind)
+        {
+            // TC_Default because a LUT is real colour, and sRGB because the source ramp is authored and sampled
+            // encoded; TC_VectorDisplacementmap here would band the ramp.
+            case ECk_VfxTextureKind::ColorLut:
+                return FCk_VfxTextureFormat{512, 2, true, TC_Default};
+            case ECk_VfxTextureKind::MaskSheet:
+            case ECk_VfxTextureKind::Mask:
+            default:
+                return FCk_VfxTextureFormat{MaskSize, MaskSize, false, TC_VectorDisplacementmap};
+        }
+    }
+
+    struct FCk_VfxTextureSpec
+    {
+        const TCHAR*       Name;
+        ECk_VfxTextureKind Kind;
+        FPxFn              Fn;
+    };
+
+    static auto Bake(const TCHAR* InName, const FCk_VfxTextureFormat& InFormat, FPxFn InFn) -> bool
     {
         const FString PkgPath = FString::Printf(TEXT("%s/%s"), TexDir, InName);
 
@@ -334,27 +498,27 @@ namespace ck::particles_editor::TexGenLocal
         auto* Texture = NewObject<UTexture2D>(Package, InName, RF_Public | RF_Standalone);
         if (Texture == nullptr) { return false; }
 
-        // FColor is laid out B,G,R,A in memory, matching TSF_BGRA8. The texture holds linear data (SRGB = false),
-        // so quantize without an sRGB encode.
-        constexpr auto EncodeSrgb = false;
+        // FColor is laid out B,G,R,A in memory, matching TSF_BGRA8. Per-pixel functions always hand back LINEAR
+        // colour, so the encode happens exactly once here and only for an sRGB texture.
+        const auto EncodeSrgb = InFormat.Srgb;
 
         TArray<FColor> Pixels;
-        Pixels.SetNumUninitialized(InSize * InSize);
-        for (int32 Y = 0; Y < InSize; ++Y)
-        for (int32 X = 0; X < InSize; ++X)
+        Pixels.SetNumUninitialized(InFormat.Width * InFormat.Height);
+        for (int32 Y = 0; Y < InFormat.Height; ++Y)
+        for (int32 X = 0; X < InFormat.Width;  ++X)
         {
-            const float U = (X + 0.5f) / InSize;
-            const float V = (Y + 0.5f) / InSize;
-            Pixels[Y * InSize + X] = InFn(U, V).ToFColor(EncodeSrgb);
+            const float U = (X + 0.5f) / InFormat.Width;
+            const float V = (Y + 0.5f) / InFormat.Height;
+            Pixels[Y * InFormat.Width + X] = InFn(U, V).ToFColor(EncodeSrgb);
         }
 
         constexpr auto Slices = 1;
         constexpr auto Mips   = 1;
 
         Texture->PreEditChange(nullptr);
-        Texture->Source.Init(InSize, InSize, Slices, Mips, TSF_BGRA8, reinterpret_cast<const uint8*>(Pixels.GetData()));
-        Texture->SRGB               = false;
-        Texture->CompressionSettings = TC_VectorDisplacementmap; // uncompressed RGBA8 — crisp SDF edges, linear data
+        Texture->Source.Init(InFormat.Width, InFormat.Height, Slices, Mips, TSF_BGRA8, reinterpret_cast<const uint8*>(Pixels.GetData()));
+        Texture->SRGB                = InFormat.Srgb;
+        Texture->CompressionSettings = InFormat.Compression;
         Texture->MipGenSettings      = TMGS_FromTextureGroup;
         Texture->LODGroup            = TEXTUREGROUP_Effects;
         Texture->PostEditChange();
@@ -376,31 +540,36 @@ namespace ck::particles_editor
     {
         using namespace TexGenLocal;
 
-        constexpr int32 Size = 512; // the source pack's uniform size — below it the 16-32 cyc content cannot survive
-
-        int32 Ok = 0, Total = 0;
-        const auto BakeOne = [&](const TCHAR* InName, FPxFn InFn)
+        static const FCk_VfxTextureSpec Specs[] =
         {
-            ++Total;
-            if (Bake(InName, Size, InFn)) { ++Ok; }
-            else { Log(TEXT("Failed to bake VFX texture: {}"), FString(InName)); }
+            { TEXT("T_CkParticles_Glow"),         ECk_VfxTextureKind::Mask,      &Px_Glow         },
+            { TEXT("T_CkParticles_Flare"),        ECk_VfxTextureKind::Mask,      &Px_Flare        },
+            { TEXT("T_CkParticles_Smoke"),        ECk_VfxTextureKind::Mask,      &Px_Smoke        },
+            { TEXT("T_CkParticles_Electric"),     ECk_VfxTextureKind::Mask,      &Px_Electric     },
+            { TEXT("T_CkParticles_Streak"),       ECk_VfxTextureKind::Mask,      &Px_Streak       },
+            { TEXT("T_CkParticles_Ring"),         ECk_VfxTextureKind::Mask,      &Px_Ring         },
+            { TEXT("T_CkParticles_SweepStreak"),  ECk_VfxTextureKind::Mask,      &Px_SweepStreak  },
+            { TEXT("T_CkParticles_TileNoise"),    ECk_VfxTextureKind::Mask,      &Px_TileNoise    },
+            { TEXT("T_CkParticles_SlashArc01"),   ECk_VfxTextureKind::Mask,      &Px_SlashArc01   },
+            { TEXT("T_CkParticles_SlashArc02"),   ECk_VfxTextureKind::Mask,      &Px_SlashArc02   },
+            { TEXT("T_CkParticles_WindBand"),     ECk_VfxTextureKind::Mask,      &Px_WindBand     },
+            { TEXT("T_CkParticles_SoftParticle"), ECk_VfxTextureKind::Mask,      &Px_SoftParticle },
+            { TEXT("T_CkParticles_SparkStreak"),  ECk_VfxTextureKind::Mask,      &Px_SparkStreak  },
+            { TEXT("T_CkParticles_WindSheet"),    ECk_VfxTextureKind::MaskSheet, &Px_WindSheet    },
+            { TEXT("T_CkParticles_LutWhite"),     ECk_VfxTextureKind::ColorLut,  &Px_LutWhite     },
+            { TEXT("T_CkParticles_LutRainbow"),   ECk_VfxTextureKind::ColorLut,  &Px_LutRainbow   },
         };
 
-        BakeOne(TEXT("T_CkParticles_Glow"),        &Px_Glow);
-        BakeOne(TEXT("T_CkParticles_Flare"),       &Px_Flare);
-        BakeOne(TEXT("T_CkParticles_Smoke"),       &Px_Smoke);
-        BakeOne(TEXT("T_CkParticles_Electric"),    &Px_Electric);
-        BakeOne(TEXT("T_CkParticles_Streak"),      &Px_Streak);
-        BakeOne(TEXT("T_CkParticles_Ring"),        &Px_Ring);
-        BakeOne(TEXT("T_CkParticles_SweepStreak"), &Px_SweepStreak);
-        BakeOne(TEXT("T_CkParticles_TileNoise"),   &Px_TileNoise);
-        BakeOne(TEXT("T_CkParticles_SlashArc01"),  &Px_SlashArc01);
-        BakeOne(TEXT("T_CkParticles_SlashArc02"),  &Px_SlashArc02);
-        BakeOne(TEXT("T_CkParticles_WindBand"),    &Px_WindBand);
-        BakeOne(TEXT("T_CkParticles_SoftParticle"),&Px_SoftParticle);
-        BakeOne(TEXT("T_CkParticles_SparkStreak"), &Px_SparkStreak);
+        auto Ok = 0;
+        for (const auto& Spec : Specs)
+        {
+            if (Bake(Spec.Name, Get_TextureFormat(Spec.Kind), Spec.Fn))
+            { ++Ok; }
+            else
+            { Log(TEXT("Failed to bake VFX texture: {}"), FString(Spec.Name)); }
+        }
 
         Log(TEXT("Generated {}/{} CkParticles VFX textures under {}."),
-            FString::FromInt(Ok), FString::FromInt(Total), FString(TexDir));
+            FString::FromInt(Ok), FString::FromInt(static_cast<int32>(UE_ARRAY_COUNT(Specs))), FString(TexDir));
     }
 }
