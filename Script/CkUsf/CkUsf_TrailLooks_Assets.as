@@ -1,10 +1,10 @@
 // Language=angelscript
 
 //============================================================================
-// VEFECTS PROJECTILE-TRAIL PARAMETERIZATIONS — the first RIBBON-drawn looks
+// VEFECTS TRAIL PARAMETERIZATIONS — the RIBBON-drawn looks
 //============================================================================
 //
-// Two looks, from two different Vefects families, sharing one property no
+// Three looks, from two different Vefects families, sharing one property no
 // earlier look has: they are drawn by a Niagara RIBBON renderer.
 //
 // `_UsedWithNiagaraRibbons` is a THIRD independent usage flag, not a synonym
@@ -15,9 +15,10 @@
 // so the two are checked against each other rather than trusted.
 //
 // Every default below is quoted in a recipe's per-material delta table:
-// CkFoundation/Source/CkParticles/Cookbook/NS_FireBall_Projectile.md §4.2 and
-// NS_Bomb_Projectile.md §4.1. A delta table states the FULL inherited pair, so
-// every value is stated here explicitly rather than defaulted.
+// CkFoundation/Source/CkParticles/Cookbook/NS_FireBall_Projectile.md §4.2,
+// NS_Bomb_Projectile.md §4.1 and NS_BuffCast.md §4. A delta table states the
+// FULL inherited pair, so every value is stated here explicitly rather than
+// defaulted.
 //
 // FAMILY PARAMETERS TrailDisAdd01 DRIVES THAT THE LOOK DOES NOT PLUMB:
 // Core_Intensity (2), Color_CoreDifferent (1), the Color_Core tint
@@ -89,5 +90,43 @@ namespace CkUsf
             0.0,          // Gradient_Invert
             0.1,          // Distortion_Scale — inherited from the reference
             "TileNoise"); // Distortion_Tex is T_VFX_Noise_02, distinct from this instance's dissolve paint
+    }
+
+    // M_VFX_DisAdd_Trail03 — the sparkle trail of NS_BuffCast, and the only look in the cookbook whose SHAPE,
+    // COLOUR and DISSOLVE paints are all the same pure gradient: T_VFX_Gradient_02 is the ramp 1 - u, so the
+    // strand simply darkens from head to tail with nothing painted on it at all. Its dissolve never pans, so
+    // the fade is entirely the behavior's Emitter.Age-indexed alpha.
+    //
+    // FAMILY PARAMETERS IT DRIVES THAT THE LOOK DOES NOT PLUMB: Opacty_DepthFade (30). Everything else on the
+    // instance resolves to the family reference. Recorded in NS_BuffCast.md §13.
+    asset TrailDisAdd03 of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/DissolveAdd.ush";
+        _UshFunctionName = n"CkUsf_Look_DissolveAdd";
+        _Domain          = ECk_Usf_Domain::SurfaceUnlit;
+        _BlendMode       = ECk_Usf_BlendMode::Translucent;
+        _LookName        = n"TrailDisAdd03";
+        _TwoSided        = true;
+
+        _UsedWithNiagaraRibbons   = true;
+        _ParticleColor            = true;
+        _ParticleDynamicParameter = true;
+        _ParticleDynamicParameterNames = CkUsf::Usf_DissolveAddChannelNames();
+
+        _Parameters = CkUsf::Usf_DissolveAddParams(
+            "LinearRamp", "LinearRamp",
+            4.0,          // Brightness
+            0.0, 0.0,     // Dissolve_Speed
+            0.0,          // Dissolve (static bias)
+            1.0, 1.0,     // Dissolve_Scale
+            0.0,          // Distortion_Intensity — dead on this instance
+            0.0, 0.0,     // Distortion_Speed
+            1.0, 1.0,     // MainTex_Scale
+            1.0,          // Opacity_Boldness
+            "LutWhite",   // GradientMap_Tex — the family's white pixel, so the gradient chain is inert here
+            0.1,          // GradientMap_Displacement
+            0.0,          // Gradient_Invert
+            1.0,          // Distortion_Scale
+            "TileNoise"); // Distortion_Tex is T_VFX_Noise_02, distinct from this instance's ramp
     }
 }
