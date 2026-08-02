@@ -169,6 +169,7 @@ cookbook is worth more than the sum of its recipes.
 | Recipe | Source system | Behavior | Status |
 |---|---|---|---|
 | [NS_Lightning_Range.md](NS_Lightning_Range.md) | Vefects `NS_Lightning_Range` | `LightningRange` (17) | source- and math-verified; **template asset missing** (needs a fork-enabled engine), visual gate not run |
+| [NS_BasicAttack.md](NS_BasicAttack.md) | Vefects `NS_BasicAttack` | `Slash` (7) | source- and math-verified, template generated non-inert, all lanes green (2026-08-01); **visual gate not run**. Introduced row-level renderer overrides + the procedural crescent carrier |
 
 ---
 
