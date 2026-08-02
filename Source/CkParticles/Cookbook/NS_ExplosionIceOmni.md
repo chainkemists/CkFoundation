@@ -8,7 +8,9 @@ meshes and cadence.
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) — BehaviorId 43.** The second PALETTE TWIN, sharing
+its layer math with behavior 42. Its own `PS_CkParticles_Template_ExplosionOmniIce` row, its own
+automation test, its own VfxExamples pair, ZERO new assets. `[HUMAN-VERIFY]` open — §12.
 
 No behavior, no `.ush`, no look, no mesh, no texture, no cadence row, no test, no gym station. No
 behavior id allocated. Nothing rendered or looked at.
@@ -271,4 +273,99 @@ multipliers, must survive the colour path unclamped.
 
 ---
 
-## 7+. Reserved for implementation.
+## 7. Textures, 8. Meshes, 9. The behavior — SHARED, not duplicated
+
+**This port added no texture, no mesh, no look, no shader file and no CPU mirror function.** It is
+BehaviorId 43: two lines in `Behavior_ExplosionOmniIce.ush` and two lines in `ExecuteStage_CPU` case
+43, over the same `Behavior_ExplosionShared.ush` that behaviors 40-42 run. Read
+[NS_ExplosionGround.md](NS_ExplosionGround.md) §7-§9 for the implementation and
+[NS_ExplosionOmni.md](NS_ExplosionOmni.md) §9 for the variant axis.
+
+### 9.1 The corpus diff, re-run at implementation
+
+`diff NS_ExplosionOmni.txt NS_ExplosionIceOmni.txt`, light emitter names normalized, produces **86
+lines and nothing structural**:
+
+| Class | Count | Notes |
+|---|---|---|
+| `Color from Curve` overrides | 11 | including the two-key collapses and the moved `Flames` key times |
+| Initialize colours | 2 | `Glow_03`, `Light` |
+| Direct-Set LIFETIMES | 2 | `Bubble_First_Explo` and `Spike01`, 0.1 → **0.15** |
+| Non-colour scalars | 1 | `Flames`' `Color.Scale Alpha` 1 → **0.4** |
+| Curve-index bindings | 1 | the ribbon loses `CurveIndex = linked:Emitter.Age` |
+| Inert authored leftovers | 1 | `Flare01.InitializeParticle.Mesh Uniform Scale = 1` on a SPRITE emitter whose Mesh Scale Mode is Unset |
+| Renderers / materials / meshes / spawn shapes / counts / spawn times / module structure | **0** | |
+
+§5.0's five-item list is confirmed; as on the Ground pair the ribbon's curve-index binding is a sixth
+difference already recorded in prose (§5.5) but absent from the §5.0 table. That is this sheet's only
+correction.
+
+**The two lifetimes are the thing most likely to be lost in a recolour**, and they are the reason this
+twin's test is not a copy of the Ground twin's: they change how long two layers DRAW, which no colour
+comparison would catch.
+
+---
+
+## 10. Looks and renderers
+
+**Zero new looks.** The twin declares literally `Get_ExplosionOmniRendererSpecs()`, so its row's
+`RendererOverrides` pointer compares equal to behavior 42's. VisTags **198-209**, the same band.
+
+**Cadence row:** `{ "PS_CkParticles_Template_ExplosionOmniIce", 2.0f, 1.3f, 65, …, 0.0f, { 0.0f, 301, … } }`
+— identical to its original's but for the asset name.
+
+---
+
+## 11. Tests
+
+`CkTests.UnitTests.CkParticles.ExplosionOmniIceBehavior` is the second DIFFERENTIAL test. It drives
+behaviors 42 and 43 over the same seeds and ages and asserts
+
+- every structural field is IDENTICAL, **excluding the six slots whose lifetime the recolour moves** —
+  the bubble and the five spikes, which are checked separately;
+- **the two lifetimes**, directly: at t = 0.125 s every FIRE spike and the fire bubble are gone and
+  every ICE one is still drawing;
+- **the inert leftover**, in the only way it can be checked: `Flare01` is a sprite, so its `Scale` must
+  stay at the pass-through default in BOTH twins while its colour differs. If the exported
+  `Mesh Uniform Scale` were live, the ice Flare would carry a mesh scale;
+- colour differs on every layer the diff lists and is identical on `Raimbow`;
+- `Flames`' alpha peak 1.0 vs 0.4;
+- the ribbon's curve index flipping, with the trail geometry unmoved.
+
+---
+
+## 12. Verification — A/B protocol `[HUMAN-VERIFY]`
+
+VfxExamples gym, station **EXPLOSION OMNI (ICE)**, spawn offset (0, 0, 140).
+
+| # | What to compare | What "right" looks like |
+|---|---|---|
+| a | against its own original | the same airburst, in blue-cyan |
+| b | against the FIRE Omni Ck pedestal | the same shapes and timing, EXCEPT that the bubble and the spikes linger 50 % longer here |
+| c | the smoke | this is the one place the ICE palette overdrives HARDER than the fire one — the cyan flash peaks at G 4.96 / B 5.0 |
+| d | the flames | an HDR mid key here (unlike the ice GROUND flames, which stay inside [0, 1]) at 40 % alpha |
+| e | `Glow_04` | back inside [0, 1] — the fire Omni variant opens it at 3x and the ice one does not |
+| f | the trails | each point on its own clock, as on the ice ground variant |
+| g | the floor illumination | **DROPPED** (§13) |
+
+## 13. Confirmed fidelity differences or intentional deviations
+
+**All of [NS_ExplosionGround.md](NS_ExplosionGround.md) §13 apply verbatim**, with
+[NS_ExplosionOmni.md](NS_ExplosionOmni.md) §13's two notes. This variant adds none of its own.
+
+The [P4-D2] light-drop clause, verbatim: *a Niagara light renderer is CPU-sim only and every
+CkParticles emitter is GPU, so the layer is dropped and recorded here; if the maintainer's A/B shows
+the original's floor illumination as a visible gap, the options are a first CPU light emitter or a
+proxy glow, decided on real evidence at inspection rather than speculatively.*
+
+## 14. Reusable lessons
+
+1. **A recolour can move a LIFETIME.** §5.0 lists them plainly and they are still the easiest thing to
+   drop, because every colour-focused check passes without them. Assert lifetimes as
+   hidden-vs-drawing at an instant BETWEEN the two values — that is a boolean, not a tolerance.
+2. **An inert leftover is testable.** `Flare01`'s exported `Mesh Uniform Scale` exists in exactly one
+   of the four systems and must do nothing; asserting the twins' `Scale` outputs are equal WHILE their
+   colours differ proves both halves at once.
+3. **"Ice is colder" is not a rule.** The ice Omni smoke overdrives harder than the fire one, and the
+   ice Omni flames carry an HDR key the ice Ground ones do not. A palette is a table, not a transform
+   — which is exactly what §6.6 of this sheet predicted before the port started.
