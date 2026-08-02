@@ -4,11 +4,13 @@ Schema and evidence-tag conventions: [README.md](README.md).
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 22, `GunshotHit`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior id is allocated, no `.ush` exists, no look exists, no cadence row exists, no mesh or texture
-has been baked, and nothing has ever been rendered. Sections 7+ are reserved for the implementation
-session.
+§1–6 are archaeology against the extracted corpus, re-verified against the v3 sidecar at implementation time.
+Two stale §5 lines were found and CORRECTED in place (both `Sparkles` lifetimes stated the INERT range as the
+operative one, contradicting their own headers and [P0-D2]); everything else survived unchanged. §7 onward is
+what was actually built.
 
 **Read [NS_Gunshot_Cast.md](NS_Gunshot_Cast.md) alongside this.** `NS_Gunshot_Hit` is the same
 construction with the three Wind layers and the `LightningStrip` removed, `FlareImpact` added, and
@@ -270,7 +272,8 @@ introduced in the port would flatten it.
 
 *Was misread as 0.2–0.4 under the override-wins assumption; `Random` ⇒ Min/Max drives ([P0-D2]).*
 
-- `Lifetime Mode = Random` via `Random Range Float` **min 0.2 / max 0.4**.
+- `Lifetime Mode = Random` ⇒ the module's **`Lifetime Min / Max = 0.3 / 0.6` DRIVES** (`lifetimeResolved.source
+  = minmax`); the `Random Range Float` override (0.2 / 0.4) sits on the unselected Direct-Set pin and is INERT.
 - `Sphere Location`: **radius 0.1**, `Non Uniform Scale = (1,1,1)`, `Surface Only = false`,
   `Offset = (0,0,0)`, **no hemisphere override** — a point source.
 - `Add Velocity from Point`: `Velocity Strength = Random Range Float 001` **min 1300 / max 2000**,
@@ -326,8 +329,9 @@ introduced in the port would flatten it.
 
 - **`Emitter State`: Loop Behavior `Once`, Loop Duration Mode `Fixed`, Loop Duration `0.3`.**
   Every other emitter is Infinite / 1.0. §6.7 #2.
-- `Lifetime Mode = Random` via `Random Range Float` **min 0.2 / max 0.4** (the module's own
-  `Lifetime Min/Max = 0.3 / 0.6` are inert — the dynamic input wins).
+- `Lifetime Mode = Random` ⇒ the module's **`Lifetime Min / Max = 0.3 / 0.6` DRIVES**; the `Random Range Float`
+  override (0.2 / 0.4) is the INERT one. *(Corrected 2026-08-02 against the v3 sidecar: this line previously
+  stated the opposite, contradicting its own header and [P0-D2].)*
 - `Sphere Location`: **radius 0.1**, `Non Uniform Scale = (1,1,1)`, `Surface Only = false`,
   no hemisphere — a point source.
 - `Add Velocity from Point`: `Velocity Strength = Random Range Float 001` **min 800 / max 1700**,
@@ -548,4 +552,195 @@ GPU simulation, collision, events, light renderers, or user parameters.
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures
+
+Six paints, **three reused and four new bakes** — every "candidate" in §4.3 was measured against its
+stand-in first, and every candidate failed. Full measurement tables and the calibration that makes the
+verdicts readable are in [NS_FireBall_Hit.md](NS_FireBall_Hit.md) §7; this system's subset:
+
+| Source paint | Verdict | Stand-in |
+|---|---|---|
+| `T_VFX_Part_01` | reuse | `SoftParticle` (MAE 0.0026, corr 0.99990) |
+| `T_VFX_Part_04` | reuse | `SparkStreak` |
+| `T_VFX_Noise_02` | **not needed** | `Distortion_Intensity` is 0 on every instance here — §4.1's "the distortion branch is entirely dead" holds, and the family's texture slot simply resolves to the dissolve paint |
+| `T_VFX_Part_02` | **NEW** | `SoftParticleBright` — a cosine bell, not a power curve: it holds ≥ 0.90 out to r 0.25 and no `pow(1−r,k)` has a flat shoulder |
+| `T_VFX_Part_03` | **NEW** | `SoftParticleFine` — exponential falloff, constant annulus ratios 0.52 |
+| `T_VFX_Star_01` | **NEW** | `StarFour` — FOUR lobes on the cardinal axes, against `Px_Flare`'s six |
+| `T_VFX_Impact_01` | **NEW** | `ImpactStar` — a five-fold star over a hollow core |
+| `T_VFX_Impact_02` | **NEW** | `ImpactSheet` — the 2×2 sub-UV sheet, measured as a sheet (below) |
+| `T_VFX_WhitePixel` | no-op | the family's `LutWhite` ramp |
+
+### 7.1 `T_VFX_Impact_02` — one evolving burst, not four paints
+
+§6.7 #1 called this "a 2×2 SUB-UV SHEET" and left the rest open. Measured as a sheet, three independent lines
+of evidence say it is ONE shape evolving rather than four unrelated stamps:
+
+1. every frame is a **vertical two-lobe burst** with its lobes at ±90° and angular harmonic 2 dominant in all
+   four — the silhouette family is shared;
+2. the radial law correlates **0.941–0.990** across every frame pair;
+3. the frame-ordered quantities move **monotonically** — centroid v 0.608 → 0.571 → 0.535 → 0.420 (mass rises
+   through the frame), coverage 0.136 → 0.116 → 0.117 → 0.108, mean 0.038 → 0.029 → 0.025 → 0.025, and
+   pixelwise correlation decays with distance from frame 0 (0.780 → 0.626 → 0.507).
+
+It never saturates (per-frame peak 0.749 / 0.788 / 0.882 / 0.710) and every frame is bordered in black, so
+the frames never bleed into each other. Its frame-to-frame correlation band of **0.51–0.78** is lower than
+`WindSheet`'s 0.79–0.88 — it evolves FASTER, so the bake carries a wider noise-domain frame stride (47 vs 29)
+rather than reusing that paint's pacing.
+
+---
+
+## 8. Mesh
+
+**`SM_CkParticles_Spike`** — built for this batch and shared with NS_FireBall_Hit; the square pyramid of §3,
+base (±100, ±100, 0), apex (0, 0, 200), v running tip → base and u deriving from Y alone. Full construction
+and the apex-gap rationale: [NS_FireBall_Hit.md](NS_FireBall_Hit.md) §8. `M_VFX_DisAdd_Flat02` samples no
+texture at all, so this mesh's UV is inert here — recorded because the sibling recipes are not so lucky.
+
+---
+
+## 9. The behavior
+
+`Shaders/CkParticles/Behaviors/Behavior_GunshotHit.ush` + the CPU mirror at
+`CkParticles_DataInterface.cpp` case 22.
+
+### 9.1 Cadence row — and the §6.1 fork, RESOLVED
+
+```
+{ TEXT("PS_CkParticles_Template_GunshotHit"), 2.0f, 0.65f, 40, Get_GunshotHitRendererSpecs() }
+```
+
+- **Loop 2.0 s** — the system's own Loop-Once duration.
+- **Lifetime 0.65 s** — [P0-D5]'s formula, max over layers of (spawn delay + resolved lifetime): the 0.05 s
+  beat plus `Sparkles_01`/`Sparkles_02`'s resolved 0.6 s. §6.1 said 0.6 under the older [P0-D3] wording and
+  its own prose already said "the whole effect is over by t ≈ 0.65".
+- **Burst 40 — option (a): the seven one-shot `Sparkles_01` particles are FOLDED IN.** §6.1 offered
+  (a) burst 40 or (b) burst 33 with the layer dropped, and required the choice to be recorded rather than
+  silent. **(a) was chosen.** Rationale: the system is `Loop Once`, so on a single firing every layer fires
+  exactly once and option (a) is *exact* — its only deviation is on the gym's looping re-arm, where
+  `Sparkles_01`'s own 0.3 s Self loop would re-fire on a different clock from the other ten. Option (b) would
+  drop 7 of 40 particles — 17.5 % of the effect — permanently. This is one constant and one layer band; it is
+  cheap to reverse if the inspection stage disagrees.
+
+The corpus confirms the arithmetic: the enabled total is **40**, and **33** excluding `Sparkles_01`'s seven.
+
+### 9.2 Layer partition
+
+`Seed % 40`: 0 `Glow_01`, 1 `Glow_02`, 2–6 `Glow_03`, 7–11 `Sparkles_02`, 12–16 `Glow_04`, 17–19 `Glow_05`,
+20 `Star01`, 21–26 `Impact_01`, 27 `FlareImpact`, 28–32 `Spike01`, **33–39 `Sparkles_01`**.
+
+### 9.3 The sub-UV anomaly, ruled
+
+`Impact_01`'s `Sub UVAnimation` says `End Frame = 4` on a 2×2 sheet whose valid indices are 0–3. §6.7 #1
+recorded this `[unresolved]`, and the v3 sidecar confirms it verbatim — it is a real out-of-range authored
+value, not a transcription error, and the only one in the batch (`Flames`, `Flames01` and the disabled
+`Wind_02` are all well-formed 0–3). **Ruled to the sheet's own last frame**: the port clamps to 3, the only
+reading that never samples off the end of the sheet.
+
+### 9.4 Mesh facing
+
+`Spike01` renders with `Facing: Velocity`, which a row-declared `Mesh` renderer cannot express. The behavior
+owns the velocity, so it writes `CkParticles_QuatFromZTo(Dir)` — gap 4's workaround, and the same one both
+FireBall_Hit spike bands use.
+
+---
+
+## 10. Looks and renderers
+
+**Nine row renderers, VisTags 28–36**, allocated after behaviors 20 and 21 took 12–14 and 15–27 in the same
+batch. The ceiling stays derived from `Get_RosterVisTag_Max()`.
+
+| VisTag | Kind | Look | Status | Source emitters |
+|---|---|---|---|---|
+| 28 | CameraFacingSprite | `PartDisAdd01` | reused | `Glow_01`, `Glow_02`, `Glow_04` |
+| 29 | CameraFacingSprite | `PartDisAdd02` | **new** | `Glow_03` |
+| 30 | VelocityAlignedSprite | `PartDisAdd04` | reused | `Sparkles_02` |
+| 31 | CameraFacingSprite | `PartDisAdd03Bright` | shared with 21 | `Glow_05` |
+| 32 | CameraFacingSprite | `StarDisAdd01` | shared with 21 | `Star01` |
+| 33 | VelocityAlignedSprite + `SubImageSize (2,2)` | `ImpactDisAdd02` | **new** | `Impact_01` |
+| 34 | CameraFacingSprite | `ImpactDisAdd01` | shared with 21 | `FlareImpact` |
+| 35 | Mesh `Spike` | `FlatAdd02` | reused | `Spike01` |
+| 36 | CameraFacingSprite | `PartDisAdd01Bright` | shared with 21 | `Sparkles_01` |
+
+§6.3 predicted "if either sibling ships first, this recipe adds **zero** new looks". Both shipped in the same
+batch, so it adds **two**: `PartDisAdd02` (the one instance in the cookbook that DIMS — `Glow_Intensity` 0.3)
+and `ImpactDisAdd02`. The `FlatAdd` family §6.3 asked for already existed from a prior batch; it gained the
+mesh-particle usage flag here (see [NS_FireBall_Hit.md](NS_FireBall_Hit.md) §10).
+
+---
+
+## 11. Tests
+
+`Test_Particles_GunshotHitBehavior.cpp` + the `NumBehaviors` 20 → 23 ratchet in
+`Test_Particles_RosterSanity.cpp`.
+
+Beyond the standard partition / anti-vacuity / death checks, it gates the three facts that make this system
+what it is:
+
+- **CURVE-S on three layers with a 4× alpha over-brighten.** §5 notes no other system in the batch exceeds
+  alpha 1, and §6.7 #8 warns that any clamp added later would silently flatten the three brightest layers.
+  The gate asserts alpha **== 4** on all three, so a clamp reds it immediately.
+- **`Impact_01`'s HDR opening keys** (3.578 / 4.481 / **5.0**) and its advancing 2×2 flipbook.
+- **Omnidirectional spread.** This system's single structural difference from `NS_Gunshot_Cast` is
+  directionality; a directed port would satisfy every per-layer assertion and still be wrong. The gate
+  averages 24 unit velocity vectors from one spray and requires the mean to be near zero.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **GUNSHOT HIT**:
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | one unified blue-white flash snapping warm and crushing to black inside ~0.2 s, then sparks — NOT a layered muzzle blast |
+| b | Directionality | everything sprays EVENLY in all directions from the impact point; no cone, no preferred axis |
+| c | `Impact_01` | six velocity-aligned flashes, each on a different flipbook frame, and the dominant element of the effect |
+| d | Over-brightening | `Glow_03`, `FlareImpact` and `Spike01` should look blown out relative to everything else — that is the 4× alpha, not a bug |
+| e | `Glow_05` | three white-hot cores whose colour never moves; only their alpha fades |
+| f | `Glow_04` | a deep red halo that WARMS toward mid-life rather than starting near-white |
+| g | Spikes | five pyramids pointing outward along their own travel |
+| h | Sparkles | two sprays — seven fine points and five long streaks — the streaks reaching much further |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **`Sparkles_01`'s per-emitter loop is folded into the burst** (§9.1 option (a)). On a single firing this is
+   exact; on the gym's looping re-arm its 0.3 s Self loop would have re-fired on a different clock from the
+   other ten emitters. Recorded, not silent.
+2. **`End Frame = 4` is clamped to 3** (§9.3). The corpus value is out of range for a 2×2 sheet and Niagara's
+   own handling is not recoverable.
+3. **Unplumbed family parameters:** `Glow_Intensity` (0.3 on `Part02`) IS reproduced, folded into Brightness;
+   `Core_Intensity` (1 on `Part01_Bright` / `Part03_Bright`, **2** on `Impact02`), `Core_Power` (0 on
+   `Impact01`), `CamOffset` (50 on `Part03_Bright` — so `Glow_05` sorts against nearby geometry differently
+   from the source) and `Opacty_DepthFade` (10 / 20 / 30) are not. §6.7 #5 flagged that several are NOT at
+   inert values; that remains true and is the largest unplumbed surface in this port.
+4. **`Spike01`'s inverted X mesh-scale range** (min 0.1 > max 0.05) is copied verbatim — lerping the other way
+   spans the identical set of values, so the `[unresolved]` question of what Niagara does with it cannot
+   change the result. The identical inversion in `NS_Arrow_Hit` can be ported the same way.
+5. **`Velocity Falloff Distance` 100 is not reproduced**; the authored strength applies undiminished at the
+   spawn radius `[inferred]`.
+6. **Local space matches** on every emitter — §6.7 #11's "no gap" holds, and this is the one port in the batch
+   with no space deviation at all.
+7. **Sprite rotation is never written**, matching §6.6: every emitter's `Sprite Rotation Mode` is `Unset`.
+8. **Every stand-in texture is a statistical match, not a copy** — see §7 and NS_FireBall_Hit.md §7.1.
+
+---
+
+## 14. Reusable lessons
+
+1. **A pre-enumerated fork with a stated recording requirement is a decision to MAKE, not a decision to
+   escalate.** §6.1 offered exactly two options and told the implementer to record whichever was chosen. The
+   corpus then settled it: under `Loop Once`, option (a) is exact on a single firing and option (b) drops
+   17.5 % of the effect forever.
+2. **An `[unresolved]` in a sheet is worth re-checking against the corpus before ruling it.** `End Frame = 4`
+   could have been a transcription slip; the v3 sidecar confirmed it verbatim, which turned "probably a typo"
+   into "a real authored out-of-range value" and made the clamp a ruling rather than a correction.
+3. **Test the STRUCTURAL claim, not just the per-layer numbers.** Directionality is this system's whole
+   identity against its Cast sibling, and a directed port passes every colour, size and lifetime assertion.
+   Averaging unit velocity vectors over a spray is two lines and catches it.
+4. **Assert an over-1 alpha explicitly.** Three layers here carry `Color.Scale Alpha = 4`. Nothing clamps it
+   today, so a test that merely checks "alpha ≥ 0" would stay green through the day someone adds a saturate.
+5. **A sub-UV sheet is measured as a SHEET.** Per-frame centroid, coverage and inter-frame correlation are
+   what distinguish "one evolving shape" from "four stamps" — and they also set the bake's frame stride,
+   which is why this sheet's does not match the wind sheet's.

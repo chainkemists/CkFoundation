@@ -5,11 +5,11 @@ Schema and evidence-tag conventions: [README.md](README.md). Exemplars: [NS_Basi
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 20, `FireBurst`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior, no `.ush`, no look, no mesh, no texture, no cadence row, no test, no gym station exists
-for this effect. No behavior id is allocated. Nothing has been rendered or looked at. Sections 1–6 are
-archaeology and a plan; everything in them comes from the extracted corpus and is tagged `[corpus]`.
+Everything in §1–6 is archaeology against the extracted corpus, re-verified against the v3 sidecar at
+implementation time with **zero contradictions**. §7 onward is what was actually built.
 
 **This is the SIMPLEST system in the batch**: four sprite emitters, no meshes, three materials, all
 from the already-implemented `DissolveAdd` family. It has exactly **one** hard capability gap (sub-UV
@@ -385,4 +385,202 @@ pixels. `T_VFX_Part_01`, `T_VFX_Part_04` and `T_VFX_Noise_02` are already served
 
 ---
 
-## 7+. Reserved for implementation.
+## 7. Textures — what was baked and from what measurement
+
+**One new bake; everything else reuses an existing stand-in.** Method per [C-D5]: derive numbers from the
+corpus PNG, never copy pixels. Bakes live in `CkParticles_TextureGenerator.cpp`.
+
+| Source paint | Stand-in | Status | Decisive measurement |
+|---|---|---|---|
+| `T_VFX_Part_01` | `T_CkParticles_SoftParticle` | **reused** | re-verified this pass: MAE **0.0026**, correlation **0.99990** against the corpus PNG — the `pow(1−r, 2.2)` fit still holds |
+| `T_VFX_Part_04` | `T_CkParticles_SparkStreak` | **reused** | unchanged from NS_BasicAttack §7 |
+| `T_VFX_Noise_02` | `T_CkParticles_TileNoise` | **reused** | re-verified: histogram intersection 0.930, KS 0.048, band split 68.5/24.5/6.6 against the source's 70.7/22.6/6.3 |
+| `T_VFX_Wind_01` | `T_CkParticles_WindSheet` | **already existed** (Phase 1, C3) | a 2×2 flipbook measured off this exact sheet: peak 0.4706 never saturating, per-frame coverage 0.226–0.239, a LINEAR annulus profile from 0.43 at the centre to zero at r 0.575 (a cone fits it to 0.012; any power curve fits worse), 12-bin anisotropy 2.5–6.6 living in the SILHOUETTE rather than the interior, frame-to-frame correlation 0.79–0.88 |
+| `T_VFX_Noise_04` | `T_CkParticles_TileNoiseCoarse` | **NEW** | measured against `TileNoise` first, and it FAILED: histogram intersection 0.378, KS 0.622, and 98.6 % of its energy in the 1–8 cyc band against `Noise_02`'s 70.7 %. It is a coarse cloud **clipped at white over 18 % of itself**, which is what makes it left-skewed (−0.539) where every other noise in the pack is right-skewed. Constants: 5 tiles (the measured 49 px correlation half-decay), gain 1.50, bias 0.33 |
+
+`T_VFX_WhitePixel` is a no-op gradient map, served by the family's own `LutWhite` ramp.
+
+### 7.1 Bake verification
+
+The new bake was re-simulated in Python against its measured targets:
+
+| Statistic | `TileNoiseCoarse` | source `T_VFX_Noise_04` |
+|---|---|---|
+| median | 0.7285 | 0.7216 |
+| rms contrast | 0.2409 | 0.2510 |
+| saturated fraction | 0.1620 | 0.1798 |
+
+---
+
+## 8. The behavior
+
+`Shaders/CkParticles/Behaviors/Behavior_FireBurst.ush` + the CPU mirror at `CkParticles_DataInterface.cpp`
+case 20.
+
+**Named `FireBurst`, not `Fire`.** BehaviorId 3 already owns `CkParticles_Behavior_Fire`, the procedural
+rising column that predates the cookbook. The two are unrelated effects that happen to share a source-asset
+name; the cadence row is `PS_CkParticles_Template_FireBurst` for the same reason.
+
+### 8.1 Cadence row
+
+```
+{ TEXT("PS_CkParticles_Template_FireBurst"), 2.0f, 1.0f, 10, Get_FireBurstRendererSpecs() }
+```
+
+Exactly §6.1's numbers. It shares its 2.0 s loop with the other two ports in this batch and **nothing else** —
+lifetime and burst both differ, which is precisely what makes a row a row.
+
+### 8.2 Layer partition — and the batch's one randomized burst count
+
+`Seed % 10`: 0 `Bomb_Glow_01`, 1 `Bomb_Glow_02`, 2–4 `Flames`, 5–9 `Sparkles`.
+
+§6.0 G3b is implemented as designed. Burst `UniqueID`s are sequential, so `LoopIndex = Seed / 10` divides out
+of the seed and every particle in one burst hashes the same value:
+
+```hlsl
+const int LoopIndex   = In.Seed / CKP_FB_NUM_LAYERS;
+const int NumThisLoop = 3 + int(CkParticles_Rand(LoopIndex, 11) * 3.0);   // 3, 4 or 5
+if (Layer - CKP_FB_FIRST_SPARKLE >= NumThisLoop) { return Hidden(O); }
+```
+
+The gate asserts all three properties this needs: every burst draws 3–5, the count actually *varies* across
+bursts, and a slot hidden by the roll never reappears later in the same particle's life.
+
+### 8.3 Sub-UV
+
+`Flames` is the batch's first shipped flipbook. The row renderer declares `SubImageSize (2, 2)` and the
+behavior writes `OutSubImageIndex`. The source's `Sub UVAnimation` is mode **Random**, frames 0–3, one loop,
+so a per-particle random start frame steps forward through the sheet:
+
+```hlsl
+const float Start = floor(CkParticles_Rand(In.Seed, 6) * 4.0);
+O.SubImageIndex = fmod(Start + min(floor(t * 4.0), 3.0), 4.0);
+```
+
+`min()` rather than a wrap, so the last frame holds at t = 1 instead of snapping back to the start frame for
+a single instant.
+
+### 8.4 Shared helpers added
+
+`Common.ush` gained `CkParticles_Key2..Key5` (clamped-key lerps), `CkParticles_Int2` / `Int3` (their exact
+integrals, for velocity-scale curves) and `CkParticles_QuatFromZTo`. All are additive: behaviors 0–19 are
+untouched and `Behavior_Slash.ush` keeps its own `CkParticles_Slash_Key*` copies.
+
+---
+
+## 9. Looks
+
+| Look | Status | Source instance |
+|---|---|---|
+| `PartDisAdd01` | **reused unchanged** | `M_VFX_DisAdd_Part01` — §4's delta table for it (Brightness 1, `Dissolve_Speed` (0, 0), `Distortion_Intensity` 0, `Gradient_Invert` 0.5, `Opacity_Boldness` 0.5) is *already* exactly what the existing look resolves, so this system binds it with no edit at all |
+| `PartDisAdd04` | **reused unchanged** | `M_VFX_DisAdd_Part04` |
+| `FlamesDisAdd01` | **NEW** (`Script/CkUsf/CkUsf_HitLooks_Assets.as`) | `M_VFX_DisAdd_Flames01`, shared with NS_FireBall_Hit |
+
+`FlamesDisAdd01` is one of only two instances in the whole cookbook with a LIVE distortion branch, and the
+only one driving a static dissolve bias, a tiled dissolve and a panning distortion at once. Serving it needed
+two new **trailing, default-inert** parameters on `Usf_DissolveAddParams`: `InDistortScale` (default 0.1 —
+what every prior look resolved) and `InDistortTexture` (default empty ⇒ the same asset as the dissolve
+texture — what every prior look resolved). Every look authored before the change regenerates unchanged.
+
+---
+
+## 10. Renderers
+
+Three row-declared renderers, VisTags **12–14**, allocated after the previous roster maximum of 11. The
+ceiling stays derived from `Get_RosterVisTag_Max()`; no test restates it.
+
+| VisTag | Kind | Look | Source emitters |
+|---|---|---|---|
+| 12 | `CameraFacingSprite` | `PartDisAdd01` | `Bomb_Glow_01`, `Bomb_Glow_02` |
+| 13 | `CameraFacingSprite` + `SubImageSize (2,2)` | `FlamesDisAdd01` | `Flames` |
+| 14 | `VelocityAlignedSprite` | `PartDisAdd04` | `Sparkles` |
+
+§6.2's requirement for a camera-facing kind was satisfied by the Phase 1 C1 capability, which landed before
+this port; this is its first consumer carrying two distinct camera-facing looks on one row.
+
+---
+
+## 11. Tests
+
+`Plugins/CkTests/.../UnitTests/CkParticles/Test_Particles_FireBurstBehavior.cpp`, plus the roster ratchet in
+`Test_Particles_RosterSanity.cpp` (`NumBehaviors` 20 → 23 — that literal is the file's one intentional one).
+
+The gate drives the CPU mirror, so it needs no Niagara, no template asset, no RHI and no forked engine. It
+asserts: the cadence row's three numbers and the flame renderer's 2×2 grid; the 10-slot partition and its
+stability across bursts; every VisTag inside `Get_RosterVisTag_Max()`; the two glows' constant Initialize
+colour under their alpha ramp (**the source has no colour curve on either — inventing one is the failure this
+section exists to catch**); the flames' HDR opening keys, constant distortion channel and advancing flipbook;
+the randomized sparkle count; radial kinematics; per-layer anti-vacuity; the 0.05 s spawn beat; and death past
+the row lifetime.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **FIRE**, and judge:
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall silhouette | one bright core flash with three flame puffs and a spray of fine sparkles, all inside ~1 s |
+| b | The two glows | a wide dim orange disc with a brighter, more orange, slightly smaller one inside it — both fading linearly, neither ever changing hue |
+| c | Flames | three puffs rising off a hemisphere, each rotating slowly and each showing a DIFFERENT flipbook frame; they should read as fire, not as three identical stamps |
+| d | Sparkles | 3–5 per firing (count them across several restarts — the number must actually change), thin streaks aligned to their motion, popping in at 10 % of life and shrinking to 40 % length |
+| e | Colour | the flames open white-hot (HDR 5 / 3.43) and redden through amber; the sparkles are warm yellow-white reddening over life, with red never leaving 1 |
+| f | Timing | the glows and flames start 50 ms AFTER the sparkles, not with them |
+
+`Ck_GymVfxExamples_RestartAll` re-fires both sides in sync.
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **`Opacty_DepthFade`** (20 on the glows and flames, 30 on the sparkles) is dropped — CkUsf surface looks do
+   not wire scene depth. Pre-existing gap, shared with every recipe in the cookbook.
+2. **`Core_Intensity` 1 + `Color_Core` (0.015996, 0.014444, 0.014444) on `Flames01`** is not reproduced. The
+   parent graph is not in the extracted corpus (only an expression histogram), so the chain combining
+   `Core_Intensity`, `Core_Power` and `Color_Core`'s alpha is not reconstructible — and every reading that
+   fits the histogram produces a visibly different result against a near-black core tint. Recorded rather
+   than guessed at.
+3. **`Glow_Intensity` 2 on `Flames01` IS reproduced, folded into Brightness** (10 × 2 = 20). On an unlit
+   additive composite the two are the same emissive scale `[inferred]`. The alternative — dropping it — would
+   render the flames at half the source's intensity, a larger error than the inference.
+4. **`Gradient_Invert` 0.5 on `Part01`** resolves against the family's flat white ramp, so the whole gradient
+   chain is a provable multiply by one. Inert, not dropped.
+5. **World space → local space.** All four source emitters are world-space; the CkParticles template is
+   local-space because self-driving behaviors write absolute positions. Visible only if the spawning actor
+   moves during the effect — which, for a fire attached to something, it might. Same deviation
+   NS_BasicAttack §13.2 records.
+6. **`Velocity Falloff Distance` 100 is not reproduced.** Both moving emitters carry it on their
+   `Add Velocity from Point`; the authored strength is applied undiminished at the spawn radius instead. At
+   spawn radii of 2 and 20 units against a 100-unit falloff the difference is small, but it is a difference
+   `[inferred]`.
+7. **The sub-UV animation MODE is a reading, not a transcription.** The source says mode **Random**, start
+   frame 0, end frame 3, one loop. "Random" is implemented as a random START frame stepping forward through
+   the sheet; Niagara's exact behaviour for that mode is not recoverable from the corpus. The frame range and
+   the one-loop-per-life pacing ARE transcribed.
+8. **`TileNoiseCoarse` is a stand-in with a measured statistical profile, not a copy.** Median and rms land
+   within 0.01 of the source; the saturated fraction lands at 0.162 against 0.180. Its *realization* — which
+   blob sits where — is necessarily different.
+9. **Volume-vs-surface sphere draws** use `R · rand^(1/3)` for the non-surface case, the correct uniform-volume
+   distribution but not necessarily Niagara's own. `Surface Only` draws are exact.
+
+---
+
+## 14. Reusable lessons
+
+1. **Check whether the "new" look you need already exists.** §6.4 called `PartDisAdd01` new. It was not —
+   behaviors 18/19 had already shipped it, and its §4 delta table matched the existing asset value for value.
+   One grep saved a duplicate look and a second place to fix the same bug.
+2. **A randomized burst count is a behavior problem, not a table problem.** Declare the row at the MAXIMUM and
+   let the surplus slots hide themselves. `LoopIndex = Seed / BurstCount` is exact for sequential burst
+   `UniqueID`s, so every particle of one burst agrees on the roll with no shared state — and the property
+   worth testing is not the count but that the count *varies* across bursts and is *stable within* one.
+3. **Mechanically diff the GPU and CPU literal streams.** Expand the `#define`s on one side and the
+   `constexpr auto` declarations on the other and you are left with two sequences that must match exactly. It
+   runs in seconds, and in this batch it found a real divergence no amount of reading was going to catch.
+4. **Trace every constant back to the sheet, mechanically.** Extracting the numeric literals from the `.ush`
+   and grepping the recipe for each proves nothing was invented: 35 constants here, 234 across the batch,
+   zero unsourced.
+5. **A shared-helper addition to `Common.ush` beats a fourth private copy of `Key2`.** Three behaviors in one
+   batch needed clamped-key lerps up to five keys plus their exact integrals. Behaviors 0–19 stay untouched
+   because the additions are new functions rather than changes to existing ones.

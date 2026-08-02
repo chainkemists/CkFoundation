@@ -5,12 +5,13 @@ Exemplars this sheet copies: [NS_BasicAttack.md](NS_BasicAttack.md) §1–6, [NS
 
 ## Completion state — READ FIRST
 
-**Status: PLANNED — TRANSLATION SHEET ONLY (2026-08-01). Nothing implemented.**
+**Status: IMPLEMENTATION-COMPLETE (2026-08-02) as CkParticles behavior 21, `FireBallHit`.
+NOT visually verified — the §12 human A/B has not been run.**
 
-No behavior, no `.ush`, no CPU mirror, no look, no mesh, no texture, no cadence row, no test, no gym
-station exists for this effect. No behavior id has been allocated. Nothing has been rendered or
-visually compared. Sections 1–6 are archaeology and a plan; everything below `## 7+` is reserved for
-the implementation session.
+§1–6 are archaeology against the extracted corpus, re-verified against the v3 sidecar at implementation time.
+Four §2 census errors were found and CORRECTED in place (the `LightningStrip` lifetime, the sprite/mesh
+renderer split, the spawn-beat particle split and the camera-facing/material counts); the 47-particle total
+and every §5 curve survived unchanged. §7 onward is what was actually built.
 
 ---
 
@@ -52,7 +53,8 @@ kind*. Read this sheet, do not diff the two by eye.
 ## 2. System anatomy `[corpus]`
 
 **20 CPU emitters — 17 enabled, 3 DISABLED. All `Spawn Burst Instantaneous`. 47 particles per loop
-from the enabled set. 13 sprite renderers + 4 mesh renderers (enabled).**
+from the enabled set. 14 sprite renderers + 3 mesh renderers (enabled)** — the fourth mesh renderer belongs to
+the DISABLED `Wind_01`. *(Corrected 2026-08-02 against the v3 sidecar.)*
 
 | # | Emitter | Enabled | Space | Count | Spawn t | Lifetime | Renderer | Mesh | Material |
 |---|---|---|---|---|---|---|---|---|---|
@@ -74,7 +76,7 @@ from the enabled set. 13 sprite renderers + 4 mesh renderers (enabled).**
 | 15 | `FirstFlash` | yes | World | **4** | **0.04** | 0.1 | Sprite, Unaligned/FaceCamera | — | `M_VFX_DisAdd_Part03_Bright` |
 | 16 | `FirstGlow` | yes | World | 1 | 0.05 | 0.2 | Sprite, Unaligned/FaceCamera | — | `M_VFX_DisAdd_Part01` |
 | 17 | `FlareImpact` | yes | **Local** | 1 | 0.05 | **0.05** | Sprite, Unaligned/FaceCamera | — | `M_VFX_DisAdd_Impact01` |
-| 18 | `LightningStrip` | yes | **Local** | **5** | 0 | rand 0.1–0.2 | **Mesh**, Facing **Velocity** | `SM_VFX_Plane01` | `M_VFX_DisAdd_LightStrip` |
+| 18 | `LightningStrip` | yes | **Local** | **5** | 0 | **0.2** (Direct Set) | **Mesh**, Facing **Velocity** | `SM_VFX_Plane01` | `M_VFX_DisAdd_LightStrip` |
 | 19 | `Spike02` | yes | **Local** | **3** | 0.05 | rand 0.1–0.15 | **Mesh**, Facing **Velocity** | `SM_VFX_Spike01` | `M_VFX_DisAdd_Flat02` |
 
 **Total per loop (enabled): 47 particles.** The three disabled emitters would add 7 more (1 + 1 + 5).
@@ -84,8 +86,11 @@ from the enabled set. 13 sprite renderers + 4 mesh renderers (enabled).**
 
 | Beat | Spawn t | Emitters | Particles |
 |---|---|---|---|
-| Impact | **0** | `Raimbow`, `Ring`, `Glow_01`, `Glow_02`, `SecondGlow`, `Flames01`, `Flare01`, `LightningStrip` | 16 |
-| Aftermath | **0.04 / 0.05** | `Smokes`, `FirstFlash` (0.04); `Sparkles`, `Sparkles_Stretched`, `Star_01`, `Spike01`, `FirstGlow`, `FlareImpact`, `Spike02` (0.05) | 31 |
+| Impact | **0** | `Raimbow`, `Ring`, `Glow_01`, `Glow_02`, `SecondGlow`, `Flames01`, `Flare01`, `LightningStrip` | 17 |
+| Aftermath | **0.04 / 0.05** | `Smokes`, `FirstFlash` (0.04); `Sparkles`, `Sparkles_Stretched`, `Star_01`, `Spike01`, `FirstGlow`, `FlareImpact`, `Spike02` (0.05) | 30 |
+
+*(The 17/30 split is corrected from 16/31 against the v3 sidecar, 2026-08-02; the 47 total and the emitter
+membership of each beat were always right.)*
 
 **The three disabled emitters are recorded, not deleted** (README §3): `Star_02`, `Wind_01`,
 `Wind_02`. Their absence from the recreation is then a decision, not an oversight — and note
@@ -613,7 +618,7 @@ silently *not saying which* is what README §3 forbids.
 
 | Source emitters | Renderer needed | Available today? |
 |---|---|---|
-| 12 camera-facing sprites across **8 distinct materials** (`Part01` ×3, `Part03_Bright` ×2, `Part01_Bright`, `Rainbow`, `Ring01`, `Star01`, `Flare01`, `Impact01`, `Smoke01`) | camera-facing sprite, per-look | **NO — gap 1** |
+| 13 camera-facing sprites across **10 distinct materials** (`Part01` ×3, `Part03_Bright` ×2, `Part01_Bright`, `Rainbow`, `Ring01`, `Star01`, `Flare01`, `Impact01`, `Smoke01`) — `Flames01` is the 13th and needs the sub-UV row below | camera-facing sprite, per-look | **NO — gap 1** |
 | `Sparkles_Stretched` | velocity-aligned sprite, `Part04` | **YES** — shared VisTag 1 or one row-declared `VelocityAlignedSprite` |
 | `Spike01`, `Spike02`, `LightningStrip` | mesh, Facing **Velocity**, 2 meshes / 2 looks | **partial — gap 3**; Default-facing mesh row renderer exists, velocity facing does not |
 | `Flames01` | camera-facing sprite **with SubUV 2×2** | **NO — gap 2** |
@@ -655,7 +660,7 @@ and a 2×2 sub-UV atlas shape.
 
 | # | Gap | Severity |
 |---|---|---|
-| 1 | **No row-declared camera-facing sprite kind.** 12 of the 17 enabled emitters are `Unaligned`/`FaceCamera` across **8 materials**; one `User.SpriteMaterial` binding cannot carry them. Additive fix to `ECk_ParticlesRenderer_Kind`; shared with every sheet in this batch. | **BLOCKING** |
+| 1 | **No row-declared camera-facing sprite kind.** 13 of the 17 enabled emitters are `Unaligned`/`FaceCamera` across **10 materials**; one `User.SpriteMaterial` binding cannot carry them. Additive fix to `ECk_ParticlesRenderer_Kind`; shared with every sheet in this batch. | **BLOCKING** |
 | 2 | **No sub-UV / flipbook support anywhere in CkParticles.** `Flames01` renders `SubUV: 2x2` driven by `Sub UVAnimation` (frames 0–3, 1 loop). The DI writes no sub-image index, the builder sets no `SubImageSize`, the generator bakes no atlases. Without it the flames read as static sprites. | **BLOCKING** for 1 emitter |
 | 3 | **Mesh renderer facing mode is not expressible** on a row-declared `Mesh` renderer (`Kind`/`VisTag`/`MeshName`/`LookName` only). Three emitters (`Spike01`, `Spike02`, `LightningStrip`) need `Facing: Velocity`. **Workaroundable** — the behavior owns the velocity and can write an `Orientation` quat from it. | Medium |
 | 4 | ~~System-level loop parameters absent from the corpus~~ — **RESOLVED `[corpus-v3]`** (§2): system `Loop Once / 2.0 s`. | Closed |
@@ -684,7 +689,232 @@ short cadence, and a fixed impact point that makes the local-space deviation nea
 
 ---
 
-## 7+. Reserved for implementation
+## 7. Textures — what was baked and from what measurement
 
-Sections 7–14 of the recipe schema ([README.md](README.md)) are intentionally absent and are to be
-written by the implementation session, from what actually happened.
+**Nine new bakes, every one of them measured against the nearest existing stand-in FIRST.** Method per
+[C-D5]: derive numbers from the corpus PNG, never copy pixels. §4.3's "candidate" reuses were all treated as
+guesses and all nine were checked — **every one failed on a structural statistic**, which is exactly why the
+sheet insisted they be measured before assuming.
+
+Calibration for reading the verdicts: `Px_SoftParticle` vs `T_VFX_Part_01` re-measures at MAE **0.0026** /
+correlation **0.99990**, and `Px_TileNoise` vs `T_VFX_Noise_02` at histogram intersection **0.930** / KS
+**0.048**. Those are what "reuse justified" looks like on this corpus. For a deterministic shape MAE and
+correlation are decisive; for a noise field they are meaningless by construction (a different realization
+correlates at 0), so the histogram and the spectral band split decide.
+
+| Source paint | Verdict | Stand-in | Why the candidate failed / what was measured |
+|---|---|---|---|
+| `T_VFX_Part_01` | **reuse** | `SoftParticle` | MAE 0.0026, corr 0.99990 |
+| `T_VFX_Part_04` | **reuse** | `SparkStreak` | unchanged from NS_BasicAttack §7 |
+| `T_VFX_Noise_02` | **reuse** | `TileNoise` | hist-int 0.930, KS 0.048 |
+| `T_VFX_Wind_01` | **reuse** | `WindSheet` | the 2×2 sheet Phase 1 measured off this exact paint |
+| `T_VFX_Part_02` | **NEW** | `SoftParticleBright` | radially symmetric like Part_01 but a different falloff LAW: it holds 0.99/0.96/0.91 across the first three annuli and reaches exactly zero at r = 1. `cos(π/2·r)^1.14` fits to 0.0034; the best `pow(1−r,k)` costs 0.063 — 11× worse, because no power curve has a flat shoulder |
+| `T_VFX_Part_03` | **NEW** | `SoftParticleFine` | EXPONENTIAL, not power or Gaussian: successive annulus ratios are a constant 0.521/0.524/0.517/0.508. `A·exp(−r/L)` with A 0.750, L 0.128 fits to 0.0139; a Gaussian costs 4.6× that. Content hard-terminates at r 0.79 |
+| `T_VFX_Ring_01` | **NEW** | `RingUneven` | vs `Px_Ring`: MAE 0.0802, corr 0.670. Decisive — the source's interior is EXACTLY empty (max 0.000000 over every pixel inside r < 0.6) where the SDF ring paints a cubic inner glow across 38 % of the texture; and its circumference is a hand-painted **9.5:1** bright-to-dim with 4–5 nodes (dominant harmonic 4) against the SDF ring's flat 1.04:1. It also never saturates (peak 0.898) |
+| `T_VFX_Ring_02` | **NEW** | `RingFlare` | a far wider, SATURATING annulus: 51.5 % of its band is ≥ 0.99 and 9.2 % of the whole texture is white. Ring at r₀ 0.536, σ 0.089. Its outer glow carries **seven irregular spokes** — the flare streaks — which a clean annulus reads wrong without |
+| `T_VFX_Star_01` | **NEW** | `StarFour` | vs `Px_Flare`: MAE 0.0864, corr 0.722, and the LOBE COUNT is wrong. The source's dominant angular harmonic is **4** (lobes at 0 / ±90 / 180; u-profile and v-profile agree to 0.0001) where `Px_Flare` is `pow(\|cos 3θ\|,36)` — six lobes, harmonic 6. Its core is LINEAR (`1.1399 − 1.7881·r`, residual 0.0041) not a power curve, and its lobes TAPER: 90° wide at r 0.3, 20° at 0.5, 2° at 0.7 |
+| `T_VFX_LightStrip_01` | **NEW** | `LightStrip` | vs `Px_Streak`: MAE 0.1040, **corr 0.0219 — statistically uncorrelated**. Different texture classes: the source is a vertical strip that RAMPS along v (centroid v 0.735, linear 0.03 → 0.99 between v 0.25 and 0.90, then collapsing by 0.98) with a flat-topped cross-section, where `Px_Streak` is a cusp centred at v = 0.5 |
+| `T_VFX_Impact_01` | **NEW** | `ImpactStar` | a FIVE-fold star at 36° + 72k over a HOLLOW core. No single radial law fits (best whole-shape residual 0.059); it decomposes into a core Gaussian (r₀ 0.118, σ 0.050 — peaking at r 0.15, not at the centre) plus a spike-envelope Gaussian (r₀ 0.353, σ 0.180). Inter-spike floor 0.001 of peak. The rays TAPER: anisotropy 2.43 at r 0.15 → 917 by r 0.55 |
+| `T_VFX_Cloud_04` | **NEW** | `Cloud04` | vs `Px_Smoke`: MAE 0.1382. `Px_Smoke` **has no silhouette** — it lights 84 % of its square against this paint's 36 % and runs 2.2× its mean. Hard ceiling at 0.596, never saturates |
+| `T_VFX_Cloud_05` | **NEW** | `Cloud05` | vs `Px_Smoke`: MAE 0.1575. The opposite failure — Cloud_05 SATURATES (1.42 % at white) while still holding a silhouette (zero fraction 0.579), and carries 14× `Px_Smoke`'s 8–16 cyc energy. **It is also not the same paint as Cloud_04** (peak 0.596 vs 1.000, sat 0 vs 1.4 %), so one function cannot serve both |
+| `T_VFX_Noise_04` | **NEW** | `TileNoiseCoarse` | not the same family as `Noise_02`: hist-int 0.378, KS 0.622, 3× the correlation length, 98.6 % of energy in 1–8 cyc. A coarse cloud clipped at white over 18 % of itself, hence left-skewed (−0.539) |
+| `T_VFX_Noise_07` | **NEW** | `TileNoiseBanded` | also not the same family: hist-int 0.653, and the 16–32 cyc band is **660× short** — the grain octave `TileNoise` deliberately carries has no counterpart. It also sits on a hard 0.0196 black floor it never crosses, so a dissolve driven by it can never fully clear |
+| `T_VFX_LUT_Rainbow_01` | **held** | `LutWhite` | the bake exists (`LutRainbow`, 10 measured stops, max error 4.39/255) but is NOT bound — see §13.1 and [P1-D1] |
+
+### 7.1 Bake verification
+
+Every closed-form bake was re-simulated in Python against its measured targets:
+
+| Bake | Landed | Target |
+|---|---|---|
+| `SoftParticleBright` | peak 1.000, cov>0.02 0.753, cov>0.5 0.315, mean 0.337; annuli 0.993/0.965/0.910/0.831/0.729/0.609/0.475/0.333 | peak 1.0, 0.757, 0.316, 0.339; annuli 0.994/0.964/0.907/0.828/0.726/0.607/0.476/0.336 |
+| `SoftParticleFine` | cov>0.02 0.188, mean 0.021; annuli 0.4651/0.2425/0.1175/0.0564 | 0.193, 0.021; annuli 0.4322/0.2251/0.1177/0.0608 |
+| `RingUneven` | peak 0.898, cov>0.02 0.238, cov>0.5 0.055, zero 0.758, **interior max 0.00000** | 0.898, 0.198, 0.044, 0.792, 0 |
+| `RingFlare` | peak 1.0, sat 0.097, cov>0.02 0.485, zero 0.381 | 1.0, 0.0924, 0.432, 0.400 |
+| `StarFour` | annuli 0.994/0.911/0.813/0.618/0.281/0.079; u/v profile maxdiff **0.0000** (4-fold symmetric) | 0.997/0.895/0.742/0.538/0.252/0.110; 0.0001 |
+| `LightStrip` | peak 0.748, centroid v 0.714 | 0.7569, 0.7350 |
+| `Cloud04` | peak 0.596, cov>0.02 0.359, zero 0.567 | 0.596, 0.364, 0.618 |
+| `Cloud05` | peak 1.0, sat 0.017, cov>0.02 0.400, zero 0.582 | 1.0, 0.0142, 0.402, 0.579 |
+| `TileNoiseCoarse` | median 0.729, rms 0.241, sat 0.162 | 0.7216, 0.2510, 0.1798 |
+| `TileNoiseBanded` | median 0.496, rms 0.181, min 0.085 | 0.5020, 0.1593, 0.0196 |
+| `ImpactStar` | annuli 0.3173/0.4500/0.3497/0.1992/0.0806/0.0238 | 0.2964/0.4387/0.3369/0.2031/0.1129/0.0491 |
+
+---
+
+## 8. Meshes
+
+Two new procedural carriers, both from §3's measurements and both shared with sibling recipes:
+
+- **`SM_CkParticles_Spike`** (`SM_VFX_Spike01`) — a square pyramid, base (±100, ±100, 0), apex (0, 0, 200).
+  The UV is the measured fact that matters: `corr(v, Z) = −1.000` and `corr(v, radius) = +1.000`, so v runs
+  TIP (0) → BASE (1), and u derives from Y alone (`corr(u, Y) = −1.000`): 0 on +Y, 1 on −Y, 0.5 at the apex.
+  The apex is a 1-unit square rather than a point — 0.5 % of the height — because a grid surface whose top row
+  collapses emits degenerate triangles. That is the same technique `Surface_Shell` already uses at its poles.
+- **`SM_CkParticles_Card`** (`SM_VFX_Plane01`) — a flat quad in XZ, X ±100, Z 0…200, u running −X → +X and v
+  top (0) → bottom (1). The source's 0.0643-unit Y offset between its two coincident quads is 0.03 % of the
+  span; collapsed to one sheet with a `_TwoSided` look, exactly as NS_BasicAttack §13.5 did for the crescent.
+
+`SM_VFX_Ring01` was NOT built — it is referenced only by the disabled `Wind_01`.
+
+---
+
+## 9. The behavior
+
+`Shaders/CkParticles/Behaviors/Behavior_FireBallHit.ush` + the CPU mirror at
+`CkParticles_DataInterface.cpp` case 21. Seventeen layers — the widest port in the cookbook.
+
+### 9.1 Cadence row
+
+```
+{ TEXT("PS_CkParticles_Template_FireBallHit"), 2.0f, 1.34f, 47, Get_FireBallHitRendererSpecs() }
+```
+
+Loop 2.0 s is the system's own Loop-Once duration. Lifetime is **1.34 s** by [P0-D5] — max over layers of
+(spawn delay + resolved lifetime), which is `Smokes`' 1.3 s from its 0.04 s beat; §6.1's table said 1.3 and
+its own "why" column said ≥ 1.34, so [P0-D5]'s refinement settles it. Burst 47 is the ENABLED count.
+
+### 9.2 Layer partition
+
+`Seed % 47`, in the source's own emitter order: 0 `Raimbow`, 1 `Ring`, 2–8 `Sparkles`, 9 `Glow_01`,
+10–14 `Sparkles_Stretched`, 15 `Star_01`, 16 `Glow_02`, 17 `SecondGlow`, 18–20 `Spike01`, 21–25 `Flames01`,
+26–30 `Smokes`, 31–32 `Flare01`, 33–36 `FirstFlash`, 37 `FirstGlow`, 38 `FlareImpact`,
+39–43 `LightningStrip`, 44–46 `Spike02`.
+
+### 9.3 Mesh facing — gap 3's workaround, implemented
+
+`Spike01`, `Spike02` and `LightningStrip` render with `Facing: Velocity`, which a row-declared `Mesh`
+renderer cannot express (it draws with `FacingMode::Default`). The behavior owns the velocity, so it writes
+the orientation itself: `CkParticles_QuatFromZTo(Dir)` puts the carrier's local +Z down its own direction of
+travel. Both spike bands do exactly that. `LightningStrip` is the exception — see §13.4.
+
+---
+
+## 10. Looks and renderers
+
+**Thirteen row renderers, VisTags 15–27**, allocated after the previous roster maximum of 11 (behavior 20
+took 12–14 in the same batch). The ceiling stays derived from `Get_RosterVisTag_Max()`.
+
+| VisTag | Kind | Look | Status | Source emitters |
+|---|---|---|---|---|
+| 15 | CameraFacingSprite | `PartDisAdd01` | reused | `Glow_01`, `Glow_02`, `FirstGlow` |
+| 16 | CameraFacingSprite | `PartDisAdd01Bright` | **new** | `Sparkles` |
+| 17 | CameraFacingSprite | `PartDisAdd03Bright` | **new** | `SecondGlow`, `FirstFlash` |
+| 18 | VelocityAlignedSprite | `PartDisAdd04` | reused | `Sparkles_Stretched` |
+| 19 | CameraFacingSprite | `RingDisAdd01` | **new** | `Ring` |
+| 20 | CameraFacingSprite | `RainbowDisAdd` | **new** | `Raimbow` |
+| 21 | CameraFacingSprite | `StarDisAdd01` | **new** | `Star_01` |
+| 22 | CameraFacingSprite | `FlareDisAdd01` | **new** | `Flare01` |
+| 23 | CameraFacingSprite | `ImpactDisAdd01` | **new** | `FlareImpact` |
+| 24 | CameraFacingSprite + `SubImageSize (2,2)` | `FlamesDisAdd01` | **new**, shared with NS_Fire | `Flames01` |
+| 25 | CameraFacingSprite | `SmokeDisAdd01` | **new** | `Smokes` |
+| 26 | Mesh `Spike` | `FlatAdd02` | reused | `Spike01`, `Spike02` |
+| 27 | Mesh `Card` | `LightStripDisAdd` | **new** | `LightningStrip` |
+
+Ten new looks, all in `Script/CkUsf/CkUsf_HitLooks_Assets.as`, all parameterizations of the ONE
+`DissolveAdd` family shader. `FlatAdd02` gained `_UsedWithNiagaraMeshParticles` — it was authored with the
+sprite flag only, and this is the first port to wear it on a mesh renderer (NS_BasicAttack §14.9: a usage
+flag is about which RENDERER accepts the master, and getting it wrong falls back to the default material in a
+packaged build ONLY).
+
+---
+
+## 11. Tests
+
+`Test_Particles_FireBallHitBehavior.cpp` + the `NumBehaviors` 20 → 23 ratchet in `Test_Particles_RosterSanity.cpp`.
+
+The band table is the gate's centre of gravity: for a 17-emitter port, a drifted boundary silently collapses
+two source emitters onto one look and reads as a missing layer rather than as an error. It asserts the row's
+three numbers, the 2×2 grid, both mesh carriers, the full 47-slot partition with burst stability, `Raimbow`'s
+Scale-Color halving (reading it as a Color-from-Curve layer would put a white ring where the source has a dim
+grey one), `SecondGlow`'s rising 2 → 3 HDR curve, `Flames01`'s HDR keys and advancing flipbook, `Smokes`
+staying on the ground plane, all five lightning cards facing differently at the origin, spike orientation
+pointing down its own velocity, **omnidirectional** spread on three sprays, per-layer anti-vacuity, both
+spawn beats, and death past 1.34 s.
+
+---
+
+## 12. Verification — A/B protocol
+
+`[HUMAN-VERIFY]` — **not yet run.** Open the **VfxExamples** gym, station pair **FIREBALL HIT**:
+
+| # | Criterion | Look for |
+|---|---|---|
+| a | Overall read | one violent impact: a blue-white flash, an expanding pink-red ring, spikes and lightning cards thrown outward, then smoke drifting across the floor for a full second |
+| b | The two big shells | `Glow_01` and `FirstGlow` are both 1000 units wide; `FirstGlow` squashes to a wide flat band as it fades, `Glow_01` stays round |
+| c | `SecondGlow` | the ONE element that BRIGHTENS over its life, ending on a 3× white-hot key |
+| d | Ring | starts from nothing and grows, dissolving away rather than fading uniformly |
+| e | Smoke | five puffs spreading OUTWARD ALONG THE FLOOR, not into a dome; they should outlive everything else by far |
+| f | Spikes and cards | six pyramids and five cards, each pointing a different way; the cards sit at the impact point and only differ in facing |
+| g | Flames | five puffs, each on a different flipbook frame, rotating |
+| h | Colour | the lens ring is a dim grey (NOT white), the flares open at DOUBLE white, and `Flames01` opens at HDR 5 |
+
+---
+
+## 13. Confirmed fidelity differences
+
+1. **The `Rainbow` gradient ramp is HELD BACK pending [P1-D1].** `M_VFX_DisAdd_Rainbow` is the only instance
+   in the cookbook whose `GradientMap_Tex` is a real colour ramp, and the only one whose `Gradient_Invert`
+   resolves past 1 (to 2). The `LutRainbow` bake exists and is measured, but the family's `Gradient_Invert`
+   remap is not recoverable from the corpus, so `RainbowDisAdd` ships against the flat white ramp — under
+   which the whole chain is a provable multiply by one and the look renders as if the gradient chain did not
+   exist. **Awaiting [P1-D1]**; one-line change when it lands.
+2. **The three DISABLED emitters are not ported** — `Star_02`, `Wind_01`, `Wind_02`, seven further particles.
+   This is a recorded decision, not an oversight: the hit has no wind (both wind emitters are enabled in
+   NS_FireBall_Cast and disabled here). Restoring them would be burst 54 and one more mesh carrier
+   (`SM_VFX_Ring01`).
+3. **Unplumbed family parameters:** `Core_Intensity` (1 on `Part01_Bright`, `Part03_Bright`, `Flames01`,
+   `Smoke01`), `Core_Power` (0 on `LightStrip`, `Impact01`), `CamOffset` (50 on `Part03_Bright`),
+   `Opacty_DepthFade`, `Opacty_StepAdd`, a `GradientShape_Tex` separate from the shape (`Rainbow`, `Flare01`
+   both use `T_VFX_Part_01` there), and a `Color_Tex` separate from `Main_Tex` (`Smoke01` uses `Cloud_04` for
+   colour and `Cloud_05` for shape — the port carries the shape one). All are chains the expression histogram
+   cannot reconstruct. `Glow_Intensity` 2 on `Flames01` IS reproduced, folded into Brightness (§13 of
+   NS_Fire.md).
+4. **`LightningStrip`'s orientation is an inferred reading.** Its `Sphere Location` module is DISABLED, so all
+   five spawn at the origin — and `Add Velocity from Point` has no direction to work from there, leaving the
+   `Initial Mesh Orientation` randomization (`Random Range Vector` min (0,0,1) max (0,0.5,−1)) as the only
+   thing separating them. That module's exact mapping is not recoverable, so each card takes its own random
+   facing: five differently-oriented cards is what every reading of it produces. Its `Scale Velocity` curve is
+   inert for the same reason and is not implemented.
+5. **`Spike01`/`Spike02` spawn on a 1-unit shell**, the source's `Sphere Radius = 10` under its
+   `Non Uniform Scale = (0.1, 0.1, 0.1)`. That is a transcription, not a simplification.
+6. **World space → local space on 12 of the 17 enabled emitters.** A hit fires at a fixed impact point, so the
+   risk is low — the deviation only shows if the spawning actor moves during the effect.
+7. **`Velocity Falloff Distance` 100 is not reproduced** on any `Add Velocity from Point`; the authored
+   strength applies undiminished at the spawn radius `[inferred]`.
+8. **`Smokes`' colour curve drops a duplicated t = 0 key.** The corpus carries two keys at t = 0 (0.009134
+   and 1); the first is unreachable under any interpolation and would only create a degenerate zero-width
+   segment. The five remaining keys are transcribed verbatim.
+9. **`Sparkles_Stretched`' length range is inverted in the source** (min 70 > max 60) and is copied verbatim —
+   lerping the other way spans the identical set of values.
+10. **`TileNoiseBanded`'s floor lands at 0.085 rather than the source's 0.0196.** The load-bearing property —
+    a dissolve driven by it never fully clears, because the paint is never black — holds either way, but the
+    exact floor is higher.
+11. **The sub-UV animation MODE is a reading** (see NS_Fire.md §13.7).
+12. **Every stand-in texture is a statistical match, not a copy.** §7.1 lists what landed and what did not;
+    the largest residuals are `RingUneven`'s coverage (0.238 vs 0.198) and `ImpactStar`'s (0.118 vs 0.176).
+
+---
+
+## 14. Reusable lessons
+
+1. **"Measure before assuming" was worth nine bakes.** Every one of §4.3's candidate reuses failed, and three
+   failed on something no eyeball would have caught: `Ring_01`'s interior is EXACTLY empty, `Star_01` has FOUR
+   lobes where the nearest stand-in has six, and `LightStrip_01` correlates with the streak bake at 0.02. A
+   generic library is a trap precisely because its members look plausible.
+2. **Calibrate the verdict threshold on a known-good reuse first.** Re-measuring `SoftParticle` vs its source
+   (MAE 0.0026) and `TileNoise` vs its source (hist-int 0.930) is what makes "MAE 0.104" mean something. It
+   also proves the measurement pipeline before any decision rests on it.
+3. **MAE is the wrong statistic for a noise field.** Two realizations of the same noise correlate at zero. The
+   decisive comparisons are the histogram (intersection / KS) and the spectral band split — which is how
+   `Noise_04` and `Noise_07` were shown to be different *families* rather than different draws.
+4. **A shape that no single radial law fits is telling you it has two parts.** `Impact_01`'s best whole-shape
+   fit residual was 0.059 against 0.024 for a core-plus-envelope decomposition — and the decomposition is what
+   revealed the hollow centre (it peaks at r 0.15, not at r 0).
+5. **Angular structure needs its own taper.** Both `StarFour` and `ImpactStar` have lobes whose angular width
+   collapses with radius (90° → 2°, anisotropy 2.4 → 917). A fixed exponent gets the lobe COUNT right and the
+   silhouette wrong.
+6. **Grid-surface mesh generators need a pole gap.** A pyramid apex or a sphere pole that collapses a whole
+   grid row emits degenerate triangles. A 0.5 %-of-height tip square is invisible and correct.
+7. **A usage flag is per-RENDERER, and the failure is packaged-build-only.** `FlatAdd02` had shipped with the
+   sprite flag alone; this port is the first to wear it on a mesh renderer, and in the editor it would have
+   looked fine right up until a cook.
