@@ -873,6 +873,40 @@ namespace ck::particles_editor::TexGenLocal
         return FLinearColor(I, I, I, I);
     }
 
+    // T_VFX_Part_08 stand-in — the lens-flare sheet of NS_HealCast, and the only 2x2 atlas in the library that is
+    // a plain PUFF rather than a directional burst. Measured off the corpus PNG frame by frame: four soft blobs
+    // centred a tenth of a frame ABOVE centre (0.505, 0.402), support out to 0.69 of the half-frame, a radial law
+    // of pow(1 - r/R, 1.60) (per-frame fits 1.49-1.77), and peaks that DECAY in frame order — 0.6275, 0.4627,
+    // 0.4078, 0.3608, so the flare dims as it plays rather than changing shape (frame correlation 0.77-0.93).
+    // Angular content sits in harmonics 2 and 3 at about a quarter of the mean, which is a lobed puff, not a disc.
+    // Both existing sheets were measured against it and rejected: Pearson 0.56 against the wind paint, 0.26
+    // against the impact one.
+    static auto Px_LensSheet(float U, float V) -> FLinearColor
+    {
+        constexpr float CentreU     = 0.505f;
+        constexpr float CentreV     = 0.402f;
+        constexpr float EdgeRadius  = 0.69f;
+        constexpr float FalloffPow  = 1.60f;
+        constexpr float LobeAmp     = 0.25f;
+        constexpr float FrameStride = 37.0f;
+        constexpr float GrainDepth  = 0.15f;
+        constexpr float FramePeak[] = {0.6275f, 0.4627f, 0.4078f, 0.3608f};
+
+        const auto  Sheet = Sample_Sheet2x2(U, V);
+        const float Dx    = Sheet.U - CentreU;
+        const float Dy    = Sheet.V - CentreV;
+        const float R     = FMath::Sqrt(Dx * Dx + Dy * Dy) * 2.0f;
+        const float Ang   = FMath::Atan2(Dy, Dx);
+        const float Off   = Sheet.Frame * FrameStride;
+
+        const float Body  = FMath::Pow(Saturate(1.0f - R / EdgeRadius), FalloffPow);
+        const float Lobe  = 1.0f + LobeAmp * 0.5f * (FMath::Sin(2.0f * Ang + Off) + FMath::Sin(3.0f * Ang - Off));
+        const float Grain = 1.0f - GrainDepth * Fbm(Sheet.U * 5.0f + Off, Sheet.V * 5.0f + Off + 11.0f, 3, 5);
+
+        const float I = Saturate(FramePeak[Sheet.Frame] * Body * Lobe * Grain);
+        return FLinearColor(I, I, I, I);
+    }
+
     static auto Px_Ring(float U, float V) -> FLinearColor
     {
         const float Dx = U - 0.5f, Dy = V - 0.5f;
@@ -1036,6 +1070,11 @@ namespace ck::particles_editor
             // arrow chevron. Every other texture those four ports need is a paint an earlier batch already
             // measured and baked, reached through a look that already binds it.
             { TEXT("T_CkParticles_ArrowChevron"),       ECk_VfxTextureKind::Mask, &Px_ArrowChevron       },
+            // The Vefects Cast paints (recipes NS_PickupCast.md §7, NS_HealCast.md §7, NS_DebuffCast.md §7).
+            // Again only ONE new bake: the lens-flare atlas. Every other paint those three ports need was
+            // measured and baked by an earlier batch, and both existing 2x2 sheets were measured against this
+            // one and rejected.
+            { TEXT("T_CkParticles_LensSheet"),          ECk_VfxTextureKind::MaskSheet, &Px_LensSheet     },
         };
 
         auto Ok = 0;

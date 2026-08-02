@@ -35,8 +35,9 @@ struct FCkParticles_StageInput
 //       (ck::particles::FCk_ParticlesRendererSpec), each with a named generated mesh and/or a named CkUsf
 //       look bound explicitly. They exist only on that row's template, so a behavior writing one of these
 //       tags renders nothing anywhere else. Behavior 7 (Slash) owns 5..9; behaviors 18 and 19 (the
-//       projectile pair) share 10..11 on one cadence row; the Vefects hit/burst/cast ports own 12..14 (20),
-//       15..27 (21), 28..36 (22), 37..49 (23), 50..61 (24) and 62..70 (25).
+//       projectile pair) share 10..11 on one cadence row; every Vefects port from 20 up allocates its own
+//       contiguous band above those. The roster ceiling is DERIVED from the cadence table
+//       (ck::particles::Get_RosterVisTag_Max) — never restate it here or anywhere else.
 //
 // Dynamic -> Particles.DynamicMaterialParameter, read by the VFX master materials as
 //   x = dissolve/erosion threshold [0..1], y = distortion strength, z = UV pan offset, w = emissive boost.
@@ -138,6 +139,31 @@ float3 CkParticles_HsvToRgb(float H, float S, float V)
     if (Sector < 4.0) { return float3(P, Q, V); }
     if (Sector < 5.0) { return float3(T, P, V); }
     return float3(V, P, Q);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Spawn phase — where in the emitter's loop a particle was born.
+//
+// A cadence row may carry a burst AND a rate, which is how a source that bursts N at loop start and then streams
+// R/s is expressed. The two populations are told apart by WHEN they spawned: the burst module fires at Spawn Time
+// 0, so its particles land at phase 0, and the rate stack spreads its particles across the whole loop.
+//
+// The epsilon is a float-precision floor, not a tuning: EmitterAge grows without bound while Age stays small, so
+// their difference loses absolute precision as the system runs, and a burst particle's phase drifts off zero by
+// roughly EmitterAge * 2^-24. 1 ms holds that classification correct past two hours of continuous play. A rate
+// particle that happens to spawn inside the same millisecond is misread as a burst particle; at the rates the
+// cookbook's sources use that is a few hundredths of a particle per loop.
+// --------------------------------------------------------------------------------------------------------------------
+float CkParticles_SpawnPhase(float EmitterAge, float Age, float LoopDuration)
+{
+    const float P = fmod(EmitterAge - Age, LoopDuration);
+    return P < 0.0 ? P + LoopDuration : P;
+}
+
+bool CkParticles_IsBurstSpawn(float SpawnPhase, float LoopDuration)
+{
+    const float Eps = 0.001;
+    return SpawnPhase < Eps || SpawnPhase > LoopDuration - Eps;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

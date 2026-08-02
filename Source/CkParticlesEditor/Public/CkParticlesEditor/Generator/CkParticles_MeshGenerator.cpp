@@ -385,6 +385,93 @@ namespace ck::particles_editor::MeshGenLocal
         return { FVector3f(FMath::Cos(Angle) * R, FMath::Sin(Angle) * R, 0.0f),
                  FVector2f(Get_CrescentU(SweepDegrees), S) };
     }
+
+    // ---- SlashClaw: the Vefects NS_DebuffCast mesh layer, from the recipe's MEASURED profile -------------------
+    //
+    // NOT the same carrier as the Crescent: where that is a full-360 tapered annulus, this is a comma-shaped
+    // quarter-arc ribbon that starts at the origin, spirals out to a radius of ~222 and eases back to ~200,
+    // widening from 5.4 units at both ends to 51.0 at its belly. Its cross-section direction ROTATES along the
+    // sweep — the band is a genuine 2-D ribbon, not a radial annulus slice — so the table below stores the
+    // outer and inner rim points per column rather than a radius pair.
+    //
+    // The 49 columns ARE the source mesh's own columns (u evenly spaced at 1/48), quoted in
+    // CkParticles/Cookbook/NS_DebuffCast.md §3, so the surface reproduces one of the source's two flat sheets
+    // exactly at 48 arc segments. The generator never reads the .obj at bake time — these numbers are the
+    // source of truth. The second sheet is dropped: the look this carrier draws with is two-sided.
+    struct FSlashClawRim { float OuterX; float OuterY; float InnerX; float InnerY; };
+
+    static constexpr FSlashClawRim SlashClawRims[] =
+    {
+        {   -3.1013f,    0.0041f,    2.2987f,   -0.0041f },
+        {   -3.8780f,  -15.4270f,    3.5430f,  -15.1843f },
+        {   -4.1466f,  -30.2825f,    5.2814f,  -29.6376f },
+        {   -3.9240f,  -44.5674f,    7.4871f,  -43.3587f },
+        {   -3.2264f,  -58.2868f,   10.1330f,  -56.3428f },
+        {   -2.0687f,  -71.4460f,   13.1903f,  -68.5846f },
+        {   -0.4650f,  -84.0503f,   16.6297f,  -80.0785f },
+        {    1.5722f,  -96.1053f,   20.4200f,  -90.8192f },
+        {    4.0321f, -107.6170f,   24.5286f, -100.8010f },
+        {    6.9055f, -118.5890f,   28.9211f, -110.0190f },
+        {   10.1857f, -129.0280f,   33.5608f, -118.4680f },
+        {   13.8682f, -138.9370f,   38.4085f, -126.1440f },
+        {   17.9514f, -148.3190f,   43.4224f, -133.0450f },
+        {   22.4365f, -157.1740f,   48.5578f, -139.1700f },
+        {   27.3276f, -165.4990f,   53.7668f, -144.5220f },
+        {   32.6317f, -173.2870f,   58.9993f, -149.1090f },
+        {   38.3576f, -180.5260f,   64.2026f, -152.9420f },
+        {   44.5150f, -187.1960f,   69.3238f, -156.0420f },
+        {   51.1123f, -193.2680f,   74.3106f, -158.4360f },
+        {   58.1539f, -198.7070f,   79.1153f, -160.1630f },
+        {   65.6368f, -203.4640f,   83.6974f, -161.2670f },
+        {   73.5463f, -207.4870f,   88.0280f, -161.8030f },
+        {   81.8529f, -210.7180f,   92.0930f, -162.1910f },
+        {   90.5103f, -212.9670f,   95.8953f, -162.5910f },
+        {   99.4549f, -213.8110f,   99.4548f, -162.7890f },
+        {  108.4000f, -212.9670f,  103.0150f, -162.5910f },
+        {  117.0570f, -210.7180f,  106.8210f, -162.1900f },
+        {  125.3650f, -207.4880f,  110.8900f, -161.8020f },
+        {  133.2760f, -203.4660f,  115.2250f, -161.2640f },
+        {  140.7620f, -198.7100f,  119.8140f, -160.1590f },
+        {  147.8070f, -193.2740f,  124.6250f, -158.4310f },
+        {  154.4100f, -187.2030f,  129.6200f, -156.0350f },
+        {  160.5740f, -180.5350f,  134.7490f, -152.9330f },
+        {  166.3080f, -173.2980f,  139.9610f, -149.0980f },
+        {  171.6220f, -165.5110f,  145.2030f, -144.5100f },
+        {  176.5240f, -157.1880f,  150.4220f, -139.1560f },
+        {  181.0220f, -148.3340f,  155.5680f, -133.0300f },
+        {  185.1180f, -138.9520f,  160.5930f, -126.1290f },
+        {  188.8150f, -129.0430f,  165.4540f, -118.4530f },
+        {  192.1110f, -118.6040f,  170.1070f, -110.0040f },
+        {  195.0010f, -107.6310f,  174.5140f, -100.7870f },
+        {  197.4780f,  -96.1187f,  178.6380f,  -90.8058f },
+        {  199.5340f,  -84.0627f,  182.4450f,  -80.0662f },
+        {  201.1570f,  -71.4573f,  185.9020f,  -68.5733f },
+        {  202.3340f,  -58.2969f,  188.9780f,  -56.3329f },
+        {  203.0530f,  -44.5761f,  191.6440f,  -43.3502f },
+        {  203.2980f,  -30.2897f,  193.8710f,  -29.6304f },
+        {  203.0520f,  -15.4327f,  195.6310f,  -15.1787f },
+        {  202.2990f,   -0.0000f,  196.8990f,    0.0000f },
+    };
+    static constexpr int32 NumSlashClawSegments = UE_ARRAY_COUNT(SlashClawRims) - 1;
+
+    // T sweeps the arc from the origin outward; S crosses the band, v=0 OUTER rim to v=1 INNER rim. u runs
+    // ALONG the arc, which is what makes the look's offset channel sweep the streak down the claw rather than
+    // across it.
+    static auto Surface_SlashClaw(float S, float T) -> FGridPoint
+    {
+        const float Station = FMath::Clamp(T, 0.0f, 1.0f) * NumSlashClawSegments;
+        const int32 Index   = FMath::Clamp(FMath::FloorToInt32(Station), 0, NumSlashClawSegments - 1);
+        const float Alpha   = Station - Index;
+
+        const auto& Lo = SlashClawRims[Index];
+        const auto& Hi = SlashClawRims[Index + 1];
+
+        const auto Outer = FVector2f(FMath::Lerp(Lo.OuterX, Hi.OuterX, Alpha), FMath::Lerp(Lo.OuterY, Hi.OuterY, Alpha));
+        const auto Inner = FVector2f(FMath::Lerp(Lo.InnerX, Hi.InnerX, Alpha), FMath::Lerp(Lo.InnerY, Hi.InnerY, Alpha));
+        const auto Rim   = FMath::Lerp(Outer, Inner, S);
+
+        return { FVector3f(Rim.X, Rim.Y, 0.0f), FVector2f(T, S) };
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -422,6 +509,10 @@ namespace ck::particles_editor
         // a stylization rather than a transcription (see Surface_Bomb) and is sized for a clean silhouette.
         BakeOne(TEXT("SM_CkParticles_Cylinder"), &Surface_Cylinder, 32, 1,  TEXT("SweepErode"));
         BakeOne(TEXT("SM_CkParticles_Bomb"),     &Surface_Bomb,     24, 20, TEXT("SweepErode"));
+
+        // The Vefects cast carrier. 1 band segment x 48 arc segments IS the source sheet's own topology, so the
+        // rim table lands on knots exactly and the surface reproduces it rather than resampling it.
+        BakeOne(TEXT("SM_CkParticles_SlashClaw"), &Surface_SlashClaw, 1, NumSlashClawSegments, TEXT("SweepErode"));
 
         Log(TEXT("Generated {}/{} CkParticles VFX carrier meshes under {}."),
             FString::FromInt(Ok), FString::FromInt(Total), FString(MeshDir));
