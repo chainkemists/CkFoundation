@@ -9,13 +9,11 @@ resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
 **Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1, 2, 3, 4-core,
-**4b-fairness (a1a844a1f + CkTests ed3b340)**, 6, and 7 COMPLETE — **24/24, EXIT 0, 0 AS
-errors** (Test-VoiceChatP3-fairness.log). The full mouth-to-ear machine path runs cross-world
-with N1 enforcement, mute privacy, and the CTO amplitude-fairness ruling all tested. Remaining
-in Gate 3: **S5 drain-budget measurement** (instrumented run, numbers into Gate_3.md), item 5
-(Positional3D probe routing set, earns CkSpatialQuery), item 8 (S4 teardown ordering + the
-teardown-mid-transmit test), host-asymmetry net tests, N7 routing matrix in module Claude.md —
-then the Gate-3 exit sweep (full VoiceChat + RenderTarget delta-zero) and the gate audit.
+4b-fairness, 6, 7, **8 (S4 teardown test), host-asymmetry matrix, and N7 docs** COMPLETE —
+**27/27, EXIT 0, 0 AS errors** (Test-VoiceChatP3-asymmetry3.log). Remaining in Gate 3: only
+**item 5** (Positional3D probe routing set, earns CkSpatialQuery) and the **S5 drain-budget
+measurement** (instrumented numbers into Gate_3.md) — then the exit sweep (full VoiceChat +
+RenderTarget delta-zero on the final binary) and the Gate-3 top-tier audit.
 The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
 P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
 DefaultEngine.ini (a BB-repo decision; superproject untouched).
@@ -29,6 +27,25 @@ DefaultEngine.ini (a BB-repo decision; superproject untouched).
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — P3 items 8 + host-asymmetry + N7 complete (27/27); FCk_Time sweep
+- **CkTests 99010c5 + CkF a0d72258c:** the asymmetry matrix is fully tested —
+  `Ck.VoiceChat.Net.HostHearsClient` (the true client-origin path: client-side encoder, relay
+  resolve, spoof guard passing; the host decodes), `Ck.VoiceChat.Net.ClientToClient` (3 worlds:
+  client 0 → client 1 through the server; the speaker's own world decodes NOTHING — no echo),
+  and `Ck.VoiceChat.Net.TeardownMidTransmit` (S4/§7.8: whole speaker subject destroyed
+  mid-stream while voice provably flowed; replicas vanish cleanly, the listener side survives).
+  **N7 routing-policy matrix** landed in the module Claude.md (incl. the known v1 NPC-sender
+  gap, stated not hidden).
+- Fix cycle (both test-side, routing untouched): client-local PlayerState absent at PIE-ready
+  in a 3-world boot (settle ticks); a bystander world sees NULL owner on another client's
+  subject — PlayerControllers replicate only to their owning client — so third-party worlds
+  identify by not-locally-owned.
+- Earlier same day: **FCk_Time sweep** (maintainer feedback; CkF 2905dcf79 + CkTests 56a9dc7) —
+  all time-typed fields/params across the module (incl. the P2 capture-seam API) converted;
+  24/24 + byte-identical pipeline decode proved it behavior-preserving.
+- Ran: `--build --test --test-pattern VoiceChat --discover-fresh` → **27/27, EXIT 0, 0 AS
+  errors** (Test-VoiceChatP3-asymmetry3.log).
 
 ### 2026-08-03 — P3 item 4b (fairness half): audible-speaker cap + envelope + LRS (24/24)
 - **CkF a1a844a1f + CkTests ed3b340:** routing split into stage/flush — Route (per-talker)
