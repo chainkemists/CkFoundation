@@ -972,8 +972,22 @@ bool
         RF_Transient);
     FreshSession->Initialize(World);
     TestTrue(
+        TEXT("fresh session automatically restores the level-owned path network"),
+        FreshSession->Get_VisualizedActor() == Actor);
+    TestTrue(
+        TEXT("fresh session automatically restores the level-owned detection bounds"),
+        FreshSession->Get_DetectionBounds().Equals(
+            Actor->Get_DetectionBounds()));
+    TestTrue(
         TEXT("fresh session can target the level-owned path network"),
         FreshSession->Use_CurrentLevel());
+    TestTrue(
+        TEXT("retargeting the current level restores the level-owned path network"),
+        FreshSession->Get_VisualizedActor() == Actor);
+    TestTrue(
+        TEXT("retargeting the current level restores the level-owned detection bounds"),
+        FreshSession->Get_DetectionBounds().Equals(
+            Actor->Get_DetectionBounds()));
     TestEqual(
         TEXT("fresh session reloads the surviving route watch"),
         FreshSession->Get_RouteWatchCount(),
@@ -1000,6 +1014,47 @@ bool
         TEXT("external undo-style removal invalidates cached watch previews"),
         Session->Get_RouteWatchPreviews().Num(),
         0);
+
+    auto* SecondActor = World->SpawnActor<ACk_PathNetwork_UE>();
+    auto* SecondDetector = SecondActor != nullptr
+        ? NewObject<UCk_PathNetwork_AuthoringTestDetector>(
+            SecondActor,
+            NAME_None,
+            RF_Transactional)
+        : nullptr;
+    TestNotNull(
+        TEXT("second path-network actor is created for ambiguity coverage"),
+        SecondActor);
+    TestNotNull(
+        TEXT("second path-network detector is created for ambiguity coverage"),
+        SecondDetector);
+    if (SecondActor == nullptr || SecondDetector == nullptr)
+    { return false; }
+    TestTrue(
+        TEXT("second path-network actor accepts a usable configuration"),
+        SecondActor->Set_EditorAuthoringConfiguration(
+            FCk_PathNetwork_BuildParams{},
+            FCk_PathNetwork_VectorizeParams{},
+            SecondDetector,
+            FVector{400.0, 400.0, 100.0},
+            ECk_EnableDisable::Disable));
+
+    auto* AmbiguousSession = NewObject<UCk_PathNetworkDesigner_Session_UE>(
+        GetTransientPackage(),
+        NAME_None,
+        RF_Transient);
+    AmbiguousSession->Initialize(World);
+    TestNull(
+        TEXT("fresh session does not guess between multiple level path networks"),
+        AmbiguousSession->Get_VisualizedActor());
+    TestEqual(
+        TEXT("multiple level path networks leave the session in an actionable error state"),
+        AmbiguousSession->Get_Status(),
+        ECk_PathNetworkDesigner_Status::Error);
+    TestTrue(
+        TEXT("multiple level path networks instruct the designer to select one"),
+        AmbiguousSession->Get_StatusMessage().Contains(
+            TEXT("Load Selected Network")));
     return true;
 }
 
