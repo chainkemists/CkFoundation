@@ -8,15 +8,13 @@ counters landed, 136ca780f; Conceal zero-fill + HandleRequests-synth recorded as
 resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
-**Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1 (bb0513333),
-2 (c01b43ef0 + 36ef940f7), 3 (5c8fc8cd6), 4-core (86d857995), and **6 (client
-receive/playback, fcd8576f9 + CkTests 938ccf4)** COMPLETE — **22/22, EXIT 0, 0 AS errors**
-(Test-VoiceChatP3-receive.log). **The full mouth-to-ear machine path runs cross-world**
-(capture → VAD → encode → pace → relay → route → forward → jitter → decode); only audible
-speaker output remains human. N1 is enforcement + test. Remaining in Gate 3: item 4b (top-N
-fairness + S5 drain measurement), item 5 (Positional3D probe routing set, earns
-CkSpatialQuery), item 7 (listener mute upstream + mute-stops-forwarding net test), item 8
-(S4 teardown), host-asymmetry net tests, N7 docs.
+**Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1, 2, 3, 4-core,
+6, and **7 (listener mute = routing exclusion, 3f84feadf + CkTests b397076)** COMPLETE —
+**23/23, EXIT 0, 0 AS errors** (Test-VoiceChatP3-mute.log). The full mouth-to-ear machine path
+runs cross-world; N1 is enforcement + test; mute is a server-side privacy exclusion with a
+three-act net proof. Remaining in Gate 3: item 4b (top-N fairness + S5 drain measurement),
+item 5 (Positional3D probe routing set, earns CkSpatialQuery), item 8 (S4 teardown ordering),
+host-asymmetry net tests, N7 routing matrix in module Claude.md.
 The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
 P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
 DefaultEngine.ini (a BB-repo decision; superproject untouched).
@@ -30,6 +28,22 @@ DefaultEngine.ini (a BB-repo decision; superproject untouched).
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — P3 item 7 complete: listener mute is a routing exclusion (23/23)
+- **CkF 3f84feadf + CkTests b397076:** mute sync is stateful must-apply, so it rides a SECOND
+  reliable control relay (`ActorRelay.VoiceChatControl`) — S1 bans reliable RPCs on the voice
+  STREAM actor; a separate Iris object cannot HoL-block it. Payload = full-set replace
+  (idempotent, ordering-proof). VoiceListener grew its three requests (completion contract +
+  cancel processor), `SyncMutes` (host applies directly into the routing matrix; client retries
+  the control relay until resolved), `ApplyControl` (AuthorityOnly) draining reports into the
+  per-player mute matrix the Route processor consults — **muted audio is never SENT**. Local
+  defense-in-depth gate in ReceivePlayback covers the in-flight race (drops bundles, still
+  drains the jitter tail so unmute never replays stale audio — caught in self-review).
+- **Net test** (`Ck.VoiceChat.Net.ListenerMute_StopsForwarding`): three transmit cycles —
+  baseline decodes; muted spurt leaves decoded bytes FROZEN (never arrived); unmute restores
+  growth (the exclusion, not a broken pipe). First-run green.
+- Ran: `--build --test --test-pattern VoiceChat --discover-fresh` → **23/23, EXIT 0, 0 AS
+  errors** (Test-VoiceChatP3-mute.log).
 
 ### 2026-08-03 — P3 item 6 complete: remote voice decodes cross-world (22/22)
 - **CkF fcd8576f9 + CkTests 938ccf4:** `FProcessor_VoiceTalker_ReceivePlayback` (all net modes —
