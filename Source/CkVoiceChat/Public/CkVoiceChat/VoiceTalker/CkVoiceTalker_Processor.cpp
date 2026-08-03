@@ -8,10 +8,16 @@
 
 #include "CkVoiceChat/Capture/CkVoiceChat_CaptureSource.h"
 #include "CkVoiceChat/CkVoiceChat_Log.h"
+#include "CkVoiceChat/CkVoiceChat_Stats.h"
 #include "CkVoiceChat/Settings/CkVoiceChat_Settings.h"
 
 #include "Interfaces/VoiceCodec.h"
 #include "VoiceModule.h"
+
+DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Captured"),  STAT_CkVoiceChat_FramesCaptured,  STATGROUP_CkVoiceChat);
+DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Encoded"),   STAT_CkVoiceChat_FramesEncoded,   STATGROUP_CkVoiceChat);
+DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Concealed"), STAT_CkVoiceChat_FramesConcealed, STATGROUP_CkVoiceChat);
+DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Decoded"),   STAT_CkVoiceChat_FramesDecoded,   STATGROUP_CkVoiceChat);
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceTalker_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceTalker_HandleRequests);
@@ -321,6 +327,8 @@ namespace ck
             FramePcm.Append(InCurrent._PendingPcm.GetData(), FrameBytes);
             InCurrent._PendingPcm.RemoveAt(0, FrameBytes);
 
+            INC_DWORD_STAT(STAT_CkVoiceChat_FramesCaptured);
+
             const auto Samples = TArrayView<int16>{
                 reinterpret_cast<int16*>(FramePcm.GetData()), FrameBytes / 2};
 
@@ -343,6 +351,8 @@ namespace ck
             { continue; }
 
             Encoded.SetNum(static_cast<int32>(EncodedSize));
+
+            INC_DWORD_STAT(STAT_CkVoiceChat_FramesEncoded);
 
             const auto FrameSeq = InCurrent._Seq++;
 
@@ -388,6 +398,8 @@ namespace ck
 
             if (PopResult.Get_Type() == ECk_VoiceChat_JitterPop::Conceal)
             {
+                INC_DWORD_STAT(STAT_CkVoiceChat_FramesConcealed);
+
                 InCurrent._LoopbackDecodedPcm.AddZeroed(FrameBytes);
 
                 if (InCurrent._LoopbackSynth.IsValid())
@@ -407,6 +419,8 @@ namespace ck
 
             if (DecodedSize > 0)
             {
+                INC_DWORD_STAT(STAT_CkVoiceChat_FramesDecoded);
+
                 InCurrent._LoopbackDecodedPcm.Append(Decoded.GetData(), static_cast<int32>(DecodedSize));
 
                 if (InCurrent._LoopbackSynth.IsValid())
