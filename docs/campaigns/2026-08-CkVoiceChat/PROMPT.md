@@ -81,6 +81,18 @@ unchanged.
 | N7 | Routing-policy matrix table (per-policy send-set formula) in module Claude.md | P3 |
 | N8 | Citation-drift fixes in the review brief (cosmetic; paths corrected in the review doc itself if kept as record) | Any |
 
+### P0 spike amendments (added 2026-08-03 — binding on P3, from [SpikeMemo_P0_UnreliableUnicastClientRPC.md](SpikeMemo_P0_UnreliableUnicastClientRPC.md))
+
+Iris flags every unicast RPC `Ordered` even when Unreliable (fork `NetRPCHandler.cpp:24-33`), so
+voice rides the reliable-queue machinery (deep silent queue; sent-once/never-resent). Therefore:
+
+| # | Amendment |
+|---|---|
+| S1 | **No reliable RPCs on the voice relay actor, ever** — reliable attachments on the same object head-of-line-block the unreliable section |
+| S2 | **The pacing processor bounds FRESHNESS, not just bytes** — the transport queues ~4096 bundles silently; drop stale frames server-side before enqueue or latency replaces loss |
+| S3 | **Bundle ≤ 3 × 20 ms frames; serialized RPC < 256 B** — the server→client unreliable split threshold makes bigger payloads all-or-nothing multi-part |
+| S4 | **Teardown/travel windows stop sends before destroying channel actors** — a client receiving RPCs for an unresolvable object emits unthrottled `LogIrisRpc` Errors |
+
 ## Non-goals (v1) — spec §2
 
 Echo cancellation/noise-suppression DSP (hook reserved); trace-based occlusion (v1 passes through

@@ -18,6 +18,30 @@ PID 22316 + UnrealToolbox) was live at session start — `--build` waits until i
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-03 — skeleton + doctrine + spike code landed; build gate running
+- Ran: scaffold committed as CkFoundation 9b0a55d22 (28 files: 3 quartets, Settings, Log/Stats/
+  Module, uplugin entry, tier row, module Claude.md stub); doctrine amendment 1ff7decf9
+  (CkActorRelay Anti-patterns split: event channels events-only verbatim; relay actors may carry
+  paced budgeted streams under clause (a)-(g)); campaign docs ffa02f6c0.
+- Ran: CkTests branch `feature/voice-chat` cut from origin/dev (417b062); spike committed 9d9b9d2
+  (channel actor mirroring relay wire shape bReplicates+bAlwaysRelevant+Owner=PlayerState per
+  CkActorRelay_Actor.cpp:23-24 / _GroupSubsystem.cpp:452; pressure actor churning a 64 KB
+  replicated payload; specs Ck.VoiceChat.Spike.{UnreliableUnicast_DeliveryUnderLoad,
+  UnresolvedTarget_SilentDrop}).
+- Confirmed: Iris is ON for the host project (`net.Iris.UseIrisReplication=1`,
+  BusterBlock/Config/DefaultEngine.ini:6).
+- Confirmed: pre-commit sweep clean — no stock ensure/check in Source/CkVoiceChat (rg exit 1);
+  every mimicked API verified at source (Request_CreateEntity_AsTypeSafe, Get_ValidEntry_ByTag,
+  record policies, ck::IsValid(FGameplayTag) at CkIsValid_Defaults.h:94, FCk_Time ctor
+  CkTime.h:85, GameplayLabel Add CkLabel_Utils.h:24-26).
+- Decision (spike vehicle): plain replicated actor copying the relay channel's wire shape instead
+  of subclassing abstract ACk_ActorRelay_UE — the base adds only group-subsystem registration
+  bookkeeping (no netcode; verified by reading CkActorRelay_Actor.h in full), and a subsystem-less
+  subclass would spin its registration retry loop. Transport composite is identical.
+- Inferred (pending): Iris unreliable-attachment mechanics — Explore agent reading the fork's
+  Iris source (queue/drop policy, unresolved-target path, per-RPC overhead, SaturateBandwidth
+  cvar); build gate running in background (Build-Editor-VoiceChatP0.log).
+
 ### 2026-08-03 — Gate 0 opened: branch, docs, research
 - Ran: `git checkout -b feature/voice-chat origin/dev` (base d02278cdd) → cherry-pick d6f6edd6c
   → 7a66ff11e (CTO review rides the branch); `git add -f docs/specs/2026-08-02-CkVoiceChat-technical-review.md`
