@@ -313,4 +313,67 @@ bool
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// Hit-test defaults contract: decorative nodes — no data-ck-name/bind — must not hit-test
+// themselves (SelfHitTestInvisible keeps their subtree traversable); gameplay-reachable nodes
+// stay fully hittable; CSS visibility:hidden always wins.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCkWebUmg_HitTestDefaults_Test,
+    "CkTests.UnitTests.CkWebUmg.HitTestDefaults",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool
+    FCkWebUmg_HitTestDefaults_Test::
+    RunTest(
+        const FString&)
+{
+    using namespace ck_webumg_layoutfidelity;
+
+    const auto IrPath = FPaths::Combine(CorpusGoldenDir(), TEXT("smoke.ckui.json"));
+    const auto Document = ck::webumg::LoadIrDocumentFromFile(IrPath);
+    if (NOT TestTrue(TEXT("smoke IR document loads"), Document.IsSet()))
+    { return false; }
+
+    const auto Built = ck::webumg::BuildWidgetTree(*Document);
+    if (NOT TestTrue(TEXT("smoke widget tree builds"), Built.RootWidget != nullptr))
+    { return false; }
+
+    auto IrNodesById = TMap<FString, TSharedPtr<const FCkWebUmg_IrNode>>{};
+    CollectIrNodesById(Document->Root, IrNodesById);
+
+    auto ReachableCount = 0;
+    auto DecorativeCount = 0;
+    for (const auto& [Id, Widget] : Built.WidgetsByIrId)
+    {
+        const auto* Node = IrNodesById.Find(Id);
+        if (NOT TestTrue(FString::Printf(TEXT("widget [%s] has an IR node"), *Id), Node != nullptr))
+        { continue; }
+
+        const auto Visibility = Widget->GetVisibility();
+        if ((*Node)->Paint.Visibility == TEXT("hidden"))
+        {
+            TestTrue(FString::Printf(TEXT("hidden node [%s] stays Hidden"), *Id),
+                Visibility == EVisibility::Hidden);
+        }
+        else if (NOT (*Node)->CkName.IsEmpty() || NOT (*Node)->CkBind.IsEmpty())
+        {
+            ++ReachableCount;
+            TestTrue(FString::Printf(TEXT("gameplay-reachable node [%s] stays hittable"), *Id),
+                Visibility == EVisibility::Visible);
+        }
+        else
+        {
+            ++DecorativeCount;
+            TestTrue(FString::Printf(TEXT("decorative node [%s] is SelfHitTestInvisible"), *Id),
+                Visibility == EVisibility::SelfHitTestInvisible);
+        }
+    }
+
+    TestTrue(TEXT("contract exercised both classes (>=1 reachable, >=1 decorative)"),
+        ReachableCount >= 1 && DecorativeCount >= 1);
+    AddInfo(FString::Printf(TEXT("smoke page: %d reachable, %d decorative"),
+        ReachableCount, DecorativeCount));
+    return true;
+}
+
 #endif // WITH_AUTOMATION_TESTS

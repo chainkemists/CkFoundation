@@ -522,6 +522,9 @@ private:
     FString _Browser;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FString _PageTitle; // the mockup's <title> — display metadata; naming stays the file basename
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FString _SourceHash; // MD5 of the source ckui.json text — the regeneration stamp
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
@@ -545,6 +548,7 @@ public:
     CK_PROPERTY(_SchemaVersion);
     CK_PROPERTY(_Viewport);
     CK_PROPERTY(_Browser);
+    CK_PROPERTY(_PageTitle);
     CK_PROPERTY(_SourceHash);
     CK_PROPERTY(_SourceJsonPath);
     CK_PROPERTY(_SourceHtmlPath);

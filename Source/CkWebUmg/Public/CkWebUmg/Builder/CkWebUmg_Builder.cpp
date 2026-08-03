@@ -809,6 +809,12 @@ namespace ck_webumg_builder
 
         if (InNode->Paint.Visibility == TEXT("hidden"))
         { Result->SetVisibility(EVisibility::Hidden); }
+        else if (InNode->CkName.IsEmpty() && InNode->CkBind.IsEmpty())
+        {
+            // Decorative nodes must never eat clicks aimed at gameplay-reachable widgets layered
+            // with them; Self keeps containers traversable so named/bound descendants still hit-test.
+            Result->SetVisibility(EVisibility::SelfHitTestInvisible);
+        }
 
         // overflow hidden/auto/scroll all clip paint; scrolling behavior itself is Gate 5 scope.
         const auto Clips = [](const FString& InOverflow)

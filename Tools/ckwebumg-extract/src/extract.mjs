@@ -821,10 +821,12 @@ const main = async () => {
             }
         }
 
+        const pageTitle = (await page.title()).trim();
         const ir = {
             schema: SCHEMA_VERSION,
             source: {
                 html: path.basename(inputPath),
+                ...(pageTitle !== '' ? { title: pageTitle } : {}),
                 viewport: [VIEWPORT.width, VIEWPORT.height],
                 dpr: VIEWPORT.deviceScaleFactor,
                 browser: version,

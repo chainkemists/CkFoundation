@@ -391,6 +391,7 @@ namespace ck::webumg
 
         const auto& SourceObj = RootObj->GetObjectField(TEXT("source"));
         Document.Browser = SourceObj->GetStringField(TEXT("browser"));
+        SourceObj->TryGetStringField(TEXT("title"), Document.Title);
         Document.Dpr = static_cast<float>(SourceObj->GetNumberField(TEXT("dpr")));
 
         const TArray<TSharedPtr<FJsonValue>>* ViewportValues = nullptr;

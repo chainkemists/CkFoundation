@@ -323,6 +323,7 @@ namespace ck::webumg
         InOutAsset.Set_SchemaVersion(InDocument.Schema);
         InOutAsset.Set_Viewport(InDocument.Viewport);
         InOutAsset.Set_Browser(InDocument.Browser);
+        InOutAsset.Set_PageTitle(InDocument.Title);
         InOutAsset.Set_SourceHash(InSourceHash);
         InOutAsset.Set_Nodes(Nodes);
         InOutAsset.Set_ConversionReport(Report);
@@ -340,6 +341,7 @@ namespace ck::webumg
         Document.Schema = InAsset.Get_SchemaVersion();
         Document.Viewport = InAsset.Get_Viewport();
         Document.Browser = InAsset.Get_Browser();
+        Document.Title = InAsset.Get_PageTitle();
         Document.Root = UnflattenNode(InAsset.Get_Nodes(), 0);
         for (const auto& [AssetId, Texture] : InAsset.Get_Textures())
         { Document.AssetSourcesById.Add(AssetId, AssetId); } // presence only; brushes come from the asset's textures

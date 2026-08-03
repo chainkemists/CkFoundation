@@ -21,13 +21,19 @@ Rewind 99) and wiring it to real gameplay data.
 4. **Live-reload preview** — watch the `.html`, re-extract, rebuild the preview widget in-editor
    ([EDITOR-VERIFY] heavy; extraction is a Node process the editor must spawn).
 5. **Editor UX** (inherited) — import context-menu/factory over the programmatic entry point.
+   Factory + reimport handler VERIFIED 2026-08-02 (58/58 incl. FactoryReimport). Tools-menu entry
+   ("Tools → CkWebUmg → Import Web Page…", file dialog → html/json import into `/Game/WebUmg`)
+   code landed 2026-08-02 — registration compiles; the click itself is [EDITOR-VERIFY]: open the
+   Tools menu, pick a corpus .html, confirm the asset appears. `<title>` now captured
+   extractor→IR→asset (`_PageTitle`, display metadata; naming stays the collision-safe basename).
 6. **Real-screen conversion [BLOCKED on Adam]** — needs the actual project mockup supplied.
 
 Added 2026-08-02 from the UIBridge reference intake (PriorArt §7, DECISIONS entry same date):
 
-7. **Hit-test defaults** — decorative nodes (pure-paint containers, text) default to
-   `(Self)HitTestInvisible` so backgrounds never eat clicks; confirmed absent today (no hit-test
-   handling anywhere in the builder). Small builder change + rect-suite assertion.
+7. **Hit-test defaults — ✅ DONE 2026-08-02 (59/59):** decorative nodes (no `data-ck-name`/`bind`)
+   build as `SelfHitTestInvisible` (subtree stays traversable), named/bound nodes stay `Visible`,
+   `visibility:hidden` wins. Enforced page-wide by `CkTests.UnitTests.CkWebUmg.HitTestDefaults`
+   (smoke corpus; vacuous-pass guarded — requires ≥1 node of each class).
 8. **Validation pre-pass** — a read-only validate mode over the IR (loader + report machinery
    already exist): errors block import, warnings don't, never touches the project.
 9. **Live-reload debounce spec** (folds into item 4 when built) — wait for a quiet period after

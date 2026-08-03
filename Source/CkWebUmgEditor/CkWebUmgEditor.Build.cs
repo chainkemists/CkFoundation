@@ -11,6 +11,10 @@ public class CkWebUmgEditor : CkModuleRules
             "Engine",
             "UnrealEd",
             "Projects",
+            "ToolMenus",
+            "DesktopPlatform",
+            "Slate",
+            "SlateCore",
 
             "CkCore",
             "CkLog",

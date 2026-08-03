@@ -92,6 +92,15 @@ Previous state — **As of 2026-08-01 (branch `feature/webumg-campaign`, tip `e4
   `Total:` against expectation after every test addition.
 - The `[UNVERIFIED]` marker on 96057afe1 is lifted. `[EDITOR-VERIFY]` remains for Adam: one
   interactive drag-drop of an .html into the Content Browser (factory path through real editor UI).
+- **Implementation round (post-verification): 59/59.** (a) Hit-test defaults landed + page-wide
+  contract test (`HitTestDefaults`; both classes exercised, vacuous-pass guarded). (b) Tools-menu
+  entry: `Tools → CkWebUmg → Import Web Page…` (DesktopPlatform file dialog → html/json import to
+  `/Game/WebUmg`; mimics CkJoltEditor's registration shape; Build.cs +ToolMenus/DesktopPlatform/
+  Slate/SlateCore). Registration compiled; the interactive click is [EDITOR-VERIFY]. (c) `<title>`
+  captured extractor→IR (`Title`)→asset (`_PageTitle`), SCHEMA.md updated; display metadata only —
+  asset naming stays the collision-safe basename (recorded rationale: title collisions + the
+  FindObject hash-no-op key must stay stable). Goldens NOT re-extracted (title absent = empty;
+  loader tolerates; live HtmlImport path covers the new field).
 - Typed box-shadow end-to-end (extractor `parseBoxShadow` wired → IR `ShadowLayers` → loader → `BakeShadowBrushes`). SDF rounded-rect coverage, separable Gaussian σ=blur/2 (CSS/Skia model), straight-alpha sRGB source-over layer compositing (CSS first-layer-topmost via composite-under iteration), transient-texture brushes. Outset = negative-padding SOverlay wrap of the final widget (shadow inherits transform/opacity, per CSS); inset = overlay above background below content, complement-blur clipped to the rounded silhouette.
 - Measured (28/28): P3 6.0603%→5.7471%, maxDelta 145→52. Card 1 exact. Probes prove the entire residual is §8 (colored glows brighter under UE's linear blend; black-over-dark identical in both spaces). P3+P4 now sit at the same platform ceiling; further paint work cannot move them without a §8 policy decision.
 - Ran: single build+test cycle post-settle (binary coherent — build launched after all edits).

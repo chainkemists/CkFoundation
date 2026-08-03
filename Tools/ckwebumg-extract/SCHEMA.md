@@ -10,6 +10,8 @@
   "schema": 1,
   "source": {
     "html": "smoke.html",            // basename of the extracted page
+    "title": "Smoke Page",           // the page's <title>, trimmed; OMITTED when empty.
+                                     // Display metadata only — asset naming stays the basename
     "viewport": [1920, 1080],        // extraction viewport — a recorded INPUT (brief §6)
     "dpr": 1,
     "browser": "Chrome/150.0.7871.188" // determinism is per-browser-version (Gate_01 risk 1)

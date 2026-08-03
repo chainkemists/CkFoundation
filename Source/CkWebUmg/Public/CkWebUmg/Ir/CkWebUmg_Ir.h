@@ -190,6 +190,8 @@ struct CKWEBUMG_API FCkWebUmg_IrDocument
     FIntPoint Viewport = FIntPoint::ZeroValue;
     float Dpr = 1.0f;
     FString Browser;
+    FString Title; // the page's <title> (empty when the mockup has none) — display metadata only;
+                   // asset/package naming stays the collision-safe file basename
     TMap<FString, FString> AssetSourcesById; // asset id -> src path relative to the page
     TArray<FCkWebUmg_IrDiagnostic> Diagnostics; // page-level extractor diagnostics
     TSharedPtr<FCkWebUmg_IrNode> Root;
