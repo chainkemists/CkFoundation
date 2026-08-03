@@ -9,13 +9,14 @@ resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
 **Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1 (bb0513333),
-2 (c01b43ef0 + 36ef940f7), 3 (5c8fc8cd6), and **4-core (Route processor + N1 enforcement +
-never-stash net test, 86d857995 + CkTests 5c8930a)** COMPLETE — **22/22 VoiceChat, EXIT 0,
-0 AS errors** (Test-VoiceChatP3-routing2.log). **N1, the green-light's standing mandatory
-condition, is now enforcement + test.** Remaining in Gate 3: item 4b (top-N fairness + S5
-drain measurement), item 5 (Positional3D probe routing set), item 6 (client receive/playback
-via the P2 jitter/synth machinery), items 7–10 (mute upstream, S4 teardown, S5 numbers, N7
-docs) + host-asymmetry and mute-stops-forwarding net tests.
+2 (c01b43ef0 + 36ef940f7), 3 (5c8fc8cd6), 4-core (86d857995), and **6 (client
+receive/playback, fcd8576f9 + CkTests 938ccf4)** COMPLETE — **22/22, EXIT 0, 0 AS errors**
+(Test-VoiceChatP3-receive.log). **The full mouth-to-ear machine path runs cross-world**
+(capture → VAD → encode → pace → relay → route → forward → jitter → decode); only audible
+speaker output remains human. N1 is enforcement + test. Remaining in Gate 3: item 4b (top-N
+fairness + S5 drain measurement), item 5 (Positional3D probe routing set, earns
+CkSpatialQuery), item 7 (listener mute upstream + mute-stops-forwarding net test), item 8
+(S4 teardown), host-asymmetry net tests, N7 docs.
 The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
 P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
 DefaultEngine.ini (a BB-repo decision; superproject untouched).
@@ -29,6 +30,25 @@ DefaultEngine.ini (a BB-repo decision; superproject untouched).
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — P3 item 6 complete: remote voice decodes cross-world (22/22)
+- **CkF fcd8576f9 + CkTests 938ccf4:** `FProcessor_VoiceTalker_ReceivePlayback` (all net modes —
+  a listen host hears clients too; time-stepping, no MarkedDirtyBy) drains forwarded bundles
+  into the talker's jitter buffer (frame i = header seq + i — valid because pacing selection is
+  provably contiguous: staleness drops a prefix, stop-at-first-misfit cuts a suffix), mirrors
+  header amplitude for remote `Get_CurrentAmplitude` parity, creates decoder/synth on demand.
+- **Consolidation, not duplication:** the P2 `_Loopback*` machinery is now the shared playout
+  chain — `Drain_Playout` + `TryCreate_PlaybackSynth` are single implementations used by both
+  Capture-loopback and remote receive (mutually exclusive per entity per machine); Capture's
+  block and StartTransmit's synth block collapsed into calls. Pipeline decode byte-identical
+  post-refactor (1.20 s / 115200 B) — behavior-preserving, proven.
+- **Routing spec upgraded** to the stronger property: the client world DECODED talker A's voice
+  into PCM (none for B); N1 never-stash equality now compares decoded bytes. Longer settle so
+  the jitter tail drains before the snapshot.
+- Ran: `--build --test --test-pattern VoiceChat --discover-fresh` → **22/22, EXIT 0, 0 AS
+  errors** (Test-VoiceChatP3-receive.log). **The full mouth-to-ear machine path now runs
+  cross-world: capture → VAD → encode → pace → relay → route → forward → jitter → decode.**
+  Only the audible speaker output remains human-verifiable.
 
 ### 2026-08-03 — P3 item 4 core complete: Route processor + N1 enforcement (22/22)
 - **CkF 86d857995 + CkTests 5c8930a:** `FProcessor_VoiceChat_Route` (AuthorityOnly, after
