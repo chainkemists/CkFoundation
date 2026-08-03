@@ -7,9 +7,11 @@
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
 #include "CkVoiceChat/Codec/CkVoiceChat_Codec.h"
+#include "CkVoiceChat/Playback/CkVoiceChatSynth_Component.h"
 #include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment_Data.h"
 
 #include <Templates/SharedPointer.h>
+#include <UObject/StrongObjectPtr.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -65,6 +67,7 @@ namespace ck
         TSharedPtr<IVoiceDecoder> _LoopbackDecoder;
         TArray<uint8> _LoopbackDecodedPcm;
         double _LoopbackPopAccumulatorSeconds = 0.0;
+        TStrongObjectPtr<UCk_VoiceChatSynthComponent_UE> _LoopbackSynth;
 
     public:
         CK_PROPERTY_GET(_Seq);

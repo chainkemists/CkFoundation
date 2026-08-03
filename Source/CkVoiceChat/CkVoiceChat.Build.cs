@@ -15,6 +15,7 @@ public class CkVoiceChat : CkModuleRules
         // configurations, not attitude queries.
         PublicDependencyModuleNames.AddRange(new string[]
         {
+            "AudioMixer",
             "Core",
             "CoreUObject",
             "DeveloperSettings",

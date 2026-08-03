@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -161,6 +162,21 @@ namespace ck
         {
             constexpr auto NumChannels = 1;
             InCurrent._LoopbackDecoder = FVoiceModule::Get().CreateVoiceDecoder(SampleRate, NumChannels);
+        }
+
+        if (InParams.Get_Loopback() == ECk_EnableDisable::Enable && NOT InCurrent._LoopbackSynth.IsValid())
+        {
+            auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+
+            if (ck::IsValid(World) && World->GetAudioDevice().IsValid())
+            {
+                auto* Synth = NewObject<UCk_VoiceChatSynthComponent_UE>(World);
+                Synth->bAutoActivate = false;
+                Synth->RegisterComponentWithWorld(World);
+                Synth->Start();
+
+                InCurrent._LoopbackSynth = TStrongObjectPtr{Synth};
+            }
         }
 
         const auto CaptureStarted = InCurrent._CaptureSource->Start();
@@ -373,6 +389,13 @@ namespace ck
             if (PopResult.Get_Type() == ECk_VoiceChat_JitterPop::Conceal)
             {
                 InCurrent._LoopbackDecodedPcm.AddZeroed(FrameBytes);
+
+                if (InCurrent._LoopbackSynth.IsValid())
+                {
+                    auto SilentFrame = TArray<int16>{};
+                    SilentFrame.SetNumZeroed(FrameBytes / 2);
+                    InCurrent._LoopbackSynth->Enqueue_DecodedPcm(SilentFrame);
+                }
                 continue;
             }
 
@@ -385,6 +408,13 @@ namespace ck
             if (DecodedSize > 0)
             {
                 InCurrent._LoopbackDecodedPcm.Append(Decoded.GetData(), static_cast<int32>(DecodedSize));
+
+                if (InCurrent._LoopbackSynth.IsValid())
+                {
+                    InCurrent._LoopbackSynth->Enqueue_DecodedPcm(TArrayView<const int16>{
+                        reinterpret_cast<const int16*>(Decoded.GetData()),
+                        static_cast<int32>(DecodedSize) / 2});
+                }
             }
         }
 
@@ -411,6 +441,14 @@ namespace ck
         {
             InCurrent._CaptureSource->Stop();
         }
+
+        if (auto* Synth = InCurrent._LoopbackSynth.Get();
+            ck::IsValid(Synth))
+        {
+            Synth->Stop();
+            Synth->DestroyComponent();
+        }
+        InCurrent._LoopbackSynth.Reset();
 
         InCurrent._CaptureSource.Reset();
         InCurrent._Encoder.Reset();
