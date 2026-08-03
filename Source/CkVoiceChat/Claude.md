@@ -13,10 +13,10 @@ entity under a host, per-channel spatialization policy/attenuation/effect chain)
 (the local ears — per-talker client mute + receive volume). Zero coupling to OnlineSubsystem,
 sessions, or external services.
 
-**Depends on (P0):** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkRecord`, `CkSettings`.
-UE: `DeveloperSettings`, `GameplayTags`. Later phases add deps only as their code earns them
-(review N4): P2 `AudioMixer`/`AudioCaptureCore`/`Voice`, P3 `NetCore`/`CkActorRelay`/`CkSpatialQuery`,
-P3/P4 `CkResourceLoader`. Never `CkRelationship`.
+**Depends on (as of P3):** `CkActorRelay`, `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`,
+`CkRecord`, `CkSettings`. UE: `AudioMixer`, `DeveloperSettings`, `GameplayTags`, `NetCore`,
+`Voice`. Still to be earned: `CkSpatialQuery` (P3 item 5, the routing probe), `CkResourceLoader`
+(P4 asset resolution). Never `CkRelationship`.
 
 ---
 
@@ -33,6 +33,27 @@ P3/P4 `CkResourceLoader`. Never `CkRelationship`.
   (`ck::voice_chat::defaults`): codec (48 kHz/24 kbps/20 ms), transport (frames per RPC, byte
   budget), routing (MaxAudibleSpeakers 8 server-only, hysteresis), playback (jitter depths,
   default attenuation).
+
+## Routing-policy matrix (review N7) — who receives a talker's bundles
+
+The server routing pipeline is two processors: `FProcessor_VoiceChat_Route` (per talker:
+authorization + staging) then `FProcessor_VoiceChat_FlushForwards` (per recipient: fairness cap →
+byte budget → send). A bundle reaches a recipient only if EVERY row below passes:
+
+| Gate (in order) | Positional3D | Global2D | HybridRadio (P4) |
+|---|---|---|---|
+| Wire `ChannelIdx` resolves in the registry | required (drop + count, never stash — N1) | same | same |
+| Stamped sender owns the talker (spoof guard) | required where both resolve; player-less (NPC) talkers skip it — **known v1 gap**, an owning player can transmit on any NPC talker | same | same |
+| Talker is a member with `CanTalk`, not server-muted | required | required | required (membership IS the entitlement) |
+| Recipient set | `CanHear` members — **range filter via the routing probe lands with gate item 5**; until then identical to Global2D | `CanHear` members regardless of range | `CanHear` members; one wire copy, 3D-vs-radio branch chosen client-side at render |
+| Not the talker entity, not the talker's own connection | required (no echo back) | same | same |
+| Recipient has not listener-muted the talker | required (the privacy exclusion — muted audio is never SENT) | same | same |
+| Audible-speaker cap (`MaxAudibleSpeakers`, default 8) | envelope-bucket priority, least-recently-served rotation at saturation | same | same |
+| Per-connection byte budget this tick | required | same | same |
+
+Listen-server host: the host's capture injects straight into its own routing inbox (no
+self-RPC); the host receives other talkers like any client (a Client RPC on a host-owned relay
+executes locally).
 
 ## Anti-patterns
 
