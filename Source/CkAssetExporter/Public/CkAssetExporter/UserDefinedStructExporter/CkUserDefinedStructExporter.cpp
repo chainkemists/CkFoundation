@@ -155,7 +155,7 @@ auto
         // GetAuthoredName() strips the GUID suffix UDS appends to field names; GetName() keeps it.
         FieldObject->SetStringField(TEXT("name"), Property->GetAuthoredName());
         FieldObject->SetStringField(TEXT("internalName"), Property->GetName());
-        FieldObject->SetStringField(TEXT("type"), Property->GetCPPType());
+        FieldObject->SetStringField(TEXT("type"), FCk_DataAssetExporter::Get_SafeCPPType(Property));
 
         const auto Category = Property->GetMetaData(TEXT("Category"));
         if (NOT Category.IsEmpty())
@@ -235,7 +235,7 @@ auto
         }
 
         Text += ck::Format_UE(TEXT("  ({}) {} = {}\n"),
-            Property->GetCPPType(),
+            FCk_DataAssetExporter::Get_SafeCPPType(Property),
             Property->GetAuthoredName(),
             DefaultValue);
     });

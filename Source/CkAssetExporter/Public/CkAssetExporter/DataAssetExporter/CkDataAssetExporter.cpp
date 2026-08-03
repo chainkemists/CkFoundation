@@ -4,6 +4,7 @@
 #include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
@@ -37,6 +38,46 @@ namespace ck_data_asset_exporter_internal
     thread_local int32 GPropertyRecursionDepth = 0;
     thread_local TSet<const UObject*> GObjectsAlreadyExported;
     thread_local TSet<const void*>    GStructMemoryAlreadyExported;
+
+    // GetCPPType dereferences these without null checks; a field whose referenced type was deleted
+    // (or sits behind a dead redirector) loads with a null class pointer and crashes the sweep.
+    auto
+    Get_IsCPPTypeResolvable(
+        const FProperty* InProperty)
+        -> bool
+    {
+        if (InProperty == nullptr)
+        { return false; }
+
+        if (const auto* ClassProperty = CastField<FClassProperty>(InProperty))
+        { return ClassProperty->PropertyClass != nullptr && ClassProperty->MetaClass != nullptr; }
+
+        if (const auto* SoftClassProperty = CastField<FSoftClassProperty>(InProperty))
+        { return SoftClassProperty->PropertyClass != nullptr && SoftClassProperty->MetaClass != nullptr; }
+
+        if (const auto* ObjectProperty = CastField<FObjectPropertyBase>(InProperty))
+        { return ObjectProperty->PropertyClass != nullptr; }
+
+        if (const auto* InterfaceProperty = CastField<FInterfaceProperty>(InProperty))
+        { return InterfaceProperty->InterfaceClass != nullptr; }
+
+        if (const auto* StructProperty = CastField<FStructProperty>(InProperty))
+        { return StructProperty->Struct != nullptr; }
+
+        if (const auto* EnumProperty = CastField<FEnumProperty>(InProperty))
+        { return EnumProperty->GetEnum() != nullptr; }
+
+        if (const auto* ArrayProperty = CastField<FArrayProperty>(InProperty))
+        { return Get_IsCPPTypeResolvable(ArrayProperty->Inner); }
+
+        if (const auto* SetProperty = CastField<FSetProperty>(InProperty))
+        { return Get_IsCPPTypeResolvable(SetProperty->ElementProp); }
+
+        if (const auto* MapProperty = CastField<FMapProperty>(InProperty))
+        { return Get_IsCPPTypeResolvable(MapProperty->KeyProp) && Get_IsCPPTypeResolvable(MapProperty->ValueProp); }
+
+        return true;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -180,7 +221,7 @@ auto
 
         auto PropObject = MakeShared<FJsonObject>();
         PropObject->SetStringField(TEXT("name"), Property->GetName());
-        PropObject->SetStringField(TEXT("type"), Property->GetCPPType());
+        PropObject->SetStringField(TEXT("type"), Get_SafeCPPType(Property));
 
         const auto Category = Property->GetMetaData(TEXT("Category"));
         if (NOT Category.IsEmpty())
@@ -222,6 +263,11 @@ auto
 
     if (InProperty == nullptr || InValuePtr == nullptr)
     { return MakeShared<FJsonValueNull>(); }
+
+    // A property whose referenced type no longer exists cannot be value-serialized either —
+    // ExportTextItem/struct walks dereference the same null pointer Get_SafeCPPType guards against.
+    if (NOT Get_IsCPPTypeResolvable(InProperty))
+    { return MakeShared<FJsonValueString>(TEXT("<unresolved type>")); }
 
     // ONE budget shared by every kind of descent (struct member, FInstancedStruct payload, container element,
     // instanced object): recursion can wander through structs and arrays indefinitely without ever reaching the
@@ -577,7 +623,7 @@ auto
         {
             OutText += ck::Format_UE(TEXT("{}    ({}) {} = {}\n"),
                 Indent,
-                Property->GetCPPType(),
+                Get_SafeCPPType(Property),
                 Property->GetName(),
                 DoGetPropertyValueAsString(Property, InObject));
         });
@@ -614,6 +660,9 @@ auto
         const void* InContainer)
     -> FString
 {
+    if (NOT ck_data_asset_exporter_internal::Get_IsCPPTypeResolvable(InProperty))
+    { return TEXT("<unresolved type>"); }
+
     auto Value = FString{};
     const auto* ValuePtr = InProperty->ContainerPtrToValuePtr<void>(InContainer);
     InProperty->ExportTextItem_Direct(Value, ValuePtr, nullptr, nullptr, PPF_None);
@@ -643,6 +692,25 @@ auto
     { return true; }
 
     return false;
+}
+
+auto
+    FCk_DataAssetExporter::
+    Get_SafeCPPType(
+        const FProperty* InProperty)
+    -> FString
+{
+    const auto TypeIsResolvable = ck_data_asset_exporter_internal::Get_IsCPPTypeResolvable(InProperty);
+    CK_ENSURE_IF_NOT(TypeIsResolvable,
+        TEXT("Property [{}] on [{}] has an unresolved type (deleted class/struct/enum or dead redirector) — "
+             "exporting UNRESOLVED sentinel instead of its CPP type"),
+        InProperty ? InProperty->GetName() : TEXT("<null>"),
+        InProperty ? InProperty->GetOwnerVariant().GetName() : TEXT("<null>"))
+    {}
+    if (NOT TypeIsResolvable)
+    { return ck::Format_UE(TEXT("UNRESOLVED({})"), InProperty ? InProperty->GetName() : TEXT("<null>")); }
+
+    return InProperty->GetCPPType();
 }
 
 auto
