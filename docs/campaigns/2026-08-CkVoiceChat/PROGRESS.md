@@ -8,12 +8,14 @@ counters landed, 136ca780f; Conceal zero-fill + HandleRequests-synth recorded as
 resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
-**Next action:** the two HUMAN items in Gate_2.md — mic `[EDITOR-VERIFY]` loopback and the N5
-packaged Opus smoke; both gated on adding `[Voice] bEnabled=true` to BB's DefaultEngine.ini
-(a BB-repo decision — this campaign leaves the superproject untouched). **P3 opens only after
-both.** P3 carries N1–N3/N7 + S1–S5 (PROMPT.md) plus audit findings F3/F6 (open items below).
-**Blocked on:** the human items — the machine side has nothing left to do.
-Nothing pushed anywhere; superproject gitlink untouched.
+**Next action:** **Gate 3 (P3) OPENED 2026-08-03** ([Gate_3.md](Gate_3.md)) on the maintainer's
+"continue" — the two HUMAN items in Gate_2.md (mic `[EDITOR-VERIFY]`, N5 packaged smoke)
+reclassified as **P2-verification obligations gating the campaign's ship (P5)**, not P3's
+transport work (decision + revert hook recorded in Gate_3.md's status header). Both still need
+`[Voice] bEnabled=true` in BB's DefaultEngine.ini (a BB-repo decision — this campaign leaves the
+superproject untouched). P3 carries N1–N3/N7 + S1–S5 + audit F3/F6; work items sequenced in
+Gate_3.md.
+**Blocked on:** nothing machine-side. Nothing pushed anywhere; superproject gitlink untouched.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
