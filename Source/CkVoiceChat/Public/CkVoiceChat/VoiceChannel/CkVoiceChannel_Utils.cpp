@@ -410,6 +410,24 @@ auto
         {
             Current._ServerMuted.Add(Muted);
         }
+
+        // Mirror the registry entry onto this world's transient entity so idx-based resolution
+        // (TryGet_ChannelByIdx - the receive path) and channel enumeration (the outbound path)
+        // work on clients exactly as they do on the authority.
+        auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InChannelHost);
+        auto& Registry = TransientEntity.AddOrGet<ck::FFragment_VoiceChat_ChannelRegistry>();
+
+        const auto ExistingIdx = Registry._Entries.IndexOfByPredicate(
+            [&](const ck::FCk_VoiceChat_ChannelRegistryEntry& InEntry)
+            { return InEntry.Get_ChannelIdx() == Entry.Get_ChannelIdx(); });
+
+        auto MirroredEntry = ck::FCk_VoiceChat_ChannelRegistryEntry{
+            Entry.Get_ChannelName(), Channel, Entry.Get_ChannelIdx()};
+
+        if (ExistingIdx == INDEX_NONE)
+        { Registry._Entries.Emplace(MoveTemp(MirroredEntry)); }
+        else
+        { Registry._Entries[ExistingIdx] = MoveTemp(MirroredEntry); }
     }
 
     return ECk_Persistence_ApplyResult::Applied;

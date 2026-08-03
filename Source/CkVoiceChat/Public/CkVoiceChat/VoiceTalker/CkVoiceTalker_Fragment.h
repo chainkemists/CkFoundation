@@ -35,6 +35,30 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // One encoded frame awaiting send, timestamped on the capture clock so the pacing step can
+    // drop stale entries BEFORE the transport queue ever sees them (the Iris ordered-unreliable
+    // path queues silently and never drops - freshness is a send-side responsibility).
+    struct CKVOICECHAT_API FCk_VoiceChat_OutboundFrame
+    {
+    public:
+        CK_GENERATED_BODY(FCk_VoiceChat_OutboundFrame);
+
+    private:
+        uint16 _Seq = 0;
+        TArray<uint8> _Encoded;
+        double _CaptureTimeSeconds = 0.0;
+
+    public:
+        CK_PROPERTY_GET(_Seq);
+        CK_PROPERTY_GET(_Encoded);
+        CK_PROPERTY_GET(_CaptureTimeSeconds);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FCk_VoiceChat_OutboundFrame, _Seq, _Encoded, _CaptureTimeSeconds);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKVOICECHAT_API FFragment_VoiceTalker_Current
     {
     public:
@@ -62,6 +86,8 @@ namespace ck
         FCk_VoiceChat_Vad _Vad;
         TArray<uint8> _PendingPcm;
         double _CaptureClockSeconds = 0.0;
+
+        TArray<FCk_VoiceChat_OutboundFrame> _OutboundFrames;
 
         // local self-monitor path: encoded frames run back through the real playback policy
         FCk_VoiceChat_JitterBuffer _LoopbackJitter;
@@ -107,6 +133,10 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    // Voice is disposable: an inbox nobody drains yet (composition races, a paused world) must
+    // never grow unbounded - past this cap new bundles are dropped and counted.
+    inline constexpr int32 VoiceChat_MaxInboxBundles = 256;
 
     // Server-side, on the talker entity: packed bundles that arrived over the relay, stamped with
     // the sending player at the RPC boundary (clients are not trusted to self-identify).
