@@ -1,13 +1,14 @@
 # CkVoiceChat — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-08-03 (branch `feature/voice-chat`, base d02278cdd):** Gate 0 in progress —
-campaign docs landed; skeleton scaffold next.
-**Baseline being diffed against:** not yet captured (pre-build; capture before the gate's test
-runs).
-**Next action:** scaffold `Source/CkVoiceChat/`.
-**Blocked on:** nothing. NOTE: a sibling session's headless test run (`BusterBlockEditor-Cmd`
-PID 22316 + UnrealToolbox) was live at session start — `--build` waits until it ends.
+**As of 2026-08-03 (CkFoundation `feature/voice-chat` at the Gate-0 close commit; CkTests
+`feature/voice-chat` at 8808cae):** **Gate 0 work COMPLETE — campaign PAUSED awaiting the
+top-tier audit** ([Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md)). Spike verdict:
+**PROCEED — ADR-4 holds**; amendments S1–S5 binding on P3.
+**Baseline being diffed against:** waived for the purely-additive branch (honest gap flagged to
+the auditor); regression evidence = RenderTarget suite 22/22 on the final binary + 3 clean boots.
+**Next action:** top-tier audit of the review package; on GO → open Gate 1 (Codec pure layer).
+**Blocked on:** the audit. Nothing pushed anywhere; superproject gitlink untouched.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -17,6 +18,37 @@ PID 22316 + UnrealToolbox) was live at session start — `--build` waits until i
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — Gate 0 closed: build + AS + spike green; verdict PROCEED
+- Ran: `UnrealToolbox --build --config=Development --target=Editor` → `Result: Succeeded`
+  (Build-Editor-VoiceChatP0.log). Machine gotcha recorded: `--generate` fails here (no VS2022
+  IDE — project-file generation needs it, UBT does not); a first failed toolbox invocation also
+  sat on the machine-wide build lock without exiting and had to be killed (own process, verified
+  by start time + already-failed log).
+- Ran: spike suite three times (fix cycle recorded in the memo's Run record). Final:
+  `--test --test-pattern VoiceChat.Spike --discover-fresh` → **2/2 passed, EXIT CODE: 0**
+  (Test-VoiceChatSpike3.log). Numbers: Phase A 300/300, lag −2 const (zero added latency),
+  ~214 B/RPC; Phase B 2400/2400 drained, lag max 298; Phase C (+60 KB/t churn) 2400/2400, lag
+  37/484/641; unresolved-target burst 25/25 delivered, 0 net warnings.
+- Ran: AS gate — 0 `Angelscript: Error` in the run-3 boot; 4 `utils_voice_*` wrappers emitted.
+- Ran: adjacent regression — `--test --test-pattern RenderTarget` → **22/22 passed, EXIT 0**,
+  2m48s (Test-RenderTargetRegression.log), on the final binary.
+- Confirmed: the three load-bearing Iris claims re-read by hand (`NetRPCHandler.cpp:24-33`
+  Ordered flag on all unicast RPCs; `AttachmentReplication.cpp:215-226` Ordered→reliable-queue
+  routing; `PartialNetObjectAttachmentHandler.h:30` 256 B server unreliable split threshold).
+- Spike harness defects found+fixed en route (in the committed history, not hidden): 65,536-byte
+  pressure payload tripped Iris's 65,535-element array cap; send-window fencepost (299/300);
+  AddInfo lines don't reach captured logs (→ UE_LOG); fixed-settle windows measure the window,
+  not the transport (→ drain-to-completion + lag as the pressure metric).
+- Inferred (unconfirmed, named for the auditor): BP-editor surface renders correctly
+  (`[EDITOR-VERIFY]` steps in the review package); production-config drain budget (S5 makes it a
+  P3 measurement); lag-tick→wall-clock conversion assumes ~60 fps PIE ticking.
+
+## Decision log (Gate-0 close additions)
+| Date | Decision | Why | Revisit when |
+|---|---|---|---|
+| 2026-08-03 | Spike verdict PROCEED; latency (not loss) is the pressure response; S1–S5 bound it | Memo § Verdict — mechanism + measurement agree | P3 profile (S5 measurement) contradicts |
+| 2026-08-03 | Spike tests stay committed + green under `Ck.VoiceChat.Spike.*`, marked THROWAWAY | Red-by-design tests would pollute the suite; green canaries are harmless | Campaign end (delete) or auditor keeps them |
 
 ### 2026-08-03 — skeleton + doctrine + spike code landed; build gate running
 - Ran: scaffold committed as CkFoundation 9b0a55d22 (28 files: 3 quartets, Settings, Log/Stats/
@@ -72,8 +104,9 @@ PID 22316 + UnrealToolbox) was live at session start — `--build` waits until i
 ## Open items
 | Item | Status | Next step |
 |---|---|---|
-| Skeleton scaffold | 🟡 in progress | land, then build gate |
-| ADR-4 doctrine amendment | ⏳ | after scaffold |
-| P0 spike + memo | ⏳ | after amendment; CkTests branch |
-| Build + AS gates | ⏳ | after sibling's editor run ends |
-| Gate-review package | ⏳ | last |
+| Skeleton scaffold | ✅ 9b0a55d22 | audited at gate review |
+| ADR-4 doctrine amendment | ✅ 1ff7decf9 | audited at gate review |
+| P0 spike + memo | ✅ memo FINAL, tests 2/2 green | audited at gate review |
+| Build + AS + regression gates | ✅ all green (see 2026-08-03 entry) | — |
+| Gate-review package | ✅ Gate_0_ReviewPackage.md | **top-tier audit — the only open item** |
+| `[EDITOR-VERIFY]` BP surface | ⏳ human | steps in the review package |

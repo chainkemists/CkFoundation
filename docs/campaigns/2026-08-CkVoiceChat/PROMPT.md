@@ -92,6 +92,7 @@ voice rides the reliable-queue machinery (deep silent queue; sent-once/never-res
 | S2 | **The pacing processor bounds FRESHNESS, not just bytes** — the transport queues ~4096 bundles silently; drop stale frames server-side before enqueue or latency replaces loss |
 | S3 | **Bundle ≤ 3 × 20 ms frames; serialized RPC < 256 B** — the server→client unreliable split threshold makes bigger payloads all-or-nothing multi-part |
 | S4 | **Teardown/travel windows stop sends before destroying channel actors** — a client receiving RPCs for an unresolvable object emits unthrottled `LogIrisRpc` Errors |
+| S5 | **P3 gate measures the per-connection drain budget under production net config** and sets the voice byte budget below it with headroom — the spike's PIE config drained ~850 B/tick while 8 talkers × 25 Hz × ~214 B ≈ 43 kB/s (added 2026-08-03 with the spike verdict) |
 
 ## Non-goals (v1) — spec §2
 

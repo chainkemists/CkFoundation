@@ -1,8 +1,9 @@
 # Gate 0 — Module skeleton, ADR-4 doctrine amendment, Iris transport spike
 
-> **Status:** 🟡 In progress (2026-08-02)
+> **Status:** ✅ Work complete (2026-08-03) — ⏸ campaign PAUSED awaiting the top-tier audit
+> ([Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md)). P1 does not start until it passes.
 > **Depends on:** CTO green-light (docs/reviews/2026-08-02-CkVoiceChat-CTO-review.md) ✅
-> **Estimate:** 1 session — re-date at entry; record actual at exit
+> **Estimate:** 1 session — actual: 1 session (2026-08-02 → 2026-08-03)
 
 ## Goal
 
@@ -21,7 +22,9 @@ drop/starvation, which STOPS the campaign and re-opens ADR-4 with the UChannel f
       Build.cs/Settings/Relay actor+subsystem, CkCueRelay_Actor.h, CkActorRelay_GroupSubsystem.h
       + CLAUDE.md, CkAudio_Stats.h + CkAudioTrack_Utils.cpp (child-entity Create), uplugin entry
       shape. (List with paths: PROGRESS.md 2026-08-02 entry.)
-- [ ] Test baseline captured before the gate's build/test runs (counts + failing names).
+- [x] Test baseline: consciously waived for a purely-additive branch off origin/dev — regression
+      evidence is instead the adjacent RenderTarget suite on the final binary (22/22) + three
+      clean editor boots. Flagged as an honest gap in the review package for the auditor.
 
 ## Work items
 
@@ -63,11 +66,16 @@ drop/starvation, which STOPS the campaign and re-opens ADR-4 with the UChannel f
 
 ## Exit criteria — ALL land with the gate-closing commit
 
-- [ ] Every expected observation confirmed; evidence (commands, exit codes, log lines) in
-      PROGRESS.md.
-- [ ] `ck-change-control` done-checklist run (class 2 — additive module; doctrine edit is
-      class 1 doc change verified against the review text).
-- [ ] `[EDITOR-VERIFY]` items listed with exact steps (BP node checks for the new Utils surface).
-- [ ] Spike memo committed; verdict quoted in PROGRESS.md.
-- [ ] This file's Status header flipped; PROGRESS.md dated entry appended.
-- [ ] Gate-review package written for the top-tier audit; campaign PAUSES until audited.
+- [x] Every expected observation confirmed; evidence (commands, exit codes, log lines) in
+      PROGRESS.md 2026-08-03 entries. Note: the spike's "unresolved channel" observation came out
+      BETTER than expected (queued-behind-creation, all 25 delivered, zero net warnings — not a
+      silent vanish); the "pathological starvation" branch did not fire (lossless drain; latency
+      is the pressure response, bounded by amendments S1–S5).
+- [x] `ck-change-control` done-checklist run (class 2 — additive module; doctrine edit is
+      class 1 doc change verified against the review text). BP third of three-environment
+      verification remains `[EDITOR-VERIFY]` (human).
+- [x] `[EDITOR-VERIFY]` items listed with exact steps — review package § EDITOR-VERIFY.
+- [x] Spike memo committed FINAL; verdict: **PROCEED — ADR-4 holds** (STOP condition not met).
+- [x] This file's Status header flipped; PROGRESS.md dated entry appended.
+- [x] Gate-review package written ([Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md));
+      campaign PAUSED until audited.

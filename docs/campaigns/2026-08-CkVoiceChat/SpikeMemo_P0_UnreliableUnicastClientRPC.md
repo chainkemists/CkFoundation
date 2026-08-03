@@ -1,6 +1,6 @@
 # P0 Spike Memo — Unreliable unicast Client-direction RPCs under the fork's Iris stack
 
-> **Date:** 2026-08-03 · **Status:** DRAFT — empirical sections pending the first spike run.
+> **Date:** 2026-08-03 · **Status:** FINAL — verdict: **PROCEED, ADR-4 holds** (see Verdict).
 > **Artifact of:** Gate 0, work item 4 ([Gate_0.md](Gate_0.md)). Spike code (throwaway):
 > CkTests `feature/voice-chat` — `CkAutoTest_VoiceSpike.{h,cpp}`,
 > `CkVoiceChat_TransportSpike.spec.cpp` (`Ck.VoiceChat.Spike.*`).
@@ -55,11 +55,27 @@ replication-record starvation (below 1000 free records only OOB/huge objects wri
 `ReplicationWriter.cpp:90-92`, `:3409`). Pressure converts to latency through the deep ordered
 queue.
 
-**Empirical [PENDING — fill from `Ck.VoiceChat.Spike.UnreliableUnicast_DeliveryUnderLoad`]:**
-- Phase A (1 bundle/tick × 300, no pressure): delivery %, lag min/avg/max = …
-- Phase B (8 bundles/tick × 300): …
-- Phase C (8 bundles/tick × 300 + 64 KB/tick state churn): delivery %, lag delta vs Phase A = …
-- Reliable-control yardstick delivered in full: …
+**Empirical [CONFIRMED — `Ck.VoiceChat.Spike.UnreliableUnicast_DeliveryUnderLoad`, runs 2+3]:**
+two-world PIE (listen server + 1 client), Iris on, 190 B bundles, reliable control RPC every 10
+ticks as yardstick. Lag is in ticks relative to a −2 spawn-offset baseline; "cutoff" = run 2's
+fixed observation window; "drained" = run 3, which waits until recv == sent.
+
+| Phase | Offered | Drained | Out-of-order | Lag min/avg/max (ticks) | Wire bytes |
+|---|---|---|---|---|---|
+| A: 1 bundle/tick × 300 | 300 | **300 (100%)** | 0 | −2 / −2.0 / −2 (**zero added latency**) | 76,954 |
+| B: 8 bundles/tick × 300 | 2,400 | **2,400 (100%)** | 0 | −2 / 148 / **298** | 512,574 |
+| C: B + 60 KB/tick state churn | 2,400 | **2,400 (100%)** | 0 | 37 / 484 / **641** | 1,109,126 |
+
+Reliable control: 30/30 delivered in every phase (after drain). At run 2's fixed cutoff the same
+phases read 100% / 60.5% / 33.5% delivered and control 30/30 / 18/30 / 10/31 — i.e. **nothing was
+lost; the backlog simply outlived the window.** Idle baseline: 4,984 wire bytes / 120 ticks.
+
+**Reading:** delivery is lossless and strictly ordered in-process; over-budget offered load
+(phases B/C run ~2.4× production cadence per stream, ×8 streams) converts entirely into queueing
+latency — max lag ~5 s (B) / ~10 s (C) at 60 fps equivalents. Phase A — the closest proxy for one
+production stream — is latency-free. No coalescing, no starvation, no drops. This matches the
+mechanism exactly and is the behavior amendment S2 (pace for freshness, drop stale server-side)
+exists to bound.
 
 ### (b) Client has not resolved the target channel actor
 
@@ -84,9 +100,12 @@ locally (travel/teardown windows) while frames are still in flight. Separately, 
 malformed-stream paths **close the connection** (`ReplicationReader.cpp:1377-1397`, `:3304-3309`;
 `AttachmentReplication.cpp:1041-1046` — the last one is unreachable for ordered blobs).
 
-**Empirical [PENDING — fill from `Ck.VoiceChat.Spike.UnresolvedTarget_SilentDrop`]:** burst of
-20 unreliable + 5 reliable fired the same frame as the spawn → received counts, LogNet/LogIris
-warning-or-worse count, samples = …
+**Empirical [CONFIRMED — `Ck.VoiceChat.Spike.UnresolvedTarget_SilentDrop`, passing in all runs]:**
+20 unreliable + 5 reliable Client RPCs fired the SAME FRAME the channel actor was spawned (before
+any replication tick): **all 25 delivered once the actor resolved on the client; zero
+LogNet/LogIris warnings-or-worse during the window.** Confirms mechanism case 2/3 — in-flight
+RPCs queue behind creation and burst-deliver after confirmation; no vanish, no storm. The Error
+storm remains reachable only through the client-side teardown window (amendment S4).
 
 ### (c) Per-RPC overhead at ~25 Hz; bundle sizing
 
@@ -106,7 +125,12 @@ framing) sits safely under the threshold; do NOT grow the bundle past 3 × 20 ms
 24 kbps.** Higher bitrates or bigger bundles must either stay under 256 B serialized or raise
 `[/Script/IrisCore.PartialNetObjectAttachmentHandlerConfig]` in config (it is `UPROPERTY(Config)`).
 
-**Empirical [PENDING]:** wire-bytes per phase vs idle baseline → measured per-RPC cost = …
+**Empirical [CONFIRMED]:** Phase A wire math: (76,954 − 305 × 41.5 idle) ÷ 300 RPCs ≈
+**214 B per RPC for a 190 B payload → ~24 B all-in wire overhead** (attachment framing + batch
+header + packet share at one RPC per packet-tick — the worst amortization case; multi-bundle
+ticks amortize better, e.g. Phase B ≈ 205 B/RPC). ~11% overhead at the spec's bundle size: the
+2–3-frame bundle is comfortably efficient, and growing it is prohibited by the split threshold
+anyway.
 
 ## Incidental findings
 
@@ -134,11 +158,29 @@ framing) sits safely under the threshold; do NOT grow the bundle past 3 × 20 ms
 
 ## Verdict
 
-**[PENDING the empirical run.]** The STOP condition (pathological drop/starvation) has no
-mechanism to occur for ordered-unreliable attachments per the source read; the failure mode to
-judge instead is queueing latency under saturation, bounded by design amendment 2. Final verdict
-after the spike run's numbers land below.
+**PROCEED — ADR-4 holds. The STOP condition is not met.** No pathological drop or starvation
+exists on this path, by mechanism (no drop site exists for ordered-unreliable attachments short
+of the silent 4096 pre-queue rejection) and by measurement (100% drain under 3× overdrive plus
+state saturation). The failure mode is **queueing latency**, which is bounded by design:
+amendments S1–S4 (PROMPT.md) are binding on P3, with S2 (the pacing processor bounds freshness —
+drop stale frames server-side before enqueue) carrying the load. One P3 gate obligation added:
+**measure the per-connection drain budget in production net config and set the voice byte budget
+below it with headroom** — the spike's PIE config drained ~850 B/tick, and 8 talkers × 25 Hz ×
+~214 B ≈ 43 kB/s must fit the real budget, not the PIE default.
 
 ## Run record
 
-[PENDING — commands, exit codes, and the `[VoiceSpike]` log lines verbatim.]
+- Build: `UnrealToolbox --build --config=Development --target=Editor` → `Result: Succeeded`
+  (Build-Editor-VoiceChatP0.log). Machine note: `--generate` fails on this box (no VS2022 IDE);
+  UBT needs no project files — build without it.
+- Run 1 (2026-08-03, Test-VoiceChatSpike.log): UnresolvedTarget PASS; DeliveryUnderLoad FAIL on
+  two harness defects — send-window fencepost (299/300) and the pressure payload at 65,536
+  elements tripping Iris's `FArrayPropertyNetSerializer` 65,535-element cap every tick
+  (`LogIris: Error: ... 65536 > 65535`), so Phase C's churn never hit the wire. Both fixed
+  (CkTests 7210d47).
+- Run 2 (Test-VoiceChatSpike2.log): valid overdrive dataset, cutoff view (numbers above);
+  exposed that a fixed settle window measures the window, not the transport → drain-to-completion
+  restructure (CkTests 8808cae).
+- Run 3 (Test-VoiceChatSpike3.log): `Total: 2, Passed: 2, Failed: 0, Duration: 1m 39s`,
+  `**** TEST COMPLETE. EXIT CODE: 0 ****`; `[VoiceSpike]` lines quoted in the tables above;
+  0 `Angelscript: Error` in the same boot.
