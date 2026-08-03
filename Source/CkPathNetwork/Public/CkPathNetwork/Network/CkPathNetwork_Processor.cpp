@@ -375,6 +375,7 @@ namespace ck_pathnetwork_processor
         TSubclassOf<UNavigationQueryFilter> InFilterClass,
         const FVector& InFrom,
         const FVector& InTo,
+        float InMaxCornerOffsetCm,
         TArray<FVector>& OutWaypoints) -> bool
     {
         OutWaypoints.Reset();
@@ -404,7 +405,11 @@ namespace ck_pathnetwork_processor
         auto DetourResult = FCk_Nav_PathResult{};
         constexpr auto AllowPartial = false;
         constexpr auto AgentRadiusForFirstSkip = 0.0f;
-        const auto CornerOffsetDistance = InNavData.GetConfig().AgentRadius;
+        // An offset corner can leave the ribbon by up to the offset distance, so callers whose
+        // waypoints face a downstream Is_SegmentInsideRibbonRun check cap it at their slack.
+        const auto CornerOffsetDistance = FMath::Min(
+            InNavData.GetConfig().AgentRadius,
+            InMaxCornerOffsetCm);
         const auto DetourFound = FCk_Nav_Algorithm::FindPathSync(
             InNavSys,
             InNavData,
@@ -530,7 +535,8 @@ namespace ck_pathnetwork_processor
     Try_ResolvePathOntoNavmesh(
         UWorld* InWorld,
         TArray<FVector>& InOutWaypoints,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass) -> bool
+        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        float InMaxCornerOffsetCm) -> bool
     {
         auto* NavData = Get_DefaultRecastNavmesh(InWorld);
         if (NavData == nullptr || NOT NavData->HasValidNavmesh())
@@ -558,6 +564,7 @@ namespace ck_pathnetwork_processor
                     InFilterClass,
                     InOutWaypoints[Index],
                     InOutWaypoints[Index + 1],
+                    InMaxCornerOffsetCm,
                     SegmentWaypoints))
             { return false; }
 
@@ -610,6 +617,8 @@ namespace ck_pathnetwork_processor
         ResolvedWaypoints.Reserve(InOutWaypoints.Num());
         Append_CompiledWaypoint(ResolvedWaypoints, InOutWaypoints[0]);
 
+        const auto MaxCornerOffsetCm =
+            FMath::Max(0.0f, InRibbonTolerance - RibbonContainmentToleranceCm);
         for (auto Index = 0; Index < InOutWaypoints.Num() - 1; ++Index)
         {
             auto SegmentWaypoints = TArray<FVector>{};
@@ -620,6 +629,7 @@ namespace ck_pathnetwork_processor
                     InFilterClass,
                     InOutWaypoints[Index],
                     InOutWaypoints[Index + 1],
+                    MaxCornerOffsetCm,
                     SegmentWaypoints))
             { return EConstrainedPathResolution::NavFailed; }
 
@@ -681,6 +691,8 @@ namespace ck_pathnetwork_processor
         if (NOT InToIsRouteEndpoint)
         { Append_CompiledWaypoint(ConnectedWaypoints, InTo); }
 
+        // Off-path connectors are never ribbon-contained, so corner offsetting stays unbounded.
+        constexpr auto UnboundedCornerOffsetCm = TNumericLimits<float>::Max();
         const auto PathIsValid =
             ConnectedWaypoints.Num() >= 2
             && Try_ProjectPathOntoNavmesh(
@@ -688,7 +700,11 @@ namespace ck_pathnetwork_processor
                 ConnectedWaypoints,
                 InFilterClass,
                 ClearanceProjectionPlanarExtentCm)
-            && Try_ResolvePathOntoNavmesh(InWorld, ConnectedWaypoints, InFilterClass);
+            && Try_ResolvePathOntoNavmesh(
+                InWorld,
+                ConnectedWaypoints,
+                InFilterClass,
+                UnboundedCornerOffsetCm);
         if (NOT PathIsValid)
         {
             InOutResolution._Outcome = EOffPathResolve::PathFailed;
@@ -1661,10 +1677,13 @@ namespace ck
                             InParams.Get_DesiredNavmeshClearance(),
                             FilterClass,
                             CandidateWaypoints);
+                        // The projected waypoints already sit within RibbonContainmentToleranceCm,
+                        // so the resolved-tolerance headroom is the whole corner-offset budget.
                         if (NOT Try_ResolvePathOntoNavmesh(
                                 World,
                                 CandidateWaypoints,
-                                FilterClass))
+                                FilterClass,
+                                InParams.Get_NavmeshResolvedRibbonTolerance()))
                         {
                             LastCompileFailure = ERouteFailureStage::RibbonNavValidation;
                             continue;
