@@ -320,4 +320,28 @@ auto
     return InVoiceTalker.Get<ck::FFragment_VoiceTalker_ReceiveInbox>().Get_PackedBundles().Num();
 }
 
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_Get_ReceiveArrivedBundles(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> uint64
+{
+    if (NOT InVoiceTalker.Has<ck::FFragment_VoiceTalker_ReceiveInbox>())
+    { return 0; }
+
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_ReceiveInbox>().Get_TotalArrivedBundles();
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_Get_ReceiveArrivedBytes(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> uint64
+{
+    if (NOT InVoiceTalker.Has<ck::FFragment_VoiceTalker_ReceiveInbox>())
+    { return 0; }
+
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_ReceiveInbox>().Get_TotalArrivedBytes();
+}
+
 // --------------------------------------------------------------------------------------------------------------------

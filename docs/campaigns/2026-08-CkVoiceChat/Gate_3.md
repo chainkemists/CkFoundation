@@ -38,6 +38,23 @@ and counted, never stashed (N1).
   unresolvable object = unthrottled `LogIrisRpc` Errors client-side).
 - **S5:** measure the per-connection drain budget under production net config at this gate; set
   the default voice byte budget below it with headroom. Numbers recorded here before the claim.
+
+  **S5 MEASURED (2026-08-03, `Ck.VoiceChat.Net.DrainBudgetMeasure`, Test-VoiceChatP3-drain2.log):**
+  burst of 2000 × 240 B (480,000 B) queued in one server call through `Client_ReceiveVoiceBundle`;
+  arrivals counted at the client RPC boundary (pre-inbox-cap seam added for this measurement).
+  Mark 1 (30 ticks): 87 bundles / 20,880 B. Mark 2 (+60): 264 / 63,360 → **708.0 B/tick
+  (2.95 bundles/tick)**. Mark 3 (+60): 441 / 105,840 → **708.0 B/tick** again — slope identical
+  across both windows, queue still draining at mark 3 (441 < 2000), so this is the SATURATED
+  drain ceiling, not noise. Config caveat: editor net-PIE (localhost, Iris, project
+  DefaultEngine.ini rates) — a packaged/dedicated server under real WAN throttles may differ;
+  re-measure there before ship-tuning (the spec stays in the suite as the re-measurement tool).
+  **Default set from these numbers:** `MaxVoiceBytesPerConnectionPerTick` 4096 → **640**
+  (pre-measurement optimism corrected): 640 ≥ the 8-talker steady worst case
+  (8 × 240 B ÷ 3.6 ticks ≈ 533 B/tick, ~20% margin) yet ~10% UNDER the measured drain, so
+  sustained overage drops at the counted budget layer (S2) instead of silently queueing —
+  the spike's exact pathology. Note the spike's ~850 B/tick drain estimate was HIGH; the real
+  ceiling (708) sits below its "~716 B/tick needed for 8 talkers," which is why the budget, not
+  the transport queue, must be the binding constraint.
 - **Gate-2 audit carry-forwards:** F3 — create the loopback synth only AFTER capture `Start()`
   succeeds; F6 — `_AmplitudeQ8` last-frame-hold/decay instead of zeroing on frameless ticks
   (matters now: amplitude feeds the top-N fairness clamp).

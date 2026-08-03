@@ -261,6 +261,16 @@ public:
     static auto
     Debug_Get_ReceiveInboxNum(
         const FCk_Handle_VoiceTalker& InVoiceTalker) -> int32;
+
+    // Lifetime totals at the client RPC boundary (counted before the inbox capacity check) -
+    // the S5 drain-budget instrumentation reads the connection's actual delivery rate off these.
+    static auto
+    Debug_Get_ReceiveArrivedBundles(
+        const FCk_Handle_VoiceTalker& InVoiceTalker) -> uint64;
+
+    static auto
+    Debug_Get_ReceiveArrivedBytes(
+        const FCk_Handle_VoiceTalker& InVoiceTalker) -> uint64;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

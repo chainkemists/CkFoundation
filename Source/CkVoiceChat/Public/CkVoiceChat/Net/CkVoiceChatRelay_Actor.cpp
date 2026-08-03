@@ -75,7 +75,11 @@ auto
         return;
     }
 
-    auto& Inbox = Talker.AddOrGet<ck::FFragment_VoiceTalker_ReceiveInbox>().Get_PackedBundles();
+    auto& InboxFragment = Talker.AddOrGet<ck::FFragment_VoiceTalker_ReceiveInbox>();
+    InboxFragment.Set_TotalArrivedBundles(InboxFragment.Get_TotalArrivedBundles() + 1);
+    InboxFragment.Set_TotalArrivedBytes(InboxFragment.Get_TotalArrivedBytes() + InPackedBundle.Num());
+
+    auto& Inbox = InboxFragment.Get_PackedBundles();
 
     if (Inbox.Num() >= ck::VoiceChat_MaxInboxBundles)
     {

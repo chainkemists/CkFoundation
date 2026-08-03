@@ -29,6 +29,26 @@ DefaultEngine.ini (a BB-repo decision; superproject untouched).
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-03 — S5 drain-budget measured; default budget 4096 → 640 (numbers in Gate_3.md)
+- **Instrumentation:** arrival totals now count at the client RPC boundary BEFORE the inbox cap
+  (`FFragment_VoiceTalker_ReceiveInbox` totals + `Debug_Get_ReceiveArrivedBundles/Bytes`), read
+  by the new `Ck.VoiceChat.Net.DrainBudgetMeasure` spec: one 2000 × 240 B burst through
+  `Client_ReceiveVoiceBundle` (0xFF payloads — guaranteed unpack-reject, decoder untouched),
+  then arrival slopes at tick marks. Sanity asserts only (delivered, monotone, ≤ sent) — the
+  numbers are machine/config-dependent and the spec must not flake on a slower box; it stays in
+  the suite as the re-measurement tool.
+- **Measured: saturated drain = 708.0 B/tick (2.95 × 240 B bundles/tick), IDENTICAL across both
+  60-tick windows; queue still draining at mark 3 (441/2000)** — a stable ceiling, not noise.
+  The spike's ~850 B/tick estimate was high; 708 sits BELOW its "~716 B/tick needed for 8
+  talkers."
+- **Default `MaxVoiceBytesPerConnectionPerTick` 4096 → 640:** covers the 8-talker steady worst
+  case (≈533 B/tick) with ~20% margin while staying ~10% under the measured drain, so sustained
+  overage drops at the counted budget layer (S2), never queues silently. Full numbers +
+  config caveat (editor net-PIE; re-measure packaged before ship-tuning) recorded in
+  [Gate_3.md](Gate_3.md) §S5.
+- One logging round-trip: AddInfo events don't reach the unattended runner's log — the spec
+  prints via LogTemp Display (the [VoiceSpike] canary precedent) and AddInfo both.
+
 ### 2026-08-03 — P3 item 5: Positional3D proximity routing set (28/28)
 - **CkF 383630b38 + CkTests b7b2a61:** ADR-6 lands. Every Positional3D member gets a probe pair
   reconciled by the new authority-only `FProcessor_VoiceChat_ProximityProbes` (dirty-tag driven

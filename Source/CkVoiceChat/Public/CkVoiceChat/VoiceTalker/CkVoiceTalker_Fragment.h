@@ -220,7 +220,9 @@ namespace ck
     };
 
     // Client-side, on the talker entity: packed bundles forwarded by the server, awaiting the
-    // jitter/decode playback processor.
+    // jitter/decode playback processor. The arrival totals count at the RPC boundary - BEFORE
+    // the capacity check - so they measure what the connection actually delivered (the S5
+    // drain-budget instrumentation), not what the inbox accepted.
     struct CKVOICECHAT_API FFragment_VoiceTalker_ReceiveInbox
     {
     public:
@@ -228,9 +230,13 @@ namespace ck
 
     private:
         TArray<TArray<uint8>> _PackedBundles;
+        uint64 _TotalArrivedBundles = 0;
+        uint64 _TotalArrivedBytes = 0;
 
     public:
         CK_PROPERTY(_PackedBundles);
+        CK_PROPERTY(_TotalArrivedBundles);
+        CK_PROPERTY(_TotalArrivedBytes);
     };
 
     // World-scoped (transient entity), authority-side: per-connection bytes forwarded THIS tick.
