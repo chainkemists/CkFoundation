@@ -10,6 +10,7 @@
 
 class UMaterialInterface;
 class UMaterial;
+class UTexture;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,7 +35,7 @@ public:
     static auto ExportMaterials(const TArray<UMaterialInterface*>& InMaterials) -> TArray<FCk_MaterialExportResult>;
 
 private:
-    static auto DoSerializeToJson(UMaterialInterface* InMaterial, TSet<FString>& OutTextures) -> TSharedPtr<FJsonObject>;
+    static auto DoSerializeToJson(UMaterialInterface* InMaterial, const TArray<UTexture*>& InUsedTextures, TSet<FString>& OutTextures) -> TSharedPtr<FJsonObject>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
