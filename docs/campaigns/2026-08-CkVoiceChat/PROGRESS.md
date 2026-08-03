@@ -9,12 +9,15 @@ resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
 **Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1 (transport
-skeleton, bb0513333) and 2-local (control plane, c01b43ef0 + CkTests eef61de) landed —
-**20/20 VoiceChat, EXIT 0, 0 AS errors** (Test-VoiceChatP3-membership.log). Next: item 2
-replicated half (`FCk_RepData_VoiceChat`, late-join + N1 voice-before-registry net tests), then
-item 3 (talker outbound + audit F3/F6). The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5
-packaged smoke) remain open as P2-verification obligations gating P5 ship — both need
-`[Voice] bEnabled=true` in BB's DefaultEngine.ini (a BB-repo decision; superproject untouched).
+skeleton, bb0513333) and 2 COMPLETE — local half (c01b43ef0 + CkTests eef61de) and replicated
+half (36ef940f7 + CkTests d8d404f) — **21/21 VoiceChat, EXIT 0, 0 AS errors** incl.
+`Ck.VoiceChat.Net.ControlPlane_Replicates` (Test-VoiceChatP3-repdata2.log). Sequencing note:
+the N1 voice-before-registry net test moves to item 4 (its drop site is the Route processor);
+late-join is inherent to the full-state container and pinned by the control-plane spec. Next:
+item 3 (talker outbound + audit F3/F6), then item 4 (Route processor + N1/N2 enforcement).
+The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
+P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
+DefaultEngine.ini (a BB-repo decision; superproject untouched).
 **Blocked on:** nothing machine-side. Nothing pushed anywhere; superproject gitlink untouched.
 
 ## Decision log
@@ -25,6 +28,25 @@ packaged smoke) remain open as P2-verification obligations gating P5 ship — bo
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — P3 item 2 complete: control plane replicates (21/21)
+- **Replicated half (CkF 36ef940f7, CkTests d8d404f):** `FCk_RepData_VoiceChat` (registry
+  entries tag→idx, memberships+flags, server-mute matrix) as ONE container fragment on the
+  channel HOST; `Register_NetOnly` registrar delegating to
+  `UCk_Utils_VoiceChannel_UE::Apply_ReplicatedControlPlane` (NotReady-before-any-mutation until
+  every named channel composes; applies idx + clears client NeedsIdx; fires OnMemberJoined/Left
+  from the state diff). Server pushes at mutation sites via host-gated
+  TryAdd/TryUpdateContainerFragment (RenderTarget pattern) — local-only usage no-ops cleanly.
+- Fix cycle: LNK2019 `UEPushModelPrivate::MarkPropertyDirty` from the container push template →
+  `NetCore` dep earned (same path as CkRenderTarget carries it).
+- Ran: `--build --test --test-pattern VoiceChat --discover-fresh` → **21/21, EXIT 0, 0 AS
+  errors** (Test-VoiceChatP3-repdata2.log). The net spec ran in its own net lane and CONFIRMED
+  the riskiest claim: a member handle serialized server→client resolves to the client's own
+  bridged entity (cross-wire handle identity), making `Get_IsMember(clientChannel, clientTalker)`
+  true. Leave replicates; server mute survives leave on the client too.
+- Sequencing correction recorded: the N1 voice-before-registry net test belongs to item 4 (the
+  Route processor owns the drop site); item 2's net contract (registry/membership/late-join via
+  full-state container) is covered by `Ck.VoiceChat.Net.ControlPlane_Replicates`.
 
 ### 2026-08-03 — Gate 3 opened; P3 work items 1 + 2(local half) landed green
 - Gate_3.md committed (94a7abcfb): contract carries N1–N3/N7 + S1–S5 + audit F3/F6; ten
