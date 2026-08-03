@@ -165,3 +165,186 @@ Net tests land WITH their work item, not batched at the end: late-join + voice-b
 - [x] AS boot clean: 0 `Angelscript: Error` in every exit-sweep log.
 - [x] PROGRESS.md dated entries; **audit requested 2026-08-03 — response appended below when it
       lands.**
+
+## Gate-3 top-tier audit — 2026-08-03
+
+Fresh-context adversarial audit; every claim below is grounded in a file:line or log line I read
+myself. Nothing was taken from the executor's narrative on trust.
+
+### Verdict: **GO WITH CONDITIONS** for opening P4
+
+The transport/routing/control-plane machinery is real, house-conformant, and the run evidence is
+authentic (logs, mtimes, and name-level diffs all check out). The conditions are proof-strength
+gaps in two net specs — the *code* for both properties exists and reads correct; the *tests*
+assert one layer too far downstream to prove what the gate text claims they prove — plus one
+unrecorded deviation from N2's letter. None require re-opening the design. Conditions 1–3 below
+land as the first P3-followup commits (or the first P4 commits); they are small, mechanical, and
+use a seam that already exists.
+
+### Findings (ranked)
+
+**F1 — HIGH (proof gap, not a code defect): the mute-privacy spec cannot distinguish the server
+exclusion from the local defense-in-depth drop.**
+`Ck.VoiceChat.Net.ListenerMute_StopsForwarding` asserts only decoded PCM
+(`Debug_Get_LoopbackDecodedPcm`, CkTests `Net/CkVoiceChat_ListenerMute.spec.cpp:129,258-259,297`).
+But the muting client's local gate (`CkVoiceTalker_Processor.cpp:628-640`) resets arriving bundles
+for muted talkers BEFORE decode — so "decoded bytes frozen" holds even if the server kept
+forwarding, and unmute reopens the local gate too. The binding constraint ("the client never
+receives what it muted", tested as "STOPS ARRIVING, not just stops playing") is therefore not
+proven by this spec, only made plausible. The server-side exclusion IS implemented
+(`CkVoiceChat_Route_Processor.cpp:518-522` via `Get_IsMutedByRecipient`, :104-119), and the right
+seam exists and is already used by two sibling specs: `Debug_Get_ReceiveArrivedBundles` counts at
+the client RPC boundary before any cap or gate (`CkVoiceChatRelay_Actor.cpp:79-80`).
+**Required action (Condition 1):** add an arrival-counter freeze assert across the muted spurt
+(and growth across the unmuted one) to the mute spec.
+
+**F2 — MEDIUM (proof gap): the N1 never-stash assert was silently weakened by the item-6 spec
+"upgrade."** The original spec (CkTests `5c8930a`) asserted the client `ReceiveInboxNum`; the
+current one asserts decoded-PCM equality (`Net/CkVoiceChat_Routing.spec.cpp:285-287`). A stashed
+bundle resurrected after idx allocation would carry seq 1 against a client playhead near ~40 and
+be late-dropped by the jitter buffer before decoding (exactly the behavior pinned by
+`Jitter.ReorderConcealLateDrop`), so a stash could false-pass the equality. Mitigation: I read the
+route path end-to-end — the unresolvable-idx branch drops and counts with no stash container
+anywhere (`CkVoiceChat_Route_Processor.cpp:383-392`; the inbox is drained/reset at :352-353), so I
+believe the property holds; the spec just doesn't prove it. Also a brittleness nit: `FutureIdx = 2`
+is hardcoded (spec :238) — nothing asserts it is actually unresolvable at inject time.
+**Required action (Condition 2):** snapshot `Debug_Get_ReceiveArrivedBundles` at the
+forward-assert and re-assert equality at the never-stash assert; assert
+`TryGet_ChannelByIdx(..., FutureIdx)` is invalid at inject time.
+
+**F3 — MEDIUM-LOW (unrecorded deviation from N2's letter): the "throttled per-talker
+`ck::voice_chat` Warning" does not exist.** N2 (this doc, :27-28) specifies per-talker attribution
+via throttled Warning + stat counter. As built, the packet-path drops carry: ensure-once-per-site
+(talker named in the message) + stat + `VeryVerbose` (`CkVoiceChat_Route_Processor.cpp:369-378,
+399-409`); the spoof drop path has no per-event log at all after the single ensure fire, so a
+*second* offending talker is visible only as a counter increment. The relay boundary comment even
+delegates the job ("per-talker throttled attribution is the Route processor's job",
+`CkVoiceChatRelay_Actor.cpp:26`) — and the Route processor doesn't do it. The only three
+`Warning` calls in the module are RPC-boundary sender-resolution failures. This may well be an
+acceptable engineering call (ensure + stat is arguably better than a throttled Warning), but it
+deviates from a binding constraint and was never recorded as a deviation.
+**Required action (Condition 3):** either implement a throttled per-talker Warning at the
+spoof/malformed drop sites, or record the substitution as a numbered deviation in PROGRESS.md for
+maintainer sign-off.
+
+**F4 — LOW (doctrine): process-breadcrumb comments in shipped code.** Root CLAUDE.md bans comments
+naming a Gate/Phase/PROMPT/campaign/review. Present: "amendment S1"
+(`CkVoiceChatControlRelay_Actor.h:16`), "the campaign PROMPT (S1-S5)" (`CkVoiceChatRelay_Actor.h:19`),
+"campaign amendment S2" / "amendment S3" (`CkVoiceTalker_Processor.cpp:55,59`), "review N1" / "the
+CTO amplitude-fairness ruling" (`CkVoiceChat_Route_Processor.h:50,83-84`), "review N6" / "measured
+cheap at P1" (`CkVoiceChatSynth_Component.h:41,14`), plus spec-§ and ADR references. The technical
+*why* content in these comments is load-bearing and should stay; the campaign/review labels are the
+breadcrumbs. Acceptable to defer the strip to the P5 module-doc pass — recording it here so it
+isn't lost.
+
+**F5 — LOW (slow leak): unbounded transient-entity maps.**
+`FFragment_VoiceChat_ServeHistory::_LastServedFrame` (outer key weak `APlayerState`, inner key
+talker handle — written at `CkVoiceChat_Route_Processor.cpp:568,622`) and
+`FFragment_VoiceChat_ListenerMuteMatrix::_MutedByPlayer` (`CkVoiceListener_Processor.cpp:197,235`)
+never prune entries for departed players or destroyed talkers. Harmless at session scale, but a
+long-lived server with churn accumulates stale weak keys and dead handles. P4 hygiene item, not
+gate-blocking.
+
+**F6 — INFO (doc drift).** (a) Work item 1 above names `Server_SendVoiceBundles` /
+`Client_ReceiveVoiceBundles` (plural); the RPCs are singular (`CkVoiceChatRelay_Actor.h:33,41`).
+(b) The `Source/CLAUDE.md` tier-table row for CkVoiceChat still lists the P0 dep set; Build.cs now
+carries `+ActorRelay, +Shapes, +SpatialQuery` and engine `AudioMixer/GameplayTags/NetCore/Voice/
+DeveloperSettings` — the row's own parenthetical anticipates this, so it's a docs fix at the next
+tier-table sweep, not a code fix. The module Claude.md dep list is accurate.
+
+### Claims verified (exact evidence per exit criterion)
+
+- **VoiceChat 30/30, EXIT 0, 0 AS errors** — read `Test-VoiceChatP3-exitsweep2.log` summary block
+  (`Total: 30 / Passed: 30 / Failed: 0 / Contaminated: 0`), all five `**** TEST COMPLETE. EXIT
+  CODE: 0 ****` lines (3 lanes + serial + net), `grep -c "Angelscript: Error"` = 0,
+  `grep -c "Result={Fail"` = 0.
+- **RenderTarget 22/22 delta-zero** — read `Test-P3-RenderTarget-exitsweep2.log` summary
+  (`Total: 22 / Passed: 22 / Failed: 0`), EXIT 0 ×5, 0 AS errors; name-level `diff` of Success
+  paths vs the entry baseline `Test-P2-Regression.log` → **identical name sets**.
+- **Same binary, correct ordering, no post-build edits** — binaries
+  `BusterBlockEditor-CkVoiceChat.dll` 16:19:17 / `-CkTests.dll` 16:19:35; VoiceChat sweep ran
+  20:20:26–20:23:03 UTC (file mtime 16:23:04 EDT); RenderTarget sweep ended 16:26:48 EDT; no
+  binary anywhere newer than 16:19:35; `find -newermt` over `Source/CkVoiceChat` and CkTests
+  `Source/` returned nothing newer than the build.
+- **+12 new tests, zero regressions** — name diff of the 18 baseline Success paths
+  (`Test-VoiceChatP2-statscounters.log`) against the 30: all 18 present, exactly 12 new
+  (11 `Ck.VoiceChat.Channel/Net.*` + `TopN.CapEnvelopeAndRotation`).
+- **S5 numbers** — `Test-VoiceChatP3-drain2.log:7559-7561` prints mark1 87/20,880 B, mark2
+  264/63,360 → 708.0 B/tick, mark3 441/105,840 → 708.0 B/tick — verbatim match to §S5 above;
+  default 640 at `CkVoiceChat_Settings.h:29` with the 708-citing why-comment.
+- **N1 enforcement** — drop+count, no ensure, `VeryVerbose` at
+  `CkVoiceChat_Route_Processor.cpp:383-392`; no stash container exists on the route path.
+- **N2 shape** — hoisted local + empty-body ensure + separate ordinary drop branch at both
+  packet-path ensure sites (:368-378, :399-409). Throttled-Warning component missing (F3).
+- **N3** — wrap ensure at `CkVoiceChannel_Processor.cpp:117-125` (session-append-only rationale in
+  the message); registry entries only ever `Emplace`d; channel EndPlay removes nothing; a stale
+  idx resolves to nothing via the `IsValid(Entry.Get_Channel())` check
+  (`CkVoiceChannel_Utils.cpp:339-340`).
+- **S1** — `ACk_VoiceChatRelay_UE` has exactly two RPCs, both `Unreliable`
+  (`CkVoiceChatRelay_Actor.h:31,39`); the reliable `Server_SetMutedTalkers` lives on the separate
+  `ACk_VoiceChatControlRelay_UE` (`CkVoiceChatControlRelay_Actor.h:30`) with the S1 rationale in
+  its class comment.
+- **S2** — stale-drop before budget/send via the P1-unit-tested `Select_BundlesToSend`
+  (`CkVoiceTalker_Processor.cpp:149-160`, `MaxOutboundFrameAge` 0.15 s at :56); relay inboxes
+  capped at 256 with drop+count (`CkVoiceTalker_Fragment.h:156`, relay actor :48-52, :84-88).
+- **S3** — `MaxPackedBundleBytes = 240` (:60) + `FramesPerBundle` clamp 1..3 (:210) enforced
+  incrementally at bundle build (:263-265); out-of-contract pack rejects at
+  `CkVoiceChat_Codec.cpp:226` (`Wire.PackRejectsOutOfContract` green).
+- **F3/F6 carry-forwards** — synth created only after `Start()` succeeds
+  (`CkVoiceTalker_Processor.cpp:384-393`, with the why-comment); amplitude last-frame-hold
+  (:575-581).
+- **N7** — routing-policy matrix present in `Source/CkVoiceChat/Claude.md` (gate order,
+  per-policy recipient set, fail-closed rule, listen-host row) including the NPC-sender v1 gap
+  stated in the table, plus the probe-read anti-pattern paragraph.
+- **Control plane** — `Register_NetOnly` (`CkVoiceChat_Replication.cpp:16-22`) delegating to
+  `Apply_ReplicatedControlPlane` with NotReady-before-ANY-mutation (`CkVoiceChannel_Utils.cpp:
+  357-362`), client registry mirror upsert (:415-431); pushed at idx-assign and every successful
+  request (`CkVoiceChannel_Processor.cpp:133,162`).
+- **RouteRejections** — non-member and forged-sender negatives both asserted at the ARRIVAL
+  counter with a positive control through the identical seam plus a no-echo assert
+  (`Net/CkVoiceChat_RouteRejections.spec.cpp:227,265,304-309`). This spec is the model the two
+  condition specs should copy.
+- **ProximityRouting** — all four phases present exactly as claimed (500 receives / 9000 never;
+  4050 holds; 4300 stops; 4050 re-entry stays stopped) with per-phase buffer resets and the
+  transform-sync diagnostic (spec :245-434). Decode-layer asserts are adequate HERE because no
+  client-side gate exists between arrival and decode for the proximity property.
+- **TeardownMidTransmit** — voice-provably-flowing precondition, whole-subject destroy, replica
+  gone on client, listener survives (spec :172-218).
+- **Top-N** — `Test_VoiceChat_TopN.cpp` pins cap, cross-bucket win, LRS tie rotation,
+  serve-updates-rotation, and degenerate inputs (:32-81); hysteresis/envelope constants and the
+  stage/flush split read as described (`CkVoiceChat_Route_Processor.cpp:54-55,431-434,534-626`).
+- **Style/doctrine sweep** — zero stock `ensure/check` (all 17 sites `CK_ENSURE_IF_NOT`); zero
+  `ck::StaticCast`; trailing returns + UFUNCTION concrete-type-on-own-line conform throughout;
+  request completion contract (trailing `InDelegate`, `AutoCreateRefTerm`, `MakeCompletionGuard`,
+  cancel processors) present on all three features; no `TODO/FIXME`.
+
+### Deviations ruling
+
+1. **Deviation 5 (probe `_CurrentOverlaps` read instead of ADR-6's `BindTo_OnBeginOverlap`) —
+   ACCEPTED.** The claimed exemplar is real and exact: `CkCrowdAgent_Neighbors_Processor.cpp:60`
+   is the same `Get<FFragment_Probe_Current>().Get_CurrentOverlaps()` read. The "no C++ adopter
+   binds it" claim holds: grep finds zero users of `UCk_Utils_Probe_UE::BindTo_OnBeginOverlap`
+   outside CkSpatialQuery itself (the CkOverlapBody hits are that module's own Sensor feature, a
+   different system). ADR-6's *mechanism* — event-maintained set, no queries or world scans in the
+   packet path — is preserved; its *letter* named a bind surface no native code uses. The
+   deviation was recorded, reasoned, and is the better engineering choice.
+2. **Top-N-under-net-load coverage bound — ACCEPTED as recorded.** The selection policy is
+   unit-pinned, the flush path runs in every forwarding spec, and the harness realistically hosts
+   3 worlds; building a >8-connection net rig for this gate would buy little. Bound is honestly
+   stated in the exit criteria rather than claimed. Re-examine only if a packaged soak (P5) shows
+   fairness anomalies.
+3. **S5 config caveat (editor net-PIE, not packaged) — ACCEPTED with its own stated condition.**
+   The measurement methodology is sound (pre-cap arrival seam, two identical 60-tick windows,
+   queue still draining at mark 3 ⇒ saturated ceiling), the numbers in this doc match the log
+   verbatim, and the 640 default is internally consistent (≈20% above the 8-talker steady case,
+   ≈10% under the measured drain). The packaged/dedicated re-measure before ship-tuning is already
+   a recorded P5 obligation; the spec staying in the suite as the re-measurement tool is the right
+   call.
+
+### Scope check
+
+All twelve audited commits touch only `Source/CkVoiceChat`, CkTests VoiceChat specs/units, and
+campaign docs; the `FCk_Time` sweep (2905dcf79) was maintainer-directed per PROGRESS. No
+unrecorded scope creep found. Dep budget N4 honored: Build.cs earns exactly
+`CkActorRelay/CkShapes/CkSpatialQuery` + `NetCore/Voice/AudioMixer/GameplayTags/DeveloperSettings`,
+each with a recorded earning event; `CkRelationship` absent.

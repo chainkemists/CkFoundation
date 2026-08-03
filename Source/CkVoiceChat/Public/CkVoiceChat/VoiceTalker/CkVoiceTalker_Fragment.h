@@ -180,8 +180,16 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_VoiceTalker_ServerInbox);
 
+    public:
+        friend class FProcessor_VoiceChat_Route;
+
     private:
         TArray<FCk_VoiceChat_InboundBundle> _Bundles;
+
+        // N2's per-talker attribution: at most one Warning per talker per cooldown window
+        // summarizing that drain's drops - the stats carry exact totals, the ensure carries the
+        // first diagnostic, this keeps a SECOND offending talker visible without log spam.
+        FCk_Time _DropWarnCooldown = FCk_Time{0.0f};
 
     public:
         CK_PROPERTY(_Bundles);

@@ -54,6 +54,9 @@ namespace ck_voice_chat_route_processor
     constexpr auto EnvelopeRisePerSecond = 2.0f;
     constexpr auto EnvelopeFallPerSecond = 4.0f;
 
+    // N2 attribution throttle: at most one drop-summary Warning per talker per this window.
+    constexpr auto RouteDropWarnCooldownSeconds = 5.0f;
+
     // A talker's connection identity: the player behind its owning actor, or nullptr for
     // player-less talkers (NPCs, test subjects with no owner chain).
     auto
@@ -357,6 +360,13 @@ namespace ck
 
         auto* TalkerOwnerPlayer = ResolveOwningPlayer(InVoiceTalkerEntity);
 
+        auto DroppedMalformed = 0;
+        auto DroppedUnresolvable = 0;
+        auto DroppedSenderMismatch = 0;
+        auto DroppedNotAuthorized = 0;
+        auto DroppedServerMuted = 0;
+        auto DroppedNoProximity = 0;
+
         const auto SlewSeconds = InDeltaT.Get_Seconds() / BundlesCopy.Num();
 
         for (const auto& Bundle : BundlesCopy)
@@ -374,6 +384,7 @@ namespace ck
             if (NOT BundleIsWellFormed)
             {
                 INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedMalformed);
+                ++DroppedMalformed;
                 continue;
             }
 
@@ -386,6 +397,7 @@ namespace ck
             if (ck::Is_NOT_Valid(Channel))
             {
                 INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedUnresolvableIdx);
+                ++DroppedUnresolvable;
                 voice_chat::VeryVerbose(TEXT("Route: dropping bundle for Talker [{}] - ChannelIdx [{}] does not resolve"),
                     InVoiceTalkerEntity, Unpacked->Get_Header().Get_ChannelIdx());
                 continue;
@@ -405,6 +417,7 @@ namespace ck
             if (NOT SenderMatchesTalker)
             {
                 INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedSenderMismatch);
+                ++DroppedSenderMismatch;
                 continue;
             }
 
@@ -416,6 +429,7 @@ namespace ck
             {
                 // Expected during join/leave races - count only.
                 INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedNotAuthorized);
+                ++DroppedNotAuthorized;
                 voice_chat::VeryVerbose(TEXT("Route: dropping bundle - Talker [{}] is not an authorized speaker on Channel [{}]"),
                     InVoiceTalkerEntity, Channel);
                 continue;
@@ -425,6 +439,7 @@ namespace ck
             {
                 // The privacy property: muted audio is never forwarded anywhere.
                 INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedServerMuted);
+                ++DroppedServerMuted;
                 continue;
             }
 
@@ -453,6 +468,7 @@ namespace ck
                 if (NOT ProximityIsReady)
                 {
                     INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedNoProximity);
+                    ++DroppedNoProximity;
                     voice_chat::VeryVerbose(TEXT("Route: dropping bundle - Talker [{}] has no proximity set for Positional3D Channel [{}]"),
                         InVoiceTalkerEntity, Channel);
                     continue;
@@ -526,6 +542,25 @@ namespace ck
                     FCk_VoiceChat_PendingForward{MakeWeakObjectPtr(RecipientPlayer), InVoiceTalkerEntity,
                         Packed, InCurrent._FairnessEnvelope});
             }
+        }
+
+        InInbox._DropWarnCooldown = FCk_Time{
+            FMath::Max(0.0f, InInbox._DropWarnCooldown.Get_Seconds() - InDeltaT.Get_Seconds())};
+
+        const auto DroppedThisDrain = DroppedMalformed + DroppedUnresolvable + DroppedSenderMismatch
+            + DroppedNotAuthorized + DroppedServerMuted + DroppedNoProximity;
+
+        if (DroppedThisDrain > 0 && InInbox._DropWarnCooldown.Get_Seconds() <= 0.0f)
+        {
+            voice_chat::Warning(TEXT("Route dropped [{}] bundle(s) from Talker [{}] this drain "
+                "(malformed [{}], unresolvable-idx [{}], sender-mismatch [{}], unauthorized [{}], "
+                "server-muted [{}], no-proximity [{}]) - throttled to one warning per [{}]s per talker; "
+                "stats carry exact totals"),
+                DroppedThisDrain, InVoiceTalkerEntity, DroppedMalformed, DroppedUnresolvable,
+                DroppedSenderMismatch, DroppedNotAuthorized, DroppedServerMuted, DroppedNoProximity,
+                RouteDropWarnCooldownSeconds);
+
+            InInbox._DropWarnCooldown = FCk_Time{RouteDropWarnCooldownSeconds};
         }
     }
 
