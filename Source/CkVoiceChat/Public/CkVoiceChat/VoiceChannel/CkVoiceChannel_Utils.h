@@ -2,6 +2,9 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
+
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -116,6 +119,146 @@ public:
     static int32
     Get_Priority(
         const FCk_Handle_VoiceChannel& InVoiceChannel);
+
+public:
+    // Membership is server-authoritative: every request below rejects non-authority callers
+    // synchronously (Failed_NotEnqueued) - clients receive membership via the control plane.
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Request Join",
+              meta = (AutoCreateRefTerm = "InRequest,InDelegate"))
+    static FCk_Handle_VoiceChannel
+    Request_Join(
+        UPARAM(ref) FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Request_VoiceChannel_Join& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Request Leave",
+              meta = (AutoCreateRefTerm = "InRequest,InDelegate"))
+    static FCk_Handle_VoiceChannel
+    Request_Leave(
+        UPARAM(ref) FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Request_VoiceChannel_Leave& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Request Set Member Flags",
+              meta = (AutoCreateRefTerm = "InRequest,InDelegate"))
+    static FCk_Handle_VoiceChannel
+    Request_SetMemberFlags(
+        UPARAM(ref) FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Request_VoiceChannel_SetMemberFlags& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Request Server Mute",
+              meta = (AutoCreateRefTerm = "InRequest,InDelegate"))
+    static FCk_Handle_VoiceChannel
+    Request_ServerMute(
+        UPARAM(ref) FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Request_VoiceChannel_ServerMute& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Request Server Unmute",
+              meta = (AutoCreateRefTerm = "InRequest,InDelegate"))
+    static FCk_Handle_VoiceChannel
+    Request_ServerUnmute(
+        UPARAM(ref) FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Request_VoiceChannel_ServerUnmute& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Get Channel Idx")
+    static uint8
+    Get_ChannelIdx(
+        const FCk_Handle_VoiceChannel& InVoiceChannel);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Get Is Member")
+    static bool
+    Get_IsMember(
+        const FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Handle_VoiceTalker& InTalker);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Get Member Flags")
+    static FCk_VoiceChat_MemberFlags
+    Get_MemberFlags(
+        const FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Handle_VoiceTalker& InTalker);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Get Members")
+    static TArray<FCk_Handle_VoiceTalker>
+    Get_Members(
+        const FCk_Handle_VoiceChannel& InVoiceChannel);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Get Is Server Muted")
+    static bool
+    Get_IsServerMuted(
+        const FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Handle_VoiceTalker& InTalker);
+
+    // Resolves a wire ChannelIdx against the world registry. Quiet on miss by design: a stale
+    // or forged index is expected traffic (N1) - the caller drops and counts.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Try Get Channel By Idx")
+    static FCk_Handle_VoiceChannel
+    TryGet_ChannelByIdx(
+        const FCk_Handle& InAnyHandle,
+        uint8 InChannelIdx);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Bind To OnMemberJoined")
+    static FCk_Handle_VoiceChannel
+    BindTo_OnMemberJoined(
+        UPARAM(ref) FCk_Handle_VoiceChannel& InVoiceChannel,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceChannel_Membership& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Unbind From OnMemberJoined")
+    static FCk_Handle_VoiceChannel
+    UnbindFrom_OnMemberJoined(
+        UPARAM(ref) FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Delegate_VoiceChannel_Membership& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Bind To OnMemberLeft")
+    static FCk_Handle_VoiceChannel
+    BindTo_OnMemberLeft(
+        UPARAM(ref) FCk_Handle_VoiceChannel& InVoiceChannel,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceChannel_Membership& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Unbind From OnMemberLeft")
+    static FCk_Handle_VoiceChannel
+    UnbindFrom_OnMemberLeft(
+        UPARAM(ref) FCk_Handle_VoiceChannel& InVoiceChannel,
+        const FCk_Delegate_VoiceChannel_Membership& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

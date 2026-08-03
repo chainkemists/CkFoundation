@@ -6,6 +6,9 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
+
+#include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment_Data.h"
 
 #include <GameplayTags.h>
 #include <NativeGameplayTags.h>
@@ -95,5 +98,166 @@ public:
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VoiceChannel_ParamsData, _ChannelName);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKVOICECHAT_API FCk_VoiceChat_MemberFlags
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_VoiceChat_MemberFlags);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _CanTalk = ECk_EnableDisable::Enable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _CanHear = ECk_EnableDisable::Enable;
+
+public:
+    CK_PROPERTY(_CanTalk);
+    CK_PROPERTY(_CanHear);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Membership mutations are authority-only: the server routes from ITS membership state and
+// clients receive it via the control-plane replication - a client-side mutation would only
+// diverge the local display copy. The Utils boundary rejects non-authority callers synchronously.
+USTRUCT(BlueprintType)
+struct CKVOICECHAT_API FCk_Request_VoiceChannel_Join : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_VoiceChannel_Join);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VoiceChannel_Join);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_VoiceTalker _Talker;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_VoiceChat_MemberFlags _MemberFlags;
+
+public:
+    CK_PROPERTY_GET(_Talker);
+    CK_PROPERTY(_MemberFlags);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_VoiceChannel_Join, _Talker);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKVOICECHAT_API FCk_Request_VoiceChannel_Leave : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_VoiceChannel_Leave);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VoiceChannel_Leave);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_VoiceTalker _Talker;
+
+public:
+    CK_PROPERTY_GET(_Talker);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_VoiceChannel_Leave, _Talker);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKVOICECHAT_API FCk_Request_VoiceChannel_SetMemberFlags : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_VoiceChannel_SetMemberFlags);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VoiceChannel_SetMemberFlags);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_VoiceTalker _Talker;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_VoiceChat_MemberFlags _MemberFlags;
+
+public:
+    CK_PROPERTY_GET(_Talker);
+    CK_PROPERTY_GET(_MemberFlags);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_VoiceChannel_SetMemberFlags, _Talker, _MemberFlags);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Server mute is a ROUTING exclusion (the server stops forwarding this talker's frames on this
+// channel), not a playback preference - the muted audio never reaches any client.
+USTRUCT(BlueprintType)
+struct CKVOICECHAT_API FCk_Request_VoiceChannel_ServerMute : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_VoiceChannel_ServerMute);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VoiceChannel_ServerMute);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_VoiceTalker _Talker;
+
+public:
+    CK_PROPERTY_GET(_Talker);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_VoiceChannel_ServerMute, _Talker);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKVOICECHAT_API FCk_Request_VoiceChannel_ServerUnmute : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_VoiceChannel_ServerUnmute);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VoiceChannel_ServerUnmute);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_VoiceTalker _Talker;
+
+public:
+    CK_PROPERTY_GET(_Talker);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_VoiceChannel_ServerUnmute, _Talker);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_VoiceChannel_Membership,
+    FCk_Handle_VoiceChannel, InChannel,
+    FCk_Handle_VoiceTalker, InTalker);
 
 // --------------------------------------------------------------------------------------------------------------------
