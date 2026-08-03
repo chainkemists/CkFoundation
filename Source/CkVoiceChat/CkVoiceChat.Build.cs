@@ -32,6 +32,8 @@ public class CkVoiceChat : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
+            "CkShapes",
+            "CkSpatialQuery",
         });
     }
 }

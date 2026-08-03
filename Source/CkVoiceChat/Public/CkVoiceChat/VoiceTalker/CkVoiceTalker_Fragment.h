@@ -6,6 +6,10 @@
 #include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
+#include "CkShapes/Sphere/CkShapeSphere_Fragment_Data.h"
+
+#include "CkSpatialQuery/Probe/CkProbe_Fragment_Data.h"
+
 #include "CkVoiceChat/Codec/CkVoiceChat_Codec.h"
 #include "CkVoiceChat/Playback/CkVoiceChatSynth_Component.h"
 #include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment_Data.h"
@@ -28,6 +32,7 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_VoiceTalker_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_VoiceTalker_IsTransmitting);
     CK_DEFINE_ECS_TAG(FTag_VoiceTalker_IsSpeaking);
+    CK_DEFINE_ECS_TAG(FTag_VoiceTalker_ProximityDirty);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -180,6 +185,38 @@ namespace ck
 
     public:
         CK_PROPERTY(_Bundles);
+    };
+
+    // The presence dot other talkers' range probes detect. Sphere-sphere contact begins at
+    // range+margin+this, so it only pads the CANDIDATE boundary - audibility is enforced by the
+    // exact distance checks in the routing gate, never by contact geometry.
+    inline constexpr float VoiceChat_PresenceProbeRadiusCm = 32.0f;
+
+    // Authority-side, on the talker entity: the Positional3D routing set (ADR-6). The range probe
+    // (audible range + hysteresis margin) maintains the candidate set event-driven via Jolt
+    // contacts; _AudibleOn holds the per-recipient hysteresis state - a recipient enters a
+    // channel's audible set at that channel's range and leaves it at range + margin, so speakers
+    // at the boundary don't pop mid-word.
+    struct CKVOICECHAT_API FFragment_VoiceTalker_Proximity
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceTalker_Proximity);
+
+    public:
+        friend class FProcessor_VoiceChat_ProximityProbes;
+        friend class FProcessor_VoiceChat_Route;
+        friend class UCk_Utils_VoiceTalker_UE;
+
+    private:
+        FCk_Handle_Probe _RangeProbe;
+        FCk_Handle_ShapeSphere _RangeShape;
+        FCk_Handle _RangeProbeChild;
+        FCk_Handle _PresenceProbeChild;
+        float _RangeProbeRadius = 0.0f;
+        TMap<FCk_Handle, TSet<uint8>> _AudibleOn;
+
+    public:
+        CK_PROPERTY_GET(_RangeProbe);
     };
 
     // Client-side, on the talker entity: packed bundles forwarded by the server, awaiting the

@@ -9,10 +9,12 @@
 
 #include "CkVoiceChat/CkVoiceChat_Log.h"
 #include "CkVoiceChat/Net/CkVoiceChat_RepData.h"
+#include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_AssignIdx);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_EndPlay);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -57,6 +59,24 @@ namespace ck_voice_channel_processor
                 }
                 Entry.Set_ServerMuted(MoveTemp(Muted));
             });
+    }
+
+    // A membership change on a Positional3D channel re-shapes the talker's routing probe -
+    // flag it for the (authority-only) proximity reconcile processor. Runs only from the
+    // authority-side request handlers, so clients never grow probe state.
+    auto
+    MarkTalker_ProximityDirty(
+        FCk_Handle_VoiceChannel InChannel,
+        const FCk_Handle& InTalker) -> void
+    {
+        if (InChannel.Get<ck::FFragment_VoiceChannel_Params>().Get_SpatializationPolicy() != ECk_VoiceChat_SpatializationPolicy::Positional3D)
+        { return; }
+
+        if (ck::Is_NOT_Valid(InTalker))
+        { return; }
+
+        auto TalkerEntity = InTalker;
+        TalkerEntity.AddOrGet<ck::FTag_VoiceTalker_ProximityDirty>();
     }
 }
 
@@ -172,6 +192,7 @@ namespace ck
         if (NOT WasAlreadyMember)
         {
             UUtils_Signal_OnVoiceChannel_MemberJoined::Broadcast(InHandle, MakePayload(InHandle, Talker));
+            ck_voice_channel_processor::MarkTalker_ProximityDirty(InHandle, Talker);
         }
 
         return true;
@@ -190,6 +211,7 @@ namespace ck
         if (InCurrent._Members.Remove(Talker) > 0)
         {
             UUtils_Signal_OnVoiceChannel_MemberLeft::Broadcast(InHandle, MakePayload(InHandle, Talker));
+            ck_voice_channel_processor::MarkTalker_ProximityDirty(InHandle, Talker);
         }
 
         // The server-mute entry deliberately survives leave: a moderated talker who rejoins is
@@ -249,6 +271,22 @@ namespace ck
     {
         InCurrent._ServerMuted.Remove(InRequest.Get_Talker());
         return true;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_VoiceChannel_EndPlay::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVoiceChannelEntity,
+            const FFragment_VoiceChannel_Current& InCurrent)
+        -> void
+    {
+        for (const auto& [MemberHandle, MemberFlags] : InCurrent.Get_Members())
+        {
+            ck_voice_channel_processor::MarkTalker_ProximityDirty(InVoiceChannelEntity, MemberHandle);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

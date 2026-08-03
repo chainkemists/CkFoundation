@@ -128,6 +128,33 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // A dying channel releases its proximity claims: every member talker gets re-reconciled so
+    // its range probe shrinks (or disappears) now that this channel's audible range no longer
+    // contributes. Authority-only - probes exist only where routing runs.
+    class CKVOICECHAT_API FProcessor_VoiceChannel_EndPlay : public ck_exp::TProcessor<
+        FProcessor_VoiceChannel_EndPlay,
+        FCk_Handle_VoiceChannel,
+        ck::TReadOnly<FFragment_VoiceChannel_Current>,
+        CK_IF_END_PLAY>
+    {
+    public:
+        using Group = FGroup_EndPlay;
+        static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::AuthorityOnly;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVoiceChannelEntity,
+            const FFragment_VoiceChannel_Current& InCurrent)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // HandleRequests excludes owners already tagged for destruction, so a destroyed channel's
     // still-queued requests are never drained; this fires each pending request's completion
     // delegate with Failed_Cancelled so a caller awaiting completion terminates instead of hanging.

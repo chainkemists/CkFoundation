@@ -14,9 +14,9 @@ entity under a host, per-channel spatialization policy/attenuation/effect chain)
 sessions, or external services.
 
 **Depends on (as of P3):** `CkActorRelay`, `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`,
-`CkRecord`, `CkSettings`. UE: `AudioMixer`, `DeveloperSettings`, `GameplayTags`, `NetCore`,
-`Voice`. Still to be earned: `CkSpatialQuery` (P3 item 5, the routing probe), `CkResourceLoader`
-(P4 asset resolution). Never `CkRelationship`.
+`CkRecord`, `CkSettings`, `CkShapes`, `CkSpatialQuery` (the ADR-6 routing probes). UE:
+`AudioMixer`, `DeveloperSettings`, `GameplayTags`, `NetCore`, `Voice`. Still to be earned:
+`CkResourceLoader` (P4 asset resolution). Never `CkRelationship`.
 
 ---
 
@@ -45,7 +45,7 @@ byte budget → send). A bundle reaches a recipient only if EVERY row below pass
 | Wire `ChannelIdx` resolves in the registry | required (drop + count, never stash — N1) | same | same |
 | Stamped sender owns the talker (spoof guard) | required where both resolve; player-less (NPC) talkers skip it — **known v1 gap**, an owning player can transmit on any NPC talker | same | same |
 | Talker is a member with `CanTalk`, not server-muted | required | required | required (membership IS the entitlement) |
-| Recipient set | `CanHear` members — **range filter via the routing probe lands with gate item 5**; until then identical to Global2D | `CanHear` members regardless of range | `CanHear` members; one wire copy, 3D-vs-radio branch chosen client-side at render |
+| Recipient set | `CanHear` members ∩ the sender's probe-maintained proximity set, with hysteresis: a recipient becomes audible inside the channel's range and stays audible until range + margin (`Get_ProximityHysteresisMarginCm`). A sender or recipient without a Transform has no probes and Positional3D **fails closed** for it — no position, no proximity, never a fallback to membership-wide sends | `CanHear` members regardless of range | `CanHear` members; one wire copy, 3D-vs-radio branch chosen client-side at render |
 | Not the talker entity, not the talker's own connection | required (no echo back) | same | same |
 | Recipient has not listener-muted the talker | required (the privacy exclusion — muted audio is never SENT) | same | same |
 | Audible-speaker cap (`MaxAudibleSpeakers`, default 8) | envelope-bucket priority, least-recently-served rotation at saturation | same | same |
@@ -59,9 +59,11 @@ executes locally).
 
 - Don't add a `CkRelationship` dep for team channels — team semantics are membership-flag
   configurations on channel entities (ADR-5; CTO review N4).
-- Don't poll overlaps for the routing set — the P3 routing processor is event-driven off a
-  persistent probe (ADR-6); world scans in the packet path are the confirmed failure mode of a
-  commercial reference.
+- Don't poll overlaps for the routing set — the routing set is a persistent probe's
+  event-maintained overlap set (ADR-6); world scans in the packet path are the confirmed failure
+  mode of a commercial reference. The routing processor READS `FFragment_Probe_Current`'s
+  maintained set (the CkCrowd Neighbors adopter pattern) only when bundles actually flow — it
+  never issues a spatial query.
 - Don't stash undecodable/unroutable voice packets — voice is disposable; drop + count (review N1).
 
 ## See also
