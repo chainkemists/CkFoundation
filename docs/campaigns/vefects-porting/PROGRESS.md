@@ -1637,3 +1637,70 @@ orchestrator's per-phase counts summed to the wave lists, not the pack roster. T
 "build-out complete / 29 of 29" status was WRONG — true state 28 of 29. Lesson: a roster
 completion claim must be verified against the SOURCE inventory, not the plan's own tables.
 Dash ports now as behavior 46.
+
+## FINAL (2026-08-02): NS_Dash ported as 46 — roster VERIFIED COMPLETE against the source inventory
+
+31 pack systems = 31 behaviors (7, 17, 18-46) = 31 A/B pairs. Gate of record: Particles 37/37
+(38 s), CkUsf 4/4, VfxExamples 1/1, 32 templates non-inert (Dash 41, single-emitter). Commits:
+CkFoundation 088861999+997ae5e20+97a030ca4; CkTests 92624dba. Two closing reds root-caused:
+Lightning_Hit's test had RESTATED the roster ceiling as its own ribbon tag (made monotone) and
+the recurring transient listen-server ensure. Inspection stage is the campaign's only open work.
+
+## INSPECTION STAGE (2026-08-02): all-pairs regime hung the maintainer's editor — gym reworked to one-active-pair + F2 selector
+
+The maintainer opened the gym and the editor collapsed (60-70% CPU, unresponsive) — the
+many-live-systems regime, as predicted by the roster-test measurements (~45 live systems →
+multi-minute frames). Two findings and one rework:
+
+- **[INS-D1] The "unclamped DeltaSeconds feeds rate emitters" hypothesis is DEAD.** This
+  engine's Niagara clamps sim dt at 0.125 s BY DEFAULT (`UNiagaraSettings::bLimitDeltaTime`
+  = true, `MaxDeltaTimePerTick = 0.125`, consumed via `UNiagaraSystem::MaxDeltaTime`;
+  project config does not override). Spawn catch-up is bounded and populations cap at
+  rate × lifetime — there is no dt runaway and no framework dt clamp left to write. The
+  REAL per-frame cost mechanism of ~370 concurrent emitter instances remains unmeasured
+  (candidates: GPU dispatch count / translucent overdraw, first-view PSO compile storm,
+  per-instance CPU tick cost). A trace run is the next diagnostic step if the one-pair
+  gym still hitches.
+- **[INS-D2] Gym reworked to ONE PAIR EXISTING AT A TIME** (`CkVfxExamplesGym_PlayerController.as`):
+  only the active pair's TWO stations are spawned (62 pedestals made the live pair
+  unfindable — maintainer ruling). A 2-station gym's default grid layout puts them at the
+  same two spots every time, so a switch destroys the old stations + respawns in place and
+  the viewer never moves (teleport fires once, at gym boot). Switches route through the
+  base `Request_EnsureStationsExist` → settle → `Request_StartGym` flow, guarded against
+  mid-flight re-entry. `Ck_GymVfxExamples_RestartAll` KEEPS ITS NAME (every recipe §12
+  cites it) and restarts the active pair in sync. New execs: `_Next`/`_Prev`/`_GoTo`/`_List`.
+- **[INS-D3] Pair selector HUD** (`CkVfxExamplesGym_HUD.as`, new): V opens a searchable
+  list mirroring the gym cycler's menu mechanics (adapted, not refactored out of
+  `ACkGym_MenuHUD` — the cycler serves every gym with zero automated coverage; a shared
+  refactor was the riskier path). F2 was the first pick and was REJECTED by the maintainer
+  (F-keys collide with the editor's rendering debug modes); V only toggles OPEN, since
+  inside the menu it types into the search. PgUp/PgDn cycle pairs and R restarts while no
+  menu is open; a persistent top-left readout names the live pair. EmmsUI was considered
+  and REJECTED: plugins cannot nest, so an EmmsUI dependency in CkTests would burden every
+  consumer host — ruled out by the maintainer.
+- The PairStationsSpawn autotest now destroys each pair's spawns per-iteration (same
+  assertions) so the all-live regime can't form on machines where the originals resolve.
+- [EDITOR-VERIFY] F2 menu, PgUp/PgDn/R, teleport framing, and that one-pair keeps the
+  editor responsive — first minutes of the next gym session.
+
+## [INS-D4] (2026-08-03): the "PickupLoop hang" is a BLOCKING first-activation Niagara system compile
+
+The maintainer isolated the hang to activating the PickupLoop pair alone. Static analysis
+cleared the usual suspects (cadence 27.5/s x 4 s ~ 110 particles; behavior math closed-form,
+no loops; distortion branchless). The sustained-sim probe
+(`CkAutoTest_Particles_PickupLoopSustainedSim.as`) plus the FULL editor log then pinned it:
+on first sustained activation, `LogNiagara: Compiling System ...
+PS_CkParticles_Template_PickupLoop` fired and the game thread STALLED ~133 s in one block
+(`LogAutomationController: Ignoring very large delta of 132.92 seconds`), frames [169]->[172].
+The compile result caches to the machine DDC: the identical probe re-ran at 60-98 fps, and
+baseline-vs-spawned phases measured 3.29 s vs 3.44 s per 60 frames - the sim itself is ~free.
+Spawn-and-destroy tests (roster sweep, pair contract) never keep the system alive long enough
+to complete/cache the compile, which is why every green lane left the template cold and the
+first human to DWELL on the pair paid the stall (60-70% CPU, reads as a hang, self-resolves).
+Consequences: (a) this machine's DDC is now warm for PickupLoop - the next activation should
+play immediately; (b) any OTHER still-cold template pays one such stall on first activation,
+and a `.ush` edit busts every template via the DI compile hash - pre-warm after regens or
+expect one stall per pair; (c) the lesson is recorded in the new `ck-vfx-authoring` skill
+(indexed in the root doctrine skill table). Log forensics: `ck::Trace` is on-screen only and
+the toolbox `--output` stream is curated - `Print` markers + `Saved/Logs/CkPlugins*.log` are
+the reliable pair.
