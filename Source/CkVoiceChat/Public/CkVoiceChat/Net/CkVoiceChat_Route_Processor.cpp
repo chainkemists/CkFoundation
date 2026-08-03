@@ -12,6 +12,7 @@
 #include "CkVoiceChat/Net/CkVoiceChatRelay_Subsystem.h"
 #include "CkVoiceChat/Settings/CkVoiceChat_Settings.h"
 #include "CkVoiceChat/VoiceChannel/CkVoiceChannel_Utils.h"
+#include "CkVoiceChat/VoiceListener/CkVoiceListener_Fragment.h"
 #include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Utils.h"
 
 #include <GameFramework/Pawn.h>
@@ -27,6 +28,7 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Sender Mismatch)"), ST
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Not Authorized)"), STAT_CkVoiceChat_RouteDroppedNotAuthorized, STATGROUP_CkVoiceChat);
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Server Muted)"), STAT_CkVoiceChat_RouteDroppedServerMuted, STATGROUP_CkVoiceChat);
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Budget)"), STAT_CkVoiceChat_RouteDroppedBudget, STATGROUP_CkVoiceChat);
+DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Listener Muted)"), STAT_CkVoiceChat_RouteDroppedListenerMuted, STATGROUP_CkVoiceChat);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -75,6 +77,25 @@ namespace ck_voice_chat_route_processor
         const auto Result = Subsystem->Try_ResolvePending(Pending);
 
         return ::Cast<ACk_VoiceChatRelay_UE>(Result.Get_ChannelActor().Get());
+    }
+
+    // The listener-mute privacy gate: true when this recipient asked to never receive this
+    // talker (the exclusion is server-side by design - muted audio is never sent at all).
+    auto
+    Get_IsMutedByRecipient(
+        const FCk_Handle& InAnyEntity,
+        APlayerState* InRecipient,
+        const FCk_Handle& InTalker) -> bool
+    {
+        auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InAnyEntity);
+
+        if (NOT TransientEntity.Has<ck::FFragment_VoiceChat_ListenerMuteMatrix>())
+        { return false; }
+
+        const auto* MutedSet = TransientEntity.Get<ck::FFragment_VoiceChat_ListenerMuteMatrix>()
+            .Get_MutedByPlayer().Find(MakeWeakObjectPtr(InRecipient));
+
+        return MutedSet != nullptr && MutedSet->Contains(InTalker);
     }
 
     // Per-connection bytes forwarded this tick, shared across every talker's inbox drain.
@@ -208,6 +229,12 @@ namespace ck
 
                 if (RecipientPlayer == Sender || RecipientPlayer == TalkerOwnerPlayer)
                 { continue; }
+
+                if (Get_IsMutedByRecipient(InVoiceTalkerEntity, RecipientPlayer, InVoiceTalkerEntity))
+                {
+                    INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedListenerMuted);
+                    continue;
+                }
 
                 auto& SpentBytes = Budgets.Get_SpentBytes().FindOrAdd(MakeWeakObjectPtr(RecipientPlayer));
 

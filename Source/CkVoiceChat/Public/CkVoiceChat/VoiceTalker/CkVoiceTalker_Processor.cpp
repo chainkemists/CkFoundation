@@ -15,6 +15,7 @@
 #include "CkVoiceChat/Net/CkVoiceChatRelay_Subsystem.h"
 #include "CkVoiceChat/Settings/CkVoiceChat_Settings.h"
 #include "CkVoiceChat/VoiceChannel/CkVoiceChannel_Utils.h"
+#include "CkVoiceChat/VoiceListener/CkVoiceListener_Fragment.h"
 
 #include "Interfaces/VoiceCodec.h"
 #include "VoiceModule.h"
@@ -617,8 +618,26 @@ namespace ck
 
         InCurrent._ReceiveClockSeconds += InDeltaT.Get_Seconds();
 
-        const auto BundlesCopy = InInbox.Get_PackedBundles();
+        auto BundlesCopy = InInbox.Get_PackedBundles();
         InInbox.Get_PackedBundles().Reset();
+
+        // Defense in depth for the mute race: the server-side exclusion is the privacy property,
+        // but a bundle already in flight when the mute landed still arrives - the local ears
+        // drop it here so mute is instant on this machine. The playout drain below still runs,
+        // flushing any pre-mute jitter tail.
+        if (NOT BundlesCopy.IsEmpty())
+        {
+            auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InVoiceTalkerEntity);
+
+            if (TransientEntity.Has<FFragment_VoiceChat_LocalListener>())
+            {
+                const auto& LocalListener = TransientEntity.Get<FFragment_VoiceChat_LocalListener>().Get_Listener();
+
+                if (ck::IsValid(LocalListener)
+                    && LocalListener.Get<FFragment_VoiceListener_Current>().Get_MutedTalkers().Contains(InVoiceTalkerEntity))
+                { BundlesCopy.Reset(); }
+            }
+        }
 
         for (const auto& Packed : BundlesCopy)
         {
