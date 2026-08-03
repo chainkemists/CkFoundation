@@ -813,13 +813,13 @@ auto
 
         if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
         {
-            ReturnType = Property->GetCPPType();
+            ReturnType = FCk_DataAssetExporter::Get_SafeCPPType(Property);
             continue;
         }
 
         auto ParamObject = MakeShared<FJsonObject>();
         ParamObject->SetStringField(TEXT("name"), Property->GetName());
-        ParamObject->SetStringField(TEXT("type"), Property->GetCPPType());
+        ParamObject->SetStringField(TEXT("type"), FCk_DataAssetExporter::Get_SafeCPPType(Property));
         ParamObject->SetBoolField(TEXT("isOut"), Property->HasAnyPropertyFlags(CPF_OutParm));
         ParamObject->SetBoolField(TEXT("isReference"), Property->HasAnyPropertyFlags(CPF_ReferenceParm));
 
@@ -1406,12 +1406,12 @@ auto
 
                 if (Property->HasAnyPropertyFlags(CPF_ReturnParm))
                 {
-                    ReturnType = Property->GetCPPType();
+                    ReturnType = FCk_DataAssetExporter::Get_SafeCPPType(Property);
                     continue;
                 }
 
                 Params.Add(ck::Format_UE(TEXT("{} {}"),
-                    Property->GetCPPType(), Property->GetName()));
+                    FCk_DataAssetExporter::Get_SafeCPPType(Property), Property->GetName()));
             }
 
             OutText += ck::Format_UE(TEXT("    {} {}({})\n"),
