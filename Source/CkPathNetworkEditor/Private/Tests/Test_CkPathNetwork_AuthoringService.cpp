@@ -190,8 +190,16 @@ bool FCk_PathNetworkEditor_Authoring_PreviewPurity_Test::RunTest(const FString& 
     const auto LevelDirtyBefore = World->GetCurrentLevel()->GetPackage()->IsDirty();
     const auto EditorStateBefore =
         ck::pathnetwork_editor::authoring::test::Capture_PreviewEditorState();
-    const auto PreviewResult = Preview(ck::pathnetwork_editor::authoring::test::Make_PreviewRequest(
-        *World, *Detector));
+    constexpr auto ExpectedSimplifyTolerance = 432.0f;
+    Detector->Set_ExpectedProcessSimplifyTolerance(
+        ExpectedSimplifyTolerance);
+    auto PreviewRequest =
+        ck::pathnetwork_editor::authoring::test::Make_PreviewRequest(
+            *World,
+            *Detector);
+    PreviewRequest._VectorizeParams.Set_SimplifyTolerance(
+        ExpectedSimplifyTolerance);
+    const auto PreviewResult = Preview(PreviewRequest);
     const auto EditorStateAfter =
         ck::pathnetwork_editor::authoring::test::Capture_PreviewEditorState();
 

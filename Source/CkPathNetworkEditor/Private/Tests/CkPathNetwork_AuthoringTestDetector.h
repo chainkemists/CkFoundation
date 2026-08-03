@@ -41,6 +41,13 @@ public:
         -> FCk_PathNetwork_DetectorProcessResult override;
 
     auto
+    Process_GeneratedRibbons_WithVectorizeParams(
+        const FBox& InWorldBounds,
+        const TArray<FCk_PathNetwork_Ribbon>& InGeneratedWorldRibbons,
+        const FCk_PathNetwork_VectorizeParams& InVectorizeParams) const
+        -> FCk_PathNetwork_DetectorProcessResult override;
+
+    auto
     Validate_GeneratedRibbons_Implementation(
         const FBox& InWorldBounds,
         const TArray<FCk_PathNetwork_Ribbon>& InGeneratedWorldRibbons) const
@@ -59,6 +66,10 @@ public:
         AActor* InLocationSource) -> void;
 
     auto
+    Set_ExpectedProcessSimplifyTolerance(
+        float InExpectedSimplifyTolerance) -> void;
+
+    auto
     Get_CallbackCount() const -> int32;
 
 private:
@@ -72,7 +83,11 @@ private:
     UPROPERTY()
     TObjectPtr<AActor> _LocationSource;
 
+    UPROPERTY()
+    float _ExpectedProcessSimplifyTolerance = -1.0f;
+
     mutable int32 _CallbackCount = 0;
+    mutable bool _IsParameterAwareProcessCall = false;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

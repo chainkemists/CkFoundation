@@ -500,9 +500,11 @@ namespace ck::pathnetwork_editor::authoring
 
             if (Result._FailureReason.IsEmpty())
             {
-                auto Processed = Detector->Process_GeneratedRibbons(
-                    InRequest._DetectionBounds,
-                    Result._GeneratedWorldRibbons);
+                auto Processed =
+                    Detector->Process_GeneratedRibbons_WithVectorizeParams(
+                        InRequest._DetectionBounds,
+                        Result._GeneratedWorldRibbons,
+                        InRequest._VectorizeParams);
                 Result._UnsupportedSegmentCount =
                     Processed.Get_UnsupportedSegmentCount();
                 if (NOT Processed.Get_Succeeded())

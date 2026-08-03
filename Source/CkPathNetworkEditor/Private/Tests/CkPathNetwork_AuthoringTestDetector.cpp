@@ -41,12 +41,48 @@ auto
 
 auto
     UCk_PathNetwork_AuthoringTestDetector::
+    Process_GeneratedRibbons_WithVectorizeParams(
+        const FBox& InWorldBounds,
+        const TArray<FCk_PathNetwork_Ribbon>& InGeneratedWorldRibbons,
+        const FCk_PathNetwork_VectorizeParams& InVectorizeParams) const
+    -> FCk_PathNetwork_DetectorProcessResult
+{
+    if (_ExpectedProcessSimplifyTolerance >= 0.0f &&
+        NOT FMath::IsNearlyEqual(
+            InVectorizeParams.Get_SimplifyTolerance(),
+            _ExpectedProcessSimplifyTolerance))
+    {
+        auto Result = FCk_PathNetwork_DetectorProcessResult{};
+        Result.Set_Succeeded(false);
+        Result.Set_FailureReason(TEXT("Unexpected process simplify tolerance"));
+        return Result;
+    }
+
+    _IsParameterAwareProcessCall = true;
+    auto Result = Process_GeneratedRibbons_Implementation(
+        InWorldBounds,
+        InGeneratedWorldRibbons);
+    _IsParameterAwareProcessCall = false;
+    return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_PathNetwork_AuthoringTestDetector::
     Process_GeneratedRibbons_Implementation(
         const FBox& InWorldBounds,
         const TArray<FCk_PathNetwork_Ribbon>& InGeneratedWorldRibbons) const
     -> FCk_PathNetwork_DetectorProcessResult
 {
     auto Result = FCk_PathNetwork_DetectorProcessResult{};
+    if (_ExpectedProcessSimplifyTolerance >= 0.0f &&
+        NOT _IsParameterAwareProcessCall)
+    {
+        Result.Set_Succeeded(false);
+        Result.Set_FailureReason(TEXT("Parameter-aware process hook was bypassed"));
+        return Result;
+    }
     if (_Behavior == ECk_PathNetwork_AuthoringTestDetectorBehavior::ProcessFails)
     {
         Result.Set_Succeeded(false);
@@ -115,6 +151,16 @@ auto
     -> void
 {
     _LocationSource = InLocationSource;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_PathNetwork_AuthoringTestDetector::
+    Set_ExpectedProcessSimplifyTolerance(
+        const float InExpectedSimplifyTolerance) -> void
+{
+    _ExpectedProcessSimplifyTolerance = InExpectedSimplifyTolerance;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

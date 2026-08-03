@@ -229,8 +229,11 @@ auto
         GeneratedRibbons = MoveTemp(Vectorized._Ribbons);
     }
 
-    const auto Processed = InDetector->Process_GeneratedRibbons(
-        InWorldBounds, GeneratedRibbons);
+    const auto Processed =
+        InDetector->Process_GeneratedRibbons_WithVectorizeParams(
+            InWorldBounds,
+            GeneratedRibbons,
+            InVectorizeParams);
     const auto GeneratedRibbonsWereProcessed = Processed.Get_Succeeded();
     CK_ENSURE_IF_NOT(GeneratedRibbonsWereProcessed,
         TEXT("Request_RebuildFromDetector on [{}] could not process generated detector output: [{}]"),
