@@ -272,7 +272,12 @@ public:
     Get_IsRunningCommandlet();
 
     // Only for callers running at/after OnFEngineLoopInitComplete but ahead of CkCore's own
-    // registrar in that delegate's add-order. Do not call this elsewhere.
+    // registrar in that delegate's add-order — or from a commandlet's Main: -run= commandlets
+    // execute inside FEngineLoop::PreInit, FEngineLoop::Init never runs, and the delegate never
+    // fires, yet by Main-time every subsystem exists and blocking loads are safe (the cook does
+    // nothing else). A commandlet that marks this must also run the deferred heals itself
+    // (UCk_DeferredAssetInit_UE::ResolveAllPending, UCk_DeferredConfig_UE::ResolveAllPending).
+    // Do not call this elsewhere.
     static void
     MarkEngineSafeForBlockingLoads();
 
