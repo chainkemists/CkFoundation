@@ -67,6 +67,16 @@ public:
     DoShouldIncludeProperty(
         const FProperty* InProperty) -> bool;
 
+    /**
+     * GetCPPType dereferences the property's class/struct/enum pointer, which is null for fields
+     * whose referenced type no longer exists (deleted BP class, dead redirector). Validates the
+     * property tree first; a broken property ensures loudly and exports as UNRESOLVED(<field>)
+     * instead of crashing the sweep.
+     */
+    static auto
+    Get_SafeCPPType(
+        const FProperty* InProperty) -> FString;
+
     // Resets the thread-local recursion/dedup bookkeeping used by the shared
     // serializers. Call this before driving DoSerializeProperties_Json /
     // DoSerializePropertyValue_Json from a non-DataAsset exporter so stale
