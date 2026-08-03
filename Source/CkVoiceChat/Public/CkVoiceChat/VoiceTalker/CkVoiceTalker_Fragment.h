@@ -70,6 +70,7 @@ namespace ck
         friend class FProcessor_VoiceTalker_Capture;
         friend class FProcessor_VoiceTalker_ReceivePlayback;
         friend class FProcessor_VoiceTalker_EndPlay;
+        friend class FProcessor_VoiceChat_Route;
         friend class UCk_Utils_VoiceTalker_UE;
 
     private:
@@ -89,6 +90,11 @@ namespace ck
         double _CaptureClockSeconds = 0.0;
 
         TArray<FCk_VoiceChat_OutboundFrame> _OutboundFrames;
+
+        // Server-side slew-limited loudness (self-reported amplitude is not trusted raw): the
+        // fairness input for the audible-speaker cap. Rise-limited so a spoofed instant-max
+        // claim cannot jump the queue; falls when the talker goes quiet.
+        float _FairnessEnvelope = 0.0f;
 
         // The playout chain (jitter -> decoder -> decoded PCM -> synth). Shared by the two
         // mutually exclusive users on any one machine: the local self-monitor (loopback, while
@@ -205,6 +211,56 @@ namespace ck
     public:
         CK_PROPERTY(_LastResetFrame);
         CK_PROPERTY(_SpentBytes);
+    };
+
+    // One authorized forward awaiting the fairness/budget flush. The Route processor stages
+    // per talker; the flush processor sees ALL talkers competing for a recipient this tick -
+    // the audible-speaker cap needs that cross-talker view.
+    struct CKVOICECHAT_API FCk_VoiceChat_PendingForward
+    {
+    public:
+        CK_GENERATED_BODY(FCk_VoiceChat_PendingForward);
+
+    private:
+        TWeakObjectPtr<APlayerState> _Recipient;
+        FCk_Handle _Talker;
+        TArray<uint8> _PackedBundle;
+        float _Envelope = 0.0f;
+
+    public:
+        CK_PROPERTY_GET(_Recipient);
+        CK_PROPERTY_GET(_Talker);
+        CK_PROPERTY_GET(_PackedBundle);
+        CK_PROPERTY_GET(_Envelope);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FCk_VoiceChat_PendingForward, _Recipient, _Talker, _PackedBundle, _Envelope);
+    };
+
+    struct CKVOICECHAT_API FFragment_VoiceChat_PendingForwards
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceChat_PendingForwards);
+
+    private:
+        TArray<FCk_VoiceChat_PendingForward> _Forwards;
+
+    public:
+        CK_PROPERTY(_Forwards);
+    };
+
+    // World-scoped (transient entity), authority-side: when each recipient last received each
+    // talker - the least-recently-served rotation input at speaker-cap saturation.
+    struct CKVOICECHAT_API FFragment_VoiceChat_ServeHistory
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceChat_ServeHistory);
+
+    private:
+        TMap<TWeakObjectPtr<APlayerState>, TMap<FCk_Handle, uint64>> _LastServedFrame;
+
+    public:
+        CK_PROPERTY(_LastServedFrame);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

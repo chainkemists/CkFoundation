@@ -20,6 +20,7 @@
 #include <GameFramework/PlayerState.h>
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChat_Route);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChat_FlushForwards);
 
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Forwarded"), STAT_CkVoiceChat_RouteForwarded, STATGROUP_CkVoiceChat);
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Unresolvable ChannelIdx)"), STAT_CkVoiceChat_RouteDroppedUnresolvableIdx, STATGROUP_CkVoiceChat);
@@ -29,11 +30,18 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Not Authorized)"), STA
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Server Muted)"), STAT_CkVoiceChat_RouteDroppedServerMuted, STATGROUP_CkVoiceChat);
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Budget)"), STAT_CkVoiceChat_RouteDroppedBudget, STATGROUP_CkVoiceChat);
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Listener Muted)"), STAT_CkVoiceChat_RouteDroppedListenerMuted, STATGROUP_CkVoiceChat);
+DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Route Dropped (Speaker Cap)"), STAT_CkVoiceChat_RouteDroppedSpeakerCap, STATGROUP_CkVoiceChat);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_voice_chat_route_processor
 {
+    // Rise-limited so a spoofed instant-max amplitude claim takes ~half a second to reach the
+    // top loudness bucket; falls faster than it rises so a talker gone quiet yields its
+    // audible-speaker slot promptly.
+    constexpr auto EnvelopeRisePerSecond = 2.0f;
+    constexpr auto EnvelopeFallPerSecond = 4.0f;
+
     // A talker's connection identity: the player behind its owning actor, or nullptr for
     // player-less talkers (NPCs, test subjects with no owner chain).
     auto
@@ -125,6 +133,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent,
             FFragment_VoiceTalker_ServerInbox& InInbox)
         -> void
     {
@@ -136,11 +145,9 @@ namespace ck
         if (BundlesCopy.IsEmpty())
         { return; }
 
-        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVoiceTalkerEntity);
         auto* TalkerOwnerPlayer = ResolveOwningPlayer(InVoiceTalkerEntity);
-        auto& Budgets = Get_RouteBudgets(InVoiceTalkerEntity);
 
-        const auto ByteBudget = UCk_Utils_VoiceChat_Settings_UE::Get_MaxVoiceBytesPerConnectionPerTick();
+        const auto SlewSeconds = InDeltaT.Get_Seconds() / BundlesCopy.Num();
 
         for (const auto& Bundle : BundlesCopy)
         {
@@ -211,9 +218,15 @@ namespace ck
                 continue;
             }
 
+            InCurrent._FairnessEnvelope += FMath::Clamp(
+                voice_chat::codec::Dequantize_Amplitude(Unpacked->Get_Header().Get_AmplitudeQ8()) - InCurrent._FairnessEnvelope,
+                -EnvelopeFallPerSecond * SlewSeconds,
+                EnvelopeRisePerSecond * SlewSeconds);
+
             // Recipients: CanHear members, minus the talker entity and the sending connection.
             // Positional3D range filtering arrives with the routing probe (gate item 5); until
-            // then both policies route by membership.
+            // then both policies route by membership. Authorized forwards STAGE here; the flush
+            // processor applies the audible-speaker cap + byte budget and does the actual send.
             for (const auto& Member : UCk_Utils_VoiceChannel_UE::Get_Members(Channel))
             {
                 if (Member == InVoiceTalkerEntity)
@@ -236,22 +249,105 @@ namespace ck
                     continue;
                 }
 
-                auto& SpentBytes = Budgets.Get_SpentBytes().FindOrAdd(MakeWeakObjectPtr(RecipientPlayer));
+                auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InVoiceTalkerEntity);
+                TransientEntity.AddOrGet<FFragment_VoiceChat_PendingForwards>().Get_Forwards().Emplace(
+                    FCk_VoiceChat_PendingForward{MakeWeakObjectPtr(RecipientPlayer), InVoiceTalkerEntity,
+                        Packed, InCurrent._FairnessEnvelope});
+            }
+        }
+    }
 
-                if (SpentBytes + Packed.Num() > ByteBudget)
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_VoiceChat_FlushForwards::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InTransientEntity,
+            FFragment_VoiceChat_PendingForwards& InPending)
+        -> void
+    {
+        using namespace ck_voice_chat_route_processor;
+
+        const auto ForwardsCopy = InPending.Get_Forwards();
+        InPending.Get_Forwards().Reset();
+
+        if (ForwardsCopy.IsEmpty())
+        { return; }
+
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InTransientEntity);
+        auto& Budgets = Get_RouteBudgets(InTransientEntity);
+        auto& ServeHistory = InTransientEntity.AddOrGet<FFragment_VoiceChat_ServeHistory>();
+
+        const auto ByteBudget = UCk_Utils_VoiceChat_Settings_UE::Get_MaxVoiceBytesPerConnectionPerTick();
+        const auto MaxSpeakers = UCk_Utils_VoiceChat_Settings_UE::Get_MaxAudibleSpeakers();
+
+        auto ForwardsByRecipient = TMap<TWeakObjectPtr<APlayerState>, TArray<int32>>{};
+        for (auto Idx = 0; Idx < ForwardsCopy.Num(); ++Idx)
+        {
+            if (NOT ForwardsCopy[Idx].Get_Recipient().IsValid())
+            { continue; }
+
+            ForwardsByRecipient.FindOrAdd(ForwardsCopy[Idx].Get_Recipient()).Add(Idx);
+        }
+
+        for (const auto& [Recipient, ForwardIdxs] : ForwardsByRecipient)
+        {
+            auto& RecipientHistory = ServeHistory.Get_LastServedFrame().FindOrAdd(Recipient);
+
+            // Distinct competing talkers this tick, keyed into a candidate list for the pure
+            // selection policy (candidate id = index into Talkers).
+            auto Talkers = TArray<FCk_Handle>{};
+            auto Candidates = TArray<FCk_VoiceChat_TopNCandidate>{};
+            for (const auto ForwardIdx : ForwardIdxs)
+            {
+                const auto& Talker = ForwardsCopy[ForwardIdx].Get_Talker();
+
+                if (Talkers.Contains(Talker))
+                { continue; }
+
+                const auto* LastServed = RecipientHistory.Find(Talker);
+                Candidates.Emplace(FCk_VoiceChat_TopNCandidate{
+                    Talkers.Num(), ForwardsCopy[ForwardIdx].Get_Envelope(),
+                    LastServed != nullptr ? *LastServed : uint64{0}});
+                Talkers.Emplace(Talker);
+            }
+
+            auto SelectedTalkers = TSet<FCk_Handle>{};
+            for (const auto SelectedId : voice_chat::codec::Select_TopNTalkers(Candidates, MaxSpeakers))
+            {
+                SelectedTalkers.Add(Talkers[SelectedId]);
+            }
+
+            if (SelectedTalkers.Num() < Talkers.Num())
+            {
+                INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedSpeakerCap);
+            }
+
+            auto* Relay = ResolveRelayChannel_ForPlayer(World, Recipient.Get());
+
+            if (ck::Is_NOT_Valid(Relay))
+            { continue; }
+
+            auto& SpentBytes = Budgets.Get_SpentBytes().FindOrAdd(Recipient);
+
+            for (const auto ForwardIdx : ForwardIdxs)
+            {
+                const auto& Forward = ForwardsCopy[ForwardIdx];
+
+                if (NOT SelectedTalkers.Contains(Forward.Get_Talker()))
+                { continue; }
+
+                if (SpentBytes + Forward.Get_PackedBundle().Num() > ByteBudget)
                 {
                     INC_DWORD_STAT(STAT_CkVoiceChat_RouteDroppedBudget);
                     continue;
                 }
 
-                auto* Relay = ResolveRelayChannel_ForPlayer(World, RecipientPlayer);
+                Relay->Client_ReceiveVoiceBundle(Forward.Get_Talker(), Forward.Get_PackedBundle());
 
-                if (ck::Is_NOT_Valid(Relay))
-                { continue; }
-
-                Relay->Client_ReceiveVoiceBundle(InVoiceTalkerEntity, Packed);
-
-                SpentBytes += Packed.Num();
+                SpentBytes += Forward.Get_PackedBundle().Num();
+                RecipientHistory.Add(Forward.Get_Talker(), GFrameCounter);
                 INC_DWORD_STAT(STAT_CkVoiceChat_RouteForwarded);
             }
         }
