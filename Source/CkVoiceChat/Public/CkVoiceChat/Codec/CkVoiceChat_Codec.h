@@ -102,6 +102,9 @@ public:
 
 private:
     FCk_Time _FrameDuration = FCk_Time{0.02};
+
+    // The clean-network floor: measured jitter near zero converges the target depth HERE, not to
+    // _InitialTargetDepth (which only covers the window before an estimate exists).
     FCk_Time _MinDepth = FCk_Time{0.02};
     FCk_Time _InitialTargetDepth = FCk_Time{0.06};
     FCk_Time _MaxDepth = FCk_Time{0.2};
