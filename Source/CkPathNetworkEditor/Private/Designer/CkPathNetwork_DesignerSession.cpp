@@ -498,6 +498,12 @@ auto
         { Set_DetectorClass(DetectorClasses[0]); }
     }
 
+    // Fit before resolving the level's network so a session reused across map changes never
+    // carries the previous map's detection center into an error early-return; a successful
+    // Load_PathNetwork below overrides these bounds with the loaded network's own.
+    if (ck::IsValid(InWorld))
+    { Fit_BoundsToLoadedWorld(); }
+
     auto HasMultiplePathNetworks = false;
     auto* LevelPathNetwork =
         Resolve_SoleLevelPathNetwork(HasMultiplePathNetworks);
@@ -521,9 +527,6 @@ auto
             TEXT("The target level has multiple path networks. Select one and use Load Selected Network."));
         return;
     }
-
-    if (ck::IsValid(InWorld))
-    { Fit_BoundsToLoadedWorld(); }
 
     if (ck::Is_NOT_Valid(_DetectorTemplate))
     {
