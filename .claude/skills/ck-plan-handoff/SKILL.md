@@ -42,6 +42,28 @@ chosen approach in ONE short message before writing the package.
 ## Phase B — Write the handoff package
 Location: the feature/investigation folder, per ck-methodology structure.
 
+**Lead with an executable spec; prose is rationale, not specification.** The
+highest-fidelity instruction you can hand an executor is something it can run
+and watch fail. Before writing any phase prose, produce whichever the work
+admits:
+
+- a **failing test** — an AS or C++ autotest per `ck-tests-authoring-and-running`,
+  committed red, with the exact toolbox `--test` invocation and its current
+  failing output pasted in. It goes green precisely when the work is done, and
+  it cannot be misread the way a paragraph can.
+- a **repro command with its captured output** where a test isn't yet possible
+  (build failure, UHT error, editor-boot crash) — exact command, exact current
+  text, exact expected text after the fix.
+- a **rubric** — acceptance criteria as a scored checklist, routed through
+  `ck-change-control`, written so the executor self-checks against it and a
+  later `/audit-package` session scores the same list.
+- a **rendered reference** where the deliverable is structural or visual:
+  pre-designed struct layouts and macro call sites in house style, a Slate
+  mockup, a sample log/snapshot output.
+
+Then write the docs around it. If the work genuinely admits no executable
+spec, say so in PROMPT.md in one line and name what stands in its place.
+
 - **PROMPT.md** — problem statement, chosen approach with rationale,
   rejected approaches with one-line kill reasons, full file inventory,
   glossary of every non-obvious term used, links to the skills the executor
@@ -59,7 +81,9 @@ Location: the feature/investigation folder, per ck-methodology structure.
     else → STOP, record in PROGRESS.md blockers, end session." Never leave
     an implicit "figure it out."
   - Exit criteria that are MEASURABLE (compiles, named tests pass, specific
-    grep returns N hits) — never "works correctly."
+    grep returns N hits) — never "works correctly." Where the phase has a
+    failing test from the executable spec, the exit criterion IS that test
+    going green under the toolbox.
   - Explicit fences: the wrong paths from Phase A, each with its reason.
 - **PROGRESS.md** — from the ck-methodology template, pre-filled with all
   phases, plus a **Blockers** section the executor must use instead of
@@ -72,6 +96,8 @@ Location: the feature/investigation folder, per ck-methodology structure.
 ## Phase C — Adversarial self-review before handing off
 Re-read the package as a Sonnet-class executor with no context:
 - Is any step ambiguous enough to permit two interpretations? Fix it.
+- Does the package lead with an executable spec (red test / repro-with-output
+  / rubric / rendered reference), or state in one line why none was possible?
 - Does any gate lack an "anything else → STOP" branch? Add it.
 - Does any phase require a design decision? Pull it back into PROMPT.md.
 - Is every command/path/signature verified against the repo this session?
