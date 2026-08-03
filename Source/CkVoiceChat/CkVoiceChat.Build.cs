@@ -20,6 +20,7 @@ public class CkVoiceChat : CkModuleRules
             "DeveloperSettings",
             "Engine",
             "GameplayTags",
+            "Voice",
 
             "CkCore",
             "CkEcs",
