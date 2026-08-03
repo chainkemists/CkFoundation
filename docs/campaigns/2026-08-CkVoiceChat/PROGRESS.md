@@ -7,11 +7,12 @@ top-tier audit** ([Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md)). Spike ver
 **PROCEED — ADR-4 holds**; amendments S1–S5 binding on P3.
 **Baseline being diffed against:** waived for the purely-additive branch (honest gap flagged to
 the auditor); regression evidence = RenderTarget suite 22/22 on the final binary + 3 clean boots.
-**Next action:** **Gate 1 work COMPLETE** ([Gate_1.md](Gate_1.md)) — codec layer 10/10 green,
-benchmark recorded (encode 61.3 µs / decode 26.9 µs / 47.7 B per frame), C1 satisfied, canaries +
-regression delta-zero. Awaiting the Gate-1 top-tier audit (appended to Gate_1.md when it lands);
-on GO → open Gate 2 (P2: capture seam + local loopback playback + packaged Opus smoke per N5).
-**Blocked on:** the Gate-1 audit. Nothing pushed anywhere; superproject gitlink untouched.
+**Next action:** Gate 1 CLOSED (audit GO WITH CONDITIONS → all conditions resolved + verified,
+run 5 **14/14 EXIT 0**, 2ed23fff0). **Gate 2 (P2) OPEN** ([Gate_2.md](Gate_2.md)): capture seam
+(engine + fake), talker requests/signals, capture→VAD→encode processors, synth playback +
+loopback, fake-capture AutoTests, N5 packaged smoke. Discontinuity contract + decode-capacity
+floor + `[Voice] bEnabled` gate all already pinned for this phase.
+**Blocked on:** nothing. Nothing pushed anywhere; superproject gitlink untouched.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
