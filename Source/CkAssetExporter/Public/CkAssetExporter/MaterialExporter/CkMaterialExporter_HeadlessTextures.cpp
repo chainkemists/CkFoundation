@@ -4,6 +4,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "Engine/EngineTypes.h"
+#include "Engine/Font.h"
 #include "Engine/Texture.h"
 #include "MaterialShared.h"
 #include "Misc/ScopeExit.h"
@@ -16,6 +17,8 @@
 #include "Materials/MaterialExpressionCustomOutput.h"
 #include "Materials/MaterialExpressionDataDrivenShaderPlatformInfoSwitch.h"
 #include "Materials/MaterialExpressionFeatureLevelSwitch.h"
+#include "Materials/MaterialExpressionFontSample.h"
+#include "Materials/MaterialExpressionFontSampleParameter.h"
 #include "Materials/MaterialExpressionFunctionInput.h"
 #include "Materials/MaterialExpressionFunctionOutput.h"
 #include "Materials/MaterialExpressionMaterialAttributeLayers.h"
@@ -116,18 +119,17 @@ namespace ck_material_exporter_headless_textures
 
     // Mirrors FMaterialTextureParameterInfo::GetGameThreadTextureValue: a named parameter resolves
     // through the queried interface's instance chain; anything else (or a failed lookup) falls back
-    // to the texture the translator registered — the node's own default.
-    auto RegisterTextureNode(FWalkState& InState, const UMaterialExpressionTextureBase* InNode) -> void
+    // to the texture the translator registered — the node's default.
+    auto RegisterTexture(FWalkState& InState, UTexture* InDefaultTexture, FName InParameterName) -> void
     {
-        auto* DefaultTexture = InNode->Texture.Get();
+        auto* DefaultTexture = InDefaultTexture;
 
         auto ResolvedTexture = DefaultTexture;
-        if (const auto* ParamNode = Cast<UMaterialExpressionTextureSampleParameter>(InNode);
-            ParamNode != nullptr && NOT ParamNode->ParameterName.IsNone())
+        if (NOT InParameterName.IsNone())
         {
             auto* ParamValue = static_cast<UTexture*>(nullptr);
             if (InState._QueriedMaterial->GetTextureParameterValue(
-                    FHashedMaterialParameterInfo{ParamNode->ParameterName}, ParamValue))
+                    FHashedMaterialParameterInfo{InParameterName}, ParamValue))
             { ResolvedTexture = ParamValue; }
         }
 
@@ -155,6 +157,12 @@ namespace ck_material_exporter_headless_textures
         { return; }
 
         InState._Buckets[Bucket].AddUnique(ResolvedTexture);
+    }
+
+    auto RegisterTextureNode(FWalkState& InState, const UMaterialExpressionTextureBase* InNode) -> void
+    {
+        const auto* ParamNode = Cast<UMaterialExpressionTextureSampleParameter>(InNode);
+        RegisterTexture(InState, InNode->Texture.Get(), ParamNode != nullptr ? ParamNode->ParameterName : FName{});
     }
 
     auto EvaluateStaticBool(FWalkState& InState, const FExpressionInput& InInput, int32 InFrame) -> TOptional<bool>
@@ -366,6 +374,27 @@ namespace ck_material_exporter_headless_textures
         if (const auto* TextureBase = Cast<UMaterialExpressionTextureBase>(InExpression))
         {
             RegisterTextureNode(InState, TextureBase);
+            return;
+        }
+
+        // FontSample registers the selected font page texture; the parameter variant registers it
+        // as a TEXTURE parameter named after the font parameter (FontSampleParameter::Compile),
+        // and falls back to the plain-sample path when its name/font/page is unusable.
+        if (const auto* FontSample = Cast<UMaterialExpressionFontSample>(InExpression))
+        {
+            auto* Font = FontSample->Font.Get();
+            const auto FontPageIsSampleable = Font != nullptr &&
+                Font->FontCacheType == EFontCacheType::Offline &&
+                Font->Textures.IsValidIndex(FontSample->FontTexturePage);
+            if (NOT FontPageIsSampleable)
+            { return; }
+
+            auto ParameterName = FName{};
+            if (const auto* FontParam = Cast<UMaterialExpressionFontSampleParameter>(FontSample);
+                FontParam != nullptr && FontParam->ParameterName.IsValid() && NOT FontParam->ParameterName.IsNone())
+            { ParameterName = FontParam->ParameterName; }
+
+            RegisterTexture(InState, Font->Textures[FontSample->FontTexturePage], ParameterName);
             return;
         }
 
