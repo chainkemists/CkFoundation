@@ -1,6 +1,8 @@
 # CkWebUmg — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
+**As of 2026-08-02 (session close): Gate 5 headless items ALL DONE — full-suite baseline 937/937 CONFIRMED** (BuildTest-FullRegression8.log, 8m52s — the prior 934 + FactoryReimport + HitTestDefaults + ValidatePreImport, exact predicted count, zero regressions; measured post-checkout-surgery, so the baseline is valid for the current CkTests@32c1c77 / CkGameplayDebugger@57a78e3 pair). Branch `feature/webumg-campaign` @ 056724c1b (dev+54, nothing pushed). Landed this session: freeze resolution, factory verification (58/58), UIBridge intake, hit-test defaults + Tools-menu entry + `<title>` capture (59/59), validation pre-pass (60/60 WebUmg lane). **Remaining Gate 5:** live-reload preview (item 4+9 — next headless-ish item; debounce logic unit-testable, watcher observation is [EDITOR-VERIFY]), real-screen exit criterion (blocked on Adam's mockup), ZIP multi-page (deferred). **Adam-side [EDITOR-VERIFY] queue:** drag-drop .html into Content Browser (factory); Tools → CkWebUmg → Import Web Page… click.
+
 **As of 2026-08-02: UNFROZEN — factory commit VERIFIED; UIBridge digested; Gate 5 continues.**
 The 2026-08-01 freeze resolved without touching CkFoundation: CkTests switched to its
 `feature/webumg-campaign` side branch (32c1c77 — zero references to the missing CkDynamic symbol)
