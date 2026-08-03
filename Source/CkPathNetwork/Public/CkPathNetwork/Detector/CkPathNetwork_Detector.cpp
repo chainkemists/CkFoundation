@@ -109,6 +109,21 @@ auto
 
 auto
     UCk_PathNetwork_Detector_UE::
+    Process_GeneratedRibbons_WithVectorizeParams(
+        const FBox& InWorldBounds,
+        const TArray<FCk_PathNetwork_Ribbon>& InGeneratedWorldRibbons,
+        const FCk_PathNetwork_VectorizeParams&) const
+    -> FCk_PathNetwork_DetectorProcessResult
+{
+    return Process_GeneratedRibbons(
+        InWorldBounds,
+        InGeneratedWorldRibbons);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_PathNetwork_Detector_UE::
     Get_DetectionMask_Implementation(
         const FBox& InWorldBounds) const
     -> FCk_PathNetwork_DetectionMask
