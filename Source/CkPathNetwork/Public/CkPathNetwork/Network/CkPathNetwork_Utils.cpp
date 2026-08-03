@@ -240,7 +240,10 @@ auto
         InNetwork, Processed.Get_FailureReason())
     {}
     if (NOT GeneratedRibbonsWereProcessed)
-    { return InNetwork; }
+    {
+        InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InNetwork;
+    }
     GeneratedRibbons = Processed.Get_GeneratedWorldRibbons();
 
     const auto ProcessedSourcesAreGenerated =
@@ -251,7 +254,10 @@ auto
         InNetwork)
     {}
     if (NOT ProcessedSourcesAreGenerated)
-    { return InNetwork; }
+    {
+        InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InNetwork;
+    }
 
     const auto Validation = InDetector->Validate_GeneratedRibbons(
         InWorldBounds, GeneratedRibbons);
@@ -261,7 +267,10 @@ auto
         InNetwork, Validation.Get_FailureReason())
     {}
     if (NOT GeneratedRibbonsAreValid)
-    { return InNetwork; }
+    {
+        InDelegate.ExecuteIfBound(InNetwork, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InNetwork;
+    }
 
     auto NewRibbons = ck::algo::Filter(
         InNetwork.Get<ck::FFragment_PathNetwork_Params>().Get_Ribbons(),
