@@ -60,6 +60,22 @@ struct CKPATHNETWORK_API FCk_PathNetwork_VectorizeResult
 
 namespace ck::pathnetwork
 {
+    // Simplify an already-generated ribbon while bounding the visible corridor-footprint error.
+    // Zero preserves every source point. Positive values preserve exact endpoints and bound the
+    // summed planar-centerline plus half-width error, with height bounded separately.
+    CKPATHNETWORK_API auto
+    Simplify_RibbonPoints(
+        const TArray<FCk_PathNetwork_RibbonPoint>& InPoints,
+        float InTolerance,
+        TFunctionRef<bool(int32, int32)> InIsChordSupported)
+        -> TArray<FCk_PathNetwork_RibbonPoint>;
+
+    // Convenience overload for callers whose source admits every tolerance-compliant chord.
+    CKPATHNETWORK_API auto
+    Simplify_RibbonPoints(
+        const TArray<FCk_PathNetwork_RibbonPoint>& InPoints,
+        float InTolerance) -> TArray<FCk_PathNetwork_RibbonPoint>;
+
     CKPATHNETWORK_API auto
     Try_VectorizeMaskToRibbons(
         const FCk_PathNetwork_DetectionMask& InMask,

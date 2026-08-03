@@ -548,6 +548,126 @@ namespace ck_pathnetwork_vectorize
 namespace ck::pathnetwork
 {
     auto
+    Simplify_RibbonPoints(
+        const TArray<FCk_PathNetwork_RibbonPoint>& InPoints,
+        const float InTolerance,
+        TFunctionRef<bool(int32, int32)> InIsChordSupported)
+        -> TArray<FCk_PathNetwork_RibbonPoint>
+    {
+        const auto CanSimplify =
+            FMath::IsFinite(InTolerance) &&
+            InTolerance > 0.0f &&
+            InPoints.Num() > 2;
+        if (NOT CanSimplify)
+        { return InPoints; }
+
+        struct FSpan
+        {
+            int32 _First;
+            int32 _Last;
+        };
+
+        auto Kept = TSet<int32>{};
+        Kept.Add(0);
+        Kept.Add(InPoints.Num() - 1);
+
+        auto Stack = TArray<FSpan>{};
+        Stack.Push(FSpan{0, InPoints.Num() - 1});
+        while (NOT Stack.IsEmpty())
+        {
+            const auto Span = Stack.Pop();
+            if (Span._Last - Span._First < 2)
+            { continue; }
+
+            const auto& First = InPoints[Span._First];
+            const auto& Last = InPoints[Span._Last];
+            const auto FirstXY = FVector2D{First.Get_Location()};
+            const auto LastXY = FVector2D{Last.Get_Location()};
+            const auto ChordXY = LastXY - FirstXY;
+            const auto ChordLengthSquared = ChordXY.SquaredLength();
+
+            auto MaxExcess = 0.0;
+            auto MaxIndex = int32{INDEX_NONE};
+            for (auto Index = Span._First + 1; Index < Span._Last; ++Index)
+            {
+                const auto& Point = InPoints[Index];
+                const auto PointXY = FVector2D{Point.Get_Location()};
+                const auto ChordT = ChordLengthSquared > UE_KINDA_SMALL_NUMBER
+                    ? FMath::Clamp(
+                        FVector2D::DotProduct(PointXY - FirstXY, ChordXY) /
+                            ChordLengthSquared,
+                        0.0,
+                        1.0)
+                    : 0.0;
+                const auto PlanarDeviation = FVector2D::Distance(
+                    PointXY,
+                    FirstXY + ChordXY * ChordT);
+                const auto HeightDeviation = FMath::Abs(
+                    Point.Get_Location().Z -
+                    FMath::Lerp(
+                        First.Get_Location().Z,
+                        Last.Get_Location().Z,
+                        ChordT));
+                const auto WidthDeviation = FMath::Abs(
+                    Point.Get_HalfWidth() -
+                    FMath::Lerp(
+                        First.Get_HalfWidth(),
+                        Last.Get_HalfWidth(),
+                        static_cast<float>(ChordT)));
+                const auto DeviationsAreFinite =
+                    FMath::IsFinite(PlanarDeviation) &&
+                    FMath::IsFinite(HeightDeviation) &&
+                    FMath::IsFinite(WidthDeviation);
+                const auto Excess = DeviationsAreFinite
+                    ? FMath::Max(
+                        PlanarDeviation + WidthDeviation - InTolerance,
+                        HeightDeviation - InTolerance)
+                    : TNumericLimits<double>::Max();
+                if (Excess > MaxExcess)
+                {
+                    MaxExcess = Excess;
+                    MaxIndex = Index;
+                }
+            }
+
+            if (MaxIndex == INDEX_NONE &&
+                NOT InIsChordSupported(Span._First, Span._Last))
+            { MaxIndex = (Span._First + Span._Last) / 2; }
+
+            if (MaxIndex != INDEX_NONE)
+            {
+                Kept.Add(MaxIndex);
+                Stack.Push(FSpan{Span._First, MaxIndex});
+                Stack.Push(FSpan{MaxIndex, Span._Last});
+            }
+        }
+
+        auto KeptIndices = Kept.Array();
+        KeptIndices.Sort();
+        auto Result = TArray<FCk_PathNetwork_RibbonPoint>{};
+        Result.Reserve(KeptIndices.Num());
+        for (const auto KeptIndex : KeptIndices)
+        { Result.Add(InPoints[KeptIndex]); }
+        return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+    Simplify_RibbonPoints(
+        const TArray<FCk_PathNetwork_RibbonPoint>& InPoints,
+        const float InTolerance) -> TArray<FCk_PathNetwork_RibbonPoint>
+    {
+        return Simplify_RibbonPoints(
+            InPoints,
+            InTolerance,
+            [](const int32, const int32)
+            { return true; });
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
     Try_VectorizeMaskToRibbons(
         const FCk_PathNetwork_DetectionMask& InMask,
         const FCk_PathNetwork_VectorizeParams& InParams,
