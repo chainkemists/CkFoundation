@@ -68,6 +68,7 @@ namespace ck
         friend class FProcessor_VoiceTalker_Setup;
         friend class FProcessor_VoiceTalker_HandleRequests;
         friend class FProcessor_VoiceTalker_Capture;
+        friend class FProcessor_VoiceTalker_ReceivePlayback;
         friend class FProcessor_VoiceTalker_EndPlay;
         friend class UCk_Utils_VoiceTalker_UE;
 
@@ -89,12 +90,17 @@ namespace ck
 
         TArray<FCk_VoiceChat_OutboundFrame> _OutboundFrames;
 
-        // local self-monitor path: encoded frames run back through the real playback policy
+        // The playout chain (jitter -> decoder -> decoded PCM -> synth). Shared by the two
+        // mutually exclusive users on any one machine: the local self-monitor (loopback, while
+        // THIS machine transmits) and remote-talker receive (the entity is a replica; its
+        // transmit path never runs here).
         FCk_VoiceChat_JitterBuffer _LoopbackJitter;
         TSharedPtr<IVoiceDecoder> _LoopbackDecoder;
         TArray<uint8> _LoopbackDecodedPcm;
         double _LoopbackPopAccumulatorSeconds = 0.0;
         TStrongObjectPtr<UCk_VoiceChatSynthComponent_UE> _LoopbackSynth;
+
+        double _ReceiveClockSeconds = 0.0;
 
     public:
         CK_PROPERTY_GET(_Seq);

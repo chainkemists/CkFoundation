@@ -29,11 +29,13 @@ DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Decoded"),   STAT_CkVoiceChat_
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Sent"),      STAT_CkVoiceChat_FramesSent,      STATGROUP_CkVoiceChat);
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Dropped (Stale)"), STAT_CkVoiceChat_FramesDroppedStale, STATGROUP_CkVoiceChat);
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Bundles Dropped (Inbox Full)"), STAT_CkVoiceChat_BundlesDroppedInboxFull_Talker, STATGROUP_CkVoiceChat);
+DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Receive Dropped (Malformed)"), STAT_CkVoiceChat_ReceiveDroppedMalformed, STATGROUP_CkVoiceChat);
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceTalker_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceTalker_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceTalker_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceTalker_Capture);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceTalker_ReceivePlayback);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceTalker_EndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -384,19 +386,9 @@ namespace ck
 
         // The synth is created only AFTER capture is known to be running - creating it earlier
         // left a registered, silently-running component behind when capture failed to start.
-        if (InParams.Get_Loopback() == ECk_EnableDisable::Enable && NOT InCurrent._LoopbackSynth.IsValid())
+        if (InParams.Get_Loopback() == ECk_EnableDisable::Enable)
         {
-            auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-
-            if (ck::IsValid(World) && World->GetAudioDevice().IsValid())
-            {
-                auto* Synth = NewObject<UCk_VoiceChatSynthComponent_UE>(World);
-                Synth->bAutoActivate = false;
-                Synth->RegisterComponentWithWorld(World);
-                Synth->Start();
-
-                InCurrent._LoopbackSynth = TStrongObjectPtr{Synth};
-            }
+            FProcessor_VoiceTalker_ReceivePlayback::TryCreate_PlaybackSynth(InHandle, InCurrent);
         }
 
         InHandle.Add<FTag_VoiceTalker_IsTransmitting>();
@@ -604,10 +596,93 @@ namespace ck
         Send_OutboundFrames(InVoiceTalkerEntity, InCurrent.Get_AmplitudeQ8(),
             InCurrent._CaptureClockSeconds, InCurrent._OutboundFrames);
 
-        if (InParams.Get_Loopback() != ECk_EnableDisable::Enable || NOT InCurrent._LoopbackDecoder.IsValid())
+        if (InParams.Get_Loopback() != ECk_EnableDisable::Enable)
         { return; }
 
-        InCurrent._LoopbackPopAccumulatorSeconds += InDeltaT.Get_Seconds();
+        FProcessor_VoiceTalker_ReceivePlayback::Drain_Playout(InCurrent, InDeltaT.Get_Seconds());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_VoiceTalker_ReceivePlayback::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_ReceiveInbox& InInbox)
+        -> void
+    {
+        using namespace ck_voice_talker_processor;
+
+        InCurrent._ReceiveClockSeconds += InDeltaT.Get_Seconds();
+
+        const auto BundlesCopy = InInbox.Get_PackedBundles();
+        InInbox.Get_PackedBundles().Reset();
+
+        for (const auto& Packed : BundlesCopy)
+        {
+            const auto Unpacked = voice_chat::codec::Unpack_Bundle(Packed);
+
+            if (NOT Unpacked.IsSet())
+            {
+                // The route validated this bundle before forwarding - a malformed arrival here
+                // is wire corruption, not a caller error.
+                INC_DWORD_STAT(STAT_CkVoiceChat_ReceiveDroppedMalformed);
+                continue;
+            }
+
+            if (NOT InCurrent._LoopbackDecoder.IsValid())
+            {
+                constexpr auto NumChannels = 1;
+                InCurrent._LoopbackDecoder = FVoiceModule::Get().CreateVoiceDecoder(
+                    UCk_Utils_VoiceChat_Settings_UE::Get_SampleRate(), NumChannels);
+            }
+
+            // Remote amplitude rides the header (the server never decodes) - mirror it so
+            // Get_CurrentAmplitude works for remote talkers exactly like local ones.
+            InCurrent._AmplitudeQ8 = Unpacked->Get_Header().Get_AmplitudeQ8();
+
+            // Send-side invariant: a bundle's frames are one contiguous seq run (staleness drops
+            // a prefix, the budget cuts a suffix), so frame i is header seq + i.
+            const auto FirstSeq = Unpacked->Get_Header().Get_Seq();
+
+            auto FrameOffset = uint16{0};
+            for (const auto& Frame : Unpacked->Get_Frames())
+            {
+                InCurrent._LoopbackJitter.Push(static_cast<uint16>(FirstSeq + FrameOffset), Frame,
+                    FCk_Time{InCurrent._ReceiveClockSeconds}, FCk_VoiceChat_JitterParams{});
+                ++FrameOffset;
+            }
+        }
+
+        if (NOT BundlesCopy.IsEmpty())
+        {
+            TryCreate_PlaybackSynth(InVoiceTalkerEntity, InCurrent);
+        }
+
+        Drain_Playout(InCurrent, InDeltaT.Get_Seconds());
+    }
+
+    auto
+        FProcessor_VoiceTalker_ReceivePlayback::
+        Drain_Playout(
+            FFragment_VoiceTalker_Current& InCurrent,
+            double InDeltaSeconds)
+        -> void
+    {
+        using namespace ck_voice_talker_processor;
+
+        if (NOT InCurrent._LoopbackDecoder.IsValid())
+        {
+            InCurrent._LoopbackPopAccumulatorSeconds = 0.0;
+            return;
+        }
+
+        const auto FrameBytes = Get_FrameBytes();
+        const auto FrameDurationSeconds = Get_FrameDurationSeconds();
+
+        InCurrent._LoopbackPopAccumulatorSeconds += InDeltaSeconds;
 
         const auto JitterParams = FCk_VoiceChat_JitterParams{};
         const auto DecodeCapacityBytes = EngineDecodeCapacityFrames * FrameBytes;
@@ -661,6 +736,29 @@ namespace ck
         {
             InCurrent._LoopbackDecodedPcm.RemoveAt(0,
                 InCurrent._LoopbackDecodedPcm.Num() - MaxLoopbackDecodedBytes);
+        }
+    }
+
+    auto
+        FProcessor_VoiceTalker_ReceivePlayback::
+        TryCreate_PlaybackSynth(
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent)
+        -> void
+    {
+        if (InCurrent._LoopbackSynth.IsValid())
+        { return; }
+
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVoiceTalkerEntity);
+
+        if (ck::IsValid(World) && World->GetAudioDevice().IsValid())
+        {
+            auto* Synth = NewObject<UCk_VoiceChatSynthComponent_UE>(World);
+            Synth->bAutoActivate = false;
+            Synth->RegisterComponentWithWorld(World);
+            Synth->Start();
+
+            InCurrent._LoopbackSynth = TStrongObjectPtr{Synth};
         }
     }
 
