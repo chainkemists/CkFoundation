@@ -9,12 +9,13 @@ resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
 **Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1, 2, 3, 4-core,
-6, and **7 (listener mute = routing exclusion, 3f84feadf + CkTests b397076)** COMPLETE —
-**23/23, EXIT 0, 0 AS errors** (Test-VoiceChatP3-mute.log). The full mouth-to-ear machine path
-runs cross-world; N1 is enforcement + test; mute is a server-side privacy exclusion with a
-three-act net proof. Remaining in Gate 3: item 4b (top-N fairness + S5 drain measurement),
-item 5 (Positional3D probe routing set, earns CkSpatialQuery), item 8 (S4 teardown ordering),
-host-asymmetry net tests, N7 routing matrix in module Claude.md.
+**4b-fairness (a1a844a1f + CkTests ed3b340)**, 6, and 7 COMPLETE — **24/24, EXIT 0, 0 AS
+errors** (Test-VoiceChatP3-fairness.log). The full mouth-to-ear machine path runs cross-world
+with N1 enforcement, mute privacy, and the CTO amplitude-fairness ruling all tested. Remaining
+in Gate 3: **S5 drain-budget measurement** (instrumented run, numbers into Gate_3.md), item 5
+(Positional3D probe routing set, earns CkSpatialQuery), item 8 (S4 teardown ordering + the
+teardown-mid-transmit test), host-asymmetry net tests, N7 routing matrix in module Claude.md —
+then the Gate-3 exit sweep (full VoiceChat + RenderTarget delta-zero) and the gate audit.
 The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
 P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
 DefaultEngine.ini (a BB-repo decision; superproject untouched).
@@ -28,6 +29,22 @@ DefaultEngine.ini (a BB-repo decision; superproject untouched).
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — P3 item 4b (fairness half): audible-speaker cap + envelope + LRS (24/24)
+- **CkF a1a844a1f + CkTests ed3b340:** routing split into stage/flush — Route (per-talker)
+  stages authorized forwards and slews the fairness envelope (rise 2.0/s, fall 4.0/s: a spoofed
+  instant-max claim takes ~0.5 s to reach the top bucket and cannot jump the queue);
+  `FlushForwards` (AuthorityOnly, RunAfter Route) applies the MaxAudibleSpeakers cap per
+  recipient with the PURE `Select_TopNTalkers` policy (8 loudness buckets, ties + the
+  sustained-max spoof rotate least-recently-served), then the per-connection byte budget, then
+  the sends + serve-history update. This lands the CTO amplitude-fairness ruling in full.
+- Unit tests pin the policy where a 2-talker net spec cannot: cap, cross-bucket loudness wins,
+  LRS rotation flips after serving, degenerate inputs.
+- Ran: `--build --test --test-pattern VoiceChat --discover-fresh` → **24/24, EXIT 0, 0 AS
+  errors** (Test-VoiceChatP3-fairness.log); existing net specs unchanged (≤2 talkers → cap
+  no-op; budget same value, applied at flush).
+- Still open in 4b: the **S5 drain-budget measurement** (instrumented run + honest numbers in
+  Gate_3.md, default budget justified against them).
 
 ### 2026-08-03 — P3 item 7 complete: listener mute is a routing exclusion (23/23)
 - **CkF 3f84feadf + CkTests b397076:** mute sync is stateful must-apply, so it rides a SECOND
