@@ -101,13 +101,13 @@ auto
 auto
     FCk_VoiceChat_CaptureSource_Fake::
     Enqueue_Sine(
-        float InDurationSeconds,
+        FCk_Time InDuration,
         float InAmplitude01,
         float InFrequencyHz)
     -> void
 {
     auto& Segment = _Segments.Emplace_GetRef();
-    Segment._RemainingSamples = FMath::RoundToInt32(InDurationSeconds * _SampleRate);
+    Segment._RemainingSamples = FMath::RoundToInt32(InDuration.Get_Seconds() * _SampleRate);
     Segment._Amplitude01 = InAmplitude01;
     Segment._FrequencyHz = InFrequencyHz;
 }
@@ -115,31 +115,31 @@ auto
 auto
     FCk_VoiceChat_CaptureSource_Fake::
     Enqueue_Silence(
-        float InDurationSeconds)
+        FCk_Time InDuration)
     -> void
 {
-    Enqueue_Sine(InDurationSeconds, 0.0f, 0.0f);
+    Enqueue_Sine(InDuration, 0.0f, 0.0f);
 }
 
 auto
     FCk_VoiceChat_CaptureSource_Fake::
     AdvanceTime(
-        float InDeltaSeconds)
+        FCk_Time InDeltaT)
     -> void
 {
     if (NOT _IsStarted)
     { return; }
 
-    _PendingSeconds += InDeltaSeconds;
+    _PendingSeconds += InDeltaT.Get_Seconds();
 }
 
 auto
     FCk_VoiceChat_CaptureSource_Fake::
     Tick(
-        float InDeltaSeconds)
+        FCk_Time InDeltaT)
     -> void
 {
-    AdvanceTime(InDeltaSeconds);
+    AdvanceTime(InDeltaT);
 }
 
 auto

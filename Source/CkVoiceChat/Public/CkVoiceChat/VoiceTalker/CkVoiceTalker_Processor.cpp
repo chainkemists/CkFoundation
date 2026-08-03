@@ -53,7 +53,7 @@ namespace ck_voice_talker_processor
     // Send-side freshness bound (campaign amendment S2): a frame older than this has already
     // blown the mouth-to-ear budget - dropping it beats delivering it late, and it keeps the
     // outbound queue bounded when no channel/relay is reachable yet.
-    constexpr auto MaxOutboundFrameAgeSeconds = 0.15;
+    const auto MaxOutboundFrameAge = FCk_Time{0.15};
 
     // Headroom under the 256 B server->client unreliable split threshold (amendment S3), leaving
     // room for the RPC envelope (talker handle + array overhead) around the packed bundle.
@@ -130,7 +130,7 @@ namespace ck_voice_talker_processor
     Send_OutboundFrames(
         FCk_Handle_VoiceTalker InTalker,
         uint8 InAmplitudeQ8,
-        double InCaptureClockSeconds,
+        FCk_Time InCaptureClock,
         TArray<ck::FCk_VoiceChat_OutboundFrame>& InOutFrames) -> void
     {
         if (InOutFrames.IsEmpty())
@@ -143,12 +143,12 @@ namespace ck_voice_talker_processor
             Entries.Emplace(FCk_VoiceChat_PacingEntry{
                 static_cast<int32>(Frame.Get_Seq()),
                 Frame.Get_Encoded().Num(),
-                FCk_Time{static_cast<float>(InCaptureClockSeconds - Frame.Get_CaptureTimeSeconds())}});
+                InCaptureClock - Frame.Get_CaptureTime()});
         }
 
         const auto Pacing = ck::voice_chat::codec::Select_BundlesToSend(Entries,
             UCk_Utils_VoiceChat_Settings_UE::Get_MaxVoiceBytesPerConnectionPerTick(),
-            FCk_Time{MaxOutboundFrameAgeSeconds});
+            MaxOutboundFrameAge);
 
         if (NOT Pacing.Get_StaleDropIds().IsEmpty())
         {
@@ -498,8 +498,8 @@ namespace ck
         if (NOT InCurrent._CaptureSource.IsValid())
         { return; }
 
-        InCurrent._CaptureClockSeconds += InDeltaT.Get_Seconds();
-        InCurrent._CaptureSource->Tick(InDeltaT.Get_Seconds());
+        InCurrent._CaptureClock = InCurrent._CaptureClock + InDeltaT;
+        InCurrent._CaptureSource->Tick(InDeltaT);
 
         const auto DrainStartBytes = InCurrent._PendingPcm.Num();
         InCurrent._CaptureSource->DrainPcm(InCurrent._PendingPcm);
@@ -563,12 +563,12 @@ namespace ck
             const auto FrameSeq = InCurrent._Seq++;
 
             InCurrent._OutboundFrames.Emplace(FCk_VoiceChat_OutboundFrame{
-                FrameSeq, Encoded, InCurrent._CaptureClockSeconds});
+                FrameSeq, Encoded, InCurrent._CaptureClock});
 
             if (InParams.Get_Loopback() == ECk_EnableDisable::Enable)
             {
                 InCurrent._LoopbackJitter.Push(FrameSeq, MoveTemp(Encoded),
-                    FCk_Time{InCurrent._CaptureClockSeconds}, FCk_VoiceChat_JitterParams{});
+                    InCurrent._CaptureClock, FCk_VoiceChat_JitterParams{});
             }
         }
 
@@ -595,12 +595,12 @@ namespace ck
         }
 
         Send_OutboundFrames(InVoiceTalkerEntity, InCurrent.Get_AmplitudeQ8(),
-            InCurrent._CaptureClockSeconds, InCurrent._OutboundFrames);
+            InCurrent._CaptureClock, InCurrent._OutboundFrames);
 
         if (InParams.Get_Loopback() != ECk_EnableDisable::Enable)
         { return; }
 
-        FProcessor_VoiceTalker_ReceivePlayback::Drain_Playout(InCurrent, InDeltaT.Get_Seconds());
+        FProcessor_VoiceTalker_ReceivePlayback::Drain_Playout(InCurrent, InDeltaT);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -616,7 +616,7 @@ namespace ck
     {
         using namespace ck_voice_talker_processor;
 
-        InCurrent._ReceiveClockSeconds += InDeltaT.Get_Seconds();
+        InCurrent._ReceiveClock = InCurrent._ReceiveClock + InDeltaT;
 
         auto BundlesCopy = InInbox.Get_PackedBundles();
         InInbox.Get_PackedBundles().Reset();
@@ -670,7 +670,7 @@ namespace ck
             for (const auto& Frame : Unpacked->Get_Frames())
             {
                 InCurrent._LoopbackJitter.Push(static_cast<uint16>(FirstSeq + FrameOffset), Frame,
-                    FCk_Time{InCurrent._ReceiveClockSeconds}, FCk_VoiceChat_JitterParams{});
+                    InCurrent._ReceiveClock, FCk_VoiceChat_JitterParams{});
                 ++FrameOffset;
             }
         }
@@ -680,35 +680,35 @@ namespace ck
             TryCreate_PlaybackSynth(InVoiceTalkerEntity, InCurrent);
         }
 
-        Drain_Playout(InCurrent, InDeltaT.Get_Seconds());
+        Drain_Playout(InCurrent, InDeltaT);
     }
 
     auto
         FProcessor_VoiceTalker_ReceivePlayback::
         Drain_Playout(
             FFragment_VoiceTalker_Current& InCurrent,
-            double InDeltaSeconds)
+            FCk_Time InDeltaT)
         -> void
     {
         using namespace ck_voice_talker_processor;
 
         if (NOT InCurrent._LoopbackDecoder.IsValid())
         {
-            InCurrent._LoopbackPopAccumulatorSeconds = 0.0;
+            InCurrent._LoopbackPopAccumulator = FCk_Time{0.0};
             return;
         }
 
         const auto FrameBytes = Get_FrameBytes();
-        const auto FrameDurationSeconds = Get_FrameDurationSeconds();
+        const auto FrameDuration = FCk_Time{Get_FrameDurationSeconds()};
 
-        InCurrent._LoopbackPopAccumulatorSeconds += InDeltaSeconds;
+        InCurrent._LoopbackPopAccumulator = InCurrent._LoopbackPopAccumulator + InDeltaT;
 
         const auto JitterParams = FCk_VoiceChat_JitterParams{};
         const auto DecodeCapacityBytes = EngineDecodeCapacityFrames * FrameBytes;
 
-        while (InCurrent._LoopbackPopAccumulatorSeconds >= FrameDurationSeconds)
+        while (InCurrent._LoopbackPopAccumulator >= FrameDuration)
         {
-            InCurrent._LoopbackPopAccumulatorSeconds -= FrameDurationSeconds;
+            InCurrent._LoopbackPopAccumulator = InCurrent._LoopbackPopAccumulator - FrameDuration;
 
             const auto PopResult = InCurrent._LoopbackJitter.Pop(JitterParams);
 

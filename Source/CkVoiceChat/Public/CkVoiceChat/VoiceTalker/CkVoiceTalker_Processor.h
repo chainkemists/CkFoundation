@@ -196,7 +196,7 @@ namespace ck
         static auto
         Drain_Playout(
             FFragment_VoiceTalker_Current& InCurrent,
-            double InDeltaSeconds)
+            FCk_Time InDeltaT)
             -> void;
 
         // Creates + starts the playback synth if the world can render audio; no-op otherwise

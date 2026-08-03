@@ -46,15 +46,15 @@ namespace ck
     private:
         uint16 _Seq = 0;
         TArray<uint8> _Encoded;
-        double _CaptureTimeSeconds = 0.0;
+        FCk_Time _CaptureTime;
 
     public:
         CK_PROPERTY_GET(_Seq);
         CK_PROPERTY_GET(_Encoded);
-        CK_PROPERTY_GET(_CaptureTimeSeconds);
+        CK_PROPERTY_GET(_CaptureTime);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FCk_VoiceChat_OutboundFrame, _Seq, _Encoded, _CaptureTimeSeconds);
+        CK_DEFINE_CONSTRUCTORS(FCk_VoiceChat_OutboundFrame, _Seq, _Encoded, _CaptureTime);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -87,7 +87,7 @@ namespace ck
 
         FCk_VoiceChat_Vad _Vad;
         TArray<uint8> _PendingPcm;
-        double _CaptureClockSeconds = 0.0;
+        FCk_Time _CaptureClock;
 
         TArray<FCk_VoiceChat_OutboundFrame> _OutboundFrames;
 
@@ -103,10 +103,10 @@ namespace ck
         FCk_VoiceChat_JitterBuffer _LoopbackJitter;
         TSharedPtr<IVoiceDecoder> _LoopbackDecoder;
         TArray<uint8> _LoopbackDecodedPcm;
-        double _LoopbackPopAccumulatorSeconds = 0.0;
+        FCk_Time _LoopbackPopAccumulator;
         TStrongObjectPtr<UCk_VoiceChatSynthComponent_UE> _LoopbackSynth;
 
-        double _ReceiveClockSeconds = 0.0;
+        FCk_Time _ReceiveClock;
 
     public:
         CK_PROPERTY_GET(_Seq);

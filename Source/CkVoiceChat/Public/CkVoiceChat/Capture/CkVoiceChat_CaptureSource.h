@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include <Containers/Array.h>
 #include <Templates/SharedPointer.h>
@@ -22,7 +23,7 @@ public:
 
     // Called on the game thread each tick before DrainPcm; scripted sources advance their clock
     // here, device-backed sources have nothing to do.
-    virtual auto Tick(float InDeltaSeconds) -> void {}
+    virtual auto Tick(FCk_Time InDeltaT) -> void {}
 
     // Appends all PCM available since the last drain. Called on the game thread each tick.
     virtual auto DrainPcm(TArray<uint8>& OutPcm) -> void = 0;
@@ -68,24 +69,24 @@ public:
 public:
     auto Start() -> bool override;
     auto Stop() -> void override;
-    auto Tick(float InDeltaSeconds) -> void override;
+    auto Tick(FCk_Time InDeltaT) -> void override;
     auto DrainPcm(TArray<uint8>& OutPcm) -> void override;
 
 public:
     auto
     Enqueue_Sine(
-        float InDurationSeconds,
+        FCk_Time InDuration,
         float InAmplitude01,
         float InFrequencyHz) -> void;
 
     auto
     Enqueue_Silence(
-        float InDurationSeconds) -> void;
+        FCk_Time InDuration) -> void;
 
     // Advances the fake clock; the next DrainPcm emits this much more audio.
     auto
     AdvanceTime(
-        float InDeltaSeconds) -> void;
+        FCk_Time InDeltaT) -> void;
 
 private:
     struct FSegment
