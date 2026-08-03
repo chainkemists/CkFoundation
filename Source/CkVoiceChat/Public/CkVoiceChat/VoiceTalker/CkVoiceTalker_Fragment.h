@@ -184,6 +184,23 @@ namespace ck
         CK_PROPERTY(_PackedBundles);
     };
 
+    // World-scoped (transient entity), authority-side: per-connection bytes forwarded THIS tick.
+    // The routing processor iterates per talker, so the cross-talker budget lives here; the map
+    // self-resets on the first touch of each new frame.
+    struct CKVOICECHAT_API FFragment_VoiceChat_RouteBudgets
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceChat_RouteBudgets);
+
+    private:
+        uint64 _LastResetFrame = 0;
+        TMap<TWeakObjectPtr<APlayerState>, int32> _SpentBytes;
+
+    public:
+        CK_PROPERTY(_LastResetFrame);
+        CK_PROPERTY(_SpentBytes);
+    };
+
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKVOICECHAT_API, OnVoiceTalker_TransmitStarted, FCk_Delegate_VoiceTalker, FCk_Handle_VoiceTalker);

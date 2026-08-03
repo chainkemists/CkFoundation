@@ -4,6 +4,8 @@
 #include "CkVoiceChat/CkVoiceChat_Log.h"
 #include "CkVoiceChat/Codec/CkVoiceChat_Codec.h"
 
+#include <GameFramework/PlayerState.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -292,6 +294,30 @@ auto
     -> void
 {
     InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>()._LoopbackDecodedPcm.Reset();
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_InjectInboundBundle(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const TArray<uint8>& InPackedBundle,
+        APlayerState* InSender)
+    -> void
+{
+    InVoiceTalker.AddOrGet<ck::FFragment_VoiceTalker_ServerInbox>().Get_Bundles().Emplace(
+        ck::FCk_VoiceChat_InboundBundle{InPackedBundle, MakeWeakObjectPtr(InSender)});
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_Get_ReceiveInboxNum(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> int32
+{
+    if (NOT InVoiceTalker.Has<ck::FFragment_VoiceTalker_ReceiveInbox>())
+    { return 0; }
+
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_ReceiveInbox>().Get_PackedBundles().Num();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
