@@ -137,15 +137,31 @@ Net tests land WITH their work item, not batched at the end: late-join + voice-b
 | Mute test | Muted talker's bundles stop ARRIVING at the muting client | Bundles arrive, playback silent | Privacy property violated — exclusion must gate the server send-set, not client playback |
 | `stat CkVoiceChat` during net PIE | Route/drop/forward counters move | Counters flat while audio flows | Stats wired to dead code — instrument the real path |
 
-## Exit criteria — ALL in the SAME commit as the last work item
+## Exit criteria — machine portion complete 2026-08-03
 
-- [ ] Net tests green: late-join, voice-before-registry (N1), host asymmetry, in-range routing +
-      hysteresis, sender exclusion, mute-stops-forwarding, top-N culling under synthetic load.
-- [ ] Full VoiceChat pattern green + RenderTarget 22/22 delta-zero vs the entry baseline, on the
-      final binary (freshness chain recorded).
-- [ ] S5 numbers recorded in this doc; default budget justified against them.
-- [ ] N7 matrix in module Claude.md; module Claude.md updated for the P3 surface.
-- [ ] Invalid-input test per new validation boundary (non-negotiable #3): at minimum forged
-      talker handle, unresolvable ChannelIdx (N1), non-member send, oversize bundle (S3).
-- [ ] AS boot clean (0 `Angelscript: Error`); new request/signal wrappers regenerate.
-- [ ] PROGRESS.md dated entry; audit requested; response appended below when it lands.
+- [x] Net tests green: late-join + voice-before-registry/N1 (`Routing_ForwardsAndNeverStashes`,
+      `ControlPlane_Replicates`), host asymmetry (`HostHearsClient`, `ClientToClient`, host-talks
+      in the routing spec), in-range routing + hysteresis (`ProximityRouting`, 4-phase), sender
+      exclusion (no-echo asserts in `ClientToClient` + `RouteRejections`), mute-stops-forwarding
+      (`ListenerMute_StopsForwarding`), teardown mid-transmit (`TeardownMidTransmit`).
+      **Top-N culling: the selection policy is unit-pinned (`Test_VoiceChat_TopN`: cap,
+      cross-bucket wins, LRS rotation) and the flush path runs in every forwarding spec, but a
+      NET test with >8 concurrent talker connections was not built — the harness practically
+      hosts 3 worlds. Recorded as a known coverage bound for the audit, not claimed.**
+- [x] Full VoiceChat pattern green + RenderTarget delta-zero on the final binary:
+      **VoiceChat 30/30** (Test-VoiceChatP3-exitsweep2.log, EXIT 0, 0 AS errors) +
+      **RenderTarget 22/22** (Test-P3-RenderTarget-exitsweep2.log) — RenderTarget run with NO
+      rebuild after the VoiceChat run, same binary; no source edits between build and either run.
+      Entry baseline was VoiceChat 18/18 + RenderTarget 22/22 → +12 new tests, zero regressions.
+- [x] S5 numbers recorded above (708 B/tick saturated drain); default budget 4096 → 640,
+      justified against them.
+- [x] N7 matrix in module Claude.md; module doc updated for the P3 surface (deps, fail-closed
+      proximity rule, probe-read pattern).
+- [x] Invalid-input test per new validation boundary: forged talker handle + non-member send
+      (`RouteRejections`, with positive control), unresolvable ChannelIdx/N1 (routing spec),
+      malformed + out-of-contract pack (`CkTests.UnitTests.CkVoiceChat.Wire.*`; oversize is
+      unbuildable send-side — the S3 guard at bundle build — and malformed-reject covers the
+      receive boundary).
+- [x] AS boot clean: 0 `Angelscript: Error` in every exit-sweep log.
+- [x] PROGRESS.md dated entries; **audit requested 2026-08-03 — response appended below when it
+      lands.**

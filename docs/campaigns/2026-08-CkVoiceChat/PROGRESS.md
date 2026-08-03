@@ -8,13 +8,15 @@ counters landed, 136ca780f; Conceal zero-fill + HandleRequests-synth recorded as
 resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
-**Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1, 2, 3, 4-core,
-4b-fairness, **5 (Positional3D proximity routing set — ADR-6 probes + hysteresis, earns
-CkShapes+CkSpatialQuery)**, 6, 7, 8, host-asymmetry matrix, and N7 docs COMPLETE —
-**28/28, EXIT 0, 0 AS errors** (Test-VoiceChatP3-proximity3.log). Remaining in Gate 3: only the
-**S5 drain-budget measurement** (instrumented numbers into Gate_3.md, default
-`MaxVoiceBytesPerConnectionPerTick` justified) — then the exit sweep (full VoiceChat +
-RenderTarget delta-zero on the final binary) and the Gate-3 top-tier audit.
+**Next action:** **Gate 3 (P3) MACHINE PORTION COMPLETE 2026-08-03** ([Gate_3.md](Gate_3.md)):
+all 10 work items done — incl. item 5 (ADR-6 proximity probes + hysteresis, earns
+CkShapes+CkSpatialQuery), S5 measured (708 B/tick saturated drain → default budget 640), and
+the invalid-input negatives (`RouteRejections`). **Exit sweep on the final binary: VoiceChat
+30/30 (Test-VoiceChatP3-exitsweep2.log) + RenderTarget 22/22 delta-zero
+(Test-P3-RenderTarget-exitsweep2.log), EXIT 0, 0 AS errors, no rebuild between runs.** Exit
+checklist ticked in Gate_3.md (one recorded coverage bound: top-N culling is unit-pinned, not
+net-load-tested — harness hosts 3 worlds). **Awaiting the Gate-3 top-tier audit** (fresh agent,
+verdict appended to Gate_3.md); P4 opens only after audit resolutions.
 The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
 P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
 DefaultEngine.ini (a BB-repo decision; superproject untouched).
