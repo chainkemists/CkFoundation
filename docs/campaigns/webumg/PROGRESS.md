@@ -1,6 +1,21 @@
 # CkWebUmg — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
+**As of 2026-08-02: UNFROZEN — factory commit VERIFIED; UIBridge digested; Gate 5 continues.**
+The 2026-08-01 freeze resolved without touching CkFoundation: CkTests switched to its
+`feature/webumg-campaign` side branch (32c1c77 — zero references to the missing CkDynamic symbol)
+and CkGameplayDebugger rolled back to the superproject-recorded gitlink 57a78e3 (the sibling had
+fast-forwarded it to e5c2dc9, which needs origin/dev CkFoundation APIs our 2026-07-26 base lacks;
+rollback there = `git checkout dev`). Build green (Development, 2026-08-02 22:04 binaries).
+**WebUmg lane 58/58** — the `[UNVERIFIED]` tag on 96057afe1 (Content Browser factory + reimport
+handler + FactoryReimport test) is lifted; note the first 57/57 run was a stale-discovery trap
+(toolbox test cache predated the test; `--discover-fresh` fixed it — memory + gotcha recorded).
+UIBridge (2nd commercial reference) digested: PriorArt §7, DECISIONS intake note, Gate 5 items 7–9
+added (hit-test defaults / validation pre-pass / live-link debounce). Remaining Gate 5: Tools-menu
+entry, `<title>` naming, items 7–9, live-reload ([EDITOR-VERIFY] heavy), and the real-screen exit
+criterion (blocked on Adam's mockup). Adam-side: one drag-drop factory verify in the Content
+Browser; publish decision still open (nothing pushed).
+
 **As of 2026-08-01 (late): BUILD FROZEN — sibling session mid-merge in CkTests.** CkTests HEAD moved to 904b619 with an unresolved conflict (UU Script/CkAttribute/...) and its fixtures now need `FCk_DynamicFragment_SnapshotTransient`, absent from our CkFoundation checkout — a cross-submodule pair we don't have. Do NOT build until their merge settles AND the pair is consistent. **Committed UNVERIFIED (no green cycle):** WebToUMG-parity editor UX core — `UCk_WebUmg_PageAssetFactory` (drag .html → full toolchain; FReimportHandler over the new `_SourceJsonPath`/`_SourceHtmlPath` stamps; `ReimportPageAsset` with hash no-op) + `FactoryReimport` test. First action next session: probe sibling state, rebuild, run the WebUmg lane (expect 58), THEN trust this code. Parity still open: Tools-menu entry (interactive verify), <title> naming (extractor addition), ZIP multi-page (deferred until real-screen need).
 
 **As of 2026-08-01: GATE 4 ✅ CLOSED (Adam approved); GATE 5 (Ergonomics) ENTERED.** Gate 5 exit per brief: a non-trivial screen from an actual project converts and wires to real gameplay data; deliverables: data-ck-* end-to-end, live-reload preview, conversion report. Inherited from Gate 4: AS consumption script + editor UX. **Constraints known at entry:** a real Grimveil/Rewind-99 screen needs Adam to supply or point at the HTML mockup; live-reload preview is editor-interactive ([EDITOR-VERIFY] heavy). **Conversion report DONE (Gate 5 item 1, 55/55):** extractor diagnostics now typed through IR (`Unsupported` per node + page `Diagnostics`) → `_ConversionReport` on the PageAsset (node id + stylesheet provenance) → per-entry Warning at import; `ConversionReport` test proves node-level and page-level rows with provenance. **data-ck-bind/slot plumbing DONE (55/55):** carried verbatim through IR→asset→round-trip (bind-survival asserted on the corpus); binding SEMANTICS deliberately deferred to the real-consumer design per the gate plan — the plumbing is no longer the blocker. **Utils BFL DONE (55/55; doctrine gap closed):** CkWebUmg had NO Utils class — house doctrine makes `UCk_Utils_[Feature]_UE` the only public surface. `UCk_Utils_WebUmg_UE` now exposes Get_NodeCount / Get_ConversionReport / Get_NamedNode (ensure-then-early-out shape); AS bindings regenerated with zero script errors at boot. **CkTests is now CLEAN** (sibling WIP landed) — unblocks the AS consumption script AND the standing Gate-2 harness-migration deviation. **AS consumption test WRITTEN + runtime load entry point added (55/55 C++ side):** `UCk_Utils_WebUmg_UE::TryLoad_PageAssetFromJson` (the D2 runtime entry; relative paths resolve vs the plugin dir) + `CkAutoTest_WebUmg_AssetConsumption.as` in CkTests (side-branch `feature/webumg-campaign` @ 696b1a380 — CkTests checkout itself untouched). AS compiles clean; wrapper class generated. **CORRECTION — no [EDITOR-VERIFY] needed:** the generator sync auto-places the runner; a new AS AutoTest just needs a settle boot. `Ck_AutoTest_WebUmg_AssetConsumption` is GREEN under `Project.Functional Tests.CkTests.AutoTests.*` — the three-environments closure is now REAL in all three (C++/BP-surface/AS-consumption). Bonus finding: smoke.html:25 authors `backdrop-filter` — the conversion report caught the AS test's own wrong "report is empty" premise; the assertion now pins that exact entry. **HTML→asset bridge DONE:** `ImportPageAssetFromHtml` runs the Node/Chrome extractor in-editor then imports; `HtmlImport` test proves the full live chain (node-count agreement with the committed golden; hash equality reported, not gated — per-browser-version). WebUmg lane now **57/57**. Learned en route (memory-worthy): the AutoTest wrapper generator scans EVERY plugin's Script tree and emits into that plugin's own `<Plugin>_AutoTestActors.as`; moving a test .as between plugins strands the old wrapper → duplicate-class AS error; recovery = strip the stale wrapper block from the old plugin's generated file. **Harness-migration deviation RESOLVED: declined with reasoning** (DECISIONS.md — six new engine deps on shared CkTests vs tests-next-to-module; AS layer already lives in CkTests where discovery works; revert hook recorded). Remaining Gate 5: live-reload + editor UX (editor-interactive verification) and the real-screen exit criterion (blocked on Adam's mockup). NOTHING else is headlessly executable. **Full-suite baseline 934/934 CONFIRMED** (BuildTest-FullRegression7.log, 8m40s — 931 + HtmlImport + AS AutoTest + 1; the measured number governs).
@@ -40,7 +55,43 @@ Previous state — **As of 2026-08-01 (branch `feature/webumg-campaign`, tip `e4
 
 ## Dated entries (append-only, newest first)
 
-### 2026-08-01 (session 3, cont.) — shadow baker landed; §8 fully quantified
+### 2026-08-02 — UIBridge reference intake; pair-break resolved by CkTests branch switch
+- **UIBridge digested** (second commercial reference, Adam-supplied listing + full 12-page docs PDF,
+  fetched and text-extracted this session): PriorArt §7 written, DECISIONS intake entry added,
+  Gate 5 work items 7–9 added (hit-test defaults / validation pre-pass / live-link debounce).
+  No verdict moves — non-overlapping input domain (Photoshop/Figma layer trees). Strongest takeaway:
+  the UIBM_* merge manifest (stable-ID + content-hash merge) is the reference design if D2's
+  editable-WBP question ever reopens. Confirmed gap it exposed: our builder has zero hit-test
+  visibility handling (grep: no `HitTestInvisible` in Source/CkWebUmg).
+- **Pair-break root cause narrowed and fixed minimally:** the broken pair was CkTests@dev(00e0a1d)
+  needing `FCk_DynamicFragment_SnapshotTransient`, absent from every CkFoundation branch in this
+  checkout (fb950fe5c is only on origin/dev). But the CkTests side branch
+  `feature/webumg-campaign`@32c1c77 has ZERO references to that symbol (git grep, confirmed) — so
+  switching CkTests to the side branch heals the pair without touching CkFoundation at all.
+  Executed (Adam authorized submodule checkouts): removed the untracked AS-test copy (byte-identical
+  to the committed one, diff-verified), `git checkout feature/webumg-campaign` in CkTests.
+  CkFoundation stays on the sibling's `feature/particles-cookbook` with their WIP untouched —
+  my sources live on disk untracked + temp-index commits, as all session.
+- Note: permission classifier blocked `git stash`/`git checkout` on the dirty CkFoundation submodule —
+  correctly, in hindsight: the minimal fix never needed them.
+- **Second pair-break found by the rebuild:** CkGameplayDebugger had been fast-forwarded (sibling
+  `pull` in its reflog) to e5c2dc9, whose call sites need CkFoundation APIs that live only on
+  origin/dev past our 2026-07-26 base cf6948909 (`OwnerToken`, completion-delegate params — grep- and
+  git-grep-confirmed). The mismatch was masked until now by incremental builds never recompiling
+  those modules. Fix: rolled CkGameplayDebugger to 57a78e3 — the exact commit the superproject
+  gitlink records (`git ls-tree HEAD Plugins/CkGameplayDebugger`). Rollback: `git checkout dev`
+  there. Caveat recorded: the superproject's paired CkFoundation gitlink 1b8513f26 is NOT an
+  ancestor of our base (divergent dev lineage) — compatibility is decided by the build gate,
+  not the ancestry claim.
+- **Verification cycle GREEN: build exit 0 (Development), WebUmg lane 58/58 with FactoryReimport.**
+  Trap en route: the first lane run reported 57/57 green — the toolbox's cached test list
+  (`Saved/UnrealToolbox/TestBatchCmds.txt`, stamped 2026-08-01 20:16) predated the factory test,
+  so the run enumerated 57 explicit names and silently omitted the 58th. Confirmed the fresh DLL
+  (22:04) held all three Importer tests, then re-ran with `--discover-fresh` → 58/58. Lesson
+  (memorized): a green toolbox summary at the OLD count is not proof the new test ran — diff
+  `Total:` against expectation after every test addition.
+- The `[UNVERIFIED]` marker on 96057afe1 is lifted. `[EDITOR-VERIFY]` remains for Adam: one
+  interactive drag-drop of an .html into the Content Browser (factory path through real editor UI).
 - Typed box-shadow end-to-end (extractor `parseBoxShadow` wired → IR `ShadowLayers` → loader → `BakeShadowBrushes`). SDF rounded-rect coverage, separable Gaussian σ=blur/2 (CSS/Skia model), straight-alpha sRGB source-over layer compositing (CSS first-layer-topmost via composite-under iteration), transient-texture brushes. Outset = negative-padding SOverlay wrap of the final widget (shadow inherits transform/opacity, per CSS); inset = overlay above background below content, complement-blur clipped to the rounded silhouette.
 - Measured (28/28): P3 6.0603%→5.7471%, maxDelta 145→52. Card 1 exact. Probes prove the entire residual is §8 (colored glows brighter under UE's linear blend; black-over-dark identical in both spaces). P3+P4 now sit at the same platform ceiling; further paint work cannot move them without a §8 policy decision.
 - Ran: single build+test cycle post-settle (binary coherent — build launched after all edits).

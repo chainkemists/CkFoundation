@@ -69,6 +69,26 @@ The AS layer DOES live in CkTests (its Script tree is where AutoTest discovery w
 UI-testing tier that wants those deps anyway, move the suites then — names are stable
 (`CkTests.UnitTests.CkWebUmg.*`), so the move stays invisible to automation.
 
+## UIBridge reference intake — 2026-08-02 (Adam-supplied listing + 12-page docs; PriorArt §7)
+
+Second commercial reference (Photoshop/Figma→UMG — non-overlapping input domain, no HTML/CSS/browser).
+**No verdict moves**: DECISION 0 stands (it converts layer trees, not web pages); D3 is *strengthened*
+(UIBridge took the editable+merge road and its own Limits table shows the cost — unwired style asset,
+three wizard options "not yet acted on by the builder", i.e. shipped no-op options). Recorded consequences:
+
+- **D2's future reference design**: if "also emit editable WBP" is ever revisited, UIBridge's merge
+  manifest is the proven shape — stable-ID (not name) matching, content-hash change detection,
+  never-touch-what-you-didn't-create, generated graph nodes tagged and replaced exactly, event nodes
+  unwired not deleted. Our `data-ck-name` is the analogous stable ID.
+- **Gate 5/6 candidates adopted** (PriorArt §7 for detail): hit-test defaults (decorative nodes →
+  (Self)HitTestInvisible — confirmed absent in our builder), validation pre-pass over the IR
+  (errors block / warnings don't, never touches the project), live-link debounce spec (quiet-period
+  wait because textures land before the json; live path always merges).
+- **Frontier candidate**: prefab/repeated-structure detection (structure hash ignoring names/position/
+  text; differing text → per-instance variable).
+- **Independent corroboration**: their pt/px ×0.75 (72÷96) conversion and solid-fill→RoundedBox-brush
+  (no texture) choices match what Gates 3–4 already ship.
+
 ## Standing evidence notes (carried from Phase 0)
 
 - Yoga vendoring cautions: pin `c766885`; `UseWebDefaults` on; never expose inert grid setters; extractor pre-sorts children by computed `order`; fix `pointScaleFactor` for deterministic harness comparisons (PriorArt §3).

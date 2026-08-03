@@ -180,6 +180,37 @@
 
 ---
 
+## 7. UIBridge (commercial, Fab) — Verdict: **Reference only — non-overlapping input domain; three ideas adopted as candidates** (added 2026-08-02)
+
+**Access:** Fab listing text + the full 12-page vendor documentation PDF, both supplied by Adam, read 2026-08-02. No source pre-purchase. Listing: `fab.com/listings/79a975fc-a155-4758-b2bf-73d89f8e3ab0` — one `UIBridgeEditor` (Editor) module, 57 C++ classes, UE 5.8, Windows only, Photoshop CS6+/Figma. Claims labeled ⟨V⟩ (listing) / ⟨D⟩ (documentation, "Version 1.0 · Schema 2").
+
+**What it does:** ⟨D⟩ Photoshop/Figma layer tree → `layout.json` (one shared schema for both exporters) → `WBP_*` Widget Blueprints. The layer *name* decides the widget class (~45 prefixes: `CAN_`→CanvasPanel, `VBX_`/`HBX_` boxes, `BTN_` compound groups whose `IMG_Normal/Hover/Pressed` children supply button states), with name-embedded modifiers (`ROT_`, `RAD_`, `ANC_`, `_IDN_` shared-texture keys). **Not a competitor:** the input domain is design-tool layer trees — no HTML, no CSS, no browser anywhere in the pipeline. Changes no verdict: DECISION 0 and all gate outcomes stand.
+
+**The part that matters — the merge model (the "second import" problem, solved properly):** ⟨D⟩
+- A `UIBM_*` manifest asset maps **layer id → widget name + content hash**; matching is on the design tool's own layer ID, not the name, so renames survive.
+- Merge table: hash unchanged → widget untouched; hash differs → position/size/brush/text updated; new layer → created; deleted layer → removed; prefix changed → rebuilt (class change); **not in the manifest → you made it, never touched**.
+- Generated graph nodes carry a "UIBridge generated" comment; re-import replaces exactly those; event nodes are *unwired, not deleted*, so user logic on the same event survives.
+- Deleting the manifest degrades to create-everything-fresh — hand-built work is lost (their own warning).
+
+This is the reference design if D2 ("also emit an editable WBP") is ever revisited. Our D3 read-only regeneration deliberately avoids needing any of it; our `data-ck-name` is the analogous stable ID — authored rather than tool-assigned, so it survives DOM restructuring even better than their layer ids survive Photoshop edits.
+
+**Corroborations of our own choices (independent agreement = evidence):**
+- **Font size ×0.75:** ⟨D⟩ they multiply by 0.75 (72÷96) with the same rationale (design-tool px@72dpi vs Slate points@96dpi) that Gate 3 derived empirically (`SizePx * 0.75f`). They expose the factor as a user knob; ours is exact by construction.
+- **Shapes without textures:** ⟨D⟩ solid vector fills → RoundedBox brush, no PNG; gradients/masks/effects stay textures. Same split we already ship (`FSlateRoundedBoxBrush` for solid fills, `CkWebUmg_Builder.cpp:693,720`, verified this session; baked textures for gradients/shadows).
+- **The editable-output fork, priced:** they took editable+merge (the road D3 declined) and their own Limits table shows the cost — the style DataAsset is created but "widgets do not reference it yet", and three wizard options (CommonUI emission, String Table, transparent-trim) are "present in the wizard, not yet acted on by the builder". Shipped no-op options are exactly the silent-failure shape our doctrine forbids.
+
+**Ideas adopted as Gate 5/6 candidates (recorded, not committed):**
+1. **Live-reload debounce:** ⟨D⟩ Live Link waits **1.25 s of quiet** rather than reacting to the first file change, because the exporter writes textures first and `layout.json` last — verbatim applicable to our extractor's output ordering when the deferred live-reload item is built. Two more invariants worth copying: the live path *always* merges regardless of settings (a save can never destroy work), and the watcher outlives the wizard ("switch it off before packaging").
+2. **Validation pre-pass:** ⟨D⟩ "Read and validate" reads and checks **without touching the project**; errors block the import, warnings don't; every finding carries a one-sentence fix. Our conversion report is post-conversion; a pre-import validate mode over the IR is cheap (loader + report machinery already exist).
+3. **Hit-test defaults:** ⟨D⟩ `BG_` layers become `HitTestInvisible`, text blocks `SelfHitTestInvisible` — a full-screen background must not eat clicks aimed at buttons above it. **Confirmed gap in our builder:** zero hit-test handling in `Source/CkWebUmg` (grep this session — no `HitTestInvisible` anywhere; the only visibility call is the `Hidden` case at `CkWebUmg_Builder.cpp:811`). When emitted pages become interactive, decorative nodes should default to (Self)HitTestInvisible.
+4. **Font import pairing** (feeds Gate 4's shipped-font question): ⟨D⟩ a .ttf import must build **both** the FontFace and the Font asset whose typeface points at it — "A FontFace on its own cannot be used by a TextBlock". Anchors the bundled-font work item; unmatched fonts still import at correct size with the default face (layout survives, styling fixable later — a good degradation shape).
+5. **Prefab/reusable-widget detection** (frontier candidate, nothing in our scope covers it): ⟨D⟩ repeated structures become one WBP instanced N times; detection hashes types + relative geometry + texture keys while ignoring names, position, and text content; the differing text becomes an instance-editable, expose-on-spawn variable. HTML equivalent: repeated card/button subtrees.
+6. **Anchor inference** for aspect-ratio survival: ⟨D⟩ covers ≥85% of an axis → stretch; center in the first/last third → anchored to that edge; else centered; `ANC_` overrides per layer. Less urgent for us (Yoga owns responsive layout), but relevant to any absolute-positioned screen we emit.
+
+**Fidelity ceiling vs §10:** not comparable — no fidelity number, no pixel harness, no diagnostics contract anywhere in the 12 pages. The Limits table is honest but qualitative (blend modes → imported as Normal "with a note"; gradient/glow/bevel stay baked into textures). Same posture as WebToUMG: fidelity by construction effort, not by measurement.
+
+---
+
 ## Build vs. buy — recommendation (evidence chain exposed)
 
 **Recommendation: BUILD — with three evidence-driven scope reductions, and a $56 hedge.** DECISION 0 remains Adam's; the chain that leads there:

@@ -23,6 +23,17 @@ Rewind 99) and wiring it to real gameplay data.
 5. **Editor UX** (inherited) — import context-menu/factory over the programmatic entry point.
 6. **Real-screen conversion [BLOCKED on Adam]** — needs the actual project mockup supplied.
 
+Added 2026-08-02 from the UIBridge reference intake (PriorArt §7, DECISIONS entry same date):
+
+7. **Hit-test defaults** — decorative nodes (pure-paint containers, text) default to
+   `(Self)HitTestInvisible` so backgrounds never eat clicks; confirmed absent today (no hit-test
+   handling anywhere in the builder). Small builder change + rect-suite assertion.
+8. **Validation pre-pass** — a read-only validate mode over the IR (loader + report machinery
+   already exist): errors block import, warnings don't, never touches the project.
+9. **Live-reload debounce spec** (folds into item 4 when built) — wait for a quiet period after
+   the last file write (extractor writes textures before the json); the live path always
+   regenerates read-only output, so a save can never destroy work (D3 makes this free for us).
+
 ## Exit criteria
 
 - [ ] A real project screen converts, renders within the ratified thresholds, and wires to
