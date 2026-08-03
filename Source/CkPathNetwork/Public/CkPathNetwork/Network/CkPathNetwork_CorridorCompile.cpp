@@ -19,6 +19,8 @@ namespace
     constexpr auto RasterSimplifyMaximumVerticalDeviationCm = 10.0f;
     constexpr auto RasterSimplifyLookAheadControlCount = 32;
     constexpr auto RasterSimplifyMaximumContainmentAttempts = 4;
+    constexpr auto RibbonContainmentCellSizeCm = 400.0;
+    constexpr auto MaximumContainmentCellsPerSegment = 65536;
 
     struct FCenterSample
     {
@@ -37,6 +39,305 @@ namespace
         float _AllowedDistance = 0.0f;
         float _ExcessDistance = TNumericLimits<float>::Max();
     };
+
+    struct FIndexedRibbonSegment
+    {
+        FVector _A = FVector::ZeroVector;
+        FVector _B = FVector::ZeroVector;
+        float _HalfWidthA = 0.0f;
+        float _HalfWidthB = 0.0f;
+    };
+
+    struct FRibbonContainmentIndex
+    {
+        TArray<FIndexedRibbonSegment> _Segments;
+        TMap<FIntPoint, TArray<int32>> _SegmentIdsByCell;
+        bool _CanUseCells = true;
+    };
+
+    auto
+    Try_GetContainmentCellCoordinate(double InCoordinate, int32& OutCoordinate) -> bool
+    {
+        if (NOT FMath::IsFinite(InCoordinate))
+        { return false; }
+
+        const auto CellCoordinate = FMath::Floor(InCoordinate / RibbonContainmentCellSizeCm);
+        if (CellCoordinate < static_cast<double>(TNumericLimits<int32>::Lowest()) ||
+            CellCoordinate > static_cast<double>(TNumericLimits<int32>::Max()))
+        { return false; }
+
+        OutCoordinate = static_cast<int32>(CellCoordinate);
+        return true;
+    }
+
+    auto
+    Build_RibbonContainmentIndex(
+        const FBuiltNetwork& InNetwork,
+        TConstArrayView<FRouteLegSpan> InSpans) -> FRibbonContainmentIndex
+    {
+        auto Result = FRibbonContainmentIndex{};
+
+        for (const auto& Span : InSpans)
+        {
+            if (Span._IsOffPath || NOT InNetwork._Edges.IsValidIndex(Span._EdgeId))
+            { continue; }
+
+            const auto& Edge = InNetwork._Edges[Span._EdgeId];
+            if (Edge._Points.Num() < 2 ||
+                Edge._Points.Num() != Edge._HalfWidths.Num() ||
+                Edge._Points.Num() != Edge._CumulativeLengths.Num())
+            { continue; }
+
+            const auto SpanMin = FMath::Clamp(
+                FMath::Min(Span._FromDist, Span._ToDist), 0.0f, Edge._Length);
+            const auto SpanMax = FMath::Clamp(
+                FMath::Max(Span._FromDist, Span._ToDist), 0.0f, Edge._Length);
+
+            for (auto SegmentIndex = 0; SegmentIndex < Edge._Points.Num() - 1; ++SegmentIndex)
+            {
+                const auto SegmentStartDistance = Edge._CumulativeLengths[SegmentIndex];
+                const auto SegmentEndDistance = Edge._CumulativeLengths[SegmentIndex + 1];
+                const auto SegmentMin = FMath::Max(SpanMin, SegmentStartDistance);
+                const auto SegmentMax = FMath::Min(SpanMax, SegmentEndDistance);
+                if (SegmentMax < SegmentMin)
+                { continue; }
+
+                const auto SegmentDistance = SegmentEndDistance - SegmentStartDistance;
+                const auto SampleAtDistance = [&](float InDistance)
+                {
+                    const auto Alpha = SegmentDistance > UE_KINDA_SMALL_NUMBER
+                        ? FMath::Clamp(
+                            (InDistance - SegmentStartDistance) / SegmentDistance,
+                            0.0f,
+                            1.0f)
+                        : 0.0f;
+                    return TPair<FVector, float>{
+                        FMath::Lerp(
+                            Edge._Points[SegmentIndex],
+                            Edge._Points[SegmentIndex + 1],
+                            Alpha),
+                        FMath::Lerp(
+                            Edge._HalfWidths[SegmentIndex],
+                            Edge._HalfWidths[SegmentIndex + 1],
+                            Alpha)};
+                };
+
+                const auto A = SampleAtDistance(SegmentMin);
+                const auto B = SampleAtDistance(SegmentMax);
+                Result._Segments.Add(FIndexedRibbonSegment{
+                    A.Key,
+                    B.Key,
+                    A.Value,
+                    B.Value});
+            }
+        }
+
+        for (auto SegmentId = 0; SegmentId < Result._Segments.Num(); ++SegmentId)
+        {
+            const auto& Segment = Result._Segments[SegmentId];
+            const auto SegmentIsFinite =
+                NOT Segment._A.ContainsNaN() &&
+                NOT Segment._B.ContainsNaN() &&
+                FMath::IsFinite(Segment._HalfWidthA) &&
+                FMath::IsFinite(Segment._HalfWidthB) &&
+                Segment._HalfWidthA >= 0.0f &&
+                Segment._HalfWidthB >= 0.0f;
+            if (NOT SegmentIsFinite)
+            {
+                Result._CanUseCells = false;
+                break;
+            }
+
+            const auto MaximumHalfWidth = FMath::Max(
+                Segment._HalfWidthA,
+                Segment._HalfWidthB);
+            int32 MinCellX = 0;
+            int32 MaxCellX = 0;
+            int32 MinCellY = 0;
+            int32 MaxCellY = 0;
+            if (NOT Try_GetContainmentCellCoordinate(
+                    FMath::Min(Segment._A.X, Segment._B.X) - MaximumHalfWidth,
+                    MinCellX) ||
+                NOT Try_GetContainmentCellCoordinate(
+                    FMath::Max(Segment._A.X, Segment._B.X) + MaximumHalfWidth,
+                    MaxCellX) ||
+                NOT Try_GetContainmentCellCoordinate(
+                    FMath::Min(Segment._A.Y, Segment._B.Y) - MaximumHalfWidth,
+                    MinCellY) ||
+                NOT Try_GetContainmentCellCoordinate(
+                    FMath::Max(Segment._A.Y, Segment._B.Y) + MaximumHalfWidth,
+                    MaxCellY))
+            {
+                Result._CanUseCells = false;
+                break;
+            }
+
+            const auto CellCountX = static_cast<int64>(MaxCellX) - MinCellX + 1;
+            const auto CellCountY = static_cast<int64>(MaxCellY) - MinCellY + 1;
+            if (CellCountX <= 0 ||
+                CellCountY <= 0 ||
+                CellCountX > MaximumContainmentCellsPerSegment ||
+                CellCountY > MaximumContainmentCellsPerSegment ||
+                CellCountX * CellCountY > MaximumContainmentCellsPerSegment)
+            {
+                Result._CanUseCells = false;
+                break;
+            }
+
+            for (auto CellY = static_cast<int64>(MinCellY); CellY <= MaxCellY; ++CellY)
+            {
+                for (auto CellX = static_cast<int64>(MinCellX); CellX <= MaxCellX; ++CellX)
+                {
+                    Result._SegmentIdsByCell.FindOrAdd(FIntPoint{
+                        static_cast<int32>(CellX),
+                        static_cast<int32>(CellY)}).Add(SegmentId);
+                }
+            }
+        }
+
+        if (NOT Result._CanUseCells)
+        { Result._SegmentIdsByCell.Reset(); }
+        return Result;
+    }
+
+    auto
+    Is_PointInsideIndexedSegment(
+        const FIndexedRibbonSegment& InSegment,
+        const FVector& InPoint,
+        float InTolerance) -> bool
+    {
+        const auto Closest = FMath::ClosestPointOnSegment(
+            InPoint,
+            InSegment._A,
+            InSegment._B);
+        const auto SegmentLengthSquared = FVector::DistSquared(
+            InSegment._A,
+            InSegment._B);
+        const auto Alpha = SegmentLengthSquared > UE_KINDA_SMALL_NUMBER
+            ? FMath::Clamp(
+                static_cast<float>(FVector::DotProduct(
+                    Closest - InSegment._A,
+                    InSegment._B - InSegment._A) / SegmentLengthSquared),
+                0.0f,
+                1.0f)
+            : 0.0f;
+        const auto HalfWidth = FMath::Lerp(
+            InSegment._HalfWidthA,
+            InSegment._HalfWidthB,
+            Alpha);
+        return FVector::DistSquared(InPoint, Closest) <=
+            FMath::Square(HalfWidth + InTolerance);
+    }
+
+    auto
+    Is_PointInsideRibbonRun(
+        const FRibbonContainmentIndex& InIndex,
+        const FVector& InPoint,
+        float InTolerance) -> bool
+    {
+        if (InPoint.ContainsNaN() ||
+            NOT FMath::IsFinite(InTolerance) ||
+            InTolerance < 0.0f)
+        { return false; }
+
+        const auto TestAllSegments = [&]()
+        {
+            for (const auto& Segment : InIndex._Segments)
+            {
+                if (Is_PointInsideIndexedSegment(Segment, InPoint, InTolerance))
+                { return true; }
+            }
+            return false;
+        };
+
+        if (NOT InIndex._CanUseCells)
+        { return TestAllSegments(); }
+
+        int32 MinCellX = 0;
+        int32 MaxCellX = 0;
+        int32 MinCellY = 0;
+        int32 MaxCellY = 0;
+        if (NOT Try_GetContainmentCellCoordinate(InPoint.X - InTolerance, MinCellX) ||
+            NOT Try_GetContainmentCellCoordinate(InPoint.X + InTolerance, MaxCellX) ||
+            NOT Try_GetContainmentCellCoordinate(InPoint.Y - InTolerance, MinCellY) ||
+            NOT Try_GetContainmentCellCoordinate(InPoint.Y + InTolerance, MaxCellY))
+        { return TestAllSegments(); }
+
+        const auto CellCountX = static_cast<int64>(MaxCellX) - MinCellX + 1;
+        const auto CellCountY = static_cast<int64>(MaxCellY) - MinCellY + 1;
+        if (CellCountX <= 0 ||
+            CellCountY <= 0 ||
+            CellCountX > MaximumContainmentCellsPerSegment ||
+            CellCountY > MaximumContainmentCellsPerSegment ||
+            CellCountX * CellCountY > MaximumContainmentCellsPerSegment)
+        { return TestAllSegments(); }
+
+        for (auto CellY = static_cast<int64>(MinCellY); CellY <= MaxCellY; ++CellY)
+        {
+            for (auto CellX = static_cast<int64>(MinCellX); CellX <= MaxCellX; ++CellX)
+            {
+                const auto* SegmentIds = InIndex._SegmentIdsByCell.Find(
+                    FIntPoint{
+                        static_cast<int32>(CellX),
+                        static_cast<int32>(CellY)});
+                if (SegmentIds == nullptr)
+                { continue; }
+
+                for (const auto SegmentId : *SegmentIds)
+                {
+                    if (InIndex._Segments.IsValidIndex(SegmentId) &&
+                        Is_PointInsideIndexedSegment(
+                            InIndex._Segments[SegmentId],
+                            InPoint,
+                            InTolerance))
+                    { return true; }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    auto
+    Is_SegmentInsideRibbonRun(
+        const FRibbonContainmentIndex& InIndex,
+        const FVector& InFrom,
+        const FVector& InTo,
+        float InSampleSpacing,
+        float InTolerance,
+        int32* OutFailureSampleIndex = nullptr,
+        int32* OutSampleCount = nullptr) -> bool
+    {
+        if (OutFailureSampleIndex != nullptr)
+        { *OutFailureSampleIndex = INDEX_NONE; }
+        if (OutSampleCount != nullptr)
+        { *OutSampleCount = 0; }
+
+        if (NOT FMath::IsFinite(InSampleSpacing) || InSampleSpacing <= 0.0f ||
+            NOT FMath::IsFinite(InTolerance) || InTolerance < 0.0f)
+        { return false; }
+
+        const auto Length = static_cast<float>(FVector::Dist(InFrom, InTo));
+        const auto StepCount = FMath::Max(1, FMath::CeilToInt32(Length / InSampleSpacing));
+        if (OutSampleCount != nullptr)
+        { *OutSampleCount = StepCount + 1; }
+
+        for (auto Index = 0; Index <= StepCount; ++Index)
+        {
+            const auto Alpha = static_cast<float>(Index) / StepCount;
+            if (Is_PointInsideRibbonRun(
+                    InIndex,
+                    FMath::Lerp(InFrom, InTo, Alpha),
+                    InTolerance))
+            { continue; }
+
+            if (OutFailureSampleIndex != nullptr)
+            { *OutFailureSampleIndex = Index; }
+            return false;
+        }
+
+        return true;
+    }
 
     auto
     Measure_PointAgainstRibbonRun(
@@ -300,8 +601,7 @@ namespace
 
     auto
     Simplify_AlternatingMicroTurns(
-        const FBuiltNetwork& InNetwork,
-        TConstArrayView<FRouteLegSpan> InSpans,
+        const FRibbonContainmentIndex& InContainmentIndex,
         TConstArrayView<FCenterSample> InControls,
         float InSmoothingDistance) -> TArray<FCenterSample>
     {
@@ -368,8 +668,7 @@ namespace
                             StartIndex,
                             EndIndex) ||
                     NOT Is_SegmentInsideRibbonRun(
-                            InNetwork,
-                            InSpans,
+                            InContainmentIndex,
                             InControls[StartIndex]._Location,
                             InControls[EndIndex]._Location,
                             RibbonContainmentSampleSpacingCm,
@@ -689,8 +988,7 @@ namespace
 
     auto
     Is_CompiledPathContained(
-        const FBuiltNetwork& InNetwork,
-        TConstArrayView<FRouteLegSpan> InSpans,
+        const FRibbonContainmentIndex& InContainmentIndex,
         TConstArrayView<FVector> InWaypoints) -> bool
     {
         if (InWaypoints.Num() < 2)
@@ -699,8 +997,7 @@ namespace
         for (auto Index = 0; Index < InWaypoints.Num() - 1; ++Index)
         {
             if (NOT Is_SegmentInsideRibbonRun(
-                InNetwork,
-                InSpans,
+                InContainmentIndex,
                 InWaypoints[Index],
                 InWaypoints[Index + 1],
                 RibbonContainmentSampleSpacingCm,
@@ -724,52 +1021,10 @@ namespace ck::pathnetwork
         float InTolerance)
         -> bool
     {
-        if (NOT FMath::IsFinite(InTolerance) || InTolerance < 0.0f)
-        { return false; }
-
-        for (const auto& Span : InSpans)
-        {
-            if (Span._IsOffPath || NOT InNetwork._Edges.IsValidIndex(Span._EdgeId))
-            { continue; }
-
-            const auto& Edge = InNetwork._Edges[Span._EdgeId];
-            if (Edge._Points.Num() < 2 ||
-                Edge._Points.Num() != Edge._HalfWidths.Num() ||
-                Edge._Points.Num() != Edge._CumulativeLengths.Num())
-            { continue; }
-
-            const auto SpanMin = FMath::Clamp(
-                FMath::Min(Span._FromDist, Span._ToDist), 0.0f, Edge._Length);
-            const auto SpanMax = FMath::Clamp(
-                FMath::Max(Span._FromDist, Span._ToDist), 0.0f, Edge._Length);
-
-            for (auto SegmentIndex = 0; SegmentIndex < Edge._Points.Num() - 1; ++SegmentIndex)
-            {
-                const auto SegmentMin = FMath::Max(SpanMin, Edge._CumulativeLengths[SegmentIndex]);
-                const auto SegmentMax = FMath::Min(SpanMax, Edge._CumulativeLengths[SegmentIndex + 1]);
-                if (SegmentMax < SegmentMin)
-                { continue; }
-
-                const auto A = InNetwork.Sample_Edge(Span._EdgeId, SegmentMin);
-                const auto B = InNetwork.Sample_Edge(Span._EdgeId, SegmentMax);
-                const auto Closest = FMath::ClosestPointOnSegment(InPoint, A._Location, B._Location);
-                const auto SegmentLengthSquared = FVector::DistSquared(A._Location, B._Location);
-                const auto Alpha = SegmentLengthSquared > UE_KINDA_SMALL_NUMBER
-                    ? FMath::Clamp(
-                        static_cast<float>(FVector::DotProduct(
-                            Closest - A._Location,
-                            B._Location - A._Location) / SegmentLengthSquared),
-                        0.0f,
-                        1.0f)
-                    : 0.0f;
-                const auto HalfWidth = FMath::Lerp(A._HalfWidth, B._HalfWidth, Alpha);
-
-                if (FVector::DistSquared(InPoint, Closest) <= FMath::Square(HalfWidth + InTolerance))
-                { return true; }
-            }
-        }
-
-        return false;
+        return ::Is_PointInsideRibbonRun(
+            Build_RibbonContainmentIndex(InNetwork, InSpans),
+            InPoint,
+            InTolerance);
     }
 
     auto
@@ -786,23 +1041,90 @@ namespace ck::pathnetwork
         if (OutFailure != nullptr)
         { *OutFailure = FRibbonContainmentFailure{}; }
 
-        if (NOT FMath::IsFinite(InSampleSpacing) || InSampleSpacing <= 0.0f)
-        { return false; }
-        if (NOT FMath::IsFinite(InTolerance) || InTolerance < 0.0f)
-        { return false; }
+        const auto ContainmentIndex = Build_RibbonContainmentIndex(InNetwork, InSpans);
+        int32 FailureSampleIndex = INDEX_NONE;
+        auto SampleCount = 0;
+        if (::Is_SegmentInsideRibbonRun(
+                ContainmentIndex,
+                InFrom,
+                InTo,
+                InSampleSpacing,
+                InTolerance,
+                &FailureSampleIndex,
+                &SampleCount))
+        { return true; }
 
-        const auto Length = static_cast<float>(FVector::Dist(InFrom, InTo));
-        const auto StepCount = FMath::Max(1, FMath::CeilToInt32(Length / InSampleSpacing));
-
-        for (auto Index = 0; Index <= StepCount; ++Index)
+        if (OutFailure != nullptr && FailureSampleIndex != INDEX_NONE && SampleCount > 1)
         {
-            const auto Alpha = static_cast<float>(Index) / StepCount;
-            const auto Sample = FMath::Lerp(InFrom, InTo, Alpha);
-            if (Is_PointInsideRibbonRun(InNetwork, InSpans, Sample, InTolerance))
+            const auto Sample = FMath::Lerp(
+                InFrom,
+                InTo,
+                static_cast<float>(FailureSampleIndex) / (SampleCount - 1));
+            const auto Measurement = Measure_PointAgainstRibbonRun(
+                InNetwork,
+                InSpans,
+                Sample,
+                InTolerance);
+            OutFailure->_Sample = Sample;
+            OutFailure->_ClosestRibbonPoint = Measurement._ClosestRibbonPoint;
+            OutFailure->_SampleIndex = FailureSampleIndex;
+            OutFailure->_SampleCount = SampleCount;
+            OutFailure->_SpanIndex = Measurement._SpanIndex;
+            OutFailure->_EdgeId = Measurement._EdgeId;
+            OutFailure->_Distance3D = Measurement._Distance3D;
+            OutFailure->_Distance2D = Measurement._Distance2D;
+            OutFailure->_VerticalDistance = Measurement._VerticalDistance;
+            OutFailure->_AllowedDistance = Measurement._AllowedDistance;
+        }
+        return false;
+    }
+
+    auto
+    Is_PathInsideRibbonRun(
+        const FBuiltNetwork& InNetwork,
+        TConstArrayView<FRouteLegSpan> InSpans,
+        TConstArrayView<FVector> InWaypoints,
+        float InSampleSpacing,
+        float InTolerance,
+        FRibbonContainmentFailure* OutFailure,
+        int32* OutFailureSegmentIndex)
+        -> bool
+    {
+        if (OutFailure != nullptr)
+        { *OutFailure = FRibbonContainmentFailure{}; }
+        if (OutFailureSegmentIndex != nullptr)
+        { *OutFailureSegmentIndex = INDEX_NONE; }
+        if (InWaypoints.IsEmpty())
+        { return false; }
+
+        const auto ContainmentIndex = Build_RibbonContainmentIndex(InNetwork, InSpans);
+        // Nav resolution deliberately collapses endpoints within the 1cm waypoint merge distance.
+        // Such a path has no segment to sample, but its retained point must still belong to the run.
+        if (InWaypoints.Num() == 1)
+        { return ::Is_PointInsideRibbonRun(ContainmentIndex, InWaypoints[0], InTolerance); }
+
+        for (auto SegmentIndex = 0; SegmentIndex < InWaypoints.Num() - 1; ++SegmentIndex)
+        {
+            int32 FailureSampleIndex = INDEX_NONE;
+            auto SampleCount = 0;
+            if (::Is_SegmentInsideRibbonRun(
+                    ContainmentIndex,
+                    InWaypoints[SegmentIndex],
+                    InWaypoints[SegmentIndex + 1],
+                    InSampleSpacing,
+                    InTolerance,
+                    &FailureSampleIndex,
+                    &SampleCount))
             { continue; }
 
-            if (OutFailure != nullptr)
+            if (OutFailureSegmentIndex != nullptr)
+            { *OutFailureSegmentIndex = SegmentIndex; }
+            if (OutFailure != nullptr && FailureSampleIndex != INDEX_NONE && SampleCount > 1)
             {
+                const auto Sample = FMath::Lerp(
+                    InWaypoints[SegmentIndex],
+                    InWaypoints[SegmentIndex + 1],
+                    static_cast<float>(FailureSampleIndex) / (SampleCount - 1));
                 const auto Measurement = Measure_PointAgainstRibbonRun(
                     InNetwork,
                     InSpans,
@@ -810,8 +1132,8 @@ namespace ck::pathnetwork
                     InTolerance);
                 OutFailure->_Sample = Sample;
                 OutFailure->_ClosestRibbonPoint = Measurement._ClosestRibbonPoint;
-                OutFailure->_SampleIndex = Index;
-                OutFailure->_SampleCount = StepCount + 1;
+                OutFailure->_SampleIndex = FailureSampleIndex;
+                OutFailure->_SampleCount = SampleCount;
                 OutFailure->_SpanIndex = Measurement._SpanIndex;
                 OutFailure->_EdgeId = Measurement._EdgeId;
                 OutFailure->_Distance3D = Measurement._Distance3D;
@@ -847,9 +1169,9 @@ namespace ck::pathnetwork
         const auto GatheredControls = Gather_Controls(InNetwork, InSpans);
         if (GatheredControls.Num() < 2)
         { return {}; }
+        const auto ContainmentIndex = Build_RibbonContainmentIndex(InNetwork, InSpans);
         const auto Controls = Simplify_AlternatingMicroTurns(
-            InNetwork,
-            InSpans,
+            ContainmentIndex,
             GatheredControls,
             InParams._CornerSmoothingDistance);
 
@@ -862,7 +1184,7 @@ namespace ck::pathnetwork
                 SmoothingDistance);
             const auto Waypoints = Apply_SideOffset(Centerline, InParams);
 
-            if (Is_CompiledPathContained(InNetwork, InSpans, Waypoints))
+            if (Is_CompiledPathContained(ContainmentIndex, Waypoints))
             {
                 if (InParams._SideKeepingFraction <= 0.0f ||
                     NOT Does_PathContainLocalFold2D(Waypoints))
@@ -879,8 +1201,7 @@ namespace ck::pathnetwork
                         Centerline,
                         CenteredParams);
                     if (Is_CompiledPathContained(
-                            InNetwork,
-                            InSpans,
+                            ContainmentIndex,
                             CenteredWaypoints))
                     { return CenteredWaypoints; }
                 }
@@ -896,7 +1217,7 @@ namespace ck::pathnetwork
         const auto Fallback = Apply_SideOffset(
             Build_Centerline(Controls, InParams._WaypointSpacing, 0.0f),
             CenterlineParams);
-        return Is_CompiledPathContained(InNetwork, InSpans, Fallback)
+        return Is_CompiledPathContained(ContainmentIndex, Fallback)
             ? Fallback
             : TArray<FVector>{};
     }

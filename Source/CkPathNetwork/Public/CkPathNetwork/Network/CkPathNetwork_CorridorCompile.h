@@ -56,6 +56,20 @@ namespace ck::pathnetwork
         FRibbonContainmentFailure* OutFailure = nullptr)
         -> bool;
 
+    // Validates a complete waypoint path against one ribbon run while building the route-local
+    // containment acceleration structure only once. OutFailureSegmentIndex identifies the first
+    // rejected segment when supplied.
+    CKPATHNETWORK_API auto
+    Is_PathInsideRibbonRun(
+        const FBuiltNetwork& InNetwork,
+        TConstArrayView<FRouteLegSpan> InSpans,
+        TConstArrayView<FVector> InWaypoints,
+        float InSampleSpacing = RibbonContainmentSampleSpacingCm,
+        float InTolerance = RibbonContainmentToleranceCm,
+        FRibbonContainmentFailure* OutFailure = nullptr,
+        int32* OutFailureSegmentIndex = nullptr)
+        -> bool;
+
     // Compiles all adjacent on-ribbon spans together. Eligible corners receive bounded quadratic
     // fillets; every emitted segment is checked against the union of the selected ribbon spans.
     // If smoothing or side keeping does not fit, the compiler degrades to the corner-preserving
