@@ -7,8 +7,11 @@ top-tier audit** ([Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md)). Spike ver
 **PROCEED — ADR-4 holds**; amendments S1–S5 binding on P3.
 **Baseline being diffed against:** waived for the purely-additive branch (honest gap flagged to
 the auditor); regression evidence = RenderTarget suite 22/22 on the final binary + 3 clean boots.
-**Next action:** top-tier audit of the review package; on GO → open Gate 1 (Codec pure layer).
-**Blocked on:** the audit. Nothing pushed anywhere; superproject gitlink untouched.
+**Next action:** ~~top-tier audit~~ DONE 2026-08-03 — **GO WITH CONDITIONS** (b3a5c3cf6): C1
+invalid-input test for VoiceChannel::Add due at P1 gate close; C2 citation fix landed with the
+audit commit. **Gate 1 OPEN** ([Gate_1.md](Gate_1.md)) — Codec pure layer + unit tests +
+encode/decode micro-benchmark in progress.
+**Blocked on:** nothing. Nothing pushed anywhere; superproject gitlink untouched.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
