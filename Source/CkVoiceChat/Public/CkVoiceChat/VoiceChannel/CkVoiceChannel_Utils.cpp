@@ -349,6 +349,76 @@ auto
 
 auto
     UCk_Utils_VoiceChannel_UE::
+    Apply_ReplicatedControlPlane(
+        FCk_Handle& InChannelHost,
+        const FCk_RepData_VoiceChat& InRepData)
+    -> ECk_Persistence_ApplyResult
+{
+    // NotReady before ANY mutation: every named channel must already be composed here.
+    for (const auto& Entry : InRepData.Get_Channels())
+    {
+        if (ck::Is_NOT_Valid(TryGet_VoiceChannel(InChannelHost, Entry.Get_ChannelName())))
+        { return ECk_Persistence_ApplyResult::NotReady; }
+    }
+
+    for (const auto& Entry : InRepData.Get_Channels())
+    {
+        auto Channel = TryGet_VoiceChannel(InChannelHost, Entry.Get_ChannelName());
+        auto& Current = Channel.Get<ck::FFragment_VoiceChannel_Current>();
+
+        Current._ChannelIdx = Entry.Get_ChannelIdx();
+
+        if (Channel.Has<ck::FTag_VoiceChannel_NeedsIdx>())
+        { Channel.Remove<ck::FTag_VoiceChannel_NeedsIdx>(); }
+
+        auto NewMembers = TMap<FCk_Handle, FCk_VoiceChat_MemberFlags>{};
+        NewMembers.Reserve(Entry.Get_Members().Num());
+        for (const auto& Member : Entry.Get_Members())
+        {
+            NewMembers.Add(Member.Get_Talker(), Member.Get_Flags());
+        }
+
+        // Joined/Left fire from the local state diff. A member whose talker feature has not
+        // composed on this world yet still lands in the map (keys are base handles); only the
+        // typed signal payload is skipped for it.
+        for (const auto& [NewMemberHandle, NewMemberFlags] : NewMembers)
+        {
+            if (Current._Members.Contains(NewMemberHandle))
+            { continue; }
+
+            auto MemberCopy = NewMemberHandle;
+            if (auto Talker = UCk_Utils_VoiceTalker_UE::Cast(MemberCopy);
+                ck::IsValid(Talker))
+            { ck::UUtils_Signal_OnVoiceChannel_MemberJoined::Broadcast(Channel, ck::MakePayload(Channel, Talker)); }
+        }
+
+        for (const auto& [OldMemberHandle, OldMemberFlags] : Current._Members)
+        {
+            if (NewMembers.Contains(OldMemberHandle))
+            { continue; }
+
+            auto MemberCopy = OldMemberHandle;
+            if (auto Talker = UCk_Utils_VoiceTalker_UE::Cast(MemberCopy);
+                ck::IsValid(Talker))
+            { ck::UUtils_Signal_OnVoiceChannel_MemberLeft::Broadcast(Channel, ck::MakePayload(Channel, Talker)); }
+        }
+
+        Current._Members = MoveTemp(NewMembers);
+
+        Current._ServerMuted.Reset();
+        for (const auto& Muted : Entry.Get_ServerMuted())
+        {
+            Current._ServerMuted.Add(Muted);
+        }
+    }
+
+    return ECk_Persistence_ApplyResult::Applied;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoiceChannel_UE::
     BindTo_OnMemberJoined(
         FCk_Handle_VoiceChannel& InVoiceChannel,
         ECk_Signal_BindingPolicy InBindingPolicy,

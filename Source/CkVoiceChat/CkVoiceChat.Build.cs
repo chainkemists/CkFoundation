@@ -21,6 +21,7 @@ public class CkVoiceChat : CkModuleRules
             "DeveloperSettings",
             "Engine",
             "GameplayTags",
+            "NetCore",
             "Voice",
 
             "CkActorRelay",

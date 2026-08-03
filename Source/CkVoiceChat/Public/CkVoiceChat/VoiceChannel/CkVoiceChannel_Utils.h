@@ -2,6 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Signal/CkSignal_Fragment_Data.h"
 
@@ -9,6 +10,7 @@
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
+#include "CkVoiceChat/Net/CkVoiceChat_RepData.h"
 #include "CkVoiceChat/VoiceChannel/CkVoiceChannel_Fragment.h"
 #include "CkVoiceChat/VoiceChannel/CkVoiceChannel_Fragment_Data.h"
 
@@ -222,6 +224,16 @@ public:
     TryGet_ChannelByIdx(
         const FCk_Handle& InAnyHandle,
         uint8 InChannelIdx);
+
+public:
+    // Client-side control-plane applier, called by the registered net handler (see
+    // Net/CkVoiceChat_Replication.cpp). NotReady until EVERY named channel is composed on this
+    // world (symmetric composition), and mutates nothing before that check passes. Not a
+    // UFUNCTION - net plumbing, not consumer API.
+    static auto
+    Apply_ReplicatedControlPlane(
+        FCk_Handle& InChannelHost,
+        const FCk_RepData_VoiceChat& InRepData) -> ECk_Persistence_ApplyResult;
 
 public:
     UFUNCTION(BlueprintCallable,

@@ -3,15 +3,62 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkVoiceChat/CkVoiceChat_Log.h"
+#include "CkVoiceChat/Net/CkVoiceChat_RepData.h"
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_AssignIdx);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_CancelPendingRequests);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_voice_channel_processor
+{
+    // Publishes this channel's control-plane entry onto the HOST entity's replicated container.
+    // Host-gated inside the Try* calls, so mutation sites call it unconditionally; a
+    // non-replicating host (local-only usage, unit tests) is a clean no-op.
+    auto
+    Push_ControlPlane(
+        FCk_Handle_VoiceChannel InChannel,
+        const ck::FFragment_VoiceChannel_Current& InCurrent) -> void
+    {
+        auto HostEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InChannel);
+
+        if (ck::Is_NOT_Valid(HostEntity))
+        { return; }
+
+        UCk_Utils_Net_UE::TryAddContainerFragment<FCk_RepData_VoiceChat>(HostEntity);
+        UCk_Utils_Net_UE::TryUpdateContainerFragment<FCk_RepData_VoiceChat>(HostEntity,
+            [&](FCk_RepData_VoiceChat& InRepData) -> void
+            {
+                const auto& ChannelName = InChannel.Get<ck::FFragment_VoiceChannel_Params>().Get_ChannelName();
+
+                auto& Entry = InRepData.FindOrAdd_Channel(ChannelName);
+                Entry.Set_ChannelIdx(InCurrent.Get_ChannelIdx());
+
+                auto Members = TArray<FCk_RepData_VoiceChat_Member>{};
+                Members.Reserve(InCurrent.Get_Members().Num());
+                for (const auto& [MemberHandle, MemberFlags] : InCurrent.Get_Members())
+                {
+                    Members.Emplace(FCk_RepData_VoiceChat_Member{MemberHandle, MemberFlags});
+                }
+                Entry.Set_Members(MoveTemp(Members));
+
+                auto Muted = TArray<FCk_Handle>{};
+                Muted.Reserve(InCurrent.Get_ServerMuted().Num());
+                for (const auto& MutedHandle : InCurrent.Get_ServerMuted())
+                {
+                    Muted.Emplace(MutedHandle);
+                }
+                Entry.Set_ServerMuted(MoveTemp(Muted));
+            });
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -63,6 +110,8 @@ namespace ck
         Registry._Entries.Emplace(FCk_VoiceChat_ChannelRegistryEntry{
             InParams.Get_ChannelName(), InVoiceChannelEntity, NewIdx});
 
+        ck_voice_channel_processor::Push_ControlPlane(InVoiceChannelEntity, InCurrent);
+
         voice_chat::VeryVerbose(TEXT("Assigned ChannelIdx [{}] to VoiceChannel [{}] ([{}])"),
             NewIdx, InVoiceChannelEntity, InParams.Get_ChannelName());
     }
@@ -90,6 +139,7 @@ namespace ck
             if (DoHandleRequest(InVoiceChannelEntity, InCurrent, InRequest))
             {
                 Result = ECk_Request_OperationResult::Succeeded;
+                ck_voice_channel_processor::Push_ControlPlane(InVoiceChannelEntity, InCurrent);
             }
         }), policy::DontResetContainer{});
 

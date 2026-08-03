@@ -24,6 +24,15 @@ CKVOICECHAT_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_VoiceChat_Channel_CategoryNam
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    // The wire ChannelIdx is a u8; this sentinel marks "not yet allocated", so usable indices
+    // are 0..254 (255 channels per session).
+    inline constexpr uint8 VoiceChannel_UnassignedIdx = 255;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UENUM(BlueprintType)
 enum class ECk_VoiceChat_SpatializationPolicy : uint8
 {

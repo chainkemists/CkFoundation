@@ -21,10 +21,6 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_VoiceChannel_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_VoiceChannel_NeedsIdx);
 
-    // The wire ChannelIdx is a u8; this sentinel marks "not yet allocated", so usable indices
-    // are 0..254 (255 channels per session).
-    inline constexpr uint8 VoiceChannel_UnassignedIdx = 255;
-
     // --------------------------------------------------------------------------------------------------------------------
 
     using FFragment_VoiceChannel_Params = FCk_Fragment_VoiceChannel_ParamsData;
