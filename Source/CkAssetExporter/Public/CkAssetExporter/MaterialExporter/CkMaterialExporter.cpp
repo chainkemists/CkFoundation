@@ -3,12 +3,14 @@
 #include "CkAssetExporter_Log.h"
 #include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "Engine/Texture.h"
 #include "HAL/FileManager.h"
+#include "Misc/App.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
 #include "Materials/MaterialExpression.h"
@@ -39,6 +41,24 @@ auto
     }
 
     Result.AssetName = InMaterial->GetName();
+
+    // GetUsedTextures walks compiled FMaterialResources, which never exist in a render-incapable
+    // process (commandlet/nullrhi) — the export would silently write "usedTextures": [] while the
+    // MD5 freshness oracle keeps calling the sidecar fresh. Refuse instead: materials export only
+    // from a render-capable context (open editor via the bridge, or a real editor boot).
+    const auto ContextCanEnumerateTextures = FApp::CanEverRender();
+    CK_ENSURE_IF_NOT(ContextCanEnumerateTextures,
+        TEXT("Refusing to export Material [{}] from a render-incapable process — its compiled resources do not "
+             "exist here, so the texture list would silently export empty. Export it through an open editor."),
+        InMaterial->GetName())
+    {}
+    if (NOT ContextCanEnumerateTextures)
+    {
+        Result.ErrorMessage = ck::Format_UE(
+            TEXT("Material export requires a render-capable context (usedTextures would be empty here) — [{}] "
+                 "was NOT exported; use an open editor (bridge) instead"), InMaterial->GetName());
+        return Result;
+    }
 
     auto Textures = TSet<FString>{};
     const auto JsonObject = DoSerializeToJson(InMaterial, Textures);
