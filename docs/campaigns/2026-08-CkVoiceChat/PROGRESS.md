@@ -9,10 +9,11 @@ resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
 **Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1, 2, 3, 4-core,
-4b-fairness, 6, 7, **8 (S4 teardown test), host-asymmetry matrix, and N7 docs** COMPLETE —
-**27/27, EXIT 0, 0 AS errors** (Test-VoiceChatP3-asymmetry3.log). Remaining in Gate 3: only
-**item 5** (Positional3D probe routing set, earns CkSpatialQuery) and the **S5 drain-budget
-measurement** (instrumented numbers into Gate_3.md) — then the exit sweep (full VoiceChat +
+4b-fairness, **5 (Positional3D proximity routing set — ADR-6 probes + hysteresis, earns
+CkShapes+CkSpatialQuery)**, 6, 7, 8, host-asymmetry matrix, and N7 docs COMPLETE —
+**28/28, EXIT 0, 0 AS errors** (Test-VoiceChatP3-proximity3.log). Remaining in Gate 3: only the
+**S5 drain-budget measurement** (instrumented numbers into Gate_3.md, default
+`MaxVoiceBytesPerConnectionPerTick` justified) — then the exit sweep (full VoiceChat +
 RenderTarget delta-zero on the final binary) and the Gate-3 top-tier audit.
 The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
 P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
@@ -27,6 +28,36 @@ DefaultEngine.ini (a BB-repo decision; superproject untouched).
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — P3 item 5: Positional3D proximity routing set (28/28)
+- **CkF 383630b38 + CkTests b7b2a61:** ADR-6 lands. Every Positional3D member gets a probe pair
+  reconciled by the new authority-only `FProcessor_VoiceChat_ProximityProbes` (dirty-tag driven
+  off Join/Leave/channel-EndPlay — no per-tick scans): a presence dot (`Probe.VoiceChat.Presence`,
+  empty filter, reports nothing) and a range probe (`Probe.VoiceChat.Range`, filter=Presence,
+  Kinematic, PersistContacts, radius = max member-channel range + `Get_ProximityHysteresisMarginCm`,
+  resized via ShapeSphere UpdateDimensions on membership change). Route intersects CanHear members
+  with the probe's candidate set and applies per-(recipient, channel-idx) hysteresis: audible from
+  the channel's range, held to range + margin. **Fails CLOSED** with no Transform/probes (new
+  stats: `RouteDroppedNoProximity`, `RouteDroppedOutOfRange`) — never falls back to
+  membership-wide sends.
+- **Deviation 5 (recorded): ADR-6's letter says `BindTo_OnBeginOverlap/OnEndOverlap` maintain the
+  candidate set.** As built, Route READS the probe's event-maintained `_CurrentOverlaps` set
+  (only when bundles flow). Why: the Bind surface is a dynamic delegate needing a UObject
+  listener — NO C++ adopter binds it; the house pattern for a processor consuming overlaps is
+  the direct read (`CkCrowdAgent_Neighbors_Processor.cpp:60`). The mechanism ADR-6 mandates —
+  incremental event-maintained set, no polling queries, no world scans in the packet path — is
+  preserved; the rejected alternative (per-frame re-query) is not what a fragment read is.
+- `Ck.VoiceChat.Net.ProximityRouting` (3 worlds) proves the matrix: in-range (500cm/range 4000)
+  receives while far (9000cm) NEVER does; moved into the margin band (4050) the stream HOLDS;
+  beyond it (4300) it stops arriving; back into the band from outside it does NOT resume — the
+  hysteresis asymmetry. Phase windows via decoded-PCM buffer resets (the buffer is ring-capped;
+  count deltas would saturate). A diagnostic assert separates transform-sync failure from
+  routing failure. First-run green after two compile fixes (missing NativeGameplayTags.h;
+  typesafe-handle CastChecked at Transform/member call sites).
+- Post-run cleanup: one unused accessor removed (`CK_PROPERTY_GET(_PresenceProbeChild)`) —
+  behavior-neutral, re-covered by the S5 run and the exit sweep on the final binary.
+- Ran: `--build --test --test-pattern VoiceChat --discover-fresh` → **28/28, EXIT 0, 0 AS
+  errors** (Test-VoiceChatP3-proximity3.log).
 
 ### 2026-08-03 — P3 items 8 + host-asymmetry + N7 complete (27/27); FCk_Time sweep
 - **CkTests 99010c5 + CkF a0d72258c:** the asymmetry matrix is fully tested —
