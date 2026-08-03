@@ -1,8 +1,9 @@
 # Gate 2 — VoiceTalker capture pipeline + local loopback playback (P2)
 
-> **Status:** 🟡 In progress (2026-08-03)
+> **Status:** 🟡 Machine portion COMPLETE (2026-08-03) — ⏸ awaiting the Gate-2 audit + the two
+> HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke). P3 does not start before all three.
 > **Depends on:** Gate 1 ✅ (audit GO WITH CONDITIONS — all conditions resolved, 2ed23fff0)
-> **Estimate:** 1–2 sessions — re-date at entry; record actual at exit
+> **Estimate:** 1–2 sessions — machine portion: 1 session (2026-08-03)
 
 ## Goal
 
@@ -63,13 +64,53 @@ microphone is a human `[EDITOR-VERIFY]` gym step; a packaged Opus-init smoke run
 | `[EDITOR-VERIFY]` real mic loopback | Human hears themselves with ~100–150 ms latency | Silence/artifacts | Debug via the capture-seam stage taps; jitter overlay numbers |
 | N5 packaged smoke | Opus init + loopback in packaged client | Packaged-only init failure | THE community failure class — capture verbatim, fix before P3 |
 
-## Exit criteria — ALL land with the gate-closing commit
+## Exit criteria — machine portion complete 2026-08-03; human portion listed below
 
-- [ ] AutoTests green (counts vs the 14/14 P1 baseline + new tests named).
-- [ ] Spike canaries + RenderTarget suite delta-zero.
-- [ ] AS boot clean; new AS surface (requests/signals) exercised from an AS test if feasible.
-- [ ] `[EDITOR-VERIFY]` list for the human (mic loopback, settings audition).
-- [ ] N5 packaged smoke run + result recorded (or explicitly listed as the human's step with
-      exact commands if packaging infra requires it).
-- [ ] PROGRESS.md dated entry; this file's Status flipped; audit section appended; campaign
-      pauses for the Gate-2 audit.
+- [x] AutoTests green: **18/18** under pattern `VoiceChat` (14 P1 unit tests + 2 spike canaries +
+      `Ck.VoiceChat.Pipeline.FakeCapture_LoopbackDecodes` + `...StartTransmit_DisabledMode_Rejected`),
+      EXIT 0, Test-VoiceChatP2-final.log. Pipeline decodes **1.20 s from 1.9 s scripted input**
+      (sine + VAD release tail; both silences gated) — the full
+      capture→gain→VAD→encode→jitter→decode loop, headless, with the synth in the loop.
+- [x] RenderTarget suite **22/22** delta-zero on the same binary (Test-P2-Regression.log).
+- [x] AS boot clean (0 `Angelscript: Error`); AS wrappers regenerate for the new request/signal
+      surface. Runtime AS exercise deferred to the gym step below.
+- [x] Invalid-input test for the gate's new validation boundary (Disabled-mode StartTransmit →
+      ensure + zero partial state).
+- [x] PROGRESS.md dated entry; audit requested (response appended below when it lands).
+- [ ] **HUMAN: `[EDITOR-VERIFY]` mic loopback** — see below.
+- [ ] **HUMAN: N5 packaged Opus smoke** — see below.
+
+## Design deviations recorded for the audit
+
+1. **Playback uses `CreateSoundGenerator`/`ISoundGenerator`, not `OnGenerateAudio` on the
+   component** — the engine marks the latter soon-to-be-deprecated and the generator path is the
+   engine's own no-UObjects-on-render-thread pattern, which is §7.5's discipline anyway.
+2. **Decode runs on the GAME thread, not the audio render thread** (spec §7.5 said render
+   thread): measured at P1 as 27 µs per 20 ms frame (~1.1% of one core at the full 8-talker
+   cap), so the render thread consumes only ready float PCM through a lock-free SPSC queue —
+   no decoder state, locks, or UObjects near the render thread at all. Revisit only if a
+   profile ever says otherwise (non-negotiable #7 cuts both ways).
+
+## `[EDITOR-VERIFY]` — mic loopback (human)
+
+1. Add `[Voice]` + `bEnabled=true` to `BusterBlock/Config/DefaultEngine.ini` (REQUIRED — the
+   engine Voice module is config-gated; without it every capture/codec factory returns null).
+   This line is a permanent production prerequisite for voice, not a test hack — landing it is a
+   BB-repo decision.
+2. Build + open the BB editor with a working microphone. In any level's Level Blueprint (or an
+   AS snippet): on BeginPlay — create an entity (or use an existing pawn's), call
+   `[Ck][VoiceTalker] Add Feature` with TransmitMode=OpenMic, Loopback=Enable, then
+   `[Ck][VoiceTalker] Request Start Transmit`.
+3. PIE and speak: you should hear yourself with roughly 100–300 ms delay (loopback rides the
+   real jitter policy). `[Ck][VoiceTalker] Get Is Speaking` flips with your voice; silence
+   closes it after ~200 ms.
+4. While there: the Gate-0 BP checklist items (nodes under `Ck|Utils|VoiceChat|…`, enum
+   dropdowns, autocasts, the Project Settings → Voice Chat page defaults).
+
+## N5 packaged Opus smoke (human)
+
+Package a Development client (`runreal buildgraph run ./.runreal/buildgraph/build.xml
+-set:ClientConfigurations=Development -Target="Build Clients"` per BB CLAUDE.md), include the
+step-2 test level, run the packaged client with the config line from step 1, and verify: no
+Opus/Voice init errors in the packaged log, and audible mic loopback. This is the community's
+marquee packaged-only failure class — capture any failure verbatim before P3 work continues.

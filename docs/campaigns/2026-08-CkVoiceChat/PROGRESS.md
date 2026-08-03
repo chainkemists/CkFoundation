@@ -7,7 +7,14 @@ top-tier audit** ([Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md)). Spike ver
 **PROCEED — ADR-4 holds**; amendments S1–S5 binding on P3.
 **Baseline being diffed against:** waived for the purely-additive branch (honest gap flagged to
 the auditor); regression evidence = RenderTarget suite 22/22 on the final binary + 3 clean boots.
-**Next action:** Gate 2 (P2) in progress — **the machine-checkable core is GREEN**:
+**Next action (SUPERSEDES the line below):** **Gate 2 machine portion COMPLETE** — full sweep
+**18/18 VoiceChat + 22/22 RenderTarget, EXIT 0, 0 AS errors** on the final binary (CkF
+421d99baa, CkTests 5a0141c): synth playback landed (ISoundGenerator SPSC consumer; game-thread
+decode justified by the P1 benchmark — deviations recorded in Gate_2.md), Disabled-mode
+rejection test green. Remaining before P3: the Gate-2 audit (launched), then the two HUMAN items
+in Gate_2.md — mic `[EDITOR-VERIFY]` and the N5 packaged smoke (both need `[Voice] bEnabled=true`
+added to BB's DefaultEngine.ini — a BB-repo decision).
+Earlier in-progress note: Gate 2 (P2) in progress — **the machine-checkable core is GREEN**:
 `Ck.VoiceChat.Pipeline.FakeCapture_LoopbackDecodes` 1/1 EXIT 0, decoding **1.20 s from 1.9 s of
 scripted input** (sine + VAD release tail; both silences gated out) through the full
 capture→gain→VAD→encode→jitter→decode loop, headless. Landed: capture seam (engine wrapper +
