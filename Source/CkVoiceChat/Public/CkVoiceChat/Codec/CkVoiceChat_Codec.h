@@ -114,6 +114,12 @@ private:
     float _JitterToDepthMultiplier = 4.0f;
     float _JitterEwmaAlpha = 0.1f;
 
+    // Stream-discontinuity detection: an arrival after a longer silence than this (a VAD-gated
+    // talk-spurt boundary), or a seq jump past _MaxSeqJumpFrames, reseeds the buffer instead of
+    // being treated as network jitter or a conceal-walkable gap.
+    FCk_Time _ArrivalGapReset = FCk_Time{0.2};
+    int32 _MaxSeqJumpFrames = 50;
+
 public:
     CK_PROPERTY(_FrameDuration);
     CK_PROPERTY(_MinDepth);
@@ -121,6 +127,8 @@ public:
     CK_PROPERTY(_MaxDepth);
     CK_PROPERTY(_JitterToDepthMultiplier);
     CK_PROPERTY(_JitterEwmaAlpha);
+    CK_PROPERTY(_ArrivalGapReset);
+    CK_PROPERTY(_MaxSeqJumpFrames);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -162,6 +170,13 @@ public:
 // decisions, late-frame drops (voice is disposable - drop and count, never stash), and adaptive
 // target depth from inter-arrival jitter. Sequence numbers wrap at u16; distances are signed
 // 16-bit deltas. The caller pops once per frame duration from the audio pull.
+//
+// Stream-discontinuity contract: a talk-spurt boundary (arrival gap > _ArrivalGapReset) or a seq
+// jump past _MaxSeqJumpFrames RESEEDS the buffer at the incoming seq — playout re-warms, the
+// arrival is excluded from the jitter estimate (silence is not network jitter; the estimate
+// itself persists across spurts), and _DiscontinuityCount increments. While still warming up,
+// arrivals BEHIND the cursor extend the playout window backward instead of late-dropping, so a
+// reordered-high first packet cannot clip the utterance onset.
 struct CKVOICECHAT_API FCk_VoiceChat_JitterBuffer
 {
 public:
@@ -188,6 +203,11 @@ public:
         const FCk_VoiceChat_JitterParams& InParams) const -> int32;
 
 private:
+    auto
+    DoReseed(
+        uint16 InSeq) -> void;
+
+private:
     TMap<uint16, TArray<uint8>> _BufferedFrames;
     uint16 _NextPlayoutSeq = 0;
     bool _HasPlayoutCursor = false;
@@ -199,10 +219,12 @@ private:
 
     int32 _LateDropCount = 0;
     int32 _ConcealCount = 0;
+    int32 _DiscontinuityCount = 0;
 
 public:
     CK_PROPERTY_GET(_LateDropCount);
     CK_PROPERTY_GET(_ConcealCount);
+    CK_PROPERTY_GET(_DiscontinuityCount);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

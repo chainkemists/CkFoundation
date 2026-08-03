@@ -7,13 +7,19 @@
 
 namespace ck_voice_chat_codec
 {
-    auto Write_U16_LE(TArray<uint8>& InOutBuffer, uint16 InValue) -> void
+    auto
+    Write_U16_LE(
+        TArray<uint8>& InOutBuffer,
+        uint16 InValue) -> void
     {
         InOutBuffer.Add(static_cast<uint8>(InValue & 0xFF));
         InOutBuffer.Add(static_cast<uint8>((InValue >> 8) & 0xFF));
     }
 
-    auto Read_U16_LE(const TArray<uint8>& InBuffer, int32& InOutCursor) -> uint16
+    auto
+    Read_U16_LE(
+        const TArray<uint8>& InBuffer,
+        int32& InOutCursor) -> uint16
     {
         const auto Value = static_cast<uint16>(InBuffer[InOutCursor]) |
             (static_cast<uint16>(InBuffer[InOutCursor + 1]) << 8);
@@ -22,7 +28,10 @@ namespace ck_voice_chat_codec
     }
 
     // Signed distance from InFrom to InTo in u16 sequence space (wrap-safe).
-    auto Get_SeqDistance(uint16 InTo, uint16 InFrom) -> int32
+    auto
+    Get_SeqDistance(
+        uint16 InTo,
+        uint16 InFrom) -> int32
     {
         return static_cast<int16>(static_cast<uint16>(InTo - InFrom));
     }
@@ -70,20 +79,43 @@ auto
         const FCk_VoiceChat_JitterParams& InParams)
     -> void
 {
-    if (_HasLastArrivalTime)
+    const auto ArrivalGapSeconds = _HasLastArrivalTime
+        ? InNow.Get_Seconds() - _LastArrivalTime.Get_Seconds()
+        : 0.0;
+    const auto SeqDistance = _HasPlayoutCursor
+        ? ck_voice_chat_codec::Get_SeqDistance(InSeq, _NextPlayoutSeq)
+        : 0;
+
+    const auto IsDiscontinuity = _HasPlayoutCursor &&
+        (ArrivalGapSeconds > InParams.Get_ArrivalGapReset().Get_Seconds() ||
+         SeqDistance > InParams.Get_MaxSeqJumpFrames());
+
+    if (IsDiscontinuity)
     {
-        const auto InterArrivalSeconds = InNow.Get_Seconds() - _LastArrivalTime.Get_Seconds();
-        const auto DeviationSeconds = FMath::Abs(InterArrivalSeconds - InParams.Get_FrameDuration().Get_Seconds());
+        DoReseed(InSeq);
+        ++_DiscontinuityCount;
+    }
+    else if (_HasLastArrivalTime)
+    {
+        const auto DeviationSeconds = FMath::Abs(ArrivalGapSeconds - InParams.Get_FrameDuration().Get_Seconds());
         const auto Alpha = InParams.Get_JitterEwmaAlpha();
         _JitterEwmaSeconds = Alpha * static_cast<float>(DeviationSeconds) + (1.0f - Alpha) * _JitterEwmaSeconds;
     }
     _LastArrivalTime = InNow;
     _HasLastArrivalTime = true;
 
-    if (_HasPlayoutCursor && ck_voice_chat_codec::Get_SeqDistance(InSeq, _NextPlayoutSeq) < 0)
+    if (_HasPlayoutCursor && NOT IsDiscontinuity &&
+        ck_voice_chat_codec::Get_SeqDistance(InSeq, _NextPlayoutSeq) < 0)
     {
-        ++_LateDropCount;
-        return;
+        if (_IsWarmedUp)
+        {
+            ++_LateDropCount;
+            return;
+        }
+
+        // still warming up: extend the playout window backward so a reordered-high first packet
+        // cannot clip the utterance onset
+        _NextPlayoutSeq = InSeq;
     }
 
     _BufferedFrames.Add(InSeq, MoveTemp(InFrame));
@@ -93,6 +125,18 @@ auto
         _NextPlayoutSeq = InSeq;
         _HasPlayoutCursor = true;
     }
+}
+
+auto
+    FCk_VoiceChat_JitterBuffer::
+    DoReseed(
+        uint16 InSeq)
+    -> void
+{
+    _BufferedFrames.Reset();
+    _NextPlayoutSeq = InSeq;
+    _HasPlayoutCursor = true;
+    _IsWarmedUp = false;
 }
 
 auto
