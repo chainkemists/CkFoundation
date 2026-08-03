@@ -8,13 +8,13 @@ counters landed, 136ca780f; Conceal zero-fill + HandleRequests-synth recorded as
 resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
-**Next action:** **Gate 3 (P3) OPENED 2026-08-03** ([Gate_3.md](Gate_3.md)) on the maintainer's
-"continue" — the two HUMAN items in Gate_2.md (mic `[EDITOR-VERIFY]`, N5 packaged smoke)
-reclassified as **P2-verification obligations gating the campaign's ship (P5)**, not P3's
-transport work (decision + revert hook recorded in Gate_3.md's status header). Both still need
-`[Voice] bEnabled=true` in BB's DefaultEngine.ini (a BB-repo decision — this campaign leaves the
-superproject untouched). P3 carries N1–N3/N7 + S1–S5 + audit F3/F6; work items sequenced in
-Gate_3.md.
+**Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1 (transport
+skeleton, bb0513333) and 2-local (control plane, c01b43ef0 + CkTests eef61de) landed —
+**20/20 VoiceChat, EXIT 0, 0 AS errors** (Test-VoiceChatP3-membership.log). Next: item 2
+replicated half (`FCk_RepData_VoiceChat`, late-join + N1 voice-before-registry net tests), then
+item 3 (talker outbound + audit F3/F6). The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5
+packaged smoke) remain open as P2-verification obligations gating P5 ship — both need
+`[Voice] bEnabled=true` in BB's DefaultEngine.ini (a BB-repo decision; superproject untouched).
 **Blocked on:** nothing machine-side. Nothing pushed anywhere; superproject gitlink untouched.
 
 ## Decision log
@@ -25,6 +25,34 @@ Gate_3.md.
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — Gate 3 opened; P3 work items 1 + 2(local half) landed green
+- Gate_3.md committed (94a7abcfb): contract carries N1–N3/N7 + S1–S5 + audit F3/F6; ten
+  sequenced work items; the two Gate-2 HUMAN items reclassified P2-verification-gating-P5
+  (decision + revert hook in its status header).
+- **Item 1 — transport skeleton (bb0513333):** `ACk_VoiceChatRelay_UE` with
+  `Server_SendVoiceBundle`/`Client_ReceiveVoiceBundle`, both Unreliable BY CONTRACT (S1),
+  enqueue-only bodies into talker-entity inboxes, sender stamped server-side from the channel
+  owner chain, drop+count on unresolvable (NO stash path — deliberate divergence from
+  RenderTarget, per N1); `UCk_VoiceChatRelay_Subsystem_UE` on group `ActorRelay.VoiceChat`
+  (ResolveGameplayTag self-registers missing tags — verified in CkGameplayTag_Utils.cpp:498);
+  CkActorRelay dep earned. Gate: 18/18 (Test-VoiceChatP3-transportskeleton.log).
+- **Item 2, local half — control plane (c01b43ef0):** `FProcessor_VoiceChannel_AssignIdx`
+  (AuthorityOnly via `NetModeRequirement`, exemplar CkEntityScript_Processor.h:110) allocating
+  session-append-only u8 indices from a transient-entity world registry, N3 ensure on
+  exhaustion (255 = unassigned sentinel, 0–254 usable); membership requests
+  Join/Leave/SetMemberFlags/ServerMute/ServerUnmute with completion contract + EndPlay cancel;
+  non-authority callers rejected synchronously Failed_NotEnqueued; OnMemberJoined/Left signals;
+  TryGet_ChannelByIdx quiet-on-miss (stale idx = expected N1 traffic); server mute survives
+  leave/rejoin (moderation-safe default, pinned by test). Gate: 18/18
+  (Test-VoiceChatP3-controlplane.log).
+- **Item 2 tests (CkTests eef61de):** `Ck.VoiceChat.Channel.MembershipAndIdx` +
+  `.InvalidInputs_Rejected` — **20/20, EXIT 0, 0 AS errors**
+  (Test-VoiceChatP3-membership.log). Non-authority-rejection test deferred to the RepData
+  slice (needs a genuinely non-authoritative replicated channel on a client world).
+- Next: item 2 replicated half — `FCk_RepData_VoiceChat` (Register_NetOnly, NotReady until
+  composed), late-join + voice-before-registry (N1) net tests, then item 3 (talker outbound +
+  F3/F6).
 
 ### 2026-08-03 — Gate 2 audited GO WITH CONDITIONS; both conditions resolved + re-gated
 - Audit (fresh top-tier session) appended to Gate_2.md: no blocker in the capture seam, talker
