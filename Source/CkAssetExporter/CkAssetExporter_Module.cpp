@@ -104,7 +104,7 @@ auto
         FOnSpawnTab::CreateRaw(this, &FCkAssetExporterModule::DoOnSpawnTab)
     )
     .SetDisplayName(FText::FromString(ExporterTab_TabDisplayName))
-    .SetTooltipText(FText::FromString(TEXT("Export assets (Behavior Trees, Blueprints, DataAssets, EQS, State Trees, Structs, Enums, Materials) to JSON and plain-text formats")))
+    .SetTooltipText(FText::FromString(TEXT("Export assets (Behavior Trees, Blueprints, DataAssets, EQS, State Trees, Structs, Enums, Materials) to .ckexport sidecars")))
     .SetGroup(WorkspaceMenu::GetMenuStructure().GetDeveloperToolsDebugCategory());
 }
 
@@ -127,7 +127,7 @@ auto
     return SNew(SDockTab)
         .TabRole(ETabRole::NomadTab)
         .Label(FText::FromString(ExporterTab_TabDisplayName))
-        .ToolTipText(FText::FromString(TEXT("Export assets to JSON and plain-text formats")))
+        .ToolTipText(FText::FromString(TEXT("Export assets to .ckexport sidecars")))
         [
             SNew(SCkAssetExporterTab)
         ];
