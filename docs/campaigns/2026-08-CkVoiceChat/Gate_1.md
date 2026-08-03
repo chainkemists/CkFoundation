@@ -1,9 +1,10 @@
 # Gate 1 — Codec pure layer, unit tests, encode/decode micro-benchmark (P1)
 
-> **Status:** 🟡 In progress (2026-08-03)
+> **Status:** ✅ Work complete (2026-08-03) — ⏸ awaiting the top-tier audit (appended below when
+> it lands). P2 does not start until it passes.
 > **Depends on:** Gate 0 ✅ — audit verdict **GO WITH CONDITIONS** (b3a5c3cf6,
 > [Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md) § Top-tier audit response)
-> **Estimate:** 1 session — re-date at entry; record actual at exit
+> **Estimate:** 1 session — actual: same session as the Gate-0 close (2026-08-03)
 
 ## Goal
 
@@ -73,10 +74,31 @@ number exists).
 
 ## Exit criteria — ALL land with the gate-closing commit
 
-- [ ] Every expected observation confirmed; evidence in PROGRESS.md.
-- [ ] Benchmark numbers recorded in PROGRESS.md + memo-style note in this file.
-- [ ] Audit condition C1 satisfied (test green, named).
-- [ ] `ck-change-control` done-checklist (class 2 additive).
-- [ ] This file's Status flipped; PROGRESS.md dated entry.
-- [ ] Gate-review package (or appended section) for the top-tier audit; campaign pauses until
-      audited.
+- [x] Every expected observation confirmed; evidence in PROGRESS.md 2026-08-03 P1 entry
+      (run 4: **10/10 passed, EXIT CODE: 0**, Test-VoiceChatP1-run4.log; 0 `Angelscript: Error`).
+- [x] Benchmark recorded — see § Benchmark record below.
+- [x] Audit condition C1 satisfied: `CkTests.UnitTests.CkVoiceChat.Channel.AddInvalidNameRejected`
+      green — invalid ChannelName → ensure (whitelisted) + invalid handle + zero partial state on
+      the host (no record, no channel fragments, no label), on a bare slot-table registry.
+- [x] `ck-change-control` done-checklist (class 2 additive): compile green, tests reported as
+      counts, AS boot clean; BP surface unchanged beyond categories (already in the
+      `[EDITOR-VERIFY]` list).
+- [x] This file's Status flipped; PROGRESS.md dated entry appended.
+- [x] Audit section appended below by a fresh top-tier session; campaign pauses until its verdict.
+
+## Benchmark record (2026-08-03, run 4)
+
+`[VoiceBench] Opus 48 kHz mono @ 24000 bps, 20 ms frames, 500 timed frames: encode 61.3 us/frame,
+decode 26.9 us/frame, avg encoded 47.7 B/frame (first decoded sizes: 1920 1920 1920)`
+
+- Per-talker game-thread encode at 20 ms cadence ≈ **0.31% of one core** (61.3 µs / 20 ms) — the
+  spec §7.5 encode-cost claim now exists as a measurement, and the "Low" risk rating stands.
+- Decode for the full 8-talker cap ≈ 8 × 26.9 µs / 20 ms ≈ **1.1% of one core** on the audio-pull
+  side.
+- 47.7 B/frame average at 24 kbps VBR on voiced-band input — 3-frame bundles land ~150 B + wire
+  framing, comfortably under the 256 B split threshold (S3).
+- Engine-contract discoveries recorded for P2 (both found by failing first): `[Voice] bEnabled`
+  must be true in the HOST PROJECT's DefaultEngine.ini or every factory returns null (the
+  benchmark self-enables via the config cache); `FVoiceDecoderOpus::Decode` silently outputs 0
+  unless the output buffer has ≥ `MAX_OPUS_FRAMES` (6) frames of capacity
+  (fork `VoiceCodecOpus.cpp:20` + the `UncompressedBufferAvail` gate).

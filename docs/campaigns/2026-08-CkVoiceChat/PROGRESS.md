@@ -7,11 +7,11 @@ top-tier audit** ([Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md)). Spike ver
 **PROCEED — ADR-4 holds**; amendments S1–S5 binding on P3.
 **Baseline being diffed against:** waived for the purely-additive branch (honest gap flagged to
 the auditor); regression evidence = RenderTarget suite 22/22 on the final binary + 3 clean boots.
-**Next action:** ~~top-tier audit~~ DONE 2026-08-03 — **GO WITH CONDITIONS** (b3a5c3cf6): C1
-invalid-input test for VoiceChannel::Add due at P1 gate close; C2 citation fix landed with the
-audit commit. **Gate 1 OPEN** ([Gate_1.md](Gate_1.md)) — Codec pure layer + unit tests +
-encode/decode micro-benchmark in progress.
-**Blocked on:** nothing. Nothing pushed anywhere; superproject gitlink untouched.
+**Next action:** **Gate 1 work COMPLETE** ([Gate_1.md](Gate_1.md)) — codec layer 10/10 green,
+benchmark recorded (encode 61.3 µs / decode 26.9 µs / 47.7 B per frame), C1 satisfied, canaries +
+regression delta-zero. Awaiting the Gate-1 top-tier audit (appended to Gate_1.md when it lands);
+on GO → open Gate 2 (P2: capture seam + local loopback playback + packaged Opus smoke per N5).
+**Blocked on:** the Gate-1 audit. Nothing pushed anywhere; superproject gitlink untouched.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -21,6 +21,31 @@ encode/decode micro-benchmark in progress.
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — Gate 1 (P1) work complete: codec layer green, benchmark recorded
+- Ran: `--build --test --test-pattern UnitTests.CkVoiceChat --discover-fresh` × 4 runs (fix cycle
+  below). Final run 4: **10/10 passed, EXIT CODE: 0** (Test-VoiceChatP1-run4.log), 0
+  `Angelscript: Error`.
+- Benchmark (run 4): encode **61.3 µs/frame**, decode **26.9 µs/frame**, **47.7 B/frame** avg at
+  24 kbps — per-talker game-thread encode ≈ 0.31% core; full details + P2 contract discoveries in
+  Gate_1.md § Benchmark record.
+- Audit condition C1 landed green: `CkTests.UnitTests.CkVoiceChat.Channel.AddInvalidNameRejected`
+  (zero-partial-state rejection on a bare slot-table registry).
+- Fix cycle (all committed, honest history): run 1 — AdaptiveDepth test asserted the wrong
+  contract (near-zero jitter EWMA correctly converges to the MinDepth floor, not
+  InitialTargetDepth; float accumulation makes the estimate epsilon-positive), and the Opus
+  factories returned null (`[Voice] bEnabled` read once at module startup; host project has no
+  `[Voice]` section — benchmark now self-enables via the config cache + module reload fallback +
+  key cleanup). Run 3 — all decodes were size 0: `FVoiceDecoderOpus` silently skips frames unless
+  the OUTPUT buffer holds ≥ MAX_OPUS_FRAMES (6) frames (`VoiceCodecOpus.cpp:20`); root-caused by
+  reading the engine source after two failed hypotheses (stuck-protocol stop), buffer sized to
+  the floor.
+- P2 obligations discovered here: host project needs `[Voice] bEnabled=true` for capture; synth
+  decode target must honor the 6-frame capacity floor.
+- Commits: CkFoundation 59a7de954 (codec layer) + comment/docs commits; CkTests 4d01366 → 0019a63
+  (tests + benchmark + fixes; Build.cs earns Voice + CkVoiceChat).
+- Canary + regression sweep on the run-4 binary: spike canaries **2/2**, RenderTarget **22/22**,
+  both EXIT 0 (Test-P1-Canary.log / Test-P1-Regression.log) — delta-zero vs the Gate-0 baseline.
 
 ### 2026-08-03 — Gate 0 closed: build + AS + spike green; verdict PROCEED
 - Ran: `UnrealToolbox --build --config=Development --target=Editor` → `Result: Succeeded`
