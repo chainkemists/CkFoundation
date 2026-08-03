@@ -574,14 +574,14 @@ function Show-ExporterStatus {
 
 # (a) PURE
 function Get-PerAssetEntries($ManifestObj) {
-    if ($null -eq $ManifestObj) { return @() }
+    if ($null -eq $ManifestObj) { return ,@() }
 
     # Primary, contract-given shape: an object with a perAsset/assets array property. Wrapping
     # in @(...) matters here too -- ConvertFrom-Json silently collapses a JSON array with exactly
     # one element down to a scalar (a well-documented cmdlet quirk, not specific to this field),
     # so a single-entry perAsset array would otherwise arrive as a bare object.
     $perAsset = Get-PropertyValue $ManifestObj @('entries', 'Entries', 'perAsset', 'PerAsset', 'assets', 'Assets')
-    if ($null -ne $perAsset) { return @($perAsset) }
+    if ($null -ne $perAsset) { return ,@($perAsset) }
 
     # No wrapper property found. Two remaining possibilities, both defensive (the fixed contract
     # doesn't specify either): the root IS a single per-asset entry (detected by an asset/path
@@ -589,13 +589,13 @@ function Get-PerAssetEntries($ManifestObj) {
     # NOT gate on `-is [array]` first, since the single-element collapse above means a one-entry
     # array root would already have failed that check even though it should still count).
     if (Get-PropertyValue $ManifestObj @('asset', 'Asset', 'path', 'Path', 'AssetPath')) {
-        return @($ManifestObj)
+        return ,@($ManifestObj)
     }
     if ($ManifestObj -is [System.Collections.IEnumerable] -and $ManifestObj -isnot [string]) {
-        return @($ManifestObj)
+        return ,@($ManifestObj)
     }
 
-    return @()
+    return ,@()
 }
 
 # (a) PURE
