@@ -1,7 +1,8 @@
 # Gate 2 — VoiceTalker capture pipeline + local loopback playback (P2)
 
-> **Status:** 🟡 Machine portion COMPLETE (2026-08-03) — ⏸ awaiting the Gate-2 audit + the two
-> HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke). P3 does not start before all three.
+> **Status:** 🟡 Machine portion ✅ CLOSED (2026-08-03 — audit GO WITH CONDITIONS, both conditions
+> resolved + re-gated same session, resolution table below) — ⏸ awaiting the two HUMAN items
+> (mic `[EDITOR-VERIFY]`, N5 packaged smoke). P3 does not start before both.
 > **Depends on:** Gate 1 ✅ (audit GO WITH CONDITIONS — all conditions resolved, 2ed23fff0)
 > **Estimate:** 1–2 sessions — machine portion: 1 session (2026-08-03)
 
@@ -90,6 +91,19 @@ microphone is a human `[EDITOR-VERIFY]` gym step; a packaged Opus-init smoke run
    cap), so the render thread consumes only ready float PCM through a lock-free SPSC queue —
    no decoder state, locks, or UObjects near the render thread at all. Revisit only if a
    profile ever says otherwise (non-negotiable #7 cuts both ways).
+3. **Conceal zero-fills instead of Opus PLC** (work item 4 said "Opus PLC on Conceal"):
+   `FVoiceDecoderOpus::Decode` early-outs with `OutRawDataSize = 0` on null compressed input
+   (engine `VoiceCodecOpus.cpp`), so packet-level Opus PLC is NOT reachable through the ADR-2
+   `IVoiceDecoder` factory surface — zero-fill is the only conceal available there. P3's
+   listener playback path inherits the same constraint; revisit only if we ever bypass the
+   factory for raw libopus access. (Recorded per Gate-2 audit condition 2; the auditor verified
+   the engine surface independently.)
+4. **Loopback synth is created in HandleRequests (on StartTransmit), not in Setup** ("CkVfx
+   discipline: Setup creates"): loopback playback is conditional on a runtime request, so
+   creation happens at the request boundary. Every other clause of the component-lifetime
+   discipline holds — `TStrongObjectPtr` in Current, `bAutoActivate=false`, no destroy outside
+   EndPlay, `Stop` + `DestroyComponent` + `Reset` at teardown. (Recorded per Gate-2 audit
+   finding 4.)
 
 ## `[EDITOR-VERIFY]` — mic loopback (human)
 
@@ -114,3 +128,145 @@ Package a Development client (`runreal buildgraph run ./.runreal/buildgraph/buil
 step-2 test level, run the packaged client with the config line from step 1, and verify: no
 Opus/Voice init errors in the packaged log, and audible mic loopback. This is the community's
 marquee packaged-only failure class — capture any failure verbatim before P3 work continues.
+
+---
+
+## Top-tier audit response (Gate 2, machine portion)
+
+### Verdict
+
+**GO WITH CONDITIONS** — the machine portion is sound and P3 design may begin once the two
+conditions below land (both mechanical; neither invalidates any code that shipped) and the two
+human items pass. No blocker found in the capture seam, the talker request/signal surface, the
+processor pipeline, the synth component, or the tests.
+
+1. **Stats counters (this gate's own contract, "Binding constraints" above):** `CkVoiceChat_Stats.h`
+   still declares only `STATGROUP_CkVoiceChat` — zero counters exist anywhere in
+   `Source/CkVoiceChat` (rg for `DECLARE_.*STAT|INC_|SET_` matches only the group declaration).
+   The gate text promised "its first real counters ... with the capture/encode processors."
+   Either land counters (frames captured / encoded / concealed / decoded is enough) or amend this
+   gate doc to record the deferral to P3 where ADR-4 clause (f) makes them non-negotiable. Doc or
+   ~20-line code change; pick one and record it.
+2. **Record the Conceal behavior as deviation 3:** work item 4 promises "Opus PLC on Conceal" but
+   the implementation zero-fills (`CkVoiceTalker_Processor.cpp:389-399`). I verified the engine
+   surface: `FVoiceDecoderOpus::Decode` early-outs with `OutRawDataSize = 0` on null input
+   (engine `VoiceCodecOpus.cpp`, `!InCompressedData` check at the top of Decode) — packet-level
+   Opus PLC is **not reachable** through the ADR-2 `IVoiceDecoder` factory surface, so zero-fill
+   is the defensible choice, not a shortcut. But it is an undocumented deviation from this gate's
+   own work-item text, and P3's listener playback path will inherit the same constraint. Record
+   it (doc-only).
+
+### Spot-checks performed
+
+- **A — Capture seam** (`Capture/CkVoiceChat_CaptureSource.{h,cpp}`): interface is the minimal
+  Start/Stop/Tick/DrainPcm game-thread seam. The engine wrapper's `[Voice] bEnabled` precondition
+  is the exact non-negotiable-#3 shape — hoisted `CaptureCreated` local, `CK_ENSURE_IF_NOT` with
+  empty body naming the fix, separate ordinary `if (NOT CaptureCreated) return false`
+  (.cpp:29-36). Fake is deterministic: no RNG, continuous `_SampleCounter` phase across segments,
+  time-accumulator drain; Stop resets pending time only (.cpp:92-99, 145-189).
+- **B — Talker P2 surface**: completion contract matches CkTimer doctrine — trailing
+  `AutoCreateRefTerm` delegate with no C++ default on all five requests (Utils.h:76-123);
+  `IsBound → Set_CompletionDelegate` on a named request local at every boundary (Utils.cpp:40-45
+  et al.; `Set_CompletionDelegate` is const-qualified over the mutable transport,
+  `CkRequest_Data.h:95,124`, so the `const auto Request` locals are correct);
+  `MakeCompletionGuard` declared AFTER the `Result` local (Processor.cpp:102-103);
+  `TExclude<FTag_DestroyEntity_Initiate>` + `CK_IGNORE_PENDING_KILL` on the HandleRequests view
+  (Processor.h:47-48); `FGroup_EndPlay` cancel processor calls
+  `ck::request::FireCancelledForPending` (Processor.cpp:264-273). Signals defined via
+  `CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE` and bound via `CK_SIGNAL_BIND`/`CK_SIGNAL_UNBIND` —
+  no CkTimer direct-Bind divergence (Utils.cpp:171-265). Pipeline order confirmed
+  drain→gain→RMS→VAD→encode→loopback (Processor.cpp:277-426) with mode/mute/encoder gates before
+  encode. EndPlay order: capture Stop first, synth Stop+DestroyComponent+Reset, then
+  encoder/decoder release (Processor.cpp:430-456) — spec §7.8 honored. Friend lists on
+  Current/Requests name exactly the actual writers (Fragment.h:43-47, 88-90; the Utils friend
+  covers the Debug_ test seams). Idempotent no-ops report Succeeded (start-while-transmitting,
+  stop-while-stopped) per the result-semantics doctrine.
+- **C — Playback** (`Playback/CkVoiceChatSynth_Component.{h,cpp}`): N6 pins honored — `Init`
+  writes the settings rate through the `int32& SampleRate` ref + `NumChannels = 1` (.cpp:49-64);
+  zero resampling in the generator (pure memcpy/zero-fill, .cpp:13-45); the SPSC queue is held by
+  `TSharedPtr` on both component and generator so Stop→Start recreates the generator over the
+  same queue untorn (.h:33,68; .cpp:72-77). `OnGenerateAudio` has no locks and no allocations
+  beyond the dequeued array's buffer release. Verified against the real 5.7.4 engine header
+  (`SynthComponent.h:340` `virtual bool Init(int32& SampleRate)`; :355 carries the engine's own
+  "soon to be deprecated, use CreateSoundGenerator" comment; :360 the virtual) — **deviation 1 is
+  the engine's own recommendation, not a liberty**. Deviation 2 (game-thread decode) is backed by
+  the recorded P1 measurement (26.9 µs / 20 ms frame, Gate_1 benchmark) and buys a decoder-free,
+  UObject-free render thread; sound, revisit only on profile per non-negotiable #7. Start/Stop
+  both happen only in game-thread processor code.
+- **D — Tests** (`CkTests .../Net/CkVoiceChat_PipelineLoopback.spec.cpp`): the loopback test pins
+  VAD both ways — lower bound ≥0.5 s decoded proves the spurt passed; upper bound ≤1.5 s from
+  1.9 s scripted input fails a never-gating VAD (which would decode ~1.9 s); the loud-sample scan
+  proves sine content, not zeros (:139-152). Measured 1.20 s is consistent with 1.0 s sine +
+  release tail. The rejection test pins zero partial state (no transmit tag, no speaking tag,
+  EMPTY decoded buffer) plus the expected ensure text (:177, :215-220) — and the handler
+  validates mode before creating any resource, so the pin is real. Config hygiene: original
+  `[Voice] bEnabled` captured (including key-absence) and restored on both terminal paths
+  (:43-60); `bSuppressLogErrors/Warnings` is the established house pattern across 17+ sibling
+  Net specs.
+- **E — Evidence chain**: CkFoundation `origin/dev..HEAD` tip = 08a152b60 (docs-only above
+  421d99baa — `git diff 421d99baa..08a152b60 -- Source/` is empty); CkTests tip = 5a0141c. Both
+  match PROGRESS. `Test-VoiceChatP2-final.log`: `Passed: 18`, all 3 lanes `EXIT CODE: 0`, the
+  `[VoicePipeline] loopback decoded 115200 bytes (1.20 s)` line present, 0 `Angelscript: Error`,
+  0 `Result={Fail|Timeout}`. `Test-P2-Regression.log`: 22 `Result={Success}`, `Passed: 22`, all
+  lanes EXIT 0. Binary freshness: `BusterBlockEditor-CkVoiceChat.dll` 03:08:37,
+  `BusterBlockEditor-CkTests.dll` 03:13:41, run window 03:14–03:16, and **no file under
+  `Source/CkVoiceChat` is newer than the DLL** — stale-green ruled out.
+- **F — Adversarial**: dep budget clean — `AudioMixer` (USynthComponent) and `Voice`
+  (FVoiceModule/IVoiceCapture/IVoice{En,De}coder) both consumed; `AudioCaptureCore` correctly NOT
+  added. Headless/dedicated-server safe: synth creation gated on
+  `World->GetAudioDevice().IsValid()` (Processor.cpp:171); everything else in the pipeline is
+  audio-device-free; a capture-create failure ensures once and completes the request `Failed`
+  through the ordinary branch. P3 seam is clean: encoded frames exist with Seq + AmplitudeQ8 at a
+  single insertion point (Processor.cpp:345-353) and the P1 Bundle/pacing structs already exist —
+  transport is one outbound-fragment push added there, no signature churn.
+
+### Findings
+
+1. **(Condition 1 — gate-contract miss)** Stats counters promised at this gate do not exist; see
+   Verdict. Not recorded as a deviation.
+2. **(Condition 2 — unrecorded deviation)** Conceal zero-fills instead of Opus PLC; engine
+   factory surface cannot express packet-level PLC, so record it and carry the constraint to P3.
+3. **(Non-blocking)** StartTransmit creates the encoder and creates+Starts the loopback synth
+   BEFORE the capture `Start()` gate (Processor.cpp:143-184): a capture-start failure leaves a
+   registered, running (silent) synth until EndPlay. The validation boundary itself is clean
+   (mode checked first; the rejection test proves zero state), but moving synth creation after
+   `CaptureStarted` removes the residue for free. Suggest folding into P3 work.
+4. **(Non-blocking)** Synth creation lives in the HandleRequests processor, not Setup — a
+   deviation from the letter of this gate's "CkVfx discipline: Setup creates". Defensible
+   (loopback is conditional on a runtime request) and every other clause of the discipline is
+   honored (TStrongObjectPtr, bAutoActivate=false, no destroy outside EndPlay,
+   Stop+DestroyComponent+Reset at Processor.cpp:445-451). Worth one line in the deviations list
+   if anyone re-reads this gate later.
+5. **(Non-blocking — P5 perf-pass ledger)** Per-tick/per-frame allocations in the Capture
+   processor: the raw-tap copy is built even with zero bound listeners (Processor.cpp:302-305);
+   per-frame `FramePcm` + 2048-B `Encoded` allocs (:320-340); 11.5-KB `Decoded` alloc per pop
+   (:402-404); float-array + TQueue-node alloc per enqueue (Synth .cpp:89-97); and
+   `_PendingPcm.RemoveAt(0, FrameBytes)` is an O(n) front-shift per frame (:322). None matter at
+   1 talker; all are on the 8-talker hot path.
+6. **(Non-blocking — cosmetic)** `_AmplitudeQ8` is overwritten with `Quantize(0)` on any tick
+   that completes no frame (Processor.cpp:315,356), so `Get_CurrentAmplitude` flickers to 0 at
+   tick rate mid-speech (960-sample frames vs ~800 samples/tick at 60 fps). Wire use at P3 is
+   unaffected (bundles only exist when frames exist); fix is a decay or last-frame-hold.
+7. **(Inferred, named honestly)** The exit-criterion phrase "with the synth in the loop" headless
+   is inferred, not log-proven: no log line demonstrates `_LoopbackSynth` was created in the PIE
+   lanes (creation is silent and the decode assertions read `_LoopbackDecodedPcm`, which works
+   either way). The synth's audible path is exactly what the two HUMAN items exist to confirm —
+   no action needed beyond running them.
+
+### Auditor
+
+Fresh top-tier session (did not author the work) — date 2026-08-03
+
+---
+
+## Audit conditions & findings — resolution (2026-08-03, same session)
+
+| # | Item | Resolution | Evidence |
+|---|---|---|---|
+| C1 | Stats counters promised at this gate don't exist | **Landed as code** (not deferred — a doc-only deferral would have been the second consecutive punt of the same item): four frame counters (`Captured/Encoded/Concealed/Decoded`) declared in `CkVoiceTalker_Processor.cpp` against `STATGROUP_CkVoiceChat` (`CkVoiceChat_Stats.h` now bound), incremented at the frame-consume, post-encode, conceal, and decode sites. Commit 136ca780f. | Re-gate on the rebuilt binary: **18/18 VoiceChat, all 3 lanes EXIT 0, 0 fails, 0 `Angelscript: Error`** (`Test-VoiceChatP2-statscounters.log`); pipeline line unchanged (`loopback decoded 115200 bytes (1.20 s)`). Freshness: source 03:36:52 → `BusterBlockEditor-CkVoiceChat.dll` 03:37:46 → run 03:38–03:40. |
+| C2 | Conceal zero-fill was an unrecorded deviation | Recorded as **deviation 3** above, incl. the auditor's engine-surface verification and the P3 carry-forward. | doc-only |
+| F3 | Synth created+started before the capture `Start()` gate — silent-synth residue on capture failure | Carried to **P3 open items** (PROGRESS.md) — fold the reorder into the P3 talker work, per the audit's own suggestion. | doc-only |
+| F4 | Synth created in HandleRequests, not Setup | Recorded as **deviation 4** above. | doc-only |
+| F5 | Capture hot-path allocations (raw-tap copy with zero listeners, per-frame allocs, O(n) front-shift) | Carried to the **P5 perf-pass ledger** (PROGRESS.md open items). None matter at 1 talker; all on the 8-talker path. | doc-only |
+| F6 | `_AmplitudeQ8` flickers to 0 on frameless ticks | Carried to **P3 open items** (fix = decay or last-frame-hold; wire use unaffected — bundles only exist when frames exist). | doc-only |
+| F7 | "Synth in the loop" headless is inferred, not log-proven | No action — the two HUMAN items are exactly the audible-path confirmation. | — |

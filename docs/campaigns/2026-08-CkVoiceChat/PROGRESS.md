@@ -1,31 +1,19 @@
 # CkVoiceChat — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-08-03 (CkFoundation `feature/voice-chat` at the Gate-0 close commit; CkTests
-`feature/voice-chat` at 8808cae):** **Gate 0 work COMPLETE — campaign PAUSED awaiting the
-top-tier audit** ([Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md)). Spike verdict:
-**PROCEED — ADR-4 holds**; amendments S1–S5 binding on P3.
-**Baseline being diffed against:** waived for the purely-additive branch (honest gap flagged to
-the auditor); regression evidence = RenderTarget suite 22/22 on the final binary + 3 clean boots.
-**Next action (SUPERSEDES the line below):** **Gate 2 machine portion COMPLETE** — full sweep
-**18/18 VoiceChat + 22/22 RenderTarget, EXIT 0, 0 AS errors** on the final binary (CkF
-421d99baa, CkTests 5a0141c): synth playback landed (ISoundGenerator SPSC consumer; game-thread
-decode justified by the P1 benchmark — deviations recorded in Gate_2.md), Disabled-mode
-rejection test green. Remaining before P3: the Gate-2 audit (launched), then the two HUMAN items
-in Gate_2.md — mic `[EDITOR-VERIFY]` and the N5 packaged smoke (both need `[Voice] bEnabled=true`
-added to BB's DefaultEngine.ini — a BB-repo decision).
-Earlier in-progress note: Gate 2 (P2) in progress — **the machine-checkable core is GREEN**:
-`Ck.VoiceChat.Pipeline.FakeCapture_LoopbackDecodes` 1/1 EXIT 0, decoding **1.20 s from 1.9 s of
-scripted input** (sine + VAD release tail; both silences gated out) through the full
-capture→gain→VAD→encode→jitter→decode loop, headless. Landed: capture seam (engine wrapper +
-scripted fake), all five talker requests with the completion contract + EndPlay cancellation,
-four signals incl. the raw-PCM tap, the Capture processor, and the loopback path (CkF 0606abefa,
-CkTests 33a834e→0fb55f3). **Remaining for the Gate-2 close:** synth component presentation layer
-(`UCk_VoiceChatSynthComponent` via `CreateSoundGenerator` — the engine marks `OnGenerateAudio`
-legacy; spec-detail deviation to record), invalid-input tests for the new request boundaries,
-canary/regression sweep, N5 packaged smoke (human/toolbox packaging), `[EDITOR-VERIFY]` mic
-loopback, then the Gate-2 audit.
-**Blocked on:** nothing. Nothing pushed anywhere; superproject gitlink untouched.
+**As of 2026-08-03 (CkFoundation `feature/voice-chat` at the Gate-2 resolution commits; CkTests
+`feature/voice-chat` at 5a0141c):** **Gates 0, 1, 2(machine) ALL CLOSED AND AUDITED** — Gate-2
+verdict **GO WITH CONDITIONS**, both conditions resolved + re-gated the same session (stats
+counters landed, 136ca780f; Conceal zero-fill + HandleRequests-synth recorded as deviations 3/4;
+resolution table in [Gate_2.md](Gate_2.md)).
+**Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
+(Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
+**Next action:** the two HUMAN items in Gate_2.md — mic `[EDITOR-VERIFY]` loopback and the N5
+packaged Opus smoke; both gated on adding `[Voice] bEnabled=true` to BB's DefaultEngine.ini
+(a BB-repo decision — this campaign leaves the superproject untouched). **P3 opens only after
+both.** P3 carries N1–N3/N7 + S1–S5 (PROMPT.md) plus audit findings F3/F6 (open items below).
+**Blocked on:** the human items — the machine side has nothing left to do.
+Nothing pushed anywhere; superproject gitlink untouched.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -35,6 +23,23 @@ loopback, then the Gate-2 audit.
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — Gate 2 audited GO WITH CONDITIONS; both conditions resolved + re-gated
+- Audit (fresh top-tier session) appended to Gate_2.md: no blocker in the capture seam, talker
+  request/signal surface, processor pipeline, synth component, or tests; evidence chain and
+  binary freshness verified independently by the auditor.
+- Condition 1 landed as code: four frame counters (Captured/Encoded/Concealed/Decoded) on
+  `STATGROUP_CkVoiceChat`, wired in the Capture processor — commit 136ca780f.
+- Condition 2 + finding 4 recorded as deviations 3/4 in Gate_2.md (Conceal zero-fill — the
+  engine's `IVoiceDecoder` factory surface cannot express packet-level Opus PLC, verified by the
+  auditor against `VoiceCodecOpus.cpp`; synth creation at the request boundary).
+- Ran: `--build --test --test-pattern VoiceChat --discover-fresh` on the counters commit →
+  **18/18, all 3 lanes EXIT 0, 0 fails, 0 `Angelscript: Error`**
+  (Test-VoiceChatP2-statscounters.log); pipeline decode line unchanged (1.20 s). Freshness:
+  source 03:36:52 → `BusterBlockEditor-CkVoiceChat.dll` 03:37:46 → run 03:38–03:40.
+- Non-blocking findings routed: F3 (synth-before-capture-start residue) and F6 (amplitude
+  flicker on frameless ticks) → P3 open items; F5 (capture hot-path allocations) → P5 perf
+  ledger; F7 needs no action (the HUMAN items are the audible-path proof).
 
 ### 2026-08-03 — Gate 1 (P1) work complete: codec layer green, benchmark recorded
 - Ran: `--build --test --test-pattern UnitTests.CkVoiceChat --discover-fresh` × 4 runs (fix cycle
@@ -143,12 +148,13 @@ loopback, then the Gate-2 audit.
 - Inferred (unconfirmed): unreliable unicast Client RPC behavior under the fork's net stack —
   exactly what the P0 spike exists to confirm.
 
-## Open items
+## Open items  <!-- refreshed 2026-08-03 at the Gate-2 close; Gate-0-era rows retired (all ✅ audited) -->
 | Item | Status | Next step |
 |---|---|---|
-| Skeleton scaffold | ✅ 9b0a55d22 | audited at gate review |
-| ADR-4 doctrine amendment | ✅ 1ff7decf9 | audited at gate review |
-| P0 spike + memo | ✅ memo FINAL, tests 2/2 green | audited at gate review |
-| Build + AS + regression gates | ✅ all green (see 2026-08-03 entry) | — |
-| Gate-review package | ✅ Gate_0_ReviewPackage.md | **top-tier audit — the only open item** |
-| `[EDITOR-VERIFY]` BP surface | ⏳ human | steps in the review package |
+| Gate 0 / 1 / 2(machine) audits | ✅ all GO (Gate 2: GO WITH CONDITIONS, resolved same session) | — |
+| HUMAN: `[Voice] bEnabled=true` in BB `DefaultEngine.ini` | ⏳ Adam — BB-repo decision | prerequisite for both items below |
+| HUMAN: mic loopback `[EDITOR-VERIFY]` (+ Gate-0 BP checklist folded in) | ⏳ human | exact steps in Gate_2.md |
+| HUMAN: N5 packaged Opus smoke | ⏳ human | exact steps in Gate_2.md |
+| P3 carry-forwards: N1 (mandatory pre-P3), N2, N3, N7, S1–S5 (PROMPT.md) + audit F3 (synth-after-capture-start reorder) + F6 (amplitude decay/hold) | 📋 queued | fold into the P3 gate doc at open |
+| P5 perf-pass ledger: capture hot-path allocations (audit F5) | 📋 queued | profile first, then fix |
+| Spike canaries (`CkAutoTest_VoiceSpike`, transport spec) | 📋 campaign end | delete unless P3 promotes them |
