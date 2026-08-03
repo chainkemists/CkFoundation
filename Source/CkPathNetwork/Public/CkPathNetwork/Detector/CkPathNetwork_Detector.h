@@ -135,6 +135,16 @@ public:
     CK_GENERATED_BODY(UCk_PathNetwork_Detector_UE);
 
 public:
+    // Parameter-aware native bridge used by editor/runtime generation. The default forwards to the
+    // reflected hook below, preserving Blueprint/AngelScript detector behavior. Native detectors
+    // may override when post-vectorization output depends on the vectorization configuration.
+    virtual auto
+    Process_GeneratedRibbons_WithVectorizeParams(
+        const FBox& InWorldBounds,
+        const TArray<FCk_PathNetwork_Ribbon>& InGeneratedWorldRibbons,
+        const FCk_PathNetwork_VectorizeParams& InVectorizeParams) const
+        -> FCk_PathNetwork_DetectorProcessResult;
+
     // Optional C++-only exact segment proof policy. The returned evaluator is owned by one
     // synchronous vectorization pass; null means the generic occupancy/height policy is sufficient.
     // Reflected detector subclasses retain legacy behavior unless their native base overrides this.
