@@ -8,13 +8,13 @@ counters landed, 136ca780f; Conceal zero-fill + HandleRequests-synth recorded as
 resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
-**Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1 (transport
-skeleton, bb0513333) and 2 COMPLETE — local half (c01b43ef0 + CkTests eef61de) and replicated
-half (36ef940f7 + CkTests d8d404f) — **21/21 VoiceChat, EXIT 0, 0 AS errors** incl.
-`Ck.VoiceChat.Net.ControlPlane_Replicates` (Test-VoiceChatP3-repdata2.log). Sequencing note:
-the N1 voice-before-registry net test moves to item 4 (its drop site is the Route processor);
-late-join is inherent to the full-state container and pinned by the control-plane spec. Next:
-item 3 (talker outbound + audit F3/F6), then item 4 (Route processor + N1/N2 enforcement).
+**Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1 (bb0513333),
+2 (c01b43ef0 + 36ef940f7; CkTests eef61de + d8d404f), and **3 (talker outbound + F3/F6,
+5c8fc8cd6)** COMPLETE — **21/21 VoiceChat, EXIT 0, 0 AS errors**, pipeline decode unchanged
+(Test-VoiceChatP3-outbound.log). Next: item 4 — the Route processor (AuthorityOnly) with
+N1/N2/N3 enforcement, sender exclusion, top-N fairness, per-connection pacing, and the
+voice-before-registry + routing net tests; then item 5 (probe routing set), item 6 (client
+receive/playback).
 The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
 P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
 DefaultEngine.ini (a BB-repo decision; superproject untouched).
@@ -28,6 +28,30 @@ DefaultEngine.ini (a BB-repo decision; superproject untouched).
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — P3 item 3 complete: talker outbound + audit F3/F6 (21/21)
+- **CkF 5c8fc8cd6:** encoded frames → timestamped outbound queue → per-tick
+  `Select_BundlesToSend` (stale-drop FIRST at 150 ms per S2, then oldest-first under
+  `Get_MaxVoiceBytesPerConnectionPerTick`) → bundles ≤ FramesPerRpc (≤3) with an incremental
+  <240 B packed-size guard (S3 headroom) → packed once per eligible CanTalk-member channel →
+  host injects into own routing inbox (no self-RPC, host-player-stamped) / client resolves its
+  per-player relay (resolve-or-retry, RenderTarget shape) → `Server_SendVoiceBundle`.
+- Defensive inbox caps (256 bundles, drop+count) at all three enqueue sites — item 3 starts
+  filling inboxes that only item 4's Route processor drains.
+- Gap found + fixed while wiring channel eligibility: the client applier never mirrored the
+  registry — `Apply_ReplicatedControlPlane` now upserts the transient-entity registry, giving
+  clients idx→channel resolution and channel enumeration parity with the authority.
+- Audit conditions landed: **F3** (loopback synth created only after capture `Start()`
+  succeeds) + **F6** (`_AmplitudeQ8` holds on frameless ticks — the wire header and item 4's
+  fairness clamp read it). StopTransmit clears the outbound queue.
+- Ran: `--build --test --test-pattern VoiceChat --discover-fresh` → **21/21, EXIT 0, 0 AS
+  errors**; pipeline decode byte-identical (1.20 s / 115200 B) — outbound insertion did not
+  perturb the loopback path (Test-VoiceChatP3-outbound.log). Behavior note: with no channels
+  composed (the pipeline test), frames age out quietly at 150 ms — bounded by design.
+- Next: item 4 — `FProcessor_VoiceChat_Route` (AuthorityOnly): drain ServerInbox → N2-shaped
+  validation → N1 drop+count on unresolvable ChannelIdx → send-set by policy → sender exclusion
+  → top-N fairness → per-connection budget → `Client_ReceiveVoiceBundle`; with the N1
+  voice-before-registry + routing net tests.
 
 ### 2026-08-03 — P3 item 2 complete: control plane replicates (21/21)
 - **Replicated half (CkF 36ef940f7, CkTests d8d404f):** `FCk_RepData_VoiceChat` (registry
