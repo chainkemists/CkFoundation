@@ -10,6 +10,7 @@
 #include "CkEcs/Signal/CkSignal_Utils.h"
 
 #include <NavigationSystem.h>
+#include <NavMesh/NavMeshPath.h>
 #include <NavMesh/RecastNavMesh.h>
 #include <NavigationData.h>
 #include <NavFilters/NavigationQueryFilter.h>
@@ -37,7 +38,8 @@ auto
         float                InProjectionVerticalHalfExtent,
         float                InAgentRadiusForFirstSkip,
         FCk_Nav_PathResult&  OutResult,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass)
+        TSubclassOf<UNavigationQueryFilter> InFilterClass,
+        float                InCornerOffsetDistance)
         -> bool
 {
     SCOPE_CYCLE_COUNTER(STAT_Nav_FindPathSync);
@@ -153,6 +155,16 @@ auto
     {
         SCOPE_CYCLE_COUNTER(STAT_Nav_RecastFindPath);
         Result = ARecastNavMesh::FindPath(Query.NavAgentProperties, Query);
+    }
+
+    const auto ShouldOffsetCorners =
+        FMath::IsFinite(InCornerOffsetDistance)
+        && InCornerOffsetDistance > 0.0f;
+    if (ShouldOffsetCorners && Result.Path.IsValid())
+    {
+        auto* NavMeshPath = Result.Path->CastPath<FNavMeshPath>();
+        if (NavMeshPath != nullptr)
+        { NavMeshPath->OffsetFromCorners(InCornerOffsetDistance); }
     }
 
     ExtractWaypoints(Result, InStart, InAgentRadiusForFirstSkip, OutResult);

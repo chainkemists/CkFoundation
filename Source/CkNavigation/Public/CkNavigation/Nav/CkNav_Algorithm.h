@@ -31,7 +31,8 @@ struct CKNAVIGATION_API FCk_Nav_Algorithm
         float                InProjectionVerticalHalfExtent, // cm; < 0 => use horizontal extent (uniform cube, today's behavior)
         float                InAgentRadiusForFirstSkip, // cm; 0 disables the skip-first-waypoint pass
         FCk_Nav_PathResult&  OutResult,
-        TSubclassOf<UNavigationQueryFilter> InFilterClass = {}) -> bool; // null -> NavData's default filter
+        TSubclassOf<UNavigationQueryFilter> InFilterClass = {}, // null -> NavData's default filter
+        float InCornerOffsetDistance = 0.0f) -> bool; // cm; 0 preserves the raw Recast corridor corners
 
     // InAgentRadius > 0 drops the first waypoint when it is within ~2x radius of InAgentLocation:
     // UE includes the agent's own position as the first point, which reads as a backtrack-to-start.
