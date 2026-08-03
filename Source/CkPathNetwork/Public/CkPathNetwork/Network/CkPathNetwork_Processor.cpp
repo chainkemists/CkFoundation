@@ -51,6 +51,20 @@ DECLARE_CYCLE_STAT(TEXT("PathNetwork::GraphSearch"),      STAT_CkPathNetwork_Gra
 DECLARE_CYCLE_STAT(TEXT("PathNetwork::OffPathNav"),       STAT_CkPathNetwork_OffPathNav,       STATGROUP_CkPathNetwork);
 DECLARE_CYCLE_STAT(TEXT("PathNetwork::CorridorCompile"),  STAT_CkPathNetwork_CorridorCompile,  STATGROUP_CkPathNetwork);
 DECLARE_CYCLE_STAT(TEXT("PathNetwork::FinalNavValidate"), STAT_CkPathNetwork_FinalNavValidate, STATGROUP_CkPathNetwork);
+DECLARE_CYCLE_STAT(TEXT("PathNetwork::RibbonCompile"),    STAT_CkPathNetwork_RibbonCompile,    STATGROUP_CkPathNetwork);
+DECLARE_CYCLE_STAT(TEXT("PathNetwork::RibbonProject"),    STAT_CkPathNetwork_RibbonProject,    STATGROUP_CkPathNetwork);
+DECLARE_CYCLE_STAT(
+    TEXT("PathNetwork::RibbonProjContain"),
+    STAT_CkPathNetwork_RibbonProjContain,
+    STATGROUP_CkPathNetwork);
+DECLARE_CYCLE_STAT(TEXT("PathNetwork::RibbonClearance"),  STAT_CkPathNetwork_RibbonClearance,  STATGROUP_CkPathNetwork);
+DECLARE_CYCLE_STAT(TEXT("PathNetwork::RibbonResolve"),    STAT_CkPathNetwork_RibbonResolve,    STATGROUP_CkPathNetwork);
+DECLARE_CYCLE_STAT(
+    TEXT("PathNetwork::RibbonResolveContain"),
+    STAT_CkPathNetwork_RibbonResolveContain,
+    STATGROUP_CkPathNetwork);
+DECLARE_CYCLE_STAT(TEXT("PathNetwork::FinalEndpoints"),   STAT_CkPathNetwork_FinalEndpoints,   STATGROUP_CkPathNetwork);
+DECLARE_CYCLE_STAT(TEXT("PathNetwork::FinalResolve"),     STAT_CkPathNetwork_FinalResolve,     STATGROUP_CkPathNetwork);
 DECLARE_CYCLE_STAT(TEXT("PathNetwork::RouteSignal"),      STAT_CkPathNetwork_RouteSignal,      STATGROUP_CkPathNetwork);
 DECLARE_CYCLE_STAT(TEXT("PathNetwork::Invalidate"),       STAT_CkPathNetwork_Invalidate,       STATGROUP_CkPathNetwork);
 DECLARE_DWORD_COUNTER_STAT(TEXT("Static Cache Hits"),     STAT_CkPathNetwork_StaticCacheHits,   STATGROUP_CkPathNetwork);
@@ -588,6 +602,7 @@ namespace ck_pathnetwork_processor
         UWorld* InWorld,
         TArray<FVector>& InOutWaypoints,
         TConstArrayView<int32> InSegmentRibbonRunIndices,
+        TConstArrayView<bool> InSegmentNeedsValidation,
         const FBuiltNetwork& InNetwork,
         TConstArrayView<TArray<FRouteLegSpan>> InRibbonRuns,
         float InRibbonTolerance,
@@ -610,7 +625,8 @@ namespace ck_pathnetwork_processor
 
         auto* NavSys = UNavigationSystemV1::GetCurrent(InWorld);
         if (NavSys == nullptr || InOutWaypoints.Num() < 2 ||
-            InSegmentRibbonRunIndices.Num() != InOutWaypoints.Num() - 1)
+            InSegmentRibbonRunIndices.Num() != InOutWaypoints.Num() - 1 ||
+            InSegmentNeedsValidation.Num() != InOutWaypoints.Num() - 1)
         { return EConstrainedPathResolution::NavFailed; }
 
         auto ResolvedWaypoints = TArray<FVector>{};
@@ -622,16 +638,28 @@ namespace ck_pathnetwork_processor
         for (auto Index = 0; Index < InOutWaypoints.Num() - 1; ++Index)
         {
             auto SegmentWaypoints = TArray<FVector>{};
-            if (NOT Try_ResolveNavmeshSegment(
-                    *NavSys,
-                    *NavData,
-                    QueryFilter,
-                    InFilterClass,
-                    InOutWaypoints[Index],
-                    InOutWaypoints[Index + 1],
-                    MaxCornerOffsetCm,
-                    SegmentWaypoints))
-            { return EConstrainedPathResolution::NavFailed; }
+            const auto NeedsValidation = InSegmentNeedsValidation[Index];
+            if (NeedsValidation)
+            {
+                if (NOT Try_ResolveNavmeshSegment(
+                        *NavSys,
+                        *NavData,
+                        QueryFilter,
+                        InFilterClass,
+                        InOutWaypoints[Index],
+                        InOutWaypoints[Index + 1],
+                        MaxCornerOffsetCm,
+                        SegmentWaypoints))
+                { return EConstrainedPathResolution::NavFailed; }
+            }
+            else
+            {
+                // Each source leg was projected and nav-resolved before assembly. Preserve those
+                // already-proven segments verbatim; only seams and normalized endpoints need a
+                // second proof after assembly changes their adjacency.
+                Append_CompiledWaypoint(SegmentWaypoints, InOutWaypoints[Index]);
+                Append_CompiledWaypoint(SegmentWaypoints, InOutWaypoints[Index + 1]);
+            }
 
             const auto RibbonRunIndex = InSegmentRibbonRunIndices[Index];
             if (RibbonRunIndex != INDEX_NONE)
@@ -639,24 +667,18 @@ namespace ck_pathnetwork_processor
                 if (NOT InRibbonRuns.IsValidIndex(RibbonRunIndex))
                 { return EConstrainedPathResolution::NavFailed; }
 
-                const auto& RibbonRun = InRibbonRuns[RibbonRunIndex];
-                for (auto WaypointIndex = 0;
-                     WaypointIndex < SegmentWaypoints.Num() - 1;
-                     ++WaypointIndex)
+                if (NeedsValidation &&
+                    NOT Is_PathInsideRibbonRun(
+                        InNetwork,
+                        InRibbonRuns[RibbonRunIndex],
+                        SegmentWaypoints,
+                        RibbonContainmentSampleSpacingCm,
+                        InRibbonTolerance,
+                        &OutContainmentFailure))
                 {
-                    if (NOT Is_SegmentInsideRibbonRun(
-                            InNetwork,
-                            RibbonRun,
-                            SegmentWaypoints[WaypointIndex],
-                            SegmentWaypoints[WaypointIndex + 1],
-                            RibbonContainmentSampleSpacingCm,
-                            InRibbonTolerance,
-                            &OutContainmentFailure))
-                    {
-                        OutOriginalSegmentIndex = Index;
-                        OutRibbonRunIndex = RibbonRunIndex;
-                        return EConstrainedPathResolution::RibbonContainmentFailed;
-                    }
+                    OutOriginalSegmentIndex = Index;
+                    OutRibbonRunIndex = RibbonRunIndex;
+                    return EConstrainedPathResolution::RibbonContainmentFailed;
                 }
             }
 
@@ -1533,14 +1555,23 @@ namespace ck
         Result._TuningRevision = InRequest.Get_TuningRevision();
         auto RibbonRuns = TArray<TArray<FRouteLegSpan>>{};
         auto CompiledSegmentRibbonRunIndices = TArray<int32>{};
-        const auto AppendCompiledWaypoint =
-            [&](const FVector& InWaypoint, int32 InRibbonRunIndex)
+        auto CompiledSegmentNeedsValidation = TArray<bool>{};
+        const auto AppendCompiledPath =
+            [&](TConstArrayView<FVector> InWaypoints, int32 InRibbonRunIndex)
             {
-                const auto PreviousWaypointCount = Result._CompiledWaypoints.Num();
-                Append_CompiledWaypoint(Result._CompiledWaypoints, InWaypoint);
-                if (PreviousWaypointCount > 0 &&
-                    Result._CompiledWaypoints.Num() > PreviousWaypointCount)
-                { CompiledSegmentRibbonRunIndices.Add(InRibbonRunIndex); }
+                auto HasPendingSeam = NOT Result._CompiledWaypoints.IsEmpty();
+                for (const auto& Waypoint : InWaypoints)
+                {
+                    const auto PreviousWaypointCount = Result._CompiledWaypoints.Num();
+                    Append_CompiledWaypoint(Result._CompiledWaypoints, Waypoint);
+                    if (PreviousWaypointCount > 0 &&
+                        Result._CompiledWaypoints.Num() > PreviousWaypointCount)
+                    {
+                        CompiledSegmentRibbonRunIndices.Add(InRibbonRunIndex);
+                        CompiledSegmentNeedsValidation.Add(HasPendingSeam);
+                        HasPendingSeam = false;
+                    }
+                }
             };
 
         {
@@ -1558,8 +1589,7 @@ namespace ck
                     Leg._LegType = ECk_PathNetwork_CorridorLegType::OffPath;
                     Leg._Waypoints = AcceptedOffPathWaypoints.FindChecked(SpanIndex);
 
-                    for (const auto& Waypoint : Leg.Get_Waypoints())
-                    { AppendCompiledWaypoint(Waypoint, INDEX_NONE); }
+                    AppendCompiledPath(Leg.Get_Waypoints(), INDEX_NONE);
                     Result._Legs.Add(MoveTemp(Leg));
                     ++SpanIndex;
                 }
@@ -1611,124 +1641,121 @@ namespace ck
                         if (CompileAttempt >= 2)
                         { AttemptParams._SideKeepingFraction = 0.0f; }
 
-                        auto CandidateWaypoints = Compile_OnRibbonRun(
-                            BuiltNetwork,
-                            RunSpans,
-                            AttemptParams);
+                        auto CandidateWaypoints = TArray<FVector>{};
+                        {
+                            SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_RibbonCompile);
+                            CandidateWaypoints = Compile_OnRibbonRun(
+                                BuiltNetwork,
+                                RunSpans,
+                                AttemptParams);
+                        }
                         if (CandidateWaypoints.Num() < 2)
                         {
                             LastCompileFailure = ERouteFailureStage::RibbonCompileEmpty;
                             continue;
                         }
 
-                        if (NOT Try_ProjectPathOntoNavmesh(
+                        auto Projected = false;
+                        {
+                            SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_RibbonProject);
+                            Projected = Try_ProjectPathOntoNavmesh(
                                 World,
                                 CandidateWaypoints,
                                 FilterClass,
-                                RibbonProjectionPlanarExtentCm))
+                                RibbonProjectionPlanarExtentCm);
+                        }
+                        if (NOT Projected)
                         {
                             LastCompileFailure = ERouteFailureStage::RibbonProjection;
                             continue;
                         }
 
-                        auto ProjectedPathContained = true;
-                        for (auto WaypointIndex = 0;
-                             WaypointIndex < CandidateWaypoints.Num() - 1;
-                             ++WaypointIndex)
                         {
-                            if (NOT Is_SegmentInsideRibbonRun(
+                            SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_RibbonProjContain);
+                            auto ContainmentFailure = FRibbonContainmentFailure{};
+                            int32 ContainmentSegmentIndex = INDEX_NONE;
+                            if (NOT Is_PathInsideRibbonRun(
                                     BuiltNetwork,
                                     RunSpans,
-                                    CandidateWaypoints[WaypointIndex],
-                                    CandidateWaypoints[WaypointIndex + 1],
-                                    RibbonContainmentSampleSpacingCm,
-                                    RibbonContainmentToleranceCm))
-                            {
-                                auto ContainmentFailure = FRibbonContainmentFailure{};
-                                Is_SegmentInsideRibbonRun(
-                                    BuiltNetwork,
-                                    RunSpans,
-                                    CandidateWaypoints[WaypointIndex],
-                                    CandidateWaypoints[WaypointIndex + 1],
+                                    CandidateWaypoints,
                                     RibbonContainmentSampleSpacingCm,
                                     RibbonContainmentToleranceCm,
-                                    &ContainmentFailure);
+                                    &ContainmentFailure,
+                                    &ContainmentSegmentIndex))
+                            {
                                 LastContainmentFailure = ContainmentFailure;
                                 LastContainmentPhase = TEXT("Projected");
                                 LastContainmentAttempt = CompileAttempt;
-                                LastContainmentSegmentIndex = WaypointIndex;
+                                LastContainmentSegmentIndex = ContainmentSegmentIndex;
                                 LastContainmentSegmentCount = CandidateWaypoints.Num() - 1;
-                                LastContainmentFrom = CandidateWaypoints[WaypointIndex];
-                                LastContainmentTo = CandidateWaypoints[WaypointIndex + 1];
-                                ProjectedPathContained = false;
-                                break;
+                                if (CandidateWaypoints.IsValidIndex(ContainmentSegmentIndex) &&
+                                    CandidateWaypoints.IsValidIndex(ContainmentSegmentIndex + 1))
+                                {
+                                    LastContainmentFrom = CandidateWaypoints[ContainmentSegmentIndex];
+                                    LastContainmentTo = CandidateWaypoints[ContainmentSegmentIndex + 1];
+                                }
+                                LastCompileFailure = ERouteFailureStage::RibbonContainment;
+                                continue;
                             }
                         }
-                        if (NOT ProjectedPathContained)
-                        {
-                            LastCompileFailure = ERouteFailureStage::RibbonContainment;
-                            continue;
-                        }
 
-                        Apply_NavmeshClearance(
-                            World,
-                            BuiltNetwork,
-                            RunSpans,
-                            InParams.Get_DesiredNavmeshClearance(),
-                            FilterClass,
-                            CandidateWaypoints);
+                        {
+                            SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_RibbonClearance);
+                            Apply_NavmeshClearance(
+                                World,
+                                BuiltNetwork,
+                                RunSpans,
+                                InParams.Get_DesiredNavmeshClearance(),
+                                FilterClass,
+                                CandidateWaypoints);
+                        }
                         // The projected waypoints already sit within RibbonContainmentToleranceCm,
                         // so the resolved-tolerance headroom is the whole corner-offset budget.
-                        if (NOT Try_ResolvePathOntoNavmesh(
+                        auto Resolved = false;
+                        {
+                            SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_RibbonResolve);
+                            Resolved = Try_ResolvePathOntoNavmesh(
                                 World,
                                 CandidateWaypoints,
                                 FilterClass,
-                                InParams.Get_NavmeshResolvedRibbonTolerance()))
+                                InParams.Get_NavmeshResolvedRibbonTolerance());
+                        }
+                        if (NOT Resolved)
                         {
                             LastCompileFailure = ERouteFailureStage::RibbonNavValidation;
                             continue;
                         }
 
-                        const auto ResolvedRibbonTolerance =
-                            RibbonContainmentToleranceCm +
-                            InParams.Get_NavmeshResolvedRibbonTolerance();
-                        auto ResolvedPathContained = true;
-                        for (auto WaypointIndex = 0;
-                             WaypointIndex < CandidateWaypoints.Num() - 1;
-                             ++WaypointIndex)
                         {
-                            if (NOT Is_SegmentInsideRibbonRun(
+                            SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_RibbonResolveContain);
+                            const auto ResolvedRibbonTolerance =
+                                RibbonContainmentToleranceCm +
+                                InParams.Get_NavmeshResolvedRibbonTolerance();
+                            auto ContainmentFailure = FRibbonContainmentFailure{};
+                            int32 ContainmentSegmentIndex = INDEX_NONE;
+                            if (NOT Is_PathInsideRibbonRun(
                                     BuiltNetwork,
                                     RunSpans,
-                                    CandidateWaypoints[WaypointIndex],
-                                    CandidateWaypoints[WaypointIndex + 1],
-                                    RibbonContainmentSampleSpacingCm,
-                                    ResolvedRibbonTolerance))
-                            {
-                                auto ContainmentFailure = FRibbonContainmentFailure{};
-                                Is_SegmentInsideRibbonRun(
-                                    BuiltNetwork,
-                                    RunSpans,
-                                    CandidateWaypoints[WaypointIndex],
-                                    CandidateWaypoints[WaypointIndex + 1],
+                                    CandidateWaypoints,
                                     RibbonContainmentSampleSpacingCm,
                                     ResolvedRibbonTolerance,
-                                    &ContainmentFailure);
+                                    &ContainmentFailure,
+                                    &ContainmentSegmentIndex))
+                            {
                                 LastContainmentFailure = ContainmentFailure;
                                 LastContainmentPhase = TEXT("Resolved");
                                 LastContainmentAttempt = CompileAttempt;
-                                LastContainmentSegmentIndex = WaypointIndex;
+                                LastContainmentSegmentIndex = ContainmentSegmentIndex;
                                 LastContainmentSegmentCount = CandidateWaypoints.Num() - 1;
-                                LastContainmentFrom = CandidateWaypoints[WaypointIndex];
-                                LastContainmentTo = CandidateWaypoints[WaypointIndex + 1];
-                                ResolvedPathContained = false;
-                                break;
+                                if (CandidateWaypoints.IsValidIndex(ContainmentSegmentIndex) &&
+                                    CandidateWaypoints.IsValidIndex(ContainmentSegmentIndex + 1))
+                                {
+                                    LastContainmentFrom = CandidateWaypoints[ContainmentSegmentIndex];
+                                    LastContainmentTo = CandidateWaypoints[ContainmentSegmentIndex + 1];
+                                }
+                                LastCompileFailure = ERouteFailureStage::RibbonContainment;
+                                continue;
                             }
-                        }
-                        if (NOT ResolvedPathContained)
-                        {
-                            LastCompileFailure = ERouteFailureStage::RibbonContainment;
-                            continue;
                         }
 
                         RunWaypoints = MoveTemp(CandidateWaypoints);
@@ -1770,8 +1797,7 @@ namespace ck
                         return;
                     }
 
-                    for (const auto& Waypoint : RunWaypoints)
-                    { AppendCompiledWaypoint(Waypoint, RibbonRunIndex); }
+                    AppendCompiledPath(RunWaypoints, RibbonRunIndex);
                 }
             }
         }
@@ -1780,85 +1806,90 @@ namespace ck
             SCOPE_CYCLE_COUNTER(
                 STAT_CkPathNetwork_FinalNavValidate);
 
-            if (NOT Try_ProjectPathOntoNavmesh(
-                    World,
-                    Result._CompiledWaypoints,
-                    FilterClass,
-                    ClearanceProjectionPlanarExtentCm))
-            {
-                FailureStage = ERouteFailureStage::CompiledPathProjection;
-                FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
-                return;
-            }
-
             auto NormalizedStart = FVector::ZeroVector;
-            if (NOT Try_ProjectRouteEndpointOntoNavmesh(
+            auto NormalizedGoal = FVector::ZeroVector;
+            {
+                SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_FinalEndpoints);
+                if (NOT Try_ProjectRouteEndpointOntoNavmesh(
                     World,
                     StartLocation,
                     FilterClass,
                     NormalizedStart))
-            {
-                FailureStage = ERouteFailureStage::StartProjection;
-                FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
-                return;
-            }
+                {
+                    FailureStage = ERouteFailureStage::StartProjection;
+                    FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
+                    return;
+                }
 
-            // The agent stands at the first waypoint already — drop it so movement consumers don't
-            // backtrack (same artifact CkNavigation's first-waypoint skip addresses).
-            if (Result._CompiledWaypoints.Num() > 1 &&
-                FVector::Dist(Result._CompiledWaypoints[0], NormalizedStart) <
-                    CompiledWaypointMergeDistance)
-            {
-                Result._CompiledWaypoints.RemoveAt(0);
-                if (NOT CompiledSegmentRibbonRunIndices.IsEmpty())
-                { CompiledSegmentRibbonRunIndices.RemoveAt(0); }
-            }
+                // The agent stands at the first waypoint already — drop it so movement consumers don't
+                // backtrack (same artifact CkNavigation's first-waypoint skip addresses).
+                if (Result._CompiledWaypoints.Num() > 1 &&
+                    FVector::Dist(Result._CompiledWaypoints[0], NormalizedStart) <
+                        CompiledWaypointMergeDistance)
+                {
+                    Result._CompiledWaypoints.RemoveAt(0);
+                    if (NOT CompiledSegmentRibbonRunIndices.IsEmpty())
+                    { CompiledSegmentRibbonRunIndices.RemoveAt(0); }
+                    if (NOT CompiledSegmentNeedsValidation.IsEmpty())
+                    { CompiledSegmentNeedsValidation.RemoveAt(0); }
+                }
 
-            auto NormalizedGoal = FVector::ZeroVector;
-            if (NOT Try_ProjectRouteEndpointOntoNavmesh(
+                if (NOT Try_ProjectRouteEndpointOntoNavmesh(
                     World,
                     GoalLocation,
                     FilterClass,
                     NormalizedGoal))
-            {
-                FailureStage = ERouteFailureStage::GoalProjection;
-                FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
-                return;
-            }
+                {
+                    FailureStage = ERouteFailureStage::GoalProjection;
+                    FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
+                    return;
+                }
 
-            const auto HasExactTerminal =
-                Result._CompiledWaypoints.Num() > 0 &&
-                FVector::Dist(Result._CompiledWaypoints.Last(), NormalizedGoal) <
-                    CompiledWaypointMergeDistance;
-            if (NOT HasExactTerminal)
-            {
-                FailureStage = ERouteFailureStage::TerminalMismatch;
-                FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
-                return;
+                const auto HasExactTerminal =
+                    Result._CompiledWaypoints.Num() > 0 &&
+                    FVector::Dist(Result._CompiledWaypoints.Last(), NormalizedGoal) <
+                        CompiledWaypointMergeDistance;
+                if (NOT HasExactTerminal)
+                {
+                    FailureStage = ERouteFailureStage::TerminalMismatch;
+                    FailRoute(ECk_PathNetwork_RouteFailReason::NoRouteFound);
+                    return;
+                }
+                Result._CompiledWaypoints.Last() = NormalizedGoal;
+                if (NOT CompiledSegmentNeedsValidation.IsEmpty())
+                { CompiledSegmentNeedsValidation.Last() = true; }
             }
-            Result._CompiledWaypoints.Last() = NormalizedGoal;
 
             auto FullMovementPath = Result._CompiledWaypoints;
             FullMovementPath.Insert(NormalizedStart, 0);
             auto FullMovementSegmentRibbonRunIndices =
                 CompiledSegmentRibbonRunIndices;
             FullMovementSegmentRibbonRunIndices.Insert(INDEX_NONE, 0);
+            auto FullMovementSegmentNeedsValidation =
+                CompiledSegmentNeedsValidation;
+            FullMovementSegmentNeedsValidation.Insert(true, 0);
             auto FinalContainmentFailure = FRibbonContainmentFailure{};
             int32 FinalContainmentOriginalSegmentIndex = INDEX_NONE;
             int32 FinalContainmentRibbonRunIndex = INDEX_NONE;
-            const auto FullPathResolution =
-                Try_ResolvePathOntoNavmeshWithRibbonConstraints(
-                    World,
-                    FullMovementPath,
-                    FullMovementSegmentRibbonRunIndices,
-                    BuiltNetwork,
-                    RibbonRuns,
-                    RibbonContainmentToleranceCm +
-                    InParams.Get_NavmeshResolvedRibbonTolerance(),
-                    FilterClass,
-                    FinalContainmentFailure,
-                    FinalContainmentOriginalSegmentIndex,
-                    FinalContainmentRibbonRunIndex);
+            auto FullPathResolution = EConstrainedPathResolution{};
+            {
+                SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_FinalResolve);
+                FullPathResolution =
+                    Try_ResolvePathOntoNavmeshWithRibbonConstraints(
+                        World,
+                        FullMovementPath,
+                        FullMovementSegmentRibbonRunIndices,
+                        FullMovementSegmentNeedsValidation,
+                        BuiltNetwork,
+                        RibbonRuns,
+                        RibbonContainmentToleranceCm +
+                        InParams.Get_NavmeshResolvedRibbonTolerance(),
+                        FilterClass,
+                        FinalContainmentFailure,
+                        FinalContainmentOriginalSegmentIndex,
+                        FinalContainmentRibbonRunIndex);
+            }
+
             if (FullPathResolution ==
                 EConstrainedPathResolution::RibbonContainmentFailed)
             {
