@@ -27,7 +27,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Listener",
               DisplayName="[Ck][VoiceListener] Add Feature")
     static FCk_Handle_VoiceListener
     Add(
@@ -35,7 +35,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Listener",
               DisplayName="[Ck][VoiceListener] Has Feature")
     static bool
     Has(
@@ -43,7 +43,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|VoiceChat",
+        Category = "Ck|Utils|VoiceChat|Listener",
         DisplayName="[Ck][VoiceListener] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_VoiceListener
@@ -52,7 +52,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|VoiceChat",
+        Category = "Ck|Utils|VoiceChat|Listener",
         DisplayName="[Ck][VoiceListener] Handle -> VoiceListener Handle",
         meta = (CompactNodeTitle = "<AsVoiceListener>", BlueprintAutocast))
     static FCk_Handle_VoiceListener
@@ -61,14 +61,14 @@ private:
 
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Get Invalid VoiceListener Handle",
-        Category = "Ck|Utils|VoiceChat",
+        Category = "Ck|Utils|VoiceChat|Listener",
         meta = (CompactNodeTitle = "INVALID_VoiceListenerHandle", Keywords = "make"))
     static FCk_Handle_VoiceListener
     Get_InvalidHandle() { return {}; };
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Listener",
               DisplayName="[Ck][VoiceListener] Get Is Talker Muted")
     static bool
     Get_IsTalkerMuted(
@@ -76,7 +76,7 @@ public:
         const FCk_Handle_VoiceTalker& InVoiceTalker);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Listener",
               DisplayName="[Ck][VoiceListener] Get Talker Volume")
     static float
     Get_TalkerVolume(
