@@ -266,6 +266,7 @@ namespace ck_pathnetwork_processor
 
         constexpr auto AllowPartial = false;
         constexpr auto AgentRadiusForFirstSkip = 0.0f;
+        const auto CornerOffsetDistance = NavData->GetConfig().AgentRadius;
 
         const auto FoundPath = FCk_Nav_Algorithm::FindPathSync(
             *NavSys,
@@ -277,7 +278,8 @@ namespace ck_pathnetwork_processor
             UCk_Utils_Nav_Settings_UE::Get_NavQueryVerticalHalfExtent(),
             AgentRadiusForFirstSkip,
             NavResult,
-            InFilterClass);
+            InFilterClass,
+            CornerOffsetDistance);
 
         if (NOT FoundPath)
         {
@@ -402,6 +404,7 @@ namespace ck_pathnetwork_processor
         auto DetourResult = FCk_Nav_PathResult{};
         constexpr auto AllowPartial = false;
         constexpr auto AgentRadiusForFirstSkip = 0.0f;
+        const auto CornerOffsetDistance = InNavData.GetConfig().AgentRadius;
         const auto DetourFound = FCk_Nav_Algorithm::FindPathSync(
             InNavSys,
             InNavData,
@@ -412,7 +415,8 @@ namespace ck_pathnetwork_processor
             ClearanceProjectionVerticalExtentCm,
             AgentRadiusForFirstSkip,
             DetourResult,
-            InFilterClass);
+            InFilterClass,
+            CornerOffsetDistance);
         if (NOT DetourFound || DetourResult.Get_Status() != ECk_Nav_PathStatus::Ready)
         { return false; }
 
