@@ -2,6 +2,7 @@
 
 #include "CkAssetExporter_Log.h"
 #include "CkAssetExporter/ExportMeta/CkAssetExporter_ExportMeta.h"
+#include "CkAssetExporter/MaterialExporter/CkMaterialExporter_HeadlessTextures.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
@@ -44,24 +45,36 @@ auto
 
     // GetUsedTextures walks compiled FMaterialResources, which never exist in a render-incapable
     // process (commandlet/nullrhi) — the export would silently write "usedTextures": [] while the
-    // MD5 freshness oracle keeps calling the sidecar fresh. Refuse instead: materials export only
-    // from a render-capable context (open editor via the bridge, or a real editor boot).
-    const auto ContextCanEnumerateTextures = FApp::CanEverRender();
-    CK_ENSURE_IF_NOT(ContextCanEnumerateTextures,
-        TEXT("Refusing to export Material [{}] from a render-incapable process — its compiled resources do not "
-             "exist here, so the texture list would silently export empty. Export it through an open editor."),
-        InMaterial->GetName())
-    {}
-    if (NOT ContextCanEnumerateTextures)
+    // MD5 freshness oracle keeps calling the sidecar fresh. There, the editor-data walk emulates
+    // the translator's traversal instead (verified byte-identical against a live-editor corpus);
+    // materials it cannot model keep the old refusal so a wrong texture list never ships.
+    auto UsedTextures = TArray<UTexture*>{};
+    if (FApp::CanEverRender())
     {
-        Result.ErrorMessage = ck::Format_UE(
-            TEXT("Material export requires a render-capable context (usedTextures would be empty here) — [{}] "
-                 "was NOT exported; use an open editor (bridge) instead"), InMaterial->GetName());
-        return Result;
+        InMaterial->GetUsedTextures(UsedTextures);
+    }
+    else
+    {
+        const auto Walk = FCk_MaterialExporter_HeadlessTextures::EnumerateUsedTextures(InMaterial);
+        const auto WalkServesThisMaterial = Walk.Supported;
+        CK_ENSURE_IF_NOT(WalkServesThisMaterial,
+            TEXT("Refusing to export Material [{}] from a render-incapable process — the headless texture walk "
+                 "cannot model it ({}), so the texture list could silently export wrong. Export it through an "
+                 "open editor."),
+            InMaterial->GetName(), Walk.UnsupportedReason)
+        {}
+        if (NOT WalkServesThisMaterial)
+        {
+            Result.ErrorMessage = ck::Format_UE(
+                TEXT("Material export requires a render-capable context for [{}] ({}) — it was NOT exported; "
+                     "use an open editor (bridge) instead"), InMaterial->GetName(), Walk.UnsupportedReason);
+            return Result;
+        }
+        UsedTextures = Walk.Textures;
     }
 
     auto Textures = TSet<FString>{};
-    const auto JsonObject = DoSerializeToJson(InMaterial, Textures);
+    const auto JsonObject = DoSerializeToJson(InMaterial, UsedTextures, Textures);
     Result.ReferencedTextures = Textures.Array();
 
     auto JsonString = FString{};
@@ -117,6 +130,7 @@ auto
     FCk_MaterialExporter::
     DoSerializeToJson(
         UMaterialInterface* InMaterial,
+        const TArray<UTexture*>& InUsedTextures,
         TSet<FString>& OutTextures)
     -> TSharedPtr<FJsonObject>
 {
@@ -255,12 +269,8 @@ auto
     Root->SetArrayField(TEXT("textureParams"), TextureArr);
 
     // ---- Every texture the material uses (parameters + hard-wired samples) ----
-    // The 5-arg GetUsedTextures overload is a UE_DEPRECATED(5.7) empty-body no-op; this TOptional one is live.
-    auto UsedTextures = TArray<UTexture*>{};
-    InMaterial->GetUsedTextures(UsedTextures);
-
     auto UsedArr = TArray<TSharedPtr<FJsonValue>>{};
-    for (const auto* Texture : UsedTextures)
+    for (const auto* Texture : InUsedTextures)
     {
         if (Texture == nullptr)
         { continue; }
