@@ -9,12 +9,13 @@ resolution table in [Gate_2.md](Gate_2.md)).
 **Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
 (Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
 **Next action:** **Gate 3 (P3) in progress** ([Gate_3.md](Gate_3.md)): items 1 (bb0513333),
-2 (c01b43ef0 + 36ef940f7; CkTests eef61de + d8d404f), and **3 (talker outbound + F3/F6,
-5c8fc8cd6)** COMPLETE — **21/21 VoiceChat, EXIT 0, 0 AS errors**, pipeline decode unchanged
-(Test-VoiceChatP3-outbound.log). Next: item 4 — the Route processor (AuthorityOnly) with
-N1/N2/N3 enforcement, sender exclusion, top-N fairness, per-connection pacing, and the
-voice-before-registry + routing net tests; then item 5 (probe routing set), item 6 (client
-receive/playback).
+2 (c01b43ef0 + 36ef940f7), 3 (5c8fc8cd6), and **4-core (Route processor + N1 enforcement +
+never-stash net test, 86d857995 + CkTests 5c8930a)** COMPLETE — **22/22 VoiceChat, EXIT 0,
+0 AS errors** (Test-VoiceChatP3-routing2.log). **N1, the green-light's standing mandatory
+condition, is now enforcement + test.** Remaining in Gate 3: item 4b (top-N fairness + S5
+drain measurement), item 5 (Positional3D probe routing set), item 6 (client receive/playback
+via the P2 jitter/synth machinery), items 7–10 (mute upstream, S4 teardown, S5 numbers, N7
+docs) + host-asymmetry and mute-stops-forwarding net tests.
 The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
 P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
 DefaultEngine.ini (a BB-repo decision; superproject untouched).
@@ -28,6 +29,30 @@ DefaultEngine.ini (a BB-repo decision; superproject untouched).
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-03 — P3 item 4 core complete: Route processor + N1 enforcement (22/22)
+- **CkF 86d857995 + CkTests 5c8930a:** `FProcessor_VoiceChat_Route` (AuthorityOnly, after
+  Capture) — strict unpack (malformed = ensure-once + drop), **N1: unresolvable ChannelIdx =
+  drop + count, never stash** (expected traffic, no ensure), clause-(c) spoof guard (stamped
+  sender vs talker-owning player, skipped for player-less talkers), membership + CanTalk,
+  server-mute privacy drop; forwards packed bytes untouched to CanHear members on OTHER
+  connections under a per-connection per-tick byte budget (frame-reset world fragment). 7 route
+  counters. Debug seams: `Debug_InjectInboundBundle` / `Debug_Get_ReceiveInboxNum`.
+- **N1 net test landed** (`Ck.VoiceChat.Net.Routing_ForwardsAndNeverStashes`): the real e2e
+  path — host-injected scripted sine from an unowned subject forwards to a client-PC-owned
+  subject's connection (client ReceiveInbox fills); then a bundle naming the NEXT unallocated
+  idx is dropped, that idx is allocated with would-be recipients, and the client count must not
+  move. **The campaign's standing mandatory condition (N1) is now enforcement + test.**
+- Fix cycle: run 1 red — the spec lacked the `[Voice] bEnabled` self-enable (encoder factory
+  null → transmit never started; `CkEnsure: EncoderCreated` named it). Third test file bitten
+  by the once-at-startup config gate — reinforces the BB DefaultEngine.ini line as a permanent
+  production prerequisite.
+- Ran: `--build --test --test-pattern VoiceChat --discover-fresh` → **22/22, EXIT 0, 0 AS
+  errors** (Test-VoiceChatP3-routing2.log).
+- Deferred within item 4 (recorded): top-N fairness (envelope clamp + LRS tiebreak) and the S5
+  production drain-budget measurement → item 4b before gate close; Positional3D range filter →
+  item 5 (probe). NPC-talker sender binding is unguarded by design in v1 (player-less talkers
+  skip the spoof check) — document in module Claude.md at N7 time.
 
 ### 2026-08-03 — P3 item 3 complete: talker outbound + audit F3/F6 (21/21)
 - **CkF 5c8fc8cd6:** encoded frames → timestamped outbound queue → per-tick
