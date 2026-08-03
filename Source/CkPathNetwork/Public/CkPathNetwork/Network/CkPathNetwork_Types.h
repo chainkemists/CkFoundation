@@ -136,8 +136,9 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _MinHalfWidth = 50.0f;
 
-    // Douglas-Peucker tolerance in cm. Positive values also absorb the mask's unavoidable
-    // cell-center quantization; zero preserves the raw skeleton. Higher = fewer, straighter points.
+    // Douglas-Peucker tolerance in cm for raster and detector-generated ribbons. Positive values
+    // also absorb the mask's unavoidable cell-center quantization; zero preserves raw source
+    // points. Higher = fewer, straighter points.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="0.0"))
     float _SimplifyTolerance = 25.0f;
 
