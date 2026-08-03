@@ -257,6 +257,10 @@ private:
         UClass* InDetectorClass) -> bool;
 
     auto
+    Load_PathNetwork(
+        ACk_PathNetwork_UE& InPathNetwork) -> bool;
+
+    auto
     Set_Status(
         ECk_PathNetworkDesigner_Status InStatus,
         FString InMessage) -> void;
@@ -278,6 +282,10 @@ private:
 
     auto
     Resolve_RouteWatchActor() const -> ACk_PathNetwork_UE*;
+
+    auto
+    Resolve_SoleLevelPathNetwork(
+        bool& OutHasMultiplePathNetworks) const -> ACk_PathNetwork_UE*;
 
     auto
     Persist_RouteWatches(

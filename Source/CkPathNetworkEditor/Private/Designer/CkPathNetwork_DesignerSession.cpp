@@ -498,6 +498,30 @@ auto
         { Set_DetectorClass(DetectorClasses[0]); }
     }
 
+    auto HasMultiplePathNetworks = false;
+    auto* LevelPathNetwork =
+        Resolve_SoleLevelPathNetwork(HasMultiplePathNetworks);
+    if (ck::IsValid(LevelPathNetwork))
+    {
+        if (ck::IsValid(LevelPathNetwork->Get_Detector()))
+        { Load_PathNetwork(*LevelPathNetwork); }
+        else
+        {
+            Set_Status(
+                ECk_PathNetworkDesigner_Status::Error,
+                TEXT("The level path-network actor has no usable detector."));
+        }
+        return;
+    }
+
+    if (HasMultiplePathNetworks)
+    {
+        Set_Status(
+            ECk_PathNetworkDesigner_Status::Error,
+            TEXT("The target level has multiple path networks. Select one and use Load Selected Network."));
+        return;
+    }
+
     if (ck::IsValid(InWorld))
     { Fit_BoundsToLoadedWorld(); }
 
@@ -549,6 +573,30 @@ auto
     _VisualizedActor.Reset();
     Clear_Preview();
     _ActiveRouteWatchIndex = INDEX_NONE;
+
+    auto HasMultiplePathNetworks = false;
+    auto* LevelPathNetwork =
+        Resolve_SoleLevelPathNetwork(HasMultiplePathNetworks);
+    if (ck::IsValid(LevelPathNetwork))
+    {
+        if (ck::Is_NOT_Valid(LevelPathNetwork->Get_Detector()))
+        {
+            Set_Status(
+                ECk_PathNetworkDesigner_Status::Error,
+                TEXT("The level path-network actor has no usable detector."));
+            return false;
+        }
+        return Load_PathNetwork(*LevelPathNetwork);
+    }
+
+    if (HasMultiplePathNetworks)
+    {
+        Set_Status(
+            ECk_PathNetworkDesigner_Status::Error,
+            TEXT("The target level has multiple path networks. Select one and use Load Selected Network."));
+        return false;
+    }
+
     if (Get_RouteWatchCount() > 0)
     { Load_RouteWatch(0, false); }
     Set_Status(
@@ -668,26 +716,59 @@ auto
         return false;
     }
 
-    _World = SelectedNetwork->GetWorld();
-    _TargetLevel = SelectedNetwork->GetLevel();
-    _ExplicitTargetActor = SelectedNetwork;
-    _VisualizedActor = SelectedNetwork;
-    _DetectorClass = SelectedNetwork->Get_Detector()->GetClass();
-    _DetectorTemplate = NewObject<UCk_PathNetwork_Detector_UE>(
+    return Load_PathNetwork(*SelectedNetwork);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_PathNetworkDesigner_Session_UE::
+    Load_PathNetwork(
+        ACk_PathNetwork_UE& InPathNetwork)
+    -> bool
+{
+    auto* Detector = InPathNetwork.Get_Detector().Get();
+    const bool PathNetworkIsUsable =
+        ck::IsValid(InPathNetwork.GetWorld())
+        && ck::IsValid(InPathNetwork.GetLevel())
+        && ck::IsValid(Detector);
+    if (NOT PathNetworkIsUsable)
+    {
+        Set_Status(
+            ECk_PathNetworkDesigner_Status::Error,
+            TEXT("The path-network actor has no usable world, level, or detector."));
+        return false;
+    }
+
+    auto* DetectorTemplate = NewObject<UCk_PathNetwork_Detector_UE>(
         this,
-        _DetectorClass,
+        Detector->GetClass(),
         NAME_None,
         RF_Transient,
-        SelectedNetwork->Get_Detector());
-    _DetectionCenter = SelectedNetwork->Get_DetectionBounds().GetCenter();
-    _DetectionExtents = SelectedNetwork->Get_DetectionExtents();
-    _VectorizeParams = SelectedNetwork->Get_VectorizeParams();
-    _BuildParams = SelectedNetwork->Get_BuildParams();
-    _AutoDetectOnBeginPlay = SelectedNetwork->Get_AutoDetectOnBeginPlay();
+        Detector);
+    if (ck::Is_NOT_Valid(DetectorTemplate))
+    {
+        Set_Status(
+            ECk_PathNetworkDesigner_Status::Error,
+            TEXT("Could not duplicate the path-network detector into the designer session."));
+        return false;
+    }
+
+    _World = InPathNetwork.GetWorld();
+    _TargetLevel = InPathNetwork.GetLevel();
+    _ExplicitTargetActor = &InPathNetwork;
+    _VisualizedActor = &InPathNetwork;
+    _DetectorClass = Detector->GetClass();
+    _DetectorTemplate = DetectorTemplate;
+    _DetectionCenter = InPathNetwork.Get_DetectionBounds().GetCenter();
+    _DetectionExtents = InPathNetwork.Get_DetectionExtents();
+    _VectorizeParams = InPathNetwork.Get_VectorizeParams();
+    _BuildParams = InPathNetwork.Get_BuildParams();
+    _AutoDetectOnBeginPlay = InPathNetwork.Get_AutoDetectOnBeginPlay();
     _UseRecommendedFollowerTuning =
-        SelectedNetwork->Get_UseRecommendedFollowerTuning();
+        InPathNetwork.Get_UseRecommendedFollowerTuning();
     _RecommendedFollowerTuning =
-        SelectedNetwork->Get_RecommendedFollowerTuning();
+        InPathNetwork.Get_RecommendedFollowerTuning();
     _ActivePresetOwner = NAME_None;
     _ActivePresetId = NAME_None;
     Clear_Preview();
@@ -696,7 +777,7 @@ auto
     { Load_RouteWatch(0, false); }
     Set_Status(
         ECk_PathNetworkDesigner_Status::Ready,
-        FString::Printf(TEXT("Loaded %s. Preview before applying changes."), *SelectedNetwork->GetActorLabel()));
+        FString::Printf(TEXT("Loaded %s. Preview before applying changes."), *InPathNetwork.GetActorLabel()));
     return true;
 }
 
@@ -1396,6 +1477,20 @@ auto
         ck::IsValid(ExplicitActor))
     { return ExplicitActor; }
 
+    auto HasMultiplePathNetworks = false;
+    return Resolve_SoleLevelPathNetwork(HasMultiplePathNetworks);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_PathNetworkDesigner_Session_UE::
+    Resolve_SoleLevelPathNetwork(
+        bool& OutHasMultiplePathNetworks) const
+    -> ACk_PathNetwork_UE*
+{
+    OutHasMultiplePathNetworks = false;
+
     auto* TargetLevel = _TargetLevel.Get();
     if (ck::Is_NOT_Valid(TargetLevel))
     { return nullptr; }
@@ -1407,7 +1502,10 @@ auto
         if (ck::Is_NOT_Valid(Candidate))
         { continue; }
         if (FoundActor != nullptr)
-        { return nullptr; }
+        {
+            OutHasMultiplePathNetworks = true;
+            return nullptr;
+        }
         FoundActor = Candidate;
     }
     return FoundActor;
