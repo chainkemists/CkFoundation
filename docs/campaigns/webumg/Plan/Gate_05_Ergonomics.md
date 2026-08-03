@@ -34,8 +34,13 @@ Added 2026-08-02 from the UIBridge reference intake (PriorArt §7, DECISIONS ent
    build as `SelfHitTestInvisible` (subtree stays traversable), named/bound nodes stay `Visible`,
    `visibility:hidden` wins. Enforced page-wide by `CkTests.UnitTests.CkWebUmg.HitTestDefaults`
    (smoke corpus; vacuous-pass guarded — requires ≥1 node of each class).
-8. **Validation pre-pass** — a read-only validate mode over the IR (loader + report machinery
-   already exist): errors block import, warnings don't, never touches the project.
+8. **Validation pre-pass — ✅ DONE 2026-08-02 (60/60):** `ck::webumg::ValidateIrForEmission`
+   (read-only; errors = exactly the emission hard-fails, ALL duplicates listed up front; warnings =
+   conversion-report preview + 3D transforms + missing bundle textures when a base dir is given).
+   The importer gates on it before conversion. `ValidatePreImport` test: hostile → errors named,
+   smoke → 0 errors/1 warning (the authored backdrop-filter), P5 → one warning per texture when
+   the bundle dir is bogus. BFL/AS exposure deferred until a real tooling consumer exists
+   (evidence-driven surface growth, per D4's posture).
 9. **Live-reload debounce spec** (folds into item 4 when built) — wait for a quiet period after
    the last file write (extractor writes textures before the json); the live path always
    regenerates read-only output, so a save can never destroy work (D3 makes this free for us).

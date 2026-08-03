@@ -48,6 +48,17 @@ namespace ck::webumg::editor
         if (NOT Document.IsSet())
         { return nullptr; }
 
+        const auto BaseDir = FPaths::GetPath(InJsonPath);
+        const auto Validation = ValidateIrForEmission(*Document, BaseDir);
+        const auto ValidationPassed = Validation.Errors.Num() == 0;
+        CK_ENSURE_IF_NOT(ValidationPassed,
+            TEXT("ImportPageAsset: [{}] failed pre-import validation ({} error(s); first: {})"),
+            AssetName, Validation.Errors.Num(),
+            Validation.Errors.Num() > 0 ? Validation.Errors[0].Message : FString{})
+        {}
+        if (NOT ValidationPassed)
+        { return nullptr; }
+
         auto* Asset = FindObject<UCk_WebUmg_PageAsset_UE>(Package, *AssetName);
         if (Asset == nullptr)
         {
@@ -62,7 +73,6 @@ namespace ck::webumg::editor
         // Textures ride the same package (outered to the asset), sourced from the browser-
         // normalized ckui-assets bundle next to the json.
         auto Textures = TMap<FString, TObjectPtr<UTexture2D>>{};
-        const auto BaseDir = FPaths::GetPath(InJsonPath);
         for (const auto& [AssetId, Src] : Document->AssetSourcesById)
         {
             const auto PngPath = FPaths::Combine(BaseDir, Src);

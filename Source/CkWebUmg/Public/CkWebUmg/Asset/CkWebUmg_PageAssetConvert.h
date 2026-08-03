@@ -9,8 +9,31 @@
 // so runtime consumption reuses the one battle-tested builder instead of forking it.
 // ====================================================================================================================
 
+struct CKWEBUMG_API FCkWebUmg_ValidationIssue
+{
+    FString NodeId;   // empty for page-level issues
+    FString Property; // the declaration or bundle entry that triggered the issue
+    FString Message;  // human-readable, includes how to fix it
+};
+
+struct CKWEBUMG_API FCkWebUmg_ValidationResult
+{
+    TArray<FCkWebUmg_ValidationIssue> Errors;   // emission would hard-fail — block the import
+    TArray<FCkWebUmg_ValidationIssue> Warnings; // conversion proceeds; content will be dropped or approximated
+};
+
 namespace ck::webumg
 {
+    // Read-only pre-import validation — mutates nothing, never touches the project. Errors are
+    // exactly the conditions ConvertIrToAsset hard-fails on; warnings enumerate what the
+    // conversion report will carry plus bundle problems (missing texture files, checked only when
+    // InBundleBaseDir is non-empty).
+    CKWEBUMG_API auto
+    ValidateIrForEmission(
+        const FCkWebUmg_IrDocument& InDocument,
+        const FString& InBundleBaseDir = {})
+        -> FCkWebUmg_ValidationResult;
+
     // Returns false (and ensures) on a duplicate data-ck-name or malformed tree — the asset is
     // left untouched in that case (emission is atomic).
     CKWEBUMG_API auto

@@ -1,7 +1,10 @@
 #include "CkWebUmg_PageAssetConvert.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Format/CkFormat.h"
 #include "CkWebUmg_Log.h"
+
+#include "Misc/Paths.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -283,8 +286,92 @@ namespace ck_webumg_pageassetconvert
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_webumg_pageassetconvert
+{
+    auto
+    CollectValidationIssues(
+        const TSharedPtr<const FCkWebUmg_IrNode>& InNode,
+        TMap<FString, FString>& InOutNameToNodeId,
+        FCkWebUmg_ValidationResult& InOutResult)
+        -> void
+    {
+        if (NOT InNode->CkName.IsEmpty())
+        {
+            if (const auto* FirstNodeId = InOutNameToNodeId.Find(InNode->CkName))
+            {
+                InOutResult.Errors.Add(FCkWebUmg_ValidationIssue{InNode->Id, InNode->CkName,
+                    ck::Format_UE(TEXT("data-ck-name [{}] is also on node [{}] — names must be unique per page"),
+                        InNode->CkName, *FirstNodeId)});
+            }
+            else
+            { InOutNameToNodeId.Add(InNode->CkName, InNode->Id); }
+        }
+
+        for (const auto& Entry : InNode->Unsupported)
+        {
+            InOutResult.Warnings.Add(FCkWebUmg_ValidationIssue{InNode->Id, Entry.Property,
+                ck::Format_UE(TEXT("value [{}] from [{}] is outside the v1 surface — it will not convert"),
+                    Entry.Value, Entry.Source)});
+        }
+
+        if (InNode->Paint.Transform.IsSet() && InNode->Paint.Transform->Matrix.Num() != 6)
+        {
+            InOutResult.Warnings.Add(FCkWebUmg_ValidationIssue{InNode->Id, TEXT("transform"),
+                TEXT("3D transform is left unapplied — flatten it to a 2D transform in the mockup")});
+        }
+
+        for (const auto& Child : InNode->Children)
+        { CollectValidationIssues(Child, InOutNameToNodeId, InOutResult); }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck::webumg
 {
+    auto
+    ValidateIrForEmission(
+        const FCkWebUmg_IrDocument& InDocument,
+        const FString& InBundleBaseDir)
+        -> FCkWebUmg_ValidationResult
+    {
+        using namespace ck_webumg_pageassetconvert;
+
+        auto Result = FCkWebUmg_ValidationResult{};
+        if (InDocument.Root == nullptr)
+        {
+            Result.Errors.Add(FCkWebUmg_ValidationIssue{{}, TEXT("root"),
+                TEXT("document has no root node — the extraction is malformed, re-extract the page")});
+            return Result;
+        }
+
+        auto NameToNodeId = TMap<FString, FString>{};
+        CollectValidationIssues(InDocument.Root, NameToNodeId, Result);
+
+        for (const auto& Diagnostic : InDocument.Diagnostics)
+        {
+            // The tree walk above owns duplicate names (as errors); repeating the extractor's
+            // diagnostic for them would double-report the same defect.
+            if (Diagnostic.Kind == TEXT("duplicate-ck-name"))
+            { continue; }
+            Result.Warnings.Add(FCkWebUmg_ValidationIssue{Diagnostic.Node, Diagnostic.Kind,
+                Diagnostic.Detail});
+        }
+
+        if (NOT InBundleBaseDir.IsEmpty())
+        {
+            for (const auto& [AssetId, Src] : InDocument.AssetSourcesById)
+            {
+                if (NOT FPaths::FileExists(FPaths::Combine(InBundleBaseDir, Src)))
+                {
+                    Result.Warnings.Add(FCkWebUmg_ValidationIssue{{}, AssetId,
+                        ck::Format_UE(TEXT("texture [{}] is missing from the bundle — re-extract the page"), Src)});
+                }
+            }
+        }
+        return Result;
+    }
+
     auto
     ConvertIrToAsset(
         const FCkWebUmg_IrDocument& InDocument,

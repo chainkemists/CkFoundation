@@ -264,4 +264,67 @@ bool
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+// Pre-import validation is read-only and complete: the hostile page's duplicate names surface as
+// ERRORS (the emission hard-fail, listed up front instead of first-failure), a clean page passes
+// with exactly its conversion-report warnings, and validating mutates nothing.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCkWebUmg_ValidatePreImport_Test,
+    "CkTests.UnitTests.CkWebUmg.ValidatePreImport",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool
+    FCkWebUmg_ValidatePreImport_Test::
+    RunTest(
+        const FString&)
+{
+    using namespace ck_webumg_assetroundtrip;
+
+    const auto HostileDocument = ck::webumg::LoadIrDocumentFromFile(
+        FPaths::Combine(CorpusGoldenDir(), TEXT("H1_hostile.ckui.json")));
+    if (NOT TestTrue(TEXT("hostile IR loads"), HostileDocument.IsSet()))
+    { return false; }
+
+    const auto HostileResult = ck::webumg::ValidateIrForEmission(*HostileDocument);
+    TestTrue(FString::Printf(TEXT("hostile page reports duplicate-name errors (%d)"),
+        HostileResult.Errors.Num()), HostileResult.Errors.Num() >= 1);
+    for (const auto& Error : HostileResult.Errors)
+    {
+        TestTrue(FString::Printf(TEXT("error [%s] names the duplicate"), *Error.Message),
+            Error.Message.Contains(TEXT("unique per page")));
+    }
+
+    const auto SmokeDocument = ck::webumg::LoadIrDocumentFromFile(
+        FPaths::Combine(CorpusGoldenDir(), TEXT("smoke.ckui.json")));
+    if (NOT TestTrue(TEXT("smoke IR loads"), SmokeDocument.IsSet()))
+    { return false; }
+
+    const auto SmokeResult = ck::webumg::ValidateIrForEmission(*SmokeDocument, CorpusGoldenDir());
+    TestTrue(TEXT("smoke page has zero errors"), SmokeResult.Errors.Num() == 0);
+    TestTrue(FString::Printf(TEXT("smoke warnings = exactly the conversion report (%d)"),
+        SmokeResult.Warnings.Num()), SmokeResult.Warnings.Num() == 1);
+    TestTrue(TEXT("smoke warning is the authored backdrop-filter"),
+        SmokeResult.Warnings.Num() == 1
+        && SmokeResult.Warnings[0].Property == TEXT("backdrop-filter"));
+
+    // Missing-bundle detection on a page that actually carries textures (smoke has none):
+    // a bogus base dir must add exactly one warning per bundle texture over the real-dir baseline.
+    const auto ImagesDocument = ck::webumg::LoadIrDocumentFromFile(
+        FPaths::Combine(CorpusGoldenDir(), TEXT("P5_images.ckui.json")));
+    if (NOT TestTrue(TEXT("images IR loads"), ImagesDocument.IsSet()))
+    { return false; }
+    if (NOT TestTrue(TEXT("images page carries bundle textures"),
+        ImagesDocument->AssetSourcesById.Num() >= 1))
+    { return false; }
+
+    const auto BundlePresent = ck::webumg::ValidateIrForEmission(*ImagesDocument, CorpusGoldenDir());
+    const auto BundleMissing = ck::webumg::ValidateIrForEmission(
+        *ImagesDocument, FPaths::Combine(CorpusGoldenDir(), TEXT("does-not-exist")));
+    TestTrue(FString::Printf(TEXT("missing bundle adds one warning per texture (%d -> %d, %d textures)"),
+        BundlePresent.Warnings.Num(), BundleMissing.Warnings.Num(), ImagesDocument->AssetSourcesById.Num()),
+        BundleMissing.Warnings.Num() ==
+            BundlePresent.Warnings.Num() + ImagesDocument->AssetSourcesById.Num());
+    return true;
+}
+
 #endif // WITH_AUTOMATION_TESTS

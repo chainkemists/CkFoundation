@@ -92,6 +92,14 @@ Previous state — **As of 2026-08-01 (branch `feature/webumg-campaign`, tip `e4
   `Total:` against expectation after every test addition.
 - The `[UNVERIFIED]` marker on 96057afe1 is lifted. `[EDITOR-VERIFY]` remains for Adam: one
   interactive drag-drop of an .html into the Content Browser (factory path through real editor UI).
+- **Validation pre-pass (item 8) DONE: 60/60.** `ValidateIrForEmission` in PageAssetConvert
+  (typed errors/warnings; duplicates as up-front errors via a name→node-id walk, the extractor's
+  own duplicate diagnostic skipped to avoid double-reporting; missing-bundle texture checks
+  opt-in by base dir). Importer pre-validates before conversion (ensure + bail on errors).
+  One test iteration: first run failed on MY wrong premise that smoke carries textures
+  (`"assets": []` — the SCHEMA example was illustrative); re-anchored the missing-bundle
+  scenario on P5_images with a baseline-vs-bogus-dir delta assertion. Internal C++ surface
+  only — BFL/AS exposure waits for a real consumer.
 - **Implementation round (post-verification): 59/59.** (a) Hit-test defaults landed + page-wide
   contract test (`HitTestDefaults`; both classes exercised, vacuous-pass guarded). (b) Tools-menu
   entry: `Tools → CkWebUmg → Import Web Page…` (DesktopPlatform file dialog → html/json import to
