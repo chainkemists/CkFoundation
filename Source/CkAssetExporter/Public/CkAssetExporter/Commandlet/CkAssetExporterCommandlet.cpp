@@ -6,6 +6,9 @@
 #include "CkAssetExporter/Server/CkAssetExporter_RequestLoop.h"
 
 #include "CkCore/Format/CkFormat.h"
+#include "CkCore/IO/CkDeferredAssetInit_AngelScript.h"
+#include "CkCore/IO/CkDeferredConfig.h"
+#include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include <Dom/JsonObject.h>
@@ -124,6 +127,16 @@ UCkAssetExporterCommandlet::UCkAssetExporterCommandlet()
 int32 UCkAssetExporterCommandlet::Main(const FString& InParams)
 {
     using namespace ck_asset_exporter_commandlet;
+
+    // -run= commandlets execute inside FEngineLoop::PreInit — FEngineLoop::Init never runs, so
+    // OnFEngineLoopInitComplete never fires: the blocking-load flag stays false, AS CDO defaults
+    // populated via assets::load:: stay null, and deferred configs stay unresolved. An export
+    // taken in that state faithfully serializes the nulls as "None" — silent corruption the
+    // sidecar's MD5 freshness oracle cannot see. By Main-time every subsystem exists, so mark
+    // the engine load-safe and run the heals the delegate would have run, in the same order.
+    UCk_Utils_IO_UE::MarkEngineSafeForBlockingLoads();
+    UCk_DeferredAssetInit_UE::ResolveAllPending();
+    UCk_DeferredConfig_UE::ResolveAllPending();
 
     // NOT "-Server": reserved engine switch — it hijacks the launch into a headless session, commandlet never runs.
     if (FParse::Param(*InParams, TEXT("ExportServer")))
