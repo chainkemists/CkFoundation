@@ -19,6 +19,7 @@ class UCk_Utils_VoiceTalker_UE;
 class ICk_VoiceChat_CaptureSource;
 class IVoiceEncoder;
 class IVoiceDecoder;
+class APlayerState;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -103,6 +104,54 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Requests);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Server-side, on the talker entity: packed bundles that arrived over the relay, stamped with
+    // the sending player at the RPC boundary (clients are not trusted to self-identify).
+    // Drained by FProcessor_VoiceChat_Route; entries surviving a tick are already stale.
+    struct CKVOICECHAT_API FCk_VoiceChat_InboundBundle
+    {
+    public:
+        CK_GENERATED_BODY(FCk_VoiceChat_InboundBundle);
+
+    private:
+        TArray<uint8> _PackedBundle;
+        TWeakObjectPtr<APlayerState> _Sender;
+
+    public:
+        CK_PROPERTY_GET(_PackedBundle);
+        CK_PROPERTY_GET(_Sender);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FCk_VoiceChat_InboundBundle, _PackedBundle, _Sender);
+    };
+
+    struct CKVOICECHAT_API FFragment_VoiceTalker_ServerInbox
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceTalker_ServerInbox);
+
+    private:
+        TArray<FCk_VoiceChat_InboundBundle> _Bundles;
+
+    public:
+        CK_PROPERTY(_Bundles);
+    };
+
+    // Client-side, on the talker entity: packed bundles forwarded by the server, awaiting the
+    // jitter/decode playback processor.
+    struct CKVOICECHAT_API FFragment_VoiceTalker_ReceiveInbox
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceTalker_ReceiveInbox);
+
+    private:
+        TArray<TArray<uint8>> _PackedBundles;
+
+    public:
+        CK_PROPERTY(_PackedBundles);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -23,6 +23,7 @@ public class CkVoiceChat : CkModuleRules
             "GameplayTags",
             "Voice",
 
+            "CkActorRelay",
             "CkCore",
             "CkEcs",
             "CkEcsExt",
