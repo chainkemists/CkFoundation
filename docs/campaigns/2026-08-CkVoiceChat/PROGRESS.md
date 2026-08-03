@@ -7,11 +7,17 @@ top-tier audit** ([Gate_0_ReviewPackage.md](Gate_0_ReviewPackage.md)). Spike ver
 **PROCEED — ADR-4 holds**; amendments S1–S5 binding on P3.
 **Baseline being diffed against:** waived for the purely-additive branch (honest gap flagged to
 the auditor); regression evidence = RenderTarget suite 22/22 on the final binary + 3 clean boots.
-**Next action:** Gate 1 CLOSED (audit GO WITH CONDITIONS → all conditions resolved + verified,
-run 5 **14/14 EXIT 0**, 2ed23fff0). **Gate 2 (P2) OPEN** ([Gate_2.md](Gate_2.md)): capture seam
-(engine + fake), talker requests/signals, capture→VAD→encode processors, synth playback +
-loopback, fake-capture AutoTests, N5 packaged smoke. Discontinuity contract + decode-capacity
-floor + `[Voice] bEnabled` gate all already pinned for this phase.
+**Next action:** Gate 2 (P2) in progress — **the machine-checkable core is GREEN**:
+`Ck.VoiceChat.Pipeline.FakeCapture_LoopbackDecodes` 1/1 EXIT 0, decoding **1.20 s from 1.9 s of
+scripted input** (sine + VAD release tail; both silences gated out) through the full
+capture→gain→VAD→encode→jitter→decode loop, headless. Landed: capture seam (engine wrapper +
+scripted fake), all five talker requests with the completion contract + EndPlay cancellation,
+four signals incl. the raw-PCM tap, the Capture processor, and the loopback path (CkF 0606abefa,
+CkTests 33a834e→0fb55f3). **Remaining for the Gate-2 close:** synth component presentation layer
+(`UCk_VoiceChatSynthComponent` via `CreateSoundGenerator` — the engine marks `OnGenerateAudio`
+legacy; spec-detail deviation to record), invalid-input tests for the new request boundaries,
+canary/regression sweep, N5 packaged smoke (human/toolbox packaging), `[EDITOR-VERIFY]` mic
+loopback, then the Gate-2 audit.
 **Blocked on:** nothing. Nothing pushed anywhere; superproject gitlink untouched.
 
 ## Decision log
