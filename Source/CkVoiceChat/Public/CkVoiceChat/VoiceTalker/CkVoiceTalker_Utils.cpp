@@ -373,30 +373,24 @@ auto
 
 auto
     UCk_Utils_VoiceTalker_UE::
-    Debug_Get_WorldMapEntriesForTalker(
-        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    Debug_Get_WorldMapTalkerEntryCount(
+        const FCk_Handle& InAnyWorldHandle)
     -> int32
 {
-    auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InVoiceTalker);
+    auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InAnyWorldHandle);
 
     auto Entries = 0;
 
     if (TransientEntity.Has<ck::FFragment_VoiceChat_ServeHistory>())
     {
         for (const auto& [Player, PerTalker] : TransientEntity.Get<ck::FFragment_VoiceChat_ServeHistory>().Get_LastServedFrame())
-        {
-            if (PerTalker.Contains(InVoiceTalker))
-            { ++Entries; }
-        }
+        { Entries += PerTalker.Num(); }
     }
 
     if (TransientEntity.Has<ck::FFragment_VoiceChat_ListenerMuteMatrix>())
     {
         for (const auto& [Player, MutedTalkers] : TransientEntity.Get<ck::FFragment_VoiceChat_ListenerMuteMatrix>().Get_MutedByPlayer())
-        {
-            if (MutedTalkers.Contains(InVoiceTalker))
-            { ++Entries; }
-        }
+        { Entries += MutedTalkers.Num(); }
     }
 
     return Entries;

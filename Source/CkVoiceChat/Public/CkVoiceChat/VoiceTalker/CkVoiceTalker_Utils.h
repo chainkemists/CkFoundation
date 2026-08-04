@@ -279,12 +279,14 @@ public:
     Debug_Get_HybridRenderNear(
         const FCk_Handle_VoiceTalker& InVoiceTalker) -> TOptional<bool>;
 
-    // P4 prune seam: how many entries across the world-scoped authority maps (ServeHistory +
-    // ListenerMuteMatrix) still reference this talker - the EndPlay-prune spec asserts zero
-    // after destroy.
+    // P4 prune seam: TOTAL talker entries across the world-scoped authority maps (ServeHistory +
+    // ListenerMuteMatrix). Takes any LIVE handle in the world as the anchor - a destroyed
+    // talker's own handle is a tombstone and cannot anchor the lookup, and matching map keys
+    // against a tombstone would false-pass. In a spec's controlled world where every entry names
+    // the destroyed talker, total == 0 after its destroy IS the prune proof.
     static auto
-    Debug_Get_WorldMapEntriesForTalker(
-        const FCk_Handle_VoiceTalker& InVoiceTalker) -> int32;
+    Debug_Get_WorldMapTalkerEntryCount(
+        const FCk_Handle& InAnyWorldHandle) -> int32;
 
     static auto
     Debug_Get_ReceiveArrivedBytes(
