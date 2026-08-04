@@ -1,11 +1,13 @@
 #include "CkParticlesEditor/Generator/CkParticles_Generator.h"
 
+#include "CkParticles/DataInterface/CkParticles_DataInterface.h"
 #include "CkParticles/ScriptDefinition/CkParticles_ScriptDefinition.h"
 #include "CkParticles/ScriptDefinition/CkParticles_ScriptDefinition_Naming.h"
 #include "CkParticlesEditor_Log.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "NiagaraNodeFunctionCall.h"
 #include "NiagaraSystem.h"
 #include "NiagaraTypes.h"
 
@@ -15,6 +17,7 @@
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 #include "UObject/UObjectGlobals.h"
+#include "UObject/UObjectHash.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -88,6 +91,39 @@ namespace ck::particles_editor
                 TEXT("Template for [{}] has no int User parameter named [{}] — BehaviorId {} NOT applied. "
                      "Add that int User parameter to the template system."),
                 ScriptName, BehaviorParamName, InDef->_BehaviorId);
+        }
+
+        // ---- Narrow the baked-ids specifier to this system's single behavior ----
+        // The duplicated graphs still carry the source template's baked-ids specifier on their ExecuteStage call
+        // nodes; restamping it makes this system's GPU scripts compile ONLY that behavior's HLSL. The specifier —
+        // not the DI instance — is the channel GPU codegen reads: the translator only ever sees the class CDO.
+        const auto SpecifierValue = FName(*ck::particles::Get_BakedIdsSpecifierValue({ InDef->_BehaviorId }));
+
+        auto InnerObjects = TArray<UObject*>{};
+        constexpr auto IncludeNested = true;
+        GetObjectsWithOuter(System, InnerObjects, IncludeNested);
+
+        auto StampedNodeCount = 0;
+        for (auto* InnerObject : InnerObjects)
+        {
+            auto* FuncNode = Cast<UNiagaraNodeFunctionCall>(InnerObject);
+            if (FuncNode == nullptr || FuncNode->FunctionScript != nullptr)
+            { continue; }
+            if (FuncNode->Signature.Name != FName(TEXT("ExecuteStage")))
+            { continue; }
+
+            FuncNode->Modify();
+            FuncNode->Signature.FunctionSpecifiers.Add(ck::particles::Get_BakedIdsSpecifierKey(), SpecifierValue);
+            FuncNode->FunctionSpecifiers.Add(ck::particles::Get_BakedIdsSpecifierKey(), SpecifierValue);
+            ++StampedNodeCount;
+        }
+
+        if (StampedNodeCount == 0)
+        {
+            ck::particles_editor::Warning(
+                TEXT("Template for [{}] has no ExecuteStage call node — BehaviorId {} NOT baked; "
+                     "its GPU scripts will compile the full behavior corpus."),
+                ScriptName, InDef->_BehaviorId);
         }
 
         // ---- Recompile (incl. GPU shaders) so the patched system is ready, then save ----

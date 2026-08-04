@@ -3,6 +3,7 @@
 #include "CkParticlesEditor/Generator/CkParticles_Generator.h"
 #include "CkParticlesEditor/Generator/CkParticles_TemplateBuilder.h"
 #include "CkParticlesEditor/Generator/CkParticles_TextureGenerator.h"
+#include "CkParticlesEditor/Generator/CkParticles_TuningGenerator.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CkParticles_GeneratorSubsystem)
 
@@ -27,6 +28,13 @@ void
     Generate_VfxTextures()
 {
     ck::particles_editor::Generate_AllVfxTextures();
+}
+
+void
+    UCkParticles_GeneratorSubsystem::
+    Generate_TuningAssets()
+{
+    ck::particles_editor::Generate_AllTuningAssets();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
