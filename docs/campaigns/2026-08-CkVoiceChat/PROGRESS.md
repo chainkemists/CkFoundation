@@ -39,6 +39,22 @@ not pushed by the campaign sessions.
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-04 (late afternoon) — P4 item 5 COMPLETE: moderation matrix green, suite at 31/31
+- **CkTests `f67bc2b`** (on the canonical `feature/voice-chat-wip`, authored + committed in BB's
+  clone): `Ck.VoiceChat.Net.ModerationMatrix` — six acts, one identical inject seam, only the
+  moderation state varying. CanTalk silences everywhere; CanHear excludes exactly one recipient
+  (differential: B frozen WHILE C grows); server-mute silences all; the listener-mute × server-mute
+  composition proven both directions (listener exclusion survives server-unmute alone; lifting
+  both restores). Server-mute-survives-rejoin deliberately not duplicated (P3 local pin).
+- Fix cycle recorded: `FCk_Latent_StartPIEMultiClient(N)` counts TOTAL PIE instances — three
+  remote clients need N=4.
+- Ran: matrix green solo (1m14s), then **full pattern 31/31, 0 failed, 0 contaminated, 0 AS
+  errors, 2m54s, same binary** (Test-VoiceChatP4-item5c.log). The suite baseline is now **31**.
+- **Gate-4 exit ledger now:** seam specs (playback selection, hybrid near/far, prune assert,
+  amplitude release — seams compiled, exemplar idioms proven by the matrix spec), item-1
+  positive-path resolution (.uasset), gym station + `[EDITOR-VERIFY]` block, formal exit sweep
+  (VoiceChat 31+ AND RenderTarget 22/22, same binary) + fresh top-tier audit.
+
 ### 2026-08-04 (afternoon) — P4 NET GATE GREEN: 30/30 on the canonical rebased branch
 - **Maintainer rebased both feature branches onto dev and pushed** — the canonical lineage is
   now `origin/feature/voice-chat` (CkF, tip `0de850f97`) / `origin/feature/voice-chat-wip`
