@@ -936,6 +936,45 @@ namespace ck
     {
         voice_chat::Verbose(TEXT("Tearing down VoiceTalker [{}]"), InVoiceTalkerEntity);
 
+        // Churn-coupled hygiene for the world-scoped authority maps: sweep this talker's entries
+        // and drop any stale player keys met on the way. Both fragments exist only where the
+        // authority wrote them; every talker destroy prunes, so long-lived servers with churn
+        // never accumulate dead handles (a departed player's own key falls to the NEXT sweep
+        // after its PlayerState goes stale).
+        auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InVoiceTalkerEntity);
+
+        if (TransientEntity.Has<FFragment_VoiceChat_ServeHistory>())
+        {
+            auto& History = TransientEntity.Get<FFragment_VoiceChat_ServeHistory>().Get_LastServedFrame();
+
+            for (auto It = History.CreateIterator(); It; ++It)
+            {
+                if (NOT It->Key.IsValid())
+                {
+                    It.RemoveCurrent();
+                    continue;
+                }
+
+                It->Value.Remove(InVoiceTalkerEntity);
+            }
+        }
+
+        if (TransientEntity.Has<FFragment_VoiceChat_ListenerMuteMatrix>())
+        {
+            auto& MutedByPlayer = TransientEntity.Get<FFragment_VoiceChat_ListenerMuteMatrix>().Get_MutedByPlayer();
+
+            for (auto It = MutedByPlayer.CreateIterator(); It; ++It)
+            {
+                if (NOT It->Key.IsValid())
+                {
+                    It.RemoveCurrent();
+                    continue;
+                }
+
+                It->Value.Remove(InVoiceTalkerEntity);
+            }
+        }
+
         if (InCurrent._CaptureSource.IsValid())
         {
             InCurrent._CaptureSource->Stop();
