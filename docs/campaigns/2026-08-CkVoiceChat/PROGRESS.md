@@ -54,6 +54,17 @@ not pushed by the campaign sessions.
   `Debug_Get_WorldMapEntriesForTalker` — compiled + delta-zero; their SPECS are the BB batch.
 - Every commit gated: 19/19 local + 11 name-identical env-fails + 0 AS errors, four runs
   (item6/item7/seams logs + item4b earlier). One ritual consumed (item-4's first run).
+- **Net-gate attempt (2026-08-04 ~13:40):** flipped BB to tonight's tips and ran the 30-spec
+  gate twice. Run 1 failed in C++ — NOT ours: CkGameplayDebugger dev tip `e31bc64` consumes
+  `Set_IsDebuggerCaptureVisible`, whose CkF half (`759814651`) landed on dev overnight; **merged
+  origin/dev into feature/voice-chat (`cfc5e9ed8`, 0 behind)**. Run 2: **C++ built clean —
+  tonight's 7 commits compile against BB's full plugin set** — but exit 76: BB's OWN AS is
+  broken (`BB_Shelf_Processor_Requests.as:573` calls `UBb_Cue_Shelf_ProxyMoved::Params(...)`
+  and the committed `Script/Generated/BusterBlock_EntitySpawnParams.as` (04:46) predates the
+  sibling's Shelf-cue commit — zero generator entries for that class; regenerating requires an
+  editor pass on BB's superproject, which stays read-only for this campaign). **The 11 net
+  specs remain unrun against P4 code — blocked on the sibling regenerating BB's script assets,
+  not on anything in this branch.** BB restored to dev afterward.
 - **Remaining for Gate-4 exit, all BB-or-editor-shaped:** item 5 moderation matrix (net specs);
   BB spec batch (playback selection, hybrid near/far state incl. hysteresis asymmetry, prune
   assert, amplitude release, item-1 positive-path resolution with a real .uasset); gym audition
