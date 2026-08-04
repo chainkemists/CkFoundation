@@ -34,6 +34,26 @@ public:
     static auto
     Get_IsDebugDataDesired() -> bool;
 
+    // Dedicated State Machine debugger capture contract. This is intentionally separate from
+    // Get_IsDebugDataDesired(): the on-screen overlay may need current-state polling without
+    // authorizing graph discovery or transition-history retention.
+    static auto
+    Set_IsDebuggerCaptureVisible(bool InIsVisible) -> void;
+
+    static auto
+    Get_IsDebuggerCaptureVisible() -> bool;
+
+    // Start (or refresh) a capture for one machine. A new visible session resets its debug
+    // history, so opening the debugger after transitions never backfills old history.
+    static auto
+    BeginDebuggerCapture(FCk_Handle_StateMachine& InStateMachine) -> void;
+
+    static auto
+    Get_IsDebuggerCaptureActive(const FCk_Handle_StateMachine& InStateMachine) -> bool;
+
+    static auto
+    Get_DebuggerCaptureGeneration() -> uint64;
+
 private:
     static auto
     DoAddRequest(

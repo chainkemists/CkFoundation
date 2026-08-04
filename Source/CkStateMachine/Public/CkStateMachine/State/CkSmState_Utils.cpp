@@ -7,6 +7,7 @@
 #include "CkStateMachine/Condition/CkSmCondition_Utils.h"
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Utils.h"
 
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
@@ -55,6 +56,9 @@ auto
     -> void
 {
 #if !UE_BUILD_SHIPPING
+    if (NOT UCk_Utils_StateMachineDebug_UE::Get_IsDebuggerCaptureActive(InStateMachine))
+    { return; }
+
     auto& [ConditionNames, RealTimeSeconds] = InStateMachine.AddOrGet<ck::FFragment_Sm_Debug_LastFiredTransition>();
     RealTimeSeconds = FPlatformTime::Seconds();
     ConditionNames.Reset();
