@@ -39,6 +39,33 @@ not pushed by the campaign sessions.
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-04 (evening) — campaign finishing sweep: seam specs, gym, F4, module docs all landed
+- **Seam specs (CkTests `5205d36b`):** `Ck.VoiceChat.Net.PlaybackConfig` (selection by wire idx,
+  amplitude release past the stale-drop age with sticky selection, EndPlay prune with a
+  populated-first precondition) + `Ck.VoiceChat.Net.HybridRenderMode` (four-beat distance walk
+  pinning the full hysteresis asymmetry through a symmetric-composed HybridRadio channel).
+  **Product fix en route (CkF `faf5b96f0`):** the near/far state now computes from the owning
+  actor's position — the synth-location derivation made the state unavailable headless
+  (unpinnable by any spec). Compile-gated + discovered on the CkPlugins host (33 total, 19/19
+  local, 14 name-expected env-fails, 0 AS errors, Test-VoiceChatP4-seamspecs2.log); PASS
+  verification rides the BB exit sweep.
+- **Gym station (same commit):** "Voice Chat" registered — loopback talker on the pawn, V-key
+  PTT with transmit-edge flashes (the roger-beep bind points made visible), console fallbacks.
+  AS lesson recorded: adjacent string literals do not splice.
+- **`[EDITOR-VERIFY]` block written into Gate_4.md** (steps A/B/C: mic loopback + edges;
+  2-PIE attenuation/spatialization — ALSO item 1's positive-path proof; effect chain +
+  HybridRadio near/far walk incl. the flip-must-be-clean check). Scoping decision recorded: no
+  engine-shipped USoundAttenuation asset exists, so item-1's positive path is human-auditioned
+  with an authored asset; the machine half pins the no-asset and failed-resolve branches.
+- **F4 stripped (CkF `50bfa61fa`):** campaign/review labels out of all five flagged files,
+  every technical why retained. **Module doc to feature-complete (CkF `1b877b949`)** + tier row
+  updated (`ResourceLoader` earned).
+- **Blocked tail (BB editor live, sibling active — watcher armed):** flip BB to the feature
+  tips → exit sweep (VoiceChat 33 expected incl. the three new net specs green + RenderTarget
+  22/22, one binary, freshness chain) → fresh top-tier audit appended to Gate_4.md. P5 ship
+  additionally needs the standing human items (mic `[EDITOR-VERIFY]`, N5 packaged smoke,
+  `[Voice] bEnabled=true` in BB config).
+
 ### 2026-08-04 (late afternoon) — P4 item 5 COMPLETE: moderation matrix green, suite at 31/31
 - **CkTests `f67bc2b`** (on the canonical `feature/voice-chat-wip`, authored + committed in BB's
   clone): `Ck.VoiceChat.Net.ModerationMatrix` — six acts, one identical inject seam, only the
