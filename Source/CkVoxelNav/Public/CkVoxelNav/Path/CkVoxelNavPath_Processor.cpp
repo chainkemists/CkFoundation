@@ -10,6 +10,7 @@
 
 #include "CkVoxelNav/CkVoxelNav_Log.h"
 #include "CkVoxelNav/Path/CkVoxelNav_Path_Graph.h"
+#include "CkVoxelNav/Path/CkVoxelNav_Path_Refine.h"
 #include "CkVoxelNav/Settings/CkVoxelNav_ProjectSettings.h"
 #include "CkVoxelNav/Volume/CkVoxelNavVolume_Fragment.h"
 #include "CkVoxelNav/Volume/CkVoxelNavVolume_Utils.h"
@@ -39,6 +40,20 @@ namespace ck_voxelnav_path_processor
         SearchParams._PlannedAgainstEpoch = InEpoch;
 
         return SearchParams;
+    }
+
+    auto
+        Make_RefineParams(
+            const FCk_Request_VoxelNavPath_FindPath& InRequest)
+        -> ck::voxelnav::FPathRefineParams
+    {
+        auto RefineParams = ck::voxelnav::FPathRefineParams{};
+
+        RefineParams._VisibilityPruning = InRequest.Get_VisibilityPruning();
+        RefineParams._Smoothing = InRequest.Get_Smoothing();
+        RefineParams._SmoothingSubdivisions = InRequest.Get_SmoothingSubdivisions();
+
+        return RefineParams;
     }
 }
 
@@ -94,6 +109,8 @@ namespace ck
             InResult._Outcome = InOutcome;
             InResult._Volume = Volume;
             InResult._PlannedAgainstEpoch = InEpoch;
+            InResult._RawWaypointCount = 0;
+            InResult._PathLengthUu = 0.0f;
 
             UUtils_Signal_OnVoxelNavPathFailed::Broadcast(InPathEntity, MakePayload(InPathEntity, InOutcome));
         };
@@ -139,11 +156,15 @@ namespace ck
             return;
         }
 
-        InResult._Waypoints = Plan._Waypoints;
+        const auto Refined = voxelnav::Refine_Waypoints(*Octree, Plan._Waypoints, Make_RefineParams(InRequest));
+
+        InResult._Waypoints = Refined._Waypoints;
         InResult._Status = ECk_VoxelNav_PathStatus::Ready;
         InResult._Outcome = Plan._Outcome;
         InResult._Volume = Volume;
         InResult._PlannedAgainstEpoch = Plan._PlannedAgainstEpoch;
+        InResult._RawWaypointCount = Refined._RawWaypointCount;
+        InResult._PathLengthUu = Refined._RefinedLengthUu;
 
         RequestResult = ECk_Request_OperationResult::Succeeded;
 

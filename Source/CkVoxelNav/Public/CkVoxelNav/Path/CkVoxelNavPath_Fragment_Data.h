@@ -132,10 +132,32 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _To = FVector::ZeroVector;
 
+    /** Drops every waypoint the octree proves redundant, turning the search's axis-by-axis staircase into
+     *  the straight runs an agent can actually fly. On by default because the raw cell-centre path is a
+     *  planning artefact, not a route: nothing that flies one wants its corners. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _VisibilityPruning = ECk_EnableDisable::Enable;
+
+    /** Rounds the corners the pruning left, span by span, keeping a curve only where the octree agrees it
+     *  stays in free space. Off by default: it multiplies the waypoint count, and a follower that already
+     *  interpolates between waypoints gains nothing from it. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _Smoothing = ECk_EnableDisable::Disable;
+
+    // Segments each span is divided into when smoothing. One or less introduces no point at all.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1"))
+    int32 _SmoothingSubdivisions = 4;
+
 public:
     CK_PROPERTY_GET(_Volume);
     CK_PROPERTY_GET(_From);
     CK_PROPERTY_GET(_To);
+    CK_PROPERTY(_VisibilityPruning);
+    CK_PROPERTY(_Smoothing);
+    CK_PROPERTY(_SmoothingSubdivisions);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_VoxelNavPath_FindPath, _Volume, _From, _To);
