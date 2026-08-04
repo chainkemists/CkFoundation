@@ -39,6 +39,29 @@ not pushed by the campaign sessions.
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-04 (session close) — P4 items 6, 7, 8-doc + debug seams landed
+- **Item 6 (CkF `16964bd89`, audit F5):** talker EndPlay sweeps the destroyed talker out of
+  `ServeHistory`/`ListenerMuteMatrix`, dropping stale player keys en route. Churn-coupled, no
+  periodic scan. Residual recorded: a departed player's own outer key falls to the NEXT sweep.
+- **Item 7 (CkF `36377fd3d`):** remote amplitude releases to zero once the stream idles past
+  `MaxOutboundFrameAge` (0.15s = the sender's stale-drop age). Root cause: the header mirror only
+  writes on arrival, so a closed VAD left the last loud value frozen — a remote talker read as
+  speaking forever. `_LastBundleArrivalClock` guards loopback talkers off the release.
+- **Item 8 doc half (CkF `f8b0e091a`):** roger-beep consumer recipe in the module Claude.md
+  (BindTo_OnTransmitStarted/Stopped → consumer cue; APIs verified against the generated surface).
+  Gym audition station = the remaining half.
+- **Debug seams (CkF `7fbc0a321`):** `Debug_Get_PlaybackConfigChannel`, `Debug_Get_HybridRenderNear`,
+  `Debug_Get_WorldMapEntriesForTalker` — compiled + delta-zero; their SPECS are the BB batch.
+- Every commit gated: 19/19 local + 11 name-identical env-fails + 0 AS errors, four runs
+  (item6/item7/seams logs + item4b earlier). One ritual consumed (item-4's first run).
+- **Remaining for Gate-4 exit, all BB-or-editor-shaped:** item 5 moderation matrix (net specs);
+  BB spec batch (playback selection, hybrid near/far state incl. hysteresis asymmetry, prune
+  assert, amplitude release, item-1 positive-path resolution with a real .uasset); gym audition
+  station + the `[EDITOR-VERIFY]` block (deliberately deferred WITH the station — steps that
+  can't be followed are checkbox theater); full gate-exit sweep on BusterBlock (expect 30 base +
+  new specs, RenderTarget 22/22 delta-zero, same binary); fresh top-tier audit appended to
+  Gate_4.md before P5.
+
 ### 2026-08-04 (later still) — P4 item 4 landed: HybridRadio near/far render decision
 - **CkF `1d8d06033`:** per-recipient near/far decided at PLAYBACK per drain — listener position
   (`GetAudioListenerPosition`) vs synth location against `AudibleRange`, Route's hysteresis
