@@ -17,9 +17,21 @@
 
 ## Baseline (campaign open)
 
-- Branch: `feature/ckvoxelnav-port` @ `c11766760` (== origin/dev tip 2026-08-03).
-- Full toolbox build+test counts: **PENDING — run in flight; record totals + failing names here
-  before any Source/ edit lands.**
+- Branch: `feature/ckvoxelnav-port` @ `c11766760` (== origin/dev tip 2026-08-03), UNMODIFIED
+  Source/. Invocation: `--build --test --parallel 1 --no-nullrhi` (single-shot, no --config).
+- **Total: 981 | Passed: 974 | Failed: 7 | Skipped: 0 | Contaminated: 0 | Duration: 15m24s (tests)**
+- Pre-existing failing names (delta-zero means: exactly these 7, no more, no fewer):
+  1. `Ck_AutoTest_PathNetworkFollower_RoutePrefersNetwork` (goal-exactness assert)
+  2. `Ck_AutoTest_PathNetworkFollower_ComponentTransferUsesDisconnectedIslands`
+  3. `Ck_AutoTest_PathNetworkFollower_DesiredNavmeshClearanceMovesInward` (fixture: no north navmesh boundary)
+  4. `Ck_AutoTest_PathNetworkFollower_LocalShortcutUsesSameComponentGap`
+  5. `Ck_AutoTest_PathNetworkFollower_ProjectsRibbonWaypointWithinNavQueryExtent` (same fixture issue)
+  6. `Ck_AutoTest_PathNetworkFollower_TuningReplansSameGoal`
+  7. `Ck_AutoTest_CkJolt_ChaosParity_KinematicPlatformCarry` — editor DIED mid-test (exit 0x3),
+     toolbox-marked Failed, run resumed in a fresh lane. Instability, not an assertion red; watch
+     whether it recurs at phase gates.
+  Also noted: the resumed lane's editor exited 0xFF AFTER completing all tests (results kept).
+- All 7 are foreign workstreams (PathNetwork, Jolt parity) — none touched by this campaign.
 
 ## Done
 
