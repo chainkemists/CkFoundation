@@ -7,8 +7,8 @@
 
 | Phase | State | Evidence |
 |---|---|---|
-| 0 — Scaffold | **OPEN** — docs authored; baseline PENDING; units not yet dispatched | this file |
-| 1 — Octree + voxelize | not started (PHASE_1.md authored at 0→1 boundary) | — |
+| 0 — Scaffold | **CLOSED 2026-08-04** — all exit criteria met | Exit evidence block below; commits d401a54aa/13e30ab1f/49da3aeb5 (CkFoundation), CkTests + superproject commits per session log |
+| 1 — Octree + voxelize | **OPEN** — wave 1 (1A ∥ 1B) dispatched | PHASE_1.md |
 | 2 — Pathfinding | not started | — |
 | 3 — Chunks & dynamics | not started | — |
 | 4 — Consumers | not started | — |
@@ -48,11 +48,69 @@
   to expect at Phase 1 exit: occupancy decided by collision shapes (Jolt), not LOD0 render tris —
   baked results differ from Nav3D by design.
 
+## PHASE 0 EXIT EVIDENCE (closed 2026-08-04)
+
+1. Build: green (`Result: Succeeded`, integration build + relink build).
+2. Boundary full suite (post-[C-D16], final artifact): **981 / 974 / 7 / 0 contaminated, 12m06s** —
+   six known PathNetworkFollower reds + `Ck_AutoTest_PathNetworkFollower_FallsBackToNavigation`
+   (arrival-distance 180cm), which passed 1/1 SOLO immediately after → flake-observed in a foreign
+   known-fragile family, non-blocking per [C-D18(b)]. (A second suite sample was started and then
+   deliberately stopped under [C-D18] — evidence already sufficient.) Pre-fix suite samples: 2×
+   delta-zero (975/6 and 974/7-with-crash-flake, baseline-identical).
+3. Targeted C++ patterns ([C-D17]): `Ck.VoxelNav.Volume.Scaffold.*` 2/2 green;
+   `Ck.Jolt.Query.BoxOccupancy` 1/1 green post-[C-D16], zero net-driver noise.
+4. Hygiene: `rg -l "Jolt/" Source/CkVoxelNav` = 0; libmorton allowlist + Used-by landed; CkJolt
+   Claude.md updated; uplugin + Source/CLAUDE.md rows landed; MIT attribution + LICENSE.Nav3D.txt.
+5. Bonus root-cause fix [C-D16] verified healed: pre-existing `Ck.Jolt.Body.Lifecycle` 0/3 → 3/3.
+
 ## In-flight
 
-- Integration build of 0A+0B+0C (`--build --generate`, orchestrator-run, background). First
-  compile of ~850 new lines — expect possible UHT/compile fixes before 0D.
-- Unit 0D (tests) — dispatches after the integration build is green.
+- Phase 1 wave 1: 1A (octree core + hermetic tests) ∥ 1B (geometry backend) — opus, dispatched.
+
+- **[C-D16] VERIFIED HEALED 2026-08-04**: post-fix solo runs — `Ck.Jolt.Query.BoxOccupancy` **1/1
+  green, zero EnableListenServer/NetDriverCreateFailure hits in the log** (was 0/1 twice);
+  `Ck.Jolt.Body.Lifecycle` **3/3 green** (was 0/3). The occupancy stack (session resolution,
+  narrowphase in/out, broadphase AABox + body-id attribution) is proven end-to-end in PIE. The
+  pre-fix full suite also reconfirmed delta-zero (981/975/6, the six known PathNetworkFollower
+  reds, 0 contaminated) — so the phase's plugin-code is regression-free independent of the
+  uproject repair.
+
+- Relink chronology: touch + `--build --test-pattern VoxelNav --discover-fresh` → **2/2 VoxelNav
+  scaffold tests discovered and GREEN** (36s). Then `Ck.Jolt.Query.BoxOccupancy` solo → FAILED 2/2
+  runs, NOT on its own assertions (latent chain completed; body-added wait met) but on an attributed
+  engine ensure during PIE start: `EnableListenServer` → `NetDriverCreateFailure`.
+  **Discriminator (decisive): the pre-existing exemplar `Ck.Jolt.Body.Lifecycle.*` — green in the
+  full suite — fails 0/3 SOLO with the identical ensure.** Mechanism = PIE-multi-client fixture
+  fails its listen-server bind in a fresh solo editor session on this config; passes inside the
+  full-suite session. Our test inherits a pre-existing solo-run limitation; it is not the defect.
+  Follow-up (h): the solo-run listen-server failure of the PIE fixture deserves a root-cause pass
+  by the CkTests owner (diagnosis agent's mechanism report to be attached).
+
+- **PHASE 0 FULL-SUITE GATE: DELTA-ZERO ACHIEVED 2026-08-04** (orchestrator-run, single-shot
+  `--build --generate --test --parallel 1 --no-nullrhi`): **Total: 981 | Passed: 975 | Failed: 6 |
+  Contaminated: 0 | 12m42s.** The 6 reds are exactly baseline reds 1–6 (PathNetworkFollower);
+  baseline red 7 (`Ck_AutoTest_CkJolt_ChaosParity_KinematicPlatformCarry`, the mid-test editor
+  crash) PASSED this run — instability confirmed, not a deterministic red. No new failures from
+  Phase 0 code. Editor's end-of-run 0xFF exit recurred (pre-existing, results kept, same as
+  baseline). Remaining for phase close: the 3 new tests discovered + green.
+
+- **0D tests — implemented, spot-check + gate pending** (opus): CkTests branch
+  `feature/ckvoxelnav-port` created at `e5bb948b` (verified no ref move, clean tree + 3 paths).
+  187-line PIE session-layer occupancy test (exemplar Test_JoltBody_Lifecycle.spec.cpp; static
+  JoltBody at (0,0,20000), named wait conditions, 3 assertion stages) + 90-line hermetic FEcsWorld
+  scaffold test (exemplar Test_JoltBody_OwnershipExclusivity) + CkTests.Build.cs +CkVoxelNav dep.
+  Deviations 1-5 all accepted (session-layer choice was spec-sanctioned; invalid-owner rejection
+  test is non-negotiable #3 compliance; .cpp suffix matches JoltBake siblings).
+
+- **Integration build GREEN 2026-08-03** (`Result: Succeeded`, 733s, orchestrator-run): 0A+0B+0C
+  compile clean first try. (First attempt failed on vendored Jolt `PhysicsUpdateContext.cpp` at 0s
+  with no diagnostics — XGE agent flake, confirmed by clean retry of the identical invocation.)
+  0B and 0C acceptance FINAL. Committed: `d401a54aa` (libmorton) → `13e30ab1f` (CkJolt occupancy)
+  → `49da3aeb5` (CkVoxelNav skeleton) → `1726f6f0d` (docs).
+- **[C-D15]** CkTests campaign branch bases on its CURRENT detached HEAD `e5bb948b` (clean tree),
+  NOT origin/dev — the 981-test baseline was captured against e5bb948b; moving CkTests would change
+  the suite population and void delta-zero. (CkTests local dev is 83 behind origin — same sibling
+  drift pattern as CkFoundation; pairing against origin/dev is a ship-time question, not Phase 0's.)
 
 - **0B implemented, spot-checked, compile pending** (opus): 4 new files (Occupancy_Utils JPH layer
   479 lines total, Occupancy_Session JPH-free pimpl layer), +32 additive lines in
@@ -92,6 +150,15 @@
 - (g) `CkTimer_Fragment_Data.h` includes `CkHandle_Typesafe.h` (wrong casing; on-disk file is
   `CkHandle_TypeSafe.h`) — resolves only on case-insensitive filesystems while CkTimer is
   Mac/Linux-whitelisted.
+- (h) RESOLVED by [C-D16]'s diagnosis — the "solo-run PIE fixture limitation" was actually the
+  project-wide missing-online-plugins misconfiguration; full mechanism recorded there.
+- (i) `bSuppressLogWarnings`/`bSuppressLogErrors` are STATIC members of `FAutomationTestBase`;
+  both Jolt test files (and now BoxOccupancy, by mimicry) set `bSuppressLogWarnings = true` inside
+  RunTest, leaking process-wide to every later test in the run. CkTests owner should scope it.
+- (j) `ck_net_automation_common::Override_PlaySettings` forces `PIE_ListenServer` even for
+  NumClients=1 (`CkNetAutomation_Common.cpp:134`); harness "works" pre-fix only because
+  `GetNetMode()` reports NM_ListenServer off the `?Listen` URL despite the absent driver. Worth a
+  deliberate pass by the CkTests owner post-[C-D16].
 
 ## Known foreign dirt (never stage, never revert without a decision)
 
@@ -134,6 +201,33 @@
 - **[C-D13]** UFUNCTION categories are FEATURE-named, not module-named: `Ck|Utils|VoxelNavVolume` /
   `[Ck][VoxelNavVolume] ...` (matches the utils class per CkTimer precedent; port-map §5.4 form
   wins over the 0C brief's `Ck|Utils|VoxelNav`). Future features (path/follower) get their own.
+- **[C-D16]** ROOT-CAUSE FIX to the host project (outside the plugin, in scope as gate repair):
+  add `OnlineSubsystem` + `OnlineSubsystemUtils` (Enabled) to `CkPlugins.uproject`'s Plugins array.
+  Diagnosis (Opus, verified end-to-end): `1357343` "perf: slim the editor startup plugin set"
+  (2026-07-31) set `DisableEnginePluginsByDefault: true` without those two in the closure →
+  `GameNetDriver`/IpNetDriver can never be created → every `FCk_Latent_StartPIEMultiClient` PIE
+  (80 files in CkTests) emits `NetDriverCreateFailure`+`EnableListenServer` ensure noise → every
+  C++ automation test using the fixture fails; AS functional tests are immune (log capture gated
+  to the functional-test window). Precedent: BusterBlock.uproject lists exactly these two under
+  the same slim flag; same repair shape as `aaa2a9a` (Content Browser closure patch). Rejected:
+  harness/per-test whitelists (mask a real misconfig), standalone-PIE fallback (breaks
+  Get_ServerWorld contract for 80 tests). Undo = delete the two entries. NOTE: partially trims
+  `1357343`'s startup-perf intent — flag to maintainer in the session report.
+- **[C-D17]** GATE DEFINITION AMENDED: the standard full-suite `--test` run EXCLUDES the
+  `Ck.<Feature>.*` C++ automation family (EngineFilter flags — verified: zero `Ck.Jolt.*` rows in
+  the full-suite run's name list; my earlier "exemplar passes in-suite" premise was WRONG — it
+  never ran there). Phase gates are therefore: full suite (delta-zero vs baseline) PLUS targeted
+  C++ patterns (`Ck.VoxelNav`, `Ck.Jolt.Query`, and future phase patterns) green. VALIDATION.md
+  inherits this definition.
+- **[C-D18]** SPEED POLICY (maintainer directive 2026-08-04: "reduce tests, complete quickly"):
+  (a) during-phase verification = TARGETED patterns only (`Ck.VoxelNav*`, `Ck.Jolt.Query`, the
+  phase's new tests — ~40-60s each); (b) full suite runs ONCE per phase boundary, `--parallel 1`
+  (project memory: lanes false-red), no re-samples — a single-occurrence new red in a known-fragile
+  FOREIGN family (PathNetworkFollower, the Jolt-parity crash) is recorded as flake-observed and
+  does NOT block the phase if a solo re-run passes; only deterministic or own-code reds block;
+  (c) pre-warm the toolbox warm server during test-authoring iterations (`--live` routing, zero
+  boot), with the phase-boundary run staying a fresh boot (gate-of-record rule); (d) fewer, larger
+  dispatch waves (Phase 1: 1A∥1B as wave 1, 1C+1D as one sequential wave 2, 1E with the boundary).
 - **[C-D10]** (OQ-1, blocker) 0B's consumer surface must be JPH-free: CkJolt ships opaque
   TPimplPtr-backed `FCk_Jolt_QuerySession` + `FCk_Jolt_BoxProbe` value types; the JPH-signature
   functions stay CkJolt-internal. Rejected alternative: allowlisting CkVoxelNav for direct JPH
@@ -165,3 +259,8 @@ then 0D → orchestrator re-runs gate → phase boundary ritual → author PHASE
 - 2026-08-03 — orchestrator: Fable 5 (interactive). Research (7 Opus dossiers, ~1.3M subagent
   tokens) → plan → campaign opened: branch, doc set, baseline started. Routing: all execution
   units → opus; judgment/audit inline at orchestrator.
+- 2026-08-04 (same session) — PHASE 0 executed and CLOSED: 4 opus units (0A-0D) + port map +
+  diagnosis agent; rulings C-D10..C-D18; root-caused and fixed the project-wide missing
+  OnlineSubsystem closure ([C-D16], superproject commit). Speed policy [C-D18] adopted on
+  maintainer directive. Commits: CkFoundation d401a54aa/13e30ab1f/49da3aeb5/1726f6f0d + docs;
+  CkTests `test(voxelnav)` commit; superproject uproject fix commit. Phase 1 wave 1 dispatched.
