@@ -22,6 +22,36 @@ auto
 
 auto
     UCk_Utils_VoxelNav_Settings_UE::
+    Get_MaxRepairProbesPerTick()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_VoxelNav_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 512; }
+
+    return Settings->Get_MaxRepairProbesPerTick();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoxelNav_Settings_UE::
+    Get_OccluderMovementThresholdUu()
+    -> float
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_VoxelNav_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 10.0f; }
+
+    return Settings->Get_OccluderMovementThresholdUu();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoxelNav_Settings_UE::
     Get_MaxBuildMillisecondsPerTick()
     -> float
 {

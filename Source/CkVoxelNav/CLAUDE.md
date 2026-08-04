@@ -79,6 +79,34 @@ and plan paths through it at horde scale.
   pinned). `FPathGraph` holds a RAW pointer to the octree and is valid for exactly one synchronous
   search inside one tick; its caller holds the `TSharedPtr` that keeps the structure whole.
 
+### Dynamic occluders and local repair
+
+- `UCk_Utils_VoxelNavOccluder_UE` — `Add` stamps the feature **on the moving entity itself** (it is a
+  reading of that entity's transform, so the entity must already carry `Transform`).
+  `FCk_Fragment_VoxelNavOccluder_ParamsData` carries authored `_HalfExtentsUu` plus an optional
+  movement-threshold override; `Get_TrackedBounds` / `Get_TimesDirtied` are what a caller or a test
+  reads. There is no component and nothing ticks per actor: one processor walks every occluder.
+- **An occluder does not occlude.** Occupancy comes from the geometry backend, so a tracked entity
+  only blocks navigation if it has geometry the bake can see — and CkJolt's occupancy surface is
+  filtered to the **Static** body domain, so a **Kinematic** JoltBody is invisible to voxelization
+  entirely. Moving a Static body is what "dynamic occluder" means here. The feature's job is to say
+  WHEN and WHERE the volumes must look again.
+- `UCk_Utils_VoxelNavVolume_UE::Request_MarkDirty` — the volume-side entry point. Regions arriving
+  before a repair starts are UNIONED into one repair. A volume that has never baked reports `Failed`:
+  a local repair carries the occupancy of everything OUTSIDE the dirty region over from the previous
+  bake, and there is none to carry. `Get_RepairStage` / `Get_RepairStats` /
+  `Get_PendingDirtyBounds`; signal `BindTo_OnRepairComplete` (distinct from the build signal, so a
+  listener waiting for the FIRST bake is not woken by every obstacle that moves).
+- `ck::voxelnav::FRepairState` + `Request_BeginRepair` / `Request_AdvanceRepair` /
+  `Request_ReleaseRepairedOctree` (`Octree/CkVoxelNav_Octree_Repair.h`) — the resumable repair, ECS-free
+  in the same way the voxelizer is. `Get_CellMortonsIntersectingBounds` is its dirty-box → cell math.
+- **The local-repair contract**, test-pinned in `Ck.VoxelNav.Occluder.Repair.*`: *occupancy is
+  re-probed only for cells whose inflated probe box intersects the dirty bounds — every other cell
+  keeps the occupancy the last bake or repair recorded for it, bit for bit; a repair never mutates the
+  octree it repairs, it assembles a whole new one and swaps it in; and structure is DERIVED from the
+  updated blocked-cell set by the bake's own stages, never patched in place.* A repair therefore lands
+  field-for-field where a full rebake of the moved scene would, for a fraction of the probes.
+
 ---
 
 ## Voxelization — the parts that look wrong until you know why
@@ -104,6 +132,15 @@ and plan paths through it at horde scale.
   asks the same structure the search planned through. `ICk_VoxelNav_GeometryBackend::Get_IsSegmentBlocked`
   answers "does PHYSICS block it" against the live world: exact shapes, finer than any cell, one
   narrowphase query each. Use it to validate a bake or for a tactical query, never to prune a path.
+- **A repair rebuilds the octree's STRUCTURE rather than editing it.** Node identity here is
+  `(layer, INDEX)`: parent, child and all six neighbour links store array positions, and every layer is
+  Morton-sorted because lookups binary-search it. Upstream's dynamic path swap-removed and appended
+  layer-0 nodes in place and never re-sorted layer 0, so the first obstacle movement invalidated every
+  link and every search in the octree. Deriving structure from the blocked-cell set makes that class of
+  corruption unrepresentable — at the cost of an O(existing nodes), probe-free pass per repair.
+- **A repair's leaf occupancy is REPLACED, never accumulated.** `FLeafNode::Set_SubNodes` exists for
+  exactly this: upstream's leaf writer was set-only, so an obstacle that vacated a still-occupied leaf
+  left its bits behind forever — a permanent occupied trail behind anything that moved.
 - **A volume over LANDSCAPE bakes as free space in a packaged build.** CkJolt extracts landscape
   heightfields only under `WITH_EDITOR`, so outside the editor there are no landscape bodies to
   find. The build ensures once when its whole-volume broadphase sweep returns zero bodies and then
@@ -134,9 +171,10 @@ preserved at `docs/campaigns/voxelnav-port/` until the port matures, then alongs
 
 ## Status
 
-The octree core, the geometry backend, budgeted voxelization, and pathfinding are implemented: a
-volume bakes an immutable Sparse Voxel Octree of its free space, answers point and segment queries
-against it, and an agent plans a refined route through it. Chunking, dynamic occluders, crowd
-consumption, and node merging are not implemented yet; the plan of record is
+The octree core, the geometry backend, budgeted voxelization, pathfinding, and dynamic occluders with
+local repair are implemented: a volume bakes an immutable Sparse Voxel Octree of its free space,
+answers point and segment queries against it, an agent plans a refined route through it, and a moving
+obstacle repairs only the cells it dirtied. Chunking, crowd consumption, and node merging are not
+implemented yet; the plan of record is
 `docs/campaigns/voxelnav-port/` (`PROMPT.md` for the mission and locked decisions, `PROGRESS.md`
 for live status).

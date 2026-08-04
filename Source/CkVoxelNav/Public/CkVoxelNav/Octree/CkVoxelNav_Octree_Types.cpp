@@ -304,6 +304,16 @@ namespace ck::voxelnav
 
     auto
         FLeafNode::
+        Set_SubNodes(
+            uint64 InSubNodes)
+        -> FLeafNode&
+    {
+        _SubNodes = InSubNodes;
+        return *this;
+    }
+
+    auto
+        FLeafNode::
         Set_Parent(
             FNodeAddress InParent)
         -> FLeafNode&

@@ -53,6 +53,7 @@ namespace ck
         FCk_Handle_VoxelNavVolume,
         ck::TReadOnly<FFragment_VoxelNavVolume_Params>,
         ck::TReadWrite<FFragment_VoxelNavVolume_BuildState>,
+        ck::TReadWrite<FFragment_VoxelNavVolume_RepairState>,
         ck::TReadWrite<FFragment_VoxelNavVolume_Requests>,
         TExclude<FTag_VoxelNavVolume_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -73,6 +74,7 @@ namespace ck
             HandleType InVolumeEntity,
             const FFragment_VoxelNavVolume_Params& InParams,
             FFragment_VoxelNavVolume_BuildState& InBuildState,
+            FFragment_VoxelNavVolume_RepairState& InRepairState,
             FFragment_VoxelNavVolume_Requests& InRequests) const -> void;
 
     private:
@@ -80,13 +82,22 @@ namespace ck
         DoHandleRequest(
             HandleType InVolumeEntity,
             FFragment_VoxelNavVolume_BuildState& InBuildState,
+            FFragment_VoxelNavVolume_RepairState& InRepairState,
             const FCk_Request_VoxelNavVolume_Build& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InVolumeEntity,
             FFragment_VoxelNavVolume_BuildState& InBuildState,
+            FFragment_VoxelNavVolume_RepairState& InRepairState,
             const FCk_Request_VoxelNavVolume_CancelBuild& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType InVolumeEntity,
+            FFragment_VoxelNavVolume_BuildState& InBuildState,
+            FFragment_VoxelNavVolume_RepairState& InRepairState,
+            const FCk_Request_VoxelNavVolume_MarkDirty& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -128,6 +139,7 @@ namespace ck
         FCk_Handle_VoxelNavVolume,
         ck::TReadOnly<FFragment_VoxelNavVolume_Params>,
         ck::TReadWrite<FFragment_VoxelNavVolume_BuildState>,
+        ck::TReadWrite<FFragment_VoxelNavVolume_RepairState>,
         ck::TReadWrite<FFragment_VoxelNavVolume_BuiltOctree>,
         FTag_VoxelNavVolume_BuildInProgress,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -148,6 +160,79 @@ namespace ck
             HandleType InVolumeEntity,
             const FFragment_VoxelNavVolume_Params& InParams,
             FFragment_VoxelNavVolume_BuildState& InBuildState,
+            FFragment_VoxelNavVolume_RepairState& InRepairState,
+            FFragment_VoxelNavVolume_BuiltOctree& InBuiltOctree) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Opens a local repair over the accumulated dirty region. Split from the repair slice for the same reason
+    // StartBuild is split from Build: resolving the geometry backend and seeding from the published octree
+    // are the steps that can fail, and they must fail before any repair state exists to half-fill.
+    //
+    // A repair NEVER runs while a full build does. A build re-rasterizes the whole volume from live geometry,
+    // so it already answers everything a pending repair was going to ask.
+    class CKVOXELNAV_API FProcessor_VoxelNavVolume_StartRepair : public ck_exp::TProcessor<
+        FProcessor_VoxelNavVolume_StartRepair,
+        FCk_Handle_VoxelNavVolume,
+        ck::TReadOnly<FFragment_VoxelNavVolume_Params>,
+        ck::TReadWrite<FFragment_VoxelNavVolume_RepairState>,
+        ck::TReadOnly<FFragment_VoxelNavVolume_BuiltOctree>,
+        FTag_VoxelNavVolume_NeedsRepair,
+        TExclude<FTag_VoxelNavVolume_NeedsBuild>,
+        TExclude<FTag_VoxelNavVolume_BuildInProgress>,
+        TExclude<FTag_VoxelNavVolume_RepairInProgress>,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_JoltWorld_WaitForAsync, FProcessor_VoxelNavVolume_Build>;
+        using RunBefore = TDepList<FProcessor_JoltWorld_Step>;
+        using MarkedDirtyBy = FTag_VoxelNavVolume_NeedsRepair;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_VoxelNavVolume_Params& InParams,
+            FFragment_VoxelNavVolume_RepairState& InRepairState,
+            const FFragment_VoxelNavVolume_BuiltOctree& InBuiltOctree) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // One budgeted slice of local repair per tick, per volume. Publishes the repaired octree and bumps the
+    // epoch on completion, which is the whole staleness mechanism - no path is ever walked or notified.
+    class CKVOXELNAV_API FProcessor_VoxelNavVolume_Repair : public ck_exp::TProcessor<
+        FProcessor_VoxelNavVolume_Repair,
+        FCk_Handle_VoxelNavVolume,
+        ck::TReadOnly<FFragment_VoxelNavVolume_Params>,
+        ck::TReadWrite<FFragment_VoxelNavVolume_RepairState>,
+        ck::TReadWrite<FFragment_VoxelNavVolume_BuiltOctree>,
+        FTag_VoxelNavVolume_RepairInProgress,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_JoltWorld_WaitForAsync, FProcessor_VoxelNavVolume_StartRepair>;
+        using RunBefore = TDepList<FProcessor_JoltWorld_Step>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            const FFragment_VoxelNavVolume_Params& InParams,
+            FFragment_VoxelNavVolume_RepairState& InRepairState,
             FFragment_VoxelNavVolume_BuiltOctree& InBuiltOctree) const -> void;
     };
 
@@ -161,6 +246,7 @@ namespace ck
         FCk_Handle_VoxelNavVolume,
         ck::TReadOnly<FFragment_VoxelNavVolume_Requests>,
         ck::TReadWrite<FFragment_VoxelNavVolume_BuildState>,
+        ck::TReadWrite<FFragment_VoxelNavVolume_RepairState>,
         CK_IF_END_PLAY>
     {
     public:
@@ -175,7 +261,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVolumeEntity,
             const FFragment_VoxelNavVolume_Requests& InRequests,
-            FFragment_VoxelNavVolume_BuildState& InBuildState) -> void;
+            FFragment_VoxelNavVolume_BuildState& InBuildState,
+            FFragment_VoxelNavVolume_RepairState& InRepairState) -> void;
     };
 }
 

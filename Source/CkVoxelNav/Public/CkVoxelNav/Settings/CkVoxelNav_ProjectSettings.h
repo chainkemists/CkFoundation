@@ -27,6 +27,16 @@ private:
             ToolTip = "Wall-clock GUARD on one volume's build slice, in milliseconds. 0 disables it. Checked between stages, so it bounds when a slice stops rather than how long one stage may run - keep the probe budget as the real limit."))
     float _MaxBuildMillisecondsPerTick = 4.0f;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Voxelization",
+        meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1,
+            ToolTip = "Occupancy probes one volume may spend per tick on a LOCAL repair. Separate from the bake budget because a repair runs during gameplay rather than at load, so what a frame can afford is a different question."))
+    int32 _MaxRepairProbesPerTick = 512;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Dynamic Occluders",
+        meta = (AllowPrivateAccess = true, ClampMin = 0.0, UIMin = 0.0,
+            ToolTip = "How far an occluder's world bounds must move before it dirties the volumes it overlaps. Sub-threshold drift is ignored: a repair that re-probes hundreds of cells to change no voxel is pure cost, and upstream's tick-time transform comparison used a float epsilon, so any jitter at all rebuilt."))
+    float _OccluderMovementThresholdUu = 10.0f;
+
     UPROPERTY(Config, EditDefaultsOnly, Category = "Pathfinding",
         meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1,
             ToolTip = "Cell expansions one path search may spend. The search runs to completion inside the tick that requested it, so this cap is the only thing bounding a pathological query - a search that reaches it reports IterationCapReached rather than a path."))
@@ -34,6 +44,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_MaxOccupancyProbesPerTick);
+    CK_PROPERTY_GET(_MaxRepairProbesPerTick);
+    CK_PROPERTY_GET(_OccluderMovementThresholdUu);
     CK_PROPERTY_GET(_MaxBuildMillisecondsPerTick);
     CK_PROPERTY_GET(_MaxPathSearchIterations);
 };
@@ -51,6 +63,12 @@ public:
 public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|VoxelNav|Settings")
     static int32 Get_MaxOccupancyProbesPerTick();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|VoxelNav|Settings")
+    static int32 Get_MaxRepairProbesPerTick();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|VoxelNav|Settings")
+    static float Get_OccluderMovementThresholdUu();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|VoxelNav|Settings")
     static float Get_MaxBuildMillisecondsPerTick();
