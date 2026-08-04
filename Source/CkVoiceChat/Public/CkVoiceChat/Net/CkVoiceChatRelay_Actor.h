@@ -16,7 +16,7 @@ class APlayerState;
 // is Unreliable BY CONTRACT and no Reliable RPC may ever be added to it: the fork's Iris stack
 // marks unicast RPCs Ordered, so a reliable attachment on the same object head-of-line-blocks
 // the voice stream. Bodies enqueue only; all validation and routing belongs to the Route
-// processor. Transport contract: the campaign PROMPT (S1-S5) + CkActorRelay/CLAUDE.md.
+// processor. Transport contract: CkActorRelay/CLAUDE.md (the paced-stream clause).
 UCLASS()
 class CKVOICECHAT_API ACk_VoiceChatRelay_UE : public ACk_ActorRelay_UE
 {

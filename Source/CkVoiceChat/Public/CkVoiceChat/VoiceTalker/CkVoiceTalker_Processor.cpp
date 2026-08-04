@@ -53,12 +53,12 @@ namespace ck_voice_talker_processor
     // Test-readable loopback PCM is bounded so long-running talkers don't grow it forever.
     constexpr auto MaxLoopbackDecodedBytes = 48000 * 2 * 2;   // 2 s at 48 kHz mono 16-bit
 
-    // Send-side freshness bound (campaign amendment S2): a frame older than this has already
+    // Send-side freshness bound: a frame older than this has already
     // blown the mouth-to-ear budget - dropping it beats delivering it late, and it keeps the
     // outbound queue bounded when no channel/relay is reachable yet.
     const auto MaxOutboundFrameAge = FCk_Time{0.15};
 
-    // Headroom under the 256 B server->client unreliable split threshold (amendment S3), leaving
+    // Headroom under the 256 B server->client unreliable split threshold, leaving
     // room for the RPC envelope (talker handle + array overhead) around the packed bundle.
     constexpr auto MaxPackedBundleBytes = 240;
 
