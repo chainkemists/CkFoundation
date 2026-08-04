@@ -137,6 +137,59 @@ testing/perf discipline for VFX work.
   and read the FULL editor log — `ck::Trace` is on-screen only, and the toolbox
   `--output` stream is curated, so neither shows them; `Saved/Logs/CkPlugins*.log` does).
 
+## Per-instance tuning (`User.CkTuning`) — the sanctioned knob layer
+
+Every template exposes a float4 (identity default) applied CENTRALLY in
+`CkParticles_ExecuteStage` + the CPU mirror — x → Size/Scale, y → Color.rgb, z → Color.a,
+w → Age/DeltaTime (playback; Niagara still retires at real lifetime). Behaviors never read it;
+corpus constants stay the defaults. Runtime: `UCkParticles_TuningDefinition` DataAsset +
+`Spawn_BehaviorAtLocation_Tuned` / `Request_ApplyTuning[Values]`. Each behavior owns a
+CONVENTION asset `/CkFoundation/CkParticles/Tuning/DA_CkParticles_Tuning_<Name>` auto-applied
+by the shared spawn path (explicit `_Tuned` overrides; absent = identity); the generator
+creates missing ones with identity values and NEVER overwrites — designer edits are user data.
+Gym: `Ck_GymVfxExamples_Tune` is a session overlay; `_TuneReset` restarts the pair to restore
+asset values. PER-PART tuning: each asset carries a generator-owned `_Parts` roster (one named
+row per renderer, keyed by VisTag — reconciled on regen, values never touched) applied
+centrally post-dispatch via DI per-instance data (`FCkParticles_PartTuningBlock`, GPU wrapper
++ CPU mirror lockstep). Row semantics live in CkParticles_PartTuning.h; VisTags between the
+shared set and the behavior's band map to NO row (both sides). A behavior needs no code to be
+part-tunable — but its parts are only as legible as its renderer specs' names.
+
+## Compile readiness — three traps, all measured 2026-08-03
+
+The first-activation editor freeze is activation blocking the GT on the SYSTEM/VM compile
+(`WaitForCompilationComplete`); a cold GPU compute shader compiles async AFTER activation
+(effect appears late, editor stays live). Consequences for any readiness check or prewarm:
+(1) never gate on `HasOutstandingCompilationRequests(bIncludingGPUShaders=true)` — a
+loaded-but-never-activated system's compute shader map is never even REQUESTED, so it reads
+unfinished forever with zero compile in flight (livelock); (2) a bare
+`HasOutstandingCompilationRequests()` can ALSO sit true forever at `NeedsRequestCompile`
+in contexts without the world-tick Niagara poll (automation editor): the check must DRIVE the
+work — call `PollForCompilationComplete()` when not ready, then re-ask (see
+`Get_IsBehaviorTemplateReady` / the PrewarmTemplates test); (3) a silent multi-minute compile
+stretch gets the editor KILLED by the toolbox idle watchdog — long latent waits must heartbeat
+via a Display-level stock category (`LogTemp`), not AddInfo (surfaces only at test end) or a
+module Trace (filtered from the stream). Post-regen ritual (2026-08-03, supersedes plain
+prewarm): STABILIZE, then verify — env `CK_PARTICLES_STABILIZE=1` + `--test --no-nullrhi
+--test-pattern PrewarmTemplates`, then the same lane once more WITHOUT the env var expecting
+`out-of-sync at load: 0` for CPU-sim systems. In-memory prewarm alone NEVER sticks:
+`UNiagaraSystem::PostLoad` re-checks compile-id sync on every load, load-time graph fixups
+desync any asset saved without them (builder output, imported packs, anything saved before a
+`.ush` hash change), and only a resave of the post-fixup ids + VM (what stabilize does)
+survives the session. Save only after the FULL emitter-side check would pass — VM readiness
+alone re-persists an asset whose GPU shader map is still compiling and it stays desynced.
+Residual: GPU-SIM systems still re-arm a lazy on-demand resolve each session (AsyncTasks-mode
+PostLoad cannot see the DDC-resident shader map) — ms-scale on warm DDC once ids are
+stabilized; CPU-sim systems go fully silent. The VfxExamples gym additionally defers a pair
+spawn behind a visible COMPILING line instead of blocking. Consequences for authors:
+NEVER bake a tuning-like multiplier into a behavior (that's what this layer is for), and any
+change to the ExecuteStage signature is a four-site lockstep edit (spec, template ush, VM
+binding, CPU mirror) + builder Map Get wiring + full template regen. Regen trap (2026-08-03):
+the toolbox regen lane's idle watchdog can false-kill the editor mid-regen — the builder's
+Trace lines don't reach the curated stream; a killed run leaves a MIXED-generation template set
+(tail templates stale). Verify EVERY template after regen: `grep -ac CkTuning <t>.uasset`
+non-zero, and re-run the lane if any is zero (idempotent; warm DDC makes the retry fast).
+
 ## VfxExamples gym (the A/B verification harness)
 
 - One pair EXISTS at a time — the active pair's two stations spawn at fixed spots;
