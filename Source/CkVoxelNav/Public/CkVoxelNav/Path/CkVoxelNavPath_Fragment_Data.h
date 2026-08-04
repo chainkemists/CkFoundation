@@ -99,10 +99,18 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _NodeSizeCompensation = ECk_EnableDisable::Disable;
 
+    /** The volume this agent plans through. Assign at Add() time (spawn code holds the volume handle) or
+     *  later via Request_SetVolume. Request_FindPath still takes its own volume, so this binding is for
+     *  consumers that plan repeatedly on the agent's behalf and have no volume of their own to pass. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_VoxelNavVolume _Volume;
+
 public:
     CK_PROPERTY(_AgentRadiusUu);
     CK_PROPERTY(_HeuristicScale);
     CK_PROPERTY(_NodeSizeCompensation);
+    CK_PROPERTY(_Volume);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VoxelNavPath_ParamsData, _AgentRadiusUu);

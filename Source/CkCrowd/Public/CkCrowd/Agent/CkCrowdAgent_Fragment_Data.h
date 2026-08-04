@@ -26,6 +26,7 @@ namespace ck
     class FProcessor_CrowdAgent_HandleRequests;
     class FProcessor_CrowdAgent_OnPathResolved;
     class FProcessor_CrowdAgent_OnRouteResolved;
+    class FProcessor_CrowdAgent_OnVoxelPathResolved;
     class FProcessor_CrowdAgent_NeighborSync;
     class FProcessor_CrowdAgent_Separation;
     class FProcessor_CrowdAgent_AccelClamp;
@@ -246,6 +247,7 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_PathFollowData
     friend class ck::FProcessor_CrowdAgent_HandleRequests;
     friend class ck::FProcessor_CrowdAgent_OnPathResolved;
     friend class ck::FProcessor_CrowdAgent_OnRouteResolved;
+    friend class ck::FProcessor_CrowdAgent_OnVoxelPathResolved;
     friend class ck::FProcessor_CrowdAgent_BlockedRecheck;
     friend class ck::FProcessor_CrowdAgent_PathRefresh;
     friend class ::UCk_Utils_CrowdAgent_UE;

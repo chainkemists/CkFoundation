@@ -36,6 +36,7 @@ public class CkCrowd : CkModuleRules
 
             "CkNavigation",
             "CkPathNetwork",   // follower agents route MoveTo through the path network (corridor → nav-path install seam)
+            "CkVoxelNav",      // volumetric agents route MoveTo through a baked volume (voxel path → nav-path install seam)
         });
     }
 }
