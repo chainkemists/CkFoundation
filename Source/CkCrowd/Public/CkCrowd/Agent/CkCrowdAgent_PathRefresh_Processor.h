@@ -34,6 +34,9 @@ namespace ck
     //
     // Server-only in effect: only the server paints discs, so the per-tick gather is empty on
     // clients and every agent early-outs.
+    //
+    // A flying agent is excluded: its route came from a volumetric provider, so no navmesh cost disc
+    // can invalidate it, and the re-path this processor issues would be planned against Recast.
     class CKCROWD_API FProcessor_CrowdAgent_PathRefresh : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_PathRefresh,
             FCk_Handle_CrowdAgent,
@@ -44,6 +47,7 @@ namespace ck
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_BlockDetect>,
             TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

@@ -12,26 +12,27 @@
 
 namespace ck
 {
-    // Turns the agent toward its desired-velocity heading at _MaxTurnRate. Facing is decoupled from
-    // travel direction, so the agent may briefly walk sideways through a sharp corner.
+    // The flying counterpart of FProcessor_CrowdAgent_FaceAngle: turns the agent toward its
+    // desired-velocity heading in yaw AND pitch, both at _MaxTurnRate. No roll — banking is a
+    // presentation choice that needs its own turn model, not a facing one.
     //
-    // Group FGroup_Transform_SyncFrom: after FGroup_Physics so steering/integrator state has settled,
-    // before FGroup_Transform so the rotation request drains in the same frame.
-    // PumpPolicy::SkipPump: the enqueued delta is a fixed value, so a DeltaT=0 pump would re-enqueue
-    // it and double the applied rotation.
+    // Requires FTag_CrowdAgent_Flying, which the yaw-only processor excludes, so exactly one of the
+    // two rotates any given agent. Group, pump policy and turn-rate constant are the yaw-only
+    // processor's verbatim — this differs in the axes it may turn about, and in writing the reached
+    // orientation absolutely rather than as a delta (see the body).
     //
-    // A flying agent is excluded and faced by FProcessor_CrowdAgent_FaceAngle3D instead: a climb or a
-    // dive is invisible to a yaw-only heading, and the two views partition the agent population so
-    // only one of them ever rotates a given agent.
-    class CKCROWD_API FProcessor_CrowdAgent_FaceAngle : public ck_exp::TProcessor<
-            FProcessor_CrowdAgent_FaceAngle,
+    // It is a rotation writer and never touches translation, so it does not compete with the single
+    // Transform-translation writer (ConstrainToNavmesh for a grounded agent, ApplyDisplacement3D for
+    // a flying one): the two enqueue different Transform requests.
+    class CKCROWD_API FProcessor_CrowdAgent_FaceAngle3D : public ck_exp::TProcessor<
+            FProcessor_CrowdAgent_FaceAngle3D,
             FCk_Handle_CrowdAgent,
+            FTag_CrowdAgent_Flying,
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadOnly<FFragment_CrowdAgent_DesiredVelocity>,
             ck::TReadWrite<FFragment_CrowdAgent_FaceAngle>,
             TExclude<FTag_CrowdAgent_Asleep>,
-            TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

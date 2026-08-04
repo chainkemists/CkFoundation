@@ -86,7 +86,10 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
                                          4 iterations — deliberately UNDER-RELAXED, so it does NOT
                                          guarantee zero interpenetration in a single frame);
                                          stages its shove into PendingDisplacement
-  FProcessor_CrowdAgent_ConstrainToNavmesh ← THE SINGLE TRANSFORM WRITER: walks the accumulated
+  FProcessor_CrowdAgent_ConstrainToNavmesh ← THE SINGLE TRANSFORM WRITER (grounded agents; a flying
+                                         one is excluded and drained by
+                                         FProcessor_CrowdAgent_ApplyDisplacement3D instead, which
+                                         enqueues the staged offset whole): walks the accumulated
                                          displacement along the navmesh surface
                                          (ANavigationData::FindMoveAlongSurface — dtCrowd's
                                          corridor movePosition, which the original port dropped)
@@ -196,7 +199,19 @@ FTag_CrowdAgent_PathPending       # FindPath / FindRoute in flight
 FTag_CrowdAgent_DebugOverride     # Debugger "took control" — gameplay must not issue its own MoveTo
 FTag_CrowdAgent_GoalBlocked       # Goal is unreachable; agent is Idle but still WANTS it (resumable)
 FTag_CrowdAgent_Asleep            # DEFINED AND EXCLUDED, BUT NOTHING EVER STAMPS IT (see below)
+FTag_CrowdAgent_Flying            # Free-space agent; opts out of every surface-bound / planar stage
 ```
+
+**`FTag_CrowdAgent_Flying`** is stamped by `Add` from `_AgentMode` and never changes afterwards. It
+partitions the agent population rather than disabling anything: `ConstrainToNavmesh`,
+`StationaryMarkup`, `PathRefresh`, `AvoidanceSample`, `Separation`, `PushApart` and `FaceAngle` all
+exclude it, and two Flying-gated processors take over the two jobs that still have to happen —
+`FProcessor_CrowdAgent_ApplyDisplacement3D` (the pending-displacement drain, enqueuing the full 3D
+offset) and `FProcessor_CrowdAgent_FaceAngle3D` (yaw + pitch). Steering, AccelClamp, VelocityBridge,
+the integrator and ApplyOffset are already dimension-agnostic and run unchanged. A flying agent gets
+**no avoidance and no de-overlap at all** — the sampler and both forces are planar by construction and
+a volumetric replacement is not built — and its path must come from a volumetric provider
+(`CkVoxelNav`); a Recast polyline is a floor-hugging route no flyer wants.
 
 **`FTag_CrowdAgent_Asleep` is dead weight.** Every steering-side processor carries
 `TExclude<FTag_CrowdAgent_Asleep>`, but no code path anywhere adds the tag — the SleepEvaluator that
@@ -243,6 +258,7 @@ to be here for `_Piercing*`, `_Sleep*`, `_Replan*`, `_MaxReplansPerPath` and `_P
 | `_SeparationInertia` | 0.5 | Lerp toward last frame's separation force; kills frame-to-frame flicker. Mirrors dtCrowd's `weightCurVel` concept (`DetourObstacleAvoidance.cpp:472`), applied as a force-blend factor because this solver does not sample-and-score separation; 0.5 approximates Detour's `wCurVel`/`wDesVel` = 0.375 ratio. |
 | `_MaxNeighborsForSteering` | 6 | Top-N cap (sorted by distance). |
 | `_CollisionFlags` / `_IgnoreFlags` | -1 / 0 | Present on the struct; **no processor currently reads them.** |
+| `_AgentMode` | `Grounded` | `Flying` makes `Add` stamp `FTag_CrowdAgent_Flying`. Read once, at Add — changing it later changes nothing. See the Tags section for what the tag partitions. |
 
 Avoidance-sampler tuning (velBias, penalty weights, sample density, trigger/stride) and
 stationary-markup tuning live in `UCk_Crowd_ProjectSettings_UE`
@@ -423,7 +439,7 @@ have.
 ## Anti-patterns
 
 - **Never write SceneNode position from a steering processor.** The pipeline is `Steering → DesiredVelocity → VelocityBridge → FFragment_Velocity_Current → EulerIntegrator → PendingDisplacement → ConstrainToNavmesh → SceneNode`. Skipping any step is a bug.
-- **Never write a crowd agent's Transform from anywhere but ConstrainToNavmesh.** A second writer bypasses the navmesh constraint and re-opens the through-the-wall bug. New displacement sources accumulate into `FFragment_CrowdAgent_PendingDisplacement` instead.
+- **Never write a crowd agent's Transform position from anywhere but the agent's one displacement drain** — `ConstrainToNavmesh` for a grounded agent, `ApplyDisplacement3D` for a flying one (the two views are disjoint on `FTag_CrowdAgent_Flying`, so it is still exactly one writer per agent). A second writer bypasses the navmesh constraint and re-opens the through-the-wall bug. New displacement sources accumulate into `FFragment_CrowdAgent_PendingDisplacement` instead. Rotation is a separate concern with its own single writer per agent (`FaceAngle` / `FaceAngle3D`) and does not compete with either.
 - **Never enqueue MoveTo from a client.** Server-authoritative. `Request_MoveTo` checks authority.
 - **Never bypass `_MaxNeighborsForSteering`.** It's the perf cliff — a careless "let me just look at all 30 neighbors" inside a custom processor will tank stress runs.
 - **Don't read `FFragment_Velocity_Current` to drive steering decisions.** Read `FFragment_CrowdAgent_DesiredVelocity` (the steering output) or compute fresh. The current velocity is a frame behind and includes the velocity clamp.

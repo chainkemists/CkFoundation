@@ -28,6 +28,9 @@ namespace ck
     // fully-plugged corridor still paths through rather than failing.
     //
     // Server-only: pathfinding is server-authoritative; client worlds skip painting.
+    //
+    // A flying agent is excluded: the disc is a Recast cost area, and a hovering flyer standing still
+    // in mid-air blocks nothing a walker paths through.
     class CKCROWD_API FProcessor_CrowdAgent_StationaryMarkup : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_StationaryMarkup,
             FCk_Handle_CrowdAgent,
@@ -35,6 +38,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_NavMarkup>,
             TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

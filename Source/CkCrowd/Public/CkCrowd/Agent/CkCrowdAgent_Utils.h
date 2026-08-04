@@ -70,6 +70,15 @@ public:
     Get_CurrentWaypointIndex(
         const FCk_Handle_CrowdAgent& InHandle);
 
+    // The face-angle processor's target pitch in DEGREES (the fragment stores radians). Stays 0 for a
+    // grounded agent: only the flying facing processor pitches toward the climb or dive.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Target Pitch (degrees)")
+    static float
+    Get_TargetPitchDegrees(
+        const FCk_Handle_CrowdAgent& InHandle);
+
     // The face-angle processor's target yaw in DEGREES (the fragment stores radians). The agent's
     // actual yaw — lerped toward this target at _MaxTurnRate — is on its Transform's SceneNode rotation.
     UFUNCTION(BlueprintPure,

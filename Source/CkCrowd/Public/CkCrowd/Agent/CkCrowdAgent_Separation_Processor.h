@@ -15,6 +15,9 @@ namespace ck
 {
     // A short-range reactive nudge, NOT the avoidance system — that is
     // FProcessor_CrowdAgent_AvoidanceSample. Only acts inside _SeparationRadius.
+    //
+    // A flying agent is excluded: the force is zeroed in Z by construction, so it would answer a
+    // vertical overlap with a horizontal shove.
     class CKCROWD_API FProcessor_CrowdAgent_Separation : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_Separation,
             FCk_Handle_CrowdAgent,
@@ -22,6 +25,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_SeparationForce>,
             TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
