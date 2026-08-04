@@ -28,19 +28,27 @@
 
 ### 0B — CkJolt occupancy primitive (route: opus)
 
-Add to CkJolt (NOT to CkVoxelNav — decision [C-D5]):
+Add to CkJolt (NOT to CkVoxelNav — decision [C-D5]). **Amended per [C-D10]/OQ-1: the consumer-facing
+surface must be JPH-free** (CkVoxelNav's hygiene gate forbids any `Jolt/` include), so 0B ships two
+layers:
 
-1. `ck::jolt::Get_IsBoxOccupied(const JPH::PhysicsSystem&, const FVector& InCenter,
-   const FVector& InHalfExtents, ...filters...) -> bool` — namespace-level (below the BPFL, like
-   `CkProbeTrace_Utils` internals): any-hit collector (`JPH::AnyHitCollisionCollector
-   <JPH::CollideShapeCollector>`), `NarrowPhaseQuery().CollideShape` with a `JPH::BoxShape`;
-   an overload accepting a caller-held `JPH::Ref<JPH::Shape>` for per-voxel-size reuse. No entity
-   attribution, no subsystem resolution — callable in a tight loop.
+1. Internal, namespace-level (JPH signatures fine — CkJolt-internal .cpp/.h under its existing
+   idioms): `ck::jolt::Get_IsBoxOccupied(const JPH::PhysicsSystem&, center, halfExtents, filters)
+   -> bool` — any-hit collector (`JPH::AnyHitCollisionCollector<JPH::CollideShapeCollector>`),
+   `NarrowPhaseQuery().CollideShape` with a `JPH::BoxShape`; overload taking a caller-held
+   `JPH::Ref<JPH::Shape>`. No entity attribution, no subsystem resolution. Plus
+   `ck::jolt::Get_BodiesInAABox(...)` — first in-tree use of `GetBroadPhaseQuery().CollideAABox`.
 2. `FCk_Jolt_StaticOccupancyFilter` (an `ObjectLayerFilter`: Domain == Static; ~15 lines mirroring
    `FCk_Jolt_DomainQueryFilter`) + a `JPH::BroadPhaseLayerFilter` accepting only
    `broadphase_layers::Static` (the existing wrappers pass accept-all; this is the cheap win).
-3. `ck::jolt::Get_BodiesInAABox(const JPH::PhysicsSystem&, const FBox&, filters, TArray<JPH::BodyID>&)`
-   — first in-tree use of `GetBroadPhaseQuery().CollideAABox` (currently unused anywhere).
+3. **Public JPH-free surface** (headers include NO Jolt): `FCk_Jolt_QuerySession` (TPimplPtr-backed
+   value type; constructed from a WorldContextObject or `UCk_Jolt_Subsystem`; resolves + holds the
+   PhysicsSystem weak ref and the static-domain filters once) and `FCk_Jolt_BoxProbe` (TPimplPtr;
+   holds a reusable per-voxel-size box shape). Methods: `Session.Get_IsBoxOccupied(Probe, Center)
+   -> bool`, `Session.Get_IsBoxOccupied(Center, HalfExtents) -> bool`,
+   `Session.Get_BodiesInAABox(FBox, TArray<uint64>& OutBodyIds)`. These are what CkVoxelNav's
+   backend impl calls. Document the game-thread contract on each ("off-thread only under a future
+   step-barrier contract — not yet provided").
 4. Update `Source/CkJolt/Claude.md` (query surface section) — same commit.
 
 Constraints: follow `CkJoltQuery_Utils.cpp` idioms exactly (Conv, filters, formatting); no behavior
@@ -58,7 +66,8 @@ Scaffold by mimicry from CkTimer (copy-rename its 14-file shape; see PROMPT.md l
 3. `CkVoxelNav_Module.{h,cpp}` (`IMPLEMENT_MODULE(FCkVoxelNavModule, CkVoxelNav)`).
 4. Minimal first feature under `Public/CkVoxelNav/Volume/`: `CkVoxelNavVolume_Fragment_Data.h`
    (`FCk_Handle_VoxelNavVolume` typesafe handle + `FCk_Fragment_VoxelNavVolume_ParamsData` with
-   `_VolumeBounds` (FBox) + `_VoxelExtent` (float)), `_Fragment.h/.cpp` (Params bridge alias +
+   `_VolumeBounds` (FBox) + `_FinestCellSizeUu` (float — the finest cell's EDGE length; renamed
+   from `_VoxelExtent` per [C-D12]/OQ-9)), `_Fragment.h/.cpp` (Params bridge alias +
    `FTag_VoxelNavVolume_NeedsBuild`), `_Processor.h/.cpp` (a `Setup` no-op processor,
    `CK_REGISTER_PROCESSOR` at top of .cpp), `_Utils.h/.cpp`
    (`UCk_Utils_VoxelNavVolume_UE : UCk_Utils_Ecs_Base_UE`, `Meta=(ScriptMixin=

@@ -27,10 +27,22 @@
   (`backup/detached-asset-exporter-20260803` = `fcf3da7bd`, unpushed local merge, not ours).
   Doc set authored (PROMPT, PHASE_0, VALIDATION, this file). Research record: 7 dossiers under
   `research/` (5 from the port sweep, 2 from the spatial-structure follow-up).
+- 2026-08-03: `research/phase1-port-map.md` (1,381 lines, Opus, orchestrator-reviewed) — full type
+  translation, function-level port map (PORT/PORT+FIX/SEAM/DROP per function), 14-stage resumable
+  voxelizer design, AStar adapter + volume entity designs. Found SIX verified upstream Nav3D bugs
+  (free-space Morton stuffed into 6-bit SubNodeIndex; backwards NavNodeRef unpack ctor; cube-vs-edge
+  bounds check in FindNeighbourInDirection; GetRandomPoint one-past-last layer index; 8x-duplicated
+  blocked-parent propagation; full-cube RasterizeLayer scan) — all fixed in the map. Behavior change
+  to expect at Phase 1 exit: occupancy decided by collision shapes (Jolt), not LOD0 render tris —
+  baked results differ from Nav3D by design.
 
 ## In-flight
 
-- Baseline toolbox build+test (must complete before 0A–0D Source/ edits land).
+- Baseline toolbox build+test (must complete before 0A–0D Source/ edits land). First launch failed:
+  this worktree's `CkAuto/UnrealToolbox.exe` (+LogViewer/crashpad) were unsmudged LFS pointers —
+  fixed via `git -C CkAuto lfs pull` (worktree-specific hazard, now healed); run relaunched.
+- Opus prep agent drafting `research/phase1-port-map.md` (read-only vs Source/; docs-only write —
+  safe during the build).
 
 ## Decisions
 
@@ -61,6 +73,22 @@
   (d) CkRaySense/CkOverlapBody Chaos→Jolt consolidation.
 - **[C-D9]** Phase 3 must audit Nav3D's dynamic-occlusion machinery before porting it — upstream
   issue #39 reports it broken in v2.0. Port the design, verify the behavior, don't trust the code.
+- **[C-D10]** (OQ-1, blocker) 0B's consumer surface must be JPH-free: CkJolt ships opaque
+  TPimplPtr-backed `FCk_Jolt_QuerySession` + `FCk_Jolt_BoxProbe` value types; the JPH-signature
+  functions stay CkJolt-internal. Rejected alternative: allowlisting CkVoxelNav for direct JPH
+  includes — would hollow out the Jolt-agnostic backend the maintainer explicitly asked for.
+  PHASE_0.md 0B amended.
+- **[C-D11]** (OQ-2) Voxel build processors: `FGroup_Transform`, `RunAfter
+  FProcessor_JoltWorld_WaitForAsync` + `RunBefore FProcessor_JoltWorld_Step` — the only window
+  provably outside the async step. Adjacent finding recorded as follow-up (e) under [C-D8]:
+  CkEqs queries Jolt from `FGroup_PostTransform`, i.e. after Step dispatches the async batch — a
+  latent async-mode exposure, NOT ours to fix in this campaign.
+- **[C-D12]** The port map's recommendations (research/phase1-port-map.md §6 OQ-3..OQ-10) are
+  adopted as written — incl. OQ-9 rename `_VoxelExtent`→`_FinestCellSizeUu` (PHASE_0 amended),
+  OQ-4 landscape fence (packaged builds have no Jolt landscape outside WITH_EDITOR → volumes over
+  landscape voxelize as free; ensure via `Get_NumStaticBodies` sanity signal + doc fence), drop of
+  the L1 overlap cache (hierarchy provides the pruning; Jolt any-hit replaces the triangle
+  narrowphase). Any implementation-time deviation needs a new decision entry.
 
 ## Blockers
 
