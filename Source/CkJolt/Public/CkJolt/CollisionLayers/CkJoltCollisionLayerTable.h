@@ -191,6 +191,38 @@ namespace ck::jolt
         ECk_Jolt_BodyDomain _Domain;
     };
 
+    /// Object filter for occupancy queries, fixed to the Static domain — baked level geometry AND
+    /// Static-motion-type JoltBodies. Both are immovable world obstacles, which is what an occupancy or
+    /// navigation bake wants. Fixed rather than parameterized (unlike FCk_Jolt_DomainQueryFilter) so a
+    /// per-cell query in a tight loop cannot be handed the wrong domain.
+    class CKJOLT_API FCk_Jolt_StaticOccupancyFilter final : public JPH::ObjectLayerFilter
+    {
+    public:
+        explicit FCk_Jolt_StaticOccupancyFilter(
+            const FCk_Jolt_CollisionLayerTable& InTable)
+            : _Table(InTable) {}
+
+        auto ShouldCollide(JPH::ObjectLayer inLayer) const -> bool override
+        {
+            return _Table.Get_Domain(inLayer) == ECk_Jolt_BodyDomain::Static;
+        }
+
+    private:
+        const FCk_Jolt_CollisionLayerTable& _Table;
+    };
+
+    /// Broadphase companion to FCk_Jolt_StaticOccupancyFilter: the dynamic tree is never descended at all.
+    /// The scene-query wrappers pass an accept-all JPH::BroadPhaseLayerFilter, which is the right default
+    /// for a handful of gameplay traces and the wrong one for grid-scale query counts.
+    class CKJOLT_API FCk_Jolt_StaticBroadPhaseQueryFilter final : public JPH::BroadPhaseLayerFilter
+    {
+    public:
+        auto ShouldCollide(JPH::BroadPhaseLayer inLayer) const -> bool override
+        {
+            return inLayer == broadphase_layers::Static;
+        }
+    };
+
     // ----------------------------------------------------------------------------------------------------------------
 
     /// Published into the ECS registry context alongside the PhysicsSystem. Non-const because body spawn is a
