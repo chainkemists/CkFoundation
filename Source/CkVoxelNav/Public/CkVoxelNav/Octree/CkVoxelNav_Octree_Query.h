@@ -181,13 +181,23 @@ namespace ck::voxelnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    /** The cell seam. Search-facing code asks the octree about a cell through these four and never
-     *  unpacks an FCellId itself, so a coarser cell representation can be introduced by extending the
-     *  kind dispatch here and nowhere else. */
+    /** The cell seam. Search-facing code asks the octree about a cell through these and never unpacks an
+     *  FCellId itself, so a coarser cell representation is introduced by extending the kind dispatch here
+     *  and nowhere else.
+     *
+     *  When the octree carries a merged table, MERGED cells are the currency: an endpoint resolves to one,
+     *  neighbour enumeration hands them back for octree-node cells too, and a route is a chain of them.
+     *  Node cells stay addressable throughout - a portal address baked before merging still answers for its
+     *  centre and extent - but nothing a search walks addresses one. */
     CKVOXELNAV_API auto
     Get_CellCenter(
         const FOctree& InOctree,
         const FCellId& InCell) -> FVector;
+
+    CKVOXELNAV_API auto
+    Get_CellBounds(
+        const FOctree& InOctree,
+        const FCellId& InCell) -> FBox;
 
     CKVOXELNAV_API auto
     Get_CellExtent(
@@ -204,6 +214,31 @@ namespace ck::voxelnav
         const FOctree& InOctree,
         const FCellId& InCell,
         TArray<FCellId>& OutNeighbors) -> void;
+
+    /** Resolves a world position to the cell a search should stand in - the merged cell when the octree
+     *  carries a merged table, the octree-node cell otherwise. An invalid cell means the position resolves
+     *  to no free cell at all, which is what an out-of-bounds or unbaked endpoint answers. */
+    CKVOXELNAV_API auto
+    TryGet_CellAtPosition(
+        const FOctree& InOctree,
+        FVolumeId InVolume,
+        const FVector& InPosition,
+        LayerIndex InMinLayerIndex) -> FCellId;
+
+    /** The points a route has to pass through between two consecutive cells, appended in order.
+     *
+     *  Two adjacent OCTREE cells need none: the segment between their centres provably stays inside their
+     *  union, because a finer cell on a coarser cell's face lies within that face's span and the lateral
+     *  drift from the finer cell's centre to the shared plane is therefore less than its own half-extent.
+     *  Two MERGED boxes carry no such property - they can share a small patch of a large face - so the
+     *  centre of the shared face is emitted, and the route becomes centre -> face -> centre, each leg
+     *  inside one convex box. */
+    CKVOXELNAV_API auto
+    Get_CellTransitionPoints(
+        const FOctree& InOctree,
+        const FCellId& InFrom,
+        const FCellId& InTo,
+        TArray<FVector>& OutPoints) -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

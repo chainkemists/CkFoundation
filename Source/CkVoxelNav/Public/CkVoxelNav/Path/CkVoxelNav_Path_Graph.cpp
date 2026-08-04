@@ -12,24 +12,6 @@ namespace ck_voxelnav_path_graph
 {
     // Six faces, and a face abutting a subdivided neighbour contributes up to sixteen leaf sub-nodes.
     constexpr auto TypicalNeighborCount = 24;
-
-    auto
-        TryGet_FreeCellAtPosition(
-            const ck::voxelnav::FOctree& InOctree,
-            const FVector& InPosition,
-            ck::voxelnav::LayerIndex InMinLayerIndex,
-            ck::voxelnav::FVolumeId InVolume)
-        -> ck::voxelnav::FCellId
-    {
-        // Snaps a position buried in geometry to the nearest free cell of its leaf, and falls back to a
-        // whole-octree nearest-free scan - which is exactly what resolving a path endpoint wants.
-        const auto Lookup = TryGet_NodeAddressFromPosition(InOctree, InPosition, InMinLayerIndex);
-
-        if (Lookup._Outcome != ECk_VoxelNav_AddressLookup::Found)
-        { return {}; }
-
-        return ck::voxelnav::FCellId::Make_FromNodeAddress(InVolume, Lookup._Address);
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -183,8 +165,6 @@ namespace ck::voxelnav
             const FPathSearchParams& InParams)
         -> FPathPlan
     {
-        using namespace ck_voxelnav_path_graph;
-
         QUICK_SCOPE_CYCLE_COUNTER(VoxelNav_Search_PathGraph);
 
         auto Plan = FPathPlan{};
@@ -210,8 +190,8 @@ namespace ck::voxelnav
 
         const auto MinLayerIndex = Get_MinLayerIndexForAgentRadius(InOctree, InParams._AgentRadiusUu);
 
-        const auto StartCell = TryGet_FreeCellAtPosition(InOctree, InParams._From, MinLayerIndex, InVolume);
-        const auto GoalCell = TryGet_FreeCellAtPosition(InOctree, InParams._To, MinLayerIndex, InVolume);
+        const auto StartCell = TryGet_CellAtPosition(InOctree, InVolume, InParams._From, MinLayerIndex);
+        const auto GoalCell = TryGet_CellAtPosition(InOctree, InVolume, InParams._To, MinLayerIndex);
 
         if (NOT StartCell.Get_IsValid() || NOT GoalCell.Get_IsValid())
         {
@@ -265,8 +245,16 @@ namespace ck::voxelnav
 
         Plan._Waypoints.Emplace(InParams._From);
 
-        for (const auto& Cell : Plan._Cells)
-        { Plan._Waypoints.Emplace(Get_CellCenter(InOctree, Cell)); }
+        for (auto CellIdx = 0; CellIdx < Plan._Cells.Num(); ++CellIdx)
+        {
+            if (CellIdx > 0)
+            {
+                Get_CellTransitionPoints(
+                    InOctree, Plan._Cells[CellIdx - 1], Plan._Cells[CellIdx], Plan._Waypoints);
+            }
+
+            Plan._Waypoints.Emplace(Get_CellCenter(InOctree, Plan._Cells[CellIdx]));
+        }
 
         Plan._Waypoints.Emplace(InParams._To);
 

@@ -79,6 +79,40 @@ and plan paths through it at horde scale.
   pinned). `FPathGraph` holds a RAW pointer to the octree and is valid for exactly one synchronous
   search inside one tick; its caller holds the `TSharedPtr` that keeps the structure whole.
 
+### Node merging (the cell representation search actually walks)
+
+- **A bake ends by coalescing its free cells into merged boxes** (`Octree/CkVoxelNav_Octree_Merge.h`),
+  and `FOctree::Get_MergedCells()` is where they live. The octree itself is IDENTICAL either way — the
+  merge pass reads it and writes a table beside it. The project setting `_CellMerging` (default **Enable**)
+  and `FBuildParams::_CellMerging` / `FRepairParams::_CellMerging` are the switch; a repair MUST be given
+  the same value the bake was, or the volume republishes in a different representation than the paths
+  planned against it.
+- **The algorithm is greedy box growing over the finest-cell lattice.** Cells are visited in ascending
+  lattice order and each unclaimed one seeds a box that grows along +X, then +Y, then +Z; a growth step
+  absorbs a slab only when unclaimed cells of ONE size tile it exactly, so a merged box is always a union
+  of WHOLE cells and the cell → merged lookup is total. Face adjacency is read off the octree's own
+  neighbour walk, so the merged graph inherits the plain graph's correctness rather than restating it.
+- **Merging is what the cell seam exists for.** With a table present, `Get_Cell*` answer in
+  merged cells — including for a node cell's neighbours, so a node address stays a usable ENTRY POINT into
+  the merged graph. Search, cost and neighbour enumeration are untouched; `Search_PathGraph` resolves its
+  endpoints through `TryGet_CellAtPosition` and never learns which representation it got.
+- **Two merged boxes get a TRANSITION POINT between them, two octree cells do not.** Between adjacent
+  octree cells the segment joining their centres provably stays inside their union; two merged boxes can
+  share a small patch of a large face, so `Get_CellTransitionPoints` emits the shared face's centre and the
+  route becomes centre → face → centre, each leg inside one convex box. That is why a merged route's
+  waypoint count is not `cells + 2`.
+- **A repair re-merges only the dirty neighbourhood.** Merged boxes clear of the (clearance-expanded) dirty
+  bounds are carried over bit for bit; only boxes the obstacle reached are derived again. The carry-over is
+  keyed on lattice GEOMETRY, not on packed addresses: a repair rebuilds the node arrays, so node indices
+  move even where nothing changed.
+- **Clearance guarantees are per-CELL, not per-transition.** `Get_CellExtent` of a merged box is its
+  smallest half-extent, and the agent-radius filter uses that — but two boxes that both pass the filter may
+  meet over a face smaller than the agent. Bake `_ClearanceUu` at the agent's radius (the intended
+  mechanism) and the question does not arise, because then every free cell already fits the agent.
+- **The merge pass is unbudgeted and runs in the slice that finishes the bake.** It spends no probe and
+  cannot resume, so it is not a stage. It IS a real spike at scale — measured 45 ms on a 6400uu/50uu scene
+  — and `FCk_VoxelNav_BuildStats::Get_MergeSeconds()` is what says whether that ever needs budgeting.
+
 ### Chunked volumes
 
 - **Partitioning is decided at composition, not in a processor.** `Add` computes
@@ -254,7 +288,9 @@ obstacle repairs only the cells it dirtied, and a volume too large for one bake 
 route between each other across a baked adjacency. Crowd consumption is implemented too: a crowd agent
 bound to a volume plans through it, receives its polyline through the provider-agnostic nav-path seam,
 replans itself when a repair invalidates its route, and — when composed as a flying agent — follows it
-in three dimensions. Cross-VOLUME routing, 3D crowd avoidance, and node merging are not implemented
-yet; the plan of record is
+in three dimensions. Node merging is implemented and on by default: a bake coalesces its free cells into
+merged boxes behind the cell seam, and a search expands those instead (measured 537 → 12 cells on the
+1600uu fixture and 91,752 → 359 on a 6400uu scene, with the long search falling from 68 ms to 0.05 ms).
+Cross-VOLUME routing and 3D crowd avoidance are not implemented yet; the plan of record is
 `docs/campaigns/voxelnav-port/` (`PROMPT.md` for the mission and locked decisions, `PROGRESS.md`
 for live status).

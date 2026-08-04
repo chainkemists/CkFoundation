@@ -54,6 +54,7 @@ namespace ck_voxelnav_volume_processor
         BuildParams._VolumeBounds = InParams.Get_VolumeBounds();
         BuildParams._FinestCellSizeUu = InParams.Get_FinestCellSizeUu();
         BuildParams._ClearanceUu = InParams.Get_ClearanceUu();
+        BuildParams._CellMerging = UCk_Utils_VoxelNav_Settings_UE::Get_CellMerging();
 
         return BuildParams;
     }
@@ -89,6 +90,7 @@ namespace ck_voxelnav_volume_processor
         RepairParams._FinestCellSizeUu = InParams.Get_FinestCellSizeUu();
         RepairParams._ClearanceUu = InParams.Get_ClearanceUu();
         RepairParams._DirtyBounds = InDirtyBounds;
+        RepairParams._CellMerging = UCk_Utils_VoxelNav_Settings_UE::Get_CellMerging();
 
         return RepairParams;
     }
