@@ -702,6 +702,22 @@ namespace ck
             { Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent); }
         }
 
+        // Remote amplitude parity, release half: the header mirror only ever WRITES on arrival,
+        // so a sender whose VAD closed leaves the last (loud) value frozen - unlike the local
+        // side, whose capture keeps measuring ambient RMS. Once the stream has been idle past
+        // the sender's own stale-drop age, the spurt is over: release to zero. The arrival-clock
+        // guard keeps this off capture-loopback talkers (they never receive).
+        if (NOT BundlesCopy.IsEmpty())
+        {
+            InCurrent._LastBundleArrivalClock = InCurrent._ReceiveClock;
+        }
+        else if (InCurrent._LastBundleArrivalClock > FCk_Time{0.0} &&
+                 InCurrent._AmplitudeQ8 > 0 &&
+                 InCurrent._ReceiveClock - InCurrent._LastBundleArrivalClock > MaxOutboundFrameAge)
+        {
+            InCurrent._AmplitudeQ8 = 0;
+        }
+
         if (NOT BundlesCopy.IsEmpty())
         {
             TryCreate_PlaybackSynth(InVoiceTalkerEntity, InCurrent);

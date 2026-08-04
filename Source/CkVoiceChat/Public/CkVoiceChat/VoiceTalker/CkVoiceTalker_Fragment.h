@@ -122,6 +122,10 @@ namespace ck
         // evaluation, and whenever the config channel is not HybridRadio.
         TOptional<bool> _HybridRenderNear;
 
+        // Zero until this machine receives its first forwarded bundle - the guard that keeps the
+        // remote amplitude release from ever touching a capture-loopback talker's amplitude.
+        FCk_Time _LastBundleArrivalClock;
+
         FCk_Time _ReceiveClock;
 
     public:
