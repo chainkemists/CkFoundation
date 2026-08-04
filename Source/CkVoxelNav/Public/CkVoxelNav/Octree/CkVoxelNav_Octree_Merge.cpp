@@ -404,6 +404,46 @@ namespace ck::voxelnav
     }
 
     auto
+        Get_OccupiedCells(
+            const FOctree& InOctree,
+            TArray<FNodeAddress>& OutCells)
+        -> void
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(VoxelNav_Get_OccupiedCells);
+
+        if (NOT InOctree.Get_IsValid() || InOctree.Get_LayerCount() == 0)
+        { return; }
+
+        const auto& LayerZero = InOctree.Get_Layer(0);
+        const auto& Leaves = InOctree.Get_LeafNodes().Get_LeafNodes();
+        const auto LeafStoreMatchesLayer = LayerZero.Get_NodeCount() == Leaves.Num();
+
+        CK_ENSURE_IF_NOT(LeafStoreMatchesLayer,
+            TEXT("VoxelNav layer-zero has [{}] nodes but its leaf store has [{}] entries; occupied debug cells are unavailable"),
+            LayerZero.Get_NodeCount(), Leaves.Num())
+        {}
+
+        if (NOT LeafStoreMatchesLayer)
+        { return; }
+
+        for (auto LeafIndex = 0; LeafIndex < Leaves.Num(); ++LeafIndex)
+        {
+            const auto& Leaf = Leaves[LeafIndex];
+
+            if (Leaf.Get_IsFullyFree())
+            { continue; }
+
+            for (auto SubNode = 0; SubNode <= FNodeAddress::MaxSubNodeIndex; ++SubNode)
+            {
+                const auto SubNodeId = static_cast<SubNodeIndex>(SubNode);
+
+                if (Leaf.Get_IsSubNodeOccluded(SubNodeId))
+                { OutCells.Emplace(FNodeAddress::Make(0, LeafIndex, SubNodeId)); }
+            }
+        }
+    }
+
+    auto
         Get_NodeBoundsFromAddress(
             const FOctree& InOctree,
             const FNodeAddress& InAddress)

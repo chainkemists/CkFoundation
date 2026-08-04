@@ -4,16 +4,88 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkVoxelNav/Chunk/CkVoxelNav_Chunk_Search.h"
 #include "CkVoxelNav/CkVoxelNav_Log.h"
 #include "CkVoxelNav/Octree/CkVoxelNav_Octree_Query.h"
 #include "CkVoxelNav/Settings/CkVoxelNav_ProjectSettings.h"
 
+#include <Engine/World.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_voxelnav_volume_utils
 {
+    auto
+        Get_DebugStateFingerprint(
+            ECk_VoxelNav_BuildStage InBuildStage,
+            ECk_VoxelNav_RepairStage InRepairStage,
+            const FBox& InDirtyBounds)
+        -> uint64
+    {
+        auto Hash = HashCombineFast(GetTypeHash(static_cast<uint8>(InBuildStage)),
+            GetTypeHash(static_cast<uint8>(InRepairStage)));
+
+        if (InDirtyBounds.IsValid != 0)
+        {
+            Hash = HashCombineFast(Hash, GetTypeHash(InDirtyBounds.Min));
+            Hash = HashCombineFast(Hash, GetTypeHash(InDirtyBounds.Max));
+        }
+
+        return static_cast<uint64>(Hash);
+    }
+
+    auto
+        Get_DebugStatus(
+            bool InIsBuilt,
+            ECk_VoxelNav_BuildStage InBuildStage,
+            ECk_VoxelNav_RepairStage InRepairStage)
+        -> ck::voxelnav::EDebugSnapshotStatus
+    {
+        using namespace ck::voxelnav;
+
+        if (InBuildStage == ECk_VoxelNav_BuildStage::Failed ||
+            InRepairStage == ECk_VoxelNav_RepairStage::Failed)
+        { return EDebugSnapshotStatus::Failed; }
+
+        const auto BuildIsWorking =
+            InBuildStage != ECk_VoxelNav_BuildStage::NotStarted &&
+            InBuildStage != ECk_VoxelNav_BuildStage::Complete;
+
+        const auto RepairIsWorking =
+            InRepairStage != ECk_VoxelNav_RepairStage::NotStarted &&
+            InRepairStage != ECk_VoxelNav_RepairStage::Complete &&
+            InRepairStage != ECk_VoxelNav_RepairStage::Failed;
+
+        if (BuildIsWorking || RepairIsWorking || NOT InIsBuilt)
+        { return EDebugSnapshotStatus::Building; }
+
+        return EDebugSnapshotStatus::Current;
+    }
+
+    auto
+        Get_DebugStatusMessage(
+            const ck::voxelnav::FDebugSnapshot& InSnapshot)
+        -> FString
+    {
+        using namespace ck::voxelnav;
+
+        if (InSnapshot._Status == EDebugSnapshotStatus::Failed && InSnapshot._IsBuilt)
+        { return TEXT("Latest operation failed; showing the last published navigation epoch."); }
+
+        if (InSnapshot._Status == EDebugSnapshotStatus::Failed)
+        { return TEXT("VoxelNav has no published navigation because its latest operation failed."); }
+
+        if (InSnapshot._Status == EDebugSnapshotStatus::Building && InSnapshot._IsBuilt)
+        { return TEXT("VoxelNav is rebuilding or repairing; showing the last published navigation epoch."); }
+
+        if (InSnapshot._Status == EDebugSnapshotStatus::Building)
+        { return TEXT("VoxelNav is building and has not published navigation yet."); }
+
+        return TEXT("Live VoxelNav navigation is current.");
+    }
+
     auto
         Make_PartitionParams(
             const FCk_Fragment_VoxelNavVolume_ParamsData& InParams)
@@ -503,6 +575,175 @@ auto
     -> int32
 {
     return Get_ChunkAdjacency(InVolume).Get_PortalCount();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoxelNavVolume_UE::
+    TryBuild_DebugSnapshot(
+        const FCk_Handle_VoxelNavVolume& InVolume,
+        const ck::voxelnav::FDebugSnapshotBuildParams& InParams,
+        ck::voxelnav::FDebugSnapshot& OutSnapshot)
+    -> bool
+{
+    using namespace ck_voxelnav_volume_utils;
+    using namespace ck::voxelnav;
+
+    auto Snapshot = FDebugSnapshot{};
+
+    if (ck::Is_NOT_Valid(InVolume))
+    {
+        OutSnapshot = MoveTemp(Snapshot);
+        return false;
+    }
+
+    const auto VolumeIsUsable =
+        InVolume.Has<ck::FFragment_VoxelNavVolume_Params>() &&
+        InVolume.Has<ck::FFragment_VoxelNavVolume_BuildState>() &&
+        InVolume.Has<ck::FFragment_VoxelNavVolume_RepairState>() &&
+        InVolume.Has<ck::FFragment_VoxelNavVolume_BuiltOctree>();
+
+    CK_ENSURE_IF_NOT(VolumeIsUsable,
+        TEXT("Cannot build a VoxelNav debug snapshot from incomplete Volume [{}]"), InVolume)
+    {}
+
+    if (NOT VolumeIsUsable)
+    {
+        OutSnapshot = MoveTemp(Snapshot);
+        return false;
+    }
+
+    const auto& BuiltOctree = InVolume.Get<ck::FFragment_VoxelNavVolume_BuiltOctree>();
+    const auto& RepairState = InVolume.Get<ck::FFragment_VoxelNavVolume_RepairState>();
+
+    Snapshot._Source = EDebugSnapshotSource::LivePie;
+    Snapshot._SourceIdentity = FString::Printf(TEXT("VoxelNavVolume:%u"), BuiltOctree.Get_VolumeId().Get_Value());
+    Snapshot._SourceEpoch = BuiltOctree.Get_Epoch();
+    Snapshot._AuthoredBounds = InVolume.Get<ck::FFragment_VoxelNavVolume_Params>().Get_VolumeBounds();
+    Snapshot._BuildStage = Get_BuildStage(InVolume);
+    Snapshot._RepairStage = Get_RepairStage(InVolume);
+    Snapshot._BuildStats = Get_BuildStats(InVolume);
+    Snapshot._RepairStats = Get_RepairStats(InVolume);
+    Snapshot._BuildProgress = Get_BuildProgress(InVolume);
+    Snapshot._IsBuilt = Get_IsBuilt(InVolume);
+    Snapshot._IsPartitioned = Get_IsPartitioned(InVolume);
+    Snapshot._Status = Get_DebugStatus(Snapshot._IsBuilt, Snapshot._BuildStage, Snapshot._RepairStage);
+
+    const auto DirtyBounds = RepairState.Get_PendingDirtyBounds();
+    Snapshot._SourceFingerprint = Get_DebugStateFingerprint(
+        Snapshot._BuildStage, Snapshot._RepairStage, DirtyBounds);
+
+    const auto RepairIsWorking =
+        Snapshot._RepairStage != ECk_VoxelNav_RepairStage::NotStarted &&
+        Snapshot._RepairStage != ECk_VoxelNav_RepairStage::Complete &&
+        Snapshot._RepairStage != ECk_VoxelNav_RepairStage::Failed;
+
+    if (RepairIsWorking)
+    { Snapshot._ActiveDirtyBounds = DirtyBounds; }
+    else
+    { Snapshot._PendingDirtyBounds = DirtyBounds; }
+
+    Snapshot._StatusMessage = Get_DebugStatusMessage(Snapshot);
+
+    if (Snapshot._IsPartitioned)
+    {
+        const auto Inputs = Get_ChunkSearchInputs(InVolume);
+        const auto& ChunkHandles = InVolume.Get<ck::FFragment_VoxelNavVolume_Chunks>().Get_Chunks();
+
+        Snapshot._Chunks.Reserve(Inputs.Num());
+
+        for (auto ChunkIndex = 0; ChunkIndex < Inputs.Num(); ++ChunkIndex)
+        {
+            const auto& Input = Inputs[ChunkIndex];
+            const auto ChunkIsValid = ChunkHandles.IsValidIndex(ChunkIndex) && ck::IsValid(ChunkHandles[ChunkIndex]);
+
+            auto ChunkSnapshot = FDebugSnapshotChunk{};
+            ChunkSnapshot._Bounds = Input._Bounds;
+            ChunkSnapshot._ChunkIndex = ChunkIndex;
+
+            if (ChunkIsValid)
+            {
+                ChunkSnapshot._Epoch = Get_BuildEpoch(ChunkHandles[ChunkIndex]);
+                ChunkSnapshot._BuildStage = Get_BuildStage(ChunkHandles[ChunkIndex]);
+                ChunkSnapshot._IsBuilt = Get_IsBuilt(ChunkHandles[ChunkIndex]);
+            }
+
+            Snapshot._Chunks.Emplace(MoveTemp(ChunkSnapshot));
+
+            if (Input._Octree.IsValid())
+            { Append_OctreeDebugSnapshot(*Input._Octree, ChunkIndex, InParams, Snapshot); }
+        }
+
+        const auto& Adjacency = Get_ChunkAdjacency(InVolume);
+
+        for (auto FromChunkIndex = 0; FromChunkIndex < Inputs.Num(); ++FromChunkIndex)
+        {
+            for (const auto ToChunkIndex : Adjacency.Get_NeighborIndices(FromChunkIndex))
+            {
+                if (ToChunkIndex <= FromChunkIndex || NOT Inputs.IsValidIndex(ToChunkIndex))
+                { continue; }
+
+                for (const auto& Portal : Adjacency.Get_Portals(FromChunkIndex, ToChunkIndex))
+                {
+                    if (NOT Inputs[FromChunkIndex]._Octree.IsValid() || NOT Inputs[ToChunkIndex]._Octree.IsValid())
+                    { continue; }
+
+                    const auto FromBounds = Get_NodeBoundsFromAddress(
+                        *Inputs[FromChunkIndex]._Octree, Portal.Get_FromCellAddress());
+                    const auto ToBounds = Get_NodeBoundsFromAddress(
+                        *Inputs[ToChunkIndex]._Octree, Portal.Get_ToCellAddress());
+
+                    if (FromBounds.IsValid == 0 || ToBounds.IsValid == 0)
+                    { continue; }
+
+                    Snapshot._Portals.Emplace(FDebugSnapshotPortal{
+                        FromBounds.GetCenter(), ToBounds.GetCenter(), Portal._ConnectionPoint,
+                        FromChunkIndex, ToChunkIndex});
+                }
+            }
+        }
+    }
+    else if (BuiltOctree.Get_Octree().IsValid())
+    {
+        Append_OctreeDebugSnapshot(*BuiltOctree.Get_Octree(), INDEX_NONE, InParams, Snapshot);
+    }
+
+    OutSnapshot = MoveTemp(Snapshot);
+    return true;
+}
+
+auto
+    UCk_Utils_VoxelNavVolume_UE::
+    TryBuild_DebugSnapshotsForWorld(
+        const UObject* InWorldContextObject,
+        const ck::voxelnav::FDebugSnapshotBuildParams& InParams,
+        TArray<ck::voxelnav::FDebugSnapshot>& OutSnapshots)
+    -> bool
+{
+    OutSnapshots.Reset();
+
+    auto* World = InWorldContextObject != nullptr ? InWorldContextObject->GetWorld() : nullptr;
+    auto* Subsystem = World != nullptr ? World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>() : nullptr;
+    if (Subsystem == nullptr)
+    { return false; }
+
+    const auto TransientEntity = Subsystem->Get_TransientEntity();
+    const auto TransientEntityIsValid = ck::IsValid(TransientEntity);
+    if (NOT TransientEntityIsValid)
+    { return false; }
+
+    auto Registry = Subsystem->Get_Registry();
+    Registry.View<ck::FFragment_VoxelNavVolume_Params>().ForEach(
+        [&](FCk_Entity InEntity, const ck::FFragment_VoxelNavVolume_Params&)
+        {
+            auto Volume = ck::StaticCast<FCk_Handle_VoxelNavVolume>(ck::MakeHandle(InEntity, TransientEntity));
+            auto Snapshot = ck::voxelnav::FDebugSnapshot{};
+            if (TryBuild_DebugSnapshot(Volume, InParams, Snapshot))
+            { OutSnapshots.Emplace(MoveTemp(Snapshot)); }
+        });
+
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

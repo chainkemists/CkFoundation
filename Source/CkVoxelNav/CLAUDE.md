@@ -253,6 +253,25 @@ and plan paths through it at horde scale.
 
 ---
 
+## Debug snapshots
+
+- **Debugger clients consume bounded VALUES, never the live octree.**
+  `CkVoxelNav/Debug/CkVoxelNav_DebugSnapshot.h` is the ownership boundary: snapshots may contain
+  boxes, counts, ids, epochs, build/repair metadata, and explicit source status, but never an
+  `FCk_Handle`, UObject/UWorld pointer, JPH type, or `TSharedPtr<const FOctree>`. This makes retained
+  PIE data safe after its world is torn down and lets editor and runtime sources share one renderer.
+- **Merged free cells are the default truth shown to users.** They are the graph pathfinding actually
+  searches. Raw free and occupied layer-0 cells are opt-in diagnostic layers and must remain bounded
+  by a deterministic cap, octree-depth filter, and optional clip box.
+- **Cache identity is checked before enumeration.** Use `TryGet_SnapshotForKey` before walking an
+  octree, then publish a whole replacement snapshot. Source identity/epoch/fingerprint plus the
+  requested layer/filter budget form the key; a cache hit must not rebuild cell arrays.
+- **Failure is a status, never an empty Current scene.** Missing/stale cook, active build, failed
+  build/repair, and runtime-only authoring are represented explicitly. Publication is atomic, so a
+  reader never observes metadata from one generation with cells from another.
+
+---
+
 ## Anti-patterns
 
 1. **Never include a JPH header here.** The geometry backend talks to CkJolt's opaque,
