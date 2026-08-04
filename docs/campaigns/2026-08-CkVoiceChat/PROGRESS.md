@@ -39,6 +39,31 @@ not pushed by the campaign sessions.
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-04 — P4 opened (Gate_4.md); item 1 landed (CkResourceLoader resolution); host runbook
+- **Gate_4.md committed** (b95e4eae1 + survey correction f75828ed8): scope grounded in code, not
+  the spec — HybridRadio currently routes like Global2D; `Get_Attenuation`/`Get_SourceEffectChain`
+  had zero consumers; **playback today is entirely non-spatialized** (bare synth, no attach, no
+  attenuation), so item 2 lands spatialized playback itself. Decision recorded: one synth per
+  talker per machine adopts the highest-`_Priority` delivering channel's audio config.
+- **Entry blocker cleared:** CkTests `35fcde38` + merge of `e5bb948b` → `feature/voice-chat-wip`
+  is 0 behind / 28 ahead of origin/dev and AS-compiles standalone.
+- **Item 1 (CkF `c4e923a65`):** channel Setup resolves the ADR-5 audio soft refs through
+  `RequestLoad_RootedBatch` (AudioTrack pattern), resolved objects on Current behind the batch GC
+  root, `Get_ResolvedAttenuation`/`Get_ResolvedSourceEffectChain` utils as the item-2/3 seam.
+  CkResourceLoader dep earned. Deliberately no EndPlay reset (AuthorityOnly EndPlay vs
+  every-machine resolution; RAII at fragment destruction covers all machines). Fix cycle:
+  TProcessor demands `TReadWrite<>` on the mutated fragment.
+- Ran (CkPlugins host, iteration lane): **30 total — 19/19 local pass, 11 net fails
+  name-identical to the host's recorded no-NetDriver env-fail set, 0 AS errors, no fatal**
+  (Test-VoiceChatP4-item1e.log). Positive-path resolution spec deferred to item 2 (observable at
+  the synth there).
+- **CkPlugins-host runbook (proven twice tonight):** a headless editor crash poisons
+  `Saved/Config/WindowsEditor/EditorPerProjectUserSettings.ini` (headless-written state re-fatals
+  every later windowless boot at `FTabManager::SavePersistentLayout` →
+  `GetRestoredDimensions`); recovery = one GUI editor boot + graceful close (regenerates the
+  known-good ~105 KB state), then headless runs work. Iteration on this host = local specs only;
+  gate runs stay on BusterBlock.
+
 ### 2026-08-04 — Gate-3 audit conditions re-gated GREEN post-rebase; Gate 3 machine portion CLOSED
 - **VoiceChat 30/30 + RenderTarget 22/22, both EXIT 0, 0 AS errors, same binary, no rebuild
   between runs** (Test-VoiceChatP3-postrebase2.log / Test-P3-RenderTarget-postrebase2.log).
