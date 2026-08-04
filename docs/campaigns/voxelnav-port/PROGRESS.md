@@ -10,7 +10,8 @@
 | 0 — Scaffold | **CLOSED 2026-08-04** — all exit criteria met | Exit evidence block below; commits d401a54aa/13e30ab1f/49da3aeb5 (CkFoundation), CkTests + superproject commits per session log |
 | 1 — Octree + voxelize | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 20/20 + Ck.Jolt 48/48, zero contaminated, hygiene clean | commits 2c8aec16c/05e146a4a (CkFoundation), deea9fb1/5a6c65c9 (CkTests) |
 | 2 — Pathfinding | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 38/38 + Ck.Jolt.Query 4/4; CkAStar untouched | commits 489eb4bc3/69d689466 (CkFoundation), 3da53af6/12c32a84 (CkTests) |
-| 3 — Chunks & dynamics | **OPEN** — wave 1 (3B dynamic occluders, audit-first) dispatched | PHASE_3.md |
+| 3 — Chunks & dynamics | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 53/53 + Ck.Jolt.Query 4/4 | commits 92b5ef0f5/65a502cbb (CkFoundation), 52088050/d1958689 (CkTests) |
+| 4 — Consumers | **OPEN** — 4A (third provider branch in CkCrowd) dispatched | PHASE_4.md |
 | 3 — Chunks & dynamics | not started | — |
 | 4 — Consumers | not started | — |
 | 5 — Perf (merging) | not started | — |
@@ -66,7 +67,24 @@
 
 ## In-flight
 
-- Phase 3 wave 2 (3A chunked volumes + cross-chunk pathfinding) — opus, dispatched.
+- Phase 3 boundary full suite running (`Phase3-Boundary.log`); then targeted `Ck.Jolt.Query`.
+
+- **3A ACCEPTED 2026-08-04** (opus, self-gated 53/53, zero ensures): chunk = an ORDINARY volume
+  entity (ChunkIdentity marker), so bake/repair/occluder composed with zero changes; parent
+  aggregates via epoch-sum polling, one volume epoch, adjacency baked at aggregation; cross-chunk
+  = BFS over portals → per-chunk A* portal-cell-centre to portal-cell-centre → stitched;
+  per-segment refinement + iteration cap (route success independent of chunk count). Stable-id
+  gate verified (no handles/actor ptrs in Chunk/). Upstream fixes: 3D contains (was XY-only),
+  integer-pair portal keys (was float TMap<FVector,..>), record-indexed chunk lookup (was
+  TActorIterator per call) + NEW upstream find (#12): unclamped portal connection midpoints can
+  land outside both cells — clamped into the shared span, test-pinned. Own self-review catch:
+  chunk-failure aggregation fires the volume delegate Failed exactly once (never-strand). All 8
+  deviations accepted (incl. no cube-partition port — strictly worse under power-of-2 padding;
+  no portal thinning — density heuristic that can drop the only crossing; greedy deterministic
+  portal choice documented as traversable-not-optimal). Follow-ups (a) scratch-buffer allocs,
+  (b) bucketed face pairing, (c) cross-VOLUME routing — deferred pool. Defaults: MaxChunkSize
+  12800uu, MaxChunksPerAxis 8 (existing fixtures ≤1600uu never partition — how the 46 stayed
+  untouched). Commits: CkFoundation `65a502cbb`, CkTests `d1958689`.
 
 - **3B ACCEPTED 2026-08-04** (opus, self-gated 46/46, zero ensures): AUDIT verdict — upstream #39
   is NINE defects (D1 fatal: layer-0 loses Morton sort AND index identity on RemoveAtSwap/Add with
