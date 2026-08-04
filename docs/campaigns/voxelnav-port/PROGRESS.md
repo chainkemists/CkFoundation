@@ -8,7 +8,7 @@
 | Phase | State | Evidence |
 |---|---|---|
 | 0 — Scaffold | **CLOSED 2026-08-04** — all exit criteria met | Exit evidence block below; commits d401a54aa/13e30ab1f/49da3aeb5 (CkFoundation), CkTests + superproject commits per session log |
-| 1 — Octree + voxelize | **OPEN** — wave 1 (1A ∥ 1B) dispatched | PHASE_1.md |
+| 1 — Octree + voxelize | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 20/20 + Ck.Jolt 48/48, zero contaminated, hygiene clean | commits 2c8aec16c/05e146a4a (CkFoundation), deea9fb1/5a6c65c9 (CkTests) |
 | 2 — Pathfinding | not started | — |
 | 3 — Chunks & dynamics | not started | — |
 | 4 — Consumers | not started | — |
@@ -65,7 +65,73 @@
 
 ## In-flight
 
-- Phase 1 wave 1: 1A (octree core + hermetic tests) ∥ 1B (geometry backend) — opus, dispatched.
+- Phase 1 boundary full suite running (`Phase1-Boundary.log`) — the one [C-D18(b)] sample. Then a
+  targeted `Ck.Jolt` run (its binaries changed since its last green) closes the [C-D17] gate.
+
+- **Wave 2 ACCEPTED + GATE GREEN 2026-08-04: 20/20 (35s), zero ensures.** Path to green: 3
+  orchestrator inline compile fixes (stub CK_PROPERTY_GET→hand getter — the 1A-documented trap;
+  stub CKVOXELNAV_API removed — header-only, never exported; Build.cs +DeveloperSettings), then an
+  opus debug agent root-caused the 4 functional reds: (1) the anti-hang guard compared STAGE
+  identity instead of a (stage+cursors) footprint, so the first zero-probe layer-walking step after
+  RasterizeSubNodes read as a stall and failed every real bake (empty-volume pass was the tell);
+  fixed with FStepFootprint comparison, guard intent preserved. (2) PIE test setup created its
+  owner via bare Request_CreateEntity(registry) → no LifetimeOwner → no world → StartBuild failed
+  before any state existed; fixed via Request_CreateEntity_TransientOwner (proof: framework ensure
+  text + Get_WorldForEntity impl). Plus Remove→Try_Remove on may-be-absent tags (first-build
+  ensures). NO assertions weakened — hand-computed probe cascade reproduces exactly (hermetic 5328
+  = 64+144+80×64; PIE 280 = 64+24+3×64, 18 slices). Commits: CkFoundation `05e146a4a`, CkTests
+  `5a6c65c9`.
+- Adjacent finding (l): the PIE bake test's three box entities are still bare-registry-created —
+  harmless for CkJolt today; will bite any future world-resolving feature composed onto them.
+
+- **Wave 2 (1C+1D+1E) implemented, spot-check + gate pending** (opus): Build.h/.cpp state machine,
+  backend-driven stages, Volume/ rewrite (BuiltOctree fragment + epoch + TSharedPtr<const FOctree>,
+  Request_Build/CancelBuild with full completion contract, 5 processors with [C-D11] placement
+  verbatim, EndPlay cancellation), settings knobs, 5 new tests + scaffold update. All 11 deviations
+  accepted. Module CLAUDE.md gained a "parts that look wrong" section — good doc practice.
+- **[C-D20]** (wave-2 STOP item) `Stage_RasterizeLayer`/`Stage_BuildNeighbourLinks` budget at
+  one-LAYER-per-slice (wave-1 signatures kept; 13 green tests pinned them). Known limitation: a
+  large octree's neighbor-link layer is an unbounded single-tick spike during BAKE. Accepted for
+  Phase 1 (load-time bake, small scenes); threading cursor+budget through both stages is PHASE 5
+  scope (the landed shapes already take FRasterizeScratch&/return FRasterizeStageResult, so the
+  change is additive).
+- **Repo trap discovered (wave 2)**: CkFoundation `.gitignore:49` is `*.md` — every NEW module doc
+  is silently ignored (existing module docs predate the rule). `Source/CkVoxelNav/CLAUDE.md`
+  force-added by orchestrator. Follow-up (k): the .gitignore rule deserves maintainer review —
+  it will eat the next module's doc too.
+
+- **WAVE 1 GATE GREEN 2026-08-04: 15/15 (13 Octree + 2 Scaffold), 34s.** One compile fix applied
+  inline by orchestrator: MSVC C4273 — friend redeclarations of the three `Request_*Octree`
+  functions needed `CKVOXELNAV_API` to match the decorated declarations. The libmorton
+  unity-blob risk did NOT materialize. Committed: CkFoundation `2c8aec16c` (Octree+Backend),
+  CkTests `deea9fb1` (octree tests). 1A + 1B acceptance FINAL.
+
+- **1A octree core — ACCEPTED 2026-08-04** (opus, compile pending wave-1 gate): 8 files / 3,008
+  lines under Octree/ + 669-line Test_VoxelNav_Octree.cpp (13 hermetic tests). All six mandated
+  upstream fixes implemented (evidence table in the unit report) PLUS a SEVENTH found+fixed:
+  `GetFreeNodesFromNodeAddress` recursed with a Morton CODE where a node INDEX is required
+  (`VND:2217-2224`, hidden behind bug #4 since GetRandomPoint is the only caller). Ten deviations
+  accepted — notably CK_PROPERTY_GET→hand getters (macro requires CK_GENERATED_BODY/ThisType),
+  friends→named mutators with `TSharedPtr<const FOctree>` carrying C-D7 immutability,
+  `Request_MarkOctreeBuilt` publish switch, exponent>10 overflow guard (upstream latent bug).
+  O2 ruling: `Get_ParentMortonAtLayer` implemented with the octree's own coarser=higher-index
+  convention (upstream's version has zero callers and inverted direction) — contract block + test
+  pin it. O3: upstream's multi-level neighbor-fallback bug ported FAITHFULLY behind a CK_ENSURE
+  so it surfaces rather than being silently patched.
+
+- **1B geometry backend — ACCEPTED 2026-08-04** (opus, compile pending wave-1 build): 4 files /
+  275 lines under Backend/. Interface = exactly the two calls §3's stages consume
+  (Get_IsBoxOccupied, Get_BodiesInBox); Jolt impl over the Phase 0 session (lazy exact-extent
+  probe memoization — port map's ctor-time wording was self-inconsistent, deviation adopted);
+  header-only stub double for 1C. All 5 narrowing deviations accepted (no SegmentBlocked — no
+  Phase 1 consumer AND unimplementable over the current CkJolt surface; no BodyBounds — callers
+  deleted; no empty BackendParams struct — clearance arrives pre-inflated per contract; lazy
+  probes; _Stub suffix). Hygiene-gate regex corrected in PHASE_1.md per its flag (`<Jolt/` form).
+  1D note: `Get_IsValid()` lives on the CONCRETE Jolt backend; the build processor must gate on it.
+- **[C-D19]** Phase 2 prerequisite (from 1B's analysis): CkJolt's session gains
+  `Get_IsSegmentBlocked(From, To) -> bool` (any-hit CastRay, static-domain filter, no channel, no
+  attribution — [C-D14]-consistent) BEFORE the refinement pass unit; the backend interface then
+  grows the matching pure virtual (6-line change). Phase 2's opening unit owns this.
 
 - **[C-D16] VERIFIED HEALED 2026-08-04**: post-fix solo runs — `Ck.Jolt.Query.BoxOccupancy` **1/1
   green, zero EnableListenServer/NetDriverCreateFailure hits in the log** (was 0/1 twice);
