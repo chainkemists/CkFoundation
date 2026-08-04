@@ -34,3 +34,18 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoxelNav_Settings_UE::
+    Get_MaxPathSearchIterations()
+    -> int32
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_VoxelNav_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return 200000; }
+
+    return Settings->Get_MaxPathSearchIterations();
+}
+
+// --------------------------------------------------------------------------------------------------------------------

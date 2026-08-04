@@ -43,6 +43,11 @@ public:
         const FBox& InWorldBounds,
         TArray<FCk_VoxelNav_BodyId>& OutBodies) const -> void override;
 
+    auto
+    Get_IsSegmentBlocked(
+        const FVector& InFrom,
+        const FVector& InTo) const -> bool override;
+
 private:
     auto
     DoGet_Probe(

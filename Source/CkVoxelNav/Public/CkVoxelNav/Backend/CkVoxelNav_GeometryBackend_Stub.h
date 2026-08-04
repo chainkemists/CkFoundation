@@ -59,6 +59,59 @@ public:
         }
     }
 
+    auto
+    Get_IsSegmentBlocked(
+        const FVector& InFrom,
+        const FVector& InTo) const -> bool override
+    {
+        return _Obstacles.ContainsByPredicate([&](const FBox& InObstacle) -> bool
+        { return DoGet_SegmentIntersectsBox(InFrom, InTo, InObstacle); });
+    }
+
+private:
+    /** Slab test in the segment's own parameter space, so [0,1] bounds the answer to the segment rather
+     *  than the infinite line. A zero-length segment degenerates to point containment, which is the same
+     *  answer Get_IsBoxOccupied gives for a zero half-extent. */
+    static auto
+    DoGet_SegmentIntersectsBox(
+        const FVector& InFrom,
+        const FVector& InTo,
+        const FBox& InBox) -> bool
+    {
+        auto TEnter = 0.0;
+        auto TExit = 1.0;
+
+        for (auto Axis = 0; Axis < 3; ++Axis)
+        {
+            const auto Origin = InFrom[Axis];
+            const auto Delta = InTo[Axis] - InFrom[Axis];
+
+            if (FMath::IsNearlyZero(Delta))
+            {
+                if (Origin < InBox.Min[Axis] || Origin > InBox.Max[Axis])
+                { return false; }
+
+                continue;
+            }
+
+            const auto InverseDelta = 1.0 / Delta;
+
+            auto TNear = (InBox.Min[Axis] - Origin) * InverseDelta;
+            auto TFar = (InBox.Max[Axis] - Origin) * InverseDelta;
+
+            if (TNear > TFar)
+            { Swap(TNear, TFar); }
+
+            TEnter = FMath::Max(TEnter, TNear);
+            TExit = FMath::Min(TExit, TFar);
+
+            if (TEnter > TExit)
+            { return false; }
+        }
+
+        return true;
+    }
+
 private:
     TArray<FBox> _Obstacles;
 

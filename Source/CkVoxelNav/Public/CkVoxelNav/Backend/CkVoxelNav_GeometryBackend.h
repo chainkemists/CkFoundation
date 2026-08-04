@@ -21,8 +21,8 @@ struct CKVOXELNAV_API FCk_VoxelNav_BodyId
 
 /**
  * The ONLY world-geometry surface the voxelizer sees. Everything a bake learns about the world
- * arrives through these two calls, which is what keeps the octree free of any physics backend and
- * lets a hand-authored box list stand in for a whole level in a test.
+ * arrives through these calls, which is what keeps the octree free of any physics backend and lets a
+ * hand-authored box list stand in for a whole level in a test.
  *
  * Occupancy is decided against STATIC geometry only: a bake is a statement about immovable world
  * obstacles, and a moving obstacle is a steering problem, not a bake input.
@@ -62,6 +62,24 @@ public:
     Get_BodiesInBox(
         const FBox& InWorldBounds,
         TArray<FCk_VoxelNav_BodyId>& OutBodies) const -> void = 0;
+
+    /**
+     * Does any geometry stand between InFrom and InTo? A boolean line-of-sight test against the LIVE
+     * world, with no hit position and no identity.
+     *
+     * This is NOT what a path query should ask. A planned path is checked against the BAKE — the
+     * octree ray-marcher in Octree/CkVoxelNav_Octree_Raycast.h — because the bake is what the search
+     * planned through, it costs no physics query, and it already carries the agent clearance the
+     * rasterizer inflated every cell by. Reach for this call only when the question is genuinely
+     * about the world rather than the bake: validating a bake, or a tactical visibility test that
+     * must see geometry finer than the finest cell.
+     *
+     * Game thread only (off-thread only under a future step-barrier contract — not yet provided).
+     */
+    virtual auto
+    Get_IsSegmentBlocked(
+        const FVector& InFrom,
+        const FVector& InTo) const -> bool = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

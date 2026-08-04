@@ -170,6 +170,25 @@ namespace ck::jolt
 
     auto
         FCk_Jolt_QuerySession::
+        Get_IsSegmentBlocked(
+            const FVector& InFrom,
+            const FVector& InTo) const
+        -> bool
+    {
+        if (ck::Is_NOT_Valid(_Impl, ck::IsValid_Policy_NullptrOnly{}))
+        { return false; }
+
+        const auto PhysicsSystem = _Impl->_PhysicsSystem.Pin();
+
+        if (ck::Is_NOT_Valid(PhysicsSystem))
+        { return false; }
+
+        return ck::jolt::Get_IsSegmentBlocked(*PhysicsSystem, InFrom, InTo,
+            _Impl->_BroadPhaseFilter, _Impl->_ObjectFilter);
+    }
+
+    auto
+        FCk_Jolt_QuerySession::
         Get_BodiesInAABox(
             const FBox& InWorldBounds,
             TArray<uint64>& OutBodyIds) const

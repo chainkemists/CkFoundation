@@ -59,6 +59,16 @@ auto
 
 auto
     FCk_VoxelNav_GeometryBackend_Jolt::
+    Get_IsSegmentBlocked(
+        const FVector& InFrom,
+        const FVector& InTo) const
+    -> bool
+{
+    return _Session.Get_IsSegmentBlocked(InFrom, InTo);
+}
+
+auto
+    FCk_VoxelNav_GeometryBackend_Jolt::
     DoGet_Probe(
         const FVector& InHalfExtents) const
     -> const ck::jolt::FCk_Jolt_BoxProbe&

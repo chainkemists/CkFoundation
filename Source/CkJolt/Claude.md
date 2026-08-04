@@ -123,11 +123,16 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
 - **Occupancy surface** — the opposite trade, for callers issuing thousands of boolean tests (coverage
   grids, volumetric navigation bakes): any-hit early-out, NO entity attribution, no per-call subsystem
   resolution, caller-owned shape and filters. Two layers:
-  - `ck::jolt::Get_IsBoxOccupied` (box dimensions, or a caller-held `JPH::Ref<JPH::Shape>`) and
-    `ck::jolt::Get_BodiesInAABox` (Query/CkJoltOccupancy_Utils.h) — JPH signatures, for callers that
-    already hold a `JPH::PhysicsSystem`. `Get_BodiesInAABox` is the module's first
-    `GetBroadPhaseQuery().CollideAABox` use: bounding boxes only, so the answer is conservative and cheap
-    — a whole-region early-out, not a per-cell test.
+  - `ck::jolt::Get_IsBoxOccupied` (box dimensions, or a caller-held `JPH::Ref<JPH::Shape>`),
+    `ck::jolt::Get_IsSegmentBlocked` and `ck::jolt::Get_BodiesInAABox` (Query/CkJoltOccupancy_Utils.h) —
+    JPH signatures, for callers that already hold a `JPH::PhysicsSystem`. `Get_BodiesInAABox` is the
+    module's first `GetBroadPhaseQuery().CollideAABox` use: bounding boxes only, so the answer is
+    conservative and cheap — a whole-region early-out, not a per-cell test.
+  - `Get_IsSegmentBlocked` is a LINE-OF-SIGHT test, not a raycast: `AnyHitCollisionCollector<CastRayCollector>`
+    over `NarrowPhaseQuery().CastRay`, so it stops at the first blocker and reports only a bool — no
+    fraction, no normal, no entity. A segment starting inside a convex body reads as blocked (Jolt's
+    convex-as-solid default). Callers that need hit DATA want `UCk_Utils_JoltQuery_UE::Get_RayCast`
+    instead; this one exists for visibility/clearance sweeps that issue thousands of boolean tests.
   - `ck::jolt::FCk_Jolt_QuerySession` + `ck::jolt::FCk_Jolt_BoxProbe` (Query/CkJoltOccupancy_Session.h) —
     the same capability with NO Jolt type in the header: opaque `TPimplPtr`-backed, move-only value types,
     so a module that must not see JPH (a geometry-agnostic navigation backend) still gets the fast path.

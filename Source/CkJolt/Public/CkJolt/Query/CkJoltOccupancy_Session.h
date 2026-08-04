@@ -108,6 +108,15 @@ namespace ck::jolt
             const FVector& InCenter,
             const FVector& InHalfExtents) const -> bool;
 
+        /// True when any static geometry stands between InFrom and InTo. A line-of-sight test, not a
+        /// raycast: any-hit with early-out, and the answer carries no hit position, no normal and no body
+        /// identity. A segment whose start point is already inside a convex body reads as BLOCKED.
+        /// Game thread only (off-thread only under a future step-barrier contract — not yet provided).
+        auto
+        Get_IsSegmentBlocked(
+            const FVector& InFrom,
+            const FVector& InTo) const -> bool;
+
         /// Every static body whose BOUNDING BOX overlaps InWorldBounds — broadphase only, so the result is
         /// conservative and cheap; ideal as a whole-region early-out. The ids are opaque handles onto Jolt
         /// bodies: compare and pass them back, never decode them. OutBodyIds is reset before filling.
