@@ -63,6 +63,14 @@
          absolutely). Any of the three is a regression in the Flying tag's exclusions.
       10. Console `ck.Crowd.Debug 1` + `ck.Crowd.DrawPlannedPaths 1` draws both agents' installed
           polylines — the flying one's should be visibly airborne along its whole length.
+
+      **Setup automated 2026-08-04 (post-close addendum):** the gym
+      `VoxelNav Flying Vs Grounded` (CkTests `231db471` — Script/CkVoxelNav/
+      `CkVoxelNavGym_FlyingVsGrounded_{GameMode,PlayerController}.as`) performs steps 1-6
+      automatically: PIE on the gym level → Tab → select it. Floor, wall, volume bake, both
+      agents, and the MoveTos are scripted; the debug CVars are forced on; per-agent labels show
+      mode + pitch + movement state. Steps 7-9 (the observations and fail signatures) remain the
+      human-owned verification. Exec commands: `Ck_GymVoxelNav_Restart`, `Ck_GymVoxelNav_ReturnTrip`.
 - [x] Three environments: at least one end-to-end exercise each from C++, Blueprint, and
       AngelScript for the public API (Add volume / request build / request path / read result).
       - **C++** — `Ck.VoxelNav.Path.Pie.PlansACollisionFreeRouteAcrossTheBakedScene` drives the

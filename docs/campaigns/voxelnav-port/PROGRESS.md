@@ -486,3 +486,10 @@ then 0D → orchestrator re-runs gate → phase boundary ritual → author PHASE
   merging A/B 44.75×/255.58× cell reduction, merged search sub-0.05ms; endpoint "anomaly"
   root-caused to a test use-after-free (provider vindicated); repo-wide BPFL by-value-return
   landmine documented. Final gate 982/976/6 delta-zero. All work LOCAL, awaiting ship decision.
+- 2026-08-04 (post-close addendum, maintainer request) — flying-vs-grounded GYM authored so the
+  [EDITOR-VERIFY] walkthrough needs no manual scene assembly: CkTests `231db471` (2 new gym
+  scripts + registry row, "VoxelNav Flying Vs Grounded"). 2 Opus research units + 1 Opus
+  implementer; orchestrator review + 2 fix rounds (AS default-statement-only accessor on a
+  runtime component; class-const float64 inlining warnings). Gate: VoxelNav family 63/63,
+  AS compile clean. VALIDATION.md [EDITOR-VERIFY] block annotated — steps 1-6 automated,
+  observations 7-9 remain human-owned. Still LOCAL, no pushes.
