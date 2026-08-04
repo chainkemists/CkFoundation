@@ -8,6 +8,7 @@
 
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
+#include "CkVoxelNav/Debug/CkVoxelNav_DebugSnapshot.h"
 #include "CkVoxelNav/Volume/CkVoxelNavVolume_Fragment.h"
 #include "CkVoxelNav/Volume/CkVoxelNavVolume_Fragment_Data.h"
 
@@ -210,6 +211,24 @@ public:
     static int32
     Get_ChunkPortalCount(
         const FCk_Handle_VoxelNavVolume& InVolume);
+
+public:
+    /** Copies one coherent renderer-facing view of the volume. A valid but unbuilt volume is still a
+     *  successful snapshot with Building or Failed status and no cells; only an invalid/non-volume handle
+     *  is rejected. The result never retains an entity, world, Jolt object, or octree reference. */
+    static auto
+    TryBuild_DebugSnapshot(
+        const FCk_Handle_VoxelNavVolume& InVolume,
+        const ck::voxelnav::FDebugSnapshotBuildParams& InParams,
+        ck::voxelnav::FDebugSnapshot& OutSnapshot) -> bool;
+
+    /** Copies every VoxelNav volume in the world into renderer-facing values. Returns false when the
+     *  context has no runtime ECS world; an ordinary world with zero volumes succeeds with an empty array. */
+    static auto
+    TryBuild_DebugSnapshotsForWorld(
+        const UObject* InWorldContextObject,
+        const ck::voxelnav::FDebugSnapshotBuildParams& InParams,
+        TArray<ck::voxelnav::FDebugSnapshot>& OutSnapshots) -> bool;
 
 public:
     /** Everything a cross-chunk query needs about this volume's chunks, in partition-lattice order so a

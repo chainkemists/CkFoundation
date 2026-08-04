@@ -32,6 +32,14 @@ namespace ck::voxelnav
         const FOctree& InOctree,
         TArray<FNodeAddress>& OutCells) -> void;
 
+    /** Occupied layer-zero sub-cells, ordered by leaf then Morton sub-node. Every blocked leaf contributes
+     *  its blocked 4x4x4 sub-cells, including all 64 when wholly blocked: layer-zero addresses otherwise
+     *  resolve as sub-cells. Higher layers do not encode blocked space: a node without children is free. */
+    CKVOXELNAV_API auto
+    Get_OccupiedCells(
+        const FOctree& InOctree,
+        TArray<FNodeAddress>& OutCells) -> void;
+
     /** The octree cell's world-space box. Cells are cubes, so this is centre +/- extent - but going through
      *  one function keeps the merge pass and the seam agreeing on cell geometry by construction. */
     CKVOXELNAV_API auto
