@@ -81,6 +81,24 @@ namespace ck
         CK_PROPERTY_GET(_TuningRevision);
     };
 
+    // Identity of the last volumetric path installed into this agent's nav-path slot: goal pins which
+    // MoveTo it answered, epoch pins which bake of the volume it was planned against.
+    struct CKCROWD_API FFragment_CrowdAgent_InstalledVoxelPath
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_CrowdAgent_InstalledVoxelPath);
+
+        friend class FProcessor_CrowdAgent_OnVoxelPathResolved;
+
+    private:
+        FVector _GoalLocation = FVector::ZeroVector;
+        int32 _VolumeEpoch = 0;
+
+    public:
+        CK_PROPERTY_GET(_GoalLocation);
+        CK_PROPERTY_GET(_VolumeEpoch);
+    };
+
     // Value-only record of the last pathfinding problem in the current movement episode. A
     // PathNetwork failure survives the CkNavigation fallback overwriting FFragment_Nav_PathResult,
     // so both the in-world overlay and the Crowd Debugger can explain which layer had trouble.
@@ -92,6 +110,7 @@ namespace ck
 
         friend class FProcessor_CrowdAgent_HandleRequests;
         friend class FProcessor_CrowdAgent_OnRouteResolved;
+        friend class FProcessor_CrowdAgent_OnVoxelPathResolved;
         friend class FProcessor_CrowdAgent_OnPathResolved;
 
         static constexpr auto FadeDurationSeconds = 5.0;
@@ -195,6 +214,10 @@ namespace ck
     // One-shot guard while an initial PathNetwork failure is being retried through CkNavigation.
     // Cleared when that nav request resolves, or when a new movement episode replaces it.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_PathNetworkFallbackPending);
+
+    // The same one-shot guard for a volumetric path failure being retried through CkNavigation. It is a
+    // distinct tag rather than a shared one so the two providers can never consume each other's retry.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_VoxelPathFallbackPending);
 
     // Nothing stamps this today; the steering views carry TExclude<> for it so a future sleep pass
     // is wire-compatible without retro-fitting every view.
