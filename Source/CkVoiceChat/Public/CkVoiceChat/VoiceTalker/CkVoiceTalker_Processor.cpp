@@ -900,11 +900,13 @@ namespace ck
             return;
         }
 
-        auto* Synth = InCurrent._LoopbackSynth.Get();
+        // The talker's position comes from its owning actor - the synth is attached to that
+        // actor's root anyway, and the near/far STATE is a distance decision, not a render one,
+        // so it must compute even where no audio device exists (headless: the state is what the
+        // specs pin; Apply's attach guard still gates the actual render independently).
+        auto* OwningActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(InVoiceTalkerEntity);
 
-        // Without a synth or an attach parent there is no talker world position - the stream
-        // stays radio; Apply's attach guard enforces the flat render independently.
-        if (ck::Is_NOT_Valid(Synth) || ck::Is_NOT_Valid(Synth->GetAttachParent()))
+        if (ck::Is_NOT_Valid(OwningActor))
         { return; }
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVoiceTalkerEntity);
@@ -922,7 +924,7 @@ namespace ck
         auto ListenerRight = FVector{};
         LocalPlayerController->GetAudioListenerPosition(ListenerLocation, ListenerFront, ListenerRight);
 
-        const auto DistSq = FVector::DistSquared(ListenerLocation, Synth->GetComponentLocation());
+        const auto DistSq = FVector::DistSquared(ListenerLocation, OwningActor->GetActorLocation());
         const auto RangeCm = UCk_Utils_VoiceChannel_UE::Get_AudibleRange(ConfigChannel);
         const auto OuterCm = RangeCm + UCk_Utils_VoiceChat_Settings_UE::Get_ProximityHysteresisMarginCm();
 
