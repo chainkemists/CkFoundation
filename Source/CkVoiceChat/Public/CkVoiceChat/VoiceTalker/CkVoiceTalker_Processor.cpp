@@ -705,6 +705,7 @@ namespace ck
         if (NOT BundlesCopy.IsEmpty())
         {
             TryCreate_PlaybackSynth(InVoiceTalkerEntity, InCurrent);
+            Evaluate_HybridRenderMode(InVoiceTalkerEntity, InCurrent);
         }
 
         Drain_Playout(InCurrent, InDeltaT);
@@ -845,18 +846,82 @@ namespace ck
             SourceEffectChain = UCk_Utils_VoiceChannel_UE::Get_ResolvedSourceEffectChain(ConfigChannel);
         }
 
-        // HybridRadio's per-recipient near/far render decision is a later work item; until it
-        // lands the stream renders as radio (flat + effect chain), matching its membership-wide
-        // routing. An unattached synth has no world position, so it must render flat too.
+        // HybridRadio near = plain proximity speech (spatialized, NO radio filter); far = flat
+        // radio through the channel's chain. Positional3D keeps its authored chain in 3D. An
+        // unattached synth has no world position, so it must render flat regardless of policy.
+        const auto HybridNear =
+            Policy == ECk_VoiceChat_SpatializationPolicy::HybridRadio &&
+            InCurrent._HybridRenderNear.Get(false);
+
         const auto Spatialize =
-            Policy == ECk_VoiceChat_SpatializationPolicy::Positional3D &&
+            (Policy == ECk_VoiceChat_SpatializationPolicy::Positional3D || HybridNear) &&
             ck::IsValid(Synth->GetAttachParent());
+
+        const auto ApplyEffectChain =
+            Policy != ECk_VoiceChat_SpatializationPolicy::HybridRadio || NOT HybridNear;
 
         Synth->Stop();
         Synth->bAllowSpatialization = Spatialize;
         Synth->AttenuationSettings = Spatialize ? Attenuation : nullptr;
-        Synth->SourceEffectChain = SourceEffectChain;
+        Synth->SourceEffectChain = ApplyEffectChain ? SourceEffectChain : nullptr;
         Synth->Start();
+    }
+
+    auto
+        FProcessor_VoiceTalker_ReceivePlayback::
+        Evaluate_HybridRenderMode(
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent)
+        -> void
+    {
+        const auto& ConfigChannel = InCurrent._PlaybackConfigChannel;
+
+        if (ck::Is_NOT_Valid(ConfigChannel) ||
+            UCk_Utils_VoiceChannel_UE::Get_SpatializationPolicy(ConfigChannel) !=
+                ECk_VoiceChat_SpatializationPolicy::HybridRadio)
+        {
+            InCurrent._HybridRenderNear.Reset();
+            return;
+        }
+
+        auto* Synth = InCurrent._LoopbackSynth.Get();
+
+        // Without a synth or an attach parent there is no talker world position - the stream
+        // stays radio; Apply's attach guard enforces the flat render independently.
+        if (ck::Is_NOT_Valid(Synth) || ck::Is_NOT_Valid(Synth->GetAttachParent()))
+        { return; }
+
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVoiceTalkerEntity);
+
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        auto* LocalPlayerController = World->GetFirstPlayerController();
+
+        if (ck::Is_NOT_Valid(LocalPlayerController))
+        { return; }
+
+        auto ListenerLocation = FVector{};
+        auto ListenerFront = FVector{};
+        auto ListenerRight = FVector{};
+        LocalPlayerController->GetAudioListenerPosition(ListenerLocation, ListenerFront, ListenerRight);
+
+        const auto DistSq = FVector::DistSquared(ListenerLocation, Synth->GetComponentLocation());
+        const auto RangeCm = UCk_Utils_VoiceChannel_UE::Get_AudibleRange(ConfigChannel);
+        const auto OuterCm = RangeCm + UCk_Utils_VoiceChat_Settings_UE::Get_ProximityHysteresisMarginCm();
+
+        // The Route asymmetry, mirrored: become near INSIDE the range, stay near until
+        // range + margin - a speaker hovering at the boundary never flips per drain.
+        const auto WasNear = InCurrent._HybridRenderNear.Get(false);
+        const auto ThresholdCm = WasNear ? OuterCm : RangeCm;
+        const auto IsNear = DistSq <= ThresholdCm * ThresholdCm;
+
+        if (InCurrent._HybridRenderNear.IsSet() && InCurrent._HybridRenderNear.GetValue() == IsNear)
+        { return; }
+
+        InCurrent._HybridRenderNear = IsNear;
+
+        Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

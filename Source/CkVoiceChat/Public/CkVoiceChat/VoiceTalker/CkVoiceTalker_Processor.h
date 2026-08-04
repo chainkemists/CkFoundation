@@ -220,6 +220,17 @@ namespace ck
             HandleType InVoiceTalkerEntity,
             FFragment_VoiceTalker_Current& InCurrent)
             -> void;
+
+        // HybridRadio's per-recipient render decision (ADR-5: "prefer 3D if near", ONE wire
+        // copy): listener-to-talker distance against the channel's AudibleRange with the module
+        // hysteresis asymmetry mirrored from Route - become near INSIDE the range, stay near
+        // until range + margin. Re-applies the synth config on a mode flip. Bundle-arrival
+        // cadence: runs per drain, so a silent talker never flips modes.
+        static auto
+        Evaluate_HybridRenderMode(
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

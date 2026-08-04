@@ -117,6 +117,11 @@ namespace ck
         // to this machine. Invalid for capture-loopback (flat playback, no channel context).
         FCk_Handle_VoiceChannel _PlaybackConfigChannel;
 
+        // HybridRadio render mode on this machine: near = spatialized proximity speech, far =
+        // flat radio through the channel's effect chain. Unset until the first distance
+        // evaluation, and whenever the config channel is not HybridRadio.
+        TOptional<bool> _HybridRenderNear;
+
         FCk_Time _ReceiveClock;
 
     public:
