@@ -20,7 +20,7 @@ and plan paths through it at horde scale.
 
 **Depends on:** `CkAStar`, `CkCore`, `CkEcs`, `CkEcsExt`, `CkJolt`, `CkLabel`, `CkLog`,
 `CkNavigation`, `CkProfile`, `CkRecord`, `CkSettings`, `CkThirdParty`.
-**Used by:** nothing yet.
+**Used by:** `CkCrowd` (the third path provider — see "Crowd consumption" below).
 
 ---
 
@@ -145,6 +145,30 @@ and plan paths through it at horde scale.
   updated blocked-cell set by the bake's own stages, never patched in place.* A repair therefore lands
   field-for-field where a full rebake of the moved scene would, for a fraction of the probes.
 
+### Crowd consumption (CkCrowd owns this code; it is listed here because it is what the module is FOR)
+
+- **The provider is chosen by composition, not configuration.** An agent that has the VoxelNavPath
+  feature AND a bound volume takes the volumetric branch of
+  `FProcessor_CrowdAgent_HandleRequests`'s MoveTo — above the PathNetwork branch, which is above
+  plain CkNavigation. `Request_SetVolume` is what makes the binding; without it the agent falls
+  through to Recast exactly as before this integration existed.
+- **`FProcessor_CrowdAgent_OnVoxelPathResolved` installs the refined waypoints into
+  `FFragment_Nav_PathResult`** via `FCk_Nav_Algorithm::InstallExternalPath`, so every downstream
+  crowd processor stays provider-agnostic. Freshness is answered by the request QUEUE (a queue that
+  still exists means the result predates the request in flight), and re-install is deduped on
+  (volume epoch, goal). A `Failed` search falls back to `Request_NavigationPath` behind a one-shot tag.
+- **A stale epoch replans itself.** A repair or rebake bumps the volume's epoch under an agent that
+  is already walking; the dedupe then — correctly — refuses to re-install the pre-repair result, so
+  the resolver re-issues `Request_FindPath` toward the active goal. Exactly once per drift: the queue
+  answers "in flight" and `FFragment_CrowdAgent_InstalledVoxelPath::_RequestedAgainstEpoch` answers
+  "already asked", which is what survives a replan that comes back Failed.
+- **Flying agents are a CkCrowd tag, not a CkVoxelNav feature.** `_AgentMode = Flying` on the crowd
+  agent's params stamps `FTag_CrowdAgent_Flying`, which excludes the agent from every surface-bound
+  and planar stage of the steering pipeline and routes it through the 3D displacement and facing
+  processors instead (CkCrowd/CLAUDE.md § Tags owns the list). Nothing in this module knows about it —
+  but a flying agent with no volumetric provider has no route worth flying, which is why the two ship
+  together. Such an agent has **no avoidance and no de-overlap**: the crowd's samplers are 2D.
+
 ---
 
 ## Voxelization — the parts that look wrong until you know why
@@ -227,7 +251,10 @@ The octree core, the geometry backend, budgeted voxelization, pathfinding, dynam
 repair, and chunked volumes are implemented: a volume bakes an immutable Sparse Voxel Octree of its free
 space, answers point and segment queries against it, an agent plans a refined route through it, a moving
 obstacle repairs only the cells it dirtied, and a volume too large for one bake splits into chunks that
-route between each other across a baked adjacency. Cross-VOLUME routing, crowd consumption, and node
-merging are not implemented yet; the plan of record is
+route between each other across a baked adjacency. Crowd consumption is implemented too: a crowd agent
+bound to a volume plans through it, receives its polyline through the provider-agnostic nav-path seam,
+replans itself when a repair invalidates its route, and — when composed as a flying agent — follows it
+in three dimensions. Cross-VOLUME routing, 3D crowd avoidance, and node merging are not implemented
+yet; the plan of record is
 `docs/campaigns/voxelnav-port/` (`PROMPT.md` for the mission and locked decisions, `PROGRESS.md`
 for live status).

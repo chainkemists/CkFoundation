@@ -34,6 +34,10 @@ namespace ck
     //
     // Group: FGroup_Physics. RunAfter PushApart (the last staging writer). The resulting
     // AddLocationOffset request is drained by Transform_HandleRequests.
+    //
+    // A flying agent is not on a surface, so it is excluded and its staged displacement is applied
+    // whole by FProcessor_CrowdAgent_ApplyDisplacement3D instead — the two views partition the agent
+    // population, keeping exactly one Transform writer per agent.
     class CKCROWD_API FProcessor_CrowdAgent_ConstrainToNavmesh : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_ConstrainToNavmesh,
             FCk_Handle_CrowdAgent,
@@ -41,6 +45,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

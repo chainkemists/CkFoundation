@@ -16,6 +16,9 @@ namespace ck
     // single Transform writer is FProcessor_CrowdAgent_ConstrainToNavmesh.
     // No FTag_CrowdAgent_Walking requirement, deliberately: idle agents must separate too, which
     // is what resolves a cluster that converged on one goal and went Idle.
+    //
+    // A flying agent is excluded: the shove is zeroed in Z by construction, so two agents stacked
+    // vertically would be de-overlapped sideways.
     class CKCROWD_API FProcessor_CrowdAgent_PushApart : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_PushApart,
             FCk_Handle_CrowdAgent,
@@ -24,6 +27,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
