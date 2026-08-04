@@ -16,7 +16,8 @@ public class CkThirdParty : ModuleRules
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/ctti/include"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/cleantype/src/include"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/JoltPhysics"),
-				Path.Combine(ModuleDirectory, "Public/CkThirdParty/delegate/include")
+				Path.Combine(ModuleDirectory, "Public/CkThirdParty/delegate/include"),
+				Path.Combine(ModuleDirectory, "Public/CkThirdParty/libmorton")
 			}
 		);
 

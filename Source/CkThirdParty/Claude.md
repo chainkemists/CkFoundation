@@ -3,7 +3,7 @@
 **Purpose:** Third-party library distribution. All external libraries used by CkFoundation are vendored here, wrapped in a UE build module so they compile consistently across all platform targets.
 
 **Depends on:** Nothing.
-**Used by:** `CkCore` (fmt, ctti, cleantype, EnTT, bitwise-enum), `CkEcs` (EnTT), `CkJolt` (JoltPhysics — owns the Jolt world), `CkSpatialQuery` + `CkEqs` (JoltPhysics via CkJolt's world), `CkUI` (ThirdParty UI lib).
+**Used by:** `CkCore` (fmt, ctti, cleantype, EnTT, bitwise-enum), `CkEcs` (EnTT), `CkJolt` (JoltPhysics — owns the Jolt world), `CkSpatialQuery` + `CkEqs` (JoltPhysics via CkJolt's world), `CkUI` (ThirdParty UI lib), `CkVoxelNav` (libmorton).
 
 ---
 
@@ -18,6 +18,7 @@
 | `bitwise-enum/` | `bitwise-enum` | Enables `|`/`&`/`~` on `UENUM(meta=(Bitflags))` types |
 | `delegate/` | Custom delegate lib | Lightweight delegate used inside signal system |
 | `JoltPhysics/` | Jolt Physics 5.2.1 | The Jolt collision world, owned by `CkJolt` |
+| `libmorton/` | libmorton | Morton/Z-order encode-decode for SVO node keys |
 
 ---
 
@@ -28,6 +29,7 @@
 3. **Bitwise enum:** include via `CkCore/Enums/CkEnums.h`. The macro `ENABLE_ENUM_BITWISE_OPERATORS(EMyEnum)` is re-exported there.
 4. **JoltPhysics:** the world is owned by `CkJolt`; the sanctioned direct `JPH::` consumers are `CkJolt`, `CkSpatialQuery` (Probe internals), and `CkEqs` (query overloads). Don't add new direct Jolt includes outside those — go through `CkJolt`'s API.
 5. **fmt / ctti / cleantype:** exposed only through `CkCore/Format/CkFormat.h` and `CkCore/TypeTraits/`. Don't add new raw includes.
+6. **libmorton:** headers are flat in `libmorton/`, so the include form is `#include "morton.h"` and the API is namespaced `libmorton::`. The sole sanctioned direct consumer is `CkVoxelNav` (SVO node keys). Don't add new direct libmorton includes outside it — go through `CkVoxelNav`'s API.
 
 ---
 
