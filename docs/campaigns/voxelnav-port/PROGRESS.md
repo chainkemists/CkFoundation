@@ -12,11 +12,20 @@
 | 2 — Pathfinding | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 38/38 + Ck.Jolt.Query 4/4; CkAStar untouched | commits 489eb4bc3/69d689466 (CkFoundation), 3da53af6/12c32a84 (CkTests) |
 | 3 — Chunks & dynamics | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 53/53 + Ck.Jolt.Query 4/4 | commits 92b5ef0f5/65a502cbb (CkFoundation), 52088050/d1958689 (CkTests) |
 | 4 — Consumers | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6, six knowns identical) + Ck.VoxelNav 57/57 + Crowd 34/34; CkCrowd diff surgical (+173/−6) | commits 89991d4ef/31f282100 (CkFoundation), a5f3c7be/892718c2/b6e32d25 (CkTests) |
-| 5 — Perf (merging) | **OPEN** — 5A (merging + A/B benchmark) dispatched | PHASE_5.md |
-| 3 — Chunks & dynamics | not started | — |
-| 4 — Consumers | not started | — |
-| 5 — Perf (merging) | not started | — |
-| 6 — Deferred pool | closed by default; items open by decision entry only | — |
+| 5 — Perf (merging) | **CLOSED 2026-08-04** — 5A+5B accepted; A/B of record; both merge configs green (62/62 + 62/62), AS leg landed | commits 0609e39c1/3ca4f9188 (CkFoundation), 2eb7b4fd/2ceadc18 (CkTests) |
+| 6 — Deferred pool | closed by default; roster with decision refs: cross-volume routing, cooked bake, WP streaming, tactical port, debugger inspector, async search [C-D21], merge-pass slicing [C-D25], kinematic-domain filter [C-D22], CkSpatialHash + CkJolt batching [C-D8], follow-ups (a)-(r) | — |
+
+## CAMPAIGN CLOSE — 2026-08-04
+
+**FINAL GATE: full suite 982 / 976 / 6 / 0 contaminated (10m08s, `Campaign-Final.log`) — the six
+reds are the SAME six foreign PathNetworkFollower failures enumerated at the 2026-08-03 baseline,
+and the new AS autotest ran IN the suite of record and passed.** Targeted evidence at close:
+`Ck.VoxelNav` 63/63 (both merge configurations), `Ck.Jolt.Query` 4/4, `Crowd` 34/34, PNF
+failure-message identity confirmed twice during Phase 4. Every agent-deliverable VALIDATION item
+is checked with evidence. Remaining, HUMAN-OWNED: (1) the `[EDITOR-VERIFY]` flying-vs-grounded
+gym walkthrough (exact steps in VALIDATION.md); (2) the ship decision — per [C-D6] every commit is
+LOCAL on `feature/ckvoxelnav-port` (CkFoundation, CkTests) and the superproject's
+`feature/3d-navigation`; nothing pushed, no pointer bumps.
 
 ## Baseline (campaign open)
 
@@ -68,7 +77,7 @@
 
 ## In-flight
 
-- CAMPAIGN-FINAL boundary full suite running.
+- (none — campaign closed; see CAMPAIGN CLOSE block above)
 
 - **5B ACCEPTED 2026-08-04** (opus, self-gated 63/63 first attempt): AS autotest
   `Ck_AutoTest_VoxelNav_PlansARouteAroundABakedObstacle` (obstacle-detour pinned — Ready,
@@ -470,3 +479,10 @@ then 0D → orchestrator re-runs gate → phase boundary ritual → author PHASE
   OnlineSubsystem closure ([C-D16], superproject commit). Speed policy [C-D18] adopted on
   maintainer directive. Commits: CkFoundation d401a54aa/13e30ab1f/49da3aeb5/1726f6f0d + docs;
   CkTests `test(voxelnav)` commit; superproject uproject fix commit. Phase 1 wave 1 dispatched.
+- 2026-08-04 (same session, continued) — PHASES 1-5 executed and CLOSED; CAMPAIGN CLOSED.
+  Orchestrator: Fable 5; all 11 execution/debug units + 1 fanned-out comment audit: Opus 5
+  (~4.5M subagent tokens session-total incl. research). Rulings C-D19..C-D25. Notables: 12+
+  upstream Nav3D bugs found+fixed (incl. #39 decomposed into nine defects made unrepresentable);
+  merging A/B 44.75×/255.58× cell reduction, merged search sub-0.05ms; endpoint "anomaly"
+  root-caused to a test use-after-free (provider vindicated); repo-wide BPFL by-value-return
+  landmine documented. Final gate 982/976/6 delta-zero. All work LOCAL, awaiting ship decision.
