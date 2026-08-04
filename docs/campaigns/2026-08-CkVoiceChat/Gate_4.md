@@ -215,3 +215,210 @@ Prerequisite for ALL steps: `[Voice]` + `bEnabled=true` in the host project's
 - [x] Comment audit over the P4 diff: no new campaign breadcrumbs (module-doc/ADR references
       only where the module already carries them).
 - [ ] Fresh top-tier audit appended to this doc before P5 opens.
+
+## Gate-4 top-tier audit — 2026-08-04
+
+Fresh-context adversarial audit; every claim below is grounded in a file:line, a log line, or an
+mtime I read myself. Nothing was taken from the executor's narrative on trust.
+
+### Verdict: **GO WITH CONDITIONS** for opening P5
+
+The P4 machinery is real and house-conformant, the run evidence is authentic (summary blocks,
+name-level diffs, binary mtimes, and the no-rebuild claim all check out), and the three new net
+specs are load-bearing (differential controls, RPC-boundary counters, a correctly polled transient
+window). The conditions are one small code defect on the gate's own headline path and one
+proof-gap-plus-record-overstatement against non-negotiable #3 — both mechanical, both fixable as
+the first P4-followup/P5 commits. Nothing requires re-opening the design.
+
+### Findings (ranked)
+
+**F1 — MEDIUM (code defect, the gate's headline path): a channel still loading its audio assets
+can be latched as the playback config and is never re-applied when the load completes.**
+`TryGet_ChannelByIdx` does not gate on `FTag_VoiceChannel_PendingAssetLoad`
+(`CkVoiceChannel_Utils.cpp:337-361`), and the client control-plane apply publishes the idx as soon
+as the channel *composes* — its NotReady check is `TryGet_VoiceChannel` by name only
+(`CkVoiceChannel_Utils.cpp:376-380`), not Setup completion. So on a receiving client the drain can
+select a channel whose `RootedBatch` is still in flight; `Apply_SynthChannelConfig` then reads
+null `Get_ResolvedAttenuation`/`Get_ResolvedSourceEffectChain` and the synth latches a config with
+the authored assets missing. The only re-apply triggers are a config-channel CHANGE
+(`CkVoiceTalker_Processor.cpp:697-702`), synth creation (:837), and a hybrid flip (:942) — load
+completion re-applies nothing, so the wrong render persists indefinitely. Real-world trigger: a
+listener joins while a talker is already streaming (channel composes, bundles arrive within the
+async-load window — a common scenario, not a corner). The authority side is protected
+(`FProcessor_VoiceChannel_HandleRequests` excludes `FTag_VoiceChannel_NeedsSetup`,
+`CkVoiceChannel_Processor.h:79`, so joins wait for resolution); clients are not. This is the gate's
+own "Attenuation asset null at playback" observation row, whose prescribed response is "fix at the
+resolution seam". **Required action (Condition 1):** in the selection block
+(`CkVoiceTalker_Processor.cpp:659-671`), skip a `DeliveringChannel` still tagged
+`FTag_VoiceChannel_PendingAssetLoad` (leaving `_PlaybackConfigChannel` unset so the next drain
+retries), or re-apply when the tag clears. One-guard fix; the HybridRenderMode/PlaybackConfig seams
+can pin it.
+
+**F2 — MEDIUM (proof gap + record overstatement, non-negotiable #3): the failed-resolve branch of
+the item-1 validation boundary is machine-tested by NOTHING, and the record claims otherwise.**
+PROGRESS (2026-08-04 evening) records: "the machine half pins the no-asset and failed-resolve
+branches." I grepped both repos (`Set_Attenuation|Set_SourceEffectChain` over CkTests `Source/` +
+`Script/` with `--no-ignore`, and the CkVoiceChat gym scripts): **zero tests author either soft
+ref** — no positive resolution, no failed resolution, ever exercised by a machine test. The
+no-asset branch is exercised implicitly (every net spec composes bare channels), but the
+failed-resolve branch — the actual new validation boundary, `EveryAuthoredAssetResolved` at
+`CkVoiceChannel_Processor.cpp:146-167` — is pinned by nothing. Non-negotiable #3 requires a
+focused invalid-input test at every new validation boundary. The branch *code* is correct-by-read
+(hoisted side-effect-safe local, empty-body ensure, separate always-on reset branch that clears
+the batch + resolved ptrs, removes the pending tag, and completes setup — no partial state).
+**Required action (Condition 2):** author a focused spec with a bogus `FSoftObjectPath` asserting
+the fallback state (resolved getters null, setup completed, no crash, expected-ensure handled), or
+record the coverage gap as a numbered deviation with maintainer sign-off and correct the PROGRESS
+claim. The first option is the fuller one.
+
+**F3 — LOW (doctrine, contradicts a ticked exit item): the P4 diff added two new phase-labeled
+comments.** The exit criterion "no new campaign breadcrumbs" is ticked, but `abee82dc1` added
+"P4 playback-config seams" and "P4 prune seam" (`CkVoiceTalker_Utils.h:271,282`), and both
+survived the F4 strip (`50bfa61fa`, which came later the same day). Also pre-existing and now
+factually stale: "(P3)" at `CkVoiceTalker_Fragment_Data.h:99` ("routing consumes this once
+transport exists (P3)" — transport has existed since P3 closed). Strip the labels at the next
+touch; the technical content stays.
+
+**F4 — LOW (overstated equivalence claim): `faf5b96f0`'s "No behavior change where an audio
+device exists" has two corners.** (a) The render attaches at `PlaybackAttachSocketName`
+(`CkVoiceTalker_Processor.cpp:829-830`) but the near/far state now measures from the actor origin
+(:927) — divergence up to the socket offset, negligible against range+margin but not zero.
+(b) A near-state with an UNATTACHED synth renders flat WITHOUT the radio chain: `Spatialize`
+fails on the attach guard while `ApplyEffectChain = NOT HybridNear` stays false (:868-877) —
+"all fallbacks collapse to radio" breaks in exactly that corner (previously the early-out kept
+the state unset → radio). Narrow (needs an owning actor with no attachable root); worth a
+one-line guard (`HybridNear` should also require the attach parent) whenever the file is next
+touched, not a re-gate.
+
+**F5 — LOW (edge, deviation-adjacent): per-drain reselection can flap the config across drains.**
+The "ties keep earliest" rule stabilizes selection *within* one drain
+(`CkVoiceTalker_Processor.cpp:645-671`, strict `>`), but selection recomputes per drain from that
+drain's bundles only: a talker delivering on two channels whose copies split across drains (loss,
+reorder, tick phase) flips the config down and back, each flip costing a synth Stop→Start. In
+practice both copies ride the same server flush, so this is bounded — but the deviation's
+"no config flapping between equal-priority channels" claim only holds per-drain. Note for the P5
+soak; no action now.
+
+**F6 — INFO: first-drain double Stop→Start.** On the first drain, `TryCreate_PlaybackSynth`
+applies the config (:837), then the first `Evaluate_HybridRenderMode` sets `_HybridRenderNear`
+from unset and re-applies (:938-942) even when the resulting render is identical. Harmless — the
+PCM queue survives by design — just redundant.
+
+### Claims verified (exact evidence per exit criterion)
+
+- **VoiceChat 33/33, EXIT 0, 0 AS errors** — `Test-VoiceChatP4-exitsweep2.log:4749-4753`
+  (`Total: 33 / Passed: 33 / Failed: 0 / Skipped: 0 / Contaminated: 0`), five `EXIT CODE: 0`
+  lines (3 lanes + net; :1792,2678,3675,4747), `grep -c 'Angelscript: Error'` = 0,
+  `grep -c 'Result={Fail'` = 0.
+- **RenderTarget 22/22 on the same binary, no rebuild** — `Test-P4-RenderTarget-exitsweep.log:
+  7584-7588`, EXIT 0 ×5, 0 AS errors; every "Compil-" hit in BOTH logs is
+  `LogShaderCompilers ... AutogenShaderHeaders.ush` — zero C++ compile/link actions. Name-level
+  diff of the 22 Success paths vs `Test-P3-RenderTarget-postrebase2.log` → **identical sets**.
+- **+3 tests exactly, zero regressions** — name diff of the 30 baseline Success paths
+  (`Test-VoiceChatP3-postrebase2.log`) against the 33: all 30 present; new =
+  {`Net.HybridRenderMode`, `Net.ModerationMatrix`, `Net.PlaybackConfig`} — nothing else.
+- **Freshness chain monotonic** — sources (`CkVoiceTalker_Utils.h/.cpp`, the `9c6cab9e4` fix)
+  16:35:15 → `BusterBlockEditor-CkVoiceChat.dll` 16:36:01 → `BusterBlockEditor-CkTests.dll`
+  16:40:45 (the checklist omits this one; it is the `157f491b` spec-fix rebuild and still
+  predates the sweep) → VoiceChat sweep 16:45 → RenderTarget 16:49. No DLL under
+  `BusterBlock/Binaries/Win64` newer than 16:40:45. BB trees at the audited tips: CkFoundation
+  clean @ `9c6cab9e4`, CkTests @ `157f491` with only `Script/Generated/CkTestsAssets.as` dirty —
+  editor-boot regeneration adding OTHER plugins' autotest entries (Aggro/Crowd/AudioTrack), benign
+  run residue, not tampering. The two intermediate logs (`-exitsweep-fix.log` 16:37,
+  `-exitsweep-fix2.log` 16:41) match the two recorded fix cycles — honest history.
+- **Stop→set→Start engine claim** — `USynthComponent::Start()` copies `AttenuationSettings` /
+  `bAllowSpatialization` to the AudioComponent and `SourceEffectChain` to the Synth sound
+  (`Runtime/AudioMixer/Private/Components/SynthComponent.cpp` ≈443-490, copy block ≈464-479 —
+  the commit's ":465-479" cite is accurate to within drift); `Stop()` never touches queued data,
+  and the PCM queue survives because the generator holds it by shared ref
+  (`CkVoiceChatSynth_Component.h:16-20,33`).
+- **RootedBatch GC-root claim** — `FCk_ResourceLoader_RootedAssetBatch` holds
+  `TSharedPtr<FStreamableHandle>`; the type's own contract states the handle IS the GC root and
+  reset/destruction releases (`CkResourceLoader_Fragment_Data.h:157-182`). The resolved objects
+  are held as `TWeakObjectPtr` behind that root — correct non-owning observation per doctrine.
+- **No-EndPlay-reset rationale** — `FProcessor_VoiceChannel_EndPlay` is AuthorityOnly
+  (`CkVoiceChannel_Processor.h:144`); the batch releases via fragment destruction at entity
+  teardown on every machine. Rationale holds.
+- **Receive-drain ordering** — selection precedes the config-change apply, which precedes
+  `TryCreate_PlaybackSynth` (`CkVoiceTalker_Processor.cpp:645-724`): on the first drain the
+  latch is set before creation and `TryCreate` applies post-attach (:837); on later drains the
+  change-apply hits the live synth. No misorder found.
+- **One wire copy (the STOP condition)** — item 4 (`da8ae684f`) and its follow-up (`faf5b96f0`)
+  touch ONLY VoiceTalker playback files; the Route processor's HybridRadio row is unchanged in
+  the whole P4 range. The no-routing-fork property holds structurally.
+- **Hysteresis mirror** — become-near at range, stay-near to range+margin
+  (`CkVoiceTalker_Processor.cpp:929-934`), pinned by the four-beat walk (300→near, 550→holds,
+  700→far, 550→stays far; `Net/CkVoiceChat_HybridRender.spec.cpp:360-370`) — the asymmetry is
+  proven by the SAME 550 placement asserting opposite states on approach direction.
+- **ModerationMatrix is load-bearing** — one identical inject seam across six acts
+  (`Net/CkVoiceChat_ModerationMatrix.spec.cpp:105-120`), arrival-counter asserts at the RPC
+  boundary (`Debug_Get_ReceiveArrivedBundles`), the act-3 differential (B frozen WHILE C grows,
+  :361-363) separates moderation from a dead pipe, growth positive-controls bracket every frozen
+  assert, and the composition is proven both directions (:460-461, :500).
+- **PlaybackConfig spec** — selection asserted by wire idx through the seam (:245-246); the
+  transient amplitude window POLLED via `FCk_Latent_WaitUntil` (:214-224, the recorded fix-cycle-2
+  lesson) rather than settled; sticky selection through silence (:279-281); prune proven with a
+  populated-first precondition (>0 at :319-320, ==0 at :343-344) against the live-anchor
+  total-count seam (`9c6cab9e4` — the tombstone lesson is real: a destroyed talker's handle
+  cannot anchor `Has<>` nor safely key matches).
+- **F5 (Gate-3 carry) resolved** — EndPlay sweeps both world maps, dropping stale player keys en
+  route (`CkVoiceTalker_Processor.cpp:939-977` region); the stated residual (a departed player's
+  own outer key falls to the next sweep) is honest and bounded by player count.
+- **Item 7 release** — arrival-clock guard keeps the release off loopback talkers
+  (`CkVoiceTalker_Processor.cpp:710-718`); release threshold = the sender's own stale-drop age.
+- **N4 dep budget** — Build.cs Ck deps are EXACTLY
+  ActorRelay/Core/Ecs/EcsExt/Label/Log/Record/ResourceLoader/Settings/Shapes/SpatialQuery +
+  engine AudioMixer/Core/CoreUObject/DeveloperSettings/Engine/GameplayTags/NetCore/Voice;
+  `CkRelationship` absent; ResourceLoader earned at item 1 with the earning event in the
+  Build.cs why-comment.
+- **F4 strip (Gate-3 carry)** — all five flagged sites re-swept clean (amendment/campaign/review
+  labels gone, HoL-blocking and measurement why-content retained). Residue = this audit's F3.
+- **Gym + docs** — "Voice Chat" registered (`CkTests_GymRegistry.as:77`); 0 AS errors in the
+  sweep proves it compiles; module Claude.md carries the P4 playback-config section + roger-beep
+  recipe; `Source/CLAUDE.md` tier row updated (the P4 range's only out-of-module source touch —
+  recorded, `f94dfaa38`).
+
+### Deviations ruling
+
+1. **Priority ties keep EARLIEST (vs the gate doc's "most recent") — ACCEPTED.** Recorded in the
+   commit, PROGRESS, and here; strict `>` is the simpler implementation and strictly better
+   within a drain. The stability rationale is bounded per-drain (finding F5) — acceptable for v1,
+   re-examine only if the P5 soak shows audible config churn.
+2. **Item-1 positive path scoped to the audition — SPLIT RULING.** The positive half is ACCEPTED:
+   no engine-shipped `USoundAttenuation` exists, authoring a content asset in CkTests was a real
+   alternative but the `[EDITOR-VERIFY]` step B covers the same claim with more fidelity (audible
+   application, not just pointer equality). The failed-resolve half is REJECTED AS RECORDED: the
+   record claims machine coverage that does not exist (finding F2 / Condition 2).
+3. **F4 stripped early instead of deferred to P5 — ACCEPTED.** Verified on all five flagged
+   sites; doing it early was the better call. The two new P4-labeled seam comments (F3) are the
+   only residue.
+4. **(Unrecorded but honest) specs batched to the BB gate rather than landing strictly WITH their
+   work items — ACCEPTED as circumstance.** BusterBlock is the only net-capable host and was
+   blocked mid-campaign (sibling session, stale generated scripts); each item still carried a
+   local delta-zero gate and the deferred-verification ledger named what remained. The evidence
+   chain never broke.
+
+### Scope check
+
+`git diff a16c55389..7978e9771 --name-only` touches only `Source/CkVoiceChat/`,
+`docs/campaigns/2026-08-CkVoiceChat/`, and `Source/CLAUDE.md` (the recorded tier-row update).
+CkTests commits (`f67bc2b7`, `5205d36b`, `e49fe505`, `157f491b`) touch only VoiceChat specs, the
+net-subject helper, and the gym scripts/registry. No unrecorded scope creep. Dep budget honored
+(see Claims). The `[EDITOR-VERIFY]` block is genuinely followable (exact stations, keys, console
+fallbacks, expected observations per step, including the flip-must-be-clean check with a
+prewritten response).
+
+## Audit-condition resolution — 2026-08-04 (same session)
+
+**All four actionable findings resolved and re-gated green. Gate 4 machine portion CLOSED.**
+
+| Finding | Resolution |
+|---|---|
+| C1/F1 (mid-load latch, never re-applied) | The receive drain skips a delivering channel still carrying `FTag_VoiceChannel_PendingAssetLoad` — the next drain after the load completes selects and applies (CkF fix commit). Late-join now gets authored config as soon as it resolves. |
+| C2/F2 (failed-resolve branch untested; record overstated) | `Ck.VoiceChat.Channel.AudioAssetResolveFails` — bogus authored soft ref ensures once, setup completes on defaults, resolved getters null, membership still works (zero partial state). Green FIRST run. The earlier PROGRESS claim that this branch was already pinned is hereby corrected: it was not, until this spec. |
+| F3 (new P4 breadcrumbs) | Both seam labels + the stale "(P3)" stripped; technical content retained. |
+| F4b (unattached-near loses the radio chain) | Render-near now requires attachment: an unattached synth with a computed-near state renders RADIO (flat + chain), never bare flat. The state stays attachment-independent (F4a's socket-offset divergence accepted as negligible vs range+margin, per the audit's own read). |
+
+**Re-gate (BusterBlock): VoiceChat 34/34 — 0 failed, 0 contaminated, 0 `Angelscript: Error`,
+3m18s (Test-VoiceChatP4-auditres.log) + RenderTarget 22/22 on the SAME binary, no rebuild
+(Test-P4-RenderTarget-auditres.log).** The suite baseline is now **34**.
