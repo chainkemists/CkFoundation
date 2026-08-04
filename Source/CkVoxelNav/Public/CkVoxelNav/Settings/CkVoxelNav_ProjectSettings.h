@@ -48,6 +48,11 @@ private:
     int32 _MaxChunksPerAxis = 8;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Pathfinding",
+        meta = (AllowPrivateAccess = true,
+            ToolTip = "Coalesce a finished bake's free cells into merged boxes, and search over those instead. The octree is identical either way - merging adds a table beside it - but a route's cells are then merged boxes rather than octree cells, so anything that pins a route's cell list is pinning the representation this switch chooses."))
+    ECk_EnableDisable _CellMerging = ECk_EnableDisable::Enable;
+
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Pathfinding",
         meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1,
             ToolTip = "Cell expansions one path search may spend. The search runs to completion inside the tick that requested it, so this cap is the only thing bounding a pathological query - a search that reaches it reports IterationCapReached rather than a path."))
     int32 _MaxPathSearchIterations = 200000;
@@ -60,6 +65,7 @@ public:
     CK_PROPERTY_GET(_MaxPathSearchIterations);
     CK_PROPERTY_GET(_MaxChunkSizeUu);
     CK_PROPERTY_GET(_MaxChunksPerAxis);
+    CK_PROPERTY_GET(_CellMerging);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -93,6 +99,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|VoxelNav|Settings")
     static int32 Get_MaxChunksPerAxis();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|VoxelNav|Settings")
+    static ECk_EnableDisable Get_CellMerging();
 };
 
 // --------------------------------------------------------------------------------------------------------------------

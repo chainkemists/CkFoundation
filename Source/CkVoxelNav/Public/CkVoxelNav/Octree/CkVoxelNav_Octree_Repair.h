@@ -110,6 +110,17 @@ private:
     UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _RepairSeconds = 0.0f;
 
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _MergedCellCount = 0;
+
+    // Merged boxes taken from the published table untouched because the dirty bounds never reached them.
+    // The merge half of the local-repair contract, expressed as a number: what is NOT re-derived.
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _MergedCellsCarriedOver = 0;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float _MergeSeconds = 0.0f;
+
 public:
     CK_PROPERTY(_OccupancyProbes);
     CK_PROPERTY(_Slices);
@@ -119,6 +130,9 @@ public:
     CK_PROPERTY(_LeafNodeCount);
     CK_PROPERTY(_TotalNodeCount);
     CK_PROPERTY(_RepairSeconds);
+    CK_PROPERTY(_MergedCellCount);
+    CK_PROPERTY(_MergedCellsCarriedOver);
+    CK_PROPERTY(_MergeSeconds);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -138,6 +152,11 @@ namespace ck::voxelnav
          *  where space became blocked, the old ones say where it became free again, and a repair given only
          *  the new bounds leaves the obstacle's departure point permanently occupied. */
         FBox _DirtyBounds = FBox{ForceInit};
+
+        /** MUST match the value the published octree was baked with. A repair that merges where the bake did
+         *  not (or the reverse) republishes the volume in a different cell representation, and a path planned
+         *  against the old one would be re-validated against cells that do not exist. */
+        ECk_EnableDisable _CellMerging = ECk_EnableDisable::Enable;
     };
 
     // ----------------------------------------------------------------------------------------------------------------

@@ -263,6 +263,179 @@ namespace ck::voxelnav
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        FMergedCell::
+        Get_MinExtent() const
+        -> float
+    {
+        if (_Bounds.IsValid == 0)
+        { return 0.0f; }
+
+        return static_cast<float>(_Bounds.GetExtent().GetAbsMin());
+    }
+
+    auto
+        FMergedCell::
+        Set_Bounds(
+            const FBox& InBounds)
+        -> FMergedCell&
+    {
+        _Bounds = InBounds;
+        return *this;
+    }
+
+    auto
+        FMergedCell::
+        Set_CellCount(
+            int32 InCellCount)
+        -> FMergedCell&
+    {
+        _CellCount = InCellCount;
+        return *this;
+    }
+
+    auto
+        FMergedCell::
+        Set_Neighbors(
+            TArray<int32> InNeighbors)
+        -> FMergedCell&
+    {
+        _Neighbors = MoveTemp(InNeighbors);
+        return *this;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        FMergedCellTable::
+        TryGet_Cell(
+            int32 InMergedIndex) const
+        -> const FMergedCell*
+    {
+        if (NOT _Cells.IsValidIndex(InMergedIndex))
+        { return nullptr; }
+
+        return &_Cells[InMergedIndex];
+    }
+
+    auto
+        FMergedCellTable::
+        Get_MergedIndexForCell(
+            const FNodeAddress& InAddress) const
+        -> int32
+    {
+        const auto* MergedIndex = _CellToMerged.Find(InAddress.Get_Packed());
+
+        return MergedIndex != nullptr ? *MergedIndex : INDEX_NONE;
+    }
+
+    auto
+        FMergedCellTable::
+        Get_AllocatedSize() const
+        -> int32
+    {
+        auto AllocatedSize = _Cells.Num() * static_cast<int32>(sizeof(FMergedCell));
+
+        for (const auto& Cell : _Cells)
+        { AllocatedSize += Cell.Get_Neighbors().Num() * static_cast<int32>(sizeof(int32)); }
+
+        return AllocatedSize + static_cast<int32>(_CellToMerged.GetAllocatedSize());
+    }
+
+    auto
+        FMergedCellTable::
+        Request_Reset()
+        -> void
+    {
+        _Cells.Reset();
+        _CellToMerged.Reset();
+        _SourceCellCount = 0;
+        _CarriedOverCount = 0;
+        _IsMerged = false;
+    }
+
+    auto
+        FMergedCellTable::
+        Request_AddCell(
+            const FMergedCell& InCell)
+        -> int32
+    {
+        return _Cells.Emplace(InCell);
+    }
+
+    auto
+        FMergedCellTable::
+        Request_MapCellToMerged(
+            const FNodeAddress& InAddress,
+            int32 InMergedIndex)
+        -> void
+    {
+        const auto MappingIsInRange = InAddress.Get_IsValid() && _Cells.IsValidIndex(InMergedIndex);
+
+        CK_ENSURE_IF_NOT(MappingIsInRange,
+            TEXT("Cannot map VoxelNav cell [{}] onto merged cell [{}] - the table holds [{}] merged cells"),
+            InAddress.Get_Packed(), InMergedIndex, _Cells.Num())
+        {}
+
+        if (NOT MappingIsInRange)
+        { return; }
+
+        _CellToMerged.Add(InAddress.Get_Packed(), InMergedIndex);
+    }
+
+    auto
+        FMergedCellTable::
+        Request_SetBounds(
+            int32 InMergedIndex,
+            const FBox& InBounds)
+        -> void
+    {
+        if (NOT _Cells.IsValidIndex(InMergedIndex))
+        { return; }
+
+        _Cells[InMergedIndex].Set_Bounds(InBounds);
+    }
+
+    auto
+        FMergedCellTable::
+        Request_SetNeighbors(
+            int32 InMergedIndex,
+            TArray<int32> InNeighbors)
+        -> void
+    {
+        if (NOT _Cells.IsValidIndex(InMergedIndex))
+        { return; }
+
+        _Cells[InMergedIndex].Set_Neighbors(MoveTemp(InNeighbors));
+    }
+
+    auto
+        FMergedCellTable::
+        Request_SetCellCount(
+            int32 InMergedIndex,
+            int32 InCellCount)
+        -> void
+    {
+        if (NOT _Cells.IsValidIndex(InMergedIndex))
+        { return; }
+
+        _Cells[InMergedIndex].Set_CellCount(InCellCount);
+    }
+
+    auto
+        FMergedCellTable::
+        Request_MarkMerged(
+            int32 InSourceCellCount,
+            int32 InCarriedOverCount)
+        -> void
+    {
+        _SourceCellCount = InSourceCellCount;
+        _CarriedOverCount = InCarriedOverCount;
+        _IsMerged = true;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         FLeafNode::
         Get_IsSubNodeOccluded(
             SubNodeIndex InSubNodeIndex) const
@@ -487,7 +660,7 @@ namespace ck::voxelnav
         Get_AllocatedSize() const
         -> int32
     {
-        auto AllocatedSize = _LeafNodes.Get_AllocatedSize();
+        auto AllocatedSize = _LeafNodes.Get_AllocatedSize() + _MergedCells.Get_AllocatedSize();
 
         for (const auto& Layer : _Layers)
         { AllocatedSize += Layer.Get_AllocatedSize(); }
@@ -504,6 +677,7 @@ namespace ck::voxelnav
     {
         InOutOctree._Layers.Reset();
         InOutOctree._LeafNodes.Request_Reset();
+        InOutOctree._MergedCells.Request_Reset();
         InOutOctree._NavigationBounds = FBox{ForceInit};
         InOutOctree._VolumeBounds = FBox{ForceInit};
         InOutOctree._IsValid = false;

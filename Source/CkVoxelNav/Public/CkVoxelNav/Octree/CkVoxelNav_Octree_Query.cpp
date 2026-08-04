@@ -1099,18 +1099,42 @@ namespace ck::voxelnav
             const FCellId& InCell)
         -> FVector
     {
-        const auto IsOctreeNodeCell = InCell.Get_Kind() == ECellKind::OctreeNode;
+        if (InCell.Get_Kind() == ECellKind::Merged)
+        {
+            const auto* MergedCell = InOctree.Get_MergedCells().TryGet_Cell(InCell.Get_MergedIndex());
 
-        CK_ENSURE_IF_NOT(IsOctreeNodeCell,
-            TEXT("VoxelNav cell [{}] is not an octree-node cell, and merged-cell resolution is not implemented"),
-            InCell.Get_Packed())
-        {}
+            if (ck::Is_NOT_Valid(MergedCell, ck::IsValid_Policy_NullptrOnly{}))
+            { return FVector::ZeroVector; }
 
-        if (NOT IsOctreeNodeCell)
-        { return FVector::ZeroVector; }
+            return MergedCell->Get_Center();
+        }
 
         return Get_NodePositionFromAddress(
             InOctree, InCell.Get_NodeAddress(), ECk_VoxelNav_SubNodePrecision::SubNodeCenter);
+    }
+
+    auto
+        Get_CellBounds(
+            const FOctree& InOctree,
+            const FCellId& InCell)
+        -> FBox
+    {
+        if (InCell.Get_Kind() == ECellKind::Merged)
+        {
+            const auto* MergedCell = InOctree.Get_MergedCells().TryGet_Cell(InCell.Get_MergedIndex());
+
+            if (ck::Is_NOT_Valid(MergedCell, ck::IsValid_Policy_NullptrOnly{}))
+            { return FBox{ForceInit}; }
+
+            return MergedCell->Get_Bounds();
+        }
+
+        const auto Extent = Get_NodeExtentFromAddress(InOctree, InCell.Get_NodeAddress());
+
+        if (Extent <= 0.0f)
+        { return FBox{ForceInit}; }
+
+        return FBox::BuildAABB(Get_CellCenter(InOctree, InCell), FVector{Extent});
     }
 
     auto
@@ -1119,15 +1143,15 @@ namespace ck::voxelnav
             const FCellId& InCell)
         -> float
     {
-        const auto IsOctreeNodeCell = InCell.Get_Kind() == ECellKind::OctreeNode;
+        if (InCell.Get_Kind() == ECellKind::Merged)
+        {
+            const auto* MergedCell = InOctree.Get_MergedCells().TryGet_Cell(InCell.Get_MergedIndex());
 
-        CK_ENSURE_IF_NOT(IsOctreeNodeCell,
-            TEXT("VoxelNav cell [{}] is not an octree-node cell, and merged-cell resolution is not implemented"),
-            InCell.Get_Packed())
-        {}
+            if (ck::Is_NOT_Valid(MergedCell, ck::IsValid_Policy_NullptrOnly{}))
+            { return 0.0f; }
 
-        if (NOT IsOctreeNodeCell)
-        { return 0.0f; }
+            return MergedCell->Get_MinExtent();
+        }
 
         return Get_NodeExtentFromAddress(InOctree, InCell.Get_NodeAddress());
     }
@@ -1138,15 +1162,10 @@ namespace ck::voxelnav
             const FCellId& InCell)
         -> bool
     {
-        const auto IsOctreeNodeCell = InCell.Get_Kind() == ECellKind::OctreeNode;
-
-        CK_ENSURE_IF_NOT(IsOctreeNodeCell,
-            TEXT("VoxelNav cell [{}] is not an octree-node cell, and merged-cell resolution is not implemented"),
-            InCell.Get_Packed())
-        {}
-
-        if (NOT IsOctreeNodeCell)
-        { return false; }
+        // A merged cell is a box the merge pass assembled out of free cells only, so its existence IS its
+        // freedom - there is nothing further to look up.
+        if (InCell.Get_Kind() == ECellKind::Merged)
+        { return InOctree.Get_MergedCells().TryGet_Cell(InCell.Get_MergedIndex()) != nullptr; }
 
         const auto Address = InCell.Get_NodeAddress();
         const auto* Node = TryGet_NodeFromAddress(InOctree, Address);
@@ -1174,15 +1193,22 @@ namespace ck::voxelnav
             TArray<FCellId>& OutNeighbors)
         -> void
     {
-        const auto IsOctreeNodeCell = InCell.Get_Kind() == ECellKind::OctreeNode;
+        const auto& MergedCells = InOctree.Get_MergedCells();
 
-        CK_ENSURE_IF_NOT(IsOctreeNodeCell,
-            TEXT("VoxelNav cell [{}] is not an octree-node cell, and merged-cell resolution is not implemented"),
-            InCell.Get_Packed())
-        {}
+        if (InCell.Get_Kind() == ECellKind::Merged)
+        {
+            const auto* MergedCell = MergedCells.TryGet_Cell(InCell.Get_MergedIndex());
 
-        if (NOT IsOctreeNodeCell)
-        { return; }
+            if (ck::Is_NOT_Valid(MergedCell, ck::IsValid_Policy_NullptrOnly{}))
+            { return; }
+
+            OutNeighbors.Reserve(OutNeighbors.Num() + MergedCell->Get_Neighbors().Num());
+
+            for (const auto NeighbourMergedIndex : MergedCell->Get_Neighbors())
+            { OutNeighbors.Emplace(FCellId::Make_FromMergedIndex(InCell.Get_Volume(), NeighbourMergedIndex)); }
+
+            return;
+        }
 
         auto NeighbourAddresses = TArray<FNodeAddress>{};
         Get_NodeNeighbours(InOctree, InCell.Get_NodeAddress(), NeighbourAddresses);
@@ -1190,7 +1216,62 @@ namespace ck::voxelnav
         OutNeighbors.Reserve(OutNeighbors.Num() + NeighbourAddresses.Num());
 
         for (const auto& NeighbourAddress : NeighbourAddresses)
-        { OutNeighbors.Emplace(FCellId::Make_FromNodeAddress(InCell.Get_Volume(), NeighbourAddress)); }
+        {
+            // A merged octree answers in merged cells even when asked about a node cell, so a node cell
+            // handed to a search is an entry point into the merged graph rather than a dead end in it.
+            const auto NeighbourMergedIndex = MergedCells.Get_MergedIndexForCell(NeighbourAddress);
+
+            if (NeighbourMergedIndex != INDEX_NONE)
+            {
+                OutNeighbors.AddUnique(FCellId::Make_FromMergedIndex(InCell.Get_Volume(), NeighbourMergedIndex));
+                continue;
+            }
+
+            OutNeighbors.Emplace(FCellId::Make_FromNodeAddress(InCell.Get_Volume(), NeighbourAddress));
+        }
+    }
+
+    auto
+        TryGet_CellAtPosition(
+            const FOctree& InOctree,
+            FVolumeId InVolume,
+            const FVector& InPosition,
+            LayerIndex InMinLayerIndex)
+        -> FCellId
+    {
+        // Snaps a position buried in geometry to the nearest free cell of its leaf, and falls back to a
+        // whole-octree nearest-free scan - which is exactly what resolving a path endpoint wants.
+        const auto Lookup = TryGet_NodeAddressFromPosition(InOctree, InPosition, InMinLayerIndex);
+
+        if (Lookup._Outcome != ECk_VoxelNav_AddressLookup::Found)
+        { return {}; }
+
+        const auto MergedIndex = InOctree.Get_MergedCells().Get_MergedIndexForCell(Lookup._Address);
+
+        if (MergedIndex != INDEX_NONE)
+        { return FCellId::Make_FromMergedIndex(InVolume, MergedIndex); }
+
+        return FCellId::Make_FromNodeAddress(InVolume, Lookup._Address);
+    }
+
+    auto
+        Get_CellTransitionPoints(
+            const FOctree& InOctree,
+            const FCellId& InFrom,
+            const FCellId& InTo,
+            TArray<FVector>& OutPoints)
+        -> void
+    {
+        if (InFrom.Get_Kind() == ECellKind::OctreeNode && InTo.Get_Kind() == ECellKind::OctreeNode)
+        { return; }
+
+        const auto FromBounds = Get_CellBounds(InOctree, InFrom);
+        const auto ToBounds = Get_CellBounds(InOctree, InTo);
+
+        if (FromBounds.IsValid == 0 || ToBounds.IsValid == 0 || NOT FromBounds.Intersect(ToBounds))
+        { return; }
+
+        OutPoints.Emplace(FromBounds.Overlap(ToBounds).GetCenter());
     }
 }
 
