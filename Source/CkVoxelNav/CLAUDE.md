@@ -79,6 +79,44 @@ and plan paths through it at horde scale.
   pinned). `FPathGraph` holds a RAW pointer to the octree and is valid for exactly one synchronous
   search inside one tick; its caller holds the `TSharedPtr` that keeps the structure whole.
 
+### Chunked volumes
+
+- **Partitioning is decided at composition, not in a processor.** `Add` computes
+  `ck::voxelnav::Get_ChunkPartition` from the params; a volume longer than the max chunk size on any axis
+  splits there and then, creating one **chunk child entity** per sub-box. Creating entities is a structural
+  change, and a processor doing it mid-view is how a view invalidates underneath itself.
+- **A chunk is an ORDINARY volume entity.** It carries the same params, bakes through the same budgeted
+  processors, repairs through the same repair machinery, and answers every query on
+  `UCk_Utils_VoxelNavVolume_UE`. The only thing that marks it is `FFragment_VoxelNavVolume_ChunkIdentity`,
+  which holds its `FChunkId`.
+- **A partitioned volume publishes no octree of its own.** `FTag_VoxelNavVolume_Partitioned` is on the
+  parent, its `_Octree` stays null forever, and only its `_Epoch` is meaningful.
+  `Get_IsBuilt` / `Get_NumLayers` / `Get_BuildProgress` / `Get_BuildStats` / `Get_IsPointFree` all route to
+  the chunks; `Request_Build` and `Request_MarkDirty` fan out to them (the per-chunk copies carry NO
+  completion delegate — one caller gets one outcome). `Get_IsPartitioned` / `Get_ChunkCount` / `Get_Chunk` /
+  `Get_ChunkIndex` / `Get_ChunkPortalCount` are the chunk-facing surface, plus the two non-reflected
+  `Get_ChunkSearchInputs` / `Get_ChunkAdjacency` a cross-chunk query needs.
+- **`FProcessor_VoxelNavVolume_AggregateChunks` is the publish step.** It polls every tick (no
+  `MarkedDirtyBy` — what it watches lives on OTHER entities) and, once every chunk has published AND the
+  combined chunk epoch has moved, bakes the adjacency, bumps the volume's ONE epoch, and reports:
+  `OnBuildComplete` when the change came from a fan-out build, `OnRepairComplete` when a chunk repaired
+  underneath it. Epochs only increase, so their sum is a monotone fingerprint of "any chunk republished" —
+  which is the whole trigger, with no per-chunk signal subscription and no fan-out per obstacle.
+- **Identity is `FChunkId` = parent `FVolumeId` + lattice index, and the adjacency table holds nothing
+  else.** Portals pair two `FChunkId`s with two PACKED node addresses and a connection point; an `FCellId`
+  is deliberately NOT stored, because its volume qualifier is a live runtime value. The table is keyed by
+  the ordered `(int32, int32)` chunk-index pair packed into a `uint64` — upstream keyed its equivalent on a
+  `TMap<FVector, ...>`, where two positions differing in the last mantissa bit are different keys.
+- **Cross-chunk search** (`Chunk/CkVoxelNav_Chunk_Search.h`): same chunk → the existing `Search_PathGraph`,
+  one segment, byte-for-byte what an unpartitioned volume would return. Different chunks → BFS over the
+  adjacency graph, then one in-chunk search per chunk on the way, **portal cell centre to portal cell
+  centre** (a cell centre resolves back to that same cell, so the route's transition cells provably ARE the
+  adjacency's), stitched with the connection point between them. Cross-VOLUME routing is not implemented.
+- **Refinement is per segment, and that is a limit rather than a choice.** The octree ray-marcher can only
+  answer for the structure it belongs to, so a span reaching from one chunk into another is unprovable by
+  either chunk's octree — pruning it would assert free space nothing baked. `Refine_ChunkedWaypoints`
+  refines each segment against its own chunk and the two waypoints either side of a crossing always survive.
+
 ### Dynamic occluders and local repair
 
 - `UCk_Utils_VoxelNavOccluder_UE` — `Add` stamps the feature **on the moving entity itself** (it is a
@@ -141,6 +179,15 @@ and plan paths through it at horde scale.
 - **A repair's leaf occupancy is REPLACED, never accumulated.** `FLeafNode::Set_SubNodes` exists for
   exactly this: upstream's leaf writer was set-only, so an obstacle that vacated a still-occupied leaf
   left its bits behind forever — a permanent occupied trail behind anything that moved.
+- **Chunk boundaries are found on the AUTHORED sub-boxes, never on the octrees' bounds.** A chunk's octree
+  addresses a power-of-two cube snapped up from its sub-box, so two neighbouring chunks' cubes usually
+  OVERLAP in the padding. The face-sharing test and the boundary-cell face masks therefore work against the
+  authored boxes; a cell is allowed to sit up to one of its own extents past the plane, which is exactly the
+  padded space a crossing needs.
+- **A chunk with no geometry at all offers nothing to path through.** The bake short-circuits at the
+  broadphase sweep and creates zero nodes, so there are no cells and no boundary cells — the chunk is a hole
+  in the volume's connectivity rather than open space. That is the same behavior an empty unpartitioned
+  volume has, and it is why every chunk in a route's way needs geometry.
 - **A volume over LANDSCAPE bakes as free space in a packaged build.** CkJolt extracts landscape
   heightfields only under `WITH_EDITOR`, so outside the editor there are no landscape bodies to
   find. The build ensures once when its whole-volume broadphase sweep returns zero bodies and then
@@ -158,7 +205,12 @@ and plan paths through it at horde scale.
 3. **Don't re-implement A\*.** New search behavior belongs behind the CkAStar adapter or in the
    refinement pass, not in a bespoke solver.
 4. **Don't key anything on actor pointers.** Volume and chunk identity are stable integer ids so a
-   bake survives streaming and serialization.
+   bake survives streaming and serialization. Nothing in `Chunk/` may name an entity, a handle or an actor —
+   the child record on the parent volume is the one place handles live, and it is runtime plumbing, not
+   navigation data.
+5. **Don't scan the world to find a chunk.** A partitioned volume's own record answers "which chunks do I
+   own" in one step and the adjacency's integer keys index straight into it. Upstream resolved a chunk with
+   a `TActorIterator` scan per pathfinding call.
 
 ---
 
@@ -171,10 +223,11 @@ preserved at `docs/campaigns/voxelnav-port/` until the port matures, then alongs
 
 ## Status
 
-The octree core, the geometry backend, budgeted voxelization, pathfinding, and dynamic occluders with
-local repair are implemented: a volume bakes an immutable Sparse Voxel Octree of its free space,
-answers point and segment queries against it, an agent plans a refined route through it, and a moving
-obstacle repairs only the cells it dirtied. Chunking, crowd consumption, and node merging are not
-implemented yet; the plan of record is
+The octree core, the geometry backend, budgeted voxelization, pathfinding, dynamic occluders with local
+repair, and chunked volumes are implemented: a volume bakes an immutable Sparse Voxel Octree of its free
+space, answers point and segment queries against it, an agent plans a refined route through it, a moving
+obstacle repairs only the cells it dirtied, and a volume too large for one bake splits into chunks that
+route between each other across a baked adjacency. Cross-VOLUME routing, crowd consumption, and node
+merging are not implemented yet; the plan of record is
 `docs/campaigns/voxelnav-port/` (`PROMPT.md` for the mission and locked decisions, `PROGRESS.md`
 for live status).

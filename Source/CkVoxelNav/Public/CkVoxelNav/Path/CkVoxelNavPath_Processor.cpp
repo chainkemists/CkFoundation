@@ -8,6 +8,7 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkVoxelNav/Chunk/CkVoxelNav_Chunk_Search.h"
 #include "CkVoxelNav/CkVoxelNav_Log.h"
 #include "CkVoxelNav/Path/CkVoxelNav_Path_Graph.h"
 #include "CkVoxelNav/Path/CkVoxelNav_Path_Refine.h"
@@ -136,6 +137,52 @@ namespace ck
         const auto Octree = BuiltOctree.Get_Octree();
         const auto Epoch = BuiltOctree.Get_Epoch();
 
+        const auto DoPublishPath = [&](const voxelnav::FPathRefineResult& InRefined,
+                                       ECk_VoxelNav_PathSearchOutcome InOutcome,
+                                       int32 InPlannedAgainstEpoch) -> void
+        {
+            InResult._Waypoints = InRefined._Waypoints;
+            InResult._Status = ECk_VoxelNav_PathStatus::Ready;
+            InResult._Outcome = InOutcome;
+            InResult._Volume = Volume;
+            InResult._PlannedAgainstEpoch = InPlannedAgainstEpoch;
+            InResult._RawWaypointCount = InRefined._RawWaypointCount;
+            InResult._PathLengthUu = InRefined._RefinedLengthUu;
+
+            RequestResult = ECk_Request_OperationResult::Succeeded;
+
+            UUtils_Signal_OnVoxelNavPathReady::Broadcast(InPathEntity, MakePayload(InPathEntity));
+        };
+
+        // A partitioned volume holds no octree of its own: the route is planned chunk by chunk over the
+        // adjacency the volume baked, and each leg is the same in-chunk search an unpartitioned volume runs.
+        if (UCk_Utils_VoxelNavVolume_UE::Get_IsPartitioned(Volume))
+        {
+            const auto Chunks = UCk_Utils_VoxelNavVolume_UE::Get_ChunkSearchInputs(Volume);
+
+            const auto ChunkedPlan = voxelnav::Search_ChunkedPathGraph(
+                Chunks,
+                UCk_Utils_VoxelNavVolume_UE::Get_ChunkAdjacency(Volume),
+                Make_SearchParams(InParams, InRequest, Epoch));
+
+            if (ChunkedPlan._Outcome != ECk_VoxelNav_PathSearchOutcome::Succeeded)
+            {
+                voxelnav::Verbose(
+                    TEXT("VoxelNav Path [{}] found no chunked route from [{}] to [{}] on Volume [{}]: [{}]"),
+                    InPathEntity, InRequest.Get_From(), InRequest.Get_To(), Volume, ChunkedPlan._Outcome);
+
+                DoFailPath(ChunkedPlan._Outcome, ChunkedPlan._PlannedAgainstEpoch);
+                return;
+            }
+
+            DoPublishPath(
+                voxelnav::Refine_ChunkedWaypoints(Chunks, ChunkedPlan, Make_RefineParams(InRequest)),
+                ChunkedPlan._Outcome,
+                ChunkedPlan._PlannedAgainstEpoch);
+
+            return;
+        }
+
         // A volume that has not baked yet is an ordinary timing situation, not a caller error - the agent
         // simply asked before the world was ready, and it may ask again.
         if (NOT Octree.IsValid())
@@ -156,19 +203,10 @@ namespace ck
             return;
         }
 
-        const auto Refined = voxelnav::Refine_Waypoints(*Octree, Plan._Waypoints, Make_RefineParams(InRequest));
-
-        InResult._Waypoints = Refined._Waypoints;
-        InResult._Status = ECk_VoxelNav_PathStatus::Ready;
-        InResult._Outcome = Plan._Outcome;
-        InResult._Volume = Volume;
-        InResult._PlannedAgainstEpoch = Plan._PlannedAgainstEpoch;
-        InResult._RawWaypointCount = Refined._RawWaypointCount;
-        InResult._PathLengthUu = Refined._RefinedLengthUu;
-
-        RequestResult = ECk_Request_OperationResult::Succeeded;
-
-        UUtils_Signal_OnVoxelNavPathReady::Broadcast(InPathEntity, MakePayload(InPathEntity));
+        DoPublishPath(
+            voxelnav::Refine_Waypoints(*Octree, Plan._Waypoints, Make_RefineParams(InRequest)),
+            Plan._Outcome,
+            Plan._PlannedAgainstEpoch);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
