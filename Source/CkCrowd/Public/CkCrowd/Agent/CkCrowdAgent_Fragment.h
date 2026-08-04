@@ -94,9 +94,15 @@ namespace ck
         FVector _GoalLocation = FVector::ZeroVector;
         int32 _VolumeEpoch = 0;
 
+        // The volume epoch the stale-epoch replan last asked against. It is stamped BEFORE the answer
+        // arrives — an answer that fails never updates _VolumeEpoch, and without a separate record the
+        // drift would be re-requested every frame forever.
+        int32 _RequestedAgainstEpoch = 0;
+
     public:
         CK_PROPERTY_GET(_GoalLocation);
         CK_PROPERTY_GET(_VolumeEpoch);
+        CK_PROPERTY_GET(_RequestedAgainstEpoch);
     };
 
     // Value-only record of the last pathfinding problem in the current movement episode. A
@@ -138,9 +144,11 @@ namespace ck
         CK_PROPERTY_GET(_UsedNavigationFallback);
     };
 
-    // Per-frame displacement staging, consumed solely by FProcessor_CrowdAgent_ConstrainToNavmesh.
-    // Nothing else may write a crowd agent's Transform — a second writer bypasses the navmesh
-    // constraint, so every new displacement source accumulates here instead.
+    // Per-frame displacement staging. Exactly ONE processor consumes it and writes the agent's
+    // Transform: FProcessor_CrowdAgent_ConstrainToNavmesh for a grounded agent, and
+    // FProcessor_CrowdAgent_ApplyDisplacement3D for a flying one — the two views are disjoint on
+    // FTag_CrowdAgent_Flying. A second writer bypasses the navmesh constraint, so every new
+    // displacement source accumulates here instead.
     struct CKCROWD_API FFragment_CrowdAgent_PendingDisplacement
     {
     public:
@@ -149,6 +157,7 @@ namespace ck
         friend class FProcessor_CrowdAgent_ApplyOffset;
         friend class FProcessor_CrowdAgent_PushApart;
         friend class FProcessor_CrowdAgent_ConstrainToNavmesh;
+        friend class FProcessor_CrowdAgent_ApplyDisplacement3D;
 
     private:
         FVector _Displacement = FVector::ZeroVector;
@@ -222,6 +231,14 @@ namespace ck
     // Nothing stamps this today; the steering views carry TExclude<> for it so a future sleep pass
     // is wire-compatible without retro-fitting every view.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Asleep);
+
+    // Stamped by Add from the params' _AgentMode and never changed after. Every surface-bound or
+    // planar stage of the pipeline excludes it — the navmesh constraint (replaced for these agents by
+    // FProcessor_CrowdAgent_ApplyDisplacement3D), StationaryMarkup and PathRefresh (Recast disc math),
+    // AvoidanceSample/Separation/PushApart (2D by construction), and the yaw-only FaceAngle (replaced
+    // by FProcessor_CrowdAgent_FaceAngle3D). Path-follow, acceleration clamping, the velocity bridge
+    // and the integrator are already dimension-agnostic and run unchanged.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Flying);
 
     // While present, gameplay code must NOT issue its own MoveTo for this agent, or it fights the
     // goal the debugger took control to issue.

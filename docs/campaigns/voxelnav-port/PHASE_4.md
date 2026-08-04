@@ -48,10 +48,18 @@
    view membership assertions per gotcha (m) if practical).
 5. `[EDITOR-VERIFY]` (VALIDATION.md item): flying agent traverses a VoxelNav gym course in PIE —
    exact steps written into VALIDATION.md by this unit.
+6. **Not in the brief, forced by (1):** `FFragment_CrowdAgent_PendingDisplacement` has exactly one
+   consumer, `ConstrainToNavmesh`. Excluding a flying agent from it with no replacement leaves the
+   agent frozen, so `FProcessor_CrowdAgent_ApplyDisplacement3D` (Flying-gated, the constraint's own
+   no-nav-data branch standing alone) ships with the exclusions. Single-writer doctrine is preserved:
+   the two views partition the population.
 
 ## Exit criteria
 
-- [ ] Targeted `Ck.VoxelNav` (53 + new) green; the crowd integration tests green.
+- [ ] Targeted `Ck.VoxelNav` (53 + new) green; the crowd integration tests green. As landed, "new" is
+      4A's `Ck.VoxelNav.Crowd.Pie.AgentReceivesItsRouteThroughTheNavPathSeam` plus 4B's
+      `...FlyingAgentFliesItsRouteInThreeDimensions` and
+      `...StaleVolumeEpochReplansTheWalkingAgentExactlyOnce` — 56 total.
 - [ ] Full suite delta-zero — EXACTLY the six known reds: the PathNetworkFollower family must be
       bit-for-bit the same failures (we edited beside them); ONE sample.
 - [ ] `git diff --stat` over CkCrowd reviewed by the orchestrator (surgical-scope check).

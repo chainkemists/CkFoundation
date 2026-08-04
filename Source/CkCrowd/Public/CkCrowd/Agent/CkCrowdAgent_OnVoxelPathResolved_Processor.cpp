@@ -12,6 +12,9 @@
 #include "CkNavigation/Nav/CkNav_Algorithm.h"
 #include "CkNavigation/Nav/CkNav_Fragment.h"
 
+#include "CkVoxelNav/Path/CkVoxelNavPath_Utils.h"
+#include "CkVoxelNav/Volume/CkVoxelNavVolume_Utils.h"
+
 #include "HAL/PlatformTime.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -60,6 +63,46 @@ namespace ck
         // empties, so a queue that still exists means this result predates the request in flight.
         if (InHandle.Has<FFragment_VoxelNavPath_Requests>())
         { return; }
+
+        // A repair or a rebake bumps the volume's epoch underneath an agent that is ALREADY walking.
+        // Its installed route was planned through free space that may no longer be free, and the Ready
+        // branch below correctly refuses to re-install the stale result it still holds — so without
+        // this, nothing ever asks for a fresh one and the agent flies the pre-repair route to its end.
+        // Asked once per epoch: the request queue answers "in flight" and the recorded epoch answers
+        // "already asked", which together survive a replan that comes back Failed.
+        if (IsWalking && InHandle.Has<FFragment_CrowdAgent_InstalledVoxelPath>())
+        {
+            const auto CurrentVolumeEpoch =
+                UCk_Utils_VoxelNavVolume_UE::Get_BuildEpoch(InPathParams.Get_Volume());
+            const auto& Installed = InHandle.Get<FFragment_CrowdAgent_InstalledVoxelPath>();
+
+            if (CurrentVolumeEpoch != Installed.Get_VolumeEpoch() &&
+                CurrentVolumeEpoch != Installed.Get_RequestedAgainstEpoch())
+            {
+                auto NonConstHandle = InHandle;
+                NonConstHandle.Get<FFragment_CrowdAgent_InstalledVoxelPath>()._RequestedAgainstEpoch =
+                    CurrentVolumeEpoch;
+
+                auto Path = UCk_Utils_VoxelNavPath_UE::CastChecked(NonConstHandle);
+                UCk_Utils_VoxelNavPath_UE::Request_FindPath(
+                    Path,
+                    FCk_Request_VoxelNavPath_FindPath{
+                        InPathParams.Get_Volume(),
+                        InTransform.Get_Transform().GetLocation(),
+                        InPathFollow.Get_ActiveGoal()},
+                    {});
+
+                ck::crowd::Verbose(
+                    TEXT("CrowdAgent [{}] walking a route planned against volume epoch {} — the volume "
+                         "is now at epoch {}; replanning toward {}"),
+                    InHandle,
+                    Installed.Get_VolumeEpoch(),
+                    CurrentVolumeEpoch,
+                    InPathFollow.Get_ActiveGoal());
+
+                return;
+            }
+        }
 
         switch (InPathResult.Get_Status())
         {

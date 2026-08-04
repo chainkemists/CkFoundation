@@ -42,6 +42,9 @@ auto
     InOwner.Add<ck::FTag_CrowdAgent_NeedsSetup>();
     InOwner.Add<ck::FTag_CrowdAgent_Idle>();
 
+    if (InParams.Get_AgentMode() == ECk_CrowdAgent_Mode::Flying)
+    { InOwner.Add<ck::FTag_CrowdAgent_Flying>(); }
+
     // Overridden per-MoveTo by _ArrivalRadiusOverride; otherwise Steering's final-stop branch reads this.
     InOwner.Get<ck::FFragment_CrowdAgent_PathFollow>()._ActiveArrivalRadius = InParams.Get_ArrivalRadius();
 
@@ -109,6 +112,21 @@ auto
     { return 0.0f; }
 
     return FMath::RadiansToDegrees(InHandle.Get<ck::FFragment_CrowdAgent_FaceAngle>().Get_TargetYaw());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_TargetPitchDegrees(
+        const FCk_Handle_CrowdAgent& InHandle)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Invalid CrowdAgent handle [{}] passed to Get_TargetPitchDegrees"), InHandle)
+    { return 0.0f; }
+
+    return FMath::RadiansToDegrees(InHandle.Get<ck::FFragment_CrowdAgent_FaceAngle>().Get_TargetPitch());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

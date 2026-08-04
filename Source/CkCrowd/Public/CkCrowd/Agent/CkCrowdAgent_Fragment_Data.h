@@ -23,6 +23,7 @@ namespace ck
     class FProcessor_CrowdAgent_Setup;
     class FProcessor_CrowdAgent_Steering;
     class FProcessor_CrowdAgent_FaceAngle;
+    class FProcessor_CrowdAgent_FaceAngle3D;
     class FProcessor_CrowdAgent_HandleRequests;
     class FProcessor_CrowdAgent_OnPathResolved;
     class FProcessor_CrowdAgent_OnRouteResolved;
@@ -84,6 +85,26 @@ enum class ECk_CrowdAgent_MovementState : uint8
     Walking
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_MovementState);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Which locomotion the agent's steering pipeline is built around.
+//
+// Grounded (default): the agent is a walker. Every stage of the pipeline applies — the navmesh
+// constraint that lands its Z on the walkable surface, the planar separation/push-apart forces, the
+// 2D velocity-obstacle sampler, the Recast-bound stationary markup and path refresh, and the
+// yaw-only facing.
+// Flying: the agent moves through free space, so all of those are excluded by tag and its
+// displacement is applied in three dimensions. Its path must come from a volumetric provider —
+// a Recast polyline is a floor-hugging route no flyer wants — and it gets no avoidance at all:
+// the sampler and both separation forces are planar, and a 3D replacement is not built.
+UENUM(BlueprintType)
+enum class ECk_CrowdAgent_Mode : uint8
+{
+    Grounded,
+    Flying
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_Mode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -166,6 +187,11 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     ECk_CrowdAgent_BlockedPolicy _BlockedPolicy = ECk_CrowdAgent_BlockedPolicy::HoldAndRetry;
 
+    // Read once, by Add, to stamp FTag_CrowdAgent_Flying. Every processor that opts a flyer out does
+    // so on that tag, so changing this field afterwards changes nothing.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
+    ECk_CrowdAgent_Mode _AgentMode = ECk_CrowdAgent_Mode::Grounded;
+
     // Collision-channel bitfield stored as int32 — UPROPERTY does not support uint32 except as
     // bitfields. -1 is every bit set: the agent is in every channel until something narrows it.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
@@ -191,6 +217,7 @@ public:
     CK_PROPERTY(_MaxNeighborsForSteering);
     CK_PROPERTY(_PushApartIdleYield);
     CK_PROPERTY(_BlockedPolicy);
+    CK_PROPERTY(_AgentMode);
     CK_PROPERTY(_CollisionFlags);
     CK_PROPERTY(_IgnoreFlags);
 
@@ -328,7 +355,8 @@ public:
 
 // Cached target yaw for the face-angle processor, in RADIANS (converted at the BP boundary by
 // Get_TargetYawDegrees). Surfaced for the debugger and tests; the orientation itself lives on the
-// SceneNode.
+// SceneNode. _TargetPitch stays at its default for a grounded agent — only the flying facing
+// processor writes it.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_FaceAngleData
 {
@@ -336,14 +364,19 @@ struct CKCROWD_API FCk_Fragment_CrowdAgent_FaceAngleData
     CK_GENERATED_BODY(FCk_Fragment_CrowdAgent_FaceAngleData);
 
     friend class ck::FProcessor_CrowdAgent_FaceAngle;
+    friend class ck::FProcessor_CrowdAgent_FaceAngle3D;
     friend class ::UCk_Utils_CrowdAgent_UE;
 
 private:
     UPROPERTY()
     float _TargetYaw = 0.0f;
 
+    UPROPERTY()
+    float _TargetPitch = 0.0f;
+
 public:
     CK_PROPERTY_GET(_TargetYaw);
+    CK_PROPERTY_GET(_TargetPitch);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

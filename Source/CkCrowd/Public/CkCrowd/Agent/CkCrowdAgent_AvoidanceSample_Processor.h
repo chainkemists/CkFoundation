@@ -17,6 +17,10 @@ namespace ck
     // dtCrowd-style penalty-scored velocity sampling; overwrites _DesiredVelocity with the
     // lowest-penalty candidate. PARALLEL-SAFE: every cross-entity access is a read (the zone-tag
     // walk), and the only write is the agent's own DesiredVelocity.
+    //
+    // A flying agent is excluded: the velocity-obstacle quadratic, its penalties and its side
+    // preference are all FVector2D, so sampling would flatten a 3D route's desired velocity onto the
+    // XY plane. Flyers get no avoidance until a volumetric sampler exists.
     class CKCROWD_API FProcessor_CrowdAgent_AvoidanceSample : public TParallelProcessor<
             FProcessor_CrowdAgent_AvoidanceSample,
             FCk_Handle_CrowdAgent,
@@ -26,6 +30,7 @@ namespace ck
             TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

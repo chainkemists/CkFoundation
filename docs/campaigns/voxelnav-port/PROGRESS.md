@@ -67,7 +67,21 @@
 
 ## In-flight
 
-- Phase 3 boundary full suite running (`Phase3-Boundary.log`); then targeted `Ck.Jolt.Query`.
+- Phase 4 wave 2 (4B flying-agent enablement + [C-D24] stale-epoch replan) — opus, dispatched.
+
+- **4A ACCEPTED 2026-08-04** (opus, self-gated 54/54 + PathNetworkFollower delta-vigilance:
+  6 reds name-for-name with IDENTICAL failure messages, zero flips; the 2 greens traversing the
+  edited code pass). Freshness gate (queued-request-means-stale) replaces the exemplar's 25cm
+  goal-match — exact, no silent-stall failure mode; dedupe on (volume epoch, goal). All 6
+  deviations accepted (extra CkCrowd files were compiler/correctness-mandated no-ops for untagged
+  agents; stationary-markup detour correctly omitted — 2D disc math on a 3D route). Follow-ups:
+  (n) grounded voxel agents silently switch provider on BlockDetect/PathRefresh re-path;
+  (o) PathTrouble lacks voxel-typed fields (CkCrowdDebugger contract — deferred).
+  Commits: CkFoundation `89991d4ef`, CkTests `a5f3c7be`.
+- **[C-D24]** 4B's scope grows one item: stale-epoch auto-replan — the resolver re-issues
+  Request_FindPath (behind the freshness gate) when a WALKING voxel agent's installed epoch
+  drifts from the volume's (the dynamic-occluder story is incomplete without it: repair bumps
+  the epoch, dedupe blocks the stale re-install, but nothing re-requests).
 
 - **3A ACCEPTED 2026-08-04** (opus, self-gated 53/53, zero ensures): chunk = an ORDINARY volume
   entity (ChunkIdentity marker), so bake/repair/occluder composed with zero changes; parent
