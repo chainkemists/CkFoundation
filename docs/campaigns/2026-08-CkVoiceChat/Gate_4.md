@@ -81,11 +81,27 @@ left behind.
         `:161` and `CkVoiceChannel_Processor.cpp:72`). No near/far behavior exists yet.
       - Moderation primitives exist (`_ServerMuted` set + RepData mirror, `CanTalk`/`CanListen`
         member flags, listener mute matrix) — P4 adds the *matrix coverage*, not the mechanism.
-- [ ] **Carried blocker, must clear before the first P4 gate run:** CkTests `feature/voice-chat-wip`
-      is 1 commit behind `origin/dev` and needs `e5bb948b`. Upstream CkFoundation `dd3632bd7`
-      dropped the C++ default on `Request_ClearAllModifiers`'s `InAttributeComponent`, breaking
-      every AngelScript caller that omitted it; without the fix the branch cannot AS-compile
-      standalone. The 2026-08-04 re-gate used a working-tree edit, NOT a commit.
+      - **CORRECTION (deeper survey, same day): playback today is entirely NON-spatialized.**
+        `TryCreate_PlaybackSynth` (`CkVoiceTalker_Processor.cpp:763`) creates a bare synth — no
+        attach to the talker's transform, no attenuation, no spatialization flags — and
+        `Get_DefaultAttenuation` has ZERO consumers. Positional3D gates *routing*, but the received
+        audio renders flat 2D. Item 2 therefore lands spatialized playback itself, not merely a
+        per-channel attenuation swap. (Gate-3's "synth attached at the talker's location" goal line
+        was aspirational; the code never did it.)
+
+## Decision recorded at open — which channel's audio config a synth uses
+
+A talker has ONE synth per listening machine but may deliver on MULTIPLE channels; audio config is
+per-channel. The wire header carries `ChannelIdx` per bundle, so the receive path knows each
+bundle's channel. **Decision:** the synth adopts the config of the **highest-`_Priority` channel**
+among those currently delivering that talker's stream to this listener — the field exists for
+exactly this (ADR-5), and the Onset reference's "single-send + single-playback dedupe across shared
+channels" is the precedent. Ties break toward the most recently delivering channel. Low-blast,
+reversible — say the word if you want per-channel synths instead (rejected here: N synths per
+talker multiplies audio components and reintroduces the double-playback the reference dedupes).
+- [x] **Carried blocker CLEARED 2026-08-04:** CkTests `35fcde38` commits the one-line fix
+      (mirrors `e5bb948b`) and the follow-up merge of `e5bb948b` itself brings the branch to
+      **0 behind / 28 ahead** of `origin/dev`. `feature/voice-chat-wip` AS-compiles standalone.
 
 ## Work items (sequenced; each names its exemplar or is flagged NEW)
 
@@ -94,10 +110,14 @@ left behind.
    objects on a channel fragment. Earns the `CkResourceLoader` dep (record the earning event in
    Build.cs review per N4). Exemplar: an existing CkResourceLoader adopter — name it in the commit,
    do not invent a loading shape.
-2. **Per-channel attenuation at playback.** `CkVoiceChatSynth_Component` applies the channel's
-   resolved attenuation to the talker's audio component instead of the settings-level default.
-   Falls back to `UCk_Utils_VoiceChat_Settings_UE::Get_DefaultAttenuation()` when the channel
-   specifies none (that getter already exists, `CkVoiceChat_Settings.h:191`).
+2. **Spatialized playback + per-channel attenuation (bigger than first scoped — see the survey
+   correction).** Attach the synth at the talker's transform (the params' playback attach socket
+   has waited for this since P0), enable spatialization, and apply the channel-resolved attenuation
+   per the priority decision above. Falls back to
+   `UCk_Utils_VoiceChat_Settings_UE::Get_DefaultAttenuation()` when the channel specifies none
+   (getter exists, `CkVoiceChat_Settings.h:191` — currently zero consumers). Global2D channels keep
+   the non-spatialized render. Verify `USynthComponent`'s attenuation/spatialization surface
+   against 5.7 source at implementation, not from memory.
 3. **Per-channel source-effect chain at playback.** Apply the resolved
    `USoundEffectSourcePresetChain` to the same component. This is the mechanism `HybridRadio`'s
    "filtered 2D radio" leans on — land it before item 4.
