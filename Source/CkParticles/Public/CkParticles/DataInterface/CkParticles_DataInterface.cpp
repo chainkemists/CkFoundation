@@ -1,9 +1,16 @@
 ﻿#include "CkParticles/DataInterface/CkParticles_DataInterface.h"
 
+#include "CkParticles/DataInterface/CkParticles_PartTuning.h"
 #include "CkParticles/ScriptDefinition/CkParticles_ScriptDefinition_Naming.h"
+#include "CkParticles_Log.h"
 
 #include "NiagaraCompileHashVisitor.h"
+#include "NiagaraComponent.h"
+#include "NiagaraShaderParametersBuilder.h"
+#include "NiagaraSystemInstance.h"
 #include "NiagaraTypeRegistry.h"
+
+#include "RenderingThread.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CkParticles_DataInterface)
 
@@ -13,13 +20,23 @@
 
 namespace NDICkParticlesLocal
 {
+    // The per-instance PART tuning block as the GPU sees it. Declared here rather than in the UCLASS body so the
+    // array length keeps its ONE definition — ck::particles::PartTuningFloat4Count — without putting a namespaced
+    // constant expression through UHT. The template's `{ParameterName}_PartTuning*` declarations bind by name.
+    BEGIN_SHADER_PARAMETER_STRUCT(FShaderParameters, )
+        SHADER_PARAMETER(int32,           PartTuningBandStart)
+        SHADER_PARAMETER_ARRAY(FVector4f, PartTuningRows, [ck::particles::PartTuningFloat4Count])
+    END_SHADER_PARAMETER_STRUCT();
+
     static const FName NAME_ExecuteStage(TEXT("ExecuteStage"));
 
-    static const TCHAR* TemplateShaderFile = TEXT("/CkParticles/CkParticles_DataInterfaceTemplate.ush");
+    static const TCHAR* TemplateShaderFile      = TEXT("/CkParticles/CkParticles_DataInterfaceTemplate.ush");
+    static const TCHAR* BakedTemplateShaderFile = TEXT("/CkParticles/CkParticles_DataInterfaceTemplate_Baked.ush");
 
     static const TCHAR* DependentShaderFiles[] =
     {
         TEXT("/CkParticles/CkParticles_DataInterfaceTemplate.ush"),
+        TEXT("/CkParticles/CkParticles_DataInterfaceTemplate_Baked.ush"),
         TEXT("/CkParticles/CkParticles_Behaviors.ush"),
         TEXT("/CkParticles/Common.ush"),
         TEXT("/CkParticles/Behaviors/Behavior_Gravity.ush"),
@@ -74,12 +91,72 @@ namespace NDICkParticlesLocal
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// The DI is stateless, so this proxy carries no data — it exists only because a GPU-capable DI requires one.
+// Per-instance state. The DI's stage function is still pure — the ONLY per-instance datum is the PART tuning block,
+// which cannot ride a Niagara User parameter (there is no float4-array user type) and so is looked up per component
+// from ck::particles' registry.
+//
+// The Version is what keeps this cheap: the game thread bumps it only when the registry actually moved, and the
+// render thread skips the map write whenever it matches. An untuned system pays one integer compare per tick.
+struct FCkParticles_InstanceData_GT
+{
+    FCkParticles_PartTuningBlock Block;
+    uint64                       ObservedRegistryRevision = 0;
+    uint32                       Version                  = 1;
+};
+
+struct FCkParticles_InstanceData_RT
+{
+    FCkParticles_PartTuningBlock Block;
+    uint32                       Version = 0;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 struct FNiagaraDataInterfaceProxyCkParticles : public FNiagaraDataInterfaceProxy
 {
-    virtual void ConsumePerInstanceDataFromGameThread(void* PerInstanceData, const FNiagaraSystemInstanceID& Instance) override { check(false); }
-    virtual int32 PerInstanceDataPassedToRenderThreadSize() const override { return 0; }
+    virtual int32 PerInstanceDataPassedToRenderThreadSize() const override { return sizeof(FCkParticles_InstanceData_RT); }
+
+    virtual void ConsumePerInstanceDataFromGameThread(void* PerInstanceData, const FNiagaraSystemInstanceID& InstanceID) override
+    {
+        auto* FromGameThread = static_cast<FCkParticles_InstanceData_RT*>(PerInstanceData);
+        auto& InstanceData   = SystemInstancesToInstanceData_RT.FindOrAdd(InstanceID);
+
+        if (InstanceData.Version != FromGameThread->Version)
+        { InstanceData = *FromGameThread; }
+
+        FromGameThread->~FCkParticles_InstanceData_RT();
+    }
+
+    TMap<FNiagaraSystemInstanceID, FCkParticles_InstanceData_RT> SystemInstancesToInstanceData_RT;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace NDICkParticlesLocal
+{
+    // The one place a system instance is resolved back to the component a caller tuned. The registry's revision is
+    // checked FIRST, so an untouched registry costs an integer compare and never re-reads the map or re-uploads.
+    auto Refresh_PartTuning(
+        FCkParticles_InstanceData_GT& InOutInstanceData,
+        FNiagaraSystemInstance*       InSystemInstance) -> void
+    {
+        const auto Revision = ck::particles::Get_PartTuningRevision();
+
+        if (InOutInstanceData.ObservedRegistryRevision == Revision)
+        { return; }
+
+        InOutInstanceData.ObservedRegistryRevision = Revision;
+
+        auto* Component = InSystemInstance != nullptr
+            ? Cast<UNiagaraComponent>(InSystemInstance->GetAttachComponent())
+            : nullptr;
+
+        // A component with no entry is left at the IDENTITY block (TryGet_ writes it either way), never at zeros —
+        // a zero block hides every particle on the system.
+        ck::particles::TryGet_PartTuningBlock(Component, InOutInstanceData.Block);
+        ++InOutInstanceData.Version;
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 // CPU mirror of /CkParticles/CkParticles_Behaviors.ush — same BehaviorId, same math, or the two diverge.
@@ -1430,8 +1507,15 @@ namespace NDICkParticlesLocal
 
     static auto ExecuteStage_CPU(
         int32 InBehaviorId, float InDeltaTime, float InAge, float InLifetime,
-        FVector3f InPosition, FVector3f InVelocity, int32 InSeed, float InEmitterAge) -> FStageIO
+        FVector3f InPosition, FVector3f InVelocity, int32 InSeed, float InEmitterAge, FVector4f InTuning,
+        const FCkParticles_PartTuningBlock* InPartTuning) -> FStageIO
     {
+        // The clock half of the central tuning application, mirroring CkParticles_ExecuteStage's
+        // `In.Age *= In.Tuning.w; In.DeltaTime *= In.Tuning.w;`. It lands on the by-value parameters rather than
+        // on locals so the whole mirror below reads the scaled clock exactly as every behavior does on the GPU.
+        InAge       *= InTuning.W;
+        InDeltaTime *= InTuning.W;
+
         FStageIO Out;
         Out.Position = InPosition;
         Out.Velocity = InVelocity;
@@ -10513,6 +10597,21 @@ namespace NDICkParticlesLocal
                 break;
             }
         }
+
+        // The output half, mirroring CkParticles_ExecuteStage's post-dispatch block in the same order.
+        Out.Size    *= InTuning.X;
+        Out.Scale   *= InTuning.X;
+        Out.Color.R *= InTuning.Y;
+        Out.Color.G *= InTuning.Y;
+        Out.Color.B *= InTuning.Y;
+        Out.Color.A *= InTuning.Z;
+
+        // Per-part tuning, mirroring the DI template wrapper's post-ExecuteStage block. NormalizedAge is the local
+        // above, taken off the already-w-scaled clock — the same value CkParticles_NormalizedAgeOf(Age * Tuning.w,
+        // Lifetime) produces on the GPU.
+        if (InPartTuning != nullptr)
+        { ck::particles::Apply_PartTuning(Out, NormalizedAge, *InPartTuning); }
+
         return Out;
     }
 }
@@ -10538,6 +10637,105 @@ void
     }
 }
 
+bool
+    UCkParticles_DataInterface::
+    InitPerInstanceData(
+        void*                   PerInstanceData,
+        FNiagaraSystemInstance* SystemInstance)
+{
+    auto* InstanceData = new (PerInstanceData) FCkParticles_InstanceData_GT{};
+
+    // Seeded here rather than only on the first tick: a system whose block was set BEFORE it spawned must render
+    // tuned on its very first frame, not one frame late.
+    NDICkParticlesLocal::Refresh_PartTuning(*InstanceData, SystemInstance);
+
+    return true;
+}
+
+void
+    UCkParticles_DataInterface::
+    DestroyPerInstanceData(
+        void*                   PerInstanceData,
+        FNiagaraSystemInstance* SystemInstance)
+{
+    auto* InstanceData = static_cast<FCkParticles_InstanceData_GT*>(PerInstanceData);
+    InstanceData->~FCkParticles_InstanceData_GT();
+
+    ENQUEUE_RENDER_COMMAND(FCkParticles_RemovePartTuningInstance)
+    (
+        [RT_Proxy = GetProxyAs<FNiagaraDataInterfaceProxyCkParticles>(), InstanceID = SystemInstance->GetId()](FRHICommandListImmediate&)
+        {
+            RT_Proxy->SystemInstancesToInstanceData_RT.Remove(InstanceID);
+        }
+    );
+}
+
+int32
+    UCkParticles_DataInterface::
+    PerInstanceDataSize() const
+{
+    return sizeof(FCkParticles_InstanceData_GT);
+}
+
+bool
+    UCkParticles_DataInterface::
+    PerInstanceTick(
+        void*                   PerInstanceData,
+        FNiagaraSystemInstance* SystemInstance,
+        float                   DeltaSeconds)
+{
+    auto* InstanceData = static_cast<FCkParticles_InstanceData_GT*>(PerInstanceData);
+
+    if (InstanceData == nullptr)
+    { return false; }
+
+    NDICkParticlesLocal::Refresh_PartTuning(*InstanceData, SystemInstance);
+
+    return false;
+}
+
+void
+    UCkParticles_DataInterface::
+    ProvidePerInstanceDataForRenderThread(
+        void*                           DataForRenderThread,
+        void*                           PerInstanceData,
+        const FNiagaraSystemInstanceID& SystemInstance)
+{
+    auto*       Target = new (DataForRenderThread) FCkParticles_InstanceData_RT{};
+    const auto* Source = static_cast<const FCkParticles_InstanceData_GT*>(PerInstanceData);
+
+    Target->Block   = Source->Block;
+    Target->Version = Source->Version;
+}
+
+void
+    UCkParticles_DataInterface::
+    BuildShaderParameters(
+        FNiagaraShaderParametersBuilder& ShaderParametersBuilder) const
+{
+    ShaderParametersBuilder.AddNestedStruct<NDICkParticlesLocal::FShaderParameters>();
+}
+
+void
+    UCkParticles_DataInterface::
+    SetShaderParameters(
+        const FNiagaraDataInterfaceSetShaderParametersContext& Context) const
+{
+    auto&       DataInterfaceProxy = Context.GetProxy<FNiagaraDataInterfaceProxyCkParticles>();
+    const auto* InstanceData       = DataInterfaceProxy.SystemInstancesToInstanceData_RT.Find(Context.GetSystemInstanceID());
+
+    // An instance the render thread has not been told about yet renders with the IDENTITY block. Never zeros: a
+    // zero block hides every particle, which reads as a broken effect rather than an untuned one.
+    static const FCkParticles_PartTuningBlock IdentityBlock{};
+    const auto& Block = InstanceData != nullptr ? InstanceData->Block : IdentityBlock;
+
+    auto* ShaderParameters = Context.GetParameterNestedStruct<NDICkParticlesLocal::FShaderParameters>();
+    ShaderParameters->PartTuningBandStart = Block.BandStart;
+
+    for (auto RowIndex = 0; RowIndex < ck::particles::PartTuningFloat4Count; ++RowIndex)
+    { ShaderParameters->PartTuningRows[RowIndex] = Block.Rows[RowIndex]; }
+}
+
 #if WITH_EDITORONLY_DATA
 void
     UCkParticles_DataInterface::
@@ -10557,6 +10755,7 @@ void
     Sig.Inputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),     TEXT("Velocity")));
     Sig.Inputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetIntDef(),      TEXT("Seed")));
     Sig.Inputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(),    TEXT("EmitterAge")));
+    Sig.Inputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec4Def(),     TEXT("Tuning")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),    TEXT("OutPosition")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(),    TEXT("OutVelocity")));
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetColorDef(),   TEXT("OutColor")));
@@ -10572,6 +10771,7 @@ void
     Sig.Outputs.Add(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(),   TEXT("OutSubImageIndex")));
     Sig.SetDescription(LOCTEXT("ExecuteStageDesc",
         "Runs the CkParticles behavior selected by BehaviorId. Logic lives in /CkParticles/*.ush (GPU) and the CPU mirror."));
+    Sig.FunctionSpecifiers.Add(ck::particles::Get_BakedIdsSpecifierKey());
     OutFunctions.Add(Sig);
 }
 #endif
@@ -10599,10 +10799,13 @@ FCk_Particles_StageResult
         FVector3f InPosition,
         FVector3f InVelocity,
         int32     InSeed,
-        float     InEmitterAge)
+        float     InEmitterAge,
+        FVector4f InTuning,
+        const FCkParticles_PartTuningBlock* InPartTuning)
 {
     return NDICkParticlesLocal::ExecuteStage_CPU(
-        InBehaviorId, InDeltaTime, InAge, InLifetime, InPosition, InVelocity, InSeed, InEmitterAge);
+        InBehaviorId, InDeltaTime, InAge, InLifetime, InPosition, InVelocity, InSeed, InEmitterAge, InTuning,
+        InPartTuning);
 }
 
 void
@@ -10610,6 +10813,12 @@ void
     VMExecuteStage(
         FVectorVMExternalFunctionContext& Context)
 {
+    // The per-instance data handler comes FIRST and is not part of the DI's declared signature: the translator
+    // inserts a user-ptr operand ahead of every declared input for any DI whose PerInstanceDataSize() is non-zero
+    // (NiagaraHlslTranslator, "This interface requires per instance data via a user ptr"). Reading the declared
+    // inputs before it would take the pointer index for BehaviorId.
+    VectorVM::FUserPtrHandler<FCkParticles_InstanceData_GT> InstanceData(Context);
+
     // Order MUST match GetFunctionsInternal (inputs after the DI param, then outputs).
     FNDIInputParam<int32>         BehaviorId(Context);
     FNDIInputParam<float>         DeltaTime(Context);
@@ -10619,6 +10828,7 @@ void
     FNDIInputParam<FVector3f>     InVelocity(Context);
     FNDIInputParam<int32>         Seed(Context);
     FNDIInputParam<float>         EmitterAge(Context);
+    FNDIInputParam<FVector4f>     Tuning(Context);
 
     FNDIOutputParam<FVector3f>    OutPosition(Context);
     FNDIOutputParam<FVector3f>    OutVelocity(Context);
@@ -10634,6 +10844,11 @@ void
     FNDIOutputParam<FVector3f>   OutSpriteFacing(Context);
     FNDIOutputParam<float>       OutSubImageIndex(Context);
 
+    // One block for the whole batch: it is per SYSTEM INSTANCE, not per particle. The pointer is checked because
+    // the execution context leaves a user-pointer entry NULL when it cannot resolve the DI (it logs "Failed to
+    // resolve User Pointer" and carries on); the untuned result is the right answer there, not a crash.
+    const auto* PartTuning = InstanceData.Get() != nullptr ? &InstanceData.Get()->Block : nullptr;
+
     for (int32 i = 0; i < Context.GetNumInstances(); ++i)
     {
         const auto Result = NDICkParticlesLocal::ExecuteStage_CPU(
@@ -10644,7 +10859,9 @@ void
             InPosition.GetAndAdvance(),
             InVelocity.GetAndAdvance(),
             Seed.GetAndAdvance(),
-            EmitterAge.GetAndAdvance());
+            EmitterAge.GetAndAdvance(),
+            Tuning.GetAndAdvance(),
+            PartTuning);
 
         OutPosition.SetAndAdvance(Result.Position);
         OutVelocity.SetAndAdvance(Result.Velocity);
@@ -10669,9 +10886,74 @@ void
         const FNiagaraDataInterfaceGPUParamInfo& ParamInfo,
         FString& OutHLSL)
 {
+    // Niagara runs GPU codegen on a transient duplicate of the class CDO — never on the User.ParticleScript
+    // instance — so the ONLY per-template input available here is the ExecuteStage call node's function
+    // specifier, delivered through ParamInfo. Its value selects which behaviors the generated script includes;
+    // no specifier means the full-corpus dispatch (hand-authored systems). GeneratedFunctions[].InstanceName is
+    // the exact call symbol the translated sim will invoke (the specifier is mangled into it), so the wrapper's
+    // function is named from it rather than from the parameter symbol alone.
+    auto ExecuteStageSymbol = FString{};
+    auto BakedIdsValue = FName{};
+    for (const auto& GeneratedFunction : ParamInfo.GeneratedFunctions)
+    {
+        if (GeneratedFunction.DefinitionName != NDICkParticlesLocal::NAME_ExecuteStage)
+        { continue; }
+
+        ExecuteStageSymbol = GeneratedFunction.InstanceName;
+        if (const auto* SpecifierValue = GeneratedFunction.FindSpecifierValue(ck::particles::Get_BakedIdsSpecifierKey()))
+        { BakedIdsValue = *SpecifierValue; }
+        break;
+    }
+
+    // A script can reference the DI parameter without ever calling ExecuteStage; the wrapper still needs a
+    // function name, and nothing will call it.
+    if (ExecuteStageSymbol.IsEmpty())
+    { ExecuteStageSymbol = FString::Printf(TEXT("ExecuteStage_%s"), *ParamInfo.DataInterfaceHLSLSymbol); }
+
+    auto BehaviorIncludes = FString{};
+    auto BehaviorDispatch = FString{};
+    auto FallbackFunction = FString{};
+
+    for (const auto& BakedBehaviorId : ck::particles::Get_BehaviorIdsFromSpecifierValue(BakedIdsValue))
+    {
+        const auto BehaviorInclude = ck::particles::Get_BehaviorShaderIncludePath(BakedBehaviorId);
+        if (BehaviorInclude.IsEmpty())
+        { continue; }
+
+        const auto BehaviorFunction = ck::particles::Get_BehaviorShaderFunctionName(BakedBehaviorId);
+
+        BehaviorIncludes += FString::Printf(TEXT("#include \"%s\"\n"), *BehaviorInclude);
+        BehaviorDispatch += FString::Printf(TEXT("    if (In.BehaviorId == %d) { return %s(In); }\n"),
+            BakedBehaviorId, *BehaviorFunction);
+
+        if (FallbackFunction.IsEmpty())
+        { FallbackFunction = BehaviorFunction; }
+    }
+
+    if (NOT FallbackFunction.IsEmpty())
+    {
+        ck::particles::Display(TEXT("[HlslCodegen] BAKED dispatch: symbol [{}] specifier [{}]"),
+            ExecuteStageSymbol, BakedIdsValue.ToString());
+
+        const TMap<FString, FStringFormatArg> TemplateArgs =
+        {
+            { TEXT("ParameterName"),      ParamInfo.DataInterfaceHLSLSymbol },
+            { TEXT("ExecuteStageSymbol"), ExecuteStageSymbol },
+            { TEXT("BehaviorIncludes"),   BehaviorIncludes },
+            { TEXT("BehaviorDispatch"),   BehaviorDispatch },
+            { TEXT("FallbackFunction"),   FallbackFunction },
+        };
+        AppendTemplateHLSL(OutHLSL, NDICkParticlesLocal::BakedTemplateShaderFile, TemplateArgs);
+        return;
+    }
+
+    ck::particles::Display(TEXT("[HlslCodegen] LEGACY full-corpus dispatch: symbol [{}] specifier [{}]"),
+        ExecuteStageSymbol, BakedIdsValue.ToString());
+
     const TMap<FString, FStringFormatArg> TemplateArgs =
     {
-        { TEXT("ParameterName"), ParamInfo.DataInterfaceHLSLSymbol },
+        { TEXT("ParameterName"),      ParamInfo.DataInterfaceHLSLSymbol },
+        { TEXT("ExecuteStageSymbol"), ExecuteStageSymbol },
     };
     AppendTemplateHLSL(OutHLSL, NDICkParticlesLocal::TemplateShaderFile, TemplateArgs);
 }
@@ -10698,6 +10980,11 @@ bool
     {
         InVisitor->UpdateShaderFile(ShaderFile);
     }
+
+    // The shader PARAMETER layout is not covered by any of the files above and the base hash does not include it,
+    // so a change to FShaderParameters that left the .ush untouched would reuse a stale compiled script.
+    InVisitor->UpdatePOD(TEXT("CkParticles_PartTuningFloat4Count"), ck::particles::PartTuningFloat4Count);
+
     return bSuccess;
 }
 #endif

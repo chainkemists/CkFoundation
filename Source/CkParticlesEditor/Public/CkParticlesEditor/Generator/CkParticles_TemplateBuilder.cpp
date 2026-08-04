@@ -36,6 +36,7 @@
 #include "CkParticlesEditor/Generator/CkParticles_MaterialGenerator.h"
 #include "CkParticlesEditor/Generator/CkParticles_MeshGenerator.h"
 #include "CkParticlesEditor/Generator/CkParticles_TextureGenerator.h"
+#include "CkParticlesEditor/Generator/CkParticles_TuningGenerator.h"
 #include "CkParticles/ScriptDefinition/CkParticles_ScriptDefinition_Naming.h"
 
 #include "Engine/StaticMesh.h"
@@ -653,9 +654,10 @@ namespace ck::particles_editor
         // InSeedBank is 0 on the main emitter and ck::particles::RibbonSeedBase on the ribbon emitter, which is the
         // ONLY thing that tells the two populations apart — same DI, same signature, same behavior id.
         static auto Build_BehaviorModuleScript(
-            UObject*     InOuter,
-            const TCHAR* InScriptName,
-            int32        InSeedBank) -> UNiagaraScript*
+            UObject*        InOuter,
+            const TCHAR*    InScriptName,
+            int32           InSeedBank,
+            const FString&  InBakedIdsValue) -> UNiagaraScript*
         {
             auto* Script = NewObject<UNiagaraScript>(InOuter, InScriptName, RF_Transactional);
             Script->SetUsage(ENiagaraScriptUsage::Module);
@@ -703,6 +705,17 @@ namespace ck::particles_editor
             FuncNode->Signature.bMemberFunction = true;
             FuncCreator.Finalize();
 
+            if (NOT InBakedIdsValue.IsEmpty())
+            {
+                // The NODE's specifier map, not just the Signature's: both compile bridges overwrite
+                // Signature.FunctionSpecifiers from the node's own map, and a code-authored node that is never
+                // drawn in a graph editor keeps that map empty — Signature-only stamping is a silent no-op.
+                // (Written directly: the class is MinimalAPI and SetFunctionSpecifier does not link.)
+                const auto SpecifierValue = FName(*InBakedIdsValue);
+                FuncNode->Signature.FunctionSpecifiers.Add(ck::particles::Get_BakedIdsSpecifierKey(), SpecifierValue);
+                FuncNode->FunctionSpecifiers.Add(ck::particles::Get_BakedIdsSpecifierKey(), SpecifierValue);
+            }
+
             // ---- Read pins on Map Get (outputs = values read FROM the map) ----
             const FNiagaraTypeDefinition DiType(UCkParticles_DataInterface::StaticClass());
             UEdGraphPin* GetScript   = MapGet->RequestNewTypedPin(EGPD_Output, DiType,                                  TEXT("User.ParticleScript"));
@@ -716,6 +729,9 @@ namespace ck::particles_editor
             // The EMITTER's clock, which keeps running as particles are born and die — a particle's own Age
             // subtracted from it is the moment in the loop it spawned.
             UEdGraphPin* GetEmitterAge = MapGet->RequestNewTypedPin(EGPD_Output, FNiagaraTypeDefinition::GetFloatDef(), TEXT("Emitter.Age"));
+            // Per-instance tuning, applied centrally inside the stage (see CkParticles_Behaviors.ush). Read here so
+            // EVERY behavior on EVERY template is tunable without a single Behavior_*.ush knowing it exists.
+            UEdGraphPin* GetTuning   = MapGet->RequestNewTypedPin(EGPD_Output, FNiagaraTypeDefinition::GetVec4Def(), ck::particles::Get_TuningParameterName());
 
             // ---- Write pins on Map Set (inputs = values written TO the map) ----
             UEdGraphPin* SetPosition    = MapSet->RequestNewTypedPin(EGPD_Input, FNiagaraTypeDefinition::GetPositionDef(), TEXT("Particles.Position"));
@@ -772,6 +788,7 @@ namespace ck::particles_editor
 
             Wire(SeedSource,    Find_PinByName(FuncNode, TEXT("Seed"),         EGPD_Input));
             Wire(GetEmitterAge, Find_PinByName(FuncNode, TEXT("EmitterAge"),   EGPD_Input));
+            Wire(GetTuning,     Find_PinByName(FuncNode, TEXT("Tuning"),       EGPD_Input));
 
             // ---- Wire ExecuteStage outputs -> Map Set writes ----
             Wire(Find_PinByName(FuncNode, TEXT("OutPosition"),    EGPD_Output), SetPosition);
@@ -797,7 +814,8 @@ namespace ck::particles_editor
             UNiagaraSystem* InSystem,
             int32           InEmitterHandleIndex,
             const TCHAR*    InScriptName,
-            int32           InSeedBank) -> bool
+            int32           InSeedBank,
+            const FString&  InBakedIdsValue) -> bool
         {
             if (InSystem->GetEmitterHandles().Num() <= InEmitterHandleIndex)
             { return false; }
@@ -820,7 +838,7 @@ namespace ck::particles_editor
             if (OutputNode == nullptr)
             { return false; }
 
-            auto* ModuleScript = Build_BehaviorModuleScript(InSystem, InScriptName, InSeedBank);
+            auto* ModuleScript = Build_BehaviorModuleScript(InSystem, InScriptName, InSeedBank, InBakedIdsValue);
             if (ModuleScript == nullptr)
             { return false; }
 
@@ -1067,7 +1085,8 @@ namespace ck::particles_editor
             if (InSpec.RibbonEmitter.Get_IsDeclared() && RibbonEmitterIndex == INDEX_NONE)
             { return nullptr; }
 
-            // ---- User parameters: BehaviorId int + the DI as ParticleScript + the swappable sprite material ----
+            // ---- User parameters: BehaviorId int + the tuning float4 + the DI as ParticleScript + the swappable
+            // sprite material ----
             // Both emitters read these: the ribbon population runs the same behavior id and the same DI instance.
             auto& Exposed = System->GetExposedParameters();
 
@@ -1076,9 +1095,17 @@ namespace ck::particles_editor
             constexpr auto AddIfMissing = true;
             Exposed.SetParameterValue<int32>(0, BehaviorVar, AddIfMissing);
 
+            // Identity, so a caller that never tunes gets exactly the untuned behavior. Every template carries it:
+            // the tuning is applied centrally in the stage, so a template missing the parameter would feed the
+            // stage a zero float4 and render nothing.
+            const FNiagaraVariable TuningVar(FNiagaraTypeDefinition::GetVec4Def(), ck::particles::Get_TuningParameterName());
+            Exposed.AddParameter(TuningVar);
+            Exposed.SetParameterValue<FVector4f>(FVector4f(1.0f, 1.0f, 1.0f, 1.0f), TuningVar, AddIfMissing);
+
             const FNiagaraVariable DiVar(FNiagaraTypeDefinition(UCkParticles_DataInterface::StaticClass()), TEXT("User.ParticleScript"));
             Exposed.AddParameter(DiVar);
-            Exposed.SetDataInterface(NewObject<UCkParticles_DataInterface>(System), DiVar);
+            auto* ParticleScriptDi = NewObject<UCkParticles_DataInterface>(System);
+            Exposed.SetDataInterface(ParticleScriptDi, DiVar);
 
             const FNiagaraVariable SpriteMatVar(FNiagaraTypeDefinition::GetUMaterialDef(), ck::particles::Get_SpriteMaterialParameterName());
             Exposed.AddParameter(SpriteMatVar);
@@ -1086,19 +1113,26 @@ namespace ck::particles_editor
 
             // ---- Code-built behavior module (forked engine only; inert on stock via CK_WITH_PARTICLES) ----
 #if CK_WITH_PARTICLES
+            // The behaviors that spawn through this template, stamped on the ExecuteStage call node as a function
+            // specifier so its GPU scripts compile ONLY their HLSL — GPU codegen never sees the DI instance, and
+            // the specifier rides the graph (digested, compile-hashed, DDC-keyed). An empty set (a template no
+            // behavior routes to) stamps nothing and keeps the full-corpus dispatch.
+            const auto BakedIdsValue = ck::particles::Get_BakedIdsSpecifierValue(
+                ck::particles::Get_BehaviorIdsForTemplateAsset(AssetName));
+
             constexpr auto MainSeedBank = 0;
             const auto bModuleAdded = Try_AddCodeBuiltBehaviorModule(
-                System, MainEmitterIndex, TEXT("CkParticles_ApplyBehavior_Module"), MainSeedBank);
-            ck::particles_editor::Log(TEXT("[{}] Code-built behavior module added to Particle Update: {}"),
-                FString(AssetName), bModuleAdded ? FString(TEXT("YES")) : FString(TEXT("NO")));
+                System, MainEmitterIndex, TEXT("CkParticles_ApplyBehavior_Module"), MainSeedBank, BakedIdsValue);
+            ck::particles_editor::Log(TEXT("[{}] Code-built behavior module added to Particle Update: {} (baked ids [{}])"),
+                FString(AssetName), bModuleAdded ? FString(TEXT("YES")) : FString(TEXT("NO")), BakedIdsValue);
 
             if (RibbonEmitterIndex != INDEX_NONE)
             {
                 const auto bRibbonModuleAdded = Try_AddCodeBuiltBehaviorModule(
                     System, RibbonEmitterIndex, TEXT("CkParticles_ApplyBehavior_Module_Ribbon"),
-                    ck::particles::RibbonSeedBase);
-                ck::particles_editor::Log(TEXT("[{}] Code-built behavior module added to the ribbon emitter: {}"),
-                    FString(AssetName), bRibbonModuleAdded ? FString(TEXT("YES")) : FString(TEXT("NO")));
+                    ck::particles::RibbonSeedBase, BakedIdsValue);
+                ck::particles_editor::Log(TEXT("[{}] Code-built behavior module added to the ribbon emitter: {} (baked ids [{}])"),
+                    FString(AssetName), bRibbonModuleAdded ? FString(TEXT("YES")) : FString(TEXT("NO")), BakedIdsValue);
             }
 #endif
 
@@ -1166,6 +1200,10 @@ namespace ck::particles_editor
                 AllBuilt = false;
             }
         }
+
+        // Tops up the per-behavior tuning assets a new roster id has no asset for yet. Safe to run here because it
+        // never overwrites an existing one, so a full regen adds the missing and leaves every tuned asset alone.
+        Generate_AllTuningAssets();
 
         return AllBuilt;
 #endif

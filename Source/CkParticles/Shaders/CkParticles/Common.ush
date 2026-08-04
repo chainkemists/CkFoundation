@@ -18,6 +18,11 @@ struct FCkParticles_StageInput
     // loop the particle spawned: SpawnPhase = fmod(EmitterAge - Age, LoopDuration). Burst particles land at
     // phase ~0, rate particles spread across the loop, and a windowed sub-layer gates on it.
     float  EmitterAge;
+    // Per-instance tuning, from the User.CkTuning parameter. Applied CENTRALLY in CkParticles_ExecuteStage
+    // (x -> Size and Scale, y -> Color.rgb, z -> Color.a, w -> Age and DeltaTime), never inside a behavior:
+    // one application site is what keeps every behavior tunable without any of them knowing this exists.
+    // Identity is (1,1,1,1).
+    float4 Tuning;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -64,9 +69,14 @@ struct FCkParticles_StageOutput
 };
 
 // 0..1 over the particle's lifetime (0 when lifetime is unset).
+float CkParticles_NormalizedAgeOf(float Age, float Lifetime)
+{
+    return Lifetime > 0.0 ? saturate(Age / Lifetime) : 0.0;
+}
+
 float CkParticles_NormalizedAge(FCkParticles_StageInput In)
 {
-    return In.Lifetime > 0.0 ? saturate(In.Age / In.Lifetime) : 0.0;
+    return CkParticles_NormalizedAgeOf(In.Age, In.Lifetime);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -512,4 +522,85 @@ FCkParticles_StageOutput CkParticles_DefaultOutput(FCkParticles_StageInput In)
     O.SpriteFacing    = float3(0.0, 0.0, 1.0);
     O.SubImageIndex   = 0.0;
     return O;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// PER-PART tuning.
+//
+// User.CkTuning tunes a whole system with four floats; this tunes the LAYERS inside it, addressed by the VisTag the
+// behavior wrote. It is applied by the DI's template wrapper AFTER CkParticles_ExecuteStage returns — the wrapper,
+// not this file's dispatch, because the block arrives as the DI's own shader parameters and only the wrapper has
+// them in scope. The global tuning application inside CkParticles_ExecuteStage is untouched and runs first.
+//
+// LOCKSTEP: FCkParticles_PartTuningBlock, ck::particles::Get_PartTuningRowIndex and
+// ck::particles::Apply_PartTuningRows (CkParticles_PartTuning.h/.cpp) are the C++ mirror — same layout, same order,
+// same math. CKPARTICLES_MAX_TUNED_PARTS is ck::particles::MaxTunedParts and CKPARTICLES_SHARED_VISTAG_MAX is
+// ck::particles::SharedRendererVisTag_Max; the pairs move together.
+// --------------------------------------------------------------------------------------------------------------------
+#define CKPARTICLES_MAX_TUNED_PARTS   24
+#define CKPARTICLES_SHARED_VISTAG_MAX 4
+#define CKPARTICLES_PART_TUNING_ROWS  5
+
+// The block row a VisTag reads, or -1 when the tag falls outside the budget. The shared renderer set maps onto rows
+// 0..CKPARTICLES_SHARED_VISTAG_MAX verbatim; a behavior's own band maps onto the rows above it. Out of range is
+// SKIPPED rather than clamped or wrapped, so a mis-stated BandStart cannot retune an unrelated layer.
+int CkParticles_PartTuningRow(int VisTag, int BandStart)
+{
+    if (VisTag <= CKPARTICLES_SHARED_VISTAG_MAX) { return VisTag; }
+    // A tag between the shared set and the band belongs to no part of this behavior — skip it rather than
+    // let the subtraction alias it onto a shared row. Mirrors Get_PartTuningRowIndex exactly.
+    if (VisTag < BandStart)                      { return -1; }
+
+    const int Row = (CKPARTICLES_SHARED_VISTAG_MAX + 1) + (VisTag - BandStart);
+    return (Row >= 0 && Row < CKPARTICLES_MAX_TUNED_PARTS) ? Row : -1;
+}
+
+// R0: SizeMul, StretchMul, MeshScaleMul, SpeedMul   R1: TintRGB, AlphaMul   R2: per-axis Dynamic
+// R3: RotationOffsetDeg, WindowStart, WindowEnd     R4: PosOffsetXYZ
+void CkParticles_ApplyPartTuning(inout FCkParticles_StageOutput Out, float NormalizedAge,
+                                 float4 R0, float4 R1, float4 R2, float4 R3, float4 R4)
+{
+    Out.Size     *= R0.x;
+    Out.Size.y   *= R0.y;
+    Out.Scale    *= R0.z;
+    Out.Velocity *= R0.w;
+
+    Out.Color.rgb *= R1.rgb;
+    Out.Color.a   *= R1.a;
+
+    Out.Dynamic *= R2;
+
+    Out.Rotation += R3.x;
+
+    // Visibility window — a HARD hide outside [start, end], not a fade: a windowed-out layer must contribute
+    // nothing, and a scaled-down sprite still writes depth and still costs a draw.
+    if (NormalizedAge < R3.y || NormalizedAge > R3.z)
+    {
+        Out.Color.a = 0.0;
+        Out.Size    = float2(0.0, 0.0);
+        Out.Scale   = float3(0.0, 0.0, 0.0);
+    }
+
+    Out.Position += R4.xyz;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// The global User.CkTuning application, split in two so the full-corpus dispatch (CkParticles_Behaviors.ush) and the
+// per-behavior baked wrapper (CkParticles_DataInterfaceTemplate_Baked.ush) share the ONE definition of the math.
+// Pre scales the clock BEFORE the behavior reads it; Post scales whatever the behavior wrote. Mirrored, in this
+// order, by NDICkParticlesLocal::ExecuteStage_CPU.
+FCkParticles_StageInput CkParticles_ApplyGlobalTuningPre(FCkParticles_StageInput In)
+{
+    In.Age       *= In.Tuning.w;
+    In.DeltaTime *= In.Tuning.w;
+    return In;
+}
+
+FCkParticles_StageOutput CkParticles_ApplyGlobalTuningPost(FCkParticles_StageOutput Out, float4 Tuning)
+{
+    Out.Size      *= Tuning.x;
+    Out.Scale     *= Tuning.x;
+    Out.Color.rgb *= Tuning.y;
+    Out.Color.a   *= Tuning.z;
+    return Out;
 }

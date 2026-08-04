@@ -24,4 +24,11 @@ public:
     UFUNCTION(CallInEditor, Category = "CkParticles",
               DisplayName = "Generate VFX Textures")
     void Generate_VfxTextures();
+
+    // Creates the MISSING per-behavior tuning DataAssets under /CkFoundation/CkParticles/Tuning/ with identity
+    // values. Existing ones are user data and are left untouched, so this is safe to run any time (and
+    // Create Template System runs it for you).
+    UFUNCTION(CallInEditor, Category = "CkParticles",
+              DisplayName = "Generate Tuning Assets")
+    void Generate_TuningAssets();
 };
