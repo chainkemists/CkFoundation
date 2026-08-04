@@ -191,6 +191,11 @@ namespace ck
 
         InHandle.CopyAndRemove(InRequests, [&](FFragment_SmDebug_Requests& InRequestsCopy)
         {
+            if (NOT UCk_Utils_StateMachineDebug_UE::Get_IsDebuggerCaptureActive(InHandle)
+                || InRequestsCopy.Get_CaptureGeneration()
+                    != UCk_Utils_StateMachineDebug_UE::Get_DebuggerCaptureGeneration())
+            { return; }
+
             algo::ForEachRequest(InRequestsCopy._Requests, Visitor([&](const auto& InRequest)
             {
                 DoHandleRequest(InHandle, InRequest);

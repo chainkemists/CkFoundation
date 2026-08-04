@@ -8,6 +8,7 @@
 #include "CkStateMachine/StateMachine/CkStateMachine_Fragment.h"
 #include "CkStateMachine/Task/CkSmTask_Fragment.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Utils.h"
 
 #if CK_BUILD_SM_GRAPH_WALK
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
@@ -51,9 +52,8 @@ auto
     InOwner.Add<ck::FFragment_Sm_Params>(InParams);
     InOwner.Add<ck::FFragment_Sm_Current>();
 
-#if CK_BUILD_SM_GRAPH_WALK
-    InOwner.Add<ck::FTag_Sm_Debug_RequiresGraphWalk>();
-#endif
+    auto StateMachine = Cast(InOwner);
+    UCk_Utils_StateMachineDebug_UE::BeginDebuggerCapture(StateMachine);
 
     return Cast(InOwner);
 }

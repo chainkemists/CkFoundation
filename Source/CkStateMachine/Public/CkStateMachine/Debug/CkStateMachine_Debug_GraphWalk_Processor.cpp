@@ -11,6 +11,7 @@
 #include "CkStateMachine/Condition/EntityScripts/CkSmCondition_EntityScript.h"
 #include "CkStateMachine/State/CkSmState_Utils.h"
 #include "CkStateMachine/State/EntityScripts/CkSmState_EntityScript.h"
+#include "CkStateMachine/Debug/CkStateMachine_Debug_Utils.h"
 #include "CkStateMachine/StateMachine/CkStateMachine_Utils.h"
 #include "CkStateMachine/Task/CkSmTask_Utils.h"
 #include "CkStateMachine/Task/EntityScripts/CkSmTask_EntityScript.h"
@@ -49,6 +50,9 @@ namespace ck
         SCOPE_CYCLE_COUNTER(STAT_Sm_Debug_GraphWalk);
 
         InHandle.Remove<FTag_Sm_Debug_RequiresGraphWalk>();
+
+        if (NOT UCk_Utils_StateMachineDebug_UE::Get_IsDebuggerCaptureActive(InHandle))
+        { return; }
 
         auto InitialStateClass = InParams.Get_InitialStateClass();
 
@@ -114,6 +118,12 @@ namespace ck
         SCOPE_CYCLE_COUNTER(STAT_Sm_Debug_GraphWalk_Iterate);
 
         auto& Progress = InHandle.Get<FFragment_Sm_Debug_GraphWalk_Progress>();
+
+        if (NOT UCk_Utils_StateMachineDebug_UE::Get_IsDebuggerCaptureActive(InHandle))
+        {
+            InHandle.Remove<FFragment_Sm_Debug_GraphWalk_Progress>();
+            return;
+        }
 
         if (Progress._PendingEntities.IsEmpty())
         { return; }
