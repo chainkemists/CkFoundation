@@ -657,12 +657,15 @@ namespace ck
             }
 
             // The synth renders with ONE channel's audio config; when bundles interleave across
-            // channels, the highest-Priority delivering channel wins (ADR-5 priority, the Onset
-            // single-playback dedupe). An unresolvable idx just means the control plane hasn't
-            // composed that channel here yet - the audio still plays, flat.
+            // channels, the highest-Priority delivering channel wins (the single-playback
+            // dedupe). An unresolvable idx just means the control plane hasn't composed that
+            // channel here yet - the audio still plays, flat. A channel still LOADING its audio
+            // assets is skipped the same way: latching it would apply null config and nothing
+            // re-applies on load completion - the next drain after the load finishes selects it.
             if (const auto DeliveringChannel = UCk_Utils_VoiceChannel_UE::TryGet_ChannelByIdx(
                     InVoiceTalkerEntity, Unpacked->Get_Header().Get_ChannelIdx());
                 ck::IsValid(DeliveringChannel) &&
+                NOT DeliveringChannel.Has<FTag_VoiceChannel_PendingAssetLoad>() &&
                 (ck::Is_NOT_Valid(BestDeliveringChannel) ||
                  UCk_Utils_VoiceChannel_UE::Get_Priority(DeliveringChannel) >
                  UCk_Utils_VoiceChannel_UE::Get_Priority(BestDeliveringChannel)))
@@ -864,17 +867,21 @@ namespace ck
 
         // HybridRadio near = plain proximity speech (spatialized, NO radio filter); far = flat
         // radio through the channel's chain. Positional3D keeps its authored chain in 3D. An
-        // unattached synth has no world position, so it must render flat regardless of policy.
-        const auto HybridNear =
+        // unattached synth has no world position, so it cannot RENDER near regardless of the
+        // computed state - it falls back to radio (flat + chain), never to bare flat.
+        const auto CanSpatialize = ck::IsValid(Synth->GetAttachParent());
+
+        const auto RenderNear =
             Policy == ECk_VoiceChat_SpatializationPolicy::HybridRadio &&
-            InCurrent._HybridRenderNear.Get(false);
+            InCurrent._HybridRenderNear.Get(false) &&
+            CanSpatialize;
 
         const auto Spatialize =
-            (Policy == ECk_VoiceChat_SpatializationPolicy::Positional3D || HybridNear) &&
-            ck::IsValid(Synth->GetAttachParent());
+            (Policy == ECk_VoiceChat_SpatializationPolicy::Positional3D || RenderNear) &&
+            CanSpatialize;
 
         const auto ApplyEffectChain =
-            Policy != ECk_VoiceChat_SpatializationPolicy::HybridRadio || NOT HybridNear;
+            Policy != ECk_VoiceChat_SpatializationPolicy::HybridRadio || NOT RenderNear;
 
         Synth->Stop();
         Synth->bAllowSpatialization = Spatialize;

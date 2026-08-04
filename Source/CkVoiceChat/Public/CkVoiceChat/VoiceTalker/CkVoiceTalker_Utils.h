@@ -268,7 +268,7 @@ public:
     Debug_Get_ReceiveArrivedBundles(
         const FCk_Handle_VoiceTalker& InVoiceTalker) -> uint64;
 
-    // P4 playback-config seams: which channel the receive path selected and HybridRadio's
+    // Playback-config seams: which channel the receive path selected and HybridRadio's
     // near/far render state - net specs assert the selection and mode; the audible render is
     // audition-only.
     static auto
@@ -279,7 +279,7 @@ public:
     Debug_Get_HybridRenderNear(
         const FCk_Handle_VoiceTalker& InVoiceTalker) -> TOptional<bool>;
 
-    // P4 prune seam: TOTAL talker entries across the world-scoped authority maps (ServeHistory +
+    // Prune seam: TOTAL talker entries across the world-scoped authority maps (ServeHistory +
     // ListenerMuteMatrix). Takes any LIVE handle in the world as the anchor - a destroyed
     // talker's own handle is a tombstone and cannot anchor the lookup, and matching map keys
     // against a tombstone would false-pass. In a spec's controlled world where every entry names
