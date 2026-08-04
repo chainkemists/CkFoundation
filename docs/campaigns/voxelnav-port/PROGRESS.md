@@ -50,11 +50,57 @@
 
 ## In-flight
 
-- Baseline toolbox build+test (must complete before 0A–0D Source/ edits land). First launch failed:
-  this worktree's `CkAuto/UnrealToolbox.exe` (+LogViewer/crashpad) were unsmudged LFS pointers —
-  fixed via `git -C CkAuto lfs pull` (worktree-specific hazard, now healed); run relaunched.
-- Opus prep agent drafting `research/phase1-port-map.md` (read-only vs Source/; docs-only write —
-  safe during the build).
+- Integration build of 0A+0B+0C (`--build --generate`, orchestrator-run, background). First
+  compile of ~850 new lines — expect possible UHT/compile fixes before 0D.
+- Unit 0D (tests) — dispatches after the integration build is green.
+
+- **0B implemented, spot-checked, compile pending** (opus): 4 new files (Occupancy_Utils JPH layer
+  479 lines total, Occupancy_Session JPH-free pimpl layer), +32 additive lines in
+  CkJoltCollisionLayerTable.h (StaticOccupancyFilter + StaticBroadPhaseQueryFilter), CkJolt
+  Claude.md section. Session header verified JPH-free by orchestrator grep. Judgment calls 1-4
+  accepted. Acceptance finalizes when the integration build is green.
+- **[C-D14]** (0B's OQ-3 flag) v1 occupancy filtering is STATIC-DOMAIN ONLY. `_QueryChannel` is
+  removed from the Phase 1 backend params (amends the port map's §6/OQ-3 adoption under [C-D12]);
+  a composed Domain+Channel filter waits for a named consumer needing per-channel nav-blocking.
+  Noted, accepted: body-id 0 is a theoretical validity-sentinel hole (uint8 sequence wrap after
+  255 reuses of body index 0) — documented, not guarded.
+
+## Accepted units
+
+- **0A libmorton vendor — ACCEPTED 2026-08-03** (opus). 10 files byte-identical to
+  F:\Nav3D-2.0 copy (cmp+sha256 by executor; count/entry/rule re-verified by orchestrator).
+  build.cs include path line 20; Claude.md table row + rule 6 (allowlist: CkVoxelNav sole direct
+  consumer). Small gap assigned to integration pass: CkThirdParty Claude.md "Used by:" header line
+  should gain `CkVoxelNav (libmorton)` once the module exists.
+- **0C CkVoxelNav skeleton — ACCEPTED 2026-08-03** (opus). 13 files / 373 lines, exemplar-mapped
+  per file (CkTimer quartet + CkPathNetwork Add ritual); uplugin parses (118 modules, CkVoxelNav
+  present); Source/CLAUDE.md rows landed; zero Jolt includes (orchestrator re-grepped). Reported
+  deviations 1,3,4,5,6,7 accepted as-is (no _Fragment_Data.cpp — nothing to hold; NeedsBuild-consuming
+  no-op Setup; root-doctrine validation form; corrected CkHandle_TypeSafe.h casing; no cast-conv BP
+  nodes yet; FGroup_Gameplay_TimeDelta on the placeholder Setup). Compile deferred to the phase gate.
+- **Orchestrator integration pass 2026-08-03:** copied Nav3D LICENSE →
+  `docs/campaigns/voxelnav-port/LICENSE.Nav3D.txt` (0C's attribution was dangling); added
+  `CkVoxelNav (libmorton)` to CkThirdParty Claude.md Used-by line (0A's gap); applied [C-D13]
+  category rename in CkVoxelNavVolume_Utils.h.
+
+## Follow-ups discovered (foreign code — NOT this campaign's scope)
+
+- (f) `UCk_Utils_PathNetwork_UE::Add` uses the inline `CK_ENSURE_IF_NOT(...) { return {}; }` form —
+  its early-out compiles away under `CK_DISABLE_ENSURE_CHECKS`, letting an invalid owner reach
+  `Request_CreateEntity` (violates non-negotiable #3's separate-branch rule). One-line fix for the
+  PathNetwork owner.
+- (g) `CkTimer_Fragment_Data.h` includes `CkHandle_Typesafe.h` (wrong casing; on-disk file is
+  `CkHandle_TypeSafe.h`) — resolves only on case-insensitive filesystems while CkTimer is
+  Mac/Linux-whitelisted.
+
+## Known foreign dirt (never stage, never revert without a decision)
+
+- 76 × `Content/CkUsf/GeneratedLooks/M_CkUsf_Look_*.uasset` modified — known CkUsf test-lane
+  on-disk churn (matches standing memory; almost certainly our own baseline run's side effect).
+  Phase 0's "working tree clean" entry criterion is interpreted as: clean apart from campaign work
+  and this enumerated churn.
+- Historical note (resolved): first baseline launch failed — this worktree's CkAuto toolbox
+  binaries were unsmudged LFS pointers; healed via `git -C CkAuto lfs pull`.
 
 ## Decisions
 
@@ -85,6 +131,9 @@
   (d) CkRaySense/CkOverlapBody Chaos→Jolt consolidation.
 - **[C-D9]** Phase 3 must audit Nav3D's dynamic-occlusion machinery before porting it — upstream
   issue #39 reports it broken in v2.0. Port the design, verify the behavior, don't trust the code.
+- **[C-D13]** UFUNCTION categories are FEATURE-named, not module-named: `Ck|Utils|VoxelNavVolume` /
+  `[Ck][VoxelNavVolume] ...` (matches the utils class per CkTimer precedent; port-map §5.4 form
+  wins over the 0C brief's `Ck|Utils|VoxelNav`). Future features (path/follower) get their own.
 - **[C-D10]** (OQ-1, blocker) 0B's consumer surface must be JPH-free: CkJolt ships opaque
   TPimplPtr-backed `FCk_Jolt_QuerySession` + `FCk_Jolt_BoxProbe` value types; the JPH-signature
   functions stay CkJolt-internal. Rejected alternative: allowlisting CkVoxelNav for direct JPH
