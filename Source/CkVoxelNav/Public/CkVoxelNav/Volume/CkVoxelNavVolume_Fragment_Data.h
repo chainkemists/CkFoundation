@@ -56,6 +56,21 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = "1"))
     int32 _MaxOccupancyProbesPerTickOverride = 2048;
 
+    /** A volume longer than the max chunk size on any axis splits into chunk children, each baking its own
+     *  octree over its own sub-box. A volume that fits stays exactly what it was: one entity, one bake, one
+     *  octree — partitioning is not a mode, it is what happens when a volume is too big to be one. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _ChunkPartitioning = ECk_EnableDisable::Enable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _MaxChunkSizeOverride = ECk_EnableDisable::Disable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "1.0"))
+    float _MaxChunkSizeUuOverride = 12800.0f;
+
 public:
     CK_PROPERTY_GET(_VolumeBounds);
     CK_PROPERTY_GET(_FinestCellSizeUu);
@@ -63,6 +78,9 @@ public:
     CK_PROPERTY(_AutoBuildOnSetup);
     CK_PROPERTY(_BuildBudgetOverride);
     CK_PROPERTY(_MaxOccupancyProbesPerTickOverride);
+    CK_PROPERTY(_ChunkPartitioning);
+    CK_PROPERTY(_MaxChunkSizeOverride);
+    CK_PROPERTY(_MaxChunkSizeUuOverride);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VoxelNavVolume_ParamsData, _VolumeBounds, _FinestCellSizeUu);

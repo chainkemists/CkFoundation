@@ -98,6 +98,17 @@ namespace ck
             FFragment_VoxelNavVolume_BuildState& InBuildState,
             FFragment_VoxelNavVolume_RepairState& InRepairState,
             const FCk_Request_VoxelNavVolume_MarkDirty& InRequest) -> void;
+
+        static auto
+        DoFanOutBuild(
+            HandleType InVolumeEntity,
+            FFragment_VoxelNavVolume_BuildState& InBuildState,
+            const FCk_Request_VoxelNavVolume_Build& InRequest) -> void;
+
+        static auto
+        DoFanOutMarkDirty(
+            HandleType InVolumeEntity,
+            const FCk_Request_VoxelNavVolume_MarkDirty& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -233,6 +244,45 @@ namespace ck
             HandleType InVolumeEntity,
             const FFragment_VoxelNavVolume_Params& InParams,
             FFragment_VoxelNavVolume_RepairState& InRepairState,
+            FFragment_VoxelNavVolume_BuiltOctree& InBuiltOctree) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Watches a partitioned volume's chunks and, once they have all published, bakes the adjacency between
+    // them and publishes the volume itself: one epoch bump, one completion, one signal, however many chunks
+    // moved. It runs every tick with no MarkedDirtyBy because what it watches lives on OTHER entities - a
+    // chunk republishing does not dirty its parent, and making it do so would be a fan-out per chunk repair.
+    //
+    // It queries no physics, so unlike the bake it needs no window relative to the Jolt step; it only has to
+    // land after the processors that can republish a chunk in this same tick.
+    class CKVOXELNAV_API FProcessor_VoxelNavVolume_AggregateChunks : public ck_exp::TProcessor<
+        FProcessor_VoxelNavVolume_AggregateChunks,
+        FCk_Handle_VoxelNavVolume,
+        ck::TReadWrite<FFragment_VoxelNavVolume_Chunks>,
+        ck::TReadWrite<FFragment_VoxelNavVolume_ChunkAdjacency>,
+        ck::TReadWrite<FFragment_VoxelNavVolume_BuildState>,
+        ck::TReadWrite<FFragment_VoxelNavVolume_BuiltOctree>,
+        FTag_VoxelNavVolume_Partitioned,
+        TExclude<FTag_VoxelNavVolume_NeedsSetup>,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Transform;
+        using RunAfter = TDepList<FProcessor_VoxelNavVolume_Build, FProcessor_VoxelNavVolume_Repair>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            FFragment_VoxelNavVolume_Chunks& InChunks,
+            FFragment_VoxelNavVolume_ChunkAdjacency& InAdjacency,
+            FFragment_VoxelNavVolume_BuildState& InBuildState,
             FFragment_VoxelNavVolume_BuiltOctree& InBuiltOctree) const -> void;
     };
 

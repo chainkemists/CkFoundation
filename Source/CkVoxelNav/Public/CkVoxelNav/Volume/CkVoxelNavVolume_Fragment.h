@@ -9,6 +9,7 @@
 #include "CkEcs/Tag/CkTag.h"
 
 #include "CkVoxelNav/Backend/CkVoxelNav_GeometryBackend_Jolt.h"
+#include "CkVoxelNav/Chunk/CkVoxelNav_Chunk_Types.h"
 #include "CkVoxelNav/Octree/CkVoxelNav_Octree_Build.h"
 #include "CkVoxelNav/Octree/CkVoxelNav_Octree_Repair.h"
 #include "CkVoxelNav/Volume/CkVoxelNavVolume_Fragment_Data.h"
@@ -30,6 +31,10 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_VoxelNavVolume_NeedsRepair);
     CK_DEFINE_ECS_TAG(FTag_VoxelNavVolume_RepairInProgress);
 
+    // A volume too large for one chunk, stamped at composition. It never bakes an octree of its own - it
+    // owns the chunk children that do, and every query on it routes to one of them.
+    CK_DEFINE_ECS_TAG(FTag_VoxelNavVolume_Partitioned);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     using FFragment_VoxelNavVolume_Params = FCk_Fragment_VoxelNavVolume_ParamsData;
@@ -50,10 +55,12 @@ namespace ck
 
         friend class FProcessor_VoxelNavVolume_Build;
         friend class FProcessor_VoxelNavVolume_Repair;
+        friend class FProcessor_VoxelNavVolume_AggregateChunks;
         friend class ::UCk_Utils_VoxelNavVolume_UE;
 
     private:
-        // Null until the first build completes.
+        // Null until the first build completes. Stays null on a PARTITIONED volume, which owns chunk
+        // children that each hold one of these instead - only `_Epoch` is meaningful there.
         TSharedPtr<const voxelnav::FOctree> _Octree;
         voxelnav::FVolumeId _VolumeId;
         int32 _Epoch = 0;
@@ -83,6 +90,7 @@ namespace ck
         friend class FProcessor_VoxelNavVolume_HandleRequests;
         friend class FProcessor_VoxelNavVolume_StartBuild;
         friend class FProcessor_VoxelNavVolume_Build;
+        friend class FProcessor_VoxelNavVolume_AggregateChunks;
         friend class FProcessor_VoxelNavVolume_CancelPendingRequests;
         friend class ::UCk_Utils_VoxelNavVolume_UE;
 
@@ -127,6 +135,87 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Repair);
         CK_PROPERTY_GET(_PendingDirtyBounds);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    /** The parent side of a partition: the chunk children it owns, and what it has already aggregated from
+     *  them.
+     *
+     *  The handles here are a RUNTIME CHILD RECORD, not navigation data. Nothing serialized and nothing in
+     *  the adjacency table names an entity - a chunk's identity there is FChunkId, which is a pure function
+     *  of the authored params. This array is how the volume reaches its own children in one step instead of
+     *  scanning the world for them, which is precisely what upstream's TActorIterator hot-path lookups did.
+     *
+     *  Chunks are stored in PARTITION LATTICE ORDER, so a chunk's array position IS its FChunkId index and
+     *  the adjacency table's integer keys index straight into this array. */
+    struct CKVOXELNAV_API FFragment_VoxelNavVolume_Chunks
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoxelNavVolume_Chunks);
+
+        friend class FProcessor_VoxelNavVolume_HandleRequests;
+        friend class FProcessor_VoxelNavVolume_AggregateChunks;
+        friend class ::UCk_Utils_VoxelNavVolume_UE;
+
+    private:
+        TArray<FCk_Handle_VoxelNavVolume> _Chunks;
+        FIntVector _Divisions = FIntVector{1, 1, 1};
+
+        // The combined chunk epoch this volume last aggregated. Epochs only increase, so a difference here
+        // means at least one chunk rebaked or repaired since - which is the whole trigger.
+        int64 _AggregatedChunkEpochSum = -1;
+
+        // A whole-volume bake was asked for and has been fanned out to the chunks. It is what tells the
+        // aggregation whether the change it is about to publish is a BAKE completing or an obstacle having
+        // moved - the two have separate signals, and a listener waiting for the first bake must not be woken
+        // by the second.
+        bool _FanOutBuildPending = true;
+
+    public:
+        CK_PROPERTY_GET(_Chunks);
+        CK_PROPERTY_GET(_Divisions);
+        CK_PROPERTY_GET(_AggregatedChunkEpochSum);
+        CK_PROPERTY_GET(_FanOutBuildPending);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    /** The baked crossings between a partitioned volume's chunks. Its own fragment rather than a member of
+     *  the chunk record, so the type that a search and a serializer touch stays free of anything that names
+     *  an entity. */
+    struct CKVOXELNAV_API FFragment_VoxelNavVolume_ChunkAdjacency
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoxelNavVolume_ChunkAdjacency);
+
+        friend class FProcessor_VoxelNavVolume_AggregateChunks;
+        friend class ::UCk_Utils_VoxelNavVolume_UE;
+
+    private:
+        voxelnav::FChunkAdjacencyTable _Table;
+
+    public:
+        CK_PROPERTY_GET(_Table);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    /** The child side of a partition. A chunk entity is an ORDINARY volume entity in every other respect -
+     *  it bakes, repairs and publishes through the same processors - and this fragment is the only thing
+     *  that says whose chunk it is. */
+    struct CKVOXELNAV_API FFragment_VoxelNavVolume_ChunkIdentity
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoxelNavVolume_ChunkIdentity);
+
+        friend class ::UCk_Utils_VoxelNavVolume_UE;
+
+    private:
+        voxelnav::FChunkId _ChunkId;
+
+    public:
+        CK_PROPERTY_GET(_ChunkId);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
