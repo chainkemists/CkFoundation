@@ -158,16 +158,60 @@ with item 5.
 | Moderation matrix red on a combination P3 "already covered" | P3's single-axis specs hid an interaction | Real finding — fix and record; do not weaken the matrix |
 | Any net spec red on BusterBlock | Could be ours or upstream drift | A/B against the entry baseline (30/30) before blaming own code |
 
-## Exit criteria
+## `[EDITOR-VERIFY]` — the audition block (human, exact steps)
 
-- [ ] All 8 work items landed, each with its tests.
-- [ ] `--build --test --test-pattern VoiceChat --discover-fresh` on BusterBlock: green, EXIT 0,
-      0 `Angelscript: Error`, count **≥ 30** (the entry baseline; new specs raise it).
-- [ ] RenderTarget **22/22** delta-zero on the SAME binary, no rebuild between runs.
-- [ ] Freshness chain recorded (sources → DLL → run mtimes monotonic) — no stale-green.
-- [ ] F5 resolved; F4 explicitly restated as a P5 obligation.
-- [ ] N4 dep budget re-checked: every Build.cs entry has a recorded earning event.
-- [ ] `[EDITOR-VERIFY]` steps written with exact clicks for the attenuation/effect/HybridRadio
-      auditions (agents cannot launch PIE — root non-negotiable #7).
-- [ ] Comment audit run over the P4 diff (no new campaign breadcrumbs — F4's lesson).
+Prerequisite for ALL steps: `[Voice]` + `bEnabled=true` in the host project's
+`Config/DefaultEngine.ini` (the standing P2 human decision), and a working microphone.
+
+**A. Mic loopback + transmit edges (single player — the P2 obligation, folded in):**
+1. Open the editor on a host with CkTests → PIE on `TestGyms_CkTests_Level`.
+2. Tab → cycle to **"Voice Chat"** → the MIC LOOPBACK station.
+3. HOLD **V** and speak. Expect: your own voice back (full capture→encode→decode→synth path)
+   and a green **TX START** flash; release → yellow **TX END** flash. Console fallbacks:
+   `Ck_GymVoiceChat_TalkStart` / `Ck_GymVoiceChat_TalkStop`.
+4. Silence WITH the flashes working = capture never opened → re-check the `[Voice]` line.
+
+**B. Per-channel attenuation + spatialization (2 PIE clients):**
+1. Author a `USoundAttenuation` asset (any obvious falloff, e.g. 500→2000cm) and set it as
+   `_Attenuation` on a Positional3D test channel both clients join (or set it as the module
+   default via Project Settings → Ck VoiceChat → DefaultAttenuation).
+2. Play In Editor with **Number of Players = 2**, net mode listen server.
+3. Talk on client A while moving A's pawn toward/away from B's. Expect at B: A's voice
+   attenuates with distance and pans with direction (spatialized at A's pawn).
+4. This is ALSO item 1's positive-path proof: a resolved-through-CkResourceLoader asset
+   audibly applied (the machine half only pins the negative/no-asset branches).
+
+**C. Effect chain + HybridRadio near/far (2 PIE clients):**
+1. Author a `USoundEffectSourcePresetChain` with an unmistakable filter (e.g. aggressive
+   low-pass "radio" EQ); set it on a HybridRadio channel with a small AudibleRange (~500cm).
+2. Talk on A. At B, walk B's pawn: inside 500cm expect plain spatialized speech (NO filter);
+   beyond ~600cm (range+margin) expect flat filtered "radio". Walk back into the 500-600 band:
+   must STAY radio until inside 500 (the hysteresis asymmetry — the state machine half is
+   already pinned by `Ck.VoiceChat.Net.HybridRenderMode`).
+3. The flip itself should be a clean cut, not a stutter — the PCM queue survives the synth's
+   Stop→Start by design; a stutter here is a real finding (file it, don't shrug it off).
+
+## Exit criteria — machine portion complete 2026-08-04
+
+- [x] All 8 work items landed with tests (items 2-4's render application half + item 1's
+      positive path are the `[EDITOR-VERIFY]` block's steps B/C by recorded scoping decision;
+      their machine-assertable halves are spec-pinned: ModerationMatrix, PlaybackConfig,
+      HybridRenderMode).
+- [x] Full VoiceChat suite on BusterBlock: **33/33, 0 failed, 0 contaminated, EXIT 0, 0
+      `Angelscript: Error`, 3m18s** (Test-VoiceChatP4-exitsweep2.log). Two spec fix cycles en
+      route, both harness lessons recorded in commit history (tombstone handles cannot anchor
+      or key lookups; a deliberately transient state needs FCk_Latent_WaitUntil, not a settle).
+- [x] RenderTarget **22/22, 0 failed** on the SAME binary, no rebuild
+      (Test-P4-RenderTarget-exitsweep.log).
+- [x] Freshness chain monotonic: CkVoiceChat DLL 16:36:01 → VoiceChat sweep 16:45:41 →
+      RenderTarget 16:49:55.
+- [x] F5 resolved (item 6 + the PlaybackConfig prune act proving it live); F4 RESOLVED EARLY
+      (campaign labels stripped, `50bfa61fa`) rather than deferred.
+- [x] N4 re-checked: Build.cs = ActorRelay/Core/Ecs/EcsExt/Label/Log/Record/ResourceLoader/
+      Settings/Shapes/SpatialQuery, each with a recorded earning event; ResourceLoader earned
+      at item 1 (`c4e923a65`); never Relationship.
+- [x] `[EDITOR-VERIFY]` block written above (steps A/B/C with exact clicks; gym station
+      "Voice Chat" registered and AS-compiles).
+- [x] Comment audit over the P4 diff: no new campaign breadcrumbs (module-doc/ADR references
+      only where the module already carries them).
 - [ ] Fresh top-tier audit appended to this doc before P5 opens.

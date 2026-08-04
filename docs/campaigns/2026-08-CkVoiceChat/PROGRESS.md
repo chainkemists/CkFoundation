@@ -39,6 +39,24 @@ not pushed by the campaign sessions.
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-04 (night) — GATE 4 MACHINE PORTION COMPLETE: 33/33 + 22/22 on one binary
+- **Exit sweep (BusterBlock): VoiceChat 33/33, 0 failed, 0 contaminated, 0 AS errors**
+  (Test-VoiceChatP4-exitsweep2.log) + **RenderTarget 22/22** same binary, no rebuild
+  (Test-P4-RenderTarget-exitsweep.log). Freshness chain: DLL 16:36:01 → 16:45:41 → 16:49:55.
+  The three new net specs (ModerationMatrix, PlaybackConfig, HybridRenderMode) all pass —
+  HybridRenderMode's four-beat hysteresis walk green FIRST run.
+- **Two spec fix cycles, both real lessons (in commit history):** (1) a destroyed talker's
+  handle is a TOMBSTONE — cannot anchor `Has<>` and its equality short-circuit would false-pass
+  key matching; the prune seam now anchors on a live handle and counts totals (CkF `9c6cab9e4`^,
+  CkTests fix). (2) The amplitude mirror is transient BY DESIGN (releases at 0.15s), so a fixed
+  tick-settle races it — `FCk_Latent_WaitUntil` polls the window (the harness's own prescribed
+  replacement; CkTests `157f491`-lineage).
+- Gate_4.md exit checklist ticked; **the only open exit item is the fresh top-tier audit**,
+  launched next. P5 ship remains gated on the human `[EDITOR-VERIFY]` block + N5 packaged smoke
+  + the `[Voice] bEnabled=true` BB config decision.
+- BB left on the feature tips (the user built/pushed the canonical branch themselves today);
+  submodule state is theirs to manage now.
+
 ### 2026-08-04 (evening) — campaign finishing sweep: seam specs, gym, F4, module docs all landed
 - **Seam specs (CkTests `5205d36b`):** `Ck.VoiceChat.Net.PlaybackConfig` (selection by wire idx,
   amplitude release past the stale-drop age with sticky selection, EndPlay prune with a
