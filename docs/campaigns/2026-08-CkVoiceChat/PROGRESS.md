@@ -39,6 +39,27 @@ not pushed by the campaign sessions.
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-04 (afternoon) — P4 NET GATE GREEN: 30/30 on the canonical rebased branch
+- **Maintainer rebased both feature branches onto dev and pushed** — the canonical lineage is
+  now `origin/feature/voice-chat` (CkF, tip `0de850f97`) / `origin/feature/voice-chat-wip`
+  (CkTests, `27515ca`). Content verified identical to the session's work (CkF diff = the final
+  PROGRESS entry only, already included; CkTests tree diff empty — the mirror fix dissolved into
+  dev's identical commit). Overnight session SHAs cited in earlier entries are the pre-rebase
+  lineage; titles are 1:1.
+- **Ran on BusterBlock: 30/30, Failed 0, Contaminated 0, EXIT 0, 0 `Angelscript: Error`, 2m42s**
+  (`Test-VoiceChatP4-netgate3.log`). Freshness verified: sources checked out 14:13:06 (clean vs
+  `0de850f97`) → DLL 14:14:04 (maintainer's build) → run 15:04. "Target is up to date" was
+  correct, not a stale skip. **All 11 net specs pass against the P4 receive/EndPlay/routing
+  changes for the first time** — items 1-4, 6, 7 are now net-verified, not just local-delta-zero.
+  (The earlier same-day blocker — BB's Shelf AS failure — resolved with the maintainer's
+  committed script work; the "stale generated file" mechanism recorded this morning was the
+  weaker hypothesis, mid-commit tree the likelier one.)
+- Housekeeping: CkPlugins_Other's CkF clone adopted the rebased lineage (`checkout -B` onto
+  origin). **CkTests clone NOT yet adopted** (classifier-blocked) — next session run:
+  `cd Plugins/CkTests && git fetch origin && git checkout -B feature/voice-chat-wip origin/feature/voice-chat-wip`
+  (trees identical; old tip stays in reflog). BB left on the feature tips as the maintainer
+  arranged it.
+
 ### 2026-08-04 (session close) — P4 items 6, 7, 8-doc + debug seams landed
 - **Item 6 (CkF `16964bd89`, audit F5):** talker EndPlay sweeps the destroyed talker out of
   `ServeHistory`/`ListenerMuteMatrix`, dropping stale player keys en route. Churn-coupled, no
