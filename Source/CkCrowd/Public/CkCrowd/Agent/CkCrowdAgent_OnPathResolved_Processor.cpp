@@ -93,6 +93,7 @@ namespace ck
             {
                 InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
                 InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
+                InHandle.Try_Remove<FTag_CrowdAgent_VoxelPathFallbackPending>();
                 InHandle.AddOrGet<FTag_CrowdAgent_Walking>();
 
                 const auto& Wps = InPathResult.Get_Waypoints();
@@ -162,6 +163,7 @@ namespace ck
             {
                 InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
                 InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
+                InHandle.Try_Remove<FTag_CrowdAgent_VoxelPathFallbackPending>();
                 InHandle.AddOrGet<FTag_CrowdAgent_Idle>();
 
                 UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(

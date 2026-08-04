@@ -62,6 +62,17 @@ public:
         const FCk_Request_VoxelNavPath_FindPath& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    /** Bind the volume this agent plans through, for consumers that issue its path requests for it. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoxelNavPath",
+              DisplayName="[Ck][VoxelNavPath] Request Set Volume",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_VoxelNavPath
+    Request_SetVolume(
+        UPARAM(ref) FCk_Handle_VoxelNavPath& InPath,
+        const FCk_Handle_VoxelNavVolume& InVolume,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
 public:
     /** Reports `Stale` for a Ready path whose volume has rebuilt since — including one whose volume is
      *  gone entirely. The stored status is never `Stale`: staleness belongs to the volume, and deriving it

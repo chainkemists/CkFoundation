@@ -17,6 +17,9 @@
 
 #include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
 
+#include "CkVoxelNav/Path/CkVoxelNavPath_Fragment.h"
+#include "CkVoxelNav/Path/CkVoxelNavPath_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_CrowdAgent_HandleRequests);
@@ -107,14 +110,35 @@ namespace ck
         InHandle.Try_Remove<FTag_CrowdAgent_Idle>();
         InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
         InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
+        InHandle.Try_Remove<FTag_CrowdAgent_VoxelPathFallbackPending>();
         InHandle.AddOrGet<FTag_CrowdAgent_PathPending>();
 
         // An external MoveTo starts a NEW episode, so OnGoalBlocked may fire again for the new goal.
         DoClearBlockedState(InHandle);
 
+        // A volumetric agent plans through the free space its bound volume baked, and its refined
+        // waypoints install through the same FFragment_Nav_PathResult seam the other two providers use.
+        if (UCk_Utils_VoxelNavPath_UE::Has(InHandle) &&
+            ck::IsValid(InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume()))
+        {
+            // Park the slot at Pending and forget the installed path: no nav request exists to do the
+            // former, and the path-result fragment persists across MoveTos.
+            FCk_Nav_Algorithm::MarkPathPending(InHandle);
+            InHandle.Try_Remove<FFragment_CrowdAgent_InstalledVoxelPath>();
+
+            auto Path = UCk_Utils_VoxelNavPath_UE::CastChecked(InHandle);
+            const auto From = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
+                UCk_Utils_Transform_UE::CastChecked(InHandle));
+
+            UCk_Utils_VoxelNavPath_UE::Request_FindPath(
+                Path,
+                FCk_Request_VoxelNavPath_FindPath{
+                    InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume(), From, Goal},
+                {});
+        }
         // Followers route through the path network, which installs its compiled waypoints through
         // the same FFragment_Nav_PathResult seam — everything downstream stays provider-agnostic.
-        if (UCk_Utils_PathNetworkFollower_UE::Has(InHandle))
+        else if (UCk_Utils_PathNetworkFollower_UE::Has(InHandle))
         {
             // Park the slot at Pending and forget the installed corridor: no nav request exists to
             // do the former, and the corridor fragment persists across MoveTos.
@@ -229,6 +253,7 @@ namespace ck
         InHandle.Try_Remove<FTag_CrowdAgent_Walking>();
         InHandle.Try_Remove<FTag_CrowdAgent_PathPending>();
         InHandle.Try_Remove<FTag_CrowdAgent_PathNetworkFallbackPending>();
+        InHandle.Try_Remove<FTag_CrowdAgent_VoxelPathFallbackPending>();
         InHandle.AddOrGet<FTag_CrowdAgent_Idle>();
 
         // Stop abandons the goal entirely — BlockedRecheck must never resume it.

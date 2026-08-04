@@ -91,6 +91,36 @@ auto
 
 auto
     UCk_Utils_VoxelNavPath_UE::
+    Request_SetVolume(
+        FCk_Handle_VoxelNavPath& InPath,
+        const FCk_Handle_VoxelNavVolume& InVolume,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_VoxelNavPath
+{
+    const auto PathIsValid = ck::IsValid(InPath);
+
+    CK_ENSURE_IF_NOT(PathIsValid,
+        TEXT("Invalid VoxelNav Path Handle [{}] supplied to Request_SetVolume"), InPath)
+    {}
+
+    if (NOT PathIsValid)
+    {
+        InDelegate.ExecuteIfBound(InPath, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InPath;
+    }
+
+    InPath.Get<ck::FFragment_VoxelNavPath_Params>().Set_Volume(InVolume);
+
+    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
+    InDelegate.ExecuteIfBound(InPath, ECk_Request_OperationResult::Succeeded);
+
+    return InPath;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoxelNavPath_UE::
     Get_Status(
         const FCk_Handle_VoxelNavPath& InPath)
     -> ECk_VoxelNav_PathStatus
