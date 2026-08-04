@@ -4,6 +4,7 @@
 #include "CkCore/Format/CkFormat.h"
 
 #include "CkVoxelNav/CkVoxelNav_Log.h"
+#include "CkVoxelNav/Octree/CkVoxelNav_Octree_Merge.h"
 #include "CkVoxelNav/Octree/CkVoxelNav_Octree_Morton.h"
 #include "CkVoxelNav/Octree/CkVoxelNav_Octree_Query.h"
 
@@ -156,8 +157,29 @@ namespace ck::voxelnav
         auto& Scratch = InOutState._Scratch;
         auto& Stats = InOutState._Stats;
 
+        // Merging closes the bake rather than taking a stage of its own: it spends no probe, cannot resume,
+        // and a stage would put a slice boundary either side of a pass that has to run to completion anyway.
+        // Its cost is RECORDED instead - _MergeSeconds is what says whether it ever needs budgeting.
+        const auto DoMergeCells = [&]() -> void
+        {
+            if (InParams._CellMerging != ECk_EnableDisable::Enable)
+            { return; }
+
+            const auto MergeStartSeconds = FPlatformTime::Seconds();
+
+            Request_MergeCells(WorkingOctree);
+
+            const auto& MergedCells = WorkingOctree.Get_MergedCells();
+
+            Stats.Set_PlainCellCount(MergedCells.Get_SourceCellCount());
+            Stats.Set_MergedCellCount(MergedCells.Get_CellCount());
+            Stats.Set_MergeSeconds(static_cast<float>(FPlatformTime::Seconds() - MergeStartSeconds));
+        };
+
         const auto DoFinishBuild = [&]() -> void
         {
+            DoMergeCells();
+
             Request_MarkOctreeBuilt(WorkingOctree);
 
             Stats.Set_TotalNodeCount(Get_TotalNodeCount(WorkingOctree));
@@ -371,6 +393,15 @@ namespace ck::voxelnav
             Stats.Get_LeafNodeCount(),
             Stats.Get_OccludedLeafCount(),
             Stats.Get_TotalNodeCount());
+
+        if (InParams._CellMerging != ECk_EnableDisable::Enable)
+        { return; }
+
+        voxelnav::Display(
+            TEXT("VoxelNav cell merging: [{}] free cells merged into [{}] merged cells in [{}]s"),
+            Stats.Get_PlainCellCount(),
+            Stats.Get_MergedCellCount(),
+            Stats.Get_MergeSeconds());
     }
 }
 

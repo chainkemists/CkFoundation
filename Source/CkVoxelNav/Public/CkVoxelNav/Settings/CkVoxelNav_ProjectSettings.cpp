@@ -109,3 +109,18 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoxelNav_Settings_UE::
+    Get_CellMerging()
+    -> ECk_EnableDisable
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_VoxelNav_ProjectSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ECk_EnableDisable::Disable; }
+
+    return Settings->Get_CellMerging();
+}
+
+// --------------------------------------------------------------------------------------------------------------------

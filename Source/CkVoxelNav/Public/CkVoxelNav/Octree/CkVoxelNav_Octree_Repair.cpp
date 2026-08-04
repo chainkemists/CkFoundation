@@ -4,6 +4,7 @@
 #include "CkCore/Format/CkFormat.h"
 
 #include "CkVoxelNav/CkVoxelNav_Log.h"
+#include "CkVoxelNav/Octree/CkVoxelNav_Octree_Merge.h"
 #include "CkVoxelNav/Octree/CkVoxelNav_Octree_Morton.h"
 #include "CkVoxelNav/Octree/CkVoxelNav_Octree_Query.h"
 
@@ -292,8 +293,32 @@ namespace ck::voxelnav
             ? InParams._DirtyBounds.ExpandBy(static_cast<double>(InParams._ClearanceUu))
             : InParams._DirtyBounds;
 
+        // The merge half of the local-repair contract: the published table's boxes clear of the dirty region
+        // are carried over, and only what the obstacle reached is merged again. Expanded bounds, for the
+        // same reason the probes use them - a cell whose probe box reached the dirty region can have changed.
+        const auto DoMergeCells = [&]() -> void
+        {
+            if (InParams._CellMerging != ECk_EnableDisable::Enable)
+            { return; }
+
+            const auto MergeStartSeconds = FPlatformTime::Seconds();
+
+            if (PublishedOctreePtr.IsValid())
+            { Request_MergeCellsLocally(WorkingOctree, *PublishedOctreePtr, ExpandedDirtyBounds); }
+            else
+            { Request_MergeCells(WorkingOctree); }
+
+            const auto& MergedCells = WorkingOctree.Get_MergedCells();
+
+            Stats.Set_MergedCellCount(MergedCells.Get_CellCount());
+            Stats.Set_MergedCellsCarriedOver(MergedCells.Get_CarriedOverCount());
+            Stats.Set_MergeSeconds(static_cast<float>(FPlatformTime::Seconds() - MergeStartSeconds));
+        };
+
         const auto DoFinishRepair = [&]() -> void
         {
+            DoMergeCells();
+
             Request_MarkOctreeBuilt(WorkingOctree);
 
             Stats.Set_LeafNodeCount(WorkingOctree.Get_Layer(0).Get_NodeCount());

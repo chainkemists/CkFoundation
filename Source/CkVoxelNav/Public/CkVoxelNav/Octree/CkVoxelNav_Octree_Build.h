@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 
@@ -107,6 +108,16 @@ private:
     UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float _BuildSeconds = 0.0f;
 
+    // Free cells the merge pass was handed. Zero when merging is off, and the A/B baseline when it is on.
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _PlainCellCount = 0;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    int32 _MergedCellCount = 0;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float _MergeSeconds = 0.0f;
+
 public:
     CK_PROPERTY(_OccupancyProbes);
     CK_PROPERTY(_Slices);
@@ -116,6 +127,9 @@ public:
     CK_PROPERTY(_OccludedLeafCount);
     CK_PROPERTY(_TotalNodeCount);
     CK_PROPERTY(_BuildSeconds);
+    CK_PROPERTY(_PlainCellCount);
+    CK_PROPERTY(_MergedCellCount);
+    CK_PROPERTY(_MergeSeconds);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -131,6 +145,13 @@ namespace ck::voxelnav
         // Added to every probe half-extent; grows obstacles and shrinks free space. Clearance is the
         // rasterizer's business, never the backend's.
         float _ClearanceUu = 0.0f;
+
+        /** Coalesce the finished free-cell set into merged boxes (Octree/CkVoxelNav_Octree_Merge.h). The
+         *  bake is IDENTICAL either way - merging only adds a table beside the octree - but a search over a
+         *  merged octree expands merged cells, so a route's cell list is a different (coarser) answer to the
+         *  same question. Anything asserting on octree ADDRESSES along a route wants it off, and should say
+         *  so rather than inherit whatever the caller defaulted to. */
+        ECk_EnableDisable _CellMerging = ECk_EnableDisable::Enable;
     };
 
     /** How much work one slice may do.

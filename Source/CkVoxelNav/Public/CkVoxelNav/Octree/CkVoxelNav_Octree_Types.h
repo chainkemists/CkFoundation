@@ -201,6 +201,124 @@ namespace ck::voxelnav
 
     // ----------------------------------------------------------------------------------------------------------------
 
+    /** One merged cell: an axis-aligned box of free space assembled from WHOLE octree cells, plus the
+     *  merged cells sharing a face with it. Neighbours are stored as indices into the table's own array,
+     *  so the graph a search walks is an integer adjacency list rather than a per-expansion octree walk. */
+    struct CKVOXELNAV_API FMergedCell
+    {
+    public:
+        FMergedCell() = default;
+
+        explicit FMergedCell(const FBox& InBounds)
+            : _Bounds(InBounds)
+        {}
+
+    public:
+        auto Get_Bounds()    const -> const FBox&          { return _Bounds; }
+        auto Get_Center()    const -> FVector              { return _Bounds.GetCenter(); }
+        auto Get_Neighbors() const -> const TArray<int32>& { return _Neighbors; }
+        auto Get_CellCount() const -> int32                { return _CellCount; }
+
+        /** The box's SMALLEST half-extent. A merged cell is free everywhere inside it, so its narrowest
+         *  axis is the only one an agent-size filter can honestly answer with. */
+        auto
+        Get_MinExtent() const -> float;
+
+    public:
+        auto
+        Set_Bounds(
+            const FBox& InBounds) -> FMergedCell&;
+
+        auto
+        Set_CellCount(
+            int32 InCellCount) -> FMergedCell&;
+
+        auto
+        Set_Neighbors(
+            TArray<int32> InNeighbors) -> FMergedCell&;
+
+    private:
+        FBox _Bounds = FBox{ForceInit};
+        TArray<int32> _Neighbors;
+        int32 _CellCount = 0;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    /** The merged-cell table: the coarser cell representation the kind-dispatching seam hands search when
+     *  merging is on, plus the octree-cell to merged-cell lookup that resolves an endpoint into it.
+     *
+     *  Keyed by the PACKED node address rather than by an FCellId: the table belongs to one octree, so the
+     *  volume qualifier an FCellId carries would be a runtime value stored in baked data. */
+    struct CKVOXELNAV_API FMergedCellTable
+    {
+    public:
+        auto Get_Cells()           const -> const TArray<FMergedCell>& { return _Cells; }
+        auto Get_CellCount()       const -> int32 { return _Cells.Num(); }
+        auto Get_IsMerged()        const -> bool  { return _IsMerged; }
+        auto Get_SourceCellCount() const -> int32 { return _SourceCellCount; }
+        auto Get_CarriedOverCount()const -> int32 { return _CarriedOverCount; }
+
+        /** nullptr when the index names no merged cell - never a shared placeholder, for the same reason
+         *  TryGet_NodeFromAddress refuses one. */
+        auto
+        TryGet_Cell(
+            int32 InMergedIndex) const -> const FMergedCell*;
+
+        /** INDEX_NONE when this octree cell belongs to no merged cell, which is what an unmerged octree
+         *  and an occluded cell both answer. */
+        auto
+        Get_MergedIndexForCell(
+            const FNodeAddress& InAddress) const -> int32;
+
+        auto
+        Get_AllocatedSize() const -> int32;
+
+    public:
+        auto
+        Request_Reset() -> void;
+
+        auto
+        Request_AddCell(
+            const FMergedCell& InCell) -> int32;
+
+        auto
+        Request_MapCellToMerged(
+            const FNodeAddress& InAddress,
+            int32 InMergedIndex) -> void;
+
+        auto
+        Request_SetBounds(
+            int32 InMergedIndex,
+            const FBox& InBounds) -> void;
+
+        auto
+        Request_SetNeighbors(
+            int32 InMergedIndex,
+            TArray<int32> InNeighbors) -> void;
+
+        auto
+        Request_SetCellCount(
+            int32 InMergedIndex,
+            int32 InCellCount) -> void;
+
+        /** Flips the table to readable, exactly as Request_MarkOctreeBuilt does for the octree: a table
+         *  mid-assembly must never answer a query. */
+        auto
+        Request_MarkMerged(
+            int32 InSourceCellCount,
+            int32 InCarriedOverCount) -> void;
+
+    private:
+        TArray<FMergedCell> _Cells;
+        TMap<uint32, int32> _CellToMerged;
+        int32 _SourceCellCount = 0;
+        int32 _CarriedOverCount = 0;
+        bool _IsMerged = false;
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
     /** One leaf node's 4x4x4 occupancy, one bit per sub-node, indexed by the sub-node's Morton code. */
     struct CKVOXELNAV_API FLeafNode
     {
@@ -424,6 +542,11 @@ namespace ck::voxelnav
         auto Get_LeafNodes() const -> const FLeafNodes& { return _LeafNodes; }
         auto Get_LeafNodes()       -> FLeafNodes&       { return _LeafNodes; }
 
+        /** Empty and unmerged unless the bake ran the merge pass. Its presence is what makes the cell seam
+         *  hand back merged cells, so it IS the merging switch as far as every query is concerned. */
+        auto Get_MergedCells() const -> const FMergedCellTable& { return _MergedCells; }
+        auto Get_MergedCells()       -> FMergedCellTable&       { return _MergedCells; }
+
         /** The power-of-two cube the octree actually addresses, centred on the authored volume. It is
          *  usually LARGER than the authored bounds - a volume is snapped up to the next power of two. */
         auto Get_NavigationBounds() const -> const FBox& { return _NavigationBounds; }
@@ -437,6 +560,7 @@ namespace ck::voxelnav
     private:
         TArray<FLayer> _Layers;
         FLeafNodes _LeafNodes;
+        FMergedCellTable _MergedCells;
         FBox _NavigationBounds = FBox{ForceInit};
         FBox _VolumeBounds = FBox{ForceInit};
         bool _IsValid = false;
