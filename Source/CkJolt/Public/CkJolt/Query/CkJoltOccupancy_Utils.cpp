@@ -8,8 +8,10 @@
 
 #include <Jolt/Geometry/AABox.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
+#include <Jolt/Physics/Collision/RayCast.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,6 +53,25 @@ namespace ck::jolt
         InPhysicsSystem.GetNarrowPhaseQuery().CollideShape(
             InBoxShape.GetPtr(), JPH::Vec3::sReplicate(1.0f), Transform, JPH::CollideShapeSettings{},
             JPH::RVec3::sZero(), Collector, InBroadPhaseFilter, InObjectFilter);
+
+        return Collector.HadHit();
+    }
+
+    auto
+        Get_IsSegmentBlocked(
+            const JPH::PhysicsSystem& InPhysicsSystem,
+            const FVector& InFrom,
+            const FVector& InTo,
+            const JPH::BroadPhaseLayerFilter& InBroadPhaseFilter,
+            const JPH::ObjectLayerFilter& InObjectFilter)
+        -> bool
+    {
+        const auto Ray = JPH::RRayCast{Conv(InFrom), Conv(InTo - InFrom)};
+
+        auto Collector = JPH::AnyHitCollisionCollector<JPH::CastRayCollector>{};
+
+        InPhysicsSystem.GetNarrowPhaseQuery().CastRay(
+            Ray, JPH::RayCastSettings{}, Collector, InBroadPhaseFilter, InObjectFilter);
 
         return Collector.HadHit();
     }

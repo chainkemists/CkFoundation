@@ -55,6 +55,18 @@ namespace ck::jolt
         const JPH::BroadPhaseLayerFilter& InBroadPhaseFilter,
         const JPH::ObjectLayerFilter& InObjectFilter) -> bool;
 
+    /// True when any body passing the filters stands between InFrom and InTo. A line-of-sight test, not a
+    /// raycast: any-hit with early-out, no fraction, no normal, no body identity. A segment whose start
+    /// point is already inside a convex body reads as BLOCKED — that is Jolt's convex-as-solid default and
+    /// it is the answer a visibility test wants, since a viewer buried in geometry can see nothing.
+    /// Game thread only (off-thread only under a future step-barrier contract — not yet provided).
+    CKJOLT_API auto Get_IsSegmentBlocked(
+        const JPH::PhysicsSystem& InPhysicsSystem,
+        const FVector& InFrom,
+        const FVector& InTo,
+        const JPH::BroadPhaseLayerFilter& InBroadPhaseFilter,
+        const JPH::ObjectLayerFilter& InObjectFilter) -> bool;
+
     /// Every body whose BOUNDING BOX overlaps InWorldBounds — broadphase only, no shape test, so the
     /// result is conservative. OutBodyIds is reset before filling, so callers can reuse one array.
     /// Game thread only (off-thread only under a future step-barrier contract — not yet provided).

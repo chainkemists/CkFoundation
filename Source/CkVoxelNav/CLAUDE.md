@@ -44,6 +44,9 @@ and plan paths through it at horde scale.
 - `ck::voxelnav::FBuildState` + `Request_AdvanceBuild` (`Octree/CkVoxelNav_Octree_Build.h`) — the
   resumable voxelizer, usable with no ECS at all. Everything it learns about geometry arrives
   through `ICk_VoxelNav_GeometryBackend`, so a whole bake runs against a hand-authored box list.
+- `ck::voxelnav::Raycast` / `Get_IsSegmentBlocked` (`Octree/CkVoxelNav_Octree_Raycast.h`) — Revelles
+  parametric traversal of a built octree, reporting the first occluded cell a segment enters
+  (distance, impact point, entered cell face, cell address).
 
 ---
 
@@ -64,6 +67,12 @@ and plan paths through it at horde scale.
   `FProcessor_JoltWorld_WaitForAsync` and before `FProcessor_JoltWorld_Step`.** That is the only
   window provably outside the async physics step. Anything later queries Jolt concurrently with the
   task-graph update whenever `jolt.EnableAsyncPhysicsUpdate` is on.
+- **There are TWO segment tests and picking the wrong one is a silent mistake.** The octree
+  ray-marcher answers "does the BAKE block this segment" — no physics query, agent clearance already
+  baked in, resolution capped at a leaf sub-node — and it is the one pathfinding wants, because it
+  asks the same structure the search planned through. `ICk_VoxelNav_GeometryBackend::Get_IsSegmentBlocked`
+  answers "does PHYSICS block it" against the live world: exact shapes, finer than any cell, one
+  narrowphase query each. Use it to validate a bake or for a tactical query, never to prune a path.
 - **A volume over LANDSCAPE bakes as free space in a packaged build.** CkJolt extracts landscape
   heightfields only under `WITH_EDITOR`, so outside the editor there are no landscape bodies to
   find. The build ensures once when its whole-volume broadphase sweep returns zero bodies and then

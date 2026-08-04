@@ -27,9 +27,15 @@ private:
             ToolTip = "Wall-clock GUARD on one volume's build slice, in milliseconds. 0 disables it. Checked between stages, so it bounds when a slice stops rather than how long one stage may run - keep the probe budget as the real limit."))
     float _MaxBuildMillisecondsPerTick = 4.0f;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Pathfinding",
+        meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1,
+            ToolTip = "Cell expansions one path search may spend. The search runs to completion inside the tick that requested it, so this cap is the only thing bounding a pathological query - a search that reaches it reports IterationCapReached rather than a path."))
+    int32 _MaxPathSearchIterations = 200000;
+
 public:
     CK_PROPERTY_GET(_MaxOccupancyProbesPerTick);
     CK_PROPERTY_GET(_MaxBuildMillisecondsPerTick);
+    CK_PROPERTY_GET(_MaxPathSearchIterations);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -48,6 +54,9 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|VoxelNav|Settings")
     static float Get_MaxBuildMillisecondsPerTick();
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|VoxelNav|Settings")
+    static int32 Get_MaxPathSearchIterations();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
