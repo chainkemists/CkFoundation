@@ -48,6 +48,37 @@ and plan paths through it at horde scale.
   parametric traversal of a built octree, reporting the first occluded cell a segment enters
   (distance, impact point, entered cell face, cell address).
 
+### Pathfinding
+
+- `UCk_Utils_VoxelNavPath_UE` — `Add` stamps the feature **on the agent entity itself**, not on a
+  child: a path belongs to the thing flying it, and every consumer that reads waypoints already
+  holds the agent's handle. `FCk_Fragment_VoxelNavPath_ParamsData` carries what belongs to the
+  agent (`_AgentRadiusUu`, `_HeuristicScale`, `_NodeSizeCompensation`); the query itself rides the
+  request.
+- `Request_FindPath(volume, from, to)` — deferred, completion delegate last. The search is
+  **synchronous inside the drain** and bounded by an iteration cap (project setting
+  `_MaxPathSearchIterations`), so a request made on one tick is answered on the next: the delegate
+  reports `Succeeded` only when waypoints are readable, and every rejection reports `Failed` and
+  fires `OnPathFailed` carrying an `ECk_VoxelNav_PathSearchOutcome` that names WHICH rejection
+  (`NoBake`, `EndpointUnresolvable`, `Unreachable`, `IterationCapReached`, `InvalidRequest`) —
+  because each one asks the caller for a different repair.
+- **Refinement knobs ride the request** (`_VisibilityPruning` default ON, `_Smoothing` default OFF,
+  `_SmoothingSubdivisions`). Pruning drops every waypoint the octree ray-marcher proves redundant;
+  smoothing subdivides what survives with a centripetal Catmull-Rom, span by span, keeping a curve
+  only where the octree agrees it stays in free space. A span that fails reverts to its straight
+  segment, so the worst case of smoothing is the polyline it was handed. Full contract:
+  `Path/CkVoxelNav_Path_Refine.h`.
+- **The stored waypoints ARE the refined output** — the raw cell-centre path is not kept.
+  `Get_RawWaypointCount` / `Get_RefinedWaypointCount` / `Get_PathLengthUu` are what a caller (or a
+  test) reads to see what refinement bought.
+- **`Stale` is DERIVED at the read boundary, never stored.** `Get_Status` compares the volume's
+  current build epoch against `Get_PlannedAgainstEpoch`; a volume that is gone reads as stale too.
+  Storing it would mean every rebuild had to walk every path that ever planned against it.
+- `ck::voxelnav::Search_PathGraph` (`Path/CkVoxelNav_Path_Graph.h`) — the ECS-free search seam over
+  a published octree, and `FPathGraph`, the `astar::AStarGraph` adapter it runs on (`static_assert`
+  pinned). `FPathGraph` holds a RAW pointer to the octree and is valid for exactly one synchronous
+  search inside one tick; its caller holds the `TSharedPtr` that keeps the structure whole.
+
 ---
 
 ## Voxelization — the parts that look wrong until you know why
@@ -103,8 +134,9 @@ preserved at `docs/campaigns/voxelnav-port/` until the port matures, then alongs
 
 ## Status
 
-The octree core, the geometry backend, and budgeted voxelization are implemented: a volume bakes an
-immutable Sparse Voxel Octree of its free space and answers point queries against it. Pathfinding,
-chunking, dynamic occluders, and node merging are not implemented yet; the plan of record is
+The octree core, the geometry backend, budgeted voxelization, and pathfinding are implemented: a
+volume bakes an immutable Sparse Voxel Octree of its free space, answers point and segment queries
+against it, and an agent plans a refined route through it. Chunking, dynamic occluders, crowd
+consumption, and node merging are not implemented yet; the plan of record is
 `docs/campaigns/voxelnav-port/` (`PROMPT.md` for the mission and locked decisions, `PROGRESS.md`
 for live status).

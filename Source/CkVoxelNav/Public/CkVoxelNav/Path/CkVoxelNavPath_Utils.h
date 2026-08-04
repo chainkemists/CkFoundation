@@ -48,7 +48,10 @@ public:
      *  the completion delegate fires on the tick after the request — with Succeeded only when waypoints
      *  are readable. Every rejection (a volume that is not one, one that has not baked, endpoints outside
      *  the bake, an unreachable goal, a spent iteration budget) completes as Failed and fires
-     *  OnPathFailed carrying which of those it was. */
+     *  OnPathFailed carrying which of those it was.
+     *
+     *  A successful search is refined before it is stored, per the request's own knobs — so the waypoints a
+     *  caller reads are the refined ones, and the raw cell-centre path is not kept. */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VoxelNavPath",
               DisplayName="[Ck][VoxelNavPath] Request Find Path",
@@ -77,12 +80,37 @@ public:
     Get_IsStale(
         const FCk_Handle_VoxelNavPath& InPath);
 
-    // The From position, every cell centre in order, then the To position. Empty unless the path is Ready.
+    // The route to fly, as refined: the From position, the cells the search kept, then the To position.
+    // Empty unless the path is Ready.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|VoxelNavPath",
               DisplayName="[Ck][VoxelNavPath] Get Waypoints")
     static TArray<FVector>
     Get_Waypoints(
+        const FCk_Handle_VoxelNavPath& InPath);
+
+    // How many waypoints the search produced before refinement. Against Get Refined Waypoint Count it is
+    // what refinement bought, and it is the only trace of the raw path — that path is not kept.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoxelNavPath",
+              DisplayName="[Ck][VoxelNavPath] Get Raw Waypoint Count")
+    static int32
+    Get_RawWaypointCount(
+        const FCk_Handle_VoxelNavPath& InPath);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoxelNavPath",
+              DisplayName="[Ck][VoxelNavPath] Get Refined Waypoint Count")
+    static int32
+    Get_RefinedWaypointCount(
+        const FCk_Handle_VoxelNavPath& InPath);
+
+    // Total length of the stored waypoints in uu, so a caller can compare two plans without walking them.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoxelNavPath",
+              DisplayName="[Ck][VoxelNavPath] Get Path Length")
+    static float
+    Get_PathLengthUu(
         const FCk_Handle_VoxelNavPath& InPath);
 
     UFUNCTION(BlueprintPure,
