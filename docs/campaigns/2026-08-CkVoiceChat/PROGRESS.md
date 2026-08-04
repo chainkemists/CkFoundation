@@ -39,6 +39,22 @@ not pushed by the campaign sessions.
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-04 (later still) — P4 item 4 landed: HybridRadio near/far render decision
+- **CkF `1d8d06033`:** per-recipient near/far decided at PLAYBACK per drain — listener position
+  (`GetAudioListenerPosition`) vs synth location against `AudibleRange`, Route's hysteresis
+  asymmetry mirrored (near inside range, held to range+margin). Near = spatialized, no radio
+  filter; far = flat + the channel's effect chain. Routing untouched (one wire copy — the gate's
+  no-fork STOP condition holds structurally). All fallbacks collapse to radio. `_HybridRenderNear`
+  (TOptional) resets when the config channel is not HybridRadio.
+- Ran: **30 total — 19/19 local, 11 env-fails name-identical, 0 AS errors**
+  (Test-VoiceChatP4-item4b.log). Same deferred-verification ledger as items 2/3: near/far state
+  spec via the debug seam + BB, audible difference via `[EDITOR-VERIFY]`.
+- **Runbook refinement (model corrected):** the CkPlugins-host layout fatal recurs after some
+  number of NORMAL headless runs, not only after crashes — items 1e+2 ran full suites
+  post-ritual, then item 4's first run fataled at runner boot (0 tests). Treat the ritual (GUI
+  boot → settle → graceful close) as the standing response to any `GetRestoredDimensions` fatal;
+  ~2 min, automated. P4 items 1-4 each cost one ritual on average.
+
 ### 2026-08-04 (later) — P4 items 2+3 landed: spatialized playback + per-channel audio config
 - **CkF `a2cbd385c`:** the receive drain selects `_PlaybackConfigChannel` per drain
   (highest-Priority delivering channel; **deviation from the gate doc's tie rule, recorded: ties
