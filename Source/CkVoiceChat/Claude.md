@@ -55,6 +55,33 @@ Listen-server host: the host's capture injects straight into its own routing inb
 self-RPC); the host receives other talkers like any client (a Client RPC on a host-owned relay
 executes locally).
 
+## Consumer recipes
+
+### Roger-beep / walkie-talkie bip (Ruling Q4: consumer recipe, NO CkCue dep in this module)
+
+The module fires `OnVoiceTalker_TransmitStarted` / `OnVoiceTalker_TransmitStopped` on every
+transmit edge; the beep is the consumer's cue, bound in game code (any of C++/BP/AS). AngelScript
+shape:
+
+```angelscript
+// In the consumer's EntityScript BeginPlay - Talker is the FCk_Handle_VoiceTalker:
+utils_voice_talker::BindTo_OnTransmitStarted(Talker, ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+    ECk_Signal_PostFireBehavior::DoNothing, FCk_Delegate_VoiceTalker(this, n"OnTransmitStarted"));
+utils_voice_talker::BindTo_OnTransmitStopped(Talker, ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+    ECk_Signal_PostFireBehavior::DoNothing, FCk_Delegate_VoiceTalker(this, n"OnTransmitStopped"));
+
+UFUNCTION()
+private void OnTransmitStarted(FCk_Handle_VoiceTalker InTalker)
+{
+    // The consumer's own cue tag + CkCue executor - e.g. a squelch-open bip:
+    // Request_ExecuteCue_Transient(n"Cue.Voice.RogerBeep.Open", ...) on the cue subsystem.
+}
+```
+
+`OnTransmitStopped` is the classic roger-beep edge (squelch-close "over"). For a per-CHANNEL beep
+(different radio nets sounding different), key the cue tag off the channel the talker transmits
+on. Audition: gym station (P4 `[EDITOR-VERIFY]`).
+
 ## Anti-patterns
 
 - Don't add a `CkRelationship` dep for team channels — team semantics are membership-flag
