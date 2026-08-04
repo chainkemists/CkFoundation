@@ -113,6 +113,39 @@ change. Campaign docs: `docs/campaigns/jolt-collision-world/` in the host projec
   `Get_SourceActorName` (cached, survives actor death), `Get_NumBodies`.
 - Cooker lives in `CkJoltEditor` (editor subsystem + `-run=CkJoltCook` commandlet).
 
+### Scene queries + occupancy
+
+- `UCk_Utils_JoltQuery_UE` (Query/CkJoltQuery_Utils.h) — the BP/AS-facing scene queries: `Get_RayCast` /
+  `Get_ShapeCast` / `Get_Overlap` (+ the `*Multi` variants) / `Get_OverlapEntities`. Each takes a
+  WorldContextObject and an `FCk_Jolt_QueryFilter` (UE channel + minimum response), resolves the subsystem
+  and rebuilds its shape per call, collects EVERY hit, and attributes each hit to a live entity. Pure reads
+  — no probe-overlap side effects.
+- **Occupancy surface** — the opposite trade, for callers issuing thousands of boolean tests (coverage
+  grids, volumetric navigation bakes): any-hit early-out, NO entity attribution, no per-call subsystem
+  resolution, caller-owned shape and filters. Two layers:
+  - `ck::jolt::Get_IsBoxOccupied` (box dimensions, or a caller-held `JPH::Ref<JPH::Shape>`) and
+    `ck::jolt::Get_BodiesInAABox` (Query/CkJoltOccupancy_Utils.h) — JPH signatures, for callers that
+    already hold a `JPH::PhysicsSystem`. `Get_BodiesInAABox` is the module's first
+    `GetBroadPhaseQuery().CollideAABox` use: bounding boxes only, so the answer is conservative and cheap
+    — a whole-region early-out, not a per-cell test.
+  - `ck::jolt::FCk_Jolt_QuerySession` + `ck::jolt::FCk_Jolt_BoxProbe` (Query/CkJoltOccupancy_Session.h) —
+    the same capability with NO Jolt type in the header: opaque `TPimplPtr`-backed, move-only value types,
+    so a module that must not see JPH (a geometry-agnostic navigation backend) still gets the fast path.
+    The session resolves the subsystem and builds its static-domain filters once and holds the physics
+    world WEAKLY; a probe holds one reusable box shape per cell size. Bodies come back as opaque `uint64`
+    ids — compare them and pass them back, never decode them.
+  - An INVALID session answers every query "unoccupied" / no bodies. That is a legitimate state (no Jolt
+    subsystem outside Game/PIE worlds), so consumers must gate on `Get_IsValid()` and fail loudly
+    themselves rather than baking an empty world.
+- Query-side filters live in CollisionLayers/CkJoltCollisionLayerTable.h: `FCk_Jolt_ChannelQueryFilter`
+  (UE trace semantics), `FCk_Jolt_DomainQueryFilter` (one body domain), plus the occupancy pair
+  `FCk_Jolt_StaticOccupancyFilter` (object layer, Static domain fixed) and
+  `FCk_Jolt_StaticBroadPhaseQueryFilter` (broadphase, static tree only — the scene-query wrappers pass an
+  accept-all broadphase filter, which is the wrong default at grid-scale query counts). The Static domain
+  covers baked level geometry AND Static-motion-type JoltBodies; both are immovable world obstacles.
+- **Game thread only**, as with every Jolt query here — safe off-thread only under a future step-barrier
+  contract, which this module does not yet provide.
+
 ### Dynamic bodies + characters (Phases 3-4)
 
 - **JoltBody quartet** (`Body/`): `UCk_Utils_JoltBody_UE::Add` with
