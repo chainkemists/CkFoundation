@@ -11,7 +11,8 @@
 | 1 — Octree + voxelize | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 20/20 + Ck.Jolt 48/48, zero contaminated, hygiene clean | commits 2c8aec16c/05e146a4a (CkFoundation), deea9fb1/5a6c65c9 (CkTests) |
 | 2 — Pathfinding | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 38/38 + Ck.Jolt.Query 4/4; CkAStar untouched | commits 489eb4bc3/69d689466 (CkFoundation), 3da53af6/12c32a84 (CkTests) |
 | 3 — Chunks & dynamics | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 53/53 + Ck.Jolt.Query 4/4 | commits 92b5ef0f5/65a502cbb (CkFoundation), 52088050/d1958689 (CkTests) |
-| 4 — Consumers | **OPEN** — 4A (third provider branch in CkCrowd) dispatched | PHASE_4.md |
+| 4 — Consumers | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6, six knowns identical) + Ck.VoxelNav 57/57 + Crowd 34/34; CkCrowd diff surgical (+173/−6) | commits 89991d4ef/31f282100 (CkFoundation), a5f3c7be/892718c2/b6e32d25 (CkTests) |
+| 5 — Perf (merging) | **OPEN** — 5A (merging + A/B benchmark) dispatched | PHASE_5.md |
 | 3 — Chunks & dynamics | not started | — |
 | 4 — Consumers | not started | — |
 | 5 — Perf (merging) | not started | — |
@@ -67,7 +68,27 @@
 
 ## In-flight
 
-- Phase 4 wave 2 (4B flying-agent enablement + [C-D24] stale-epoch replan) — opus, dispatched.
+- Phase 4 boundary full suite running (`Phase4-Boundary.log`).
+
+- **4B ACCEPTED 2026-08-04** (opus, self-gated 56/56 + PNF 6-reds-identical + Crowd 34/34):
+  Flying tag with 7 insert-only view exclusions; FaceAngle3D (absolute Request_SetRotation —
+  delta-composition leaks roll) + ApplyDisplacement3D (forced: PendingDisplacement had exactly one
+  consumer; views partition, single-translation-writer preserved); _AgentMode params opt-in;
+  [C-D24] stale-epoch replan-once (guarded by _RequestedAgainstEpoch stamped pre-answer);
+  [EDITOR-VERIFY] steps in VALIDATION.md. Orchestrator reviewed CkCrowd diff (13 files,
+  +173/−6, surgical). Commits: `31f282100` (CkFoundation), `892718c2` (CkTests).
+- **Endpoint anomaly RESOLVED 2026-08-04** (opus debug agent): NOT a provider defect — a
+  use-after-free in the flying test (`const auto& = Get_PathResult(...).Get_Waypoints()` binds
+  into a by-value UFUNCTION return's subobject; no lifetime extension; freed block's first 8
+  bytes reused = element 0's X zeroed). Publish-correct/read-corrupt proven from instrumented
+  logs; "route dependence" was allocator traffic (solo runs passed). Provider vindicated:
+  hermetic pin reproduces the PIE bake bit-for-bit with endpoints intact through search AND
+  pruning. Fix in CkTests only (+2 assertions, none weakened); 57/57. Commit: `b6e32d25`.
+- **Repo-wide landmine recorded (p)**: every struct-returning `Get_*` BPFL is a BY-VALUE copy —
+  `const auto& X = Get_Foo(...).Get_Bar()` dangles. One instance existed in CkTests (now fixed);
+  grep pattern documented in the debug report. Maintainer may want a lint/doctrine line.
+- Latent hole recorded (q): `TryGet_FreeCellAtPosition` treats FreeSpaceAtLayer as unresolvable —
+  unreachable while interiors stay dense; will surface if a sparser interior representation lands.
 
 - **4A ACCEPTED 2026-08-04** (opus, self-gated 54/54 + PathNetworkFollower delta-vigilance:
   6 reds name-for-name with IDENTICAL failure messages, zero flips; the 2 greens traversing the
