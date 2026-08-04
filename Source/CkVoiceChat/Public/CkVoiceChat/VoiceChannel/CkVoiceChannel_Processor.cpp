@@ -7,9 +7,14 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkResourceLoader/CkResourceLoader_Utils.h"
+
 #include "CkVoiceChat/CkVoiceChat_Log.h"
 #include "CkVoiceChat/Net/CkVoiceChat_RepData.h"
 #include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment.h"
+
+#include <Sound/SoundAttenuation.h>
+#include <Sound/SoundEffectSource.h>
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoiceChannel_AssignIdx);
@@ -89,9 +94,69 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
-            const FFragment_VoiceChannel_Params& InParams)
+            const FFragment_VoiceChannel_Params& InParams,
+            FFragment_VoiceChannel_Current& InCurrent)
         -> void
     {
+        const auto& Attenuation = InParams.Get_Attenuation();
+        const auto& SourceEffectChain = InParams.Get_SourceEffectChain();
+
+        // Both assets are optional-by-design (ADR-5); a channel that authors neither has nothing
+        // to resolve. Resolution runs on EVERY machine - clients apply the config at playback.
+        if (ck::IsValid(Attenuation) || ck::IsValid(SourceEffectChain))
+        {
+            if (NOT InCurrent._LoadedAudioAssets.Get_IsRequested())
+            {
+                auto PathsToLoad = TArray<FSoftObjectPath>{};
+
+                if (ck::IsValid(Attenuation))
+                { PathsToLoad.Emplace(Attenuation.ToSoftObjectPath()); }
+                if (ck::IsValid(SourceEffectChain))
+                { PathsToLoad.Emplace(SourceEffectChain.ToSoftObjectPath()); }
+
+                InCurrent._LoadedAudioAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+                    TEXT("VoiceChannel.Setup"), PathsToLoad);
+            }
+
+            if (NOT InCurrent._LoadedAudioAssets.Get_IsReady())
+            {
+                InVoiceChannelEntity.AddOrGet<FTag_VoiceChannel_PendingAssetLoad>();
+                return;
+            }
+
+            const auto ResolvedAttenuation = ck::IsValid(Attenuation)
+                ? Cast<USoundAttenuation>(InCurrent._LoadedAudioAssets.Get_ResolvedObject(Attenuation.ToSoftObjectPath()))
+                : nullptr;
+            const auto ResolvedSourceEffectChain = ck::IsValid(SourceEffectChain)
+                ? Cast<USoundEffectSourcePresetChain>(InCurrent._LoadedAudioAssets.Get_ResolvedObject(SourceEffectChain.ToSoftObjectPath()))
+                : nullptr;
+
+            const auto EveryAuthoredAssetResolved =
+                NOT InCurrent._LoadedAudioAssets.Get_HasFailed() &&
+                (ck::Is_NOT_Valid(Attenuation) || ck::IsValid(ResolvedAttenuation)) &&
+                (ck::Is_NOT_Valid(SourceEffectChain) || ck::IsValid(ResolvedSourceEffectChain));
+
+            CK_ENSURE_IF_NOT(EveryAuthoredAssetResolved,
+                TEXT("VoiceChannel [{}] failed to resolve its authored audio config through CkResourceLoader "
+                     "(Attenuation [{}], SourceEffectChain [{}]) - playback on this machine falls back to module defaults"),
+                InVoiceChannelEntity, Attenuation.ToSoftObjectPath(), SourceEffectChain.ToSoftObjectPath())
+            {}
+
+            if (NOT EveryAuthoredAssetResolved)
+            {
+                InCurrent._LoadedAudioAssets = {};
+                InCurrent._ResolvedAttenuation = nullptr;
+                InCurrent._ResolvedSourceEffectChain = nullptr;
+                InVoiceChannelEntity.Try_Remove<FTag_VoiceChannel_PendingAssetLoad>();
+                InVoiceChannelEntity.Remove<MarkedDirtyBy>();
+                return;
+            }
+
+            InCurrent._ResolvedAttenuation = ResolvedAttenuation;
+            InCurrent._ResolvedSourceEffectChain = ResolvedSourceEffectChain;
+            InVoiceChannelEntity.Try_Remove<FTag_VoiceChannel_PendingAssetLoad>();
+        }
+
         InVoiceChannelEntity.Remove<MarkedDirtyBy>();
 
         voice_chat::VeryVerbose(TEXT("Setup complete for VoiceChannel [{}] with ChannelName [{}]"),

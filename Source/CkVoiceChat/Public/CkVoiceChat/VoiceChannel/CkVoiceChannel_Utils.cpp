@@ -134,6 +134,24 @@ auto
     return InVoiceChannel.Get<ck::FFragment_VoiceChannel_Params>().Get_Priority();
 }
 
+auto
+    UCk_Utils_VoiceChannel_UE::
+    Get_ResolvedAttenuation(
+        const FCk_Handle_VoiceChannel& InVoiceChannel)
+    -> USoundAttenuation*
+{
+    return InVoiceChannel.Get<ck::FFragment_VoiceChannel_Current>().Get_ResolvedAttenuation().Get();
+}
+
+auto
+    UCk_Utils_VoiceChannel_UE::
+    Get_ResolvedSourceEffectChain(
+        const FCk_Handle_VoiceChannel& InVoiceChannel)
+    -> USoundEffectSourcePresetChain*
+{
+    return InVoiceChannel.Get<ck::FFragment_VoiceChannel_Current>().Get_ResolvedSourceEffectChain().Get();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
