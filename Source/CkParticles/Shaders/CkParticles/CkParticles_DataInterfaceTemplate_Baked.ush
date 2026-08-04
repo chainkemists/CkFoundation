@@ -1,0 +1,84 @@
+// /CkParticles/CkParticles_DataInterfaceTemplate_Baked.ush
+//
+// The baked twin of CkParticles_DataInterfaceTemplate.ush, emitted by
+// UCkParticles_DataInterface::GetParameterDefinitionHLSL when the ExecuteStage call node carries the baked-ids
+// function specifier (the DI instance itself is invisible to codegen — Niagara only ever hands the translator a
+// class-CDO duplicate). It includes and dispatches over ONLY the behaviors that legitimately spawn through the
+// owning template (one for a per-behavior system, a small set for a shared cadence row) instead of the full
+// registry. The full-corpus dispatch inlines every behavior's HLSL behind a runtime id nothing can dead-strip,
+// and the driver-side compile of that corpus measured ~170-200 s PER emitter script; the baked script compiles
+// at only-what-it-can-run cost.
+//
+// ParameterName is the DI's HLSL symbol. ExecuteStageSymbol is the exact call symbol the translated sim
+// invokes — the specifier is mangled into it, so the name comes from the translator, never hand-derived.
+// BehaviorIncludes, BehaviorDispatch and FallbackFunction are built per baked id from
+// ck::particles::Get_BehaviorShaderIncludePath/FunctionName — the roster naming convention is what keeps this
+// file behavior-agnostic. An id outside the baked set falls back to the first baked behavior: the template and
+// its spawn path are paired by construction, so a mismatched runtime id has nothing meaningful to select.
+//
+// COMMENTS IN THIS FILE MUST NEVER SPELL A SUBSTITUTION TOKEN IN BRACES: FString::Format replaces tokens inside
+// comments too, and a multi-line value (the include/dispatch blocks) spills past the comment marker as bare code.
+
+#include "/CkParticles/Common.ush"
+{BehaviorIncludes}
+
+// The DI's per-instance shader parameters (UCkParticles_DataInterface::FShaderParameters). The block is addressed
+// by VisTag and applied below, AFTER the behavior returns — the wrapper is where these are in scope, and applying
+// it centrally here is what keeps every behavior unaware that per-part tuning exists.
+int    {ParameterName}_PartTuningBandStart;
+float4 {ParameterName}_PartTuningRows[CKPARTICLES_MAX_TUNED_PARTS * CKPARTICLES_PART_TUNING_ROWS];
+
+FCkParticles_StageOutput CkParticles_BakedDispatch_{ParameterName}(FCkParticles_StageInput In)
+{
+{BehaviorDispatch}
+    return {FallbackFunction}(In);
+}
+
+void {ExecuteStageSymbol}(in int BehaviorId, in float DeltaTime, in float Age, in float Lifetime, in float3 InPosition, in float3 InVelocity, in int Seed, in float EmitterAge, in float4 InTuning, out float3 OutPosition, out float3 OutVelocity, out float4 OutColor, out float2 OutSize, out float3 OutScale, out float4 OutOrientation, out float4 OutDynamic, out float OutRotation, out int OutMeshIndex, out int OutVisTag, out float3 OutSpriteAlignment, out float3 OutSpriteFacing, out float OutSubImageIndex)
+{
+    FCkParticles_StageInput In;
+    In.BehaviorId = BehaviorId;
+    In.DeltaTime  = DeltaTime;
+    In.Age        = Age;
+    In.Lifetime   = Lifetime;
+    In.Position   = InPosition;
+    In.Velocity   = InVelocity;
+    In.Seed       = Seed;
+    In.EmitterAge = EmitterAge;
+    In.Tuning     = InTuning;
+
+    In = CkParticles_ApplyGlobalTuningPre(In);
+
+    FCkParticles_StageOutput Out = CkParticles_BakedDispatch_{ParameterName}(In);
+
+    Out = CkParticles_ApplyGlobalTuningPost(Out, In.Tuning);
+
+    // Per-part tuning, on top of the global one above. NormalizedAge is taken from the TUNED clock (Tuning.w
+    // pre-scales Age inside the Pre helper) so a visibility window is stated in the same normalized life every
+    // behavior reads. Mirrored by NDICkParticlesLocal::ExecuteStage_CPU.
+    const int PartRow = CkParticles_PartTuningRow(Out.VisTag, {ParameterName}_PartTuningBandStart);
+    if (PartRow >= 0)
+    {
+        const int PartBase = PartRow * CKPARTICLES_PART_TUNING_ROWS;
+        CkParticles_ApplyPartTuning(Out, CkParticles_NormalizedAgeOf(Age * InTuning.w, Lifetime),
+            {ParameterName}_PartTuningRows[PartBase + 0],
+            {ParameterName}_PartTuningRows[PartBase + 1],
+            {ParameterName}_PartTuningRows[PartBase + 2],
+            {ParameterName}_PartTuningRows[PartBase + 3],
+            {ParameterName}_PartTuningRows[PartBase + 4]);
+    }
+
+    OutPosition    = Out.Position;
+    OutVelocity    = Out.Velocity;
+    OutColor       = Out.Color;
+    OutSize        = Out.Size;
+    OutScale       = Out.Scale;
+    OutOrientation = Out.Orientation;
+    OutDynamic     = Out.Dynamic;
+    OutRotation    = Out.Rotation;
+    OutMeshIndex   = Out.MeshIndex;
+    OutVisTag      = Out.VisTag;
+    OutSpriteAlignment = Out.SpriteAlignment;
+    OutSpriteFacing    = Out.SpriteFacing;
+    OutSubImageIndex   = Out.SubImageIndex;
+}

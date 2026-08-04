@@ -59,6 +59,16 @@ namespace ck::particles
     // renders the default glow rather than nothing.
     inline auto Get_SpriteMaterialParameterName() -> FName { return FName(TEXT("User.SpriteMaterial")); }
 
+    // Per-instance tuning float4 fed to ExecuteStage as its last input and applied CENTRALLY (see
+    // CkParticles_Behaviors.ush), so every behavior is tunable without touching a Behavior_*.ush:
+    // x scales Size and Scale, y scales Color.rgb, z scales Color.a, w scales Age and DeltaTime.
+    // Identity is (1,1,1,1), which every template carries as the parameter's default.
+    inline auto Get_TuningParameterName() -> FName { return FName(TEXT("User.CkTuning")); }
+
+    // The behavior selector every template exposes and the spawn path writes. The tuning path READS it back, because
+    // per-part rows are addressed against the behavior's own VisTag band and Request_ApplyTuning takes no id.
+    inline auto Get_BehaviorIdParameterName() -> FName { return FName(TEXT("User.BehaviorId")); }
+
     // Keep this table in sync with the behavior roster in CkParticles_Behaviors.ush.
     inline auto Get_BehaviorUsesBurstTemplate(const int32 InBehaviorId) -> bool
     {
@@ -1221,6 +1231,132 @@ namespace ck::particles
     }
 
     // --------------------------------------------------------------------------------------------------------------
+    // Behavior -> tunable PARTS.
+    //
+    // The authority on what a designer may retune INSIDE one behavior: the five shared renderers every template
+    // carries, then that behavior's own row-declared band in VisTag order (ribbon-emitter renderers included — their
+    // particles write a tag out of the same ledger). Two behaviors that resolve to the same cadence row share a part
+    // list, which is correct: they draw through the same renderers.
+    //
+    // The display name is the asset row's LABEL, not its identity — the VisTag is, and the reconcile pass matches on
+    // it. The label composes the renderer's kind with the look (and carrier, and flipbook grid) it draws, so a
+    // designer recognises the layer without opening the template. A row that declares the same kind, carrier and look
+    // twice — NS_Lightning_Hit's two Spike carriers, the only such pair on the roster — takes a trailing ordinal,
+    // because there is nothing else in the spec left to tell the two apart.
+    // --------------------------------------------------------------------------------------------------------------
+    struct FCk_ParticlesPartInfo
+    {
+        int32 VisTag = 0;
+        FName DisplayName;
+    };
+
+    inline auto Get_SharedPartDisplayName(const int32 InVisTag) -> FName
+    {
+        switch (InVisTag)
+        {
+            case 0:  return FName(TEXT("Shared Camera Sprite"));
+            case 1:  return FName(TEXT("Shared Velocity Streak"));
+            case 2:  return FName(TEXT("Shared Smoke Sprite"));
+            case 3:  return FName(TEXT("Shared Carrier Mesh"));
+            case 4:  return FName(TEXT("Shared Ground Quad"));
+            default: return NAME_None;
+        }
+    }
+
+    inline auto Get_RendererPartDisplayName(const FCk_ParticlesRendererSpec& InRenderer) -> FName
+    {
+        const auto LookName = InRenderer.LookName != nullptr ? FString(InRenderer.LookName) : FString(TEXT("Unbound"));
+
+        const auto Sheet = InRenderer.SubImageSize.X > 0 && InRenderer.SubImageSize.Y > 0
+            ? FString::Printf(TEXT(" %dx%d"), InRenderer.SubImageSize.X, InRenderer.SubImageSize.Y)
+            : FString{};
+
+        switch (InRenderer.Kind)
+        {
+            case ECk_ParticlesRenderer_Kind::Mesh:
+                return FName(*FString::Printf(TEXT("Mesh: %s (%s)"), *LookName,
+                    InRenderer.MeshName != nullptr ? InRenderer.MeshName : TEXT("Unbound")));
+            case ECk_ParticlesRenderer_Kind::CameraFacingSprite:
+                return FName(*FString::Printf(TEXT("Sprite: %s%s"), *LookName, *Sheet));
+            case ECk_ParticlesRenderer_Kind::VelocityAlignedSprite:
+                return FName(*FString::Printf(TEXT("Streak: %s%s"), *LookName, *Sheet));
+            case ECk_ParticlesRenderer_Kind::CustomFacingSprite:
+                return FName(*FString::Printf(TEXT("Ground Quad: %s%s"), *LookName, *Sheet));
+            case ECk_ParticlesRenderer_Kind::Ribbon:
+                return FName(*FString::Printf(TEXT("Ribbon: %s"), *LookName));
+            default:
+                return FName(*LookName);
+        }
+    }
+
+    // The cadence row a behavior spawns through, resolved through the SAME path Get_BehaviorTemplateSystemObjectPath
+    // hands the spawn path — so a behavior can never be tuned against a row it does not actually render on.
+    inline auto TryGet_BehaviorTemplateSpec(const int32 InBehaviorId) -> const FCk_ParticlesTemplateSpec*
+    {
+        const auto Path = Get_BehaviorTemplateSystemObjectPath(InBehaviorId);
+
+        for (const auto& Spec : Get_TemplateSpecs())
+        {
+            if (Get_TemplateSystemObjectPath(Spec.AssetName) == Path)
+            { return &Spec; }
+        }
+
+        return nullptr;
+    }
+
+    inline auto Get_BehaviorBandRenderers(const int32 InBehaviorId) -> TArray<FCk_ParticlesRendererSpec>
+    {
+        auto Renderers = TArray<FCk_ParticlesRendererSpec>{};
+
+        const auto* Spec = TryGet_BehaviorTemplateSpec(InBehaviorId);
+        if (Spec == nullptr)
+        { return Renderers; }
+
+        Renderers.Append(Spec->RendererOverrides.GetData(), Spec->RendererOverrides.Num());
+        Renderers.Append(Spec->RibbonEmitter.Renderers.GetData(), Spec->RibbonEmitter.Renderers.Num());
+
+        Renderers.Sort([](const FCk_ParticlesRendererSpec& InA, const FCk_ParticlesRendererSpec& InB) -> bool
+        { return InA.VisTag < InB.VisTag; });
+
+        return Renderers;
+    }
+
+    // The behavior's band start VisTag, or 0 when it declares no band — which is exactly what
+    // FCkParticles_PartTuningBlock::BandStart takes.
+    inline auto Get_BehaviorBandStart(const int32 InBehaviorId) -> int32
+    {
+        const auto Renderers = Get_BehaviorBandRenderers(InBehaviorId);
+
+        return Renderers.IsEmpty() ? 0 : Renderers[0].VisTag;
+    }
+
+    inline auto Get_BehaviorTunableParts(const int32 InBehaviorId) -> TArray<FCk_ParticlesPartInfo>
+    {
+        auto Parts = TArray<FCk_ParticlesPartInfo>{};
+
+        for (auto VisTag = 0; VisTag <= SharedRendererVisTag_Max; ++VisTag)
+        { Parts.Add(FCk_ParticlesPartInfo{VisTag, Get_SharedPartDisplayName(VisTag)}); }
+
+        auto LabelCounts = TMap<FName, int32>{};
+
+        for (const auto& Renderer : Get_BehaviorBandRenderers(InBehaviorId))
+        {
+            const auto Label = Get_RendererPartDisplayName(Renderer);
+            auto&      Count = LabelCounts.FindOrAdd(Label);
+
+            ++Count;
+
+            const auto DisplayName = Count == 1
+                ? Label
+                : FName(*FString::Printf(TEXT("%s #%d"), *Label.ToString(), Count));
+
+            Parts.Add(FCk_ParticlesPartInfo{Renderer.VisTag, DisplayName});
+        }
+
+        return Parts;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------
     // Behavior -> generated CkUsf look.
     //
     // A behavior whose visual identity is a hand-authored shader binds a generated CkUsf master here; the spawn path
@@ -1252,5 +1388,168 @@ namespace ck::particles
     {
         return FString::Printf(TEXT("/CkFoundation/CkUsf/GeneratedLooks/M_CkUsf_Look_%s.M_CkUsf_Look_%s"),
             *InLookName.ToString(), *InLookName.ToString());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------
+    // Behavior -> roster name.
+    //
+    // Keep this table in sync with the behavior roster in CkParticles_Behaviors.ush and the roster paragraph in
+    // CkParticles/CLAUDE.md. It is what the per-behavior tuning asset is named after, so a rename here renames the
+    // asset the spawn path resolves.
+    // --------------------------------------------------------------------------------------------------------------
+    inline auto Get_BehaviorName(const int32 InBehaviorId) -> FName
+    {
+        switch (InBehaviorId)
+        {
+            case 0:  return FName(TEXT("Gravity"));
+            case 1:  return FName(TEXT("Swirl"));
+            case 2:  return FName(TEXT("Explosion"));
+            case 3:  return FName(TEXT("Fire"));
+            case 4:  return FName(TEXT("Fireworks"));
+            case 5:  return FName(TEXT("Galaxy"));
+            case 6:  return FName(TEXT("Beam"));
+            case 7:  return FName(TEXT("Slash"));
+            case 8:  return FName(TEXT("Nova"));
+            case 9:  return FName(TEXT("MuzzleFlash"));
+            case 10: return FName(TEXT("ImpactBurst"));
+            case 11: return FName(TEXT("Tracer"));
+            case 12: return FName(TEXT("SmokePlume"));
+            case 13: return FName(TEXT("SparksBurst"));
+            case 14: return FName(TEXT("GroundRing"));
+            case 15: return FName(TEXT("LightningStrike"));
+            case 16: return FName(TEXT("AuraSwirl"));
+            case 17: return FName(TEXT("LightningRange"));
+            case 18: return FName(TEXT("GunshotProjectile"));
+            case 19: return FName(TEXT("ArrowProjectile"));
+            case 20: return FName(TEXT("FireBurst"));
+            case 21: return FName(TEXT("FireBallHit"));
+            case 22: return FName(TEXT("GunshotHit"));
+            case 23: return FName(TEXT("ArrowCast"));
+            case 24: return FName(TEXT("ArrowHit"));
+            case 25: return FName(TEXT("BombSpawn"));
+            case 26: return FName(TEXT("PickupLoop"));
+            case 27: return FName(TEXT("HealLoop"));
+            case 28: return FName(TEXT("BuffLoop"));
+            case 29: return FName(TEXT("DebuffLoop"));
+            case 30: return FName(TEXT("PickupCast"));
+            case 31: return FName(TEXT("HealCast"));
+            case 32: return FName(TEXT("DebuffCast"));
+            case 33: return FName(TEXT("GunshotCast"));
+            case 34: return FName(TEXT("FireBallCast"));
+            case 35: return FName(TEXT("LightningCast"));
+            case 36: return FName(TEXT("FireBallProjectile"));
+            case 37: return FName(TEXT("BombProjectile"));
+            case 38: return FName(TEXT("BuffCast"));
+            case 39: return FName(TEXT("LightningMuzzle"));
+            case 40: return FName(TEXT("ExplosionGround"));
+            case 41: return FName(TEXT("ExplosionGroundIce"));
+            case 42: return FName(TEXT("ExplosionOmni"));
+            case 43: return FName(TEXT("ExplosionOmniIce"));
+            case 44: return FName(TEXT("BombExplosion"));
+            case 45: return FName(TEXT("LightningHit"));
+            case 46: return FName(TEXT("Dash"));
+            default: return NAME_None;
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------
+    // Behavior -> its shader file / function, by the roster convention: Behavior_<Name>.ush defines
+    // CkParticles_Behavior_<Name>. The DI's baked-behavior codegen (GetParameterDefinitionHLSL) resolves through
+    // these so a compiled sim script can include exactly one behavior instead of the full-corpus dispatch.
+    // --------------------------------------------------------------------------------------------------------------
+    inline auto Get_BehaviorShaderIncludePath(const int32 InBehaviorId) -> FString
+    {
+        const auto BehaviorName = Get_BehaviorName(InBehaviorId);
+        if (BehaviorName == NAME_None)
+        { return {}; }
+
+        return FString::Printf(TEXT("/CkParticles/Behaviors/Behavior_%s.ush"), *BehaviorName.ToString());
+    }
+
+    inline auto Get_BehaviorShaderFunctionName(const int32 InBehaviorId) -> FString
+    {
+        const auto BehaviorName = Get_BehaviorName(InBehaviorId);
+        if (BehaviorName == NAME_None)
+        { return {}; }
+
+        return FString::Printf(TEXT("CkParticles_Behavior_%s"), *BehaviorName.ToString());
+    }
+
+    // The inverse of Get_BehaviorTemplateSystemObjectPath: every behavior that spawns through the named template
+    // asset. This is what the template builder stamps onto the ExecuteStage call node — a shared cadence row must
+    // keep every behavior it serves compilable, and ONLY those.
+    inline auto Get_BehaviorIdsForTemplateAsset(const FString& InTemplateAssetName) -> TArray<int32>
+    {
+        const auto Suffix = FString::Printf(TEXT(".%s"), *InTemplateAssetName);
+
+        auto BehaviorIds = TArray<int32>{};
+        for (auto BehaviorId = 0; BehaviorId < NumBehaviors; ++BehaviorId)
+        {
+            if (Get_BehaviorTemplateSystemObjectPath(BehaviorId).EndsWith(Suffix))
+            { BehaviorIds.Add(BehaviorId); }
+        }
+        return BehaviorIds;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------
+    // The baked-behavior FUNCTION SPECIFIER — the only per-template channel that reaches GPU codegen. Niagara calls
+    // GetParameterDefinitionHLSL on a transient duplicate of the class CDO, never on the User.ParticleScript
+    // instance, so per-instance DI state is invisible there; a specifier on the ExecuteStage call node rides the
+    // graph instead — digested, compile-hashed (the DDC re-keys when it changes), and delivered through
+    // ParamInfo.GeneratedFunctions. Kept to ONE key: the engine hashes multi-entry specifier maps with unstable
+    // key/value pairing (NiagaraEditorUtilities.cpp map-property hash reads values by unsorted logical index).
+    // --------------------------------------------------------------------------------------------------------------
+    inline auto Get_BakedIdsSpecifierKey() -> FName
+    {
+        return FName(TEXT("CkBakedIds"));
+    }
+
+    inline auto Get_BakedIdsSpecifierValue(const TArray<int32>& InBehaviorIds) -> FString
+    {
+        return FString::JoinBy(InBehaviorIds, TEXT("_"),
+            [](int32 InBehaviorId) { return FString::FromInt(InBehaviorId); });
+    }
+
+    inline auto Get_BehaviorIdsFromSpecifierValue(const FName InSpecifierValue) -> TArray<int32>
+    {
+        auto BehaviorIds = TArray<int32>{};
+        if (InSpecifierValue.IsNone())
+        { return BehaviorIds; }
+
+        auto Tokens = TArray<FString>{};
+        InSpecifierValue.ToString().ParseIntoArray(Tokens, TEXT("_"));
+        for (const auto& Token : Tokens)
+        {
+            if (Token.IsNumeric())
+            { BehaviorIds.Add(FCString::Atoi(*Token)); }
+        }
+        return BehaviorIds;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------
+    // Behavior -> per-behavior tuning DataAsset.
+    //
+    // A CONVENTION path, not a registration: the spawn path resolves it for every behavior it spawns and applies the
+    // asset when one exists. An absent asset is legitimate (a fresh checkout runs before Generate_AllTuningAssets),
+    // and resolves to the identity tuning the templates already default to.
+    // --------------------------------------------------------------------------------------------------------------
+    inline auto Get_BehaviorTuningAssetPackagePath(const int32 InBehaviorId) -> FString
+    {
+        const auto BehaviorName = Get_BehaviorName(InBehaviorId);
+        if (BehaviorName == NAME_None)
+        { return {}; }
+
+        return FString::Printf(TEXT("/CkFoundation/CkParticles/Tuning/DA_CkParticles_Tuning_%s"),
+            *BehaviorName.ToString());
+    }
+
+    inline auto Get_BehaviorTuningAssetObjectPath(const int32 InBehaviorId) -> FString
+    {
+        const auto BehaviorName = Get_BehaviorName(InBehaviorId);
+        if (BehaviorName == NAME_None)
+        { return {}; }
+
+        return FString::Printf(TEXT("%s.DA_CkParticles_Tuning_%s"),
+            *Get_BehaviorTuningAssetPackagePath(InBehaviorId), *BehaviorName.ToString());
     }
 }

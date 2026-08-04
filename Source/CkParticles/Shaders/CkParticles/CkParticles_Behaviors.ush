@@ -55,7 +55,7 @@
 #include "/CkParticles/Behaviors/Behavior_LightningHit.ush"
 #include "/CkParticles/Behaviors/Behavior_Dash.ush"
 
-FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
+FCkParticles_StageOutput CkParticles_Dispatch(FCkParticles_StageInput In)
 {
     if (In.BehaviorId == 1) { return CkParticles_Behavior_Swirl(In); }
     if (In.BehaviorId == 2) { return CkParticles_Behavior_Explosion(In); }
@@ -106,4 +106,17 @@ FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
 
     // BehaviorId 0 (and any unknown id) -> Gravity.
     return CkParticles_Behavior_Gravity(In);
+}
+
+// The ONE site the global tuning wraps the dispatch. The dispatch above is left alone precisely so a behavior
+// can never re-implement, skip, or double-apply it: the clock scale lands on the input every behavior reads,
+// and the size/colour scales land on whatever it wrote. The math itself lives in Common.ush's
+// CkParticles_ApplyGlobalTuningPre/Post so the per-behavior baked wrapper applies the identical pair.
+FCkParticles_StageOutput CkParticles_ExecuteStage(FCkParticles_StageInput In)
+{
+    In = CkParticles_ApplyGlobalTuningPre(In);
+
+    FCkParticles_StageOutput Out = CkParticles_Dispatch(In);
+
+    return CkParticles_ApplyGlobalTuningPost(Out, In.Tuning);
 }

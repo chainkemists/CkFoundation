@@ -42,8 +42,8 @@ major bump.
 ## Architecture
 
 ```
-UCkParticles_DataInterface (UNiagaraDataInterface, stateless)
-  └─ ExecuteStage(BehaviorId, DeltaTime, Age, Lifetime, Position, Velocity, Seed)
+UCkParticles_DataInterface (UNiagaraDataInterface; pure stage fn, one per-instance datum)
+  └─ ExecuteStage(BehaviorId, DeltaTime, Age, Lifetime, Position, Velocity, Seed, EmitterAge, Tuning)
         -> OutPosition, OutVelocity, OutColor, OutSize, OutScale, OutOrientation (quat),
            OutDynamic (float4 -> Particles.DynamicMaterialParameter), OutRotation (sprite degrees),
            OutMeshIndex, OutVisTag, OutSpriteAlignment, OutSpriteFacing
@@ -224,6 +224,39 @@ every cadence-table template — entirely from C++
 
 Idempotent — re-run any time; it overwrites in place.
 
+**Baked-behavior specialization (2026-08-04).** Each template's ExecuteStage call node carries a
+`CkBakedIds` function specifier (that template's behavior ids joined with `_`), stamped by the builder on
+the NODE's `FunctionSpecifiers` map (the `Signature` copy alone never reaches compile — both compile
+bridges overwrite it from the node map). `GetParameterDefinitionHLSL` reads it from
+`ParamInfo.GeneratedFunctions` and emits `CkParticles_DataInterfaceTemplate_Baked.ush` with ONLY those
+behaviors' includes; no specifier = the legacy full-corpus wrapper (a full-corpus compute PSO costs
+~170-200 s of AMD driver compile on first render — the VFX-select freeze). Per-instance DI state CANNOT
+carry this: Niagara runs DI codegen on a transient class-CDO duplicate, never the `User.ParticleScript`
+instance. The specifier rides the graph hash, so a regen re-keys the DDC. After a regen,
+`grep -ac CkBakedIds <template>.uasset` must be non-zero on every template (alongside the `ExecuteStage`
+and `CkTuning` checks). Wrapper-file comments must never spell a substitution token in braces —
+`FString::Format` substitutes inside comments and multi-line values spill out as bare HLSL.
+
+**After a regen, run the STABILIZE lane, then verify** — env `CK_PARTICLES_STABILIZE=1` + toolbox
+`--test --no-nullrhi --test-pattern PrewarmTemplates`, then the same command once more WITHOUT the env var and
+confirm its log line says `out-of-sync at load: 0` for the CPU-sim set. The lane loads every distinct template
+path across the roster (deduped) plus every original Niagara system under `/Game/Vefects`, drives their compiles
+to completion (GPU shader maps included when stabilizing, hence `--no-nullrhi`), and — only under the env var —
+RESAVES each system that arrived out of sync, persisting the post-load-fixup compile ids and VM data the way the
+engine's own resave commandlet does. Without the env var it saves nothing and only prewarms/reports.
+
+Why this exists (measured 2026-08-03): `UNiagaraSystem::PostLoad` re-checks `AreScriptAndSourceSynchronized()`
+on EVERY load, and an asset saved by the builder (which never went through load-time graph fixups) or saved
+before a `.ush` hash change fails that check in every session — the "Preparing… Niagara Systems" toast and the
+first-activation stall, forever, until stabilized. Two traps inside the lane's history: saving on VM readiness
+alone re-persists an asset whose GPU shader map is still compiling (still fails the load check), so the
+stabilize wait mirrors the FULL emitter-side check; and a `.ush` edit after a regen invalidates every template's
+saved ids — stabilize again after ANY shader edit. Residual, not fixable by resave: under the engine-default
+`AsyncTasks` compilation mode the GPU shader map lives in DDC and is fetched after PostLoad's check runs, so
+GPU-SIM systems (all 32 templates) still re-arm a lazy on-demand resolve each session — with stabilized ids
+that costs milliseconds per system on a warm DDC (the CPU-sim Vefects originals pass the check outright and go
+fully silent). Eliminating even that would take an engine-fork change to the PostLoad shader-sync check.
+
 > **Regeneration REFUSES on a non-fork engine.** With `CK_WITH_PARTICLES=0` there is no behavior-call module,
 > so every template written would be **inert**: the DI is never invoked and nothing renders. Those assets still
 > save and still load, so the failure is invisible to any test that only checks existence — it cost a real
@@ -310,6 +343,71 @@ The roster SIZE has one definition — `ck::particles::NumBehaviors`, exposed to
 **Aim-axis conventions** (these are baked into the behavior math — spawn rotation aims them):
 MuzzleFlash/Tracer forward = **+X**; ImpactBurst surface normal = **+Z**;
 GroundRing/LightningStrike/AuraSwirl ground plane = local **XY**; Beam travels down **+X**.
+
+**Per-instance tuning (`User.CkTuning`, 2026-08-03).** Every template exposes a float4 user parameter
+(default identity `(1,1,1,1)`) that the stage applies CENTRALLY — in `CkParticles_ExecuteStage`
+(`CkParticles_Behaviors.ush`) and its CPU mirror, never inside a behavior: x scales `Size`+`Scale`,
+y scales `Color.rgb`, z scales `Color.a`, w pre-scales `Age`+`DeltaTime` (playback rate; Niagara still
+retires particles at their real lifetime, so w>1 finishes the arc early and holds, w<1 gets cut).
+Behaviors stay untouched — corpus-measured constants remain the defaults, tuning is a bounded layer on
+top. Author a `UCkParticles_TuningDefinition` DataAsset (four floats) and spawn via
+`Spawn_BehaviorAtLocation_Tuned(..., Tuning)`, or retune a live component with
+`Request_ApplyTuning(Component, Tuning)` / `Request_ApplyTuningValues(Component, x, y, z, w)`
+(null asset = identity).
+
+**Per-part tuning (the DI's per-instance block, 2026-08-03).** `User.CkTuning` tunes a whole system; per-part
+tuning tunes the LAYERS inside it, addressed by the VisTag each behavior writes.
+`FCkParticles_PartTuningBlock` (`DataInterface/CkParticles_PartTuning.h`) is a fixed budget of
+`MaxTunedParts` (24) parts × 5 float4s — size/stretch/mesh-scale/speed, tint+alpha, per-axis `Dynamic`,
+rotation offset + visibility window, position offset — plus a `BandStart`. Shared VisTags 0–4 occupy rows
+0–4; a behavior's own band maps onto row `5 + (VisTag - BandStart)`. A tag outside `[0, 24)` is left untuned.
+It is applied CENTRALLY, after `CkParticles_ExecuteStage` returns, in the DI's **template wrapper**
+(`CkParticles_DataInterfaceTemplate.ush` — the wrapper, not `CkParticles_Behaviors.ush`, because that is where
+the DI's shader parameters are in scope), mirrored line-for-line by `NDICkParticlesLocal::ExecuteStage_CPU`.
+The block cannot ride a User parameter (Niagara has no float4-array user type), so it lives in a
+component-keyed module registry — `UCk_Utils_Particles_UE::Request_ApplyPartTuningBlock` /
+`Request_ResetPartTuning`, C++-facing (the reflected way in is a tuning asset's part rows, applied by
+`Request_ApplyTuning`, which reads the behavior id back off the component's `User.BehaviorId`) — and reaches the GPU as the DI's per-instance data
+(`InitPerInstanceData` / `PerInstanceTick` resolve `FNiagaraSystemInstance::GetAttachComponent()`) → the RT
+proxy → `SetShaderParameters`. **A missing entry is the IDENTITY, never zeros** — a zero block would hide
+every particle.
+
+**Part rows in the tuning DataAsset.** `UCkParticles_TuningDefinition` carries the four global floats *plus* a
+`_Parts` array of `FCkParticles_PartTuning_AssetRow` — one row per layer the behavior draws, each with size /
+stretch / mesh-scale / speed, tint + alpha, dissolve / distortion / UV-pan / emissive, a rotation offset, a
+visibility window and a position offset. `_GlobalTint` has no slot in the `User.CkTuning` float4, so it is folded
+into every row's tint by `Get_AsPartTuningBlock`, which is also the only path per-part values reach the DI.
+The row ROSTER is generator-owned (`EditFixedSize` — values are editable, rows are not): **Generate Tuning Assets**
+fills it from `ck::particles::Get_BehaviorTunableParts` (the 5 shared VisTags, then the behavior's cadence-row band
+in VisTag order, ribbon renderers included) and RECONCILES it on every later run — rows are matched by **VisTag**,
+missing ones added, undeclared ones removed with a log line, names refreshed, values never touched. A row whose
+VisTag the behavior no longer declares is skipped at conversion with a warning rather than aliased onto a
+neighbour, and `Get_PartTuningRowIndex` now answers `INDEX_NONE` for the whole interval
+`(SharedRendererVisTag_Max, BandStart)` — a tag there belongs to no part of the behavior, and the old band
+arithmetic ran it backwards onto a SHARED row.
+
+**Per-behavior tuning is a CONVENTION path, resolved at spawn.** Every behavior may own a
+`UCkParticles_TuningDefinition` at
+`/CkFoundation/CkParticles/Tuning/DA_CkParticles_Tuning_<Name>` (`<Name>` =
+`ck::particles::Get_BehaviorName(id)`, path =
+`Get_BehaviorTuningAssetObjectPath(id)`); the shared spawn path loads it and applies it to every
+component it spawns. An absent asset is legitimate and silent — it renders the identity. An explicit
+`Spawn_BehaviorAtLocation_Tuned(..., Tuning)` OVERRIDES the asset; a null `InTuning` there falls back
+to it rather than writing the identity over it.
+**`Generate Tuning Assets`** (same subsystem; also called at the end of `Create Template System`, and
+headless via env `CK_PARTICLES_GENERATE_TUNING=1` + toolbox `--test --test-pattern GenerateTuningAssets`)
+creates only the MISSING assets with identity values — an existing one is a designer's tuning and is
+**never** overwritten, which is what makes running it on every regen safe.
+The VfxExamples gym's `Ck_GymVfxExamples_Tune` is an OVERLAY on top of the asset; `..._TuneReset` drops
+the overlay and restarts the pair, because only a respawn brings the asset's values back.
+That gym also DEFERS a pair spawn behind a visible `COMPILING <pair>` HUD line rather than blocking the game
+thread — it polls `UCk_Utils_Particles_UE::Get_IsBehaviorTemplateReady(id)` each frame and spawns both sides
+together once the template answers ready, so a cold first run after a regen leaves the editor live and the
+selector usable.
+
+Adding a NEW input to `ExecuteStage` requires the four-site lockstep edit
+(function spec, `.ush` template, VM binding, CPU mirror) plus the builder's Map Get wiring, and a full
+template regen — see the tuning change for the exemplar.
 
 **Sprite material fallback:** `User.SpriteMaterial` (`ck::particles::Get_SpriteMaterialParameterName`) overrides
 the sprite renderer's material per component. When unset, the renderer's own Material is used — a miss renders
