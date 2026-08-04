@@ -134,6 +134,8 @@ namespace ck
         CK_PROPERTY_GET(_TransmitMode);
         CK_PROPERTY_GET(_InputGain);
         CK_PROPERTY_GET(_SelfMute);
+        CK_PROPERTY_GET(_PlaybackConfigChannel);
+        CK_PROPERTY_GET(_HybridRenderNear);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

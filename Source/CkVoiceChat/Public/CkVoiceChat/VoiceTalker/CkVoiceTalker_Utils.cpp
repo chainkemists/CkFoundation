@@ -1,8 +1,11 @@
 #include "CkVoiceTalker_Utils.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
 #include "CkVoiceChat/Capture/CkVoiceChat_CaptureSource.h"
 #include "CkVoiceChat/CkVoiceChat_Log.h"
 #include "CkVoiceChat/Codec/CkVoiceChat_Codec.h"
+#include "CkVoiceChat/VoiceListener/CkVoiceListener_Fragment.h"
 
 #include <GameFramework/PlayerState.h>
 
@@ -342,6 +345,61 @@ auto
     { return 0; }
 
     return InVoiceTalker.Get<ck::FFragment_VoiceTalker_ReceiveInbox>().Get_TotalArrivedBytes();
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_Get_PlaybackConfigChannel(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> FCk_Handle_VoiceChannel
+{
+    if (NOT InVoiceTalker.Has<ck::FFragment_VoiceTalker_Current>())
+    { return {}; }
+
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_PlaybackConfigChannel();
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_Get_HybridRenderNear(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> TOptional<bool>
+{
+    if (NOT InVoiceTalker.Has<ck::FFragment_VoiceTalker_Current>())
+    { return {}; }
+
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_HybridRenderNear();
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_Get_WorldMapEntriesForTalker(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> int32
+{
+    auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InVoiceTalker);
+
+    auto Entries = 0;
+
+    if (TransientEntity.Has<ck::FFragment_VoiceChat_ServeHistory>())
+    {
+        for (const auto& [Player, PerTalker] : TransientEntity.Get<ck::FFragment_VoiceChat_ServeHistory>().Get_LastServedFrame())
+        {
+            if (PerTalker.Contains(InVoiceTalker))
+            { ++Entries; }
+        }
+    }
+
+    if (TransientEntity.Has<ck::FFragment_VoiceChat_ListenerMuteMatrix>())
+    {
+        for (const auto& [Player, MutedTalkers] : TransientEntity.Get<ck::FFragment_VoiceChat_ListenerMuteMatrix>().Get_MutedByPlayer())
+        {
+            if (MutedTalkers.Contains(InVoiceTalker))
+            { ++Entries; }
+        }
+    }
+
+    return Entries;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

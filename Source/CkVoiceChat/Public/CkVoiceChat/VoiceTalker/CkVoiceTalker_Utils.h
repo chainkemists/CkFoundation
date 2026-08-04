@@ -268,6 +268,24 @@ public:
     Debug_Get_ReceiveArrivedBundles(
         const FCk_Handle_VoiceTalker& InVoiceTalker) -> uint64;
 
+    // P4 playback-config seams: which channel the receive path selected and HybridRadio's
+    // near/far render state - net specs assert the selection and mode; the audible render is
+    // audition-only.
+    static auto
+    Debug_Get_PlaybackConfigChannel(
+        const FCk_Handle_VoiceTalker& InVoiceTalker) -> FCk_Handle_VoiceChannel;
+
+    static auto
+    Debug_Get_HybridRenderNear(
+        const FCk_Handle_VoiceTalker& InVoiceTalker) -> TOptional<bool>;
+
+    // P4 prune seam: how many entries across the world-scoped authority maps (ServeHistory +
+    // ListenerMuteMatrix) still reference this talker - the EndPlay-prune spec asserts zero
+    // after destroy.
+    static auto
+    Debug_Get_WorldMapEntriesForTalker(
+        const FCk_Handle_VoiceTalker& InVoiceTalker) -> int32;
+
     static auto
     Debug_Get_ReceiveArrivedBytes(
         const FCk_Handle_VoiceTalker& InVoiceTalker) -> uint64;
