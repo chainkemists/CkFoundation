@@ -9,7 +9,8 @@
 |---|---|---|
 | 0 — Scaffold | **CLOSED 2026-08-04** — all exit criteria met | Exit evidence block below; commits d401a54aa/13e30ab1f/49da3aeb5 (CkFoundation), CkTests + superproject commits per session log |
 | 1 — Octree + voxelize | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 20/20 + Ck.Jolt 48/48, zero contaminated, hygiene clean | commits 2c8aec16c/05e146a4a (CkFoundation), deea9fb1/5a6c65c9 (CkTests) |
-| 2 — Pathfinding | not started | — |
+| 2 — Pathfinding | **CLOSED 2026-08-04** — gate: full suite delta-zero (981/975/6) + Ck.VoxelNav 38/38 + Ck.Jolt.Query 4/4; CkAStar untouched | commits 489eb4bc3/69d689466 (CkFoundation), 3da53af6/12c32a84 (CkTests) |
+| 3 — Chunks & dynamics | **OPEN** — wave 1 (3B dynamic occluders, audit-first) dispatched | PHASE_3.md |
 | 3 — Chunks & dynamics | not started | — |
 | 4 — Consumers | not started | — |
 | 5 — Perf (merging) | not started | — |
@@ -65,8 +66,44 @@
 
 ## In-flight
 
-- Phase 1 boundary full suite running (`Phase1-Boundary.log`) — the one [C-D18(b)] sample. Then a
-  targeted `Ck.Jolt` run (its binaries changed since its last green) closes the [C-D17] gate.
+- Phase 2 boundary full suite running (`Phase2-Boundary.log`); then targeted `Ck.Jolt.Query` on
+  final binaries closes the [C-D17] gate.
+
+- **Wave 2 (2D+2E) ACCEPTED 2026-08-04** (opus, self-gated 38/38, zero ensures): refinement =
+  greedy visibility pruning (octree raycast, endpoints kept, unprovable spans kept — always
+  traversable, never longer) + CatmullRom smoothing with BOTH segment and point re-validation
+  (a curve bulging outside the baked volume passes a segment-only check — the point test is the
+  soundness fix). Zigzag pinned: raw 22 wp / 967.32uu → pruned 2 wp / 571.66uu (fixture designed
+  tie-break-invariant). TWO MORE upstream bugs fixed (tally 11): smoothing's virtual endpoints
+  used `2*(P0−P1)` (a direction as a control point — drags spans toward world origin; correct
+  `2*P0−P1`) and upstream's smoothed path silently DROPPED its final waypoint (`Index < Num-2`
+  emission). PIE end-to-end test plans a collision-free route across the baked scene. All 9
+  deviations accepted. CkAStar verified untouched (empty diff). Commits: CkFoundation `69d689466`,
+  CkTests `12c32a84`.
+
+- **2C ACCEPTED 2026-08-04** (opus, self-gated): `Ck.VoxelNav.Path` 8/8; combined `Ck.VoxelNav`
+  34/34 on the final artifact (orchestrator re-verified the log). FPathGraph satisfies
+  `astar::AStarGraph` (static_assert), synchronous capped search per [C-D21], iteration knob
+  landed. Deviations 1-6, 8 accepted — notably: `Stale` DERIVED at the read boundary from epoch
+  drift (never stored — rebuilds don't walk paths); node-size compensation folded into Cost (only
+  CkAStar-compatible seam; documented inadmissible; default off); unified
+  `ECk_VoxelNav_PathSearchOutcome`. Deviations 7 (PIE success-path test gap) + 9 (module doc Path
+  section) assigned to wave 2. Recorded gotcha (m): hermetic single-processor scheduler tests must
+  add the processor's Group + FGroup_DestructionPipeline descriptors to the same list or graph
+  building fails. Commits: CkFoundation `489eb4bc3`, CkTests `3da53af6`.
+
+- **2A+2B ACCEPTED 2026-08-04** (opus, self-gated green): CkJolt session grew
+  `Get_IsSegmentBlocked` (any-hit CastRay, static filters, [C-D14]-clean) — `Ck.Jolt.Query` 4/4
+  incl. 3 new segment assertions; octree ray-marcher ported to `Octree/CkVoxelNav_Octree_Raycast.*`
+  (538 lines) with `Ck.VoxelNav.Raycast` 6/6. TWO MORE upstream bugs found+fixed (campaign total
+  NINE): (8) `GetFirstNodeIndex` compared FAR t-values where Revelles requires MIDpoints —
+  over-visits children, can report a farther hit as closest; (9) impact point un-mirrored twice
+  (local origin mirrored at :165, world result re-mirrored at :223-238) — pinned by
+  reverse-direction assertions. Also: leaf scan now keeps the CLOSEST of all 64 sub-node hits
+  (upstream returned first-in-Morton-order = arbitrary distance); double-precision parametric math;
+  the octree-vs-physics segment-test doctrine documented in three places. Deviations 3-11 accepted.
+  Fixture note for later authors: `TryGet_NodeAddressFromPosition` falls through to
+  nearest-free on fully-occluded leaves — never returns the occluded leaf's own address.
 
 - **Wave 2 ACCEPTED + GATE GREEN 2026-08-04: 20/20 (35s), zero ensures.** Path to green: 3
   orchestrator inline compile fixes (stub CK_PROPERTY_GET→hand getter — the 1A-documented trap;
