@@ -74,7 +74,9 @@ worked numbers are the reference). Pattern `Ck.VoxelNav.Bake`.
 - [ ] Full suite delta-zero vs Phase 1 entry baseline ([C-D17]: full suite + targeted patterns
       `Ck.VoxelNav`, `Ck.Jolt.Query` all green).
 - [ ] All 1A/1C hermetic tests + the 1E PIE bake test green, named in PROGRESS.md.
-- [ ] `rg --no-ignore -l "Jolt/" Source/CkVoxelNav` → zero, still.
+- [ ] `rg --no-ignore -l "<Jolt/" Source/CkVoxelNav` → zero (JPH headers are angle-form `<Jolt/...>`;
+      the quoted `"CkJolt/Query/CkJoltOccupancy_Session.h"` include is sanctioned — it is JPH-free
+      by construction. Gate regex corrected per 1B's flag).
 - [ ] Comment audit run over the phase's diff (root doctrine closing step).
 - [ ] PROGRESS.md updated (evidence, decisions, session log); PHASE_2.md authored at the boundary.
 
