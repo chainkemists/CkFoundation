@@ -75,6 +75,7 @@ Before writing any code, navigate the documentation in this order:
 | sidewalk/path preference + authoring (ZoneGraph-lite) | `CkPathNetwork` (+ `CkPathNetworkEditor` tooling) |
 | GOAP planner (A* over Action entities) | `CkGoap` |
 | grid-based pathfinding | `CkAStar` + `CkGrid` |
+| volumetric 3D pathfinding for flying/swimming agents | `CkVoxelNav` |
 | ECS raycast sensing | `CkRaySense` |
 | replicate render-target pixels / draw calls | `CkRenderTarget` (no doc yet) |
 | runtime shader Looks / outline rendering | `CkUsf` |
@@ -220,6 +221,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
 | CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkVisibleRange | Core,Ecs,EcsExt,Log (deliberately minimal — no Poi/consumer knowledge; see its Claude.md) |
+| CkVoxelNav | AStar,Core,Ecs,EcsExt,Jolt,Label,Log,Navigation,Profile,Record,Settings,ThirdParty (volumetric free-space nav; all geometry queries via CkJolt's JPH-free surface — no direct Jolt includes) |
 | CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UI |
 
 ### T5 — editor modules (25 UncookedOnly + 3 Editor; runtime code must NEVER depend on these)
