@@ -39,6 +39,33 @@ not pushed by the campaign sessions.
 
 ## Dated entries (append-only, newest first)
 
+### 2026-08-04 (later) — P4 items 2+3 landed: spatialized playback + per-channel audio config
+- **CkF `a2cbd385c`:** the receive drain selects `_PlaybackConfigChannel` per drain
+  (highest-Priority delivering channel; **deviation from the gate doc's tie rule, recorded: ties
+  keep the EARLIEST selection** — strict `>` comparison — stabler than most-recent, no config
+  flapping between equal-priority channels). `Apply_SynthChannelConfig` re-applies on change via
+  Stop→set→Start (verified against engine source: `USynthComponent::Start()` copies the fields,
+  SynthComponent.cpp:465-479; the module's PCM queue survives the cycle by design).
+  `TryCreate_PlaybackSynth` attaches at the owning actor's `PlaybackAttachSocketName` (P0 param,
+  first consumer). Spatialize requires Positional3D AND an attach parent. Invalid config channel
+  = flat (loopback/pre-control-plane behavior preserved). HybridRadio renders flat+chain until
+  item 4. Channel Setup resolves the settings default attenuation through the same batch when a
+  spatializing channel authors none. **Item 3 (effect chain) landed inside item 2's apply path**
+  — never separable.
+- Ran (CkPlugins host, iteration lane): **30 total — 19/19 local pass, 11 net fails
+  name-identical to the env-fail set, 0 AS errors, compile clean first try**
+  (Test-VoiceChatP4-item2.log).
+- **Open before item 2/3 can be called machine-verified end-to-end:** (a) selection net spec —
+  needs a `Debug_Get_PlaybackConfigChannel` seam (follow the `Debug_InjectInboundBundle`
+  precedent) + a BusterBlock run; (b) the application half is audio-device-only →
+  `[EDITOR-VERIFY]` audition steps to write into Gate_4.md with items 2-4 together; (c) item 1's
+  positive-path resolution spec (real .uasset) still deferred.
+- **Next: item 4 (HybridRadio near/far).** Sketch: per drain on the receiving client, when
+  policy == HybridRadio compute listener↔talker distance (talker pos = synth component location;
+  listener pos = the engine audio listener), compare vs channel AudibleRange with the module
+  hysteresis margin (near→far at range+margin, far→near at range — mirror Route's asymmetry),
+  flip via Apply on change. Bundle-arrival-coupled cadence (silent talkers never flip).
+
 ### 2026-08-04 — P4 opened (Gate_4.md); item 1 landed (CkResourceLoader resolution); host runbook
 - **Gate_4.md committed** (b95e4eae1 + survey correction f75828ed8): scope grounded in code, not
   the spec — HybridRadio currently routes like Global2D; `Get_Attenuation`/`Get_SourceEffectChain`
