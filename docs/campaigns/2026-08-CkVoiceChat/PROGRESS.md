@@ -1,6 +1,24 @@
 # CkVoiceChat — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
+**As of 2026-08-04 (night) — THE CAMPAIGN'S MACHINE PORTION IS COMPLETE.** Gates 0-4 all closed
+and audited; Gate-4 verdict **GO WITH CONDITIONS**, all four actionable findings resolved and
+re-gated the same session (resolution table in [Gate_4.md](Gate_4.md)). **Final machine
+baseline: VoiceChat 34/34 + RenderTarget 22/22, one binary, 0 AS errors**
+(Test-VoiceChatP4-auditres.log / Test-P4-RenderTarget-auditres.log, BusterBlock).
+P4 delivered: CkResourceLoader asset resolution, spatialized playback with priority-selected
+per-channel config, HybridRadio per-recipient near/far with hysteresis, moderation matrix,
+F5 pruning, amplitude release, roger-beep recipe + gym station, three seam specs + the
+failed-resolve boundary spec, F4 comment strip, module docs to feature-complete.
+**What remains is HUMAN-ONLY (P5 ship gate):** (1) the Gate_4.md `[EDITOR-VERIFY]` block, steps
+A/B/C — step A folds in the long-standing P2 mic-loopback item; (2) the N5 packaged Opus smoke;
+(3) `[Voice] bEnabled=true` in BB's DefaultEngine.ini (BB-repo decision) — prerequisite for 1+2.
+Plus P5's remaining machine items IF the auditions surface findings (seamless-travel hardening
+was folded into TeardownMidTransmit coverage; a packaged smoke failure would reopen machine
+work). **Nothing is pushed by the campaign sessions** — the maintainer owns push (they rebased
++ pushed the canonical branches themselves on 2026-08-04); local tips are ahead of origin in
+CkPlugins_Other (CkF) and BusterBlock (CkTests) clones.
+**Prior state (2026-08-03, superseded):**
 **As of 2026-08-04 (CkFoundation `feature/voice-chat` @ `cc95c7760`; CkTests
 `feature/voice-chat-wip` @ `52a4d9f` — branch renamed upstream from `feature/voice-chat`):**
 **Gates 0, 1, 2, and 3 (machine) ALL CLOSED AND AUDITED.** Gate-3 verdict **GO WITH CONDITIONS**;
