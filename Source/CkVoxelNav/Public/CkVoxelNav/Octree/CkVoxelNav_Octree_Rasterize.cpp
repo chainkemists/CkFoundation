@@ -14,6 +14,8 @@ namespace ck_voxelnav_octree_rasterize
 
     // Leaf nodes hang off layer 1, so a leaf's parent always lives there.
     constexpr auto LeafParentLayerIndex = ck::voxelnav::LayerIndex{1};
+
+    constexpr auto SubNodesPerLeaf = 64;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -26,8 +28,11 @@ namespace ck::voxelnav
         -> void
     {
         InOutScratch._BlockedNodes.Reset();
+        InOutScratch._LeafMortonCodes.Reset();
+        InOutScratch._OccludedLeafMortons.Reset();
         InOutScratch._LeafIndexToParentMorton.Reset();
         InOutScratch._Cursor = 0;
+        InOutScratch._SubCursor = 0;
         InOutScratch._LayerCursor = 0;
     }
 
@@ -49,6 +54,77 @@ namespace ck::voxelnav
         { return; }
 
         InOutScratch._BlockedNodes.SetNum(InOctree.Get_LayerCount() + 1);
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Stage_ProbeVolumeEmpty(
+            const FOctree& InOctree,
+            const ICk_VoxelNav_GeometryBackend& InBackend)
+        -> FVolumeProbeResult
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(VoxelNav_Stage_ProbeVolumeEmpty);
+
+        auto Bodies = TArray<FCk_VoxelNav_BodyId>{};
+        InBackend.Get_BodiesInBox(InOctree.Get_NavigationBounds(), Bodies);
+
+        auto Result = FVolumeProbeResult{};
+        Result._BodyCount = Bodies.Num();
+        Result._VolumeIsEmpty = Bodies.IsEmpty();
+
+        return Result;
+    }
+
+    auto
+        Stage_RasterizeL1(
+            const FOctree& InOctree,
+            FRasterizeScratch& InOutScratch,
+            const ICk_VoxelNav_GeometryBackend& InBackend,
+            float InClearanceUu,
+            int32 InProbeBudget)
+        -> FRasterizeStageResult
+    {
+        using namespace ck_voxelnav_octree_rasterize;
+
+        QUICK_SCOPE_CYCLE_COUNTER(VoxelNav_Stage_RasterizeL1);
+
+        auto Result = FRasterizeStageResult{};
+
+        const auto OctreeCarriesALayerOne =
+            InOctree.Get_LayerCount() > LeafParentLayerIndex &&
+            InOutScratch._BlockedNodes.Num() > 0;
+
+        CK_ENSURE_IF_NOT(OctreeCarriesALayerOne,
+            TEXT("Cannot rasterize layer 1 of a VoxelNav octree with [{}] layers against a scratch holding "
+                 "[{}] blocked-node sets"),
+            InOctree.Get_LayerCount(), InOutScratch._BlockedNodes.Num())
+        {}
+
+        if (NOT OctreeCarriesALayerOne)
+        { return Result; }
+
+        const auto& Layer = InOctree.Get_Layer(LeafParentLayerIndex);
+        const auto CellCount = Layer.Get_MaxNodeCount();
+        const auto ProbeHalfExtents = FVector{Layer.Get_NodeExtent() + InClearanceUu};
+
+        for (; InOutScratch._Cursor < CellCount && Result._ProbesSpent < InProbeBudget; ++InOutScratch._Cursor)
+        {
+            const auto CellMortonCode = static_cast<MortonCode>(InOutScratch._Cursor);
+            const auto CellPosition = Get_NodePositionFromLayerAndMorton(
+                InOctree, LeafParentLayerIndex, CellMortonCode);
+
+            ++Result._ProbesSpent;
+
+            if (NOT InBackend.Get_IsBoxOccupied(CellPosition, ProbeHalfExtents))
+            { continue; }
+
+            InOutScratch._BlockedNodes[0].Add(CellMortonCode);
+        }
+
+        Result._StageComplete = InOutScratch._Cursor >= CellCount;
+
+        return Result;
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -82,6 +158,185 @@ namespace ck::voxelnav
             { ParentCodes.Add(Get_ParentMorton(ChildCode)); }
         }
     }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
+        Stage_AllocateLeaves(
+            FOctree& InOutOctree,
+            FRasterizeScratch& InOutScratch)
+        -> void
+    {
+        using namespace ck_voxelnav_octree_rasterize;
+
+        const auto ScratchIsInitialized = InOutScratch._BlockedNodes.Num() > 0;
+
+        CK_ENSURE_IF_NOT(ScratchIsInitialized,
+            TEXT("Cannot allocate VoxelNav leaves from a rasterize scratch that holds no blocked-node sets"))
+        {}
+
+        if (NOT ScratchIsInitialized)
+        { return; }
+
+        const auto& BlockedParentCodes = InOutScratch._BlockedNodes[0];
+
+        InOutScratch._LeafMortonCodes.Reset();
+        InOutScratch._LeafMortonCodes.Reserve(BlockedParentCodes.Num() * ChildrenPerNode);
+
+        // Unlike the interior layers, no child code needs a capacity check here: both lattices are cubes
+        // of a power-of-two edge, so the eight children of any in-range layer-1 code are in range on
+        // layer 0 by construction. Dropping one would break the leaf store's parallelism with the layer.
+        for (const auto ParentMortonCode : BlockedParentCodes)
+        {
+            const auto FirstChildMortonCode = Get_FirstChildMorton(ParentMortonCode);
+
+            for (auto ChildOffset = 0; ChildOffset < ChildrenPerNode; ++ChildOffset)
+            { InOutScratch._LeafMortonCodes.Emplace(FirstChildMortonCode + ChildOffset); }
+        }
+
+        InOutOctree.Get_LeafNodes().Request_SetLeafCount(InOutScratch._LeafMortonCodes.Num());
+        InOutOctree.Get_Layer(0).Get_Nodes().Reserve(InOutScratch._LeafMortonCodes.Num());
+    }
+
+    auto
+        Stage_ProbeLeafOccupancy(
+            const FOctree& InOctree,
+            FRasterizeScratch& InOutScratch,
+            const ICk_VoxelNav_GeometryBackend& InBackend,
+            float InClearanceUu,
+            int32 InProbeBudget)
+        -> FRasterizeStageResult
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(VoxelNav_Stage_ProbeLeafOccupancy);
+
+        auto Result = FRasterizeStageResult{};
+
+        const auto LeafCount = InOutScratch._LeafMortonCodes.Num();
+        const auto ProbeHalfExtents = FVector{InOctree.Get_LeafNodes().Get_LeafNodeExtent() + InClearanceUu};
+
+        for (; InOutScratch._Cursor < LeafCount && Result._ProbesSpent < InProbeBudget; ++InOutScratch._Cursor)
+        {
+            const auto LeafMortonCode = InOutScratch._LeafMortonCodes[InOutScratch._Cursor];
+            const auto LeafPosition = Get_LeafNodePositionFromMorton(InOctree, LeafMortonCode);
+
+            ++Result._ProbesSpent;
+
+            if (NOT InBackend.Get_IsBoxOccupied(LeafPosition, ProbeHalfExtents))
+            { continue; }
+
+            InOutScratch._OccludedLeafMortons.Add(LeafMortonCode);
+        }
+
+        Result._StageComplete = InOutScratch._Cursor >= LeafCount;
+
+        return Result;
+    }
+
+    auto
+        Stage_SortLeafLayer(
+            FOctree& InOutOctree,
+            FRasterizeScratch& InOutScratch)
+        -> void
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(VoxelNav_Stage_SortLeafLayer);
+
+        InOutScratch._LeafMortonCodes.Sort();
+
+        auto& LeafLayerNodes = InOutOctree.Get_Layer(0).Get_Nodes();
+        LeafLayerNodes.Reset();
+        LeafLayerNodes.Reserve(InOutScratch._LeafMortonCodes.Num());
+
+        InOutScratch._LeafIndexToParentMorton.Reset();
+        InOutScratch._LeafIndexToParentMorton.Reserve(InOutScratch._LeafMortonCodes.Num());
+
+        for (auto LeafIdx = 0; LeafIdx < InOutScratch._LeafMortonCodes.Num(); ++LeafIdx)
+        {
+            const auto LeafMortonCode = InOutScratch._LeafMortonCodes[LeafIdx];
+
+            auto LeafLayerNode = FNode{LeafMortonCode};
+
+            // A layer-0 node's child link addresses its LEAF entry, and the leaf store is parallel to the
+            // layer, so an occluded leaf points at its own index. A free leaf stays childless, which is
+            // how every query reads "this whole cell is navigable".
+            if (InOutScratch._OccludedLeafMortons.Contains(LeafMortonCode))
+            { LeafLayerNode.Set_FirstChild(FNodeAddress::Make(0, LeafIdx)); }
+
+            LeafLayerNodes.Add(LeafLayerNode);
+
+            InOutScratch._LeafIndexToParentMorton.Add(LeafIdx, Get_ParentMorton(LeafMortonCode));
+        }
+
+        InOutOctree.Get_LeafNodes().Request_SetLeafCount(LeafLayerNodes.Num());
+    }
+
+    auto
+        Stage_RasterizeLeafSubNodes(
+            FOctree& InOutOctree,
+            FRasterizeScratch& InOutScratch,
+            const ICk_VoxelNav_GeometryBackend& InBackend,
+            float InClearanceUu,
+            int32 InProbeBudget)
+        -> FRasterizeStageResult
+    {
+        using namespace ck_voxelnav_octree_rasterize;
+
+        QUICK_SCOPE_CYCLE_COUNTER(VoxelNav_Stage_RasterizeLeafSubNodes);
+
+        auto Result = FRasterizeStageResult{};
+
+        const auto SubNodeSize = InOutOctree.Get_LeafNodes().Get_LeafSubNodeSize();
+        const auto SubNodeExtent = InOutOctree.Get_LeafNodes().Get_LeafSubNodeExtent();
+        const auto LeafNodeExtent = InOutOctree.Get_LeafNodes().Get_LeafNodeExtent();
+        const auto ProbeHalfExtents = FVector{SubNodeExtent + InClearanceUu};
+
+        const auto LeafLayerNodeCount = InOutOctree.Get_Layer(0).Get_NodeCount();
+
+        while (InOutScratch._Cursor < LeafLayerNodeCount && Result._ProbesSpent < InProbeBudget)
+        {
+            const auto& LeafLayerNode = InOutOctree.Get_Layer(0).Get_Node(InOutScratch._Cursor);
+
+            if (NOT LeafLayerNode.Get_HasChildren())
+            {
+                ++InOutScratch._Cursor;
+                InOutScratch._SubCursor = 0;
+                continue;
+            }
+
+            const auto LeafOrigin =
+                Get_LeafNodePositionFromMorton(InOutOctree, LeafLayerNode.Get_MortonCode()) -
+                FVector{LeafNodeExtent};
+
+            for (; InOutScratch._SubCursor < SubNodesPerLeaf && Result._ProbesSpent < InProbeBudget;
+                   ++InOutScratch._SubCursor)
+            {
+                const auto SubNodeIdx = static_cast<SubNodeIndex>(InOutScratch._SubCursor);
+                const auto SubNodeCenter = LeafOrigin +
+                                           Get_VectorFromMorton(SubNodeIdx) * SubNodeSize +
+                                           FVector{SubNodeExtent};
+
+                ++Result._ProbesSpent;
+
+                if (NOT InBackend.Get_IsBoxOccupied(SubNodeCenter, ProbeHalfExtents))
+                { continue; }
+
+                InOutOctree.Get_LeafNodes()
+                    .Get_LeafNode(InOutScratch._Cursor)
+                    .Request_MarkSubNodeOccluded(SubNodeIdx);
+            }
+
+            if (InOutScratch._SubCursor < SubNodesPerLeaf)
+            { break; }
+
+            ++InOutScratch._Cursor;
+            InOutScratch._SubCursor = 0;
+        }
+
+        Result._StageComplete = InOutScratch._Cursor >= LeafLayerNodeCount;
+
+        return Result;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
 
     auto
         Stage_RasterizeLayer(

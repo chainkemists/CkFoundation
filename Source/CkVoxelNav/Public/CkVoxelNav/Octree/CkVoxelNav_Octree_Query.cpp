@@ -683,6 +683,99 @@ namespace ck::voxelnav
         return FBox::BuildAABB(InNodePosition, FVector{InNodeExtent}).Intersect(InBounds);
     }
 
+    auto
+        Get_IsPositionFree(
+            const FOctree& InOctree,
+            const FVector& InPosition)
+        -> bool
+    {
+        using namespace ck_voxelnav_octree_query;
+
+        QUICK_SCOPE_CYCLE_COUNTER(VoxelNav_Get_IsPositionFree);
+
+        const auto LayerCount = InOctree.Get_LayerCount();
+
+        if (LayerCount == 0)
+        { return false; }
+
+        const auto& NavigationBounds = InOctree.Get_NavigationBounds();
+
+        if (NOT NavigationBounds.ExpandBy(BoundsToleranceUu).IsInside(InPosition))
+        { return false; }
+
+        const auto MinCorner = NavigationBounds.GetCenter() - NavigationBounds.GetExtent();
+        const auto LocalPosition = InPosition - MinCorner;
+
+        for (auto LayerCursor = LayerCount - 1; LayerCursor >= 0; --LayerCursor)
+        {
+            const auto LayerIdx = static_cast<LayerIndex>(LayerCursor);
+            const auto& Layer = InOctree.Get_Layer(LayerIdx);
+            const auto LayerNodeSize = Get_LayerNodeSize(InOctree, LayerIdx);
+
+            const auto LayerIsSized = LayerNodeSize > 0.0f;
+
+            CK_ENSURE_IF_NOT(LayerIsSized,
+                TEXT("VoxelNav layer [{}] has a node size of [{}]"),
+                static_cast<int32>(LayerIdx), LayerNodeSize)
+            {}
+
+            if (NOT LayerIsSized)
+            { return false; }
+
+            const auto MaxCoord = Layer.Get_EdgeNodeCount() - 1;
+            const auto LayerCoords = FIntVector
+            {
+                FMath::Clamp(FMath::FloorToInt32(LocalPosition.X / LayerNodeSize), 0, MaxCoord),
+                FMath::Clamp(FMath::FloorToInt32(LocalPosition.Y / LayerNodeSize), 0, MaxCoord),
+                FMath::Clamp(FMath::FloorToInt32(LocalPosition.Z / LayerNodeSize), 0, MaxCoord)
+            };
+
+            const auto NodeIdx = Get_NodeIndexFromMorton(InOctree, LayerIdx, Get_MortonFromCoords(LayerCoords));
+
+            // No node at this layer means the cell was never subdivided, which the octree encodes as
+            // "nothing in this whole subtree" - the coarsest possible free answer.
+            if (NodeIdx == INDEX_NONE)
+            { return true; }
+
+            const auto& Node = Layer.Get_Node(NodeIdx);
+
+            if (NOT Node.Get_HasChildren())
+            { return true; }
+
+            if (LayerIdx != 0)
+            { continue; }
+
+            const auto& LeafNodes = InOctree.Get_LeafNodes();
+            const auto LeafIsInRange = LeafNodes.Get_LeafNodes().IsValidIndex(NodeIdx);
+
+            CK_ENSURE_IF_NOT(LeafIsInRange,
+                TEXT("Layer-0 node [{}] has no leaf entry - the leaf store holds [{}] leaves"),
+                NodeIdx, LeafNodes.Get_LeafNodes().Num())
+            {}
+
+            if (NOT LeafIsInRange)
+            { return false; }
+
+            const auto LeafOrigin = Get_LeafNodePositionFromMorton(InOctree, Node.Get_MortonCode()) -
+                                    FVector{LeafNodes.Get_LeafNodeExtent()};
+            const auto SubNodeSize = LeafNodes.Get_LeafSubNodeSize();
+            const auto LocalInLeaf = InPosition - LeafOrigin;
+
+            const auto SubNodeCoords = FIntVector
+            {
+                FMath::Clamp(FMath::FloorToInt32(LocalInLeaf.X / SubNodeSize), 0, LeafSubNodeEdgeCount - 1),
+                FMath::Clamp(FMath::FloorToInt32(LocalInLeaf.Y / SubNodeSize), 0, LeafSubNodeEdgeCount - 1),
+                FMath::Clamp(FMath::FloorToInt32(LocalInLeaf.Z / SubNodeSize), 0, LeafSubNodeEdgeCount - 1)
+            };
+
+            const auto SubNodeIdx = static_cast<SubNodeIndex>(Get_MortonFromCoords(SubNodeCoords));
+
+            return NOT LeafNodes.Get_LeafNode(NodeIdx).Get_IsSubNodeOccluded(SubNodeIdx);
+        }
+
+        return false;
+    }
+
     // ----------------------------------------------------------------------------------------------------------------
 
     auto

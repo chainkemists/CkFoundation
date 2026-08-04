@@ -142,6 +142,18 @@ namespace ck::voxelnav
         float InNodeExtent,
         const FBox& InBounds) -> bool;
 
+    /** Is the finest cell containing this position navigable? EXACT, and deliberately distinct from
+     *  TryGet_NodeAddressFromPosition, which SNAPS an occluded position to the nearest free sub-node of
+     *  the same leaf and therefore answers `Found` for a point buried inside geometry - correct for
+     *  resolving a path endpoint, wrong for asking whether a point is free.
+     *
+     *  A position outside the octree's navigation bounds is NOT free: the bake makes no statement about
+     *  space it never rasterized, and reporting free there would let a path leave the volume. */
+    CKVOXELNAV_API auto
+    Get_IsPositionFree(
+        const FOctree& InOctree,
+        const FVector& InPosition) -> bool;
+
     // ----------------------------------------------------------------------------------------------------------------
 
     CKVOXELNAV_API auto

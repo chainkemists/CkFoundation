@@ -20,7 +20,7 @@
  *
  * No thread affinity of its own — it reads nothing but its own obstacle list.
  */
-struct CKVOXELNAV_API FCk_VoxelNav_GeometryBackend_Stub final : public ICk_VoxelNav_GeometryBackend
+struct FCk_VoxelNav_GeometryBackend_Stub final : public ICk_VoxelNav_GeometryBackend
 {
 public:
     FCk_VoxelNav_GeometryBackend_Stub() = default;
@@ -63,7 +63,7 @@ private:
     TArray<FBox> _Obstacles;
 
 public:
-    CK_PROPERTY_GET(_Obstacles);
+    auto Get_Obstacles() const -> const TArray<FBox>& { return _Obstacles; }
 };
 
 // --------------------------------------------------------------------------------------------------------------------

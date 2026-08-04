@@ -14,6 +14,7 @@ public class CkVoxelNav : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "DeveloperSettings",
             "GameplayTags",
 
             "CkAStar",
