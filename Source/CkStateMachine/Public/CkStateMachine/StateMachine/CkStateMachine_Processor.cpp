@@ -302,25 +302,28 @@ namespace ck
         {
             auto ParentSm = TUtils_Sm_OwningStateMachine::Get_StoredEntity(InHandle);
 
-            auto ParentStateName = FString{};
-            if (ck::IsValid(ParentSm) && ParentSm.Has<FFragment_Sm_Current>())
+            if (UCk_Utils_StateMachineDebug_UE::Get_IsDebuggerCaptureActive(ParentSm))
             {
-                if (const auto ParentCurrentClass = ParentSm.Get<FFragment_Sm_Current>().Get_CurrentStateClass();
-                    ck::IsValid(ParentCurrentClass))
+                auto ParentStateName = FString{};
+                if (ck::IsValid(ParentSm) && ParentSm.Has<FFragment_Sm_Current>())
                 {
-                    ParentStateName = UCk_Utils_Object_UE::Get_CleanClassName(ParentCurrentClass);
+                    if (const auto ParentCurrentClass = ParentSm.Get<FFragment_Sm_Current>().Get_CurrentStateClass();
+                        ck::IsValid(ParentCurrentClass))
+                    {
+                        ParentStateName = UCk_Utils_Object_UE::Get_CleanClassName(ParentCurrentClass);
+                    }
                 }
+
+                // _CurrentStateClass is already override-resolved by DoEnterState; the params'
+                // initial state class is the pre-resolution request and would display the base class.
+                auto SubSmStartRequest = FCk_Request_SmDebug_RecordTransition{
+                    TSubclassOf<UCk_SmState_EntityScript>{}, InCurrent._CurrentStateClass};
+                SubSmStartRequest.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
+                SubSmStartRequest.Set_RealTimeSeconds(FPlatformTime::Seconds());
+                SubSmStartRequest.Set_SubSmParentStateName(ParentStateName);
+
+                UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(ParentSm, SubSmStartRequest);
             }
-
-            // _CurrentStateClass is already override-resolved by DoEnterState; the params' initial
-            // state class is the pre-resolution request and would display the base class.
-            auto SubSmStartRequest = FCk_Request_SmDebug_RecordTransition{
-                TSubclassOf<UCk_SmState_EntityScript>{}, InCurrent._CurrentStateClass};
-            SubSmStartRequest.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
-            SubSmStartRequest.Set_RealTimeSeconds(FPlatformTime::Seconds());
-            SubSmStartRequest.Set_SubSmParentStateName(ParentStateName);
-
-            UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(ParentSm, SubSmStartRequest);
         }
 #endif
 
@@ -593,23 +596,30 @@ namespace ck
 #if !UE_BUILD_SHIPPING
         if (ck::IsValid(PreviousStateClass) && ck::IsValid(InCurrent._CurrentStateClass))
         {
-            auto Request = FCk_Request_SmDebug_RecordTransition{
-                PreviousStateClass, InCurrent._CurrentStateClass};
-            Request.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
-
-            if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
+            if (NOT UCk_Utils_StateMachineDebug_UE::Get_IsDebuggerCaptureActive(InHandle))
             {
-                const auto& LastFired = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
-                Request.Set_ConditionNames(LastFired.ConditionNames);
-                Request.Set_RealTimeSeconds(LastFired.RealTimeSeconds);
-                InHandle.Remove<FFragment_Sm_Debug_LastFiredTransition>();
+                InHandle.Try_Remove<FFragment_Sm_Debug_LastFiredTransition>();
             }
             else
             {
-                Request.Set_RealTimeSeconds(FPlatformTime::Seconds());
-            }
+                auto Request = FCk_Request_SmDebug_RecordTransition{
+                    PreviousStateClass, InCurrent._CurrentStateClass};
+                Request.Set_FrameNumber(UCk_Utils_Time_UE::Get_FrameNumber());
 
-            UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(InHandle, Request);
+                if (InHandle.Has<FFragment_Sm_Debug_LastFiredTransition>())
+                {
+                    const auto& LastFired = InHandle.Get<FFragment_Sm_Debug_LastFiredTransition>();
+                    Request.Set_ConditionNames(LastFired.ConditionNames);
+                    Request.Set_RealTimeSeconds(LastFired.RealTimeSeconds);
+                    InHandle.Remove<FFragment_Sm_Debug_LastFiredTransition>();
+                }
+                else
+                {
+                    Request.Set_RealTimeSeconds(FPlatformTime::Seconds());
+                }
+
+                UCk_Utils_StateMachineDebug_UE::Request_RecordTransition(InHandle, Request);
+            }
         }
 #endif
 

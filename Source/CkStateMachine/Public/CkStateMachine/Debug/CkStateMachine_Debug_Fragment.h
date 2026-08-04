@@ -105,9 +105,11 @@ namespace ck
 
     private:
         TArray<RequestType> _Requests;
+        uint64 _CaptureGeneration = 0;
 
     public:
         CK_PROPERTY_GET(_Requests);
+        CK_PROPERTY_GET(_CaptureGeneration);
     };
 
 #if !UE_BUILD_SHIPPING
@@ -183,6 +185,7 @@ namespace ck
 
         friend class FProcessor_Sm_Debug;
         friend class FProcessor_SmDebug_HandleRequests;
+        friend class ::UCk_Utils_StateMachineDebug_UE;
 
     private:
         TMap<TSubclassOf<UCk_SmState_EntityScript>, FCk_SmDebug_CachedState> _CachedStates;
@@ -194,6 +197,7 @@ namespace ck
         int32 _RunCounter = 0;
         ECk_SmRunStatus _LastObservedRunStatus = ECk_SmRunStatus::Stopped;
         double _CurrentRunStartRealTime = 0.0;
+        uint64 _CaptureGeneration = 0;
 
     public:
         CK_PROPERTY_GET(_CachedStates);
@@ -202,6 +206,7 @@ namespace ck
         CK_PROPERTY_GET(_CurrentStateEnteredAtRealTime);
         CK_PROPERTY_GET(_CompletedRuns);
         CK_PROPERTY_GET(_RunCounter);
+        CK_PROPERTY_GET(_CaptureGeneration);
     };
 }
 
