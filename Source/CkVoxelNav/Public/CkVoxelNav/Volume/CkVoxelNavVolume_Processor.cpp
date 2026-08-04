@@ -9,8 +9,10 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkVoxelNav/Chunk/CkVoxelNav_Chunk_Adjacency.h"
 #include "CkVoxelNav/CkVoxelNav_Log.h"
 #include "CkVoxelNav/Settings/CkVoxelNav_ProjectSettings.h"
+#include "CkVoxelNav/Volume/CkVoxelNavVolume_Utils.h"
 
 #include <Engine/World.h>
 
@@ -20,6 +22,7 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_VoxelNavVolume_StartBuild);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoxelNavVolume_Build);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoxelNavVolume_StartRepair);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoxelNavVolume_Repair);
+CK_REGISTER_PROCESSOR(ck::FProcessor_VoxelNavVolume_AggregateChunks);
 CK_REGISTER_PROCESSOR(ck::FProcessor_VoxelNavVolume_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -107,6 +110,70 @@ namespace ck_voxelnav_volume_processor
 
         return Budget;
     }
+
+    auto
+        Get_ChunkPublishStates(
+            const ck::FFragment_VoxelNavVolume_Chunks& InChunks)
+        -> TArray<ck::voxelnav::FChunkPublishState>
+    {
+        auto States = TArray<ck::voxelnav::FChunkPublishState>{};
+
+        States.Reserve(InChunks.Get_Chunks().Num());
+
+        for (const auto& Chunk : InChunks.Get_Chunks())
+        {
+            auto State = ck::voxelnav::FChunkPublishState{};
+
+            if (ck::IsValid(Chunk))
+            {
+                const auto& ChunkOctree = Chunk.Get<ck::FFragment_VoxelNavVolume_BuiltOctree>();
+
+                State._ChunkId = Chunk.Get<ck::FFragment_VoxelNavVolume_ChunkIdentity>().Get_ChunkId();
+                State._IsBuilt = ChunkOctree.Get_Octree().IsValid() && ChunkOctree.Get_Octree()->Get_IsValid();
+                State._Epoch = ChunkOctree.Get_Epoch();
+
+                // A queued request counts as building: between the parent fanning a build out and the chunk
+                // draining it there is no tag yet, and a chunk in that window has not failed - it has not
+                // started.
+                State._IsBuilding =
+                    Chunk.Has<ck::FTag_VoxelNavVolume_NeedsBuild>() ||
+                    Chunk.Has<ck::FTag_VoxelNavVolume_BuildInProgress>() ||
+                    (Chunk.Has<ck::FFragment_VoxelNavVolume_Requests>() &&
+                        NOT Chunk.Get<ck::FFragment_VoxelNavVolume_Requests>().Get_Requests().IsEmpty());
+
+                State._HasFailed =
+                    Chunk.Get<ck::FFragment_VoxelNavVolume_BuildState>().Get_Build().Get_Stage() ==
+                        ECk_VoxelNav_BuildStage::Failed;
+            }
+
+            States.Emplace(State);
+        }
+
+        return States;
+    }
+
+    auto
+        Make_AdjacencyInputs(
+            const TArray<ck::voxelnav::FChunkSearchInput>& InSearchInputs)
+        -> TArray<ck::voxelnav::FChunkAdjacencyInput>
+    {
+        auto Inputs = TArray<ck::voxelnav::FChunkAdjacencyInput>{};
+
+        Inputs.Reserve(InSearchInputs.Num());
+
+        for (const auto& SearchInput : InSearchInputs)
+        {
+            auto Input = ck::voxelnav::FChunkAdjacencyInput{};
+
+            Input._ChunkId = SearchInput._ChunkId;
+            Input._Bounds = SearchInput._Bounds;
+            Input._Octree = SearchInput._Octree.Get();
+
+            Inputs.Emplace(Input);
+        }
+
+        return Inputs;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -141,6 +208,11 @@ namespace ck
         { return; }
 
         if (InParams.Get_AutoBuildOnSetup() == ECk_EnableDisable::Disable)
+        { return; }
+
+        // A partitioned volume bakes nothing itself. Its chunks were composed with the same auto-build
+        // setting and are arming their own builds through this very processor.
+        if (InVolumeEntity.Has<FTag_VoxelNavVolume_Partitioned>())
         { return; }
 
         InVolumeEntity.AddOrGet<FTag_VoxelNavVolume_NeedsBuild>();
@@ -183,6 +255,12 @@ namespace ck
             const FCk_Request_VoxelNavVolume_Build& InRequest)
         -> void
     {
+        if (InVolumeEntity.Has<FTag_VoxelNavVolume_Partitioned>())
+        {
+            DoFanOutBuild(InVolumeEntity, InBuildState, InRequest);
+            return;
+        }
+
         const auto BuildIsAlreadyUnderway =
             InVolumeEntity.Has<FTag_VoxelNavVolume_NeedsBuild>() ||
             InVolumeEntity.Has<FTag_VoxelNavVolume_BuildInProgress>();
@@ -253,6 +331,12 @@ namespace ck
             const FCk_Request_VoxelNavVolume_MarkDirty& InRequest)
         -> void
     {
+        if (InVolumeEntity.Has<FTag_VoxelNavVolume_Partitioned>())
+        {
+            DoFanOutMarkDirty(InVolumeEntity, InRequest);
+            return;
+        }
+
         const auto DirtyBoundsAreUsable = InRequest.Get_DirtyBounds().IsValid != 0;
 
         CK_ENSURE_IF_NOT(DirtyBoundsAreUsable,
@@ -287,6 +371,100 @@ namespace ck
         InRepairState._PendingRequests.Emplace(InRequest);
 
         InVolumeEntity.AddOrGet<FTag_VoxelNavVolume_NeedsRepair>();
+    }
+
+    auto
+        FProcessor_VoxelNavVolume_HandleRequests::
+        DoFanOutBuild(
+            HandleType InVolumeEntity,
+            FFragment_VoxelNavVolume_BuildState& InBuildState,
+            const FCk_Request_VoxelNavVolume_Build& InRequest)
+        -> void
+    {
+        // The delegate rides the request across the WHOLE fan-out, so a request being displaced has to be
+        // completed here or the caller that supplied it waits forever.
+        InBuildState._PendingRequest.TryFireCompletion(
+            InVolumeEntity, ECk_Request_OperationResult::Failed_Cancelled);
+
+        InBuildState._PendingRequest = InRequest;
+
+        auto& ChunkRecord = InVolumeEntity.Get<FFragment_VoxelNavVolume_Chunks>();
+
+        ChunkRecord._FanOutBuildPending = true;
+
+        // The chunks report to the AGGREGATION, never to the caller: the caller asked one volume for one
+        // outcome, and a fan-out that carried their delegate would fire it once per chunk.
+        auto ChunkRequest = InRequest;
+        ChunkRequest.Set_CompletionDelegate({});
+
+        for (auto& Chunk : ChunkRecord._Chunks)
+        {
+            if (ck::Is_NOT_Valid(Chunk))
+            { continue; }
+
+            UCk_Utils_VoxelNavVolume_UE::Request_Build(Chunk, ChunkRequest, {});
+        }
+
+        voxelnav::Verbose(TEXT("VoxelNav Volume [{}] fanned a build out to [{}] chunks"),
+            InVolumeEntity, ChunkRecord._Chunks.Num());
+    }
+
+    auto
+        FProcessor_VoxelNavVolume_HandleRequests::
+        DoFanOutMarkDirty(
+            HandleType InVolumeEntity,
+            const FCk_Request_VoxelNavVolume_MarkDirty& InRequest)
+        -> void
+    {
+        const auto DirtyBounds = InRequest.Get_DirtyBounds();
+        const auto DirtyBoundsAreUsable = DirtyBounds.IsValid != 0;
+
+        CK_ENSURE_IF_NOT(DirtyBoundsAreUsable,
+            TEXT("VoxelNav Volume [{}] was handed degenerate dirty bounds [{}] - there is no region to "
+                 "repair"),
+            InVolumeEntity, DirtyBounds)
+        {}
+
+        if (NOT DirtyBoundsAreUsable)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        auto& ChunkRecord = InVolumeEntity.Get<FFragment_VoxelNavVolume_Chunks>();
+
+        // Same reason as the build fan-out: one caller, one outcome, so the per-chunk copies carry no
+        // delegate and the parent answers for all of them.
+        auto ChunkRequest = InRequest;
+        ChunkRequest.Set_CompletionDelegate({});
+
+        auto ReachedChunkCount = 0;
+
+        for (auto& Chunk : ChunkRecord._Chunks)
+        {
+            if (ck::Is_NOT_Valid(Chunk))
+            { continue; }
+
+            const auto& ChunkOctree = Chunk.Get<FFragment_VoxelNavVolume_BuiltOctree>().Get_Octree();
+
+            if (NOT ChunkOctree.IsValid())
+            { continue; }
+
+            // The NAVIGATION bounds, not the authored sub-box: a chunk's octree addresses a power-of-two
+            // cube snapped up from what it was given, and cells outside the sub-box are still baked.
+            if (NOT ChunkOctree->Get_NavigationBounds().Intersect(DirtyBounds))
+            { continue; }
+
+            UCk_Utils_VoxelNavVolume_UE::Request_MarkDirty(Chunk, ChunkRequest, {});
+            ++ReachedChunkCount;
+        }
+
+        // The caller's intent - that the volume's data account for this region - holds the moment every
+        // chunk the region touches has been told. A region reaching no chunk at all is a caller pointing at
+        // space this volume never claimed, and no repair makes that true.
+        InRequest.TryFireCompletion(InVolumeEntity, ReachedChunkCount > 0
+            ? ECk_Request_OperationResult::Succeeded
+            : ECk_Request_OperationResult::Failed);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -616,6 +794,83 @@ namespace ck
 
         UUtils_Signal_OnVoxelNavVolumeRepairComplete::Broadcast(InVolumeEntity, MakePayload(InVolumeEntity,
             RepairSucceeded ? ECk_SucceededFailed::Succeeded : ECk_SucceededFailed::Failed, RepairStats));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_VoxelNavVolume_AggregateChunks::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVolumeEntity,
+            FFragment_VoxelNavVolume_Chunks& InChunks,
+            FFragment_VoxelNavVolume_ChunkAdjacency& InAdjacency,
+            FFragment_VoxelNavVolume_BuildState& InBuildState,
+            FFragment_VoxelNavVolume_BuiltOctree& InBuiltOctree) const
+        -> void
+    {
+        using namespace ck_voxelnav_volume_processor;
+
+        QUICK_SCOPE_CYCLE_COUNTER(VoxelNav_Volume_AggregateChunks);
+
+        const auto PublishStates = Get_ChunkPublishStates(InChunks);
+
+        // A volume whose chunk could not bake will never aggregate, so the caller waiting on the fan-out has
+        // to hear about it here or wait forever. The volume publishes nothing: an octree missing a chunk is
+        // navigation data with a hole in it, and a hole reads as free space.
+        if (InChunks._FanOutBuildPending && voxelnav::Get_ChunkBuildFailed(PublishStates))
+        {
+            InChunks._FanOutBuildPending = false;
+
+            InBuildState._PendingRequest.TryFireCompletion(
+                InVolumeEntity, ECk_Request_OperationResult::Failed);
+
+            UUtils_Signal_OnVoxelNavVolumeBuildComplete::Broadcast(InVolumeEntity,
+                MakePayload(InVolumeEntity, ECk_SucceededFailed::Failed,
+                    UCk_Utils_VoxelNavVolume_UE::Get_BuildStats(InVolumeEntity)));
+
+            return;
+        }
+
+        if (NOT voxelnav::Get_ChunksNeedAggregation(PublishStates, InChunks._AggregatedChunkEpochSum))
+        { return; }
+
+        InAdjacency._Table = voxelnav::Bake_ChunkAdjacency(
+            Make_AdjacencyInputs(UCk_Utils_VoxelNavVolume_UE::Get_ChunkSearchInputs(InVolumeEntity)));
+
+        InChunks._AggregatedChunkEpochSum = voxelnav::Get_ChunkEpochSum(PublishStates);
+
+        // ONE epoch for the volume, however many chunks moved. A path planned against it reads stale when
+        // any chunk it might cross has republished, which is the only answer that is safe without walking
+        // the path to see which chunks it actually touches.
+        ++InBuiltOctree._Epoch;
+
+        InVolumeEntity.AddOrGet<FTag_VoxelNavVolume_Built>();
+
+        const auto WasFanOutBuild = InChunks._FanOutBuildPending;
+        InChunks._FanOutBuildPending = false;
+
+        voxelnav::Verbose(
+            TEXT("VoxelNav Volume [{}] aggregated [{}] chunks: [{}] portals, epoch [{}]"),
+            InVolumeEntity, InChunks._Chunks.Num(), InAdjacency._Table.Get_PortalCount(),
+            InBuiltOctree._Epoch);
+
+        if (WasFanOutBuild)
+        {
+            InBuildState._PendingRequest.TryFireCompletion(
+                InVolumeEntity, ECk_Request_OperationResult::Succeeded);
+
+            UUtils_Signal_OnVoxelNavVolumeBuildComplete::Broadcast(InVolumeEntity,
+                MakePayload(InVolumeEntity, ECk_SucceededFailed::Succeeded,
+                    UCk_Utils_VoxelNavVolume_UE::Get_BuildStats(InVolumeEntity)));
+
+            return;
+        }
+
+        // Not a bake: a chunk repaired underneath the volume. The two signals are separate precisely so a
+        // listener waiting for the first bake is not woken by every obstacle that moves.
+        UUtils_Signal_OnVoxelNavVolumeRepairComplete::Broadcast(InVolumeEntity,
+            MakePayload(InVolumeEntity, ECk_SucceededFailed::Succeeded, FCk_VoxelNav_RepairStats{}));
     }
 
     // --------------------------------------------------------------------------------------------------------------------

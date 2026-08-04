@@ -25,9 +25,15 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_VoxelNavVolume);
 
 public:
-    // Add the volumetric-navigation feature to InOwner. Creates a child entity carrying the bake params;
-    // FProcessor_VoxelNavVolume_Setup consumes its NeedsSetup tag on the next tick and, unless the params
-    // opted out, arms the first build from there.
+    /** Add the volumetric-navigation feature to InOwner. Creates a child entity carrying the bake params;
+     *  FProcessor_VoxelNavVolume_Setup consumes its NeedsSetup tag on the next tick and, unless the params
+     *  opted out, arms the first build from there.
+     *
+     *  A volume whose bounds exceed the max chunk size PARTITIONS here, synchronously: the returned handle
+     *  owns one chunk child per sub-box, each an ordinary volume entity baking its own octree, and it bakes
+     *  none itself. Partitioning is decided at composition rather than in a processor because creating
+     *  entities is a structural change, and a processor doing that mid-view is how a view invalidates
+     *  underneath itself. */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VoxelNavVolume",
               DisplayName="[Ck][VoxelNavVolume] Add Volume Feature")
@@ -161,6 +167,63 @@ public:
     Get_PendingDirtyBounds(
         const FCk_Handle_VoxelNavVolume& InVolume);
 
+    // True when this volume split into chunk children. A partitioned volume publishes no octree of its own:
+    // every query on it routes to the chunk that owns the space being asked about.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoxelNavVolume",
+              DisplayName="[Ck][VoxelNavVolume] Get Is Partitioned")
+    static bool
+    Get_IsPartitioned(
+        const FCk_Handle_VoxelNavVolume& InVolume);
+
+    // Zero for an unpartitioned volume, which is the answer that keeps "how many chunks" and "is it
+    // partitioned" from disagreeing.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoxelNavVolume",
+              DisplayName="[Ck][VoxelNavVolume] Get Chunk Count")
+    static int32
+    Get_ChunkCount(
+        const FCk_Handle_VoxelNavVolume& InVolume);
+
+    // The chunk at a partition-lattice index. A chunk is an ordinary volume handle, so every query and
+    // every request on this page works on it.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoxelNavVolume",
+              DisplayName="[Ck][VoxelNavVolume] Get Chunk")
+    static FCk_Handle_VoxelNavVolume
+    Get_Chunk(
+        const FCk_Handle_VoxelNavVolume& InVolume,
+        int32 InChunkIndex);
+
+    // The chunk's index within its parent volume's partition, or -1 for a volume that is not a chunk.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoxelNavVolume",
+              DisplayName="[Ck][VoxelNavVolume] Get Chunk Index")
+    static int32
+    Get_ChunkIndex(
+        const FCk_Handle_VoxelNavVolume& InVolume);
+
+    // Crossings the adjacency bake found between this volume's chunks, counted in both directions.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoxelNavVolume",
+              DisplayName="[Ck][VoxelNavVolume] Get Chunk Portal Count")
+    static int32
+    Get_ChunkPortalCount(
+        const FCk_Handle_VoxelNavVolume& InVolume);
+
+public:
+    /** Everything a cross-chunk query needs about this volume's chunks, in partition-lattice order so a
+     *  chunk's position IS its adjacency-table index. Empty for an unpartitioned volume. Not reflected:
+     *  it hands out octree shares, which no Blueprint can hold. */
+    static auto
+    Get_ChunkSearchInputs(
+        const FCk_Handle_VoxelNavVolume& InVolume) -> TArray<ck::voxelnav::FChunkSearchInput>;
+
+    static auto
+    Get_ChunkAdjacency(
+        const FCk_Handle_VoxelNavVolume& InVolume) -> const ck::voxelnav::FChunkAdjacencyTable&;
+
+public:
     /** Is the finest cell containing InLocation navigable?
      *
      *  A volume with no published bake answers false for every point, as does a point outside the baked
