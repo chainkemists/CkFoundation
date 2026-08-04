@@ -1195,6 +1195,16 @@
         "Mac",
         "Linux"
       ]
+    },
+    {
+      "Name": "CkVoxelNavEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
     }
   ],
   "Plugins": [
