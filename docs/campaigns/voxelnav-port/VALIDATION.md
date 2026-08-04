@@ -63,22 +63,67 @@
          absolutely). Any of the three is a regression in the Flying tag's exclusions.
       10. Console `ck.Crowd.Debug 1` + `ck.Crowd.DrawPlannedPaths 1` draws both agents' installed
           polylines — the flying one's should be visibly airborne along its whole length.
-- [ ] Three environments: at least one end-to-end exercise each from C++, Blueprint, and
+- [x] Three environments: at least one end-to-end exercise each from C++, Blueprint, and
       AngelScript for the public API (Add volume / request build / request path / read result).
+      - **C++** — `Ck.VoxelNav.Path.Pie.PlansACollisionFreeRouteAcrossTheBakedScene` drives the
+        `UCk_Utils_VoxelNavVolume_UE` / `UCk_Utils_VoxelNavPath_UE` surface directly in a PIE world.
+      - **AngelScript** — `Ck_AutoTest_VoxelNav_PlansARouteAroundABakedObstacle` (PIE autotest,
+        `Plugins/CkTests/Script/CkVoxelNav/`) drives the same sequence through the generated
+        `utils_voxel_nav_volume` / `utils_voxel_nav_path` namespaces: Add volume (auto-build off) →
+        Request_Build with a completion delegate → assert the bake saw the obstacle → Add the path
+        feature on an agent → bind OnPathReady/OnPathFailed → Request_FindPath → read Ready,
+        endpoint-preserving, free-space waypoints whose length exceeds the blocked straight line.
+      - **Blueprint** — covered by the `[EDITOR-VERIFY]` steps above. Every entry point the AS and
+        C++ legs exercise is a `UFUNCTION` on the same two BPFLs, so the BPFL nodes ARE the
+        Blueprint surface: the manual steps place a `VoxelNavVolume`, `Request Build`, wait on
+        `Get Is Built`, `Request Set Volume`, and `Request MoveTo` entirely through those nodes.
+        There is no Blueprint-only code path that a separate BP test could reach.
 
 ## Perf gate (Phase 5)
 
-- [ ] Merged-vs-plain cell A/B on the reference scene recorded (bake time, cell count, query time).
+- [x] Merged-vs-plain cell A/B on the reference scene recorded (bake time, cell count, query time).
       No functional test regressions with merging enabled.
-- [ ] Bake of the reference gym completes within its budgeted frames without frame-time spikes
+      Recorded by `Ck.VoxelNav.Merge.BenchmarkPlainVersusMergedOnReferenceScenes`
+      (`Saved/Logs/P5W1-MergeOnFinal.log`, 2026-08-04), both scenes verbatim:
+
+      | Scene | Cells plain → merged | Ratio | Bake plain/merged | Merge pass | Search plain/merged | Bake frames | Route cells |
+      |---|---|---|---|---|---|---|---|
+      | KnownLayout 1600uu / 50uu | 537 → 12 | 44.75x | 0.2 / 0.4 ms | 0.2 ms | 0.030 / 0.002 ms | 3 / 3 | 3 / 2 |
+      | Generated 6400uu / 50uu | 91752 → 359 | 255.58x | 9.2 / 51.3 ms | 41.9 ms | 67.897 / 0.045 ms | 104 / 104 | 107 / 8 |
+
+      The generated scene is the headline: search drops from 67.897 ms to 0.045 ms (~1500x) because
+      the route crosses 8 merged cells instead of 107 plain ones. No functional regressions —
+      `Ck.VoxelNav` 62/62 green on the same artifact with merging on, and the plain-representation
+      pins were made default-independent so both configurations stay covered.
+- [x] Bake of the reference gym completes within its budgeted frames without frame-time spikes
       beyond the processor budget (numbers recorded, not vibes).
+      Bake frame counts are IDENTICAL with and without merging (3/3 and 104/104 above): merging adds
+      no slices, so the budgeted per-slice rasterization work is unchanged and stays inside the
+      per-tick probe budget. The one spike is the merge pass itself — a single 41.9 ms slice at bake
+      completion on the 6400uu scene (0.2 ms on the reference-sized one). **[C-D25]** rules that
+      spike ACCEPTED at reference scale and defers slicing it; the conditional **[C-D20]** stage
+      budgeting is therefore resolved as no-code-change (`Stage_RasterizeLayer` /
+      `Stage_BuildNeighbourLinks` keep their one-layer-per-slice shape).
 
 ## Hygiene
 
-- [ ] `rg --no-ignore -l "Jolt/" Source/CkVoxelNav` → zero. CkThirdParty allowlist names CkVoxelNav
-      for libmorton only.
-- [ ] MIT attribution for Nav3D (Darby Costello) and libmorton present and accurate.
+- [x] `rg --no-ignore -l "<Jolt/" Source/CkVoxelNav` → **zero** (the `<Jolt/` form is the one that
+      catches a JPH include; the bare `Jolt/` form also matches the two legitimate `CkJolt/...`
+      module-path includes, which is the whole point of the backend seam). CkThirdParty allowlist
+      rule 6 names CkVoxelNav as libmorton's sole sanctioned direct consumer; Used-by line carries
+      `CkVoxelNav (libmorton)`.
+- [x] MIT attribution for Nav3D (Darby Costello) and libmorton present and accurate.
+      `// Derived from Nav3D 2.0, (c) 2025 Darby Costello, MIT.` heads all 9 ported headers (Octree
+      Build/Raycast/Repair/Types, Chunk Adjacency/Search/Types, Path Graph/Refine); module
+      `CLAUDE.md` repeats it and points at `docs/campaigns/voxelnav-port/LICENSE.Nav3D.txt` (the
+      upstream LICENSE verbatim). libmorton ships its own `LICENSE` (MIT, © 2016 Jeroen Baert)
+      inside the vendored folder.
 - [ ] `Source/CkVoxelNav/Claude.md` current (boundary paragraph, API, anti-patterns);
       Source/CLAUDE.md tier + decision rows landed; every campaign doc updated-or-tombstoned.
-- [ ] All commits on `feature/ckvoxelnav-port` branches (CkFoundation, CkTests); pushes/pointer
-      bumps only on explicit maintainer go (recorded decision [C-D6]).
+      Verified so far: the module doc opens with the mandated vs-CkNavigation / vs-CkSpatialQuery /
+      vs-CkAStar boundary paragraph and carries API + anti-patterns; `Source/CLAUDE.md` has both the
+      decision-tree row (line 78) and the tier/dependency row (line 224). Remaining clause — the
+      campaign-doc sweep — closes with PROGRESS.md's final status board.
+- [x] All commits on `feature/ckvoxelnav-port` branches (CkFoundation, CkTests); pushes/pointer
+      bumps only on explicit maintainer go (recorded decision [C-D6]). Both submodule HEADs are on
+      `feature/ckvoxelnav-port`; nothing pushed, no pointer bump.

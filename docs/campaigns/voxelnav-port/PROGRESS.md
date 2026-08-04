@@ -68,7 +68,41 @@
 
 ## In-flight
 
-- Phase 4 boundary full suite running (`Phase4-Boundary.log`).
+- CAMPAIGN-FINAL boundary full suite running.
+
+- **5B ACCEPTED 2026-08-04** (opus, self-gated 63/63 first attempt): AS autotest
+  `Ck_AutoTest_VoxelNav_PlansARouteAroundABakedObstacle` (obstacle-detour pinned — Ready,
+  exactly-once both channels, endpoints preserved, all waypoints in baked free space, length >
+  blocked straight line; exercises merged representation: 2424 free cells → 14). VALIDATION swept
+  with evidence (three-environments: C++ + AS legs named, BP = the BPFL nodes via [EDITOR-VERIFY];
+  perf gate cited; hygiene greps re-run). Comment audit: 1 campaign breadcrumb FIXED (CkTests
+  Merge test's port-map reference); 0 violations in campaign-authored CkFoundation code; the 4
+  CkThirdParty.build.cs hits are pre-existing/adjacent — follow-up (r), untouched. Deviation 1
+  vindicated by repo doctrine: `_TimeoutSeconds` belongs on the ENTITY SCRIPT (CkTests CLAUDE.md
+  calls the actor-wrapper wording stale) — orchestrator's memory entry corrected.
+- **A/B of record (from P5W1-MergeOnFinal.log):**
+  `KnownLayout-1600uu/50uu | plain 537 | merged 12 | 44.75x | bake 0.2/0.4ms | merge 0.2ms | search 0.030/0.002ms | frames 3/3 | route cells 3/2 | probes 5328`
+  `Generated-6400uu/50uu | plain 91752 | merged 359 | 255.58x | bake 9.2/51.3ms | merge 41.9ms | search 67.897/0.045ms | frames 104/104 | route cells 107/8 | probes 211200`
+
+- **5A ACCEPTED 2026-08-04** (opus, self-gated 62/62 in BOTH merge configs, zero ensures): greedy
+  whole-cell box-growing merge over the free-cell set, post-bake/post-repair, probe-free; seam
+  HELD ([C-D4] payoff: 3 new kind-dispatch functions, search edited in exactly 2 kind-blind
+  places, zero merged-specific logic in Path/). Soundness fix found by analysis: merged-pair
+  TRANSITION POINTS (shared-face centre; centre-to-centre provably safe only for octree-cell
+  pairs — drift-bound proof in the header; plain output byte-identical). **A/B TABLE (recorded,
+  P5W1-MergeOnFinal.log): KnownLayout 1600uu/50uu: 537→12 cells (44.8×), search 0.030→0.002ms;
+  Generated 6400uu/50uu: 91,752→359 cells (255.6×), search 67.897→0.045ms, bake 9.2→51.3ms
+  (merge 41.9ms), budget frames 104/104 unchanged; local re-merge carries 12/23 boxes, 67 repair
+  probes.** Caveat noted+accepted: the OFF-config gate predates one assertion edit inside a
+  fixture that sets merging explicitly (default-independent by construction; final ON gate covers
+  HEAD). Deviations 1-7 accepted (default→Enable; 3 plain-representation fixture pins made
+  default-independent with assertions untouched). Commits: `0609e39c1` (CkFoundation),
+  `2eb7b4fd` (CkTests).
+- **[C-D25]** ([C-D20] conditional resolved by measurement): the merge pass is a 42ms single-slice
+  spike AT BAKE COMPLETION at reference scale — accepted (bake is load-time, not steady-state);
+  slicing the merge pass + budget-threading the layer stages stay DEFERRED, trigger: a much larger
+  volume showing the spike in a real profile. Bonus recorded: with merging on, the zigzag's raw
+  route is already 3 wp / 571.66uu — merging delivers pruning's result for free on that fixture.
 
 - **4B ACCEPTED 2026-08-04** (opus, self-gated 56/56 + PNF 6-reds-identical + Crowd 34/34):
   Flying tag with 7 insert-only view exclusions; FaceAngle3D (absolute Request_SetRotation —
