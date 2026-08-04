@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -22,6 +23,8 @@
 
 #include <GameFramework/PlayerController.h>
 #include <GameFramework/PlayerState.h>
+#include <Sound/SoundAttenuation.h>
+#include <Sound/SoundEffectSource.h>
 
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Captured"),  STAT_CkVoiceChat_FramesCaptured,  STATGROUP_CkVoiceChat);
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Encoded"),   STAT_CkVoiceChat_FramesEncoded,   STATGROUP_CkVoiceChat);
@@ -639,6 +642,8 @@ namespace ck
             }
         }
 
+        auto BestDeliveringChannel = FCk_Handle_VoiceChannel{};
+
         for (const auto& Packed : BundlesCopy)
         {
             const auto Unpacked = voice_chat::codec::Unpack_Bundle(Packed);
@@ -649,6 +654,20 @@ namespace ck
                 // is wire corruption, not a caller error.
                 INC_DWORD_STAT(STAT_CkVoiceChat_ReceiveDroppedMalformed);
                 continue;
+            }
+
+            // The synth renders with ONE channel's audio config; when bundles interleave across
+            // channels, the highest-Priority delivering channel wins (ADR-5 priority, the Onset
+            // single-playback dedupe). An unresolvable idx just means the control plane hasn't
+            // composed that channel here yet - the audio still plays, flat.
+            if (const auto DeliveringChannel = UCk_Utils_VoiceChannel_UE::TryGet_ChannelByIdx(
+                    InVoiceTalkerEntity, Unpacked->Get_Header().Get_ChannelIdx());
+                ck::IsValid(DeliveringChannel) &&
+                (ck::Is_NOT_Valid(BestDeliveringChannel) ||
+                 UCk_Utils_VoiceChannel_UE::Get_Priority(DeliveringChannel) >
+                 UCk_Utils_VoiceChannel_UE::Get_Priority(BestDeliveringChannel)))
+            {
+                BestDeliveringChannel = DeliveringChannel;
             }
 
             if (NOT InCurrent._LoopbackDecoder.IsValid())
@@ -673,6 +692,14 @@ namespace ck
                     InCurrent._ReceiveClock, FCk_VoiceChat_JitterParams{});
                 ++FrameOffset;
             }
+        }
+
+        if (ck::IsValid(BestDeliveringChannel) && BestDeliveringChannel != InCurrent._PlaybackConfigChannel)
+        {
+            InCurrent._PlaybackConfigChannel = BestDeliveringChannel;
+
+            if (InCurrent._LoopbackSynth.IsValid())
+            { Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent); }
         }
 
         if (NOT BundlesCopy.IsEmpty())
@@ -775,10 +802,61 @@ namespace ck
             auto* Synth = NewObject<UCk_VoiceChatSynthComponent_UE>(World);
             Synth->bAutoActivate = false;
             Synth->RegisterComponentWithWorld(World);
-            Synth->Start();
+
+            if (auto* OwningActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(InVoiceTalkerEntity);
+                ck::IsValid(OwningActor))
+            {
+                if (auto* AttachTarget = OwningActor->GetRootComponent();
+                    ck::IsValid(AttachTarget))
+                {
+                    const auto& SocketName = InVoiceTalkerEntity.Get<FFragment_VoiceTalker_Params>().Get_PlaybackAttachSocketName();
+                    Synth->AttachToComponent(AttachTarget,
+                        FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+                }
+            }
 
             InCurrent._LoopbackSynth = TStrongObjectPtr{Synth};
+
+            Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent);
         }
+    }
+
+    auto
+        FProcessor_VoiceTalker_ReceivePlayback::
+        Apply_SynthChannelConfig(
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent)
+        -> void
+    {
+        auto* Synth = InCurrent._LoopbackSynth.Get();
+
+        if (ck::Is_NOT_Valid(Synth))
+        { return; }
+
+        auto Policy = ECk_VoiceChat_SpatializationPolicy::Global2D;
+        auto Attenuation = static_cast<USoundAttenuation*>(nullptr);
+        auto SourceEffectChain = static_cast<USoundEffectSourcePresetChain*>(nullptr);
+
+        if (const auto& ConfigChannel = InCurrent._PlaybackConfigChannel;
+            ck::IsValid(ConfigChannel))
+        {
+            Policy = UCk_Utils_VoiceChannel_UE::Get_SpatializationPolicy(ConfigChannel);
+            Attenuation = UCk_Utils_VoiceChannel_UE::Get_ResolvedAttenuation(ConfigChannel);
+            SourceEffectChain = UCk_Utils_VoiceChannel_UE::Get_ResolvedSourceEffectChain(ConfigChannel);
+        }
+
+        // HybridRadio's per-recipient near/far render decision is a later work item; until it
+        // lands the stream renders as radio (flat + effect chain), matching its membership-wide
+        // routing. An unattached synth has no world position, so it must render flat too.
+        const auto Spatialize =
+            Policy == ECk_VoiceChat_SpatializationPolicy::Positional3D &&
+            ck::IsValid(Synth->GetAttachParent());
+
+        Synth->Stop();
+        Synth->bAllowSpatialization = Spatialize;
+        Synth->AttenuationSettings = Spatialize ? Attenuation : nullptr;
+        Synth->SourceEffectChain = SourceEffectChain;
+        Synth->Start();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -10,6 +10,7 @@
 #include "CkResourceLoader/CkResourceLoader_Utils.h"
 
 #include "CkVoiceChat/CkVoiceChat_Log.h"
+#include "CkVoiceChat/Settings/CkVoiceChat_Settings.h"
 #include "CkVoiceChat/Net/CkVoiceChat_RepData.h"
 #include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment.h"
 
@@ -98,11 +99,22 @@ namespace ck
             FFragment_VoiceChannel_Current& InCurrent)
         -> void
     {
-        const auto& Attenuation = InParams.Get_Attenuation();
+        // A spatializing channel that authors no attenuation falls back to the module default -
+        // resolved through the same batch so playback never loads on demand.
+        const auto Attenuation = [&]() -> TSoftObjectPtr<USoundAttenuation>
+        {
+            if (ck::IsValid(InParams.Get_Attenuation()))
+            { return InParams.Get_Attenuation(); }
+
+            if (InParams.Get_SpatializationPolicy() == ECk_VoiceChat_SpatializationPolicy::Global2D)
+            { return {}; }
+
+            return UCk_Utils_VoiceChat_Settings_UE::Get_DefaultAttenuation();
+        }();
         const auto& SourceEffectChain = InParams.Get_SourceEffectChain();
 
-        // Both assets are optional-by-design (ADR-5); a channel that authors neither has nothing
-        // to resolve. Resolution runs on EVERY machine - clients apply the config at playback.
+        // Both assets are optional-by-design (ADR-5); a channel that resolves neither has nothing
+        // to load. Resolution runs on EVERY machine - clients apply the config at playback.
         if (ck::IsValid(Attenuation) || ck::IsValid(SourceEffectChain))
         {
             if (NOT InCurrent._LoadedAudioAssets.Get_IsRequested())

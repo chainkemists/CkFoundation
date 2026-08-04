@@ -200,9 +200,23 @@ namespace ck
             -> void;
 
         // Creates + starts the playback synth if the world can render audio; no-op otherwise
-        // (headless PIE) - the decode path still fills the test-readable PCM buffer.
+        // (headless PIE) - the decode path still fills the test-readable PCM buffer. Attaches at
+        // the owning actor's PlaybackAttachSocketName and applies the config-channel render
+        // settings before the first Start.
         static auto
         TryCreate_PlaybackSynth(
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent)
+            -> void;
+
+        // (Re)applies _PlaybackConfigChannel's spatialization/attenuation/effect chain to the
+        // synth via Stop -> set -> Start (USynthComponent::Start copies the fields to its audio
+        // component; the PCM queue survives the cycle by design). Invalid config channel = flat
+        // non-spatialized playback (capture loopback, unresolved control plane). Spatialization
+        // additionally requires the synth to be attached - an unattached synth has no world
+        // position and MUST render flat regardless of policy.
+        static auto
+        Apply_SynthChannelConfig(
             HandleType InVoiceTalkerEntity,
             FFragment_VoiceTalker_Current& InCurrent)
             -> void;

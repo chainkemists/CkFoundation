@@ -12,6 +12,7 @@
 
 #include "CkVoiceChat/Codec/CkVoiceChat_Codec.h"
 #include "CkVoiceChat/Playback/CkVoiceChatSynth_Component.h"
+#include "CkVoiceChat/VoiceChannel/CkVoiceChannel_Fragment_Data.h"
 #include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment_Data.h"
 
 #include <Templates/SharedPointer.h>
@@ -110,6 +111,11 @@ namespace ck
         TArray<uint8> _LoopbackDecodedPcm;
         FCk_Time _LoopbackPopAccumulator;
         TStrongObjectPtr<UCk_VoiceChatSynthComponent_UE> _LoopbackSynth;
+
+        // The channel whose audio config (spatialization/attenuation/effect chain) the synth
+        // currently renders with: the highest-Priority channel delivering this talker's stream
+        // to this machine. Invalid for capture-loopback (flat playback, no channel context).
+        FCk_Handle_VoiceChannel _PlaybackConfigChannel;
 
         FCk_Time _ReceiveClock;
 
