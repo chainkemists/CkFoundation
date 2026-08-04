@@ -1,0 +1,101 @@
+# CkVoxelNav
+
+**Boundary — read this before anything else.** CkVoxelNav owns *volumetric* (free-space) 3D
+navigation: a Sparse Voxel Octree of the open air inside an authored volume, and pathfinding
+through it for agents that are not stuck to a surface — flying, swimming, zero-g. It is **not** a
+replacement for **`CkNavigation`**, which wraps engine Recast and stays the stack for walking
+agents projected onto a navmesh; the two coexist and a game may run both. It is **not**
+**`CkSpatialQuery`**, which answers *"which entities are inside/near this shape right now"* with
+live Jolt probes — CkVoxelNav consumes world geometry once to bake a static structure and answers
+*"is this space free"* / *"how do I fly from A to B"*; it registers no probes and holds no bodies.
+It does **not** implement a search: **`CkAStar`** owns the budgeted, warm-startable A* core, and
+CkVoxelNav supplies a graph adapter over its octree plus a post-search refinement pass so the
+search runs on CkAStar unchanged.
+
+All world-geometry queries go through **`CkJolt`**'s public, JPH-free query surface. CkVoxelNav
+includes **no** Jolt headers — that is a hard invariant, not a preference (see Anti-patterns).
+
+**Purpose:** bake and query a Sparse Voxel Octree of navigable free space over an authored volume,
+and plan paths through it at horde scale.
+
+**Depends on:** `CkAStar`, `CkCore`, `CkEcs`, `CkEcsExt`, `CkJolt`, `CkLabel`, `CkLog`,
+`CkNavigation`, `CkProfile`, `CkRecord`, `CkSettings`, `CkThirdParty`.
+**Used by:** nothing yet.
+
+---
+
+## Key API
+
+- `UCk_Utils_VoxelNavVolume_UE` (inherits `UCk_Utils_Ecs_Base_UE`) — `Add` composes the volume
+  feature onto an owner as a child entity; `Has` tests for it; `Cast` / `CastChecked` convert a
+  handle. `Add` stamps `ck::FTag_VoxelNavVolume_NeedsSetup`, which
+  `ck::FProcessor_VoxelNavVolume_Setup` consumes; that processor validates the params and arms
+  `FTag_VoxelNavVolume_NeedsBuild` unless `_AutoBuildOnSetup` opted out.
+- `FCk_Fragment_VoxelNavVolume_ParamsData` — `_VolumeBounds` (world-space `FBox`),
+  `_FinestCellSizeUu` (the finest navigable cell's **edge length** in uu, not a half-extent),
+  `_ClearanceUu` (added to every probe half-extent — grows obstacles, shrinks free space),
+  `_AutoBuildOnSetup`, and a per-volume budget override pair.
+- `Request_Build` / `Request_CancelBuild` — deferred, completion delegate last. The build's
+  completion delegate fires when the BUILD ends, not when the request is accepted: the delegate is
+  carried on the build-state fragment across every frame the bake spans.
+- Queries: `Get_IsBuilt`, `Get_BuildEpoch`, `Get_BuildStage`, `Get_BuildProgress`, `Get_BuildStats`,
+  `Get_NumLayers`, `Get_IsPointFree`. Signal: `BindTo_OnBuildComplete` (fires on BOTH outcomes and
+  carries an `ECk_SucceededFailed`).
+- `ck::voxelnav::FBuildState` + `Request_AdvanceBuild` (`Octree/CkVoxelNav_Octree_Build.h`) — the
+  resumable voxelizer, usable with no ECS at all. Everything it learns about geometry arrives
+  through `ICk_VoxelNav_GeometryBackend`, so a whole bake runs against a hand-authored box list.
+
+---
+
+## Voxelization — the parts that look wrong until you know why
+
+- **Occupancy is decided by COLLISION shapes, not render geometry.** Nav3D filtered candidates on
+  simple collision but decided occupancy on LOD0 render triangles; Jolt unifies both onto the baked
+  collision shape. Baked results therefore **differ from Nav3D's by design** — usually more correct,
+  always different.
+- **Probe count is the primary budget; wall-clock is only a guard.** A probe count is deterministic,
+  so a test can assert a bake's exact cost and catch a regression in the hierarchy's pruning. A
+  time-only budget would make that count machine-dependent and every such assertion flaky.
+- **The build processor does not use `ck::RunPacedSteps`.** That primitive is built on the pump
+  mechanism and refills its budget on `DeltaT > 0`, which would put probe batches in pump passes
+  whose position relative to `FProcessor_JoltWorld_Step` is not pinned. A plain per-tick budget loop
+  inside `ForEachEntity` is both simpler and provably inside the safe window — do not "fix" it.
+- **The build and start processors sit in `FGroup_Transform`, after
+  `FProcessor_JoltWorld_WaitForAsync` and before `FProcessor_JoltWorld_Step`.** That is the only
+  window provably outside the async physics step. Anything later queries Jolt concurrently with the
+  task-graph update whenever `jolt.EnableAsyncPhysicsUpdate` is on.
+- **A volume over LANDSCAPE bakes as free space in a packaged build.** CkJolt extracts landscape
+  heightfields only under `WITH_EDITOR`, so outside the editor there are no landscape bodies to
+  find. The build ensures once when its whole-volume broadphase sweep returns zero bodies and then
+  proceeds — free space is a legal answer, just a suspicious one.
+
+---
+
+## Anti-patterns
+
+1. **Never include a JPH header here.** The geometry backend talks to CkJolt's opaque,
+   JPH-free query types. A direct JPH include re-opens the allowlist this module was designed to
+   keep closed and couples the octree to a physics backend it must not know.
+2. **Don't route walking agents through this module.** A grounded agent belongs on
+   `CkNavigation`/`CkCrowd`; a voxel path for a walker is both slower and worse.
+3. **Don't re-implement A\*.** New search behavior belongs behind the CkAStar adapter or in the
+   refinement pass, not in a bespoke solver.
+4. **Don't key anything on actor pointers.** Volume and chunk identity are stable integer ids so a
+   bake survives streaming and serialization.
+
+---
+
+## Attribution
+
+Core algorithms are derived from **Nav3D 2.0**, © 2025 Darby Costello, MIT. The upstream LICENSE is
+preserved at `docs/campaigns/voxelnav-port/` until the port matures, then alongside this module.
+
+---
+
+## Status
+
+The octree core, the geometry backend, and budgeted voxelization are implemented: a volume bakes an
+immutable Sparse Voxel Octree of its free space and answers point queries against it. Pathfinding,
+chunking, dynamic occluders, and node merging are not implemented yet; the plan of record is
+`docs/campaigns/voxelnav-port/` (`PROMPT.md` for the mission and locked decisions, `PROGRESS.md`
+for live status).
