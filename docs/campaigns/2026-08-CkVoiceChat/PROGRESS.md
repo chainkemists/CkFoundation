@@ -1,26 +1,31 @@
 # CkVoiceChat — PROGRESS.md (living log)
 
 ## Current state  <!-- supersedes everything below; update at EVERY gate and session end -->
-**As of 2026-08-03 (CkFoundation `feature/voice-chat` at the Gate-2 resolution commits; CkTests
-`feature/voice-chat` at 5a0141c):** **Gates 0, 1, 2(machine) ALL CLOSED AND AUDITED** — Gate-2
-verdict **GO WITH CONDITIONS**, both conditions resolved + re-gated the same session (stats
-counters landed, 136ca780f; Conceal zero-fill + HandleRequests-synth recorded as deviations 3/4;
-resolution table in [Gate_2.md](Gate_2.md)).
-**Baseline being diffed against:** VoiceChat **18/18** on the post-counters binary
-(Test-VoiceChatP2-statscounters.log) + RenderTarget **22/22** (Test-P2-Regression.log).
-**Next action:** **Gate 3 (P3) MACHINE PORTION COMPLETE 2026-08-03** ([Gate_3.md](Gate_3.md)):
-all 10 work items done — incl. item 5 (ADR-6 proximity probes + hysteresis, earns
-CkShapes+CkSpatialQuery), S5 measured (708 B/tick saturated drain → default budget 640), and
-the invalid-input negatives (`RouteRejections`). **Exit sweep on the final binary: VoiceChat
-30/30 (Test-VoiceChatP3-exitsweep2.log) + RenderTarget 22/22 delta-zero
-(Test-P3-RenderTarget-exitsweep2.log), EXIT 0, 0 AS errors, no rebuild between runs.** Exit
-checklist ticked in Gate_3.md (one recorded coverage bound: top-N culling is unit-pinned, not
-net-load-tested — harness hosts 3 worlds). **Awaiting the Gate-3 top-tier audit** (fresh agent,
-verdict appended to Gate_3.md); P4 opens only after audit resolutions.
+**As of 2026-08-04 (CkFoundation `feature/voice-chat` @ `cc95c7760`; CkTests
+`feature/voice-chat-wip` @ `52a4d9f` — branch renamed upstream from `feature/voice-chat`):**
+**Gates 0, 1, 2, and 3 (machine) ALL CLOSED AND AUDITED.** Gate-3 verdict **GO WITH CONDITIONS**;
+**all three conditions implemented AND re-gated green 2026-08-04** — resolution table + run
+evidence in [Gate_3.md](Gate_3.md) § "Audit-condition re-gate". C3's code (N2 throttled per-talker
+drop Warning) compiled for the first time in that run.
+**Baseline (current, post-rebase, BusterBlock host):** VoiceChat **30/30**
+(Test-VoiceChatP3-postrebase2.log) + RenderTarget **22/22** delta-zero
+(Test-P3-RenderTarget-postrebase2.log), both EXIT 0, 0 `Angelscript: Error`, same binary, no
+rebuild between runs; freshness chain verified monotonic (sources 02:14:27 → DLL 02:21:14 → run
+02:27:13).
+**Next action:** **open Gate 4 (P4)** per the spec's phase table (Gate_4.md via `ck-methodology`,
+entry criteria incl. fresh baseline capture). Two carried items to record in it: audit **F5**
+(prune unbounded `ServeHistory` / `ListenerMuteMatrix` maps — P4 hygiene) and **F4** (strip
+campaign/review breadcrumb comments — deferred to P5).
+**Carried blocker (branch hygiene, not code):** CkTests `feature/voice-chat-wip` is 1 commit behind
+`origin/dev` and needs `e5bb948b` merged/rebased in — upstream CkFoundation `dd3632bd7` dropped a
+C++ default on `Request_ClearAllModifiers`, so without it the branch cannot AngelScript-compile
+standalone. Applied as a working-tree edit for the 2026-08-04 run only; NOT committed.
 The two Gate-2 HUMAN items (mic `[EDITOR-VERIFY]`, N5 packaged smoke) remain open as
 P2-verification obligations gating P5 ship — both need `[Voice] bEnabled=true` in BB's
 DefaultEngine.ini (a BB-repo decision; superproject untouched).
-**Blocked on:** nothing machine-side. Nothing pushed anywhere; superproject gitlink untouched.
+**Blocked on:** nothing machine-side. Nothing pushed by this session; superproject gitlink
+untouched. NOTE: both feature tips were found already present on `origin` at session start —
+not pushed by the campaign sessions.
 
 ## Decision log
 | Date | Decision | Why | Revisit when |
@@ -30,6 +35,34 @@ DefaultEngine.ini (a BB-repo decision; superproject untouched).
 | 2026-08-03 | P0 skeleton carries NO requests/signals/Codec/Net/Playback files — deferred to the phase that implements them; VoiceListener has no Processor files until P3 | Skeleton = compiling topology, not speculative surface; empty files are dead weight | P1 (Codec), P2 (Talker requests/signals/Playback), P3 (Net, Listener processors) |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-04 — Gate-3 audit conditions re-gated GREEN post-rebase; Gate 3 machine portion CLOSED
+- **VoiceChat 30/30 + RenderTarget 22/22, both EXIT 0, 0 AS errors, same binary, no rebuild
+  between runs** (Test-VoiceChatP3-postrebase2.log / Test-P3-RenderTarget-postrebase2.log).
+  Freshness chain verified monotonic: sources 02:14:27 → CkVoiceChat compiled+linked in-run
+  (actions 43-72/117) → DLL 02:21:14 → run 02:27:13. **C3's code compiled for the first time
+  here** — it was committed at authoring time but never built.
+- Conditions C1 (mute-spec arrival-counter freeze), C2 (N1 never-stash arrival equality +
+  FutureIdx-unresolvable assert), C3 (throttled per-talker N2 drop Warning on a ServerInbox
+  cooldown) all confirmed green. Resolution table in [Gate_3.md](Gate_3.md).
+- **Upstream break found, not ours:** CkFoundation `dd3632bd7` (delegate-on-every-request sweep)
+  dropped the C++ default on `Request_ClearAllModifiers`' `InAttributeComponent`, breaking every
+  AngelScript caller that omitted it — `CkAttributeGym_Integer_Modifiers_Steps.as:115` failed the
+  whole AS compile. `origin/dev` already had the fix (CkTests `e5bb948b`); our branch was exactly
+  1 commit behind and had never touched the file. Applied as a working-tree edit for the run,
+  NOT committed — the branch still needs `e5bb948b` merged in. Recommend a repo-wide sweep for
+  other AS callers stranded by that same default-drop.
+- **Host lesson (recorded so it isn't re-litigated):** the CkPlugins host CANNOT run this
+  campaign's net specs. `DisableEnginePluginsByDefault: true` + a slimmed plugin closure excludes
+  OnlineSubsystem/OnlineSubsystemUtils and it defines no `NetDriverDefinitions`, so every PIE net
+  world dies with `NetDriverCreateFailure ... Driver = NONE` — 11/11 net specs fail on
+  environment, 19/19 non-net pass. Also needed a one-off GUI editor boot before headless runs
+  work at all (virgin projects fatal in `FGenericWindow::GetRestoredDimensions` while persisting
+  a fresh Slate layout). **BusterBlock remains the only net-capable host.**
+- BusterBlock restored to `dev` on both plugin submodules afterward; superproject left to its
+  owning session. One residue: the run auto-registered `ActorRelay.VoiceChat` +
+  `ActorRelay.VoiceChatControl` into BB `Config/DefaultGameplayTags.ini` (ResolveGameplayTag
+  self-registration) — left in place, revert is `git checkout -- Config/DefaultGameplayTags.ini`.
 
 ### 2026-08-03 — S5 drain-budget measured; default budget 4096 → 640 (numbers in Gate_3.md)
 - **Instrumentation:** arrival totals now count at the client RPC boundary BEFORE the inbox cap

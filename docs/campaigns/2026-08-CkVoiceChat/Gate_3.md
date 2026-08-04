@@ -348,3 +348,50 @@ campaign docs; the `FCk_Time` sweep (2905dcf79) was maintainer-directed per PROG
 unrecorded scope creep found. Dep budget N4 honored: Build.cs earns exactly
 `CkActorRelay/CkShapes/CkSpatialQuery` + `NetCore/Voice/AudioMixer/GameplayTags/DeveloperSettings`,
 each with a recorded earning event; `CkRelationship` absent.
+
+## Audit-condition re-gate — 2026-08-04 (post-rebase)
+
+**All three conditions RESOLVED and re-gated green. Gate 3 machine portion CLOSED.**
+
+Conditions landed on the post-rebase lineage — CkFoundation `feature/voice-chat` @ `cc95c7760`,
+CkTests `feature/voice-chat-wip` @ `52a4d9f` (branch renamed from `feature/voice-chat` upstream;
+both tips also present on `origin`):
+
+| # | Condition | As landed |
+|---|---|---|
+| C1 | Arrival-counter freeze assert in the mute spec (F1) | `Ck.VoiceChat.Net.ListenerMute_StopsForwarding` asserts the RPC-boundary `Debug_Get_ReceiveArrivedBundles` counter is FROZEN across the muted spurt and grows across the unmuted one — proves the server exclusion, not just the local pre-decode gate |
+| C2 | N1 never-stash arrival equality + FutureIdx assert (F2) | `Ck.VoiceChat.Net.Routing_ForwardsAndNeverStashes` snapshots the arrival counter at the forward-assert and re-asserts equality at the never-stash assert; also asserts `TryGet_ChannelByIdx(FutureIdx)` is invalid at inject time |
+| C3 | Throttled per-talker N2 drop Warning (F3) | `FProcessor_VoiceChat_Route` tallies all six packet-path drop reasons per drain and emits at most one Warning per talker per 5s naming the per-reason breakdown; cooldown rides `FFragment_VoiceTalker_ServerInbox`. Implemented rather than recorded as a deviation — the fuller of F3's two options |
+
+**Re-gate run (BusterBlock host, the same host every prior gate used):**
+
+- `--build --config=Development --target=Editor --test --test-pattern VoiceChat --discover-fresh`
+  → **VoiceChat 30/30, Failed 0, Skipped 0, Contaminated 0, EXIT 0, 3m21s, 0 `Angelscript: Error`**
+  (`Saved/Logs/Test-VoiceChatP3-postrebase2.log`).
+- `--test --test-pattern RenderTarget --discover-fresh` on the SAME binary, **no rebuild between
+  runs** (0 compile/link actions in the log) → **RenderTarget 22/22, Failed 0, EXIT 0, 2m47s**
+  (`Saved/Logs/Test-P3-RenderTarget-postrebase2.log`) — delta-zero vs the recorded baseline.
+- Build: 0 `error C####`, 0 `LNK`. **C3's code compiled for the first time in this run** (it was
+  committed but never built at authoring time).
+- **Freshness chain verified (no stale-green):** sources checked out 02:14:27 → `CkVoiceChat`
+  compiled + linked in THIS run (actions 43-72 of 117) → `BusterBlockEditor-CkVoiceChat.dll`
+  02:21:14 → VoiceChat log 02:27:13 → RenderTarget on that same DLL. Monotonic.
+
+**Post-rebase blocker found and fixed (not campaign code).** Upstream CkFoundation `dd3632bd7`
+("carry a completion delegate on every deferred request, repo-wide") added a trailing delegate to
+`UCk_Utils_IntegerAttributeModifier_UE::Request_ClearAllModifiers`, which DROPPED the C++ default on
+`InAttributeComponent` — source-breaking for AngelScript callers, exactly the hazard CkFoundation's
+own doctrine warns about. `CkAttributeGym_Integer_Modifiers_Steps.as:115` still passed one argument,
+failing the whole AS compile ("Keeping all old script code") and taking the run with it. `origin/dev`
+already carried the one-line fix (CkTests `e5bb948b`); our branch was exactly 1 commit behind and had
+never touched that file. Applied as a working-tree edit for the run. **Carried item: CkTests
+`feature/voice-chat-wip` still needs `e5bb948b` merged/rebased in — until then the branch cannot AS-compile
+standalone.** Worth a repo-wide sweep for other AS callers that omitted a now-defaulted-away argument.
+
+**Host note.** An attempt to run this re-gate on the CkPlugins host instead was abandoned: CkPlugins
+sets `DisableEnginePluginsByDefault: true` with a slimmed plugin closure that excludes
+OnlineSubsystem/OnlineSubsystemUtils and defines no `NetDriverDefinitions`, so PIE net worlds fail
+with `NetDriverCreateFailure ... Driver = NONE` and **all 11 net specs cannot run there** (19/19
+non-net specs did pass, and the C++/AS compile was clean — useful corroboration on an independent
+host, but no gate evidence). BusterBlock defines `GameNetDriver` with an `OnlineSubsystemUtils.IpNetDriver`
+fallback and remains the only net-capable host for this campaign.
