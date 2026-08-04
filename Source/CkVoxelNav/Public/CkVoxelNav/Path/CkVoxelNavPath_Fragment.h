@@ -37,7 +37,10 @@ namespace ck
         friend class ::UCk_Utils_VoxelNavPath_UE;
 
     private:
-        // The From position, every cell centre in order, then the To position. Empty unless Ready.
+        /** The route to fly, AFTER whatever refinement the request asked for: the From position, the cells
+         *  the search kept, then the To position. Empty unless Ready. Refinement writes back here rather
+         *  than alongside, because a caller reading two waypoint lists would have to know which one the
+         *  agent is meant to follow. */
         TArray<FVector> _Waypoints;
 
         ECk_VoxelNav_PathStatus _Status = ECk_VoxelNav_PathStatus::None;
@@ -48,12 +51,20 @@ namespace ck
 
         int32 _PlannedAgainstEpoch = 0;
 
+        // What the search produced before refinement. Against the current waypoint count it is the only way
+        // to see whether refinement did anything - the raw path is not kept.
+        int32 _RawWaypointCount = 0;
+
+        float _PathLengthUu = 0.0f;
+
     public:
         CK_PROPERTY_GET(_Waypoints);
         CK_PROPERTY_GET(_Status);
         CK_PROPERTY_GET(_Outcome);
         CK_PROPERTY_GET(_Volume);
         CK_PROPERTY_GET(_PlannedAgainstEpoch);
+        CK_PROPERTY_GET(_RawWaypointCount);
+        CK_PROPERTY_GET(_PathLengthUu);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

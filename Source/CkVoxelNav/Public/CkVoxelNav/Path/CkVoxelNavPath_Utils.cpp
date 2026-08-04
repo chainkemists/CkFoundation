@@ -140,6 +140,42 @@ auto
 
 auto
     UCk_Utils_VoxelNavPath_UE::
+    Get_RawWaypointCount(
+        const FCk_Handle_VoxelNavPath& InPath)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InPath))
+    { return 0; }
+
+    return InPath.Get<ck::FFragment_VoxelNavPath_Result>().Get_RawWaypointCount();
+}
+
+auto
+    UCk_Utils_VoxelNavPath_UE::
+    Get_RefinedWaypointCount(
+        const FCk_Handle_VoxelNavPath& InPath)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InPath))
+    { return 0; }
+
+    return InPath.Get<ck::FFragment_VoxelNavPath_Result>().Get_Waypoints().Num();
+}
+
+auto
+    UCk_Utils_VoxelNavPath_UE::
+    Get_PathLengthUu(
+        const FCk_Handle_VoxelNavPath& InPath)
+    -> float
+{
+    if (ck::Is_NOT_Valid(InPath))
+    { return 0.0f; }
+
+    return InPath.Get<ck::FFragment_VoxelNavPath_Result>().Get_PathLengthUu();
+}
+
+auto
+    UCk_Utils_VoxelNavPath_UE::
     Get_LastSearchOutcome(
         const FCk_Handle_VoxelNavPath& InPath)
     -> ECk_VoxelNav_PathSearchOutcome
