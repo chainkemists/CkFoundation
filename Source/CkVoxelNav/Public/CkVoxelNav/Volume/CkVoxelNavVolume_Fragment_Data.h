@@ -8,6 +8,7 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkVoxelNav/Octree/CkVoxelNav_Octree_Build.h"
+#include "CkVoxelNav/Octree/CkVoxelNav_Octree_Repair.h"
 
 #include "CkVoxelNavVolume_Fragment_Data.generated.h"
 
@@ -103,10 +104,43 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKVOXELNAV_API FCk_Request_VoxelNavVolume_MarkDirty : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_VoxelNavVolume_MarkDirty);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VoxelNavVolume_MarkDirty);
+
+private:
+    /** World-space box whose occupancy is no longer trustworthy. For a moved obstacle this is the UNION of
+     *  where it was and where it is: the old half is what frees the space it left. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FBox _DirtyBounds = FBox{ForceInit};
+
+public:
+    CK_PROPERTY_GET(_DirtyBounds);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_VoxelNavVolume_MarkDirty, _DirtyBounds);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_VoxelNavVolume_OnBuildComplete,
     FCk_Handle_VoxelNavVolume, InVolume,
     ECk_SucceededFailed, InResult,
     FCk_VoxelNav_BuildStats, InStats);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_VoxelNavVolume_OnRepairComplete,
+    FCk_Handle_VoxelNavVolume, InVolume,
+    ECk_SucceededFailed, InResult,
+    FCk_VoxelNav_RepairStats, InStats);
 
 // --------------------------------------------------------------------------------------------------------------------

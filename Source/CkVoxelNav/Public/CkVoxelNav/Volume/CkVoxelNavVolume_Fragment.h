@@ -10,6 +10,7 @@
 
 #include "CkVoxelNav/Backend/CkVoxelNav_GeometryBackend_Jolt.h"
 #include "CkVoxelNav/Octree/CkVoxelNav_Octree_Build.h"
+#include "CkVoxelNav/Octree/CkVoxelNav_Octree_Repair.h"
 #include "CkVoxelNav/Volume/CkVoxelNavVolume_Fragment_Data.h"
 
 #include <variant>
@@ -26,6 +27,8 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_VoxelNavVolume_NeedsBuild);
     CK_DEFINE_ECS_TAG(FTag_VoxelNavVolume_BuildInProgress);
     CK_DEFINE_ECS_TAG(FTag_VoxelNavVolume_Built);
+    CK_DEFINE_ECS_TAG(FTag_VoxelNavVolume_NeedsRepair);
+    CK_DEFINE_ECS_TAG(FTag_VoxelNavVolume_RepairInProgress);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -46,6 +49,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_VoxelNavVolume_BuiltOctree);
 
         friend class FProcessor_VoxelNavVolume_Build;
+        friend class FProcessor_VoxelNavVolume_Repair;
         friend class ::UCk_Utils_VoxelNavVolume_UE;
 
     private:
@@ -93,6 +97,40 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    /** A local repair in flight, plus the dirty region waiting for one.
+     *
+     *  `_PendingDirtyBounds` ACCUMULATES: several occluders may dirty the same volume in one frame, and one
+     *  repair over their union costs less than one repair each. It is consumed - and reset - when a repair
+     *  starts, so a dirty box arriving mid-repair opens the next one rather than corrupting this one.
+     *
+     *  `_PendingRequests` carries the callers' completion delegates across the whole multi-frame repair, for
+     *  the same reason the build state carries one: the drain that accepted them cannot report an outcome
+     *  that is frames away. A list rather than a single request because dirty requests coalesce. */
+    struct CKVOXELNAV_API FFragment_VoxelNavVolume_RepairState
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoxelNavVolume_RepairState);
+
+        friend class FProcessor_VoxelNavVolume_HandleRequests;
+        friend class FProcessor_VoxelNavVolume_Build;
+        friend class FProcessor_VoxelNavVolume_StartRepair;
+        friend class FProcessor_VoxelNavVolume_Repair;
+        friend class FProcessor_VoxelNavVolume_CancelPendingRequests;
+        friend class ::UCk_Utils_VoxelNavVolume_UE;
+
+    private:
+        voxelnav::FRepairState _Repair;
+        TUniquePtr<FCk_VoxelNav_GeometryBackend_Jolt> _Backend;
+        FBox _PendingDirtyBounds = FBox{ForceInit};
+        TArray<FCk_Request_VoxelNavVolume_MarkDirty> _PendingRequests;
+
+    public:
+        CK_PROPERTY_GET(_Repair);
+        CK_PROPERTY_GET(_PendingDirtyBounds);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKVOXELNAV_API FFragment_VoxelNavVolume_Requests
     {
     public:
@@ -103,7 +141,8 @@ namespace ck
 
     public:
         using RequestType = std::variant<FCk_Request_VoxelNavVolume_Build,
-                                         FCk_Request_VoxelNavVolume_CancelBuild>;
+                                         FCk_Request_VoxelNavVolume_CancelBuild,
+                                         FCk_Request_VoxelNavVolume_MarkDirty>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -124,6 +163,16 @@ namespace ck
         FCk_Handle_VoxelNavVolume,
         ECk_SucceededFailed,
         FCk_VoxelNav_BuildStats);
+
+    // Distinct from the build signal on purpose: a listener that wants to know when navigation data CHANGED
+    // wants both, but a listener waiting for the FIRST bake would be woken by every obstacle that moves.
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKVOXELNAV_API,
+        OnVoxelNavVolumeRepairComplete,
+        FCk_Delegate_VoxelNavVolume_OnRepairComplete,
+        FCk_Handle_VoxelNavVolume,
+        ECk_SucceededFailed,
+        FCk_VoxelNav_RepairStats);
 
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_VoxelNavVolume_Requests);
 }

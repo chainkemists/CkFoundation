@@ -221,6 +221,14 @@ namespace ck::voxelnav
         Request_MarkSubNodeOccluded(
             SubNodeIndex InSubNodeIndex) -> void;
 
+        /** Writes the whole 4x4x4 occupancy word at once, REPLACING what was there. A local repair
+         *  re-derives a dirty leaf's occupancy from scratch and must be able to clear bits an obstacle
+         *  vacated; accumulating into the old word instead is how upstream's dynamic occlusion left
+         *  permanent occupied trails behind a moving obstacle. */
+        auto
+        Set_SubNodes(
+            uint64 InSubNodes) -> FLeafNode&;
+
         auto
         Set_Parent(
             FNodeAddress InParent) -> FLeafNode&;
