@@ -12,10 +12,13 @@ drop Warning) compiled for the first time in that run.
 (Test-P3-RenderTarget-postrebase2.log), both EXIT 0, 0 `Angelscript: Error`, same binary, no
 rebuild between runs; freshness chain verified monotonic (sources 02:14:27 → DLL 02:21:14 → run
 02:27:13).
-**Next action:** **open Gate 4 (P4)** per the spec's phase table (Gate_4.md via `ck-methodology`,
-entry criteria incl. fresh baseline capture). Two carried items to record in it: audit **F5**
-(prune unbounded `ServeHistory` / `ListenerMuteMatrix` maps — P4 hygiene) and **F4** (strip
-campaign/review breadcrumb comments — deferred to P5).
+**Next action:** **Gate 4 (P4) OPENED 2026-08-04** — [Gate_4.md](Gate_4.md) committed with entry
+criteria ticked against the baseline above. Scope: HybridRadio near/far playback, per-channel
+attenuation + source-effect chain (ADR-5 config is currently declared but has ZERO consumers),
+moderation matrix, roger-beep recipe (docs+gym, no CkCue dep per Ruling Q4). Carried audit items
+recorded there: **F5** (prune unbounded `ServeHistory`/`ListenerMuteMatrix` maps) is work item 6;
+**F4** (strip campaign breadcrumb comments) is restated as a P5 obligation. First P4 work item is
+CkResourceLoader soft-ref resolution — start there.
 **Carried blocker (branch hygiene, not code):** CkTests `feature/voice-chat-wip` is 1 commit behind
 `origin/dev` and needs `e5bb948b` merged/rebased in — upstream CkFoundation `dd3632bd7` dropped a
 C++ default on `Request_ClearAllModifiers`, so without it the branch cannot AngelScript-compile
