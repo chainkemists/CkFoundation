@@ -66,8 +66,24 @@
 
 ## In-flight
 
-- Phase 2 boundary full suite running (`Phase2-Boundary.log`); then targeted `Ck.Jolt.Query` on
-  final binaries closes the [C-D17] gate.
+- Phase 3 wave 2 (3A chunked volumes + cross-chunk pathfinding) — opus, dispatched.
+
+- **3B ACCEPTED 2026-08-04** (opus, self-gated 46/46, zero ensures): AUDIT verdict — upstream #39
+  is NINE defects (D1 fatal: layer-0 loses Morton sort AND index identity on RemoveAtSwap/Add with
+  no re-link — first movement corrupts every lookup; D2 fatal: contiguous-8-children invariant
+  broken by one-at-a-time adds; D3: occupancy OR-accumulated, never cleared — permanent occupied
+  trails; D4-D9: dead scans, no lattice clamp, volume fan-out, unbudgeted tick, inert occluder
+  registry, leaked leaves). Ported design makes D1/D2/D3/D9 UNREPRESENTABLE: occupancy re-derived
+  (never accumulated), structure DERIVED from the blocked-cell set by re-running the bake's own
+  structural stages, repair assembles a NEW octree and swaps (C-D7 preserved) — ratified. Oracle
+  test: repaired octree field-for-field equals a full rebake; locality pinned (67 probes vs 4360,
+  untouched leaves bit-identical). Deviations 2-8 accepted (incl. the self-review catch:
+  Request_Build abandons an in-flight repair — publish-slot race closed).
+- **[C-D22]** (3B deviation 1 — capability finding): v1 voxelization sees STATIC-domain bodies
+  only ([C-D14] filter + CkJolt's motion-type→domain mapping). KINEMATIC bodies are invisible to
+  bake AND repair — the occluder feature today covers static-body teleports and appearing/vanishing
+  geometry, NOT moving kinematic platforms. Fix = the deferred composed Domain filter in CkJolt;
+  assigned to the deferred pool, trigger: first game needing moving platforms to block flying nav.
 
 - **Wave 2 (2D+2E) ACCEPTED 2026-08-04** (opus, self-gated 38/38, zero ensures): refinement =
   greedy visibility pruning (octree raycast, endpoints kept, unprovable spans kept — always
