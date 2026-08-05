@@ -13,7 +13,7 @@ class APlayerState;
 // --------------------------------------------------------------------------------------------------------------------
 
 // Voice CONTROL traffic - reliable, low-rate, stateful must-apply (a mute that gets lost is a
-// privacy bug). It rides its OWN relay actor because amendment S1 bans reliable RPCs on the
+// privacy bug). It rides its OWN relay actor because reliable RPCs must never share the
 // voice STREAM actor: a reliable attachment on that object would head-of-line-block the
 // unreliable audio. A separate Iris object cannot.
 UCLASS()

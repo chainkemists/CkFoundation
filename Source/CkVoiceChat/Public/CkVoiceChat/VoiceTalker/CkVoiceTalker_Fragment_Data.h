@@ -96,7 +96,7 @@ public:
     CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_VoiceTalker_StartTransmit);
 
 private:
-    // Channels to speak into; routing consumes this once transport exists (P3). Empty = the
+    // Channels to speak into; the routing processor consumes this. Empty = the
     // talker's AutoJoinChannels.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "VoiceChat.Channel"))

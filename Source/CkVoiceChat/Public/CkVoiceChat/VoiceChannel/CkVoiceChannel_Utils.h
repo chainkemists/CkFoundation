@@ -122,6 +122,23 @@ public:
     Get_Priority(
         const FCk_Handle_VoiceChannel& InVoiceChannel);
 
+    // Resolved at channel Setup through CkResourceLoader (nullptr while the async load is
+    // pending, if the channel authored none, or if resolution failed - callers fall back to
+    // UCk_Utils_VoiceChat_Settings_UE::Get_DefaultAttenuation()).
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Get Resolved Attenuation")
+    static USoundAttenuation*
+    Get_ResolvedAttenuation(
+        const FCk_Handle_VoiceChannel& InVoiceChannel);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Channel",
+              DisplayName="[Ck][VoiceChannel] Get Resolved Source Effect Chain")
+    static USoundEffectSourcePresetChain*
+    Get_ResolvedSourceEffectChain(
+        const FCk_Handle_VoiceChannel& InVoiceChannel);
+
 public:
     // Membership is server-authoritative: every request below rejects non-authority callers
     // synchronously (Failed_NotEnqueued) - clients receive membership via the control plane.

@@ -47,7 +47,7 @@ namespace ck
     // The server's packet path (spec §7.3): drains each talker's routing inbox, re-validates
     // every bundle against the authorization state (sender binding, membership, CanTalk, server
     // mute), resolves the wire ChannelIdx against the registry - an unresolvable idx is DROPPED
-    // and counted, NEVER stashed (review N1: voice is disposable; a stale idx must not resurrect
+    // and counted, NEVER stashed (voice is disposable; a stale idx must not resurrect
     // when the registry catches up) - then forwards the packed bytes untouched (the server never
     // decodes) to every eligible recipient under the per-connection byte budget.
     class CKVOICECHAT_API FProcessor_VoiceChat_Route : public ck_exp::TProcessor<
@@ -80,8 +80,9 @@ namespace ck
 
     // The send half of routing: Route STAGES authorized forwards per talker; this processor sees
     // every talker competing for each recipient this tick and applies the audible-speaker cap
-    // (envelope-bucket priority, least-recently-served rotation - the CTO amplitude-fairness
-    // ruling), then the per-connection byte budget, then the actual Client RPC.
+    // (envelope-bucket priority, least-recently-served rotation - amplitude fairness that a
+    // spoofed instant-max claim cannot jump), then the per-connection byte budget, then the
+    // actual Client RPC.
     class CKVOICECHAT_API FProcessor_VoiceChat_FlushForwards : public ck_exp::TProcessor<
         FProcessor_VoiceChat_FlushForwards,
         FCk_Handle,
