@@ -17,6 +17,7 @@ public class CkIskmRenderer : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "DeveloperSettings",
             "GameplayTags",
 
             "AnimGraphRuntime",
