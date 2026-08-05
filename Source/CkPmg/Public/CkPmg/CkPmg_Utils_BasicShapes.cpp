@@ -28,7 +28,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Sphere_Params{};
     Params.Set_Radius(InRadius);
@@ -104,7 +104,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Box_Params{};
     Params.Set_Extent(InExtent);
@@ -177,7 +177,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Cone_Params{};
     Params.Set_Radius(InRadius);
@@ -258,7 +258,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Cylinder_Params{};
     Params.Set_Radius(InRadius);
@@ -337,7 +337,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Capsule_Params{};
     Params.Set_Radius(InRadius);
@@ -417,7 +417,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Pyramid_Params{};
     Params.Set_BaseSize(InBaseSize);
@@ -492,7 +492,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Hemisphere_Params{};
     Params.Set_Radius(InRadius);
@@ -571,7 +571,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Torus_Params{};
     Params.Set_MajorRadius(InMajorRadius);

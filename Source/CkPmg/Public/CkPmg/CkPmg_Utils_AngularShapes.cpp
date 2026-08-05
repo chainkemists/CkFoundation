@@ -31,7 +31,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Wedge_Params{};
     Params.Set_Radius(InRadius);
@@ -116,7 +116,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Arc_Params{};
     Params.Set_Radius(InRadius);
@@ -204,7 +204,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_WedgeCone_Params{};
     Params.Set_Radius(InRadius);

@@ -649,7 +649,7 @@ namespace ck_pmg_processor_flat_shapes_impl
             auto DynamicMaterial = UMaterialInstanceDynamic::Create(TranslucentMaterial, InMeshComponent);
             if (ck::IsValid(DynamicMaterial))
             {
-                DynamicMaterial->SetVectorParameterValue(FName("Color"), InCommon.Get_Color());
+                DynamicMaterial->SetVectorParameterValue(FName("Color"), ck::pmg_debug_shape::Get_FillColor(InCommon.Get_Color()));
                 InMeshComponent->SetMaterial(0, DynamicMaterial);
             }
         }

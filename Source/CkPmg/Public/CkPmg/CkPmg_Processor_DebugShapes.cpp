@@ -350,7 +350,7 @@ namespace ck
 
         if (auto* MID = pmg_debug_shape_helpers::Get_DynamicMaterial(InCurrent._MeshComponent.Get()))
         {
-            MID->SetVectorParameterValue(FName(TEXT("Color")), NewColor);
+            MID->SetVectorParameterValue(FName(TEXT("Color")), pmg_debug_shape::Get_FillColor(NewColor));
         }
 
         if (auto* MeshComponent = InCurrent._MeshComponent.Get();
@@ -403,6 +403,7 @@ namespace ck
         -> void
     {
         InCommon._Duration = InRequest.Get_NewDuration();
+        pmg_debug_shape::UpdateDurationMembership(InHandle, InCommon._Duration);
     }
 
     auto

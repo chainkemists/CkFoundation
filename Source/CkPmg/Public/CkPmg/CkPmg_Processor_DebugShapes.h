@@ -77,6 +77,7 @@ namespace ck
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
             ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
+            TExclude<FTag_Pmg_DebugShape_PersistentDuration>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
