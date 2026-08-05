@@ -2,12 +2,19 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
+
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment.h"
 #include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment_Data.h"
 
 #include "CkVoiceTalker_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class ICk_VoiceChat_CaptureSource;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -66,6 +73,70 @@ private:
     Get_InvalidHandle() { return {}; };
 
 public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Request Start Transmit",
+              meta = (AutoCreateRefTerm = "InRequest,InDelegate"))
+    static FCk_Handle_VoiceTalker
+    Request_StartTransmit(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Request_VoiceTalker_StartTransmit& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Request Stop Transmit",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_VoiceTalker
+    Request_StopTransmit(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Request Set Transmit Mode",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_VoiceTalker
+    Request_SetTransmitMode(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_VoiceChat_TransmitMode InTransmitMode,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Request Set Input Gain",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_VoiceTalker
+    Request_SetInputGain(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        float InInputGain,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Request Set Self Mute",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_VoiceTalker
+    Request_SetSelfMute(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_EnableDisable InSelfMute,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Get Is Transmitting")
+    static bool
+    Get_IsTransmitting(
+        const FCk_Handle_VoiceTalker& InVoiceTalker);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Get Is Speaking")
+    static bool
+    Get_IsSpeaking(
+        const FCk_Handle_VoiceTalker& InVoiceTalker);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|VoiceChat|Talker",
               DisplayName="[Ck][VoiceTalker] Get Transmit Mode")
@@ -79,6 +150,103 @@ public:
     static float
     Get_InputGain(
         const FCk_Handle_VoiceTalker& InVoiceTalker);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Get Current Amplitude")
+    static float
+    Get_CurrentAmplitude(
+        const FCk_Handle_VoiceTalker& InVoiceTalker);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Bind To OnTransmitStarted")
+    static FCk_Handle_VoiceTalker
+    BindTo_OnTransmitStarted(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceTalker& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Unbind From OnTransmitStarted")
+    static FCk_Handle_VoiceTalker
+    UnbindFrom_OnTransmitStarted(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_VoiceTalker& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Bind To OnTransmitStopped")
+    static FCk_Handle_VoiceTalker
+    BindTo_OnTransmitStopped(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceTalker& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Unbind From OnTransmitStopped")
+    static FCk_Handle_VoiceTalker
+    UnbindFrom_OnTransmitStopped(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_VoiceTalker& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Bind To OnSpeakingStateChanged")
+    static FCk_Handle_VoiceTalker
+    BindTo_OnSpeakingStateChanged(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceTalker_SpeakingStateChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Unbind From OnSpeakingStateChanged")
+    static FCk_Handle_VoiceTalker
+    UnbindFrom_OnSpeakingStateChanged(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_VoiceTalker_SpeakingStateChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Bind To OnFramesCaptured")
+    static FCk_Handle_VoiceTalker
+    BindTo_OnFramesCaptured(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceTalker_FramesCaptured& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Talker",
+              DisplayName="[Ck][VoiceTalker] Unbind From OnFramesCaptured")
+    static FCk_Handle_VoiceTalker
+    UnbindFrom_OnFramesCaptured(
+        UPARAM(ref) FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_VoiceTalker_FramesCaptured& InDelegate);
+
+public:
+    // Test seams (C++-only). InjectCaptureSource replaces the engine microphone with a scripted
+    // source; call BEFORE Request_StartTransmit. The loopback PCM accessors read/clear what the
+    // full gate->encode->jitter->decode loop produced.
+    static auto
+    Debug_InjectCaptureSource(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const TSharedPtr<ICk_VoiceChat_CaptureSource>& InCaptureSource) -> void;
+
+    static auto
+    Debug_Get_LoopbackDecodedPcm(
+        const FCk_Handle_VoiceTalker& InVoiceTalker) -> const TArray<uint8>&;
+
+    static auto
+    Debug_Reset_LoopbackDecodedPcm(
+        FCk_Handle_VoiceTalker& InVoiceTalker) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
