@@ -2,12 +2,29 @@
 
 **Purpose:** Per-consumer presentation configuration for an entity, plus a parent→child visibility
 cascade. A display definition names a `_Consumer` (which projector it is FOR — compass, minimap, a
-world-space indicator), a `_Priority`, an `_OffscreenPolicy`, and an OPAQUE soft reference to a
-`UCk_Poi_DisplayDefinition_PDA` visual asset. One entity can carry a single definition direct-attach
-(`Add`) or several consumer-keyed definitions as child entities under its
-`RecordOfPoiDisplayDefinitions` (`Create`). When the owner composes `CkVisibleRange` and goes hidden,
-every child definition gains the plain tag `FTag_PoiDisplayDefinition_ParentHidden` (and loses it on
-show) — the cascade this module owns.
+world-space indicator), a `_Priority`, an `_OffscreenPolicy`, and the visual triplet `_Icon` /
+`_Tint` / `_SizeHint`. One entity can carry a single definition direct-attach (`Add`) or several
+consumer-keyed definitions as child entities under its `RecordOfPoiDisplayDefinitions` (`Create`).
+When the owner composes `CkVisibleRange` and goes hidden, every child definition gains the plain tag
+`FTag_PoiDisplayDefinition_ParentHidden` (and loses it on show) — the cascade this module owns.
+
+**Params is the SEED; Current is the truth — for the MUTABLE half only.** `Add` copies `_Tint` and
+`_SizeHint` from Params into `FFragment_PoiDisplayDefinition_Current`, and every later change goes
+through `Request_SetTint` / `Request_SetSizeHint`. Consumers read `Get_Tint` / `Get_SizeHint`
+(Current), never Params. This is what makes per-INSTANCE looks possible — a marker re-tinting when a
+rental goes overdue — without re-authoring shared config or swapping definitions.
+
+**`_Icon`, `_Priority` and `_OffscreenPolicy` are immutable post-`Add`** and are served straight off
+Params: no Current copy, no request, nothing mutates them. The icon is a definition's identity — the
+64-customers-64-portraits case is 64 definitions each authored with its own icon, and every adopter
+re-skins by TINTING that one icon rather than swapping the texture. A definition that genuinely needs
+a different icon is a different definition (`Create` another keyed to a second consumer, or re-Create).
+
+**`_Icon` is a soft reference end-to-end and this module never loads it.** Composing a definition
+costs no texture load, and a dedicated server never pays for one. The presentation layer that draws
+the marker resolves it. (Before 2026-08-04 the visual triplet lived in a separate
+`UCk_Poi_DisplayDefinition_PDA` asset; that class is deleted. A PDA is shared-immutable by nature,
+so a per-instance tint was impossible without authoring one asset per instance.)
 
 **Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkPoi`, `CkRecord`, `CkSettings`,
 `CkVisibleRange`. Knows nothing of projectors or "what a viewer is" — it is the display-config substrate
@@ -58,7 +75,18 @@ Gate 4 additionally wires the projectors to the `Get_IsEffectivelyHidden` /
   Gate-4 projectors use. Exact match only: a consumer tag never resolves a definition keyed with a
   DESCENDANT of it, so `Poi.Consumer.Compass.Foo` is invisible to the compass.
 - Getters (on `FCk_Handle_PoiDisplayDefinition`): `Get_Consumer`, `Get_Priority`, `Get_OffscreenPolicy`,
-  `Get_DisplayAsset`, `Get_IsParentHidden`, `Get_IsEffectivelyHidden`.
+  `Get_Icon`, `Get_Tint`, `Get_SizeHint`, `Get_IsParentHidden`, `Get_IsEffectivelyHidden`.
+- `Request_SetTint` / `Request_SetSizeHint` — deferred per-instance overrides, drained by
+  `FProcessor_PoiDisplayDefinition_HandleRequests`. Each takes its REQUEST STRUCT
+  (`FCk_Request_PoiDisplayDefinition_SetTint{Colour}`), not a loose value, so a later second field
+  stays a non-breaking change for C++, Blueprint and AngelScript callers alike — see the
+  `Request_*` rule in [Source/CLAUDE.md](../CLAUDE.md). There is deliberately **no `Request_SetIcon`**
+  (see the immutability note above).
+- `BindTo_OnDisplayChanged` / `UnbindFrom_OnDisplayChanged` — fires ONCE per drain in which Current
+  actually changed (not once per request), carrying only the handle; the consumer re-reads whichever
+  getters it cares about. A request that re-asserts the value already in Current broadcasts nothing.
+  Binding default is `FireIfPayloadInFlight`: a marker widget binding in the same frame a change was
+  requested must still see it, and replaying a "re-read Current" nudge is cheap and idempotent.
 - Consumer tags live under the native root **`Poi.Consumer`** (declared in
   `CkPoiDisplayDefinition_Utils.cpp`).
 
@@ -67,9 +95,9 @@ children carry only static config and rebuild from their owner's Construct recip
 never round-tripped through a save. (The `_ROUNDTRIP`/`_TRANSIENT` policy split is inert post-Model-A
 purge; the macro name is the surviving documentation.)
 
-This module ships **no processors and no signals of its own** — the cascade is a native signal bind to
-CkVisibleRange, not a polling processor (the CkTween↔CkTimer precedent). Display definitions are static
-config: no `Current` fragment, no requests.
+The **cascade** is a native signal bind to CkVisibleRange, not a polling processor (the CkTween↔CkTimer
+precedent). The module's one processor exists solely to drain the display-override requests above;
+nothing here polls.
 
 ## The cascade contract
 
@@ -98,10 +126,18 @@ Gate-4 consumers exclude BOTH `FTag_VisibleRange_Hidden` (owner's own) and
    note (the hard boundary).
 2. **No Poi / projector / viewer knowledge here.** This module is display-config + cascade only. What a
    "consumer" means, how a compass or minimap draws, what a viewer is — all live in the consumer, not
-   here. `_DisplayAsset` is OPAQUE: never load or dereference it in this module.
+   here. `_Icon` is OPAQUE: never load or dereference it in this module.
 3. **`Add` composes ONE definition; `Create` composes per-consumer children.** Don't call `Add` twice on
    one entity expecting two consumers — the second `Add` ensure-fails (one direct-attach definition per
    entity). For several consumer-keyed definitions on one owner, `Create` each.
+4. **Never read `_Tint` / `_SizeHint` off Params to draw with.** Params is the authored seed for those two
+   and goes stale the instant anything calls `Request_Set*`. Draw from `Get_Tint` / `Get_SizeHint`.
+   (`Get_Icon` reads Params by design — the icon never changes — so use the getter regardless and the
+   distinction stays invisible at the call site.)
+5. **Don't try to swap definitions to change a look.** `TryGet_..._ByConsumer` returns the first
+   exact-consumer match regardless of hidden state, and projectors treat a hidden resolved definition as
+   "cull the entry" rather than falling through to a sibling — so a two-definitions-one-consumer
+   enable/disable scheme does not work. Override Current instead; that is what it is for.
 
 ## See also
 
