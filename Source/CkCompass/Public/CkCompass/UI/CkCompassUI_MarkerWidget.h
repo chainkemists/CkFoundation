@@ -4,6 +4,8 @@
 
 #include "CkCompass/CkCompass_Fragment_Data.h"
 
+#include "CkPoiDisplayDefinition/CkPoiDisplayDefinition_Fragment_Data.h"
+
 #include "CkUI/UserWidget/CkUserWidget.h"
 
 #include "CkCompassUI_MarkerWidget.generated.h"
@@ -87,8 +89,43 @@ protected:
     // readout while being styled (the preview entry's Poi is invalid — icon defaults are kept)
     auto NativePreConstruct() -> void override;
 
+    // Drops the display-change binding — a pooled marker outlives any single POI, and the ribbon may
+    // destroy it while it is still bound.
+    auto NativeDestruct() -> void override;
+
 private:
     auto DoResolveDisplay() -> void;
+    // Full apply, for POI assignment: resolves the immutable icon, then the mutable state.
+    auto DoApplyDisplay(const FCk_Handle_PoiDisplayDefinition& InDefinition) -> void;
+    // Tint + size only — everything a display-changed broadcast can actually have altered.
+    auto DoApplyMutableDisplay(const FCk_Handle_PoiDisplayDefinition& InDefinition) -> void;
+    auto DoUnbindDisplayChanged() -> void;
+    auto DoCaptureAuthoredDisplay() -> void;
+    auto DoRestoreAuthoredDisplay() -> void;
+
+    // Re-reads the definition's Current state when a per-instance override lands (tint or size).
+    UFUNCTION()
+    void
+    DoOnDisplayChanged(
+        FCk_Handle_PoiDisplayDefinition InDefinition);
+
+private:
+    /** The display definition this marker is currently bound to. Pooled markers get reassigned across POIs,
+     *  so the previous binding is dropped before a new one is taken. */
+    UPROPERTY(Transient)
+    FCk_Handle_PoiDisplayDefinition _BoundDisplayDefinition;
+
+    /** Whatever the marker Blueprint authored on _Icon, captured lazily the first time it is about to be
+     *  overwritten. Markers are POOLED, so a slot recycled onto a POI with no compass definition would
+     *  otherwise keep the PREVIOUS POI's icon and tint. UPROPERTY because FSlateBrush holds a
+     *  ResourceObject that must stay GC-reachable. */
+    UPROPERTY(Transient)
+    FSlateBrush _AuthoredBrush;
+
+    UPROPERTY(Transient)
+    FLinearColor _AuthoredTint = FLinearColor::White;
+
+    bool _AuthoredCaptured = false;
 
 private:
     /** When > 0, _DistanceText is collapsed while the entry is NEARER than this (cm) — no "1 m"
