@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
@@ -22,6 +23,8 @@
 
 #include <GameFramework/PlayerController.h>
 #include <GameFramework/PlayerState.h>
+#include <Sound/SoundAttenuation.h>
+#include <Sound/SoundEffectSource.h>
 
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Captured"),  STAT_CkVoiceChat_FramesCaptured,  STATGROUP_CkVoiceChat);
 DECLARE_DWORD_COUNTER_STAT(TEXT("VoiceChat Frames Encoded"),   STAT_CkVoiceChat_FramesEncoded,   STATGROUP_CkVoiceChat);
@@ -50,12 +53,12 @@ namespace ck_voice_talker_processor
     // Test-readable loopback PCM is bounded so long-running talkers don't grow it forever.
     constexpr auto MaxLoopbackDecodedBytes = 48000 * 2 * 2;   // 2 s at 48 kHz mono 16-bit
 
-    // Send-side freshness bound (campaign amendment S2): a frame older than this has already
+    // Send-side freshness bound: a frame older than this has already
     // blown the mouth-to-ear budget - dropping it beats delivering it late, and it keeps the
     // outbound queue bounded when no channel/relay is reachable yet.
     const auto MaxOutboundFrameAge = FCk_Time{0.15};
 
-    // Headroom under the 256 B server->client unreliable split threshold (amendment S3), leaving
+    // Headroom under the 256 B server->client unreliable split threshold, leaving
     // room for the RPC envelope (talker handle + array overhead) around the packed bundle.
     constexpr auto MaxPackedBundleBytes = 240;
 
@@ -639,6 +642,8 @@ namespace ck
             }
         }
 
+        auto BestDeliveringChannel = FCk_Handle_VoiceChannel{};
+
         for (const auto& Packed : BundlesCopy)
         {
             const auto Unpacked = voice_chat::codec::Unpack_Bundle(Packed);
@@ -649,6 +654,23 @@ namespace ck
                 // is wire corruption, not a caller error.
                 INC_DWORD_STAT(STAT_CkVoiceChat_ReceiveDroppedMalformed);
                 continue;
+            }
+
+            // The synth renders with ONE channel's audio config; when bundles interleave across
+            // channels, the highest-Priority delivering channel wins (the single-playback
+            // dedupe). An unresolvable idx just means the control plane hasn't composed that
+            // channel here yet - the audio still plays, flat. A channel still LOADING its audio
+            // assets is skipped the same way: latching it would apply null config and nothing
+            // re-applies on load completion - the next drain after the load finishes selects it.
+            if (const auto DeliveringChannel = UCk_Utils_VoiceChannel_UE::TryGet_ChannelByIdx(
+                    InVoiceTalkerEntity, Unpacked->Get_Header().Get_ChannelIdx());
+                ck::IsValid(DeliveringChannel) &&
+                NOT DeliveringChannel.Has<FTag_VoiceChannel_PendingAssetLoad>() &&
+                (ck::Is_NOT_Valid(BestDeliveringChannel) ||
+                 UCk_Utils_VoiceChannel_UE::Get_Priority(DeliveringChannel) >
+                 UCk_Utils_VoiceChannel_UE::Get_Priority(BestDeliveringChannel)))
+            {
+                BestDeliveringChannel = DeliveringChannel;
             }
 
             if (NOT InCurrent._LoopbackDecoder.IsValid())
@@ -675,9 +697,34 @@ namespace ck
             }
         }
 
+        if (ck::IsValid(BestDeliveringChannel) && BestDeliveringChannel != InCurrent._PlaybackConfigChannel)
+        {
+            InCurrent._PlaybackConfigChannel = BestDeliveringChannel;
+
+            if (InCurrent._LoopbackSynth.IsValid())
+            { Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent); }
+        }
+
+        // Remote amplitude parity, release half: the header mirror only ever WRITES on arrival,
+        // so a sender whose VAD closed leaves the last (loud) value frozen - unlike the local
+        // side, whose capture keeps measuring ambient RMS. Once the stream has been idle past
+        // the sender's own stale-drop age, the spurt is over: release to zero. The arrival-clock
+        // guard keeps this off capture-loopback talkers (they never receive).
+        if (NOT BundlesCopy.IsEmpty())
+        {
+            InCurrent._LastBundleArrivalClock = InCurrent._ReceiveClock;
+        }
+        else if (InCurrent._LastBundleArrivalClock > FCk_Time{0.0} &&
+                 InCurrent._AmplitudeQ8 > 0 &&
+                 InCurrent._ReceiveClock - InCurrent._LastBundleArrivalClock > MaxOutboundFrameAge)
+        {
+            InCurrent._AmplitudeQ8 = 0;
+        }
+
         if (NOT BundlesCopy.IsEmpty())
         {
             TryCreate_PlaybackSynth(InVoiceTalkerEntity, InCurrent);
+            Evaluate_HybridRenderMode(InVoiceTalkerEntity, InCurrent);
         }
 
         Drain_Playout(InCurrent, InDeltaT);
@@ -775,10 +822,131 @@ namespace ck
             auto* Synth = NewObject<UCk_VoiceChatSynthComponent_UE>(World);
             Synth->bAutoActivate = false;
             Synth->RegisterComponentWithWorld(World);
-            Synth->Start();
+
+            if (auto* OwningActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(InVoiceTalkerEntity);
+                ck::IsValid(OwningActor))
+            {
+                if (auto* AttachTarget = OwningActor->GetRootComponent();
+                    ck::IsValid(AttachTarget))
+                {
+                    const auto& SocketName = InVoiceTalkerEntity.Get<FFragment_VoiceTalker_Params>().Get_PlaybackAttachSocketName();
+                    Synth->AttachToComponent(AttachTarget,
+                        FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+                }
+            }
 
             InCurrent._LoopbackSynth = TStrongObjectPtr{Synth};
+
+            Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent);
         }
+    }
+
+    auto
+        FProcessor_VoiceTalker_ReceivePlayback::
+        Apply_SynthChannelConfig(
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent)
+        -> void
+    {
+        auto* Synth = InCurrent._LoopbackSynth.Get();
+
+        if (ck::Is_NOT_Valid(Synth))
+        { return; }
+
+        auto Policy = ECk_VoiceChat_SpatializationPolicy::Global2D;
+        auto Attenuation = static_cast<USoundAttenuation*>(nullptr);
+        auto SourceEffectChain = static_cast<USoundEffectSourcePresetChain*>(nullptr);
+
+        if (const auto& ConfigChannel = InCurrent._PlaybackConfigChannel;
+            ck::IsValid(ConfigChannel))
+        {
+            Policy = UCk_Utils_VoiceChannel_UE::Get_SpatializationPolicy(ConfigChannel);
+            Attenuation = UCk_Utils_VoiceChannel_UE::Get_ResolvedAttenuation(ConfigChannel);
+            SourceEffectChain = UCk_Utils_VoiceChannel_UE::Get_ResolvedSourceEffectChain(ConfigChannel);
+        }
+
+        // HybridRadio near = plain proximity speech (spatialized, NO radio filter); far = flat
+        // radio through the channel's chain. Positional3D keeps its authored chain in 3D. An
+        // unattached synth has no world position, so it cannot RENDER near regardless of the
+        // computed state - it falls back to radio (flat + chain), never to bare flat.
+        const auto CanSpatialize = ck::IsValid(Synth->GetAttachParent());
+
+        const auto RenderNear =
+            Policy == ECk_VoiceChat_SpatializationPolicy::HybridRadio &&
+            InCurrent._HybridRenderNear.Get(false) &&
+            CanSpatialize;
+
+        const auto Spatialize =
+            (Policy == ECk_VoiceChat_SpatializationPolicy::Positional3D || RenderNear) &&
+            CanSpatialize;
+
+        const auto ApplyEffectChain =
+            Policy != ECk_VoiceChat_SpatializationPolicy::HybridRadio || NOT RenderNear;
+
+        Synth->Stop();
+        Synth->bAllowSpatialization = Spatialize;
+        Synth->AttenuationSettings = Spatialize ? Attenuation : nullptr;
+        Synth->SourceEffectChain = ApplyEffectChain ? SourceEffectChain : nullptr;
+        Synth->Start();
+    }
+
+    auto
+        FProcessor_VoiceTalker_ReceivePlayback::
+        Evaluate_HybridRenderMode(
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent)
+        -> void
+    {
+        const auto& ConfigChannel = InCurrent._PlaybackConfigChannel;
+
+        if (ck::Is_NOT_Valid(ConfigChannel) ||
+            UCk_Utils_VoiceChannel_UE::Get_SpatializationPolicy(ConfigChannel) !=
+                ECk_VoiceChat_SpatializationPolicy::HybridRadio)
+        {
+            InCurrent._HybridRenderNear.Reset();
+            return;
+        }
+
+        // The talker's position comes from its owning actor - the synth is attached to that
+        // actor's root anyway, and the near/far STATE is a distance decision, not a render one,
+        // so it must compute even where no audio device exists (headless: the state is what the
+        // specs pin; Apply's attach guard still gates the actual render independently).
+        auto* OwningActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(InVoiceTalkerEntity);
+
+        if (ck::Is_NOT_Valid(OwningActor))
+        { return; }
+
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVoiceTalkerEntity);
+
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        auto* LocalPlayerController = World->GetFirstPlayerController();
+
+        if (ck::Is_NOT_Valid(LocalPlayerController))
+        { return; }
+
+        auto ListenerLocation = FVector{};
+        auto ListenerFront = FVector{};
+        auto ListenerRight = FVector{};
+        LocalPlayerController->GetAudioListenerPosition(ListenerLocation, ListenerFront, ListenerRight);
+
+        const auto DistSq = FVector::DistSquared(ListenerLocation, OwningActor->GetActorLocation());
+        const auto RangeCm = UCk_Utils_VoiceChannel_UE::Get_AudibleRange(ConfigChannel);
+        const auto OuterCm = RangeCm + UCk_Utils_VoiceChat_Settings_UE::Get_ProximityHysteresisMarginCm();
+
+        // The Route asymmetry, mirrored: become near INSIDE the range, stay near until
+        // range + margin - a speaker hovering at the boundary never flips per drain.
+        const auto WasNear = InCurrent._HybridRenderNear.Get(false);
+        const auto ThresholdCm = WasNear ? OuterCm : RangeCm;
+        const auto IsNear = DistSq <= ThresholdCm * ThresholdCm;
+
+        if (InCurrent._HybridRenderNear.IsSet() && InCurrent._HybridRenderNear.GetValue() == IsNear)
+        { return; }
+
+        InCurrent._HybridRenderNear = IsNear;
+
+        Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -792,6 +960,45 @@ namespace ck
         -> void
     {
         voice_chat::Verbose(TEXT("Tearing down VoiceTalker [{}]"), InVoiceTalkerEntity);
+
+        // Churn-coupled hygiene for the world-scoped authority maps: sweep this talker's entries
+        // and drop any stale player keys met on the way. Both fragments exist only where the
+        // authority wrote them; every talker destroy prunes, so long-lived servers with churn
+        // never accumulate dead handles (a departed player's own key falls to the NEXT sweep
+        // after its PlayerState goes stale).
+        auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InVoiceTalkerEntity);
+
+        if (TransientEntity.Has<FFragment_VoiceChat_ServeHistory>())
+        {
+            auto& History = TransientEntity.Get<FFragment_VoiceChat_ServeHistory>().Get_LastServedFrame();
+
+            for (auto It = History.CreateIterator(); It; ++It)
+            {
+                if (NOT It->Key.IsValid())
+                {
+                    It.RemoveCurrent();
+                    continue;
+                }
+
+                It->Value.Remove(InVoiceTalkerEntity);
+            }
+        }
+
+        if (TransientEntity.Has<FFragment_VoiceChat_ListenerMuteMatrix>())
+        {
+            auto& MutedByPlayer = TransientEntity.Get<FFragment_VoiceChat_ListenerMuteMatrix>().Get_MutedByPlayer();
+
+            for (auto It = MutedByPlayer.CreateIterator(); It; ++It)
+            {
+                if (NOT It->Key.IsValid())
+                {
+                    It.RemoveCurrent();
+                    continue;
+                }
+
+                It->Value.Remove(InVoiceTalkerEntity);
+            }
+        }
 
         if (InCurrent._CaptureSource.IsValid())
         {

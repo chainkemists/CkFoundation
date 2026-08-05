@@ -12,6 +12,7 @@
 
 #include "CkVoiceChat/Codec/CkVoiceChat_Codec.h"
 #include "CkVoiceChat/Playback/CkVoiceChatSynth_Component.h"
+#include "CkVoiceChat/VoiceChannel/CkVoiceChannel_Fragment_Data.h"
 #include "CkVoiceChat/VoiceTalker/CkVoiceTalker_Fragment_Data.h"
 
 #include <Templates/SharedPointer.h>
@@ -111,6 +112,20 @@ namespace ck
         FCk_Time _LoopbackPopAccumulator;
         TStrongObjectPtr<UCk_VoiceChatSynthComponent_UE> _LoopbackSynth;
 
+        // The channel whose audio config (spatialization/attenuation/effect chain) the synth
+        // currently renders with: the highest-Priority channel delivering this talker's stream
+        // to this machine. Invalid for capture-loopback (flat playback, no channel context).
+        FCk_Handle_VoiceChannel _PlaybackConfigChannel;
+
+        // HybridRadio render mode on this machine: near = spatialized proximity speech, far =
+        // flat radio through the channel's effect chain. Unset until the first distance
+        // evaluation, and whenever the config channel is not HybridRadio.
+        TOptional<bool> _HybridRenderNear;
+
+        // Zero until this machine receives its first forwarded bundle - the guard that keeps the
+        // remote amplitude release from ever touching a capture-loopback talker's amplitude.
+        FCk_Time _LastBundleArrivalClock;
+
         FCk_Time _ReceiveClock;
 
     public:
@@ -119,6 +134,8 @@ namespace ck
         CK_PROPERTY_GET(_TransmitMode);
         CK_PROPERTY_GET(_InputGain);
         CK_PROPERTY_GET(_SelfMute);
+        CK_PROPERTY_GET(_PlaybackConfigChannel);
+        CK_PROPERTY_GET(_HybridRenderNear);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 # CkVoiceChat
 
-> **Status: CAMPAIGN IN PROGRESS (P0 skeleton, 2026-08-03).** Design of record:
+> **Status: P4 feature-complete (2026-08-04); ship (P5) gated on the human audition items in
+> the campaign's Gate_4.md `[EDITOR-VERIFY]` block.** Design of record:
 > [docs/specs/2026-08-02-CkVoiceChat-technical-review.md](../../docs/specs/2026-08-02-CkVoiceChat-technical-review.md);
 > binding CTO review: [docs/reviews/2026-08-02-CkVoiceChat-CTO-review.md](../../docs/reviews/2026-08-02-CkVoiceChat-CTO-review.md);
 > living state: [docs/campaigns/2026-08-CkVoiceChat/PROGRESS.md](../../docs/campaigns/2026-08-CkVoiceChat/PROGRESS.md).
-> This doc is a stub until P5 replaces it with the full module doc.
 
 **Purpose:** Proximity voice chat — microphone capture, Opus encoding, server-routed transport
 with server-side interest management, and spatialized playback, as three composable ECS features:
@@ -13,10 +13,22 @@ entity under a host, per-channel spatialization policy/attenuation/effect chain)
 (the local ears — per-talker client mute + receive volume). Zero coupling to OnlineSubsystem,
 sessions, or external services.
 
-**Depends on (as of P3):** `CkActorRelay`, `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`,
-`CkRecord`, `CkSettings`, `CkShapes`, `CkSpatialQuery` (the ADR-6 routing probes). UE:
-`AudioMixer`, `DeveloperSettings`, `GameplayTags`, `NetCore`, `Voice`. Still to be earned:
-`CkResourceLoader` (P4 asset resolution). Never `CkRelationship`.
+**Depends on (as of P4):** `CkActorRelay`, `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`,
+`CkRecord`, `CkResourceLoader` (per-channel audio asset resolution), `CkSettings`, `CkShapes`,
+`CkSpatialQuery` (the routing probes). UE: `AudioMixer`, `DeveloperSettings`, `GameplayTags`,
+`NetCore`, `Voice`. Never `CkRelationship`.
+
+**Playback config (P4).** A channel's authored `_Attenuation`/`_SourceEffectChain` soft refs
+resolve through CkResourceLoader at channel Setup on every machine (spatializing channels with
+none authored resolve the module default); `Get_ResolvedAttenuation`/`Get_ResolvedSourceEffectChain`
+expose them. Each receiving machine's synth adopts the config of the **highest-`_Priority`
+channel currently delivering that talker's stream** (one synth per talker per machine — the
+single-playback dedupe), attaches at the owning actor's `PlaybackAttachSocketName`, and applies
+spatialization per policy. **HybridRadio** renders per recipient: spatialized proximity speech
+inside the channel's `AudibleRange`, flat radio through the channel's effect chain outside it,
+with the same hysteresis asymmetry the routing probes use (near inside range, held to
+range + margin). Remote `Get_CurrentAmplitude` mirrors the wire header while bundles flow and
+releases to zero once the stream idles past the sender's stale-drop age.
 
 ---
 
@@ -54,6 +66,33 @@ byte budget → send). A bundle reaches a recipient only if EVERY row below pass
 Listen-server host: the host's capture injects straight into its own routing inbox (no
 self-RPC); the host receives other talkers like any client (a Client RPC on a host-owned relay
 executes locally).
+
+## Consumer recipes
+
+### Roger-beep / walkie-talkie bip (Ruling Q4: consumer recipe, NO CkCue dep in this module)
+
+The module fires `OnVoiceTalker_TransmitStarted` / `OnVoiceTalker_TransmitStopped` on every
+transmit edge; the beep is the consumer's cue, bound in game code (any of C++/BP/AS). AngelScript
+shape:
+
+```angelscript
+// In the consumer's EntityScript BeginPlay - Talker is the FCk_Handle_VoiceTalker:
+utils_voice_talker::BindTo_OnTransmitStarted(Talker, ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+    ECk_Signal_PostFireBehavior::DoNothing, FCk_Delegate_VoiceTalker(this, n"OnTransmitStarted"));
+utils_voice_talker::BindTo_OnTransmitStopped(Talker, ECk_Signal_BindingPolicy::IgnorePayloadInFlight,
+    ECk_Signal_PostFireBehavior::DoNothing, FCk_Delegate_VoiceTalker(this, n"OnTransmitStopped"));
+
+UFUNCTION()
+private void OnTransmitStarted(FCk_Handle_VoiceTalker InTalker)
+{
+    // The consumer's own cue tag + CkCue executor - e.g. a squelch-open bip:
+    // Request_ExecuteCue_Transient(n"Cue.Voice.RogerBeep.Open", ...) on the cue subsystem.
+}
+```
+
+`OnTransmitStopped` is the classic roger-beep edge (squelch-close "over"). For a per-CHANNEL beep
+(different radio nets sounding different), key the cue tag off the channel the talker transmits
+on. Audition: gym station (P4 `[EDITOR-VERIFY]`).
 
 ## Anti-patterns
 

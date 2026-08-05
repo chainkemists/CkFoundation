@@ -15,6 +15,7 @@ namespace ck
         FProcessor_VoiceChannel_Setup,
         FCk_Handle_VoiceChannel,
         ck::TReadOnly<FFragment_VoiceChannel_Params>,
+        ck::TReadWrite<FFragment_VoiceChannel_Current>,
         FTag_VoiceChannel_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -30,7 +31,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
-            const FFragment_VoiceChannel_Params& InParams)
+            const FFragment_VoiceChannel_Params& InParams,
+            FFragment_VoiceChannel_Current& InCurrent)
             -> void;
     };
 

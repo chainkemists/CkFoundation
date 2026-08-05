@@ -31,6 +31,7 @@ public class CkVoiceChat : CkModuleRules
             "CkLabel",
             "CkLog",
             "CkRecord",
+            "CkResourceLoader",
             "CkSettings",
             "CkShapes",
             "CkSpatialQuery",
