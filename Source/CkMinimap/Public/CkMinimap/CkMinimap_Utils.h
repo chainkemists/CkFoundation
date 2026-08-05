@@ -200,7 +200,7 @@ public:
     static FCk_Handle_Minimap
     Request_SetViewExtent(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
-        float InViewExtent,
+        const FCk_Request_Minimap_SetViewExtent& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -220,7 +220,7 @@ public:
     static FCk_Handle_Minimap
     Request_SetObserver(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
-        FCk_Handle InObserver,
+        const FCk_Request_Minimap_SetObserver& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -230,7 +230,7 @@ public:
     static FCk_Handle_Minimap
     Request_SetRotationMode(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
-        ECk_Minimap_RotationMode InRotationMode,
+        const FCk_Request_Minimap_SetRotationMode& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -240,7 +240,7 @@ public:
     static FCk_Handle_Minimap
     Request_SetFogOfWar(
         UPARAM(ref) FCk_Handle_Minimap& InMinimap,
-        FCk_Handle_FogOfWar InFogOfWar,
+        const FCk_Request_Minimap_SetFogOfWar& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
