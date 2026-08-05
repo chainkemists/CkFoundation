@@ -39,6 +39,14 @@ auto
 
     InHandle.Add<ck::FFragment_PoiDisplayDefinition_Params>(InParams);
 
+    // Current starts as a copy of the MUTABLE half of the authored seed. The icon is immutable post-Add and
+    // is served straight from Params, so it is not copied here.
+    InHandle.Add<ck::FFragment_PoiDisplayDefinition_Current>();
+
+    auto& Current = InHandle.Get<ck::FFragment_PoiDisplayDefinition_Current>();
+    Current._Tint     = InParams.Get_Tint();
+    Current._SizeHint = InParams.Get_SizeHint();
+
     // CkLabel is set-once: on an entity that already carries one this no-ops with a Display log. Only Create's
     // record indexing keys off it, and its child is freshly created, so a direct-attach collision is harmless.
     UCk_Utils_GameplayLabel_UE::Add(InHandle, InParams.Get_Consumer());
@@ -48,7 +56,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_PoiDisplayDefinition_UE, FCk_Handle_PoiDisplayDefinition, ck::FFragment_PoiDisplayDefinition_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_PoiDisplayDefinition_UE, FCk_Handle_PoiDisplayDefinition, ck::FFragment_PoiDisplayDefinition_Params, ck::FFragment_PoiDisplayDefinition_Current);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -156,11 +164,29 @@ auto
 
 auto
     UCk_Utils_PoiDisplayDefinition_UE::
-    Get_DisplayAsset(
+    Get_Icon(
         const FCk_Handle_PoiDisplayDefinition& InHandle)
-    -> TSoftObjectPtr<UCk_Poi_DisplayDefinition_PDA>
+    -> TSoftObjectPtr<UTexture2D>
 {
-    return InHandle.Get<ck::FFragment_PoiDisplayDefinition_Params>().Get_DisplayAsset();
+    return InHandle.Get<ck::FFragment_PoiDisplayDefinition_Params>().Get_Icon();
+}
+
+auto
+    UCk_Utils_PoiDisplayDefinition_UE::
+    Get_Tint(
+        const FCk_Handle_PoiDisplayDefinition& InHandle)
+    -> FLinearColor
+{
+    return InHandle.Get<ck::FFragment_PoiDisplayDefinition_Current>().Get_Tint();
+}
+
+auto
+    UCk_Utils_PoiDisplayDefinition_UE::
+    Get_SizeHint(
+        const FCk_Handle_PoiDisplayDefinition& InHandle)
+    -> FVector2D
+{
+    return InHandle.Get<ck::FFragment_PoiDisplayDefinition_Current>().Get_SizeHint();
 }
 
 auto
@@ -217,6 +243,72 @@ auto
     }
 
     return Result;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PoiDisplayDefinition_UE::
+    Request_SetTint(
+        FCk_Handle_PoiDisplayDefinition& InHandle,
+        const FCk_Request_PoiDisplayDefinition_SetTint& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_PoiDisplayDefinition
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_PoiDisplayDefinition_Requests, InHandle);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_PoiDisplayDefinition_Requests>()._Requests.Emplace(InRequest);
+
+    return InHandle;
+}
+
+auto
+    UCk_Utils_PoiDisplayDefinition_UE::
+    Request_SetSizeHint(
+        FCk_Handle_PoiDisplayDefinition& InHandle,
+        const FCk_Request_PoiDisplayDefinition_SetSizeHint& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_PoiDisplayDefinition
+{
+    CK_CALLSTACK_RECORD(ck::FFragment_PoiDisplayDefinition_Requests, InHandle);
+
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InHandle.AddOrGet<ck::FFragment_PoiDisplayDefinition_Requests>()._Requests.Emplace(InRequest);
+
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PoiDisplayDefinition_UE::
+    BindTo_OnDisplayChanged(
+        FCk_Handle_PoiDisplayDefinition& InHandle,
+        const FCk_Delegate_PoiDisplayDefinition_DisplayChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_PoiDisplayDefinition
+{
+    ck::UUtils_Signal_OnPoiDisplayDefinition_DisplayChanged::Bind(InHandle, InDelegate, InBindingPolicy);
+
+    return InHandle;
+}
+
+auto
+    UCk_Utils_PoiDisplayDefinition_UE::
+    UnbindFrom_OnDisplayChanged(
+        FCk_Handle_PoiDisplayDefinition& InHandle,
+        const FCk_Delegate_PoiDisplayDefinition_DisplayChanged& InDelegate)
+    -> FCk_Handle_PoiDisplayDefinition
+{
+    ck::UUtils_Signal_OnPoiDisplayDefinition_DisplayChanged::Unbind(InHandle, InDelegate);
+
+    return InHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

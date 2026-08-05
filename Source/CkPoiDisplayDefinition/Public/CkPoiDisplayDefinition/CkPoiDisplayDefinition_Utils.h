@@ -3,6 +3,9 @@
 #include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+#include "CkEcs/Signal/CkSignal_Fragment_Data.h"
+
 #include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkVisibleRange/CkVisibleRange_Fragment_Data.h"
@@ -107,11 +110,29 @@ public:
     Get_OffscreenPolicy(
         const FCk_Handle_PoiDisplayDefinition& InHandle);
 
+    // Authored on Params and immutable for the definition's lifetime — there is no Request to change it.
+    // Still a soft reference: the caller decides when (and whether) to load the texture.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|PoiDisplayDefinition",
-              DisplayName="[Ck][PoiDisplayDefinition] Get Display Asset")
-    static TSoftObjectPtr<UCk_Poi_DisplayDefinition_PDA>
-    Get_DisplayAsset(
+              DisplayName="[Ck][PoiDisplayDefinition] Get Icon")
+    static TSoftObjectPtr<UTexture2D>
+    Get_Icon(
+        const FCk_Handle_PoiDisplayDefinition& InHandle);
+
+    // The LIVE display state (Current), not the authored Params seed — this is what a projector or marker
+    // widget draws.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|PoiDisplayDefinition",
+              DisplayName="[Ck][PoiDisplayDefinition] Get Tint")
+    static FLinearColor
+    Get_Tint(
+        const FCk_Handle_PoiDisplayDefinition& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|PoiDisplayDefinition",
+              DisplayName="[Ck][PoiDisplayDefinition] Get Size Hint")
+    static FVector2D
+    Get_SizeHint(
         const FCk_Handle_PoiDisplayDefinition& InHandle);
 
     UFUNCTION(BlueprintPure,
@@ -141,6 +162,52 @@ public:
     TryGet_PoiDisplayDefinition_ByConsumer(
         const FCk_Handle_Poi& InPoi,
         FGameplayTag InConsumer);
+
+public:
+    // Per-instance display overrides. Both are deferred (drained by
+    // FProcessor_PoiDisplayDefinition_HandleRequests) and collapse into ONE OnDisplayChanged broadcast per
+    // frame; re-asserting a value already in Current broadcasts nothing.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|PoiDisplayDefinition",
+              DisplayName="[Ck][PoiDisplayDefinition] Request Set Tint",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_PoiDisplayDefinition
+    Request_SetTint(
+        UPARAM(ref) FCk_Handle_PoiDisplayDefinition& InHandle,
+        const FCk_Request_PoiDisplayDefinition_SetTint& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|PoiDisplayDefinition",
+              DisplayName="[Ck][PoiDisplayDefinition] Request Set Size Hint",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_PoiDisplayDefinition
+    Request_SetSizeHint(
+        UPARAM(ref) FCk_Handle_PoiDisplayDefinition& InHandle,
+        const FCk_Request_PoiDisplayDefinition_SetSizeHint& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+public:
+    // Default binding policy is FireIfPayloadInFlight: a marker widget that binds in the same frame a
+    // display change was requested must still get it — unlike the projector membership signals, the payload
+    // here is a one-shot "re-read Current" nudge that is cheap to replay.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|PoiDisplayDefinition",
+              DisplayName = "[Ck][PoiDisplayDefinition] Bind To OnDisplayChanged")
+    static FCk_Handle_PoiDisplayDefinition
+    BindTo_OnDisplayChanged(
+        UPARAM(ref) FCk_Handle_PoiDisplayDefinition& InHandle,
+        const FCk_Delegate_PoiDisplayDefinition_DisplayChanged& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|PoiDisplayDefinition",
+              DisplayName = "[Ck][PoiDisplayDefinition] Unbind From OnDisplayChanged")
+    static FCk_Handle_PoiDisplayDefinition
+    UnbindFrom_OnDisplayChanged(
+        UPARAM(ref) FCk_Handle_PoiDisplayDefinition& InHandle,
+        const FCk_Delegate_PoiDisplayDefinition_DisplayChanged& InDelegate);
 
 private:
     // Cascade handler bound once per owner to OnVisibleRange_HiddenChanged (signature = the signal payload). Walks the
