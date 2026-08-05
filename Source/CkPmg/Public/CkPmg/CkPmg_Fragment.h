@@ -94,6 +94,9 @@ namespace ck
 
     CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_LinesNeedBaking);
 
+    // Shapes with a negative duration never expire and must stay out of the per-frame duration view.
+    CK_DEFINE_ECS_TAG(FTag_Pmg_DebugShape_PersistentDuration);
+
     CK_DEFINE_ECS_TAG(FTag_Pmg_EditorSelectionHandle);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -239,6 +242,52 @@ namespace ck
 
         CK_DEFINE_CONSTRUCTORS(FFragment_Pmg_DebugShape_Current, _MeshComponent, _SpawnTime);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    namespace pmg_debug_shape
+    {
+        // Debug-shape color is the semantic outline color. Filled mesh sections deliberately
+        // use the same RGB at a low, fixed alpha so they remain readable without obscuring
+        // the scene; baked wireframes retain their own fully opaque MID.
+        inline constexpr float FillOpacity = 0.1f;
+
+        inline auto
+            Get_FillColor(
+                FLinearColor InColor) -> FLinearColor
+        {
+            InColor.A = FillOpacity;
+            return InColor;
+        }
+
+        inline auto
+            AddCommon(
+                FCk_Handle& InHandle,
+                const FFragment_Pmg_DebugShape_Common& InCommon) -> void
+        {
+            InHandle.Add<FFragment_Pmg_DebugShape_Common>(InCommon);
+
+            if (InCommon.Get_Duration().Get_Seconds() < 0.0f)
+            {
+                InHandle.AddOrGet<FTag_Pmg_DebugShape_PersistentDuration>();
+            }
+        }
+
+        inline auto
+            UpdateDurationMembership(
+                FCk_Handle& InHandle,
+                const FCk_Time& InDuration) -> void
+        {
+            if (InDuration.Get_Seconds() < 0.0f)
+            {
+                InHandle.AddOrGet<FTag_Pmg_DebugShape_PersistentDuration>();
+            }
+            else
+            {
+                InHandle.Try_Remove<FTag_Pmg_DebugShape_PersistentDuration>();
+            }
+        }
+    }
 
     // --------------------------------------------------------------------------------------------------------------------
 
