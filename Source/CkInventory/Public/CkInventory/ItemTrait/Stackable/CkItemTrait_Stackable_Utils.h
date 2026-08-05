@@ -196,6 +196,29 @@ public:
         const FCk_Handle_Item& InSourceItem,
         const FCk_Handle_Item& InTargetItem);
 
+    /** Consumes InCount units from InItem's stack in place, WITHOUT minting a new entry.
+     *
+     *  This is the destroy-style counterpart to Request_SplitStack (sell, eat, craft input).
+     *  A split cannot serve that purpose: it must allocate a NEW entry for the split-off
+     *  units, so it fails with Failed_NoSpaceForNewItem in any bounded inventory with no free
+     *  slot — including the capacity-1 containers commonly used for hotbar slots, where a
+     *  partial consume is therefore impossible via split.
+     *
+     *  Deliberately refuses to consume the WHOLE stack: emptying it must remove the entry
+     *  through the owning inventory's Request_RemoveItem, and doing that here — with no
+     *  inventory context — would leave the inventory's records pointing at a 0-count item.
+     *  Callers consuming everything should call Request_RemoveItem instead.
+     *
+     *  Returns false and changes nothing when the item is invalid, is not stackable, or when
+     *  InCount is outside [1, StackCount - 1]. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Item|Stackable",
+              DisplayName = "[Ck][Item] Request Consume From Stack")
+    static bool
+    Request_ConsumeFromStack(
+        UPARAM(ref) FCk_Handle_Item& InItem,
+        int32 InCount);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Item|Stackable",
               DisplayName = "[Ck][Item] Bind To OnStackCountChanged")
