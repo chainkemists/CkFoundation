@@ -19,6 +19,19 @@
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
 
+#if WITH_EDITOR
+namespace ck_iskm_batched_crowd
+{
+    static auto
+        IsNonPieEditorWorld(const UWorld* InWorld)
+        -> bool
+    {
+        return ck::IsValid(InWorld, ck::IsValid_Policy_NullptrOnly{}) &&
+            (InWorld->WorldType == EWorldType::Editor || InWorld->WorldType == EWorldType::EditorPreview);
+    }
+}
+#endif
+
 ACk_Iskm_BatchedCrowd_Actor::ACk_Iskm_BatchedCrowd_Actor()
 {
     // FProcessor_IskmCrowd_Advance drives AdvanceAnimation on the ECS clock instead of AActor::Tick.
@@ -335,6 +348,14 @@ auto
         RebuildTile(Pair.Key);
     }
     _DirtyTiles.Reset();
+
+#if WITH_EDITOR
+    // FProcessor_IskmCrowd_Advance is deliberately absent from non-PIE editor graphs. Members start at
+    // baked frame zero (the reference pose), so resolve their authored sequence/time offset once after every
+    // member has been added and the tiles exist. This is a one-shot render-data push, not an editor tick.
+    if (ck_iskm_batched_crowd::IsNonPieEditorWorld(GetWorld()))
+    { AdvanceAnimation(0.0f); }
+#endif
 }
 
 auto
@@ -565,6 +586,13 @@ auto
     { M.Inst.Time = 0.0f; }
     if (M.Visible)
     { _DirtyTiles.Add(M.Tile); }
+
+#if WITH_EDITOR
+    // The editor graph intentionally has no crowd-advance processor. Flush this explicit authored change
+    // immediately so changing a preview member's sequence never leaves its renderer at a stale pose.
+    if (ck_iskm_batched_crowd::IsNonPieEditorWorld(GetWorld()))
+    { AdvanceAnimation(0.0f); }
+#endif
 }
 
 auto
