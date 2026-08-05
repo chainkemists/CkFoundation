@@ -25,7 +25,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Talker",
               DisplayName="[Ck][VoiceTalker] Add Feature")
     static FCk_Handle_VoiceTalker
     Add(
@@ -34,7 +34,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Talker",
               DisplayName="[Ck][VoiceTalker] Has Feature")
     static bool
     Has(
@@ -42,7 +42,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|VoiceChat",
+        Category = "Ck|Utils|VoiceChat|Talker",
         DisplayName="[Ck][VoiceTalker] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_VoiceTalker
@@ -51,7 +51,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|VoiceChat",
+        Category = "Ck|Utils|VoiceChat|Talker",
         DisplayName="[Ck][VoiceTalker] Handle -> VoiceTalker Handle",
         meta = (CompactNodeTitle = "<AsVoiceTalker>", BlueprintAutocast))
     static FCk_Handle_VoiceTalker
@@ -60,21 +60,21 @@ private:
 
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Get Invalid VoiceTalker Handle",
-        Category = "Ck|Utils|VoiceChat",
+        Category = "Ck|Utils|VoiceChat|Talker",
         meta = (CompactNodeTitle = "INVALID_VoiceTalkerHandle", Keywords = "make"))
     static FCk_Handle_VoiceTalker
     Get_InvalidHandle() { return {}; };
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Talker",
               DisplayName="[Ck][VoiceTalker] Get Transmit Mode")
     static ECk_VoiceChat_TransmitMode
     Get_TransmitMode(
         const FCk_Handle_VoiceTalker& InVoiceTalker);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Talker",
               DisplayName="[Ck][VoiceTalker] Get Input Gain")
     static float
     Get_InputGain(
