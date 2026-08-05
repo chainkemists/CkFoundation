@@ -21,7 +21,9 @@ trigger: the first NON-map gameplay consumer of exploration state → extract `C
   connected to the owner's RecordOfMinimaps. An owner hosts MULTIPLE minimaps this way (HUD minimap +
   world map = two children; children carry no label — no ByTag lookups, enumerate via `ForEach_Minimap`).
   The observer defaults to `InLifetimeOwner` (unlike the compass, which defaults to the created child).
-- `FCk_Fragment_Minimap_ParamsData` — `_ViewExtent` (essential; world cm center→edge = the zoom),
+- `FCk_Fragment_Minimap_ParamsData` — `_ViewExtent` (world cm center→edge = the zoom; **ObserverCentric
+  only** — FixedBounds projects through `Get_BoundsToFrame` and never reads it, so it is neither
+  required nor ensured there. `_FixedBounds` is what FixedBounds actually requires),
   `_ProjectionMode` (`ObserverCentric` minimap / `FixedBounds` world map — IMMUTABLE post-Add, destroy +
   re-Add to change; `_FixedBounds` must be valid for FixedBounds), `_RotationMode`
   (`NorthLocked`/`RotateWithObserver`; FixedBounds is always north-up), `_FrameShape` (Rectangle/Circle —
@@ -32,6 +34,8 @@ trigger: the first NON-map gameplay consumer of exploration state → extract `C
 - Requests: `Request_SetViewExtent` (zoom; > 0 or rejected), `Request_SetCategoryFilter`,
   `Request_SetObserver`, `Request_SetRotationMode`, `Request_SetFogOfWar` (invalid handle = no fog culling).
   Every one of these forces an immediate reprojection — changes never wait out the throttle.
+  Every one also takes its REQUEST STRUCT (`FCk_Request_Minimap_SetViewExtent{5000.0f}`), never a loose
+  value — see the `Request_*` rule in [Source/CLAUDE.md](../CLAUDE.md).
 - Pure math: `ck::minimap::` in `CkMinimap_Math.h`, unit-tested in `Tests/CkMinimap_Math.spec.cpp`
   (`Ck.CkMinimap.Math.*`).
 
