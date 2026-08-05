@@ -450,6 +450,41 @@ FCk_PersistenceHandlerRegistry::Register_NetAndSave_SharedApply<FCk_RepData_Team
   values only from `Promise_OnReplicationComplete`. Full contract: [CkEcs/Claude.md](CkEcs/Claude.md); the
   save/load authoring recipe: [CkSnapshot/Claude.md](CkSnapshot/Claude.md).
 
+### `Request_*` takes the request STRUCT — never loose parameters
+
+A `Request_*` util's payload parameter is **always** the request struct itself, even when that
+struct currently holds a single field:
+
+```cpp
+// CORRECT — the struct is the payload
+static FCk_Handle_PoiDisplayDefinition
+Request_SetTint(
+    UPARAM(ref) FCk_Handle_PoiDisplayDefinition& InHandle,
+    const FCk_Request_PoiDisplayDefinition_SetTint& InRequest,
+    const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+// WRONG — loose parameter, even though it is "just a colour" today
+Request_SetTint(InHandle, FLinearColor InTint, const FCk_Delegate_Request_OnCompleted&);
+```
+
+**Why:** the struct is the extension point. Adding a second field later is then a
+non-breaking change — every existing C++ call site, Blueprint node and AngelScript caller
+keeps compiling, because the new field arrives with its default. Adding a second *parameter*
+breaks every call site in all three languages at once, and in Blueprint it silently orphans
+the pins on already-authored graphs. The single-field case is exactly when this is easiest to
+get wrong and exactly when it costs nothing to get right.
+
+Corollaries:
+- Build the struct at the call site (`FCk_Request_X{Value}`) and pass it. Do NOT add a
+  "convenience" scalar overload beside the struct one — the convenience overload is what call
+  sites reach for, which defeats the purpose.
+- The handle and the completion delegate are NOT part of this rule: they stay their own
+  parameters (`UPARAM(ref)` handle first, `InDelegate` last).
+- If you find a util still taking a scalar, it pre-dates this rule — do not copy it, and prefer
+  converting it when you are already touching its signature. `CkMinimap` and
+  `CkPoiDisplayDefinition` are fully converted and are the reference shape;
+  `UCk_Utils_Compass_UE::Request_SetObserver` is a known remaining holdout.
+
 ### Variant dispatch — `ck::Visitor` takes ONE generic lambda
 
 Defined in `CkCore/TypeTraits/CkTypeTraits.h`; canonical use `CkTimer_Processor.cpp:51`:
