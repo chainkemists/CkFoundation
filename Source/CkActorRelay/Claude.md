@@ -51,7 +51,30 @@ Audio/VFX modules acquire a relay channel on the owning actor; the cue system br
 
 ## Anti-patterns
 
-Don't use relay channels for high-frequency data (e.g., per-frame positions) — relay is for events. Use fragment state for continuous data.
+**Broadcast/Bind event channels are for events only.** Don't use the Broadcast/Bind channel
+mechanism for high-frequency data (e.g., per-frame positions) — relay events are for events. Use
+fragment state for continuous data.
+
+**Relay ACTORS as per-player RPC endpoints are a separate mechanism**, and paced, budgeted data
+streams over them ARE permitted doctrine (adjudicated 2026-08-02,
+`docs/reviews/2026-08-02-CkVoiceChat-CTO-review.md` § ADR-4). Replicated fragment state is the
+wrong prescription for a lossy time-sensitive stream — it rides reliable, delta-serialized
+container replication, and retransmitting stale data (e.g. audio) is strictly worse than dropping
+it. A stream over relay actors is permitted **iff ALL of**:
+
+- (a) the reliability class is chosen from payload semantics — Reliable for stateful must-apply
+  payloads (CkRenderTarget's pixels: reliable ⇒ ordered ⇒ no resend/reorder logic), Unreliable for
+  disposable time-sensitive payloads that tolerate silent loss end-to-end (voice: Opus PLC);
+- (b) RPC bodies enqueue-only — never apply inline;
+- (c) sender identity is stamped server-side from the channel owner — clients are not trusted to
+  self-identify;
+- (d) a per-connection byte budget is drained by a pacing processor;
+- (e) the payload is bounded well under the bunch ceiling (needing chunking ⇒ needing reliability
+  ⇒ re-justify the reliability class);
+- (f) stats counters exist from day one;
+- (g) the drop policy is explicit and stated.
+
+Adopters: `CkRenderTarget` (reliable pixel streams), `CkVoiceChat` (unreliable voice streams).
 
 ---
 
