@@ -1,6 +1,8 @@
 #include "CkVoiceTalker_Utils.h"
 
+#include "CkVoiceChat/Capture/CkVoiceChat_CaptureSource.h"
 #include "CkVoiceChat/CkVoiceChat_Log.h"
+#include "CkVoiceChat/Codec/CkVoiceChat_Codec.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,11 +31,120 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VoiceTalker_UE, FCk_Handle_Voi
 
 auto
     UCk_Utils_VoiceTalker_UE::
+    Request_StartTransmit(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Request_VoiceTalker_StartTransmit& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    const auto Request = InRequest;
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InVoiceTalker.AddOrGet<ck::FFragment_VoiceTalker_Requests>()._Requests.Emplace(Request);
+
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Request_StopTransmit(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    const auto Request = FCk_Request_VoiceTalker_StopTransmit{};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InVoiceTalker.AddOrGet<ck::FFragment_VoiceTalker_Requests>()._Requests.Emplace(Request);
+
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Request_SetTransmitMode(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_VoiceChat_TransmitMode InTransmitMode,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    const auto Request = FCk_Request_VoiceTalker_SetTransmitMode{InTransmitMode};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InVoiceTalker.AddOrGet<ck::FFragment_VoiceTalker_Requests>()._Requests.Emplace(Request);
+
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Request_SetInputGain(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        float InInputGain,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    const auto Request = FCk_Request_VoiceTalker_SetInputGain{InInputGain};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InVoiceTalker.AddOrGet<ck::FFragment_VoiceTalker_Requests>()._Requests.Emplace(Request);
+
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Request_SetSelfMute(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_EnableDisable InSelfMute,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    const auto Request = FCk_Request_VoiceTalker_SetSelfMute{InSelfMute};
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InVoiceTalker.AddOrGet<ck::FFragment_VoiceTalker_Requests>()._Requests.Emplace(Request);
+
+    return InVoiceTalker;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Get_IsTransmitting(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> bool
+{
+    return InVoiceTalker.Has<ck::FTag_VoiceTalker_IsTransmitting>();
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Get_IsSpeaking(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> bool
+{
+    return InVoiceTalker.Has<ck::FTag_VoiceTalker_IsSpeaking>();
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
     Get_TransmitMode(
         const FCk_Handle_VoiceTalker& InVoiceTalker)
     -> ECk_VoiceChat_TransmitMode
 {
-    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Params>().Get_TransmitMode();
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_TransmitMode();
 }
 
 auto
@@ -42,7 +153,145 @@ auto
         const FCk_Handle_VoiceTalker& InVoiceTalker)
     -> float
 {
-    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Params>().Get_InputGain();
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_InputGain();
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Get_CurrentAmplitude(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> float
+{
+    return ck::voice_chat::codec::Dequantize_Amplitude(
+        InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_AmplitudeQ8());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    BindTo_OnTransmitStarted(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceTalker& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnVoiceTalker_TransmitStarted, InVoiceTalker, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    UnbindFrom_OnTransmitStarted(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_VoiceTalker& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnVoiceTalker_TransmitStarted, InVoiceTalker, InDelegate);
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    BindTo_OnTransmitStopped(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceTalker& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnVoiceTalker_TransmitStopped, InVoiceTalker, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    UnbindFrom_OnTransmitStopped(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_VoiceTalker& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnVoiceTalker_TransmitStopped, InVoiceTalker, InDelegate);
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    BindTo_OnSpeakingStateChanged(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceTalker_SpeakingStateChanged& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnVoiceTalker_SpeakingStateChanged, InVoiceTalker, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    UnbindFrom_OnSpeakingStateChanged(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_VoiceTalker_SpeakingStateChanged& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnVoiceTalker_SpeakingStateChanged, InVoiceTalker, InDelegate);
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    BindTo_OnFramesCaptured(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_VoiceTalker_FramesCaptured& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnVoiceTalker_FramesCaptured, InVoiceTalker, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InVoiceTalker;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    UnbindFrom_OnFramesCaptured(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const FCk_Delegate_VoiceTalker_FramesCaptured& InDelegate)
+    -> FCk_Handle_VoiceTalker
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnVoiceTalker_FramesCaptured, InVoiceTalker, InDelegate);
+    return InVoiceTalker;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_InjectCaptureSource(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const TSharedPtr<ICk_VoiceChat_CaptureSource>& InCaptureSource)
+    -> void
+{
+    InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>()._CaptureSource = InCaptureSource;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_Get_LoopbackDecodedPcm(
+        const FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> const TArray<uint8>&
+{
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>()._LoopbackDecodedPcm;
+}
+
+auto
+    UCk_Utils_VoiceTalker_UE::
+    Debug_Reset_LoopbackDecodedPcm(
+        FCk_Handle_VoiceTalker& InVoiceTalker)
+    -> void
+{
+    InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>()._LoopbackDecodedPcm.Reset();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
