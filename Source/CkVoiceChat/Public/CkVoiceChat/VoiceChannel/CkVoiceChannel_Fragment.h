@@ -8,6 +8,8 @@
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
+#include "CkResourceLoader/CkResourceLoader_Fragment_Data.h"
+
 #include "CkVoiceChat/VoiceChannel/CkVoiceChannel_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -20,6 +22,7 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_VoiceChannel_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_VoiceChannel_NeedsIdx);
+    CK_DEFINE_ECS_TAG(FTag_VoiceChannel_PendingAssetLoad);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -33,6 +36,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_VoiceChannel_Current);
 
     public:
+        friend class FProcessor_VoiceChannel_Setup;
         friend class FProcessor_VoiceChannel_AssignIdx;
         friend class FProcessor_VoiceChannel_HandleRequests;
         friend class UCk_Utils_VoiceChannel_UE;
@@ -46,10 +50,19 @@ namespace ck
         TMap<FCk_Handle, FCk_VoiceChat_MemberFlags> _Members;
         TSet<FCk_Handle> _ServerMuted;
 
+        // The batch's streamable handle is the GC root for the resolved assets below; it releases
+        // via the fragment's destruction on entity teardown (all machines - EndPlay is
+        // authority-only, playback resolution is not).
+        FCk_ResourceLoader_RootedAssetBatch _LoadedAudioAssets;
+        TWeakObjectPtr<USoundAttenuation> _ResolvedAttenuation;
+        TWeakObjectPtr<USoundEffectSourcePresetChain> _ResolvedSourceEffectChain;
+
     public:
         CK_PROPERTY_GET(_ChannelIdx);
         CK_PROPERTY_GET(_Members);
         CK_PROPERTY_GET(_ServerMuted);
+        CK_PROPERTY_GET(_ResolvedAttenuation);
+        CK_PROPERTY_GET(_ResolvedSourceEffectChain);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

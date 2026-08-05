@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 // Render-thread consumer: drains ready-to-play float PCM from the SPSC queue and zero-fills on
-// underrun. Decode/jitter/PLC policy all run on the GAME thread (measured cheap at P1 — 27 us
+// underrun. Decode/jitter/PLC policy all run on the GAME thread (measured: 27 us
 // per 20 ms frame), so no decoder state, no UObjects, no locks and no new allocations live here.
 // The generator holds the queue by shared ref, so it survives component Stop->Start untorn.
 class CKVOICECHAT_API FCk_VoiceChat_SoundGenerator : public ISoundGenerator
@@ -37,9 +37,8 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Spatialized voice playback endpoint (ADR-3): one per audible talker on each listening machine.
-// Fixed 48 kHz mono - the audio mixer's SRC owns device-rate conversion (review N6); never
-// resample here. Game thread pushes decoded PCM via Enqueue_DecodedPcm.
+// Spatialized voice playback endpoint: one per audible talker on each listening machine.
+// Fixed 48 kHz mono - the audio mixer's SRC owns device-rate conversion; never resample here. Game thread pushes decoded PCM via Enqueue_DecodedPcm.
 UCLASS(NotBlueprintable)
 class CKVOICECHAT_API UCk_VoiceChatSynthComponent_UE : public USynthComponent
 {
