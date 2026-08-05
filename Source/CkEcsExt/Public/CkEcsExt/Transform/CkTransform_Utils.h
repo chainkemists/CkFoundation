@@ -26,6 +26,10 @@ namespace ck
     class FProcessor_Transform_SyncToActor;
 }
 
+#if WITH_EDITOR
+DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Transform_OnAdded, const FCk_Handle_Transform&);
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Transform"))
@@ -43,6 +47,13 @@ public:
     friend class ck::FProcessor_Transform_SyncFromMeshSocket_SceneNode;
     friend class ck::FProcessor_Transform_HandleRequests;
     friend class ck::FProcessor_Transform_SyncToActor;
+
+#if WITH_EDITOR
+public:
+    // Creation-time editor signal used by retained visualizers. Consumers coalesce the callback and
+    // reconcile after composition completes; no per-frame polling is required.
+    static auto Get_OnAdded() -> FCk_Transform_OnAdded&;
+#endif
 
 public:
     UFUNCTION(BlueprintCallable,

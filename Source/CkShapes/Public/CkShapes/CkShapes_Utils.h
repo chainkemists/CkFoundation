@@ -9,6 +9,12 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if WITH_EDITOR
+DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Shape_OnDimensionsChanged, const FCk_Handle&);
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Shape"))
 class CKSHAPES_API UCk_Utils_Shapes_UE : public UBlueprintFunctionLibrary
 {
@@ -17,6 +23,14 @@ class CKSHAPES_API UCk_Utils_Shapes_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_Utils_Shapes_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Shape);
+
+#if WITH_EDITOR
+public:
+    // Editor-only invalidation signal for retained visualizers. Shape request processors emit this
+    // only when dimensions actually change, so consumers do not need to poll every shape each frame.
+    static auto Get_OnDimensionsChanged() -> FCk_Shape_OnDimensionsChanged&;
+    static auto Notify_DimensionsChanged(const FCk_Handle& InHandle) -> void;
+#endif
 
 public:
     UFUNCTION(BlueprintPure,

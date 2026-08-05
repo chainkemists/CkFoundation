@@ -5,15 +5,29 @@
 #include "CkCore/Debug/CkDebugDraw_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
+
+#include <GameFramework/Actor.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_Preview_Box_EditorTime);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_Preview_Sphere_EditorTime);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_Preview_Capsule_EditorTime);
-CK_REGISTER_PROCESSOR(ck::FProcessor_Probe_Preview_Cylinder_EditorTime);
+// Retained by CkEntityVisualizer. Deliberately not registered: Duration=0 debug draw required
+// four full probe scans and redraws every editor frame, even when no probe changed.
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_CYCLE_STAT(
+    TEXT("Probe Preview::Selection Filter"),
+    STAT_CkProbeEditorPreview_SelectionFilter,
+    STATGROUP_CkProcessors_Details);
+DECLARE_CYCLE_STAT(
+    TEXT("Probe Preview::Draw"),
+    STAT_CkProbeEditorPreview_Draw,
+    STATGROUP_CkProcessors_Details);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -23,6 +37,17 @@ namespace ck
     {
         constexpr auto Duration = 0.0f;
         constexpr auto Segments = 12;
+
+        auto
+        ShouldDrawPreview(
+            const FCk_Handle& InHandle) -> bool
+        {
+            if (UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllProbes())
+            { return true; }
+
+            const auto* SelectionOwner = UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwner(InHandle);
+            return ck::Is_NOT_Valid(SelectionOwner) ? true : SelectionOwner->IsSelected();
+        }
 
         static auto
         DrawProbeShape(
@@ -113,6 +138,17 @@ namespace ck
             const FFragment_Transform& InTransform)
         -> void
     {
+        const auto ShouldDrawPreview = [&InHandle]()
+        {
+            SCOPE_CYCLE_COUNTER(STAT_CkProbeEditorPreview_SelectionFilter);
+            return probe_editor_preview::ShouldDrawPreview(InHandle);
+        }();
+
+        if (NOT ShouldDrawPreview)
+        { return; }
+
+        SCOPE_CYCLE_COUNTER(STAT_CkProbeEditorPreview_Draw);
+
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (ck::Is_NOT_Valid(World))
         { return; }

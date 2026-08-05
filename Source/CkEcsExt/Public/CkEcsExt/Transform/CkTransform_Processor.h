@@ -83,6 +83,11 @@ namespace ck
         using RunAfter = TDepList<FProcessor_Transform_InterpolateToGoal_Rotation>;
         using MarkedDirtyBy = FFragment_Transform_Requests;
 
+        // The custom DoTick's normal drain, cancellation drain, and pool clear are all meaningful only
+        // while at least one live request owner exists. This explicit contract lets the scheduler omit
+        // the processor entirely from an idle main pass.
+        using MainPassRequiredFragments = entt::type_list<FFragment_Transform_Requests>;
+
     public:
         using TProcessor::TProcessor;
 

@@ -80,8 +80,10 @@ enum class ECk_ProcessorLoadPolicy : uint8
 // --------------------------------------------------------------------------------------------------------------------
 // Whether the scheduler's main pass may skip a processor whose view is PROVABLY empty (some required include type
 // has zero LIVE entities), bypassing the whole dispatch. Eligibility is automatic and conservative: only processors
-// whose DoTick IS the template-generated view iteration qualify — a custom DoTick may do work not gated on the view,
-// which a skip would silently drop. Tracking and the AlwaysTick escape hatch: CkEcs/CLAUDE.md § Empty-view skip.
+// whose DoTick IS the template-generated view iteration qualify automatically — a custom DoTick may do work not gated
+// on that view, which a skip would silently drop. A custom processor may opt in by declaring
+// `using MainPassRequiredFragments = entt::type_list<...>` when ALL of its main-pass work requires at least one live
+// entity with every listed fragment. Tracking and the AlwaysTick escape hatch: CkEcs/CLAUDE.md § Empty-view skip.
 UENUM()
 enum class ECk_ProcessorEmptyViewPolicy : uint8
 {

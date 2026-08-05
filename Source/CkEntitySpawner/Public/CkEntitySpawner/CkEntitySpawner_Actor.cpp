@@ -295,7 +295,10 @@ auto
     // Editor-world visuals live on per-owner proxy actors; owning their selection makes a viewport
     // click on the preview mesh act on this spawner.
     if (ck::IsValid(_EditorEntityHandle))
-    { UCk_Utils_EditorSelectionOwner_UE::Request_SetupEntityWithEditorSelectionOwner(_EditorEntityHandle, this); }
+    {
+        UCk_Utils_EditorSelectionOwner_UE::Request_SetupEntityWithEditorSelectionOwner(_EditorEntityHandle, this);
+        UCk_Utils_EditorSelectionOwner_UE::PushOwnerSelectionToProxies(this);
+    }
 }
 
 auto

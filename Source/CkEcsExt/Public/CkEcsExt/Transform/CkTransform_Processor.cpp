@@ -18,6 +18,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_STATS_GROUP(TEXT("CkTransform"), STATGROUP_CkTransform, STATCAT_Advanced);
+DECLARE_CYCLE_STAT(TEXT("Transform HandleRequests::Drain"), STAT_CkTransform_HandleRequests_Drain, STATGROUP_CkTransform);
+DECLARE_CYCLE_STAT(TEXT("Transform HandleRequests::CancelUndrained"), STAT_CkTransform_HandleRequests_CancelUndrained, STATGROUP_CkTransform);
+DECLARE_CYCLE_STAT(TEXT("Transform HandleRequests::Clear"), STAT_CkTransform_HandleRequests_Clear, STATGROUP_CkTransform);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncFromActor);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_SyncFromMeshSocket);
 CK_REGISTER_PROCESSOR(ck::FProcessor_Transform_InterpolateToGoal_Location);
@@ -176,7 +183,19 @@ namespace ck
         DoTick(
             TimeType InDeltaT) -> void
     {
-        TProcessor::DoTick(InDeltaT);
+        // The scheduler skips the main-pass dispatch via MainPassRequiredFragments. Keep this
+        // tombstone-aware guard as the pump-path backstop: a once-used in_place_delete pool can remain
+        // physically non-empty after its last live request owner is gone.
+        if (NOT _TransientEntity.Get_RegistryView().Has_AnyLiveEntityWith<FFragment_Transform_Requests>())
+        {
+            _LastVisitedCount = 0;
+            return;
+        }
+
+        {
+            SCOPE_CYCLE_COUNTER(STAT_CkTransform_HandleRequests_Drain);
+            TProcessor::DoTick(InDeltaT);
+        }
 
         // Whatever the drain did not reach — an owner mid-destroy, or one whose RootComponent is not
         // Movable — is about to be discarded by the Clear below. Complete those entries here, or a
@@ -184,36 +203,43 @@ namespace ck
         // separate FGroup_EndPlay processor would find the pool already cleared by this same tick.
         // The owners are collected first because a completion handler is free to enqueue, and the pool
         // being iterated must not grow underneath the view.
-        auto UndrainedOwners = TArray<EntityType>{};
-
-        _TransientEntity.View<FFragment_Transform_Requests>().ForEach(
-        [&](EntityType InEntity, const FFragment_Transform_Requests&)
         {
-            UndrainedOwners.Emplace(InEntity);
-        });
+            SCOPE_CYCLE_COUNTER(STAT_CkTransform_HandleRequests_CancelUndrained);
 
-        for (const auto& UndrainedEntity : UndrainedOwners)
-        {
-            auto Owner = MakeHandle(UndrainedEntity, _TransientEntity);
-            const auto& Requests = Owner.Get<FFragment_Transform_Requests>();
+            auto UndrainedOwners = TArray<EntityType>{};
 
-            request::FireCancelledForPending(Owner, Requests.Get_LocationRequests());
-            request::FireCancelledForPending(Owner, Requests.Get_RotationRequests());
-
-            algo::ForEachRequest(Requests.Get_ScaleRequests(),
-            [&](const FCk_Request_Transform_SetScale& InRequest)
+            _TransientEntity.View<FFragment_Transform_Requests>().ForEach(
+            [&](EntityType InEntity, const FFragment_Transform_Requests&)
             {
-                InRequest.TryFireCompletion(Owner, ECk_Request_OperationResult::Failed_Cancelled);
-            }, policy::DontResetContainer{});
+                UndrainedOwners.Emplace(InEntity);
+            });
 
-            algo::ForEachRequest(Requests.Get_ForceRefreshRequests(),
-            [&](const FCk_Request_Transform_ForceRefresh& InRequest)
+            for (const auto& UndrainedEntity : UndrainedOwners)
             {
-                InRequest.TryFireCompletion(Owner, ECk_Request_OperationResult::Failed_Cancelled);
-            }, policy::DontResetContainer{});
+                auto Owner = MakeHandle(UndrainedEntity, _TransientEntity);
+                const auto& Requests = Owner.Get<FFragment_Transform_Requests>();
+
+                request::FireCancelledForPending(Owner, Requests.Get_LocationRequests());
+                request::FireCancelledForPending(Owner, Requests.Get_RotationRequests());
+
+                algo::ForEachRequest(Requests.Get_ScaleRequests(),
+                [&](const FCk_Request_Transform_SetScale& InRequest)
+                {
+                    InRequest.TryFireCompletion(Owner, ECk_Request_OperationResult::Failed_Cancelled);
+                }, policy::DontResetContainer{});
+
+                algo::ForEachRequest(Requests.Get_ForceRefreshRequests(),
+                [&](const FCk_Request_Transform_ForceRefresh& InRequest)
+                {
+                    InRequest.TryFireCompletion(Owner, ECk_Request_OperationResult::Failed_Cancelled);
+                }, policy::DontResetContainer{});
+            }
         }
 
-        _TransientEntity.Clear<MarkedDirtyBy>();
+        {
+            SCOPE_CYCLE_COUNTER(STAT_CkTransform_HandleRequests_Clear);
+            _TransientEntity.Clear<MarkedDirtyBy>();
+        }
     }
 
     auto

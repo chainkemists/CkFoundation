@@ -6,6 +6,8 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkShapes/CkShapes_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_REGISTER_PROCESSOR(ck::FProcessor_ShapeSphere_HandleRequests);
@@ -60,6 +62,9 @@ namespace ck
 
         InCurrent._Dimensions = NewDimensions;
         UUtils_Signal_OnShapeSphereDimensionsChanged::Broadcast(InHandle, MakePayload(InHandle, NewDimensions));
+#if WITH_EDITOR
+        UCk_Utils_Shapes_UE::Notify_DimensionsChanged(InHandle.ConvertToHandle());
+#endif
     }
 
     // --------------------------------------------------------------------------------------------------------------------

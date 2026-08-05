@@ -487,6 +487,16 @@
       ]
     },
     {
+      "Name": "CkEntityVisualizer",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkFx",
       "Type": "Runtime",
       "LoadingPhase": "Default",

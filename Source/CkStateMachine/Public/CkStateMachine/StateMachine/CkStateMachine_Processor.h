@@ -207,6 +207,7 @@ namespace ck
         FCk_Handle_StateMachine,
         TReadOnly<FFragment_Sm_Params>,
         TReadWrite<FFragment_Sm_Current>,
+        FTag_Sm_NeedsInitialStateEntry,
         TExclude<FFragment_Sm_PendingTransition>,
         TExclude<FTag_Sm_DeterminismFault>,
         TExclude<FTag_Sm_RequiresSetup>,

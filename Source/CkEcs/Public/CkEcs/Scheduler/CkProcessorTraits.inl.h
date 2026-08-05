@@ -149,9 +149,11 @@ namespace ck
     }
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Only a processor whose DoTick is the inherited, template-generated view iteration may be empty-view
-    // skipped — a custom DoTick may do work that is not gated on the view, which a skip would silently drop.
-    // Detection leans on name hiding: a pointer-to-member-of-derived will not convert to the base's type.
+    // A processor whose DoTick is the inherited, template-generated view iteration may be empty-view skipped
+    // automatically. A custom DoTick is ineligible unless it explicitly declares MainPassRequiredFragments —
+    // the author is then asserting that ALL custom main-pass work is gated by those live fragments.
+    // Generated-DoTick detection leans on name hiding: a pointer-to-member-of-derived will not convert to the
+    // base's type.
 
     template <typename T_Processor>
     constexpr auto
@@ -247,11 +249,20 @@ namespace ck
                 Descriptor._RW_FragmentNames);
         }
 
-        if constexpr (Get_HasGeneratedViewDoTick<T_Processor>() && Get_EmptyViewPolicyAllowsSkip<T_Processor>())
+        if constexpr (Get_EmptyViewPolicyAllowsSkip<T_Processor>())
         {
-            detail::ExtractViewIncludeMetadata(
-                typename detail::TViewIncludesOf<typename T_Processor::FragmentList>::Type{},
-                Descriptor);
+            if constexpr (requires { typename T_Processor::MainPassRequiredFragments; })
+            {
+                detail::ExtractViewIncludeMetadata(
+                    typename T_Processor::MainPassRequiredFragments{},
+                    Descriptor);
+            }
+            else if constexpr (Get_HasGeneratedViewDoTick<T_Processor>())
+            {
+                detail::ExtractViewIncludeMetadata(
+                    typename detail::TViewIncludesOf<typename T_Processor::FragmentList>::Type{},
+                    Descriptor);
+            }
         }
 
         if constexpr (requires { T_Processor::NetModeRequirement; })
