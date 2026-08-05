@@ -364,6 +364,49 @@ namespace ck::voice_chat::codec
 
         return FCk_VoiceChat_PacingResult{MoveTemp(SendIds), MoveTemp(StaleDropIds), BytesSelected};
     }
+
+    auto
+        Select_TopNTalkers(
+            const TArray<FCk_VoiceChat_TopNCandidate>& InCandidates,
+            int32 InMaxTalkers)
+        -> TArray<int32>
+    {
+        if (InMaxTalkers <= 0 || InCandidates.IsEmpty())
+        { return {}; }
+
+        constexpr auto LoudnessBuckets = 8;
+
+        const auto Get_Bucket = [](const FCk_VoiceChat_TopNCandidate& InCandidate) -> int32
+        {
+            return FMath::Clamp(
+                static_cast<int32>(InCandidate.Get_Envelope() * LoudnessBuckets), 0, LoudnessBuckets - 1);
+        };
+
+        auto Sorted = InCandidates;
+        ck::algo::Sort(Sorted, [&](const FCk_VoiceChat_TopNCandidate& InA, const FCk_VoiceChat_TopNCandidate& InB)
+        {
+            const auto BucketA = Get_Bucket(InA);
+            const auto BucketB = Get_Bucket(InB);
+
+            if (BucketA != BucketB)
+            { return BucketA > BucketB; }
+
+            if (InA.Get_LastServedFrame() != InB.Get_LastServedFrame())
+            { return InA.Get_LastServedFrame() < InB.Get_LastServedFrame(); }
+
+            return InA.Get_Id() < InB.Get_Id();
+        });
+
+        auto Selected = TArray<int32>{};
+        Selected.Reserve(FMath::Min(InMaxTalkers, Sorted.Num()));
+
+        for (auto Idx = 0; Idx < Sorted.Num() && Idx < InMaxTalkers; ++Idx)
+        {
+            Selected.Add(Sorted[Idx].Get_Id());
+        }
+
+        return Selected;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

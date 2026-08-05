@@ -13,10 +13,10 @@ entity under a host, per-channel spatialization policy/attenuation/effect chain)
 (the local ears — per-talker client mute + receive volume). Zero coupling to OnlineSubsystem,
 sessions, or external services.
 
-**Depends on (P0):** `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`, `CkRecord`, `CkSettings`.
-UE: `DeveloperSettings`, `GameplayTags`. Later phases add deps only as their code earns them
-(review N4): P2 `AudioMixer`/`AudioCaptureCore`/`Voice`, P3 `NetCore`/`CkActorRelay`/`CkSpatialQuery`,
-P3/P4 `CkResourceLoader`. Never `CkRelationship`.
+**Depends on (as of P3):** `CkActorRelay`, `CkCore`, `CkEcs`, `CkEcsExt`, `CkLabel`, `CkLog`,
+`CkRecord`, `CkSettings`, `CkShapes`, `CkSpatialQuery` (the ADR-6 routing probes). UE:
+`AudioMixer`, `DeveloperSettings`, `GameplayTags`, `NetCore`, `Voice`. Still to be earned:
+`CkResourceLoader` (P4 asset resolution). Never `CkRelationship`.
 
 ---
 
@@ -34,13 +34,36 @@ P3/P4 `CkResourceLoader`. Never `CkRelationship`.
   budget), routing (MaxAudibleSpeakers 8 server-only, hysteresis), playback (jitter depths,
   default attenuation).
 
+## Routing-policy matrix (review N7) — who receives a talker's bundles
+
+The server routing pipeline is two processors: `FProcessor_VoiceChat_Route` (per talker:
+authorization + staging) then `FProcessor_VoiceChat_FlushForwards` (per recipient: fairness cap →
+byte budget → send). A bundle reaches a recipient only if EVERY row below passes:
+
+| Gate (in order) | Positional3D | Global2D | HybridRadio (P4) |
+|---|---|---|---|
+| Wire `ChannelIdx` resolves in the registry | required (drop + count, never stash — N1) | same | same |
+| Stamped sender owns the talker (spoof guard) | required where both resolve; player-less (NPC) talkers skip it — **known v1 gap**, an owning player can transmit on any NPC talker | same | same |
+| Talker is a member with `CanTalk`, not server-muted | required | required | required (membership IS the entitlement) |
+| Recipient set | `CanHear` members ∩ the sender's probe-maintained proximity set, with hysteresis: a recipient becomes audible inside the channel's range and stays audible until range + margin (`Get_ProximityHysteresisMarginCm`). A sender or recipient without a Transform has no probes and Positional3D **fails closed** for it — no position, no proximity, never a fallback to membership-wide sends | `CanHear` members regardless of range | `CanHear` members; one wire copy, 3D-vs-radio branch chosen client-side at render |
+| Not the talker entity, not the talker's own connection | required (no echo back) | same | same |
+| Recipient has not listener-muted the talker | required (the privacy exclusion — muted audio is never SENT) | same | same |
+| Audible-speaker cap (`MaxAudibleSpeakers`, default 8) | envelope-bucket priority, least-recently-served rotation at saturation | same | same |
+| Per-connection byte budget this tick | required | same | same |
+
+Listen-server host: the host's capture injects straight into its own routing inbox (no
+self-RPC); the host receives other talkers like any client (a Client RPC on a host-owned relay
+executes locally).
+
 ## Anti-patterns
 
 - Don't add a `CkRelationship` dep for team channels — team semantics are membership-flag
   configurations on channel entities (ADR-5; CTO review N4).
-- Don't poll overlaps for the routing set — the P3 routing processor is event-driven off a
-  persistent probe (ADR-6); world scans in the packet path are the confirmed failure mode of a
-  commercial reference.
+- Don't poll overlaps for the routing set — the routing set is a persistent probe's
+  event-maintained overlap set (ADR-6); world scans in the packet path are the confirmed failure
+  mode of a commercial reference. The routing processor READS `FFragment_Probe_Current`'s
+  maintained set (the CkCrowd Neighbors adopter pattern) only when bundles actually flow — it
+  never issues a spatial query.
 - Don't stash undecodable/unroutable voice packets — voice is disposable; drop + count (review N1).
 
 ## See also

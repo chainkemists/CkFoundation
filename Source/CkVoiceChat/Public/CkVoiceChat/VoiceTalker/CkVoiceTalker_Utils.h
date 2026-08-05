@@ -15,6 +15,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class ICk_VoiceChat_CaptureSource;
+class APlayerState;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -247,6 +248,29 @@ public:
     static auto
     Debug_Reset_LoopbackDecodedPcm(
         FCk_Handle_VoiceTalker& InVoiceTalker) -> void;
+
+    // Routing test seams (C++-only): inject a pre-packed bundle into the server-side routing
+    // inbox (bypassing the RPC boundary), and read how many forwarded bundles await the client
+    // playback processor.
+    static auto
+    Debug_InjectInboundBundle(
+        FCk_Handle_VoiceTalker& InVoiceTalker,
+        const TArray<uint8>& InPackedBundle,
+        APlayerState* InSender) -> void;
+
+    static auto
+    Debug_Get_ReceiveInboxNum(
+        const FCk_Handle_VoiceTalker& InVoiceTalker) -> int32;
+
+    // Lifetime totals at the client RPC boundary (counted before the inbox capacity check) -
+    // the S5 drain-budget instrumentation reads the connection's actual delivery rate off these.
+    static auto
+    Debug_Get_ReceiveArrivedBundles(
+        const FCk_Handle_VoiceTalker& InVoiceTalker) -> uint64;
+
+    static auto
+    Debug_Get_ReceiveArrivedBytes(
+        const FCk_Handle_VoiceTalker& InVoiceTalker) -> uint64;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Request/CkRequest_Completion.h"
+
 #include "CkEcsExt/CkEcsExt_Utils.h"
 
 #include "CkVoiceChat/VoiceListener/CkVoiceListener_Fragment.h"
@@ -65,6 +67,37 @@ private:
         meta = (CompactNodeTitle = "INVALID_VoiceListenerHandle", Keywords = "make"))
     static FCk_Handle_VoiceListener
     Get_InvalidHandle() { return {}; };
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Listener",
+              DisplayName="[Ck][VoiceListener] Request Mute Talker",
+              meta = (AutoCreateRefTerm = "InRequest,InDelegate"))
+    static FCk_Handle_VoiceListener
+    Request_MuteTalker(
+        UPARAM(ref) FCk_Handle_VoiceListener& InVoiceListener,
+        const FCk_Request_VoiceListener_MuteTalker& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Listener",
+              DisplayName="[Ck][VoiceListener] Request Unmute Talker",
+              meta = (AutoCreateRefTerm = "InRequest,InDelegate"))
+    static FCk_Handle_VoiceListener
+    Request_UnmuteTalker(
+        UPARAM(ref) FCk_Handle_VoiceListener& InVoiceListener,
+        const FCk_Request_VoiceListener_UnmuteTalker& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|VoiceChat|Listener",
+              DisplayName="[Ck][VoiceListener] Request Set Talker Volume",
+              meta = (AutoCreateRefTerm = "InRequest,InDelegate"))
+    static FCk_Handle_VoiceListener
+    Request_SetTalkerVolume(
+        UPARAM(ref) FCk_Handle_VoiceListener& InVoiceListener,
+        const FCk_Request_VoiceListener_SetTalkerVolume& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
     UFUNCTION(BlueprintPure,
