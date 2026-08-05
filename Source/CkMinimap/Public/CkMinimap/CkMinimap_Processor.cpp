@@ -72,19 +72,33 @@ namespace ck
 
         InCurrent._ViewExtent = InParams.Get_ViewExtent();
 
-        CK_ENSURE_IF_NOT(InParams.Get_ViewExtent() > 0.0f,
-            TEXT("Minimap [{}] ViewExtent [{}] must be > 0 — falling back to 1cm"),
-            InMinimapEntity, InParams.Get_ViewExtent())
+        // Clamped for EVERY projection mode, ensured for only one. The stored value must
+        // stay positive regardless (a later Request_SetRotationMode/mode flip would divide
+        // by it), but see below for why FixedBounds does not complain about it.
+        if (InCurrent._ViewExtent <= 0.0f)
         {
             InCurrent._ViewExtent = 1.0f;
         }
 
         if (InParams.Get_ProjectionMode() == ECk_Minimap_ProjectionMode::FixedBounds)
         {
+            // FixedBounds projects through Get_BoundsToFrame and NEVER reads ViewExtent, so
+            // ensuring on it here was a false positive: it forced every world-map author to
+            // invent a meaningless positive number to silence a check on a value the mode
+            // ignores. What FixedBounds actually requires is valid bounds.
             CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_FixedBounds()),
                 TEXT("Minimap [{}] uses FixedBounds projection but its FixedBounds half-extents are not > 0. "
                      "Every entry will project to the frame center until the minimap is re-Added with valid bounds"),
                 InMinimapEntity)
+            {}
+        }
+        else
+        {
+            // ObserverCentric: ViewExtent IS the zoom, so a non-positive one is a real
+            // authoring error and the 1cm fallback above is a visible degradation.
+            CK_ENSURE_IF_NOT(InParams.Get_ViewExtent() > 0.0f,
+                TEXT("Minimap [{}] ViewExtent [{}] must be > 0 — falling back to 1cm"),
+                InMinimapEntity, InParams.Get_ViewExtent())
             {}
         }
 
