@@ -8,6 +8,7 @@
 
 #include "CkAttribute/IntegerAttribute/CkIntegerAttribute_Utils.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -319,6 +320,42 @@ auto
         { return false; }
     }
 
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ItemTrait_Stackable_UE::
+    Request_ConsumeFromStack(
+        FCk_Handle_Item& InItem,
+        int32 InCount)
+    -> bool
+{
+    if (InCount == 0)
+    { return false; }
+
+    // Every failure below is a CALLER CONTRACT violation, not a runtime condition the
+    // caller is expected to handle — unlike Request_SplitStack's Failed_NoSpaceForNewItem,
+    // which is a legitimate outcome. Fail loud.
+    CK_ENSURE_IF_NOT(ck::IsValid(InItem),
+        TEXT("ConsumeFromStack: Invalid item handle"))
+    { return false; }
+
+    CK_ENSURE_IF_NOT(Get_IsStackable(InItem),
+        TEXT("ConsumeFromStack: Item [{}] is not stackable"), InItem)
+    { return false; }
+
+    const auto CurrentCount = Get_StackCount(InItem);
+
+    // Consuming the whole stack is the inventory's job (Request_RemoveItem) — see the header.
+    CK_ENSURE_IF_NOT(InCount >= 1 && InCount < CurrentCount,
+        TEXT("ConsumeFromStack: Invalid consume count [{}] for item [{}] with count [{}]. "
+             "Consuming the entire stack must go through the inventory's Request_RemoveItem"),
+        InCount, InItem, CurrentCount)
+    { return false; }
+
+    Request_AdjustStackCount(InItem, -InCount);
     return true;
 }
 
