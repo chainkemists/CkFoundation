@@ -21,7 +21,7 @@ auto
     Common.Set_DrawLines(InDrawLines);
     Common.Set_LineThickness(InLineThickness);
     Common.Set_Duration(FCk_Time{InDuration});
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Common>(Common);
+    ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Text_Params{};
     Params.Set_Text(InText);
