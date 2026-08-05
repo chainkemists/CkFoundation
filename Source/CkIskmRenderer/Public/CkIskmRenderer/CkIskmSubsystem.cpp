@@ -8,9 +8,17 @@
 #include "CkIskmRenderer/CkIskmRenderer_Log.h"
 #include "CkIskmRenderer/Renderer/CkIskmRenderer_Fragment_Data.h"
 #include "CkIskmRenderer/Renderer/CkIskm_BatchedCrowd_Actor.h"
+#include "CkIskmRenderer/Settings/CkIskmRenderer_Settings.h"
 
 #include <Engine/Engine.h>
 #include <Engine/World.h>
+
+#if WITH_EDITOR
+namespace ck_iskm_renderer_editor_preview
+{
+    constexpr auto MaximumAdvanceSeconds = 0.25;
+}
+#endif
 
 ACk_IskmRenderer_Actor_UE::ACk_IskmRenderer_Actor_UE()
 {
@@ -256,6 +264,81 @@ auto
 
 auto
     UCk_IskmRenderer_Subsystem_UE::
+    Tick(float InDeltaTime)
+    -> void
+{
+    Super::Tick(InDeltaTime);
+
+#if WITH_EDITORONLY_DATA
+    const auto* Settings = GetDefault<UCk_IskmRenderer_UserSettings_UE>();
+    if (NOT IsValid(Settings))
+    { return; }
+
+    const auto Frequency = FMath::Clamp(Settings->Get_EditorPreviewAnimationFrequency(), 5, 60);
+    const auto IntervalSeconds = 1.0 / static_cast<double>(Frequency);
+    _EditorPreviewAnimationAccumulatorSeconds += static_cast<double>(InDeltaTime);
+    if (_EditorPreviewAnimationAccumulatorSeconds < IntervalSeconds)
+    { return; }
+
+    const auto AdvanceSeconds = static_cast<float>(FMath::Min(
+        _EditorPreviewAnimationAccumulatorSeconds,
+        ck_iskm_renderer_editor_preview::MaximumAdvanceSeconds));
+    _EditorPreviewAnimationAccumulatorSeconds = FMath::Fmod(
+        _EditorPreviewAnimationAccumulatorSeconds,
+        IntervalSeconds);
+
+    const auto Mode = Settings->Get_EditorPreviewAnimationMode();
+    for (const auto& Pair : _PerOwnerPreviewCrowds)
+    {
+        auto* SelectionOwner = Pair.Key.Value.Get();
+        auto* Crowd = Pair.Value.Get();
+        if (NOT IsValid(SelectionOwner) || NOT IsValid(Crowd))
+        { continue; }
+        if (NOT ck::iskm_editor_preview::ShouldAnimate(Mode, SelectionOwner->IsSelected()))
+        { continue; }
+
+        Crowd->AdvanceAnimation(AdvanceSeconds);
+        Crowd->DriveCosmetics();
+    }
+#endif
+}
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    IsTickable() const
+    -> bool
+{
+#if WITH_EDITORONLY_DATA
+    const auto* World = GetWorld();
+    if (NOT IsValid(World) || World->WorldType != EWorldType::Editor || _PerOwnerPreviewCrowds.IsEmpty())
+    { return false; }
+
+    const auto* Settings = GetDefault<UCk_IskmRenderer_UserSettings_UE>();
+    return IsValid(Settings) &&
+        ck::iskm_editor_preview::IsEnabled(Settings->Get_EditorPreviewAnimationMode());
+#else
+    return false;
+#endif
+}
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    IsTickableInEditor() const
+    -> bool
+{
+    return true;
+}
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
+    GetStatId() const
+    -> TStatId
+{
+    RETURN_QUICK_DECLARE_CYCLE_STAT(UCk_IskmRenderer_Subsystem_UE, STATGROUP_Tickables);
+}
+
+auto
+    UCk_IskmRenderer_Subsystem_UE::
     DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool
 {
     switch (WorldType)
@@ -389,6 +472,7 @@ auto
     UCk_Utils_EditorSelectionOwner_UE::RegisterProxyActor(InSelectionOwner, Crowd);
 
     _PerOwnerPreviewCrowds.Add(Key, Crowd);
+    _EditorPreviewAnimationAccumulatorSeconds = 0.0;
 
     return Crowd;
 }

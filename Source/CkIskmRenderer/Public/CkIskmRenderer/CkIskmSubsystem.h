@@ -91,7 +91,7 @@ public:
 // ---- Subsystem ----
 
 UCLASS(DisplayName = "CkSubsystem_IskmRenderer")
-class CKISKMRENDERER_API UCk_IskmRenderer_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
+class CKISKMRENDERER_API UCk_IskmRenderer_Subsystem_UE : public UCk_Game_TickableWorldSubsystem_Base_UE
 {
     GENERATED_BODY()
 
@@ -103,6 +103,11 @@ public:
     auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
 #endif
     auto Deinitialize() -> void override;
+
+    auto Tick(float InDeltaTime) -> void override;
+    auto IsTickable() const -> bool override;
+    auto IsTickableInEditor() const -> bool override;
+    auto GetStatId() const -> TStatId override;
 
 protected:
     auto DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool override;
@@ -160,6 +165,7 @@ private:
     TMap<FPerOwnerCrowdKey, TWeakObjectPtr<ACk_Iskm_BatchedCrowd_Actor>> _PerOwnerPreviewCrowds;
 
     FDelegateHandle _OnLevelActorDeletedHandle;
+    double _EditorPreviewAnimationAccumulatorSeconds = 0.0;
 #endif
 };
 

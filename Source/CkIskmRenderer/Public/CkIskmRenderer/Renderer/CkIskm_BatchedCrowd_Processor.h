@@ -43,6 +43,9 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform_SyncFrom;
+        // Non-PIE playback is owned by the editor-preview subsystem, where per-user policy and a bounded
+        // cadence avoid advancing every crowd through the main ECS graph on every editor frame.
+        static constexpr auto WorldTypeRequirement = ECk_ProcessorWorldTypeRequirement::RuntimeOnly;
 
     public:
         using TProcessor::TProcessor;
