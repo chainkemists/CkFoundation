@@ -32,7 +32,7 @@ public:
     // Creates the channel as a child entity under the host, labeled by its channel tag, and
     // connects it to the host's record of channels (CkAudio Director->Track topology).
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Channel",
               DisplayName="[Ck][VoiceChannel] Add New Channel")
     static FCk_Handle_VoiceChannel
     Add(
@@ -41,14 +41,14 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Channel",
               DisplayName="[Ck][VoiceChannel] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Channel",
               DisplayName="[Ck][VoiceChannel] Has Any Channel")
     static bool
     Has_Any(
@@ -56,7 +56,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|VoiceChat",
+        Category = "Ck|Utils|VoiceChat|Channel",
         DisplayName="[Ck][VoiceChannel] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_VoiceChannel
@@ -65,7 +65,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|VoiceChat",
+        Category = "Ck|Utils|VoiceChat|Channel",
         DisplayName="[Ck][VoiceChannel] Handle -> VoiceChannel Handle",
         meta = (CompactNodeTitle = "<AsVoiceChannel>", BlueprintAutocast))
     static FCk_Handle_VoiceChannel
@@ -74,14 +74,14 @@ private:
 
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Get Invalid VoiceChannel Handle",
-        Category = "Ck|Utils|VoiceChat",
+        Category = "Ck|Utils|VoiceChat|Channel",
         meta = (CompactNodeTitle = "INVALID_VoiceChannelHandle", Keywords = "make"))
     static FCk_Handle_VoiceChannel
     Get_InvalidHandle() { return {}; };
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Channel",
               DisplayName="[Ck][VoiceChannel] Try Get Channel")
     static FCk_Handle_VoiceChannel
     TryGet_VoiceChannel(
@@ -90,28 +90,28 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Channel",
               DisplayName="[Ck][VoiceChannel] Get Channel Name")
     static FGameplayTag
     Get_ChannelName(
         const FCk_Handle_VoiceChannel& InVoiceChannel);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Channel",
               DisplayName="[Ck][VoiceChannel] Get Spatialization Policy")
     static ECk_VoiceChat_SpatializationPolicy
     Get_SpatializationPolicy(
         const FCk_Handle_VoiceChannel& InVoiceChannel);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Channel",
               DisplayName="[Ck][VoiceChannel] Get Audible Range")
     static float
     Get_AudibleRange(
         const FCk_Handle_VoiceChannel& InVoiceChannel);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|VoiceChat",
+              Category = "Ck|Utils|VoiceChat|Channel",
               DisplayName="[Ck][VoiceChannel] Get Priority")
     static int32
     Get_Priority(
