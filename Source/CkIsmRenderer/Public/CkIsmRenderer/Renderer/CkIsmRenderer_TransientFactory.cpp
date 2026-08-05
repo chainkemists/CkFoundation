@@ -5,11 +5,24 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-TMap<TWeakObjectPtr<UStaticMesh>, TWeakObjectPtr<UCk_IsmRenderer_Data>>
+TMap<UCk_Utils_IsmRenderer_TransientFactory_UE::FMeshOnlyKey, TWeakObjectPtr<UCk_IsmRenderer_Data>>
     UCk_Utils_IsmRenderer_TransientFactory_UE::MeshOnlyCache;
 
 TMap<UCk_Utils_IsmRenderer_TransientFactory_UE::FMeshMaterialKey, TWeakObjectPtr<UCk_IsmRenderer_Data>>
     UCk_Utils_IsmRenderer_TransientFactory_UE::MeshMaterialCache;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IsmRenderer_TransientFactory_UE::FMeshOnlyKey::
+    operator==(
+        const FMeshOnlyKey& Other) const
+    -> bool
+{
+    return World == Other.World &&
+        Mesh == Other.Mesh &&
+        Mobility == Other.Mobility;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -19,10 +32,16 @@ auto
         const FMeshMaterialKey& Other) const
     -> bool
 {
+    if (World != Other.World)
+    { return false; }
+
     if (Mesh != Other.Mesh)
     { return false; }
 
     if (NumCustomData != Other.NumCustomData)
+    { return false; }
+
+    if (Mobility != Other.Mobility)
     { return false; }
 
     if (MaterialSlots.Num() != Other.MaterialSlots.Num())
@@ -50,22 +69,33 @@ auto
         ECk_Mobility InMobility)
     -> UCk_IsmRenderer_Data*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InWorld),
+    const auto WorldIsValid = ck::IsValid(InWorld);
+    CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID World"))
+    {}
+    if (NOT WorldIsValid)
     { return nullptr; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InMesh),
+    const auto MeshIsValid = ck::IsValid(InMesh);
+    CK_ENSURE_IF_NOT(MeshIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID Mesh"))
+    {}
+    if (NOT MeshIsValid)
     { return nullptr; }
 
-    if (const auto Found = MeshOnlyCache.Find(InMesh);
+    auto CacheKey = FMeshOnlyKey{};
+    CacheKey.World = InWorld;
+    CacheKey.Mesh = InMesh;
+    CacheKey.Mobility = InMobility;
+
+    if (const auto Found = MeshOnlyCache.Find(CacheKey);
         Found && ck::IsValid(*Found))
     { return Found->Get(); }
 
     auto* NewData = CreateTransient(InWorld, InMesh, {}, InMobility);
 
     if (ck::IsValid(NewData))
-    { MeshOnlyCache.Add(InMesh, NewData); }
+    { MeshOnlyCache.Add(MoveTemp(CacheKey), NewData); }
 
     return NewData;
 }
@@ -81,16 +111,24 @@ auto
         ECk_Mobility InMobility)
     -> UCk_IsmRenderer_Data*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InWorld),
+    const auto WorldIsValid = ck::IsValid(InWorld);
+    CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID World"))
+    {}
+    if (NOT WorldIsValid)
     { return nullptr; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InMesh),
+    const auto MeshIsValid = ck::IsValid(InMesh);
+    CK_ENSURE_IF_NOT(MeshIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID Mesh"))
+    {}
+    if (NOT MeshIsValid)
     { return nullptr; }
 
     FMeshMaterialKey CacheKey;
+    CacheKey.World = InWorld;
     CacheKey.Mesh = InMesh;
+    CacheKey.Mobility = InMobility;
     CacheKey.MaterialSlots.Reserve(InMaterialOverrides.Num());
 
     for (const auto& Override : InMaterialOverrides)
@@ -125,22 +163,33 @@ auto
         ECk_Mobility InMobility)
     -> UCk_IsmRenderer_Data*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InWorld),
+    const auto WorldIsValid = ck::IsValid(InWorld);
+    CK_ENSURE_IF_NOT(WorldIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID World"))
+    {}
+    if (NOT WorldIsValid)
     { return nullptr; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InMesh),
+    const auto MeshIsValid = ck::IsValid(InMesh);
+    CK_ENSURE_IF_NOT(MeshIsValid,
         TEXT("Trying to create transient IsmRenderer_Data with an INVALID Mesh"))
+    {}
+    if (NOT MeshIsValid)
     { return nullptr; }
 
-    CK_ENSURE_IF_NOT(InNumCustomData >= 0,
+    const auto CustomDataCountIsValid = InNumCustomData >= 0;
+    CK_ENSURE_IF_NOT(CustomDataCountIsValid,
         TEXT("Trying to create transient IsmRenderer_Data for Mesh [{}] with a NEGATIVE custom-data count [{}]"),
         InMesh, InNumCustomData)
+    {}
+    if (NOT CustomDataCountIsValid)
     { return nullptr; }
 
     FMeshMaterialKey CacheKey;
+    CacheKey.World = InWorld;
     CacheKey.Mesh = InMesh;
     CacheKey.NumCustomData = InNumCustomData;
+    CacheKey.Mobility = InMobility;
     CacheKey.MaterialSlots.Reserve(InMaterialOverrides.Num());
 
     for (const auto& Override : InMaterialOverrides)
@@ -187,8 +236,11 @@ auto
         }
     );
 
-    CK_ENSURE_IF_NOT(ck::IsValid(NewData),
+    const auto NewDataIsValid = ck::IsValid(NewData);
+    CK_ENSURE_IF_NOT(NewDataIsValid,
         TEXT("Failed to create transient IsmRenderer_Data for Mesh [{}]"), InMesh)
+    {}
+    if (NOT NewDataIsValid)
     { return nullptr; }
 
     // Needed for GetWorld() on a transient-package object. const_cast is safe: the destination is a
@@ -201,6 +253,46 @@ auto
     ck::ismrenderer::Verbose(TEXT("Created new Transient ISM Renderer for Mesh [{}]..."), InMesh);
 
     return NewData;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IsmRenderer_TransientFactory_UE::
+    ClearCache(
+        const UWorld* InWorld)
+    -> void
+{
+    const auto WorldIsValid = ck::IsValid(InWorld);
+    CK_ENSURE_IF_NOT(WorldIsValid,
+        TEXT("Trying to clear transient IsmRenderer_Data cache for an INVALID World"))
+    {}
+    if (NOT WorldIsValid)
+    { return; }
+
+    ck::ismrenderer::Verbose(TEXT("Clearing Transient ISM Renderer cache for World [{}]..."), InWorld);
+
+    for (auto It = MeshOnlyCache.CreateIterator(); It; ++It)
+    {
+        if (It.Key().World.Get() != InWorld)
+        { continue; }
+
+        if (It.Value().IsValid())
+        { It.Value()->RemoveFromRoot(); }
+
+        It.RemoveCurrent();
+    }
+
+    for (auto It = MeshMaterialCache.CreateIterator(); It; ++It)
+    {
+        if (It.Key().World.Get() != InWorld)
+        { continue; }
+
+        if (It.Value().IsValid())
+        { It.Value()->RemoveFromRoot(); }
+
+        It.RemoveCurrent();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

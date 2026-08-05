@@ -81,6 +81,7 @@ Before writing any code, navigate the documentation in this order:
 | replicate render-target pixels / draw calls | `CkRenderTarget` (no doc yet) |
 | runtime shader Looks / outline rendering | `CkUsf` |
 | ISM / skeletal-instance rendering | `CkIsmRenderer` / `CkIskmRenderer` |
+| retained editor and high-count entity visualizers | `CkEntityVisualizer` (CkPmg analytical shapes + shared CkIsm primitives) |
 | vertex-animation-texture playback (bake skeletal anims to textures, tick-less ISM instances) | `CkVat` (+ `CkVatEditor` baker) |
 | ECS targeting / scoring | `CkTargeting` |
 | ECS aggro / threat table | `CkAggro` |
@@ -110,7 +111,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **76 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **77 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -180,6 +181,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkEntityCollection | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkEntityExtension | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkEntitySpawner | ActorRelay,Core,Ecs,EcsExt,Log,Settings (level-placed spawners key their entity via `ck::save_key` in CkEcs — no Snapshot dep) |
+| CkEntityVisualizer | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Pmg,Shapes,SpatialQuery (retained/event-driven; high-count visuals use shared ISM batches) |
 | CkEntityTag | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkEqs | Core,Ecs,EcsExt,EntityTag,Label,Log,Record,Settings,Shapes,SpatialQuery,ThirdParty |
 | CkFx | Core,Ecs,EcsExt,Label,Log,Record,Settings |

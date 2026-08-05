@@ -26,6 +26,23 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_UnrealComponent_PushTransform);
 CK_REGISTER_PROCESSOR(ck::FProcessor_UnrealComponent_Tick);
 CK_REGISTER_PROCESSOR(ck::FProcessor_UnrealComponent_EndPlay);
 
+namespace ck_unreal_component_processor
+{
+    auto
+        PushTransformIfChanged(
+            USceneComponent* InSceneComponent,
+            const FTransform& InWorldTransform) -> void
+    {
+        if (ck::Is_NOT_Valid(InSceneComponent))
+        { return; }
+
+        if (InSceneComponent->GetComponentTransform().Equals(InWorldTransform))
+        { return; }
+
+        InSceneComponent->SetWorldTransform(InWorldTransform);
+    }
+}
+
 namespace ck
 {
     auto
@@ -110,6 +127,14 @@ namespace ck
         if (IsSceneComponent)
         {
             InHandle.AddOrGet<FTag_UnrealComponent_IsScene>();
+
+            if (NOT InHandle.Has<FTag_UnrealComponent_TransformPushDisabled>())
+            {
+                auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InCurrent.Get_OwningEntity());
+                ck_unreal_component_processor::PushTransformIfChanged(
+                    CastChecked<USceneComponent>(NewComponent),
+                    UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform));
+            }
         }
 
         if (InParams.Get_TickPolicy() == ECk_UnrealComponent_TickPolicy::TickViaProcessor)
@@ -132,25 +157,27 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_UnrealComponent_Current& InCurrent)
+            const FFragment_Transform& InTransform,
+            const FFragment_RecordOfUnrealComponents&)
         -> void
     {
-        auto Component = InCurrent.Get_Component().Get();
-        if (ck::Is_NOT_Valid(Component))
-        { return; }
+        // PostTransform runs after root-to-ECS synchronization and transform requests. At this point the
+        // fragment is the authoritative value for both root-driven and externally-driven owners.
+        const auto& CurrentTransform = InTransform.Get_Transform();
+        RecordOfUnrealComponents_Utils::ForEach_ValidEntry(
+            InHandle,
+            [&CurrentTransform](FCk_Handle_UnrealComponent InComponentHandle)
+            {
+                if (InComponentHandle.Has<FTag_UnrealComponent_NeedsSetup>() ||
+                    InComponentHandle.Has<FTag_UnrealComponent_TransformPushDisabled>() ||
+                    NOT InComponentHandle.Has<FTag_UnrealComponent_IsScene>() ||
+                    NOT InComponentHandle.Has<FFragment_UnrealComponent_Current>())
+                { return; }
 
-        auto SceneComponent = Cast<USceneComponent>(Component);
-        if (ck::Is_NOT_Valid(SceneComponent))
-        { return; }
-
-        auto OwningEntity = InCurrent.Get_OwningEntity();
-        if (NOT UCk_Utils_Transform_UE::Has(OwningEntity))
-        { return; }
-
-        auto OwnerTransformHandle = UCk_Utils_Transform_UE::Cast(OwningEntity);
-        const auto WorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransformHandle);
-
-        SceneComponent->SetWorldTransform(WorldTransform);
+                auto* SceneComponent = Cast<USceneComponent>(
+                    InComponentHandle.Get<FFragment_UnrealComponent_Current>().Get_Component().Get());
+                ck_unreal_component_processor::PushTransformIfChanged(SceneComponent, CurrentTransform);
+            });
     }
 
     // --------------------------------------------------------------------------------------------------------------------
