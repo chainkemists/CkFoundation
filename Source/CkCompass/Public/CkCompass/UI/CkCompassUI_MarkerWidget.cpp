@@ -75,9 +75,25 @@ auto
 
 auto
     UCk_CompassUI_MarkerWidget::
+    NativeDestruct()
+    -> void
+{
+    DoUnbindDisplayChanged();
+
+    Super::NativeDestruct();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_CompassUI_MarkerWidget::
     DoResolveDisplay()
     -> void
 {
+    // The binding follows the POI, not the widget: drop it here so a pooled marker never keeps listening to
+    // the definition of a POI it no longer represents.
+    DoUnbindDisplayChanged();
+
     if (ck::Is_NOT_Valid(_Icon))
     { return; }
 
@@ -85,33 +101,127 @@ auto
     if (ck::Is_NOT_Valid(_AssignedPoi))
     { return; }
 
-    // Resolve the compass-consumer display definition for this POI; unset (no definition for this consumer)
-    // -> null soft ptr, the same "keep authored icon" path as an invalid POI above.
-    const auto DisplayDefinition = UCk_Utils_PoiDisplayDefinition_UE::TryGet_PoiDisplayDefinition_ByConsumer(
+    auto DisplayDefinition = UCk_Utils_PoiDisplayDefinition_UE::TryGet_PoiDisplayDefinition_ByConsumer(
         _AssignedPoi, Tag_PoiConsumer_Compass);
 
-    const auto DisplaySoft = ck::IsValid(DisplayDefinition)
-        ? UCk_Utils_PoiDisplayDefinition_UE::Get_DisplayAsset(DisplayDefinition)
-        : TSoftObjectPtr<UCk_Poi_DisplayDefinition_PDA>{};
-
-    if (DisplaySoft.IsNull())
-    { return; }
-
-    // Bounded hitch: a tiny PDA + one icon texture, once per POI assignment
-    const auto Display = DisplaySoft.LoadSynchronous();
-
-    if (ck::Is_NOT_Valid(Display))
-    { return; }
-
-    if (NOT Display->Get_Icon().IsNull())
+    // No definition for this consumer -> fall back to the AUTHORED look. Restoring rather than
+    // simply returning is what stops a pooled marker inheriting the last POI it displayed.
+    if (ck::Is_NOT_Valid(DisplayDefinition))
     {
-        if (const auto IconTexture = Display->Get_Icon().LoadSynchronous();
+        DoRestoreAuthoredDisplay();
+        return;
+    }
+
+    DoApplyDisplay(DisplayDefinition);
+
+    auto Delegate = FCk_Delegate_PoiDisplayDefinition_DisplayChanged{};
+    Delegate.BindDynamic(this, &UCk_CompassUI_MarkerWidget::DoOnDisplayChanged);
+
+    UCk_Utils_PoiDisplayDefinition_UE::BindTo_OnDisplayChanged(DisplayDefinition, Delegate,
+        ECk_Signal_BindingPolicy::FireIfPayloadInFlight, ECk_Signal_PostFireBehavior::DoNothing);
+
+    _BoundDisplayDefinition = DisplayDefinition;
+}
+
+auto
+    UCk_CompassUI_MarkerWidget::
+    DoApplyDisplay(
+        const FCk_Handle_PoiDisplayDefinition& InDefinition)
+    -> void
+{
+    if (ck::Is_NOT_Valid(_Icon))
+    { return; }
+
+    DoCaptureAuthoredDisplay();
+
+    const auto IconSoft = UCk_Utils_PoiDisplayDefinition_UE::Get_Icon(InDefinition);
+
+    // A null icon means "no icon authored" — leave whatever the designer put on the brush rather than
+    // blanking it, which is the same contract as having no definition at all.
+    if (NOT IconSoft.IsNull())
+    {
+        // Bounded hitch: one icon texture, once per POI assignment. The icon is immutable on a
+        // definition, so this never re-runs on a display change.
+        if (const auto IconTexture = IconSoft.LoadSynchronous();
             ck::IsValid(IconTexture))
         { _Icon->SetBrushFromTexture(IconTexture, false); }
     }
 
-    _Icon->SetColorAndOpacity(Display->Get_Tint());
-    _Icon->SetDesiredSizeOverride(Display->Get_SizeHint());
+    DoApplyMutableDisplay(InDefinition);
+}
+
+auto
+    UCk_CompassUI_MarkerWidget::
+    DoApplyMutableDisplay(
+        const FCk_Handle_PoiDisplayDefinition& InDefinition)
+    -> void
+{
+    if (ck::Is_NOT_Valid(_Icon))
+    { return; }
+
+    _Icon->SetColorAndOpacity(UCk_Utils_PoiDisplayDefinition_UE::Get_Tint(InDefinition));
+    _Icon->SetDesiredSizeOverride(UCk_Utils_PoiDisplayDefinition_UE::Get_SizeHint(InDefinition));
+}
+
+auto
+    UCk_CompassUI_MarkerWidget::
+    DoUnbindDisplayChanged()
+    -> void
+{
+    // The definition entity can die before the widget does (POI destroyed while this marker was pooled out),
+    // so the validity check is load-bearing, not defensive.
+    if (ck::Is_NOT_Valid(_BoundDisplayDefinition))
+    {
+        _BoundDisplayDefinition = FCk_Handle_PoiDisplayDefinition{};
+        return;
+    }
+
+    auto Delegate = FCk_Delegate_PoiDisplayDefinition_DisplayChanged{};
+    Delegate.BindDynamic(this, &UCk_CompassUI_MarkerWidget::DoOnDisplayChanged);
+
+    UCk_Utils_PoiDisplayDefinition_UE::UnbindFrom_OnDisplayChanged(_BoundDisplayDefinition, Delegate);
+
+    _BoundDisplayDefinition = FCk_Handle_PoiDisplayDefinition{};
+}
+
+auto
+    UCk_CompassUI_MarkerWidget::
+    DoOnDisplayChanged(
+        FCk_Handle_PoiDisplayDefinition InDefinition)
+    -> void
+{
+    // Only the mutable half: the signal cannot mean "the icon changed", so re-resolving and
+    // re-loading the texture on every tint change would be pure waste.
+    DoApplyMutableDisplay(InDefinition);
+}
+
+// Captured on first override rather than in Construct: the ribbon can inject an entry before
+// this widget constructs, and capturing after an override would bake another POI's look in as
+// "authored".
+auto
+    UCk_CompassUI_MarkerWidget::
+    DoCaptureAuthoredDisplay()
+    -> void
+{
+    if (_AuthoredCaptured || ck::Is_NOT_Valid(_Icon))
+    { return; }
+
+    _AuthoredCaptured = true;
+    _AuthoredBrush = _Icon->GetBrush();
+    _AuthoredTint = _Icon->GetColorAndOpacity();
+}
+
+auto
+    UCk_CompassUI_MarkerWidget::
+    DoRestoreAuthoredDisplay()
+    -> void
+{
+    if (NOT _AuthoredCaptured || ck::Is_NOT_Valid(_Icon))
+    { return; }
+
+    _Icon->SetBrush(_AuthoredBrush);
+    _Icon->SetColorAndOpacity(_AuthoredTint);
+    _Icon->SetDesiredSizeOverride(_AuthoredBrush.ImageSize);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
