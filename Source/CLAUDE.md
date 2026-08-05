@@ -58,6 +58,7 @@ Before writing any code, navigate the documentation in this order:
 | ECS Niagara VFX | `CkVfx` |
 | one-shot gameplay cues (base framework) | `CkCue` |
 | ECS camera shake | `CkCamera` |
+| proximity voice chat (talkers / channel entities / local ears) | `CkVoiceChat` (campaign in progress — see its Claude.md) |
 | ECS animation assets | `CkAnimation` |
 | ECS state machine (data-asset conditions) | `CkStateMachine` |
 | ECS inventory + 2D grid | `CkInventory` + `CkGrid` |
@@ -109,7 +110,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **75 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **76 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -221,6 +222,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
 | CkVfx | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkVisibleRange | Core,Ecs,EcsExt,Log (deliberately minimal — no Poi/consumer knowledge; see its Claude.md) |
+| CkVoiceChat | Core,Ecs,EcsExt,Label,Log,Record,Settings (P0 skeleton 2026-08-03 — campaign in progress; later phases add AudioMixer/Voice (P2), ActorRelay/SpatialQuery/NetCore (P3), ResourceLoader (P3/P4) as earned; never Relationship) |
 | CkVoxelNav | AStar,Core,Ecs,EcsExt,Jolt,Label,Log,Navigation,Profile,Record,Settings,ThirdParty (volumetric free-space nav; all geometry queries via CkJolt's JPH-free surface — no direct Jolt includes) |
 | CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UI |
 
