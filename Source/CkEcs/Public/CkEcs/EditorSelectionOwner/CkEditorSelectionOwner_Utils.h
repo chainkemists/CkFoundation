@@ -14,6 +14,10 @@
 class AActor;
 class UWorld;
 
+#if WITH_EDITOR
+DECLARE_MULTICAST_DELEGATE_OneParam(FCk_EditorSelectionOwner_OnRefreshRequested, const AActor*);
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
@@ -60,6 +64,11 @@ public:
     static auto
     PushOwnerSelectionToProxies(
         const AActor* InOwnerActor) -> void;
+
+    // Backend-neutral editor notification. Upper-tier retained visualizers subscribe here so
+    // selection and rebuild changes can reconcile once, without making CkEcs depend on a renderer.
+    static auto
+    Get_OnRefreshRequested() -> FCk_EditorSelectionOwner_OnRefreshRequested&;
 
     // Resolves the entity's selection owner and returns its per-owner host actor. nullptr outside editor
     // worlds or when no owner is stamped — callers then fall back to their non-preview hosting.

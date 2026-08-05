@@ -17,6 +17,12 @@ struct FCk_Handle_Transform;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if WITH_EDITOR
+DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Probe_OnDebugInfoChanged, const FCk_Handle_Probe&);
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_Probe"))
 class CKSPATIALQUERY_API UCk_Utils_Probe_UE : public UBlueprintFunctionLibrary
 {
@@ -28,6 +34,11 @@ public:
 
 public:
     friend class ck::FProcessor_Probe_HandleRequests;
+
+#if WITH_EDITOR
+public:
+    static auto Get_OnDebugInfoChanged() -> FCk_Probe_OnDebugInfoChanged&;
+#endif
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -89,6 +100,14 @@ public:
     static FGameplayTag
     Get_Name(
         const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName="[Ck][Probe] Set Debug Info")
+    static void
+    Set_DebugInfo(
+        UPARAM(ref) FCk_Handle_Probe& InProbe,
+        const FCk_Probe_DebugInfo& InDebugInfo);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",

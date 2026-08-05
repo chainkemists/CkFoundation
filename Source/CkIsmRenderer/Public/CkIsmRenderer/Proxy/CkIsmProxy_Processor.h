@@ -104,6 +104,10 @@ namespace ck
         using TProcessor::TProcessor;
         using MarkedDirtyBy = FTag_Transform_Updated;
 
+        // DoTick batches MarkRenderStateDirty across the instances visited by the base view. With no
+        // dirty transforms there is no world lookup, batch state, or render-state work to perform.
+        using MainPassRequiredFragments = entt::type_list<FTag_Transform_Updated>;
+
     public:
         auto
         DoTick(

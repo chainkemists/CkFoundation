@@ -9,6 +9,36 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if WITH_EDITOR
+namespace ck_shapes_utils
+{
+    auto Get_OnDimensionsChanged() -> FCk_Shape_OnDimensionsChanged&
+    {
+        static auto Delegate = FCk_Shape_OnDimensionsChanged{};
+        return Delegate;
+    }
+}
+
+auto
+    UCk_Utils_Shapes_UE::
+    Get_OnDimensionsChanged()
+    -> FCk_Shape_OnDimensionsChanged&
+{
+    return ck_shapes_utils::Get_OnDimensionsChanged();
+}
+
+auto
+    UCk_Utils_Shapes_UE::
+    Notify_DimensionsChanged(
+        const FCk_Handle& InHandle)
+    -> void
+{
+    ck_shapes_utils::Get_OnDimensionsChanged().Broadcast(InHandle);
+}
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
 FCk_AnyShape::
     FCk_AnyShape(
         FCk_ShapeBox_Dimensions InDimensions)

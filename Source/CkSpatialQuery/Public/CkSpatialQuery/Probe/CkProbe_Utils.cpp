@@ -12,6 +12,27 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if WITH_EDITOR
+namespace ck_probe_utils
+{
+    auto Get_OnDebugInfoChanged() -> FCk_Probe_OnDebugInfoChanged&
+    {
+        static auto Delegate = FCk_Probe_OnDebugInfoChanged{};
+        return Delegate;
+    }
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Get_OnDebugInfoChanged()
+    -> FCk_Probe_OnDebugInfoChanged&
+{
+    return ck_probe_utils::Get_OnDebugInfoChanged();
+}
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Probe_UE::
     Add(
@@ -85,6 +106,22 @@ auto
     -> FGameplayTag
 {
     return InProbe.Get<ck::FFragment_Probe_Params>().Get_ProbeName();
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Set_DebugInfo(
+        FCk_Handle_Probe& InProbe,
+        const FCk_Probe_DebugInfo& InDebugInfo)
+    -> void
+{
+    if (ck::Is_NOT_Valid(InProbe))
+    { return; }
+
+    InProbe.Replace<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
+#if WITH_EDITOR
+    ck_probe_utils::Get_OnDebugInfoChanged().Broadcast(InProbe);
+#endif
 }
 
 auto

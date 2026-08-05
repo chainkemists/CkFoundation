@@ -19,6 +19,21 @@ namespace ck_transform_utils
 
         return ETeleportType::None;
     }
+
+#if WITH_EDITOR
+    auto Get_OnAdded() -> FCk_Transform_OnAdded&
+    {
+        static auto Delegate = FCk_Transform_OnAdded{};
+        return Delegate;
+    }
+
+    auto BroadcastAdded(FCk_Handle& InHandle) -> void
+    {
+        auto Transform = UCk_Utils_Transform_UE::Cast(InHandle);
+        if (ck::IsValid(Transform))
+        { Get_OnAdded().Broadcast(Transform); }
+    }
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -40,6 +55,9 @@ auto
 
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
     InHandle.Add<ck::FFragment_Transform_Previous>(InInitialTransform);
+#if WITH_EDITOR
+    ck_transform_utils::BroadcastAdded(InHandle);
+#endif
     UCk_Utils_Transform_TypeUnsafe_UE::Request_ForceRefresh(InHandle, {});
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
@@ -101,6 +119,9 @@ auto
 
     InHandle.Add<ck::FFragment_Transform>(InAttachTo->GetComponentToWorld());
     InHandle.Add<ck::FFragment_Transform_Previous>(InAttachTo->GetComponentToWorld());
+#if WITH_EDITOR
+    ck_transform_utils::BroadcastAdded(InHandle);
+#endif
 
     if (const auto* AttachToOwner = InAttachTo->GetOwner();
         ck::IsValid(AttachToOwner, ck::IsValid_Policy_NullptrOnly{}) && AttachToOwner->IsReplicatingMovement())
@@ -162,6 +183,9 @@ auto
 
     InHandle.Add<ck::FFragment_Transform>(InAttachTo->GetSocketTransform(InSocketName));
     InHandle.Add<ck::FFragment_Transform_Previous>(InAttachTo->GetSocketTransform(InSocketName));
+#if WITH_EDITOR
+    ck_transform_utils::BroadcastAdded(InHandle);
+#endif
 
     if (const auto* AttachToOwner = InAttachTo->GetOwner();
         ck::IsValid(AttachToOwner, ck::IsValid_Policy_NullptrOnly{}) && AttachToOwner->IsReplicatingMovement())
@@ -194,6 +218,16 @@ auto
 
     return Cast(InHandle);
 }
+
+#if WITH_EDITOR
+auto
+    UCk_Utils_Transform_UE::
+    Get_OnAdded()
+    -> FCk_Transform_OnAdded&
+{
+    return ck_transform_utils::Get_OnAdded();
+}
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 

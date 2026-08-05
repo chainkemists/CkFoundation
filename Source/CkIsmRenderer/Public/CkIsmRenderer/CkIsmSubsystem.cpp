@@ -102,7 +102,7 @@ auto
     Deinitialize()
     -> void
 {
-    UCk_Utils_IsmRenderer_TransientFactory_UE::ClearCache();
+    UCk_Utils_IsmRenderer_TransientFactory_UE::ClearCache(GetWorld());
 
     Super::Deinitialize();
 }

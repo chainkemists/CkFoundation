@@ -30,10 +30,8 @@ namespace ck
 
     // Opt-out for FProcessor_UnrealComponent_PushTransform: the USceneComponent's world transform
     // is left to whoever owns it instead (typically Unreal physics after SetSimulatePhysics +
-    // K2_DetachFromComponent, which the per-tick ECS push would otherwise overwrite).
+    // K2_DetachFromComponent, which the ECS push would otherwise overwrite).
     CK_DEFINE_ECS_TAG(FTag_UnrealComponent_TransformPushDisabled);
-
-    // --------------------------------------------------------------------------------------------------------------------
 
     struct CKUNREALCOMPONENT_API FFragment_UnrealComponent_Current
     {

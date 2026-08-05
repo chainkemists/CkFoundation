@@ -6,6 +6,8 @@
 #include "CkEcs/Processor/CkProcessor.h"
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -37,14 +39,14 @@ namespace ck
 
     class CKUNREALCOMPONENT_API FProcessor_UnrealComponent_PushTransform : public ck_exp::TProcessor<
             FProcessor_UnrealComponent_PushTransform,
-            FCk_Handle_UnrealComponent,
-            ck::TReadOnly<FFragment_UnrealComponent_Current>,
-            FTag_UnrealComponent_IsScene,
-            TExclude<FTag_UnrealComponent_NeedsSetup>,
-            TExclude<FTag_UnrealComponent_TransformPushDisabled>,
+            FCk_Handle_Transform,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_RecordOfUnrealComponents>,
+            FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_PostTransform;
         using RunAfter = TDepList<FProcessor_UnrealComponent_Setup>;
 
     public:
@@ -55,7 +57,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_UnrealComponent_Current& InCurrent) -> void;
+            const FFragment_Transform& InTransform,
+            const FFragment_RecordOfUnrealComponents& InComponents) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -69,6 +72,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
+        using Group = FGroup_PostTransform;
         using RunAfter = TDepList<FProcessor_UnrealComponent_PushTransform>;
 
     public:

@@ -26,6 +26,14 @@ namespace ck_editor_selection_owner_utils
         static auto Registry = TMap<TWeakObjectPtr<const AActor>, TArray<TWeakObjectPtr<AActor>>>{};
         return Registry;
     }
+
+    auto
+        Get_OnRefreshRequested()
+        -> FCk_EditorSelectionOwner_OnRefreshRequested&
+    {
+        static auto Delegate = FCk_EditorSelectionOwner_OnRefreshRequested{};
+        return Delegate;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -131,6 +139,8 @@ auto
     if (ck::Is_NOT_Valid(InOwnerActor, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
+    ck_editor_selection_owner_utils::Get_OnRefreshRequested().Broadcast(InOwnerActor);
+
     auto& Registry = ck_editor_selection_owner_utils::Get_ProxyRegistry();
 
     const auto Key = TWeakObjectPtr<const AActor>{InOwnerActor};
@@ -154,6 +164,15 @@ auto
     {
         Proxy->PushSelectionToProxies();
     }
+}
+
+
+auto
+    UCk_Utils_EditorSelectionOwner_UE::
+    Get_OnRefreshRequested()
+    -> FCk_EditorSelectionOwner_OnRefreshRequested&
+{
+    return ck_editor_selection_owner_utils::Get_OnRefreshRequested();
 }
 
 auto
