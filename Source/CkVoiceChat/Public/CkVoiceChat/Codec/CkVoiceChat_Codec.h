@@ -273,6 +273,30 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// One talker competing for a recipient's audible-speaker slots. Envelope is the SERVER-side
+// slew-limited loudness (self-reported amplitude is not trusted raw); LastServedFrame is when
+// this recipient last received this talker.
+struct CKVOICECHAT_API FCk_VoiceChat_TopNCandidate
+{
+public:
+    CK_GENERATED_BODY(FCk_VoiceChat_TopNCandidate);
+
+private:
+    int32 _Id = 0;
+    float _Envelope = 0.0f;
+    uint64 _LastServedFrame = 0;
+
+public:
+    CK_PROPERTY_GET(_Id);
+    CK_PROPERTY_GET(_Envelope);
+    CK_PROPERTY_GET(_LastServedFrame);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_VoiceChat_TopNCandidate, _Id, _Envelope, _LastServedFrame);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Pure codec/wire/policy math - no UObjects, no ECS. The transport queues silently and never
 // drops (Iris ordered-unreliable path), so freshness enforcement lives HERE, on the send side.
 namespace ck::voice_chat::codec
@@ -317,6 +341,15 @@ namespace ck::voice_chat::codec
         const TArray<FCk_VoiceChat_PacingEntry>& InQueue,
         int32 InByteBudget,
         FCk_Time InMaxAge) -> FCk_VoiceChat_PacingResult;
+
+    // The audible-speaker cap: which talkers a saturated recipient hears this tick. Priority is
+    // the envelope QUANTIZED to 8 loudness buckets, so near-equal talkers are ties; ties (and
+    // the sustained-max spoof, which pins everyone at the top bucket) rotate least-recently-
+    // served first. Returns the selected candidate ids; a non-positive cap selects nothing.
+    CKVOICECHAT_API auto
+    Select_TopNTalkers(
+        const TArray<FCk_VoiceChat_TopNCandidate>& InCandidates,
+        int32 InMaxTalkers) -> TArray<int32>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

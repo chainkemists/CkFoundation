@@ -21,7 +21,12 @@ namespace ck::voice_chat::defaults
     constexpr int32 BitrateBps = 24000;
     constexpr int32 FrameSizeMs = 20;
     constexpr int32 FramesPerRpc = 3;
-    constexpr int32 MaxVoiceBytesPerConnectionPerTick = 4096;
+    // S5-measured (2026-08-03, editor net-PIE, Iris, project config): the connection's saturated
+    // unreliable-RPC drain is ~708 B/tick, stable across windows. 640 covers the 8-talker steady
+    // worst case (8 x 240 B / 3.6 ticks ~= 533 B/tick) yet stays UNDER the drain, so sustained
+    // overage drops at the counted budget layer instead of silently queueing (S2). Re-measure on
+    // packaged/dedicated config before ship-tuning.
+    constexpr int32 MaxVoiceBytesPerConnectionPerTick = 640;
     constexpr int32 MaxAudibleSpeakers = 8;
     constexpr float ProximityHysteresisMarginCm = 100.0f;
     constexpr float JitterBufferMinSeconds = 0.02f;
@@ -67,7 +72,7 @@ private:
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Transport",
         meta = (AllowPrivateAccess = true, ClampMin = "256",
-            ToolTip = "Per-connection byte budget per tick for outbound voice, drained by the pacing processor."))
+            ToolTip = "Per-connection byte budget per tick for outbound voice, drained by the pacing processor. Keep BELOW the connection's measured unreliable drain rate (Ck.VoiceChat.Net.DrainBudgetMeasure prints it) so overage drops at this counted layer instead of silently queueing in the transport."))
     int32 _MaxVoiceBytesPerConnectionPerTick = ck::voice_chat::defaults::MaxVoiceBytesPerConnectionPerTick;
 
     UPROPERTY(Config, EditDefaultsOnly, Category = "Routing",

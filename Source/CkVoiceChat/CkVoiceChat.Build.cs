@@ -21,8 +21,10 @@ public class CkVoiceChat : CkModuleRules
             "DeveloperSettings",
             "Engine",
             "GameplayTags",
+            "NetCore",
             "Voice",
 
+            "CkActorRelay",
             "CkCore",
             "CkEcs",
             "CkEcsExt",
@@ -30,6 +32,8 @@ public class CkVoiceChat : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
+            "CkShapes",
+            "CkSpatialQuery",
         });
     }
 }

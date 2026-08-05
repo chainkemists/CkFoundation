@@ -160,6 +160,56 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Plays out a REMOTE talker's forwarded voice on this machine: drains the receive inbox into
+    // the talker's jitter buffer, then runs the shared playout drain (pop -> decode -> PCM ->
+    // synth). Runs on every net mode - a listen host receives other players' voice like any
+    // client. Time-stepping (conceal and tail drain continue without new bundles), so
+    // deliberately no MarkedDirtyBy.
+    class CKVOICECHAT_API FProcessor_VoiceTalker_ReceivePlayback : public ck_exp::TProcessor<
+        FProcessor_VoiceTalker_ReceivePlayback,
+        FCk_Handle_VoiceTalker,
+        ck::TReadWrite<FFragment_VoiceTalker_Current>,
+        ck::TReadWrite<FFragment_VoiceTalker_ReceiveInbox>,
+        TExclude<FTag_VoiceTalker_NeedsSetup>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Gameplay_Audio;
+        using RunAfter = TDepList<FProcessor_VoiceTalker_Capture>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_ReceiveInbox& InInbox)
+            -> void;
+
+    public:
+        // The one playout drain both consumers share (Capture's loopback and this processor's
+        // receive path): advances the pop accumulator, pops/conceals/decodes into the decoded-PCM
+        // buffer + synth, and trims the buffer. No-op (accumulator cleared) without a decoder.
+        static auto
+        Drain_Playout(
+            FFragment_VoiceTalker_Current& InCurrent,
+            FCk_Time InDeltaT)
+            -> void;
+
+        // Creates + starts the playback synth if the world can render audio; no-op otherwise
+        // (headless PIE) - the decode path still fills the test-readable PCM buffer.
+        static auto
+        TryCreate_PlaybackSynth(
+            HandleType InVoiceTalkerEntity,
+            FFragment_VoiceTalker_Current& InCurrent)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // Teardown order per spec §7.8: stop capture BEFORE releasing the encoder/decoder.
     class CKVOICECHAT_API FProcessor_VoiceTalker_EndPlay : public ck_exp::TProcessor<
         FProcessor_VoiceTalker_EndPlay,

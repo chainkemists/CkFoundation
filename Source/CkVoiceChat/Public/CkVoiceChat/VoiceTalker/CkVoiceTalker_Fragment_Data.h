@@ -9,8 +9,14 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayTagContainer.h>
+#include <NativeGameplayTags.h>
 
 #include "CkVoiceTalker_Fragment_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CKVOICECHAT_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_VoiceChat_Probe_Range);
+CKVOICECHAT_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_VoiceChat_Probe_Presence);
 
 // --------------------------------------------------------------------------------------------------------------------
 
