@@ -111,6 +111,49 @@ fragment MUST move that feature's Has/Cast anchor in the same change, with a mem
 
 ## Log
 
+- 2026-08-06 (P6b): **maintainer audit — two doctrine defects found and fixed.** Branch
+  `refactor/spec-fragment-params-residues` (CkFoundation).
+  * **Defect 1 — fragments constructed FROM their Spec (bidirectional dependency).** A
+    framework-wide scan found exactly three hand-written `explicit FFragment_X(const FCk_X_Spec&)`
+    ctors, ALL introduced by this campaign's own P4: `FFragment_AudioTrack_Params`,
+    `FFragment_AudioTrack_PendingSetup`, `FFragment_Probe_Params`. The Timer pilot had it right
+    (`CK_DEFINE_CONSTRUCTORS`); the two later residues regressed. All three now use the macro over
+    their own members and the `Add`/`Create` factory does the mapping. Re-scan: zero remaining.
+    New doctrine rule recorded in the root CLAUDE.md Spec-unpacking section.
+  * **Defect 2 — Params fragments retaining data with a second home.** Scan signature:
+    `X._Foo = <Params|Spec>.Get_Foo()` into a persistent fragment. Seven hits, triaged:
+    - **VoiceTalker (ours, fresh)** — extracting `_Tunables` in P5c left `_TransmitMode`/`_InputGain`
+      in BOTH the wholesale Spec alias and Tunables. No live stale read (Setup's seeding was the only
+      consumer) but one request away from one. FIXED: residue `{_VadThreshold, _Loopback,
+      _PlaybackAttachSocketName}`, tunables seeded at `Add`, Setup demoted to clearing the gate tag.
+      Also found: `_AutoJoinChannels` is authored but read NOWHERE in the framework — dead Spec field,
+      left alone (reflected authoring API; removal is the VoiceChat owner's call).
+    - **PoiDisplayDefinition** — `_Tint`/`_SizeHint` duplicated. The module doc already handled this
+      with anti-pattern #4 ("never read them off Params"), so it was a KNOWN duplication guarded by a
+      written rule, not a latent bug — an earlier characterisation of it as a live bug was too strong.
+      FIXED anyway: residue `{_Consumer, _Icon, _Priority, _OffscreenPolicy}`, which turns that rule
+      into a compile error.
+    - **Minimap** — the worst of the set, and BOTH directions at once: `_ViewExtent`/`_RotationMode`
+      copied into Current (Spec copies stale), while `_CategoryFilter` was mutated IN the Params
+      fragment via the reflected Spec's setter (`InParams.Set_CategoryFilter`), which is why
+      HandleRequests took Params `TReadWrite`. FIXED: all three request-mutable fields now live only
+      in Current; residue is `{_ProjectionMode, _FrameShape, _FixedBounds, _MaxEntries,
+      _UpdateInterval}`; HandleRequests takes Params `TReadOnly`; the authoring ensures moved to `Add`
+      where the Spec still exists. Setup's dead Params view member dropped.
+    - **NOT defects (verified, left alone):** PathNetwork `_ChunkSize` writes a local `FBuiltNetwork{}`
+      build-result struct, not a fragment. Goap `_WorldStateSource` lives in a resolution fragment
+      beside `_Resolved`, which legitimately diverges via child overrides, and one write targets a
+      DIFFERENT entity — propagation, not duplication. IskmProxy `_LocalLocationOffset` is a real copy
+      but both sides are immutable post-Setup, so it cannot diverge: redundancy, not a bug.
+  * **Coverage answer for the campaign as a whole:** the Spec RENAME is complete and correct (the
+    detail-customization registrations bind via `FCk_..._Spec::StaticStruct()->GetFName()`, so nothing
+    is silently unbound). What survives is stale NAMING only: six `*_ParamsDataCustomization` editor
+    classes, `ACk_VoxelNavVolume::Build_ParamsData()`, and four stale comments. The data-placement
+    DOCTRINE has now reached 6 features (Timer, AudioTrack, Probe, VoiceTalker, PoiDisplayDefinition,
+    Minimap); ~50 still retain the whole Spec as a wholesale alias, which is unconverted-but-inert
+    so long as nothing mutates a runtime copy of one of their fields. The scan signature above is the
+    cheap way to find the next real one.
+
 - 2026-08-06 (P5c): **VoiceTalker (item 6) EXECUTED** — the deferral condition was re-tested and
   had lapsed, so the last staged split is done and P5 is closed.
   * **Why it un-deferred:** the P5b deferral was "coordinate with the active VoiceChat
