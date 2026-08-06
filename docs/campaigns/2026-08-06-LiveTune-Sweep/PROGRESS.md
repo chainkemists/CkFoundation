@@ -90,6 +90,31 @@ feature following `Script/CkEcs/CkAutoTest_LiveTune_TimerViaReplace.as`.
 
 ---
 
+## The decision table — start every remaining feature here
+
+`python decision_table.py` -> `decision_table.tsv`. One row per feature resolving the three facts
+that have each already cost this campaign a defect when guessed: the fragment FORM (alias vs
+wrapper), whether `Add` bakes params fields, and which non-Setup processors read the fragment.
+
+| Status | Count | What it means / what it costs |
+|---|---:|---|
+| `BARE_OK` | **8** | `Register<T>()` (+ `T_Fragment` if wrapper). Cheapest. |
+| `PER_FIELD` | **34** | `Add` bakes params fields — split retunable vs baked, `.PostApply` or document. The bulk. |
+| `VIA_REBUILD` | **21** | No params fragment retained. `ReAdd` + capture decision each. Most expensive. |
+| `SETUP_BAKED` | **19** | Params read only by Setup — needs a re-arm or a request path. |
+| `MANUAL` | 9 | No `Add()` found; read by hand. |
+| `OUT_OF_SCOPE` | 19 | `Multiple*` containers. |
+| `REGISTERED` | 5 | Timer, FloatAttribute, Probe, AutoReorient, ResolverSource. |
+
+Forms across the in-scope set: **49 alias, 25 wrapper**. Check the FORM column before writing any
+`Register` line.
+
+`BARE_OK` today: AudioDirector, BallisticMotion, Compass, DialogEmitter, JoltCharacter, Minimap,
+RaySense, VoiceTalker — all alias-form. Note several of these ALSO carry a `NeedsSetup` tag whose
+Setup pass derives `Current` from params: a live-read field retunes, but a Setup-only field will not.
+`BARE_OK` means "the bare registration is sound for the live-read fields", not "every field retunes"
+— state the bound at the call site, per the Timer precedent.
+
 ## Remaining
 
 - Finish batch 1's tests, then the other 3 batch-1 candidates.

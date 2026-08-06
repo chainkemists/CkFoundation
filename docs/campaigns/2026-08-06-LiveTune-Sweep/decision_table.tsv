@@ -1,0 +1,116 @@
+FEATURE	FORM	READ_BY	STATUS	ADD_READS
+2dGridBlocker	alias	FProcessor_2dGridBlocker_Requests	PER_FIELD	Grid,Name
+2dGridCell	alias	-	SETUP_BAKED	-
+2dGridObject	alias	-	SETUP_BAKED	-
+2dGridPlacement	alias	-	SETUP_BAKED	-
+2dGridSystem	alias	FProcessor_2dGridSystem_DebugDrawAll	PER_FIELD	Dimensions,ResolvedActiveCoordinates
+Acceleration	wrapper	FProcessor_BulkAccelerationModifier_AddNewTargets	PER_FIELD	StartingAcceleration
+AccelerationModifier	none	-	VIA_REBUILD	-
+Aggro	none	-	VIA_REBUILD	CapParams,DefaultTargetParams,EvaluationParams,SelectionParams
+AggroTarget	none	-	VIA_REBUILD	-
+AnimAsset	wrapper	-	SETUP_BAKED	AnimationAsset
+AnimPlan	wrapper	FProcessor_AnimPlan_HandleRequests,FProcessor_AnimPlan_Replicate	PER_FIELD	AnimGoal,StartingAnimCluster,StartingAnimState
+AudioDirector	alias	FProcessor_AudioDirector_EndPlay,FProcessor_AudioDirector_HandleRequests	BARE_OK	-
+AudioTrack	alias	FProcessor_AudioTrack_DebugDraw_All_NonSpatial,FProcessor_AudioTrack_DebugDraw_All_Spatial	MANUAL	-
+AutoReorient	wrapper	FProcessor_AutoReorient_OrientTowardsVelocity	REGISTERED	-
+BallisticMotion	alias	FProcessor_BallisticMotion_HandleImpacts,FProcessor_BallisticMotion_HandleRequests	BARE_OK	-
+BulkAccelerationModifier	wrapper	FProcessor_BulkAccelerationModifier_HandleRequests	MANUAL	-
+BulkVelocityModifier	wrapper	FProcessor_BulkVelocityModifier_HandleRequests	MANUAL	-
+ByteAttribute	none	-	VIA_REBUILD	BaseValue,MaxValue,MinMax,MinValue,Name
+ByteAttributeModifier	none	-	VIA_REBUILD	-
+Camera	wrapper	-	SETUP_BAKED	OutputComponent,Profile
+CameraShake	wrapper	FProcessor_CameraShake_HandleRequests	PER_FIELD	Name
+Compass	alias	FProcessor_Compass_EndPlay,FProcessor_Compass_HandleRequests	BARE_OK	-
+CrowdAgent	alias	FProcessor_CrowdAgent_AccelClamp,FProcessor_CrowdAgent_AvoidanceSample	PER_FIELD	AgentMode,ArrivalRadius,Height,Radius
+DialogEmitter	alias	FProcessor_DialogEmitter_EvaluateQueries,FProcessor_DialogEmitter_HandleRequests	BARE_OK	-
+DialogLine	alias	-	SETUP_BAKED	-
+EntityCollection	wrapper	FProcessor_EntityCollection_FireSignals,FProcessor_EntityCollection_Replicate	PER_FIELD	Name
+EntityTag	none	-	VIA_REBUILD	-
+FloatAttribute	none	-	REGISTERED	BaseValue,EnableRefill,MaxValue,MinMax,MinValue,Name,RefillParams
+FloatAttributeModifier	none	-	VIA_REBUILD	-
+FloatAttributeRefill	none	-	VIA_REBUILD	-
+FogOfWar	alias	FProcessor_FogOfWar_HandleRequests,FProcessor_FogOfWar_Update	PER_FIELD	Bounds
+GeometryCollection	wrapper	FProcessor_GeometryCollection_CrumbleNonActiveClusters,FProcessor_GeometryCollection_HandleRequests	PER_FIELD	GeometryCollection
+Goap	none	-	VIA_REBUILD	-
+Goap_WorldState	alias	-	SETUP_BAKED	-
+Homing	alias	FProcessor_Homing_HandleRequests,FProcessor_Homing_Update	PER_FIELD	GuidanceSettings,StartingState
+IntegerAttribute	none	-	VIA_REBUILD	BaseValue,EnableRefill,MaxValue,MinMax,MinValue,Name,RefillParams
+IntegerAttributeModifier	none	-	VIA_REBUILD	-
+IntegerAttributeRefill	none	-	VIA_REBUILD	-
+InteractSource	wrapper	FProcessor_InteractSource_EndPlay,FProcessor_InteractSource_HandleRequests	PER_FIELD	InteractionChannel
+InteractTarget	wrapper	FProcessor_InteractTarget_EndPlay,FProcessor_InteractTarget_HandleRequests	PER_FIELD	InteractionChannel
+Interaction	wrapper	FProcessor_Interaction_EndPlay,FProcessor_Interaction_HandleRequests	PER_FIELD	CompletionPolicy,InteractionChannel,InteractionDuration,Source,Target
+Inventory	alias	FProcessor_Inventory_DataOnly_Replicate,FProcessor_Inventory_FireSignals	MANUAL	-
+Inventory_DataOnly	alias	-	SETUP_BAKED	Name
+Inventory_Spatial	alias	-	SETUP_BAKED	Name
+IskmProxy	alias	FProcessor_IskmProxy_HandleRequests	PER_FIELD	Renderer
+IsmProxy	alias	FProcessor_IsmProxy_AddInstance,FProcessor_IsmProxy_EndPlay	PER_FIELD	IsmRenderer,StartingState
+JoltBody	alias	FProcessor_JoltBody_EndPlay	PER_FIELD	InitialSleepState,MotionType,PersistContacts
+JoltCharacter	alias	FProcessor_JoltCharacter_EndPlay,FProcessor_JoltCharacter_PreStep	BARE_OK	-
+JoltConstraint	alias	FProcessor_JoltConstraint_HandleRequests	MANUAL	-
+Marker	wrapper	FProcessor_Marker_EndPlay,FProcessor_Marker_HandleRequests	PER_FIELD	MarkerName
+Minimap	alias	FProcessor_Minimap_EndPlay,FProcessor_Minimap_HandleRequests	BARE_OK	-
+MontagePlayer	wrapper	FProcessor_MontagePlayer_HandleRequests,FProcessor_MontagePlayer_MonitorAnimInstance	PER_FIELD	SkeletalMeshComponent
+MultipleAnimAsset	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleAnimPlan	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleByteAttribute	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleCameraShake	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleEntityCollection	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleFloatAttribute	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleIntegerAttribute	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleInteractSource	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleInteractTarget	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleInteraction	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleInventory_DataOnly	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleInventory_Spatial	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleMarker	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleRotatorAttribute	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleSensor	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleSfx	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleTimer	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleVectorAttribute	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+MultipleVfx	-	-	OUT_OF_SCOPE	Multiple* bulk-add container
+PathNetwork	alias	FProcessor_PathNetwork_HandleRequests	PER_FIELD	Ribbons
+PathNetworkFollower	alias	FProcessor_PathNetworkFollower_HandleRequests,FProcessor_PathNetworkFollower_InvalidateOnRebuild	MANUAL	-
+Pmg_Donut	wrapper	-	SETUP_BAKED	-
+Poi	none	-	VIA_REBUILD	Category,Label
+PoiDisplayDefinition	alias	-	SETUP_BAKED	Consumer,SizeHint,Tint
+PredictedVelocity	wrapper	-	SETUP_BAKED	-
+Probe	alias	FProcessor_Probe_EndPlay,FProcessor_Probe_EnsureStaticNotMoved_DEBUG	REGISTERED	MotionQuality,MotionType,ProbeName,StartingState
+Projectile	none	-	VIA_REBUILD	AccelerationParams,AutoReorientParams,VelocityParams
+RaySense	alias	FProcessor_RaySense_BoxSweep_Update,FProcessor_RaySense_CapsuleSweep_Update	BARE_OK	-
+RenderStatus	wrapper	-	SETUP_BAKED	RenderGroup
+RenderTarget	alias	FProcessor_RenderTarget_ApplyClientBatches,FProcessor_RenderTarget_ClientNetMaintenance	PER_FIELD	SyncName
+ResolverDataBundle	wrapper	FProcessor_ResolverDataBundle_Calculate,FProcessor_ResolverDataBundle_StartNewPhase	MANUAL	-
+ResolverSource	wrapper	FProcessor_ResolverSource_HandleRequests	REGISTERED	-
+ResolverTarget	wrapper	-	SETUP_BAKED	-
+RewindHistory	alias	FProcessor_RewindHistory_Record	PER_FIELD	HitShapes
+RotatorAttribute	none	-	VIA_REBUILD	BaseValue,MaxValue,MinMax,MinValue,Name
+RotatorAttributeModifier	none	-	VIA_REBUILD	-
+Sensor	wrapper	FProcessor_Sensor_EndPlay,FProcessor_Sensor_HandleRequests	PER_FIELD	SensorName
+Sfx	wrapper	FProcessor_Sfx_HandleRequests	PER_FIELD	Name
+ShapeBox	alias	FProcessor_ShapeBox_HandleRequests	PER_FIELD	InitialDimensions
+ShapeCapsule	alias	FProcessor_ShapeCapsule_HandleRequests	PER_FIELD	InitialDimensions
+ShapeCylinder	alias	FProcessor_ShapeCylinder_HandleRequests	PER_FIELD	InitialDimensions
+ShapeSphere	alias	FProcessor_ShapeSphere_HandleRequests	PER_FIELD	InitialDimensions
+Spline	alias	-	SETUP_BAKED	Curves
+StateMachine	none	-	VIA_REBUILD	InitialStateClass
+Timer	alias	FProcessor_Timer_HandleRequests,FProcessor_Timer_Update	REGISTERED	CountDirection,Duration,StartingState,TimerName
+Tween	alias	FProcessor_Tween_ApplyToTransform,FProcessor_Tween_HandleYoyoDelays	MANUAL	-
+UnrealComponent	alias	-	SETUP_BAKED	ComponentClass,DebugName
+VatProxy	alias	FProcessor_VatProxy_FireSignals,FProcessor_VatProxy_HandleRequests	PER_FIELD	Collection
+VectorAttribute	none	-	VIA_REBUILD	BaseValue,MaxValue,MinMax,MinValue,Name
+VectorAttributeModifier	none	-	VIA_REBUILD	-
+Velocity	wrapper	FProcessor_BulkVelocityModifier_AddNewTargets	PER_FIELD	StartingVelocity,VelocityMinMax
+VelocityModifier	none	-	VIA_REBUILD	-
+Velocity_MinMax	none	-	VIA_REBUILD	-
+Vfx	wrapper	-	SETUP_BAKED	Name
+VfxCue	alias	-	SETUP_BAKED	-
+VisibleRange	alias	FProcessor_VisibleRange_Update_Bucket	PER_FIELD	UpdateInterval
+VoiceChannel	alias	FProcessor_VoiceChannel_AssignIdx	PER_FIELD	ChannelName
+VoiceTalker	alias	FProcessor_VoiceTalker_Capture,FProcessor_VoiceTalker_HandleRequests	BARE_OK	-
+VoxelNavOccluder	alias	FProcessor_VoxelNavOccluder_Track	PER_FIELD	HalfExtentsUu
+VoxelNavPath	alias	FProcessor_CrowdAgent_OnVoxelPathResolved,FProcessor_VoxelNavPath_HandleRequests	PER_FIELD	AgentRadiusUu
+VoxelNavVolume	alias	FProcessor_VoxelNavVolume_Build,FProcessor_VoxelNavVolume_HandleRequests	PER_FIELD	ChunkPartitioning
+WorldSpaceWidget	alias	FProcessor_WorldSpaceWidget_EndPlay,FProcessor_WorldSpaceWidget_HandleRequests	MANUAL	-
+X	alias	-	SETUP_BAKED	-
