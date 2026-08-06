@@ -52,17 +52,8 @@ namespace ck
         CK_PROPERTY_GET(_DefaultFadeOutTime);
 
     public:
-        FFragment_AudioTrack_Params() = default;
-        explicit FFragment_AudioTrack_Params(const FCk_AudioTrack_Spec& InSpec)
-            : _TrackName(InSpec.Get_TrackName())
-            , _Sound(InSpec.Get_Sound())
-            , _Priority(InSpec.Get_Priority())
-            , _OverrideBehavior(InSpec.Get_OverrideBehavior())
-            , _LoopBehavior(InSpec.Get_LoopBehavior())
-            , _Volume(InSpec.Get_Volume())
-            , _DefaultFadeInTime(InSpec.Get_DefaultFadeInTime())
-            , _DefaultFadeOutTime(InSpec.Get_DefaultFadeOutTime())
-        {}
+        CK_DEFINE_CONSTRUCTORS(FFragment_AudioTrack_Params, _TrackName, _Sound, _Priority,
+            _OverrideBehavior, _LoopBehavior, _Volume, _DefaultFadeInTime, _DefaultFadeOutTime);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -88,13 +79,8 @@ namespace ck
         CK_PROPERTY_GET(_LibrarySoundClassSettings);
 
     public:
-        FFragment_AudioTrack_PendingSetup() = default;
-        explicit FFragment_AudioTrack_PendingSetup(const FCk_AudioTrack_Spec& InSpec)
-            : _ScriptAsset(InSpec.Get_ScriptAsset())
-            , _LibraryAttenuationSettings(InSpec.Get_LibraryAttenuationSettings())
-            , _LibraryConcurrencySettings(InSpec.Get_LibraryConcurrencySettings())
-            , _LibrarySoundClassSettings(InSpec.Get_LibrarySoundClassSettings())
-        {}
+        CK_DEFINE_CONSTRUCTORS(FFragment_AudioTrack_PendingSetup, _ScriptAsset,
+            _LibraryAttenuationSettings, _LibraryConcurrencySettings, _LibrarySoundClassSettings);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
