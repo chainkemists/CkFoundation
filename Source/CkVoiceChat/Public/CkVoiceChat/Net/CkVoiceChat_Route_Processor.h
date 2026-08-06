@@ -53,7 +53,7 @@ namespace ck
     class CKVOICECHAT_API FProcessor_VoiceChat_Route : public ck_exp::TProcessor<
         FProcessor_VoiceChat_Route,
         FCk_Handle_VoiceTalker,
-        ck::TReadWrite<FFragment_VoiceTalker_Current>,
+        ck::TReadWrite<FFragment_VoiceTalker_Fairness>,
         ck::TReadWrite<FFragment_VoiceTalker_ServerInbox>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -71,7 +71,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Fairness& InFairness,
             FFragment_VoiceTalker_ServerInbox& InInbox)
             -> void;
     };

@@ -65,28 +65,66 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKVOICECHAT_API FFragment_VoiceTalker_Current
+    // The talker's loudness right now, quantized: measured from captured RMS on the machine that
+    // owns the talker, mirrored from the wire header on a machine receiving it. The one datum
+    // both halves of the pipeline write, and the value the public Get_CurrentAmplitude reads.
+    struct CKVOICECHAT_API FFragment_VoiceTalker
     {
     public:
-        CK_GENERATED_BODY(FFragment_VoiceTalker_Current);
+        CK_GENERATED_BODY(FFragment_VoiceTalker);
+
+    public:
+        friend class FProcessor_VoiceTalker_Capture;
+        friend class FProcessor_VoiceTalker_ReceivePlayback;
+
+    private:
+        uint8 _AmplitudeQ8 = 0;
+
+    public:
+        CK_PROPERTY_GET(_AmplitudeQ8);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The runtime tunables, seeded from the Spec at Setup. Requests mutate ONLY these - the Params
+    // fragment stays the authored record, so a Set_* request can never make the two disagree.
+    struct CKVOICECHAT_API FFragment_VoiceTalker_Tunables
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceTalker_Tunables);
 
     public:
         friend class FProcessor_VoiceTalker_Setup;
         friend class FProcessor_VoiceTalker_HandleRequests;
+
+    private:
+        ECk_VoiceChat_TransmitMode _TransmitMode = ECk_VoiceChat_TransmitMode::PushToTalk;
+        float _InputGain = 1.2f;
+        ECk_EnableDisable _SelfMute = ECk_EnableDisable::Disable;
+
+    public:
+        CK_PROPERTY_GET(_TransmitMode);
+        CK_PROPERTY_GET(_InputGain);
+        CK_PROPERTY_GET(_SelfMute);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The send chain: mic source -> gain/VAD -> Opus encode -> the paced outbound queue. Only ever
+    // driven on the machine that owns the talker; a replica carries it inert.
+    struct CKVOICECHAT_API FFragment_VoiceTalker_Capture
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceTalker_Capture);
+
+    public:
+        friend class FProcessor_VoiceTalker_HandleRequests;
         friend class FProcessor_VoiceTalker_Capture;
-        friend class FProcessor_VoiceTalker_ReceivePlayback;
         friend class FProcessor_VoiceTalker_EndPlay;
-        friend class FProcessor_VoiceChat_Route;
         friend class UCk_Utils_VoiceTalker_UE;
 
     private:
         uint16 _Seq = 0;
-        uint8 _AmplitudeQ8 = 0;
-
-        // runtime copies of the tunable params (requests mutate these, never the Params fragment)
-        ECk_VoiceChat_TransmitMode _TransmitMode = ECk_VoiceChat_TransmitMode::PushToTalk;
-        float _InputGain = 1.2f;
-        ECk_EnableDisable _SelfMute = ECk_EnableDisable::Disable;
 
         TSharedPtr<ICk_VoiceChat_CaptureSource> _CaptureSource;
         TSharedPtr<IVoiceEncoder> _Encoder;
@@ -97,15 +135,29 @@ namespace ck
 
         TArray<FCk_VoiceChat_OutboundFrame> _OutboundFrames;
 
-        // Server-side slew-limited loudness (self-reported amplitude is not trusted raw): the
-        // fairness input for the audible-speaker cap. Rise-limited so a spoofed instant-max
-        // claim cannot jump the queue; falls when the talker goes quiet.
-        float _FairnessEnvelope = 0.0f;
+    public:
+        CK_PROPERTY_GET(_Seq);
+    };
 
-        // The playout chain (jitter -> decoder -> decoded PCM -> synth). Shared by the two
-        // mutually exclusive users on any one machine: the local self-monitor (loopback, while
-        // THIS machine transmits) and remote-talker receive (the entity is a replica; its
-        // transmit path never runs here).
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The playout chain (jitter -> decoder -> decoded PCM -> synth) and the receive-side clocks and
+    // render config that drive it. Shared by the two mutually exclusive users on any one machine:
+    // the local self-monitor (loopback, while THIS machine transmits) and remote-talker receive
+    // (the entity is a replica; its transmit path never runs here).
+    struct CKVOICECHAT_API FFragment_VoiceTalker_Playout
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceTalker_Playout);
+
+    public:
+        friend class FProcessor_VoiceTalker_HandleRequests;
+        friend class FProcessor_VoiceTalker_Capture;
+        friend class FProcessor_VoiceTalker_ReceivePlayback;
+        friend class FProcessor_VoiceTalker_EndPlay;
+        friend class UCk_Utils_VoiceTalker_UE;
+
+    private:
         FCk_VoiceChat_JitterBuffer _LoopbackJitter;
         TSharedPtr<IVoiceDecoder> _LoopbackDecoder;
         TArray<uint8> _LoopbackDecodedPcm;
@@ -129,13 +181,25 @@ namespace ck
         FCk_Time _ReceiveClock;
 
     public:
-        CK_PROPERTY_GET(_Seq);
-        CK_PROPERTY_GET(_AmplitudeQ8);
-        CK_PROPERTY_GET(_TransmitMode);
-        CK_PROPERTY_GET(_InputGain);
-        CK_PROPERTY_GET(_SelfMute);
         CK_PROPERTY_GET(_PlaybackConfigChannel);
         CK_PROPERTY_GET(_HybridRenderNear);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Authority-side: slew-limited loudness (self-reported amplitude is not trusted raw) - the
+    // fairness input for the audible-speaker cap. Rise-limited so a spoofed instant-max claim
+    // cannot jump the queue; falls when the talker goes quiet.
+    struct CKVOICECHAT_API FFragment_VoiceTalker_Fairness
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceTalker_Fairness);
+
+    public:
+        friend class FProcessor_VoiceChat_Route;
+
+    private:
+        float _FairnessEnvelope = 0.0f;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

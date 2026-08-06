@@ -14,7 +14,7 @@ namespace ck
         FProcessor_VoiceTalker_Setup,
         FCk_Handle_VoiceTalker,
         ck::TReadOnly<FFragment_VoiceTalker_Params>,
-        ck::TReadWrite<FFragment_VoiceTalker_Current>,
+        ck::TReadWrite<FFragment_VoiceTalker_Tunables>,
         FTag_VoiceTalker_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -31,7 +31,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Tunables& InTunables)
             -> void;
     };
 
@@ -41,7 +41,9 @@ namespace ck
         FProcessor_VoiceTalker_HandleRequests,
         FCk_Handle_VoiceTalker,
         ck::TReadOnly<FFragment_VoiceTalker_Params>,
-        ck::TReadWrite<FFragment_VoiceTalker_Current>,
+        ck::TReadWrite<FFragment_VoiceTalker_Tunables>,
+        ck::TReadWrite<FFragment_VoiceTalker_Capture>,
+        ck::TReadWrite<FFragment_VoiceTalker_Playout>,
         ck::TReadWrite<FFragment_VoiceTalker_Requests>,
         TExclude<FTag_VoiceTalker_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -61,43 +63,57 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             FFragment_VoiceTalker_Requests& InRequests) const -> void;
 
     private:
+        // The overloads share one leading parameter list because the request visitor dispatches
+        // them through a single call expression - a handler that ignores a fragment still takes it.
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_StartTransmit& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_StopTransmit& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_SetTransmitMode& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_SetInputGain& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_SetSelfMute& InRequest) -> bool;
     };
 
@@ -136,7 +152,10 @@ namespace ck
         FProcessor_VoiceTalker_Capture,
         FCk_Handle_VoiceTalker,
         ck::TReadOnly<FFragment_VoiceTalker_Params>,
-        ck::TReadWrite<FFragment_VoiceTalker_Current>,
+        ck::TReadOnly<FFragment_VoiceTalker_Tunables>,
+        ck::TReadWrite<FFragment_VoiceTalker>,
+        ck::TReadWrite<FFragment_VoiceTalker_Capture>,
+        ck::TReadWrite<FFragment_VoiceTalker_Playout>,
         FTag_VoiceTalker_IsTransmitting,
         TExclude<FTag_VoiceTalker_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -154,7 +173,10 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent)
+            const FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker& InVoiceTalkerComp,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout)
             -> void;
     };
 
@@ -168,7 +190,8 @@ namespace ck
     class CKVOICECHAT_API FProcessor_VoiceTalker_ReceivePlayback : public ck_exp::TProcessor<
         FProcessor_VoiceTalker_ReceivePlayback,
         FCk_Handle_VoiceTalker,
-        ck::TReadWrite<FFragment_VoiceTalker_Current>,
+        ck::TReadWrite<FFragment_VoiceTalker>,
+        ck::TReadWrite<FFragment_VoiceTalker_Playout>,
         ck::TReadWrite<FFragment_VoiceTalker_ReceiveInbox>,
         TExclude<FTag_VoiceTalker_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -185,7 +208,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker& InVoiceTalkerComp,
+            FFragment_VoiceTalker_Playout& InPlayout,
             FFragment_VoiceTalker_ReceiveInbox& InInbox)
             -> void;
 
@@ -195,7 +219,7 @@ namespace ck
         // buffer + synth, and trims the buffer. No-op (accumulator cleared) without a decoder.
         static auto
         Drain_Playout(
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Playout& InPlayout,
             FCk_Time InDeltaT)
             -> void;
 
@@ -206,7 +230,7 @@ namespace ck
         static auto
         TryCreate_PlaybackSynth(
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Playout& InPlayout)
             -> void;
 
         // (Re)applies _PlaybackConfigChannel's spatialization/attenuation/effect chain to the
@@ -218,7 +242,7 @@ namespace ck
         static auto
         Apply_SynthChannelConfig(
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Playout& InPlayout)
             -> void;
 
         // HybridRadio's per-recipient render decision (ADR-5: "prefer 3D if near", ONE wire
@@ -229,7 +253,7 @@ namespace ck
         static auto
         Evaluate_HybridRenderMode(
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Playout& InPlayout)
             -> void;
     };
 
@@ -239,7 +263,8 @@ namespace ck
     class CKVOICECHAT_API FProcessor_VoiceTalker_EndPlay : public ck_exp::TProcessor<
         FProcessor_VoiceTalker_EndPlay,
         FCk_Handle_VoiceTalker,
-        ck::TReadWrite<FFragment_VoiceTalker_Current>,
+        ck::TReadWrite<FFragment_VoiceTalker_Capture>,
+        ck::TReadWrite<FFragment_VoiceTalker_Playout>,
         CK_IF_END_PLAY>
     {
     public:
@@ -253,7 +278,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout)
             -> void;
     };
 }

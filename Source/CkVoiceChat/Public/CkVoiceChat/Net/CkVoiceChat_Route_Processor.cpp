@@ -346,7 +346,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Fairness& InFairness,
             FFragment_VoiceTalker_ServerInbox& InInbox)
         -> void
     {
@@ -443,8 +443,8 @@ namespace ck
                 continue;
             }
 
-            InCurrent._FairnessEnvelope += FMath::Clamp(
-                voice_chat::codec::Dequantize_Amplitude(Unpacked->Get_Header().Get_AmplitudeQ8()) - InCurrent._FairnessEnvelope,
+            InFairness._FairnessEnvelope += FMath::Clamp(
+                voice_chat::codec::Dequantize_Amplitude(Unpacked->Get_Header().Get_AmplitudeQ8()) - InFairness._FairnessEnvelope,
                 -EnvelopeFallPerSecond * SlewSeconds,
                 EnvelopeRisePerSecond * SlewSeconds);
 
@@ -540,7 +540,7 @@ namespace ck
                 auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InVoiceTalkerEntity);
                 TransientEntity.AddOrGet<FFragment_VoiceChat_PendingForwards>().Get_Forwards().Emplace(
                     FCk_VoiceChat_PendingForward{MakeWeakObjectPtr(RecipientPlayer), InVoiceTalkerEntity,
-                        Packed, InCurrent._FairnessEnvelope});
+                        Packed, InFairness._FairnessEnvelope});
             }
         }
 

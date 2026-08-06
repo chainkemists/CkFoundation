@@ -290,13 +290,13 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Tunables& InTunables)
         -> void
     {
         InVoiceTalkerEntity.Remove<MarkedDirtyBy>();
 
-        InCurrent._TransmitMode = InParams.Get_TransmitMode();
-        InCurrent._InputGain = InParams.Get_InputGain();
+        InTunables._TransmitMode = InParams.Get_TransmitMode();
+        InTunables._InputGain = InParams.Get_InputGain();
 
         voice_chat::VeryVerbose(TEXT("Setup complete for VoiceTalker [{}]"), InVoiceTalkerEntity);
     }
@@ -309,7 +309,9 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             FFragment_VoiceTalker_Requests& InRequests) const
         -> void
     {
@@ -322,7 +324,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InVoiceTalkerEntity, Result);
 
-            if (DoHandleRequest(InVoiceTalkerEntity, InParams, InCurrent, InRequest))
+            if (DoHandleRequest(InVoiceTalkerEntity, InParams, InTunables, InCapture, InPlayout, InRequest))
             {
                 Result = ECk_Request_OperationResult::Succeeded;
             }
@@ -339,14 +341,16 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_StartTransmit& InRequest)
         -> bool
     {
         if (InHandle.Has<FTag_VoiceTalker_IsTransmitting>())
         { return true; }
 
-        const auto TransmitIsAllowed = InCurrent.Get_TransmitMode() != ECk_VoiceChat_TransmitMode::Disabled;
+        const auto TransmitIsAllowed = InTunables.Get_TransmitMode() != ECk_VoiceChat_TransmitMode::Disabled;
         CK_ENSURE_IF_NOT(TransmitIsAllowed,
             TEXT("StartTransmit on VoiceTalker [{}] whose transmit mode is Disabled"), InHandle)
         {}
@@ -355,18 +359,18 @@ namespace ck
 
         const auto SampleRate = UCk_Utils_VoiceChat_Settings_UE::Get_SampleRate();
 
-        if (NOT InCurrent._CaptureSource.IsValid())
+        if (NOT InCapture._CaptureSource.IsValid())
         {
-            InCurrent._CaptureSource = MakeShared<FCk_VoiceChat_CaptureSource_Engine>(SampleRate);
+            InCapture._CaptureSource = MakeShared<FCk_VoiceChat_CaptureSource_Engine>(SampleRate);
         }
 
-        if (NOT InCurrent._Encoder.IsValid())
+        if (NOT InCapture._Encoder.IsValid())
         {
             constexpr auto NumChannels = 1;
-            InCurrent._Encoder = FVoiceModule::Get().CreateVoiceEncoder(
+            InCapture._Encoder = FVoiceModule::Get().CreateVoiceEncoder(
                 SampleRate, NumChannels, EAudioEncodeHint::VoiceEncode_Voice);
 
-            const auto EncoderCreated = InCurrent._Encoder.IsValid();
+            const auto EncoderCreated = InCapture._Encoder.IsValid();
             CK_ENSURE_IF_NOT(EncoderCreated,
                 TEXT("Opus encoder could not be created for VoiceTalker [{}] - the engine Voice module "
                      "is disabled ([Voice] bEnabled=true missing in the host project's DefaultEngine.ini?)"),
@@ -375,16 +379,16 @@ namespace ck
             if (NOT EncoderCreated)
             { return false; }
 
-            InCurrent._Encoder->SetBitrate(UCk_Utils_VoiceChat_Settings_UE::Get_BitrateBps());
+            InCapture._Encoder->SetBitrate(UCk_Utils_VoiceChat_Settings_UE::Get_BitrateBps());
         }
 
-        if (InParams.Get_Loopback() == ECk_EnableDisable::Enable && NOT InCurrent._LoopbackDecoder.IsValid())
+        if (InParams.Get_Loopback() == ECk_EnableDisable::Enable && NOT InPlayout._LoopbackDecoder.IsValid())
         {
             constexpr auto NumChannels = 1;
-            InCurrent._LoopbackDecoder = FVoiceModule::Get().CreateVoiceDecoder(SampleRate, NumChannels);
+            InPlayout._LoopbackDecoder = FVoiceModule::Get().CreateVoiceDecoder(SampleRate, NumChannels);
         }
 
-        const auto CaptureStarted = InCurrent._CaptureSource->Start();
+        const auto CaptureStarted = InCapture._CaptureSource->Start();
         if (NOT CaptureStarted)
         { return false; }
 
@@ -392,7 +396,7 @@ namespace ck
         // left a registered, silently-running component behind when capture failed to start.
         if (InParams.Get_Loopback() == ECk_EnableDisable::Enable)
         {
-            FProcessor_VoiceTalker_ReceivePlayback::TryCreate_PlaybackSynth(InHandle, InCurrent);
+            FProcessor_VoiceTalker_ReceivePlayback::TryCreate_PlaybackSynth(InHandle, InPlayout);
         }
 
         InHandle.Add<FTag_VoiceTalker_IsTransmitting>();
@@ -406,19 +410,21 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_StopTransmit& InRequest)
         -> bool
     {
         if (NOT InHandle.Has<FTag_VoiceTalker_IsTransmitting>())
         { return true; }
 
-        if (InCurrent._CaptureSource.IsValid())
+        if (InCapture._CaptureSource.IsValid())
         {
-            InCurrent._CaptureSource->Stop();
+            InCapture._CaptureSource->Stop();
         }
-        InCurrent._PendingPcm.Reset();
-        InCurrent._OutboundFrames.Reset();
+        InCapture._PendingPcm.Reset();
+        InCapture._OutboundFrames.Reset();
 
         InHandle.Remove<FTag_VoiceTalker_IsTransmitting>();
 
@@ -438,11 +444,13 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_SetTransmitMode& InRequest)
         -> bool
     {
-        InCurrent._TransmitMode = InRequest.Get_TransmitMode();
+        InTunables._TransmitMode = InRequest.Get_TransmitMode();
         return true;
     }
 
@@ -451,11 +459,13 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_SetInputGain& InRequest)
         -> bool
     {
-        InCurrent._InputGain = InRequest.Get_InputGain();
+        InTunables._InputGain = InRequest.Get_InputGain();
         return true;
     }
 
@@ -464,11 +474,13 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout,
             const FCk_Request_VoiceTalker_SetSelfMute& InRequest)
         -> bool
     {
-        InCurrent._SelfMute = InRequest.Get_SelfMute();
+        InTunables._SelfMute = InRequest.Get_SelfMute();
         return true;
     }
 
@@ -493,27 +505,30 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
             const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Current& InCurrent)
+            const FFragment_VoiceTalker_Tunables& InTunables,
+            FFragment_VoiceTalker& InVoiceTalkerComp,
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout)
         -> void
     {
         using namespace ck_voice_talker_processor;
 
-        if (NOT InCurrent._CaptureSource.IsValid())
+        if (NOT InCapture._CaptureSource.IsValid())
         { return; }
 
-        InCurrent._CaptureClock = InCurrent._CaptureClock + InDeltaT;
-        InCurrent._CaptureSource->Tick(InDeltaT);
+        InCapture._CaptureClock = InCapture._CaptureClock + InDeltaT;
+        InCapture._CaptureSource->Tick(InDeltaT);
 
-        const auto DrainStartBytes = InCurrent._PendingPcm.Num();
-        InCurrent._CaptureSource->DrainPcm(InCurrent._PendingPcm);
+        const auto DrainStartBytes = InCapture._PendingPcm.Num();
+        InCapture._CaptureSource->DrainPcm(InCapture._PendingPcm);
 
         const auto SampleRate = UCk_Utils_VoiceChat_Settings_UE::Get_SampleRate();
 
-        if (const auto DrainedBytes = InCurrent._PendingPcm.Num() - DrainStartBytes;
+        if (const auto DrainedBytes = InCapture._PendingPcm.Num() - DrainStartBytes;
             DrainedBytes > 0)
         {
             auto RawTap = TArray<uint8>{};
-            RawTap.Append(InCurrent._PendingPcm.GetData() + DrainStartBytes, DrainedBytes);
+            RawTap.Append(InCapture._PendingPcm.GetData() + DrainStartBytes, DrainedBytes);
             UUtils_Signal_OnVoiceTalker_FramesCaptured::Broadcast(InVoiceTalkerEntity,
                 MakePayload(InVoiceTalkerEntity, RawTap, SampleRate));
         }
@@ -522,39 +537,39 @@ namespace ck
         const auto FrameDurationSeconds = Get_FrameDurationSeconds();
 
         const auto VadParams = FCk_VoiceChat_VadParams{}.Set_Threshold(InParams.Get_VadThreshold());
-        const auto IsMuted = InCurrent.Get_SelfMute() == ECk_EnableDisable::Enable;
-        const auto ModeAllowsFrames = InCurrent.Get_TransmitMode() != ECk_VoiceChat_TransmitMode::Disabled;
+        const auto IsMuted = InTunables.Get_SelfMute() == ECk_EnableDisable::Enable;
+        const auto ModeAllowsFrames = InTunables.Get_TransmitMode() != ECk_VoiceChat_TransmitMode::Disabled;
 
         auto MaxRmsThisTick = 0.0f;
         auto FramesMeasuredThisTick = 0;
         auto VadIsOpen = InVoiceTalkerEntity.Has<FTag_VoiceTalker_IsSpeaking>();
 
-        while (InCurrent._PendingPcm.Num() >= FrameBytes)
+        while (InCapture._PendingPcm.Num() >= FrameBytes)
         {
             auto FramePcm = TArray<uint8>{};
-            FramePcm.Append(InCurrent._PendingPcm.GetData(), FrameBytes);
-            InCurrent._PendingPcm.RemoveAt(0, FrameBytes);
+            FramePcm.Append(InCapture._PendingPcm.GetData(), FrameBytes);
+            InCapture._PendingPcm.RemoveAt(0, FrameBytes);
 
             INC_DWORD_STAT(STAT_CkVoiceChat_FramesCaptured);
 
             const auto Samples = TArrayView<int16>{
                 reinterpret_cast<int16*>(FramePcm.GetData()), FrameBytes / 2};
 
-            Apply_Gain(Samples, InCurrent.Get_InputGain());
+            Apply_Gain(Samples, InTunables.Get_InputGain());
 
             const auto Rms = voice_chat::codec::Compute_Rms(Samples);
             MaxRmsThisTick = FMath::Max(MaxRmsThisTick, Rms);
             ++FramesMeasuredThisTick;
 
-            VadIsOpen = InCurrent._Vad.Update(Rms, FCk_Time{FrameDurationSeconds}, VadParams);
+            VadIsOpen = InCapture._Vad.Update(Rms, FCk_Time{FrameDurationSeconds}, VadParams);
 
-            if (NOT VadIsOpen || IsMuted || NOT ModeAllowsFrames || NOT InCurrent._Encoder.IsValid())
+            if (NOT VadIsOpen || IsMuted || NOT ModeAllowsFrames || NOT InCapture._Encoder.IsValid())
             { continue; }
 
             auto Encoded = TArray<uint8>{};
             Encoded.SetNumUninitialized(2048);
             auto EncodedSize = static_cast<uint32>(Encoded.Num());
-            InCurrent._Encoder->Encode(FramePcm.GetData(), FrameBytes, Encoded.GetData(), EncodedSize);
+            InCapture._Encoder->Encode(FramePcm.GetData(), FrameBytes, Encoded.GetData(), EncodedSize);
 
             if (EncodedSize == 0)
             { continue; }
@@ -563,15 +578,15 @@ namespace ck
 
             INC_DWORD_STAT(STAT_CkVoiceChat_FramesEncoded);
 
-            const auto FrameSeq = InCurrent._Seq++;
+            const auto FrameSeq = InCapture._Seq++;
 
-            InCurrent._OutboundFrames.Emplace(FCk_VoiceChat_OutboundFrame{
-                FrameSeq, Encoded, InCurrent._CaptureClock});
+            InCapture._OutboundFrames.Emplace(FCk_VoiceChat_OutboundFrame{
+                FrameSeq, Encoded, InCapture._CaptureClock});
 
             if (InParams.Get_Loopback() == ECk_EnableDisable::Enable)
             {
-                InCurrent._LoopbackJitter.Push(FrameSeq, MoveTemp(Encoded),
-                    InCurrent._CaptureClock, FCk_VoiceChat_JitterParams{});
+                InPlayout._LoopbackJitter.Push(FrameSeq, MoveTemp(Encoded),
+                    InCapture._CaptureClock, FCk_VoiceChat_JitterParams{});
             }
         }
 
@@ -580,7 +595,7 @@ namespace ck
         // wire header plus the routing fairness clamp both read this value.
         if (FramesMeasuredThisTick > 0)
         {
-            InCurrent._AmplitudeQ8 = voice_chat::codec::Quantize_Amplitude(MaxRmsThisTick);
+            InVoiceTalkerComp._AmplitudeQ8 = voice_chat::codec::Quantize_Amplitude(MaxRmsThisTick);
         }
 
         const auto IsSpeakingNow = VadIsOpen && NOT IsMuted && ModeAllowsFrames;
@@ -597,13 +612,13 @@ namespace ck
                 MakePayload(InVoiceTalkerEntity, IsSpeakingNow));
         }
 
-        Send_OutboundFrames(InVoiceTalkerEntity, InCurrent.Get_AmplitudeQ8(),
-            InCurrent._CaptureClock, InCurrent._OutboundFrames);
+        Send_OutboundFrames(InVoiceTalkerEntity, InVoiceTalkerComp.Get_AmplitudeQ8(),
+            InCapture._CaptureClock, InCapture._OutboundFrames);
 
         if (InParams.Get_Loopback() != ECk_EnableDisable::Enable)
         { return; }
 
-        FProcessor_VoiceTalker_ReceivePlayback::Drain_Playout(InCurrent, InDeltaT);
+        FProcessor_VoiceTalker_ReceivePlayback::Drain_Playout(InPlayout, InDeltaT);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -613,13 +628,14 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker& InVoiceTalkerComp,
+            FFragment_VoiceTalker_Playout& InPlayout,
             FFragment_VoiceTalker_ReceiveInbox& InInbox)
         -> void
     {
         using namespace ck_voice_talker_processor;
 
-        InCurrent._ReceiveClock = InCurrent._ReceiveClock + InDeltaT;
+        InPlayout._ReceiveClock = InPlayout._ReceiveClock + InDeltaT;
 
         auto BundlesCopy = InInbox.Get_PackedBundles();
         InInbox.Get_PackedBundles().Reset();
@@ -673,16 +689,16 @@ namespace ck
                 BestDeliveringChannel = DeliveringChannel;
             }
 
-            if (NOT InCurrent._LoopbackDecoder.IsValid())
+            if (NOT InPlayout._LoopbackDecoder.IsValid())
             {
                 constexpr auto NumChannels = 1;
-                InCurrent._LoopbackDecoder = FVoiceModule::Get().CreateVoiceDecoder(
+                InPlayout._LoopbackDecoder = FVoiceModule::Get().CreateVoiceDecoder(
                     UCk_Utils_VoiceChat_Settings_UE::Get_SampleRate(), NumChannels);
             }
 
             // Remote amplitude rides the header (the server never decodes) - mirror it so
             // Get_CurrentAmplitude works for remote talkers exactly like local ones.
-            InCurrent._AmplitudeQ8 = Unpacked->Get_Header().Get_AmplitudeQ8();
+            InVoiceTalkerComp._AmplitudeQ8 = Unpacked->Get_Header().Get_AmplitudeQ8();
 
             // Send-side invariant: a bundle's frames are one contiguous seq run (staleness drops
             // a prefix, the budget cuts a suffix), so frame i is header seq + i.
@@ -691,18 +707,18 @@ namespace ck
             auto FrameOffset = uint16{0};
             for (const auto& Frame : Unpacked->Get_Frames())
             {
-                InCurrent._LoopbackJitter.Push(static_cast<uint16>(FirstSeq + FrameOffset), Frame,
-                    InCurrent._ReceiveClock, FCk_VoiceChat_JitterParams{});
+                InPlayout._LoopbackJitter.Push(static_cast<uint16>(FirstSeq + FrameOffset), Frame,
+                    InPlayout._ReceiveClock, FCk_VoiceChat_JitterParams{});
                 ++FrameOffset;
             }
         }
 
-        if (ck::IsValid(BestDeliveringChannel) && BestDeliveringChannel != InCurrent._PlaybackConfigChannel)
+        if (ck::IsValid(BestDeliveringChannel) && BestDeliveringChannel != InPlayout._PlaybackConfigChannel)
         {
-            InCurrent._PlaybackConfigChannel = BestDeliveringChannel;
+            InPlayout._PlaybackConfigChannel = BestDeliveringChannel;
 
-            if (InCurrent._LoopbackSynth.IsValid())
-            { Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent); }
+            if (InPlayout._LoopbackSynth.IsValid())
+            { Apply_SynthChannelConfig(InVoiceTalkerEntity, InPlayout); }
         }
 
         // Remote amplitude parity, release half: the header mirror only ever WRITES on arrival,
@@ -712,52 +728,52 @@ namespace ck
         // guard keeps this off capture-loopback talkers (they never receive).
         if (NOT BundlesCopy.IsEmpty())
         {
-            InCurrent._LastBundleArrivalClock = InCurrent._ReceiveClock;
+            InPlayout._LastBundleArrivalClock = InPlayout._ReceiveClock;
         }
-        else if (InCurrent._LastBundleArrivalClock > FCk_Time{0.0} &&
-                 InCurrent._AmplitudeQ8 > 0 &&
-                 InCurrent._ReceiveClock - InCurrent._LastBundleArrivalClock > MaxOutboundFrameAge)
+        else if (InPlayout._LastBundleArrivalClock > FCk_Time{0.0} &&
+                 InVoiceTalkerComp._AmplitudeQ8 > 0 &&
+                 InPlayout._ReceiveClock - InPlayout._LastBundleArrivalClock > MaxOutboundFrameAge)
         {
-            InCurrent._AmplitudeQ8 = 0;
+            InVoiceTalkerComp._AmplitudeQ8 = 0;
         }
 
         if (NOT BundlesCopy.IsEmpty())
         {
-            TryCreate_PlaybackSynth(InVoiceTalkerEntity, InCurrent);
-            Evaluate_HybridRenderMode(InVoiceTalkerEntity, InCurrent);
+            TryCreate_PlaybackSynth(InVoiceTalkerEntity, InPlayout);
+            Evaluate_HybridRenderMode(InVoiceTalkerEntity, InPlayout);
         }
 
-        Drain_Playout(InCurrent, InDeltaT);
+        Drain_Playout(InPlayout, InDeltaT);
     }
 
     auto
         FProcessor_VoiceTalker_ReceivePlayback::
         Drain_Playout(
-            FFragment_VoiceTalker_Current& InCurrent,
+            FFragment_VoiceTalker_Playout& InPlayout,
             FCk_Time InDeltaT)
         -> void
     {
         using namespace ck_voice_talker_processor;
 
-        if (NOT InCurrent._LoopbackDecoder.IsValid())
+        if (NOT InPlayout._LoopbackDecoder.IsValid())
         {
-            InCurrent._LoopbackPopAccumulator = FCk_Time{0.0};
+            InPlayout._LoopbackPopAccumulator = FCk_Time{0.0};
             return;
         }
 
         const auto FrameBytes = Get_FrameBytes();
         const auto FrameDuration = FCk_Time{Get_FrameDurationSeconds()};
 
-        InCurrent._LoopbackPopAccumulator = InCurrent._LoopbackPopAccumulator + InDeltaT;
+        InPlayout._LoopbackPopAccumulator = InPlayout._LoopbackPopAccumulator + InDeltaT;
 
         const auto JitterParams = FCk_VoiceChat_JitterParams{};
         const auto DecodeCapacityBytes = EngineDecodeCapacityFrames * FrameBytes;
 
-        while (InCurrent._LoopbackPopAccumulator >= FrameDuration)
+        while (InPlayout._LoopbackPopAccumulator >= FrameDuration)
         {
-            InCurrent._LoopbackPopAccumulator = InCurrent._LoopbackPopAccumulator - FrameDuration;
+            InPlayout._LoopbackPopAccumulator = InPlayout._LoopbackPopAccumulator - FrameDuration;
 
-            const auto PopResult = InCurrent._LoopbackJitter.Pop(JitterParams);
+            const auto PopResult = InPlayout._LoopbackJitter.Pop(JitterParams);
 
             if (PopResult.Get_Type() == ECk_VoiceChat_JitterPop::Wait)
             { continue; }
@@ -766,13 +782,13 @@ namespace ck
             {
                 INC_DWORD_STAT(STAT_CkVoiceChat_FramesConcealed);
 
-                InCurrent._LoopbackDecodedPcm.AddZeroed(FrameBytes);
+                InPlayout._LoopbackDecodedPcm.AddZeroed(FrameBytes);
 
-                if (InCurrent._LoopbackSynth.IsValid())
+                if (InPlayout._LoopbackSynth.IsValid())
                 {
                     auto SilentFrame = TArray<int16>{};
                     SilentFrame.SetNumZeroed(FrameBytes / 2);
-                    InCurrent._LoopbackSynth->Enqueue_DecodedPcm(SilentFrame);
+                    InPlayout._LoopbackSynth->Enqueue_DecodedPcm(SilentFrame);
                 }
                 continue;
             }
@@ -780,28 +796,28 @@ namespace ck
             auto Decoded = TArray<uint8>{};
             Decoded.SetNumUninitialized(DecodeCapacityBytes);
             auto DecodedSize = static_cast<uint32>(Decoded.Num());
-            InCurrent._LoopbackDecoder->Decode(PopResult.Get_Frame().GetData(),
+            InPlayout._LoopbackDecoder->Decode(PopResult.Get_Frame().GetData(),
                 PopResult.Get_Frame().Num(), Decoded.GetData(), DecodedSize);
 
             if (DecodedSize > 0)
             {
                 INC_DWORD_STAT(STAT_CkVoiceChat_FramesDecoded);
 
-                InCurrent._LoopbackDecodedPcm.Append(Decoded.GetData(), static_cast<int32>(DecodedSize));
+                InPlayout._LoopbackDecodedPcm.Append(Decoded.GetData(), static_cast<int32>(DecodedSize));
 
-                if (InCurrent._LoopbackSynth.IsValid())
+                if (InPlayout._LoopbackSynth.IsValid())
                 {
-                    InCurrent._LoopbackSynth->Enqueue_DecodedPcm(TArrayView<const int16>{
+                    InPlayout._LoopbackSynth->Enqueue_DecodedPcm(TArrayView<const int16>{
                         reinterpret_cast<const int16*>(Decoded.GetData()),
                         static_cast<int32>(DecodedSize) / 2});
                 }
             }
         }
 
-        if (InCurrent._LoopbackDecodedPcm.Num() > MaxLoopbackDecodedBytes)
+        if (InPlayout._LoopbackDecodedPcm.Num() > MaxLoopbackDecodedBytes)
         {
-            InCurrent._LoopbackDecodedPcm.RemoveAt(0,
-                InCurrent._LoopbackDecodedPcm.Num() - MaxLoopbackDecodedBytes);
+            InPlayout._LoopbackDecodedPcm.RemoveAt(0,
+                InPlayout._LoopbackDecodedPcm.Num() - MaxLoopbackDecodedBytes);
         }
     }
 
@@ -809,10 +825,10 @@ namespace ck
         FProcessor_VoiceTalker_ReceivePlayback::
         TryCreate_PlaybackSynth(
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Playout& InPlayout)
         -> void
     {
-        if (InCurrent._LoopbackSynth.IsValid())
+        if (InPlayout._LoopbackSynth.IsValid())
         { return; }
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVoiceTalkerEntity);
@@ -835,9 +851,9 @@ namespace ck
                 }
             }
 
-            InCurrent._LoopbackSynth = TStrongObjectPtr{Synth};
+            InPlayout._LoopbackSynth = TStrongObjectPtr{Synth};
 
-            Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent);
+            Apply_SynthChannelConfig(InVoiceTalkerEntity, InPlayout);
         }
     }
 
@@ -845,10 +861,10 @@ namespace ck
         FProcessor_VoiceTalker_ReceivePlayback::
         Apply_SynthChannelConfig(
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Playout& InPlayout)
         -> void
     {
-        auto* Synth = InCurrent._LoopbackSynth.Get();
+        auto* Synth = InPlayout._LoopbackSynth.Get();
 
         if (ck::Is_NOT_Valid(Synth))
         { return; }
@@ -857,7 +873,7 @@ namespace ck
         auto Attenuation = static_cast<USoundAttenuation*>(nullptr);
         auto SourceEffectChain = static_cast<USoundEffectSourcePresetChain*>(nullptr);
 
-        if (const auto& ConfigChannel = InCurrent._PlaybackConfigChannel;
+        if (const auto& ConfigChannel = InPlayout._PlaybackConfigChannel;
             ck::IsValid(ConfigChannel))
         {
             Policy = UCk_Utils_VoiceChannel_UE::Get_SpatializationPolicy(ConfigChannel);
@@ -873,7 +889,7 @@ namespace ck
 
         const auto RenderNear =
             Policy == ECk_VoiceChat_SpatializationPolicy::HybridRadio &&
-            InCurrent._HybridRenderNear.Get(false) &&
+            InPlayout._HybridRenderNear.Get(false) &&
             CanSpatialize;
 
         const auto Spatialize =
@@ -894,16 +910,16 @@ namespace ck
         FProcessor_VoiceTalker_ReceivePlayback::
         Evaluate_HybridRenderMode(
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Playout& InPlayout)
         -> void
     {
-        const auto& ConfigChannel = InCurrent._PlaybackConfigChannel;
+        const auto& ConfigChannel = InPlayout._PlaybackConfigChannel;
 
         if (ck::Is_NOT_Valid(ConfigChannel) ||
             UCk_Utils_VoiceChannel_UE::Get_SpatializationPolicy(ConfigChannel) !=
                 ECk_VoiceChat_SpatializationPolicy::HybridRadio)
         {
-            InCurrent._HybridRenderNear.Reset();
+            InPlayout._HybridRenderNear.Reset();
             return;
         }
 
@@ -937,16 +953,16 @@ namespace ck
 
         // The Route asymmetry, mirrored: become near INSIDE the range, stay near until
         // range + margin - a speaker hovering at the boundary never flips per drain.
-        const auto WasNear = InCurrent._HybridRenderNear.Get(false);
+        const auto WasNear = InPlayout._HybridRenderNear.Get(false);
         const auto ThresholdCm = WasNear ? OuterCm : RangeCm;
         const auto IsNear = DistSq <= ThresholdCm * ThresholdCm;
 
-        if (InCurrent._HybridRenderNear.IsSet() && InCurrent._HybridRenderNear.GetValue() == IsNear)
+        if (InPlayout._HybridRenderNear.IsSet() && InPlayout._HybridRenderNear.GetValue() == IsNear)
         { return; }
 
-        InCurrent._HybridRenderNear = IsNear;
+        InPlayout._HybridRenderNear = IsNear;
 
-        Apply_SynthChannelConfig(InVoiceTalkerEntity, InCurrent);
+        Apply_SynthChannelConfig(InVoiceTalkerEntity, InPlayout);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -956,7 +972,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
-            FFragment_VoiceTalker_Current& InCurrent)
+            FFragment_VoiceTalker_Capture& InCapture,
+            FFragment_VoiceTalker_Playout& InPlayout)
         -> void
     {
         voice_chat::Verbose(TEXT("Tearing down VoiceTalker [{}]"), InVoiceTalkerEntity);
@@ -1000,22 +1017,22 @@ namespace ck
             }
         }
 
-        if (InCurrent._CaptureSource.IsValid())
+        if (InCapture._CaptureSource.IsValid())
         {
-            InCurrent._CaptureSource->Stop();
+            InCapture._CaptureSource->Stop();
         }
 
-        if (auto* Synth = InCurrent._LoopbackSynth.Get();
+        if (auto* Synth = InPlayout._LoopbackSynth.Get();
             ck::IsValid(Synth))
         {
             Synth->Stop();
             Synth->DestroyComponent();
         }
-        InCurrent._LoopbackSynth.Reset();
+        InPlayout._LoopbackSynth.Reset();
 
-        InCurrent._CaptureSource.Reset();
-        InCurrent._Encoder.Reset();
-        InCurrent._LoopbackDecoder.Reset();
+        InCapture._CaptureSource.Reset();
+        InCapture._Encoder.Reset();
+        InPlayout._LoopbackDecoder.Reset();
     }
 }
 
