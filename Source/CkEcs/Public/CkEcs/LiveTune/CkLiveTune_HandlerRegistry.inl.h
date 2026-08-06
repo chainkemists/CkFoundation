@@ -1,0 +1,79 @@
+#pragma once
+
+// Out-of-line bodies for FCk_LiveTuneHandlerRegistry's template registration methods — kept out of the
+// registry header so they instantiate in the registering .cpp, where T_Params is a complete type.
+// Include both there.
+
+#include "CkEcs/LiveTune/CkLiveTune_HandlerRegistry.h"
+
+#include "CkCore/Ensure/CkEnsure.h"
+
+#if WITH_EDITOR
+
+template <typename T_Params>
+auto
+    FCk_LiveTuneHandlerRegistry::
+    Register_ViaReplace(TArgs_ViaReplace<T_Params> InArgs)
+    -> void
+{
+    auto Handler = FHandler{};
+    Handler.Tier = ECk_LiveTune_ApplyTier::ViaReplace;
+    Handler.HasFragment = [](const FCk_Handle& InEntity) -> bool
+    {
+        return InEntity.Has<T_Params>();
+    };
+    Handler.Apply = [PostReplace = MoveTemp(InArgs.PostReplace)](FCk_Handle& InEntity, const FInstancedStruct& InFreshParams) -> void
+    {
+        const auto EntityHasParams = InEntity.Has<T_Params>();
+        CK_ENSURE_IF_NOT(EntityHasParams,
+            TEXT("LiveTune ViaReplace: Entity [{}] no longer carries params fragment [{}] — cannot re-apply"),
+            InEntity, T_Params::StaticStruct()->GetName())
+        {}
+        if (NOT EntityHasParams)
+        { return; }
+
+        InEntity.Replace<T_Params>(InFreshParams.Get<T_Params>());
+
+        if (PostReplace)
+        { PostReplace(InEntity); }
+    };
+
+    RegisterLazy([]() -> UScriptStruct* { return T_Params::StaticStruct(); }, MoveTemp(Handler));
+}
+
+template <typename T_Params>
+auto
+    FCk_LiveTuneHandlerRegistry::
+    Register_ViaRequest(TArgs_ViaRequest<T_Params> InArgs)
+    -> void
+{
+    auto Handler = FHandler{};
+    Handler.Tier = ECk_LiveTune_ApplyTier::ViaRequest;
+    Handler.Apply = [Apply = MoveTemp(InArgs.Apply.Value)](FCk_Handle& InEntity, const FInstancedStruct& InFreshParams) -> void
+    {
+        Apply(InEntity, InFreshParams.Get<T_Params>());
+    };
+
+    RegisterLazy([]() -> UScriptStruct* { return T_Params::StaticStruct(); }, MoveTemp(Handler));
+}
+
+template <typename T_Params>
+auto
+    FCk_LiveTuneHandlerRegistry::
+    Register_ViaRebuild(TArgs_ViaRebuild<T_Params> InArgs)
+    -> void
+{
+    auto Handler = FHandler{};
+    Handler.Tier = ECk_LiveTune_ApplyTier::ViaRebuild;
+    Handler.RebuildScope = InArgs.Scope;
+    Handler.ReAdd = [ReAdd = MoveTemp(InArgs.ReAdd.Value)](FCk_Handle& InOwner, const FInstancedStruct& InFreshParams) -> FCk_Handle
+    {
+        return ReAdd(InOwner, InFreshParams.Get<T_Params>());
+    };
+    Handler.ProduceOverride = MoveTemp(InArgs.Produce);
+    Handler.HydrateOverride = MoveTemp(InArgs.Hydrate);
+
+    RegisterLazy([]() -> UScriptStruct* { return T_Params::StaticStruct(); }, MoveTemp(Handler));
+}
+
+#endif
