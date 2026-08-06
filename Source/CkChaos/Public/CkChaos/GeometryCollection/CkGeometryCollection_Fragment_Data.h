@@ -44,12 +44,12 @@ class UGeometryCollectionComponent;
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCHAOS_API FCk_Fragment_GeometryCollection_ParamsData
+struct CKCHAOS_API FCk_GeometryCollection_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_GeometryCollection_ParamsData);
+    CK_GENERATED_BODY(FCk_GeometryCollection_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -59,7 +59,7 @@ private:
 public:
     CK_PROPERTY_GET(_GeometryCollection);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_GeometryCollection_ParamsData, _GeometryCollection);
+    CK_DEFINE_CONSTRUCTORS(FCk_GeometryCollection_Spec, _GeometryCollection);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

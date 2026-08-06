@@ -27,7 +27,7 @@ public:
     static FCk_Handle_AudioDirector
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_AudioDirector_ParamsData& InParams);
+        const FCk_AudioDirector_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AudioDirector",
@@ -35,7 +35,7 @@ public:
     static FCk_Handle_AudioDirector
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_AudioDirector_ParamsData& InParams);
+        const FCk_AudioDirector_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AudioDirector",
@@ -100,7 +100,7 @@ public:
     static FCk_Handle_AudioDirector
     Request_AddTrack(
         UPARAM(ref) FCk_Handle_AudioDirector& InDirector,
-        const FCk_Fragment_AudioTrack_ParamsData& InTrackParams,
+        const FCk_AudioTrack_Spec& InTrackParams,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
     UFUNCTION(BlueprintCallable,

@@ -34,12 +34,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_JoltRope_LinkMode);
 // Essentials = the anchor location. Anchoring: _AnchorBody (a JoltBody entity, e.g. a kinematic scalp)
 // when set, otherwise the WORLD at _AnchorLocation.
 USTRUCT(BlueprintType)
-struct CKJOLT_API FCk_JoltRope_ParamsData
+struct CKJOLT_API FCk_JoltRope_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_JoltRope_ParamsData);
+    CK_GENERATED_BODY(FCk_JoltRope_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -118,7 +118,7 @@ public:
     CK_PROPERTY(_CollisionProfileName);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_JoltRope_ParamsData, _AnchorLocation);
+    CK_DEFINE_CONSTRUCTORS(FCk_JoltRope_Spec, _AnchorLocation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -169,7 +169,7 @@ public:
     static FCk_JoltRope_Result
     Create_Rope(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_JoltRope_ParamsData& InParams);
+        const FCk_JoltRope_Spec& InParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -17,7 +17,7 @@ auto
     UCk_Utils_JoltCharacter_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_JoltCharacter_ParamsData& InParams)
+        const FCk_JoltCharacter_Spec& InParams)
     -> FCk_Handle_JoltCharacter
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle),

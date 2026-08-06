@@ -49,12 +49,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Interaction);
 //--------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINTERACTION_API FCk_Fragment_Interaction_ParamsData
+struct CKINTERACTION_API FCk_Interaction_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Interaction_ParamsData);
+    CK_GENERATED_BODY(FCk_Interaction_Spec);
 
 public:
     friend class ck::FProcessor_Interaction_Setup;
@@ -93,29 +93,29 @@ public:
     CK_PROPERTY_GET(_InteractionDuration)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Interaction_ParamsData, _InteractionChannel, _Source, _Instigator, _Target, _CompletionPolicy, _InteractionDuration);
+    CK_DEFINE_CONSTRUCTORS(FCk_Interaction_Spec, _InteractionChannel, _Source, _Instigator, _Target, _CompletionPolicy, _InteractionDuration);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINTERACTION_API FCk_Fragment_MultipleInteraction_ParamsData
+struct CKINTERACTION_API FCk_MultipleInteraction_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleInteraction_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleInteraction_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TArray<FCk_Fragment_Interaction_ParamsData> _InteractionParams;
+    TArray<FCk_Interaction_Spec> _InteractionParams;
 
 public:
     CK_PROPERTY_GET(_InteractionParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleInteraction_ParamsData, _InteractionParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleInteraction_Spec, _InteractionParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -48,7 +48,7 @@ static auto
         InAttributeEntity,
         ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
         Difference >= 0 ? ECk_AttributeModifier_Operation::Add : ECk_AttributeModifier_Operation::Subtract,
-        FCk_Fragment_ByteAttributeModifier_ParamsData
+        FCk_ByteAttributeModifier_Spec
         {
             static_cast<uint8>(std::abs(Difference)),
             InEntry.Get_Component()

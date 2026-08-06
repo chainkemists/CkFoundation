@@ -42,7 +42,7 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     Create_AtLocation(
         FVector InLocation,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
+        const FCk_WorldSpaceWidget_Spec& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
     auto Widget = InParams.Get_Widget().Get();
@@ -62,7 +62,7 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     CreateAndAttach_ToUnrealComponent(
         USceneComponent* InAttachTo,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
+        const FCk_WorldSpaceWidget_Spec& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_Widget()), TEXT("Cannot Create WorldSpaceWidget because the Widget supplied is INVALID"))
@@ -83,7 +83,7 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     CreateAndAttach_ToEntity(
         FCk_Handle_Transform& InAttachTo,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
+        const FCk_WorldSpaceWidget_Spec& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_Widget()), TEXT("Cannot Create WorldSpaceWidget because the Widget supplied is INVALID"))
@@ -101,7 +101,7 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     DoAdd(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
+        const FCk_WorldSpaceWidget_Spec& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
     InHandle.Add<ck::FFragment_WorldSpaceWidget_Params>(InParams);
@@ -118,7 +118,7 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     DoAdd_ScreenOverlay(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
+        const FCk_WorldSpaceWidget_Spec& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
     const auto ContentWidget = InParams.Get_Widget().Get();
@@ -169,7 +169,7 @@ auto
     UCk_Utils_WorldSpaceWidget_UE::
     DoAdd_WorldComponent(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
+        const FCk_WorldSpaceWidget_Spec& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
     const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);

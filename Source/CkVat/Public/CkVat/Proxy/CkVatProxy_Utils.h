@@ -36,7 +36,7 @@ public:
     static FCk_Handle_VatProxy
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_VatProxy_ParamsData& InParams);
+        const FCk_VatProxy_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

@@ -39,7 +39,7 @@ public:
     static FCk_Handle_FloatAttribute
     Add(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_FloatAttribute_ParamsData& InParams,
+        const FCk_FloatAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -48,7 +48,7 @@ public:
     static TArray<FCk_Handle_FloatAttribute>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
+        const FCk_MultipleFloatAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
@@ -383,7 +383,7 @@ public:
         UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
         FGameplayTag InModifierName,
         UPARAM(meta = (InvalidEnumValues="Override")) ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
+        const FCk_FloatAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Float",
@@ -392,7 +392,7 @@ public:
     Add_NotRevocable(
         UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
+        const FCk_FloatAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Float",

@@ -15,7 +15,7 @@ auto
 {
     const auto Ret = Super::Construct(InHandle, InSpawnParams);
 
-    const auto ObjectiveParams = FCk_Objective_ParamsData{_ObjectiveName}
+    const auto ObjectiveParams = FCk_Objective_Spec{_ObjectiveName}
         .Set_DisplayName(_DisplayName)
         .Set_Description(_Description);
 

@@ -62,13 +62,13 @@ namespace ck
 
         // The +SeparationLookahead reach gives steering time to nudge before agents actually touch.
         const auto CylinderDimensions = FCk_ShapeCylinder_Dimensions{HalfHeight, ProbeRadius};
-        const auto CylinderParams = FCk_Fragment_ShapeCylinder_ParamsData{CylinderDimensions};
+        const auto CylinderParams = FCk_ShapeCylinder_Spec{CylinderDimensions};
         UCk_Utils_ShapeCylinder_UE::Add(ProbeChildEntity, CylinderParams);
 
         // Keep the probe NAME specific to agents while its filter also admits the local-steering
         // avoidance volumes. This prevents unrelated Crowd.Agent probe queries from receiving
         // volume entities while preserving mutual crowd-agent overlaps.
-        auto ProbeParams = FCk_Fragment_Probe_ParamsData{TAG_Crowd_Agent};
+        auto ProbeParams = FCk_Probe_Spec{TAG_Crowd_Agent};
         auto ProbeFilter = FGameplayTagContainer{TAG_Crowd_Agent};
         ProbeFilter.AddTag(TAG_Crowd_AvoidanceVolume);
         ProbeParams.Set_Filter(ProbeFilter);

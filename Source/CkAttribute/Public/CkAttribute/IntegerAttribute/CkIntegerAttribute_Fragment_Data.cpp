@@ -11,7 +11,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Label_IntegerAttribute, TEXT("IntegerAttribute"));
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Fragment_IntegerAttribute_ParamsData::
+    FCk_IntegerAttribute_Spec::
     Get_MinValue() const
     -> int32
 {
@@ -24,7 +24,7 @@ auto
 }
 
 auto
-    FCk_Fragment_IntegerAttribute_ParamsData::
+    FCk_IntegerAttribute_Spec::
     Get_MaxValue() const
     -> int32
 {

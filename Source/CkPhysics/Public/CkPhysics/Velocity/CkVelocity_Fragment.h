@@ -46,7 +46,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Velocity_Params);
 
     public:
-        using ParamsType = FCk_Fragment_Velocity_ParamsData;
+        using ParamsType = FCk_Velocity_Spec;
 
     private:
         ParamsType _Params;
@@ -126,7 +126,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_BulkVelocityModifier_Params);
 
     public:
-        using ParamsType = FCk_Fragment_BulkVelocityModifier_ParamsData;
+        using ParamsType = FCk_BulkVelocityModifier_Spec;
 
     private:
         ParamsType _Params;

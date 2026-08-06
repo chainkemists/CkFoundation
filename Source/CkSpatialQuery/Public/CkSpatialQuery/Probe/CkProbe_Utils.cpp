@@ -37,7 +37,7 @@ auto
     UCk_Utils_Probe_UE::
     Add(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_Probe_ParamsData& InParams,
+        const FCk_Probe_Spec& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo)
     -> FCk_Handle_Probe
 {
@@ -82,7 +82,7 @@ auto
         FCk_Handle& InOwner,
         const FTransform& InInitialTransform,
         const FCk_AnyShape& InShape,
-        const FCk_Fragment_Probe_ParamsData& InParams,
+        const FCk_Probe_Spec& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo)
     -> FCk_Handle_Probe
 {

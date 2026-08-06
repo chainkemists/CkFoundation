@@ -11,7 +11,7 @@ auto
     UCk_Utils_AnimPlan_UE::
     Add(
         FCk_Handle& InAnimPlanOwnerEntity,
-        const FCk_Fragment_AnimPlan_ParamsData& InParams,
+        const FCk_AnimPlan_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_AnimPlan
 {
@@ -63,12 +63,12 @@ auto
     UCk_Utils_AnimPlan_UE::
     AddMultiple(
         FCk_Handle& InAnimPlanOwnerEntity,
-        const FCk_Fragment_MultipleAnimPlan_ParamsData& InParams,
+        const FCk_MultipleAnimPlan_Spec& InParams,
         ECk_Replication InReplicates)
     -> TArray<FCk_Handle_AnimPlan>
 {
     return ck::algo::Transform<TArray<FCk_Handle_AnimPlan>>(InParams.Get_AnimPlanParams(),
-    [&](const FCk_Fragment_AnimPlan_ParamsData& InAnimPlanParams)
+    [&](const FCk_AnimPlan_Spec& InAnimPlanParams)
     {
         return Add(InAnimPlanOwnerEntity, InAnimPlanParams, InReplicates);
     });

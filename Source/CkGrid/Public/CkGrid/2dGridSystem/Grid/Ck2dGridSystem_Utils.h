@@ -30,7 +30,7 @@ public:
     static FCk_Handle_2dGridSystem
     Add(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_2dGridSystem_ParamsData& InParams);
+        const FCk_2dGridSystem_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridSystem",
@@ -39,7 +39,7 @@ public:
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
         const FTransform& InInitialTransform,
-        const FCk_Fragment_2dGridSystem_ParamsData& InParams);
+        const FCk_2dGridSystem_Spec& InParams);
 
     // Re-composes the LIVE half of a grid (pivot SceneNode, cell registry, cell entities) after a
     // snapshot load restored only its Params — the live half can never round-trip. Requires Params

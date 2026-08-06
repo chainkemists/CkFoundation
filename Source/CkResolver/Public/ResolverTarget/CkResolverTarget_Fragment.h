@@ -24,7 +24,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_ResolverTarget_Params);
 
     public:
-        using ParamsType = FCk_Fragment_ResolverTarget_ParamsData;
+        using ParamsType = FCk_ResolverTarget_Spec;
 
     private:
         ParamsType _Params;

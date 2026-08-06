@@ -20,7 +20,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_UnrealComponent_Params = FCk_Fragment_UnrealComponent_ParamsData;
+    using FFragment_UnrealComponent_Params = FCk_UnrealComponent_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

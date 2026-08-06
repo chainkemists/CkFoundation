@@ -60,7 +60,7 @@ public:
               Category = "Ck|Utils|UnrealComponent",
               DisplayName = "[Ck][UnrealComponent] Make Params (Class)",
               meta = (NativeMakeFunc))
-    static FCk_Fragment_UnrealComponent_ParamsData
+    static FCk_UnrealComponent_Spec
     Make_Params(
         TSubclassOf<UActorComponent> InComponentClass,
         ECk_UnrealComponent_TickPolicy InTickPolicy = ECk_UnrealComponent_TickPolicy::DoNotTick,
@@ -70,7 +70,7 @@ public:
               Category = "Ck|Utils|UnrealComponent",
               DisplayName = "[Ck][UnrealComponent] Make Params (Archetype)",
               meta = (NativeMakeFunc))
-    static FCk_Fragment_UnrealComponent_ParamsData
+    static FCk_UnrealComponent_Spec
     Make_Params_FromArchetype(
         UActorComponent* InComponentArchetype,
         ECk_UnrealComponent_TickPolicy InTickPolicy = ECk_UnrealComponent_TickPolicy::DoNotTick,
@@ -82,7 +82,7 @@ public:
     static FCk_Handle_UnrealComponent
     Add(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_UnrealComponent_ParamsData& InParams);
+        const FCk_UnrealComponent_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|UnrealComponent",

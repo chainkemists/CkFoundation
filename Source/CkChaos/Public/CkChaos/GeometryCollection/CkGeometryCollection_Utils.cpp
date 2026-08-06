@@ -12,7 +12,7 @@ auto
     UCk_Utils_GeometryCollection_UE::
     Add(
         FCk_Handle_GeometryCollectionOwner& InOwner,
-        const FCk_Fragment_GeometryCollection_ParamsData& InParams)
+        const FCk_GeometryCollection_Spec& InParams)
     -> FCk_Handle_GeometryCollection
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_GeometryCollection()),

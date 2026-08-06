@@ -229,7 +229,7 @@ namespace ck
                     }
                 }();
 
-                const auto AttributeModifierParams = FCk_Fragment_FloatAttributeModifier_ParamsData{
+                const auto AttributeModifierParams = FCk_FloatAttributeModifier_Spec{
                         InModifierOperation.Get_ModifierDelta(),
                         ECk_MinMaxCurrent::Current};
 

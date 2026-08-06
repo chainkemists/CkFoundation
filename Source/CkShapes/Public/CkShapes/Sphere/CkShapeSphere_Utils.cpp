@@ -12,7 +12,7 @@ auto
     UCk_Utils_ShapeSphere_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_ShapeSphere_ParamsData& InParams)
+        const FCk_ShapeSphere_Spec& InParams)
     -> FCk_Handle_ShapeSphere
 {
     CK_ENSURE_IF_NOT(NOT UCk_Utils_Shapes_UE::Has(InHandle),
@@ -29,7 +29,7 @@ auto
     UCk_Utils_ShapeSphere_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_ShapeSphere_ParamsData& InParams)
+        const FCk_ShapeSphere_Spec& InParams)
     -> FCk_Handle_ShapeSphere
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

@@ -15,7 +15,7 @@ auto
     UCk_Utils_Homing_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Homing_ParamsData& InParams)
+        const FCk_Homing_Spec& InParams)
     -> FCk_Handle_Homing
 {
     CK_ENSURE_IF_NOT(UCk_Utils_Velocity_UE::Has(InHandle) && UCk_Utils_Acceleration_UE::Has(InHandle),

@@ -26,7 +26,7 @@ public:
     static FCk_Handle_ShapeSphere
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_ShapeSphere_ParamsData& InParams);
+        const FCk_ShapeSphere_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ShapeSphere",
@@ -34,7 +34,7 @@ public:
     static FCk_Handle_ShapeSphere
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_ShapeSphere_ParamsData& InParams);
+        const FCk_ShapeSphere_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ShapeSphere",
