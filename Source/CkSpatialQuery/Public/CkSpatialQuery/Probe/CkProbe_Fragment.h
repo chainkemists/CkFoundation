@@ -63,16 +63,8 @@ namespace ck { namespace details
         CK_PROPERTY_GET(_SurfaceInfo);
 
     public:
-        FFragment_Probe_Params() = default;
-        explicit FFragment_Probe_Params(const FCk_Probe_Spec& InSpec)
-            : _ProbeName(InSpec.Get_ProbeName())
-            , _ResponsePolicy(InSpec.Get_ResponsePolicy())
-            , _Filter(InSpec.Get_Filter())
-            , _ContextOverlapPolicy(InSpec.Get_ContextOverlapPolicy())
-            , _MotionType(InSpec.Get_MotionType())
-            , _MotionQuality(InSpec.Get_MotionQuality())
-            , _SurfaceInfo(InSpec.Get_SurfaceInfo())
-        {}
+        CK_DEFINE_CONSTRUCTORS(FFragment_Probe_Params, _ProbeName, _ResponsePolicy, _Filter,
+            _ContextOverlapPolicy, _MotionType, _MotionQuality, _SurfaceInfo);
     };
     using FFragment_Probe_DebugInfo = FCk_Probe_DebugInfo;
 

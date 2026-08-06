@@ -25,8 +25,21 @@ auto
 
     auto AudioTrack = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_AudioTrack>(InParentDirector);
 
-    AudioTrack.Add<ck::FFragment_AudioTrack_Params>(ck::FFragment_AudioTrack_Params{InParams});
-    AudioTrack.Add<ck::FFragment_AudioTrack_PendingSetup>(ck::FFragment_AudioTrack_PendingSetup{InParams});
+    AudioTrack.Add<ck::FFragment_AudioTrack_Params>(
+        InParams.Get_TrackName(),
+        InParams.Get_Sound(),
+        InParams.Get_Priority(),
+        InParams.Get_OverrideBehavior(),
+        InParams.Get_LoopBehavior(),
+        InParams.Get_Volume(),
+        InParams.Get_DefaultFadeInTime(),
+        InParams.Get_DefaultFadeOutTime());
+
+    AudioTrack.Add<ck::FFragment_AudioTrack_PendingSetup>(
+        InParams.Get_ScriptAsset(),
+        InParams.Get_LibraryAttenuationSettings(),
+        InParams.Get_LibraryConcurrencySettings(),
+        InParams.Get_LibrarySoundClassSettings());
     AudioTrack.Add<ck::FFragment_AudioTrack_Current>();
     AudioTrack.Add<ck::FFragment_AudioTrack_ComponentBindings>();
     AudioTrack.Add<ck::FFragment_AudioTrack_Debug>();

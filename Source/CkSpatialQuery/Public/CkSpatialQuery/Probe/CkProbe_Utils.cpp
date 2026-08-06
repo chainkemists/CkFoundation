@@ -52,7 +52,14 @@ auto
     if (NOT ck::physics_ownership::TryClaim_Jolt(InHandle))
     { return {}; }
 
-    InHandle.Add<ck::FFragment_Probe_Params>(ck::FFragment_Probe_Params{InParams});
+    InHandle.Add<ck::FFragment_Probe_Params>(
+        InParams.Get_ProbeName(),
+        InParams.Get_ResponsePolicy(),
+        InParams.Get_Filter(),
+        InParams.Get_ContextOverlapPolicy(),
+        InParams.Get_MotionType(),
+        InParams.Get_MotionQuality(),
+        InParams.Get_SurfaceInfo());
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
     InHandle.Add<ck::FFragment_Probe_Current>();
 
