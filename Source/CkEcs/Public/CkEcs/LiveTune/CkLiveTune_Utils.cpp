@@ -51,8 +51,22 @@ auto
     if (NOT PropertyIsStruct)
     { return InHandle; }
 
-    if (const auto* Handler = FCk_LiveTuneHandlerRegistry::Find(StructProperty->Struct);
-        Handler != nullptr && Handler->HasFragment)
+    // Refuse at Link rather than let the stamp land: a link on an unregistered params type is not a
+    // no-op the caller can notice. It stamps cleanly, then swallows every edit for the life of the
+    // entity, and the only trace is a Display log nobody is reading while dragging a slider. Failing
+    // here moves that from "mysterious, at edit time" to "loud, at setup time".
+    const auto* Handler = FCk_LiveTuneHandlerRegistry::Find(StructProperty->Struct);
+    const auto TypeIsRegistered = Handler != nullptr;
+    CK_ENSURE_IF_NOT(TypeIsRegistered,
+        TEXT("LiveTune Link: params type [{}] is not live-tunable — no handler is registered for it, so Entity [{}] "
+             "would ignore every edit to [{}].[{}]. Opt the feature in with one "
+             "FCk_LiveTuneHandlerRegistry::Register_Via* line in its _Fragment.cpp, or drop the Link"),
+        StructProperty->Struct->GetName(), InHandle, InTuningAsset, InMemberName)
+    {}
+    if (NOT TypeIsRegistered)
+    { return InHandle; }
+
+    if (Handler->HasFragment)
     {
         const auto EntityHasParams = Handler->HasFragment(InHandle);
         CK_ENSURE_IF_NOT(EntityHasParams,

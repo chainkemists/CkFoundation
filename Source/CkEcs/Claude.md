@@ -672,8 +672,11 @@ undo/redo, AS hot reload via `UCk_DeferredAssetInit_UE::OnAssetsReinitialized`) 
 gated by a per-(asset, member) value-diff cache, an Interactive→ViaReplace-only change-type policy, and
 an authority gate. Design of record: `docs/specs/2026-08-05-LiveTune-design.md`.
 
-**Register a feature** (one line in its `_Fragment.cpp`, explicit opt-in — an unhandled type logs
-Display "not live-tunable"; include the registry .h + .inl.h):
+**Register a feature** (one line in its `_Fragment.cpp`, explicit opt-in; include the registry .h +
+.inl.h). Registration is what makes a feature linkable at all: `Link` ENSURES on a params type with no
+registered handler and leaves no stamp, because the alternative — stamping and then swallowing every
+edit — is a failure the caller cannot see. So the tunable set is exactly the registered set, and a
+missing opt-in surfaces at setup rather than as silence while someone drags a slider.
 
 - `Register_ViaReplace<T_Params>({...})` — live-read features; `Replace<Params>` IS the re-apply,
   optional `.PostReplace` fixup re-syncs derived state (reference: `CkTimer_Fragment.cpp`).
