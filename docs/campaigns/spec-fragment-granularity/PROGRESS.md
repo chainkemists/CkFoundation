@@ -4,7 +4,37 @@ Living doc. Newest entries on top within each section. See PROMPT.md for phases/
 
 ## State
 
-- **Phase:** P1 (Timer pilot) — in progress
+- **Phase:** P1–P4 + P6 audit COMPLETE and committed; P5 (monolith splits) STAGED with designs
+  below — each split is its own gated unit for a fresh session.
+
+## P5 — staged split designs (2026-08-06)
+
+Priority order, each with its own build+suite gate; census data in the design spec §1.3:
+
+1. **VatProxy** (13 members): extract `_PrevClipIndex/_PrevClipStartTime/_PrevPlayRate/
+   _PrevLoopMode/_TransitionStartTime/_TransitionDuration` → `FFragment_VatProxy_Transition`
+   (crossfade-source block; Transform `_Previous` precedent). Present iff a crossfade is in
+   flight → its presence can replace any is-transitioning flag; check `_FinishedDispatched`.
+2. **Minimap/Compass** (`_ScratchEntries/_ScratchPoiEntities/_ScratchParallelSlots` ×2 modules):
+   scratch buffers are a DELIBERATE per-tick-reuse perf choice — do NOT naively move to locals;
+   extract `FFragment_Minimap_Scratch` / `FFragment_Compass_Scratch` (keeps reuse, unclutters
+   state) or measure and drop. Read the parallel-slot usage first (TParallelProcessor coupling).
+3. **AudioTrack Current** (14 members): split the 6 delegate handles → `FFragment_AudioTrack_
+   ComponentBindings` (bound/unbound with the component's lifetime); fade state
+   (`_CurrentVolume/_TargetVolume/_FadeSpeed`) is a candidate `_Fade` fragment gated by
+   `FTag_AudioTrack_IsFading`.
+4. **Camera Current** (16): split read-cache config bools (7, set at compose) from per-frame
+   intention/output (`_ViewInfo` etc.); the composed-profile cache is its own concern.
+5. **Homing** (12): `_PreviousTargetLocation/_HasPreviousTargetLocation/_PreviouslyClosing/
+   _MissNotified` → `_Tracking` fragment; the `_Has*` bool dissolves into fragment presence.
+6. **VoiceTalker** (21 members, 5 concerns, 7 friend processors — LARGEST, do LAST, coordinate
+   with the VoiceChat workstream): capture chain / loopback playout / fairness / clocks / tunables
+   split per its own Current-comment inventory. The "runtime copies of tunable params" block is
+   the doctrine-priority extraction (`FFragment_VoiceTalker_Tunables` — requests mutate ONLY it).
+
+Rules for every split: keep the Has/Cast anchor stable (P6 rule), update friend lists, per-split
+`[EDITOR-VERIFY]` if any debugger inspector reads the moved members (CkInspector_Audio reads
+`FFragment_AudioTrack_Current.Get_State` — splitting `_State` out would break it; check each).
 - **Baseline (2026-08-05):** superproject `3cf103f`; CkFoundation `7ebe720f2` (dev); CkTests
   `0ea0d6a` (dev); CkGameplayDebugger `77aff95` (DETACHED HEAD — resolve before committing there).
   Superproject shows pre-existing modified submodule pointers for CkFoundation+CkTests (not ours).
