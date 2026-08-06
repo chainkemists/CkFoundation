@@ -3,9 +3,13 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_SpawnRecipe.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/LiveTune/CkLiveTune_Fragment.h"
-#include "CkEcs/LiveTune/CkLiveTune_HandlerRegistry.h"
 #include "CkEcs/Net/CkNet_Utils.h"
+#include "CkEcs/Persistence/CkPersistenceHydration.h"
+#include "CkEcs/Persistence/CkPersistenceHydration_Processor.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include <UObject/UObjectGlobals.h>
@@ -72,9 +76,53 @@ auto
     _StampDestroyConnection.release();
     _LinkedEntities.Empty();
     _LastDispatchedValues.Empty();
+    _PendingRebuilds.Empty();
 #endif
 
     Super::Deinitialize();
+}
+
+auto
+    UCk_LiveTune_Subsystem_UE::
+    Tick(
+        float InDeltaTime)
+    -> void
+{
+    Super::Tick(InDeltaTime);
+
+#if WITH_EDITOR
+    if (_PendingRebuilds.IsEmpty())
+    { return; }
+
+    for (auto Index = _PendingRebuilds.Num() - 1; Index >= 0; --Index)
+    {
+        auto& Pending = _PendingRebuilds[Index];
+
+        // The dying entity still EXISTS while the destroy pipeline runs; records disconnect during its
+        // teardown, so a re-Add before it is fully gone can collide with the same-named dying entry on a
+        // DisallowDuplicateNames record. The driver therefore keys on actual destruction, never a tick count.
+        if (ck::IsValid(Pending._DyingEntity, ck::IsValid_Policy_IncludePendingKill{}))
+        {
+            Pending._PendingForSeconds += InDeltaTime;
+
+            if (Pending._PendingForSeconds >= ck::PendingApplyTimeoutSeconds)
+            {
+                CK_TRIGGER_ENSURE(
+                    TEXT("LiveTune: a rebuild waited [{}]s for the old entity [{}] to finish destroying — dropping "
+                         "the rebuild (captured state is lost; the destroy pipeline appears stuck)"),
+                    Pending._PendingForSeconds, Pending._DyingEntity);
+
+                _PendingRebuilds.RemoveAtSwap(Index);
+            }
+
+            continue;
+        }
+
+        auto Finished = MoveTemp(Pending);
+        _PendingRebuilds.RemoveAtSwap(Index);
+        DoFinishRebuild(Finished);
+    }
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -146,6 +194,14 @@ auto
 {
     const auto* Entities = _LinkedEntities.Find(FStampKey{FObjectKey{InTuningAsset}, InMemberName});
     return Entities != nullptr ? Entities->Num() : 0;
+}
+
+auto
+    UCk_LiveTune_Subsystem_UE::
+    Test_Get_PendingRebuildCount() const
+    -> int32
+{
+    return _PendingRebuilds.Num();
 }
 
 auto
@@ -227,16 +283,9 @@ auto
     if (IsInteractiveChange && Handler->Tier != ECk_LiveTune_ApplyTier::ViaReplace)
     { return; }
 
-    if (Handler->Tier == ECk_LiveTune_ApplyTier::ViaRebuild)
-    {
-        CK_TRIGGER_ENSURE(
-            TEXT("LiveTune: [{}] is registered ViaRebuild, but no rebuild driver exists yet — the edit was NOT applied"),
-            FreshValue.GetScriptStruct()->GetName());
-        return;
-    }
-
     // Iterate a COPY — Apply may destroy entities, which re-enters _LinkedEntities via the stamp-destroy sink.
     const auto EntitiesCopy = *LinkedEntities;
+    auto AppliedToAny = false;
     for (auto Entity : EntitiesCopy)
     {
         if (ck::Is_NOT_Valid(Entity))
@@ -248,10 +297,182 @@ auto
         if (IsClientModeReplicated)
         { continue; }
 
+        if (Handler->Tier == ECk_LiveTune_ApplyTier::ViaRebuild)
+        {
+            AppliedToAny |= DoBeginRebuild(Entity, *Handler, FreshValue, Key);
+            continue;
+        }
+
         Handler->Apply(Entity, FreshValue);
+        AppliedToAny = true;
     }
 
-    _LastDispatchedValues.Add(Key, MoveTemp(FreshValue));
+    // Only a dispatch that actually reached an entity advances the cache: an edit that lands while every
+    // linked entity is skipped must stay dispatchable for the rebuild-completion catch-up.
+    if (AppliedToAny)
+    { _LastDispatchedValues.Add(Key, MoveTemp(FreshValue)); }
+}
+
+auto
+    UCk_LiveTune_Subsystem_UE::
+    DoBeginRebuild(
+        FCk_Handle& InEntity,
+        const FCk_LiveTuneHandlerRegistry::FHandler& InHandler,
+        const FInstancedStruct& InFreshParams,
+        const FStampKey& InKey)
+    -> bool
+{
+    const auto AlreadyPending = _PendingRebuilds.ContainsByPredicate(
+        [&](const FPendingRebuild& InPending) { return InPending._DyingEntity == InEntity; });
+    if (AlreadyPending)
+    { return false; }
+
+    auto Pending = FPendingRebuild{};
+    Pending._Scope = InHandler.RebuildScope;
+    Pending._DyingEntity = InEntity;
+    Pending._ReAdd = InHandler.ReAdd;
+    Pending._Key = InKey;
+    Pending._FreshParams = InFreshParams;
+    Pending._PinnedFreshParams = TStrongObjectPtr{NewObject<UCk_PendingHydrationPayloads_UE>(this)};
+    Pending._PinnedFreshParams->Add(InFreshParams);
+
+    if (InHandler.RebuildScope == ECk_LiveTune_RebuildScope::Entity)
+    {
+        const auto HasSpawnRecipe = InEntity.Has<ck::FFragment_SpawnRecipe>();
+        CK_ENSURE_IF_NOT(HasSpawnRecipe,
+            TEXT("LiveTune: Scope::Entity rebuild refused for [{}] — only RuntimeSpawned entities carry a spawn "
+                 "recipe; ConstructSpawned children and level-placed entities have nothing to respawn"),
+            InEntity)
+        {}
+        if (NOT HasSpawnRecipe)
+        { return false; }
+
+        Pending._Recipe = InEntity.Get<ck::FFragment_SpawnRecipe>().Get_Recipe();
+    }
+
+    auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity);
+    const auto OwnerIsValid = ck::IsValid(Owner);
+    CK_ENSURE_IF_NOT(OwnerIsValid,
+        TEXT("LiveTune: a rebuild of [{}] needs a valid lifetime owner to re-create under — none found"), InEntity)
+    {}
+    if (NOT OwnerIsValid)
+    { return false; }
+    Pending._Owner = Owner;
+
+    if (InHandler.CaptureOverride)
+    {
+        if (auto Payload = InHandler.CaptureOverride(InEntity, InFreshParams);
+            Payload.IsSet())
+        {
+            Pending._PinnedLinkedPayloads = TStrongObjectPtr{NewObject<UCk_PendingHydrationPayloads_UE>(this)};
+            Pending._PinnedLinkedPayloads->Add(MoveTemp(*Payload));
+        }
+    }
+    else
+    {
+        for (const auto* Type : FCk_PersistenceHandlerRegistry::Get_SaveHandlerTypes())
+        {
+            const auto* PersistenceHandler = FCk_PersistenceHandlerRegistry::Find(Type);
+            if (PersistenceHandler == nullptr || NOT PersistenceHandler->Produce)
+            { continue; }
+
+            auto Payload = PersistenceHandler->Produce(InEntity);
+            if (NOT Payload.IsSet())
+            { continue; }
+
+            if (Pending._PinnedLinkedPayloads.Get() == nullptr)
+            { Pending._PinnedLinkedPayloads = TStrongObjectPtr{NewObject<UCk_PendingHydrationPayloads_UE>(this)}; }
+
+            Pending._PinnedLinkedPayloads->Add(MoveTemp(*Payload));
+        }
+    }
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InEntity);
+    _PendingRebuilds.Add(MoveTemp(Pending));
+    return true;
+}
+
+auto
+    UCk_LiveTune_Subsystem_UE::
+    DoFinishRebuild(
+        FPendingRebuild& InPending)
+    -> void
+{
+    const auto OwnerIsValid = ck::IsValid(InPending._Owner);
+    if (NOT OwnerIsValid)
+    {
+        ck::ecs::Verbose(TEXT("LiveTune: the owner died while a rebuild of [{}] was pending — dropped"),
+            InPending._FreshParams.GetScriptStruct()->GetName());
+        return;
+    }
+
+    if (InPending._Scope == ECk_LiveTune_RebuildScope::Entity)
+    {
+        const auto Pending = UCk_Utils_EntityScript_UE::Request_SpawnEntity(
+            InPending._Owner, InPending._Recipe->Get_ScriptClass(), InPending._Recipe->Get_SpawnParams(), {});
+        auto Respawned = Pending.Get_EntityUnderConstruction();
+
+        if (InPending._PinnedLinkedPayloads.Get() != nullptr)
+        {
+            for (auto& Payload : InPending._PinnedLinkedPayloads->Get_Entries())
+            { DoEnqueueHydration(Respawned, MoveTemp(Payload)); }
+        }
+
+        ck::ecs::Display(
+            TEXT("LiveTune: respawned entity [{}] from its recipe after a [{}] edit — links, signal bindings and "
+                 "cached handles to the old entity are severed; the script's own construction re-establishes them"),
+            Respawned, InPending._FreshParams.GetScriptStruct()->GetName());
+        return;
+    }
+
+    auto NewHandle = InPending._ReAdd(InPending._Owner, InPending._FreshParams);
+    const auto NewHandleIsValid = ck::IsValid(NewHandle);
+    CK_ENSURE_IF_NOT(NewHandleIsValid,
+        TEXT("LiveTune: ReAdd for [{}] returned an invalid handle — rebuild aborted, captured state dropped"),
+        InPending._FreshParams.GetScriptStruct()->GetName())
+    {}
+    if (NOT NewHandleIsValid)
+    { return; }
+
+    if (InPending._PinnedLinkedPayloads.Get() != nullptr)
+    {
+        for (auto& Payload : InPending._PinnedLinkedPayloads->Get_Entries())
+        { DoEnqueueHydration(NewHandle, MoveTemp(Payload)); }
+    }
+
+    const auto ReAppliedPayloadCount = InPending._PinnedLinkedPayloads.Get() != nullptr
+        ? InPending._PinnedLinkedPayloads->Get_Entries().Num()
+        : 0;
+    ck::ecs::Display(
+        TEXT("LiveTune: rebuilt [{}] under Entity [{}], re-applying [{}] captured payload(s) — the old feature "
+             "entity [{}] is gone; signal bindings and cached handles to it are severed and must be "
+             "re-established by their owners"),
+        InPending._FreshParams.GetScriptStruct()->GetName(), InPending._Owner, ReAppliedPayloadCount,
+        InPending._DyingEntity);
+
+    if (auto* Asset = InPending._Key._Asset.ResolveObjectPtr();
+        ck::IsValid(Asset))
+    {
+        Request_RegisterLink(NewHandle, Asset, InPending._Key._Member);
+
+        // The rebuild applied _FreshParams, but an edit may have landed while the old entity was mid-destroy
+        // (deliberately left uncached). Record what was ACTUALLY applied, then re-read the asset: the
+        // catch-up dispatches a newer value and no-ops via the diff gate when nothing changed.
+        _LastDispatchedValues.Add(InPending._Key, InPending._FreshParams);
+        DoProcessMemberChange(Asset, InPending._Key._Member, EPropertyChangeType::ValueSet);
+    }
+}
+
+auto
+    UCk_LiveTune_Subsystem_UE::
+    DoEnqueueHydration(
+        FCk_Handle& InTarget,
+        FInstancedStruct InPayload)
+    -> void
+{
+    InTarget.AddOrGet<ck::FFragment_PendingHydration>().Enqueue(GetWorld(), MoveTemp(InPayload));
+    if (NOT InTarget.Has<ck::FTag_Hydration_PendingApply>())
+    { InTarget.Add<ck::FTag_Hydration_PendingApply>(); }
 }
 
 auto

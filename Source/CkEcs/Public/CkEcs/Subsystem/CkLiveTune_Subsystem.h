@@ -4,16 +4,23 @@
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/LiveTune/CkLiveTune_HandlerRegistry.h"
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Registry/CkRegistry_SlotTable.h"
 
 #if WITH_EDITOR
 #include <InstancedStruct.h>
 #include <UObject/ObjectKey.h>
+#include <UObject/StrongObjectPtr.h>
 #include <UObject/UnrealType.h>
 #endif
 
 #include "CkLiveTune_Subsystem.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_EntityScript_SpawnRecipe_UE;
+class UCk_PendingHydrationPayloads_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,10 +29,13 @@
 // gates — a per-(asset, member) value-diff cache (an AS hot reload heals ALL asset literals on every
 // save; without the diff, every save would re-apply world-wide), a change-type policy (Interactive slider
 // scrubs reach ViaReplace only; commits reach all tiers), and an authority gate (client-mode entities of
-// replicated features are skipped — the server's own dispatch replicates down). Never instantiated
-// outside editor builds.
+// replicated features are skipped — the server's own dispatch replicates down). Also owns the ViaRebuild
+// driver: capture (persistence Produce) -> deferred destroy -> re-Add once the dying entity is actually
+// gone (records disconnect during teardown, so re-Add can never collide with a same-named dying entry) ->
+// hydrate via FProcessor_Hydration_Dispatch -> re-link. Ticks only to advance pending rebuilds. Never
+// instantiated outside editor builds.
 UCLASS(DisplayName = "CkSubsystem_LiveTune")
-class CKECS_API UCk_LiveTune_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
+class CKECS_API UCk_LiveTune_Subsystem_UE : public UCk_Game_TickableWorldSubsystem_Base_UE
 {
     GENERATED_BODY()
 
@@ -43,6 +53,10 @@ public:
 
     auto
     Deinitialize() -> void override;
+
+    auto
+    Tick(
+        float InDeltaTime) -> void override;
 
 #if WITH_EDITOR
 public:
@@ -67,6 +81,9 @@ public:
         const UObject* InTuningAsset,
         FName InMemberName) const -> int32;
 
+    auto
+    Test_Get_PendingRebuildCount() const -> int32;
+
 private:
     struct FStampKey
     {
@@ -81,6 +98,25 @@ private:
         }
     };
 
+    struct FPendingRebuild
+    {
+        ECk_LiveTune_RebuildScope _Scope = ECk_LiveTune_RebuildScope::Feature;
+        FCk_Handle _DyingEntity;
+        FCk_Handle _Owner;
+        FCk_LiveTuneHandlerRegistry::FReAddFn _ReAdd;
+        FInstancedStruct _FreshParams;
+        FStampKey _Key;
+
+        // The pin holders root any object refs inside the captured payloads / fresh params through GC —
+        // a plain FInstancedStruct member of a non-reflected struct is not traced. _FreshParams stays
+        // safe alongside its pin because both copies point at the same (pinned) objects.
+        TStrongObjectPtr<UCk_PendingHydrationPayloads_UE> _PinnedFreshParams;
+        TStrongObjectPtr<UCk_PendingHydrationPayloads_UE> _PinnedLinkedPayloads;
+        TStrongObjectPtr<UCk_EntityScript_SpawnRecipe_UE> _Recipe;
+
+        float _PendingForSeconds = 0.0f;
+    };
+
     auto
     DoOnObjectPropertyChanged(
         UObject* InObject,
@@ -91,6 +127,22 @@ private:
         const UObject* InAsset,
         FName InMemberName,
         EPropertyChangeType::Type InChangeType) -> void;
+
+    auto
+    DoBeginRebuild(
+        FCk_Handle& InEntity,
+        const FCk_LiveTuneHandlerRegistry::FHandler& InHandler,
+        const FInstancedStruct& InFreshParams,
+        const FStampKey& InKey) -> bool;
+
+    auto
+    DoFinishRebuild(
+        FPendingRebuild& InPending) -> void;
+
+    auto
+    DoEnqueueHydration(
+        FCk_Handle& InTarget,
+        FInstancedStruct InPayload) -> void;
 
     auto
     OnStampDestroyed(
@@ -105,6 +157,7 @@ private:
 private:
     TMap<FStampKey, TArray<FCk_Handle>> _LinkedEntities;
     TMap<FStampKey, FInstancedStruct> _LastDispatchedValues;
+    TArray<FPendingRebuild> _PendingRebuilds;
     FDelegateHandle _OnObjectPropertyChangedHandle;
     entt::scoped_connection _StampDestroyConnection;
 #endif

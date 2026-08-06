@@ -45,6 +45,7 @@ public:
     using FHasFragmentFn = TFunction<bool(const FCk_Handle& Entity)>;
     using FReAddFn       = TFunction<FCk_Handle(FCk_Handle& Owner, const FInstancedStruct& FreshParams)>;
     using FPostReplaceFn = TFunction<void(FCk_Handle& Entity)>;
+    using FCaptureFn     = TFunction<TOptional<FInstancedStruct>(FCk_Handle& LinkedEntity, const FInstancedStruct& FreshParams)>;
 
     struct FHandler
     {
@@ -62,10 +63,14 @@ public:
         ECk_LiveTune_RebuildScope RebuildScope = ECk_LiveTune_RebuildScope::Feature;
         FReAddFn ReAdd;
 
-        // Unset = use the feature's FCk_PersistenceHandlerRegistry entries — the default and the point:
-        // "retune with cascades" IS "load this entity from disk".
-        FCk_PersistenceHandlerRegistry::FProduceFn ProduceOverride;
-        FCk_PersistenceHandlerRegistry::FApplyFn   HydrateOverride;
+        // Optional capture override for the rebuild driver. Unset = the driver sweeps every
+        // save-participating FCk_PersistenceHandlerRegistry Produce over the LINKED entity. Save payloads
+        // restore ABSOLUTELY, which is right for load (the recipe rebuilt the original config) but reverts
+        // a retune for any CONFIG value the payload carries — a feature whose payload mixes config with
+        // runtime state sets this to strip the config entries (the attribute shape: keep the Current
+        // entry verbatim — its "base" IS the live value — drop the Min/Max config entries so the fresh
+        // clamps win). Re-application always rides FProcessor_Hydration_Dispatch either way.
+        FCaptureFn CaptureOverride;
     };
 
     // Required-slot wrapper: no default constructor, so OMITTING the slot in the braced args below is a
@@ -98,8 +103,7 @@ public:
     {
         ECk_LiveTune_RebuildScope Scope = ECk_LiveTune_RebuildScope::Feature;
         TRequired<TFunction<FCk_Handle(FCk_Handle& Owner, const T_Params& FreshParams)>> ReAdd;
-        FCk_PersistenceHandlerRegistry::FProduceFn Produce{};
-        FCk_PersistenceHandlerRegistry::FApplyFn   Hydrate{};
+        TFunction<TOptional<FInstancedStruct>(FCk_Handle& LinkedEntity, const T_Params& FreshParams)> Capture{};
     };
 
 #if WITH_EDITOR

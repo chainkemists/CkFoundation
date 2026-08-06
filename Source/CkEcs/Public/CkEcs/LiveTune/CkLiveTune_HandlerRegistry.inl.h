@@ -70,8 +70,13 @@ auto
     {
         return ReAdd(InOwner, InFreshParams.Get<T_Params>());
     };
-    Handler.ProduceOverride = MoveTemp(InArgs.Produce);
-    Handler.HydrateOverride = MoveTemp(InArgs.Hydrate);
+    if (InArgs.Capture)
+    {
+        Handler.CaptureOverride = [Capture = MoveTemp(InArgs.Capture)](FCk_Handle& InLinkedEntity, const FInstancedStruct& InFreshParams) -> TOptional<FInstancedStruct>
+        {
+            return Capture(InLinkedEntity, InFreshParams.Get<T_Params>());
+        };
+    }
 
     RegisterLazy([]() -> UScriptStruct* { return T_Params::StaticStruct(); }, MoveTemp(Handler));
 }

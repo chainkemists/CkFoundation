@@ -5,6 +5,8 @@
 #include "Net/UnrealNetwork.h"
 
 #include "CkEcs/Handle/CkDebugCallstack_Macros.h"
+#include "CkEcs/LiveTune/CkLiveTune_HandlerRegistry.h"
+#include "CkEcs/LiveTune/CkLiveTune_HandlerRegistry.inl.h"
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.inl.h" // RegisterLazyTyped
 
@@ -73,6 +75,20 @@ namespace ck_timer_fragment
 
                     return ECk_Persistence_ApplyResult::Applied;
                 }});
+
+            // Timers are live-read, so replacing the params fragment IS most of the re-apply. Two derived
+            // pieces are re-synced by the fixup: the count-direction tag (via its own request) and the
+            // Setup pass (chrono direction alignment). The chrono's GOAL is baked at Add and stays — a
+            // Duration retune needs a Timer request that does not exist yet.
+            FCk_LiveTuneHandlerRegistry::Register_ViaReplace<FCk_Fragment_Timer_ParamsData>({
+                .PostReplace = [](FCk_Handle& InEntity) -> void
+                {
+                    auto TimerHandle = UCk_Utils_Timer_UE::CastChecked(InEntity);
+                    const auto& FreshParams = InEntity.Get<ck::FFragment_Timer_Params>();
+                    UCk_Utils_Timer_UE::Request_ChangeCountDirection(
+                        TimerHandle, FreshParams.Get_CountDirection(), {});
+                },
+            });
         }
     };
 

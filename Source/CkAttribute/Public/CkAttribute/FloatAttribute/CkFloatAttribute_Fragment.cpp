@@ -5,6 +5,8 @@
 
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
+#include "CkEcs/LiveTune/CkLiveTune_HandlerRegistry.h"
+#include "CkEcs/LiveTune/CkLiveTune_HandlerRegistry.inl.h"
 #include "CkEcs/Net/ReplicatedFragmentContainer/CkReplicatedFragmentContainer.h"
 #include "CkAttribute/CkAttribute_RestorePersistence.h" // shared attribute Produce + HydrationApply helpers
 #include "CkAttribute/CkAttribute_RefillPersistence.h"  // shared refill run-state Produce + HydrationApply helpers
@@ -114,6 +116,37 @@ static struct FFloatAttributeRepHandlerRegistrar
                     return ck::attribute_restore::HydrationApply<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes, UCk_Utils_FloatAttribute_UE>(
                         Entity, New, &ApplyReplicatedFloatAttributeEntry);
                 }});
+
+        // Attribute params feed a cascading decomposition at Add (min/max/refill sub-entities, no params
+        // fragment retained), so a retune is a rebuild: capture -> destroy the attribute entity -> re-Add
+        // with the fresh params once the dying entry has actually disconnected -> hydrate. The save payload
+        // above restores every component ABSOLUTELY — right for the CURRENT component (its "base" IS the
+        // live value: Request_Override writes it, so it must survive a rebuild verbatim, exactly as it
+        // survives a load) but wrong for MIN/MAX (pure config; restoring them would revert the very values
+        // being retuned). Capture therefore keeps only the Current entry; the fresh min/max clamp it.
+        FCk_LiveTuneHandlerRegistry::Register_ViaRebuild<FCk_Fragment_FloatAttribute_ParamsData>({
+            .ReAdd = [](FCk_Handle& InOwner, const FCk_Fragment_FloatAttribute_ParamsData& InFreshParams) -> FCk_Handle
+            {
+                return UCk_Utils_FloatAttribute_UE::Add(InOwner, InFreshParams, ECk_Replication::Replicates);
+            },
+            .Capture = [](FCk_Handle& InAttribute, const FCk_Fragment_FloatAttribute_ParamsData&) -> TOptional<FInstancedStruct>
+            {
+                auto Payload = ck::attribute_restore::Produce<ck::TFragment_FloatAttribute, FCk_RepData_FloatAttributes>(InAttribute);
+                if (NOT Payload.IsSet())
+                { return {}; }
+
+                auto& Attributes = Payload->GetMutable<FCk_RepData_FloatAttributes>().Attributes;
+                Attributes.RemoveAll([](const FCk_Fragment_FloatAttribute_BaseFinal& InEntry)
+                {
+                    return InEntry.Get_Component() != ECk_MinMaxCurrent::Current;
+                });
+
+                if (Attributes.IsEmpty())
+                { return {}; }
+
+                return Payload;
+            },
+        });
     }
 } GFloatAttributeRepHandlerRegistrar;
 
