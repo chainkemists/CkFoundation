@@ -355,6 +355,29 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Request_Probe_Reconfigure : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Probe_Reconfigure);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_Probe_Reconfigure);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Fragment_Probe_ParamsData _Params;
+
+public:
+    CK_PROPERTY_GET(_Params);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Probe_Reconfigure, _Params);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKSPATIALQUERY_API FCk_Probe_RayCast_Result
 {
     GENERATED_BODY()

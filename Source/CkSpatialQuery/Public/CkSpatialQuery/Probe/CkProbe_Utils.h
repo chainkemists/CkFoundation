@@ -248,6 +248,22 @@ public:
         const FCk_Request_Probe_EnableDisable& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    /**
+     * Re-applies the live-read subset of the Probe's params in place: Filter, ResponsePolicy,
+     * ContextOverlapPolicy and SurfaceInfo take effect on the next overlap evaluation. Identity and
+     * setup-baked fields (ProbeName, MotionType, MotionQuality, StartingState) must MATCH the current
+     * params — changing those needs a destroy + re-Add, and the request is rejected loudly.
+     */
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request Reconfigure",
+        meta=(AutoCreateRefTerm="InDelegate"))
+    static FCk_Handle_Probe
+    Request_Reconfigure(
+        UPARAM(ref) FCk_Handle_Probe& InProbe,
+        const FCk_Request_Probe_Reconfigure& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",

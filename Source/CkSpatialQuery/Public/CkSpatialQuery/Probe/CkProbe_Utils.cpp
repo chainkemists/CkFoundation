@@ -358,6 +358,25 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
+    Request_Reconfigure(
+        FCk_Handle_Probe& InProbe,
+        const FCk_Request_Probe_Reconfigure& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_Probe
+{
+    if (InDelegate.IsBound())
+    { InRequest.Set_CompletionDelegate(InDelegate); }
+
+    InProbe.AddOrGet<ck::FFragment_Probe_Requests>().Update_Requests([&](auto& InContainer)
+    {
+        InContainer.Emplace(InRequest);
+    });
+
+    return InProbe;
+}
+
+auto
+    UCk_Utils_Probe_UE::
     BindTo_OnBeginOverlap(
         FCk_Handle_Probe& InProbeEntity,
         const FCk_Delegate_Probe_OnBeginOverlap& InDelegate,

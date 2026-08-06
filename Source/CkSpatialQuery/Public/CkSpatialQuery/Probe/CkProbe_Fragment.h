@@ -71,7 +71,7 @@ namespace ck { namespace details
         CK_GENERATED_BODY(FFragment_Probe_Requests);
 
         using RequestType = std::variant<FCk_Request_Probe_BeginOverlap, FCk_Request_Probe_OverlapUpdated,
-            FCk_Request_Probe_EndOverlap, FCk_Request_Probe_EnableDisable>;
+            FCk_Request_Probe_EndOverlap, FCk_Request_Probe_EnableDisable, FCk_Request_Probe_Reconfigure>;
 
     private:
         TArray<RequestType> _Requests;

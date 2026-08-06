@@ -1136,6 +1136,38 @@ namespace ck
         return ECk_Request_OperationResult::Failed;
     }
 
+    auto
+        FProcessor_Probe_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_Probe_Current& InCurrent,
+            const FCk_Request_Probe_Reconfigure& InRequest)
+        -> ECk_Request_OperationResult
+    {
+        const auto& FreshParams = InRequest.Get_Params();
+        const auto& CurrentParams = InHandle.Get<FFragment_Probe_Params>();
+
+        // Filter/ResponsePolicy/ContextOverlapPolicy/SurfaceInfo are read from the params fragment at
+        // every overlap evaluation, so replacing the fragment IS the whole re-apply for them. The other
+        // fields are baked into the Jolt body (or are construction-time identity) at setup.
+        const auto BakedFieldsMatch =
+            FreshParams.Get_ProbeName() == CurrentParams.Get_ProbeName() &&
+            FreshParams.Get_MotionType() == CurrentParams.Get_MotionType() &&
+            FreshParams.Get_MotionQuality() == CurrentParams.Get_MotionQuality() &&
+            FreshParams.Get_StartingState() == CurrentParams.Get_StartingState();
+        CK_ENSURE_IF_NOT(BakedFieldsMatch,
+            TEXT("Probe Reconfigure on [{}] rejected: ProbeName/MotionType/MotionQuality/StartingState are baked at "
+                 "Add and cannot be reconfigured in place — only Filter/ResponsePolicy/ContextOverlapPolicy/"
+                 "SurfaceInfo are live"),
+            InHandle)
+        {}
+        if (NOT BakedFieldsMatch)
+        { return ECk_Request_OperationResult::Failed; }
+
+        InHandle.Replace<FFragment_Probe_Params>(FreshParams);
+        return ECk_Request_OperationResult::Succeeded;
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto

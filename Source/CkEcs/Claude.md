@@ -38,6 +38,7 @@ CkEcs/Public/CkEcs/
 ├── Fragments/       – shared built-in fragment types
 ├── Net/             – replication fragments, Iris driver, net mode policy
 ├── Persistence/     – save/load handler registry + hydration dispatch (Net → Persistence only)
+├── LiveTune/        – editor-only change transport: Link + stamp fragment + per-feature re-apply registry
 ├── World/           – ck::FEcsWorld (RAII private registry + slot)
 ├── Archetype/       – named feature amalgamations, typed archetypes, DebugFeatureFlags
 ├── Scheduler/       – processor ordering, debug data
@@ -659,6 +660,32 @@ Scheduling contract: `FProcessor_ReplicatedFragments_Dispatch` lives in `FGroup_
 - `SharedApply` / `SplitApply` are two distinct names rather than an overload set: the variants differ only by which lambdas they carry, which would make overload resolution on the args struct fragile.
 - `FRequired*` wrappers are implicitly constructible from any compatible callable (raw lambda, `FApplyFn`/`FProduceFn`, or a named local) as a single user-defined conversion. Optional `NetRemove` defaults to an empty `TFunction`; a save-only handler's args struct cannot even name `.NetApply`.
 - A `Produce` with no `HydrationApply` is excluded from `Get_SaveHandlerTypes` (the registration ensure has already fired), keeping the save free of state that could never load back. The capture writes one payload per (entity, type).
+
+---
+
+## LiveTune (editor-only change transport)
+
+Live-tunable feature params mid-PIE. Params storage is untouched (per-entity value copies); LiveTune is
+a `WITH_EDITOR` sidecar: `UCk_Utils_LiveTune_UE::Link(Handle, TuningAsset, MemberName)` after any feature
+`Add` stamps the entity, and `UCk_LiveTune_Subsystem_UE` maps editor-time asset edits (details panel,
+undo/redo, AS hot reload via `UCk_DeferredAssetInit_UE::OnAssetsReinitialized`) back to linked entities,
+gated by a per-(asset, member) value-diff cache, an Interactive→ViaReplace-only change-type policy, and
+an authority gate. Design of record: `docs/specs/2026-08-05-LiveTune-design.md`.
+
+**Register a feature** (one line in its `_Fragment.cpp`, explicit opt-in — an unhandled type logs
+Display "not live-tunable"; include the registry .h + .inl.h):
+
+- `Register_ViaReplace<T_Params>({...})` — live-read features; `Replace<Params>` IS the re-apply,
+  optional `.PostReplace` fixup re-syncs derived state (reference: `CkTimer_Fragment.cpp`).
+- `Register_ViaRequest<T_Params>({.Apply = ...})` — features owning an in-place reconfigure request
+  (reference: `CkProbe_Fragment.cpp` → `Request_Reconfigure`).
+- `Register_ViaRebuild<T_Params>({.ReAdd = ..., .Capture = ...})` — cascading setup: capture (persistence
+  Produce sweep, or `.Capture` to strip config the save payload conflates with runtime state) → deferred
+  destroy → re-Add keyed on actual destruction → hydrate via `FProcessor_Hydration_Dispatch` → re-link
+  (reference: `CkFloatAttribute_Fragment.cpp`). A rebuild SEVERS cached typesafe handles and signal
+  bindings to the old entity (documented, Display-logged); features with hot external signal surfaces
+  should prefer `ViaRequest`. `Scope::Entity` respawns from the spawn recipe and refuses non-RuntimeSpawned
+  entities loudly.
 
 ---
 

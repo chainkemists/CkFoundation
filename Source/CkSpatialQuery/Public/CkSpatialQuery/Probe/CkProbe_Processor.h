@@ -398,6 +398,12 @@ namespace ck
             const FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_EnableDisable& InRequest) const -> ECk_Request_OperationResult;
 
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_Probe_Current& InCurrent,
+            const FCk_Request_Probe_Reconfigure& InRequest) -> ECk_Request_OperationResult;
+
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
