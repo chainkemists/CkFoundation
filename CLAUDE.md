@@ -239,6 +239,15 @@ Timer stale-direction bug is the case study). Full doctrine + audit method:
 `docs/campaigns/spec-fragment-granularity/PROGRESS.md`. CkTimer is the converted exemplar;
 CkTween/CkStateMachine keep wholesale Params fragments deliberately (hot-path immutable config).
 
+**A fragment must NEVER know its Spec.** Give every fragment `CK_DEFINE_CONSTRUCTORS` over its own
+members; never hand-write an `explicit FFragment_X(const FCk_X_Spec&)` convenience ctor. The
+Spec→fragment mapping belongs in the ONE factory that owns it (`Add`/`Create`) — that keeps the
+dependency one-way and lets anyone (a test, a processor, a future caller) build the fragment from
+plain values. A fragment that takes its Spec is a bidirectional dependency and a review rejection.
+Corollary: a "Params" fragment nothing can construct from values, or that a request MUTATES, is
+mislabelled — request-mutable fields belong in the state fragment (CkMinimap's `_CategoryFilter` was
+the case study; it used to be `Set_*`-mutated inside the retained Spec).
+
 **Requests.** One struct per request type; essentials in the `CK_DEFINE_CONSTRUCTORS` ctor,
 optionals via the fluent `Set_*` setters; `CK_REQUEST_DEFINE_DEBUG_NAME` on every request.
 UFUNCTION surface takes `UPARAM(ref) FCk_Handle_X&` + the request struct and returns the handle
