@@ -298,7 +298,11 @@ Canonical implementation: `UCk_Utils_Timer_UE::Add` (`CkTimer/Public/CkTimer/CkT
 1. `UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, ...)` — create the feature's child
    entity under the owner.
 2. `UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName())` — label it.
-3. Add the Params/Current fragments and lifecycle tags (`FTag_Timer_NeedsSetup`, ...) on the child.
+3. UNPACK the `FCk_X_Spec` onto the child (root CLAUDE.md § Spec unpacking): seed the primary
+   state fragment from spec start-values (`Add<FFragment_Timer>(FCk_Chrono{Spec.Get_Duration()})`),
+   flip mode tags (`FTag_Timer_Countdown`, ...), add lifecycle tags (`FTag_Timer_NeedsSetup`), and
+   add a `FFragment_X_Params` residue ONLY for fields read at steady state
+   (`Add<FFragment_Timer_Params>(Spec.Get_Behavior())`).
 4. Connect it to the owner's Record: `RecordOfTimers_Utils::AddIfMissing(InHandle, ...)` +
    `Request_Connect(InHandle, NewTimerEntity, ...)`.
 5. The feature's processors drive the child entity from there.

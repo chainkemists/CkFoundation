@@ -88,8 +88,8 @@ class UCk_AutoTest_Interaction_DestroyTargetMidInteraction_SourceHearsFailed : U
         _MyEntity = LocalHandle;
         auto Channel = interaction_gym_helpers::DefaultChannel();
 
-        auto SourceParams = FCk_Fragment_InteractSource_ParamsData();
-        // Direct _Member write is the corpus-standard AS form here: this ParamsData ships no
+        auto SourceParams = FCk_InteractSource_Spec();
+        // Direct _Member write is the corpus-standard AS form here: this Spec struct ships no
         // CK_DEFINE_CONSTRUCTORS, so the BlueprintReadWrite surface is the only population path
         // (every committed CkInteraction gym/autotest does exactly this).
         SourceParams._InteractionChannel = Channel;
@@ -97,7 +97,7 @@ class UCk_AutoTest_Interaction_DestroyTargetMidInteraction_SourceHearsFailed : U
 
         // Target on its OWN entity — destroying it must not touch the source or the test entity
         _TargetOwner = utils_entity_lifetime::Request_CreateEntity(LocalHandle);
-        auto TargetParams = FCk_Fragment_InteractTarget_ParamsData(Channel);
+        auto TargetParams = FCk_InteractTarget_Spec(Channel);
         TargetParams.Set_CompletionPolicy(ECk_Interaction_CompletionPolicy::Timed);
         TargetParams.Set_InteractionDuration(FCk_Time(0.5f));
         _Target = utils_interact_target::Add(_TargetOwner, TargetParams);

@@ -473,7 +473,7 @@ class U<Prefix>_EntityScript_HelloEntity : UCk_GenericEntityScript_UE
         auto TransformHandle = utils_transform::Add(InHandle, SpawnTransform,
             ECk_Replication::DoesNotReplicate);
 
-        auto IsmParams = FCk_Fragment_IsmProxy_ParamsData(<prefix>::Asset_HelloCube);
+        auto IsmParams = FCk_IsmProxy_Spec(<prefix>::Asset_HelloCube);
         utils_ism_proxy::Add(TransformHandle, IsmParams);
 
         <prefix>::Log("[<Game>] HelloEntity constructed");
