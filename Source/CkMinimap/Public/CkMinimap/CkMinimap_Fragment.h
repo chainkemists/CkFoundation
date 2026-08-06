@@ -24,7 +24,34 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_Minimap_Params = FCk_Minimap_Spec;
+    // The retained immutable residue of FCk_Minimap_Spec. _ViewExtent, _RotationMode and
+    // _CategoryFilter are DISSOLVED into FFragment_Minimap_Current: all three are request-mutable,
+    // so an authored copy retained here goes stale the instant a Request_Set* lands. _CategoryFilter
+    // was previously mutated IN this fragment via the reflected Spec's setter, which is the only
+    // reason HandleRequests took it ReadWrite - it no longer does.
+    struct CKMINIMAP_API FFragment_Minimap_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Minimap_Params);
+
+    private:
+        ECk_Minimap_ProjectionMode _ProjectionMode = ECk_Minimap_ProjectionMode::ObserverCentric;
+        ECk_Minimap_FrameShape _FrameShape = ECk_Minimap_FrameShape::Rectangle;
+        FCk_Minimap_WorldBounds _FixedBounds;
+        int32 _MaxEntries = 64;
+        FCk_Time _UpdateInterval;
+
+    public:
+        CK_PROPERTY_GET(_ProjectionMode);
+        CK_PROPERTY_GET(_FrameShape);
+        CK_PROPERTY_GET(_FixedBounds);
+        CK_PROPERTY_GET(_MaxEntries);
+        CK_PROPERTY_GET(_UpdateInterval);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Minimap_Params, _ProjectionMode, _FrameShape, _FixedBounds,
+            _MaxEntries, _UpdateInterval);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -49,6 +76,8 @@ namespace ck
 
         ECk_Minimap_RotationMode _RotationMode = ECk_Minimap_RotationMode::NorthLocked;
 
+        FGameplayTagQuery _CategoryFilter;
+
         FVector _ViewOrigin = FVector::ZeroVector;
         float _ViewYawDegrees = 0.0f;
 
@@ -61,6 +90,7 @@ namespace ck
         CK_PROPERTY_GET(_FogOfWar);
         CK_PROPERTY_GET(_ViewExtent);
         CK_PROPERTY_GET(_RotationMode);
+        CK_PROPERTY_GET(_CategoryFilter);
         CK_PROPERTY_GET(_ViewOrigin);
         CK_PROPERTY_GET(_ViewYawDegrees);
         CK_PROPERTY_GET(_Entries);

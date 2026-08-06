@@ -58,7 +58,6 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMinimapEntity,
-            const FFragment_Minimap_Params& InParams,
             FFragment_Minimap_Current& InCurrent)
         -> void
     {
@@ -69,40 +68,6 @@ namespace ck
         {
             InCurrent._Observer = InMinimapEntity;
         }
-
-        InCurrent._ViewExtent = InParams.Get_ViewExtent();
-
-        // Clamped for EVERY projection mode, ensured for only one. The stored value must
-        // stay positive regardless (a later Request_SetRotationMode/mode flip would divide
-        // by it), but see below for why FixedBounds does not complain about it.
-        if (InCurrent._ViewExtent <= 0.0f)
-        {
-            InCurrent._ViewExtent = 1.0f;
-        }
-
-        if (InParams.Get_ProjectionMode() == ECk_Minimap_ProjectionMode::FixedBounds)
-        {
-            // FixedBounds projects through Get_BoundsToFrame and NEVER reads ViewExtent, so
-            // ensuring on it here was a false positive: it forced every world-map author to
-            // invent a meaningless positive number to silence a check on a value the mode
-            // ignores. What FixedBounds actually requires is valid bounds.
-            CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_FixedBounds()),
-                TEXT("Minimap [{}] uses FixedBounds projection but its FixedBounds half-extents are not > 0. "
-                     "Every entry will project to the frame center until the minimap is re-Added with valid bounds"),
-                InMinimapEntity)
-            {}
-        }
-        else
-        {
-            // ObserverCentric: ViewExtent IS the zoom, so a non-positive one is a real
-            // authoring error and the 1cm fallback above is a visible degradation.
-            CK_ENSURE_IF_NOT(InParams.Get_ViewExtent() > 0.0f,
-                TEXT("Minimap [{}] ViewExtent [{}] must be > 0 — falling back to 1cm"),
-                InMinimapEntity, InParams.Get_ViewExtent())
-            {}
-        }
-
-        InCurrent._RotationMode = InParams.Get_RotationMode();
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
         InCurrent._TimeSinceUpdate = ProjectImmediately;
@@ -116,7 +81,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMinimapEntity,
             FFragment_Minimap_Current& InCurrent,
-            FFragment_Minimap_Params& InParams,
+            const FFragment_Minimap_Params& InParams,
             FFragment_Minimap_Requests& InRequests) const
         -> void
     {
@@ -162,7 +127,7 @@ namespace ck
         DoHandleRequest(
             HandleType InMinimapEntity,
             FFragment_Minimap_Current& InCurrent,
-            FFragment_Minimap_Params& InParams,
+            const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetViewExtent& InRequest)
         -> bool
     {
@@ -186,13 +151,13 @@ namespace ck
         DoHandleRequest(
             HandleType InMinimapEntity,
             FFragment_Minimap_Current& InCurrent,
-            FFragment_Minimap_Params& InParams,
+            const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetCategoryFilter& InRequest)
         -> void
     {
         minimap::VeryVerbose(TEXT("Handling SetCategoryFilter Request for Minimap with Entity [{}]"), InMinimapEntity);
 
-        InParams.Set_CategoryFilter(InRequest.Get_CategoryFilter());
+        InCurrent._CategoryFilter = InRequest.Get_CategoryFilter();
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
         InCurrent._TimeSinceUpdate = ProjectImmediately;
@@ -203,7 +168,7 @@ namespace ck
         DoHandleRequest(
             HandleType InMinimapEntity,
             FFragment_Minimap_Current& InCurrent,
-            FFragment_Minimap_Params& InParams,
+            const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetObserver& InRequest)
         -> void
     {
@@ -222,7 +187,7 @@ namespace ck
         DoHandleRequest(
             HandleType InMinimapEntity,
             FFragment_Minimap_Current& InCurrent,
-            FFragment_Minimap_Params& InParams,
+            const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetRotationMode& InRequest)
         -> void
     {
@@ -239,7 +204,7 @@ namespace ck
         DoHandleRequest(
             HandleType InMinimapEntity,
             FFragment_Minimap_Current& InCurrent,
-            FFragment_Minimap_Params& InParams,
+            const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetFogOfWar& InRequest)
         -> void
     {
@@ -353,7 +318,7 @@ namespace ck
         auto& Scratch = InScratch._Entries;
         Scratch.Reset();
 
-        const auto& CategoryFilter = InParams.Get_CategoryFilter();
+        const auto& CategoryFilter = InCurrent.Get_CategoryFilter();
         const auto FilterIsEmpty = CategoryFilter.IsEmpty();
         const auto ProjectionMode = InParams.Get_ProjectionMode();
         const auto FrameShape = InParams.Get_FrameShape();
