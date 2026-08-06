@@ -475,7 +475,7 @@ class AMyActor : AActor
 //============================================================================
 
 // In DoConstruct:
-auto TimerParams = FCk_Fragment_Timer_ParamsData(FCk_Time(0.0f));
+auto TimerParams = FCk_Timer_Spec(FCk_Time(0.0f));
 TimerParams.Set_StartingState(ECk_Timer_State::Running)
            .Set_Behavior(ECk_Timer_Behavior::ResetOnDone);
 auto Timer = utils_timer::Add(InHandle, TimerParams);
@@ -498,7 +498,7 @@ private void Tick(FCk_Handle_Timer InHandle, FCk_Chrono InChrono, FCk_Time InDel
 //============================================================================
 
 // Attribute
-auto Attr = FCk_Fragment_FloatAttribute_ParamsData(
+auto Attr = FCk_FloatAttribute_Spec(
     utils_gameplay_tag::ResolveGameplayTag(n"Attribute.Health"), 100.0f);
 Attr.Set_MinMax(ECk_MinMax::MinMax).Set_MinValue(0.0f).Set_MaxValue(100.0f);
 auto Health = utils_float_attribute::Add(SelfEntity, Attr);

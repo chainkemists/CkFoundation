@@ -11,11 +11,11 @@ every `[EDITOR-VERIFY]` tag below via the exact Blueprint checklist in `ck-chang
 §"Three environments" (its numbered steps cover the accessor-visibility, autocast-node,
 request-node, and BindTo-node checks these checklists tag).
 
-### 3.1 New fragment (ParamsData + runtime + alias)
+### 3.1 New fragment (Spec + runtime fragments)
 
-1. `Ck<Feature>/Public/Ck<Feature>/Ck<Feature>_Fragment_Data.h` — the reflected config:
+1. `Ck<Feature>/Public/Ck<Feature>/Ck<Feature>_Fragment_Data.h` — the reflected authoring struct:
    - UENUMs first, each followed by `CK_DEFINE_CUSTOM_FORMATTER_ENUM(E);` (exemplar :17-27).
-   - `FCk_Fragment_<Feature>_ParamsData` USTRUCT: `GENERATED_BODY()` → `CK_GENERATED_BODY` →
+   - `FCk_<Feature>_Spec` USTRUCT: `GENERATED_BODY()` → `CK_GENERATED_BODY` →
      (optional `using IsSnapshotable = void;` for Tier-A round-trip, §3.6) → private
      `UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))` members →
      `CK_PROPERTY_GET` for essentials / `CK_PROPERTY` for optionals →
@@ -24,10 +24,16 @@ request-node, and BindTo-node checks these checklists tag).
    - Verify: UHT compiles; the struct shows in BP with Get_/Set_ accessors `[EDITOR-VERIFY]`.
 2. `Ck<Feature>_Fragment.h` — the runtime side, all inside `namespace ck`:
    - Lifecycle tags via `CK_DEFINE_ECS_TAG(FTag_<Feature>_NeedsSetup);` etc. (exemplar :27-29).
-   - Bridge alias: `using FFragment_<Feature>_Params = FCk_Fragment_<Feature>_ParamsData;` (:33).
-   - `FFragment_<Feature>_Current` — plain struct, NOT a USTRUCT: `CK_GENERATED_BODY` → friend
-     its processors + Utils → private state → `CK_PROPERTY_GET` → `CK_DEFINE_CONSTRUCTORS`
-     (exemplar :37-63). Friends are the ONLY writers of `_Members` (root doctrine).
+   - `FFragment_<Feature>` — the primary state fragment (bare noun; Timer/Transform precedent):
+     plain struct, NOT a USTRUCT: `CK_GENERATED_BODY` → friend its processors + Utils → private
+     state → `CK_PROPERTY_GET` → `CK_DEFINE_CONSTRUCTORS`. Friends are the ONLY writers of
+     `_Members` (root doctrine). Additional mutable state gets purpose-named siblings
+     (`_State`/`_Result`/`_Pending*`/`_Cooldowns`/`_Previous`), never a `_Current` monolith.
+   - `FFragment_<Feature>_Params` — ONLY if some Spec field is read at steady state (root
+     CLAUDE.md § Spec unpacking): a small residue struct holding exactly those fields
+     (exemplar: `FFragment_Timer_Params{_Behavior}`). An all-hot feature may alias the whole
+     Spec instead (`using FFragment_Tween_Params = FCk_Tween_Spec;` — Tween/StateMachine shape).
+     Start-values NEVER live here — they seed the state fragments / tags at `Add()`.
    - Verify: header compiles standalone (include it from the .cpp first).
 3. `Ck<Feature>_Fragment.cpp` — snapshot registrations if any (§3.6; exemplar :27-34).
 4. Before landing: this is a class-2 (additive API) change — finish via `ck-change-control`'s
@@ -41,7 +47,7 @@ request-node, and BindTo-node checks these checklists tag).
        FProcessor_<Feature>_Setup,
        FCk_Handle_<Feature>,
        ck::TReadOnly<FFragment_<Feature>_Params>,
-       ck::TReadWrite<FFragment_<Feature>_Current>,
+       ck::TReadWrite<FFragment_<Feature>>,
        FTag_<Feature>_NeedsSetup,
        CK_IGNORE_PENDING_KILL>
    {

@@ -91,7 +91,7 @@ failure mode of incoming engineers and models — read them twice.
 | Probe | Spatial-query trigger volume (`CkSpatialQuery/Probe`, Jolt-backed) |
 | Record | Fragment holding child/related entity collections (`CkRecord`) |
 | Utils / BPFL / BFL | `UCk_Utils_[Feature]_UE` BlueprintFunctionLibrary — the ONLY public API surface of a feature (BPFL and BFL are the same thing) |
-| ParamsData | Reflected `FCk_Fragment_[Feature]_ParamsData` USTRUCT (BP/AS-facing config) |
+| Spec | Reflected `FCk_[Feature]_Spec` USTRUCT — the authoring/construction payload (BP/AS-facing), fully unpacked at `Add()`. Renamed from `FCk_Fragment_[Feature]_ParamsData` 2026-08-05; any surviving `ParamsData` name is unmigrated code |
 | Quartet | The four files every feature ships: `X_Fragment_Data.h`, `X_Fragment.h`, `X_Processor.h/.cpp`, `X_Utils.h/.cpp` |
 | CDO | Class Default Object — UE's per-class template instance; AS `default` statements write CDO values |
 | EntityScript | `UCk_EntityScript_UE` — data-driven entity logic unit (C++/BP/AS) |
@@ -116,7 +116,7 @@ UFUNCTION(BlueprintCallable,
 static TArray<FCk_Handle_Timer>
 AddMultiple(
     UPARAM(ref) FCk_Handle& InHandle,
-    const FCk_Fragment_MultipleTimer_ParamsData& InParams);
+    const FCk_MultipleTimer_Spec& InParams);
 
 // Any definition (.cpp) and any non-UFUNCTION declaration — trailing return:
 auto
@@ -124,8 +124,7 @@ auto
     ForEachEntity(
         TimeType InDeltaT,
         HandleType InTimerEntity,
-        const FFragment_Timer_Params& InParams,
-        FFragment_Timer_Current& InCurrentComp)
+        FFragment_Timer& InTimerComp)
     -> void
 {
     ...
@@ -182,9 +181,10 @@ no `= {}` default-init inside UFUNCTION signatures.
 
 | Thing | Name | Lives in |
 |---|---|---|
-| Reflected config struct | `FCk_Fragment_[Feature]_ParamsData` (USTRUCT) | `X_Fragment_Data.h` |
-| Runtime fragment | `ck::FFragment_[Feature]_[Type]` (plain C++, `ck` namespace) | `X_Fragment.h` |
-| Bridge alias | `using FFragment_X_Params = FCk_Fragment_X_ParamsData;` | `X_Fragment.h` |
+| Reflected Spec struct | `FCk_[Feature]_Spec` (USTRUCT) — authoring payload, unpacked at `Add()` | `X_Fragment_Data.h` |
+| Primary state fragment | `ck::FFragment_[Feature]` (bare noun when the feature has one obvious primary blob — Transform/Timer precedent); otherwise purpose-named | `X_Fragment.h` |
+| Other runtime fragments | `ck::FFragment_[Feature]_[PurposeNoun]` — `_State`, `_Result`, `_Graph`, `_Pending*`, `_*Inbox`, `_*Registry`, `_Cooldowns`, `_Previous`, `_Debug`, … (`_Current` is RETIRED for new code; never `_Runtime`/`_Tracker`/`_Live`/`_Status`) | `X_Fragment.h` |
+| Retained immutable config | `ck::FFragment_[Feature]_Params` — EARNED by steady-state reads, never granted by default; holds ONLY the post-construction-read residue (`Params ⊆ Spec`). All-hot features may alias: `using FFragment_X_Params = FCk_X_Spec;` | `X_Fragment.h` |
 | Tag | `ck::FTag_[Feature]_[Purpose]` via `CK_DEFINE_ECS_TAG` | `X_Fragment.h` |
 | Typesafe handle | `FCk_Handle_[Feature]` | `X_Fragment_Data.h` — NEVER `X_Fragment.h` (89/90 declarations comply; the 1 exception, `CkShape_Handle.h`, is infrastructure — the 91st grep hit is the macro definition itself) |
 | Request | `FCk_Request_[Feature]_[Action] : FCk_Request_Base` | `X_Fragment_Data.h` |
@@ -204,12 +204,12 @@ friends (its processors and Utils). Canonical fragment-data shape:
 
 ```cpp
 USTRUCT(BlueprintType)
-struct CKTIMER_API FCk_Fragment_Timer_ParamsData
+struct CKTIMER_API FCk_Timer_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Timer_ParamsData);
+    CK_GENERATED_BODY(FCk_Timer_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -225,9 +225,19 @@ public:
     CK_PROPERTY(_CountDirection);      // optional → getter + fluent setter
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Timer_ParamsData, _Duration);  // essentials only
+    CK_DEFINE_CONSTRUCTORS(FCk_Timer_Spec, _Duration);  // essentials only
 };
 ```
+
+**Spec unpacking (the data-placement doctrine).** `Add(Handle, Spec)` dissolves the Spec:
+start-values seed the state fragments (`FCk_Chrono{Spec.Get_Duration()}`), boolean/enum modes
+become tags, the name goes to the GameplayLabel, structural options become fragment presence or
+child entities, and ONLY fields read at steady state survive into `FFragment_X_Params`. **One home
+per datum** — a value lives in the Params residue XOR in mutable state/tags, never both (the
+Timer stale-direction bug is the case study). Full doctrine + audit method:
+`docs/specs/2026-08-05-config-naming-and-fragment-granularity-design.md`; migration state:
+`docs/campaigns/spec-fragment-granularity/PROGRESS.md`. CkTimer is the converted exemplar;
+CkTween/CkStateMachine keep wholesale Params fragments deliberately (hot-path immutable config).
 
 **Requests.** One struct per request type; essentials in the `CK_DEFINE_CONSTRUCTORS` ctor,
 optionals via the fluent `Set_*` setters; `CK_REQUEST_DEFINE_DEBUG_NAME` on every request.

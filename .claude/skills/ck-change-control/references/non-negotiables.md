@@ -93,7 +93,7 @@ For an ECS change, read IN THIS ORDER before writing anything:
    (`DECISIONS.md` §15): trust code over doc on conflict and note the drift.
 4. The nearest sibling feature's **quartet** — `CkTimer` is the canonical small exemplar
    (`Source/CkTimer/Public/CkTimer/`), in this order:
-   - `CkTimer_Fragment_Data.h` — reflected surface: ParamsData, requests, typed handle, delegates
+   - `CkTimer_Fragment_Data.h` — reflected surface: the Spec struct, requests, typed handle, delegates
    - `CkTimer_Fragment.h` — runtime fragments, tags, signals, record-of-children
    - `CkTimer_Processor.h` + `.cpp` — phases, `CK_REGISTER_PROCESSOR`, request draining
    - `CkTimer_Utils.h` + `.cpp` — the only public API surface

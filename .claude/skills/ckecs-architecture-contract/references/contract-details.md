@@ -9,13 +9,14 @@ CLAUDE.md "ECS naming is two-tier"):
 
 | Tier | Type | Reflected? | Holds | Exemplar |
 |---|---|---|---|---|
-| Config | `FCk_Fragment_X_ParamsData` (USTRUCT) | Yes — BP/AS/editor-authorable | Designer-set values, provider refs | `CkTimer/Public/CkTimer/CkTimer_Fragment_Data.h:82-124` |
-| Runtime | `ck::FFragment_X_Current` / `_Requests` (plain C++ struct in `ck` namespace) | No | Mutable live state, native-only types | `CkTimer/Public/CkTimer/CkTimer_Fragment.h:37-63, 67-85` |
-| Bridge | `using FFragment_X_Params = FCk_Fragment_X_ParamsData;` | — | — | `CkTimer_Fragment.h:33` |
+| Spec | `FCk_X_Spec` (USTRUCT) | Yes — BP/AS/editor-authorable | The full authoring/construction payload, unpacked at `Add()` | `CkTimer/Public/CkTimer/CkTimer_Fragment_Data.h` (`FCk_Timer_Spec`) |
+| Runtime | `ck::FFragment_X` (primary state) + purpose-named siblings + `_Requests` (plain C++ structs in `ck` namespace) | No | Mutable live state, native-only types | `CkTimer_Fragment.h` (`FFragment_Timer`) |
+| Params residue | `ck::FFragment_X_Params` — EARNED by steady-state reads; holds only the post-construction-read subset (`Params ⊆ Spec`) | No | Immutable retained config | `FFragment_Timer_Params{_Behavior}`; all-hot alias form `using FFragment_Tween_Params = FCk_Tween_Spec;` |
 
-The alias is not cosmetic: the reflected struct **is stored directly as the params fragment** —
-`InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);` (`CkTimer/Public/CkTimer/CkTimer_Utils.cpp:58`).
-One struct serves as editor-facing config AND as the immutable ECS fragment.
+For an all-hot feature the alias form stores the reflected struct **directly as the params
+fragment** (`Add<ck::FFragment_Tween_Params>(InParams)` — one struct serves as editor-facing
+config AND as the immutable ECS fragment). For everything else the Spec is dissolved at `Add()`
+and only the residue survives (root CLAUDE.md § Spec unpacking).
 
 **Why the split exists** (confirmed structurally):
 
@@ -27,7 +28,7 @@ One struct serves as editor-facing config AND as the immutable ECS fragment.
 2. Reflection means authorability. A UPROPERTY is editable in details panels and writable from
    BP/AS. Config wants that; live state must not be mutable behind the processors' backs — the
    whole mutation contract (§3, §4) assumes writes flow through requests and friends.
-3. Snapshot participation differs by tier: a USTRUCT ParamsData opts into save/restore with one
+3. Snapshot participation differs by tier: a USTRUCT Spec opts into save/restore with one
    line (`using IsSnapshotable = void;`, reflection-serialized — `CkTimer_Fragment_Data.h:90-92`);
    a plain runtime fragment must hand-write `SerializeSnapshot` (`CkTimer_Fragment.h:59-62`).
 4. INFERRED (stated intent, consistent with 1-3): keeping the hot iteration tier out of UHT also
@@ -73,7 +74,7 @@ requirements. **What it costs:** per-handle boilerplate (declaration + ISVALID_A
 `CK_DEFINE_CPP_CASTCHECKED_TYPESAFE` in the Utils header + `CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE`
 in the .cpp) and the hard rule that handles never carry data.
 
-**Where they are declared and why:** in `X_Fragment_Data.h`, next to the feature's ParamsData and
+**Where they are declared and why:** in `X_Fragment_Data.h`, next to the feature's Spec struct and
 requests — never `X_Fragment.h`. Reasons: the declaration is a USTRUCT (UHT must see it; BP and AS
 consume it) and `_Fragment.h` would drag fragment implementation internals into every consumer plus
 invite UHT circular-include problems (`CkEcs/Claude.md` anti-pattern 6). Measured 2026-07-02:

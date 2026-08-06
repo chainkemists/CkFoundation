@@ -118,7 +118,7 @@ doctrine "Identity"), the accessor macros additionally register AS methods on th
   per `Class::Get_X` key, so double-registration cannot occur.
 - `CK_DEFINE_CONSTRUCTORS(T, ...)` similarly registers the essential-param constructor with AS at
   PreCompile via `CK_ANGELSCRIPT_CTOR_REGISTRATION` (`CkMacros.h:160+`, impl
-  `CkMacros_AngelScript.h:206-241`) — this is why `FCk_Fragment_Timer_ParamsData(FCk_Time(0.0))`
+  `CkMacros_AngelScript.h:206-241`) — this is why `FCk_Timer_Spec(FCk_Time(0.0))`
   constructs in AS. Param types are validated for AS compatibility and skipped silently if unsupported.
 
 ### 1.6 Worked example — Timer across the three environments
@@ -140,7 +140,7 @@ public:
     static FCk_Handle_Timer
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Timer_ParamsData& InParams);
+        const FCk_Timer_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",

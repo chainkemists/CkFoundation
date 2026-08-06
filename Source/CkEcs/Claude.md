@@ -100,22 +100,24 @@ Validity: always `ck::IsValid(Handle)`, never raw null checks.
 Processors are the only place game logic should live. They own the `ForEachEntity` loop over a fragment set.
 
 ```cpp
-// Header
+// Header — FFragment_MyFeature is the primary state fragment; FFragment_MyFeature_Params is the
+// retained immutable config residue (present only when the feature earned one — root CLAUDE.md
+// § Spec unpacking):
 class FProcessor_MyFeature_DoThing
     : public ck::TProcessor<FProcessor_MyFeature_DoThing,
                             FFragment_MyFeature_Params,     // required fragment
-                            FFragment_MyFeature_Current>    // required fragment
+                            FFragment_MyFeature>            // required fragment
 {
 public:
     using Super = ck::TProcessor<FProcessor_MyFeature_DoThing,
                                  FFragment_MyFeature_Params,
-                                 FFragment_MyFeature_Current>;
+                                 FFragment_MyFeature>;
     using Super::Super;
 
     auto ForEachEntity(
         const FCk_Handle& InHandle,
         const FFragment_MyFeature_Params& InParams,
-        FFragment_MyFeature_Current& InCurrent) -> void;
+        FFragment_MyFeature& InMyFeature) -> void;
 };
 
 // Implementation
@@ -124,7 +126,7 @@ auto
     ForEachEntity(
         const FCk_Handle& InHandle,
         const FFragment_MyFeature_Params& InParams,
-        FFragment_MyFeature_Current& InCurrent)
+        FFragment_MyFeature& InMyFeature)
     -> void
 {
     // main logic
@@ -177,7 +179,7 @@ class FProcessor_MyFeature_Bucket
                                          FProcessor_MyFeature_Bucket, T_BucketIndex,
                                          FCk_Handle_MyFeature,
                                          ck::TReadOnly<FFragment_MyFeature_Params>,
-                                         ck::TReadWrite<FFragment_MyFeature_Current>,
+                                         ck::TReadWrite<FFragment_MyFeature>,
                                          CK_IGNORE_PENDING_KILL>
 {
 public:
@@ -188,7 +190,7 @@ public:
     // shared, spelled with CONCRETE types — the base's TimeType/HandleType aliases
     // are not visible unqualified inside the consumer template
     static auto ForEachEntity(FCk_Time, FCk_Handle_MyFeature, const FFragment_MyFeature_Params&,
-                              FFragment_MyFeature_Current&) -> void;
+                              FFragment_MyFeature&) -> void;
 };
 ```
 
@@ -548,7 +550,7 @@ Each listed name `X` is simultaneously the member name, the typesafe handle type
 
 ### DebugFeatureFlags cache
 
-A per-registry bit table — one `uint64` row per entity index — maintained by EnTT `on_construct`/`on_destroy` sinks on each registered feature's MARKER fragment (the stable Params/Current fragment, never a request/transient tag). Rows self-correct on entity destruction because a feature's `on_destroy` fires for fragment removal AND entity destruction alike. Zero cost until `Enable()` connects the sinks (the debugger opening); consumers then get O(1) per-entity feature queries and archetype matching compiles to `(bits & required) == required`. Feature→fragment registration is deliberately NOT in CkEcs (it must not see T4 feature modules): consumers that link the fragment types call `RegisterFlag<TFragment>(FeatureId)` at startup, BEFORE `Enable()`.
+A per-registry bit table — one `uint64` row per entity index — maintained by EnTT `on_construct`/`on_destroy` sinks on each registered feature's MARKER fragment (the feature's stable membership anchor — its primary state fragment, e.g. `FFragment_Timer`; never a request/transient tag). Rows self-correct on entity destruction because a feature's `on_destroy` fires for fragment removal AND entity destruction alike. Zero cost until `Enable()` connects the sinks (the debugger opening); consumers then get O(1) per-entity feature queries and archetype matching compiles to `(bits & required) == required`. Feature→fragment registration is deliberately NOT in CkEcs (it must not see T4 feature modules): consumers that link the fragment types call `RegisterFlag<TFragment>(FeatureId)` at startup, BEFORE `Enable()`.
 
 ---
 
