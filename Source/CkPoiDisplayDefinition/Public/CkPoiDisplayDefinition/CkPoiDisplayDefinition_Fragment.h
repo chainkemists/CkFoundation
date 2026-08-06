@@ -31,7 +31,33 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_PoiDisplayDefinition_Params = FCk_PoiDisplayDefinition_Spec;
+    // The retained immutable residue of FCk_PoiDisplayDefinition_Spec: the fields projectors read
+    // straight off Params every update. _Tint and _SizeHint are DISSOLVED - they are seeded into
+    // FFragment_PoiDisplayDefinition_Current at Add and mutated only through the request processor,
+    // so the authored copies would go stale the instant anything called Request_Set*. Leaving them
+    // here made "never draw from Params" a rule the reader had to know; omitting them makes it a
+    // compile error.
+    struct CKPOIDISPLAYDEFINITION_API FFragment_PoiDisplayDefinition_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_PoiDisplayDefinition_Params);
+
+    private:
+        FGameplayTag _Consumer;
+        TSoftObjectPtr<UTexture2D> _Icon;
+        int32 _Priority = 0;
+        ECk_Poi_OffscreenPolicy _OffscreenPolicy = ECk_Poi_OffscreenPolicy::Hide;
+
+    public:
+        CK_PROPERTY_GET(_Consumer);
+        CK_PROPERTY_GET(_Icon);
+        CK_PROPERTY_GET(_Priority);
+        CK_PROPERTY_GET(_OffscreenPolicy);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_PoiDisplayDefinition_Params, _Consumer, _Icon, _Priority,
+            _OffscreenPolicy);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
