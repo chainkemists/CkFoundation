@@ -11,6 +11,10 @@ Living doc. Newest entries on top within each section. See PROMPT.md for phases/
   guidance blob, flagged on member count alone). Every code phase ended on the same steady state:
   **1002/1004 passed**, the only reds being the two pre-existing PathNetworkFollower fixture
   tests owned by the sibling navmesh work.
+- **Successor campaign:** [`../mutable-params-dissolution/PROMPT.md`](../mutable-params-dissolution/PROMPT.md)
+  — the P6b audit found six more features whose retained `_Params` fragment is MUTATED at runtime
+  (CkCompass is CkMinimap's exact twin), plus three Utils-side cases. Scoped, not started; it
+  continues on the same branch.
 - **Not done, and not ours to do:** the `[EDITOR-VERIFY]` pass (BP nodes resolving through the
   123 CoreRedirects, then recompile+resave of the 16 flagged `.uasset`s — the two
   `EntitySpawnParams_*` FInstancedStruct payloads carry the highest residual risk); shipping
