@@ -136,6 +136,46 @@ Restored values are readable at `OnLoadComplete` (the settle phase pumps to quie
 
 ---
 
+## Dynamic-fragment snapshot opt-outs
+
+CkDynamic registers ONE blanket save handler for every dynamic (AS `Add_Fragment`-declared) struct on an entity
+(`CkDynamic/CkDynamic_Fragment.cpp` — `FCkDynamicFragmentsSaveHandlerRegistrar`,
+`Register_SaveOnly<FCk_SaveData_DynamicFragments>`): `Produce` captures **every** dynamic fragment, replicated or
+not, and `HydrationApply` re-composes each onto the rebuilt entity — no per-feature registrar needed to opt IN.
+Opting a fragment (or a field) OUT is two mechanisms, chosen by granularity:
+
+**Whole fragment — `FCk_DynamicFragment_SnapshotTransient`.** C++ structs *derive* from the marker; AngelScript
+structs cannot inherit, so the AS spelling is a **field** of that type instead (`CkDynamic_Fragment_Data.h:31-34`).
+`UCk_Utils_DynamicFragment_UE::Get_IsSnapshotTransient` (`CkDynamic_Utils.cpp:452-470`) accepts either spelling —
+an `IsChildOf` test on the struct itself, or a scan for a marker-typed `FStructProperty` — and it is honoured on
+BOTH sides: `Produce` strips these before saving, `HydrationApply` skips them on load. Reach for it when the
+fragment's ENTIRE content is rebuilt by `DoConstruct` replay: cached child-entity handles, `_Signals`, `_Requests`,
+`_NeedsSetup` tags. ~25 BB script files already do (`BB_Door_Feature.as`, `BB_CombatReceiver_Feature.as`).
+
+**Per-field — `UPROPERTY(Transient)`.** The persistent archive never writes a `CPF_Transient` property
+(`FProperty::ShouldSerializeValue`), and hydration copies the payload back onto the rebuilt entity field-by-field
+via `CopyFragment_PreservingTransientFields` (`CkDynamic_Fragment.cpp:34-58`): if the struct carries ANY
+`CPF_Transient` field, every OTHER field copies from the saved payload and every Transient field is left
+untouched, so the rebuilt world's freshly-CONSTRUCTED value survives instead of being stomped by the saved
+default. Reach for it when one fragment mixes durable state with runtime-only children (`FBb_Fragment_Shelf_State`
+— `Inventory`/`StockedSku`/`NextProxyID` persist while probe/interactable/outline/cosmetic-proxy handles are
+`Transient`). **The handle-id stream is positional** — a fragment's persisted handle fields must be declared
+BEFORE its `Transient` ones: the save's handle-remap walk is a straight positional field walk, not name-keyed, so
+a reordered struct attributes a durable saved value to the wrong field.
+
+**Omitting whichever opt-out a fragment needs is the recurring shape of a real incident class.** Hydration's
+whole-fragment assign runs AFTER `DoConstruct` has already composed the entity fresh — so a Transient-worthy
+runtime handle a construction script just built (a child probe entity, a signal binding, an AI task handle) gets
+overwritten by the SAVED value for that field, which typically remaps to `entt::null` because the referenced
+child was never independently persisted. Door commit `52309113c` and the BusterBlock NPC freeze-after-load
+incident are both this shape: construct-fresh handles stomped by stale hydrated values from the previous session.
+
+Don't try to express either contract with USTRUCT `meta=(...)` metadata — Game and cooked targets strip metadata
+behind `WITH_METADATA` (`CkDynamic/CLAUDE.md`), so a metadata-only opt-out is silently inert in a packaged build.
+The `IsChildOf`/marker-field runtime scan above is the only opt-out CkDynamic actually evaluates.
+
+---
+
 ## Provenance + skip/orphan diagnostics
 
 Every saved entity carries one of four provenances (`ECk_Snapshot_V3_Provenance`, `SaveGame/CkSnapshot_Header.h`),
@@ -246,6 +286,19 @@ as comments in `Subsystem/CkSnapshot_Subsystem.cpp`:
   whose composition branches on a saved field (a world item's `ItemDefinition`) came back inert and a later payload
   hydration back-filled the field onto an entity that had already skipped composing. Empty bytes (no SaveGame
   property on the class) spawn exactly as before.
+- **Spawn-params handle refs are remapped MID-rebuild, against whatever `_SavedIdMap` holds on THAT tick — there
+  is no retry.** Unlike ownership restore and payload hydration below (both of which wait for mapping to settle
+  before running), the RuntimeSpawned leg deserializes a recipe's spawn params through `DoDeserialize_V3Blob`
+  (`Subsystem/CkSnapshot_Subsystem.cpp:598-624`) and remaps its handle refs via `ck::snapshot::RemapHandles`
+  **at the moment that row is processed** (`:826-878`, gated only on its OWNER having resolved) — a handle
+  referencing a saved-id not yet in `_SavedIdMap` remaps to `entt::null` PERMANENTLY; nothing revisits it once
+  the target eventually maps on a later tick. The capture-side AUDIT ensure
+  (`Snapshot/CkSnapshot_CaptureV3.cpp:447-463`, `v3 capture: RuntimeSpawned entity [...] spawn params reference
+  entity [...] which is NOT persisted`) only catches a ref to an entity that will NEVER be persisted at all — it
+  cannot catch a ref to an entity that IS persisted but simply hasn't been rebuilt yet on this tick, which is
+  exactly the silent-loss case this bullet is about. Consequence for authors: never park a load-bearing world
+  reference in an `ExposeOnSpawn` spawn-params handle field — re-resolve it at construction/BeginPlay from
+  durable identity (a label, a SaveKey) instead, or make the reader tolerate an invalid handle.
 - **Ownership restore runs before any payload.** Rebuild APIs establish a *valid temporary* ownership chain so
   Construct can run, but not necessarily the saved one: RuntimeSpawned scripts can override ContextOwner after spawn,
   and DefinitionBuilt items are rebuilt under a driver-bearing context owner (historically they waited for a feature
@@ -282,6 +335,82 @@ stored handle in a restored registry: a dangling HARD ref (`LifetimeOwner` / `Co
 tombstone handles are skipped, and an empty result means the backbone is consistent. The dependents leg asserts
 **back-pointer consistency, not resolvability**: `FFragment_LifetimeDependents` is a lazily-pruned WEAK-ref list, so
 an entry pointing at a destroyed entity is by design and is not reported.
+
+---
+
+## Load-gate spawn quarantine
+
+While `Get_IsLoadGateActive()` is true, `UCk_Utils_EntityScript_UE::Request_SpawnEntity` suppresses any spawn that
+is not the loader's own reconstruction — the check runs SYNCHRONOUSLY inside `Request_SpawnEntity` itself
+(`CkEcs/EntityScript/CkEntityScript_Utils.cpp:161-202`, calling `Get_IsSpawnSuppressedByLoadGate` at `:36-74`).
+Rationale is the save-inflation incident the code comment cites (2026-07-29): a census/adopt-or-spawn policy read
+the half-rebuilt world's near-zero population and spawned to fill the gap, so the next capture recorded both the
+loader's restored copy AND the policy's fresh one (+77 NPCs and a doubled StoreDriver subordinate family in one
+save→load→save cycle).
+
+Three windows are admitted (`CkEcs/Subsystem/CkEcsWorld_Subsystem.h:161-266`), each RAII-scoped — never set
+directly:
+
+| Window | Scope guard | Legitimate for |
+|---|---|---|
+| Loader spawn window | `FCk_ScopedLoaderSpawnWindow` (`Push_LoaderSpawnWindow`/`Pop_LoaderSpawnWindow`) | The loader's own recipe replays / definition rebuilds — orchestrator-only; game code must never open one |
+| Rendezvous spawn window | `FCk_ScopedRendezvousSpawnWindow` (`Push_RendezvousSpawnWindow`/`Pop_RendezvousSpawnWindow`) | World bootstrap re-creating IDENTITY-BEARING content the loader ADOPTS instead of respawning (a SaveKey / adopt-label rendezvous target). Census/count-driven population spawns must NEVER open this — it is exactly the doubling class the quarantine exists to stop |
+| Construction window | `UCk_Utils_EntityLifetime_UE::Get_IsInsideConstructionWindow(LifetimeOwner)` | A spawn issued by an owner still inside its own Construct — the owner's replayed construction is expected to re-create its children |
+
+A suppressed spawn returns an **invalid** `FCk_Handle_PendingEntityScript`; `Promise_OnConstructed` no-ops on it
+and the completion delegate reports `Failed_NotEnqueued` — reconcile-shaped callers converge on their next
+real-world evaluation instead of erroring. The suppression site also logs a Warning naming the class and lifetime
+owner and pointing at the two escape hatches below.
+
+Two consumer-side tools, and a gap between them worth knowing:
+
+- **`UCk_Utils_Snapshot_UE::Get_IsLoadInProgress(InHandle)`** (`CkSnapshot_Utils.h:49-60`) — gate
+  construction-time SEEDING on this returning false. The hazard it documents (`:51-54`): a construction script
+  that unconditionally seeds a separately-persisted entity creates a SECOND copy beside the one the load is
+  about to restore (children composed UNDER the seeding script are fine — replayed construction re-creating
+  them is how rebuild works — but a sibling/global seed is not).
+- **`Request_SpawnEntity_LoadRendezvous`** (`CkEcs/EntityScript/CkEntityScript_Utils.h:93-107`, impl
+  `.cpp:238-254`) — the sanctioned call for legitimate mid-load spawns: it opens a
+  `FCk_ScopedRendezvousSpawnWindow` around an ordinary `Request_SpawnEntity`, so it behaves identically when no
+  load is active and passes the quarantine when one is. Reserved for spawns that carry (or will acquire during
+  construction) a stable SaveKey/adopt-label the loader rendezvouses onto — never for count-driven population.
+- **The gap the quarantine cannot close by construction, not by oversight:** the suppression check keys off
+  `Get_IsLoadGateActive()`, which the load machine turns off partway through Hydrating — the same ticker callback
+  that enqueues payloads and opens the gate (see "Hydrating is ATOMIC" above) — while `Get_IsLoadInProgress` /
+  `Promise_OnLoadComplete` stay live all the way through Settling until `OnLoadComplete` fires. A spawn issued in
+  that window — e.g. from an EntityScript's `DoBeginPlay`, which fires only once construction/composition has
+  finished and typically lands exactly there — sails through `Request_SpawnEntity`'s suppression check
+  unchallenged, because `Get_IsLoadGateActive()` already reads false. If that `DoBeginPlay` unconditionally seeds
+  a separately-persisted sibling, it creates a duplicate beside the entity the load is still in the middle of
+  restoring, and the spawn-level quarantine never sees it as suppressed — it isn't a suppressible spawn by the
+  time it fires. The guard belongs at the PRODUCER: gate the seed on `Get_IsLoadInProgress`, or — more robust —
+  don't seed unconditionally at all; spawn only what a reconcile pass run from `Promise_OnLoadComplete` finds
+  missing after the restore has actually landed.
+
+---
+
+## `Promise_OnLoadComplete` — the consumer settle point
+
+Feature PROCESSORS are the only thing the load gate freezes; promise/signal CALLBACKS are not — a bound delegate
+fires whenever the code that broadcasts it runs, gate active or not. Any consumer reading world-scoped state (an
+occupancy roster, a population count, a tag scan) from inside a callback that CAN fire mid-load must route that
+read through `UCk_Utils_Snapshot_UE::Promise_OnLoadComplete` (`CkSnapshot_Utils.h:62-75`, impl
+`CkSnapshot_Utils.cpp:80-117`) instead of acting directly on the half-rebuilt world.
+
+- **No load in progress** — the delegate fires IMMEDIATELY, synchronously, with a default-constructed
+  `FCk_Snapshot_LoadReport{}` (there was no load to report on).
+- **A load IS in progress** — binds `ck::UUtils_Signal_Snapshot_OnLoadComplete` on the world's transient entity
+  with `ECk_Signal_BindingPolicy::IgnorePayloadInFlight` / `ECk_Signal_PostFireBehavior::Unbind`: a ONE-SHOT bind
+  that fires exactly once, on THIS load's completion. `IgnorePayloadInFlight` is load-bearing, not incidental — a
+  replay policy (`FireIfPayloadInFlight`) would fire immediately with a PRIOR load's already-in-flight report
+  while the current load is still reconstituting the world, which is the exact half-coherent read this API exists
+  to prevent.
+- Fires post-settle: the load machine's Settling phase pumps hydration to quiescence before `OnLoadComplete`
+  broadcasts (see "Settling waits on hydration, not just frames" above), so restored values are guaranteed
+  readable by the time the callback runs.
+
+`Get_IsLoadInProgress` is the POLL form of the same fact; `Promise_OnLoadComplete` is the PUSH form for a
+consumer that would otherwise have to poll every tick.
 
 ---
 
