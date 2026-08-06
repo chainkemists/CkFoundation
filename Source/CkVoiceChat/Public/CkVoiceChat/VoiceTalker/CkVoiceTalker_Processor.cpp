@@ -289,14 +289,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
-            const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Tunables& InTunables)
+            const FFragment_VoiceTalker_Params& InParams)
         -> void
     {
         InVoiceTalkerEntity.Remove<MarkedDirtyBy>();
-
-        InTunables._TransmitMode = InParams.Get_TransmitMode();
-        InTunables._InputGain = InParams.Get_InputGain();
 
         voice_chat::VeryVerbose(TEXT("Setup complete for VoiceTalker [{}]"), InVoiceTalkerEntity);
     }
