@@ -31,12 +31,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SamePriorityBehavior);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKAUDIO_API FCk_Fragment_AudioDirector_ParamsData
+struct CKAUDIO_API FCk_AudioDirector_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_AudioDirector_ParamsData);
+    CK_GENERATED_BODY(FCk_AudioDirector_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -150,7 +150,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_AudioTrack_ParamsData _TrackParams;
+    FCk_AudioTrack_Spec _TrackParams;
 
 public:
     CK_PROPERTY(_TrackParams);

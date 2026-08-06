@@ -34,7 +34,7 @@ public:
     static FCk_Handle_VoxelNavPath
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_VoxelNavPath_ParamsData& InParams);
+        const FCk_VoxelNavPath_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|VoxelNavPath",

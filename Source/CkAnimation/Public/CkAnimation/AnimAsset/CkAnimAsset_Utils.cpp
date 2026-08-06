@@ -8,7 +8,7 @@ auto
     UCk_Utils_AnimAsset_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_AnimAsset_ParamsData& InParams)
+        const FCk_AnimAsset_Spec& InParams)
     -> FCk_Handle_AnimAsset
 {
     auto NewAnimAssetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_AnimAsset>(InHandle);
@@ -26,11 +26,11 @@ auto
     UCk_Utils_AnimAsset_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams)
+        const FCk_MultipleAnimAsset_Spec& InParams)
     -> TArray<FCk_Handle_AnimAsset>
 {
     return ck::algo::Transform<TArray<FCk_Handle_AnimAsset>>(InParams.Get_AnimAssetParams(),
-    [&](const FCk_Fragment_AnimAsset_ParamsData& InAnimAssetParams)
+    [&](const FCk_AnimAsset_Spec& InAnimAssetParams)
     {
         return Add(InHandle, InAnimAssetParams);
     });

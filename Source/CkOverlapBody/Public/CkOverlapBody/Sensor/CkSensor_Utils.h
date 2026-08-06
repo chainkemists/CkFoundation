@@ -46,7 +46,7 @@ public:
     static FCk_Handle_Sensor
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Sensor_ParamsData& InParams,
+        const FCk_Sensor_Spec& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
     UFUNCTION(BlueprintCallable,
@@ -55,7 +55,7 @@ public:
     static TArray<FCk_Handle_Sensor>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleSensor_ParamsData& InParams,
+        const FCk_MultipleSensor_Spec& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
     UFUNCTION(BlueprintCallable,

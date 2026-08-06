@@ -35,7 +35,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-	using FFragment_Goap_Action_Params = FCk_Fragment_Goap_ActionParamsData;
+	using FFragment_Goap_Action_Params = FCk_Goap_Action_Spec;
 
 // --------------------------------------------------------------------------------------------------------------------
 

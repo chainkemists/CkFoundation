@@ -25,7 +25,7 @@ public:
     static FCk_Handle_RenderStatus
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_RenderStatus_ParamsData& InParams);
+        const FCk_RenderStatus_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderStatus",
@@ -33,7 +33,7 @@ public:
     static FCk_Handle_RenderStatus
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_RenderStatus_ParamsData& InParams);
+        const FCk_RenderStatus_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RenderStatus",

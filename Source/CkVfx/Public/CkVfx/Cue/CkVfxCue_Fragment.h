@@ -14,7 +14,7 @@ class UCk_Utils_VfxCue_UE;
 
 namespace ck
 {
-    using FFragment_VfxCue_Params = FCk_Fragment_VfxCue_ParamsData;
+    using FFragment_VfxCue_Params = FCk_VfxCue_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

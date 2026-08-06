@@ -18,7 +18,7 @@ auto
     UCk_Utils_2dGridBlocker_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_2dGridBlocker_ParamsData& InParams)
+        const FCk_2dGridBlocker_Spec& InParams)
     -> FCk_Handle_2dGridBlocker
 {
     InHandle.Add<ck::FFragment_2dGridBlocker_Params>(InParams);
@@ -59,7 +59,7 @@ auto
     UCk_Utils_2dGridBlocker_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_2dGridBlocker_ParamsData& InParams)
+        const FCk_2dGridBlocker_Spec& InParams)
     -> FCk_Handle_2dGridBlocker
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

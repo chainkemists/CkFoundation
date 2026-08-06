@@ -33,25 +33,25 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Projectile_AimAhead_Policy);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPROJECTILE_API FCk_Fragment_Projectile_ParamsData
+struct CKPROJECTILE_API FCk_Projectile_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Projectile_ParamsData);
+    CK_GENERATED_BODY(FCk_Projectile_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Velocity_ParamsData _VelocityParams;
+    FCk_Velocity_Spec _VelocityParams;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Acceleration_ParamsData _AccelerationParams;
+    FCk_Acceleration_Spec _AccelerationParams;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_AutoReorient_ParamsData _AutoReorientParams;
+    FCk_AutoReorient_Spec _AutoReorientParams;
 
 public:
     CK_PROPERTY_GET(_VelocityParams);
@@ -59,7 +59,7 @@ public:
     CK_PROPERTY_GET(_AutoReorientParams);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Projectile_ParamsData, _VelocityParams, _AccelerationParams, _AutoReorientParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_Projectile_Spec, _VelocityParams, _AccelerationParams, _AutoReorientParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

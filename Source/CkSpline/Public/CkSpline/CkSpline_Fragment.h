@@ -6,7 +6,7 @@
 
 namespace ck
 {
-    using FFragment_Spline_Params = FCk_Fragment_Spline_ParamsData;
+    using FFragment_Spline_Params = FCk_Spline_Spec;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

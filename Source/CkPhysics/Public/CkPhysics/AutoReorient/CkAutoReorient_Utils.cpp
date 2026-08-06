@@ -11,7 +11,7 @@ auto
     UCk_Utils_AutoReorient_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_AutoReorient_ParamsData& InParams)
+        const FCk_AutoReorient_Spec& InParams)
     -> FCk_Handle_AutoReorient
 {
     InHandle.Add<ck::FFragment_AutoReorient_Params>(InParams);
@@ -22,7 +22,7 @@ auto
     UCk_Utils_AutoReorient_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_AutoReorient_ParamsData& InParams)
+        const FCk_AutoReorient_Spec& InParams)
     -> FCk_Handle_AutoReorient
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

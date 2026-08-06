@@ -28,12 +28,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AnimPlan);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKANIMATION_API FCk_Fragment_AnimPlan_ParamsData
+struct CKANIMATION_API FCk_AnimPlan_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_AnimPlan_ParamsData);
+    CK_GENERATED_BODY(FCk_AnimPlan_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -54,29 +54,29 @@ public:
     CK_PROPERTY(_StartingAnimState);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AnimPlan_ParamsData, _AnimGoal);
+    CK_DEFINE_CONSTRUCTORS(FCk_AnimPlan_Spec, _AnimGoal);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKANIMATION_API FCk_Fragment_MultipleAnimPlan_ParamsData
+struct CKANIMATION_API FCk_MultipleAnimPlan_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleAnimPlan_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleAnimPlan_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_AnimGoal"))
-    TArray<FCk_Fragment_AnimPlan_ParamsData> _AnimPlanParams;
+    TArray<FCk_AnimPlan_Spec> _AnimPlanParams;
 
 public:
     CK_PROPERTY_GET(_AnimPlanParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleAnimPlan_ParamsData, _AnimPlanParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleAnimPlan_Spec, _AnimPlanParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

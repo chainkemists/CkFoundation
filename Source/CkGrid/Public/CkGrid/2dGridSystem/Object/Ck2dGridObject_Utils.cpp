@@ -12,7 +12,7 @@ auto
     UCk_Utils_2dGridObject_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_2dGridObject_ParamsData& InParams)
+        const FCk_2dGridObject_Spec& InParams)
     -> FCk_Handle_2dGridObject
 {
     InHandle.Add<ck::FFragment_2dGridObject_Params>(InParams);
@@ -23,7 +23,7 @@ auto
     UCk_Utils_2dGridObject_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_2dGridObject_ParamsData& InParams)
+        const FCk_2dGridObject_Spec& InParams)
     -> FCk_Handle_2dGridObject
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

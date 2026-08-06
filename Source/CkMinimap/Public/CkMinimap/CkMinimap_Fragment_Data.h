@@ -142,12 +142,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKMINIMAP_API FCk_Fragment_Minimap_ParamsData
+struct CKMINIMAP_API FCk_Minimap_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Minimap_ParamsData);
+    CK_GENERATED_BODY(FCk_Minimap_Spec);
 
 private:
     // World cm from the frame center to the frame edge (the zoom). STARTING value — Request_SetViewExtent after
@@ -200,7 +200,7 @@ public:
     CK_PROPERTY(_UpdateInterval);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Minimap_ParamsData, _ViewExtent);
+    CK_DEFINE_CONSTRUCTORS(FCk_Minimap_Spec, _ViewExtent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

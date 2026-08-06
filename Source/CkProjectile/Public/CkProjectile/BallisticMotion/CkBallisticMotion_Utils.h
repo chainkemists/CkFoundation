@@ -47,7 +47,7 @@ public:
     static FCk_Handle_BallisticMotion
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_BallisticMotion_ParamsData& InParams);
+        const FCk_BallisticMotion_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|BallisticMotion",

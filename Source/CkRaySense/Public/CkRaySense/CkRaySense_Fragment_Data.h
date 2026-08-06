@@ -93,12 +93,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRAYSENSE_API FCk_Fragment_RaySense_ParamsData
+struct CKRAYSENSE_API FCk_RaySense_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_RaySense_ParamsData);
+    CK_GENERATED_BODY(FCk_RaySense_Spec);
 
 private:
     // Discrete does NOT work for RaySense that do not have a shape
@@ -129,7 +129,7 @@ public:
     CK_PROPERTY(_Async);
     CK_PROPERTY(_DataToIgnore);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RaySense_ParamsData, _CollisionQuality, _CollisionChannel);
+    CK_DEFINE_CONSTRUCTORS(FCk_RaySense_Spec, _CollisionQuality, _CollisionChannel);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

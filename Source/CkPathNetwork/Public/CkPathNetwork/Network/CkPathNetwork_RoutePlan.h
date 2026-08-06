@@ -40,7 +40,7 @@ namespace ck::pathnetwork
 
     CKPATHNETWORK_API auto
     Resolve_RouteCostPolicy(
-        const FCk_Fragment_PathNetworkFollower_ParamsData& InParams) -> FRouteCostPolicy;
+        const FCk_PathNetworkFollower_Spec& InParams) -> FRouteCostPolicy;
 
     CKPATHNETWORK_API auto
     Gather_RouteEndpointCandidates(

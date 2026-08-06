@@ -20,7 +20,7 @@ auto
     Create(
         FCk_Handle& InOwner,
         FGameplayTag InName,
-        const FCk_Fragment_ResolverDataBundle_ParamsData& InParams)
+        const FCk_ResolverDataBundle_Spec& InParams)
     -> FCk_Handle_ResolverDataBundle
 {
     SCOPE_CYCLE_COUNTER(STAT_Resolver_CreateBundle);
@@ -40,19 +40,19 @@ auto
     // Formula = (BaseDamage + BonusDamage) * TotalScalarDamage
     UCk_Utils_FloatAttribute_UE::Add(
         NewEntity,
-        FCk_Fragment_FloatAttribute_ParamsData(
+        FCk_FloatAttribute_Spec(
             TAG_Label_ResolverDataBundle_BaseValue,
             0.0f), ECk_Replication::DoesNotReplicate);
 
     UCk_Utils_FloatAttribute_UE::Add(
         NewEntity,
-        FCk_Fragment_FloatAttribute_ParamsData(
+        FCk_FloatAttribute_Spec(
             TAG_Label_ResolverDataBundle_BonusValue,
             0.0f), ECk_Replication::DoesNotReplicate);
 
     UCk_Utils_FloatAttribute_UE::Add(
         NewEntity,
-        FCk_Fragment_FloatAttribute_ParamsData(
+        FCk_FloatAttribute_Spec(
             TAG_Label_ResolverDataBundle_TotalMultiplierValue,
             1.0f), ECk_Replication::DoesNotReplicate);
 

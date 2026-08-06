@@ -51,7 +51,7 @@ public:
     static FCk_Handle_Velocity
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Velocity_ParamsData& InParams,
+        const FCk_Velocity_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -60,7 +60,7 @@ public:
     static FCk_Handle_Velocity
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_Velocity_ParamsData& InParams,
+        const FCk_Velocity_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,
@@ -206,7 +206,7 @@ public:
     Add(
         UPARAM(ref) FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName,
-        const FCk_Fragment_VelocityModifier_ParamsData& InParams);
+        const FCk_VelocityModifier_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Velocity|Modifier",
@@ -264,7 +264,7 @@ public:
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Fragment_BulkVelocityModifier_ParamsData& InParams);
+        const FCk_BulkVelocityModifier_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Velocity|BulkModifier",

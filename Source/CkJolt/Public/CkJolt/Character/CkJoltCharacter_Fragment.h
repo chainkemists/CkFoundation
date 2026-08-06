@@ -35,7 +35,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_JoltCharacter_Params = FCk_Fragment_JoltCharacter_ParamsData;
+    using FFragment_JoltCharacter_Params = FCk_JoltCharacter_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

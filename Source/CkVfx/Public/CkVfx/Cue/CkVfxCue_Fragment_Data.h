@@ -52,12 +52,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_VfxCue_PoolingBehavior);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKVFX_API FCk_Fragment_VfxCue_ParamsData
+struct CKVFX_API FCk_VfxCue_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VfxCue_ParamsData);
+    CK_GENERATED_BODY(FCk_VfxCue_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning",

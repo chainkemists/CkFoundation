@@ -1295,7 +1295,7 @@ auto
                         break;
                     }
 
-                    auto ConstructionInfos = TArray<FCk_EntityReplicationDriver_ConstructionInfo>{};
+                    auto ConstructionInfos = TArray<FCk_EntityReplicationDriver_Spec>{};
                     auto AnyArchetypeUnresolved = false;
                     for (const auto& Step : Entry.Get_BuildRecipe())
                     {
@@ -1306,7 +1306,7 @@ auto
                                 SavedId, Step.Get_ScriptClassPath());
                             continue;
                         }
-                        auto Info = FCk_EntityReplicationDriver_ConstructionInfo{ScriptClass};
+                        auto Info = FCk_EntityReplicationDriver_Spec{ScriptClass};
                         if (const auto& ArchetypePath = Step.Get_ArchetypePath(); NOT ArchetypePath.IsEmpty())
                         {
                             const auto SoftArchetypePath = FSoftObjectPath{ArchetypePath};

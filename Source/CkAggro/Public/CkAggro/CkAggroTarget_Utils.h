@@ -37,7 +37,7 @@ public:
     static FCk_Handle_AggroTarget
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_AggroTarget_ParamsData& InParams);
+        const FCk_AggroTarget_Spec& InParams);
 
     // Create an internal child target under InOwner (any entity): builds a new entity, Adds the feature to it, and
     // connects it to InOwner's AggroTargets record (adding the record to InOwner if missing).
@@ -47,7 +47,7 @@ public:
     static FCk_Handle_AggroTarget
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_AggroTarget_ParamsData& InParams);
+        const FCk_AggroTarget_Spec& InParams);
 
 public:
     static bool
@@ -59,7 +59,7 @@ private:
     static void
     DoAdd_Fragments(
         FCk_Handle& InHandle,
-        const FCk_Fragment_AggroTarget_ParamsData& InParams,
+        const FCk_AggroTarget_Spec& InParams,
         const FCk_Handle& InOwner);
 
 private:

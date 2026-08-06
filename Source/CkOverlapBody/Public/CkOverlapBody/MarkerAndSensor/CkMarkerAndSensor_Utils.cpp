@@ -7,7 +7,7 @@ auto
     Draw_Marker_DebugLines(
         UObject* InOuter,
         const ck::FFragment_Marker_Current& InMarkerCurrent,
-        const FCk_Fragment_Marker_ParamsData& InMarkerParams)
+        const FCk_Marker_Spec& InMarkerParams)
     -> void
 {
     DoDraw_MarkerOrSensor_DebugLines(InOuter, InMarkerCurrent, InMarkerParams);
@@ -18,7 +18,7 @@ auto
     Draw_Sensor_DebugLines(
         UObject* InOuter,
         const ck::FFragment_Sensor_Current& InSensorCurrent,
-        const FCk_Fragment_Sensor_ParamsData& InSensorParams)
+        const FCk_Sensor_Spec& InSensorParams)
     -> void
 {
     DoDraw_MarkerOrSensor_DebugLines(InOuter, InSensorCurrent, InSensorParams);

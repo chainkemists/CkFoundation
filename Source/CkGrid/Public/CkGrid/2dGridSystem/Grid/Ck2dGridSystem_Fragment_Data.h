@@ -128,12 +128,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGRID_API FCk_Fragment_2dGridSystem_ParamsData
+struct CKGRID_API FCk_2dGridSystem_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_2dGridSystem_ParamsData);
+    CK_GENERATED_BODY(FCk_2dGridSystem_Spec);
 
 private:
     UPROPERTY(SaveGame, EditAnywhere, BlueprintReadWrite,
@@ -172,7 +172,7 @@ public:
     CK_PROPERTY(_DefaultCellTags);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridSystem_ParamsData, _Dimensions, _CellSize);
+    CK_DEFINE_CONSTRUCTORS(FCk_2dGridSystem_Spec, _Dimensions, _CellSize);
 
 public:
     auto

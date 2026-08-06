@@ -10,12 +10,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Fragment_PredictedVelocity_ParamsData
+struct CKPHYSICS_API FCk_PredictedVelocity_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_PredictedVelocity_ParamsData);
+    CK_GENERATED_BODY(FCk_PredictedVelocity_Spec);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

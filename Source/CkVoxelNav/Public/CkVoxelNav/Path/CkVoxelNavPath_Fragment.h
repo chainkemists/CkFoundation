@@ -20,7 +20,7 @@ class UCk_Utils_VoxelNavPath_UE;
 
 namespace ck
 {
-    using FFragment_VoxelNavPath_Params = FCk_Fragment_VoxelNavPath_ParamsData;
+    using FFragment_VoxelNavPath_Params = FCk_VoxelNavPath_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

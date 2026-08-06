@@ -15,7 +15,7 @@ auto
     UCk_Utils_ResolverSource_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_ResolverSource_ParamsData& InParams)
+        const FCk_ResolverSource_Spec& InParams)
     -> FCk_Handle_ResolverSource
 {
     InHandle.Add<ck::FFragment_ResolverSource_Params>(InParams);
@@ -29,7 +29,7 @@ auto
     Create(
         const FCk_Handle& InOwner,
         const FTransform& InTransform,
-        const FCk_Fragment_ResolverSource_ParamsData& InParams,
+        const FCk_ResolverSource_Spec& InParams,
         ECk_Lifetime InLifetime)
     -> FCk_Handle_ResolverSource
 {
@@ -42,7 +42,7 @@ auto
     UCk_Utils_ResolverSource_UE::
     Create_Transient(
         const FTransform& InTransform,
-        const FCk_Fragment_ResolverSource_ParamsData& InParams,
+        const FCk_ResolverSource_Spec& InParams,
         const UObject* InWorldContextObject,
         ECk_Lifetime InLifetime)
     -> FCk_Handle_ResolverSource

@@ -149,7 +149,7 @@ auto
         TEXT("Unable to create transient ISM renderer data for Transform [{}]"), InAttachTo)
     { return {}; }
 
-    auto ProxyParams = FCk_Fragment_IsmProxy_ParamsData{RendererData};
+    auto ProxyParams = FCk_IsmProxy_Spec{RendererData};
     ProxyParams.Get_CustomInstanceDataDefaults().Add(FCk_CustomPrimitiveData{
         0,
         FCk_CustomPrimitiveData_Value{ck_entity_visualizer_utils::Get_Hue01(InParams.Get_Color())}});

@@ -19,16 +19,16 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Spline);
 
 // Curves are stored in the owning transform entity's LOCAL space; query utilities compose its world transform.
 USTRUCT(BlueprintType)
-struct CKSPLINE_API FCk_Fragment_Spline_ParamsData
+struct CKSPLINE_API FCk_Spline_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Spline_ParamsData);
+    CK_GENERATED_BODY(FCk_Spline_Spec);
 
 public:
-    FCk_Fragment_Spline_ParamsData() = default;
-    FCk_Fragment_Spline_ParamsData(FSplineCurves InCurves, bool InClosedLoop)
+    FCk_Spline_Spec() = default;
+    FCk_Spline_Spec(FSplineCurves InCurves, bool InClosedLoop)
         : _Curves(MoveTemp(InCurves)), _ClosedLoop(InClosedLoop) {}
 
 private:

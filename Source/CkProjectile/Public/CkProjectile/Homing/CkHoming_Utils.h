@@ -39,7 +39,7 @@ public:
     static FCk_Handle_Homing
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Homing_ParamsData& InParams);
+        const FCk_Homing_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Homing",

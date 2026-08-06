@@ -56,12 +56,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFX_API FCk_Fragment_Sfx_ParamsData
+struct CKFX_API FCk_Sfx_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Sfx_ParamsData);
+    CK_GENERATED_BODY(FCk_Sfx_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -96,29 +96,29 @@ public:
     CK_PROPERTY_GET(_DefaultAudioSettings);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Sfx_ParamsData, _Name, _SoundCue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Sfx_Spec, _Name, _SoundCue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFX_API FCk_Fragment_MultipleSfx_ParamsData
+struct CKFX_API FCk_MultipleSfx_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleSfx_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleSfx_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_Sfx_ParamsData> _SfxParams;
+    TArray<FCk_Sfx_Spec> _SfxParams;
 
 public:
     CK_PROPERTY_GET(_SfxParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleSfx_ParamsData, _SfxParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleSfx_Spec, _SfxParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

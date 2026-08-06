@@ -37,7 +37,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_VoxelNavVolume_Params = FCk_Fragment_VoxelNavVolume_ParamsData;
+    using FFragment_VoxelNavVolume_Params = FCk_VoxelNavVolume_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

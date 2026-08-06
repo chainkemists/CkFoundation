@@ -22,7 +22,7 @@ auto
     UCk_Utils_Interaction_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Interaction_ParamsData& InParams)
+        const FCk_Interaction_Spec& InParams)
     -> FCk_Handle_Interaction
 {
     const auto SpawnParams = FInstancedStruct::Make(InParams);
@@ -42,13 +42,13 @@ auto
 
     if (InParams.Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
     {
-        const auto& TimeRefillAttributeParams = FCk_Fragment_FloatAttributeRefill_ParamsData{
+        const auto& TimeRefillAttributeParams = FCk_FloatAttributeRefill_Spec{
             TAG_InteractionTimeRefill_FloatAttribute_Name,
             1.0f}
             .Set_StartingState(ECk_Attribute_RefillState::Running)
             .Set_RefillBehavior(ECk_Attribute_Refill_Policy::Variable);
 
-        const auto TimeAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
+        const auto TimeAttributeParams = FCk_FloatAttribute_Spec{
             TAG_InteractionTime_FloatAttribute_Name,
             0.0f}
             .Set_MinMax(ECk_MinMax::MinMax)

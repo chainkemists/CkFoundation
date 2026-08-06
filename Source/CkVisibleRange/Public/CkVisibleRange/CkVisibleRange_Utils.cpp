@@ -11,7 +11,7 @@ auto
     UCk_Utils_VisibleRange_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_VisibleRange_ParamsData& InParams)
+        const FCk_VisibleRange_Spec& InParams)
     -> FCk_Handle_VisibleRange
 {
     InHandle.Add<ck::FFragment_VisibleRange_Params>(InParams);

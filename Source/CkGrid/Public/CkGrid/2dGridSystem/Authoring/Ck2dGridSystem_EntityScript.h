@@ -6,11 +6,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_2dGridSystem_Spec;
+class UCk_2dGridSystem_AuthoringSpec;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Runtime authoring glue: spawns a single 2d grid from a UCk_2dGridSystem_Spec DataAsset, then
+// Runtime authoring glue: spawns a single 2d grid from a UCk_2dGridSystem_AuthoringSpec DataAsset, then
 // applies the Spec's per-cell tags and blockers on top. Driven by the CkEntitySpawner actor.
 UCLASS(Blueprintable, BlueprintType)
 class CKGRID_API UCk_2dGridSystem_EntityScript : public UCk_GenericEntityScript_UE
@@ -29,7 +29,7 @@ protected:
 private:
     // The grid definition to instantiate. Edited by the paint tool.
     UPROPERTY(EditAnywhere, Category = "Ck|2dGridSystem")
-    TObjectPtr<UCk_2dGridSystem_Spec> Spec;
+    TObjectPtr<UCk_2dGridSystem_AuthoringSpec> Spec;
 
     // Injected by ACk_EntitySpawner_UE; the name is the spawner's default-resolution target and
     // must not be changed.

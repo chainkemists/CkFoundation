@@ -31,7 +31,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_InteractTarget_Params);
 
     public:
-        using ParamsType = FCk_Fragment_InteractTarget_ParamsData;
+        using ParamsType = FCk_InteractTarget_Spec;
 
     private:
         ParamsType _Params;

@@ -34,7 +34,7 @@ public:
 // Data-driven authoring layer for a single 2d grid, consumed at runtime by
 // UCk_2dGridSystem_EntityScript.
 UCLASS(BlueprintType, Category = "Ck|2dGridSystem")
-class CKGRID_API UCk_2dGridSystem_Spec : public UDataAsset
+class CKGRID_API UCk_2dGridSystem_AuthoringSpec : public UDataAsset
 {
     GENERATED_BODY()
 
@@ -65,7 +65,7 @@ public:
     // Grid-level fields only: PerCellTags and Blockers are NOT included — the EntityScript
     // applies those after the grid is added.
     auto
-    Resolve_GridParams() const -> FCk_Fragment_2dGridSystem_ParamsData;
+    Resolve_GridParams() const -> FCk_2dGridSystem_Spec;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

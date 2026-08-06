@@ -38,7 +38,7 @@ public:
     static FCk_Handle_VoiceTalker
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_VoiceTalker_ParamsData& InParams);
+        const FCk_VoiceTalker_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

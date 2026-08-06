@@ -20,12 +20,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ObjectiveOwner
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOBJECTIVE_API FCk_ObjectiveOwner_ParamsData
+struct CKOBJECTIVE_API FCk_ObjectiveOwner_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_ObjectiveOwner_ParamsData);
+    CK_GENERATED_BODY(FCk_ObjectiveOwner_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, AllowAbstract = false))
@@ -34,7 +34,7 @@ private:
 public:
     CK_PROPERTY_GET(_DefaultObjectives);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_ObjectiveOwner_ParamsData, _DefaultObjectives);
+    CK_DEFINE_CONSTRUCTORS(FCk_ObjectiveOwner_Spec, _DefaultObjectives);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

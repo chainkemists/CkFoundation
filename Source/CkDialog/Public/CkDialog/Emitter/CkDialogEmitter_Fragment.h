@@ -31,7 +31,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_DialogEmitter_Params = FCk_Fragment_DialogEmitter_ParamsData;
+    using FFragment_DialogEmitter_Params = FCk_DialogEmitter_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

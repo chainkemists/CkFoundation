@@ -56,6 +56,68 @@ Asset carrying the FName: `Plugins/CkFoundation/Content/CkTimer/Utils_CkTimer_FL
 
 ## Log
 
+- 2026-08-06: P3 RED CLASSIFICATION COMPLETE (A/B: all four repos stashed to P1 state, rebuilt,
+  reran the failing patterns, popped, rebuilding at P3):
+  * 2× `PathNetworkFollower_{ProjectsRibbonWaypoint,DesiredNavmeshClearance}` — **PRE-EXISTING**
+    (CONFIRMED: fail identically on pre-P3 binaries). Both fixture-geometry assertions on
+    `utils_nav::Try_ProjectOntoNavmesh`; last touched by sibling fix `4a48849` (08-04) for exactly
+    this comparison logic. NOT ours to fix mid-campaign; left for the owning workstream.
+  * `UsfOutline_VatShadowCustomData` — **ENVIRONMENT** (CONFIRMED mechanism: error-severity
+    `LogZenServiceInstance: Unable to reach ... [::1]:8558` landing inside the test window fails
+    the test; Zen answers IPv4 :8558 fine. The flap PREDATES the campaign — 1 hit in the pristine
+    baseline log, 1 in green P1 gate (landed outside test windows), 0 in the three latest runs.
+    The pre-P3 "pass" in the A/B coincided with the flap stopping, not with the code difference.)
+  * `StateMachine_DivergenceFirstBranch` — **CONTENTION FLAKE** (passes solo; sibling session's
+    BusterBlock editors shared the machine during the full gate).
+  * `Angelscript.CppTests.AngelscriptCodeCoverage.IntegrationTest` — **OUT-OF-SCOPE** (engine-fork
+    C++ test with zero Ck surface; the unfiltered `--test` run pulls in engine groups beyond the
+    ~873-test house suite). INFERRED pre-existing, not A/B'd — accepted risk, zero rename overlap.
+  Effective P3 house-suite result: **997/999 with both reds confirmed pre-existing.** Rebuild at
+  P3 + UsfOutline/ck.timer confirmation runs in flight; commit P3 on green.
+
+- 2026-08-06: P3 GATE (detached run, P3Gate3.log): **1004 total / 999 passed / 5 failed / 0
+  contaminated / no AS errors / 4m31s.** The 5: PathNetworkFollower_ProjectsRibbonWaypoint...,
+  PathNetworkFollower_DesiredNavmeshClearance... (both fixture/navmesh messages),
+  UsfOutline_VatShadowCustomData (GPU), StateMachine_DivergenceFirstBranch (timing),
+  Angelscript.CppTests.AngelscriptCodeCoverage.IntegrationTest (engine fork). None rename-shaped;
+  all load-sensitive categories; the SIBLING session's BusterBlock editor competed for the machine
+  during the whole run. Classification in progress: sequential detached re-runs of exactly those
+  4 patterns on identical binaries. Flake-green → P3 accepted; still-red → stash-classify against
+  pre-P3 `fec11c20e`.
+
+- 2026-08-06: P3 gate attempt 2 POST-MORTEM: the harness background-command timeout (600000ms hard
+  cap) killed the entire toolbox process tree ~10min in — 20s into the test phase (log froze
+  22:31:14, no completion notification, editor lock free, wrapper gone). NOT a code failure:
+  the renamed tree built clean, editors booted with AS compiling (no AS_COMPILE_FAILED), 3 lanes
+  enumerated ~334 tests each and were streaming green. Meanwhile a SIBLING session is running
+  BusterBlock tests on this machine (their toolbox, started 00:33). Re-run strategy: persistent
+  monitor waits for the sibling to exit, then launches the gate DETACHED via Start-Process
+  (immune to wrapper timeouts), `--test` only (binaries already current — no source edits since
+  the completed build), and watches P3Gate3.log for summary/AS-fail/build-fail/died-silent.
+  Lesson filed for the build-test skill.
+
+- 2026-08-05: P3 gate attempt 1 failed in UHT (4s): engine-name collision — existing DataAsset
+  `UCk_2dGridSystem_Spec` (CkGrid authoring layer) vs renamed `FCk_2dGridSystem_Spec` (UE strips
+  U/F prefixes). ONLY collision in all trees (verified by class scan). Resolution: the fragment
+  Spec rename stays uniform; the DataAsset became `UCk_2dGridSystem_AuthoringSpec` (11 files;
+  the AS test already used "AuthoringSpec" vocabulary; zero serialized instances in any Content/
+  — ClassRedirect added anyway as downstream insurance). Gate relaunched.
+
+- 2026-08-05: P1 GATE GREEN: build ok, `ck.timer` 25/25 (baseline 25/25, zero delta), no AS
+  errors. Committed: CkFoundation `fec11c20e` (code) + `75d17b349` (docs), CkTests `2df528c`
+  (146 files), CkGameplayDebugger `618ee8c` (reattached from detached HEAD to `dev` first —
+  branch pointed at same commit). NOT pushed. Superproject Script had no Timer refs (its 2
+  ParamsData sites are other features → P3). `Config/DefaultGameplayTags.ini` gained 2 VoiceChat
+  tags from the editor test boots ("Added via code") — NOT ours, left untouched.
+- 2026-08-05: P3 APPLIED: apply-rename.sh swept 954 files (121 renames). Post-sweep stragglers
+  all benign: 9 AttributeEditor files carry only `*ParamsDataCustomization` CLASS names
+  (deliberately preserved, cosmetic); 1 stale Goap comment fixed to `FCk_Goap_Planner_Spec`.
+  121 StructRedirects inserted into DefaultCkFoundation.ini (177 total now). Full gate
+  (build + ENTIRE suite) launched. **Known gap: no full-suite baseline was captured** — if reds
+  appear, classify by re-running the failing names against pre-P3 `fec11c20e` before blaming the
+  sweep. Tooling lesson: `rg` is a harness shim absent in child shells — apply-rename.sh uses
+  plain grep; scripts written by tooling need `sed -i 's/\r$//'` before bash runs them.
+
 - 2026-08-05: P1 CODE COMPLETE (gate pending): CkTimer module converted (Fragment_Data/Fragment/
   Processor/Utils), 152 files swept for the two Spec renames (CkFoundation Source+Script, CkTests,
   superproject Script), fragment-name consumers updated (ArchetypeTyped.spec.cpp, GameplayDebugger
@@ -70,6 +132,33 @@ Asset carrying the FName: `Plugins/CkFoundation/Content/CkTimer/Utils_CkTimer_FL
   DECISIONS.md §111 appended.
 - 2026-08-05: Campaign opened. Design spec finalized (F1=Spec, F7=Params kept, F2–F6 = standing
   recs accepted via blanket mandate). Baseline build+test launched (background).
+
+## P4 designs (frozen pre-gate, from first-hand reads)
+
+**AudioTrack shrink** (`CkAudioTrack_Fragment.h:26` alias → residue):
+- Residue `FFragment_AudioTrack_Params`: `{_TrackName, _Sound, _Priority, _OverrideBehavior,
+  _LoopBehavior, _Volume, _DefaultFadeInTime, _DefaultFadeOutTime}` — all (b)/(c) per audit.
+- NEW transient `FFragment_AudioTrack_PendingSetup`: `{_ScriptAsset, _LibraryAttenuationSettings,
+  _LibraryConcurrencySettings, _LibrarySoundClassSettings}` — construction-only fields that must
+  survive to the DEFERRED Setup processor; Setup consumes then REMOVES it (Dialog PendingQueries
+  precedent). `FTag_AudioTrack_NeedsSetup` kept as the lifecycle marker (other views exclude it).
+- `Create()` (`CkAudioTrack_Utils.cpp:18-43`) unpacks spec → residue + PendingSetup.
+- Setup reads dropped fields from PendingSetup (`CkAudioTrack_Processor.cpp:78-83,116-120,135-136`).
+- Has/Cast anchor unchanged `{Params, Current}` (`Utils.cpp:46-47`).
+
+**Probe shrink** (`CkProbe_Fragment.h:38` alias → residue):
+- Residue `FFragment_Probe_Params`: matching half `{_ProbeName, _ResponsePolicy, _Filter,
+  _ContextOverlapPolicy, _SurfaceInfo}` + `_MotionType` (public 3-valued getter `Utils.cpp:156-160`
+  + Setup's Static-tag derivation + ensure diagnostics — tag only encodes one bit).
+- Dissolved: `_MotionQuality` → `Get_MotionQuality` reads `FTag_Probe_LinearCast` (set at Add,
+  `Utils.cpp:60-61`); `_StartingState` → already consumed at Add via `Request_EnableDisable`
+  (`Utils.cpp:72`); `_PersistContacts` → tag set at ADD (moves out of Setup `Processor.cpp:476`).
+- Dead Params view members dropped: `FProcessor_Probe_UpdateTransform` (`Processor.h:192`),
+  `FProcessor_Probe_EndPlay` (`Processor.h:436`).
+
+**Also in P4:** `FProcessor_Tween_HandleYoyoDelays` dead Params view member (`CkTween_Processor.h:56`);
+Transform's dead `FFragment_Transform_Params` alias + dead `FCk_Transform_Spec` struct? — NO:
+struct stays (it's reflected API), only the never-used alias line dies (`CkTransform_Fragment.h:36`).
 
 ## Decisions / discards
 

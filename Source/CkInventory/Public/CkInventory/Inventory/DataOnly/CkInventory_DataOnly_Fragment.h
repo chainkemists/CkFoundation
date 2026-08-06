@@ -12,7 +12,7 @@ class UCk_Utils_Inventory_DataOnly_UE;
 
 namespace ck
 {
-    using FFragment_Inventory_DataOnly_Params = FCk_Fragment_Inventory_DataOnly_ParamsData;
+    using FFragment_Inventory_DataOnly_Params = FCk_Inventory_DataOnly_Spec;
 
     template <>
     struct CKINVENTORY_API TFragment_Inventory_Requests<FCk_Handle_Inventory_DataOnly>

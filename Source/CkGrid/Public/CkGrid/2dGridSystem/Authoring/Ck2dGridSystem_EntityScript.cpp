@@ -59,7 +59,7 @@ auto
         // Owned by the grid entity, so destroying the grid releases its blocks.
         auto BlockerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
-        auto BlockerParams = FCk_Fragment_2dGridBlocker_ParamsData{Grid, Blocker.RangeMin, Blocker.RangeMax};
+        auto BlockerParams = FCk_2dGridBlocker_Spec{Grid, Blocker.RangeMin, Blocker.RangeMax};
         BlockerParams.Set_Name(Blocker.Name);
 
         UCk_Utils_2dGridBlocker_UE::Add(BlockerEntity, BlockerParams);

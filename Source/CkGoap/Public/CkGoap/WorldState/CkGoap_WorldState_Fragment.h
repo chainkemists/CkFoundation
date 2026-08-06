@@ -24,7 +24,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-using FFragment_Goap_WorldState_Params = FCk_Fragment_Goap_WorldState_ParamsData;
+using FFragment_Goap_WorldState_Params = FCk_Goap_WorldState_Spec;
 
 // --------------------------------------------------------------------------------------------------------------------
 

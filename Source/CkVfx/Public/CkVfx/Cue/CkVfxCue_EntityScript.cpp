@@ -43,7 +43,7 @@ auto
 {
     const auto Ret = Super::Construct(InHandle, InSpawnParams);
 
-    auto VfxParams = FCk_Fragment_VfxCue_ParamsData{};
+    auto VfxParams = FCk_VfxCue_Spec{};
     VfxParams.Set_PreCullCheck(_PreCullCheck);
 
     auto VfxCueHandle = UCk_Utils_VfxCue_UE::Add(_AssociatedEntity, *this, VfxParams);

@@ -11,12 +11,13 @@ INI_SNIPPET="Plugins/CkFoundation/docs/campaigns/spec-fragment-granularity/gener
 
 [[ -f "$MAP" ]] || { echo "run from CkPlugins root; $MAP not found" >&2; exit 1; }
 
-# 1. Collect candidate files once: every file that mentions ParamsData or ConstructionInfo in the
-#    swept trees (hand-written code only — Script/Generated regenerates, docs/ are archives).
-mapfile -t FILES < <(rg --no-ignore -l "ParamsData|EntityReplicationDriver_ConstructionInfo" \
-    --glob '!**/Script/Generated/**' --glob '!**/Saved/**' --glob '!**/Intermediate/**' \
-    --glob '!**/docs/**' --glob '!**/*.md' --glob '!**/*.uasset' --glob '!**/*.umap' \
-    Plugins/CkFoundation/Source Plugins/CkFoundation/Script Plugins/CkFoundation/Config \
+# 1. Collect candidate files once: every code file that mentions ParamsData or ConstructionInfo in
+#    the swept trees (hand-written code only — Script/Generated regenerates, docs/ are archives).
+#    grep, not rg: rg is a harness shim not present in child shells on this machine.
+mapfile -t FILES < <(grep -rlE "ParamsData|EntityReplicationDriver_ConstructionInfo" \
+    --include='*.h' --include='*.cpp' --include='*.inl' --include='*.cs' --include='*.as' \
+    --exclude-dir=Generated --exclude-dir=Saved --exclude-dir=Intermediate --exclude-dir=docs \
+    Plugins/CkFoundation/Source Plugins/CkFoundation/Script \
     Plugins/CkTests Plugins/CkGameplayDebugger Script 2>/dev/null || true)
 
 echo "files to sweep: ${#FILES[@]}"
@@ -41,9 +42,9 @@ done
 echo "redirect snippet: $INI_SNIPPET ($(wc -l < "$INI_SNIPPET") lines)"
 
 # 4. Verify no old names remain in code trees.
-LEFT=$(rg --no-ignore -l "FCk_[A-Za-z0-9_]*ParamsData|FCk_EntityReplicationDriver_ConstructionInfo" \
-    --glob '!**/Script/Generated/**' --glob '!**/Saved/**' --glob '!**/Intermediate/**' \
-    --glob '!**/docs/**' --glob '!**/*.md' \
+LEFT=$(grep -rlE "FCk_[A-Za-z0-9_]*ParamsData|FCk_EntityReplicationDriver_ConstructionInfo" \
+    --include='*.h' --include='*.cpp' --include='*.inl' --include='*.cs' --include='*.as' \
+    --exclude-dir=Generated --exclude-dir=Saved --exclude-dir=Intermediate --exclude-dir=docs \
     Plugins/CkFoundation/Source Plugins/CkFoundation/Script \
     Plugins/CkTests Plugins/CkGameplayDebugger Script 2>/dev/null | wc -l)
 echo "files still containing old names (expect 0): $LEFT"

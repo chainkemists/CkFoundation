@@ -5,7 +5,7 @@
 #include "UObject/Object.h"
 #include "UObject/StrongObjectPtr.h"
 
-#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h" // FCk_EntityReplicationDriver_ConstructionInfo
+#include "CkEcs/Net/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h" // FCk_EntityReplicationDriver_Spec
 
 #include "CkEntityReplicationDriver_BuildRecipe.generated.h"
 
@@ -25,11 +25,11 @@ public:
 public:
     auto
     Populate(
-        TArray<FCk_EntityReplicationDriver_ConstructionInfo> InConstructionInfos) -> void;
+        TArray<FCk_EntityReplicationDriver_Spec> InConstructionInfos) -> void;
 
 private:
     UPROPERTY()
-    TArray<FCk_EntityReplicationDriver_ConstructionInfo> _ConstructionInfos;
+    TArray<FCk_EntityReplicationDriver_Spec> _ConstructionInfos;
 
 public:
     CK_PROPERTY_GET(_ConstructionInfos);
@@ -54,7 +54,7 @@ namespace ck
 
     public:
         // Forwards to the holder; empty when unpopulated
-        auto Get_ConstructionInfos() const -> const TArray<FCk_EntityReplicationDriver_ConstructionInfo>&;
+        auto Get_ConstructionInfos() const -> const TArray<FCk_EntityReplicationDriver_Spec>&;
     };
 }
 

@@ -65,12 +65,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINTERACTION_API FCk_InteractionResolver_ParamsData
+struct CKINTERACTION_API FCk_InteractionResolver_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_InteractionResolver_ParamsData);
+    CK_GENERATED_BODY(FCk_InteractionResolver_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, TitleProperty = "_Intent"))
@@ -80,7 +80,7 @@ public:
     CK_PROPERTY_GET(_IntentChannelMappings);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_InteractionResolver_ParamsData, _IntentChannelMappings);
+    CK_DEFINE_CONSTRUCTORS(FCk_InteractionResolver_Spec, _IntentChannelMappings);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

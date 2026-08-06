@@ -9,7 +9,7 @@ namespace utils_integer_attribute
         int32 InMinValue = 0,
         int32 InMaxValue = 0)
     {
-        auto Params = FCk_Fragment_IntegerAttribute_ParamsData(InAttributeName, InBaseValue);
+        auto Params = FCk_IntegerAttribute_Spec(InAttributeName, InBaseValue);
         Params
         .Set_MinMax(InMinMax)
         .Set_MinValue(InMinValue)

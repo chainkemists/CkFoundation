@@ -9,7 +9,7 @@ namespace utils_vector_attribute
         FVector InMinValue = FVector::ZeroVector,
         FVector InMaxValue = FVector::ZeroVector)
     {
-        auto Params = FCk_Fragment_VectorAttribute_ParamsData(InAttributeName, InBaseValue);
+        auto Params = FCk_VectorAttribute_Spec(InAttributeName, InBaseValue);
         Params
         .Set_MinMax(InMinMax)
         .Set_MinValue(InMinValue)

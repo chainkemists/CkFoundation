@@ -14,7 +14,7 @@ auto
     UCk_Utils_FogOfWar_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_FogOfWar_ParamsData& InParams)
+        const FCk_FogOfWar_Spec& InParams)
     -> FCk_Handle_FogOfWar
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle. Unable to Add the FogOfWar feature"))

@@ -24,7 +24,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_PredictedVelocity_Params);
 
     public:
-        using ParamsType = FCk_Fragment_PredictedVelocity_ParamsData;
+        using ParamsType = FCk_PredictedVelocity_Spec;
 
     private:
         ParamsType _Params;

@@ -32,7 +32,7 @@ public:
     static FCk_Handle_JoltBody
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_JoltBody_ParamsData& InParams);
+        const FCk_JoltBody_Spec& InParams);
 
 public:
     // Has Feature

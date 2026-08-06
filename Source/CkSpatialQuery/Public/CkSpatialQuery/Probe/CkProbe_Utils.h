@@ -47,7 +47,7 @@ public:
     static FCk_Handle_Probe
     Add(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_Probe_ParamsData& InParams,
+        const FCk_Probe_Spec& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo);
 
     UFUNCTION(BlueprintCallable,
@@ -58,7 +58,7 @@ public:
         UPARAM(ref) FCk_Handle& InOwner,
         const FTransform& InInitialTransform,
         const FCk_AnyShape& InShape,
-        const FCk_Fragment_Probe_ParamsData& InParams,
+        const FCk_Probe_Spec& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo);
 
     UFUNCTION(BlueprintPure,

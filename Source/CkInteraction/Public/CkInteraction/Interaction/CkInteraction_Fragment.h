@@ -27,7 +27,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Interaction_Params);
 
     public:
-        using ParamsType = FCk_Fragment_Interaction_ParamsData;
+        using ParamsType = FCk_Interaction_Spec;
 
     private:
         ParamsType _Params;

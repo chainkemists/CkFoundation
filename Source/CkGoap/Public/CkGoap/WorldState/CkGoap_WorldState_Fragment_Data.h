@@ -8,7 +8,7 @@
 #include "CkGoap_WorldState_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Planners reference one via FCk_Fragment_Goap_ParamsData::_WorldStateSource; several planners may
+// Planners reference one via FCk_Goap_Planner_Spec::_WorldStateSource; several planners may
 // share it. Lifetime is caller-owned: destruction cascades from the owner via CkRecord.
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
@@ -28,12 +28,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_WorldStat
 // the parent chain (import-aliasing). Set once at composition; there is no re-parenting API.
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Fragment_Goap_WorldState_ParamsData
+struct CKGOAP_API FCk_Goap_WorldState_Spec
 {
 	GENERATED_BODY()
 
 public:
-	CK_GENERATED_BODY(FCk_Fragment_Goap_WorldState_ParamsData);
+	CK_GENERATED_BODY(FCk_Goap_WorldState_Spec);
 
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -49,7 +49,7 @@ public:
 	CK_PROPERTY(_FallbackParent);
 
 public:
-	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_WorldState_ParamsData, _PreRegisteredKeys, _FallbackParent);
+	CK_DEFINE_CONSTRUCTORS(FCk_Goap_WorldState_Spec, _PreRegisteredKeys, _FallbackParent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

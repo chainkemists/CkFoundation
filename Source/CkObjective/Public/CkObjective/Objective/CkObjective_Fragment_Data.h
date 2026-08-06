@@ -32,12 +32,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ObjectiveStatus);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOBJECTIVE_API FCk_Objective_ParamsData
+struct CKOBJECTIVE_API FCk_Objective_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Objective_ParamsData);
+    CK_GENERATED_BODY(FCk_Objective_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "Objective"))
@@ -55,7 +55,7 @@ public:
     CK_PROPERTY(_Description);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Objective_ParamsData, _ObjectiveName);
+    CK_DEFINE_CONSTRUCTORS(FCk_Objective_Spec, _ObjectiveName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

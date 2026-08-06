@@ -35,7 +35,7 @@ public:
     static FCk_Handle_Camera
     Add(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_Camera_ParamsData& InParams);
+        const FCk_Camera_Spec& InParams);
 
 
 public:

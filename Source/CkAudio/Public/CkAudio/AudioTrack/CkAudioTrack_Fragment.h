@@ -23,7 +23,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_AudioTrack_Params = FCk_Fragment_AudioTrack_ParamsData;
+    using FFragment_AudioTrack_Params = FCk_AudioTrack_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

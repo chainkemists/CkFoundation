@@ -58,12 +58,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGRAPHICS_API FCk_Fragment_RenderStatus_ParamsData
+struct CKGRAPHICS_API FCk_RenderStatus_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_RenderStatus_ParamsData);
+    CK_GENERATED_BODY(FCk_RenderStatus_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -74,7 +74,7 @@ public:
     CK_PROPERTY_GET(_RenderGroup)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RenderStatus_ParamsData, _RenderGroup);
+    CK_DEFINE_CONSTRUCTORS(FCk_RenderStatus_Spec, _RenderGroup);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

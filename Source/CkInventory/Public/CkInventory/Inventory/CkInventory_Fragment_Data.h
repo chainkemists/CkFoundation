@@ -403,25 +403,25 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-struct FCk_Fragment_Inventory_DataOnly_ParamsData;
-struct FCk_Fragment_Inventory_Spatial_ParamsData;
+struct FCk_Inventory_DataOnly_Spec;
+struct FCk_Inventory_Spatial_Spec;
 
 USTRUCT()
-struct CKINVENTORY_API FCk_Fragment_Inventory_ParamsData
+struct CKINVENTORY_API FCk_Inventory_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Inventory_ParamsData);
+    CK_GENERATED_BODY(FCk_Inventory_Spec);
 
 public:
-    FCk_Fragment_Inventory_ParamsData() = default;
+    FCk_Inventory_Spec() = default;
 
     /** DataOnly inventory — copies the shared field set + bound mode/limit from the typed params. */
-    explicit FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_DataOnly_ParamsData& InDataOnlyParams);
+    explicit FCk_Inventory_Spec(const FCk_Inventory_DataOnly_Spec& InDataOnlyParams);
 
     /** Spatial inventory — copies the shared field set + grid dimensions from the typed params. */
-    explicit FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_Spatial_ParamsData& InSpatialParams);
+    explicit FCk_Inventory_Spec(const FCk_Inventory_Spatial_Spec& InSpatialParams);
 
 private:
     FGameplayTag _Name = FGameplayTag::EmptyTag;

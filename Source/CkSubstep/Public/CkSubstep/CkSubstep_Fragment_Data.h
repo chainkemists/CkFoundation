@@ -28,11 +28,11 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Substep);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSUBSTEP_API FCk_Substep_ParamsData
+struct CKSUBSTEP_API FCk_Substep_Spec
 {
     GENERATED_BODY()
 
-    CK_GENERATED_BODY(FCk_Substep_ParamsData);
+    CK_GENERATED_BODY(FCk_Substep_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -47,7 +47,7 @@ public:
     CK_PROPERTY_GET(_TickRate);
     CK_PROPERTY(_StartingState);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Substep_ParamsData, _TickRate);
+    CK_DEFINE_CONSTRUCTORS(FCk_Substep_Spec, _TickRate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

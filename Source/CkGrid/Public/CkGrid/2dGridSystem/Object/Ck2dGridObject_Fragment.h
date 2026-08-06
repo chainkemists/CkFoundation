@@ -10,7 +10,7 @@ class UCk_Utils_2dGridObject_UE;
 
 namespace ck
 {
-    using FFragment_2dGridObject_Params = FCk_Fragment_2dGridObject_ParamsData;
+    using FFragment_2dGridObject_Params = FCk_2dGridObject_Spec;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

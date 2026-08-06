@@ -31,12 +31,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_DialogLine);
 // Built by the Dialog registry subsystem from bank rows (see UCk_DialogRegistry_Subsystem_UE) — not hand-authored on
 // an entity. The module's only line payload is _Text; everything else is identity/routing/filtering.
 USTRUCT(BlueprintType)
-struct CKDIALOG_API FCk_Fragment_DialogLine_ParamsData
+struct CKDIALOG_API FCk_DialogLine_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_DialogLine_ParamsData);
+    CK_GENERATED_BODY(FCk_DialogLine_Spec);
 
 private:
     // Identity + debugger label; unique across all registered banks (duplicate LineIDs are rejected at registration).
@@ -76,7 +76,7 @@ public:
     CK_PROPERTY(_NumConditions);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_DialogLine_ParamsData, _LineID, _EventTag);
+    CK_DEFINE_CONSTRUCTORS(FCk_DialogLine_Spec, _LineID, _EventTag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -195,9 +195,9 @@ namespace ck_voice_chat_route_processor
             Child, UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TalkerTransformHandle), ECk_Replication::DoesNotReplicate);
 
         const auto Shape = UCk_Utils_ShapeSphere_UE::Add(
-            Child, FCk_Fragment_ShapeSphere_ParamsData{FCk_ShapeSphere_Dimensions{InRadiusCm}});
+            Child, FCk_ShapeSphere_Spec{FCk_ShapeSphere_Dimensions{InRadiusCm}});
 
-        auto ProbeParams = FCk_Fragment_Probe_ParamsData{InProbeName};
+        auto ProbeParams = FCk_Probe_Spec{InProbeName};
         ProbeParams.Set_Filter(InFilter);
         ProbeParams.Set_ContextOverlapPolicy(ECk_Probe_ContextOverlapPolicy::Any);
         ProbeParams.Set_MotionType(ECk_MotionType::Kinematic);

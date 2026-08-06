@@ -47,7 +47,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InDefinition), TEXT("Create: Null item definition"))
     { return {}; }
 
-    auto ConstructionInfo = FCk_EntityReplicationDriver_ConstructionInfo(InDefinition->GetClass());
+    auto ConstructionInfo = FCk_EntityReplicationDriver_Spec(InDefinition->GetClass());
     ConstructionInfo.Set_ConstructionScriptArchetype(InDefinition);
 
     auto ItemEntity = UCk_Utils_EntityReplicationDriver_UE::Request_BuildAndReplicate(

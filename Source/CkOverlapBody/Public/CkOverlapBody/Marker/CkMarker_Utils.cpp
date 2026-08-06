@@ -17,7 +17,7 @@ auto
     UCk_Utils_Marker_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Marker_ParamsData& InParams,
+        const FCk_Marker_Spec& InParams,
         ECk_Net_ReplicationType InReplicationType)
     -> FCk_Handle_Marker
 {
@@ -64,12 +64,12 @@ auto
     UCk_Utils_Marker_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleMarker_ParamsData& InParams,
+        const FCk_MultipleMarker_Spec& InParams,
         ECk_Net_ReplicationType InReplicationType)
     -> TArray<FCk_Handle_Marker>
 {
     return ck::algo::Transform<TArray<FCk_Handle_Marker>>(InParams.Get_MarkerParams(),
-    [&](const FCk_Fragment_Marker_ParamsData& InMarkerParams)
+    [&](const FCk_Marker_Spec& InMarkerParams)
     {
         return Add(InHandle, InMarkerParams, InReplicationType);
     });

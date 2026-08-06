@@ -19,7 +19,7 @@ auto
         ? UCk_Utils_Transform_UE::CastChecked(InHandle) 
         : UCk_Utils_Transform_UE::Add(InHandle, FTransform::Identity);
 
-    const auto GridParams = FCk_Fragment_2dGridSystem_ParamsData(
+    const auto GridParams = FCk_2dGridSystem_Spec(
         _Dimensions,
         FVector2D(1.0, 1.0));
 

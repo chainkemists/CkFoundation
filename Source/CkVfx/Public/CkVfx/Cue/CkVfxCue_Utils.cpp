@@ -13,7 +13,7 @@ auto
     Add(
         FCk_Handle& InHandle,
         const UCk_VfxCue_EntityScript& InVfxCueScript,
-        const FCk_Fragment_VfxCue_ParamsData& InParams)
+        const FCk_VfxCue_Spec& InParams)
     -> FCk_Handle_VfxCue
 {
     ck::vfx::VeryVerbose(TEXT("Adding VfxCue feature to Entity [{}]"), InHandle);

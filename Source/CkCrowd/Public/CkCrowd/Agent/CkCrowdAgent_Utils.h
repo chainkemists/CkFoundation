@@ -33,7 +33,7 @@ public:
     static FCk_Handle_CrowdAgent
     Add(
         UPARAM(ref) FCk_Handle_Transform& InOwner,
-        const FCk_Fragment_CrowdAgent_ParamsData& InParams);
+        const FCk_CrowdAgent_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CrowdAgent",

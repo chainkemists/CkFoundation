@@ -11,7 +11,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Label_FloatAttribute, TEXT("FloatAttribute"));
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Fragment_FloatAttribute_ParamsData::
+    FCk_FloatAttribute_Spec::
     Get_MinValue() const
     -> float
 {
@@ -24,7 +24,7 @@ auto
 }
 
 auto
-    FCk_Fragment_FloatAttribute_ParamsData::
+    FCk_FloatAttribute_Spec::
     Get_MaxValue() const
     -> float
 {

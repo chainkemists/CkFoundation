@@ -18,7 +18,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_AudioDirector_Params = FCk_Fragment_AudioDirector_ParamsData;
+    using FFragment_AudioDirector_Params = FCk_AudioDirector_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

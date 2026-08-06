@@ -49,12 +49,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_JoltCharacter)
 
 // Config for a Jolt CharacterVirtual; optional knobs mirror JPH::CharacterVirtualSettings defaults.
 USTRUCT(BlueprintType)
-struct CKJOLT_API FCk_Fragment_JoltCharacter_ParamsData
+struct CKJOLT_API FCk_JoltCharacter_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_JoltCharacter_ParamsData);
+    CK_GENERATED_BODY(FCk_JoltCharacter_Spec);
 
 private:
     // Capsule radius (UE units). Matches FCk_Jolt_ShapeDimensions capsule semantics.
@@ -100,7 +100,7 @@ public:
     CK_PROPERTY(_CollisionProfileName);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_JoltCharacter_ParamsData, _CapsuleRadius, _CapsuleHalfHeight);
+    CK_DEFINE_CONSTRUCTORS(FCk_JoltCharacter_Spec, _CapsuleRadius, _CapsuleHalfHeight);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

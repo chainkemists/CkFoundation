@@ -18,7 +18,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_DialogLine_Params = FCk_Fragment_DialogLine_ParamsData;
+    using FFragment_DialogLine_Params = FCk_DialogLine_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

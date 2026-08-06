@@ -22,7 +22,7 @@ public:
     static FCk_Handle_Objective
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Objective_ParamsData& InParams);
+        const FCk_Objective_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

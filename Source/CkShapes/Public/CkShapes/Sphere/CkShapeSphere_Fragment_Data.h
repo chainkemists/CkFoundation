@@ -38,12 +38,12 @@ public:
 //--------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSHAPES_API FCk_Fragment_ShapeSphere_ParamsData
+struct CKSHAPES_API FCk_ShapeSphere_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ShapeSphere_ParamsData);
+    CK_GENERATED_BODY(FCk_ShapeSphere_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -53,7 +53,7 @@ private:
 public:
     CK_PROPERTY_GET(_InitialDimensions);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ShapeSphere_ParamsData, _InitialDimensions);
+    CK_DEFINE_CONSTRUCTORS(FCk_ShapeSphere_Spec, _InitialDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -24,7 +24,7 @@ public:
     static FCk_Handle_AudioTrack
     Create(
         FCk_Handle& InParentDirector,
-        const FCk_Fragment_AudioTrack_ParamsData& InParams);
+        const FCk_AudioTrack_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

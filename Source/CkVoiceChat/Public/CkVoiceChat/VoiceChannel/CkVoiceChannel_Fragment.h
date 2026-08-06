@@ -26,7 +26,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_VoiceChannel_Params = FCk_Fragment_VoiceChannel_ParamsData;
+    using FFragment_VoiceChannel_Params = FCk_VoiceChannel_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

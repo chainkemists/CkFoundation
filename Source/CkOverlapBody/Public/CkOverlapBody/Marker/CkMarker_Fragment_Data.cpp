@@ -38,8 +38,8 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_Marker_ParamsData::
-    FCk_Fragment_Marker_ParamsData(
+FCk_Marker_Spec::
+    FCk_Marker_Spec(
         FGameplayTag InMarkerName,
         FCk_Marker_ShapeInfo InShapeParams,
         FCk_Marker_PhysicsInfo InPhysicsParams,

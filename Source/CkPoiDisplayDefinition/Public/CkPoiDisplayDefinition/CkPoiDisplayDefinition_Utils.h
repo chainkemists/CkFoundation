@@ -44,7 +44,7 @@ public:
     static FCk_Handle_PoiDisplayDefinition
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_PoiDisplayDefinition_ParamsData& InParams);
+        const FCk_PoiDisplayDefinition_Spec& InParams);
 
     // Creates a display-definition CHILD entity under InPoi and composes it via Add, so the child is keyed by its
     // _Consumer tag (fragment + label) and connected to the POI's RecordOfPoiDisplayDefinitions. Multiple Creates
@@ -56,7 +56,7 @@ public:
     static FCk_Handle_PoiDisplayDefinition
     Create(
         UPARAM(ref) FCk_Handle_Poi& InPoi,
-        const FCk_Fragment_PoiDisplayDefinition_ParamsData& InParams);
+        const FCk_PoiDisplayDefinition_Spec& InParams);
 
 public:
     static bool

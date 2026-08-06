@@ -37,7 +37,7 @@ public:
     static FCk_Handle_Spline
     Add(
         UPARAM(ref) FCk_Handle_Transform& InEntity,
-        const FCk_Fragment_Spline_ParamsData& InParams);
+        const FCk_Spline_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Spline",
@@ -57,7 +57,7 @@ public:
     static FCk_Handle_Spline
     Create(
         const FCk_Handle_Transform& InOwner,
-        const FCk_Fragment_Spline_ParamsData& InParams);
+        const FCk_Spline_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Spline",
@@ -74,7 +74,7 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Spline",
         DisplayName = "[Ck][Spline] Make Params (From Points)")
-    static FCk_Fragment_Spline_ParamsData
+    static FCk_Spline_Spec
     Make_Params_FromPoints(
         const TArray<FVector>& InLocalPoints,
         bool InClosedLoop);

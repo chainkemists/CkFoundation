@@ -3,7 +3,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Fragment_2dGridSystem_ParamsData::
+    FCk_2dGridSystem_Spec::
     Get_ResolvedActiveCoordinates() const
     -> TArray<FIntPoint>
 {
@@ -25,7 +25,7 @@ auto
 }
 
 auto
-    FCk_Fragment_2dGridSystem_ParamsData::
+    FCk_2dGridSystem_Spec::
     Get_IsCoordinateActive(
         const FIntPoint& InCoordinate) const
     -> bool

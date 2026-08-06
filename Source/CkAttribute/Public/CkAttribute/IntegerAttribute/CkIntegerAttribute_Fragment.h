@@ -194,7 +194,7 @@ private:
     FGameplayTag _ModifierName;
 
     UPROPERTY()
-    FCk_Fragment_IntegerAttributeModifier_ParamsData _Params;
+    FCk_IntegerAttributeModifier_Spec _Params;
 
 public:
     CK_PROPERTY_GET(_ModifierName);

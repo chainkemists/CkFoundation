@@ -42,7 +42,7 @@ public:
     static FCk_Handle_AnimPlan
     Add(
         UPARAM(ref) FCk_Handle& InAnimPlanOwnerEntity,
-        const FCk_Fragment_AnimPlan_ParamsData& InParams,
+        const FCk_AnimPlan_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -51,7 +51,7 @@ public:
     static TArray<FCk_Handle_AnimPlan>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InAnimPlanOwnerEntity,
-        const FCk_Fragment_MultipleAnimPlan_ParamsData& InParams,
+        const FCk_MultipleAnimPlan_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:

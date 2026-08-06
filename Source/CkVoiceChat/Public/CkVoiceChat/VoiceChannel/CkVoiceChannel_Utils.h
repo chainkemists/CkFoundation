@@ -42,7 +42,7 @@ public:
     static FCk_Handle_VoiceChannel
     Add(
         UPARAM(ref) FCk_Handle& InChannelHost,
-        const FCk_Fragment_VoiceChannel_ParamsData& InParams);
+        const FCk_VoiceChannel_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

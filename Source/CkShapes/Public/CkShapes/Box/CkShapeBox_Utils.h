@@ -27,7 +27,7 @@ public:
     static FCk_Handle_ShapeBox
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_ShapeBox_ParamsData& InParams);
+        const FCk_ShapeBox_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeBox",
@@ -35,7 +35,7 @@ public:
     static FCk_Handle_ShapeBox
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_ShapeBox_ParamsData& InParams);
+        const FCk_ShapeBox_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeBox",

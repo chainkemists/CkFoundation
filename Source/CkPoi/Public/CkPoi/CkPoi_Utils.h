@@ -38,7 +38,7 @@ public:
     static FCk_Handle_Poi
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Poi_ParamsData& InParams);
+        const FCk_Poi_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

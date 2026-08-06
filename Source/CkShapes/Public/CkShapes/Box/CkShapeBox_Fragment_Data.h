@@ -44,12 +44,12 @@ public:
 //--------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSHAPES_API FCk_Fragment_ShapeBox_ParamsData
+struct CKSHAPES_API FCk_ShapeBox_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ShapeBox_ParamsData);
+    CK_GENERATED_BODY(FCk_ShapeBox_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -59,7 +59,7 @@ private:
 public:
     CK_PROPERTY_GET(_InitialDimensions);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ShapeBox_ParamsData, _InitialDimensions);
+    CK_DEFINE_CONSTRUCTORS(FCk_ShapeBox_Spec, _InitialDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

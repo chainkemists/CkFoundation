@@ -14,7 +14,7 @@ auto
     UCk_Utils_VoxelNavPath_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_VoxelNavPath_ParamsData& InParams)
+        const FCk_VoxelNavPath_Spec& InParams)
     -> FCk_Handle_VoxelNavPath
 {
     const auto HandleIsValid = ck::IsValid(InHandle);

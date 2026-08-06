@@ -13,7 +13,7 @@ class UCk_Utils_ShapeCylinder_UE;
 
 namespace ck
 {
-    using FFragment_ShapeCylinder_Params = FCk_Fragment_ShapeCylinder_ParamsData;
+    using FFragment_ShapeCylinder_Params = FCk_ShapeCylinder_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

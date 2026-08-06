@@ -59,12 +59,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_BallisticMotion_LaunchTime);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPROJECTILE_API FCk_Fragment_BallisticMotion_ParamsData
+struct CKPROJECTILE_API FCk_BallisticMotion_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_BallisticMotion_ParamsData);
+    CK_GENERATED_BODY(FCk_BallisticMotion_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -102,7 +102,7 @@ public:
     CK_PROPERTY(_ImpactNudgeDistance);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_BallisticMotion_ParamsData, _TrajectoryParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_BallisticMotion_Spec, _TrajectoryParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -33,7 +33,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_EntityCollection_Params);
 
     public:
-        using ParamsType = FCk_Fragment_EntityCollection_ParamsData;
+        using ParamsType = FCk_EntityCollection_Spec;
 
     private:
         ParamsType _Params;

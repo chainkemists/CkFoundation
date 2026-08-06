@@ -44,7 +44,7 @@ public:
     static FCk_Handle_RewindHistory
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_RewindHistory_ParamsData& InParams);
+        const FCk_RewindHistory_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RewindHistory",

@@ -38,7 +38,7 @@ public:
               Category = "Ck|Utils|Inventory|Spatial",
               DisplayName = "[Ck][Inventory][Spatial] Make Params",
               meta = (NativeMakeFunc, AutoCreateRefTerm = "InCustomCanAcceptItem, InCustomCanStackItems"))
-    static FCk_Fragment_Inventory_Spatial_ParamsData
+    static FCk_Inventory_Spatial_Spec
     Make_Params(
         UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
         FIntPoint InDimensions,
@@ -52,7 +52,7 @@ public:
     static FCk_Handle_Inventory_Spatial
     Add(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_Inventory_Spatial_ParamsData& InParams,
+        const FCk_Inventory_Spatial_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
         const UObject* InWorldContextObject = nullptr);
 
@@ -63,7 +63,7 @@ public:
     static TArray<FCk_Handle_Inventory_Spatial>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_MultipleInventory_Spatial_ParamsData& InParams,
+        const FCk_MultipleInventory_Spatial_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
         const UObject* InWorldContextObject = nullptr);
 

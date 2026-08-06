@@ -33,7 +33,7 @@ public:
     static FCk_Handle_FogOfWar
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_FogOfWar_ParamsData& InParams);
+        const FCk_FogOfWar_Spec& InParams);
 
 public:
     static bool

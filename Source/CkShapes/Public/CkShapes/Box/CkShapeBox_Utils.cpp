@@ -11,7 +11,7 @@ auto
     UCk_Utils_ShapeBox_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_ShapeBox_ParamsData& InParams)
+        const FCk_ShapeBox_Spec& InParams)
         -> FCk_Handle_ShapeBox
 {
     CK_ENSURE_IF_NOT(NOT UCk_Utils_Shapes_UE::Has(InHandle),
@@ -32,7 +32,7 @@ auto
     UCk_Utils_ShapeBox_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_ShapeBox_ParamsData& InParams)
+        const FCk_ShapeBox_Spec& InParams)
         -> FCk_Handle_ShapeBox
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

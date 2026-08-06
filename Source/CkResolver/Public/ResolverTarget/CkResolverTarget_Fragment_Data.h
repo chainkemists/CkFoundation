@@ -12,12 +12,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRESOLVER_API FCk_Fragment_ResolverTarget_ParamsData
+struct CKRESOLVER_API FCk_ResolverTarget_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ResolverTarget_ParamsData);
+    CK_GENERATED_BODY(FCk_ResolverTarget_Spec);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

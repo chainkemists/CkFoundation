@@ -30,7 +30,7 @@ auto
     UCk_Utils_IntegerAttribute_UE::
     Add(
         FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_IntegerAttribute_ParamsData& InParams,
+        const FCk_IntegerAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_IntegerAttribute
 {
@@ -124,7 +124,7 @@ auto
             NewAttributeEntity)
         { return NewAttributeEntity; }
 
-        auto RefillAttributeEntity = UCk_Utils_FloatAttribute_UE::Add(InAttributeOwnerEntity, FCk_Fragment_FloatAttribute_ParamsData
+        auto RefillAttributeEntity = UCk_Utils_FloatAttribute_UE::Add(InAttributeOwnerEntity, FCk_FloatAttribute_Spec
             {
                 RefillParams.Get_RefillAttributeName(),
                 RefillParams.Get_RefillBehavior() == ECk_Attribute_Refill_Policy::Variable ? RefillParams.Get_FillRate() : FMath::Abs(RefillParams.Get_FillRate())
@@ -154,12 +154,12 @@ auto
     UCk_Utils_IntegerAttribute_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleIntegerAttribute_ParamsData& InParams,
+        const FCk_MultipleIntegerAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> TArray<FCk_Handle_IntegerAttribute>
 {
     return ck::algo::Transform<TArray<FCk_Handle_IntegerAttribute>>(
-        InParams.Get_IntegerAttributeParams(), [&](const FCk_Fragment_IntegerAttribute_ParamsData& InParam)
+        InParams.Get_IntegerAttributeParams(), [&](const FCk_IntegerAttribute_Spec& InParam)
     {
         return Add(InHandle, InParam, InReplicates);
     });
@@ -527,7 +527,7 @@ auto
     (
         InAttribute,
         ECk_AttributeModifier_Operation::Override,
-        FCk_Fragment_IntegerAttributeModifier_ParamsData
+        FCk_IntegerAttributeModifier_Spec
         {
             InNewBaseValue,
             InAttributeComponent
@@ -777,7 +777,7 @@ auto
         FCk_Handle_IntegerAttribute& InAttribute,
         FGameplayTag InModifierName,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_IntegerAttributeModifier_ParamsData& InParams)
+        const FCk_IntegerAttributeModifier_Spec& InParams)
     -> FCk_Handle_IntegerAttributeModifier
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddIntegerModifierRevocable);
@@ -834,7 +834,7 @@ auto
     Add_NotRevocable(
         FCk_Handle_IntegerAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_IntegerAttributeModifier_ParamsData& InParams)
+        const FCk_IntegerAttributeModifier_Spec& InParams)
     -> void
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddIntegerModifierNotRevocable);

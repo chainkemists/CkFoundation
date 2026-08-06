@@ -19,7 +19,7 @@ auto
     ResolveSetupData(
         const FCk_InteractTarget_SetupData& InSetupData,
         const UObject* InWorldContextObject)
-    -> FCk_Fragment_InteractTarget_ParamsData
+    -> FCk_InteractTarget_Spec
 {
     auto Params = InSetupData.Params;
     Params._CanInteractWithReference = Make_CanInteractWithReference(
@@ -31,7 +31,7 @@ auto
     UCk_Utils_InteractTarget_UE::
     Add(
         FCk_Handle& InInteractTargetOwner,
-        const FCk_Fragment_InteractTarget_ParamsData& InParams,
+        const FCk_InteractTarget_Spec& InParams,
         ECk_Replication InReplicates,
         const UObject* InWorldContextObject)
     -> FCk_Handle_InteractTarget
@@ -67,13 +67,13 @@ auto
     UCk_Utils_InteractTarget_UE::
     AddMultiple(
         FCk_Handle& InInteractTargetOwner,
-        const FCk_Fragment_MultipleInteractTarget_ParamsData& InParams,
+        const FCk_MultipleInteractTarget_Spec& InParams,
         ECk_Replication InReplicates,
         const UObject* InWorldContextObject)
     -> TArray<FCk_Handle_InteractTarget>
 {
     return ck::algo::Transform<TArray<FCk_Handle_InteractTarget>>(
-        InParams.Get_InteractTargetParams(), [&](const FCk_Fragment_InteractTarget_ParamsData& InParam)
+        InParams.Get_InteractTargetParams(), [&](const FCk_InteractTarget_Spec& InParam)
     {
         return Add(InInteractTargetOwner, InParam, InReplicates, InWorldContextObject);
     });
@@ -84,9 +84,9 @@ auto
     ResolveMultipleSetupData(
         const FCk_MultipleInteractTarget_SetupData& InSetupData,
         const UObject* InWorldContextObject)
-    -> FCk_Fragment_MultipleInteractTarget_ParamsData
+    -> FCk_MultipleInteractTarget_Spec
 {
-    auto Params = TArray<FCk_Fragment_InteractTarget_ParamsData>{};
+    auto Params = TArray<FCk_InteractTarget_Spec>{};
     Params.Reserve(InSetupData.InteractTargets.Num());
 
     for (const auto& Entry : InSetupData.InteractTargets)
@@ -94,7 +94,7 @@ auto
         Params.Emplace(ResolveSetupData(Entry, InWorldContextObject));
     }
 
-    return FCk_Fragment_MultipleInteractTarget_ParamsData{MoveTemp(Params)};
+    return FCk_MultipleInteractTarget_Spec{MoveTemp(Params)};
 }
 
 auto

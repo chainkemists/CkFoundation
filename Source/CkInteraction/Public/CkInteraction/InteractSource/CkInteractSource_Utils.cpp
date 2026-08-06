@@ -15,7 +15,7 @@ auto
     UCk_Utils_InteractSource_UE::
     Add(
         FCk_Handle& InInteractSourceOwner,
-        const FCk_Fragment_InteractSource_ParamsData& InParams,
+        const FCk_InteractSource_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_InteractSource
 {
@@ -37,12 +37,12 @@ auto
     UCk_Utils_InteractSource_UE::
     AddMultiple(
         FCk_Handle& InInteractSourceOwner,
-        const FCk_Fragment_MultipleInteractSource_ParamsData& InParams,
+        const FCk_MultipleInteractSource_Spec& InParams,
         ECk_Replication InReplicates)
     -> TArray<FCk_Handle_InteractSource>
 {
     return ck::algo::Transform<TArray<FCk_Handle_InteractSource>>(
-        InParams.Get_InteractSourceParams(), [&](const FCk_Fragment_InteractSource_ParamsData& InParam)
+        InParams.Get_InteractSourceParams(), [&](const FCk_InteractSource_Spec& InParam)
     {
         return Add(InInteractSourceOwner, InParam, InReplicates);
     });

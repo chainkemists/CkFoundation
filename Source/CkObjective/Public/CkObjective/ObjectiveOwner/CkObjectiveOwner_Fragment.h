@@ -16,7 +16,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_ObjectiveOwner_Params = FCk_ObjectiveOwner_ParamsData;
+    using FFragment_ObjectiveOwner_Params = FCk_ObjectiveOwner_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -49,7 +49,7 @@ public:
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
         UPARAM(meta=(Categories = "Resolver.DataBundle.Name")) FGameplayTag InName,
-        const FCk_Fragment_ResolverDataBundle_ParamsData& InParams);
+        const FCk_ResolverDataBundle_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

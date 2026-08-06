@@ -19,7 +19,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_AutoReorient_Params);
 
     public:
-        using ParamsType = FCk_Fragment_AutoReorient_ParamsData;
+        using ParamsType = FCk_AutoReorient_Spec;
 
     private:
         ParamsType _Params;

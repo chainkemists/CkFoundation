@@ -72,12 +72,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_VoxelNav_PathStatus);
 /** Per-agent search tuning. The query itself (which volume, from where, to where) rides the request:
  *  these are properties of the agent doing the flying, and they outlive any one path it asks for. */
 USTRUCT(BlueprintType)
-struct CKVOXELNAV_API FCk_Fragment_VoxelNavPath_ParamsData
+struct CKVOXELNAV_API FCk_VoxelNavPath_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VoxelNavPath_ParamsData);
+    CK_GENERATED_BODY(FCk_VoxelNavPath_Spec);
 
 private:
     /** The agent's radius in uu. A cell whose half-extent is smaller than this is never traversed, so the
@@ -113,7 +113,7 @@ public:
     CK_PROPERTY(_Volume);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VoxelNavPath_ParamsData, _AgentRadiusUu);
+    CK_DEFINE_CONSTRUCTORS(FCk_VoxelNavPath_Spec, _AgentRadiusUu);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

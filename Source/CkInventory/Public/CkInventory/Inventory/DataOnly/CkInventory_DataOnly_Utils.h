@@ -37,7 +37,7 @@ public:
               Category = "Ck|Utils|Inventory|DataOnly",
               DisplayName = "[Ck][Inventory][DataOnly] Make Params",
               meta = (NativeMakeFunc, AutoCreateRefTerm = "InCustomCanAcceptItem, InCustomCanStackItems"))
-    static FCk_Fragment_Inventory_DataOnly_ParamsData
+    static FCk_Inventory_DataOnly_Spec
     Make_Params(
         UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
         const FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic& InCustomCanAcceptItem,
@@ -48,7 +48,7 @@ public:
               Category = "Ck|Utils|Inventory|DataOnly",
               DisplayName = "[Ck][Inventory][DataOnly] Make Params (Bounded By Unique Entries)",
               meta = (NativeMakeFunc, AutoCreateRefTerm = "InCustomCanAcceptItem, InCustomCanStackItems"))
-    static FCk_Fragment_Inventory_DataOnly_ParamsData
+    static FCk_Inventory_DataOnly_Spec
     Make_Params_Bounded(
         UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
         int32 InBoundLimit,
@@ -61,7 +61,7 @@ public:
               Category = "Ck|Utils|Inventory|DataOnly",
               DisplayName = "[Ck][Inventory][DataOnly] Make Params (Bounded By Total Units)",
               meta = (NativeMakeFunc, AutoCreateRefTerm = "InCustomCanAcceptItem, InCustomCanStackItems"))
-    static FCk_Fragment_Inventory_DataOnly_ParamsData
+    static FCk_Inventory_DataOnly_Spec
     Make_Params_BoundedByTotalUnits(
         UPARAM(meta = (Categories = "Inventory")) FGameplayTag InName,
         int32 InBoundLimit,
@@ -75,7 +75,7 @@ public:
     static FCk_Handle_Inventory_DataOnly
     Add(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_Inventory_DataOnly_ParamsData& InParams,
+        const FCk_Inventory_DataOnly_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
         const UObject* InWorldContextObject = nullptr);
 
@@ -86,7 +86,7 @@ public:
     static TArray<FCk_Handle_Inventory_DataOnly>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_MultipleInventory_DataOnly_ParamsData& InParams,
+        const FCk_MultipleInventory_DataOnly_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
         const UObject* InWorldContextObject = nullptr);
 
