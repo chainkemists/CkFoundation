@@ -25,9 +25,19 @@ CkTests off `dev` @ `0ea0d6a2`). Never pushed; merge/rebase onto `dev` is Adam's
 
 ## Baseline (recorded BEFORE first edit)
 
-- 2026-08-05: single-shot toolbox `--build --test` (full suite, fresh boot) on CkPlugins_Other,
-  editor confirmed closed (log-lock probe: free). Results pending — recorded here verbatim
-  (totals + failing names) before any source lands.
+- **Baseline of record (2026-08-05, before any source landed):** toolbox `--test --no-live`
+  full suite on CkPlugins_Other against the freshly built Development editor:
+  **Total 1002 · Passed 999 · Failed 3 · Skipped 0 · Contaminated 0** (4m06s,
+  `Saved/Logs/Test-Baseline.log`). Pre-existing failures, NOT ours:
+  `Ck_AutoTest_PathNetworkFollower_DesiredNavmeshClearanceMovesInward`,
+  `Ck_AutoTest_PathNetworkFollower_ProjectsRibbonWaypointWithinNavQueryExtent`,
+  `IntegrationTest`. "No regressions" claims diff against this list.
+- Environment incident before the baseline: a stale `Saved/CkAngelscriptGenerator_RegenOwner.lock`
+  (owner pid dead — an old GitLink automation run) made every test lane run regen-SECONDARY and
+  the AS compile failed spuriously (exit 76, errors in generated wrappers that were in fact
+  current — zero `Script/Generated` diffs after the heal boot). Fix: deleted the stale lock;
+  single-lane heal boot came back clean (3/3, zero AS errors). If exit 76 with all-lanes
+  "[RegenOwnership] Another editor/commandlet instance owns" recurs, check that lock's pid first.
 - Repo ground at start: `Plugins/CkFoundation` on `dev` @ `870ad0172`, tree clean.
   `Plugins/CkTests` on `dev` @ `0ea0d6a2`, tree clean — one commit behind the BusterBlock
   checkout's `403d887` (inventory-test commit; no overlap with this campaign; deliberately NOT
