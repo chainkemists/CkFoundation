@@ -116,7 +116,7 @@ namespace ck
             InParams.Get_Params().Get_InteractionDuration().Get_Seconds(), InteractSourceRawHandle);
 
         auto InteractionEntity = UCk_Utils_Interaction_UE::Add(InHandle,
-            FCk_Fragment_Interaction_ParamsData(
+            FCk_Interaction_Spec(
                 InParams.Get_Params().Get_InteractionChannel(),
                 InteractSourceRawHandle,
                 InteractInstigatorRawHandle,

@@ -2,15 +2,15 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_UnrealComponent_ParamsData::
-FCk_Fragment_UnrealComponent_ParamsData(
+FCk_UnrealComponent_Spec::
+FCk_UnrealComponent_Spec(
     TSubclassOf<UActorComponent> InComponentClass)
     : _ComponentClass(InComponentClass)
 {
 }
 
-FCk_Fragment_UnrealComponent_ParamsData::
-FCk_Fragment_UnrealComponent_ParamsData(
+FCk_UnrealComponent_Spec::
+FCk_UnrealComponent_Spec(
     UActorComponent* InComponentArchetype)
     : _ComponentClass(InComponentArchetype != nullptr ? InComponentArchetype->GetClass() : nullptr)
     , _ComponentArchetype(InComponentArchetype)

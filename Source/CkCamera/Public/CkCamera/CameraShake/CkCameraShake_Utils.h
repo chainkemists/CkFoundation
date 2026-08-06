@@ -34,7 +34,7 @@ public:
     static FCk_Handle_CameraShake
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_CameraShake_ParamsData& InParams);
+        const FCk_CameraShake_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CameraShake",
@@ -42,7 +42,7 @@ public:
     static TArray<FCk_Handle_CameraShake>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleCameraShake_ParamsData& InParams);
+        const FCk_MultipleCameraShake_Spec& InParams);
 
 public:
     // Has Feature

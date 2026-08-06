@@ -18,7 +18,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_VoxelNavOccluder_Params = FCk_Fragment_VoxelNavOccluder_ParamsData;
+    using FFragment_VoxelNavOccluder_Params = FCk_VoxelNavOccluder_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

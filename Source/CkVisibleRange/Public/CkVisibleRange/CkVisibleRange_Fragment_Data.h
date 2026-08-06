@@ -29,12 +29,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VisibleRange);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKVISIBLERANGE_API FCk_Fragment_VisibleRange_ParamsData
+struct CKVISIBLERANGE_API FCk_VisibleRange_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VisibleRange_ParamsData);
+    CK_GENERATED_BODY(FCk_VisibleRange_Spec);
 
 private:
     // 0 = none. World units (cm). The entity is hidden while NEARER than this range.
@@ -65,7 +65,7 @@ public:
     CK_PROPERTY(_UpdateInterval);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VisibleRange_ParamsData, _MaxRange);
+    CK_DEFINE_CONSTRUCTORS(FCk_VisibleRange_Spec, _MaxRange);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

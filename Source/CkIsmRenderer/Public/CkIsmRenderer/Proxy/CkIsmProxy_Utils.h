@@ -39,7 +39,7 @@ public:
     static FCk_Handle_IsmProxy
     Add(
         UPARAM(ref) FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_IsmProxy_ParamsData& InParams);
+        const FCk_IsmProxy_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy|Proxy",
@@ -48,7 +48,7 @@ public:
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
         const FTransform& InInitialTransform,
-        const FCk_Fragment_IsmProxy_ParamsData& InParams);
+        const FCk_IsmProxy_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmProxy",

@@ -11,7 +11,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Label_VectorAttribute, TEXT("VectorAttribute"));
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Fragment_VectorAttribute_ParamsData::
+    FCk_VectorAttribute_Spec::
     Get_MinValue() const
     -> FVector
 {
@@ -24,7 +24,7 @@ auto
 }
 
 auto
-    FCk_Fragment_VectorAttribute_ParamsData::
+    FCk_VectorAttribute_Spec::
     Get_MaxValue() const
     -> FVector
 {

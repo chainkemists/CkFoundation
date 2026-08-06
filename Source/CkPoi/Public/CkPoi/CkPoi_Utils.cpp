@@ -23,7 +23,7 @@ auto
     UCk_Utils_Poi_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Poi_ParamsData& InParams)
+        const FCk_Poi_Spec& InParams)
     -> FCk_Handle_Poi
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle supplied to Poi Add"))

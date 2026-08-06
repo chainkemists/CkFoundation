@@ -30,7 +30,7 @@ private:
     static FCk_Handle_2dGridCell
     Create(
         FCk_Handle_2dGridSystem& InParentGrid,
-        const FCk_Fragment_2dGridCell_ParamsData& InParams,
+        const FCk_2dGridCell_Spec& InParams,
         ECk_EnableDisable InEnabledState = ECk_EnableDisable::Enable);
 
 public:

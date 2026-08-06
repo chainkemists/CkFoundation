@@ -27,7 +27,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Sfx_Params);
 
     public:
-        using ParamsType = FCk_Fragment_Sfx_ParamsData;
+        using ParamsType = FCk_Sfx_Spec;
 
     private:
         ParamsType _Params;

@@ -52,12 +52,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Homing_TargetPoint);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPROJECTILE_API FCk_Fragment_Homing_ParamsData
+struct CKPROJECTILE_API FCk_Homing_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Homing_ParamsData);
+    CK_GENERATED_BODY(FCk_Homing_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -81,7 +81,7 @@ public:
     CK_PROPERTY(_StartingState);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Homing_ParamsData, _GuidanceSettings);
+    CK_DEFINE_CONSTRUCTORS(FCk_Homing_Spec, _GuidanceSettings);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

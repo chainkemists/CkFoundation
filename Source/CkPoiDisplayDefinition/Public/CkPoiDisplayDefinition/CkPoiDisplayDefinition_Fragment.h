@@ -31,7 +31,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_PoiDisplayDefinition_Params = FCk_Fragment_PoiDisplayDefinition_ParamsData;
+    using FFragment_PoiDisplayDefinition_Params = FCk_PoiDisplayDefinition_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

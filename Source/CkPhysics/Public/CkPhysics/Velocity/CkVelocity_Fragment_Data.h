@@ -19,12 +19,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Velocity);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Fragment_Velocity_MinMax_ParamsData
+struct CKPHYSICS_API FCk_Velocity_MinMax_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Velocity_MinMax_ParamsData);
+    CK_GENERATED_BODY(FCk_Velocity_MinMax_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -50,18 +50,18 @@ public:
     CK_PROPERTY_GET(_MaxSpeed);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Velocity_MinMax_ParamsData, _HasMinSpeed, _MinSpeed, _HasMaxSpeed, _MaxSpeed);
+    CK_DEFINE_CONSTRUCTORS(FCk_Velocity_MinMax_Spec, _HasMinSpeed, _MinSpeed, _HasMaxSpeed, _MaxSpeed);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Fragment_Velocity_ParamsData
+struct CKPHYSICS_API FCk_Velocity_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Velocity_ParamsData);
+    CK_GENERATED_BODY(FCk_Velocity_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -74,7 +74,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Velocity_MinMax_ParamsData _VelocityMinMax;
+    FCk_Velocity_MinMax_Spec _VelocityMinMax;
 
 public:
     CK_PROPERTY_GET(_Coordinates);
@@ -82,44 +82,44 @@ public:
     CK_PROPERTY(_VelocityMinMax);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Velocity_ParamsData, _Coordinates, _StartingVelocity);
+    CK_DEFINE_CONSTRUCTORS(FCk_Velocity_Spec, _Coordinates, _StartingVelocity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Fragment_VelocityModifier_ParamsData
+struct CKPHYSICS_API FCk_VelocityModifier_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VelocityModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_VelocityModifier_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Velocity_ParamsData _VelocityParams;
+    FCk_Velocity_Spec _VelocityParams;
 
 public:
     CK_PROPERTY_GET(_VelocityParams);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VelocityModifier_ParamsData, _VelocityParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_VelocityModifier_Spec, _VelocityParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Fragment_BulkVelocityModifier_ParamsData
+struct CKPHYSICS_API FCk_BulkVelocityModifier_Spec
 {
     GENERATED_BODY()
 
-    CK_GENERATED_BODY(FCk_Fragment_BulkVelocityModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_BulkVelocityModifier_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Velocity_ParamsData _VelocityParams;
+    FCk_Velocity_Spec _VelocityParams;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -135,7 +135,7 @@ public:
     CK_PROPERTY_GET(_ModifierScope);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_BulkVelocityModifier_ParamsData, _VelocityParams, _TargetChannels, _ModifierScope);
+    CK_DEFINE_CONSTRUCTORS(FCk_BulkVelocityModifier_Spec, _VelocityParams, _TargetChannels, _ModifierScope);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

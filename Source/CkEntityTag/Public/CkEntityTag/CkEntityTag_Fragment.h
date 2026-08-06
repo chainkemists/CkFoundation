@@ -20,7 +20,7 @@ namespace ck
 
     // Presence in the per-tag hashed EnTT storage (the view behind ForEach_Entity) IS the entity's
     // "Has" answer for that tag; the count itself lives in FFragment_EntityTag_Current._Tags.
-    using FFragment_EntityTag_StorageParams = FCk_Fragment_EntityTag_ParamsData;
+    using FFragment_EntityTag_StorageParams = FCk_EntityTag_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

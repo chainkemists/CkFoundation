@@ -21,7 +21,7 @@ auto
     UCk_Utils_Minimap_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Minimap_ParamsData& InParams)
+        const FCk_Minimap_Spec& InParams)
     -> FCk_Handle_Minimap
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle supplied to Minimap Add"))
@@ -44,7 +44,7 @@ auto
     UCk_Utils_Minimap_UE::
     Create(
         FCk_Handle& InLifetimeOwner,
-        const FCk_Fragment_Minimap_ParamsData& InParams)
+        const FCk_Minimap_Spec& InParams)
     -> FCk_Handle_Minimap
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner), TEXT("Invalid Lifetime Owner supplied to Minimap Create"))

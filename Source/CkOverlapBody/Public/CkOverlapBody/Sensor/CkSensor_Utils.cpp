@@ -20,7 +20,7 @@ auto
     UCk_Utils_Sensor_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Sensor_ParamsData& InParams,
+        const FCk_Sensor_Spec& InParams,
         ECk_Net_ReplicationType InReplicationType)
     -> FCk_Handle_Sensor
 {
@@ -67,12 +67,12 @@ auto
     UCk_Utils_Sensor_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleSensor_ParamsData& InParams,
+        const FCk_MultipleSensor_Spec& InParams,
         ECk_Net_ReplicationType InReplicationType)
     -> TArray<FCk_Handle_Sensor>
 {
     return ck::algo::Transform<TArray<FCk_Handle_Sensor>>(InParams.Get_SensorParams(),
-    [&](const FCk_Fragment_Sensor_ParamsData& InSensorParams)
+    [&](const FCk_Sensor_Spec& InSensorParams)
     {
         return Add(InHandle, InSensorParams, InReplicationType);
     });

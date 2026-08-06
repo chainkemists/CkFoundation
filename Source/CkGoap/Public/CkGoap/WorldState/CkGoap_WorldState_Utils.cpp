@@ -51,7 +51,7 @@ namespace ck_goap_world_state_utils_internal
 	auto
 		DoStampWorldStateFragments(
 			FCk_Handle& InTargetEntity,
-			const FCk_Fragment_Goap_WorldState_ParamsData& InParams)
+			const FCk_Goap_WorldState_Spec& InParams)
 		-> void
 	{
 		// Params has no stampable knobs — _PreRegisteredKeys is consumed here at composition, not
@@ -81,7 +81,7 @@ auto
 	UCk_Utils_Goap_WorldState_UE::
 	Add(
 		FCk_Handle& InOwner,
-		const FCk_Fragment_Goap_WorldState_ParamsData& InParams)
+		const FCk_Goap_WorldState_Spec& InParams)
 	-> FCk_Handle_Goap_WorldState
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
@@ -105,7 +105,7 @@ auto
 	Create(
 		FCk_Handle& InOwner,
 		FGameplayTag InName,
-		const FCk_Fragment_Goap_WorldState_ParamsData& InParams)
+		const FCk_Goap_WorldState_Spec& InParams)
 	-> FCk_Handle_Goap_WorldState
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),

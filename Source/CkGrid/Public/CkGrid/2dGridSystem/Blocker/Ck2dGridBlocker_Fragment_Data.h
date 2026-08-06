@@ -27,12 +27,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_2dGridBlocker)
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGRID_API FCk_Fragment_2dGridBlocker_ParamsData
+struct CKGRID_API FCk_2dGridBlocker_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_2dGridBlocker_ParamsData);
+    CK_GENERATED_BODY(FCk_2dGridBlocker_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -57,7 +57,7 @@ public:
     CK_PROPERTY(_Name);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridBlocker_ParamsData, _Grid, _RangeMin, _RangeMax);
+    CK_DEFINE_CONSTRUCTORS(FCk_2dGridBlocker_Spec, _Grid, _RangeMin, _RangeMax);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

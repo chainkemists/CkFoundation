@@ -5,11 +5,11 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_2dGridSystem_Spec::
+    UCk_2dGridSystem_AuthoringSpec::
     Resolve_GridParams() const
-    -> FCk_Fragment_2dGridSystem_ParamsData
+    -> FCk_2dGridSystem_Spec
 {
-    auto Params = FCk_Fragment_2dGridSystem_ParamsData{Dimensions, CellSize};
+    auto Params = FCk_2dGridSystem_Spec{Dimensions, CellSize};
     Params.Set_DefaultCellState(ECk_EnableDisable::Enable);
     Params.Set_ExceptionCoordinates(DisabledCells);
     Params.Set_DefaultCellTags(DefaultCellTags);

@@ -20,17 +20,17 @@
 class UCk_InventoryItem_Definition;
 
 USTRUCT(BlueprintType, meta = (HasNativeMake))
-struct CKINVENTORY_API FCk_Fragment_Inventory_Spatial_ParamsData
+struct CKINVENTORY_API FCk_Inventory_Spatial_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Inventory_Spatial_ParamsData);
+    CK_GENERATED_BODY(FCk_Inventory_Spatial_Spec);
 
 public:
-    FCk_Fragment_Inventory_Spatial_ParamsData() = default;
+    FCk_Inventory_Spatial_Spec() = default;
 
-    explicit FCk_Fragment_Inventory_Spatial_ParamsData(FGameplayTag InName, FIntPoint InDimensions);
+    explicit FCk_Inventory_Spatial_Spec(FGameplayTag InName, FIntPoint InDimensions);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -109,23 +109,23 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Fragment_MultipleInventory_Spatial_ParamsData
+struct CKINVENTORY_API FCk_MultipleInventory_Spatial_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleInventory_Spatial_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleInventory_Spatial_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_Inventory_Spatial_ParamsData> _InventoryParams;
+    TArray<FCk_Inventory_Spatial_Spec> _InventoryParams;
 
 public:
     CK_PROPERTY_GET(_InventoryParams);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleInventory_Spatial_ParamsData, _InventoryParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleInventory_Spatial_Spec, _InventoryParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

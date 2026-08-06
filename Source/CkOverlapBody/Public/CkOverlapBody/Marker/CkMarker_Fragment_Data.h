@@ -254,16 +254,16 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOVERLAPBODY_API FCk_Fragment_Marker_ParamsData
+struct CKOVERLAPBODY_API FCk_Marker_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Marker_ParamsData);
+    CK_GENERATED_BODY(FCk_Marker_Spec);
 
 public:
-    FCk_Fragment_Marker_ParamsData() = default;
-    FCk_Fragment_Marker_ParamsData(
+    FCk_Marker_Spec() = default;
+    FCk_Marker_Spec(
         FGameplayTag              InMarkerName,
         FCk_Marker_ShapeInfo      InShapeParams,
         FCk_Marker_PhysicsInfo    InPhysicsParams,
@@ -326,23 +326,23 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOVERLAPBODY_API FCk_Fragment_MultipleMarker_ParamsData
+struct CKOVERLAPBODY_API FCk_MultipleMarker_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleMarker_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleMarker_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_MarkerName"))
-    TArray<FCk_Fragment_Marker_ParamsData> _MarkerParams;
+    TArray<FCk_Marker_Spec> _MarkerParams;
 
 public:
     CK_PROPERTY_GET(_MarkerParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleMarker_ParamsData, _MarkerParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleMarker_Spec, _MarkerParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

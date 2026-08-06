@@ -727,16 +727,16 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOVERLAPBODY_API FCk_Fragment_Sensor_ParamsData
+struct CKOVERLAPBODY_API FCk_Sensor_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Sensor_ParamsData);
+    CK_GENERATED_BODY(FCk_Sensor_Spec);
 
 public:
-    FCk_Fragment_Sensor_ParamsData() = default;
-    FCk_Fragment_Sensor_ParamsData(
+    FCk_Sensor_Spec() = default;
+    FCk_Sensor_Spec(
         FGameplayTag              InSensorName,
         FCk_Sensor_FilteringInfo  InFilteringParams,
         FCk_Sensor_ShapeInfo      InShapeParams,
@@ -805,23 +805,23 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOVERLAPBODY_API FCk_Fragment_MultipleSensor_ParamsData
+struct CKOVERLAPBODY_API FCk_MultipleSensor_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleSensor_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleSensor_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TArray<FCk_Fragment_Sensor_ParamsData> _SensorParams;
+    TArray<FCk_Sensor_Spec> _SensorParams;
 
 public:
     CK_PROPERTY_GET(_SensorParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleSensor_ParamsData, _SensorParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleSensor_Spec, _SensorParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

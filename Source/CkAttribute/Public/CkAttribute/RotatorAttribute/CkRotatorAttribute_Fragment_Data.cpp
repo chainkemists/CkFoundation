@@ -11,7 +11,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Label_RotatorAttribute, TEXT("RotatorAttribute"));
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Fragment_RotatorAttribute_ParamsData::
+    FCk_RotatorAttribute_Spec::
     Get_MinValue() const
     -> FRotator
 {
@@ -24,7 +24,7 @@ auto
 }
 
 auto
-    FCk_Fragment_RotatorAttribute_ParamsData::
+    FCk_RotatorAttribute_Spec::
     Get_MaxValue() const
     -> FRotator
 {

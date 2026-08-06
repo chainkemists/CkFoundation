@@ -10,7 +10,7 @@
 
 namespace ck
 {
-    using FFragment_2dGridPlacement_Params = FCk_Fragment_2dGridPlacement_ParamsData;
+    using FFragment_2dGridPlacement_Params = FCk_2dGridPlacement_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

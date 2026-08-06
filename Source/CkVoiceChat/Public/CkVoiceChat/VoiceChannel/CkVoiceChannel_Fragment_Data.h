@@ -57,12 +57,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VoiceChannel);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKVOICECHAT_API FCk_Fragment_VoiceChannel_ParamsData
+struct CKVOICECHAT_API FCk_VoiceChannel_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VoiceChannel_ParamsData);
+    CK_GENERATED_BODY(FCk_VoiceChannel_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -105,7 +105,7 @@ public:
     CK_PROPERTY(_AutoJoinTalkers);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VoiceChannel_ParamsData, _ChannelName);
+    CK_DEFINE_CONSTRUCTORS(FCk_VoiceChannel_Spec, _ChannelName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -39,7 +39,7 @@ public:
     static FCk_Handle_MontagePlayer
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_MontagePlayer_ParamsData& InParams,
+        const FCk_MontagePlayer_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -48,7 +48,7 @@ public:
     static FCk_Handle_MontagePlayer
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_MontagePlayer_ParamsData& InParams,
+        const FCk_MontagePlayer_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     // Re-binds the runtime SkeletalMeshComponent target — the ONE param that cannot round-trip a save/load

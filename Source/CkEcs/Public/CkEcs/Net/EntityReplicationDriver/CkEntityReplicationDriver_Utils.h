@@ -47,7 +47,7 @@ public:
     static FCk_Handle
     Request_BuildAndReplicate(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo);
+        const FCk_EntityReplicationDriver_Spec& InConstructionInfo);
 
     UFUNCTION(BlueprintCallable,
         BlueprintAuthorityOnly,
@@ -56,19 +56,19 @@ public:
     static FCk_Handle
     Request_BuildAndReplicate_Multiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos);
+        const TArray<FCk_EntityReplicationDriver_Spec>& InConstructionInfos);
 
 public:
     static auto
     Request_TryBuildAndReplicate(
         FCk_Handle& InHandle,
-        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
+        const FCk_EntityReplicationDriver_Spec& InConstructionInfo,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
 
     static auto
     Request_TryBuildAndReplicate(
         FCk_Handle& InHandle,
-        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos,
+        const TArray<FCk_EntityReplicationDriver_Spec>& InConstructionInfos,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
 
     // Restore-path sibling of Request_TryBuildAndReplicate for an ALREADY-reconstituted entity: skips entity
@@ -78,7 +78,7 @@ public:
     Request_TryReplicateExisting(
         FCk_Handle& InExistingEntity,
         FCk_Handle& InReplicatedOwner,
-        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos) -> void;
+        const TArray<FCk_EntityReplicationDriver_Spec>& InConstructionInfos) -> void;
 
     static auto
     Request_Replicate(

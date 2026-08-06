@@ -71,7 +71,7 @@ namespace ck
         (
             InHandle,
             InNewResolution.Get_BundleName(),
-            FCk_Fragment_ResolverDataBundle_ParamsData
+            FCk_ResolverDataBundle_Spec
             {
                 InNewResolution.Get_BundleName(),
                 InHandle,

@@ -14,7 +14,7 @@ auto
     UCk_Utils_RaySense_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_RaySense_ParamsData& InParams)
+        const FCk_RaySense_Spec& InParams)
     -> FCk_Handle_RaySense
 {
     if (NOT ck::physics_ownership::TryClaim_Chaos(InHandle))
@@ -32,7 +32,7 @@ auto
     UCk_Utils_RaySense_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_RaySense_ParamsData& InParams)
+        const FCk_RaySense_Spec& InParams)
     -> FCk_Handle_RaySense
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

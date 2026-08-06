@@ -52,7 +52,7 @@ public:
     static FCk_Handle_StateMachine
     Add(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_StateMachine_ParamsData& InParams);
+        const FCk_StateMachine_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|StateMachine",
@@ -60,7 +60,7 @@ public:
     static FCk_Handle_StateMachine
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_StateMachine_ParamsData& InParams);
+        const FCk_StateMachine_Spec& InParams);
 
     // --------------------------------------------------------------------------------------------------------------------
 

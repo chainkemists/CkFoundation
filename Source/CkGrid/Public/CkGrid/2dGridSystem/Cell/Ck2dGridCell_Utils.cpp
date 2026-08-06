@@ -15,7 +15,7 @@ auto
     UCk_Utils_2dGridCell_UE::
     Create(
         FCk_Handle_2dGridSystem& InParentGrid,
-        const FCk_Fragment_2dGridCell_ParamsData& InParams,
+        const FCk_2dGridCell_Spec& InParams,
         ECk_EnableDisable InEnabledState)
     -> FCk_Handle_2dGridCell
 {

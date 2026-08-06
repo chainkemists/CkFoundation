@@ -17,12 +17,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_2dGridCell);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGRID_API FCk_Fragment_2dGridCell_ParamsData
+struct CKGRID_API FCk_2dGridCell_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_2dGridCell_ParamsData);
+    CK_GENERATED_BODY(FCk_2dGridCell_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -33,7 +33,7 @@ public:
     CK_PROPERTY(_Tags);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridCell_ParamsData, _Tags);
+    CK_DEFINE_CONSTRUCTORS(FCk_2dGridCell_Spec, _Tags);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

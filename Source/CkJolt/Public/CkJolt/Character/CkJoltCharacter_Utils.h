@@ -32,7 +32,7 @@ public:
     static FCk_Handle_JoltCharacter
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_JoltCharacter_ParamsData& InParams);
+        const FCk_JoltCharacter_Spec& InParams);
 
 public:
     // Has Feature

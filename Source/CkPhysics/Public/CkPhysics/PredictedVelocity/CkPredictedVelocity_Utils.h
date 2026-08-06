@@ -22,7 +22,7 @@ public:
     static void
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_PredictedVelocity_ParamsData& InParams);
+        const FCk_PredictedVelocity_Spec& InParams);
 
     static bool
     Has(

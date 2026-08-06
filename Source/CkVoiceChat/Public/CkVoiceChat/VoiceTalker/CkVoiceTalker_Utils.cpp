@@ -15,7 +15,7 @@ auto
     UCk_Utils_VoiceTalker_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_VoiceTalker_ParamsData& InParams)
+        const FCk_VoiceTalker_Spec& InParams)
     -> FCk_Handle_VoiceTalker
 {
     ck::voice_chat::VeryVerbose(TEXT("Adding VoiceTalker feature to Entity [{}]"), InHandle);

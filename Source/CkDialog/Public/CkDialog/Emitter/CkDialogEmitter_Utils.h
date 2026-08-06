@@ -34,7 +34,7 @@ public:
     static FCk_Handle_DialogEmitter
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_DialogEmitter_ParamsData& InParams);
+        const FCk_DialogEmitter_Spec& InParams);
 
 public:
     static bool

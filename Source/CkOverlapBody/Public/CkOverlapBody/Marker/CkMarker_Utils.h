@@ -47,7 +47,7 @@ public:
     static FCk_Handle_Marker
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Marker_ParamsData& InParams,
+        const FCk_Marker_Spec& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
     UFUNCTION(BlueprintCallable,
@@ -56,7 +56,7 @@ public:
     static TArray<FCk_Handle_Marker>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleMarker_ParamsData& InParams,
+        const FCk_MultipleMarker_Spec& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
     UFUNCTION(BlueprintCallable,

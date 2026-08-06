@@ -28,7 +28,7 @@ public:
     static FCk_Handle_Substep
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Substep_ParamsData& InParams);
+        const FCk_Substep_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Substep",
@@ -36,7 +36,7 @@ public:
     static FCk_Handle_Substep
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Substep_ParamsData& InParams);
+        const FCk_Substep_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Substep",
@@ -44,7 +44,7 @@ public:
     static FCk_Handle_Substep
     AddOrReplace(
         UPARAM(ref)  FCk_Handle& InHandle,
-        const FCk_Substep_ParamsData& InParams);
+        const FCk_Substep_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

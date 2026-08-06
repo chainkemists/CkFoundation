@@ -51,7 +51,7 @@ auto
                 ? ECk_EnableDisable::Enable
                 : ECk_EnableDisable::Disable;
 
-            auto Cell = UCk_Utils_2dGridCell_UE::Create(GridEntity, FCk_Fragment_2dGridCell_ParamsData{}, EnabledState);
+            auto Cell = UCk_Utils_2dGridCell_UE::Create(GridEntity, FCk_2dGridCell_Spec{}, EnabledState);
             UCk_Utils_Handle_UE::Set_DebugName(Cell, *ck::Format_UE(TEXT("Cell_[{},{}]"), X, Y));
         }
     }
@@ -67,7 +67,7 @@ auto
     UCk_Utils_2dGridSystem_UE::
     Add(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_2dGridSystem_ParamsData& InParams)
+        const FCk_2dGridSystem_Spec& InParams)
     -> FCk_Handle_2dGridSystem
 {
     for (const auto& ResolvedActiveCoords = InParams.Get_ResolvedActiveCoordinates();
@@ -91,7 +91,7 @@ auto
     Create(
         FCk_Handle& InOwner,
         const FTransform& InInitialTransform,
-        const FCk_Fragment_2dGridSystem_ParamsData& InParams)
+        const FCk_2dGridSystem_Spec& InParams)
     -> FCk_Handle_2dGridSystem
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

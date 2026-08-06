@@ -11,7 +11,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Label_ByteAttribute, TEXT("ByteAttribute"));
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Fragment_ByteAttribute_ParamsData::
+    FCk_ByteAttribute_Spec::
     Get_MinValue() const
     -> uint8
 {
@@ -24,7 +24,7 @@ auto
 }
 
 auto
-    FCk_Fragment_ByteAttribute_ParamsData::
+    FCk_ByteAttribute_Spec::
     Get_MaxValue() const
     -> uint8
 {
