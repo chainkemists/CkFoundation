@@ -37,7 +37,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_VoiceTalker_Params = FCk_VoiceTalker_Spec;
+    // The retained immutable residue of FCk_VoiceTalker_Spec: the only fields read after
+    // construction. _TransmitMode and _InputGain are DISSOLVED into FFragment_VoiceTalker_Tunables
+    // (seeded at Add) - keeping the authored copies here too would give each two homes, and the
+    // Spec's copy would silently go stale the moment a Set_* request lands.
+    struct CKVOICECHAT_API FFragment_VoiceTalker_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoiceTalker_Params);
+
+    private:
+        float _VadThreshold = 0.07f;
+        ECk_EnableDisable _Loopback = ECk_EnableDisable::Disable;
+        FName _PlaybackAttachSocketName = NAME_None;
+
+    public:
+        CK_PROPERTY_GET(_VadThreshold);
+        CK_PROPERTY_GET(_Loopback);
+        CK_PROPERTY_GET(_PlaybackAttachSocketName);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_VoiceTalker_Params, _VadThreshold, _Loopback,
+            _PlaybackAttachSocketName);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -106,6 +128,10 @@ namespace ck
         CK_PROPERTY_GET(_TransmitMode);
         CK_PROPERTY_GET(_InputGain);
         CK_PROPERTY_GET(_SelfMute);
+
+    public:
+        // _SelfMute is not authored - it starts Disable and only ever moves via a request.
+        CK_DEFINE_CONSTRUCTORS(FFragment_VoiceTalker_Tunables, _TransmitMode, _InputGain);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
