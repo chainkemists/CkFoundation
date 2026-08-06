@@ -84,6 +84,19 @@ auto
     return InHandle;
 }
 
+#else
+
+auto
+    UCk_Utils_LiveTune_UE::
+    Link(
+        FCk_Handle& InHandle,
+        const UObject* InTuningAsset,
+        FName InMemberName)
+    -> FCk_Handle
+{
+    return InHandle;
+}
+
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------

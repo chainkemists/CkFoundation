@@ -123,6 +123,15 @@ private:
         FPropertyChangedEvent& InEvent) -> void;
 
     auto
+    DoOnAssetsReinitialized(
+        TConstArrayView<UObject*> InHealedAssets) -> void;
+
+    auto
+    DoProcessAllLinkedMembers(
+        const UObject* InAsset,
+        EPropertyChangeType::Type InChangeType) -> void;
+
+    auto
     DoProcessMemberChange(
         const UObject* InAsset,
         FName InMemberName,
@@ -159,6 +168,7 @@ private:
     TMap<FStampKey, FInstancedStruct> _LastDispatchedValues;
     TArray<FPendingRebuild> _PendingRebuilds;
     FDelegateHandle _OnObjectPropertyChangedHandle;
+    FDelegateHandle _OnAssetsReinitializedHandle;
     entt::scoped_connection _StampDestroyConnection;
 #endif
 };

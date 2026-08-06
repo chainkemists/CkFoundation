@@ -1,6 +1,7 @@
 #include "CkLiveTune_Subsystem.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/IO/CkDeferredAssetInit_AngelScript.h"
 
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -45,6 +46,9 @@ auto
     _OnObjectPropertyChangedHandle = FCoreUObjectDelegates::OnObjectPropertyChanged.AddUObject(
         this, &UCk_LiveTune_Subsystem_UE::DoOnObjectPropertyChanged);
 
+    _OnAssetsReinitializedHandle = UCk_DeferredAssetInit_UE::Get_OnAssetsReinitialized().AddUObject(
+        this, &UCk_LiveTune_Subsystem_UE::DoOnAssetsReinitialized);
+
     auto* EcsWorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
     const auto EcsWorldSubsystemIsValid = ck::IsValid(EcsWorldSubsystem);
     CK_ENSURE_IF_NOT(EcsWorldSubsystemIsValid,
@@ -73,6 +77,7 @@ auto
 {
 #if WITH_EDITOR
     FCoreUObjectDelegates::OnObjectPropertyChanged.Remove(_OnObjectPropertyChangedHandle);
+    UCk_DeferredAssetInit_UE::Get_OnAssetsReinitialized().Remove(_OnAssetsReinitializedHandle);
     _StampDestroyConnection.release();
     _LinkedEntities.Empty();
     _LastDispatchedValues.Empty();
@@ -227,21 +232,51 @@ auto
         // FTransaction::Apply -> PostEditUndo -> PostEditChange builds FPropertyChangedEvent(nullptr).
         // Any linked member of this asset may have changed; the value-diff gate reduces that to the
         // members that actually did.
-        const auto AssetKey = FObjectKey{InObject};
-        auto AffectedMembers = TArray<FName>{};
-        for (const auto& Kvp : _LinkedEntities)
-        {
-            if (Kvp.Key._Asset == AssetKey)
-            { AffectedMembers.Add(Kvp.Key._Member); }
-        }
-
-        for (const auto& Member : AffectedMembers)
-        { DoProcessMemberChange(InObject, Member, InEvent.ChangeType); }
-
+        DoProcessAllLinkedMembers(InObject, InEvent.ChangeType);
         return;
     }
 
     DoProcessMemberChange(InObject, MemberName, InEvent.ChangeType);
+}
+
+auto
+    UCk_LiveTune_Subsystem_UE::
+    DoOnAssetsReinitialized(
+        TConstArrayView<UObject*> InHealedAssets)
+    -> void
+{
+    if (_LinkedEntities.IsEmpty())
+    { return; }
+
+    // The AS heal re-initialized these assets in place (stable identity, no per-member signal) — re-diff
+    // every linked member of each healed asset; the value-diff gate reduces that to real changes, at
+    // final-commit policy (a script save IS a commit).
+    for (auto* Asset : InHealedAssets)
+    {
+        if (ck::Is_NOT_Valid(Asset))
+        { continue; }
+
+        DoProcessAllLinkedMembers(Asset, EPropertyChangeType::ValueSet);
+    }
+}
+
+auto
+    UCk_LiveTune_Subsystem_UE::
+    DoProcessAllLinkedMembers(
+        const UObject* InAsset,
+        EPropertyChangeType::Type InChangeType)
+    -> void
+{
+    const auto AssetKey = FObjectKey{InAsset};
+    auto AffectedMembers = TArray<FName>{};
+    for (const auto& Kvp : _LinkedEntities)
+    {
+        if (Kvp.Key._Asset == AssetKey)
+        { AffectedMembers.Add(Kvp.Key._Member); }
+    }
+
+    for (const auto& Member : AffectedMembers)
+    { DoProcessMemberChange(InAsset, Member, InChangeType); }
 }
 
 auto

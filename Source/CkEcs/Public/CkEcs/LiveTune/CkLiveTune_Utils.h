@@ -30,24 +30,17 @@ public:
      *
      * The tuning asset is ANY UObject with params-struct UPROPERTYs (plain PDA, AS asset literal) — no
      * base class, no registration. The member must be a TOP-LEVEL struct UPROPERTY of the asset's class.
-     * Editor-only: outside WITH_EDITOR this is an empty inline.
+     * Editor-only behavior: outside WITH_EDITOR the body compiles to a plain pass-through (the UFUNCTION
+     * itself must exist in every build for BP/AS call sites to cook).
      */
-#if WITH_EDITOR
-    static auto
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|LiveTune",
+              DisplayName="[Ck][LiveTune] Link")
+    static FCk_Handle
     Link(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const UObject* InTuningAsset,
-        FName InMemberName) -> FCk_Handle;
-#else
-    static auto
-    Link(
-        FCk_Handle& InHandle,
-        const UObject* InTuningAsset,
-        FName InMemberName) -> FCk_Handle
-    {
-        return InHandle;
-    }
-#endif
+        FName InMemberName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

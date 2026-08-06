@@ -52,6 +52,17 @@ namespace ck_deferred_asset_init_angelscript_registrar
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_DeferredAssetInit_UE::
+    Get_OnAssetsReinitialized()
+    -> FCk_Delegate_OnAssetsReinitialized&
+{
+    static auto Delegate = FCk_Delegate_OnAssetsReinitialized{};
+    return Delegate;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #if WITH_ANGELSCRIPT_CK
 
 namespace ck_deferred_asset_init_angelscript
@@ -303,6 +314,7 @@ namespace ck_deferred_asset_init_angelscript
     auto ReRunLiteralAssetInits(bool InFullHeal) -> FPhase2Stats
     {
         auto Stats = FPhase2Stats{};
+        auto HealedAssets = TArray<UObject*>{};
 
         auto ActiveModules = FAngelscriptManager::Get().GetActiveModules();
 
@@ -375,8 +387,12 @@ namespace ck_deferred_asset_init_angelscript
                 }
 
                 ++Stats.Succeeded;
+                HealedAssets.Add(AssetInstance);
             });
         });
+
+        if (HealedAssets.Num() > 0)
+        { UCk_DeferredAssetInit_UE::Get_OnAssetsReinitialized().Broadcast(HealedAssets); }
 
         return Stats;
     }

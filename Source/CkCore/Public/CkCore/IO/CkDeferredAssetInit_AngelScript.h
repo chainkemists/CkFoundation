@@ -20,6 +20,15 @@ class CKCORE_API UCk_DeferredAssetInit_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_DeferredAssetInit_UE);
 
+    // Fired at the end of every literal-asset heal sweep that actually re-initialized something,
+    // carrying the healed instances. The AS hot reload re-inits ALL literals in place with no signal of
+    // its own — this delegate closes that gap, and its payload lets subscribers (LiveTune's reload
+    // transport) scope their diffing to exactly the healed assets.
+    DECLARE_MULTICAST_DELEGATE_OneParam(FCk_Delegate_OnAssetsReinitialized, TConstArrayView<UObject*>);
+
+    static auto
+    Get_OnAssetsReinitialized() -> FCk_Delegate_OnAssetsReinitialized&;
+
     // OnFEngineLoopInitComplete — runs Phase 1 + Phase 2 with blocking-loads now safe.
     static void ResolveAllPending();
 
