@@ -54,7 +54,38 @@ CoreRedirects (before any editor/test run):
 Asset carrying the FName: `Plugins/CkFoundation/Content/CkTimer/Utils_CkTimer_FL.uasset`
 (BP function library) — `[EDITOR-VERIFY]` recompile+resave after campaign.
 
+## P6 — identity-anchor audit (2026-08-06)
+
+30 `CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE` sites key on a `_Params` fragment (list captured via
+grep; includes Params-only anchors: 2dGridCell/Object, AnimAsset, AnimPlan, CameraLayer,
+CameraShake, Camera, CrowdAgent, EntityCollection, EntityExtension, IsmProxy, MontagePlayer,
+ObjectiveOwner, Spline, TransformInterpolation, VatProxy, Velocity). **All anchors remain VALID
+after P1–P4:** no feature's Params fragment was removed — Timer's anchor was migrated to
+`FFragment_Timer` in the same change that dissolved its Params wholesale storage; AudioTrack and
+Probe keep residue `_Params` structs present on every feature entity. RULE going forward (also
+design spec §4.5): any refactor that would remove or make conditional a feature's `_Params`
+fragment MUST move that feature's Has/Cast anchor in the same change, with a membership test.
+
 ## Log
+
+- 2026-08-06: P4 CODE COMPLETE (gate in flight — build + full suite vs the now-established
+  999-passed reference incl. 2 known pre-existing PathNetwork reds):
+  * AudioTrack: alias → 8-field residue (`_TrackName` stored RESOLVED); NEW
+    `FFragment_AudioTrack_PendingSetup` (ScriptAsset + 3 library soft-ptrs) consumed+REMOVED by
+    Setup on all three exits; Create unpacks; Setup view/signature updated.
+  * Probe: alias → 7-field residue. **DESIGN REVISION vs frozen plan:** `_MotionQuality` RETAINED
+    (the LinearCast tag is derived from quality AND non-static type — lossy for the
+    Static+LinearCast authoring combo, and `Get_MotionQuality` is public API). Dissolved:
+    `_StartingState` (already request-driven at Add), `_PersistContacts` (tag now set at Add,
+    removed from Setup). Dead Params view members dropped: `FProcessor_Probe_UpdateTransform`,
+    `FProcessor_Probe_EndPlay` (bodies verified Params-free; the `EnsureStaticNotMoved_DEBUG`
+    processor KEEPS Params — it reads MotionType in its ensure).
+  * Tween: `FProcessor_Tween_HandleYoyoDelays` dead Params view member dropped.
+  * Transform: dead `using FFragment_Transform_Params` alias deleted (zero references verified).
+  * Module docs: fragment-shape sections appended to CkAudio/CLAUDE.md + CkSpatialQuery/CLAUDE.md.
+  * External-reader audits: no reads of any dropped getter in CkGameplayDebugger/CkTests; the
+    debugger's `RegisterFlag<FFragment_AudioTrack_Params>` / `<FFragment_Probe_Params>` markers
+    still valid (residue fragments remain on every feature entity).
 
 - 2026-08-06: P3 RED CLASSIFICATION COMPLETE (A/B: all four repos stashed to P1 state, rebuilt,
   reran the failing patterns, popped, rebuilding at P3):

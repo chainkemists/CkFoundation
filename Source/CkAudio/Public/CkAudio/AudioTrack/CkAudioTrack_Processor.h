@@ -15,6 +15,7 @@ namespace ck
             FProcessor_AudioTrack_Setup,
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
+            TReadOnly<FFragment_AudioTrack_PendingSetup>,
             TReadWrite<FFragment_AudioTrack_Current>,
             FTag_AudioTrack_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -32,6 +33,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
+            const FFragment_AudioTrack_PendingSetup& InPendingSetup,
             FFragment_AudioTrack_Current& InCurrent)
             -> void;
 

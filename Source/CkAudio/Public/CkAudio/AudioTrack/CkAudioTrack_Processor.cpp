@@ -57,6 +57,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
+            const FFragment_AudioTrack_PendingSetup& InPendingSetup,
             FFragment_AudioTrack_Current& InCurrent)
             -> void
     {
@@ -66,18 +67,19 @@ namespace ck
             CK_ENSURE_IF_NOT(SoundIsAuthored, TEXT("Cannot setup AudioTrack [{}] - its Sound soft reference is unset"), InHandle)
             {
                 InHandle.Remove<MarkedDirtyBy>();
+                InHandle.Remove<FFragment_AudioTrack_PendingSetup>();
                 return;
             }
 
             auto PathsToLoad = TArray<FSoftObjectPath>{};
             PathsToLoad.Emplace(InParams.Get_Sound().ToSoftObjectPath());
 
-            if (ck::IsValid(InParams.Get_LibraryAttenuationSettings()))
-            { PathsToLoad.Emplace(InParams.Get_LibraryAttenuationSettings().ToSoftObjectPath()); }
-            if (ck::IsValid(InParams.Get_LibraryConcurrencySettings()))
-            { PathsToLoad.Emplace(InParams.Get_LibraryConcurrencySettings().ToSoftObjectPath()); }
-            if (ck::IsValid(InParams.Get_LibrarySoundClassSettings()))
-            { PathsToLoad.Emplace(InParams.Get_LibrarySoundClassSettings().ToSoftObjectPath()); }
+            if (ck::IsValid(InPendingSetup.Get_LibraryAttenuationSettings()))
+            { PathsToLoad.Emplace(InPendingSetup.Get_LibraryAttenuationSettings().ToSoftObjectPath()); }
+            if (ck::IsValid(InPendingSetup.Get_LibraryConcurrencySettings()))
+            { PathsToLoad.Emplace(InPendingSetup.Get_LibraryConcurrencySettings().ToSoftObjectPath()); }
+            if (ck::IsValid(InPendingSetup.Get_LibrarySoundClassSettings()))
+            { PathsToLoad.Emplace(InPendingSetup.Get_LibrarySoundClassSettings().ToSoftObjectPath()); }
 
             InCurrent._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
                 TEXT("AudioTrack.Setup"), PathsToLoad);
@@ -100,18 +102,23 @@ namespace ck
             InCurrent._LoadedAssets = {};
             InHandle.Try_Remove<FTag_AudioTrack_PendingAssetLoad>();
             InHandle.Remove<MarkedDirtyBy>();
+            InHandle.Remove<FFragment_AudioTrack_PendingSetup>();
             return;
         }
 
         InHandle.Try_Remove<FTag_AudioTrack_PendingAssetLoad>();
         InHandle.Remove<MarkedDirtyBy>();
 
+        // Hoist everything Setup still needs, then consume the pending-setup payload — the
+        // reference dies with the fragment.
+        const auto ScriptAsset = InPendingSetup.Get_ScriptAsset();
         const auto ResolvedLibraryAttenuation = Cast<USoundAttenuation>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_LibraryAttenuationSettings().ToSoftObjectPath()));
+            InCurrent._LoadedAssets.Get_ResolvedObject(InPendingSetup.Get_LibraryAttenuationSettings().ToSoftObjectPath()));
         const auto ResolvedLibraryConcurrency = Cast<USoundConcurrency>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_LibraryConcurrencySettings().ToSoftObjectPath()));
+            InCurrent._LoadedAssets.Get_ResolvedObject(InPendingSetup.Get_LibraryConcurrencySettings().ToSoftObjectPath()));
         const auto ResolvedLibrarySoundClass = Cast<USoundClass>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_LibrarySoundClassSettings().ToSoftObjectPath()));
+            InCurrent._LoadedAssets.Get_ResolvedObject(InPendingSetup.Get_LibrarySoundClassSettings().ToSoftObjectPath()));
+        InHandle.Remove<FFragment_AudioTrack_PendingSetup>();
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Cannot setup AudioTrack [{}] - no valid world"), InHandle)
@@ -126,8 +133,8 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Failed to create AudioComponent for AudioTrack [{}]"), InHandle)
         { return; }
 
-        if (ck::IsValid(InParams.Get_ScriptAsset()))
-        { UCk_Utils_EntityScript_UE::Add(InHandle, InParams.Get_ScriptAsset(), FInstancedStruct{}); }
+        if (ck::IsValid(ScriptAsset))
+        { UCk_Utils_EntityScript_UE::Add(InHandle, ScriptAsset, FInstancedStruct{}); }
 
         AudioComponent->SetSound(ResolvedSound);
         AudioComponent->bAutoActivate = false;
