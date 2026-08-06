@@ -131,6 +131,7 @@ namespace ck
         FCk_Handle_Minimap,
         ck::TReadOnly<FFragment_Minimap_Params>,
         ck::TReadWrite<FFragment_Minimap_Current>,
+        ck::TReadWrite<FFragment_Minimap_Scratch>,
         TExclude<FTag_Minimap_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -152,7 +153,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent) const -> void;
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch) const -> void;
 
     private:
         static auto
@@ -164,17 +166,20 @@ namespace ck
         DoProjectPois(
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent) -> void;
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch) -> void;
 
         static auto
         DoDiffAndPublishEntries(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent) -> void;
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch) -> void;
 
         static auto
         DoClearAllEntries(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent) -> void;
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -184,6 +189,7 @@ namespace ck
         FCk_Handle_Minimap,
         ck::TReadOnly<FFragment_Minimap_Params>,
         ck::TReadWrite<FFragment_Minimap_Current>,
+        ck::TReadWrite<FFragment_Minimap_Scratch>,
         CK_IF_END_PLAY>
     {
     public:
@@ -199,7 +205,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent)
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch)
             -> void;
     };
 }

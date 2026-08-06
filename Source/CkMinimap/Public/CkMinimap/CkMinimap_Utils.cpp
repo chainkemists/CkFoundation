@@ -35,6 +35,7 @@ auto
 
     InHandle.Add<ck::FFragment_Minimap_Params>(InParams);
     InHandle.Add<ck::FFragment_Minimap_Current>();
+    InHandle.Add<ck::FFragment_Minimap_Scratch>();
     InHandle.Add<ck::FTag_Minimap_NeedsSetup>();
 
     return Cast(InHandle);
