@@ -10,7 +10,7 @@
 
 #if WITH_EDITOR
 
-template <typename T_Params>
+template <typename T_Params, typename T_Fragment>
 auto
     FCk_LiveTuneHandlerRegistry::
     Register(TArgs<T_Params> InArgs)
@@ -34,7 +34,7 @@ auto
     {
         Handler.HasFragment = [](const FCk_Handle& InEntity) -> bool
         {
-            return InEntity.Has<T_Params>();
+            return InEntity.Has<T_Fragment>();
         };
     }
 
@@ -47,7 +47,7 @@ auto
         }
         else
         {
-            const auto EntityHasParams = InEntity.Has<T_Params>();
+            const auto EntityHasParams = InEntity.Has<T_Fragment>();
             CK_ENSURE_IF_NOT(EntityHasParams,
                 TEXT("LiveTune: Entity [{}] no longer carries params fragment [{}] — cannot re-apply"),
                 InEntity, T_Params::StaticStruct()->GetName())
@@ -55,7 +55,9 @@ auto
             if (NOT EntityHasParams)
             { return; }
 
-            InEntity.Replace<T_Params>(InFreshParams.Get<T_Params>());
+            // T_Fragment{params} covers both forms: a copy when the fragment IS the params type, and the
+            // wrapper's CK_DEFINE_CONSTRUCTORS when it holds them.
+            InEntity.Replace<T_Fragment>(T_Fragment{InFreshParams.Get<T_Params>()});
         }
 
         if (PostApply)

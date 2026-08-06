@@ -64,6 +64,20 @@ Per batch:
 `Request_Reconfigure` addition or a `ReAdd`/`.Capture` decision each) and should be scheduled against
 what people actually want to tune, not swept.
 
+## 2b. Check the fragment FORM first — it decides the registration's shape
+
+~69 of the ~92 features WRAP their params (`struct FFragment_X_Params { ParamsType _Params; }`) rather
+than aliasing them (`using FFragment_X_Params = FCk_Fragment_X_ParamsData`). A wrapper feature must
+name its fragment or `Link` refuses it:
+
+```cpp
+Register<FCk_Fragment_X_ParamsData, ck::FFragment_X_Params>();   // wrapper
+Register<FCk_Fragment_X_ParamsData>();                            // alias
+```
+
+`grep "using FFragment_<X>_Params" ` tells you which. Getting it wrong does not always fail to
+compile — see PROGRESS.md.
+
 ## 3. Per-feature verification — the bar before you register
 
 TRIAGE.md tells you a processor reads the params fragment. That is necessary, not sufficient. For

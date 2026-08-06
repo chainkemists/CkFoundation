@@ -134,7 +134,13 @@ public:
     // Named registration shapes — bodies live in CkLiveTune_HandlerRegistry.inl.h so they instantiate
     // where T_Params is complete; include both headers in the registering .cpp. Safe to call during
     // static init (lazy type resolution, mirroring FCk_PersistenceHandlerRegistry).
-    template <typename T_Params>
+    // T_Fragment is the component the entity actually carries. It defaults to T_Params because ~56
+    // features alias the two (`using FFragment_X_Params = FCk_Fragment_X_ParamsData`), but ~69 WRAP the
+    // params in a distinct struct — and for those, replacing T_Params would write a component the entity
+    // does not have while HasFragment reported false, so Link would refuse a correctly-registered
+    // feature. Wrapper features name the fragment explicitly:
+    //     Register<FCk_Fragment_AutoReorient_ParamsData, ck::FFragment_AutoReorient_Params>()
+    template <typename T_Params, typename T_Fragment = T_Params>
     static auto Register(TArgs<T_Params> InArgs = {}) -> void;
 
     template <typename T_Params>
@@ -164,7 +170,7 @@ private:
     static TMap<const UScriptStruct*, FHandler> _Handlers;
     static TArray<FLazyEntry> _PendingHandlers;
 #else
-    template <typename T_Params>
+    template <typename T_Params, typename T_Fragment = T_Params>
     static auto Register(TArgs<T_Params> = {}) -> void {}
 
     template <typename T_Params>
