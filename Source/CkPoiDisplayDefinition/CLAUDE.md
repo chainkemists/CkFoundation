@@ -130,10 +130,14 @@ Gate-4 consumers exclude BOTH `FTag_VisibleRange_Hidden` (owner's own) and
 3. **`Add` composes ONE definition; `Create` composes per-consumer children.** Don't call `Add` twice on
    one entity expecting two consumers — the second `Add` ensure-fails (one direct-attach definition per
    entity). For several consumer-keyed definitions on one owner, `Create` each.
-4. **Never read `_Tint` / `_SizeHint` off Params to draw with.** Params is the authored seed for those two
-   and goes stale the instant anything calls `Request_Set*`. Draw from `Get_Tint` / `Get_SizeHint`.
+4. **You cannot read `_Tint` / `_SizeHint` off Params any more — and that is deliberate.** As of the
+   spec-fragment-granularity P6 pass, `ck::FFragment_PoiDisplayDefinition_Params` is a RESIDUE
+   (`_Consumer`, `_Icon`, `_Priority`, `_OffscreenPolicy`) rather than the whole Spec: the two mutable
+   fields are seeded into Current at `Add` and live only there, so reaching for them on Params is now a
+   compile error instead of a rule you had to know. Draw from `Get_Tint` / `Get_SizeHint`.
    (`Get_Icon` reads Params by design — the icon never changes — so use the getter regardless and the
-   distinction stays invisible at the call site.)
+   distinction stays invisible at the call site.) The reflected `FCk_PoiDisplayDefinition_Spec` still
+   carries all six fields; it is the authoring payload, unpacked at `Add`.
 5. **Don't try to swap definitions to change a look.** `TryGet_..._ByConsumer` returns the first
    exact-consumer match regardless of hidden state, and projectors treat a hidden resolved definition as
    "cull the entry" rather than falling through to a sibling — so a two-definitions-one-consumer
