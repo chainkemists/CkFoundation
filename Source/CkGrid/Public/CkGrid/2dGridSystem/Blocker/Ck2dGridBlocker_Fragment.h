@@ -14,7 +14,7 @@ class UCk_Utils_2dGridBlocker_UE;
 
 namespace ck
 {
-    using FFragment_2dGridBlocker_Params = FCk_Fragment_2dGridBlocker_ParamsData;
+    using FFragment_2dGridBlocker_Params = FCk_2dGridBlocker_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

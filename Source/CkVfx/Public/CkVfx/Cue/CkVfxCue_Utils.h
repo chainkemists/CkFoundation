@@ -25,7 +25,7 @@ public:
     Add(
         FCk_Handle& InHandle,
         const UCk_VfxCue_EntityScript& InVfxCueScript,
-        const FCk_Fragment_VfxCue_ParamsData& InParams);
+        const FCk_VfxCue_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

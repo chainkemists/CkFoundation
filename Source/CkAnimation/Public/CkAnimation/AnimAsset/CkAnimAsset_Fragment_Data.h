@@ -59,12 +59,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKANIMATION_API FCk_Fragment_AnimAsset_ParamsData
+struct CKANIMATION_API FCk_AnimAsset_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_AnimAsset_ParamsData);
+    CK_GENERATED_BODY(FCk_AnimAsset_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, TitleProperty = "_ID"))
@@ -74,29 +74,29 @@ public:
     CK_PROPERTY_GET(_AnimationAsset);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AnimAsset_ParamsData, _AnimationAsset);
+    CK_DEFINE_CONSTRUCTORS(FCk_AnimAsset_Spec, _AnimationAsset);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKANIMATION_API FCk_Fragment_MultipleAnimAsset_ParamsData
+struct CKANIMATION_API FCk_MultipleAnimAsset_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleAnimAsset_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleAnimAsset_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TArray<FCk_Fragment_AnimAsset_ParamsData> _AnimAssetParams;
+    TArray<FCk_AnimAsset_Spec> _AnimAssetParams;
 
 public:
     CK_PROPERTY_GET(_AnimAssetParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleAnimAsset_ParamsData, _AnimAssetParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleAnimAsset_Spec, _AnimAssetParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

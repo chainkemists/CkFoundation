@@ -19,7 +19,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_RewindHistory_Params = FCk_Fragment_RewindHistory_ParamsData;
+    using FFragment_RewindHistory_Params = FCk_RewindHistory_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

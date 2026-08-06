@@ -18,7 +18,7 @@ auto
     UCk_Utils_Pmg_Donut_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Pmg_Donut_ParamsData& InParams)
+        const FCk_Pmg_Donut_Spec& InParams)
     -> FCk_Handle_Pmg_Donut
 {
     ck::pmg::VeryVerbose(TEXT("Adding Pmg Donut feature to Entity [{}]"), InHandle);
@@ -46,7 +46,7 @@ auto
     UCk_Utils_Pmg_Donut_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_Pmg_Donut_ParamsData& InParams)
+        const FCk_Pmg_Donut_Spec& InParams)
     -> FCk_Handle_Pmg_Donut
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

@@ -18,7 +18,7 @@ auto
     UCk_Utils_Velocity_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Velocity_ParamsData& InParams,
+        const FCk_Velocity_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_Velocity
 {
@@ -56,7 +56,7 @@ auto
     UCk_Utils_Velocity_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_Velocity_ParamsData& InParams,
+        const FCk_Velocity_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_Velocity
 {
@@ -214,7 +214,7 @@ auto
     Add(
         FCk_Handle& InVelocityOwnerEntity,
         FGameplayTag InModifierName,
-        const FCk_Fragment_VelocityModifier_ParamsData& InParams)
+        const FCk_VelocityModifier_Spec& InParams)
     -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(UCk_Utils_Velocity_UE::Has(InVelocityOwnerEntity),
@@ -300,7 +300,7 @@ auto
     Add(
         FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Fragment_BulkVelocityModifier_ParamsData& InParams)
+        const FCk_BulkVelocityModifier_Spec& InParams)
     -> FCk_Handle
 {
     auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InModifierEntity)

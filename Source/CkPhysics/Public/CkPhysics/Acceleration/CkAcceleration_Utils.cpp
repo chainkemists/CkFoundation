@@ -16,7 +16,7 @@ auto
     UCk_Utils_Acceleration_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Acceleration_ParamsData& InParams,
+        const FCk_Acceleration_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_Acceleration
 {
@@ -42,7 +42,7 @@ auto
     UCk_Utils_Acceleration_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_Acceleration_ParamsData& InParams,
+        const FCk_Acceleration_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_Acceleration
 {
@@ -183,7 +183,7 @@ auto
     Add(
         FCk_Handle& InAccelerationOwnerEntity,
         FGameplayTag InModifierName,
-        const FCk_Fragment_AccelerationModifier_ParamsData& InParams)
+        const FCk_AccelerationModifier_Spec& InParams)
     -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(UCk_Utils_Acceleration_UE::Has(InAccelerationOwnerEntity),
@@ -269,7 +269,7 @@ auto
     Add(
         FCk_Handle& InHandle,
         FGameplayTag InModifierName,
-        const FCk_Fragment_BulkAccelerationModifier_ParamsData& InParams)
+        const FCk_BulkAccelerationModifier_Spec& InParams)
     -> FCk_Handle
 {
     auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InModifierEntity)

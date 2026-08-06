@@ -72,12 +72,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MontagePlayer_FinishReason);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKANIMATION_API FCk_Fragment_MontagePlayer_ParamsData
+struct CKANIMATION_API FCk_MontagePlayer_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MontagePlayer_ParamsData);
+    CK_GENERATED_BODY(FCk_MontagePlayer_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -88,7 +88,7 @@ public:
     CK_PROPERTY_GET(_SkeletalMeshComponent);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MontagePlayer_ParamsData, _SkeletalMeshComponent);
+    CK_DEFINE_CONSTRUCTORS(FCk_MontagePlayer_Spec, _SkeletalMeshComponent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -22,7 +22,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Poi_ParamsData _PoiParams;
+    FCk_Poi_Spec _PoiParams;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -51,7 +51,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Poi",
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Poi_ParamsData _PoiParams;
+    FCk_Poi_Spec _PoiParams;
 
     // Injected by ACk_EntitySpawner_UE with the spawner actor's world transform (level-placed path); overridden by
     // FCk_Poi_SpawnParams when spawned at runtime.

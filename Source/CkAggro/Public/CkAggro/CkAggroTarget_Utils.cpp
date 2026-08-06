@@ -29,7 +29,7 @@ auto
     UCk_Utils_AggroTarget_UE::
     DoAdd_Fragments(
         FCk_Handle& InHandle,
-        const FCk_Fragment_AggroTarget_ParamsData& InParams,
+        const FCk_AggroTarget_Spec& InParams,
         const FCk_Handle& InOwner)
     -> void
 {
@@ -60,7 +60,7 @@ auto
     UCk_Utils_AggroTarget_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_AggroTarget_ParamsData& InParams)
+        const FCk_AggroTarget_Spec& InParams)
     -> FCk_Handle_AggroTarget
 {
     const auto HandleIsValid = ck::IsValid(InHandle);
@@ -79,7 +79,7 @@ auto
     UCk_Utils_AggroTarget_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_AggroTarget_ParamsData& InParams)
+        const FCk_AggroTarget_Spec& InParams)
     -> FCk_Handle_AggroTarget
 {
     const auto OwnerIsValid = ck::IsValid(InOwner);

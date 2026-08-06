@@ -9,7 +9,7 @@ namespace utils_byte_attribute
         uint8 InMinValue = 0,
         uint8 InMaxValue = 0)
     {
-        auto Params = FCk_Fragment_ByteAttribute_ParamsData(InAttributeName, InBaseValue);
+        auto Params = FCk_ByteAttribute_Spec(InAttributeName, InBaseValue);
         Params
         .Set_MinMax(InMinMax)
         .Set_MinValue(InMinValue)
@@ -120,7 +120,7 @@ IncrementRevocable(
     return InAttribute.Add_Revocable(
         FGameplayTag(),
         ECk_AttributeModifier_Operation::Add,
-        FCk_Fragment_ByteAttributeModifier_ParamsData(1, InAttributeComponent));
+        FCk_ByteAttributeModifier_Spec(1, InAttributeComponent));
 }
 
 mixin void
@@ -132,7 +132,7 @@ IncrementNotRevocable(
     { return; }
     InAttribute.Add_NotRevocable(
         ECk_AttributeModifier_Operation::Add,
-        FCk_Fragment_ByteAttributeModifier_ParamsData(1, InAttributeComponent));
+        FCk_ByteAttributeModifier_Spec(1, InAttributeComponent));
 }
 
 mixin FCk_Handle_ByteAttributeModifier
@@ -145,7 +145,7 @@ DecrementRevocable(
     return InAttribute.Add_Revocable(
         FGameplayTag(),
         ECk_AttributeModifier_Operation::Subtract,
-        FCk_Fragment_ByteAttributeModifier_ParamsData(1, InAttributeComponent));
+        FCk_ByteAttributeModifier_Spec(1, InAttributeComponent));
 }
 
 mixin void
@@ -157,5 +157,5 @@ DecrementNotRevocable(
     { return; }
     InAttribute.Add_NotRevocable(
         ECk_AttributeModifier_Operation::Subtract,
-        FCk_Fragment_ByteAttributeModifier_ParamsData(1, InAttributeComponent));
+        FCk_ByteAttributeModifier_Spec(1, InAttributeComponent));
 }

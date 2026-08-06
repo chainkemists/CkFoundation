@@ -34,12 +34,12 @@ CK_REGISTER_ATTRIBUTE_MODIFIER_HANDLE_TYPE(FCk_Handle_VectorAttributeModifier);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_VectorAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_VectorAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VectorAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_VectorAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -75,40 +75,40 @@ public:
     CK_PROPERTY_SET(_MaxValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VectorAttribute_ParamsData, _Name, _BaseValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_VectorAttribute_Spec, _Name, _BaseValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_MultipleVectorAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_MultipleVectorAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleVectorAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleVectorAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_VectorAttribute_ParamsData> _VectorAttributeParams;
+    TArray<FCk_VectorAttribute_Spec> _VectorAttributeParams;
 
 public:
     CK_PROPERTY_GET(_VectorAttributeParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleVectorAttribute_ParamsData, _VectorAttributeParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleVectorAttribute_Spec, _VectorAttributeParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_VectorAttributeModifier_ParamsData
+struct CKATTRIBUTE_API FCk_VectorAttributeModifier_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VectorAttributeModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_VectorAttributeModifier_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -128,7 +128,7 @@ public:
     CK_PROPERTY_GET(_Component);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VectorAttributeModifier_ParamsData, _ModifierDelta, _Component);
+    CK_DEFINE_CONSTRUCTORS(FCk_VectorAttributeModifier_Spec, _ModifierDelta, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

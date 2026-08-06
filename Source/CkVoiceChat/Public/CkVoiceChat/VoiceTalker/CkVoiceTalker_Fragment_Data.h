@@ -39,12 +39,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VoiceTalker);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKVOICECHAT_API FCk_Fragment_VoiceTalker_ParamsData
+struct CKVOICECHAT_API FCk_VoiceTalker_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VoiceTalker_ParamsData);
+    CK_GENERATED_BODY(FCk_VoiceTalker_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

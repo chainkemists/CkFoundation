@@ -21,12 +21,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Pmg_Donut);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPMG_API FCk_Fragment_Pmg_Donut_ParamsData
+struct CKPMG_API FCk_Pmg_Donut_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Pmg_Donut_ParamsData);
+    CK_GENERATED_BODY(FCk_Pmg_Donut_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, ClampMin = "0.0"))

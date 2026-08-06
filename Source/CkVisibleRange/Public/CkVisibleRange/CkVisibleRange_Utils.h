@@ -31,7 +31,7 @@ public:
     static FCk_Handle_VisibleRange
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_VisibleRange_ParamsData& InParams);
+        const FCk_VisibleRange_Spec& InParams);
 
 public:
     static bool

@@ -67,12 +67,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_Fragment_CameraShake_ParamsData
+struct CKCAMERA_API FCk_CameraShake_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_CameraShake_ParamsData);
+    CK_GENERATED_BODY(FCk_CameraShake_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -111,29 +111,29 @@ public:
     CK_PROPERTY_GET(_Falloff);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_CameraShake_ParamsData, _Name, _CameraShake);
+    CK_DEFINE_CONSTRUCTORS(FCk_CameraShake_Spec, _Name, _CameraShake);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_Fragment_MultipleCameraShake_ParamsData
+struct CKCAMERA_API FCk_MultipleCameraShake_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleCameraShake_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleCameraShake_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_CameraShake_ParamsData> _CameraShakeParams;
+    TArray<FCk_CameraShake_Spec> _CameraShakeParams;
 
 public:
     CK_PROPERTY_GET(_CameraShakeParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleCameraShake_ParamsData, _CameraShakeParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleCameraShake_Spec, _CameraShakeParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

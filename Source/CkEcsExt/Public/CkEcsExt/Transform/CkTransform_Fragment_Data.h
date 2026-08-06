@@ -54,12 +54,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_Transform_ParamsData
+struct CKECSEXT_API FCk_Transform_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Transform_ParamsData);
+    CK_GENERATED_BODY(FCk_Transform_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
@@ -72,12 +72,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_TransformInterpolation_ParamsData
+struct CKECSEXT_API FCk_TransformInterpolation_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_TransformInterpolation_ParamsData);
+    CK_GENERATED_BODY(FCk_TransformInterpolation_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
@@ -86,7 +86,7 @@ private:
 public:
     CK_PROPERTY_GET(_InterpolationSettings);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_TransformInterpolation_ParamsData, _InterpolationSettings);
+    CK_DEFINE_CONSTRUCTORS(FCk_TransformInterpolation_Spec, _InterpolationSettings);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

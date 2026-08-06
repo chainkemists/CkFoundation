@@ -165,17 +165,17 @@ public:
 // Aggregate owner params. Aggro is the accelerant on top of AggroTarget: _DefaultTargetParams is the template it
 // stamps onto new targets (CreateTarget); Selection/Cap/Evaluation are the owner-level concerns.
 USTRUCT(BlueprintType)
-struct CKAGGRO_API FCk_Fragment_Aggro_ParamsData
+struct CKAGGRO_API FCk_Aggro_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Aggro_ParamsData);
+    CK_GENERATED_BODY(FCk_Aggro_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_AggroTarget_ParamsData _DefaultTargetParams;
+    FCk_AggroTarget_Spec _DefaultTargetParams;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -232,7 +232,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_AggroTarget_ParamsData _TargetParams;
+    FCk_AggroTarget_Spec _TargetParams;
 
 public:
     CK_PROPERTY_GET(_TrackedEntity);

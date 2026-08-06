@@ -47,7 +47,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_RenderTarget_Params = FCk_Fragment_RenderTarget_ParamsData;
+    using FFragment_RenderTarget_Params = FCk_RenderTarget_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

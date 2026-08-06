@@ -29,7 +29,7 @@ auto
     UCk_Utils_DialogEmitter_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_DialogEmitter_ParamsData& InParams)
+        const FCk_DialogEmitter_Spec& InParams)
     -> FCk_Handle_DialogEmitter
 {
     const auto HandleValid = ck::IsValid(InHandle);

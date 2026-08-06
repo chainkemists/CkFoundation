@@ -250,12 +250,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKTWEEN_API FCk_Fragment_Tween_ParamsData
+struct CKTWEEN_API FCk_Tween_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Tween_ParamsData);
+    CK_GENERATED_BODY(FCk_Tween_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -296,7 +296,7 @@ private:
     ECk_TweenCompletionBehavior _CompletionBehavior = ECk_TweenCompletionBehavior::DoNothing;
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Tween_ParamsData, _StartValue, _EndValue, _Duration, _Easing);
+    CK_DEFINE_CONSTRUCTORS(FCk_Tween_Spec, _StartValue, _EndValue, _Duration, _Easing);
 
     CK_PROPERTY_GET(_StartValue);
     CK_PROPERTY_GET(_EndValue);

@@ -10,7 +10,7 @@ auto
     UCk_Utils_Substep_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Substep_ParamsData& InParams)
+        const FCk_Substep_Spec& InParams)
     -> FCk_Handle_Substep
 {
     InHandle.Add<ck::FFragment_Substep_Params>(InParams);
@@ -31,7 +31,7 @@ auto
     UCk_Utils_Substep_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Substep_ParamsData& InParams)
+        const FCk_Substep_Spec& InParams)
     -> FCk_Handle_Substep
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
@@ -42,7 +42,7 @@ auto
     UCk_Utils_Substep_UE::
     AddOrReplace(
         FCk_Handle& InHandle,
-        const FCk_Substep_ParamsData& InParams)
+        const FCk_Substep_Spec& InParams)
     -> FCk_Handle_Substep
 {
     auto MaybeExistingSubstepEntity = Cast(InHandle);

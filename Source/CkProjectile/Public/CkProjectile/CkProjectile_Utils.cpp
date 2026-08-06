@@ -15,7 +15,7 @@ auto
     UCk_Utils_Projectile_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Projectile_ParamsData& InParams,
+        const FCk_Projectile_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_Projectile
 {
@@ -35,7 +35,7 @@ auto
     UCk_Utils_Projectile_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_Projectile_ParamsData& InParams,
+        const FCk_Projectile_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_Projectile
 {

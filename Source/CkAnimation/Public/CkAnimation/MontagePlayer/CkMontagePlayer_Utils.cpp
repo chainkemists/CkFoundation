@@ -32,7 +32,7 @@ auto
     UCk_Utils_MontagePlayer_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MontagePlayer_ParamsData& InParams,
+        const FCk_MontagePlayer_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_MontagePlayer
 {
@@ -67,7 +67,7 @@ auto
     UCk_Utils_MontagePlayer_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_MontagePlayer_ParamsData& InParams,
+        const FCk_MontagePlayer_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_MontagePlayer
 {
@@ -96,7 +96,7 @@ auto
     // The SKMC is the one param that cannot round-trip a save/load — a live component can't be captured or
     // rebuilt from a snapshot payload — so replace the whole Params payload with one wrapping the re-created mesh.
     auto& ParamsFragment = InMontagePlayer.Get<ck::FFragment_MontagePlayer_Params>();
-    ParamsFragment._Params = FCk_Fragment_MontagePlayer_ParamsData{InSkeletalMeshComponent};
+    ParamsFragment._Params = FCk_MontagePlayer_Spec{InSkeletalMeshComponent};
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InMontagePlayer, ECk_Request_OperationResult::Succeeded);

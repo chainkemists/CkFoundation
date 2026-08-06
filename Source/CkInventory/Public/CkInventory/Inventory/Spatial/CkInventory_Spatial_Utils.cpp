@@ -34,9 +34,9 @@ auto
         FIntPoint InDimensions,
         const FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic& InCustomCanAcceptItem,
         const FCk_Delegate_Inventory_CustomCanStackItems_Dynamic& InCustomCanStackItems)
-    -> FCk_Fragment_Inventory_Spatial_ParamsData
+    -> FCk_Inventory_Spatial_Spec
 {
-    auto Params = FCk_Fragment_Inventory_Spatial_ParamsData(InName, InDimensions);
+    auto Params = FCk_Inventory_Spatial_Spec(InName, InDimensions);
     Params.Set_CustomCanAcceptItemDynamic(InCustomCanAcceptItem);
     Params.Set_CustomCanStackItemsDynamic(InCustomCanStackItems);
     return Params;
@@ -48,13 +48,13 @@ auto
     UCk_Utils_Inventory_Spatial_UE::
     Add(
         FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_Inventory_Spatial_ParamsData& InParams,
+        const FCk_Inventory_Spatial_Spec& InParams,
         ECk_Replication InReplicates,
         const UObject* InWorldContextObject)
     -> FCk_Handle_Inventory_Spatial
 {
     auto Base = ck::CreateInventory<ck::TInventoryRequestTraits<FCk_Handle_Inventory_Spatial>>(
-        InOwnerEntity, FCk_Fragment_Inventory_ParamsData{InParams}, InReplicates, InWorldContextObject);
+        InOwnerEntity, FCk_Inventory_Spec{InParams}, InReplicates, InWorldContextObject);
 
     // Without this the ECS Debugger shows NONAME; a caller's later Set_DebugName still overrides it.
     UCk_Utils_Handle_UE::Set_DebugName(Base, InParams.Get_Name().GetTagName());
@@ -68,14 +68,14 @@ auto
     UCk_Utils_Inventory_Spatial_UE::
     AddMultiple(
         FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_MultipleInventory_Spatial_ParamsData& InParams,
+        const FCk_MultipleInventory_Spatial_Spec& InParams,
         ECk_Replication InReplicates,
         const UObject* InWorldContextObject)
     -> TArray<FCk_Handle_Inventory_Spatial>
 {
     return ck::algo::Transform<TArray<FCk_Handle_Inventory_Spatial>>(
         InParams.Get_InventoryParams(),
-        [&](const FCk_Fragment_Inventory_Spatial_ParamsData& InParam)
+        [&](const FCk_Inventory_Spatial_Spec& InParam)
     {
         return Add(InOwnerEntity, InParam, InReplicates, InWorldContextObject);
     });

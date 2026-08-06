@@ -173,12 +173,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_Fragment_Camera_ParamsData
+struct CKCAMERA_API FCk_Camera_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Camera_ParamsData);
+    CK_GENERATED_BODY(FCk_Camera_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -198,7 +198,7 @@ public:
     CK_PROPERTY(_DriveControllerControlRotation);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Camera_ParamsData, _OutputComponent);
+    CK_DEFINE_CONSTRUCTORS(FCk_Camera_Spec, _OutputComponent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

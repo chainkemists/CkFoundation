@@ -479,8 +479,8 @@ FCk_Sensor_FilteringInfo::
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_Sensor_ParamsData::
-    FCk_Fragment_Sensor_ParamsData(
+FCk_Sensor_Spec::
+    FCk_Sensor_Spec(
         FGameplayTag InSensorName,
         FCk_Sensor_FilteringInfo InFilteringParams,
         FCk_Sensor_ShapeInfo InShapeParams,

@@ -42,7 +42,7 @@ auto
     UCk_Utils_VoiceChannel_UE::
     Add(
         FCk_Handle& InChannelHost,
-        const FCk_Fragment_VoiceChannel_ParamsData& InParams)
+        const FCk_VoiceChannel_Spec& InParams)
     -> FCk_Handle_VoiceChannel
 {
     const auto ChannelNameIsValid = ck::IsValid(InParams.Get_ChannelName());

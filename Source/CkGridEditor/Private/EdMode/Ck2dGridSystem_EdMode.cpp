@@ -1227,7 +1227,7 @@ void
 
 auto
     UCk_2dGridSystem_EdMode::
-    Get_SelectedSpec() const -> UCk_2dGridSystem_Spec*
+    Get_SelectedSpec() const -> UCk_2dGridSystem_AuthoringSpec*
 {
     return Resolve_SelectedGridSpawner().Spec;
 }

@@ -13,8 +13,8 @@
 
 namespace ck
 {
-    using FFragment_PathNetwork_Params = FCk_Fragment_PathNetwork_ParamsData;
-    using FFragment_PathNetworkFollower_Params = FCk_Fragment_PathNetworkFollower_ParamsData;
+    using FFragment_PathNetwork_Params = FCk_PathNetwork_Spec;
+    using FFragment_PathNetworkFollower_Params = FCk_PathNetworkFollower_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

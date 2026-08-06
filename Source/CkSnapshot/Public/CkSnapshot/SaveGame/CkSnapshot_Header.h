@@ -85,7 +85,7 @@ enum class ECk_Snapshot_V3_Provenance : uint8
     DefinitionBuilt,
 };
 
-// Reconstructed on load into a FCk_EntityReplicationDriver_ConstructionInfo.
+// Reconstructed on load into a FCk_EntityReplicationDriver_Spec.
 USTRUCT()
 struct CKSNAPSHOT_API FCk_Snapshot_V3_BuildStep
 {

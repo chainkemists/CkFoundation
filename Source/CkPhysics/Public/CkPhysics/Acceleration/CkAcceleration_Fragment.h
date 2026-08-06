@@ -39,7 +39,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Acceleration_Params);
 
     public:
-        using ParamsType = FCk_Fragment_Acceleration_ParamsData;
+        using ParamsType = FCk_Acceleration_Spec;
 
     private:
         ParamsType _Params;
@@ -82,7 +82,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_BulkAccelerationModifier_Params);
 
     public:
-        using ParamsType = FCk_Fragment_BulkAccelerationModifier_ParamsData;
+        using ParamsType = FCk_BulkAccelerationModifier_Spec;
 
     private:
         ParamsType _Params;

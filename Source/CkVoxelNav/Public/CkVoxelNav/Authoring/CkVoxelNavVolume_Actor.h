@@ -47,7 +47,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|VoxelNav|Authoring",
               DisplayName = "[Ck][VoxelNav] Build Volume Params")
-    FCk_Fragment_VoxelNavVolume_ParamsData
+    FCk_VoxelNavVolume_Spec
     Build_ParamsData() const;
 
     UFUNCTION(BlueprintPure,

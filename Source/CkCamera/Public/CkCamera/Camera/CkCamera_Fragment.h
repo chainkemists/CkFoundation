@@ -47,7 +47,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Camera_Params);
 
     public:
-        using ParamsType = FCk_Fragment_Camera_ParamsData;
+        using ParamsType = FCk_Camera_Spec;
 
     private:
         ParamsType _Params;

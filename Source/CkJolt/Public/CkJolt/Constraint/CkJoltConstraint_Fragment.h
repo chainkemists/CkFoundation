@@ -34,7 +34,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_JoltConstraint_Params = FCk_Fragment_JoltConstraint_ParamsData;
+    using FFragment_JoltConstraint_Params = FCk_JoltConstraint_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

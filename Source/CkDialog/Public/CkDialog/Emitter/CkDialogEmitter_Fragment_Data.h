@@ -59,12 +59,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_DialogEmitter)
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKDIALOG_API FCk_Fragment_DialogEmitter_ParamsData
+struct CKDIALOG_API FCk_DialogEmitter_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_DialogEmitter_ParamsData);
+    CK_GENERATED_BODY(FCk_DialogEmitter_Spec);
 
 private:
     // The emitter's identity tags; ANY-overlap with a line's filter tags makes that line visible to this emitter.
@@ -81,7 +81,7 @@ public:
     CK_PROPERTY(_DefaultSortPolicy);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_DialogEmitter_ParamsData, _EmitterTags);
+    CK_DEFINE_CONSTRUCTORS(FCk_DialogEmitter_Spec, _EmitterTags);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

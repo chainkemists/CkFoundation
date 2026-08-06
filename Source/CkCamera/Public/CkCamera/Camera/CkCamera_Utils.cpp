@@ -26,12 +26,12 @@ auto
     UCk_Utils_Camera_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Camera_ParamsData& InParams)
+        const FCk_Camera_Spec& InParams)
     -> FCk_Handle_Camera
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_OutputComponent()),
         TEXT("Camera Add on entity [{}] requires a valid output UCk_CameraComponent supplied in "
-             "FCk_Fragment_Camera_ParamsData — none was provided."), InHandle)
+             "FCk_Camera_Spec — none was provided."), InHandle)
     { return {}; }
 
     InHandle.Add<ck::FFragment_Camera_Params>(InParams);
@@ -86,7 +86,7 @@ auto
     UCk_Utils_Camera_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_Camera_ParamsData& InParams)
+        const FCk_Camera_Spec& InParams)
     -> FCk_Handle_Camera
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
@@ -383,7 +383,7 @@ namespace camera_materialize_detail
         }
 
         return MarkReconstructOnly(UCk_Utils_FloatAttribute_UE::Add(InOwner,
-            FCk_Fragment_FloatAttribute_ParamsData{InTag, InBase}, NoRep));
+            FCk_FloatAttribute_Spec{InTag, InBase}, NoRep));
     }
 
     static auto AddRange(FCk_Handle& InOwner, const FGameplayTag& InTag, const FCk_FloatRange& InRange) -> FCk_Handle_FloatAttribute
@@ -396,7 +396,7 @@ namespace camera_materialize_detail
             return MarkReconstructOnly(Existing);
         }
 
-        auto Params = FCk_Fragment_FloatAttribute_ParamsData{InTag, 0.0f};
+        auto Params = FCk_FloatAttribute_Spec{InTag, 0.0f};
         Params.Set_MinMax(ECk_MinMax::MinMax);
         Params.Set_MinValue(static_cast<float>(InRange.Get_Min()));
         Params.Set_MaxValue(static_cast<float>(InRange.Get_Max()));
@@ -413,7 +413,7 @@ namespace camera_materialize_detail
         }
 
         return MarkReconstructOnly(UCk_Utils_VectorAttribute_UE::Add(InOwner,
-            FCk_Fragment_VectorAttribute_ParamsData{InTag, InBase}, NoRep));
+            FCk_VectorAttribute_Spec{InTag, InBase}, NoRep));
     }
 
     static auto AddRotator(FCk_Handle& InOwner, const FGameplayTag& InTag, const FRotator& InBase) -> FCk_Handle_RotatorAttribute
@@ -426,7 +426,7 @@ namespace camera_materialize_detail
         }
 
         return MarkReconstructOnly(UCk_Utils_RotatorAttribute_UE::Add(InOwner,
-            FCk_Fragment_RotatorAttribute_ParamsData{InTag, InBase}, NoRep));
+            FCk_RotatorAttribute_Spec{InTag, InBase}, NoRep));
     }
 
     static auto AddInt(FCk_Handle& InOwner, const FGameplayTag& InTag, int32 InBase) -> FCk_Handle_IntegerAttribute
@@ -439,7 +439,7 @@ namespace camera_materialize_detail
         }
 
         return MarkReconstructOnly(UCk_Utils_IntegerAttribute_UE::Add(InOwner,
-            FCk_Fragment_IntegerAttribute_ParamsData{InTag, InBase}, NoRep));
+            FCk_IntegerAttribute_Spec{InTag, InBase}, NoRep));
     }
 
     static auto AddRotation(

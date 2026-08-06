@@ -2,8 +2,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_Inventory_Spatial_ParamsData::
-FCk_Fragment_Inventory_Spatial_ParamsData(
+FCk_Inventory_Spatial_Spec::
+FCk_Inventory_Spatial_Spec(
     FGameplayTag InName, FIntPoint InDimensions)
     : _Name(InName)
     , _Dimensions(InDimensions)

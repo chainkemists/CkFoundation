@@ -96,12 +96,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_JoltBody);
 
 // Config for a Jolt-simulated rigid body; every optional knob mirrors its JPH::BodyCreationSettings default.
 USTRUCT(BlueprintType)
-struct CKJOLT_API FCk_Fragment_JoltBody_ParamsData
+struct CKJOLT_API FCk_JoltBody_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_JoltBody_ParamsData);
+    CK_GENERATED_BODY(FCk_JoltBody_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -210,7 +210,7 @@ public:
     CK_PROPERTY(_PersistContacts);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_JoltBody_ParamsData, _ShapeSource);
+    CK_DEFINE_CONSTRUCTORS(FCk_JoltBody_Spec, _ShapeSource);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

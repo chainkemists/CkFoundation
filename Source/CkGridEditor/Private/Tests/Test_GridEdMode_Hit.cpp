@@ -124,7 +124,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_GridEdMode_TagEnumeration::RunTest(const FString&)
 {
-    auto* Spec = NewObject<UCk_2dGridSystem_Spec>();
+    auto* Spec = NewObject<UCk_2dGridSystem_AuthoringSpec>();
     if (! TestNotNull(TEXT("Spec allocated"), Spec))
     { return false; }
     Spec->Dimensions = FIntPoint(5, 5);

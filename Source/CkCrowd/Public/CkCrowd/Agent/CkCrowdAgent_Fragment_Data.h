@@ -111,10 +111,10 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CrowdAgent_Mode);
 // Reflected ECS params for a crowd agent (radius, height, tags, locomotion, separation, etc.).
 // See the module's Tunables Reference for the defaults table.
 USTRUCT(BlueprintType)
-struct CKCROWD_API FCk_Fragment_CrowdAgent_ParamsData
+struct CKCROWD_API FCk_CrowdAgent_Spec
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Fragment_CrowdAgent_ParamsData);
+    CK_GENERATED_BODY(FCk_CrowdAgent_Spec);
 
     friend class ck::FProcessor_CrowdAgent_Setup;
     friend class ck::FProcessor_CrowdAgent_Steering;
@@ -222,7 +222,7 @@ public:
     CK_PROPERTY(_IgnoreFlags);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_CrowdAgent_ParamsData, _Radius, _Height);
+    CK_DEFINE_CONSTRUCTORS(FCk_CrowdAgent_Spec, _Radius, _Height);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

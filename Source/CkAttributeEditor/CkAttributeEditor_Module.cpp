@@ -22,27 +22,27 @@ auto
     FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 
     PropertyModule.RegisterCustomPropertyTypeLayout(
-        FCk_Fragment_ByteAttribute_ParamsData::StaticStruct()->GetFName(),
+        FCk_ByteAttribute_Spec::StaticStruct()->GetFName(),
         FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FCk_Fragment_ByteAttribute_ParamsDataCustomization::MakeInstance));
 
     PropertyModule.RegisterCustomPropertyTypeLayout(
-        FCk_Fragment_FloatAttribute_ParamsData::StaticStruct()->GetFName(),
+        FCk_FloatAttribute_Spec::StaticStruct()->GetFName(),
         FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FCk_Fragment_FloatAttribute_ParamsDataCustomization::MakeInstance));
 
     PropertyModule.RegisterCustomPropertyTypeLayout(
-        FCk_Fragment_FloatAttributeRefill_ParamsData::StaticStruct()->GetFName(),
+        FCk_FloatAttributeRefill_Spec::StaticStruct()->GetFName(),
         FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FCk_Fragment_FloatAttributeRefill_ParamsDataCustomization::MakeInstance));
 
     PropertyModule.RegisterCustomPropertyTypeLayout(
-        FCk_Fragment_IntegerAttribute_ParamsData::StaticStruct()->GetFName(),
+        FCk_IntegerAttribute_Spec::StaticStruct()->GetFName(),
         FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FCk_Fragment_IntegerAttribute_ParamsDataCustomization::MakeInstance));
 
     PropertyModule.RegisterCustomPropertyTypeLayout(
-        FCk_Fragment_IntegerAttributeRefill_ParamsData::StaticStruct()->GetFName(),
+        FCk_IntegerAttributeRefill_Spec::StaticStruct()->GetFName(),
         FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FCk_Fragment_IntegerAttributeRefill_ParamsDataCustomization::MakeInstance));
 
     PropertyModule.RegisterCustomPropertyTypeLayout(
-        FCk_Fragment_VectorAttribute_ParamsData::StaticStruct()->GetFName(),
+        FCk_VectorAttribute_Spec::StaticStruct()->GetFName(),
         FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FCk_Fragment_VectorAttribute_ParamsDataCustomization::MakeInstance));
 }
 
@@ -56,12 +56,12 @@ auto
     {
         FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
 
-        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_Fragment_ByteAttribute_ParamsData::StaticStruct()->GetFName());
-        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_Fragment_FloatAttribute_ParamsData::StaticStruct()->GetFName());
-        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_Fragment_FloatAttributeRefill_ParamsData::StaticStruct()->GetFName());
-        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_Fragment_IntegerAttribute_ParamsData::StaticStruct()->GetFName());
-        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_Fragment_IntegerAttributeRefill_ParamsData::StaticStruct()->GetFName());
-        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_Fragment_VectorAttribute_ParamsData::StaticStruct()->GetFName());
+        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_ByteAttribute_Spec::StaticStruct()->GetFName());
+        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_FloatAttribute_Spec::StaticStruct()->GetFName());
+        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_FloatAttributeRefill_Spec::StaticStruct()->GetFName());
+        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_IntegerAttribute_Spec::StaticStruct()->GetFName());
+        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_IntegerAttributeRefill_Spec::StaticStruct()->GetFName());
+        PropertyModule.UnregisterCustomPropertyTypeLayout(FCk_VectorAttribute_Spec::StaticStruct()->GetFName());
     }
 }
 

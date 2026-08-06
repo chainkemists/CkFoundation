@@ -62,12 +62,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_LoopBehavior);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKAUDIO_API FCk_Fragment_AudioTrack_ParamsData
+struct CKAUDIO_API FCk_AudioTrack_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_AudioTrack_ParamsData);
+    CK_GENERATED_BODY(FCk_AudioTrack_Spec);
 
 private:
     // Auto-derived from sound asset name. Only set manually if you need a custom override.
@@ -145,7 +145,7 @@ public:
     CK_PROPERTY(_LibrarySoundClassSettings);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AudioTrack_ParamsData, _Sound);
+    CK_DEFINE_CONSTRUCTORS(FCk_AudioTrack_Spec, _Sound);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

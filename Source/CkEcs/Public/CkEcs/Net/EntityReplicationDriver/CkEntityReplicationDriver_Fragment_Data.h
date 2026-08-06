@@ -13,12 +13,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_EntityReplicationDriver_ConstructionInfo
+struct CKECS_API FCk_EntityReplicationDriver_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ConstructionInfo);
+    CK_GENERATED_BODY(FCk_EntityReplicationDriver_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -33,7 +33,7 @@ public:
     CK_PROPERTY_GET(_ConstructionScript);
     CK_PROPERTY(_ConstructionScriptArchetype);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo, _ConstructionScript);
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_Spec, _ConstructionScript);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ private:
     bool _IsOwningEntityDriverDependentOnThis = false;
 
     UPROPERTY()
-    TArray<FCk_EntityReplicationDriver_ConstructionInfo> _ConstructionInfos;
+    TArray<FCk_EntityReplicationDriver_Spec> _ConstructionInfos;
 
     UPROPERTY()
     FCk_EntityReplicationDriver_ReplicateObjects_Data _ReplicatedObjectsData;
@@ -182,7 +182,7 @@ struct CKECS_API FCk_Request_ReplicationDriver_ReplicateEntity : public FCk_Requ
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_EntityReplicationDriver_ConstructionInfo _ConstructionInfo;
+    FCk_EntityReplicationDriver_Spec _ConstructionInfo;
 
 public:
     CK_PROPERTY_GET(_ConstructionInfo);

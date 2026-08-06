@@ -31,7 +31,7 @@ public:
     static FCk_Handle_InteractSource
     Add(
         UPARAM(ref) FCk_Handle& InInteractSourceOwner,
-        const FCk_Fragment_InteractSource_ParamsData& InParams,
+        const FCk_InteractSource_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -40,7 +40,7 @@ public:
     static TArray<FCk_Handle_InteractSource>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InInteractSourceOwner,
-        const FCk_Fragment_MultipleInteractSource_ParamsData& InParams,
+        const FCk_MultipleInteractSource_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,

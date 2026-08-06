@@ -32,7 +32,7 @@ public:
 	static FCk_Handle_Goap_WorldState
 	Add(
 		UPARAM(ref) FCk_Handle& InOwner,
-		const FCk_Fragment_Goap_WorldState_ParamsData& InParams);
+		const FCk_Goap_WorldState_Spec& InParams);
 
 	UFUNCTION(BlueprintCallable, Category = "Ck|GOAP|WorldState",
 		DisplayName = "[Ck][GOAP|WS] Create WorldState (named child)")
@@ -40,7 +40,7 @@ public:
 	Create(
 		UPARAM(ref) FCk_Handle& InOwner,
 		FGameplayTag InName,
-		const FCk_Fragment_Goap_WorldState_ParamsData& InParams);
+		const FCk_Goap_WorldState_Spec& InParams);
 
 // --------------------------------------------------------------------------------------------------------------------
 	// Keys are auto-registered on first Set. Get returns false for both "key registered,

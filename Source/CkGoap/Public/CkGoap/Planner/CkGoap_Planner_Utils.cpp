@@ -23,7 +23,7 @@ auto
     ck::goap::internal_planner::
     DoCreateOrFindActionEntity(
         FCk_Handle_Goap_Planner& InPlanner,
-        const FCk_Fragment_Goap_ActionParamsData& InParams) -> FCk_Handle_Goap_Action
+        const FCk_Goap_Action_Spec& InParams) -> FCk_Handle_Goap_Action
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
         TEXT("Invalid ActionSet handle in DoCreateOrFindActionEntity"))
@@ -81,7 +81,7 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	DoStampTopLevelPlannerRole(
 		FCk_Handle& InPlannerEntity,
-		const FCk_Fragment_Goap_PlannerParamsData& InParams)
+		const FCk_Goap_Planner_Spec& InParams)
 	-> void
 {
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Params>(InParams);
@@ -153,7 +153,7 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	Add(
 		FCk_Handle& InOwner,
-		const FCk_Fragment_Goap_PlannerParamsData& InParams)
+		const FCk_Goap_Planner_Spec& InParams)
 	-> FCk_Handle_Goap_Planner
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
@@ -182,7 +182,7 @@ auto
 	Create(
 		FCk_Handle& InOwner,
 		FGameplayTag InPlannerTag,
-		const FCk_Fragment_Goap_PlannerParamsData& InParams)
+		const FCk_Goap_Planner_Spec& InParams)
 	-> FCk_Handle_Goap_Planner
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
@@ -680,7 +680,7 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	AddAction(
 		FCk_Handle_Goap_Planner& InPlanner,
-		const FCk_Fragment_Goap_ActionParamsData& InParams) -> FCk_Handle_Goap_Action
+		const FCk_Goap_Action_Spec& InParams) -> FCk_Handle_Goap_Action
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InPlanner),
 		TEXT("Invalid Planner handle in AddAction"))
@@ -730,7 +730,7 @@ auto
 	UCk_Utils_Goap_Planner_UE::
 	PromoteActionToPlanner(
 		FCk_Handle_Goap_Action& InAction,
-		const FCk_Fragment_Goap_PlannerParamsData& InParams) -> FCk_Handle_Goap_Planner
+		const FCk_Goap_Planner_Spec& InParams) -> FCk_Handle_Goap_Planner
 {
 	CK_ENSURE_IF_NOT(ck::IsValid(InAction),
 		TEXT("Invalid Action handle in PromoteActionToPlanner"))

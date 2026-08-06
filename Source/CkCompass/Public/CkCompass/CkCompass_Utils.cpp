@@ -19,7 +19,7 @@ auto
     UCk_Utils_Compass_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Compass_ParamsData& InParams)
+        const FCk_Compass_Spec& InParams)
     -> FCk_Handle_Compass
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle. Unable to Add the Compass feature"))
@@ -41,7 +41,7 @@ auto
     UCk_Utils_Compass_UE::
     Create(
         FCk_Handle& InLifetimeOwner,
-        const FCk_Fragment_Compass_ParamsData& InParams)
+        const FCk_Compass_Spec& InParams)
     -> FCk_Handle_Compass
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InLifetimeOwner), TEXT("Invalid Lifetime Owner supplied to Compass Create"))

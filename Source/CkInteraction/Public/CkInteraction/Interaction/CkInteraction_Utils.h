@@ -33,7 +33,7 @@ public:
     static FCk_Handle_Interaction
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Interaction_ParamsData& InParams);
+        const FCk_Interaction_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Interaction",

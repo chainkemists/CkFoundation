@@ -19,7 +19,7 @@ auto
     UCk_Utils_RewindHistory_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_RewindHistory_ParamsData& InParams)
+        const FCk_RewindHistory_Spec& InParams)
     -> FCk_Handle_RewindHistory
 {
     CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InHandle),

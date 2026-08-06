@@ -60,7 +60,7 @@ namespace ck_pathnetwork_utils
 
     auto
         Get_Tuning(
-            const FCk_Fragment_PathNetworkFollower_ParamsData& InParams)
+            const FCk_PathNetworkFollower_Spec& InParams)
         -> FCk_PathNetworkFollower_Tuning
     {
         auto Tuning = FCk_PathNetworkFollower_Tuning{};
@@ -90,7 +90,7 @@ auto
     UCk_Utils_PathNetwork_UE::
     Add(
         FCk_Handle& InOwner,
-        const FCk_Fragment_PathNetwork_ParamsData& InParams)
+        const FCk_PathNetwork_Spec& InParams)
     -> FCk_Handle_PathNetwork
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
@@ -436,7 +436,7 @@ auto
     UCk_Utils_PathNetworkFollower_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_PathNetworkFollower_ParamsData& InParams)
+        const FCk_PathNetworkFollower_Spec& InParams)
     -> FCk_Handle_PathNetworkFollower
 {
     using namespace ck_pathnetwork_utils;
@@ -478,7 +478,7 @@ auto
     UCk_Utils_PathNetworkFollower_UE::
     Try_AddOrAdoptByOwnerToken(
         FCk_Handle& InHandle,
-        const FCk_Fragment_PathNetworkFollower_ParamsData& InParams,
+        const FCk_PathNetworkFollower_Spec& InParams,
         ECk_PathNetworkFollower_OwnershipResult& OutResult)
     -> FCk_Handle_PathNetworkFollower
 {

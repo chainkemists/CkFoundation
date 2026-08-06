@@ -36,7 +36,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_ResolverDataBundle_Params);
 
     public:
-        using ParamsType = FCk_Fragment_ResolverDataBundle_ParamsData;
+        using ParamsType = FCk_ResolverDataBundle_Spec;
 
     private:
         ParamsType _Params;

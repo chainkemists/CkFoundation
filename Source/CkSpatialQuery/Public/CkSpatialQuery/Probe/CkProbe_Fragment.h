@@ -35,7 +35,7 @@ namespace ck { namespace details
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_Probe_Params = FCk_Fragment_Probe_ParamsData;
+    using FFragment_Probe_Params = FCk_Probe_Spec;
     using FFragment_Probe_DebugInfo = FCk_Probe_DebugInfo;
 
     // --------------------------------------------------------------------------------------------------------------------

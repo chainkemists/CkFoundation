@@ -194,7 +194,7 @@ private:
     FGameplayTag _ModifierName;
 
     UPROPERTY()
-    FCk_Fragment_ByteAttributeModifier_ParamsData _Params;
+    FCk_ByteAttributeModifier_Spec _Params;
 
 public:
     CK_PROPERTY_GET(_ModifierName);

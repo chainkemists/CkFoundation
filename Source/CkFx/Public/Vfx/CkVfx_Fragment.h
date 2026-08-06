@@ -20,7 +20,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Vfx_Params);
 
     public:
-        using ParamsType = FCk_Fragment_Vfx_ParamsData;
+        using ParamsType = FCk_Vfx_Spec;
 
     private:
         ParamsType _Params;

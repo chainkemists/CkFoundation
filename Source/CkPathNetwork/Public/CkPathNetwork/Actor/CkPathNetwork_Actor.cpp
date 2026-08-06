@@ -50,7 +50,7 @@ auto
         TEXT("PathNetwork actor [{}] could not resolve the TransientEntity for the current world"), this)
     { return; }
 
-    auto Params = FCk_Fragment_PathNetwork_ParamsData{Get_WorldRibbons()};
+    auto Params = FCk_PathNetwork_Spec{Get_WorldRibbons()};
     Params.Set_BuildParams(_BuildParams);
     Params.Set_UseRecommendedFollowerTuning(_UseRecommendedFollowerTuning);
     Params.Set_RecommendedFollowerTuning(_RecommendedFollowerTuning);

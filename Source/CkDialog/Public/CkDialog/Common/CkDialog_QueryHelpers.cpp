@@ -105,7 +105,7 @@ namespace ck
     auto
         FDialog_QueryHelpers::
         Get_ResolvedSortPolicy(
-            const FCk_Fragment_DialogEmitter_ParamsData& InParams,
+            const FCk_DialogEmitter_Spec& InParams,
             const FCk_Request_DialogEmitter_Query& InQuery)
         -> ECk_Dialog_QuerySortPolicy
     {

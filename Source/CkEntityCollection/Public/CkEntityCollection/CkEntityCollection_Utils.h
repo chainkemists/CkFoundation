@@ -53,7 +53,7 @@ public:
     static FCk_Handle_EntityCollection
     Add(
         UPARAM(ref) FCk_Handle& InEntityCollectionOwnerEntity,
-        const FCk_Fragment_EntityCollection_ParamsData& InParams,
+        const FCk_EntityCollection_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -62,7 +62,7 @@ public:
     static TArray<FCk_Handle_EntityCollection>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InEntityCollectionOwnerEntity,
-        const FCk_Fragment_MultipleEntityCollection_ParamsData& InParams,
+        const FCk_MultipleEntityCollection_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:

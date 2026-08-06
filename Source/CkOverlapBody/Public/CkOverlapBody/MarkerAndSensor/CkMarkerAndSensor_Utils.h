@@ -40,13 +40,13 @@ public:
     Draw_Marker_DebugLines(
         UObject* InOuter,
         const ck::FFragment_Marker_Current& InMarkerCurrent,
-        const FCk_Fragment_Marker_ParamsData& InMarkerParams) -> void;
+        const FCk_Marker_Spec& InMarkerParams) -> void;
 
     static auto
     Draw_Sensor_DebugLines(
         UObject* InOuter,
         const ck::FFragment_Sensor_Current& InSensorCurrent,
-        const FCk_Fragment_Sensor_ParamsData& InSensorParams) -> void;
+        const FCk_Sensor_Spec& InSensorParams) -> void;
 
 public:
     template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams>

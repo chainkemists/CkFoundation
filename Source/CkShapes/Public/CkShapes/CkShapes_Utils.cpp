@@ -152,22 +152,22 @@ auto
     {
         case ECk_Shape_Type::Box:
         {
-            UCk_Utils_ShapeBox_UE::Add(InHandle, FCk_Fragment_ShapeBox_ParamsData{InParams.Get_Box()});
+            UCk_Utils_ShapeBox_UE::Add(InHandle, FCk_ShapeBox_Spec{InParams.Get_Box()});
             break;
         }
         case ECk_Shape_Type::Capsule:
         {
-            UCk_Utils_ShapeCapsule_UE::Add(InHandle, FCk_Fragment_ShapeCapsule_ParamsData{InParams.Get_Capsule()});
+            UCk_Utils_ShapeCapsule_UE::Add(InHandle, FCk_ShapeCapsule_Spec{InParams.Get_Capsule()});
             break;
         }
         case ECk_Shape_Type::Cylinder:
         {
-            UCk_Utils_ShapeCylinder_UE::Add(InHandle, FCk_Fragment_ShapeCylinder_ParamsData{InParams.Get_Cylinder()});
+            UCk_Utils_ShapeCylinder_UE::Add(InHandle, FCk_ShapeCylinder_Spec{InParams.Get_Cylinder()});
             break;
         }
         case ECk_Shape_Type::Sphere:
         {
-            UCk_Utils_ShapeSphere_UE::Add(InHandle, FCk_Fragment_ShapeSphere_ParamsData{InParams.Get_Sphere()});
+            UCk_Utils_ShapeSphere_UE::Add(InHandle, FCk_ShapeSphere_Spec{InParams.Get_Sphere()});
             break;
         }
         case ECk_Shape_Type::None:

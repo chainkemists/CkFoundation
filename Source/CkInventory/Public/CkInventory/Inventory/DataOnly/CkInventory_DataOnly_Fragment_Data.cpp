@@ -2,8 +2,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_Inventory_DataOnly_ParamsData::
-FCk_Fragment_Inventory_DataOnly_ParamsData(
+FCk_Inventory_DataOnly_Spec::
+FCk_Inventory_DataOnly_Spec(
     FGameplayTag InName, TOptional<int32> InBoundLimit, ECk_Inventory_DataOnly_BoundMode InBoundMode)
     : _Name(InName)
 {

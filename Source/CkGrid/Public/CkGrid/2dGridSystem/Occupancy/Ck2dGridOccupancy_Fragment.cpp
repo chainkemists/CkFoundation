@@ -1,6 +1,6 @@
 #include "Ck2dGridOccupancy_Fragment.h"
 
-#include "CkGrid/2dGridSystem/Placement/Ck2dGridPlacement_Fragment.h" // FCk_Fragment_2dGridPlacement_ParamsData + entry/RepData types (Produce)
+#include "CkGrid/2dGridSystem/Placement/Ck2dGridPlacement_Fragment.h" // FCk_2dGridPlacement_Spec + entry/RepData types (Produce)
 #include "CkGrid/2dGridSystem/Grid/Ck2dGridSystem_Utils.h"            // UCk_Utils_2dGridSystem_UE::Has/Cast (load hydration)
 #include "Ck2dGridOccupancy_Utils.h"                                  // UCk_Utils_2dGridOccupancy_UE::Request_AddPlacement (load hydration)
 #include "CkRecord/Record/CkRecord_Utils.h"                            // TUtils_RecordOfEntities::ForEach_ValidEntry (Produce)
@@ -34,7 +34,7 @@
                     ck::RecordOf_GridPlacements_Utils::ForEach_ValidEntry(Entity,
                     [&](FCk_Handle_2dGridPlacement InPlacement)
                     {
-                        const auto& Params = InPlacement.Get<FCk_Fragment_2dGridPlacement_ParamsData>();
+                        const auto& Params = InPlacement.Get<FCk_2dGridPlacement_Spec>();
 
                         Entries.Emplace(FCk_2dGridPlacement_ReplicatedEntry(Params.Get_Occupant())
                             .Set_Anchor(Params.Get_Anchor())

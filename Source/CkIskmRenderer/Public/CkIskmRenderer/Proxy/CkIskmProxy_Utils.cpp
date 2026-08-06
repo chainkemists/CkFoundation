@@ -21,7 +21,7 @@ auto
     UCk_Utils_IskmProxy_UE::
     Add(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_IskmProxy_ParamsData& InParams)
+        const FCk_IskmProxy_Spec& InParams)
     -> FCk_Handle_IskmProxy
 {
     auto RendererHandle = InParams.Get_Renderer();
@@ -47,7 +47,7 @@ auto
     Create(
         FCk_Handle& InOwner,
         const FTransform& InInitialTransform,
-        const FCk_Fragment_IskmProxy_ParamsData& InParams)
+        const FCk_IskmProxy_Spec& InParams)
     -> FCk_Handle_IskmProxy
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

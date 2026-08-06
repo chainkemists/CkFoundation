@@ -12,7 +12,7 @@
 
 namespace ck
 {
-    using FFragment_2dGridSystem_Params = FCk_Fragment_2dGridSystem_ParamsData;
+    using FFragment_2dGridSystem_Params = FCk_2dGridSystem_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

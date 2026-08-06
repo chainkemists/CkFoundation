@@ -33,7 +33,7 @@ public:
 	static FCk_Handle_Goap_Planner
 	Add(
 		UPARAM(ref) FCk_Handle& InOwner,
-		const FCk_Fragment_Goap_PlannerParamsData& InParams);
+		const FCk_Goap_Planner_Spec& InParams);
 
 	// Spawns a NEW child Planner entity off InOwner, labelled and recorded under InPlannerTag (the
 	// entry's identity, also written into the params copy). For multiple Planners on one owner.
@@ -43,7 +43,7 @@ public:
 	Create(
 		UPARAM(ref) FCk_Handle& InOwner,
 		FGameplayTag InPlannerTag,
-		const FCk_Fragment_Goap_PlannerParamsData& InParams);
+		const FCk_Goap_Planner_Spec& InParams);
 
 	// Resolves Create-spawned child Planners only — an Add-stamped Planner is not recorded.
 	UFUNCTION(BlueprintCallable, Category = "Ck|Utils|Goap|Planner",
@@ -60,7 +60,7 @@ public:
 	static FCk_Handle_Goap_Action
 	AddAction(
 		UPARAM(ref) FCk_Handle_Goap_Planner& InPlanner,
-		const FCk_Fragment_Goap_ActionParamsData& InParams);
+		const FCk_Goap_Action_Spec& InParams);
 
 	// Adds the Planner role to an existing Action entity; both casts then succeed on it. The
 	// promoted Planner's own goal is independent of the Action role's effects.
@@ -69,7 +69,7 @@ public:
 	static FCk_Handle_Goap_Planner
 	PromoteActionToPlanner(
 		UPARAM(ref) FCk_Handle_Goap_Action& InAction,
-		const FCk_Fragment_Goap_PlannerParamsData& InParams);
+		const FCk_Goap_Planner_Spec& InParams);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -406,5 +406,5 @@ private:
 	static auto
 	DoStampTopLevelPlannerRole(
 		FCk_Handle& InPlannerEntity,
-		const FCk_Fragment_Goap_PlannerParamsData& InParams) -> void;
+		const FCk_Goap_Planner_Spec& InParams) -> void;
 };

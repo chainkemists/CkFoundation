@@ -19,12 +19,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_2dGridPlacemen
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGRID_API FCk_Fragment_2dGridPlacement_ParamsData
+struct CKGRID_API FCk_2dGridPlacement_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_2dGridPlacement_ParamsData);
+    CK_GENERATED_BODY(FCk_2dGridPlacement_Spec);
 
 private:
     // The entity that occupies the grid (the thing being placed). Owns the placement's death.
@@ -53,7 +53,7 @@ public:
     CK_PROPERTY(_Cells);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_2dGridPlacement_ParamsData, _Occupant, _Grid, _Anchor, _Cells);
+    CK_DEFINE_CONSTRUCTORS(FCk_2dGridPlacement_Spec, _Occupant, _Grid, _Anchor, _Cells);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

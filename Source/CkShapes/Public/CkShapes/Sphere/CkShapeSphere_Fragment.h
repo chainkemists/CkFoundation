@@ -13,7 +13,7 @@ class UCk_Utils_ShapeSphere_UE;
 
 namespace ck
 {
-    using FFragment_ShapeSphere_Params = FCk_Fragment_ShapeSphere_ParamsData;
+    using FFragment_ShapeSphere_Params = FCk_ShapeSphere_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

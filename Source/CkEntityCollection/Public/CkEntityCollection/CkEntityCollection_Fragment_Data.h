@@ -20,12 +20,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_EntityCollecti
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKENTITYCOLLECTION_API FCk_Fragment_EntityCollection_ParamsData
+struct CKENTITYCOLLECTION_API FCk_EntityCollection_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_EntityCollection_ParamsData);
+    CK_GENERATED_BODY(FCk_EntityCollection_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -36,29 +36,29 @@ public:
     CK_PROPERTY_GET(_Name)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_EntityCollection_ParamsData, _Name);
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityCollection_Spec, _Name);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKENTITYCOLLECTION_API FCk_Fragment_MultipleEntityCollection_ParamsData
+struct CKENTITYCOLLECTION_API FCk_MultipleEntityCollection_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleEntityCollection_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleEntityCollection_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_EntityCollection_ParamsData> _EntityCollectionParams;
+    TArray<FCk_EntityCollection_Spec> _EntityCollectionParams;
 
 public:
     CK_PROPERTY_GET(_EntityCollectionParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleEntityCollection_ParamsData, _EntityCollectionParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleEntityCollection_Spec, _EntityCollectionParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

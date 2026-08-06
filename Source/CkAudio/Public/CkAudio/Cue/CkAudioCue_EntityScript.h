@@ -61,11 +61,11 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Single Track",
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_AudioTrack_ParamsData _SingleTrack;
+    FCk_AudioTrack_Spec _SingleTrack;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Library",
               meta = (AllowPrivateAccess = true, TitleProperty = "_Sound"))
-    TArray<FCk_Fragment_AudioTrack_ParamsData> _TrackLibrary;
+    TArray<FCk_AudioTrack_Spec> _TrackLibrary;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Library",
               meta = (AllowPrivateAccess = true))

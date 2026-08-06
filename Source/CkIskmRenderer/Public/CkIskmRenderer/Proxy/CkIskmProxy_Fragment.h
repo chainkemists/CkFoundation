@@ -28,7 +28,7 @@ namespace ck
 
     // ---- params (non-reflected ECS-side alias) ----
 
-    using FFragment_IskmProxy_Params = FCk_Fragment_IskmProxy_ParamsData;
+    using FFragment_IskmProxy_Params = FCk_IskmProxy_Spec;
 
     // ---- current ----
 

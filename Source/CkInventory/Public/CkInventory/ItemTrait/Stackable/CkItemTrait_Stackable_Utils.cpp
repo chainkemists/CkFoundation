@@ -388,7 +388,7 @@ auto
     UCk_Utils_IntegerAttributeModifier_UE::Add_NotRevocable(
         Attr,
         ECk_AttributeModifier_Operation::Add,
-        FCk_Fragment_IntegerAttributeModifier_ParamsData{InDelta, ECk_MinMaxCurrent::Current});
+        FCk_IntegerAttributeModifier_Spec{InDelta, ECk_MinMaxCurrent::Current});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

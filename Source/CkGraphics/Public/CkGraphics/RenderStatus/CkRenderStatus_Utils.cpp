@@ -11,7 +11,7 @@ auto
     UCk_Utils_RenderStatus_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_RenderStatus_ParamsData& InParams)
+        const FCk_RenderStatus_Spec& InParams)
     -> FCk_Handle_RenderStatus
 {
     InHandle.Add<ck::FFragment_RenderStatus_Params>(InParams);
@@ -50,7 +50,7 @@ auto
     UCk_Utils_RenderStatus_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_RenderStatus_ParamsData& InParams)
+        const FCk_RenderStatus_Spec& InParams)
     -> FCk_Handle_RenderStatus
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

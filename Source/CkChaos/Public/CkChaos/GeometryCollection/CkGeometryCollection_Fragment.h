@@ -28,7 +28,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_GeometryCollection_Params);
 
     public:
-        using ParamsType = FCk_Fragment_GeometryCollection_ParamsData;
+        using ParamsType = FCk_GeometryCollection_Spec;
 
     private:
         ParamsType _Params;

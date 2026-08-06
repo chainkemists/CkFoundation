@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class ACk_EntitySpawner_UE;
-class UCk_2dGridSystem_Spec;
+class UCk_2dGridSystem_AuthoringSpec;
 
 class FCanvas;
 class FEditorViewportClient;
@@ -155,7 +155,7 @@ public:
     auto Get_SelectedCellTags() const -> FGameplayTagContainer;
 
     // nullptr when no grid spawner is selected.
-    auto Get_SelectedSpec() const -> UCk_2dGridSystem_Spec*;
+    auto Get_SelectedSpec() const -> UCk_2dGridSystem_AuthoringSpec*;
 
     // Bounds-checked; clears the tag-group selection. INDEX_NONE clears the blocker selection.
     auto Set_SelectedBlockerIndex(int32 InIndex) -> void;
@@ -178,7 +178,7 @@ private:
     struct FResolvedGridSelection
     {
         ACk_EntitySpawner_UE*  Spawner       = nullptr;
-        UCk_2dGridSystem_Spec* Spec          = nullptr;
+        UCk_2dGridSystem_AuthoringSpec* Spec          = nullptr;
         FTransform             GridTransform = FTransform::Identity;
 
         auto IsValid() const -> bool { return Spawner != nullptr && Spec != nullptr; }

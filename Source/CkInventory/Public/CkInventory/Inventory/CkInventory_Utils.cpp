@@ -118,7 +118,7 @@ namespace ck
     template <typename TraitsType>
     auto CreateInventory(
         FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_Inventory_ParamsData& InParams,
+        const FCk_Inventory_Spec& InParams,
         ECk_Replication InReplicates,
         const UObject* InWorldContextObject) -> FCk_Handle_Inventory
     {
@@ -172,9 +172,9 @@ namespace ck
     }
 
     template CKINVENTORY_API auto CreateInventory<TInventoryRequestTraits<FCk_Handle_Inventory_Spatial>>(
-        FCk_Handle&, const FCk_Fragment_Inventory_ParamsData&, ECk_Replication, const UObject*) -> FCk_Handle_Inventory;
+        FCk_Handle&, const FCk_Inventory_Spec&, ECk_Replication, const UObject*) -> FCk_Handle_Inventory;
     template CKINVENTORY_API auto CreateInventory<TInventoryRequestTraits<FCk_Handle_Inventory_DataOnly>>(
-        FCk_Handle&, const FCk_Fragment_Inventory_ParamsData&, ECk_Replication, const UObject*) -> FCk_Handle_Inventory;
+        FCk_Handle&, const FCk_Inventory_Spec&, ECk_Replication, const UObject*) -> FCk_Handle_Inventory;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

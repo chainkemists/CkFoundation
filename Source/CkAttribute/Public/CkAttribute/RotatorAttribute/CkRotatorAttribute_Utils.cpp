@@ -38,7 +38,7 @@ auto
     UCk_Utils_RotatorAttribute_UE::
     Add(
         FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_RotatorAttribute_ParamsData& InParams,
+        const FCk_RotatorAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_RotatorAttribute
 {
@@ -126,12 +126,12 @@ auto
     UCk_Utils_RotatorAttribute_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleRotatorAttribute_ParamsData& InParams,
+        const FCk_MultipleRotatorAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> TArray<FCk_Handle_RotatorAttribute>
 {
     return ck::algo::Transform<TArray<FCk_Handle_RotatorAttribute>>(
-        InParams.Get_RotatorAttributeParams(), [&](const FCk_Fragment_RotatorAttribute_ParamsData& InParam)
+        InParams.Get_RotatorAttributeParams(), [&](const FCk_RotatorAttribute_Spec& InParam)
     {
         return Add(InHandle, InParam, InReplicates);
     });
@@ -446,7 +446,7 @@ auto
     (
         InAttribute,
         ECk_AttributeModifier_Operation::Override,
-        FCk_Fragment_RotatorAttributeModifier_ParamsData
+        FCk_RotatorAttributeModifier_Spec
         {
             InNewBaseValue,
             InAttributeComponent
@@ -617,7 +617,7 @@ auto
         FCk_Handle_RotatorAttribute& InAttribute,
         FGameplayTag InModifierName,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_RotatorAttributeModifier_ParamsData& InParams)
+        const FCk_RotatorAttributeModifier_Spec& InParams)
     -> FCk_Handle_RotatorAttributeModifier
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddRotatorModifierRevocable);
@@ -674,7 +674,7 @@ auto
     Add_NotRevocable(
         FCk_Handle_RotatorAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_RotatorAttributeModifier_ParamsData& InParams)
+        const FCk_RotatorAttributeModifier_Spec& InParams)
     -> void
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddRotatorModifierNotRevocable);

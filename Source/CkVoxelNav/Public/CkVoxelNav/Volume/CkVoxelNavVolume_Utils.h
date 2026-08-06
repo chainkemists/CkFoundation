@@ -41,7 +41,7 @@ public:
     static FCk_Handle_VoxelNavVolume
     Add(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_VoxelNavVolume_ParamsData& InParams);
+        const FCk_VoxelNavVolume_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|VoxelNavVolume",

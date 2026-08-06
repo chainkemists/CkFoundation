@@ -34,7 +34,7 @@ public:
     static FCk_Handle_Sfx
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Sfx_ParamsData& InParams);
+        const FCk_Sfx_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sfx",
@@ -42,7 +42,7 @@ public:
     static TArray<FCk_Handle_Sfx>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleSfx_ParamsData& InParams);
+        const FCk_MultipleSfx_Spec& InParams);
 
 public:
     static bool

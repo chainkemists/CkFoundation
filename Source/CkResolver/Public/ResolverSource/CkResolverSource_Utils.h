@@ -37,7 +37,7 @@ public:
     static FCk_Handle_ResolverSource
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_ResolverSource_ParamsData& InParams);
+        const FCk_ResolverSource_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ResolverSource",
@@ -54,7 +54,7 @@ public:
     Create(
         const FCk_Handle& InOwner,
         const FTransform& InTransform,
-        const FCk_Fragment_ResolverSource_ParamsData& InParams,
+        const FCk_ResolverSource_Spec& InParams,
         ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
 
     // Transient means that the onus of destroying the ResolverSource is now on the user OR after 1 frame if InLifetime == AfterOneFrame
@@ -65,7 +65,7 @@ public:
     static FCk_Handle_ResolverSource
     Create_Transient(
         const FTransform& InTransform,
-        const FCk_Fragment_ResolverSource_ParamsData& InParams,
+        const FCk_ResolverSource_Spec& InParams,
         const UObject* InWorldContextObject,
         ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
 

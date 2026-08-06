@@ -26,12 +26,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_Planner);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Fragment_Goap_PlannerParamsData
+struct CKGOAP_API FCk_Goap_Planner_Spec
 {
 	GENERATED_BODY()
 
 public:
-	CK_GENERATED_BODY(FCk_Fragment_Goap_PlannerParamsData);
+	CK_GENERATED_BODY(FCk_Goap_Planner_Spec);
 
 private:
 	// ActionSet identity within a Goap root. Unique per root entity.
@@ -105,7 +105,7 @@ public:
 	CK_PROPERTY(_AllowPlanFailed);
 
 public:
-	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_PlannerParamsData, _PlannerTag);
+	CK_DEFINE_CONSTRUCTORS(FCk_Goap_Planner_Spec, _PlannerTag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

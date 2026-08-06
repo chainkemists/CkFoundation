@@ -37,7 +37,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_VoiceTalker_Params = FCk_Fragment_VoiceTalker_ParamsData;
+    using FFragment_VoiceTalker_Params = FCk_VoiceTalker_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

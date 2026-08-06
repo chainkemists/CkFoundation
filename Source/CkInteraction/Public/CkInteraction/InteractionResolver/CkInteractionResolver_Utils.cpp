@@ -25,7 +25,7 @@ auto
     UCk_Utils_InteractionResolver_UE::
     Add(
         FCk_Handle& InInteractSource,
-        const FCk_InteractionResolver_ParamsData& InParams,
+        const FCk_InteractionResolver_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_InteractionResolver
 {
@@ -46,7 +46,7 @@ auto
     UCk_Utils_InteractionResolver_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_InteractionResolver_ParamsData& InParams,
+        const FCk_InteractionResolver_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_InteractionResolver
 {

@@ -172,7 +172,7 @@ auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_BuildAndReplicate(
         FCk_Handle& InHandle,
-        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo)
+        const FCk_EntityReplicationDriver_Spec& InConstructionInfo)
     -> FCk_Handle
 {
     return Request_BuildAndReplicate_Multiple(InHandle, { InConstructionInfo });
@@ -184,7 +184,7 @@ auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_BuildAndReplicate_Multiple(
         FCk_Handle& InHandle,
-        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos)
+        const TArray<FCk_EntityReplicationDriver_Spec>& InConstructionInfos)
     -> FCk_Handle
 {
     return Request_TryBuildAndReplicate(InHandle, InConstructionInfos, [](FCk_Handle){});
@@ -196,11 +196,11 @@ auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_TryBuildAndReplicate(
         FCk_Handle& InHandle,
-        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
+        const FCk_EntityReplicationDriver_Spec& InConstructionInfo,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild)
     -> FCk_Handle
 {
-    return Request_TryBuildAndReplicate(InHandle, TArray<FCk_EntityReplicationDriver_ConstructionInfo>{ InConstructionInfo }, InFunc_OnCreateEntityBeforeBuild);
+    return Request_TryBuildAndReplicate(InHandle, TArray<FCk_EntityReplicationDriver_Spec>{ InConstructionInfo }, InFunc_OnCreateEntityBeforeBuild);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -209,7 +209,7 @@ auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_TryBuildAndReplicate(
         FCk_Handle& InHandle,
-        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos,
+        const TArray<FCk_EntityReplicationDriver_Spec>& InConstructionInfos,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild)
     -> FCk_Handle
 {
@@ -317,7 +317,7 @@ auto
     Request_TryReplicateExisting(
         FCk_Handle& InExistingEntity,
         FCk_Handle& InReplicatedOwner,
-        const TArray<FCk_EntityReplicationDriver_ConstructionInfo>& InConstructionInfos)
+        const TArray<FCk_EntityReplicationDriver_Spec>& InConstructionInfos)
     -> void
 {
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InReplicatedOwner))

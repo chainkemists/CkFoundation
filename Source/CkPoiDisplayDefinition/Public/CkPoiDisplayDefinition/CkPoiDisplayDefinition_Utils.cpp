@@ -21,7 +21,7 @@ auto
     UCk_Utils_PoiDisplayDefinition_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_PoiDisplayDefinition_ParamsData& InParams)
+        const FCk_PoiDisplayDefinition_Spec& InParams)
     -> FCk_Handle_PoiDisplayDefinition
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid Handle supplied to PoiDisplayDefinition Add"))
@@ -64,7 +64,7 @@ auto
     UCk_Utils_PoiDisplayDefinition_UE::
     Create(
         FCk_Handle_Poi& InPoi,
-        const FCk_Fragment_PoiDisplayDefinition_ParamsData& InParams)
+        const FCk_PoiDisplayDefinition_Spec& InParams)
     -> FCk_Handle_PoiDisplayDefinition
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InPoi),

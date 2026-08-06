@@ -240,12 +240,12 @@ public:
 // Aggregate params for one target. All optional — a default-constructed value is a valid standalone target that tracks
 // itself; _TrackedEntity names the subject (Create sets it; Add defaults it to the entity the feature is added to).
 USTRUCT(BlueprintType)
-struct CKAGGRO_API FCk_Fragment_AggroTarget_ParamsData
+struct CKAGGRO_API FCk_AggroTarget_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_AggroTarget_ParamsData);
+    CK_GENERATED_BODY(FCk_AggroTarget_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -291,7 +291,7 @@ public:
     CK_PROPERTY(_LifetimeParams);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AggroTarget_ParamsData, _TrackedEntity);
+    CK_DEFINE_CONSTRUCTORS(FCk_AggroTarget_Spec, _TrackedEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

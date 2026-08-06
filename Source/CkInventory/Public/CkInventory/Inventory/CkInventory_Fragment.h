@@ -34,7 +34,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_Inventory_Params = FCk_Fragment_Inventory_ParamsData;
+    using FFragment_Inventory_Params = FCk_Inventory_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

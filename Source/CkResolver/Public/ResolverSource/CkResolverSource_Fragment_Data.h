@@ -24,12 +24,12 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Resolver_DataBundle_Phase_FinalResults);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRESOLVER_API FCk_Fragment_ResolverSource_ParamsData
+struct CKRESOLVER_API FCk_ResolverSource_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ResolverSource_ParamsData);
+    CK_GENERATED_BODY(FCk_ResolverSource_Spec);
 
 private:
     // this list can be unique per ResolverSource but most often uses a shared set of phases
@@ -40,7 +40,7 @@ private:
 public:
     CK_PROPERTY_GET(_ResolutionPhases);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ResolverSource_ParamsData, _ResolutionPhases);
+    CK_DEFINE_CONSTRUCTORS(FCk_ResolverSource_Spec, _ResolutionPhases);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

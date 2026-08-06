@@ -18,11 +18,11 @@ auto
     UCk_Utils_ObjectiveOwner_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_ObjectiveOwner_ParamsData& InParams)
+        const FCk_ObjectiveOwner_Spec& InParams)
     -> FCk_Handle_ObjectiveOwner
 {
     auto ObjectivesCollectionHandle = UCk_Utils_EntityCollection_UE::Add(InHandle,
-        FCk_Fragment_EntityCollection_ParamsData{TAG_Label_EntityCollection_Objectives}, ECk_Replication::Replicates);
+        FCk_EntityCollection_Spec{TAG_Label_EntityCollection_Objectives}, ECk_Replication::Replicates);
 
     InHandle.Add<ck::FFragment_ObjectiveOwner_Params>(InParams);
     InHandle.Add<ck::FFragment_ObjectiveOwner_Current>(ObjectivesCollectionHandle);
@@ -35,7 +35,7 @@ auto
     UCk_Utils_ObjectiveOwner_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_ObjectiveOwner_ParamsData& InParams)
+        const FCk_ObjectiveOwner_Spec& InParams)
     -> FCk_Handle_ObjectiveOwner
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

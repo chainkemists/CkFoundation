@@ -22,7 +22,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_WorldSpaceWidget_Params = FCk_Fragment_WorldSpaceWidget_ParamsData;
+    using FFragment_WorldSpaceWidget_Params = FCk_WorldSpaceWidget_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -35,7 +35,7 @@ public:
     static FCk_Handle_Camera
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Camera_ParamsData& InParams);
+        const FCk_Camera_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Camera",
@@ -43,7 +43,7 @@ public:
     static FCk_Handle_Camera
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_Camera_ParamsData& InParams);
+        const FCk_Camera_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

@@ -48,7 +48,7 @@ auto
         TEXT("AudioCue configuration is invalid for Entity [{}]"), InHandle)
     { return ECk_EntityScript_ConstructionFlow::Finished; }
 
-    const auto AudioDirectorParams = FCk_Fragment_AudioDirector_ParamsData{}
+    const auto AudioDirectorParams = FCk_AudioDirector_Spec{}
         .Set_DefaultCrossfadeDuration(_DefaultCrossfadeDuration)
         .Set_MaxConcurrentTracks(_MaxConcurrentTracks)
         .Set_SamePriorityBehavior(_SamePriorityBehavior);
@@ -200,7 +200,7 @@ auto
     if (_TrackLibrary.IsEmpty())
     { return false; }
 
-    return _TrackLibrary.ContainsByPredicate([](const FCk_Fragment_AudioTrack_ParamsData& Track)
+    return _TrackLibrary.ContainsByPredicate([](const FCk_AudioTrack_Spec& Track)
     {
         return ck::IsValid(Track.Get_Sound()) && Track.Get_TrackName() != NAME_None;
     });
@@ -374,7 +374,7 @@ auto
     DoSelectAndPlayTrack()
     -> void
 {
-    FCk_Fragment_AudioTrack_ParamsData SelectedTrack;
+    FCk_AudioTrack_Spec SelectedTrack;
     bool TrackSelected = false;
 
     switch (_SourcePriority)

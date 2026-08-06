@@ -237,7 +237,7 @@ private:
     FGameplayTag _ModifierName;
 
     UPROPERTY()
-    FCk_Fragment_RotatorAttributeModifier_ParamsData _Params;
+    FCk_RotatorAttributeModifier_Spec _Params;
 
 public:
     CK_PROPERTY_GET(_ModifierName);

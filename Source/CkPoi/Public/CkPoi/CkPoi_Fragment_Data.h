@@ -22,12 +22,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Poi);
 // composes a CkLabel role tag. Presentation (icon/priority/offscreen), range/fade, and state all live in their own
 // modules now (CkPoiDisplayDefinition / CkVisibleRange / CkEntityTag).
 USTRUCT(BlueprintType)
-struct CKPOI_API FCk_Fragment_Poi_ParamsData
+struct CKPOI_API FCk_Poi_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Poi_ParamsData);
+    CK_GENERATED_BODY(FCk_Poi_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -44,7 +44,7 @@ public:
     CK_PROPERTY(_Label);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Poi_ParamsData, _Category);
+    CK_DEFINE_CONSTRUCTORS(FCk_Poi_Spec, _Category);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

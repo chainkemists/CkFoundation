@@ -40,7 +40,7 @@ public:
     static FCk_Handle_IntegerAttribute
     Add(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_IntegerAttribute_ParamsData& InParams,
+        const FCk_IntegerAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -49,7 +49,7 @@ public:
     static TArray<FCk_Handle_IntegerAttribute>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_MultipleIntegerAttribute_ParamsData& InParams,
+        const FCk_MultipleIntegerAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
@@ -377,7 +377,7 @@ public:
         UPARAM(ref) FCk_Handle_IntegerAttribute& InAttribute,
         FGameplayTag InModifierName,
         UPARAM(meta = (InvalidEnumValues="Override")) ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_IntegerAttributeModifier_ParamsData& InParams);
+        const FCk_IntegerAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Integer",
@@ -386,7 +386,7 @@ public:
     Add_NotRevocable(
         UPARAM(ref) FCk_Handle_IntegerAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_IntegerAttributeModifier_ParamsData& InParams);
+        const FCk_IntegerAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Integer",

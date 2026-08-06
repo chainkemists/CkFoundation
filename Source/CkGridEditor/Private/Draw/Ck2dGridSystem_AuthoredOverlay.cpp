@@ -29,7 +29,7 @@ namespace ck::grid_editor
 auto
     ck::grid_editor::
     Resolve_SpecFromSpawner(
-        const ACk_EntitySpawner_UE* InSpawner) -> UCk_2dGridSystem_Spec*
+        const ACk_EntitySpawner_UE* InSpawner) -> UCk_2dGridSystem_AuthoringSpec*
 {
     if (InSpawner == nullptr)
     { return nullptr; }
@@ -45,14 +45,14 @@ auto
     if (SpecProperty == nullptr)
     { return nullptr; }
 
-    return Cast<UCk_2dGridSystem_Spec>(
+    return Cast<UCk_2dGridSystem_AuthoringSpec>(
         SpecProperty->GetObjectPropertyValue_InContainer(GridScript));
 }
 
 auto
     ck::grid_editor::
     Is_CoveredByBlocker(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> bool
 {
     if (InSpec == nullptr)
@@ -75,7 +75,7 @@ auto
 auto
     ck::grid_editor::
     Has_AuthoredTag(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> bool
 {
     if (InSpec == nullptr)
@@ -93,7 +93,7 @@ auto
 auto
     ck::grid_editor::
     Resolve_CellColor(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> FLinearColor
 {
     if (InSpec == nullptr)
@@ -142,7 +142,7 @@ auto
 auto
     ck::grid_editor::
     Resolve_PrimaryCellTag(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> FGameplayTag
 {
     if (InSpec == nullptr)
@@ -158,7 +158,7 @@ auto
 auto
     ck::grid_editor::
     Collect_PerCellTagsWithCounts(
-        const UCk_2dGridSystem_Spec* InSpec) -> TArray<TPair<FGameplayTag, int32>>
+        const UCk_2dGridSystem_AuthoringSpec* InSpec) -> TArray<TPair<FGameplayTag, int32>>
 {
     auto Result = TArray<TPair<FGameplayTag, int32>>{};
     if (InSpec == nullptr)
@@ -185,7 +185,7 @@ auto
 auto
     ck::grid_editor::
     Get_CellsWithTag(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FGameplayTag&          InTag) -> TArray<FIntPoint>
 {
     auto Result = TArray<FIntPoint>{};
@@ -206,7 +206,7 @@ auto
     ck::grid_editor::
     Draw_GridAuthoredOverlay(
         FPrimitiveDrawInterface*       InPDI,
-        const UCk_2dGridSystem_Spec*   InSpec,
+        const UCk_2dGridSystem_AuthoringSpec*   InSpec,
         const FTransform&              InTransform,
         const FAuthoredOverlayOptions& InOptions) -> void
 {
@@ -321,7 +321,7 @@ auto
 auto
     ck::grid_editor::
     Get_CellTagText(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> FString
 {
     if (InSpec == nullptr)
@@ -342,7 +342,7 @@ auto
     Draw_GridTagLabels(
         FCanvas*                     InCanvas,
         const FSceneView*            InView,
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FTransform&            InTransform) -> void
 {
     if (InCanvas == nullptr || InView == nullptr || InSpec == nullptr)

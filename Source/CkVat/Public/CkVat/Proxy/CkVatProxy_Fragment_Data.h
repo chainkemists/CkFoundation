@@ -46,12 +46,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VatProxy);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKVAT_API FCk_Fragment_VatProxy_ParamsData
+struct CKVAT_API FCk_VatProxy_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VatProxy_ParamsData);
+    CK_GENERATED_BODY(FCk_VatProxy_Spec);
 
 private:
     // Must be loaded AND baked before Add — callers async-load soft references themselves.
@@ -84,7 +84,7 @@ public:
     CK_PROPERTY(_PhaseOffset);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VatProxy_ParamsData, _Collection);
+    CK_DEFINE_CONSTRUCTORS(FCk_VatProxy_Spec, _Collection);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

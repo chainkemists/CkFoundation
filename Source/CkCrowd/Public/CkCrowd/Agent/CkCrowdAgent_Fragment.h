@@ -16,7 +16,7 @@
 
 namespace ck
 {
-    using FFragment_CrowdAgent_Params         = FCk_Fragment_CrowdAgent_ParamsData;
+    using FFragment_CrowdAgent_Params         = FCk_CrowdAgent_Spec;
     using FFragment_CrowdAgent_PathFollow     = FCk_Fragment_CrowdAgent_PathFollowData;
     using FFragment_CrowdAgent_DesiredVelocity = FCk_Fragment_CrowdAgent_DesiredVelocityData;
     using FFragment_CrowdAgent_FaceAngle      = FCk_Fragment_CrowdAgent_FaceAngleData;

@@ -38,7 +38,7 @@ namespace ck
         friend class ::UCk_Utils_MontagePlayer_UE; // Request_RebindSkeletalMeshComponent replaces _Params post-restore
 
     public:
-        using ParamsType = FCk_Fragment_MontagePlayer_ParamsData;
+        using ParamsType = FCk_MontagePlayer_Spec;
 
     private:
         ParamsType _Params;

@@ -390,14 +390,14 @@ namespace ck
 {
     auto TInventoryRequestTraits<FCk_Handle_Inventory_Spatial>::Setup_PerShape(
         FCk_Handle_Inventory& InInventoryEntity,
-        const FCk_Fragment_Inventory_ParamsData& InParams,
+        const FCk_Inventory_Spec& InParams,
         ECk_Replication /*InReplicates*/) -> void
     {
         InInventoryEntity.Add<FTag_Inventory_Spatial>();
 
         auto TransformHandle = UCk_Utils_Transform_UE::Add(InInventoryEntity, FTransform::Identity);
 
-        const auto GridParams = FCk_Fragment_2dGridSystem_ParamsData(
+        const auto GridParams = FCk_2dGridSystem_Spec(
             InParams.Get_Dimensions(),
             FVector2D(1.0, 1.0));
 

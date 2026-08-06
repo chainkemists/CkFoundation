@@ -40,7 +40,7 @@ public:
     static FCk_Handle_Compass
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Compass_ParamsData& InParams);
+        const FCk_Compass_Spec& InParams);
 
     // Create a NEW Compass child entity under InLifetimeOwner (Compass has no record — no record wiring). The
     // observer defaults to the created child; redirect it via Request_SetObserver.
@@ -50,7 +50,7 @@ public:
     static FCk_Handle_Compass
     Create(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
-        const FCk_Fragment_Compass_ParamsData& InParams);
+        const FCk_Compass_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

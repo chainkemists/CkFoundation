@@ -26,7 +26,7 @@ public:
     static FCk_Handle_ShapeCapsule
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_ShapeCapsule_ParamsData& InParams);
+        const FCk_ShapeCapsule_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ShapeCapsule",
@@ -34,7 +34,7 @@ public:
     static FCk_Handle_ShapeCapsule
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_ShapeCapsule_ParamsData& InParams);
+        const FCk_ShapeCapsule_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ShapeCapsule",

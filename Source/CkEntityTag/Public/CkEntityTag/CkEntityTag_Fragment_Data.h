@@ -50,12 +50,12 @@ public:
 //--------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKENTITYTAG_API FCk_Fragment_EntityTag_ParamsData
+struct CKENTITYTAG_API FCk_EntityTag_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_EntityTag_ParamsData);
+    CK_GENERATED_BODY(FCk_EntityTag_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -65,7 +65,7 @@ private:
 public:
     CK_PROPERTY_GET(_Tag);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_EntityTag_ParamsData, _Tag);
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityTag_Spec, _Tag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

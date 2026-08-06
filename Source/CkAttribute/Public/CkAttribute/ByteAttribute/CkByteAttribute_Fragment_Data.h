@@ -34,12 +34,12 @@ CK_REGISTER_ATTRIBUTE_MODIFIER_HANDLE_TYPE(FCk_Handle_ByteAttributeModifier);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_ByteAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_ByteAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ByteAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_ByteAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -75,40 +75,40 @@ public:
     CK_PROPERTY_SET(_MaxValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttribute_ParamsData, _Name, _BaseValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_ByteAttribute_Spec, _Name, _BaseValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_MultipleByteAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_MultipleByteAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleByteAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleByteAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_ByteAttribute_ParamsData> _ByteAttributeParams;
+    TArray<FCk_ByteAttribute_Spec> _ByteAttributeParams;
 
 public:
     CK_PROPERTY_GET(_ByteAttributeParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleByteAttribute_ParamsData, _ByteAttributeParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleByteAttribute_Spec, _ByteAttributeParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_ByteAttributeModifier_ParamsData
+struct CKATTRIBUTE_API FCk_ByteAttributeModifier_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ByteAttributeModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_ByteAttributeModifier_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -128,7 +128,7 @@ public:
     CK_PROPERTY_GET(_Component);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttributeModifier_ParamsData, _ModifierDelta, _Component);
+    CK_DEFINE_CONSTRUCTORS(FCk_ByteAttributeModifier_Spec, _ModifierDelta, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -28,7 +28,7 @@ auto
     UCk_Utils_VectorAttribute_UE::
     Add(
         FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_VectorAttribute_ParamsData& InParams,
+        const FCk_VectorAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_VectorAttribute
 {
@@ -116,12 +116,12 @@ auto
     UCk_Utils_VectorAttribute_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleVectorAttribute_ParamsData& InParams,
+        const FCk_MultipleVectorAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> TArray<FCk_Handle_VectorAttribute>
 {
     return ck::algo::Transform<TArray<FCk_Handle_VectorAttribute>>(
-        InParams.Get_VectorAttributeParams(), [&](const FCk_Fragment_VectorAttribute_ParamsData& InParam)
+        InParams.Get_VectorAttributeParams(), [&](const FCk_VectorAttribute_Spec& InParam)
     {
         return Add(InHandle, InParam, InReplicates);
     });
@@ -436,7 +436,7 @@ auto
     (
         InAttribute,
         ECk_AttributeModifier_Operation::Override,
-        FCk_Fragment_VectorAttributeModifier_ParamsData
+        FCk_VectorAttributeModifier_Spec
         {
             InNewBaseValue,
             InAttributeComponent
@@ -607,7 +607,7 @@ auto
         FCk_Handle_VectorAttribute& InAttribute,
         FGameplayTag InModifierName,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams)
+        const FCk_VectorAttributeModifier_Spec& InParams)
     -> FCk_Handle_VectorAttributeModifier
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddVectorModifierRevocable);
@@ -664,7 +664,7 @@ auto
     Add_NotRevocable(
         FCk_Handle_VectorAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams)
+        const FCk_VectorAttributeModifier_Spec& InParams)
     -> void
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddVectorModifierNotRevocable);

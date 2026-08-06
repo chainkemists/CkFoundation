@@ -916,7 +916,7 @@ auto
                         break;
                     }
 
-                    auto ConstructionInfos = TArray<FCk_EntityReplicationDriver_ConstructionInfo>{};
+                    auto ConstructionInfos = TArray<FCk_EntityReplicationDriver_Spec>{};
                     for (const auto& Step : Entry.Get_BuildRecipe())
                     {
                         auto* ScriptClass = FSoftClassPath{Step.Get_ScriptClassPath()}.TryLoadClass<UCk_Entity_ConstructionScript_PDA>();
@@ -926,7 +926,7 @@ auto
                                 SavedId, Step.Get_ScriptClassPath());
                             continue;
                         }
-                        auto Info = FCk_EntityReplicationDriver_ConstructionInfo{ScriptClass};
+                        auto Info = FCk_EntityReplicationDriver_Spec{ScriptClass};
                         if (const auto& ArchetypePath = Step.Get_ArchetypePath(); NOT ArchetypePath.IsEmpty())
                         {
                             if (auto* Archetype = Cast<UCk_Entity_ConstructionScript_PDA>(FSoftObjectPath{ArchetypePath}.TryLoad()))

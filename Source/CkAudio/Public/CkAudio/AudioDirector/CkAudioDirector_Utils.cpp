@@ -12,7 +12,7 @@ auto
     UCk_Utils_AudioDirector_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_AudioDirector_ParamsData& InParams)
+        const FCk_AudioDirector_Spec& InParams)
         -> FCk_Handle_AudioDirector
 {
     ck::audio::VeryVerbose(TEXT("Adding AudioDirector feature to Entity [{}]"), InHandle);
@@ -30,7 +30,7 @@ auto
     UCk_Utils_AudioDirector_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_AudioDirector_ParamsData& InParams)
+        const FCk_AudioDirector_Spec& InParams)
         -> FCk_Handle_AudioDirector
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
@@ -96,7 +96,7 @@ auto
     UCk_Utils_AudioDirector_UE::
     Request_AddTrack(
         FCk_Handle_AudioDirector& InDirector,
-        const FCk_Fragment_AudioTrack_ParamsData& InTrackParams,
+        const FCk_AudioTrack_Spec& InTrackParams,
         const FCk_Delegate_Request_OnCompleted& InDelegate)
         -> FCk_Handle_AudioDirector
 {

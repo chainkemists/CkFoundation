@@ -17,12 +17,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VoxelNavOcclud
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKVOXELNAV_API FCk_Fragment_VoxelNavOccluder_ParamsData
+struct CKVOXELNAV_API FCk_VoxelNavOccluder_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VoxelNavOccluder_ParamsData);
+    CK_GENERATED_BODY(FCk_VoxelNavOccluder_Spec);
 
 private:
     /** The occluder's extents in its OWN space, half-width per axis. The feature tracks the entity's
@@ -53,7 +53,7 @@ public:
     CK_PROPERTY(_MovementThresholdUuOverride);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VoxelNavOccluder_ParamsData, _HalfExtentsUu);
+    CK_DEFINE_CONSTRUCTORS(FCk_VoxelNavOccluder_Spec, _HalfExtentsUu);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -82,11 +82,11 @@ FBox
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_VoxelNavVolume_ParamsData
+FCk_VoxelNavVolume_Spec
     ACk_VoxelNavVolume_UE::
     Build_ParamsData() const
 {
-    auto Params = FCk_Fragment_VoxelNavVolume_ParamsData{Get_WorldVolumeBounds(), _FinestCellSizeUu};
+    auto Params = FCk_VoxelNavVolume_Spec{Get_WorldVolumeBounds(), _FinestCellSizeUu};
     Params.Set_ClearanceUu(_ClearanceUu);
     Params.Set_AutoBuildOnSetup(_AutoBuildOnSetup);
     Params.Set_BuildBudgetOverride(_BuildBudgetOverride);

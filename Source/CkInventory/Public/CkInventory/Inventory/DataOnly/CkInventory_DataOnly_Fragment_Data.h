@@ -20,17 +20,17 @@
 class UCk_InventoryItem_Definition;
 
 USTRUCT(BlueprintType, meta = (HasNativeMake))
-struct CKINVENTORY_API FCk_Fragment_Inventory_DataOnly_ParamsData
+struct CKINVENTORY_API FCk_Inventory_DataOnly_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Inventory_DataOnly_ParamsData);
+    CK_GENERATED_BODY(FCk_Inventory_DataOnly_Spec);
 
 public:
-    FCk_Fragment_Inventory_DataOnly_ParamsData() = default;
+    FCk_Inventory_DataOnly_Spec() = default;
 
-    explicit FCk_Fragment_Inventory_DataOnly_ParamsData(
+    explicit FCk_Inventory_DataOnly_Spec(
         FGameplayTag InName,
         TOptional<int32> InBoundLimit = {},
         ECk_Inventory_DataOnly_BoundMode InBoundMode = ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries);
@@ -118,23 +118,23 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINVENTORY_API FCk_Fragment_MultipleInventory_DataOnly_ParamsData
+struct CKINVENTORY_API FCk_MultipleInventory_DataOnly_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleInventory_DataOnly_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleInventory_DataOnly_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_Inventory_DataOnly_ParamsData> _InventoryParams;
+    TArray<FCk_Inventory_DataOnly_Spec> _InventoryParams;
 
 public:
     CK_PROPERTY_GET(_InventoryParams);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleInventory_DataOnly_ParamsData, _InventoryParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleInventory_DataOnly_Spec, _InventoryParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

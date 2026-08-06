@@ -29,7 +29,7 @@ namespace ck
     template <typename TraitsType>
     auto CreateInventory(
         FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_Inventory_ParamsData& InParams,
+        const FCk_Inventory_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
         const UObject* InWorldContextObject = nullptr) -> FCk_Handle_Inventory;
 }

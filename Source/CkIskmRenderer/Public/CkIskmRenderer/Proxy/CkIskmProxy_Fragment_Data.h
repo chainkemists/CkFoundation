@@ -60,12 +60,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_IskmProxy);
 // ---- params ----
 
 USTRUCT(BlueprintType)
-struct CKISKMRENDERER_API FCk_Fragment_IskmProxy_ParamsData
+struct CKISKMRENDERER_API FCk_IskmProxy_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_IskmProxy_ParamsData);
+    CK_GENERATED_BODY(FCk_IskmProxy_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -107,7 +107,7 @@ public:
     CK_PROPERTY(_CustomInstanceDataDefaults);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IskmProxy_ParamsData, _Renderer, _SpawnTransform);
+    CK_DEFINE_CONSTRUCTORS(FCk_IskmProxy_Spec, _Renderer, _SpawnTransform);
 };
 
 // ---- request structs ----

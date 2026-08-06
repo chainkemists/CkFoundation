@@ -42,12 +42,12 @@ CK_REGISTER_ATTRIBUTE_REFILL_HANDLE_TYPE(FCk_Handle_IntegerAttributeRefill);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_IntegerAttributeRefill_ParamsData
+struct CKATTRIBUTE_API FCk_IntegerAttributeRefill_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_IntegerAttributeRefill_ParamsData);
+    CK_GENERATED_BODY(FCk_IntegerAttributeRefill_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -73,7 +73,7 @@ public:
     CK_PROPERTY(_StartingState);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IntegerAttributeRefill_ParamsData, _RefillAttributeName, _FillRate);
+    CK_DEFINE_CONSTRUCTORS(FCk_IntegerAttributeRefill_Spec, _RefillAttributeName, _FillRate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -98,12 +98,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_IntegerAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_IntegerAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_IntegerAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_IntegerAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -133,7 +133,7 @@ private:
     // Non-Replicated fill rate
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, EditCondition = "_EnableRefill", SaveGame))
-    FCk_Fragment_IntegerAttributeRefill_ParamsData _RefillParams;
+    FCk_IntegerAttributeRefill_Spec _RefillParams;
 
 public:
     auto Get_MinValue() const -> int32;
@@ -150,40 +150,40 @@ public:
     CK_PROPERTY_SET(_MaxValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IntegerAttribute_ParamsData, _Name, _BaseValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_IntegerAttribute_Spec, _Name, _BaseValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_MultipleIntegerAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_MultipleIntegerAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleIntegerAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleIntegerAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_IntegerAttribute_ParamsData> _IntegerAttributeParams;
+    TArray<FCk_IntegerAttribute_Spec> _IntegerAttributeParams;
 
 public:
     CK_PROPERTY_GET(_IntegerAttributeParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleIntegerAttribute_ParamsData, _IntegerAttributeParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleIntegerAttribute_Spec, _IntegerAttributeParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_IntegerAttributeModifier_ParamsData
+struct CKATTRIBUTE_API FCk_IntegerAttributeModifier_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_IntegerAttributeModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_IntegerAttributeModifier_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -203,7 +203,7 @@ public:
     CK_PROPERTY_GET(_Component);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_IntegerAttributeModifier_ParamsData, _ModifierDelta, _Component);
+    CK_DEFINE_CONSTRUCTORS(FCk_IntegerAttributeModifier_Spec, _ModifierDelta, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

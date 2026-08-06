@@ -34,12 +34,12 @@ CK_REGISTER_ATTRIBUTE_MODIFIER_HANDLE_TYPE(FCk_Handle_RotatorAttributeModifier);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_RotatorAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_RotatorAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_RotatorAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_RotatorAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -75,40 +75,40 @@ public:
     CK_PROPERTY_SET(_MaxValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RotatorAttribute_ParamsData, _Name, _BaseValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_RotatorAttribute_Spec, _Name, _BaseValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_MultipleRotatorAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_MultipleRotatorAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleRotatorAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleRotatorAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_RotatorAttribute_ParamsData> _RotatorAttributeParams;
+    TArray<FCk_RotatorAttribute_Spec> _RotatorAttributeParams;
 
 public:
     CK_PROPERTY_GET(_RotatorAttributeParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleRotatorAttribute_ParamsData, _RotatorAttributeParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleRotatorAttribute_Spec, _RotatorAttributeParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_RotatorAttributeModifier_ParamsData
+struct CKATTRIBUTE_API FCk_RotatorAttributeModifier_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_RotatorAttributeModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_RotatorAttributeModifier_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -128,7 +128,7 @@ public:
     CK_PROPERTY_GET(_Component);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RotatorAttributeModifier_ParamsData, _ModifierDelta, _Component);
+    CK_DEFINE_CONSTRUCTORS(FCk_RotatorAttributeModifier_Spec, _ModifierDelta, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

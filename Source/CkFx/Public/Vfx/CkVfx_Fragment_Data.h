@@ -168,12 +168,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFX_API FCk_Fragment_Vfx_ParamsData
+struct CKFX_API FCk_Vfx_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Vfx_ParamsData);
+    CK_GENERATED_BODY(FCk_Vfx_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -194,29 +194,29 @@ public:
     CK_PROPERTY_GET(_AttachmentSettings);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Vfx_ParamsData, _Name, _ParticleSystem);
+    CK_DEFINE_CONSTRUCTORS(FCk_Vfx_Spec, _Name, _ParticleSystem);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKFX_API FCk_Fragment_MultipleVfx_ParamsData
+struct CKFX_API FCk_MultipleVfx_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleVfx_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleVfx_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_Vfx_ParamsData> _VfxParams;
+    TArray<FCk_Vfx_Spec> _VfxParams;
 
 public:
     CK_PROPERTY_GET(_VfxParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleVfx_ParamsData, _VfxParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleVfx_Spec, _VfxParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

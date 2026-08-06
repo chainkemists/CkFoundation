@@ -31,7 +31,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Marker_Params);
 
     public:
-        using ParamsType = FCk_Fragment_Marker_ParamsData;
+        using ParamsType = FCk_Marker_Spec;
 
     private:
         ParamsType _Params;

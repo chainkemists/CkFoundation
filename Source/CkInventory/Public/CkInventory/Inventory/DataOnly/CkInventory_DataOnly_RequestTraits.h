@@ -32,6 +32,6 @@ namespace ck
             typename Transfer_ToSpatial::Entry,
             typename Transfer_ToDataOnly::Entry>;
 
-        static auto Setup_PerShape(FCk_Handle_Inventory&, const FCk_Fragment_Inventory_ParamsData&, ECk_Replication) -> void;
+        static auto Setup_PerShape(FCk_Handle_Inventory&, const FCk_Inventory_Spec&, ECk_Replication) -> void;
     };
 }

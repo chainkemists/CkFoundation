@@ -33,7 +33,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_AnimPlan_Params);
 
     public:
-        using ParamsType = FCk_Fragment_AnimPlan_ParamsData;
+        using ParamsType = FCk_AnimPlan_Spec;
 
     private:
         ParamsType _Params;

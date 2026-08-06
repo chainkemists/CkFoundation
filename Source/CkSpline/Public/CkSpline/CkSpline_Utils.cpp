@@ -21,9 +21,9 @@ namespace ck_spline_detail
 {
     auto DoMakeParamsFromComponent(
         const USplineComponent* InSourceSpline)
-        -> FCk_Fragment_Spline_ParamsData
+        -> FCk_Spline_Spec
     {
-        auto Params = FCk_Fragment_Spline_ParamsData{InSourceSpline->GetSplineCurves(), InSourceSpline->IsClosedLoop()};
+        auto Params = FCk_Spline_Spec{InSourceSpline->GetSplineCurves(), InSourceSpline->IsClosedLoop()};
         Params.Set_DefaultUpVector(InSourceSpline->GetDefaultUpVector(ESplineCoordinateSpace::Local));
         return Params;
     }
@@ -127,7 +127,7 @@ auto
     UCk_Utils_Spline_UE::
     Add(
         FCk_Handle_Transform& InEntity,
-        const FCk_Fragment_Spline_ParamsData& InParams)
+        const FCk_Spline_Spec& InParams)
     -> FCk_Handle_Spline
 {
     CK_ENSURE_IF_NOT(InParams.Get_Curves().GetSplineLength() > 0.0f,
@@ -159,7 +159,7 @@ auto
     UCk_Utils_Spline_UE::
     Create(
         const FCk_Handle_Transform& InOwner,
-        const FCk_Fragment_Spline_ParamsData& InParams)
+        const FCk_Spline_Spec& InParams)
     -> FCk_Handle_Spline
 {
     auto SplineEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
@@ -194,7 +194,7 @@ auto
     Make_Params_FromPoints(
         const TArray<FVector>& InLocalPoints,
         bool InClosedLoop)
-    -> FCk_Fragment_Spline_ParamsData
+    -> FCk_Spline_Spec
 {
     CK_ENSURE_IF_NOT(InLocalPoints.Num() > 1,
         TEXT("Cannot make Spline params from [{}] point(s) - at least 2 are required."), InLocalPoints.Num())

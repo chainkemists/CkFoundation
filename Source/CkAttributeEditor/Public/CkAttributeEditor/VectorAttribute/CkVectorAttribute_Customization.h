@@ -8,7 +8,7 @@ class IDetailChildrenBuilder;
 class IPropertyHandle;
 
 /**
- * Customization for FCk_Fragment_VectorAttribute_ParamsData
+ * Customization for FCk_VectorAttribute_Spec
  * Shows the Name gameplay tag in the header row for at-a-glance identification.
  * Children are rendered using default property widgets since FVector already has good built-in editing.
  */

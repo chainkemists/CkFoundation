@@ -21,9 +21,9 @@ auto
         FGameplayTag InName,
         const FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic& InCustomCanAcceptItem,
         const FCk_Delegate_Inventory_CustomCanStackItems_Dynamic& InCustomCanStackItems)
-    -> FCk_Fragment_Inventory_DataOnly_ParamsData
+    -> FCk_Inventory_DataOnly_Spec
 {
-    auto Params = FCk_Fragment_Inventory_DataOnly_ParamsData(InName);
+    auto Params = FCk_Inventory_DataOnly_Spec(InName);
     Params.Set_CustomCanAcceptItemDynamic(InCustomCanAcceptItem);
     Params.Set_CustomCanStackItemsDynamic(InCustomCanStackItems);
     return Params;
@@ -38,9 +38,9 @@ auto
         int32 InBoundLimit,
         const FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic& InCustomCanAcceptItem,
         const FCk_Delegate_Inventory_CustomCanStackItems_Dynamic& InCustomCanStackItems)
-    -> FCk_Fragment_Inventory_DataOnly_ParamsData
+    -> FCk_Inventory_DataOnly_Spec
 {
-    auto Params = FCk_Fragment_Inventory_DataOnly_ParamsData(
+    auto Params = FCk_Inventory_DataOnly_Spec(
         InName, InBoundLimit, ECk_Inventory_DataOnly_BoundMode::BoundedByUniqueEntries);
     Params.Set_CustomCanAcceptItemDynamic(InCustomCanAcceptItem);
     Params.Set_CustomCanStackItemsDynamic(InCustomCanStackItems);
@@ -56,9 +56,9 @@ auto
         int32 InBoundLimit,
         const FCk_Delegate_Inventory_CustomCanAcceptItem_Dynamic& InCustomCanAcceptItem,
         const FCk_Delegate_Inventory_CustomCanStackItems_Dynamic& InCustomCanStackItems)
-    -> FCk_Fragment_Inventory_DataOnly_ParamsData
+    -> FCk_Inventory_DataOnly_Spec
 {
-    auto Params = FCk_Fragment_Inventory_DataOnly_ParamsData(
+    auto Params = FCk_Inventory_DataOnly_Spec(
         InName, InBoundLimit, ECk_Inventory_DataOnly_BoundMode::BoundedByTotalUnits);
     Params.Set_CustomCanAcceptItemDynamic(InCustomCanAcceptItem);
     Params.Set_CustomCanStackItemsDynamic(InCustomCanStackItems);
@@ -71,13 +71,13 @@ auto
     UCk_Utils_Inventory_DataOnly_UE::
     Add(
         FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_Inventory_DataOnly_ParamsData& InParams,
+        const FCk_Inventory_DataOnly_Spec& InParams,
         ECk_Replication InReplicates,
         const UObject* InWorldContextObject)
     -> FCk_Handle_Inventory_DataOnly
 {
     auto Base = ck::CreateInventory<ck::TInventoryRequestTraits<FCk_Handle_Inventory_DataOnly>>(
-        InOwnerEntity, FCk_Fragment_Inventory_ParamsData{InParams}, InReplicates, InWorldContextObject);
+        InOwnerEntity, FCk_Inventory_Spec{InParams}, InReplicates, InWorldContextObject);
 
     // Without this the ECS Debugger shows NONAME; a caller's later Set_DebugName still overrides it.
     UCk_Utils_Handle_UE::Set_DebugName(Base, InParams.Get_Name().GetTagName());
@@ -91,14 +91,14 @@ auto
     UCk_Utils_Inventory_DataOnly_UE::
     AddMultiple(
         FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_MultipleInventory_DataOnly_ParamsData& InParams,
+        const FCk_MultipleInventory_DataOnly_Spec& InParams,
         ECk_Replication InReplicates,
         const UObject* InWorldContextObject)
     -> TArray<FCk_Handle_Inventory_DataOnly>
 {
     return ck::algo::Transform<TArray<FCk_Handle_Inventory_DataOnly>>(
         InParams.Get_InventoryParams(),
-        [&](const FCk_Fragment_Inventory_DataOnly_ParamsData& InParam)
+        [&](const FCk_Inventory_DataOnly_Spec& InParam)
     {
         return Add(InOwnerEntity, InParam, InReplicates, InWorldContextObject);
     });

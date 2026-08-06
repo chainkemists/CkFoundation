@@ -62,12 +62,12 @@ namespace ck
 
         // The +SeparationLookahead reach gives steering time to nudge before agents actually touch.
         const auto CylinderDimensions = FCk_ShapeCylinder_Dimensions{HalfHeight, ProbeRadius};
-        const auto CylinderParams = FCk_Fragment_ShapeCylinder_ParamsData{CylinderDimensions};
+        const auto CylinderParams = FCk_ShapeCylinder_Spec{CylinderDimensions};
         UCk_Utils_ShapeCylinder_UE::Add(ProbeChildEntity, CylinderParams);
 
         // Name AND filter are TAG_Crowd_Agent so any two crowd probes mutually overlap; Kinematic
         // so Jolt lets the probe move every frame without the static-not-moved ensure firing.
-        auto ProbeParams = FCk_Fragment_Probe_ParamsData{TAG_Crowd_Agent};
+        auto ProbeParams = FCk_Probe_Spec{TAG_Crowd_Agent};
         ProbeParams.Set_Filter(FGameplayTagContainer{TAG_Crowd_Agent});
         ProbeParams.Set_ContextOverlapPolicy(ECk_Probe_ContextOverlapPolicy::Any);
         ProbeParams.Set_MotionType(ECk_MotionType::Kinematic);

@@ -34,7 +34,7 @@ public:
     static FCk_Handle_PathNetwork
     Add(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_PathNetwork_ParamsData& InParams);
+        const FCk_PathNetwork_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|PathNetwork",
@@ -144,7 +144,7 @@ public:
     static FCk_Handle_PathNetworkFollower
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_PathNetworkFollower_ParamsData& InParams);
+        const FCk_PathNetworkFollower_Spec& InParams);
 
     // Adds the feature when absent, or reacquires the existing feature when its
     // cooperative owner token matches. A foreign or unowned feature is never
@@ -156,7 +156,7 @@ public:
     static FCk_Handle_PathNetworkFollower
     Try_AddOrAdoptByOwnerToken(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_PathNetworkFollower_ParamsData& InParams,
+        const FCk_PathNetworkFollower_Spec& InParams,
         ECk_PathNetworkFollower_OwnershipResult& OutResult);
 
     UFUNCTION(BlueprintPure,

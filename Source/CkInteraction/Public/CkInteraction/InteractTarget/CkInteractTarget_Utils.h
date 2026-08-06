@@ -32,7 +32,7 @@ public:
               Category = "Ck|Utils|InteractTarget",
               DisplayName="[Ck][InteractTarget] Resolve Setup Data",
               meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject", NotInAngelscript))
-    static FCk_Fragment_InteractTarget_ParamsData
+    static FCk_InteractTarget_Spec
     ResolveSetupData(
         const FCk_InteractTarget_SetupData& InSetupData,
         const UObject* InWorldContextObject = nullptr);
@@ -44,7 +44,7 @@ public:
     static FCk_Handle_InteractTarget
     Add(
         UPARAM(ref) FCk_Handle& InInteractTargetOwner,
-        const FCk_Fragment_InteractTarget_ParamsData& InParams,
+        const FCk_InteractTarget_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
         const UObject* InWorldContextObject = nullptr);
 
@@ -66,7 +66,7 @@ public:
     static TArray<FCk_Handle_InteractTarget>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InInteractTargetOwner,
-        const FCk_Fragment_MultipleInteractTarget_ParamsData& InParams,
+        const FCk_MultipleInteractTarget_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates,
         const UObject* InWorldContextObject = nullptr);
 
@@ -85,7 +85,7 @@ public:
               Category = "Ck|Utils|InteractTarget",
               DisplayName="[Ck][InteractTarget] Resolve Multiple Setup Data",
               meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject", NotInAngelscript))
-    static FCk_Fragment_MultipleInteractTarget_ParamsData
+    static FCk_MultipleInteractTarget_Spec
     ResolveMultipleSetupData(
         const FCk_MultipleInteractTarget_SetupData& InSetupData,
         const UObject* InWorldContextObject = nullptr);

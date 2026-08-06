@@ -17,7 +17,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_AnimAsset_Params);
 
     public:
-        using ParamsType = FCk_Fragment_AnimAsset_ParamsData;
+        using ParamsType = FCk_AnimAsset_Spec;
 
     private:
         ParamsType _Params;

@@ -49,7 +49,7 @@ auto
     UCk_Utils_Aggro_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Aggro_ParamsData& InParams)
+        const FCk_Aggro_Spec& InParams)
     -> FCk_Handle_Aggro
 {
     const auto HasTransform = UCk_Utils_Transform_UE::Has(InHandle);
@@ -95,7 +95,7 @@ auto
     UCk_Utils_Aggro_UE::
     DoCreateTarget(
         FCk_Handle_Aggro& InOwner,
-        const FCk_Fragment_AggroTarget_ParamsData& InParams)
+        const FCk_AggroTarget_Spec& InParams)
     -> FCk_Handle_AggroTarget
 {
     const auto TrackedEntity  = InParams.Get_TrackedEntity();

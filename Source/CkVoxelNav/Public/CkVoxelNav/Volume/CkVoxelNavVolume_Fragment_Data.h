@@ -21,12 +21,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VoxelNavVolume
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKVOXELNAV_API FCk_Fragment_VoxelNavVolume_ParamsData
+struct CKVOXELNAV_API FCk_VoxelNavVolume_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VoxelNavVolume_ParamsData);
+    CK_GENERATED_BODY(FCk_VoxelNavVolume_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -83,7 +83,7 @@ public:
     CK_PROPERTY(_MaxChunkSizeUuOverride);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VoxelNavVolume_ParamsData, _VolumeBounds, _FinestCellSizeUu);
+    CK_DEFINE_CONSTRUCTORS(FCk_VoxelNavVolume_Spec, _VolumeBounds, _FinestCellSizeUu);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

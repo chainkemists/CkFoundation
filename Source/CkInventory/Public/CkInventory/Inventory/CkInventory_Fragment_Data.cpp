@@ -12,7 +12,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_IntegerAttribute_InventoryBoundMax, TEXT("IntegerAttr
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_DataOnly_ParamsData& InDataOnlyParams)
+FCk_Inventory_Spec::FCk_Inventory_Spec(const FCk_Inventory_DataOnly_Spec& InDataOnlyParams)
     : _Name(InDataOnlyParams.Get_Name())
     , _InventoryType(ECk_InventoryType::DataOnly)
     , _BoundMode(InDataOnlyParams.Get_BoundMode())
@@ -32,7 +32,7 @@ FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(const FCk_F
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Fragment_Inventory_ParamsData::FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_Spatial_ParamsData& InSpatialParams)
+FCk_Inventory_Spec::FCk_Inventory_Spec(const FCk_Inventory_Spatial_Spec& InSpatialParams)
     : _Name(InSpatialParams.Get_Name())
     , _InventoryType(ECk_InventoryType::Spatial)
     , _Dimensions(InSpatialParams.Get_Dimensions())

@@ -28,7 +28,7 @@ public:
     static FCk_Handle_2dGridBlocker
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_2dGridBlocker_ParamsData& InParams);
+        const FCk_2dGridBlocker_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|2dGridBlocker",
@@ -36,7 +36,7 @@ public:
     static FCk_Handle_2dGridBlocker
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_2dGridBlocker_ParamsData& InParams);
+        const FCk_2dGridBlocker_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|2dGridBlocker",

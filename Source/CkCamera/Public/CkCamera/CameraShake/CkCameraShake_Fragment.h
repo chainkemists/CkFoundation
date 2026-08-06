@@ -21,7 +21,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_CameraShake_Params);
 
     public:
-        using ParamsType = FCk_Fragment_CameraShake_ParamsData;
+        using ParamsType = FCk_CameraShake_Spec;
 
     private:
         ParamsType _Params;

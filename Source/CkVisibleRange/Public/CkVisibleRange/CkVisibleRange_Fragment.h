@@ -27,7 +27,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_VisibleRange_Params = FCk_Fragment_VisibleRange_ParamsData;
+    using FFragment_VisibleRange_Params = FCk_VisibleRange_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

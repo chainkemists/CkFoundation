@@ -35,12 +35,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_PoiDisplayDefi
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPOIDISPLAYDEFINITION_API FCk_Fragment_PoiDisplayDefinition_ParamsData
+struct CKPOIDISPLAYDEFINITION_API FCk_PoiDisplayDefinition_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_PoiDisplayDefinition_ParamsData);
+    CK_GENERATED_BODY(FCk_PoiDisplayDefinition_Spec);
 
 private:
     // Which projector-side consumer this definition is FOR (e.g. Poi.Consumer.Compass, Poi.Consumer.Minimap).
@@ -91,7 +91,7 @@ public:
     CK_PROPERTY(_OffscreenPolicy);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_PoiDisplayDefinition_ParamsData, _Consumer);
+    CK_DEFINE_CONSTRUCTORS(FCk_PoiDisplayDefinition_Spec, _Consumer);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

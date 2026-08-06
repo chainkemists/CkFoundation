@@ -29,7 +29,7 @@ public:
     static FCk_Handle_Pmg_Donut
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Pmg_Donut_ParamsData& InParams);
+        const FCk_Pmg_Donut_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Pmg|Donut",
@@ -37,7 +37,7 @@ public:
     static FCk_Handle_Pmg_Donut
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_Pmg_Donut_ParamsData& InParams);
+        const FCk_Pmg_Donut_Spec& InParams);
 
     // Opt this shape in as a click-selection handle for its editor preview's placed actor.
     // Call right after Add/Create — the mesh component's outer is chosen once, when the setup

@@ -24,7 +24,7 @@ auto
     UCk_Utils_Vfx_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Vfx_ParamsData& InParams)
+        const FCk_Vfx_Spec& InParams)
     -> FCk_Handle_Vfx
 {
      auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
@@ -47,11 +47,11 @@ auto
     UCk_Utils_Vfx_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleVfx_ParamsData& InParams)
+        const FCk_MultipleVfx_Spec& InParams)
     -> TArray<FCk_Handle_Vfx>
 {
     return ck::algo::Transform<TArray<FCk_Handle_Vfx>>(InParams.Get_VfxParams(),
-    [&](const FCk_Fragment_Vfx_ParamsData& InVfxParams)
+    [&](const FCk_Vfx_Spec& InVfxParams)
     {
         return Add(InHandle, InVfxParams);
     });

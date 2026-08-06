@@ -8,7 +8,7 @@ namespace ck
 {
     auto TInventoryRequestTraits<FCk_Handle_Inventory_DataOnly>::Setup_PerShape(
         FCk_Handle_Inventory& InInventoryEntity,
-        const FCk_Fragment_Inventory_ParamsData& InParams,
+        const FCk_Inventory_Spec& InParams,
         ECk_Replication InReplicates) -> void
     {
         InInventoryEntity.Add<FTag_Inventory_DataOnly>();
@@ -17,7 +17,7 @@ namespace ck
             ? InParams.Get_BoundLimit()
             : ck::Inventory::UnboundedBoundLimit;
 
-        const auto AttrParams = FCk_Fragment_IntegerAttribute_ParamsData(
+        const auto AttrParams = FCk_IntegerAttribute_Spec(
             TAG_IntegerAttribute_InventoryBoundMax, BoundValue);
 
         UCk_Utils_IntegerAttribute_UE::Add(InInventoryEntity, AttrParams, InReplicates);

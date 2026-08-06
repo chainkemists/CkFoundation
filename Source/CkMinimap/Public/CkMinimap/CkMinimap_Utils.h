@@ -47,7 +47,7 @@ public:
     static FCk_Handle_Minimap
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Minimap_ParamsData& InParams);
+        const FCk_Minimap_Spec& InParams);
 
     // Create a NEW Minimap child entity under InLifetimeOwner, connected to the owner's RecordOfMinimaps. The
     // observer defaults to InLifetimeOwner; redirect it via Request_SetObserver.
@@ -57,7 +57,7 @@ public:
     static FCk_Handle_Minimap
     Create(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
-        const FCk_Fragment_Minimap_ParamsData& InParams);
+        const FCk_Minimap_Spec& InParams);
 
 public:
     static bool

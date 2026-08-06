@@ -38,7 +38,7 @@ public:
     static FCk_Handle_InteractionResolver
     Add(
         UPARAM(ref) FCk_Handle& InInteractSource,
-        const FCk_InteractionResolver_ParamsData& InParams,
+        const FCk_InteractionResolver_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -47,7 +47,7 @@ public:
     static FCk_Handle_InteractionResolver
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_InteractionResolver_ParamsData& InParams,
+        const FCk_InteractionResolver_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,

@@ -18,7 +18,7 @@ auto
     UCk_Utils_IsmProxy_UE::
     Add(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_IsmProxy_ParamsData& InParams)
+        const FCk_IsmProxy_Spec& InParams)
     -> FCk_Handle_IsmProxy
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_IsmRenderer()),
@@ -42,7 +42,7 @@ auto
     Create(
         FCk_Handle& InOwner,
         const FTransform& InInitialTransform,
-        const FCk_Fragment_IsmProxy_ParamsData& InParams)
+        const FCk_IsmProxy_Spec& InParams)
     -> FCk_Handle_IsmProxy
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

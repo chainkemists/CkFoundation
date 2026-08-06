@@ -10,7 +10,7 @@ auto
     UCk_Utils_Sfx_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Sfx_ParamsData& InParams)
+        const FCk_Sfx_Spec& InParams)
     -> FCk_Handle_Sfx
 {
      auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
@@ -34,11 +34,11 @@ auto
     UCk_Utils_Sfx_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleSfx_ParamsData& InParams)
+        const FCk_MultipleSfx_Spec& InParams)
     -> TArray<FCk_Handle_Sfx>
 {
     return ck::algo::Transform<TArray<FCk_Handle_Sfx>>(InParams.Get_SfxParams(),
-    [&](const FCk_Fragment_Sfx_ParamsData& InSfxParams)
+    [&](const FCk_Sfx_Spec& InSfxParams)
     {
         return Add(InHandle, InSfxParams);
     });

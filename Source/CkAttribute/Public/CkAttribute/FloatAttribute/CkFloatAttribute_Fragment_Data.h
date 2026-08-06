@@ -130,12 +130,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_FloatAttributeRefill_ParamsData
+struct CKATTRIBUTE_API FCk_FloatAttributeRefill_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_FloatAttributeRefill_ParamsData);
+    CK_GENERATED_BODY(FCk_FloatAttributeRefill_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -161,7 +161,7 @@ public:
     CK_PROPERTY(_StartingState);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeRefill_ParamsData, _RefillAttributeName, _FillRate);
+    CK_DEFINE_CONSTRUCTORS(FCk_FloatAttributeRefill_Spec, _RefillAttributeName, _FillRate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -186,12 +186,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_FloatAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_FloatAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_FloatAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_FloatAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -221,7 +221,7 @@ private:
     // Non-Replicated fill rate
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, EditCondition = "_EnableRefill", SaveGame))
-    FCk_Fragment_FloatAttributeRefill_ParamsData _RefillParams;
+    FCk_FloatAttributeRefill_Spec _RefillParams;
 
 public:
     auto Get_MinValue() const -> float;
@@ -238,40 +238,40 @@ public:
     CK_PROPERTY_SET(_MaxValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_ParamsData, _Name, _BaseValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_FloatAttribute_Spec, _Name, _BaseValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_MultipleFloatAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_MultipleFloatAttribute_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleFloatAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleFloatAttribute_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
-    TArray<FCk_Fragment_FloatAttribute_ParamsData> _FloatAttributeParams;
+    TArray<FCk_FloatAttribute_Spec> _FloatAttributeParams;
 
 public:
     CK_PROPERTY_GET(_FloatAttributeParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleFloatAttribute_ParamsData, _FloatAttributeParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleFloatAttribute_Spec, _FloatAttributeParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_FloatAttributeModifier_ParamsData
+struct CKATTRIBUTE_API FCk_FloatAttributeModifier_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_FloatAttributeModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_FloatAttributeModifier_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -291,7 +291,7 @@ public:
     CK_PROPERTY_GET(_Component);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeModifier_ParamsData, _ModifierDelta, _Component);
+    CK_DEFINE_CONSTRUCTORS(FCk_FloatAttributeModifier_Spec, _ModifierDelta, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

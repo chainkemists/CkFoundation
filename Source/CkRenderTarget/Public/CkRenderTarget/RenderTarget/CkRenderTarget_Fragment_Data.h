@@ -213,12 +213,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRENDERTARGET_API FCk_Fragment_RenderTarget_ParamsData
+struct CKRENDERTARGET_API FCk_RenderTarget_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_RenderTarget_ParamsData);
+    CK_GENERATED_BODY(FCk_RenderTarget_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame,
@@ -272,7 +272,7 @@ public:
     CK_PROPERTY(_Replication);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RenderTarget_ParamsData, _SyncName);
+    CK_DEFINE_CONSTRUCTORS(FCk_RenderTarget_Spec, _SyncName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

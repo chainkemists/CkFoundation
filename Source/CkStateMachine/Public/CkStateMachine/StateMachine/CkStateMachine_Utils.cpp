@@ -37,7 +37,7 @@ auto
     UCk_Utils_StateMachine_UE::
     Add(
         FCk_Handle& InOwner,
-        const FCk_Fragment_StateMachine_ParamsData& InParams)
+        const FCk_StateMachine_Spec& InParams)
     -> FCk_Handle_StateMachine
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_InitialStateClass()),
@@ -64,7 +64,7 @@ auto
     UCk_Utils_StateMachine_UE::
     Create(
         FCk_Handle& InOwner,
-        const FCk_Fragment_StateMachine_ParamsData& InParams)
+        const FCk_StateMachine_Spec& InParams)
     -> FCk_Handle_StateMachine
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);

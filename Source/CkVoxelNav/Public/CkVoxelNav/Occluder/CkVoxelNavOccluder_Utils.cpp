@@ -10,7 +10,7 @@ auto
     UCk_Utils_VoxelNavOccluder_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_VoxelNavOccluder_ParamsData& InParams)
+        const FCk_VoxelNavOccluder_Spec& InParams)
     -> FCk_Handle_VoxelNavOccluder
 {
     const auto HandleIsValid = ck::IsValid(InHandle);

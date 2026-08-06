@@ -28,7 +28,7 @@ auto
     UCk_Utils_ByteAttribute_UE::
     Add(
         FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_ByteAttribute_ParamsData& InParams,
+        const FCk_ByteAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_ByteAttribute
 {
@@ -116,12 +116,12 @@ auto
     UCk_Utils_ByteAttribute_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleByteAttribute_ParamsData& InParams,
+        const FCk_MultipleByteAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> TArray<FCk_Handle_ByteAttribute>
 {
     return ck::algo::Transform<TArray<FCk_Handle_ByteAttribute>>(
-        InParams.Get_ByteAttributeParams(), [&](const FCk_Fragment_ByteAttribute_ParamsData& InParam)
+        InParams.Get_ByteAttributeParams(), [&](const FCk_ByteAttribute_Spec& InParam)
     {
         return Add(InHandle, InParam, InReplicates);
     });
@@ -466,7 +466,7 @@ auto
     (
         InAttribute,
         ECk_AttributeModifier_Operation::Override,
-        FCk_Fragment_ByteAttributeModifier_ParamsData
+        FCk_ByteAttributeModifier_Spec
         {
             InNewBaseValue,
             InAttributeComponent
@@ -637,7 +637,7 @@ auto
         FCk_Handle_ByteAttribute& InAttribute,
         FGameplayTag InModifierName,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams)
+        const FCk_ByteAttributeModifier_Spec& InParams)
     -> FCk_Handle_ByteAttributeModifier
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddByteModifierRevocable);
@@ -694,7 +694,7 @@ auto
     Add_NotRevocable(
         FCk_Handle_ByteAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams)
+        const FCk_ByteAttributeModifier_Spec& InParams)
     -> void
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddByteModifierNotRevocable);

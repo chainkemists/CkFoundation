@@ -166,7 +166,7 @@ namespace ck
 
         auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
         auto IsmProxy = UCk_Utils_IsmProxy_UE::Add(TransformHandle,
-            FCk_Fragment_IsmProxy_ParamsData{RenderState->_RendererData.Get()});
+            FCk_IsmProxy_Spec{RenderState->_RendererData.Get()});
         InCurrent._IsmProxy = IsmProxy;
 
         ck_vat_proxy_processor::Push_CustomData(InCurrent, *Collection);

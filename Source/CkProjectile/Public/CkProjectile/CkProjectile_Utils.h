@@ -29,7 +29,7 @@ public:
     static FCk_Handle_Projectile
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Projectile_ParamsData& InParams,
+        const FCk_Projectile_Spec& InParams,
         ECk_Replication InReplicates);
 
     UFUNCTION(BlueprintCallable,
@@ -38,7 +38,7 @@ public:
     static FCk_Handle_Projectile
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_Projectile_ParamsData& InParams,
+        const FCk_Projectile_Spec& InParams,
         ECk_Replication InReplicates);
 
 public:

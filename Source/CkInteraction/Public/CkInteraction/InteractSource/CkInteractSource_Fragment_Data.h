@@ -50,12 +50,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_InteractSource
 //--------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINTERACTION_API FCk_Fragment_InteractSource_ParamsData
+struct CKINTERACTION_API FCk_InteractSource_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_InteractSource_ParamsData);
+    CK_GENERATED_BODY(FCk_InteractSource_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -74,23 +74,23 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINTERACTION_API FCk_Fragment_MultipleInteractSource_ParamsData
+struct CKINTERACTION_API FCk_MultipleInteractSource_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleInteractSource_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleInteractSource_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_InteractionChannel"))
-    TArray<FCk_Fragment_InteractSource_ParamsData> _InteractSourceParams;
+    TArray<FCk_InteractSource_Spec> _InteractSourceParams;
 
 public:
     CK_PROPERTY_GET(_InteractSourceParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleInteractSource_ParamsData, _InteractSourceParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleInteractSource_Spec, _InteractSourceParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

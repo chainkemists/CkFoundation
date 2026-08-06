@@ -28,12 +28,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_Action);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Fragment_Goap_ActionParamsData
+struct CKGOAP_API FCk_Goap_Action_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Goap_ActionParamsData);
+    CK_GENERATED_BODY(FCk_Goap_Action_Spec);
 
 private:
     // EntityScript class whose CDO drives Preconditions / Effects / Cost at Setup time.
@@ -66,7 +66,7 @@ public:
     CK_PROPERTY(_CostThreshold);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Goap_ActionParamsData, _ActionClass);
+    CK_DEFINE_CONSTRUCTORS(FCk_Goap_Action_Spec, _ActionClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -34,9 +34,9 @@ auto
         TSubclassOf<UActorComponent> InComponentClass,
         ECk_UnrealComponent_TickPolicy InTickPolicy,
         FName InDebugName)
-    -> FCk_Fragment_UnrealComponent_ParamsData
+    -> FCk_UnrealComponent_Spec
 {
-    auto Params = FCk_Fragment_UnrealComponent_ParamsData(InComponentClass);
+    auto Params = FCk_UnrealComponent_Spec(InComponentClass);
     Params.Set_TickPolicy(InTickPolicy);
     Params.Set_DebugName(InDebugName);
     return Params;
@@ -48,9 +48,9 @@ auto
         UActorComponent* InComponentArchetype,
         ECk_UnrealComponent_TickPolicy InTickPolicy,
         FName InDebugName)
-    -> FCk_Fragment_UnrealComponent_ParamsData
+    -> FCk_UnrealComponent_Spec
 {
-    auto Params = FCk_Fragment_UnrealComponent_ParamsData(InComponentArchetype);
+    auto Params = FCk_UnrealComponent_Spec(InComponentArchetype);
     Params.Set_TickPolicy(InTickPolicy);
     Params.Set_DebugName(InDebugName);
     return Params;
@@ -62,7 +62,7 @@ auto
     UCk_Utils_UnrealComponent_UE::
     Add(
         FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_UnrealComponent_ParamsData& InParams)
+        const FCk_UnrealComponent_Spec& InParams)
     -> FCk_Handle_UnrealComponent
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwnerEntity),

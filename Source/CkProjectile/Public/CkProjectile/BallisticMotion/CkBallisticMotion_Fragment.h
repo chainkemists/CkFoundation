@@ -22,7 +22,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_BallisticMotion_Params = FCk_Fragment_BallisticMotion_ParamsData;
+    using FFragment_BallisticMotion_Params = FCk_BallisticMotion_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

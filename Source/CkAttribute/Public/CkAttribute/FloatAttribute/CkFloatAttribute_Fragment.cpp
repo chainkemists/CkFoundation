@@ -44,7 +44,7 @@ static auto
             InAttributeEntity,
             ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
             ECk_AttributeModifier_Operation::Add,
-            FCk_Fragment_FloatAttributeModifier_ParamsData
+            FCk_FloatAttributeModifier_Spec
             {
                 InEntry.Get_Final() - InEntry.Get_Base(),
                 InEntry.Get_Component()

@@ -12,7 +12,7 @@ auto
     UCk_Utils_VatProxy_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_VatProxy_ParamsData& InParams)
+        const FCk_VatProxy_Spec& InParams)
     -> FCk_Handle_VatProxy
 {
     CK_ENSURE_IF_NOT(NOT Has(InHandle),

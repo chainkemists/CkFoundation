@@ -16,7 +16,7 @@ auto
     UCk_Utils_JoltConstraint_UE::
     Create(
         FCk_Handle_JoltBody& InBodyA,
-        const FCk_Fragment_JoltConstraint_ParamsData& InParams)
+        const FCk_JoltConstraint_Spec& InParams)
     -> FCk_Handle_JoltConstraint
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InBodyA),

@@ -42,7 +42,7 @@ public:
     static FCk_Handle_RenderTarget
     Add(
         UPARAM(ref) FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_RenderTarget_ParamsData& InParams);
+        const FCk_RenderTarget_Spec& InParams);
 
 public:
     static bool

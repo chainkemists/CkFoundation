@@ -115,7 +115,7 @@ private:
 //--------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINTERACTION_API FCk_Fragment_InteractTarget_ParamsData
+struct CKINTERACTION_API FCk_InteractTarget_Spec
 {
     GENERATED_BODY()
 
@@ -123,7 +123,7 @@ public:
     friend class UCk_Utils_InteractTarget_UE;
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_InteractTarget_ParamsData);
+    CK_GENERATED_BODY(FCk_InteractTarget_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -160,7 +160,7 @@ public:
     CK_PROPERTY(_CustomCanInteractWithDynamic);
     CK_PROPERTY_GET(_CanInteractWithReference);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_InteractTarget_ParamsData, _InteractionChannel);
+    CK_DEFINE_CONSTRUCTORS(FCk_InteractTarget_Spec, _InteractionChannel);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -177,7 +177,7 @@ struct CKINTERACTION_API FCk_InteractTarget_SetupData
 
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interact Target")
-    FCk_Fragment_InteractTarget_ParamsData Params;
+    FCk_InteractTarget_Spec Params;
 
     UPROPERTY(EditAnywhere, Category = "Interact Target", DisplayName = "Custom Can Interact With",
               meta = (FunctionReference,
@@ -189,23 +189,23 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKINTERACTION_API FCk_Fragment_MultipleInteractTarget_ParamsData
+struct CKINTERACTION_API FCk_MultipleInteractTarget_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleInteractTarget_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleInteractTarget_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_InteractionChannel"))
-    TArray<FCk_Fragment_InteractTarget_ParamsData> _InteractTargetParams;
+    TArray<FCk_InteractTarget_Spec> _InteractTargetParams;
 
 public:
     CK_PROPERTY_GET(_InteractTargetParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleInteractTarget_ParamsData, _InteractTargetParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleInteractTarget_Spec, _InteractTargetParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

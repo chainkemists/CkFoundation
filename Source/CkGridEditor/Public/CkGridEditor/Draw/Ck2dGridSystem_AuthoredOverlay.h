@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class ACk_EntitySpawner_UE;
-class UCk_2dGridSystem_Spec;
+class UCk_2dGridSystem_AuthoringSpec;
 
 class FCanvas;
 class FPrimitiveDrawInterface;
@@ -54,23 +54,23 @@ namespace ck::grid_editor
     // Spec is a private UPROPERTY with no getter, so this is the ONE place that reflective read lives.
     CKGRIDEDITOR_API auto
     Resolve_SpecFromSpawner(
-        const ACk_EntitySpawner_UE* InSpawner) -> UCk_2dGridSystem_Spec*;
+        const ACk_EntitySpawner_UE* InSpawner) -> UCk_2dGridSystem_AuthoringSpec*;
 
     // Returns true if InCoordinate is covered by any of the Spec's blocker [RangeMin, RangeMax] rects.
     CKGRIDEDITOR_API auto
     Is_CoveredByBlocker(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> bool;
 
     // Returns true if InCoordinate carries any authored tag (grid-wide default or per-cell override).
     CKGRIDEDITOR_API auto
     Has_AuthoredTag(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> bool;
 
     CKGRIDEDITOR_API auto
     Resolve_CellColor(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> FLinearColor;
 
     // Hue hashed from InName — stable across sessions, independent of tag order/count.
@@ -87,26 +87,26 @@ namespace ck::grid_editor
     // deliberately NOT considered — grid-wide defaults would recolor the whole grid; they only reach the legend.
     CKGRIDEDITOR_API auto
     Resolve_PrimaryCellTag(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> FGameplayTag;
 
     // A cell with N tags counts once per tag. Sorted by tag name for stable list ordering. Grid-wide
     // DefaultCellTags are NOT included (the toolkit lists those separately).
     CKGRIDEDITOR_API auto
     Collect_PerCellTagsWithCounts(
-        const UCk_2dGridSystem_Spec* InSpec) -> TArray<TPair<FGameplayTag, int32>>;
+        const UCk_2dGridSystem_AuthoringSpec* InSpec) -> TArray<TPair<FGameplayTag, int32>>;
 
     // Every coordinate whose PerCellTags entry contains InTag. Empty when the Spec/tag is invalid.
     CKGRIDEDITOR_API auto
     Get_CellsWithTag(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FGameplayTag&          InTag) -> TArray<FIntPoint>;
 
     // No-op on an invalid Spec or non-positive CellSize/Dimensions.
     CKGRIDEDITOR_API auto
     Draw_GridAuthoredOverlay(
         FPrimitiveDrawInterface*       InPDI,
-        const UCk_2dGridSystem_Spec*   InSpec,
+        const UCk_2dGridSystem_AuthoringSpec*   InSpec,
         const FTransform&              InTransform,
         const FAuthoredOverlayOptions& InOptions = FAuthoredOverlayOptions{}) -> void;
 
@@ -117,7 +117,7 @@ namespace ck::grid_editor
     // Grid-wide DefaultCellTags unioned with the cell's PerCellTags override; empty when it carries none.
     CKGRIDEDITOR_API auto
     Get_CellTagText(
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FIntPoint&             InCoordinate) -> FString;
 
     // No-op when Should_ShowCellTags() is false or the Spec/view is invalid.
@@ -125,7 +125,7 @@ namespace ck::grid_editor
     Draw_GridTagLabels(
         FCanvas*                     InCanvas,
         const FSceneView*            InView,
-        const UCk_2dGridSystem_Spec* InSpec,
+        const UCk_2dGridSystem_AuthoringSpec* InSpec,
         const FTransform&            InTransform) -> void;
 }
 

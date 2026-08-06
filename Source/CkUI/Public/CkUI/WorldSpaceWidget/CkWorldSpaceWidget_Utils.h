@@ -29,7 +29,7 @@ public:
     static FCk_Handle_WorldSpaceWidget
     Create_AtLocation(
         FVector InLocation,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams);
+        const FCk_WorldSpaceWidget_Spec& InParams);
 
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
@@ -37,7 +37,7 @@ public:
     static FCk_Handle_WorldSpaceWidget
     CreateAndAttach_ToEntity(
         UPARAM(ref) FCk_Handle_Transform& InAttachTo,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams);
+        const FCk_WorldSpaceWidget_Spec& InParams);
 
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
@@ -45,7 +45,7 @@ public:
     static FCk_Handle_WorldSpaceWidget
     CreateAndAttach_ToUnrealComponent(
         USceneComponent* InAttachTo,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams);
+        const FCk_WorldSpaceWidget_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|WorldSpaceWidget",
@@ -151,15 +151,15 @@ private:
     static auto
     DoAdd(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams) -> FCk_Handle_WorldSpaceWidget;
+        const FCk_WorldSpaceWidget_Spec& InParams) -> FCk_Handle_WorldSpaceWidget;
 
     static auto
     DoAdd_ScreenOverlay(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams) -> FCk_Handle_WorldSpaceWidget;
+        const FCk_WorldSpaceWidget_Spec& InParams) -> FCk_Handle_WorldSpaceWidget;
 
     static auto
     DoAdd_WorldComponent(
         FCk_Handle_Transform& InHandle,
-        const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams) -> FCk_Handle_WorldSpaceWidget;
+        const FCk_WorldSpaceWidget_Spec& InParams) -> FCk_Handle_WorldSpaceWidget;
 };

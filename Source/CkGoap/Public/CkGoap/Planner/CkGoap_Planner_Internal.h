@@ -14,7 +14,7 @@ namespace ck::goap::internal_planner
     CKGOAP_API auto
     DoCreateOrFindActionEntity(
         FCk_Handle_Goap_Planner& InPlanner,
-        const FCk_Fragment_Goap_ActionParamsData& InParams) -> FCk_Handle_Goap_Action;
+        const FCk_Goap_Action_Spec& InParams) -> FCk_Handle_Goap_Action;
 
     // Resolution order: the child's own override → the parent's resolved → the owning Planner's
     // default. Eager, so the child's Setup can run before any parent plan is requested.

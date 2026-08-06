@@ -297,7 +297,7 @@ namespace ck
         (
             TargetEntity,
             UCk_Utils_GameplayLabel_UE::Get_Label(InHandle),
-            FCk_Fragment_VelocityModifier_ParamsData
+            FCk_VelocityModifier_Spec
             {
                 InParams.Get_Params().Get_VelocityParams()
             }

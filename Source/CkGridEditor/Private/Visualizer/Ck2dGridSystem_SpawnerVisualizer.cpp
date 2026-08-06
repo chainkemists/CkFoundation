@@ -16,7 +16,7 @@ namespace ck_grid_spawner_visualizer
     auto
         Resolve_DrawableSpec(
             const UActorComponent* InComponent,
-            const ACk_EntitySpawner_UE*& OutSpawner) -> const UCk_2dGridSystem_Spec*
+            const ACk_EntitySpawner_UE*& OutSpawner) -> const UCk_2dGridSystem_AuthoringSpec*
     {
         OutSpawner = nullptr;
 

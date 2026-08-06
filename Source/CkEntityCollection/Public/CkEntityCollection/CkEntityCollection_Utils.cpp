@@ -9,7 +9,7 @@ auto
     UCk_Utils_EntityCollection_UE::
     Add(
         FCk_Handle& InEntityCollectionOwnerEntity,
-        const FCk_Fragment_EntityCollection_ParamsData& InParams,
+        const FCk_EntityCollection_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_EntityCollection
 {
@@ -69,12 +69,12 @@ auto
     UCk_Utils_EntityCollection_UE::
     AddMultiple(
         FCk_Handle& InEntityCollectionOwnerEntity,
-        const FCk_Fragment_MultipleEntityCollection_ParamsData& InParams,
+        const FCk_MultipleEntityCollection_Spec& InParams,
         ECk_Replication InReplicates)
     -> TArray<FCk_Handle_EntityCollection>
 {
     return ck::algo::Transform<TArray<FCk_Handle_EntityCollection>>(InParams.Get_EntityCollectionParams(),
-    [&](const FCk_Fragment_EntityCollection_ParamsData& InEntityCollectionParams)
+    [&](const FCk_EntityCollection_Spec& InEntityCollectionParams)
     {
         return Add(InEntityCollectionOwnerEntity, InEntityCollectionParams, InReplicates);
     });

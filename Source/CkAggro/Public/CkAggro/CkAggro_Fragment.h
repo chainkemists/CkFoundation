@@ -29,7 +29,7 @@ namespace ck
 {
     // ----------------------------------------------------------------------------------------------------------------
 
-    using FFragment_Aggro_DefaultTargetParams = FCk_Fragment_AggroTarget_ParamsData;
+    using FFragment_Aggro_DefaultTargetParams = FCk_AggroTarget_Spec;
     using FFragment_Aggro_SelectionParams     = FCk_Aggro_SelectionParams;
     using FFragment_Aggro_CapParams           = FCk_Aggro_CapParams;
     using FFragment_Aggro_EvaluationParams    = FCk_Aggro_EvaluationParams;

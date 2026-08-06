@@ -32,7 +32,7 @@ namespace ck
         friend class UCk_Utils_Pmg_Donut_UE;
 
     private:
-        FCk_Fragment_Pmg_Donut_ParamsData _Params;
+        FCk_Pmg_Donut_Spec _Params;
 
     public:
         CK_PROPERTY_GET(_Params);

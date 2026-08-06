@@ -22,7 +22,7 @@ auto
     UCk_Utils_RenderTarget_UE::
     Add(
         FCk_Handle& InOwnerEntity,
-        const FCk_Fragment_RenderTarget_ParamsData& InParams)
+        const FCk_RenderTarget_Spec& InParams)
     -> FCk_Handle_RenderTarget
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_SyncName()),

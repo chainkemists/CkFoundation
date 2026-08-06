@@ -67,12 +67,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_JoltConstraint
 // time — place the bodies where you want them constrained, then Create. Essentials = the constraint
 // type; everything else is an optional fluent knob mirroring the JPH constraint-settings defaults.
 USTRUCT(BlueprintType)
-struct CKJOLT_API FCk_Fragment_JoltConstraint_ParamsData
+struct CKJOLT_API FCk_JoltConstraint_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_JoltConstraint_ParamsData);
+    CK_GENERATED_BODY(FCk_JoltConstraint_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -168,7 +168,7 @@ public:
     CK_PROPERTY(_MaxFrictionTorque);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_JoltConstraint_ParamsData, _ConstraintType);
+    CK_DEFINE_CONSTRUCTORS(FCk_JoltConstraint_Spec, _ConstraintType);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

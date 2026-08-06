@@ -17,7 +17,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_InteractionResolver_Params = FCk_InteractionResolver_ParamsData;
+    using FFragment_InteractionResolver_Params = FCk_InteractionResolver_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

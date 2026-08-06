@@ -24,7 +24,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_RenderStatus_Params);
 
     public:
-        using ParamsType = FCk_Fragment_RenderStatus_ParamsData;
+        using ParamsType = FCk_RenderStatus_Spec;
 
     private:
         ParamsType _Params;

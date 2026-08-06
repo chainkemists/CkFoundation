@@ -36,7 +36,7 @@ public:
     static FCk_Handle_Vfx
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Vfx_ParamsData& InParams);
+        const FCk_Vfx_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Vfx",
@@ -44,7 +44,7 @@ public:
     static TArray<FCk_Handle_Vfx>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleVfx_ParamsData& InParams);
+        const FCk_MultipleVfx_Spec& InParams);
 
 public:
     static bool

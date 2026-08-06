@@ -78,12 +78,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKMINIMAP_API FCk_Fragment_FogOfWar_ParamsData
+struct CKMINIMAP_API FCk_FogOfWar_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_FogOfWar_ParamsData);
+    CK_GENERATED_BODY(FCk_FogOfWar_Spec);
 
 private:
     // World area the grid covers (the grid's max edges may overshoot it by up to one cell)
@@ -112,7 +112,7 @@ public:
     CK_PROPERTY(_UpdateInterval);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FogOfWar_ParamsData, _Bounds);
+    CK_DEFINE_CONSTRUCTORS(FCk_FogOfWar_Spec, _Bounds);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

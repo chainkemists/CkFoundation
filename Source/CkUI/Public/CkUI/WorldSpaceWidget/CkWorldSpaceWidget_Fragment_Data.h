@@ -401,12 +401,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Fragment_WorldSpaceWidget_ParamsData
+struct CKUI_API FCk_WorldSpaceWidget_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_WorldSpaceWidget_ParamsData);
+    CK_GENERATED_BODY(FCk_WorldSpaceWidget_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -456,7 +456,7 @@ public:
     CK_PROPERTY(_RenderMode);
     CK_PROPERTY(_WorldComponentInfo);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_WorldSpaceWidget_ParamsData, _Widget, _InitialViewportOperation, _ZOrder);
+    CK_DEFINE_CONSTRUCTORS(FCk_WorldSpaceWidget_Spec, _Widget, _InitialViewportOperation, _ZOrder);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

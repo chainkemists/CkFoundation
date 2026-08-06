@@ -351,10 +351,10 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPATHNETWORK_API FCk_Fragment_PathNetwork_ParamsData
+struct CKPATHNETWORK_API FCk_PathNetwork_Spec
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Fragment_PathNetwork_ParamsData);
+    CK_GENERATED_BODY(FCk_PathNetwork_Spec);
 
     friend class ck::FProcessor_PathNetwork_Setup;
     friend class ck::FProcessor_PathNetwork_HandleRequests;
@@ -382,16 +382,16 @@ public:
     CK_PROPERTY(_RecommendedFollowerTuning);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_PathNetwork_ParamsData, _Ribbons);
+    CK_DEFINE_CONSTRUCTORS(FCk_PathNetwork_Spec, _Ribbons);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPATHNETWORK_API FCk_Fragment_PathNetworkFollower_ParamsData
+struct CKPATHNETWORK_API FCk_PathNetworkFollower_Spec
 {
     GENERATED_BODY()
-    CK_GENERATED_BODY(FCk_Fragment_PathNetworkFollower_ParamsData);
+    CK_GENERATED_BODY(FCk_PathNetworkFollower_Spec);
 
     friend class ck::FProcessor_PathNetworkFollower_HandleRequests;
     friend class ::UCk_Utils_PathNetworkFollower_UE;

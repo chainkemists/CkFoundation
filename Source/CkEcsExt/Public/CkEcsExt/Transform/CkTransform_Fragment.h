@@ -33,7 +33,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_Transform_Params = FCk_Transform_ParamsData;
+    using FFragment_Transform_Params = FCk_Transform_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -101,7 +101,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_TransformInterpolation_Params);
 
     public:
-        using ParamsType = FCk_TransformInterpolation_ParamsData;
+        using ParamsType = FCk_TransformInterpolation_Spec;
 
     private:
         ParamsType _Data;

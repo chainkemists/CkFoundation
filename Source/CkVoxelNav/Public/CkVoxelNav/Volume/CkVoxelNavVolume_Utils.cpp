@@ -88,7 +88,7 @@ namespace ck_voxelnav_volume_utils
 
     auto
         Make_PartitionParams(
-            const FCk_Fragment_VoxelNavVolume_ParamsData& InParams)
+            const FCk_VoxelNavVolume_Spec& InParams)
         -> ck::voxelnav::FChunkPartitionParams
     {
         auto PartitionParams = ck::voxelnav::FChunkPartitionParams{};
@@ -104,11 +104,11 @@ namespace ck_voxelnav_volume_utils
 
     auto
         Make_ChunkParams(
-            const FCk_Fragment_VoxelNavVolume_ParamsData& InParams,
+            const FCk_VoxelNavVolume_Spec& InParams,
             const FBox& InChunkBounds)
-        -> FCk_Fragment_VoxelNavVolume_ParamsData
+        -> FCk_VoxelNavVolume_Spec
     {
-        auto ChunkParams = FCk_Fragment_VoxelNavVolume_ParamsData{InChunkBounds, InParams.Get_FinestCellSizeUu()};
+        auto ChunkParams = FCk_VoxelNavVolume_Spec{InChunkBounds, InParams.Get_FinestCellSizeUu()};
 
         ChunkParams.Set_ClearanceUu(InParams.Get_ClearanceUu());
         ChunkParams.Set_AutoBuildOnSetup(InParams.Get_AutoBuildOnSetup());
@@ -129,7 +129,7 @@ auto
     UCk_Utils_VoxelNavVolume_UE::
     Add(
         FCk_Handle& InOwner,
-        const FCk_Fragment_VoxelNavVolume_ParamsData& InParams)
+        const FCk_VoxelNavVolume_Spec& InParams)
     -> FCk_Handle_VoxelNavVolume
 {
     using namespace ck_voxelnav_volume_utils;

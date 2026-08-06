@@ -724,7 +724,7 @@ auto
 {
     auto TweenEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
 
-    auto Params = FCk_Fragment_Tween_ParamsData{InStartValue, InEndValue, InDuration, InEasing}
+    auto Params = FCk_Tween_Spec{InStartValue, InEndValue, InDuration, InEasing}
         .Set_LoopType(InLoopType)
         .Set_LoopCount(InLoopCount)
         .Set_YoyoDelay(InYoyoDelay)

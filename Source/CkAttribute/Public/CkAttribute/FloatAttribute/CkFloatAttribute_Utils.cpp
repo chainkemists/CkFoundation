@@ -28,7 +28,7 @@ auto
     UCk_Utils_FloatAttribute_UE::
     Add(
         FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_FloatAttribute_ParamsData& InParams,
+        const FCk_FloatAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_FloatAttribute
 {
@@ -119,7 +119,7 @@ auto
             NewAttributeEntity)
         { return NewAttributeEntity; }
 
-        auto RefillAttributeEntity = Add(InAttributeOwnerEntity, FCk_Fragment_FloatAttribute_ParamsData
+        auto RefillAttributeEntity = Add(InAttributeOwnerEntity, FCk_FloatAttribute_Spec
             {
                 RefillParams.Get_RefillAttributeName(),
                 RefillParams.Get_RefillBehavior() == ECk_Attribute_Refill_Policy::Variable ? RefillParams.Get_FillRate() : FMath::Abs(RefillParams.Get_FillRate())
@@ -147,12 +147,12 @@ auto
     UCk_Utils_FloatAttribute_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
+        const FCk_MultipleFloatAttribute_Spec& InParams,
         ECk_Replication InReplicates)
     -> TArray<FCk_Handle_FloatAttribute>
 {
     return ck::algo::Transform<TArray<FCk_Handle_FloatAttribute>>(
-        InParams.Get_FloatAttributeParams(), [&](const FCk_Fragment_FloatAttribute_ParamsData& InParam)
+        InParams.Get_FloatAttributeParams(), [&](const FCk_FloatAttribute_Spec& InParam)
     {
         return Add(InHandle, InParam, InReplicates);
     });
@@ -536,7 +536,7 @@ auto
     (
         InAttribute,
         ECk_AttributeModifier_Operation::Override,
-        FCk_Fragment_FloatAttributeModifier_ParamsData
+        FCk_FloatAttributeModifier_Spec
         {
             InNewBaseValue,
             InAttributeComponent
@@ -786,7 +786,7 @@ auto
         FCk_Handle_FloatAttribute& InAttribute,
         FGameplayTag InModifierName,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
+        const FCk_FloatAttributeModifier_Spec& InParams)
     -> FCk_Handle_FloatAttributeModifier
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddFloatModifierRevocable);
@@ -843,7 +843,7 @@ auto
     Add_NotRevocable(
         FCk_Handle_FloatAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
+        const FCk_FloatAttributeModifier_Spec& InParams)
     -> void
 {
     SCOPE_CYCLE_COUNTER(STAT_CkAttribute_AddFloatModifierNotRevocable);

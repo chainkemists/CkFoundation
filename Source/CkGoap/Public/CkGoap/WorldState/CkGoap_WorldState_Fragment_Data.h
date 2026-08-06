@@ -8,7 +8,7 @@
 #include "CkGoap_WorldState_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Planners reference one via FCk_Fragment_Goap_ParamsData::_WorldStateSource; several planners may
+// Planners reference one via FCk_Goap_Planner_Spec::_WorldStateSource; several planners may
 // share it. Lifetime is caller-owned: destruction cascades from the owner via CkRecord.
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
@@ -24,12 +24,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Goap_WorldStat
 // Deliberately empty — reserved so the Add/Create signatures stay stable when knobs land.
 
 USTRUCT(BlueprintType)
-struct CKGOAP_API FCk_Fragment_Goap_WorldState_ParamsData
+struct CKGOAP_API FCk_Goap_WorldState_Spec
 {
 	GENERATED_BODY()
 
 public:
-	CK_GENERATED_BODY(FCk_Fragment_Goap_WorldState_ParamsData);
+	CK_GENERATED_BODY(FCk_Goap_WorldState_Spec);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

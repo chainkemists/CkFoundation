@@ -31,7 +31,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Sensor_Params);
 
     public:
-        using ParamsType = FCk_Fragment_Sensor_ParamsData;
+        using ParamsType = FCk_Sensor_Spec;
 
     private:
         ParamsType _Params;

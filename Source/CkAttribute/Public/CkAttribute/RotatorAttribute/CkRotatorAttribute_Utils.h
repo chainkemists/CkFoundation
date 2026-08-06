@@ -39,7 +39,7 @@ public:
     static FCk_Handle_RotatorAttribute
     Add(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_RotatorAttribute_ParamsData& InParams,
+        const FCk_RotatorAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -48,7 +48,7 @@ public:
     static TArray<FCk_Handle_RotatorAttribute>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_MultipleRotatorAttribute_ParamsData& InParams,
+        const FCk_MultipleRotatorAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
@@ -289,7 +289,7 @@ public:
         UPARAM(ref) FCk_Handle_RotatorAttribute& InAttribute,
         FGameplayTag InModifierName,
         UPARAM(meta = (InvalidEnumValues="Override")) ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_RotatorAttributeModifier_ParamsData& InParams);
+        const FCk_RotatorAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Rotator",
@@ -298,7 +298,7 @@ public:
     Add_NotRevocable(
         UPARAM(ref) FCk_Handle_RotatorAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_RotatorAttributeModifier_ParamsData& InParams);
+        const FCk_RotatorAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Rotator",

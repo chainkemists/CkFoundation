@@ -786,7 +786,7 @@ auto
         const FCk_Transform_Interpolation_Settings& InParams)
     -> FCk_Handle_TransformInterpolation
 {
-    InHandle.Add<ck::FFragment_TransformInterpolation_Params>(FCk_TransformInterpolation_ParamsData{InParams});
+    InHandle.Add<ck::FFragment_TransformInterpolation_Params>(FCk_TransformInterpolation_Spec{InParams});
     return Cast(InHandle);
 }
 
