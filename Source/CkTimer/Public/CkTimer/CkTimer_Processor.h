@@ -13,8 +13,7 @@ namespace ck
     class CKTIMER_API FProcessor_Timer_Setup : public ck_exp::TProcessor<
         FProcessor_Timer_Setup,
         FCk_Handle_Timer,
-        ck::TReadOnly<FFragment_Timer_Params>,
-        ck::TReadWrite<FFragment_Timer_Current>,
+        ck::TReadWrite<FFragment_Timer>,
         FTag_Timer_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -30,8 +29,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InTimerEntity,
-            const FFragment_Timer_Params& InParams,
-            FFragment_Timer_Current& InCurrentComp)
+            FFragment_Timer& InTimerComp)
             -> void;
     };
 
@@ -39,7 +37,7 @@ namespace ck
 
     class CKTIMER_API FProcessor_Timer_HandleRequests
         : public ck_exp::TProcessor<FProcessor_Timer_HandleRequests, FCk_Handle_Timer,
-            ck::TReadWrite<FFragment_Timer_Current>, ck::TReadOnly<FFragment_Timer_Params>, ck::TReadWrite<FFragment_Timer_Requests>,
+            ck::TReadWrite<FFragment_Timer>, ck::TReadWrite<FFragment_Timer_Requests>,
             TExclude<FTag_Timer_NeedsSetup>, TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -55,8 +53,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InTimerEntity,
-            FFragment_Timer_Current& InCurrentComp,
-            const FFragment_Timer_Params& InParamsComp,
+            FFragment_Timer& InTimerComp,
             FFragment_Timer_Requests& InRequestsComp) const -> void;
 
     private:
@@ -64,24 +61,21 @@ namespace ck
         DoHandleRequest(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Timer_Current& InCurrentComp,
-            const FFragment_Timer_Params& InParamsComp,
+            FFragment_Timer& InTimerComp,
             const FCk_Request_Timer_Manipulate& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Timer_Current& InCurrentComp,
-            const FFragment_Timer_Params& InParamsComp,
+            FFragment_Timer& InTimerComp,
             const FCk_Request_Timer_Jump& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Timer_Current& InCurrentComp,
-            const FFragment_Timer_Params& InParamsComp,
+            FFragment_Timer& InTimerComp,
             const FCk_Request_Timer_Consume& InRequest) -> void;
     };
 
@@ -117,7 +111,7 @@ namespace ck
         FProcessor_Timer_Update,
         FCk_Handle_Timer,
         ck::TReadOnly<FFragment_Timer_Params>,
-        ck::TReadWrite<FFragment_Timer_Current>,
+        ck::TReadWrite<FFragment_Timer>,
         FTag_Timer_NeedsUpdate,
         TExclude<FTag_Timer_NeedsSetup>,
         TExclude<FTag_Timer_Countdown>,
@@ -137,14 +131,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InTimerEntity,
             const FFragment_Timer_Params& InParams,
-            FFragment_Timer_Current& InCurrentComp) const -> void;
+            FFragment_Timer& InTimerComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKTIMER_API FProcessor_Timer_Update_Countdown
         : public ck_exp::TProcessor<FProcessor_Timer_Update_Countdown, FCk_Handle_Timer, ck::TReadOnly<FFragment_Timer_Params>,
-            ck::TReadWrite<FFragment_Timer_Current>, FTag_Timer_NeedsUpdate, FTag_Timer_Countdown,
+            ck::TReadWrite<FFragment_Timer>, FTag_Timer_NeedsUpdate, FTag_Timer_Countdown,
             TExclude<FTag_Timer_NeedsSetup>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -161,7 +155,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InTimerEntity,
             const FFragment_Timer_Params& InParams,
-            FFragment_Timer_Current& InCurrentComp) const -> void;
+            FFragment_Timer& InTimerComp) const -> void;
     };
 }
 

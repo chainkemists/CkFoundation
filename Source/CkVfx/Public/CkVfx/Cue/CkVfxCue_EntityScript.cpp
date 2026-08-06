@@ -79,7 +79,7 @@ auto
         }
         case ECk_VfxCue_PlaybackBehavior::DelayedPlay:
         {
-            const auto TimerParams = FCk_Fragment_Timer_ParamsData{_DelayTime}
+            const auto TimerParams = FCk_Timer_Spec{_DelayTime}
                 .Set_TimerName(TAG_Label_Timer_VfxCueStartDelay)
                 .Set_CountDirection(ECk_Timer_CountDirection::CountUp)
                 .Set_Behavior(ECk_Timer_Behavior::PauseOnDone)

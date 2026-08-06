@@ -775,7 +775,7 @@ auto
 
     DoAddRequestToTween(InNextTween, FCk_Request_Tween_Pause{}, {});
 
-    const auto TimerParams = FCk_Fragment_Timer_ParamsData{FCk_Time{InDelay}}
+    const auto TimerParams = FCk_Timer_Spec{FCk_Time{InDelay}}
         .Set_StartingState(ECk_Timer_State::Paused);
 
     auto DelayTimer = UCk_Utils_Timer_UE::Add(InNextTween, TimerParams);

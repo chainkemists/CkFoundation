@@ -27,11 +27,11 @@ DECLARE_STATS_GROUP(TEXT("CkTimer"), STATGROUP_CkTimer_Details, STATCAT_Advanced
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ck::MakeStatIdFromParams(
-        const FCk_Fragment_Timer_ParamsData& InParams)
+    ck::MakeStatId(
+        const FCk_Handle_Timer& InTimer)
     -> TStatId
 {
-    const auto& StatString = ck::Format_UE(TEXT("Timer Broadcast Event [{}]"), InParams.Get_TimerName());
+    const auto& StatString = ck::Format_UE(TEXT("Timer Broadcast Event [{}]"), UCk_Utils_Timer_UE::Get_Name(InTimer));
     return CK_CREATE_DYNAMIC_STAT_ID(STATGROUP_CkTimer_Details, StatString);
 }
 
@@ -39,7 +39,7 @@ auto
     UCk_Utils_Timer_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Timer_ParamsData& InParams)
+        const FCk_Timer_Spec& InParams)
     -> FCk_Handle_Timer
 {
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
@@ -55,8 +55,8 @@ auto
         }
 #endif
 
-        InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+        InNewEntity.Add<ck::FFragment_Timer_Params>(InParams.Get_Behavior());
+        InNewEntity.Add<ck::FFragment_Timer>(FCk_Chrono{InParams.Get_Duration()});
 
         InNewEntity.Add<ck::FTag_Timer_NeedsSetup>();
 
@@ -81,7 +81,7 @@ auto
     UCk_Utils_Timer_UE::
     AddOrReplace(
         FCk_Handle& InTimerOwnerEntity,
-        const FCk_Fragment_Timer_ParamsData& InParams)
+        const FCk_Timer_Spec& InParams)
     -> FCk_Handle_Timer
 {
     auto MaybeExistingTimerEntity = TryGet_Timer(InTimerOwnerEntity, InParams.Get_TimerName());
@@ -89,13 +89,23 @@ auto
     if (ck::Is_NOT_Valid(MaybeExistingTimerEntity))
     { return Add(InTimerOwnerEntity, InParams); }
 
-    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
-    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+    // Replace re-applies the WHOLE spec: fragments re-seed and every spec-driven tag is set or
+    // cleared, exactly as a fresh Add would leave them. NeedsSetup re-runs the Setup processor so
+    // a countdown chrono is Completed to its GoalValue again.
+    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Params>(InParams.Get_Behavior());
+    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer>(FCk_Chrono{InParams.Get_Duration()});
+
+    MaybeExistingTimerEntity.AddOrGet<ck::FTag_Timer_NeedsSetup>();
+
+    if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
+    { MaybeExistingTimerEntity.AddOrGet<ck::FTag_Timer_Countdown>(); }
+    else
+    { MaybeExistingTimerEntity.Try_Remove<ck::FTag_Timer_Countdown>(); }
 
     if (InParams.Get_StartingState() == ECk_Timer_State::Running)
-    {
-        MaybeExistingTimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
-    }
+    { MaybeExistingTimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>(); }
+    else
+    { MaybeExistingTimerEntity.Try_Remove<ck::FTag_Timer_NeedsUpdate>(); }
 
     return MaybeExistingTimerEntity;
 }
@@ -104,11 +114,11 @@ auto
     UCk_Utils_Timer_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleTimer_ParamsData& InParams)
+        const FCk_MultipleTimer_Spec& InParams)
     -> TArray<FCk_Handle_Timer>
 {
     return ck::algo::Transform<TArray<FCk_Handle_Timer>>(InParams.Get_TimerParams(),
-    [&](const FCk_Fragment_Timer_ParamsData& InTimerParams)
+    [&](const FCk_Timer_Spec& InTimerParams)
     {
         return Add(InHandle, InTimerParams);
     });
@@ -125,7 +135,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Timer_UE, FCk_Handle_Timer, ck::FFragment_Timer_Current, ck::FFragment_Timer_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Timer_UE, FCk_Handle_Timer, ck::FFragment_Timer);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -188,7 +198,7 @@ auto
         const FCk_Handle_Timer& InTimerEntity)
     -> FCk_Chrono
 {
-    return InTimerEntity.Get<ck::FFragment_Timer_Current>().Get_Chrono();
+    return InTimerEntity.Get<ck::FFragment_Timer>().Get_Chrono();
 }
 
 auto

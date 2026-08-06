@@ -15,6 +15,17 @@
 
 ---
 
+## Fragment shape (2026-08-05 — pilot of the spec-fragment-granularity campaign)
+
+- `FCk_Timer_Spec` (reflected) — the authoring/construction payload; fully unpacked at `Add`.
+- `ck::FFragment_Timer` — primary state (the chrono). **This is the `Has()`/`Cast()` anchor.**
+- `ck::FFragment_Timer_Params` — retained immutable residue: `{ _Behavior }` only. Duration lives
+  in the chrono's GoalValue, direction in `FTag_Timer_Countdown`, run-state in
+  `FTag_Timer_NeedsUpdate`, name in the GameplayLabel. One home per datum — request handlers read
+  the TAGS, never a spec copy.
+- `AddOrReplace` re-applies the whole spec: re-seeds both fragments, sets/clears all three tags,
+  and re-adds `FTag_Timer_NeedsSetup` so Setup re-Completes a countdown chrono.
+
 ## Pattern
 
 ```cpp
@@ -76,14 +87,16 @@ off the RepData census.
 
 **Why a payload at all:** the runtime position lives in the chrono's `_CurrentValue`, which is
 `UPROPERTY(Transient)` and does not survive the v3 rebuild+hydrate load. The entity is re-Constructed from
-its spawn recipe (Params re-derive GoalValue/direction/behavior) but the chrono resets to its start — 0 for
-CountUp, GoalValue for CountDown-after-Setup. The payload captures the three things the rebuild loses:
+its spawn recipe (the `FCk_Timer_Spec` re-derives GoalValue/direction/behavior) but the chrono resets to
+its start — 0 for CountUp, GoalValue for CountDown-after-Setup. The payload captures the three things the
+rebuild loses:
 
 - `_Elapsed` — the chrono position (`Get_TimeElapsed()`) at capture.
-- `_CountDirection` — the RUNTIME direction (the `FTag_Timer_Countdown` tag).
-  `Request_ChangeCountDirection` / `Request_ReverseDirection` flip that tag **without touching Params**, so
-  a runtime flip is otherwise lost on rebuild. (Despite the `Request_` name, `Request_ChangeCountDirection`
-  mutates the tag synchronously — it is not queued.)
+- `_CountDirection` — the RUNTIME direction (the `FTag_Timer_Countdown` tag — the ONLY home direction
+  has; every processor and request handler reads the tag).
+  `Request_ChangeCountDirection` / `Request_ReverseDirection` flip that tag, so a runtime flip is
+  otherwise lost on rebuild. (Despite the `Request_` name, `Request_ChangeCountDirection` mutates the
+  tag synchronously — it is not queued.)
 - `_RunState` — running vs paused (the `FTag_Timer_NeedsUpdate` tag). "Done" is not a distinct run-state;
   it is encoded by `_Elapsed` reaching GoalValue.
 
@@ -119,7 +132,7 @@ friend-gated and is never written directly — and every `NotReady` return prece
 
 ## Profiling stat-id
 
-`ck::MakeStatIdFromParams` derives a timer's `TStatId` ("Timer Broadcast Event [\<name\>]") from its Params
+`ck::MakeStatId` derives a timer's `TStatId` ("Timer Broadcast Event [\<name\>]") from its GameplayLabel
 on the fly inside the processors, under `#if STATS`, to scope each signal broadcast's CPU cost. It is
 deliberately **not** cached as a fragment: a cached fragment did not survive snapshot restore (restored
 timers came back without it), and per-broadcast derivation has no such gap. The cost is a STATS-only

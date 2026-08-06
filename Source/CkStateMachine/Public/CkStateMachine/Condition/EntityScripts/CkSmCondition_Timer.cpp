@@ -15,7 +15,7 @@ auto
 
     auto ScriptEntity = DoGet_ScriptEntity();
 
-    const auto TimerParams = FCk_Fragment_Timer_ParamsData{_Duration}
+    const auto TimerParams = FCk_Timer_Spec{_Duration}
         .Set_CountDirection(ECk_Timer_CountDirection::CountDown)
         .Set_Behavior(ECk_Timer_Behavior::PauseOnDone)
         .Set_StartingState(ECk_Timer_State::Running);

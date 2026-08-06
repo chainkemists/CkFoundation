@@ -27,14 +27,30 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_Timer_Params = FCk_Fragment_Timer_ParamsData;
+    // The retained immutable residue of FCk_Timer_Spec: the only field read after construction.
+    // Duration lives in the chrono's GoalValue; direction and run-state live in tags; the name
+    // lives in the GameplayLabel.
+    struct CKTIMER_API FFragment_Timer_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Timer_Params);
+
+    private:
+        ECk_Timer_Behavior _Behavior = ECk_Timer_Behavior::PauseOnDone;
+
+    public:
+        CK_PROPERTY_GET(_Behavior);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Timer_Params, _Behavior);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKTIMER_API FFragment_Timer_Current
+    struct CKTIMER_API FFragment_Timer
     {
     public:
-        CK_GENERATED_BODY(FFragment_Timer_Current);
+        CK_GENERATED_BODY(FFragment_Timer);
 
     public:
         friend class FProcessor_Timer_Setup;
@@ -50,7 +66,7 @@ namespace ck
         CK_PROPERTY_GET(_Chrono);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Timer_Current, _Chrono);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Timer, _Chrono);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

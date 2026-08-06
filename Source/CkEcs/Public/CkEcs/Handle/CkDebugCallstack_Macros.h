@@ -56,7 +56,7 @@
 
 // Generates the AngelScript namespace utils_<_feature_>_debug_callstack with Record and Clear.
 // _feature_ is an unquoted lowercase token pasted into that namespace name (e.g. timer).
-// Usage: CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKTIMER_API, timer, ck::FFragment_Timer_Current);
+// Usage: CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKTIMER_API, timer, ck::FFragment_Timer_Requests);
 #define CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(_API_, _feature_, _FragmentType_) \
 	AS_FORCE_LINK const FAngelscriptBinds::FBind _API_ CK_UNIQUE_NAME(Bind_Callstack_##_feature_)( \
 		FAngelscriptBinds::EOrder::Late, \

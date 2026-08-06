@@ -111,12 +111,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Timer);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKTIMER_API FCk_Fragment_Timer_ParamsData
+struct CKTIMER_API FCk_Timer_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Timer_ParamsData);
+    CK_GENERATED_BODY(FCk_Timer_Spec);
 
 
 private:
@@ -148,29 +148,29 @@ public:
     CK_PROPERTY(_StartingState);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Timer_ParamsData, _Duration);
+    CK_DEFINE_CONSTRUCTORS(FCk_Timer_Spec, _Duration);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKTIMER_API FCk_Fragment_MultipleTimer_ParamsData
+struct CKTIMER_API FCk_MultipleTimer_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleTimer_ParamsData);
+    CK_GENERATED_BODY(FCk_MultipleTimer_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, TitleProperty = "_TimerName"))
-    TArray<FCk_Fragment_Timer_ParamsData> _TimerParams;
+    TArray<FCk_Timer_Spec> _TimerParams;
 
 public:
     CK_PROPERTY_GET(_TimerParams)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleTimer_ParamsData, _TimerParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_MultipleTimer_Spec, _TimerParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

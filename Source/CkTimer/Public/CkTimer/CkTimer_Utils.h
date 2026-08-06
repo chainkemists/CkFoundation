@@ -23,9 +23,9 @@ CKTIMER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Timer_CategoryName);
 
 namespace ck
 {
-    // A timer's profiling stat-id, derived on the fly inside the processors under #if STATS.
-    // Deliberately not cached as a fragment — Claude.md § Profiling stat-id.
-    CKTIMER_API auto MakeStatIdFromParams(const FCk_Fragment_Timer_ParamsData& InParams) -> TStatId;
+    // A timer's profiling stat-id, derived on the fly inside the processors under #if STATS from
+    // the timer's GameplayLabel. Deliberately not cached as a fragment — Claude.md § Profiling stat-id.
+    CKTIMER_API auto MakeStatId(const FCk_Handle_Timer& InTimer) -> TStatId;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ public:
     static FCk_Handle_Timer
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Timer_ParamsData& InParams);
+        const FCk_Timer_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -60,7 +60,7 @@ public:
     static FCk_Handle_Timer
     AddOrReplace(
         UPARAM(ref) FCk_Handle& InTimerOwnerEntity,
-        const FCk_Fragment_Timer_ParamsData& InParams);
+        const FCk_Timer_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -68,7 +68,7 @@ public:
     static TArray<FCk_Handle_Timer>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleTimer_ParamsData& InParams);
+        const FCk_MultipleTimer_Spec& InParams);
 
     // Not providing a remove function by design - use UCk_Utils_EntityLifetime_UE::Request_DestroyEntity instead
     // Reason: We have no way of knowing how many other Fragments this Entity may have. We do not want to destroy
