@@ -33,8 +33,44 @@ auto
         TEXT("Handle [{}] already has the Minimap feature. Compose additional minimaps as child entities via Create"), InHandle)
     { return Cast(InHandle); }
 
-    InHandle.Add<ck::FFragment_Minimap_Params>(InParams);
+    InHandle.Add<ck::FFragment_Minimap_Params>(
+        InParams.Get_ProjectionMode(),
+        InParams.Get_FrameShape(),
+        InParams.Get_FixedBounds(),
+        InParams.Get_MaxEntries(),
+        InParams.Get_UpdateInterval());
     InHandle.Add<ck::FFragment_Minimap_Current>();
+
+    auto& Current = InHandle.Get<ck::FFragment_Minimap_Current>();
+    Current._RotationMode   = InParams.Get_RotationMode();
+    Current._CategoryFilter = InParams.Get_CategoryFilter();
+    Current._ViewExtent     = InParams.Get_ViewExtent();
+
+    if (InParams.Get_ProjectionMode() == ECk_Minimap_ProjectionMode::FixedBounds)
+    {
+        // FixedBounds projects through Get_BoundsToFrame and NEVER reads ViewExtent, so ensuring on
+        // it here would be a false positive: it would force every world-map author to invent a
+        // meaningless positive number. What FixedBounds actually requires is valid bounds.
+        CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_FixedBounds()),
+            TEXT("Minimap [{}] uses FixedBounds projection but its FixedBounds half-extents are not > 0. "
+                 "Every entry will project to the frame center until the minimap is re-Added with valid bounds"),
+            InHandle)
+        {}
+    }
+    else
+    {
+        // ObserverCentric: ViewExtent IS the zoom, so a non-positive one is a real authoring error
+        // and the 1cm fallback below is a visible degradation.
+        CK_ENSURE_IF_NOT(InParams.Get_ViewExtent() > 0.0f,
+            TEXT("Minimap [{}] ViewExtent [{}] must be > 0 - falling back to 1cm"),
+            InHandle, InParams.Get_ViewExtent())
+        {}
+    }
+
+    // The stored value must stay positive for EVERY projection mode - a later mode flip or
+    // Request_SetRotationMode would divide by it.
+    if (Current._ViewExtent <= 0.0f)
+    { Current._ViewExtent = 1.0f; }
     InHandle.Add<ck::FFragment_Minimap_Scratch>();
     InHandle.Add<ck::FTag_Minimap_NeedsSetup>();
 
