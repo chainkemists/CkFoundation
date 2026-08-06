@@ -99,6 +99,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // The native-delegate subscriptions on the pooled AudioComponent — bound by Setup after the
+    // component is created, removed by EndPlay before the component is released. Component-lifetime
+    // plumbing, distinct from the track's playback state.
+    struct CKAUDIO_API FFragment_AudioTrack_ComponentBindings
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_AudioTrack_ComponentBindings);
+
+    public:
+        friend class FProcessor_AudioTrack_Setup;
+        friend class FProcessor_AudioTrack_EndPlay;
+
+    private:
+        FDelegateHandle _PlayStateChangedHandle;
+        FDelegateHandle _VirtualizationChangedHandle;
+        FDelegateHandle _PlaybackPercentHandle;
+        FDelegateHandle _SingleEnvelopeHandle;
+        FDelegateHandle _MultiEnvelopeHandle;
+        FDelegateHandle _AudioFinishedHandle;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKAUDIO_API FFragment_AudioTrack_Current
     {
     public:
@@ -128,14 +151,6 @@ namespace ck
         // Cached data from AudioComponent for debug/query purposes
         float _PlaybackPercent = 0.0f;
         bool _IsVirtualized = false;
-
-        // Delegate handles for AudioComponent bindings
-        FDelegateHandle _PlayStateChangedHandle;
-        FDelegateHandle _VirtualizationChangedHandle;
-        FDelegateHandle _PlaybackPercentHandle;
-        FDelegateHandle _SingleEnvelopeHandle;
-        FDelegateHandle _MultiEnvelopeHandle;
-        FDelegateHandle _AudioFinishedHandle;
 
     public:
         CK_PROPERTY_GET(_AudioComponent);
