@@ -28,6 +28,7 @@ auto
     AudioTrack.Add<ck::FFragment_AudioTrack_Params>(ck::FFragment_AudioTrack_Params{InParams});
     AudioTrack.Add<ck::FFragment_AudioTrack_PendingSetup>(ck::FFragment_AudioTrack_PendingSetup{InParams});
     AudioTrack.Add<ck::FFragment_AudioTrack_Current>();
+    AudioTrack.Add<ck::FFragment_AudioTrack_ComponentBindings>();
     AudioTrack.Add<ck::FFragment_AudioTrack_Debug>();
     AudioTrack.Add<ck::FTag_AudioTrack_NeedsSetup>();
 
