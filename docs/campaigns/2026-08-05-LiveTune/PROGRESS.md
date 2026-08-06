@@ -18,10 +18,14 @@ CkTests off `dev` @ `0ea0d6a2`). Never pushed; merge/rebase onto `dev` is Adam's
 
 | Phase | Status |
 |---|---|
-| 0 — Spine | IN PROGRESS (this session, 2026-08-05) |
-| 1 — Pilots | not started (blocked on Phase 0 gate + audit) |
+| 0 — Spine | **GATE GREEN** (2026-08-06) — awaiting Adam's audit before Phase 1 |
+| 1 — Pilots | not started (blocked on Phase 0 audit) |
 | 2 — AS path | not started |
 | 3 — Rollout | not started |
+
+Commits on `livetune/phase-0` (local only, never pushed):
+CkFoundation `7aa1dbd26` (PROGRESS start) → `8db8eb08e` (baseline record) → `7bf179a20` (spine)
+→ docs-final commit; CkTests `45fc7ecd` (gate coverage).
 
 ## Baseline (recorded BEFORE first edit)
 
@@ -107,10 +111,7 @@ CkTests off `dev` @ `0ea0d6a2`). Never pushed; merge/rebase onto `dev` is Adam's
    real `FCoreUObjectDelegates` path, so AutoTests cover subscription → extraction → gates →
    dispatch end to end.
 
-## File list (Phase 0)
-
-Drafted in session scratchpad; landing into the CkPlugins_Other checkouts after the baseline run
-completes (no source edits while a toolbox run is in flight):
+## File list (Phase 0) — all landed + committed
 
 - CkFoundation `Source/CkEcs/Public/CkEcs/LiveTune/CkLiveTune_Fragment.h` — stamp fragment
 - CkFoundation `Source/CkEcs/Public/CkEcs/LiveTune/CkLiveTune_HandlerRegistry.h/.inl.h/.cpp` — registry
@@ -125,15 +126,60 @@ completes (no source edits while a toolbox run is in flight):
 - CkTests `Script/CkEcs/CkAutoTest_LiveTune_DispatchByType.as` / `_DiffGate.as` /
   `_InteractivePolicy.as` / `_StampCleanup.as` — PIE autotests
 
-## Gate status (Phase 0)
+## Gate status (Phase 0) — ALL GREEN 2026-08-06
 
 | Gate item | Status |
 |---|---|
-| Link validation rejects wrong-type/missing property loudly, zero partial state | tests drafted, pending run |
-| Registry dispatch by type | tests drafted (spec + AS full-pipeline), pending run |
-| Stamp cleanup on entity destroy | test drafted, pending run |
-| Diff gate suppresses no-op + full-heal dispatch | test drafted, pending run |
-| Undo/redo event shape verified on fork | **DONE** (see verifications; handled in dispatch) |
+| Link validation rejects wrong-type/missing property loudly, zero partial state | **GREEN** — `CkTests.UnitTests.LiveTune.LinkValidation.{MissingProperty, NonStructMember, MissingParamsFragment, InvalidHandle}` |
+| Registry dispatch by type | **GREEN** — `CkTests.UnitTests.LiveTune.Registry.DispatchByType` (registry contract) + `Ck_AutoTest_LiveTune_DispatchByType` (full pipeline) |
+| Stamp cleanup on entity destroy | **GREEN** — `Ck_AutoTest_LiveTune_StampCleanup` (waits on actual unregistration, then proves no dispatch) |
+| Diff gate suppresses no-op + full-heal dispatch | **GREEN** — `Ck_AutoTest_LiveTune_DiffGate` (seeded / changed / repeat) + `Ck_AutoTest_LiveTune_InteractivePolicy` (change-type policy) |
+| Undo/redo event shape verified on fork | **GREEN** — source-verified (see verifications); null-property events re-diff all linked members |
+
+### Gate run of record (2026-08-06, `Saved/Logs/BuildTest-Gate3.log`, fresh build + fresh discovery)
+
+**Total 1013 · Passed 1010 · Failed 3 · Contaminated 0** (3m55s). Delta vs baseline (1002/999/3):
+
+- The two stable baseline reds are unchanged: `Ck_AutoTest_PathNetworkFollower_DesiredNavmeshClearanceMovesInward`,
+  `Ck_AutoTest_PathNetworkFollower_ProjectsRibbonWaypointWithinNavQueryExtent`.
+- `Ck_AutoTest_UsfOutline_VatShadowCustomData` red in this run only — **flake, not a regression**:
+  green in the baseline and in BOTH intermediate full runs of the same code, and green isolated on
+  the same binary (`Test-UsfIsolate.log`, 1/1). No shared code path with LiveTune.
+- `IntegrationTest` (Angelscript coverage) was red at baseline, green in all three later full runs —
+  baseline-side flake.
+- +11 tests total = the 9 LiveTune tests (all green; also 9/9 in the earlier pattern run,
+  `BuildTest-LiveTune.log`) + 2 pre-existing tests the baseline's CACHED discovery had silently
+  skipped (`Ck_AutoTest_PoiDisplayDefinition_DisplayOverride`,
+  `CustomMainPassRequiredFragments_SkipsAndWakes` — both green; the `--discover-fresh` trap, live).
+- **Delta on pre-existing suites: zero regressions.**
+
+### Success criteria closure
+
+1. `Source/CkEcs/LiveTune/` exists and compiles: **editor target** green (gate run);
+   **non-editor (Game target)**: CkEcs incl. every LiveTune TU compiled + linked clean with
+   `WITH_EDITOR` out (`Build-Game.log` — zero LiveTune/CkEcs errors); the Game build then fails in
+   PRE-EXISTING `CkEntityVisualizer_Utils.cpp:169-170` (uses `ck::FFragment_EditorSelectionOwner`
+   outside `WITH_EDITOR`) — not ours, flagged as follow-up. `WITH_ANGELSCRIPT_CK` both-ways:
+   verified by inspection — the Phase 0 surface has zero AS-conditional code (no AS includes,
+   no bindings; the tri-env surface is Phase 2 by design).
+2. Gate AutoTests in CkTests, green via toolbox fresh boot, baseline delta-zero: **done** (above).
+3. PROGRESS current; local commits on `livetune/phase-0` in both submodules; nothing pushed: **done**.
+4. Close-out report: delivered in-session.
+
+## Post-baseline findings (for the auditor / future phases)
+
+- **`Ck.<Feature>.*` C++ pretty names never run in this host's full pass.** The toolbox's default
+  `--test` runs "project tests" = rows whose TOP path segment is a plugin name (`CkTests`,
+  `GitLink`, …). `Ck.Registry.SlotTable.*` and `Ck.DebugFeatureFlags.*` are likewise invisible to
+  full passes (pre-existing; they only run via explicit `--test-pattern`). The LiveTune specs
+  therefore joined the `CkTests.UnitTests.<Module>` family. Feeds the A2 pretty-name adjudication.
+- The flags change that preceded the rename (EngineFilter → `ck::tests::kCkUnitTestFlags`) is kept:
+  it is the documented house constant for this family.
+
+## [EDITOR-VERIFY] items (for Adam)
+
+- None for Phase 0 — nothing user-visible exists until a real feature registers a handler (Phase 1
+  pilots carry the first mid-PIE details-panel edit check). All Phase 0 behavior is pinned headlessly.
 
 ## Known limitations / notes for the auditor
 
