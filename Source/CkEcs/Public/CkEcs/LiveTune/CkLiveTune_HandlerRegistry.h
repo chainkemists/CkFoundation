@@ -2,14 +2,17 @@
 
 // Per-feature re-apply registry for LiveTune — the editor-only change transport for live-tunable feature
 // params: an editor-time edit of a linked tuning asset is dispatched back onto live entities through the
-// handler registered for the params TYPE (docs/specs/2026-08-05-LiveTune-design.md §4.4/§5). Three tiers:
-//   ViaReplace — live-read features; Replace<Params> IS the re-apply (optional PostReplace fixup).
-//   ViaRequest — setup-baked features that own an in-place rebuild path; route through their Request_*.
-//   ViaRebuild — cascading setup; persistence Produce -> destroy feature subtree -> re-Add -> hydrate,
-//                reusing the feature's FCk_PersistenceHandlerRegistry entries wholesale.
-// Registration is EXPLICIT opt-in — one line in the feature's _Fragment.cpp; an edit whose params type has
-// no handler logs Display and does nothing. Outside WITH_EDITOR the Register_* shapes are empty inlines,
-// so registration call sites stay #if-free.
+// handler registered for the params TYPE (docs/specs/2026-08-05-LiveTune-design.md §4.4/§5). Two shapes:
+//   Register           — the re-apply is ONE synchronous call. Defaults to Replace<Params>, which is the
+//                        whole re-apply for a live-read feature; pass .Apply to route through the
+//                        feature's own reconfigure request instead.
+//   Register_ViaRebuild — cascading setup, and NOT a call: the feature hands over a ReAdd callback and the
+//                        subsystem drives a multi-frame capture -> destroy -> re-Add -> hydrate protocol,
+//                        reusing the feature's FCk_PersistenceHandlerRegistry entries wholesale.
+// Registration is EXPLICIT opt-in — one line in the feature's _Fragment.cpp. It is also what makes a
+// feature linkable at all: Link ENSUREs on an unregistered params type, because a stamp that silently
+// swallows every edit is a failure the caller cannot see. Outside WITH_EDITOR the Register shapes are
+// empty inlines, so registration call sites stay #if-free.
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Persistence/CkPersistenceHandlerRegistry.h"
@@ -20,11 +23,26 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-enum class ECk_LiveTune_ApplyTier : uint8
+// Direct is one synchronous Apply call. Rebuild is a protocol the subsystem drives across frames — which is
+// why it cannot be expressed as an Apply lambda: it needs the pending-rebuild queue, the GC pins and the
+// destruction-keyed re-Add, none of which a feature can reach from inside a call.
+enum class ECk_LiveTune_ApplyKind : uint8
 {
-    ViaReplace,
-    ViaRequest,
-    ViaRebuild
+    Direct,
+    Rebuild
+};
+
+// A details-panel slider drag broadcasts EPropertyChangeType::Interactive once per tick. Whether a re-apply
+// belongs on that path is a property of its COST, not of how it is written — a cheap reconfigure request is
+// as previewable as a fragment swap, and gating on the shape of the handler would needlessly deny it.
+enum class ECk_LiveTune_ScrubPolicy : uint8
+{
+    // Resolve from the re-apply: the default Replace path is a fragment swap and previews live; a custom
+    // Apply is assumed to touch state too expensive to redo per drag-frame until it says otherwise.
+    // Rebuild always resolves to OnCommit — a rebuild per drag-frame is the storm this policy exists to stop.
+    Auto,
+    DuringScrub,
+    OnCommit
 };
 
 // Scope of a ViaRebuild re-apply: Feature destroys + re-Adds the feature's child subtree; Entity is the
@@ -44,20 +62,23 @@ public:
     using FApplyFn       = TFunction<void(FCk_Handle& Entity, const FInstancedStruct& FreshParams)>;
     using FHasFragmentFn = TFunction<bool(const FCk_Handle& Entity)>;
     using FReAddFn       = TFunction<FCk_Handle(FCk_Handle& Owner, const FInstancedStruct& FreshParams)>;
-    using FPostReplaceFn = TFunction<void(FCk_Handle& Entity)>;
+    using FPostApplyFn   = TFunction<void(FCk_Handle& Entity)>;
     using FCaptureFn     = TFunction<TOptional<FInstancedStruct>(FCk_Handle& LinkedEntity, const FInstancedStruct& FreshParams)>;
 
     struct FHandler
     {
-        ECk_LiveTune_ApplyTier Tier = ECk_LiveTune_ApplyTier::ViaReplace;
+        ECk_LiveTune_ApplyKind Kind = ECk_LiveTune_ApplyKind::Direct;
 
-        // Set for ViaReplace only — the one tier whose contract REQUIRES the params fragment on the
-        // entity, so Link can validate against it (ViaRequest/ViaRebuild features may keep no params
-        // fragment at all — FloatAttribute is fully decomposed at Add).
+        // Always resolved to DuringScrub or OnCommit by the time it lands here — never Auto.
+        ECk_LiveTune_ScrubPolicy ScrubPolicy = ECk_LiveTune_ScrubPolicy::OnCommit;
+
+        // Set only when the re-apply is the DEFAULT Replace, the one contract that REQUIRES the params
+        // fragment on the entity, so Link can validate against it. A feature with a custom Apply may keep
+        // no params fragment at all (FloatAttribute is fully decomposed at Add).
         FHasFragmentFn HasFragment;
 
-        // Direct re-apply, synthesized by Register_ViaReplace / Register_ViaRequest. Unset for
-        // ViaRebuild — that tier routes through the rebuild driver, which consumes the slots below.
+        // The whole re-apply for Kind::Direct. Unset for Kind::Rebuild — that shape routes through the
+        // rebuild driver, which consumes the slots below.
         FApplyFn Apply;
 
         ECk_LiveTune_RebuildScope RebuildScope = ECk_LiveTune_RebuildScope::Feature;
@@ -87,15 +108,18 @@ public:
     // Per-shape designated-init args (field order = designator order). Lambdas are TYPED on the params
     // struct at the call site; the registry stores them type-erased.
     template <typename T_Params>
-    struct TArgs_ViaReplace
+    struct TArgs
     {
-        FPostReplaceFn PostReplace{};
-    };
+        // Unset = the re-apply IS Replace<T_Params>, which is the whole story for a live-read feature.
+        // Set it when the params were baked into state a fragment write cannot reach (an external body, a
+        // UObject) and the feature owns an in-place reconfigure request to route through instead.
+        TFunction<void(FCk_Handle& Entity, const T_Params& FreshParams)> Apply{};
 
-    template <typename T_Params>
-    struct TArgs_ViaRequest
-    {
-        TRequired<TFunction<void(FCk_Handle& Entity, const T_Params& FreshParams)>> Apply;
+        // Runs after Apply, default or custom. For state Add DERIVED from the params and cached elsewhere
+        // — a tag, a chrono, a handle — which no params write refreshes on its own.
+        FPostApplyFn PostApply{};
+
+        ECk_LiveTune_ScrubPolicy ScrubPolicy = ECk_LiveTune_ScrubPolicy::Auto;
     };
 
     template <typename T_Params>
@@ -111,10 +135,7 @@ public:
     // where T_Params is complete; include both headers in the registering .cpp. Safe to call during
     // static init (lazy type resolution, mirroring FCk_PersistenceHandlerRegistry).
     template <typename T_Params>
-    static auto Register_ViaReplace(TArgs_ViaReplace<T_Params> InArgs = {}) -> void;
-
-    template <typename T_Params>
-    static auto Register_ViaRequest(TArgs_ViaRequest<T_Params> InArgs) -> void;
+    static auto Register(TArgs<T_Params> InArgs = {}) -> void;
 
     template <typename T_Params>
     static auto Register_ViaRebuild(TArgs_ViaRebuild<T_Params> InArgs) -> void;
@@ -144,10 +165,7 @@ private:
     static TArray<FLazyEntry> _PendingHandlers;
 #else
     template <typename T_Params>
-    static auto Register_ViaReplace(TArgs_ViaReplace<T_Params> = {}) -> void {}
-
-    template <typename T_Params>
-    static auto Register_ViaRequest(TArgs_ViaRequest<T_Params>) -> void {}
+    static auto Register(TArgs<T_Params> = {}) -> void {}
 
     template <typename T_Params>
     static auto Register_ViaRebuild(TArgs_ViaRebuild<T_Params>) -> void {}

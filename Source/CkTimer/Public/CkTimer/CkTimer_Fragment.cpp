@@ -80,8 +80,8 @@ namespace ck_timer_fragment
             // pieces are re-synced by the fixup: the count-direction tag (via its own request) and the
             // Setup pass (chrono direction alignment). The chrono's GOAL is baked at Add and stays — a
             // Duration retune needs a Timer request that does not exist yet.
-            FCk_LiveTuneHandlerRegistry::Register_ViaReplace<FCk_Fragment_Timer_ParamsData>({
-                .PostReplace = [](FCk_Handle& InEntity) -> void
+            FCk_LiveTuneHandlerRegistry::Register<FCk_Fragment_Timer_ParamsData>({
+                .PostApply = [](FCk_Handle& InEntity) -> void
                 {
                     auto TimerHandle = UCk_Utils_Timer_UE::CastChecked(InEntity);
                     const auto& FreshParams = InEntity.Get<ck::FFragment_Timer_Params>();

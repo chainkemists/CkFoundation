@@ -678,11 +678,18 @@ registered handler and leaves no stamp, because the alternative — stamping and
 edit — is a failure the caller cannot see. So the tunable set is exactly the registered set, and a
 missing opt-in surfaces at setup rather than as silence while someone drags a slider.
 
-- `Register_ViaReplace<T_Params>({...})` — live-read features; `Replace<Params>` IS the re-apply,
-  optional `.PostReplace` fixup re-syncs derived state (reference: `CkTimer_Fragment.cpp`).
-- `Register_ViaRequest<T_Params>({.Apply = ...})` — features owning an in-place reconfigure request
-  (reference: `CkProbe_Fragment.cpp` → `Request_Reconfigure`).
-- `Register_ViaRebuild<T_Params>({.ReAdd = ..., .Capture = ...})` — cascading setup: capture (persistence
+- `Register<T_Params>({})` — the re-apply is ONE synchronous call. Defaults to `Replace<Params>`,
+  which is the whole story for a live-read feature, so the common case is a bare `({})`. Optional
+  `.PostApply` re-syncs state `Add` DERIVED from the params and cached elsewhere (reference:
+  `CkTimer_Fragment.cpp`). Pass `.Apply` when the params were baked into something a fragment write
+  cannot reach and the feature owns a reconfigure request to route through instead (reference:
+  `CkProbe_Fragment.cpp` → `Request_Reconfigure`).
+  `.ScrubPolicy` decides whether the re-apply runs on every frame of a details-panel drag. `Auto`
+  (default) resolves to `DuringScrub` for the default Replace and `OnCommit` for a custom `.Apply`;
+  a custom `.Apply` that is genuinely cheap should say `DuringScrub` explicitly and get live preview.
+  The gate keys on declared COST, not on the handler's shape.
+- `Register_ViaRebuild<T_Params>({.ReAdd = ..., .Capture = ...})` — the one shape that is NOT a call:
+  the subsystem drives it across frames, which is why it cannot collapse into `Register`. Cascading setup: capture (persistence
   Produce sweep, or `.Capture` to strip config the save payload conflates with runtime state) → deferred
   destroy → re-Add keyed on actual destruction → hydrate via `FProcessor_Hydration_Dispatch` → re-link
   (reference: `CkFloatAttribute_Fragment.cpp`). A rebuild SEVERS cached typesafe handles and signal

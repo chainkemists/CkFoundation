@@ -17,10 +17,10 @@ NOT redesign LiveTune.
 3. `Plugins/CkFoundation/Source/CkEcs/Public/CkEcs/LiveTune/CkLiveTune_HandlerRegistry.h` — read the
    header comment and the three `TArgs_*` structs in full. The `TRequired<>` slots are
    compile-enforced; omitting one is a compile error, not a runtime ensure.
-4. The three reference registrations, one per tier:
-   - `CkTimer/Public/CkTimer/CkTimer_Fragment.cpp:83` — `ViaReplace` + `.PostReplace`
-   - `CkSpatialQuery/Public/CkSpatialQuery/Probe/CkProbe_Fragment.cpp:19` — `ViaRequest`
-   - `CkAttribute/Public/CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.cpp:127` — `ViaRebuild` + `.Capture`
+4. The three reference registrations:
+   - `CkTimer/Public/CkTimer/CkTimer_Fragment.cpp` — `Register` with the default Replace + `.PostApply`
+   - `CkSpatialQuery/Public/CkSpatialQuery/Probe/CkProbe_Fragment.cpp` — `Register` with a custom `.Apply`
+   - `CkAttribute/Public/CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.cpp` — `Register_ViaRebuild` + `.Capture`
 5. `Plugins/CkFoundation/docs/specs/2026-08-05-LiveTune-design.md` §5 (tiers) and §10 (risks) — the
    design of record. Do not relitigate it.
 6. `Plugins/CkFoundation/CLAUDE.md` + `Source/CLAUDE.md` — code style, ensure discipline,
@@ -35,8 +35,14 @@ NOT redesign LiveTune.
   loud at setup. Do not weaken this to a warning to make a batch pass.
 - **`Multiple*` bulk-add containers are out of scope** (TRIAGE.md). They are construction-time arrays
   of another feature's params; retuning one is ambiguous by construction.
-- The three tiers, the diff cache, the Interactive→ViaReplace policy, and the authority gate are
-  settled. You consume them.
+- The two registration shapes, the diff cache, the scrub policy, and the authority gate are settled.
+  You consume them. Note the registry was collapsed from three shapes to two on 2026-08-06:
+  `Register_ViaReplace`/`Register_ViaRequest` are now one `Register` (they always shared the same
+  `Apply` slot), and scrub-safety became an explicit `.ScrubPolicy` instead of being inferred from
+  the tier. Anything you read describing three tiers predates that.
+- **Report back on `.ScrubPolicy`.** Its `Auto` resolution assumes a custom `.Apply` is too expensive
+  to preview per drag-frame. If the sweep keeps finding cheap custom applies that deserve
+  `DuringScrub`, say so — the default may be wrong.
 - Not every field of a registered feature must retune. A feature whose params mix live-read and
   baked fields either fixes up the baked ones (`.PostReplace`), rejects them loudly (the Probe
   `Request_Reconfigure` shape), or documents the bound. Silence is the one unacceptable outcome.

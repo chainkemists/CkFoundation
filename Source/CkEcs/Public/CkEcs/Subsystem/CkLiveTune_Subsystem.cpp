@@ -315,7 +315,7 @@ auto
     }
 
     const auto IsInteractiveChange = (InChangeType & EPropertyChangeType::Interactive) != 0;
-    if (IsInteractiveChange && Handler->Tier != ECk_LiveTune_ApplyTier::ViaReplace)
+    if (IsInteractiveChange && Handler->ScrubPolicy != ECk_LiveTune_ScrubPolicy::DuringScrub)
     { return; }
 
     // Iterate a COPY — Apply may destroy entities, which re-enters _LinkedEntities via the stamp-destroy sink.
@@ -332,7 +332,7 @@ auto
         if (IsClientModeReplicated)
         { continue; }
 
-        if (Handler->Tier == ECk_LiveTune_ApplyTier::ViaRebuild)
+        if (Handler->Kind == ECk_LiveTune_ApplyKind::Rebuild)
         {
             AppliedToAny |= DoBeginRebuild(Entity, *Handler, FreshValue, Key);
             continue;

@@ -13,45 +13,53 @@
 template <typename T_Params>
 auto
     FCk_LiveTuneHandlerRegistry::
-    Register_ViaReplace(TArgs_ViaReplace<T_Params> InArgs)
+    Register(TArgs<T_Params> InArgs)
     -> void
 {
+    const auto HasCustomApply = static_cast<bool>(InArgs.Apply);
+
     auto Handler = FHandler{};
-    Handler.Tier = ECk_LiveTune_ApplyTier::ViaReplace;
-    Handler.HasFragment = [](const FCk_Handle& InEntity) -> bool
+    Handler.Kind = ECk_LiveTune_ApplyKind::Direct;
+
+    // Auto resolves against the re-apply, not the author's optimism: a fragment swap is cheap enough to
+    // preview on every drag-frame, anything routed through a feature's own request is assumed not to be
+    // until that feature says so explicitly.
+    Handler.ScrubPolicy = InArgs.ScrubPolicy != ECk_LiveTune_ScrubPolicy::Auto
+        ? InArgs.ScrubPolicy
+        : (HasCustomApply ? ECk_LiveTune_ScrubPolicy::OnCommit : ECk_LiveTune_ScrubPolicy::DuringScrub);
+
+    // Only the default Replace path guarantees the params fragment is on the entity, so it is the only one
+    // Link can validate against.
+    if (NOT HasCustomApply)
     {
-        return InEntity.Has<T_Params>();
-    };
-    Handler.Apply = [PostReplace = MoveTemp(InArgs.PostReplace)](FCk_Handle& InEntity, const FInstancedStruct& InFreshParams) -> void
+        Handler.HasFragment = [](const FCk_Handle& InEntity) -> bool
+        {
+            return InEntity.Has<T_Params>();
+        };
+    }
+
+    Handler.Apply = [Apply = MoveTemp(InArgs.Apply), PostApply = MoveTemp(InArgs.PostApply)]
+        (FCk_Handle& InEntity, const FInstancedStruct& InFreshParams) -> void
     {
-        const auto EntityHasParams = InEntity.Has<T_Params>();
-        CK_ENSURE_IF_NOT(EntityHasParams,
-            TEXT("LiveTune ViaReplace: Entity [{}] no longer carries params fragment [{}] — cannot re-apply"),
-            InEntity, T_Params::StaticStruct()->GetName())
-        {}
-        if (NOT EntityHasParams)
-        { return; }
+        if (Apply)
+        {
+            Apply(InEntity, InFreshParams.Get<T_Params>());
+        }
+        else
+        {
+            const auto EntityHasParams = InEntity.Has<T_Params>();
+            CK_ENSURE_IF_NOT(EntityHasParams,
+                TEXT("LiveTune: Entity [{}] no longer carries params fragment [{}] — cannot re-apply"),
+                InEntity, T_Params::StaticStruct()->GetName())
+            {}
+            if (NOT EntityHasParams)
+            { return; }
 
-        InEntity.Replace<T_Params>(InFreshParams.Get<T_Params>());
+            InEntity.Replace<T_Params>(InFreshParams.Get<T_Params>());
+        }
 
-        if (PostReplace)
-        { PostReplace(InEntity); }
-    };
-
-    RegisterLazy([]() -> UScriptStruct* { return T_Params::StaticStruct(); }, MoveTemp(Handler));
-}
-
-template <typename T_Params>
-auto
-    FCk_LiveTuneHandlerRegistry::
-    Register_ViaRequest(TArgs_ViaRequest<T_Params> InArgs)
-    -> void
-{
-    auto Handler = FHandler{};
-    Handler.Tier = ECk_LiveTune_ApplyTier::ViaRequest;
-    Handler.Apply = [Apply = MoveTemp(InArgs.Apply.Value)](FCk_Handle& InEntity, const FInstancedStruct& InFreshParams) -> void
-    {
-        Apply(InEntity, InFreshParams.Get<T_Params>());
+        if (PostApply)
+        { PostApply(InEntity); }
     };
 
     RegisterLazy([]() -> UScriptStruct* { return T_Params::StaticStruct(); }, MoveTemp(Handler));
@@ -64,7 +72,12 @@ auto
     -> void
 {
     auto Handler = FHandler{};
-    Handler.Tier = ECk_LiveTune_ApplyTier::ViaRebuild;
+    Handler.Kind = ECk_LiveTune_ApplyKind::Rebuild;
+
+    // Not configurable: a destroy/re-Add/hydrate cycle per drag-frame is precisely the storm the scrub
+    // policy exists to prevent, so a rebuild always waits for the committed value.
+    Handler.ScrubPolicy = ECk_LiveTune_ScrubPolicy::OnCommit;
+
     Handler.RebuildScope = InArgs.Scope;
     Handler.ReAdd = [ReAdd = MoveTemp(InArgs.ReAdd.Value)](FCk_Handle& InOwner, const FInstancedStruct& InFreshParams) -> FCk_Handle
     {
