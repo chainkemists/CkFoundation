@@ -37,10 +37,14 @@ auto
         TEXT("PoiDisplayDefinition Add on Handle [{}] requires a valid Consumer tag (Poi.Consumer.*)"), InHandle)
     { return {}; }
 
-    InHandle.Add<ck::FFragment_PoiDisplayDefinition_Params>(InParams);
+    InHandle.Add<ck::FFragment_PoiDisplayDefinition_Params>(
+        InParams.Get_Consumer(),
+        InParams.Get_Icon(),
+        InParams.Get_Priority(),
+        InParams.Get_OffscreenPolicy());
 
-    // Current starts as a copy of the MUTABLE half of the authored seed. The icon is immutable post-Add and
-    // is served straight from Params, so it is not copied here.
+    // Current takes the MUTABLE half of the authored seed, and owns it from here on. The icon is
+    // immutable post-Add and is served straight from Params, so it is not copied here.
     InHandle.Add<ck::FFragment_PoiDisplayDefinition_Current>();
 
     auto& Current = InHandle.Get<ck::FFragment_PoiDisplayDefinition_Current>();
