@@ -97,7 +97,7 @@ per listener), create a dynamic `TStatId` at runtime:
 // CkTimer/CkTimer_Utils.cpp:29-36
 auto
     ck::MakeStatIdFromParams(
-        const FCk_Fragment_Timer_ParamsData& InParams)
+        const FCk_Timer_Spec& InParams)
     -> TStatId
 {
     const auto& StatString = ck::Format_UE(TEXT("Timer Broadcast Event [{}]"), InParams.Get_TimerName());
