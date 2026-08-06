@@ -4,8 +4,19 @@ Living doc. Newest entries on top within each section. See PROMPT.md for phases/
 
 ## State
 
-- **Phase:** P1–P4 + P6 audit COMPLETE and committed; P5 (monolith splits) STAGED with designs
-  below — each split is its own gated unit for a fresh session.
+- **Phase: ALL PHASES COMPLETE (P1–P6), 2026-08-06.** P5's six staged splits are each
+  dispositioned on evidence: **executed + individually gated** — Minimap/Compass (P5a),
+  AudioTrack (P5b), Camera (P5b), VoiceTalker (P5c); **adjudicated leave-alone** — VatProxy
+  (the prev/transition block IS the GPU custom-data wire format) and Homing (single-consumer
+  guidance blob, flagged on member count alone). Every code phase ended on the same steady state:
+  **1002/1004 passed**, the only reds being the two pre-existing PathNetworkFollower fixture
+  tests owned by the sibling navmesh work.
+- **Not done, and not ours to do:** the `[EDITOR-VERIFY]` pass (BP nodes resolving through the
+  123 CoreRedirects, then recompile+resave of the 16 flagged `.uasset`s — the two
+  `EntitySpawnParams_*` FInstancedStruct payloads carry the highest residual risk); shipping
+  (everything is LOCAL on `dev`, nothing pushed, no submodule pointer bumps — origin/dev gained
+  ~5 commits during the campaign, so a ck-ship-dev rebase is required); and the BusterBlock sweep
+  when it next bumps CkFoundation (`rename-map.tsv` + `apply-rename.sh` are reusable as-is).
 
 ## P5 — staged split designs (2026-08-06)
 
@@ -31,6 +42,8 @@ Priority order, each with its own build+suite gate; census data in the design sp
    with the VoiceChat workstream): capture chain / loopback playout / fairness / clocks / tunables
    split per its own Current-comment inventory. The "runtime copies of tunable params" block is
    the doctrine-priority extraction (`FFragment_VoiceTalker_Tunables` — requests mutate ONLY it).
+   **DONE (P5c, 2026-08-06)** — design held as staged; see the log entry for the five fragments,
+   the narrowed processor views, and what was deliberately left to the VoiceChat owner.
 
 Rules for every split: keep the Has/Cast anchor stable (P6 rule), update friend lists, per-split
 `[EDITOR-VERIFY]` if any debugger inspector reads the moved members (CkInspector_Audio reads
@@ -98,6 +111,72 @@ fragment MUST move that feature's Has/Cast anchor in the same change, with a mem
 
 ## Log
 
+- 2026-08-06 (P5c): **VoiceTalker (item 6) EXECUTED** — the deferral condition was re-tested and
+  had lapsed, so the last staged split is done and P5 is closed.
+  * **Why it un-deferred:** the P5b deferral was "coordinate with the active VoiceChat
+    workstream". Re-checked: CkVoiceChat's last source commit on `origin/dev` is `99377e3bb`
+    (P4, already an ancestor of local dev); the 5 upstream commits local dev is behind are
+    entity-visualizer, scripts, and GameSettings/LiveTune docs — none touch the module; and the
+    three sibling checkouts (BusterBlock, CkPlugins_Other, Venus) have neither uncommitted nor
+    unpushed `Source/CkVoiceChat` work. No live contention.
+  * **Blast radius: 5 files, all in-module.** An exhaustive no-ignore sweep for
+    `VoiceTalker_Current` across every `*.as/*.h/*.cpp/*.cs` under `Plugins/` returns only
+    Fragment.h, Processor.h/.cpp, Utils.cpp, Route_Processor.h/.cpp. NO debugger inspector reads
+    it (unlike AudioTrack/Camera) and no BP/AS surface — these are plain C++ fragments. CkTests'
+    two VoiceChat net subjects touch only `UCk_Utils_VoiceTalker_UE::Add`.
+  * **The staged 5-concern design held**, confirmed by a per-member × per-consumer census rather
+    than member count. The decisive evidence is how little each processor actually touched of the
+    21-member blob: `FProcessor_VoiceChat_Route` took `TReadWrite<Current>` to touch exactly ONE
+    field (`_FairnessEnvelope`); Setup touched 2; ReceivePlayback touched 11 and NEVER the
+    capture chain (it runs on replicas, where the capture chain is inert).
+  * Dissolution — `FFragment_VoiceTalker_Current` (21 members) → five:
+    - `FFragment_VoiceTalker` (primary, bare noun per doctrine): `_AmplitudeQ8`. The one datum
+      BOTH pipeline halves write (capture RMS locally, wire-header mirror remotely) and the
+      public `Get_CurrentAmplitude` reads — it belongs to neither half, so it is its own concern.
+      **New Has/Cast anchor** (`{Params, FFragment_VoiceTalker}`), mirroring the Timer pilot.
+    - `FFragment_VoiceTalker_Tunables`: `_TransmitMode/_InputGain/_SelfMute` — the
+      doctrine-priority extraction the original code's own comment asked for ("runtime copies of
+      the tunable params (requests mutate these, never the Params fragment)"). Requests now
+      mutate ONLY this fragment, structurally.
+    - `FFragment_VoiceTalker_Capture`: `_Seq/_CaptureSource/_Encoder/_Vad/_PendingPcm/
+      _CaptureClock/_OutboundFrames`.
+    - `FFragment_VoiceTalker_Playout`: the 5 loopback members + `_PlaybackConfigChannel/
+      _HybridRenderNear/_LastBundleArrivalClock/_ReceiveClock`.
+    - `FFragment_VoiceTalker_Fairness`: `_FairnessEnvelope` (authority-only, Route's sole reach
+      into talker state).
+  * Processor views narrowed accordingly: Setup `{Params(RO), Tunables(RW)}`; Capture
+    `{Params(RO), Tunables(RO), VoiceTalker, Capture, Playout}`; ReceivePlayback
+    `{VoiceTalker, Playout, ReceiveInbox}` (capture chain dropped); EndPlay `{Capture, Playout}`;
+    Route `{Fairness, ServerInbox}`. The four playout statics (`Drain_Playout`,
+    `TryCreate_PlaybackSynth`, `Apply_SynthChannelConfig`, `Evaluate_HybridRenderMode`) take
+    `FFragment_VoiceTalker_Playout&`. The 5 `DoHandleRequest` overloads share one leading
+    parameter list because the visitor dispatches them through a single call expression — noted
+    in a header comment so the unused-fragment params don't read as an oversight.
+  * **Deliberately NOT changed (scope discipline):** composition is identical — all five
+    fragments are added unconditionally at `Add()`, exactly where `Current` was. So this is a
+    PURELY STRUCTURAL split: no lifetime change, no net-mode-conditional composition, no memory
+    claim. Setup remains the tunables seeder (seeding at `Add()` instead would be more doctrinal
+    but changes NeedsSetup semantics — that call belongs to the VoiceChat owner). Follow-up
+    candidate, not taken here.
+  * `[EDITOR-VERIFY]` unaffected: no reflected type, asset, or redirect touched. CkVoiceChat's own
+    open P4 audition items are orthogonal to this change.
+  * **GATE (P5C_build.log / P5C_test.log): build exit 0; full suite 1004 total / 1002 passed /
+    2 failed / 0 skipped / 0 contaminated, 4m07s.** The 2 reds are the known pre-existing pair,
+    by name: `Ck_AutoTest_PathNetworkFollower_ProjectsRibbonWaypointWithinNavQueryExtent` and
+    `..._DesiredNavmeshClearanceMovesInward`. Zero VoiceChat failures; no new reds. Same 1002/1004
+    steady state as P5a/P5b.
+  * **Self-caught naming defect (fixed after the gate).** The new primary-fragment local was first
+    named `InTalker` — but `Send_OutboundFrames` already binds the HANDLE to a parameter named
+    `InTalker` (`Processor.cpp:134`), so at the call site `InVoiceTalkerEntity` becomes the
+    callee's `InTalker` while a different `InTalker` supplies the next argument. Both compile
+    (separate scopes); it is purely a misread hazard, and the house precedent for a bare-noun
+    primary fragment is the feature noun (`FFragment_Transform& InTransform`,
+    `FFragment_Timer& InTimerComp`). Renamed to `InVoiceTalkerComp` (2 decls + 5 accesses); all 8
+    surviving `InTalker` uses were verified to lie inside `Send_OutboundFrames`. Re-gated with a
+    BUILD only, deliberately: an identifier rename that compiles cannot change behavior, so the
+    compiler is the complete oracle and a second full suite would add nothing. The 1002/1004 suite
+    above ran against the pre-rename source — stated plainly rather than implied.
+
 - 2026-08-06 (P5b, in-session continuation): items 3-6 dispositioned —
   * **AudioTrack (item 3) DONE**: `FFragment_AudioTrack_ComponentBindings` extracts the six
     native-delegate handles (Setup binds, EndPlay consumes); fade fields ADJUDICATED to stay in
@@ -113,7 +192,8 @@ fragment MUST move that feature's Has/Cast anchor in the same change, with a mem
     Update processor (zero Utils reads), already grouped under documented sub-blocks
     (finite-difference fallback, miss latch). Census flagged on member count; by consumer
     analysis it is one coherent guidance blob. No split.
-  * **VoiceTalker (item 6) — DEFERRED to the owning VoiceChat workstream**: the module landed
+  * **VoiceTalker (item 6) — DEFERRED** *(SUPERSEDED — executed in P5c above once the contention
+    was re-tested and found absent)*: the module landed
     P2→P4 feature commits on 2026-08-05 (daily-active), and origin/dev moved during this campaign
     (sibling workstream pushing). A 21-member/7-processor split from outside that workstream
     maximizes merge pain for it. The staged design (five-concern split; doctrine-priority
