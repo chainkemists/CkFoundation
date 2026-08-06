@@ -13,6 +13,25 @@ trigger: the first NON-map gameplay consumer of exploration state → extract `C
 
 ---
 
+## Fragment shape (2026-08-06 — spec-fragment-granularity P6)
+
+The Spec is the authoring payload and is fully unpacked at `Add`; it is NOT retained wholesale.
+
+- `ck::FFragment_Minimap_Params` — retained immutable residue ONLY: `_ProjectionMode`, `_FrameShape`,
+  `_FixedBounds`, `_MaxEntries`, `_UpdateInterval`.
+- `ck::FFragment_Minimap_Current` — everything request-mutable: the three seeded from the Spec at
+  `Add` (`_ViewExtent`, `_RotationMode`, `_CategoryFilter`) plus the derived view state.
+
+**Why `_CategoryFilter` moved.** It used to live in the Params fragment and be mutated *there* by
+`Request_SetCategoryFilter` (`InParams.Set_CategoryFilter(...)`) — which is why HandleRequests took
+Params `TReadWrite`. That made "Params" a mutable fragment in all but name, and left the module with
+two contradictory policies: `_ViewExtent`/`_RotationMode` were copied into Current and their Spec
+copies went stale, while `_CategoryFilter` was mutated in place. All three now have exactly one home
+(Current), Params is genuinely immutable, and HandleRequests takes it `TReadOnly`. The authoring
+ensures (positive ViewExtent / valid FixedBounds) moved to `Add`, where the Spec still exists.
+
+---
+
 ## Minimap feature
 
 - `UCk_Utils_Minimap_UE::Add(InHandle, InParams)` — composes the Minimap feature DIRECTLY onto `InHandle`
@@ -21,7 +40,7 @@ trigger: the first NON-map gameplay consumer of exploration state → extract `C
   connected to the owner's RecordOfMinimaps. An owner hosts MULTIPLE minimaps this way (HUD minimap +
   world map = two children; children carry no label — no ByTag lookups, enumerate via `ForEach_Minimap`).
   The observer defaults to `InLifetimeOwner` (unlike the compass, which defaults to the created child).
-- `FCk_Fragment_Minimap_ParamsData` — `_ViewExtent` (world cm center→edge = the zoom; **ObserverCentric
+- `FCk_Minimap_Spec` — `_ViewExtent` (world cm center→edge = the zoom; **ObserverCentric
   only** — FixedBounds projects through `Get_BoundsToFrame` and never reads it, so it is neither
   required nor ensured there. `_FixedBounds` is what FixedBounds actually requires),
   `_ProjectionMode` (`ObserverCentric` minimap / `FixedBounds` world map — IMMUTABLE post-Add, destroy +
