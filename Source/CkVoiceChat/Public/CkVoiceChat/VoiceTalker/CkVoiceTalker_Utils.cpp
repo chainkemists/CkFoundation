@@ -21,7 +21,11 @@ auto
     ck::voice_chat::VeryVerbose(TEXT("Adding VoiceTalker feature to Entity [{}]"), InHandle);
 
     InHandle.Add<ck::FFragment_VoiceTalker_Params>(InParams);
-    InHandle.Add<ck::FFragment_VoiceTalker_Current>();
+    InHandle.Add<ck::FFragment_VoiceTalker>();
+    InHandle.Add<ck::FFragment_VoiceTalker_Tunables>();
+    InHandle.Add<ck::FFragment_VoiceTalker_Capture>();
+    InHandle.Add<ck::FFragment_VoiceTalker_Playout>();
+    InHandle.Add<ck::FFragment_VoiceTalker_Fairness>();
     InHandle.Add<ck::FTag_VoiceTalker_NeedsSetup>();
 
     return Cast(InHandle);
@@ -30,7 +34,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VoiceTalker_UE, FCk_Handle_VoiceTalker,
-    ck::FFragment_VoiceTalker_Params, ck::FFragment_VoiceTalker_Current);
+    ck::FFragment_VoiceTalker_Params, ck::FFragment_VoiceTalker);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -149,7 +153,7 @@ auto
         const FCk_Handle_VoiceTalker& InVoiceTalker)
     -> ECk_VoiceChat_TransmitMode
 {
-    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_TransmitMode();
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Tunables>().Get_TransmitMode();
 }
 
 auto
@@ -158,7 +162,7 @@ auto
         const FCk_Handle_VoiceTalker& InVoiceTalker)
     -> float
 {
-    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_InputGain();
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Tunables>().Get_InputGain();
 }
 
 auto
@@ -168,7 +172,7 @@ auto
     -> float
 {
     return ck::voice_chat::codec::Dequantize_Amplitude(
-        InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_AmplitudeQ8());
+        InVoiceTalker.Get<ck::FFragment_VoiceTalker>().Get_AmplitudeQ8());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -278,7 +282,7 @@ auto
         const TSharedPtr<ICk_VoiceChat_CaptureSource>& InCaptureSource)
     -> void
 {
-    InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>()._CaptureSource = InCaptureSource;
+    InVoiceTalker.Get<ck::FFragment_VoiceTalker_Capture>()._CaptureSource = InCaptureSource;
 }
 
 auto
@@ -287,7 +291,7 @@ auto
         const FCk_Handle_VoiceTalker& InVoiceTalker)
     -> const TArray<uint8>&
 {
-    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>()._LoopbackDecodedPcm;
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Playout>()._LoopbackDecodedPcm;
 }
 
 auto
@@ -296,7 +300,7 @@ auto
         FCk_Handle_VoiceTalker& InVoiceTalker)
     -> void
 {
-    InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>()._LoopbackDecodedPcm.Reset();
+    InVoiceTalker.Get<ck::FFragment_VoiceTalker_Playout>()._LoopbackDecodedPcm.Reset();
 }
 
 auto
@@ -353,10 +357,10 @@ auto
         const FCk_Handle_VoiceTalker& InVoiceTalker)
     -> FCk_Handle_VoiceChannel
 {
-    if (NOT InVoiceTalker.Has<ck::FFragment_VoiceTalker_Current>())
+    if (NOT InVoiceTalker.Has<ck::FFragment_VoiceTalker_Playout>())
     { return {}; }
 
-    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_PlaybackConfigChannel();
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Playout>().Get_PlaybackConfigChannel();
 }
 
 auto
@@ -365,10 +369,10 @@ auto
         const FCk_Handle_VoiceTalker& InVoiceTalker)
     -> TOptional<bool>
 {
-    if (NOT InVoiceTalker.Has<ck::FFragment_VoiceTalker_Current>())
+    if (NOT InVoiceTalker.Has<ck::FFragment_VoiceTalker_Playout>())
     { return {}; }
 
-    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Current>().Get_HybridRenderNear();
+    return InVoiceTalker.Get<ck::FFragment_VoiceTalker_Playout>().Get_HybridRenderNear();
 }
 
 auto
