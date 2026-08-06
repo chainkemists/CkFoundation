@@ -12,7 +12,7 @@ class UCk_Utils_Inventory_Spatial_UE;
 
 namespace ck
 {
-    using FFragment_Inventory_Spatial_Params = FCk_Fragment_Inventory_Spatial_ParamsData;
+    using FFragment_Inventory_Spatial_Params = FCk_Inventory_Spatial_Spec;
 
     template <>
     struct CKINVENTORY_API TFragment_Inventory_Requests<FCk_Handle_Inventory_Spatial>

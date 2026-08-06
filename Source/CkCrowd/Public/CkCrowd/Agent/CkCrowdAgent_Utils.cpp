@@ -21,7 +21,7 @@ auto
     UCk_Utils_CrowdAgent_UE::
     Add(
         FCk_Handle_Transform& InOwner,
-        const FCk_Fragment_CrowdAgent_ParamsData& InParams)
+        const FCk_CrowdAgent_Spec& InParams)
     -> FCk_Handle_CrowdAgent
 {
     const auto HasValidCloseGoalStrafe =

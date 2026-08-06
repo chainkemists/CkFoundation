@@ -214,12 +214,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRESOLVER_API FCk_Fragment_ResolverDataBundle_ParamsData
+struct CKRESOLVER_API FCk_ResolverDataBundle_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ResolverDataBundle_ParamsData);
+    CK_GENERATED_BODY(FCk_ResolverDataBundle_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -251,7 +251,7 @@ public:
     CK_PROPERTY_GET(_Causer);
     CK_PROPERTY_GET(_Phases);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ResolverDataBundle_ParamsData, _BundleName, _Instigator, _Target, _Causer, _Phases);
+    CK_DEFINE_CONSTRUCTORS(FCk_ResolverDataBundle_Spec, _BundleName, _Instigator, _Target, _Causer, _Phases);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

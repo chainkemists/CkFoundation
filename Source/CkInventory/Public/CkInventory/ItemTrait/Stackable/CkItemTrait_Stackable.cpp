@@ -39,7 +39,7 @@ auto
 {
     auto ItemHandle = UCk_Utils_Item_UE::CastChecked(InHandle);
 
-    auto Params = FCk_Fragment_IntegerAttribute_ParamsData(TAG_IntegerAttribute_InventoryItem_StackCount, _InitialCount);
+    auto Params = FCk_IntegerAttribute_Spec(TAG_IntegerAttribute_InventoryItem_StackCount, _InitialCount);
     Params.Set_MinValue(1);
 
     if (_HasMaxStackSize)

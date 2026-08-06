@@ -10,7 +10,7 @@ auto
     UCk_Utils_BallisticMotion_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_BallisticMotion_ParamsData& InParams)
+        const FCk_BallisticMotion_Spec& InParams)
     -> FCk_Handle_BallisticMotion
 {
     CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InHandle),

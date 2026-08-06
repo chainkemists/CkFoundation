@@ -39,7 +39,7 @@ public:
     static FCk_Handle_VectorAttribute
     Add(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_VectorAttribute_ParamsData& InParams,
+        const FCk_VectorAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -48,7 +48,7 @@ public:
     static TArray<FCk_Handle_VectorAttribute>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_MultipleVectorAttribute_ParamsData& InParams,
+        const FCk_MultipleVectorAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
@@ -289,7 +289,7 @@ public:
         UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
         FGameplayTag InModifierName,
         UPARAM(meta = (InvalidEnumValues="Override")) ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams);
+        const FCk_VectorAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Vector",
@@ -298,7 +298,7 @@ public:
     Add_NotRevocable(
         UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams);
+        const FCk_VectorAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Vector",

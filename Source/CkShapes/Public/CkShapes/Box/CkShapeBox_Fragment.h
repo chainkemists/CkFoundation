@@ -13,7 +13,7 @@ class UCk_Utils_ShapeBox_UE;
 
 namespace ck
 {
-    using FFragment_ShapeBox_Params = FCk_Fragment_ShapeBox_ParamsData;
+    using FFragment_ShapeBox_Params = FCk_ShapeBox_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

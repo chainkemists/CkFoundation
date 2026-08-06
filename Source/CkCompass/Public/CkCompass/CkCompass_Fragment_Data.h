@@ -122,12 +122,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCOMPASS_API FCk_Fragment_Compass_ParamsData
+struct CKCOMPASS_API FCk_Compass_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Compass_ParamsData);
+    CK_GENERATED_BODY(FCk_Compass_Spec);
 
 private:
     // Total visible arc, degrees (e.g. 180 shows POIs up to 90 degrees either side of the heading)
@@ -161,7 +161,7 @@ public:
     CK_PROPERTY(_UpdateInterval);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Compass_ParamsData, _ArcDegrees);
+    CK_DEFINE_CONSTRUCTORS(FCk_Compass_Spec, _ArcDegrees);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

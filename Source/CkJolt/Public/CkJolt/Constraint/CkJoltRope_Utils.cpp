@@ -17,7 +17,7 @@ auto
     UCk_Utils_JoltRope_UE::
     Create_Rope(
         FCk_Handle& InOwner,
-        const FCk_JoltRope_ParamsData& InParams)
+        const FCk_JoltRope_Spec& InParams)
     -> FCk_JoltRope_Result
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOwner),
@@ -62,7 +62,7 @@ auto
 
         UCk_Utils_Transform_UE::Add(SegmentEntity, FTransform{Center}, ECk_Replication::DoesNotReplicate);
 
-        const auto BodyParams = FCk_Fragment_JoltBody_ParamsData{ECk_JoltBody_ShapeSource::ExplicitShape}
+        const auto BodyParams = FCk_JoltBody_Spec{ECk_JoltBody_ShapeSource::ExplicitShape}
             .Set_ShapeDimensions(FCk_Jolt_ShapeDimensions{ECk_Jolt_ShapeType::Sphere}
                 .Set_Radius(InParams.Get_SegmentRadius()))
             .Set_MotionType(ECk_MotionType::Dynamic)
@@ -83,7 +83,7 @@ auto
         if (Index > 0)
         { PreviousBody = static_cast<FCk_Handle>(Segments.Last()); }
 
-        auto ConstraintParams = FCk_Fragment_JoltConstraint_ParamsData{};
+        auto ConstraintParams = FCk_JoltConstraint_Spec{};
 
         switch (InParams.Get_LinkMode())
         {
@@ -91,7 +91,7 @@ auto
             {
                 const auto Boundary = Anchor + Direction * (SegmentLength * static_cast<float>(Index));
 
-                ConstraintParams = FCk_Fragment_JoltConstraint_ParamsData{ECk_JoltConstraint_Type::Point}
+                ConstraintParams = FCk_JoltConstraint_Spec{ECk_JoltConstraint_Type::Point}
                     .Set_OtherBody(PreviousBody)
                     .Set_WorldAnchorA(Boundary)
                     .Set_WorldAnchorB(Boundary);
@@ -103,7 +103,7 @@ auto
                     ? Anchor
                     : Anchor + Direction * (SegmentLength * (static_cast<float>(Index) - 0.5f));
 
-                ConstraintParams = FCk_Fragment_JoltConstraint_ParamsData{ECk_JoltConstraint_Type::Distance}
+                ConstraintParams = FCk_JoltConstraint_Spec{ECk_JoltConstraint_Type::Distance}
                     .Set_OtherBody(PreviousBody)
                     .Set_WorldAnchorA(Center)
                     .Set_WorldAnchorB(PreviousPoint)

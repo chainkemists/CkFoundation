@@ -133,7 +133,7 @@ auto
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InRegistryRoot, [&](FCk_Handle InNewEntity)
     {
-        auto Params = FCk_Fragment_DialogLine_ParamsData{InLineData.Get_LineID(), InLineData.Get_EventTag()};
+        auto Params = FCk_DialogLine_Spec{InLineData.Get_LineID(), InLineData.Get_EventTag()};
         Params.Set_Text(InLineData.Get_Text());
         Params.Set_LinkedEventTag(InLineData.Get_LinkedEventTag());
         Params.Set_FilterTags(MergedFilterTags);

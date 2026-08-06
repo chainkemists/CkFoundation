@@ -43,7 +43,7 @@ public:
     static FCk_Handle_Aggro
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_Aggro_ParamsData& InParams);
+        const FCk_Aggro_Spec& InParams);
 
 public:
     static bool
@@ -101,7 +101,7 @@ private:
     static FCk_Handle_AggroTarget
     DoCreateTarget(
         FCk_Handle_Aggro& InOwner,
-        const FCk_Fragment_AggroTarget_ParamsData& InParams);
+        const FCk_AggroTarget_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

@@ -18,7 +18,7 @@ auto
     UCk_Utils_AudioTrack_UE::
     Create(
         FCk_Handle& InParentDirector,
-        const FCk_Fragment_AudioTrack_ParamsData& InParams)
+        const FCk_AudioTrack_Spec& InParams)
         -> FCk_Handle_AudioTrack
 {
     ck::audio::VeryVerbose(TEXT("Creating AudioTrack [{}] for Director [{}]"), InParams.Get_TrackName(), InParentDirector);

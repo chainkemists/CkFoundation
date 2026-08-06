@@ -61,7 +61,7 @@ namespace ck
 
         algo::ForEach(GCs, [&](UGeometryCollectionComponent* InGeometryCollection)
         {
-            UCk_Utils_GeometryCollection_UE::Add(InHandle, FCk_Fragment_GeometryCollection_ParamsData{InGeometryCollection});
+            UCk_Utils_GeometryCollection_UE::Add(InHandle, FCk_GeometryCollection_Spec{InGeometryCollection});
         });
     }
 

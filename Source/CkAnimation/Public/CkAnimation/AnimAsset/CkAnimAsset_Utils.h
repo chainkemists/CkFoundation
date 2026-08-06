@@ -34,7 +34,7 @@ public:
     static FCk_Handle_AnimAsset
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_AnimAsset_ParamsData& InParams);
+        const FCk_AnimAsset_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimAsset",
@@ -42,7 +42,7 @@ public:
     static TArray<FCk_Handle_AnimAsset>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams);
+        const FCk_MultipleAnimAsset_Spec& InParams);
 
 public:
     UFUNCTION(BlueprintPure,

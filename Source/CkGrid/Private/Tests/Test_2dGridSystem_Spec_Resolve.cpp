@@ -15,7 +15,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_2dGridSystem_SpecResolve::RunTest(const FString&)
 {
-    auto* Spec = NewObject<UCk_2dGridSystem_Spec>();
+    auto* Spec = NewObject<UCk_2dGridSystem_AuthoringSpec>();
     if (! TestNotNull(TEXT("Spec allocated"), Spec))
     { return false; }
 

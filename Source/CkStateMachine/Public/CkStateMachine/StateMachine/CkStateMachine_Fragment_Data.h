@@ -190,12 +190,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SmTransitionResult);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSTATEMACHINE_API FCk_Fragment_StateMachine_ParamsData
+struct CKSTATEMACHINE_API FCk_StateMachine_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_StateMachine_ParamsData);
+    CK_GENERATED_BODY(FCk_StateMachine_Spec);
 
     // Save opt-in is the SaveGame SPECIFIER, never `meta=(SaveGame)` — the latter is inert metadata
     // and round-trips nothing.
@@ -238,7 +238,7 @@ public:
     CK_PROPERTY(_ShouldPersistCurrentState);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_StateMachine_ParamsData, _InitialStateClass);
+    CK_DEFINE_CONSTRUCTORS(FCk_StateMachine_Spec, _InitialStateClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

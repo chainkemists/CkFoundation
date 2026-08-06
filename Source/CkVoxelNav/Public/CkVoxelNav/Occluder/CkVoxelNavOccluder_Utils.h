@@ -38,7 +38,7 @@ public:
     static FCk_Handle_VoxelNavOccluder
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_VoxelNavOccluder_ParamsData& InParams);
+        const FCk_VoxelNavOccluder_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|VoxelNavOccluder",

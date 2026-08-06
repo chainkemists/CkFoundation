@@ -190,12 +190,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSPATIALQUERY_API FCk_Fragment_Probe_ParamsData
+struct CKSPATIALQUERY_API FCk_Probe_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Probe_ParamsData);
+    CK_GENERATED_BODY(FCk_Probe_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -254,7 +254,7 @@ public:
     CK_PROPERTY(_PersistContacts);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Probe_ParamsData, _ProbeName);
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_Spec, _ProbeName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

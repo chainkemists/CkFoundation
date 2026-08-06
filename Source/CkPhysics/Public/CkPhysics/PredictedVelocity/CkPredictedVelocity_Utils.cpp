@@ -9,7 +9,7 @@ auto
     UCk_Utils_PredictedVelocity_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_PredictedVelocity_ParamsData& InParams)
+        const FCk_PredictedVelocity_Spec& InParams)
     -> void
 {
     InHandle.Add<ck::FFragment_PredictedVelocity_Params>(InParams);

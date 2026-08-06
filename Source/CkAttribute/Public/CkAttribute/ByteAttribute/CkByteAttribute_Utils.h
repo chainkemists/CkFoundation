@@ -39,7 +39,7 @@ public:
     static FCk_Handle_ByteAttribute
     Add(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_ByteAttribute_ParamsData& InParams,
+        const FCk_ByteAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
@@ -48,7 +48,7 @@ public:
     static TArray<FCk_Handle_ByteAttribute>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        const FCk_Fragment_MultipleByteAttribute_ParamsData& InParams,
+        const FCk_MultipleByteAttribute_Spec& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
@@ -303,7 +303,7 @@ public:
         UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
         FGameplayTag InModifierName,
         UPARAM(meta = (InvalidEnumValues="Override")) ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams);
+        const FCk_ByteAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Byte",
@@ -312,7 +312,7 @@ public:
     Add_NotRevocable(
         UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
         ECk_AttributeModifier_Operation InModifierOperation,
-        const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams);
+        const FCk_ByteAttributeModifier_Spec& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Byte",

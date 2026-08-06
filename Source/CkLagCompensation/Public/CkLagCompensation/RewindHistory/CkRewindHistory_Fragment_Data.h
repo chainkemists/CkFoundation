@@ -177,12 +177,12 @@ public:
  * the global CVars Ck.LagComp.RecordInterval / Ck.LagComp.RetainSeconds.
  */
 USTRUCT(BlueprintType)
-struct CKLAGCOMPENSATION_API FCk_Fragment_RewindHistory_ParamsData
+struct CKLAGCOMPENSATION_API FCk_RewindHistory_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_RewindHistory_ParamsData);
+    CK_GENERATED_BODY(FCk_RewindHistory_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -203,7 +203,7 @@ public:
     CK_PROPERTY(_RetentionPeriod);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RewindHistory_ParamsData, _HitShapes);
+    CK_DEFINE_CONSTRUCTORS(FCk_RewindHistory_Spec, _HitShapes);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

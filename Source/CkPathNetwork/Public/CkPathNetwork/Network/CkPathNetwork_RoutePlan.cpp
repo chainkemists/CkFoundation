@@ -1218,7 +1218,7 @@ namespace ck::pathnetwork
 
     auto
     Resolve_RouteCostPolicy(
-        const FCk_Fragment_PathNetworkFollower_ParamsData& InParams)
+        const FCk_PathNetworkFollower_Spec& InParams)
         -> FRouteCostPolicy
     {
         auto Tuning = FCk_PathNetworkFollower_Tuning{};

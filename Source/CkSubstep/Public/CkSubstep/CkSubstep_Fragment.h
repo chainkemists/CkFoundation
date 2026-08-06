@@ -16,7 +16,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Substep_Params);
 
     public:
-        using ParamsType = FCk_Substep_ParamsData;
+        using ParamsType = FCk_Substep_Spec;
 
     private:
         ParamsType _Data;

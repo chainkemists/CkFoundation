@@ -15,9 +15,9 @@ namespace utils_float_attribute
 		ECk_MinMax InMinMax = ECk_MinMax::None,
 		float InMinValue = 0.0f,
 		float InMaxValue = 0.0f,
-		FCk_Fragment_FloatAttributeRefill_ParamsData InRefillParams = FCk_Fragment_FloatAttributeRefill_ParamsData())
+		FCk_FloatAttributeRefill_Spec InRefillParams = FCk_FloatAttributeRefill_Spec())
 	{
-		auto Params = FCk_Fragment_FloatAttribute_ParamsData(InAttributeName, InBaseValue);
+		auto Params = FCk_FloatAttribute_Spec(InAttributeName, InBaseValue);
 		Params
 		.Set_MinMax(InMinMax)
 		.Set_MaxValue(InMaxValue)
@@ -334,7 +334,7 @@ DecrementNotRevocable(
 	{ return; }
 	InAttribute.Add_NotRevocable(
 		ECk_AttributeModifier_Operation::Subtract,
-		FCk_Fragment_FloatAttributeModifier_ParamsData(1.f, InAttributeComponent));
+		FCk_FloatAttributeModifier_Spec(1.f, InAttributeComponent));
 }
 
 mixin FCk_Handle_FloatAttributeModifier
@@ -347,7 +347,7 @@ DecrementRevocable(
 	return InAttribute.Add_Revocable(
 		FGameplayTag(),
 		ECk_AttributeModifier_Operation::Subtract,
-		FCk_Fragment_FloatAttributeModifier_ParamsData(1.f, InAttributeComponent));
+		FCk_FloatAttributeModifier_Spec(1.f, InAttributeComponent));
 }
 
 mixin void
@@ -359,7 +359,7 @@ IncrementNotRevocable(
 	{ return; }
 	InAttribute.Add_NotRevocable(
 		ECk_AttributeModifier_Operation::Add,
-		FCk_Fragment_FloatAttributeModifier_ParamsData(1.f, InAttributeComponent));
+		FCk_FloatAttributeModifier_Spec(1.f, InAttributeComponent));
 }
 
 mixin FCk_Handle_FloatAttributeModifier
@@ -372,5 +372,5 @@ IncrementRevocable(
 	return InAttribute.Add_Revocable(
 		FGameplayTag(),
 		ECk_AttributeModifier_Operation::Add,
-		FCk_Fragment_FloatAttributeModifier_ParamsData(1.f, InAttributeComponent));
+		FCk_FloatAttributeModifier_Spec(1.f, InAttributeComponent));
 }

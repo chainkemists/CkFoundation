@@ -37,7 +37,7 @@ public:
     static FCk_Handle_JoltConstraint
     Create(
         UPARAM(ref) FCk_Handle_JoltBody& InBodyA,
-        const FCk_Fragment_JoltConstraint_ParamsData& InParams);
+        const FCk_JoltConstraint_Spec& InParams);
 
 public:
     static bool

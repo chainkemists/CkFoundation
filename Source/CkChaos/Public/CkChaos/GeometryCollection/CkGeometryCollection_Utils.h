@@ -24,7 +24,7 @@ public:
     static auto
     Add(
         FCk_Handle_GeometryCollectionOwner& InHandle,
-        const FCk_Fragment_GeometryCollection_ParamsData& InParams) -> FCk_Handle_GeometryCollection;
+        const FCk_GeometryCollection_Spec& InParams) -> FCk_Handle_GeometryCollection;
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Chaos|GeometryCollection",

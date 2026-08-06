@@ -162,7 +162,7 @@ auto
 
     auto Modifier = UCk_Utils_FloatAttributeModifier_UE::Add_Revocable(
         InAttribute, DoGet_LayerTag(InLayer), UnderlyingOp,
-        FCk_Fragment_FloatAttributeModifier_ParamsData{IdentityDelta, InComponent});
+        FCk_FloatAttributeModifier_Spec{IdentityDelta, InComponent});
 
     auto Entry = ck::FCk_CameraLayer_FloatModifier{};
     Entry._Modifier  = Modifier;
@@ -206,7 +206,7 @@ auto
 
     auto Modifier = UCk_Utils_VectorAttributeModifier_UE::Add_Revocable(
         InAttribute, DoGet_LayerTag(InLayer), UnderlyingOp,
-        FCk_Fragment_VectorAttributeModifier_ParamsData{IdentityDelta, ECk_MinMaxCurrent::Current});
+        FCk_VectorAttributeModifier_Spec{IdentityDelta, ECk_MinMaxCurrent::Current});
 
     auto Entry = ck::FCk_CameraLayer_VectorModifier{};
     Entry._Modifier  = Modifier;
@@ -250,7 +250,7 @@ auto
 
     auto Modifier = UCk_Utils_RotatorAttributeModifier_UE::Add_Revocable(
         InAttribute, DoGet_LayerTag(InLayer), UnderlyingOp,
-        FCk_Fragment_RotatorAttributeModifier_ParamsData{IdentityDelta, ECk_MinMaxCurrent::Current});
+        FCk_RotatorAttributeModifier_Spec{IdentityDelta, ECk_MinMaxCurrent::Current});
 
     auto Entry = ck::FCk_CameraLayer_RotatorModifier{};
     Entry._Modifier  = Modifier;
@@ -294,7 +294,7 @@ auto
 
     auto Modifier = UCk_Utils_IntegerAttributeModifier_UE::Add_Revocable(
         InAttribute, DoGet_LayerTag(InLayer), UnderlyingOp,
-        FCk_Fragment_IntegerAttributeModifier_ParamsData{IdentityDelta, ECk_MinMaxCurrent::Current});
+        FCk_IntegerAttributeModifier_Spec{IdentityDelta, ECk_MinMaxCurrent::Current});
 
     auto Entry = ck::FCk_CameraLayer_IntegerModifier{};
     Entry._Modifier  = Modifier;

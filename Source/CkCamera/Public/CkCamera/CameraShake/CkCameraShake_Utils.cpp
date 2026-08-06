@@ -8,7 +8,7 @@ auto
     UCk_Utils_CameraShake_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_CameraShake_ParamsData& InParams)
+        const FCk_CameraShake_Spec& InParams)
     -> FCk_Handle_CameraShake
 {
      auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
@@ -30,11 +30,11 @@ auto
     UCk_Utils_CameraShake_UE::
     AddMultiple(
         FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleCameraShake_ParamsData& InParams)
+        const FCk_MultipleCameraShake_Spec& InParams)
     -> TArray<FCk_Handle_CameraShake>
 {
     return ck::algo::Transform<TArray<FCk_Handle_CameraShake>>(InParams.Get_CameraShakeParams(),
-    [&](const FCk_Fragment_CameraShake_ParamsData& InCameraShakeParams)
+    [&](const FCk_CameraShake_Spec& InCameraShakeParams)
     {
         return Add(InHandle, InCameraShakeParams);
     });

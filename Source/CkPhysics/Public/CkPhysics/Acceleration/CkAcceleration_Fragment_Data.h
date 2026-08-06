@@ -18,12 +18,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Acceleration);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Fragment_Acceleration_ParamsData
+struct CKPHYSICS_API FCk_Acceleration_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Acceleration_ParamsData);
+    CK_GENERATED_BODY(FCk_Acceleration_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -39,44 +39,44 @@ public:
     CK_PROPERTY_GET(_StartingAcceleration);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Acceleration_ParamsData, _Coordinates, _StartingAcceleration);
+    CK_DEFINE_CONSTRUCTORS(FCk_Acceleration_Spec, _Coordinates, _StartingAcceleration);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Fragment_AccelerationModifier_ParamsData
+struct CKPHYSICS_API FCk_AccelerationModifier_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_AccelerationModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_AccelerationModifier_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Acceleration_ParamsData _AccelerationParams;
+    FCk_Acceleration_Spec _AccelerationParams;
 
 public:
     CK_PROPERTY_GET(_AccelerationParams);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AccelerationModifier_ParamsData, _AccelerationParams);
+    CK_DEFINE_CONSTRUCTORS(FCk_AccelerationModifier_Spec, _AccelerationParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Fragment_BulkAccelerationModifier_ParamsData
+struct CKPHYSICS_API FCk_BulkAccelerationModifier_Spec
 {
     GENERATED_BODY()
 
-    CK_GENERATED_BODY(FCk_Fragment_BulkAccelerationModifier_ParamsData);
+    CK_GENERATED_BODY(FCk_BulkAccelerationModifier_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Acceleration_ParamsData _AccelerationParams;
+    FCk_Acceleration_Spec _AccelerationParams;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -92,7 +92,7 @@ public:
     CK_PROPERTY_GET(_ModifierScope);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_BulkAccelerationModifier_ParamsData, _AccelerationParams, _TargetChannels, _ModifierScope);
+    CK_DEFINE_CONSTRUCTORS(FCk_BulkAccelerationModifier_Spec, _AccelerationParams, _TargetChannels, _ModifierScope);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -44,7 +44,7 @@ auto
 
     // Save-transient: the parent's task recreates the sub-SM fresh when the parent redrives on load.
     TypeUnsafeSubSmHandle.Add<ck::FTag_Snapshot_SaveTransient>();
-    auto SubSmParams = FCk_Fragment_StateMachine_ParamsData{_InitialStateClass};
+    auto SubSmParams = FCk_StateMachine_Spec{_InitialStateClass};
     SubSmParams.Set_AutoStart(ECk_SmAutoStart::Disabled);
     _SubSmHandle = UCk_Utils_StateMachine_UE::Add(TypeUnsafeSubSmHandle, SubSmParams);
 

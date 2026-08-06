@@ -13,7 +13,7 @@ class UCk_Utils_ShapeCapsule_UE;
 
 namespace ck
 {
-    using FFragment_ShapeCapsule_Params = FCk_Fragment_ShapeCapsule_ParamsData;
+    using FFragment_ShapeCapsule_Params = FCk_ShapeCapsule_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
