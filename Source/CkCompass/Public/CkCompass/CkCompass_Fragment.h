@@ -47,17 +47,32 @@ namespace ck
 
         TArray<FCk_Compass_Entry> _Entries;
 
-        TArray<FCk_Compass_Entry> _ScratchEntries;
-
-        TArray<FCk_Entity> _ScratchPoiEntities;
-        TArray<TOptional<FCk_Compass_Entry>> _ScratchParallelSlots;
-
         FCk_Time _TimeSinceUpdate;
 
     public:
         CK_PROPERTY_GET(_Observer);
         CK_PROPERTY_GET(_HeadingDegrees);
         CK_PROPERTY_GET(_Entries);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Per-tick working buffers for the Update processor — retained on the entity so their
+    // allocations are reused across ticks. _Entries is the BACK buffer of the published
+    // Current._Entries (swapped, never copied).
+    struct CKCOMPASS_API FFragment_Compass_Scratch
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Compass_Scratch);
+
+    public:
+        friend class FProcessor_Compass_Update;
+        friend class FProcessor_Compass_EndPlay;
+
+    private:
+        TArray<FCk_Compass_Entry> _Entries;
+        TArray<FCk_Entity> _PoiEntities;
+        TArray<TOptional<FCk_Compass_Entry>> _ParallelSlots;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
