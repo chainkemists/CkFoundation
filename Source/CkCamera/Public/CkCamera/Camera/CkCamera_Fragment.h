@@ -88,12 +88,6 @@ namespace ck
         FAlphaBlend _XIntentionCurve;
         FAlphaBlend _YIntentionCurve;
 
-        ck::camera::FPov_State _PovState;
-
-        // A per-frame DELTA pushed by whoever owns input. UpdatePOV CONSUMES it (resets to zero) after applying, so
-        // the caller must re-push every frame the input is active.
-        FVector _OrientationIntention = FVector::ZeroVector;
-
         // Unset = the dominant layer has no look-at (a zero vector is a valid target, so it cannot encode absence).
         TOptional<FVector> _DominantLookAt;
 
@@ -101,9 +95,6 @@ namespace ck
         FCk_Camera_ViewTargetResolved _ViewTarget;
 
         TSubclassOf<UCk_CameraLayer_EntityScript> _DominantLayerClass;
-
-        // Written by UpdatePOV, read by UCk_CameraComponent::GetCameraView.
-        FMinimalViewInfo _ViewInfo;
 
     public:
         CK_PROPERTY(_ComposedProfile);
@@ -116,10 +107,36 @@ namespace ck
         CK_PROPERTY(_UsePostProcess);
         CK_PROPERTY(_XIntentionCurve);
         CK_PROPERTY(_YIntentionCurve);
-        CK_PROPERTY(_OrientationIntention);
         CK_PROPERTY_GET(_DominantLayerClass);
         CK_PROPERTY_GET(_DominantLookAt);
         CK_PROPERTY_GET(_ViewTarget);
+    };
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    // The POV integrator state: the FPov::Run accumulator, the per-frame intention delta it
+    // consumes, and the FMinimalViewInfo output (read by UCk_CameraComponent::GetCameraView).
+    // Written by UpdatePOV and the Utils seed/snap paths; the compose blackboard stays in Current.
+    struct CKCAMERA_API FFragment_Camera_Pov
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Camera_Pov);
+
+    public:
+        friend class FProcessor_Camera_UpdatePOV;
+        friend class UCk_Utils_Camera_UE;
+
+    private:
+        ck::camera::FPov_State _PovState;
+
+        // A per-frame DELTA pushed by whoever owns input. UpdatePOV CONSUMES it (resets to zero) after applying, so
+        // the caller must re-push every frame the input is active.
+        FVector _OrientationIntention = FVector::ZeroVector;
+
+        FMinimalViewInfo _ViewInfo;
+
+    public:
+        CK_PROPERTY(_OrientationIntention);
         CK_PROPERTY_GET(_PovState);
         CK_PROPERTY_GET(_ViewInfo);
     };

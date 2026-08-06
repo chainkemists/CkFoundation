@@ -257,7 +257,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Camera_Current& InCurrent)
+            FFragment_Camera_Current& InCurrent,
+            FFragment_Camera_Pov& InPov)
         -> void
     {
         const auto& Profile = InCurrent.Get_ComposedProfile();
@@ -269,7 +270,7 @@ namespace ck
 
         auto Input = ck::camera::FPov_Input{};
         Input._AnchorTransform      = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
-        Input._OrientationIntention = InCurrent.Get_OrientationIntention();
+        Input._OrientationIntention = InPov.Get_OrientationIntention();
         Input._DeltaSeconds         = static_cast<float>(InDeltaT.Get_Seconds());
         Input._LookAtLocation       = InCurrent._DominantLookAt;
         Input._World                = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
@@ -277,18 +278,18 @@ namespace ck
 
         {
             SCOPE_CYCLE_COUNTER(STAT_Camera_PovRun);
-            ck::camera::FPov::Run(Profile, Input, InCurrent._PovState);
+            ck::camera::FPov::Run(Profile, Input, InPov._PovState);
         }
 
         // The intention is a per-frame DELTA: consume it, or it keeps re-applying after the input source stops.
-        InCurrent._OrientationIntention = FVector::ZeroVector;
+        InPov._OrientationIntention = FVector::ZeroVector;
 
         // Overrides boom/framing, not the anchor, and leaves FOV alone (the layer's FOV modifier eases that
         // independently). Inactive = the rig POV passes through untouched.
-        auto FinalXf = InCurrent._PovState._CameraTransform;
+        auto FinalXf = InPov._PovState._CameraTransform;
         if (InCurrent._ViewTarget._IsActive)
         {
-            FinalXf.Blend(InCurrent._PovState._CameraTransform, InCurrent._ViewTarget._Target, InCurrent._ViewTarget._Alpha);
+            FinalXf.Blend(InPov._PovState._CameraTransform, InCurrent._ViewTarget._Target, InCurrent._ViewTarget._Alpha);
         }
 
         auto ViewInfo = FMinimalViewInfo{};
@@ -302,7 +303,7 @@ namespace ck
             ViewInfo.AspectRatio          = Sensor.Get_AspectRatio();
         }
 
-        InCurrent._ViewInfo = ViewInfo;
+        InPov._ViewInfo = ViewInfo;
 
         // Camera-authoritative control rotation. One-way by design: the camera reads input intention, never control
         // rotation, so this can never feed back into the POV.

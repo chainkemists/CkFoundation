@@ -36,6 +36,7 @@ auto
 
     InHandle.Add<ck::FFragment_Camera_Params>(InParams);
     InHandle.AddOrGet<ck::FFragment_Camera_Current>();
+    InHandle.AddOrGet<ck::FFragment_Camera_Pov>();
 
     ck::FUtils_RecordOfCameraLayers::AddIfMissing(InHandle);
 
@@ -63,20 +64,21 @@ auto
     if (Director.Has<ck::FFragment_Transform>())
     {
         auto& Current = Director.Get<ck::FFragment_Camera_Current>();
+        auto& Pov = Director.Get<ck::FFragment_Camera_Pov>();
 
         auto Input = ck::camera::FPov_Input{};
         Input._AnchorTransform  = Director.Get<ck::FFragment_Transform>().Get_Transform();
         Input._World            = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Director);
         Input._TraceIgnoreActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(Director);
 
-        ck::camera::FPov::Run(Current.Get_ComposedProfile(), Input, Current._PovState);
+        ck::camera::FPov::Run(Current.Get_ComposedProfile(), Input, Pov._PovState);
 
         auto ViewInfo = FMinimalViewInfo{};
-        ViewInfo.Location   = Current._PovState._CameraTransform.GetLocation();
-        ViewInfo.Rotation   = Current._PovState._CameraTransform.Rotator();
+        ViewInfo.Location   = Pov._PovState._CameraTransform.GetLocation();
+        ViewInfo.Rotation   = Pov._PovState._CameraTransform.Rotator();
         ViewInfo.FOV        = Current.Get_ComposedProfile().Get_Sensor().Get_FOV();
         ViewInfo.DesiredFOV = ViewInfo.FOV;
-        Current._ViewInfo   = ViewInfo;
+        Pov._ViewInfo   = ViewInfo;
     }
 
     return Director;
@@ -161,7 +163,7 @@ auto
         const FCk_Handle_Camera& InCamera)
     -> FMinimalViewInfo
 {
-    return InCamera.Get<ck::FFragment_Camera_Current>().Get_ViewInfo();
+    return InCamera.Get<ck::FFragment_Camera_Pov>().Get_ViewInfo();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -208,7 +210,7 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
-    InCamera.Get<ck::FFragment_Camera_Current>().Set_OrientationIntention(InOrientationIntention);
+    InCamera.Get<ck::FFragment_Camera_Pov>().Set_OrientationIntention(InOrientationIntention);
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
@@ -225,10 +227,10 @@ auto
 {
     InWorldRotation.Roll = 0.0f;
 
-    auto& Current = InCamera.Get<ck::FFragment_Camera_Current>();
+    auto& Pov = InCamera.Get<ck::FFragment_Camera_Pov>();
     // _Initialized so FPov::Run's seed-from-anchor branch cannot clobber this seed on a first frame.
-    Current._PovState._BoomArmRotation = InWorldRotation;
-    Current._PovState._Initialized     = true;
+    Pov._PovState._BoomArmRotation = InWorldRotation;
+    Pov._PovState._Initialized     = true;
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
