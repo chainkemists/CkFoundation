@@ -98,6 +98,30 @@ fragment MUST move that feature's Has/Cast anchor in the same change, with a mem
 
 ## Log
 
+- 2026-08-06 (P5b, in-session continuation): items 3-6 dispositioned —
+  * **AudioTrack (item 3) DONE**: `FFragment_AudioTrack_ComponentBindings` extracts the six
+    native-delegate handles (Setup binds, EndPlay consumes); fade fields ADJUDICATED to stay in
+    Current (40 interleaved Play/Stop/Playback uses = live playback state). Gate 1002/1004
+    (known pair only). Commit `22087e73a`.
+  * **Camera (item 4) DONE (gate in flight)**: staged 7-bool "compose cache" split FALSIFIED by
+    code — the bools are runtime tunables with `Request_Set_*` immediate mutators and a
+    bidirectional rig round-trip (`CkCamera_Utils.cpp:574-610`). Actual split:
+    `FFragment_Camera_Pov { _PovState, _OrientationIntention, _ViewInfo }` — the POV integrator's
+    state + output; writers UpdatePOV + Utils seed/snap paths; compose blackboard stays in
+    Current. CkInspector_Camera (GameplayDebugger) updated (6 read sites).
+  * **Homing (item 5) — ADJUDICATED LEAVE-ALONE**: the 4 flagged fields are used ONLY inside the
+    Update processor (zero Utils reads), already grouped under documented sub-blocks
+    (finite-difference fallback, miss latch). Census flagged on member count; by consumer
+    analysis it is one coherent guidance blob. No split.
+  * **VoiceTalker (item 6) — DEFERRED to the owning VoiceChat workstream**: the module landed
+    P2→P4 feature commits on 2026-08-05 (daily-active), and origin/dev moved during this campaign
+    (sibling workstream pushing). A 21-member/7-processor split from outside that workstream
+    maximizes merge pain for it. The staged design (five-concern split; doctrine-priority
+    `FFragment_VoiceTalker_Tunables` extraction so requests mutate ONLY tunables) stays in
+    §"P5 — staged split designs" as the handoff.
+  * NOTE: local dev has diverged from origin/dev (~5 new upstream commits: entity-visualizer fix,
+    scripts fix, GameSettings/LiveTune docs). Ship-time rebase via ck-ship-dev required.
+
 - 2026-08-06: P5a EXECUTED (gate in flight):
   * **VatProxy — ADJUDICATED LEAVE-ALONE (false positive).** The "prev/transition block" is half
     of the GPU wire format: the custom-data packer reads `Prev*`+`Transition*` on every change
