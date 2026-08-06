@@ -96,6 +96,7 @@ namespace ck
             FProcessor_Camera_UpdatePOV,
             FCk_Handle_Camera,
             TReadWrite<FFragment_Camera_Current>,
+            TReadWrite<FFragment_Camera_Pov>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -109,7 +110,8 @@ namespace ck
         static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Camera_Current& InCurrent) -> void;
+            FFragment_Camera_Current& InCurrent,
+            FFragment_Camera_Pov& InPov) -> void;
     };
 }
 
