@@ -7,6 +7,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
@@ -118,6 +119,32 @@ auto
     -> bool
 {
     return InHandle.Has<ck::FFragment_PathNetwork_Graph>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PathNetwork_UE::
+    Get_AllRibbonsInWorld(
+        FCk_Handle InAnyHandleInWorld)
+    -> TArray<FCk_PathNetwork_Ribbon>
+{
+    if (NOT ck::IsValid(InAnyHandleInWorld))
+    { return {}; }
+
+    auto Ribbons = TArray<FCk_PathNetwork_Ribbon>{};
+    InAnyHandleInWorld.View<
+        ck::FFragment_PathNetwork_Params,
+        ck::FFragment_PathNetwork_Graph,
+        CK_IGNORE_PENDING_KILL>().ForEach(
+        [&Ribbons](
+            FCk_Entity,
+            const ck::FFragment_PathNetwork_Params& InParams,
+            const ck::FFragment_PathNetwork_Graph&)
+        {
+            Ribbons.Append(InParams.Get_Ribbons());
+        });
+    return Ribbons;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

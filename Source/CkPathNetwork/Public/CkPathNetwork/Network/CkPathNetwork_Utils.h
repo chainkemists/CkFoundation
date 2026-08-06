@@ -43,6 +43,16 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+    // Returns a value-only snapshot of every authored and generated ribbon carried by a
+    // path-network entity in the same ECS world as InAnyHandleInWorld. An invalid handle
+    // returns an empty array so debug consumers can fail closed during world teardown.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|PathNetwork",
+              DisplayName="[Ck][PathNetwork] Get All Ribbons In World")
+    static TArray<FCk_PathNetwork_Ribbon>
+    Get_AllRibbonsInWorld(
+        FCk_Handle InAnyHandleInWorld);
+
     // Replace the ribbon set and rebuild the graph (the runtime-rebuild entrypoint). Every
     // follower corridor planned against this network is invalidated and replans.
     UFUNCTION(BlueprintCallable,
