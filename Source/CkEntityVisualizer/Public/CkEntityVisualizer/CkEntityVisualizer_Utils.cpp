@@ -166,8 +166,11 @@ auto
     { return {}; }
 
     Proxy.AddOrGet<ck::FTag_EntityVisualizer_Visual>();
+
+#if WITH_EDITOR
     if (Proxy.Has<ck::FFragment_EditorSelectionOwner>())
     { Proxy.Remove<ck::FFragment_EditorSelectionOwner>(); }
+#endif
 
     auto ProxyTransform = UCk_Utils_Transform_UE::CastChecked(Proxy);
     const auto SceneNode = UCk_Utils_SceneNode_UE::Add(
