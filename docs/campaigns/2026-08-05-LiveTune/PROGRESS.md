@@ -18,14 +18,17 @@ CkTests off `dev` @ `0ea0d6a2`). Never pushed; merge/rebase onto `dev` is Adam's
 
 | Phase | Status |
 |---|---|
-| 0 — Spine | **GATE GREEN** (2026-08-06) — awaiting Adam's audit before Phase 1 |
-| 1 — Pilots | not started (blocked on Phase 0 audit) |
-| 2 — AS path | not started |
-| 3 — Rollout | not started |
+| 0 — Spine | **GATE GREEN** (2026-08-06) |
+| 1 — Pilots | **GATE GREEN** (2026-08-06) — Adam authorized full-campaign continuation in-session |
+| 2 — AS path | **GATE GREEN** (2026-08-06) |
+| 3 — Rollout | **GATE GREEN** (2026-08-06) — CkProvider disposition still pending Adam's call |
 
-Commits on `livetune/phase-0` (local only, never pushed):
-CkFoundation `7aa1dbd26` (PROGRESS start) → `8db8eb08e` (baseline record) → `7bf179a20` (spine)
-→ docs-final commit; CkTests `45fc7ecd` (gate coverage).
+Commits on `livetune/phase-0` (local only, never pushed) — CkFoundation:
+`7aa1dbd26` (PROGRESS start) → `8db8eb08e` (baseline) → `7bf179a20` (Phase 0 spine) → `fb11243c0`
+(Phase 0 docs) → `41469bdd4` (Phase 1 driver+pilots) → `1a85118cc` (Phase 2 reload transport +
+UFUNCTION Link) → Phase 3 commit (Probe Reconfigure + docs) → final docs commit.
+CkTests: `45fc7ecd` (Phase 0 tests) → `2df8b63d` (Phase 1 tests) → `e677a5cd` (Phase 2 test)
+→ Phase 3 tests commit.
 
 ## Baseline (recorded BEFORE first edit)
 
@@ -176,10 +179,92 @@ CkFoundation `7aa1dbd26` (PROGRESS start) → `8db8eb08e` (baseline record) → 
 - The flags change that preceded the rename (EngineFilter → `ck::tests::kCkUnitTestFlags`) is kept:
   it is the documented house constant for this family.
 
+## Phases 1-3 (2026-08-06, same session — Adam authorized full-campaign continuation)
+
+### Phase 1 — ViaRebuild driver + Timer/FloatAttribute pilots (`41469bdd4` / `2df8b63d`)
+
+- Driver on the (now tickable) subsystem: capture → deferred destroy → re-Add keyed on ACTUAL
+  destruction (`IsValid_Policy_IncludePendingKill` false = fully gone; loud 5s timeout) → hydration
+  enqueued into `FFragment_PendingHydration` + tag (the standard dispatcher; no parallel path) →
+  automatic re-link + cache catch-up for mid-rebuild edits. `Scope::Entity` validates spawn-recipe
+  provenance (refusal test) and respawns via `Request_SpawnEntity` (respawn path implemented but
+  has NO dedicated success-path test — the script's own Construct re-links; flagged for audit).
+- **Capture-override saga (three iterations, each hypothesis-tested):** (1) owner-keyed capture was
+  WRONG — the attribute save handler is keyed per-attribute-entity (`CkAttribute_RestorePersistence.h`
+  says so; only the net apply is owner-keyed) → empty payloads; (2) delta-riding capture was WRONG —
+  `Request_Override(value, Current)` writes the Current component's BASE, so base IS the live value
+  and delta was always 0; (3) correct: keep the Current entry VERBATIM, drop Min/Max config entries
+  so fresh clamps win. Registry gained a typed optional `.Capture(LinkedEntity, FreshParams)` slot
+  for features whose save payload conflates config with runtime state; the useless owner-capture +
+  hydrate-override slots were REMOVED (hydration must have exactly one code path).
+- Timer pilot: `Replace<Params>` + `.PostReplace` re-enqueues `Request_ChangeCountDirection` from
+  the fresh params. Known bound: the chrono GOAL is baked at Add — a Duration retune needs a Timer
+  request that does not exist (follow-up candidate, not built).
+- Phase 1 gate run: 1017 total / 13 LiveTune green / failures = 2 stable baseline reds + 3 proven
+  flakes (`FallsBackToNavigation` pass+fail on the same binary — zero-margin arrival assert, chip
+  filed; `FormatterRoundTrip` — SQLite lane-contention error attributed into its window;
+  `IntegrationTest` — coverage-report contention, red at baseline too). Zero deterministic
+  regressions.
+
+### Phase 2 — AS-reload transport + tri-env Link (`1a85118cc` / `e677a5cd`)
+
+- `UCk_DeferredAssetInit_UE::OnAssetsReinitialized` (CkCore-local) fires at the end of every heal
+  sweep that re-initialized literals, carrying the healed set; the subsystem re-diffs every linked
+  member of each healed asset (shared code path with undo/redo's null-property events).
+- `Link` is now a UFUNCTION → BP node + generated `utils_live_tune.as` (CkFoundation's
+  `Script/Generated` is gitignored; the wrapper regenerates on boot). `AsReloadHeal` drives the REAL
+  delegate and links through `utils_live_tune::Link` — the AS-environment proof. Binding discovery:
+  handle-first UFUNCTIONs bind as handle METHODS in AS, not class statics — direct
+  `UCk_Utils_X_UE::Request_*(...)` calls do not compile for typesafe-handle firsts; use the
+  `utils_*` wrapper (cost one exit-76 iteration).
+
+### Phase 3 — Probe ViaRequest pilot + docs
+
+- New Probe API: `FCk_Request_Probe_Reconfigure` + `Request_Reconfigure` + handler. Contract: the
+  live-read subset (Filter/ResponsePolicy/ContextOverlapPolicy/SurfaceInfo — read from the params
+  fragment at every overlap evaluation) re-applies via params Replace; baked/identity fields
+  (ProbeName/MotionType/MotionQuality/StartingState) must match or the request is rejected loudly
+  and ATOMICALLY (completion Failed, nothing applied — pinned by
+  `Ck_AutoTest_Probe_Reconfigure_RejectsBakedFieldChange`). LiveTune registration in
+  `CkProbe_Fragment.cpp` routes edits through it (`Ck_AutoTest_LiveTune_ProbeViaRequest`).
+- Docs: `Source/CLAUDE.md` decision-table row; `CkEcs/Claude.md` § LiveTune (registration guidance,
+  three tiers, severance warning); module-layout line.
+- **CkProvider disposition: NOT executed** — needs Adam's explicit call (delete vs archive + stale
+  doc correction). The CTO review confirmed its docs actively mislead; untouched per scope discipline.
+
+## FINAL CAMPAIGN GATE (2026-08-06, `Saved/Logs/Test-Gate-Final.log`, fresh boot + fresh discovery)
+
+**Total 1020 · Passed 1016 · Failed 4 · Contaminated 0** (3m59s) on the final binary carrying all
+four phases. All 16 LiveTune tests green. Failure accounting vs the recorded baseline (1002/999/3):
+
+- The two stable baseline reds, unchanged: `Ck_AutoTest_PathNetworkFollower_{DesiredNavmeshClearance
+  MovesInward, ProjectsRibbonWaypointWithinNavQueryExtent}`.
+- `Angelscript...IntegrationTest` — the recurring coverage-report contention flake (red at baseline,
+  green in three intermediate full gates, red here).
+- `GitLink.Stage.LfsPointerNotRaw` — flake: green isolated on the same binary
+  (`Test-IsoGitLink.log`, 1/1); git/LFS I/O under parallel-lane contention; no code-path overlap
+  with this diff.
+- +18 total vs baseline = 16 LiveTune tests + the 2 cached-discovery gaps found at the Phase 0 gate.
+- **Zero deterministic regressions across the entire campaign.**
+
 ## [EDITOR-VERIFY] items (for Adam)
 
-- None for Phase 0 — nothing user-visible exists until a real feature registers a handler (Phase 1
-  pilots carry the first mid-PIE details-panel edit check). All Phase 0 behavior is pinned headlessly.
+All headless behavior is test-pinned; these are the real-editor UX checks the design's gates name:
+
+1. **Mid-PIE details-panel retune (Phase 1 gate item).** Author a quick PDA (any UObject asset) with
+   a `FCk_Fragment_FloatAttribute_ParamsData` member; in an EntityScript's Construct:
+   `auto Attr = utils_float_attribute::Add(...asset member...)` then
+   `utils_live_tune::Link(Attr, Asset, n"<member name>")`. PIE → damage the attribute → edit the
+   member's MaxValue below current in the details panel → the attribute re-clamps live within a few
+   frames, and the log shows `LiveTune: rebuilt [...] re-applying [1] captured payload(s)`.
+2. **AS literal hot reload (Phase 2 gate item).** Same script but with an `asset ... of ...` literal;
+   change a tuned value in the .as file and save → hot reload → the change lands on live entities;
+   an unrelated .as save does NOT re-apply anything (diff-gate suppression; no `LiveTune:` log).
+3. **BP node (Phase 2 tri-env).** In any Blueprint graph: search "[Ck][LiveTune] Link" — the node
+   exists, takes Handle/Tuning Asset/Member Name, returns Handle.
+4. **Interactive scrub feel.** With a linked ViaReplace feature (e.g. a Timer's params member), DRAG
+   a slider mid-PIE: values land per-tick (Interactive events), no rebuild storms from ViaRebuild
+   features while dragging (their edits land on mouse-release commit only).
 
 ## Known limitations / notes for the auditor
 
