@@ -54,11 +54,6 @@ namespace ck
 
         TArray<FCk_Minimap_Entry> _Entries;
 
-        TArray<FCk_Minimap_Entry> _ScratchEntries;
-
-        TArray<FCk_Entity> _ScratchPoiEntities;
-        TArray<TOptional<FCk_Minimap_Entry>> _ScratchParallelSlots;
-
         FCk_Time _TimeSinceUpdate;
 
     public:
@@ -69,6 +64,26 @@ namespace ck
         CK_PROPERTY_GET(_ViewOrigin);
         CK_PROPERTY_GET(_ViewYawDegrees);
         CK_PROPERTY_GET(_Entries);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Per-tick working buffers for the Update processor — retained on the entity so their
+    // allocations are reused across ticks. _Entries is the BACK buffer of the published
+    // Current._Entries (swapped, never copied).
+    struct CKMINIMAP_API FFragment_Minimap_Scratch
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Minimap_Scratch);
+
+    public:
+        friend class FProcessor_Minimap_Update;
+        friend class FProcessor_Minimap_EndPlay;
+
+    private:
+        TArray<FCk_Minimap_Entry> _Entries;
+        TArray<FCk_Entity> _PoiEntities;
+        TArray<TOptional<FCk_Minimap_Entry>> _ParallelSlots;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -32,6 +32,7 @@ auto
 
     InHandle.Add<ck::FFragment_Compass_Params>(InParams);
     InHandle.Add<ck::FFragment_Compass_Current>();
+    InHandle.Add<ck::FFragment_Compass_Scratch>();
     InHandle.Add<ck::FTag_Compass_NeedsSetup>();
 
     return ck::StaticCast<FCk_Handle_Compass>(InHandle);

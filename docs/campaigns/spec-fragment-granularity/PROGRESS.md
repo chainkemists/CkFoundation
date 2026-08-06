@@ -98,6 +98,22 @@ fragment MUST move that feature's Has/Cast anchor in the same change, with a mem
 
 ## Log
 
+- 2026-08-06: P5a EXECUTED (gate in flight):
+  * **VatProxy — ADJUDICATED LEAVE-ALONE (false positive).** The "prev/transition block" is half
+    of the GPU wire format: the custom-data packer reads `Prev*`+`Transition*` on every change
+    (`CkVatProxy_Processor.cpp:72-79`), and the stateless GPU fade model means prev state is
+    never cleared (weight saturates). One consumer, one concern, per-field documented. A
+    presence-gated split would add branching to the packing path for zero clarity. Staged design
+    #1 withdrawn.
+  * **Minimap + Compass Scratch split DONE** (staged design #2): 3 scratch members left each
+    Current → new `FFragment_Minimap_Scratch` / `FFragment_Compass_Scratch` (`_Entries` back
+    buffer + `_PoiEntities` + `_ParallelSlots`), friends = Update+EndPlay, threaded through
+    Update's helpers (DoProjectPois/DoDiffAndPublishEntries/DoClearAllEntries) and EndPlay,
+    added at Add(). Allocation-reuse behavior unchanged (the whole point of keeping them on the
+    entity). Gotcha fixed during the edit: a blanket signature replace briefly gave Compass
+    SETUP an InScratch param its view doesn't supply — reverted; Setup stays Scratch-free.
+  * Remaining P5 (AudioTrack Current, Camera, Homing, VoiceTalker) stays staged for follow-up.
+
 - 2026-08-06: P4 CODE COMPLETE (gate in flight — build + full suite vs the now-established
   999-passed reference incl. 2 known pre-existing PathNetwork reds):
   * AudioTrack: alias → 8-field residue (`_TrackName` stored RESOLVED); NEW

@@ -119,6 +119,7 @@ namespace ck
         FCk_Handle_Compass,
         ck::TReadOnly<FFragment_Compass_Params>,
         ck::TReadWrite<FFragment_Compass_Current>,
+        ck::TReadWrite<FFragment_Compass_Scratch>,
         TExclude<FTag_Compass_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -138,7 +139,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent) const -> void;
+            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch) const -> void;
 
     private:
         static auto
@@ -153,17 +155,20 @@ namespace ck
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
             FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch,
             const FVector& InObserverLocation) -> void;
 
         static auto
         DoDiffAndPublishEntries(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent) -> void;
+            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch) -> void;
 
         static auto
         DoClearAllEntries(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent) -> void;
+            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -173,6 +178,7 @@ namespace ck
         FCk_Handle_Compass,
         ck::TReadOnly<FFragment_Compass_Params>,
         ck::TReadWrite<FFragment_Compass_Current>,
+        ck::TReadWrite<FFragment_Compass_Scratch>,
         CK_IF_END_PLAY>
     {
     public:
@@ -188,7 +194,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent)
+            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch)
             -> void;
     };
 }

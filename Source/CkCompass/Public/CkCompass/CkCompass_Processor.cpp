@@ -185,12 +185,13 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent) const
+            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch) const
         -> void
     {
         if (ck::Is_NOT_Valid(InCurrent._Observer))
         {
-            DoClearAllEntries(InCompassEntity, InCurrent);
+            DoClearAllEntries(InCompassEntity, InCurrent, InScratch);
             return;
         }
 
@@ -202,7 +203,7 @@ namespace ck
             TEXT("Compass [{}] Observer [{}] has no Transform feature. The Compass cannot project POIs without an observer position"),
             InCompassEntity, Observer)
         {
-            DoClearAllEntries(InCompassEntity, InCurrent);
+            DoClearAllEntries(InCompassEntity, InCurrent, InScratch);
             return;
         }
 
@@ -222,12 +223,12 @@ namespace ck
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkCompass_Projection);
-            DoProjectPois(InCompassEntity, InParams, InCurrent, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(ObserverTransform));
+            DoProjectPois(InCompassEntity, InParams, InCurrent, InScratch, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(ObserverTransform));
         }
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkCompass_DiffSignals);
-            DoDiffAndPublishEntries(InCompassEntity, InCurrent);
+            DoDiffAndPublishEntries(InCompassEntity, InCurrent, InScratch);
         }
     }
 
@@ -288,10 +289,11 @@ namespace ck
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
             FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch,
             const FVector& InObserverLocation)
         -> void
     {
-        auto& Scratch = InCurrent._ScratchEntries;
+        auto& Scratch = InScratch._Entries;
         Scratch.Reset();
 
         const auto& CategoryFilter = InParams.Get_CategoryFilter();
@@ -299,7 +301,7 @@ namespace ck
         const auto HeadingDegrees = InCurrent._HeadingDegrees;
         const auto ArcDegrees = InParams.Get_ArcDegrees();
 
-        auto& PoiEntities = InCurrent._ScratchPoiEntities;
+        auto& PoiEntities = InScratch._PoiEntities;
         PoiEntities.Reset();
 
         InCompassEntity.View<
@@ -313,7 +315,7 @@ namespace ck
             PoiEntities.Add(InPoiEntity);
         });
 
-        auto& Slots = InCurrent._ScratchParallelSlots;
+        auto& Slots = InScratch._ParallelSlots;
         Slots.Reset();
         Slots.SetNum(PoiEntities.Num());
 
@@ -470,10 +472,11 @@ namespace ck
         FProcessor_Compass_Update::
         DoDiffAndPublishEntries(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent)
+            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch)
         -> void
     {
-        const auto& NewEntries = InCurrent._ScratchEntries;
+        const auto& NewEntries = InScratch._Entries;
         const auto& OldEntries = InCurrent._Entries;
 
         for (const auto& NewEntry : NewEntries)
@@ -508,14 +511,15 @@ namespace ck
             }
         }
 
-        Swap(InCurrent._Entries, InCurrent._ScratchEntries);
+        Swap(InCurrent._Entries, InScratch._Entries);
     }
 
     auto
         FProcessor_Compass_Update::
         DoClearAllEntries(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent)
+            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch)
         -> void
     {
         for (const auto& Entry : InCurrent._Entries)
@@ -524,7 +528,7 @@ namespace ck
         }
 
         InCurrent._Entries.Reset();
-        InCurrent._ScratchEntries.Reset();
+        InScratch._Entries.Reset();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -535,7 +539,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent)
+            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass_Scratch& InScratch)
         -> void
     {
         for (const auto& Entry : InCurrent._Entries)
@@ -544,7 +549,7 @@ namespace ck
         }
 
         InCurrent._Entries.Reset();
-        InCurrent._ScratchEntries.Reset();
+        InScratch._Entries.Reset();
     }
 }
 

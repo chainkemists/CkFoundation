@@ -272,14 +272,15 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent) const
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch) const
         -> void
     {
         // Observers die (pawn destroyed, possession changed) as part of normal play — degrade silently and
         // wait for a Request_SetObserver. FixedBounds minimaps degrade the same way (no observer-less world map)
         if (ck::Is_NOT_Valid(InCurrent._Observer))
         {
-            DoClearAllEntries(InMinimapEntity, InCurrent);
+            DoClearAllEntries(InMinimapEntity, InCurrent, InScratch);
             return;
         }
 
@@ -291,7 +292,7 @@ namespace ck
             TEXT("Minimap [{}] Observer [{}] has no Transform feature. The Minimap cannot project POIs without an observer position"),
             InMinimapEntity, Observer)
         {
-            DoClearAllEntries(InMinimapEntity, InCurrent);
+            DoClearAllEntries(InMinimapEntity, InCurrent, InScratch);
             return;
         }
 
@@ -309,12 +310,12 @@ namespace ck
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkMinimap_Projection);
-            DoProjectPois(InMinimapEntity, InParams, InCurrent);
+            DoProjectPois(InMinimapEntity, InParams, InCurrent, InScratch);
         }
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkMinimap_DiffSignals);
-            DoDiffAndPublishEntries(InMinimapEntity, InCurrent);
+            DoDiffAndPublishEntries(InMinimapEntity, InCurrent, InScratch);
         }
     }
 
@@ -345,10 +346,11 @@ namespace ck
         DoProjectPois(
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent)
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch)
         -> void
     {
-        auto& Scratch = InCurrent._ScratchEntries;
+        auto& Scratch = InScratch._Entries;
         Scratch.Reset();
 
         const auto& CategoryFilter = InParams.Get_CategoryFilter();
@@ -365,7 +367,7 @@ namespace ck
         // The four pending-kill excludes matter: fragments survive until destruction Finalize (~2 ticks after
         // Destroy) — without them, dying POIs would linger on the minimap. Initiate-frame POIs are
         // deliberately still projected (same policy as CK_IGNORE_PENDING_KILL).
-        auto& PoiEntities = InCurrent._ScratchPoiEntities;
+        auto& PoiEntities = InScratch._PoiEntities;
         PoiEntities.Reset();
 
         InMinimapEntity.View<
@@ -379,7 +381,7 @@ namespace ck
             PoiEntities.Add(InPoiEntity);
         });
 
-        auto& Slots = InCurrent._ScratchParallelSlots;
+        auto& Slots = InScratch._ParallelSlots;
         Slots.Reset();
         Slots.SetNum(PoiEntities.Num());
 
@@ -534,10 +536,11 @@ namespace ck
         FProcessor_Minimap_Update::
         DoDiffAndPublishEntries(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent)
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch)
         -> void
     {
-        const auto& NewEntries = InCurrent._ScratchEntries;
+        const auto& NewEntries = InScratch._Entries;
         const auto& OldEntries = InCurrent._Entries;
 
         for (const auto& NewEntry : NewEntries)
@@ -572,14 +575,15 @@ namespace ck
             }
         }
 
-        Swap(InCurrent._Entries, InCurrent._ScratchEntries);
+        Swap(InCurrent._Entries, InScratch._Entries);
     }
 
     auto
         FProcessor_Minimap_Update::
         DoClearAllEntries(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent)
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch)
         -> void
     {
         for (const auto& Entry : InCurrent._Entries)
@@ -588,7 +592,7 @@ namespace ck
         }
 
         InCurrent._Entries.Reset();
-        InCurrent._ScratchEntries.Reset();
+        InScratch._Entries.Reset();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -599,7 +603,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent)
+            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap_Scratch& InScratch)
         -> void
     {
         for (const auto& Entry : InCurrent._Entries)
@@ -608,7 +613,7 @@ namespace ck
         }
 
         InCurrent._Entries.Reset();
-        InCurrent._ScratchEntries.Reset();
+        InScratch._Entries.Reset();
     }
 }
 
