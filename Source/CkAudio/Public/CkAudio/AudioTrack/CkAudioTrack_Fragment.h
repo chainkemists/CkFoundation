@@ -23,7 +23,79 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_AudioTrack_Params = FCk_AudioTrack_Spec;
+    // The retained immutable residue of FCk_AudioTrack_Spec: the fields read after construction
+    // (director arbitration, Play/Stop defaults, lookups, debug). _TrackName is stored RESOLVED —
+    // the spec's derive-from-sound-path logic runs once at Create.
+    struct CKAUDIO_API FFragment_AudioTrack_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_AudioTrack_Params);
+
+    private:
+        FName _TrackName = NAME_None;
+        TSoftObjectPtr<USoundBase> _Sound;
+        int32 _Priority = 50;
+        ECk_AudioTrack_OverrideBehavior _OverrideBehavior = ECk_AudioTrack_OverrideBehavior::Crossfade;
+        ECk_LoopBehavior _LoopBehavior = ECk_LoopBehavior::Loop;
+        float _Volume = 1.0f;
+        FCk_Time _DefaultFadeInTime = FCk_Time{1.0f};
+        FCk_Time _DefaultFadeOutTime = FCk_Time{1.0f};
+
+    public:
+        CK_PROPERTY_GET(_TrackName);
+        CK_PROPERTY_GET(_Sound);
+        CK_PROPERTY_GET(_Priority);
+        CK_PROPERTY_GET(_OverrideBehavior);
+        CK_PROPERTY_GET(_LoopBehavior);
+        CK_PROPERTY_GET(_Volume);
+        CK_PROPERTY_GET(_DefaultFadeInTime);
+        CK_PROPERTY_GET(_DefaultFadeOutTime);
+
+    public:
+        FFragment_AudioTrack_Params() = default;
+        explicit FFragment_AudioTrack_Params(const FCk_AudioTrack_Spec& InSpec)
+            : _TrackName(InSpec.Get_TrackName())
+            , _Sound(InSpec.Get_Sound())
+            , _Priority(InSpec.Get_Priority())
+            , _OverrideBehavior(InSpec.Get_OverrideBehavior())
+            , _LoopBehavior(InSpec.Get_LoopBehavior())
+            , _Volume(InSpec.Get_Volume())
+            , _DefaultFadeInTime(InSpec.Get_DefaultFadeInTime())
+            , _DefaultFadeOutTime(InSpec.Get_DefaultFadeOutTime())
+        {}
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Construction-only Spec fields that must survive to the DEFERRED Setup processor (async asset
+    // resolve): Setup consumes them and REMOVES this fragment on every completion path — success,
+    // unset-sound bail, and failed-load bail alike.
+    struct CKAUDIO_API FFragment_AudioTrack_PendingSetup
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_AudioTrack_PendingSetup);
+
+    private:
+        TSubclassOf<UCk_EntityScript_UE> _ScriptAsset;
+        TSoftObjectPtr<USoundAttenuation> _LibraryAttenuationSettings;
+        TSoftObjectPtr<USoundConcurrency> _LibraryConcurrencySettings;
+        TSoftObjectPtr<USoundClass> _LibrarySoundClassSettings;
+
+    public:
+        CK_PROPERTY_GET(_ScriptAsset);
+        CK_PROPERTY_GET(_LibraryAttenuationSettings);
+        CK_PROPERTY_GET(_LibraryConcurrencySettings);
+        CK_PROPERTY_GET(_LibrarySoundClassSettings);
+
+    public:
+        FFragment_AudioTrack_PendingSetup() = default;
+        explicit FFragment_AudioTrack_PendingSetup(const FCk_AudioTrack_Spec& InSpec)
+            : _ScriptAsset(InSpec.Get_ScriptAsset())
+            , _LibraryAttenuationSettings(InSpec.Get_LibraryAttenuationSettings())
+            , _LibraryConcurrencySettings(InSpec.Get_LibraryConcurrencySettings())
+            , _LibrarySoundClassSettings(InSpec.Get_LibrarySoundClassSettings())
+        {}
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 

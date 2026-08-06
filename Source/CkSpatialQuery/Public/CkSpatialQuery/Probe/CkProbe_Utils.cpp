@@ -52,7 +52,7 @@ auto
     if (NOT ck::physics_ownership::TryClaim_Jolt(InHandle))
     { return {}; }
 
-    InHandle.Add<ck::FFragment_Probe_Params>(InParams);
+    InHandle.Add<ck::FFragment_Probe_Params>(ck::FFragment_Probe_Params{InParams});
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
     InHandle.Add<ck::FFragment_Probe_Current>();
 
@@ -63,6 +63,11 @@ auto
     if (IsLinearCastProbe)
     {
         InHandle.Add<ck::FTag_Probe_LinearCast>();
+    }
+
+    if (InParams.Get_PersistContacts() == ECk_Probe_PersistContacts::Enabled)
+    {
+        InHandle.Add<ck::FTag_Probe_PersistContacts>();
     }
 
     InHandle.Add<ck::FTag_Probe_NeedsSetup>();

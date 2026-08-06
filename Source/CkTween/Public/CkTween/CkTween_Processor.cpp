@@ -441,7 +441,6 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Tween_Params& InParams,
             FFragment_Tween_Current& InCurrent)
             -> void
     {
