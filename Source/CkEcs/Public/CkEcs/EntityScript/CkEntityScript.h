@@ -104,9 +104,14 @@ public:
     //      root / transient): opted-in classes are respawned there, the rest are skipped so the fresh world's own
     //      copy is not duplicated. Because that test also covers non-bridged scripts, the flag lives on this base
     //      (CkEcs) rather than on the WithActor subclass in CkEcsExt.
-    // It is NOT a spawn guard: nothing suppresses Request_SpawnEntity during a load, so protecting against a
-    // duplicate is the responsibility of whatever would re-create the entity (see the loader's owner-persisted
-    // branch, and the conditional-skip pattern a boot-time spawner uses).
+    // It is NOT a spawn guard for the whole load: Get_IsSpawnSuppressedByLoadGate (CkEntityScript_Utils.cpp)
+    // does quarantine Request_SpawnEntity while the load GATE is active (outside the loader/rendezvous/
+    // construction admission windows), but the gate drops partway through hydration while the load itself runs
+    // on through Settling — and a producer whose spawn REQUESTS drain via a load-gated processor (e.g. an
+    // entity script's DoBeginPlay enqueuing spawns) lands entirely after the gate lifts, where nothing
+    // suppresses it. Protecting against a duplicate beside the loader's restore therefore remains the
+    // producer's responsibility: gate construction-time seeding on UCk_Utils_Snapshot_UE::Get_IsLoadInProgress,
+    // or reconcile (spawn only what is missing) after Promise_OnLoadComplete.
     // Default false: framework infrastructure (ActorRelay / CueRelay / StateMachineRelay, etc.) and ordinary scripts
     // spawn normally and are wiped by the restore's registry clear.
     //
