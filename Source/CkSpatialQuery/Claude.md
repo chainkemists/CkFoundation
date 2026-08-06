@@ -55,3 +55,15 @@ Jolt's `CapsuleShape`/`CylinderShape` are **Y-axis aligned**; we run Jolt in Unr
 - `CkShapes/Claude.md` — shape data.
 - `CkPerception/Claude.md` — AI perception (for perceived stimuli vs. raw overlap).
 - `CkOverlapBody/Claude.md` — signal-based overlap (vs. query-based).
+
+---
+
+## Fragment shape (2026-08-06 — spec-fragment-granularity P4)
+
+- `FCk_Probe_Spec` (reflected) — authoring payload, unpacked at `Add`.
+- `ck::FFragment_Probe_Params` — retained residue: the matching half (ProbeName, ResponsePolicy,
+  Filter, ContextOverlapPolicy, SurfaceInfo — per-contact-pair hot path) + MotionType/MotionQuality
+  (Setup body construction + public getters; the LinearCast tag is DERIVED from quality AND
+  non-static type, so it cannot reconstruct `Get_MotionQuality` for a Static+LinearCast authoring).
+- DISSOLVED to tags set at `Add`: `_StartingState` → `FTag_Probe_Disabled` (via
+  Request_EnableDisable), `_PersistContacts` → `FTag_Probe_PersistContacts` (moved out of Setup).

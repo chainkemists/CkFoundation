@@ -43,3 +43,14 @@ UCk_Utils_AudioTrack_UE::Request_Play(TrackHandle, PlayRequest);
 - `CkCue/Claude.md` — cue system that audio tracks can be driven from.
 - `CkActorRelay/Claude.md` — relay channel used to route audio events to actors.
 - Root `CLAUDE.md` section 9 — signal bind/unbind boilerplate.
+
+---
+
+## Fragment shape (2026-08-06 — spec-fragment-granularity P4)
+
+- `FCk_AudioTrack_Spec` (reflected) — authoring payload, unpacked at `Create`.
+- `ck::FFragment_AudioTrack_Params` — retained residue: TrackName (RESOLVED at Create), Sound,
+  Priority, OverrideBehavior, LoopBehavior, Volume, DefaultFadeIn/OutTime.
+- `ck::FFragment_AudioTrack_PendingSetup` — construction-only fields (ScriptAsset + 3 library
+  soft-ptrs) that survive to the DEFERRED async Setup; Setup consumes and REMOVES it on every
+  completion path (success, unset-sound bail, failed-load bail).

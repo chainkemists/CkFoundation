@@ -53,7 +53,6 @@ namespace ck
     class CKTWEEN_API FProcessor_Tween_HandleYoyoDelays : public ck_exp::TProcessor<
         FProcessor_Tween_HandleYoyoDelays,
         FCk_Handle_Tween,
-        ck::TReadOnly<FFragment_Tween_Params>,
         ck::TReadWrite<FFragment_Tween_Current>,
         FTag_Tween_InYoyoDelay,
         TExclude<FTag_Tween_Paused>,
@@ -69,7 +68,6 @@ namespace ck
     	ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Tween_Params& InParams,
             FFragment_Tween_Current& InCurrent) -> void;
     };
 

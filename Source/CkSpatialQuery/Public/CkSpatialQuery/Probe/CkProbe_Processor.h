@@ -189,7 +189,6 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Probe_UpdateTransform,
             FCk_Handle_Probe,
-            ck::TReadOnly<FFragment_Probe_Params>,
             ck::TReadOnly<FFragment_Probe_Current>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
@@ -212,7 +211,6 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Probe_Params& InParams,
             const FFragment_Probe_Current& InCurrent,
             const FFragment_Transform& InTransform) const -> void;
 
@@ -433,7 +431,6 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_EndPlay : public ck_exp::TProcessor<
             FProcessor_Probe_EndPlay,
             FCk_Handle_Probe,
-            ck::TReadOnly<FFragment_Probe_Params>,
             ck::TReadWrite<FFragment_Probe_Current>,
             CK_IF_END_PLAY>
     {
@@ -450,7 +447,6 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent) const -> void;
 
     private:

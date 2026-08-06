@@ -473,11 +473,6 @@ namespace ck::details
                 break;
         }
 
-        if (InParams.Get_PersistContacts() == ECk_Probe_PersistContacts::Enabled)
-        {
-            InHandle.template Add<FTag_Probe_PersistContacts>();
-        }
-
         const auto& PhysicsSystem = _PhysicsSystem.Pin();
 
         if (NOT PhysicsSystem)
@@ -692,7 +687,6 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Probe_Params& InParams,
             const FFragment_Probe_Current& InCurrent,
             const FFragment_Transform& InTransform) const
         -> void
@@ -1163,7 +1157,6 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent) const
         -> void
     {
