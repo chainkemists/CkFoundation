@@ -85,7 +85,7 @@ Section numbers cited elsewhere in this skill (`§2.7`, `§3.4`, …) point into
 
 `references/macro-expansions.md` — 2.1 `CK_GENERATED_BODY` · 2.2 `CK_PROPERTY` family · 2.3 `CK_DEFINE_CONSTRUCTORS` · 2.4 Ensure family · 2.5 Signal macros · 2.6 Request macros · 2.7 Typesafe-handle macros · 2.8 Tag macros · 2.9 Record / EntityHolder (poisoned policy-blind forms) · 2.10 `CK_REGISTER_PROCESSOR` · 2.11 `CK_REGISTER_SNAPSHOTABLE` · 2.12 `CK_DEFINE_LOG_FUNCTIONS` · 2.13 `CK_DEFINE_CUSTOM_FORMATTER_ENUM` · 2.14 `NOT` and the `ck::IsValid` machinery
 
-`references/add-a-new-x.md` — 3.1 new fragment (ParamsData + runtime + alias) · 3.2 new processor · 3.3 new typesafe handle · 3.4 new request (+ Utils UFUNCTION surface) · 3.5 new signal (+ BindTo wrappers) · 3.6 make a type snapshotable
+`references/add-a-new-x.md` — 3.1 new fragment (Spec + runtime fragments) · 3.2 new processor · 3.3 new typesafe handle · 3.4 new request (+ Utils UFUNCTION surface) · 3.5 new signal (+ BindTo wrappers) · 3.6 make a type snapshotable
 
 ## Common mistakes
 

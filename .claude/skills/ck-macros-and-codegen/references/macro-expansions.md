@@ -71,7 +71,7 @@ Constraints, each with its reason:
 - **Parameters are by-value + move** — members must be movable; callers pass prvalues cheaply.
 
 Canonical: `CkTimer_Fragment_Data.h:123`
-(`CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Timer_ParamsData, _Duration);` — essentials only, optionals
+(`CK_DEFINE_CONSTRUCTORS(FCk_Timer_Spec, _Duration);` — essentials only, optionals
 flow through `Set_*`). To define ONLY the positional ctor (no default), use `CK_DEFINE_CONSTRUCTOR`
 directly (`CkEcs/Public/CkEcs/Handle/CkHandle.h:454` — an algo functor with no default state).
 

@@ -117,13 +117,13 @@ ck::EnsureIfNot(ck::IsValid(Actor), f"BalloonDarts entity script [{InHandle.ToSt
 
 ### 2.5 Fluent `Set_` chains on Params/Request structs
 
-Framework `_ParamsData` and `Request_` structs expose generated `Set_X` setters that return the
+Framework `_Spec` (né `_ParamsData`) and `Request_` structs expose generated `Set_X` setters that return the
 struct for chaining — construct with the required args, then `Set_` the optional ones. Never hunt
 for a mega-constructor. Corpus example (BusterBlock),
 `Script/ECS/DayCycle/BB_DayCycle_Processor_Setup.as:44-46`:
 
 ```angelscript
-auto TickParams = FCk_Fragment_Timer_ParamsData(FCk_Time(1.0f));
+auto TickParams = FCk_Timer_Spec(FCk_Time(1.0f));
 TickParams.Set_StartingState(ECk_Timer_State::Running)
           .Set_Behavior(ECk_Timer_Behavior::ResetOnDone);
 auto TickTimer = utils_timer::Add(InHandle, TickParams);
