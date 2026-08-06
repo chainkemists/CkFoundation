@@ -14,7 +14,6 @@ namespace ck
         FProcessor_VoiceTalker_Setup,
         FCk_Handle_VoiceTalker,
         ck::TReadOnly<FFragment_VoiceTalker_Params>,
-        ck::TReadWrite<FFragment_VoiceTalker_Tunables>,
         FTag_VoiceTalker_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -26,12 +25,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
+        // Tunables are seeded at Add, not here - Setup exists to clear the gate tag that holds
+        // the request/capture processors off until composition has settled.
         static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceTalkerEntity,
-            const FFragment_VoiceTalker_Params& InParams,
-            FFragment_VoiceTalker_Tunables& InTunables)
+            const FFragment_VoiceTalker_Params& InParams)
             -> void;
     };
 

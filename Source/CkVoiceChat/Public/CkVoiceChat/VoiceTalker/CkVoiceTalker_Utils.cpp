@@ -20,9 +20,14 @@ auto
 {
     ck::voice_chat::VeryVerbose(TEXT("Adding VoiceTalker feature to Entity [{}]"), InHandle);
 
-    InHandle.Add<ck::FFragment_VoiceTalker_Params>(InParams);
+    InHandle.Add<ck::FFragment_VoiceTalker_Params>(
+        InParams.Get_VadThreshold(),
+        InParams.Get_Loopback(),
+        InParams.Get_PlaybackAttachSocketName());
     InHandle.Add<ck::FFragment_VoiceTalker>();
-    InHandle.Add<ck::FFragment_VoiceTalker_Tunables>();
+    InHandle.Add<ck::FFragment_VoiceTalker_Tunables>(
+        InParams.Get_TransmitMode(),
+        InParams.Get_InputGain());
     InHandle.Add<ck::FFragment_VoiceTalker_Capture>();
     InHandle.Add<ck::FFragment_VoiceTalker_Playout>();
     InHandle.Add<ck::FFragment_VoiceTalker_Fairness>();
