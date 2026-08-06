@@ -8,7 +8,7 @@ namespace utils_timer
     {
         auto Handle = InAnyHandle;
 
-        auto Params = FCk_Fragment_Timer_ParamsData();
+        auto Params = FCk_Timer_Spec();
         Params.Set_StartingState(ECk_Timer_State::Running);
         Params.Set_Behavior(ECk_Timer_Behavior::ResetOnDone);
 

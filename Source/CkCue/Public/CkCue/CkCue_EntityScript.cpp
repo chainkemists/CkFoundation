@@ -123,7 +123,7 @@ auto
         }
         case ECk_Cue_LifetimeBehavior::Timed:
         {
-            const auto TimerParams = FCk_Fragment_Timer_ParamsData{_LifetimeDuration}
+            const auto TimerParams = FCk_Timer_Spec{_LifetimeDuration}
                 .Set_TimerName(TAG_Label_Timer_CueLifetime)
                 .Set_Behavior(ECk_Timer_Behavior::StopOnDone)
                 .Set_StartingState(ECk_Timer_State::Running);
