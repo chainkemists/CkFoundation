@@ -58,7 +58,8 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_PendingSetup& InPendingSetup,
-            FFragment_AudioTrack_Current& InCurrent)
+            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_ComponentBindings& InBindings)
             -> void
     {
         if (NOT InCurrent._LoadedAssets.Get_IsRequested())
@@ -302,7 +303,7 @@ namespace ck
         InCurrent._TargetVolume = 0.0f;
         InCurrent._FadeSpeed = 0.0f;
 
-        DoBindAudioComponentDelegates(InHandle, InCurrent);
+        DoBindAudioComponentDelegates(InHandle, InCurrent, InBindings);
 
         if (IsSpatial)
         {
@@ -321,14 +322,15 @@ namespace ck
         FProcessor_AudioTrack_Setup::
         DoBindAudioComponentDelegates(
             HandleType InHandle,
-            FFragment_AudioTrack_Current& InCurrent)
+            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_ComponentBindings& InBindings)
         -> void
     {
         auto AudioComponent = InCurrent._AudioComponent.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Cannot bind delegates - AudioComponent is invalid"))
         { return; }
 
-        InCurrent._PlayStateChangedHandle = AudioComponent->OnAudioPlayStateChangedNative.AddLambda(
+        InBindings._PlayStateChangedHandle = AudioComponent->OnAudioPlayStateChangedNative.AddLambda(
             [InHandle](const UAudioComponent* InAudioComp, EAudioComponentPlayState InPlayState)
             {
                 auto NonConstHandle = InHandle;
@@ -348,7 +350,7 @@ namespace ck
             }
         );
 
-        InCurrent._VirtualizationChangedHandle = AudioComponent->OnAudioVirtualizationChangedNative.AddLambda(
+        InBindings._VirtualizationChangedHandle = AudioComponent->OnAudioVirtualizationChangedNative.AddLambda(
             [InHandle](const UAudioComponent* InAudioComp, bool bIsVirtualized)
             {
                 auto NonConstHandle = InHandle;
@@ -366,7 +368,7 @@ namespace ck
             }
         );
 
-        InCurrent._PlaybackPercentHandle = AudioComponent->OnAudioPlaybackPercentNative.AddLambda(
+        InBindings._PlaybackPercentHandle = AudioComponent->OnAudioPlaybackPercentNative.AddLambda(
             [InHandle](const UAudioComponent* InAudioComp, const USoundWave* InSoundWave, float InPercent)
             {
                 auto NonConstHandle = InHandle;
@@ -381,7 +383,7 @@ namespace ck
             }
         );
 
-        InCurrent._SingleEnvelopeHandle = AudioComponent->OnAudioSingleEnvelopeValueNative.AddLambda(
+        InBindings._SingleEnvelopeHandle = AudioComponent->OnAudioSingleEnvelopeValueNative.AddLambda(
             [InHandle](const UAudioComponent* InAudioComp, const USoundWave* InSoundWave, float InEnvelopeValue)
             {
                 auto NonConstHandle = InHandle;
@@ -393,7 +395,7 @@ namespace ck
             }
         );
 
-        InCurrent._MultiEnvelopeHandle = AudioComponent->OnAudioMultiEnvelopeValueNative.AddLambda(
+        InBindings._MultiEnvelopeHandle = AudioComponent->OnAudioMultiEnvelopeValueNative.AddLambda(
             [InHandle](const UAudioComponent* InAudioComp, float InAverageEnvelopeValue, float InMaxEnvelope, int32 InNumWaveInstances)
             {
                 auto NonConstHandle = InHandle;
@@ -405,7 +407,7 @@ namespace ck
             }
         );
 
-        InCurrent._AudioFinishedHandle = AudioComponent->OnAudioFinishedNative.AddLambda(
+        InBindings._AudioFinishedHandle = AudioComponent->OnAudioFinishedNative.AddLambda(
             [InHandle](UAudioComponent* InAudioComp)
             {
                 auto NonConstHandle = InHandle;
@@ -740,14 +742,15 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent)
+            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_ComponentBindings& InBindings)
             -> void
     {
         ck::audio::Verbose(TEXT("Tearing down AudioTrack [{}]"), InParams.Get_TrackName());
 
         if (ck::IsValid(InCurrent._AudioComponent))
         {
-            DoUnbindAudioComponentDelegates(InCurrent);
+            DoUnbindAudioComponentDelegates(InCurrent, InBindings);
 
             InCurrent._AudioComponent->Stop();
             InCurrent._AudioComponent->SetSound(nullptr);
@@ -765,47 +768,48 @@ namespace ck
     auto
         FProcessor_AudioTrack_EndPlay::
         DoUnbindAudioComponentDelegates(
-            FFragment_AudioTrack_Current& InCurrent)
+            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_ComponentBindings& InBindings)
         -> void
     {
         auto AudioComponent = InCurrent._AudioComponent.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Cannot unbind delegates - AudioComponent is invalid"))
         { return; }
 
-        if (InCurrent._PlayStateChangedHandle.IsValid())
+        if (InBindings._PlayStateChangedHandle.IsValid())
         {
-            AudioComponent->OnAudioPlayStateChangedNative.Remove(InCurrent._PlayStateChangedHandle);
-            InCurrent._PlayStateChangedHandle.Reset();
+            AudioComponent->OnAudioPlayStateChangedNative.Remove(InBindings._PlayStateChangedHandle);
+            InBindings._PlayStateChangedHandle.Reset();
         }
 
-        if (InCurrent._VirtualizationChangedHandle.IsValid())
+        if (InBindings._VirtualizationChangedHandle.IsValid())
         {
-            AudioComponent->OnAudioVirtualizationChangedNative.Remove(InCurrent._VirtualizationChangedHandle);
-            InCurrent._VirtualizationChangedHandle.Reset();
+            AudioComponent->OnAudioVirtualizationChangedNative.Remove(InBindings._VirtualizationChangedHandle);
+            InBindings._VirtualizationChangedHandle.Reset();
         }
 
-        if (InCurrent._PlaybackPercentHandle.IsValid())
+        if (InBindings._PlaybackPercentHandle.IsValid())
         {
-            AudioComponent->OnAudioPlaybackPercentNative.Remove(InCurrent._PlaybackPercentHandle);
-            InCurrent._PlaybackPercentHandle.Reset();
+            AudioComponent->OnAudioPlaybackPercentNative.Remove(InBindings._PlaybackPercentHandle);
+            InBindings._PlaybackPercentHandle.Reset();
         }
 
-        if (InCurrent._SingleEnvelopeHandle.IsValid())
+        if (InBindings._SingleEnvelopeHandle.IsValid())
         {
-            AudioComponent->OnAudioSingleEnvelopeValueNative.Remove(InCurrent._SingleEnvelopeHandle);
-            InCurrent._SingleEnvelopeHandle.Reset();
+            AudioComponent->OnAudioSingleEnvelopeValueNative.Remove(InBindings._SingleEnvelopeHandle);
+            InBindings._SingleEnvelopeHandle.Reset();
         }
 
-        if (InCurrent._MultiEnvelopeHandle.IsValid())
+        if (InBindings._MultiEnvelopeHandle.IsValid())
         {
-            AudioComponent->OnAudioMultiEnvelopeValueNative.Remove(InCurrent._MultiEnvelopeHandle);
-            InCurrent._MultiEnvelopeHandle.Reset();
+            AudioComponent->OnAudioMultiEnvelopeValueNative.Remove(InBindings._MultiEnvelopeHandle);
+            InBindings._MultiEnvelopeHandle.Reset();
         }
 
-        if (InCurrent._AudioFinishedHandle.IsValid())
+        if (InBindings._AudioFinishedHandle.IsValid())
         {
-            AudioComponent->OnAudioFinishedNative.Remove(InCurrent._AudioFinishedHandle);
-            InCurrent._AudioFinishedHandle.Reset();
+            AudioComponent->OnAudioFinishedNative.Remove(InBindings._AudioFinishedHandle);
+            InBindings._AudioFinishedHandle.Reset();
         }
 
         ck::audio::VeryVerbose(TEXT("Unbound AudioComponent delegates for AudioTrack"));

@@ -17,6 +17,7 @@ namespace ck
             TReadOnly<FFragment_AudioTrack_Params>,
             TReadOnly<FFragment_AudioTrack_PendingSetup>,
             TReadWrite<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack_ComponentBindings>,
             FTag_AudioTrack_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -34,14 +35,16 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_PendingSetup& InPendingSetup,
-            FFragment_AudioTrack_Current& InCurrent)
+            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_ComponentBindings& InBindings)
             -> void;
 
     private:
         static auto
         DoBindAudioComponentDelegates(
             HandleType InHandle,
-            FFragment_AudioTrack_Current& InCurrent) -> void;
+            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_ComponentBindings& InBindings) -> void;
 
         static auto
         ConvertToAudioTrackState(
@@ -190,6 +193,7 @@ namespace ck
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
             TReadWrite<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack_ComponentBindings>,
             CK_IF_END_PLAY>
     {
     public:
@@ -204,12 +208,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent)
+            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_ComponentBindings& InBindings)
             -> void;
 
         static auto
         DoUnbindAudioComponentDelegates(
-            FFragment_AudioTrack_Current& InCurrent) -> void;
+            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack_ComponentBindings& InBindings) -> void;
     };
 }
 
