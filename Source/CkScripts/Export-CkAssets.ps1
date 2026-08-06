@@ -510,7 +510,11 @@ function Test-ProjectLogLocked([string]$ProjectDir) {
     $logs = Get-ChildItem -LiteralPath $logsDir -Filter '*.log' -File -ErrorAction SilentlyContinue
     foreach ($log in $logs) {
         try {
-            $fs = [System.IO.File]::Open($log.FullName, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+            # FileShare::Read, NOT ::None — ::None also fails on a passive reader
+            # (a stray `tail -f` on a rotated log), reporting a lock with nothing
+            # running. The editor's own handle grants no write-sharing, so ::Read
+            # still detects it.
+            $fs = [System.IO.File]::Open($log.FullName, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Write, [System.IO.FileShare]::Read)
             $fs.Close()
         } catch {
             return $true
