@@ -37,7 +37,7 @@ const auto After = UCk_Utils_Memory_UE::Get_MemoryCountSnapshot(this);
 
 ## Note on scope
 
-`CkMemory` is a low-level infrastructure module. Most game code never calls it directly. If you're hitting memory issues, prefer running the Memory Insights tooling via `CkInsightsAnalyzer` rather than adding custom snapshot calls.
+`CkMemory` is a low-level infrastructure module. Most game code never calls it directly. If you're hitting memory issues, prefer the Insights Analyzer tab in CkGameplayDebugger (backed by CkFoundation's `CkInsightsAnalyzer`) rather than adding custom snapshot calls.
 
 ---
 

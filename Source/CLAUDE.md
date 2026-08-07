@@ -233,7 +233,8 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 Full reference: [EDITOR_MODULES.md](EDITOR_MODULES.md). 18 are `Ck<Feature>Editor` twins. The
 standalone ones: `CkEditorGraph` (graph/schema base), `CkEditorStyle` (shared style, PreDefault),
 `CkEditorToolbar`, `CkK2Nodes` (BP node customizations), `CkDataViewer` (entity state overlay),
-`CkInsightsAnalyzer` (Insights trace analysis), `CkAssetExporter` (asset data → JSON). Editor-type:
+`CkInsightsAnalyzer` (UI-free Insights trace analysis, reports, and commandlet; Slate UI lives in
+CkGameplayDebugger's `CkInsightsDebugger`), `CkAssetExporter` (asset data → JSON). Editor-type:
 `CkAngelscriptGenerator` (PreDefault; emits `Script/Generated/`), `CkPieLayoutEditor`, `CkUsfEditor`.
 
 ### Table notes

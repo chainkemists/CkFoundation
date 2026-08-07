@@ -7,18 +7,6 @@
 
 class FCkInsightsAnalyzerModule : public IModuleInterface
 {
-public:
-    auto StartupModule() -> void override;
-    auto ShutdownModule() -> void override;
-
-private:
-    auto DoRegisterTabSpawner() -> void;
-    auto DoUnregisterTabSpawner() -> void;
-    auto DoOnSpawnTab(const FSpawnTabArgs& Args) -> TSharedRef<SDockTab>;
-
-private:
-    static constexpr auto AnalyzerTab_TabName = "CkInsightsAnalyzerTab";
-    static constexpr auto AnalyzerTab_TabDisplayName = "Insights Analyzer";
 };
 
 // --------------------------------------------------------------------------------------------------------------------
