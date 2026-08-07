@@ -122,7 +122,23 @@ public:
         uint8 InStencilValue,
         const TWeakObjectPtr<AActor>& InEditorSelectionOwner = {}) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
 
+    // The cel-pattern twin of the above, keyed on the stencil VALUE: the cel contract is a direct value
+    // rather than a refcounted preset allocation, so two patterns sharing a renderer need two shadows and
+    // nothing needs releasing. See CkIsmRenderer/CLAUDE.md.
+    auto
+    FindOrCreate_CelPatternIsmComponent(
+        const UCk_IsmRenderer_Data* InRendererData,
+        uint8 InStencilValue,
+        const TWeakObjectPtr<AActor>& InEditorSelectionOwner = {}) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
+
 private:
+    // Shared body of both shadow factories: a custom-depth-only twin of InSourceIsm carrying InStencilValue.
+    static auto
+    DoCreate_CustomDepthShadowIsm(
+        UInstancedStaticMeshComponent* InSourceIsm,
+        uint8 InStencilValue,
+        FName InNameBase) -> UInstancedStaticMeshComponent*;
+
     auto
     DoSpawn_IsmRendererActor(
         const UCk_IsmRenderer_Data* InDataAsset,
@@ -142,6 +158,9 @@ private:
 
     using FOutlineIsmKey = TTuple<TWeakObjectPtr<const UCk_IsmRenderer_Data>, TWeakObjectPtr<const UCkUsf_OutlinePreset>, TWeakObjectPtr<AActor>>;
     TMap<FOutlineIsmKey, TWeakObjectPtr<UInstancedStaticMeshComponent>> _OutlineIsmComponentCache;
+
+    using FCelPatternIsmKey = TTuple<TWeakObjectPtr<const UCk_IsmRenderer_Data>, uint8, TWeakObjectPtr<AActor>>;
+    TMap<FCelPatternIsmKey, TWeakObjectPtr<UInstancedStaticMeshComponent>> _CelPatternIsmComponentCache;
 
 #if WITH_EDITORONLY_DATA
 private:

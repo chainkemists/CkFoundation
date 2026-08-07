@@ -6,6 +6,8 @@
 
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment_Data.h"
 
+#include "CkUsf/Stylize/CkUsf_CelShade_Params.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_IsmProxy_UE;
@@ -73,6 +75,32 @@ namespace ck
         CK_PROPERTY_GET(_ShadowInstanceId);
 
         CK_DEFINE_CONSTRUCTORS(FFragment_IsmProxy_OutlineApplied, _Preset, _ShadowIsm, _ShadowInstanceId);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Applied-state for the entity cel pattern (ck::FFragment_Usf_CelPatternTarget from CkUsf). Same
+    // shadow-ISM mechanism the outline uses — Custom Depth/Stencil is per-COMPONENT, so a shared ISM cannot
+    // express "pattern just this instance" — but keyed on the stencil VALUE rather than a preset, because the
+    // cel contract is a direct value instead of a refcounted allocation. Nothing to release on teardown.
+    struct CKISMRENDERER_API FFragment_IsmProxy_CelPatternApplied
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IsmProxy_CelPatternApplied);
+
+    private:
+        ECk_Usf_CelPattern _Pattern = ECk_Usf_CelPattern::Bayer;
+        TWeakObjectPtr<UInstancedStaticMeshComponent> _ShadowIsm;
+        FPrimitiveInstanceId _ShadowInstanceId;
+        int32 _StencilValue = 0;
+
+    public:
+        CK_PROPERTY_GET_BY_COPY(_Pattern);
+        CK_PROPERTY_GET(_ShadowIsm);
+        CK_PROPERTY_GET(_ShadowInstanceId);
+        CK_PROPERTY_GET_BY_COPY(_StencilValue);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_IsmProxy_CelPatternApplied, _Pattern, _ShadowIsm, _ShadowInstanceId, _StencilValue);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

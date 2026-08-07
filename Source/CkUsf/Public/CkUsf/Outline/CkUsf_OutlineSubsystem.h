@@ -28,6 +28,9 @@ public:
     CK_GENERATED_BODY(UCkUsf_OutlineSubsystem);
 
 public:
+    auto ShouldCreateSubsystem(UObject* InOuter) const -> bool override;
+
+public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Usf|Outline",
               DisplayName = "[Ck][Usf] Get Outline Subsystem",
               meta = (WorldContext = "InWorldContextObject"))

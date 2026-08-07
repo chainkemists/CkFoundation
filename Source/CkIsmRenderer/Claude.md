@@ -32,6 +32,19 @@
   look (e.g. `M_CkUsf_Look_Glass`) still silhouettes — at bind pose if it also animates via WPO, which beats
   no silhouette at all.
 
+- **Entity-level cel pattern** (`FProcessor_IsmProxy_CelPattern_Sync/_TransformSync/_Suspend/
+  _DropAppliedOnOutline/_Remove/_EndPlay`) — driven by `CkUsf`'s
+  `UCk_Utils_Usf_CelPattern_UE::Request_SetCelPattern(Handle, Pattern, Scope)`. Structurally the outline
+  processors' twin and it uses the same shadow-ISM mechanism, via
+  `UCk_IsmRenderer_Subsystem_UE::FindOrCreate_CelPatternIsmComponent`. Two differences worth knowing: the
+  shadow is keyed on the stencil VALUE rather than a preset (the cel contract is a direct value, so nothing
+  is allocated and nothing is released — two patterns on one renderer are two shadows), and
+  `_DropAppliedOnOutline` fully tears the cel shadow instance down rather than merely dropping the cache,
+  because here the two features own SEPARATE components and leaving both alive would put two custom-depth
+  writers on the same pixels. The two are mutually exclusive per entity; the outline wins. Test getters:
+  `UCk_Utils_IsmProxy_UE::Get_IsCelPatternApplied` / `Get_CelPatternShadowInstanceCount` /
+  `Get_CelPatternStencilValue`. Rationale: `CkUsf/Claude.md § Cel shade (Stylize)`.
+
 ---
 
 ## Pattern
@@ -112,5 +125,5 @@ wins.
 
 - `CkGraphics/Claude.md` — lower-level graphics utilities.
 - `CkEcs/Claude.md` — processor and fragment patterns.
-- `CkUsf/Claude.md` — entity-level outline request API + `DESIGN_EntityOutlines.md` (full outline architecture across
-  ISM/ISKM Plan-1/ISKM Plan-2).
+- `CkUsf/Claude.md` — entity-level outline request API, plus its *Entity outlines* section (the outline
+  architecture across ISM/ISKM Plan-1/ISKM Plan-2).

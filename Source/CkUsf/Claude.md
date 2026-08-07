@@ -39,13 +39,15 @@ and the three-effect **Stylize** suite (HandDrawn / CelShade / ScreenDither) bui
   `UCkUsf_HandDrawnPreset` data assets (AS: `Script/CkUsf/CkUsf_HandDrawnPresets_Assets.as`).
 - `UCk_Utils_Usf_CelPattern_UE` (`Stylize/CkUsf_CelPattern_Utils.h`) — ENTITY-level cel patterns:
   `Request_SetCelPattern(Handle, Pattern, Scope)` / `Request_ClearCelPattern`. Reuses
-  `ECk_Usf_OutlineScope`; the actor-path sync processor lives here, ISM/ISKM are follow-ups.
+  `ECk_Usf_OutlineScope`. Per-renderer sync processors apply it, the same distribution entity outlines use
+  (actor path here; shadow ISM in CkIsmRenderer; SKMC custom depth in CkIskmRenderer Plan-1). ISKM Plan-2
+  batched crowd members have NO cel-pattern path — see *Stylize follow-ups*.
 - `UCk_Utils_Usf_Outline_UE` (`Outline/CkUsf_Outline_Utils.h`) — ENTITY-level outlines:
   `Request_ApplyOutline(Handle, Preset, Scope)` / `Request_RemoveOutline`. Per-renderer sync processors
   apply it (actor path here; shadow ISM in CkIsmRenderer; SKMC custom depth in CkIskmRenderer Plan-1;
   batched Plan-2 members are not entities — use `UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline`).
-  Design + mechanisms: the *Entity outlines* section below (a `DESIGN_EntityOutlines.md` cited by several
-  files has never existed — see *Stylize follow-ups*).
+  Design + mechanisms: the *Entity outlines* section below. (A `DESIGN_EntityOutlines.md` that never existed
+  was cited by eleven files; all now point here instead.)
 - `UCk_Usf_Stylize_ProjectSettings_UE` (`Stylize/CkUsf_Stylize_ProjectSettings.h`) — one optional
   default-preset soft ref per effect. Unset = the effect stays off; set = that world subsystem applies it
   at `OnWorldBeginPlay` with no game code involved. It is a `UCk_Plugin_ProjectSettings_UE`, so it inherits
@@ -342,10 +344,11 @@ Consequences worth knowing before debugging one of these:
   it. `Request_ResetToDefaults` is the deliberate way back to the project row.
 - **None of the three subsystems is created on a dedicated server** (`ShouldCreateSubsystem` →
   `IsRunningDedicatedServer()`), so a configured default preset cannot make a headless server load a
-  master, build a MID and spawn a post-process actor per world. Callers must already tolerate a null
-  subsystem — `Get_*Subsystem` returns null for an unresolvable world context anyway. Known granularity
-  gap, shared with `UCk_LoadingScreen_Subsystem_UE`: a PIE dedicated-server world lives in the editor
-  process and still gets one.
+  master, build a MID and spawn a post-process actor per world. `UCkUsf_OutlineSubsystem` carries the same
+  guard (2026-08-07) for the same reason — nothing should build its params LUT and view machinery headless.
+  Callers must already tolerate a null subsystem — `Get_*Subsystem` returns null for an unresolvable world
+  context anyway. Known granularity gap, shared with `UCk_LoadingScreen_Subsystem_UE`: a PIE
+  dedicated-server world lives in the editor process and still gets one.
 
 **The Custom-Stencil byte is shared, and the two claims on it are disjoint by construction.**
 `UCkUsf_OutlineSubsystem` *allocates* refcounted values from the top of the range (240–255);
@@ -476,6 +479,22 @@ the outline subsystem's range (both features write the same byte, so an overlap 
 meshes with nothing naming the cause), and it must not reach Custom Stencil **0** — 0 is what the renderer
 leaves for every mesh that wrote nothing, so base 1 would make suppression the view-wide default and base 0
 would force pattern 0 on every pixel. Hence `ClampMin = 2` on `_StencilBase`.
+
+**Per-renderer sync mirrors the outline distribution, with two deliberate deltas.** Each renderer module owns
+a sync processor over (`ck::FFragment_Usf_CelPatternTarget` + its own proxy fragment) and records what it
+applied in a module-local `...CelPatternApplied` fragment: `FProcessor_Usf_CelPatternActor_*` here,
+`FProcessor_IsmProxy_CelPattern_*` (`CkIsmRenderer/Proxy/CkIsmProxy_CelPatternProcessor.h`) and
+`FProcessor_IskmProxy_CelPattern_*` (`CkIskmRenderer/Proxy/CkIskmProxy_CelPatternProcessor.h`). The deltas
+against the outline twins:
+- **Nothing is allocated or released.** The cel contract is a direct stencil value, so there is no
+  `Get_OrAllocate_StencilFor` / `Release_StencilFor` half and no strong preset ref keeping a refcount key
+  alive. The ISM shadow component is therefore keyed on the stencil VALUE, not a preset — two patterns on one
+  renderer are two shadow ISMs (`UCk_IsmRenderer_Subsystem_UE::FindOrCreate_CelPatternIsmComponent`).
+- **The drop-on-outline processor means different things per renderer, and both are forced by the mechanism.**
+  Where the two features share ONE primitive's stencil byte (actor path, ISKM SKMCs) the drop must NOT clear
+  the flags — the outline's own Sync overwrites the byte in the same group, and clearing could blank its
+  silhouette for a frame. Where the cel pattern owns its OWN component (ISM shadow) the drop must fully tear
+  it down, or two custom-depth writers land on the same pixels with the winner undefined.
 
 **One entity, one Custom-Stencil value.** `Request_SetCelPattern` refuses an entity that already carries a
 `ck::FFragment_Usf_OutlineTarget` (loud, zero mutation); a *cascade* skips such a dependent with a Verbose
@@ -613,28 +632,21 @@ that forces the ink / stroke / paper masks on.
 
 ### Stylize follow-ups
 
-- **Renderer-module cel-pattern sync.** `Request_SetCelPattern` reaches actor-backed primitives only:
-  `FProcessor_Usf_CelPatternActor_Sync` lives in CkUsf and there is no ISM or ISKM equivalent, so a cel
-  pattern on an instanced or batched-crowd entity is silently inert. Entity OUTLINES already solved the
-  identical problem the right way — one sync processor per renderer module, each recording what it applied
-  in a module-local `...OutlineApplied` fragment (`CkIsmRenderer/Proxy/CkIsmProxy_OutlineProcessor.h`,
-  `CkIskmRenderer/Proxy/CkIskmProxy_OutlineProcessor.h`), plus the member-indexed
-  `UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline` for Plan-2 members, which are not entities at all.
-  Mirror that distribution; the stencil VALUE side needs nothing new, since the cel contract is a direct
-  value rather than an allocation.
-- **`DESIGN_EntityOutlines.md` does not exist and never has**, but ten places cite it:
-  `CkIsmRenderer/Claude.md`, `CkIskmRenderer/Claude.md`, `CkIsmRenderer/Proxy/CkIsmProxy_Utils.h`,
-  `CkIsmRenderer/Proxy/CkIsmProxy_OutlineProcessor.h`, `CkIskmRenderer/Proxy/CkIskmProxy_Utils.h`,
-  `CkIskmRenderer/Proxy/CkIskmProxy_OutlineProcessor.h`, `CkIskmRenderer/Proxy/CkIskmProxy_Fragment.h`,
-  `CkIskmRenderer/Renderer/CkIskm_BatchedUtils.h`, `CkIskmRenderer/Renderer/CkIskm_BatchedCrowd_Actor.h/.cpp`.
-  This file's own citation now points at the *Entity outlines* section above; the other ten still dangle.
-  Either write the design doc or repoint them in one sweep — do not fix them piecemeal.
+- **ISKM Plan-2 batched crowd members have no cel-pattern path** (the one piece of the renderer-sync
+  follow-up left undone, 2026-08-07). Outlines reach them through `Set_CrowdMemberOutline`, which stands up a
+  per-(crowd, preset) custom-depth "highlight cluster" `UCk_Iskm_BatchedClusterComponent` with its own
+  world-space bounds, membership rebuilds and per-tick push — several hundred lines of cluster machinery, not
+  a processor. A cel equivalent would need the same again keyed on the stencil value, and the ISM/ISKM
+  Plan-1 paths cover every case the campaign's gyms exercise. Deferred until a batched crowd actually needs
+  per-member patterns; the shape to copy is *Plan-2 production guide → Outline (highlight cluster)* in
+  `CkIskmRenderer/Claude.md`.
+- **A cel pattern applied while `EnableStencilPatterns` is on survives the setting being turned off.** Every
+  sync processor early-outs on `Get_StencilValueFor() == 0` rather than undoing, so the already-written
+  stencil (or shadow instance) stays. Deliberate parity across all three renderer paths — the actor path has
+  behaved this way since the feature shipped — but it means the switch is not a kill switch for meshes
+  already patterned. `Request_ClearCelPattern` is.
 - **Per-preset outline fill textures** (recorded earlier, still open): `_UseFillTexture` samples the
   subsystem's single shared texture; per-preset would need an atlas or array.
-- **`UCkUsf_OutlineSubsystem` has no dedicated-server guard.** The three Stylize subsystems gained one
-  (`ShouldCreateSubsystem` → `IsRunningDedicatedServer()`); the outline subsystem predates it and still
-  builds its params LUT and view machinery on a headless server. Same one-line fix, deliberately left
-  alone here because it is not this feature's code.
 
 ## See also
 

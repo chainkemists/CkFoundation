@@ -704,7 +704,7 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Entity outline (member-indexed) — see CkUsf/DESIGN_EntityOutlines.md.
+// Entity outline (member-indexed) — see CkUsf/Claude.md § Entity outlines.
 
 void
     ACk_Iskm_BatchedCrowd_Actor::

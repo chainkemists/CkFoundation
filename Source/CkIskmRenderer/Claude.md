@@ -40,6 +40,15 @@ its coverage.
 - **Entity-level outline (Plan-1):** driven by `CkUsf`'s `UCk_Utils_Usf_Outline_UE::Request_ApplyOutline(Handle, Preset, Scope)`.
   Sets Custom Depth/Stencil on the proxy's BaseSKMC **and** every outfit submesh, re-asserted per frame so submeshes
   attached later inherit it. Test getter: `UCk_Utils_IskmProxy_UE::Get_IsOutlineApplied`.
+- **Entity-level cel pattern (Plan-1):** driven by `CkUsf`'s
+  `UCk_Utils_Usf_CelPattern_UE::Request_SetCelPattern(Handle, Pattern, Scope)`. The outline processors' twin —
+  Custom Depth/Stencil on the BaseSKMC and every outfit submesh, re-asserted per frame — minus the stencil
+  allocation, because the cel contract is a direct value. Mutually exclusive with the outline per entity (the
+  two write the same byte); an outline arriving over a pattern drops the cel applied-state WITHOUT clearing
+  the flags, since the outline's own Sync overwrites the byte in the same group. **Plan-2 batched members
+  have no cel-pattern path** — the outline's highlight-cluster machinery has no equivalent yet (recorded in
+  `CkUsf/Claude.md § Stylize follow-ups`). Test getters: `UCk_Utils_IskmProxy_UE::Get_IsCelPatternApplied` /
+  `Get_CelPatternStencilValue`.
 - **Member-level outline (Plan-2, batched):** `UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline/Clear_CrowdMemberOutline/
   Get_CrowdMemberOutlinePreset/Get_CrowdOutlinedMemberCount/Get_CrowdOutlineRenderedInstanceCount` — index-based (batched
   members aren't entities). See *Plan-2 production guide → Outline (highlight cluster)* below.
@@ -275,5 +284,5 @@ scene-data flags.
 - `CkIsmRenderer/Claude.md` — sibling module for instanced static meshes; same shared/per-entity split.
 - `CkAnimation/Claude.md` — `FCk_Handle_AnimAsset` for per-entity anim asset records (orthogonal — IskmRenderer is the renderer; AnimAsset is per-entity anim metadata that may drive what gets played).
 - `CkStateMachine/Claude.md` — likely caller for `Request_PlayAnimation`.
-- `CkUsf/Claude.md` — entity-level outline request API + `DESIGN_EntityOutlines.md` (full outline architecture across
-  ISM/ISKM Plan-1/ISKM Plan-2).
+- `CkUsf/Claude.md` — entity-level outline request API, plus its *Entity outlines* section (the outline
+  architecture across ISM/ISKM Plan-1/ISKM Plan-2).

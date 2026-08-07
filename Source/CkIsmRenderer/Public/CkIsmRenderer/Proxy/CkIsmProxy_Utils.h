@@ -167,7 +167,7 @@ public:
     Get_Mesh(
         const FCk_Handle_IsmProxy& InHandle);
 
-    // ---- Entity-outline observability (see CkUsf/DESIGN_EntityOutlines.md; used by autotests/gyms) ----
+    // ---- Entity-outline observability (see CkUsf/Claude.md § Entity outlines; used by autotests/gyms) ----
 
     // True once the outline Sync processor mirrored this proxy's instance into a shadow ISM.
     UFUNCTION(BlueprintPure,
@@ -213,6 +213,34 @@ public:
     Get_OutlineShadowMaterial(
         const FCk_Handle_IsmProxy& InHandle,
         int32 InSlot = 0);
+
+    // ---- Entity cel-pattern observability (see CkUsf/Claude.md § Cel shade (Stylize); used by autotests/gyms) ----
+
+    // True once the cel-pattern Sync processor mirrored this proxy's instance into a shadow ISM.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Is Cel Pattern Applied")
+    static bool
+    Get_IsCelPatternApplied(
+        const FCk_Handle_IsmProxy& InHandle);
+
+    // Instance count of the shadow ISM this proxy's cel pattern lives in (all proxies sharing the same
+    // renderer AND the same stencil value). INDEX_NONE when no cel pattern is applied.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Cel Pattern Shadow Instance Count")
+    static int32
+    Get_CelPatternShadowInstanceCount(
+        const FCk_Handle_IsmProxy& InHandle);
+
+    // The Custom-Stencil value written on this proxy's cel-pattern shadow. 0 when none is applied — 0 is the
+    // engine's "nothing written" value, so it is never a real slot.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName = "[Ck][IsmProxy] Get Cel Pattern Stencil Value")
+    static int32
+    Get_CelPatternStencilValue(
+        const FCk_Handle_IsmProxy& InHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",

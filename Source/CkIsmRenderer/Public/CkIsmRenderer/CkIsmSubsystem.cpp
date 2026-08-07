@@ -357,24 +357,77 @@ auto
         TEXT("FindOrCreate_OutlineIsmComponent: could NOT resolve the source ISM component for [{}]"), InRendererData)
     { return {}; }
 
-    auto* Owner = SourceIsm->GetOwner();
+    auto* ShadowIsm = DoCreate_CustomDepthShadowIsm(SourceIsm.Get(), InStencilValue, TEXT("IsmOutlineShadow"));
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Owner),
-        TEXT("FindOrCreate_OutlineIsmComponent: source ISM component for [{}] has no owning actor"), InRendererData)
+    if (ck::Is_NOT_Valid(ShadowIsm))
     { return {}; }
 
+    return _OutlineIsmComponentCache.Add(Key, ShadowIsm);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    FindOrCreate_CelPatternIsmComponent(
+        const UCk_IsmRenderer_Data* InRendererData,
+        uint8 InStencilValue,
+        const TWeakObjectPtr<AActor>& InEditorSelectionOwner)
+    -> TWeakObjectPtr<UInstancedStaticMeshComponent>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InRendererData),
+        TEXT("FindOrCreate_CelPatternIsmComponent: INVALID renderer data"))
+    { return {}; }
+
+    const auto Key = FCelPatternIsmKey{InRendererData, InStencilValue, InEditorSelectionOwner};
+
+    if (const auto& MaybeFound = _CelPatternIsmComponentCache.Find(Key);
+        ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
+    { return *MaybeFound; }
+
+    // Per-owner previews mirror into a shadow on the same renderer actor as their instances.
+    const auto SourceIsm = FindOrCache_IsmComponent(InRendererData, InEditorSelectionOwner);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(SourceIsm),
+        TEXT("FindOrCreate_CelPatternIsmComponent: could NOT resolve the source ISM component for [{}]"), InRendererData)
+    { return {}; }
+
+    auto* ShadowIsm = DoCreate_CustomDepthShadowIsm(SourceIsm.Get(), InStencilValue, TEXT("IsmCelPatternShadow"));
+
+    if (ck::Is_NOT_Valid(ShadowIsm))
+    { return {}; }
+
+    return _CelPatternIsmComponentCache.Add(Key, ShadowIsm);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
+    DoCreate_CustomDepthShadowIsm(
+        UInstancedStaticMeshComponent* InSourceIsm,
+        uint8 InStencilValue,
+        FName InNameBase)
+    -> UInstancedStaticMeshComponent*
+{
+    auto* Owner = InSourceIsm->GetOwner();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Owner),
+        TEXT("DoCreate_CustomDepthShadowIsm: source ISM component [{}] has no owning actor"), InSourceIsm)
+    { return nullptr; }
+
     auto* ShadowIsm = NewObject<UInstancedStaticMeshComponent>(Owner,
-        MakeUniqueObjectName(Owner, UInstancedStaticMeshComponent::StaticClass(), TEXT("IsmOutlineShadow")));
+        MakeUniqueObjectName(Owner, UInstancedStaticMeshComponent::StaticClass(), InNameBase));
 
     ShadowIsm->SetupAttachment(Owner->GetRootComponent());
-    ShadowIsm->SetMobility(SourceIsm->Mobility);
-    ShadowIsm->SetStaticMesh(SourceIsm->GetStaticMesh());
+    ShadowIsm->SetMobility(InSourceIsm->Mobility);
+    ShadowIsm->SetStaticMesh(InSourceIsm->GetStaticMesh());
 
-    // Inheriting the source's materials is what makes a WPO-animated outline track its mesh, and
+    // Inheriting the source's materials is what makes a WPO-animated silhouette track its mesh, and
     // translucent-family slots must NOT be inherited. Rationale: CkIsmRenderer/CLAUDE.md.
-    for (auto MaterialIndex = 0; MaterialIndex < SourceIsm->GetNumMaterials(); ++MaterialIndex)
+    for (auto MaterialIndex = 0; MaterialIndex < InSourceIsm->GetNumMaterials(); ++MaterialIndex)
     {
-        const auto& SourceMaterial = SourceIsm->GetMaterial(MaterialIndex);
+        const auto& SourceMaterial = InSourceIsm->GetMaterial(MaterialIndex);
 
         if (ck::Is_NOT_Valid(SourceMaterial, ck::IsValid_Policy_NullptrOnly{}))
         { continue; }
@@ -385,14 +438,14 @@ auto
         ShadowIsm->SetMaterial(MaterialIndex, SourceMaterial);
     }
 
-    ShadowIsm->NumCustomDataFloats = SourceIsm->NumCustomDataFloats;
-    ShadowIsm->bEvaluateWorldPositionOffset = SourceIsm->bEvaluateWorldPositionOffset;
-    ShadowIsm->WorldPositionOffsetDisableDistance = SourceIsm->WorldPositionOffsetDisableDistance;
+    ShadowIsm->NumCustomDataFloats = InSourceIsm->NumCustomDataFloats;
+    ShadowIsm->bEvaluateWorldPositionOffset = InSourceIsm->bEvaluateWorldPositionOffset;
+    ShadowIsm->WorldPositionOffsetDisableDistance = InSourceIsm->WorldPositionOffsetDisableDistance;
 
     ShadowIsm->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ShadowIsm->CastShadow = false;
-    ShadowIsm->InstanceStartCullDistance = SourceIsm->InstanceStartCullDistance;
-    ShadowIsm->InstanceEndCullDistance = SourceIsm->InstanceEndCullDistance;
+    ShadowIsm->InstanceStartCullDistance = InSourceIsm->InstanceStartCullDistance;
+    ShadowIsm->InstanceEndCullDistance = InSourceIsm->InstanceEndCullDistance;
 
     ShadowIsm->bRenderInMainPass = false;
     ShadowIsm->SetRenderCustomDepth(true);
@@ -400,7 +453,7 @@ auto
 
     ShadowIsm->RegisterComponent();
 
-    return _OutlineIsmComponentCache.Add(Key, ShadowIsm);
+    return ShadowIsm;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

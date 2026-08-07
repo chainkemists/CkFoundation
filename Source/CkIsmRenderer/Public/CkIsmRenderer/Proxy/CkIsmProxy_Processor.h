@@ -12,6 +12,18 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_ism_proxy
+{
+    // Every site that builds an ISM instance transform must compose identically, or a shadow instance drifts
+    // off the main one it mirrors. See CkIsmRenderer/CLAUDE.md.
+    CKISMRENDERER_API auto
+    Get_TransformWithLocalOffset(
+        const ck::FFragment_IsmProxy_Params& InParams,
+        const FTransform& InTransform) -> FTransform;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     class FProcessor_IsmRenderer_ClearInstances;

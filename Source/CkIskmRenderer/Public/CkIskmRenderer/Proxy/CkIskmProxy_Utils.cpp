@@ -230,6 +230,26 @@ auto
 
 auto
     UCk_Utils_IskmProxy_UE::
+    Get_IsCelPatternApplied(const FCk_Handle_IskmProxy& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+    return InHandle.Has<ck::FFragment_IskmProxy_CelPatternApplied>();
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
+    Get_CelPatternStencilValue(const FCk_Handle_IskmProxy& InHandle)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_IskmProxy_CelPatternApplied>())
+    { return 0; }
+    return InHandle.Get<ck::FFragment_IskmProxy_CelPatternApplied>().Get_StencilValue();
+}
+
+auto
+    UCk_Utils_IskmProxy_UE::
     Get_PoseSource(const FCk_Handle_IskmProxy& InHandle)
     -> ECk_IskmProxy_PoseSource
 {

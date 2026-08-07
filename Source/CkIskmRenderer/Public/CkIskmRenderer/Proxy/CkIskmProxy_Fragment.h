@@ -11,6 +11,7 @@
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Fragment_Data.h"
 
 #include "CkUsf/Outline/CkUsf_OutlinePreset.h"
+#include "CkUsf/Stylize/CkUsf_CelShade_Params.h"
 
 #include <variant>
 
@@ -67,7 +68,7 @@ namespace ck
         CK_PROPERTY_GET(_LocalLocationOffset);
     };
 
-    // ---- entity outline (see CkUsf/DESIGN_EntityOutlines.md) ----
+    // ---- entity outline (see CkUsf/Claude.md § Entity outlines) ----
     //
     // Applied-state for ck::FFragment_Usf_OutlineTarget on Plan-1 proxies: the Sync processor set Custom
     // Depth + the preset's stencil on the BaseSKMC and its submeshes; removing the fragment undoes both.
@@ -88,6 +89,28 @@ namespace ck
         CK_PROPERTY_GET_BY_COPY(_StencilValue);
 
         CK_DEFINE_CONSTRUCTORS(FFragment_IskmProxy_OutlineApplied, _Preset, _StencilValue);
+    };
+
+    // ---- entity cel pattern (see CkUsf/Claude.md § Cel shade (Stylize)) ----
+    //
+    // Applied-state for ck::FFragment_Usf_CelPatternTarget on Plan-1 proxies: the Sync processor set Custom
+    // Depth + the pattern's stencil on the BaseSKMC and its submeshes; removing the fragment undoes both.
+    // No strong preset ref here (unlike the outline twin) because the cel contract is a direct stencil value
+    // rather than a refcounted allocation — there is nothing to keep alive and nothing to release.
+    struct CKISKMRENDERER_API FFragment_IskmProxy_CelPatternApplied
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IskmProxy_CelPatternApplied);
+
+    private:
+        ECk_Usf_CelPattern _Pattern = ECk_Usf_CelPattern::Bayer;
+        int32 _StencilValue = 0;
+
+    public:
+        CK_PROPERTY_GET_BY_COPY(_Pattern);
+        CK_PROPERTY_GET_BY_COPY(_StencilValue);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_IskmProxy_CelPatternApplied, _Pattern, _StencilValue);
     };
 
     // ---- anim state ----
