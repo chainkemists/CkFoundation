@@ -18,6 +18,8 @@ namespace ck::angelscriptgenerator::self_heal
         IdentifierNotADataType,
         AdjacentStringLiteral,         // "Instead found '<string constant>'" — `"foo " "bar"` C-style splice.
         BareCtorNoMatchingSignatures,  // `No matching signatures to '<Ident>(<args>)'` — no `::`.
+        NotAMemberOfStruct,            // `'<Member>' is not a member of '<Struct>'` — a field deleted out
+                                       // from under a stale ESP canonical (2026-08 OpenSign wedge).
     };
 
     struct CKANGELSCRIPTGENERATOR_API FCk_AsParsedError
@@ -32,10 +34,12 @@ namespace ck::angelscriptgenerator::self_heal
         FString FunctionName;
         FString ArgsList;          // empty for no-arg; also carries the ctor args for BareCtorNoMatchingSignatures
 
-        // Populated for Kind == IdentifierNotADataType (the missing type) and
-        // BareCtorNoMatchingSignatures (the constructed type).
+        // Populated for Kind == IdentifierNotADataType (the missing type),
+        // BareCtorNoMatchingSignatures (the constructed type), and
+        // NotAMemberOfStruct (the missing MEMBER — a field name, NOT a class name).
         FString MissingIdentifier;
-        FString LookupScope;       // empty when "in global namespace" or absent
+        FString LookupScope;       // empty when "in global namespace" or absent;
+                                   // the owning struct for NotAMemberOfStruct
 
         auto operator==(const FCk_AsParsedError& Other) const -> bool;
         auto operator!=(const FCk_AsParsedError& Other) const -> bool { return NOT (*this == Other); }

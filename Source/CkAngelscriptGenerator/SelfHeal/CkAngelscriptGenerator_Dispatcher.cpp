@@ -138,6 +138,13 @@ namespace ck::angelscriptgenerator::self_heal
             if (NOT InFilePath.EndsWith(TEXT("_EntitySpawnParams.as")))
             { return false; }
 
+            // A sibling stub satisfies the suffix too, and quarantining one would
+            // derive a doubly-prefixed sibling from our own output. Stubs are
+            // rebuilt per session and swept at startup, so they are never the
+            // stale state this recovery exists to clear.
+            if (FPaths::GetCleanFilename(InFilePath).StartsWith(TEXT("_StubRecovery_")))
+            { return false; }
+
             auto Normalized = InFilePath;
             FPaths::NormalizeFilename(Normalized);
             return Normalized.Contains(TEXT("/Script/Generated/"));
@@ -333,7 +340,7 @@ namespace ck::angelscriptgenerator::self_heal
             }
             sQuarantinedEspCanonicals.Add(CanonicalPath);
 
-            Log(TEXT("[SelfHeal] Stale canonical '{}' references a deleted type ('{}' @ {}:{}) — ")
+            Log(TEXT("[SelfHeal] Stale canonical '{}' references a deleted symbol ('{}' @ {}:{}) — ")
                 TEXT("quarantining + rebuilding full shapes from source."),
                 CanonicalPath, InError.MissingIdentifier, InError.Line, InError.Column);
 
@@ -638,8 +645,13 @@ namespace ck::angelscriptgenerator::self_heal
                 }
                 case ECk_RecoveryStrategy::Quarantine_StaleEspCanonical:
                 {
-                    return FString::Printf(TEXT("quarantine stale canonical %s (dead type '%s')"),
-                        *InAction.Error.FilePath, *InAction.Error.MissingIdentifier);
+                    const auto DeadSymbol = InAction.Error.Kind == ECk_AsParsedError_Kind::NotAMemberOfStruct
+                        ? FString::Printf(TEXT("dead field '%s.%s'"),
+                            *InAction.Error.LookupScope, *InAction.Error.MissingIdentifier)
+                        : FString::Printf(TEXT("dead type '%s'"), *InAction.Error.MissingIdentifier);
+
+                    return FString::Printf(TEXT("quarantine stale canonical %s (%s)"),
+                        *InAction.Error.FilePath, *DeadSymbol);
                 }
                 case ECk_RecoveryStrategy::Author_FixupRequired_AdjacentStringLiteral:
                 {
@@ -1280,6 +1292,19 @@ namespace ck::angelscriptgenerator::self_heal
                 // error and gets the terminal banner.
                 if (NOT FCkAsStubSynthesizer::Derive_ClassNameFromStructName(InError.MissingIdentifier).IsEmpty())
                 { return ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams; }
+
+                return ECk_RecoveryStrategy::Unrecognized;
+            }
+
+            case ECk_AsParsedError_Kind::NotAMemberOfStruct:
+            {
+                // A FIELD that no longer exists — the deleted-field twin of the
+                // deleted-type case above, and keyed the same way. Located INSIDE
+                // a generated canonical it means the canonical is stale, so rebuild
+                // it; the identical error in author source stays Unrecognized,
+                // because a real authoring bug must not be papered over.
+                if (ck_angelscript_generator_dispatcher::Is_EntitySpawnParamsCanonicalPath(InError.FilePath))
+                { return ECk_RecoveryStrategy::Quarantine_StaleEspCanonical; }
 
                 return ECk_RecoveryStrategy::Unrecognized;
             }
