@@ -42,7 +42,7 @@ public:
     float _ColorSoftness = 0.15f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|HandDrawn|Paint",
-              meta = (UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0))
+              meta = (UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0, ClampMax = 2.0))
     float _Saturation = 0.9f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|HandDrawn|Paint",
