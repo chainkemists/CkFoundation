@@ -1,8 +1,19 @@
 # Gate 4 — HandDrawn: look + subsystem + presets
 
-> **Status:** ⏳ Pending
+> **Status:** ✅ Done (2026-08-07) — code-complete + audited; gym visuals maintainer
+> `[EDITOR-VERIFY]` (steps in PROGRESS.md Gate-4 entry, incl. the emissive-ceiling A/B).
 > **Depends on:** Gate 3 ✅
-> **Estimate:** 1–2 sessions — re-date at entry; record actual at exit
+> **Estimate:** 1–2 sessions — actual: 1 session
+>
+> **Amendments at exit:** audit ACCEPT-WITH-FIXES, no functional break — fixes were doc-truth
+> (inverted-fade = hard cutoff not reverse-fade; highlight ceiling is 2·ColorLevels−1 not the
+> named constant; `Enable in Editor Viewports` drop recorded) + one campaign-wide missing guard:
+> MID-name resolution arms added to ALL THREE effects' subsystem tests (mutation-proven). P1 was
+> a real bug (step(0,0)=1 inked zero-shade pixels at pattern cell centers) — fixed. Deviations
+> accepted: strokes share InkColor; Reinhard tone normalize (no exposure knob) with the level-count
+> ceiling; AffectSky gates paint+strokes never ink; +StrokeTriplanarSharpness/+SkyDistance.
+> Recorded for Gate 5: `_Saturation` ClampMax policy (campaign-wide); Off vs StyleStrength=0
+> passthrough distinction documented.
 
 ## Goal
 

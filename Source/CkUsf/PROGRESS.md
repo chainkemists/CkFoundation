@@ -11,6 +11,13 @@ IskmApplyRemove, IsmShadowInstances, VatShadowCustomData}, GeneratesUsableMaster
 MultiPassRendersToTexture, NiagaraSpriteContract, OutlineStencilAlloc,
 FRigVMFunction_DeltaFromPreviousFloat (engine-side pattern match, ignorable). Captured
 2026-08-06 after deleting the stale `utils_world_space_widget.as` (see dated entry).
+**Gate 4 DONE 2026-08-07** (landed as the commit carrying this entry + CkTests sibling; baseline
+now 23/23 standard / 17/17 real-RHI serial). Maintainer [EDITOR-VERIFY]: "Stylize: Hand-Drawn" gym
+— 6 preset stations + 3 debug-mask stations; headline check: world-attached strokes glued to the
+architecture under camera orbit while `Ck_GymStylizeHandDrawn_ToggleStrokeSpace` shows screen-
+stable swimming (only one may be glued); emissive A/B StorybookInk vs Off (compressed to the
+2·ColorLevels−1 ceiling, not crushed flat; DarkGothic markedly flatter); mover slides in world
+space = documented limitation; paper grain shifts with output resolution.
 **Gate 3 DONE 2026-08-06** (landed as the commit carrying this entry + CkTests sibling; baseline
 now 20/20 standard / 14/14 real-RHI serial). Maintainer [EDITOR-VERIFY]: "Stylize: Cel Shade" gym
 — walk 6 presets; gradient wall bands must run STRAIGHT ACROSS (light-driven) not track albedo
@@ -20,7 +27,8 @@ now 20/20 standard / 14/14 real-RHI serial). Maintainer [EDITOR-VERIFY]: "Styliz
 **Gate 2 DONE 2026-08-06** (landed as the commit carrying this entry + CkTests sibling; baseline
 now 15/15 standard / 9/9 real-RHI serial). Gym visuals are the maintainer's [EDITOR-VERIFY]
 (steps in the Gate-2 dated entry).
-**Next action:** Gate 4 (HandDrawn) executor dispatch.
+**Next action:** the maintainer-ordered interlude (open-items row): outline stale-MID fix +
+generation-test lane de-collision, each its own commit; THEN Gate 5.
 **Blocked on:** nothing.
 
 ## Decision log
@@ -35,6 +43,25 @@ now 15/15 standard / 9/9 real-RHI serial). Gym visuals are the maintainer's [EDI
 | 2026-08-06 | One gym PER effect, shipped inside its feature gate (2–4), Solid Outline gym pattern; stations act as preset SELECTORS (effects are view-wide) over a shared judge scene | Maintainer asked for proper gyms like the outline's; per-gate delivery because each gate's [EDITOR-VERIFY] needs its gym | — |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-07 — Gate 4 (HandDrawn) EXIT: executed, audited (ACCEPT-WITH-FIXES, no functional break), fixed, re-verified
+- Delivered: `HandDrawn.ush` (37 params; paint→ink→strokes→paper; master StyleStrength governs
+  the whole composite; Reinhard tone normalize with the 2·ColorLevels−1 highlight ceiling),
+  params/preset/subsystem trio (Gate-2 recipe verbatim, no stencil/entity API), AS look
+  (`_PostProcessWorldPosition` for world-attached strokes) + 6 presets, 3 CkTests tests, gym
+  "Stylize: Hand-Drawn" (+`ToggleStrokeSpace` A/B Exec), Claude.md section. New untracked master
+  kept in place, committed at landing.
+- Audit fixes: 4-place inverted-fade doc-truth (math = hard cutoff at End); editor-viewports
+  drop recorded; highlight-ceiling docs point at ColorLevels not the constant; **campaign-wide
+  MID-name resolution guard** added to all three effects' subsystem tests (mutation-proven 0/3 →
+  green after revert); P1 real bug fixed (step(0,0)=1 inked zero-shade pixels at pattern cell
+  centers); P2/P5/P6/P7 doc/comment fixes across the three gyms.
+- Ran (final tree): standard `-nullrhi` Usf `--discover-fresh` → **23/23**; real-RHI
+  `--parallel 1` CkUsf units → **17/17**, force-compile clean. Seam 37/37 mechanically diffed
+  (audit) + guard-tested (tests).
+- Recorded for Gate 5: `_Saturation` has no ClampMax campaign-wide (negative-channel risk into
+  the tonemapper — decide clamp policy); `Off` (component toggle) is the true passthrough while
+  `StyleStrength=0` still pays for the pass — documented, no change.
 
 ### 2026-08-06 — Gate 3 (CelShade) EXIT: executed, audited (ACCEPT-WITH-FIXES), fixed, re-verified
 - Delivered: `CelShade.ush` (61 params, 69-input node — widest yet, generates + force-compiles,
@@ -194,6 +221,7 @@ now 15/15 standard / 9/9 real-RHI serial). Gym visuals are the maintainer's [EDI
 | Gate 1 pre-flight | Resolved 2026-08-06 | — (baseline + engine facts in dated entries) |
 | Gate 2 entry pre-flight | Resolved 2026-08-06 | — |
 | Gate 2 gym [EDITOR-VERIFY] | Open (maintainer) | Steps in the Gate-2 dated entry |
-| Gate 3 entry pre-flight | Open | Gate_03 entry criteria (stencil/outline reads; GBuffer evidence re-check) |
+| Gate 3 entry pre-flight | Resolved 2026-08-06 | — |
+| Interlude (maintainer-ordered, AFTER Gate 4 lands, BEFORE Gate 5): fix outline-subsystem stale MID on failed view-actor spawn (mirror ScreenDither subsystem shape) + de-collide CkUsf generation tests across real-RHI toolbox lanes (lane-unique transient package paths preferred; editor-facing path unchanged) | Open | Execute both, test, land as their own commits |
 
 **Rule: no completion claim may be written anywhere in this file while any row here is unresolved.**
