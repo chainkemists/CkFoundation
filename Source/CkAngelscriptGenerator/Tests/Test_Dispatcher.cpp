@@ -55,6 +55,21 @@ namespace
         return E;
     }
 
+    auto Make_NotAMemberOfStruct(
+        const TCHAR* InMissingMember,
+        const TCHAR* InOwningStruct,
+        const TCHAR* InFilePath = TEXT("D:/Test/Caller.as")) -> FCk_AsParsedError
+    {
+        auto E              = FCk_AsParsedError{};
+        E.Kind              = ECk_AsParsedError_Kind::NotAMemberOfStruct;
+        E.MissingIdentifier = InMissingMember;
+        E.LookupScope       = InOwningStruct;
+        E.FilePath          = InFilePath;
+        E.Line              = 6948;
+        E.Column            = 15;
+        return E;
+    }
+
     auto Make_BareCtor(
         const TCHAR* InMissingIdentifier,
         const TCHAR* InArgsList = TEXT("")) -> FCk_AsParsedError
@@ -263,6 +278,15 @@ bool FCkTest_Dispatcher_Classify_StaleEspCanonical::RunTest(const FString&)
                 TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_AutoTestActors.as")))),
         static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
 
+    // A sibling recovery stub carries the canonical suffix but is our OWN output.
+    // Pinned for THIS kind too: the guard lives in the shared path predicate, so
+    // moving it into either Classify arm alone must fail here.
+    TestEqual(TEXT("deleted type in _StubRecovery_ sibling -> Unrecognized"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_IdentifierNotADataType(TEXT("EBb_NamedNpc"), TEXT(""),
+                TEXT("D:/Repos/BusterBlock/Script/Generated/_StubRecovery_BusterBlock_EntitySpawnParams.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
+
     // The location check is a FALLBACK after the handle / SpawnParams checks.
     TestEqual(TEXT("FCk_Handle_ inside canonical still -> DynamicHandle (not Quarantine)"),
         static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
@@ -275,6 +299,56 @@ bool FCkTest_Dispatcher_Classify_StaleEspCanonical::RunTest(const FString&)
             Make_IdentifierNotADataType(TEXT("FBb_Npc_EntityScript_SpawnParams"), TEXT(""),
                 TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as")))),
         static_cast<int32>(ECk_RecoveryStrategy::SynthesizeStub_EntitySpawnParams));
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Same LOCATION discriminator for a deleted FIELD (the 2026-08-07 OpenSign wedge):
+// `LocalRotationOffset` was dropped from the params struct while machine-local
+// canonicals kept assigning it, and the boot had no recognized root cause.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_Dispatcher_Classify_StaleEspCanonical_DeletedField,
+    "CkAngelscriptGenerator.UnitTests.Dispatcher.Classify_StaleEspCanonical_DeletedField",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_Dispatcher_Classify_StaleEspCanonical_DeletedField::RunTest(const FString&)
+{
+    TestEqual(TEXT("deleted field inside project ESP canonical -> Quarantine"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_NotAMemberOfStruct(TEXT("LocalRotationOffset"), TEXT("FBb_Fragment_OpenSign_ParamsData"),
+                TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Quarantine_StaleEspCanonical));
+
+    TestEqual(TEXT("deleted field inside plugin ESP canonical (backslashes) -> Quarantine"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_NotAMemberOfStruct(TEXT("LocalRotationOffset"), TEXT("FBb_Fragment_OpenSign_ParamsData"),
+                TEXT("D:\\Repos\\BusterBlock\\Plugins\\BusterBlockTests\\Script\\Generated\\BusterBlockTests_EntitySpawnParams.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Quarantine_StaleEspCanonical));
+
+    // The identical error in AUTHOR source is a real authoring bug.
+    TestEqual(TEXT("deleted field in author source -> Unrecognized"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_NotAMemberOfStruct(TEXT("LocalRotationOffset"), TEXT("FBb_Fragment_OpenSign_ParamsData"),
+                TEXT("D:/Repos/BusterBlock/Script/ECS/OpenSign/BB_OpenSign_EntityScript.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
+
+    // Tracked generated files are never delete-safe.
+    TestEqual(TEXT("deleted field in tracked generated Assets file -> Unrecognized"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_NotAMemberOfStruct(TEXT("DeadField"), TEXT("FBb_Fragment_Foo_ParamsData"),
+                TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlockAssets.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
+
+    // A sibling recovery stub carries the canonical suffix but is our OWN output —
+    // quarantining it would derive a doubly-prefixed sibling from a stub.
+    TestEqual(TEXT("deleted field in _StubRecovery_ sibling -> Unrecognized"),
+        static_cast<int32>(FCkAsRecoveryDispatcher::Classify(
+            Make_NotAMemberOfStruct(TEXT("DeadField"), TEXT("FBb_Fragment_Foo_ParamsData"),
+                TEXT("D:/Repos/BusterBlock/Script/Generated/_StubRecovery_BusterBlock_EntitySpawnParams.as")))),
+        static_cast<int32>(ECk_RecoveryStrategy::Unrecognized));
 
     return true;
 }

@@ -365,4 +365,84 @@ bool FCkTest_AsErrorParser_BareCtor_CascadeAndDedup::RunTest(const FString&)
     return true;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// A field deleted out from under a stale ESP canonical. The input below is the VERBATIM
+// FormatDiagnostics block captured from the 2026-08-07 OpenSign boot wedge — including the three
+// warning entries that rode along — so this doubles as the format canary for that shape. The
+// modal's own rendering differs (`Angelscript: Error:  (L:C): ...`) and must never be the source.
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AsErrorParser_NotAMemberOfStructProbe,
+    "CkAngelscriptGenerator.UnitTests.AsErrorParser.NotAMemberOfStructProbe",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AsErrorParser_NotAMemberOfStructProbe::RunTest(const FString&)
+{
+    const auto Input = FString{TEXT(
+        "D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as:\n"
+        "(6946:5) Compiling FBb_RetailOpenSign_EntityScript_SpawnParams::FBb_RetailOpenSign_EntityScript_SpawnParams()\n"
+        "(6948:15) 'LocalRotationOffset' is not a member of 'FBb_Fragment_OpenSign_ParamsData'\n"
+        "\n"
+        "D:/Repos/BusterBlock/Plugins/CkTests/Script/CkVoiceChat/CkVoiceChatGym_PlayerController.as:\n"
+        "(32:5) Compiling void ACk_VoiceChatGym_PlayerController::Request_StartGym()\n"
+        "(34:14) Variable 'ControlledPawn' shadows get accessor 'GetControlledPawn' from the class scope\n")};
+
+    const auto Errors = FCkAsErrorParser::ParseErrors(Input);
+
+    // Compiling context lines and shadowing warnings are not roots.
+    TestEqual(TEXT("error count"), Errors.Num(), 1);
+    if (Errors.Num() != 1) { return false; }
+
+    const auto& E = Errors[0];
+    TestEqual(TEXT("Kind"),   static_cast<int32>(E.Kind),
+        static_cast<int32>(ECk_AsParsedError_Kind::NotAMemberOfStruct));
+    TestEqual(TEXT("FilePath"),          E.FilePath,          FString{TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as")});
+    TestEqual(TEXT("Line"),              E.Line,              6948);
+    TestEqual(TEXT("Column"),            E.Column,            15);
+    TestEqual(TEXT("MissingIdentifier"), E.MissingIdentifier, FString{TEXT("LocalRotationOffset")});
+    TestEqual(TEXT("LookupScope"),       E.LookupScope,       FString{TEXT("FBb_Fragment_OpenSign_ParamsData")});
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_AsErrorParser_NotAMember_CascadeAndPerCanonicalDedup,
+    "CkAngelscriptGenerator.UnitTests.AsErrorParser.NotAMember_CascadeAndPerCanonicalDedup",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_AsErrorParser_NotAMember_CascadeAndPerCanonicalDedup::RunTest(const FString&)
+{
+    const auto Input = FString{TEXT(
+        "D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as:\n"
+        "(10:15) 'DeadField' is not a member of 'FBb_Fragment_Foo_ParamsData'\n"
+        "(20:15) 'DeadField' is not a member of 'FBb_Fragment_Foo_ParamsData'\n"
+        "(30:15) 'Phase' is not a member of 'Unknown'\n"
+        "D:/Repos/BusterBlock/Plugins/BusterBlockTests/Script/Generated/BusterBlockTests_EntitySpawnParams.as:\n"
+        "(40:15) 'DeadField' is not a member of 'FBb_Fragment_Foo_ParamsData'\n")};
+
+    const auto Errors = FCkAsErrorParser::ParseErrors(Input);
+
+    // The 'Unknown' owner is cascade noise from an earlier root — dropped. Promoting it would
+    // let unrelated author errors trigger a canonical DELETE.
+    TestEqual(TEXT("Unknown-owner cascade filtered"), Errors.Num(), 3);
+    if (Errors.Num() != 3) { return false; }
+
+    const auto Deduped = FCkAsErrorParser::DeduplicateRoots(Errors);
+
+    // Recovery is per-CANONICAL, so the same dead field in two canonicals is two roots. A
+    // dedup key without the file path collapses them and heals only one per cycle.
+    TestEqual(TEXT("one root per canonical"), Deduped.Num(), 2);
+    if (Deduped.Num() != 2) { return false; }
+
+    TestEqual(TEXT("[0] FilePath"), Deduped[0].FilePath,
+        FString{TEXT("D:/Repos/BusterBlock/Script/Generated/BusterBlock_EntitySpawnParams.as")});
+    TestEqual(TEXT("[1] FilePath"), Deduped[1].FilePath,
+        FString{TEXT("D:/Repos/BusterBlock/Plugins/BusterBlockTests/Script/Generated/BusterBlockTests_EntitySpawnParams.as")});
+
+    return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
