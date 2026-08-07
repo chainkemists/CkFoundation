@@ -1,0 +1,427 @@
+// /CkUsf/Looks/CelShade.ush
+// PostProcess cel shading: quantized lighting bands with halftone band transitions, plus separate
+// treatments for sky / metal / specular / rim and a screen-space ink outline. Placed at
+// SceneColorAfterDOF (see the asset's _BlendableLocation) because it reads Custom Stencil, which is
+// rendered with the TAA-jittered projection — thresholding that mask after tonemapping shimmers on a
+// stationary camera. Consequence: the input is scene-referred LINEAR, not display-referred.
+//
+// ILLUMINATION IS RECONSTRUCTED, NOT READ. A material blendable cannot see deferred lighting, so the
+// lit component is approximated as SceneColor / max(BaseColor, MinimumAlbedo): for a diffuse dielectric
+// that quotient is the incoming light, which is what the bands are supposed to follow. It fails exactly
+// where albedo is not the whole story — metals (own group, Metallic* below), unlit/emissive pixels
+// (AffectUnlit) and the sky (own group, and it has no GBuffer albedo at all, so it bands SceneColor
+// luminance directly). `QuantizeFinalColor` switches the whole look to banding SceneColor luminance
+// instead, which is the fallback if the reconstruction reads as albedo-driven rather than light-driven.
+//
+// MIDPOINT IS THE EXPOSURE ANCHOR. Pre-tonemap illumination is unbounded, so a fixed 0..1 band ramp
+// would be meaningless. Midpoint is the illumination that lands mid-ramp, and 2*Midpoint is what the
+// TOP band resolves to — so it sets band positions AND the brightness of the extreme bands. It is not a
+// neutral reparameterization: raising it darkens the lit side while spreading the bands. Distribution,
+// by contrast, is inverted exactly on the way out and only moves positions. Units are the scene's own
+// PRE-EXPOSURE linear values at this chain location, so a project that changes exposure or unit scale
+// retunes Midpoint, not the band count.
+//
+// STRENGTH GOVERNS BANDS AND PATTERN ONLY. The outline, the stepped specular and the rim are separate
+// features with their own opacity/intensity controls (this look inherits the source feature's per-group
+// strengths rather than one global style weight), so Strength at 0 still draws ink lines. The whole-look
+// passthrough is the subsystem's Enabled, not Strength.
+//
+// STENCIL CONTRACT (direct value, no allocation — mirrored by ECk_Usf_CelPattern and by
+// UCkUsf_CelShadeSubsystem's range validation):
+//   CustomStencil == StencilBase - 1        -> transitions SUPPRESSED on that object
+//   CustomStencil in [StencilBase, +9]      -> that object forces pattern (Stencil - StencilBase)
+//   anything else                           -> the global Pattern
+// Requires r.CustomDepth 3 (Custom Depth-Stencil WITH stencil) and RenderCustomDepth on the mesh.
+//
+// NOT IMPLEMENTED, ON PURPOSE: temporal stabilization of world-space patterns on translating meshes.
+// It needs a frame history a blendable does not have; DebugMode 8 (MotionOffset) therefore reports
+// black rather than pretending to measure something.
+#pragma once
+#include "/CkUsf/Common.ush"
+#include "/CkUsf/StylizeCommon.ush"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// A GBuffer albedo this dark means the pixel carries no diffuse response at all (unlit / emissive /
+// sky), so the illumination quotient there is noise divided by noise rather than a lighting term.
+#define CKUSF_CEL_UNLIT_ALBEDO_EPS 1e-3
+
+// World distance (uu) at which the world-space pattern runs at its authored cell size. Octaves are
+// counted from here, so a subject standing at roughly this range keeps the size the artist tuned.
+// In.WorldPosition arrives as float32, so cell coordinates lose sub-cell precision past roughly 1e6 uu
+// from the origin — a world-space pattern on far-from-origin geometry quantizes and then stops moving.
+#ifndef CKUSF_CEL_OCTAVE_REF_DISTANCE
+#define CKUSF_CEL_OCTAVE_REF_DISTANCE 500.0
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+// Neighbour taps. Each scene texture carries its OWN viewport rect, so a viewport UV has to be mapped
+// through that texture's own transform — the house CkUsf_ViewportUVToBufferUV maps to the scene buffer
+// only, which silently drifts under screen percentage / dynamic resolution for any other input.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_CelShade_TapDepth(float2 ViewportUV)
+{
+    float2 UV = ClampSceneTextureUV(
+        ViewportUVToSceneTextureUV(saturate(ViewportUV), PPI_SceneDepth), PPI_SceneDepth);
+    return SceneTextureLookup(UV, PPI_SceneDepth, false).r;
+}
+
+float3 CkUsf_CelShade_TapNormal(float2 ViewportUV)
+{
+    float2 UV = ClampSceneTextureUV(
+        ViewportUVToSceneTextureUV(saturate(ViewportUV), PPI_WorldNormal), PPI_WorldNormal);
+    return SceneTextureLookup(UV, PPI_WorldNormal, false).rgb;
+}
+
+float3 CkUsf_CelShade_TapAlbedo(float2 ViewportUV)
+{
+    float2 UV = ClampSceneTextureUV(
+        ViewportUVToSceneTextureUV(saturate(ViewportUV), PPI_BaseColor), PPI_BaseColor);
+    return SceneTextureLookup(UV, PPI_BaseColor, false).rgb;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Band ramp.
+// --------------------------------------------------------------------------------------------------------------------
+
+// Source luminance -> 0..1 ramp position. Midpoint maps to 0.5 (it is the exposure anchor described at
+// the top of this file); Distribution then biases where the bands sit without moving that anchor.
+float CkUsf_CelShade_Shape(float Value, float Midpoint, float Distribution)
+{
+    float V = saturate(Value / max(Midpoint * 2.0, 1e-4));
+    return pow(V, max(Distribution, 1e-3));
+}
+
+float CkUsf_CelShade_Unshape(float Ramp, float Midpoint, float Distribution)
+{
+    return pow(saturate(Ramp), 1.0 / max(Distribution, 1e-3)) * max(Midpoint * 2.0, 1e-4);
+}
+
+// Ramp value of one band. ShadowLift raises the DARKEST band only — the top band always resolves to 1,
+// so lifting the shadows never dims the lit side.
+float CkUsf_CelShade_LevelAt(float Index, float Bands, float ShadowLift)
+{
+    float N = max(Bands, 2.0);
+    float T = saturate(Index / (N - 1.0));
+    return lerp(saturate(ShadowLift), 1.0, T);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
+    FCkUsf_SurfaceInput In,
+    float Bands,
+    float Midpoint,
+    float BandOffset,
+    float Distribution,
+    float BandSoftness,
+    float ShadowLift,
+    float Strength,
+    float QuantizeFinalColor,
+    float EnablePattern,
+    float Pattern,
+    float PatternSpace,
+    float PatternStrength,
+    float PatternContrast,
+    float PatternWorldSize,
+    float PatternPixelSize,
+    float TriplanarSharpness,
+    float PatternDistanceScaling,
+    float PatternOctaveMin,
+    float PatternOctaveMax,
+    float PatternScrollSpeed,
+    float Saturation,
+    float MinimumAlbedo,
+    float AffectUnlit,
+    float EnableSky,
+    float SkyDistance,
+    float SkyBands,
+    float SkyStrength,
+    float SkyPattern,
+    float SkyPatternStrength,
+    float SkyPatternScale,
+    float MetallicThreshold,
+    float MetallicBands,
+    float MetallicStrength,
+    float MetallicPatternStrength,
+    float EnableSpecular,
+    float SpecularSteps,
+    float SpecularThreshold,
+    float SpecularIntensity,
+    float SpecularRoughnessCutoff,
+    float EnableRimLight,
+    float RimPower,
+    float RimThreshold,
+    float RimSoftness,
+    float RimIntensity,
+    float RimFollowsLighting,
+    float EnableOutline,
+    float OutlineThickness,
+    float OutlineQuality,
+    float OutlineOpacity,
+    float OutlineBlendMode,
+    float OutlineDepthThreshold,
+    float OutlineNormalThreshold,
+    float OutlineAlbedoThreshold,
+    float OutlineDistanceFade,
+    float EnableStencilPatterns,
+    float StencilBase,
+    float DebugMode,
+    float3 ShadowTint,
+    float3 LightTint,
+    float3 RimColor,
+    float3 OutlineColor)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 ViewportUV = In.UV;
+    float3 Scene      = In.SceneColor.rgb;
+    float3 Albedo     = In.SceneBaseColor.rgb;
+    float3 Normal     = normalize(In.SceneNormal.rgb + float3(0.0, 0.0, 1e-6));
+    float  Depth      = In.SceneDepth.r;
+    float  Metallic   = In.SceneMetallic.r;
+    float  Roughness  = In.SceneRoughness.r;
+    float  Stencil    = round(In.CustomStencil.r);
+
+    // ---- Group selection ---------------------------------------------------------------------------
+    // Sky first: it has no GBuffer albedo, so it must never reach the illumination quotient.
+    bool IsSky   = (EnableSky > 0.5) && (Depth >= max(SkyDistance, 1.0));
+    bool IsMetal = (!IsSky) && (Metallic >= saturate(MetallicThreshold));
+    bool IsUnlit = max(Albedo.r, max(Albedo.g, Albedo.b)) < CKUSF_CEL_UNLIT_ALBEDO_EPS;
+
+    float3 Illumination = Scene / max(Albedo, max(MinimumAlbedo, 1e-3));
+    float  IlluminationLuma = CkUsf_Stylize_Luminance(Illumination);
+    float  SceneLuma = CkUsf_Stylize_Luminance(Scene);
+
+    // The sky and the final-colour mode both band SceneColor luminance rather than the reconstruction:
+    // the sky because it has no albedo to divide by, the mode because that is its whole point.
+    bool BandsFinalColor = IsSky || (QuantizeFinalColor > 0.5);
+    float SourceLuma = BandsFinalColor ? SceneLuma : IlluminationLuma;
+
+    float GroupBands = Bands;
+    float GroupStrength = Strength;
+    float GroupPatternStrength = PatternStrength;
+    float GroupPatternScale = 1.0;
+    int   GroupPattern = (int)(Pattern + 0.5);
+
+    if (IsSky)
+    {
+        GroupBands = SkyBands;
+        GroupStrength = SkyStrength;
+        GroupPatternStrength = SkyPatternStrength;
+        GroupPatternScale = max(SkyPatternScale, 1e-3);
+        GroupPattern = (int)(SkyPattern + 0.5);
+    }
+    else if (IsMetal)
+    {
+        GroupBands = MetallicBands;
+        GroupStrength = MetallicStrength;
+        GroupPatternStrength = MetallicPatternStrength;
+    }
+
+    // ---- Per-object stencil ------------------------------------------------------------------------
+    bool StencilActive = EnableStencilPatterns > 0.5;
+    float StencilLow = round(StencilBase) - 1.0;
+    bool StencilSuppresses = StencilActive && (Stencil == StencilLow);
+    bool StencilSelects = StencilActive && (Stencil >= round(StencilBase)) && (Stencil <= round(StencilBase) + 9.0);
+
+    if (StencilSelects)
+    { GroupPattern = (int)(Stencil - round(StencilBase)); }
+
+    float EffectivePatternStrength = StencilSuppresses
+        ? 0.0
+        : (EnablePattern > 0.5 ? saturate(GroupPatternStrength) : 0.0);
+
+    // ---- Pattern threshold -------------------------------------------------------------------------
+    // World space attaches the pattern to the surface (it holds still under camera motion but SLIDES on
+    // translating meshes — the source's stabilization for that needs a frame history a blendable has
+    // not got); screen space is camera-aligned and always stable.
+    float2 PatternCoord;
+    float  PatternThreshold;
+
+    if (PatternSpace < 0.5)
+    {
+        // The distance-driven target is a WHOLE octave — a continuously scaled cell size gives every
+        // distance its own sub-cell phase and the pattern swims as the camera dollies. PatternDistanceScaling
+        // is how far the cell is taken toward that target, so only 1.0 lands exactly on it; intermediate
+        // values are a deliberate compromise between constant screen density and a stable lattice.
+        float Octave = clamp(log2(max(Depth, 1.0) / CKUSF_CEL_OCTAVE_REF_DISTANCE),
+            min(PatternOctaveMin, PatternOctaveMax), max(PatternOctaveMin, PatternOctaveMax));
+        float OctaveScale = lerp(1.0, exp2(floor(Octave)), saturate(PatternDistanceScaling));
+
+        float CellSize = max(PatternWorldSize, 1e-3) * OctaveScale * GroupPatternScale;
+        float3 P = (In.WorldPosition + In.Time * PatternScrollSpeed) / CellSize;
+
+        float3 Weights = pow(abs(Normal), max(TriplanarSharpness, 1e-3));
+        Weights /= max(Weights.x + Weights.y + Weights.z, 1e-4);
+
+        // The three planar patterns are blended, not the coordinates: blending coordinates across a
+        // corner produces a smeared cell that belongs to no plane.
+        PatternThreshold =
+            Weights.x * CkUsf_Stylize_HalftonePattern(GroupPattern, P.yz, PatternContrast) +
+            Weights.y * CkUsf_Stylize_HalftonePattern(GroupPattern, P.zx, PatternContrast) +
+            Weights.z * CkUsf_Stylize_HalftonePattern(GroupPattern, P.xy, PatternContrast);
+
+        PatternCoord = P.xy;
+    }
+    else
+    {
+        float2 ViewSize = GetSceneTextureViewSize(PPI_PostProcessInput0).xy;
+        PatternCoord = (ViewportUV * ViewSize + In.Time * PatternScrollSpeed)
+            / max(PatternPixelSize * GroupPatternScale, 1e-3);
+        PatternThreshold = CkUsf_Stylize_HalftonePattern(GroupPattern, PatternCoord, PatternContrast);
+    }
+
+    // ---- Band quantization -------------------------------------------------------------------------
+    float Ramp = CkUsf_CelShade_Shape(SourceLuma, Midpoint, Distribution);
+    float BandCount = max(GroupBands, 2.0);
+    float BandPosition = Ramp * BandCount + BandOffset;
+    float BandIndex = clamp(floor(BandPosition), 0.0, BandCount - 1.0);
+    float BandFraction = saturate(BandPosition - floor(BandPosition));
+
+    float LevelLow = CkUsf_CelShade_LevelAt(BandIndex, BandCount, ShadowLift);
+    float LevelHigh = CkUsf_CelShade_LevelAt(min(BandIndex + 1.0, BandCount - 1.0), BandCount, ShadowLift);
+
+    // The halftone IS the quantizer: comparing the within-band fraction against the pattern threshold
+    // makes the transition between two bands a growing dot/line field instead of a hard edge. Softness
+    // is the pattern-free alternative for the same boundary, so the two are blended by pattern strength
+    // rather than added.
+    float SoftTransition = BandSoftness > 1e-4
+        ? smoothstep(saturate(1.0 - BandSoftness), 1.0, BandFraction)
+        : 0.0;
+    float PatternTransition = step(PatternThreshold, BandFraction);
+    float Transition = lerp(SoftTransition, PatternTransition, EffectivePatternStrength);
+
+    float Level = lerp(LevelLow, LevelHigh, Transition);
+
+    // ---- Apply -------------------------------------------------------------------------------------
+    // Scaling the scene colour by the banded/original luminance ratio bands the LIGHT while leaving
+    // albedo and hue untouched; replacing the colour outright would flatten every material to one tint.
+    float BandedSource = CkUsf_CelShade_Unshape(Level, Midpoint, Distribution);
+    float3 Cel = Scene * (BandedSource / max(SourceLuma, 1e-3));
+
+    Cel *= lerp(ShadowTint, LightTint, Level);
+
+    float CelLuma = CkUsf_Stylize_Luminance(Cel);
+    Cel = lerp(float3(CelLuma, CelLuma, CelLuma), Cel, max(Saturation, 0.0));
+
+    // ---- Stepped specular --------------------------------------------------------------------------
+    if (EnableSpecular > 0.5 && !IsSky && Roughness <= saturate(SpecularRoughnessCutoff))
+    {
+        float Steps = max(SpecularSteps, 1.0);
+        float Highlight = saturate((Ramp - saturate(SpecularThreshold)) /
+            max(1.0 - saturate(SpecularThreshold), 1e-3));
+        float SpecularMask = floor(Highlight * Steps) / Steps;
+        Cel += LightTint * (SpecularMask * max(SpecularIntensity, 0.0));
+    }
+
+    // ---- Rim light ---------------------------------------------------------------------------------
+    // The view vector comes from the screen rect rather than a camera position: the engine helper is
+    // orthographic-safe and needs no large-world-coordinate arithmetic, whereas differencing
+    // In.WorldPosition against a camera origin does.
+    if (EnableRimLight > 0.5 && !IsSky)
+    {
+        float2 ScreenPosition = ViewportUV * float2(2.0, -2.0) + float2(-1.0, 1.0);
+        float3 ToPixel = normalize(ScreenVectorFromScreenRect(float4(ScreenPosition, 1.0, 0.0)));
+        float NdotV = saturate(dot(Normal, -ToPixel));
+
+        float Facing = pow(saturate(1.0 - NdotV), max(RimPower, 1e-3));
+        float RimMask = smoothstep(saturate(RimThreshold),
+            saturate(RimThreshold) + max(RimSoftness, 1e-3), Facing);
+
+        // Following the lighting keeps the rim off surfaces that are in shadow, which is what stops it
+        // reading as a uniform outline glow.
+        RimMask *= lerp(1.0, Level, saturate(RimFollowsLighting));
+        Cel += RimColor * (RimMask * max(RimIntensity, 0.0));
+    }
+
+    float3 Result = lerp(Scene, Cel, saturate(GroupStrength));
+
+    // Unlit pixels have no diffuse response to band. Sky is exempt because its own group already
+    // handles it through SceneColor luminance.
+    if (AffectUnlit < 0.5 && IsUnlit && !IsSky)
+    { Result = Scene; }
+
+    // ---- Outline -----------------------------------------------------------------------------------
+    float Edge = 0.0;
+    if (EnableOutline > 0.5)
+    {
+        // Same viewport the pattern path measures in (PostProcessInput0's), so "thickness in pixels" means
+        // one thing across the whole look. Equal to the scene buffer's at this chain location today; the
+        // offsets are viewport UVs and each tap maps them through its own texture's rect anyway.
+        float2 ViewSize = GetSceneTextureViewSize(PPI_PostProcessInput0).xy;
+        float2 Texel = max(OutlineThickness, 1.0) / max(ViewSize, 1.0);
+
+        // Quality is a tap count, not a radius: 4 taps are enough for the Laplacian, the extra 4
+        // diagonals only matter on edges that run diagonally through the pixel.
+        const float2 Offsets[8] =
+        {
+            float2( 1.0,  0.0), float2(-1.0,  0.0), float2( 0.0,  1.0), float2( 0.0, -1.0),
+            float2( 0.70711,  0.70711), float2(-0.70711,  0.70711),
+            float2( 0.70711, -0.70711), float2(-0.70711, -0.70711)
+        };
+        int TapCount = OutlineQuality > 0.5 ? 8 : 4;
+
+        float DepthSum = 0.0;
+        float NormalEdge = 0.0;
+        float AlbedoEdge = 0.0;
+
+        [unroll]
+        for (int i = 0; i < 8; ++i)
+        {
+            if (i >= TapCount)
+            { continue; }
+
+            float2 TapUV = ViewportUV + Offsets[i] * Texel;
+
+            DepthSum += CkUsf_CelShade_TapDepth(TapUV);
+            NormalEdge = max(NormalEdge,
+                1.0 - saturate(dot(Normal, normalize(CkUsf_CelShade_TapNormal(TapUV) + float3(0.0, 0.0, 1e-6)))));
+
+            float3 TapAlbedo = CkUsf_CelShade_TapAlbedo(TapUV);
+            AlbedoEdge = max(AlbedoEdge, length(TapAlbedo - Albedo));
+        }
+
+        // Laplacian, not a gradient: a flat surface seen at a grazing angle has a linear depth ramp and
+        // a large gradient but a near-zero second derivative, so only silhouettes and creases spike.
+        // Divided by depth so the test is distance-independent.
+        float DepthLaplacian = abs(DepthSum - TapCount * Depth) / max(Depth, 1.0);
+
+        float DepthEdge = step(max(OutlineDepthThreshold, 1e-4), DepthLaplacian);
+        float NormalEdgeMask = step(max(OutlineNormalThreshold, 1e-4), NormalEdge);
+        float AlbedoEdgeMask = step(max(OutlineAlbedoThreshold, 1e-4), AlbedoEdge);
+
+        float Fade = OutlineDistanceFade > 1.0 ? saturate(1.0 - Depth / OutlineDistanceFade) : 1.0;
+        Edge = saturate(DepthEdge + NormalEdgeMask + AlbedoEdgeMask) * saturate(OutlineOpacity) * Fade;
+
+        int BlendMode = (int)(OutlineBlendMode + 0.5);
+        if (BlendMode == 1)      { Result *= lerp(float3(1.0, 1.0, 1.0), OutlineColor, Edge); }
+        else if (BlendMode == 2) { Result += OutlineColor * Edge; }
+        else                     { Result = lerp(Result, OutlineColor, Edge); }
+    }
+
+    // ---- Debug -------------------------------------------------------------------------------------
+    int Debug = (int)(DebugMode + 0.5);
+    if (Debug == 1)
+    {
+        float Normalized = BandIndex / max(BandCount - 1.0, 1.0);
+        Result = float3(Normalized, Normalized, Normalized);
+    }
+    else if (Debug == 2) { Result = float3(Edge, Edge, Edge); }
+    else if (Debug == 3) { Result = Illumination; }
+    else if (Debug == 4) { Result = Albedo; }
+    else if (Debug == 5) { Result = Normal * 0.5 + 0.5; }
+    else if (Debug == 6) { Result = float3(PatternThreshold, PatternThreshold, PatternThreshold); }
+    else if (Debug == 7) { Result = float3(frac(PatternCoord), 0.0); }
+    else if (Debug == 8) { Result = float3(0.0, 0.0, 0.0); }
+    else if (Debug == 9)
+    {
+        float Slot = saturate((Stencil - StencilLow) / 11.0);
+        Result = StencilSuppresses || StencilSelects ? float3(0.0, Slot, 1.0 - Slot) : float3(0.0, 0.0, 0.0);
+    }
+
+    O.EmissiveColor = Result;
+    O.Opacity = 1.0;
+    return O;
+}

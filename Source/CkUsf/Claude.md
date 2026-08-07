@@ -27,6 +27,14 @@ subsystem.
   `Request_SetEnabled` / `Get_IsEnabled`, `Apply_Preset`, `Request_SetSettings` / `Get_Settings`,
   `Request_ResetToDefaults`. Settings are `FCk_Usf_ScreenDither_Params`; presets are
   `UCkUsf_ScreenDitherPreset` data assets (AS: `Script/CkUsf/CkUsf_ScreenDitherPresets_Assets.as`).
+- `UCkUsf_CelShadeSubsystem` (`Stylize/`) — per-world cel shading: same surface as ScreenDither
+  (`Request_SetEnabled` / `Get_IsEnabled`, `Apply_Preset`, `Request_SetSettings` / `Get_Settings`,
+  `Request_ResetToDefaults`) plus the Custom-Stencil contract accessors `Get_StencilValueFor`,
+  `Get_StencilSuppressValue`, `Get_StencilRangeIsFree`. Settings are `FCk_Usf_CelShade_Params`;
+  presets are `UCkUsf_CelShadePreset` data assets (AS: `Script/CkUsf/CkUsf_CelShadePresets_Assets.as`).
+- `UCk_Utils_Usf_CelPattern_UE` (`Stylize/CkUsf_CelPattern_Utils.h`) — ENTITY-level cel patterns:
+  `Request_SetCelPattern(Handle, Pattern, Scope)` / `Request_ClearCelPattern`. Reuses
+  `ECk_Usf_OutlineScope`; the actor-path sync processor lives here, ISM/ISKM are follow-ups.
 - `UCk_Utils_Usf_Outline_UE` (`Outline/CkUsf_Outline_Utils.h`) — ENTITY-level outlines:
   `Request_ApplyOutline(Handle, Preset, Scope)` / `Request_RemoveOutline`. Per-renderer sync processors
   apply it (actor path here; shadow ISM in CkIsmRenderer; SKMC custom depth in CkIskmRenderer Plan-1;
@@ -321,6 +329,99 @@ block size gives every block a different sub-pixel phase and crawls as the viewp
 Presets ship in `Script/CkUsf/CkUsf_ScreenDitherPresets_Assets.as` (Balanced, SubtleColor, RetroPixel,
 FourColorHandheld, AnimatedGrain, Off). Gym: "Stylize: Screen Dither" (CkTests) — stations are preset
 SELECTORS over one shared judge scene, because the effect is view-wide.
+
+### Cel shade (Stylize)
+
+`/CkUsf/Looks/CelShade.ush` + `UCkUsf_CelShadeSubsystem` (`Source/CkUsf/Public/CkUsf/Stylize/`). Placed at
+`SceneColorAfterDOF` because it reads Custom Stencil (pre-TAA rule above); consequence — its input and
+output are scene-referred LINEAR, so every tint and threshold is authored in that space, not in display
+values like ScreenDither's.
+
+**Illumination is RECONSTRUCTED, not read.** A material blendable cannot see deferred lighting, so the lit
+term is `SceneColor / max(BaseColor, MinimumAlbedo)`. That quotient is the incoming light for a diffuse
+dielectric and nothing useful anywhere else, which is exactly why the three exception groups exist rather
+than being tuning knobs: metals get their light from reflections (Metallic group), unlit/emissive pixels
+have no diffuse response (`AffectUnlit`), and the sky has no GBuffer albedo at all (Sky group, which bands
+SceneColor luminance directly). `QuantizeFinalColor` switches the WHOLE look to banding SceneColor
+luminance — the documented fallback if the reconstruction ever reads as albedo-driven rather than
+light-driven. The gradient wall in the gym's judge scene is the test: band boundaries must run straight
+across it, because the light there is uniform and only the albedo varies.
+
+**Midpoint is the exposure anchor, not a taste knob.** Pre-tonemap illumination is unbounded, so a fixed
+0..1 band ramp would mean nothing. Midpoint is the illumination that lands mid-ramp — and `2*Midpoint` is
+what the TOP band resolves to, so it sets band positions AND the brightness of the extreme bands. It is
+NOT a neutral reparameterization: raising it darkens the lit side while spreading the bands. (Distribution
+IS neutral — it is inverted exactly on the way out.) Its units are the scene's own pre-exposure linear
+values at this chain location, so changing project exposure or world unit scale means retuning Midpoint,
+not the band count. Tune it first; every other band control is relative to it.
+
+**Strength governs bands and pattern only.** The outline, stepped specular and rim are separate features
+with their own opacity/intensity controls (this look inherits per-group strengths rather than one global
+style weight), so `Strength = 0` still draws ink lines. The whole-look passthrough is the subsystem's
+`Enabled`, not `Strength`.
+
+**The halftone IS the quantizer.** The within-band fraction is compared against the pattern threshold, so
+a band transition renders as a growing dot/line field rather than a hard edge. `BandSoftness` is the
+pattern-free alternative for the same boundary, which is why the two are BLENDED by pattern strength
+instead of added — a look cannot be both hard-stepped and dithered at one boundary.
+
+**Per-object stencil is a DIRECT-VALUE contract, not an allocation** (unlike `UCkUsf_OutlineSubsystem`'s
+refcounted slots): `StencilBase - 1` suppresses transitions on that mesh, `StencilBase + N` forces
+`ECk_Usf_CelPattern` N, anything else takes the global pattern. The span is therefore
+`[base-1, base+9]` (default 199–209) and requires `r.CustomDepth 3` plus `RenderCustomDepth` on the mesh.
+`Request_SetSettings` REJECTS a span on two grounds, each with its own diagnostic: it must not intersect
+the outline subsystem's range (both features write the same byte, so an overlap restyles the other's
+meshes with nothing naming the cause), and it must not reach Custom Stencil **0** — 0 is what the renderer
+leaves for every mesh that wrote nothing, so base 1 would make suppression the view-wide default and base 0
+would force pattern 0 on every pixel. Hence `ClampMin = 2` on `_StencilBase`.
+
+**One entity, one Custom-Stencil value.** `Request_SetCelPattern` refuses an entity that already carries a
+`ck::FFragment_Usf_OutlineTarget` (loud, zero mutation); a *cascade* skips such a dependent with a Verbose
+log rather than failing whole, since the caller asked about the root. `FProcessor_Usf_CelPatternActor_Sync`
+excludes outline targets so an outline applied afterwards wins, and
+`FProcessor_Usf_CelPatternActor_DropAppliedOnOutline` drops the now-false applied-state — without it the
+cache survives the outline's removal and the sync processor early-outs forever, silently losing the
+pattern. The undo path only touches primitives still holding the value it wrote, so taking the byte over
+never erases someone else's silhouette.
+
+**Undo DISABLES custom depth; it does not restore prior state** — `UCkUsf_OutlineSubsystem::
+Remove_Outline_From_Component`'s precedent verbatim, and the two must agree. Consequence shared by both
+features: a mesh hand-authored to render custom depth does not get that back after a pattern (or an
+outline) is applied and then cleared.
+
+**Four index contracts** — the subsystem writes each enum's integer value straight into a scalar
+parameter, so reordering an enum silently re-maps the look (and, for `ECk_Usf_CelPattern`, silently
+restyles every stencil-tagged mesh in every level):
+
+| Enum | Consumer |
+|---|---|
+| `ECk_Usf_CelPattern` | `CkUsf_Stylize_HalftonePattern`'s dispatcher in `StylizeCommon.ush` **and** the stencil mapping |
+| `ECk_Usf_CelPatternSpace`, `ECk_Usf_CelOutlineQuality`, `ECk_Usf_CelOutlineBlend` | branches in `CelShade.ush` |
+| `ECk_Usf_CelShade_DebugMode` | the `DebugMode` dispatcher at the end of `CelShade.ush` |
+
+**Scene textures wired:** SceneColor, SceneDepth, SceneNormal, CustomStencil, BaseColor, Metallic,
+Roughness. `PPI_Specular` is deliberately NOT wired — nothing reads it, and every input costs a pin plus a
+GBuffer fetch on an already-wide (70-input) Custom node. Re-add it only when a tuning pass actually reads
+it, and note `PPI_StoredSpecular` is the un-shading-model-modified variant if it ever matters.
+
+**Documented limitation: world-space patterns SLIDE on translating and skinned meshes.** Correcting that
+needs a frame history a blendable does not have; the source feature's own docs warn of trail artifacts.
+A second world-space caveat: `In.WorldPosition` is float32, so pattern cells lose sub-cell precision past
+roughly 1e6 uu from the origin and eventually stop moving — use `Screen` space on far-from-origin levels.
+`ECk_Usf_CelShade_DebugMode::MotionOffset` renders BLACK to say so out loud instead of being quietly
+missing, and `PatternSpace = Screen` is the stable alternative. The gym's translating mover exists to make
+the limitation visible.
+
+**Neighbour taps go through each scene texture's OWN viewport**
+(`ViewportUVToSceneTextureUV(uv, PPI_X)` + `ClampSceneTextureUV`), not the house
+`CkUsf_ViewportUVToBufferUV` — the same lesson ScreenDither carries. The rim light's view vector comes
+from the engine's `ScreenVectorFromScreenRect` rather than differencing `In.WorldPosition` against a
+camera origin: it is orthographic-safe and needs no large-world-coordinate arithmetic.
+
+Presets ship in `Script/CkUsf/CkUsf_CelShadePresets_Assets.as` (Balanced, CleanAnime, ComicHalftone,
+InkCrosshatch, SoftToon, Off). Gym: "Stylize: Cel Shade" (CkTests) — preset-selector stations over one
+judge scene, plus two per-object rows (hand-tagged stencil cubes and entity-API subjects) that must look
+identical to each other.
 
 ## See also
 

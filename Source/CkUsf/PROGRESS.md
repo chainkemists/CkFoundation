@@ -11,10 +11,16 @@ IskmApplyRemove, IsmShadowInstances, VatShadowCustomData}, GeneratesUsableMaster
 MultiPassRendersToTexture, NiagaraSpriteContract, OutlineStencilAlloc,
 FRigVMFunction_DeltaFromPreviousFloat (engine-side pattern match, ignorable). Captured
 2026-08-06 after deleting the stale `utils_world_space_widget.as` (see dated entry).
+**Gate 3 DONE 2026-08-06** (landed as the commit carrying this entry + CkTests sibling; baseline
+now 20/20 standard / 14/14 real-RHI serial). Maintainer [EDITOR-VERIFY]: "Stylize: Cel Shade" gym
+— walk 6 presets; gradient wall bands must run STRAIGHT ACROSS (light-driven) not track albedo
+(pivot: `_QuantizeFinalColor`); stencil row control/suppress/RoundDots/DiagonalLines; entity row
+(Y=300/600) indistinguishable from hand-tagged twins; `Ck_GymStylizeCel_ToggleEntity`/`CycleDebug`
+(MotionOffset black by design); world patterns slide on the mover = documented limitation.
 **Gate 2 DONE 2026-08-06** (landed as the commit carrying this entry + CkTests sibling; baseline
 now 15/15 standard / 9/9 real-RHI serial). Gym visuals are the maintainer's [EDITOR-VERIFY]
 (steps in the Gate-2 dated entry).
-**Next action:** Gate 3 (CelShade) entry pre-flight + executor dispatch.
+**Next action:** Gate 4 (HandDrawn) executor dispatch.
 **Blocked on:** nothing.
 
 ## Decision log
@@ -29,6 +35,27 @@ now 15/15 standard / 9/9 real-RHI serial). Gym visuals are the maintainer's [EDI
 | 2026-08-06 | One gym PER effect, shipped inside its feature gate (2–4), Solid Outline gym pattern; stations act as preset SELECTORS (effects are view-wide) over a shared judge scene | Maintainer asked for proper gyms like the outline's; per-gate delivery because each gate's [EDITOR-VERIFY] needs its gym | — |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-06 — Gate 3 (CelShade) EXIT: executed, audited (ACCEPT-WITH-FIXES), fixed, re-verified
+- Delivered: `CelShade.ush` (61 params, 69-input node — widest yet, generates + force-compiles,
+  mutation-proven), params (+5 enums)/preset/subsystem trio, ENTITY API (`Request_Set/ClearCelPattern`
+  + Sync/Remove/EndPlay/DropAppliedOnOutline processors), stencil contract ([base−1,base+9], base
+  default 200, disjoint from outline 240–255 — live-checked, 4-arm tested), AS look + 6 presets,
+  5 CkTests tests (incl. actor-backed stencil-sync + the C1 regression sequence), gym
+  "Stylize: Cel Shade", Claude.md section. New tracked master `M_CkUsf_Look_CelShade.uasset`.
+- Audit fixes: stale-Applied outline-round-trip loss (C1, + disjoint views kills the removal race);
+  gym row alignment (C2); registry-only entity test → actor-backed (C3); stencil base ≥1 guard split
+  addressable/collision (C4, ClampMin 2); cascade skips outlined dependents loudly (C5); clear =
+  disable per outline precedent, documented honestly (C6); dead Specular pin removed + master
+  regenerated (C7); two math-lying comments fixed (C8); P1–P5 documented/unified.
+- Ran (post-fix): standard `-nullrhi` Usf `--discover-fresh` → **20/20** (baseline 15/15);
+  `--no-nullrhi --parallel 1` CkUsf units → **14/14** (baseline 9/9), zero shader errors.
+- Audit verified-clean: full 61-param seam (mechanical diff), all 4 index contracts, disjointness
+  math incl. adjacency, NN#3 shapes, Gate-2 lessons honored (grid space, hysteresis, MID null).
+- Process finds: `DESIGN_EntityOutlines.md` cited by CkUsf/Claude.md does NOT exist (follow-up:
+  fix or tombstone the reference); toolbox caches its test list — `--discover-fresh` REQUIRED after
+  adding tests without a rebuild (stale-green trap, add to runbook); content-churn restores are
+  session-safe ONLY because session-start status was captured clean (keep capturing it).
 
 ### 2026-08-06 — Gate 2 (ScreenDither) EXIT: executed, adversarially audited, fixed, re-verified
 - Delivered: `Looks/ScreenDither.ush` (27 params), `Stylize/CkUsf_ScreenDither_Params.h/.cpp`
