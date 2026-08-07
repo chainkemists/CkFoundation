@@ -1,0 +1,352 @@
+// /CkUsf/StylizeCommon.ush — procedural pattern library for the stylize looks.
+// Consumers: /CkUsf/Looks/HandDrawn.ush, /CkUsf/Looks/CelShade.ush, /CkUsf/Looks/ScreenDither.ush.
+//
+// Everything here is a small pure function over pattern-space coordinates — no texture bindings, no
+// raw .Sample (a look that reads these may be lit or WPO'd; see Common.ush § frequency-safe sampling).
+// Naming: CkUsf_Stylize_* is a feature-level dispatcher a look calls; CkUsf_* is a generic primitive.
+//
+// THRESHOLD CONVENTION: every pattern function returns 0..1, read as the coverage threshold of that
+// pattern cell. Ink the pixel where the inked quantity (1 - luminance, dissolve amount, ...) exceeds
+// the threshold, so 0 = always inked and 1 = inked last.
+#pragma once
+
+#include "/CkUsf/Common.ush"
+
+// --------------------------------------------------------------------------------------------------------------------
+// Ordered (Bayer) dither matrices. Index math only — the recursion M_2n(x,y) = 4*M_n(x%n, y%n)
+// + M_2(floor(x/n)%2, floor(y/n)%2) generates the 4x4 and 8x8 matrices from the 2x2 base, so no
+// constant tables are needed. Thresholds are cell-CENTERED ((raw + 0.5) / N^2) — an uncentered
+// matrix can never reach full coverage at either end of the ramp.
+// --------------------------------------------------------------------------------------------------------------------
+
+// Raw 0..3 value of the 2x2 base matrix [[0, 2], [3, 1]] at an integer lattice position.
+float CkUsf_BayerRaw2(float2 Lattice)
+{
+    float2 I = floor(fmod(abs(Lattice), 2.0));
+    float Row0 = I.x < 0.5 ? 0.0 : 2.0;
+    float Row1 = I.x < 0.5 ? 3.0 : 1.0;
+    return I.y < 0.5 ? Row0 : Row1;
+}
+
+float CkUsf_BayerRaw4(float2 Lattice)
+{
+    float2 L = floor(abs(Lattice));
+    return 4.0 * CkUsf_BayerRaw2(fmod(L, 2.0)) + CkUsf_BayerRaw2(floor(L / 2.0));
+}
+
+float CkUsf_BayerRaw8(float2 Lattice)
+{
+    float2 L = floor(abs(Lattice));
+    return 4.0 * CkUsf_BayerRaw4(fmod(L, 4.0)) + CkUsf_BayerRaw2(floor(L / 4.0));
+}
+
+float CkUsf_Bayer2x2(float2 PixelPos)
+{
+    return (CkUsf_BayerRaw2(PixelPos) + 0.5) / 4.0;
+}
+
+float CkUsf_Bayer4x4(float2 PixelPos)
+{
+    return (CkUsf_BayerRaw4(PixelPos) + 0.5) / 16.0;
+}
+
+float CkUsf_Bayer8x8(float2 PixelPos)
+{
+    return (CkUsf_BayerRaw8(PixelPos) + 0.5) / 64.0;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Stochastic thresholds.
+// --------------------------------------------------------------------------------------------------------------------
+
+// Plain white noise: uniform over 0..1, but its low-frequency content is what makes hash dithering
+// look blotchy in motion. Cheapest option; prefer the blue-noise approximation below for stills.
+float CkUsf_WhiteNoiseThreshold(float2 PixelPos, float AnimPhase)
+{
+    return CkUsf_Hash21(PixelPos + AnimPhase * 17.0);
+}
+
+// Procedural blue-noise APPROXIMATION — an approximation on purpose, not a substitute for a
+// void-and-cluster LUT. Two independent tricks:
+//   spatial: white noise minus its own 3x3 mean suppresses the low-frequency clumping. The result is
+//            only APPROXIMATELY uniform over 0..1 — correct as a dither threshold, wrong if you need
+//            a uniform random variable.
+//   temporal: an R2 (Roberts' generalized golden-ratio) offset per phase, so consecutive frames land
+//            far apart in the sequence instead of adjacent to each other.
+float CkUsf_BlueNoiseApprox(float2 PixelPos, float AnimPhase)
+{
+    const float2 R2 = float2(0.7548776662, 0.5698402910);
+    float2 P = PixelPos + floor(AnimPhase) * R2 * 64.0;
+
+    float Center = CkUsf_Hash21(P);
+    float Mean = 0.0;
+    [unroll]
+    for (int Y = -1; Y <= 1; ++Y)
+    {
+        [unroll]
+        for (int X = -1; X <= 1; ++X)
+        { Mean += CkUsf_Hash21(P + float2(X, Y)); }
+    }
+    Mean /= 9.0;
+
+    return saturate(0.5 + 0.9 * (Center - Mean));
+}
+
+// Integer lattice shift that animates an ORDERED pattern. Co-prime strides keep consecutive phases
+// from repeating a shift inside an 8x8 tile, which a single-axis scroll would do every 8 frames.
+float2 CkUsf_Stylize_OrderedAnimOffset(float AnimPhase)
+{
+    float P = floor(AnimPhase);
+    return float2(P * 3.0, P * 5.0);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Dither dispatcher. PatternIndex is a STENCIL CONTRACT shared with the look's asset-side enum:
+//   Bayer2x2 = 0, Bayer4x4 = 1, Bayer8x8 = 2, IGN = 3, WhiteNoise = 4, BlueNoise = 5.
+// PixelPos is in pixels (e.g. In.UV * View.ViewSizeAndInvSize.xy); AnimPhase is a frame/time counter,
+// 0 for a static pattern.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_Stylize_DitherThreshold(int PatternIndex, float2 PixelPos, float AnimPhase)
+{
+    float2 Ordered = PixelPos + CkUsf_Stylize_OrderedAnimOffset(AnimPhase);
+
+    if (PatternIndex == 0) { return CkUsf_Bayer2x2(Ordered); }
+    if (PatternIndex == 1) { return CkUsf_Bayer4x4(Ordered); }
+    if (PatternIndex == 2) { return CkUsf_Bayer8x8(Ordered); }
+    if (PatternIndex == 3) { return frac(CkUsf_IGN(PixelPos) + floor(AnimPhase) * 0.6180339887); }
+    if (PatternIndex == 4) { return CkUsf_WhiteNoiseThreshold(PixelPos, AnimPhase); }
+    return CkUsf_BlueNoiseApprox(PixelPos, AnimPhase);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Halftone primitives. P is in PATTERN CELLS (one unit = one cell), so the caller owns the screen- or
+// world-space scale. Contrast steepens the threshold ramp about its midpoint: 1 = the raw pattern,
+// higher = harder edges between inked and clean, approaching a binary stencil.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_Stylize_ApplyContrast(float Threshold, float Contrast)
+{
+    return saturate((Threshold - 0.5) * max(Contrast, 1e-3) + 0.5);
+}
+
+// Symmetric triangle wave over one unit period, 0 at the cell center and 1 at the cell boundary.
+float CkUsf_TriangleWave(float V)
+{
+    return abs(frac(V) - 0.5) * 2.0;
+}
+
+// Distance from the cell center, normalized so the inscribed circle reaches 1 at the cell edge.
+float CkUsf_Halftone_RoundDots(float2 P)
+{
+    return saturate(length(frac(P) - 0.5) * 2.0);
+}
+
+// Chebyshev twin of RoundDots — square cells grow to fill the whole cell rather than its inscribed circle.
+float CkUsf_Halftone_SquareDots(float2 P)
+{
+    float2 D = abs(frac(P) - 0.5);
+    return saturate(max(D.x, D.y) * 2.0);
+}
+
+float CkUsf_Halftone_Lines(float2 P)
+{
+    return CkUsf_TriangleWave(P.y);
+}
+
+float CkUsf_Halftone_DiagonalLines(float2 P)
+{
+    return CkUsf_TriangleWave((P.x + P.y) * 0.70710678);
+}
+
+// Two diagonal line fields at right angles; min() so ink survives wherever EITHER stroke passes.
+float CkUsf_Halftone_Crosshatch(float2 P)
+{
+    float A = CkUsf_TriangleWave((P.x + P.y) * 0.70710678);
+    float B = CkUsf_TriangleWave((P.x - P.y) * 0.70710678);
+    return min(A, B);
+}
+
+float CkUsf_Halftone_ConcentricCircles(float2 P)
+{
+    return CkUsf_TriangleWave(length(P));
+}
+
+// Triangular tiling: the cell is split along its diagonal and the two halves get mirrored ramps, so
+// the threshold grows toward each triangle's own centroid.
+float CkUsf_Halftone_Triangles(float2 P)
+{
+    float2 F = frac(P);
+    float Diagonal = F.x + F.y;
+    float2 Local = Diagonal < 1.0 ? F : (1.0 - F);
+    return saturate((Local.x + Local.y) * 1.5);
+}
+
+// Organic clumps rather than a lattice — value noise pushed toward its extremes so the clusters read
+// as discrete blobs instead of a smooth gradient.
+float CkUsf_Halftone_ClusteredNoise(float2 P)
+{
+    float N = CkUsf_ValueNoise(P);
+    return saturate(N * N * (3.0 - 2.0 * N));
+}
+
+// Archimedean spiral: the angle contributes Arms turns per revolution and the radius one band per
+// unit, so their sum is a single continuous ramp winding outward.
+float CkUsf_Halftone_Spiral(float2 P)
+{
+    const float Arms = 3.0;
+    float Angle = atan2(P.y, P.x) / 6.28318530718;
+    return CkUsf_TriangleWave(Angle * Arms + length(P));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Halftone dispatcher. PatternIndex is a STENCIL CONTRACT shared with the cel look's asset-side enum:
+//   Bayer = 0, RoundDots = 1, SquareDots = 2, Lines = 3, Crosshatch = 4, DiagonalLines = 5,
+//   ConcentricCircles = 6, Triangles = 7, ClusteredNoise = 8, Spiral = 9.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_Stylize_HalftonePattern(int PatternIndex, float2 P, float Contrast)
+{
+    float Threshold;
+
+    if      (PatternIndex == 0) { Threshold = CkUsf_Bayer8x8(P); }
+    else if (PatternIndex == 1) { Threshold = CkUsf_Halftone_RoundDots(P); }
+    else if (PatternIndex == 2) { Threshold = CkUsf_Halftone_SquareDots(P); }
+    else if (PatternIndex == 3) { Threshold = CkUsf_Halftone_Lines(P); }
+    else if (PatternIndex == 4) { Threshold = CkUsf_Halftone_Crosshatch(P); }
+    else if (PatternIndex == 5) { Threshold = CkUsf_Halftone_DiagonalLines(P); }
+    else if (PatternIndex == 6) { Threshold = CkUsf_Halftone_ConcentricCircles(P); }
+    else if (PatternIndex == 7) { Threshold = CkUsf_Halftone_Triangles(P); }
+    else if (PatternIndex == 8) { Threshold = CkUsf_Halftone_ClusteredNoise(P); }
+    else                        { Threshold = CkUsf_Halftone_Spiral(P); }
+
+    return CkUsf_Stylize_ApplyContrast(Threshold, Contrast);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Hand-drawn strokes. Same pattern-cell space and threshold convention as the halftones; Irregularity
+// (0..1) is how far the ideal stroke lattice is allowed to wander, which is the whole difference
+// between a printed screen and a drawn one.
+// --------------------------------------------------------------------------------------------------------------------
+
+// Low-frequency wobble applied to a stroke's coordinate — one fbm octave set per axis so the two
+// never share a zero crossing and the strokes bend independently.
+float2 CkUsf_StrokeWobble(float2 P, float Irregularity)
+{
+    float Amount = saturate(Irregularity);
+    float2 W = float2(CkUsf_Fbm(P * 0.35), CkUsf_Fbm(P * 0.35 + 19.7));
+    return P + (W - 0.5) * Amount * 2.0;
+}
+
+float CkUsf_Stroke_DiagonalPencil(float2 P, float Irregularity)
+{
+    float2 W = CkUsf_StrokeWobble(P, Irregularity);
+    // Per-stroke weight variation: neighbouring lines must not be equally dark or the field reads printed.
+    float Line = CkUsf_TriangleWave((W.x + W.y) * 0.70710678);
+    float Weight = lerp(1.0, CkUsf_Hash21(floor(float2((W.x + W.y) * 0.70710678, 0.0))), saturate(Irregularity));
+    return saturate(Line * lerp(1.0, Weight, 0.5));
+}
+
+float CkUsf_Stroke_Crosshatch(float2 P, float Irregularity)
+{
+    float2 W = CkUsf_StrokeWobble(P, Irregularity);
+    float A = CkUsf_TriangleWave((W.x + W.y) * 0.70710678);
+    float B = CkUsf_TriangleWave((W.x - W.y) * 0.70710678);
+    return min(A, B);
+}
+
+// A scribble is a crosshatch that lost its grid: the coordinate is domain-warped by a second fbm
+// before the line field, so strokes double back and cross at varying angles.
+float CkUsf_Stroke_LooseScribble(float2 P, float Irregularity)
+{
+    float Amount = saturate(Irregularity);
+    float2 Warp = float2(CkUsf_Fbm(P * 0.8 + 4.3), CkUsf_Fbm(P * 0.8 - 7.1)) - 0.5;
+    float2 W = P + Warp * (1.0 + Amount * 3.0);
+    float A = CkUsf_TriangleWave((W.x + W.y) * 0.70710678);
+    float B = CkUsf_TriangleWave(W.y);
+    return min(A, B);
+}
+
+// Jittered dots: each cell's dot is displaced within its own cell, so the stipple never lines up into
+// rows the eye can follow.
+float CkUsf_Stroke_Stipple(float2 P, float Irregularity)
+{
+    float2 Cell = floor(P);
+    float2 Jitter = (CkUsf_Hash22(Cell) - 0.5) * saturate(Irregularity);
+    float2 Local = frac(P) - 0.5 - Jitter;
+    float RadiusVariation = lerp(1.0, 0.5 + CkUsf_Hash21(Cell + 31.4), saturate(Irregularity));
+    return saturate(length(Local) * 2.0 / max(RadiusVariation, 1e-3));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Stroke dispatcher. PatternIndex is a STENCIL CONTRACT shared with the hand-drawn look's asset-side enum:
+//   DiagonalPencil = 0, Crosshatch = 1, LooseScribble = 2, Stipple = 3.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_Stylize_StrokePattern(int PatternIndex, float2 P, float Irregularity)
+{
+    if (PatternIndex == 0) { return CkUsf_Stroke_DiagonalPencil(P, Irregularity); }
+    if (PatternIndex == 1) { return CkUsf_Stroke_Crosshatch(P, Irregularity); }
+    if (PatternIndex == 2) { return CkUsf_Stroke_LooseScribble(P, Irregularity); }
+    return CkUsf_Stroke_Stipple(P, Irregularity);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Luminance + palette. The luma coefficients are Common.ush's (CkUsf_Desaturate, Rec.601) — the two
+// must agree or a desaturated pixel and a quantized one disagree on what "the same grey" means.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_Stylize_Luminance(float3 Color)
+{
+    return dot(Color, float3(0.299, 0.587, 0.114));
+}
+
+// Posterize each channel to Steps discrete levels. Steps < 2 is a flat fill, so it is clamped;
+// the min() keeps an input of exactly 1.0 in the top band instead of overshooting to N/(N-1).
+float3 CkUsf_Stylize_QuantizeSteps(float3 Color, float Steps)
+{
+    float N = max(Steps, 2.0);
+    return min(floor(saturate(Color) * N), N - 1.0) / (N - 1.0);
+}
+
+// Posterize the LUMINANCE only, preserving hue — the cel-band operator, as opposed to per-channel
+// posterization which shifts hue at every band edge.
+float3 CkUsf_Stylize_QuantizeLuminance(float3 Color, float Steps)
+{
+    float N = max(Steps, 2.0);
+    float Luma = CkUsf_Stylize_Luminance(Color);
+    float Banded = min(floor(saturate(Luma) * N), N - 1.0) / (N - 1.0);
+    return Color * (Banded / max(Luma, 1e-4));
+}
+
+// Nearest palette entry by squared RGB distance. Count is clamped to the array so an under-filled
+// palette can never read past its authored entries into whatever the caller left uninitialized.
+float3 CkUsf_Stylize_NearestPaletteColor(float3 Color, float3 Palette[8], int Count)
+{
+    int N = clamp(Count, 1, 8);
+    float3 Best = Palette[0];
+    float BestDistance = 1e9;
+
+    [unroll]
+    for (int I = 0; I < 8; ++I)
+    {
+        if (I >= N)
+        { continue; }
+
+        float3 Delta = Color - Palette[I];
+        float Distance = dot(Delta, Delta);
+        if (Distance < BestDistance)
+        {
+            BestDistance = Distance;
+            Best = Palette[I];
+        }
+    }
+    return Best;
+}
+
+// Monochrome with a tint: luminance drives a ramp from Shadow to Highlight, so an ink-on-paper look
+// is one call rather than a desaturate plus two lerps.
+float3 CkUsf_Stylize_MonochromeTint(float3 Color, float3 Shadow, float3 Highlight)
+{
+    return lerp(Shadow, Highlight, CkUsf_Stylize_Luminance(Color));
+}
