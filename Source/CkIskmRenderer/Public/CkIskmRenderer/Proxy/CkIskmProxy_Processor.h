@@ -233,6 +233,7 @@ namespace ck
     };
 
     class FProcessor_IskmProxy_Outline_EndPlay;
+    class FProcessor_IskmProxy_CelPattern_EndPlay;
 
     class CKISKMRENDERER_API FProcessor_IskmProxy_EndPlay : public ck_exp::TProcessor<
         FProcessor_IskmProxy_EndPlay,
@@ -242,9 +243,9 @@ namespace ck
     {
     public:
         using Group = FGroup_EndPlay;
-        // The entity-outline teardown must clear custom depth while this proxy still owns its SKMC —
-        // release it to the pool only after (Release_BaseSKMC also strips the flags defensively).
-        using RunAfter = TDepList<FProcessor_IskmProxy_Outline_EndPlay>;
+        // The entity-outline and cel-pattern teardowns must clear custom depth while this proxy still owns
+        // its SKMC — release it to the pool only after (Release_BaseSKMC also strips the flags defensively).
+        using RunAfter = TDepList<FProcessor_IskmProxy_Outline_EndPlay, FProcessor_IskmProxy_CelPattern_EndPlay>;
     public:
         using TProcessor::TProcessor;
         auto

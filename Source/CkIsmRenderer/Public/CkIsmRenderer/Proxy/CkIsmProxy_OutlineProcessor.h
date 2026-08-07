@@ -12,7 +12,7 @@
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Entity outlines for ISM proxies — see CkIsmRenderer/CLAUDE.md and CkUsf/DESIGN_EntityOutlines.md.
+// Entity outlines for ISM proxies — see CkIsmRenderer/CLAUDE.md and CkUsf/Claude.md § Entity outlines.
 
 namespace ck
 {

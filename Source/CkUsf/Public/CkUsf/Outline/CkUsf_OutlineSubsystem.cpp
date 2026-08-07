@@ -20,6 +20,23 @@
 
 auto
     UCkUsf_OutlineSubsystem::
+    ShouldCreateSubsystem(
+        UObject* InOuter) const
+    -> bool
+{
+    // A dedicated server renders nothing, so nothing should make it build the params LUT and the view
+    // machinery per world. Process-level rather than per-world on purpose: at this point the world has no
+    // NetDriver, so its net mode would only re-derive the same process answer. Known gap, matching the
+    // three Stylize subsystems' precedent: a PIE dedicated-server world lives in the editor process and
+    // still gets one.
+    if (IsRunningDedicatedServer())
+    { return false; }
+
+    return Super::ShouldCreateSubsystem(InOuter);
+}
+
+auto
+    UCkUsf_OutlineSubsystem::
     Get_OutlineSubsystem(
         const UObject* InWorldContextObject)
     -> UCkUsf_OutlineSubsystem*

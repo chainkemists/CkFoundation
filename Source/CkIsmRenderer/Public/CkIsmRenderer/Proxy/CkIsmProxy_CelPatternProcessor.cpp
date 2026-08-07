@@ -1,6 +1,5 @@
-#include "CkIsmProxy_OutlineProcessor.h"
+#include "CkIsmProxy_CelPatternProcessor.h"
 
-#include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/EditorSelectionOwner/CkEditorSelectionOwner_Utils.h"
@@ -10,49 +9,36 @@
 #include "CkIsmRenderer/CkIsmRenderer_Log.h"
 #include "CkIsmRenderer/CkIsmSubsystem.h"
 
-#include "CkUsf/Outline/CkUsf_OutlinePreset.h"
-#include "CkUsf/Outline/CkUsf_OutlineSubsystem.h"
+#include "CkUsf/Stylize/CkUsf_CelShadeSubsystem.h"
 
 #include "Engine/World.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_Outline_Sync);
-CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_Outline_TransformSync);
-CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_Outline_Suspend);
-CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_Outline_Remove);
-CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_Outline_EndPlay);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CelPattern_Sync);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CelPattern_TransformSync);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CelPattern_Suspend);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CelPattern_DropAppliedOnOutline);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CelPattern_Remove);
+CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CelPattern_EndPlay);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_ism_outline_processor
+namespace ck_ism_cel_pattern_processor
 {
     using ck_ism_proxy::Get_TransformWithLocalOffset;
 
-    // Safe during world/subsystem teardown — both lookups degrade to no-ops.
+    // No stencil to hand back: the cel contract is a direct value rather than the outline's refcounted
+    // allocation, so pulling the instance out of the shadow ISM is the whole teardown.
     auto
-        DoTeardownAppliedOutline(
-            const FCk_Handle& InHandle,
-            const ck::FFragment_IsmProxy_OutlineApplied& InApplied)
+        DoTeardownAppliedCelPattern(
+            const ck::FFragment_IsmProxy_CelPatternApplied& InApplied)
         -> void
     {
         if (auto* ShadowIsm = InApplied.Get_ShadowIsm().Get();
             ck::IsValid(ShadowIsm) && ShadowIsm->IsValidId(InApplied.Get_ShadowInstanceId()))
         {
             ShadowIsm->RemoveInstanceById(InApplied.Get_ShadowInstanceId());
-        }
-
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-        if (ck::Is_NOT_Valid(World))
-        { return; }
-
-        // An expired preset must not release: an invalid weak ptr compares equal to every other
-        // invalid weak ptr, so a nullptr Find inside Release_StencilFor can match an unrelated
-        // expired entry (same guard as UCkUsf_OutlineSubsystem::Remove_Outline_From_Component).
-        if (auto* OutlineSubsystem = World->GetSubsystem<UCkUsf_OutlineSubsystem>();
-            ck::IsValid(OutlineSubsystem, ck::IsValid_Policy_NullptrOnly{}) && InApplied.Get_Preset().IsValid())
-        {
-            OutlineSubsystem->Release_StencilFor(InApplied.Get_Preset().Get());
         }
     }
 }
@@ -62,7 +48,7 @@ namespace ck_ism_outline_processor
 namespace ck
 {
     auto
-        FProcessor_IsmProxy_Outline_Sync::
+        FProcessor_IsmProxy_CelPattern_Sync::
         DoTick(
             TimeType InDeltaT)
         -> void
@@ -73,64 +59,63 @@ namespace ck
     }
 
     auto
-        FProcessor_IsmProxy_Outline_Sync::
+        FProcessor_IsmProxy_CelPattern_Sync::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Usf_OutlineTarget& InTarget,
+            const FFragment_Usf_CelPatternTarget& InTarget,
             const FFragment_IsmProxy_Params& InParams,
             const FFragment_IsmProxy_Current& InCurrent,
             const FFragment_Transform& InTransform) const
         -> void
     {
-        using namespace ck_ism_outline_processor;
+        using namespace ck_ism_cel_pattern_processor;
 
-        auto* Preset = InTarget.Get_Preset().Get();
-
-        if (ck::Is_NOT_Valid(Preset, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(_World.Get()))
         { return; }
 
-        if (InHandle.Has<FFragment_IsmProxy_OutlineApplied>())
-        {
-            const auto& Applied = InHandle.Get<FFragment_IsmProxy_OutlineApplied>();
+        auto* CelShadeSubsystem = _World->GetSubsystem<UCkUsf_CelShadeSubsystem>();
 
-            const auto& StillValid = Applied.Get_Preset() == InTarget.Get_Preset() &&
+        if (ck::Is_NOT_Valid(CelShadeSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        { return; }
+
+        // 0 means the stencil contract is switched off in this world's settings — a shadow carrying it would
+        // write the engine's "nothing here" value and read as a silent success.
+        const auto StencilValue = CelShadeSubsystem->Get_StencilValueFor(InTarget.Get_Pattern());
+
+        if (StencilValue == 0)
+        { return; }
+
+        if (InHandle.Has<FFragment_IsmProxy_CelPatternApplied>())
+        {
+            const auto& Applied = InHandle.Get<FFragment_IsmProxy_CelPatternApplied>();
+
+            const auto& StillValid = Applied.Get_Pattern() == InTarget.Get_Pattern() &&
+                Applied.Get_StencilValue() == StencilValue &&
                 ck::IsValid(Applied.Get_ShadowIsm().Get()) &&
                 Applied.Get_ShadowIsm()->IsValidId(Applied.Get_ShadowInstanceId());
 
             if (StillValid)
             { return; }
 
-            DoTeardownAppliedOutline(InHandle, Applied);
-            InHandle.Remove<FFragment_IsmProxy_OutlineApplied>();
+            DoTeardownAppliedCelPattern(Applied);
+            InHandle.Remove<FFragment_IsmProxy_CelPatternApplied>();
         }
 
-        if (ck::Is_NOT_Valid(_World.Get()))
-        { return; }
-
-        auto* OutlineSubsystem = _World->GetSubsystem<UCkUsf_OutlineSubsystem>();
         auto* IsmSubsystem = _World->GetSubsystem<UCk_IsmRenderer_Subsystem_UE>();
 
-        if (ck::Is_NOT_Valid(OutlineSubsystem, ck::IsValid_Policy_NullptrOnly{}) ||
-            ck::Is_NOT_Valid(IsmSubsystem, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(IsmSubsystem, ck::IsValid_Policy_NullptrOnly{}))
         { return; }
 
-        const auto Stencil = OutlineSubsystem->Get_OrAllocate_StencilFor(Preset);
-        if (Stencil == 0)
-        { return; } // stencil range exhausted — already warned by the subsystem
-
-        const auto ShadowIsm = IsmSubsystem->FindOrCreate_OutlineIsmComponent(
-            InParams.Get_IsmRenderer().Get(), Preset, Stencil
+        const auto ShadowIsm = IsmSubsystem->FindOrCreate_CelPatternIsmComponent(
+            InParams.Get_IsmRenderer().Get(), static_cast<uint8>(StencilValue)
 #if WITH_EDITOR
             , UCk_Utils_EditorSelectionOwner_UE::TryGet_SelectionOwnerWeak(InHandle)
 #endif
             );
 
         if (ck::Is_NOT_Valid(ShadowIsm))
-        {
-            OutlineSubsystem->Release_StencilFor(Preset);
-            return;
-        }
+        { return; }
 
         constexpr auto TransformAsWorldSpace = true;
         const auto& InstanceTransform = Get_TransformWithLocalOffset(InParams, InTransform.Get_Transform());
@@ -140,16 +125,16 @@ namespace ck
             NOT CustomData.IsEmpty() && ShadowIsm->NumCustomDataFloats == CustomData.Num())
         { ShadowIsm->SetCustomDataById(ShadowInstanceId, CustomData); }
 
-        InHandle.AddOrGet<FFragment_IsmProxy_OutlineApplied>() =
-            FFragment_IsmProxy_OutlineApplied{Preset, ShadowIsm.Get(), ShadowInstanceId};
+        InHandle.AddOrGet<FFragment_IsmProxy_CelPatternApplied>() =
+            FFragment_IsmProxy_CelPatternApplied{InTarget.Get_Pattern(), ShadowIsm.Get(), ShadowInstanceId, StencilValue};
 
-        ck::ismrenderer::VeryVerbose(TEXT("Applied outline (shadow instance) for ISM Proxy [{}]"), InHandle);
+        ck::ismrenderer::VeryVerbose(TEXT("Applied cel pattern (shadow instance) for ISM Proxy [{}]"), InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_IsmProxy_Outline_TransformSync::
+        FProcessor_IsmProxy_CelPattern_TransformSync::
         DoTick(
             TimeType InDeltaT)
         -> void
@@ -164,16 +149,16 @@ namespace ck
     }
 
     auto
-        FProcessor_IsmProxy_Outline_TransformSync::
+        FProcessor_IsmProxy_CelPattern_TransformSync::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_IsmProxy_OutlineApplied& InApplied,
+            const FFragment_IsmProxy_CelPatternApplied& InApplied,
             const FFragment_IsmProxy_Params& InParams,
             const FFragment_Transform& InTransform)
         -> void
     {
-        using namespace ck_ism_outline_processor;
+        using namespace ck_ism_cel_pattern_processor;
 
         auto* ShadowIsm = InApplied.Get_ShadowIsm().Get();
 
@@ -191,43 +176,58 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_IsmProxy_Outline_Suspend::
+        FProcessor_IsmProxy_CelPattern_Suspend::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_IsmProxy_OutlineApplied& InApplied)
+            const FFragment_IsmProxy_CelPatternApplied& InApplied)
         -> void
     {
-        ck_ism_outline_processor::DoTeardownAppliedOutline(InHandle, InApplied);
-        InHandle.Remove<FFragment_IsmProxy_OutlineApplied>();
+        ck_ism_cel_pattern_processor::DoTeardownAppliedCelPattern(InApplied);
+        InHandle.Try_Remove<FFragment_IsmProxy_CelPatternApplied>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_IsmProxy_Outline_Remove::
+        FProcessor_IsmProxy_CelPattern_DropAppliedOnOutline::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_IsmProxy_OutlineApplied& InApplied)
+            const FFragment_IsmProxy_CelPatternApplied& InApplied,
+            const FFragment_Usf_OutlineTarget& InOutlineTarget)
         -> void
     {
-        ck_ism_outline_processor::DoTeardownAppliedOutline(InHandle, InApplied);
-        InHandle.Remove<FFragment_IsmProxy_OutlineApplied>();
+        ck_ism_cel_pattern_processor::DoTeardownAppliedCelPattern(InApplied);
+        InHandle.Try_Remove<FFragment_IsmProxy_CelPatternApplied>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_IsmProxy_Outline_EndPlay::
+        FProcessor_IsmProxy_CelPattern_Remove::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_IsmProxy_OutlineApplied& InApplied)
+            const FFragment_IsmProxy_CelPatternApplied& InApplied)
         -> void
     {
-        ck_ism_outline_processor::DoTeardownAppliedOutline(InHandle, InApplied);
-        InHandle.Remove<FFragment_IsmProxy_OutlineApplied>();
+        ck_ism_cel_pattern_processor::DoTeardownAppliedCelPattern(InApplied);
+        InHandle.Try_Remove<FFragment_IsmProxy_CelPatternApplied>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_IsmProxy_CelPattern_EndPlay::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_CelPatternApplied& InApplied)
+        -> void
+    {
+        ck_ism_cel_pattern_processor::DoTeardownAppliedCelPattern(InApplied);
+        InHandle.Try_Remove<FFragment_IsmProxy_CelPatternApplied>();
     }
 }
 

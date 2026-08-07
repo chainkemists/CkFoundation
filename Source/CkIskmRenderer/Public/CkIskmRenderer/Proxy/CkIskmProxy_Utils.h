@@ -118,11 +118,24 @@ public:
     Get_IsRagdolling(const FCk_Handle_IskmProxy& InHandle);
 
     // True once the entity outline (ck::FFragment_Usf_OutlineTarget) is applied to this proxy's SKMCs —
-    // see CkUsf/DESIGN_EntityOutlines.md. Used by autotests/gyms.
+    // see CkUsf/Claude.md § Entity outlines. Used by autotests/gyms.
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
         DisplayName = "[Ck][IskmProxy] Get Is Outline Applied")
     static bool
     Get_IsOutlineApplied(const FCk_Handle_IskmProxy& InHandle);
+
+    // True once the entity cel pattern (ck::FFragment_Usf_CelPatternTarget) is applied to this proxy's
+    // SKMCs — see CkUsf/Claude.md § Cel shade (Stylize). Used by autotests/gyms.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName = "[Ck][IskmProxy] Get Is Cel Pattern Applied")
+    static bool
+    Get_IsCelPatternApplied(const FCk_Handle_IskmProxy& InHandle);
+
+    // The Custom-Stencil value written on this proxy's SKMCs by the cel pattern, or 0 when none is applied.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
+        DisplayName = "[Ck][IskmProxy] Get Cel Pattern Stencil Value")
+    static int32
+    Get_CelPatternStencilValue(const FCk_Handle_IskmProxy& InHandle);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
         DisplayName="[Ck][IskmProxy] Get Pose Source")
