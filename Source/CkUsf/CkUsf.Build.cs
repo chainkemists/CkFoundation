@@ -15,10 +15,12 @@ public class CkUsf : CkModuleRules
             "RHI",
             "Projects",
             "GameplayTags",
+            "DeveloperSettings",     // UCk_Usf_Stylize_ProjectSettings_UE derives from UDeveloperSettingsBackedByCVars
 
             "CkCore",
             "CkEcs",
             "CkLog",
+            "CkSettings",
             "CkGraphics",
         });
     }

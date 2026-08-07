@@ -18,8 +18,8 @@ namespace ck::usf_editor
     // InPackageRootOverride (both functions) redirects the generated package to another content root, e.g.
     // "/CkFoundation/CkUsf/GeneratedLooksTest/P1234". It exists for the automation lanes: a real-RHI run is
     // spread over concurrent editors, and two of them saving the same shipped .uasset kills both. Empty is
-    // the shipped root, so the console command, the package-save hook and the generator subsystem produce
-    // byte-identically what they always did.
+    // the shipped root, so the console command, the package-save hook and the generator subsystem all write
+    // the shipped packages, byte for byte.
 
     // Discovers all UCkUsf_LookDefinition assets and generates/refreshes a master per look.
     CKUSFEDITOR_API auto Generate_AllLookMaterials(const FString& InPackageRootOverride = {}) -> FGenerateResult;
@@ -34,7 +34,7 @@ namespace ck::usf_editor
     // Returns true (clean) when the process cannot render — a -nullrhi run never builds shader maps.
     //
     // InForceSynchronousCompile is what gives the check TEETH, and it is DESTRUCTIVE: without it the shader jobs
-    // are still pending and a broken .ush passes (mutation-tested 2026-08-06). With it, the material is left
+    // are still pending and a broken .ush passes. With it, the material is left
     // without an applied game-thread shader map — measured, that makes the master render BLACK, which is why
     // generation must NOT force it across the roster. Pass true only for a throwaway master you are about to
     // discard; pass false to gate a master that will actually be used.

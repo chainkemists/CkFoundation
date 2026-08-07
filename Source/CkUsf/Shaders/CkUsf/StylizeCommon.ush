@@ -301,6 +301,17 @@ float CkUsf_Stylize_Luminance(float3 Color)
     return dot(Color, float3(0.299, 0.587, 0.114));
 }
 
+// Saturation about the pixel's own luminance. Values above 1 push a channel that sits below the luma
+// NEGATIVE (Saturation 1.15 on a pure red drives blue to -0.15*luma), and the two pre-tonemap looks emit
+// their result straight into scene-referred linear where a negative channel is not clipped by anything —
+// it reaches the tonemapper. The output floor is therefore part of the operator rather than each caller's
+// business, and it is inert at Saturation <= 1, which is where a non-negative input cannot go negative.
+float3 CkUsf_Stylize_ApplySaturation(float3 Color, float Saturation)
+{
+    float Luma = CkUsf_Stylize_Luminance(Color);
+    return max(lerp(float3(Luma, Luma, Luma), Color, max(Saturation, 0.0)), 0.0);
+}
+
 // Posterize each channel to Steps discrete levels. Steps < 2 is a flat fill, so it is clamped;
 // the min() keeps an input of exactly 1.0 in the top band instead of overshooting to N/(N-1).
 float3 CkUsf_Stylize_QuantizeSteps(float3 Color, float Steps)

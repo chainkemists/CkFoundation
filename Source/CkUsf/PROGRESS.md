@@ -11,6 +11,25 @@ IskmApplyRemove, IsmShadowInstances, VatShadowCustomData}, GeneratesUsableMaster
 MultiPassRendersToTexture, NiagaraSpriteContract, OutlineStencilAlloc,
 FRigVMFunction_DeltaFromPreviousFloat (engine-side pattern match, ignorable). Captured
 2026-08-06 after deleting the stale `utils_world_space_widget.as` (see dated entry).
+**CAMPAIGN COMPLETE 2026-08-07 — all 5 gates + interlude landed** (final commit = the one carrying
+this entry + CkTests sibling; NOTHING PUSHED — publish via ck-ship-dev on the maintainer's word).
+Final baselines: **25/25** standard `-nullrhi` Usf / **19/19** real-RHI parallel. Campaign docs are
+ready-for-deletion once the [EDITOR-VERIFY] passes land (deletion = maintainer's call; permanent
+record = CkUsf/Claude.md).
+**Maintainer-only steps, in order:** (1) the three gym passes (steps in Gate-2/3/4 dated entries) —
+load-bearing: cel illumination (bands straight across the gradient wall; pivot `_QuantizeFinalColor`),
+hand-drawn stroke-space A/B, dither FourColorHandheld exact-4-colors; (2) Gate-5 checks: Project
+Settings → CkFoundation → "Usf Stylize" default-preset row (fresh PIE, zero game code; and a
+BeginPlay-writer map must beat the project row), CVar liveness incl. `_MAX`-value rejection,
+stacking Execs, saturation-preset visual regression; (3) push decision.
+**Confirmed vs inferred (campaign-wide):** all structural/code claims are test- or audit-confirmed
+(counts above; mutation-proven compile gate + MID-name guards + CVar-overlay-reaches-MID). Inferred,
+unverifiable without PIE/packaging: every visual claim; the packaged-game deferral branch of
+DoApply_ProjectDefault (dead code in editor, reasoned from engine init order).
+**Follow-ups (recorded in CkUsf/Claude.md):** ISM/ISKM cel-pattern sync processors; outline
+subsystem ShouldCreateSubsystem server guard; DESIGN_EntityOutlines.md's 10 dangling citations in
+renderer modules; CkCVar/Claude.md doc drift (documents an API that doesn't exist); BusterBlock
+checkout will need this pulled through its CkFoundation submodule.
 **Gate 4 DONE 2026-08-07** (landed as the commit carrying this entry + CkTests sibling; baseline
 now 23/23 standard / 17/17 real-RHI serial). Maintainer [EDITOR-VERIFY]: "Stylize: Hand-Drawn" gym
 — 6 preset stations + 3 debug-mask stations; headline check: world-attached strokes glued to the
@@ -222,6 +241,6 @@ generation-test lane de-collision, each its own commit; THEN Gate 5.
 | Gate 2 entry pre-flight | Resolved 2026-08-06 | — |
 | Gate 2 gym [EDITOR-VERIFY] | Open (maintainer) | Steps in the Gate-2 dated entry |
 | Gate 3 entry pre-flight | Resolved 2026-08-06 | — |
-| Interlude (maintainer-ordered, AFTER Gate 4 lands, BEFORE Gate 5): fix outline-subsystem stale MID on failed view-actor spawn (mirror ScreenDither subsystem shape) + de-collide CkUsf generation tests across real-RHI toolbox lanes (lane-unique transient package paths preferred; editor-facing path unchanged) | Open | Execute both, test, land as their own commits |
+| Interlude (maintainer-ordered) | Resolved 2026-08-07 | Landed: outline stale-MID `dc7b6108d`; lane de-collision `e9f0bb375` + CkTests `1979d172` (parallel real-RHI proven 2×17/17, zero SavePackage hits; test runs no longer churn tracked masters — `--parallel 1` constraint retired) |
 
 **Rule: no completion claim may be written anywhere in this file while any row here is unresolved.**

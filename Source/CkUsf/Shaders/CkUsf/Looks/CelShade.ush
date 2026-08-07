@@ -303,8 +303,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
 
     Cel *= lerp(ShadowTint, LightTint, Level);
 
-    float CelLuma = CkUsf_Stylize_Luminance(Cel);
-    Cel = lerp(float3(CelLuma, CelLuma, CelLuma), Cel, max(Saturation, 0.0));
+    Cel = CkUsf_Stylize_ApplySaturation(Cel, Saturation);
 
     // ---- Stepped specular --------------------------------------------------------------------------
     if (EnableSpecular > 0.5 && !IsSky && Roughness <= saturate(SpecularRoughnessCutoff))

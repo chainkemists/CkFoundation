@@ -2,8 +2,11 @@
 
 #include "CkUsf/LookDefinition/CkUsf_LookDefinition_Naming.h"
 #include "CkUsf/Stylize/CkUsf_HandDrawnPreset.h"
+#include "CkUsf/Stylize/CkUsf_Stylize_CVars.h"
+#include "CkUsf/Stylize/CkUsf_Stylize_ProjectSettings.h"
 #include "CkUsf_Log.h"
 
+#include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "Components/PostProcessComponent.h"
@@ -12,12 +15,64 @@
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Misc/CoreDelegates.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 const FName UCkUsf_HandDrawnSubsystem::kLookName = TEXT("HandDrawn");
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCkUsf_HandDrawnSubsystem::
+    ShouldCreateSubsystem(
+        UObject* InOuter) const
+    -> bool
+{
+    // A dedicated server renders nothing, so a configured default preset must not make it load a master,
+    // build a MID and spawn a post-process actor per world. Process-level rather than per-world on
+    // purpose: at this point the world has no NetDriver, so its net mode would only re-derive the same
+    // process answer. Known gap, matching the UCk_LoadingScreen_Subsystem_UE precedent's granularity: a
+    // PIE dedicated-server world lives in the editor process and still gets one.
+    if (IsRunningDedicatedServer())
+    { return false; }
+
+    return Super::ShouldCreateSubsystem(InOuter);
+}
+
+auto
+    UCkUsf_HandDrawnSubsystem::
+    Initialize(
+        FSubsystemCollectionBase& InCollection)
+    -> void
+{
+    Super::Initialize(InCollection);
+
+    _CVarChangedHandle = ck::usf::stylize::Get_OnCVarChanged().AddUObject(
+        this, &UCkUsf_HandDrawnSubsystem::DoOn_CVarChanged);
+}
+
+auto
+    UCkUsf_HandDrawnSubsystem::
+    Deinitialize()
+    -> void
+{
+    ck::usf::stylize::Get_OnCVarChanged().Remove(_CVarChangedHandle);
+    _CVarChangedHandle.Reset();
+
+    Super::Deinitialize();
+}
+
+auto
+    UCkUsf_HandDrawnSubsystem::
+    OnWorldBeginPlay(
+        UWorld& InWorld)
+    -> void
+{
+    Super::OnWorldBeginPlay(InWorld);
+
+    DoApply_ProjectDefault();
+}
 
 auto
     UCkUsf_HandDrawnSubsystem::
@@ -41,6 +96,8 @@ auto
         ECk_EnableDisable InEnabled)
     -> void
 {
+    _SettingsExplicitlySet = true;
+
     _Settings.Set_Enabled(InEnabled);
     DoSync_ViewEffect();
 }
@@ -93,6 +150,8 @@ auto
     if (NOT InkFadeRangeIsOrdered)
     { return; }
 
+    _SettingsExplicitlySet = true;
+
     _Settings = InSettings;
     DoSync_ViewEffect();
 }
@@ -110,6 +169,12 @@ auto
     Request_ResetToDefaults()
     -> void
 {
+    if (auto* DefaultPreset = DoResolve_ProjectDefaultPreset())
+    {
+        Apply_Preset(DefaultPreset);
+        return;
+    }
+
     Request_SetSettings(FCk_Usf_HandDrawn_Params{});
 }
 
@@ -170,21 +235,135 @@ auto
     if (DoEnsure_ViewEffect() == false)
     { return; }
 
+    const auto Effective = DoGet_EffectiveSettings();
+
     // The component is owned by a world-spawned actor, so it can be torn down under us while the MID
     // (outered to this subsystem) survives and keeps DoEnsure_ViewEffect returning true.
     if (ck::IsValid(_ViewPP))
-    { _ViewPP->bEnabled = _Settings.Get_Enabled() == ECk_EnableDisable::Enable; }
+    { _ViewPP->bEnabled = Effective.Get_Enabled() == ECk_EnableDisable::Enable; }
 
-    DoWrite_ChangedParams();
+    DoWrite_ChangedParams(Effective);
 }
 
 auto
     UCkUsf_HandDrawnSubsystem::
-    DoWrite_ChangedParams()
+    DoGet_EffectiveSettings() const
+    -> FCk_Usf_HandDrawn_Params
+{
+    auto Effective = _Settings;
+
+    const auto EnabledOverride = ck::usf::stylize::Get_EnabledOverride_HandDrawn();
+    if (EnabledOverride >= 0)
+    {
+        Effective.Set_Enabled(EnabledOverride > 0 ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable);
+    }
+
+    const auto DebugOverride = ck::usf::stylize::Get_DebugOverride_HandDrawn();
+    if (DebugOverride >= 0)
+    {
+        // UHT appends a _MAX enumerator to every UENUM and IsValidEnumValue accepts it, so
+        // one-past-the-end would pass here and then fall through the shader's if-chain to the
+        // final image — a debug mode that silently shows no debug view.
+        const auto* DebugEnum = StaticEnum<ECk_Usf_HandDrawn_DebugMode>();
+        const auto DebugOverrideIsValid =
+            DebugEnum->IsValidEnumValue(DebugOverride) && DebugOverride != DebugEnum->GetMaxEnumValue();
+
+        CK_ENSURE_IF_NOT(DebugOverrideIsValid,
+            TEXT("ck.Usf.HandDrawn.Debug is [{}], which is not an ECk_Usf_HandDrawn_DebugMode value; "
+                 "the setting's own debug mode is used instead"), DebugOverride)
+        {}
+
+        if (DebugOverrideIsValid)
+        { Effective.Set_DebugMode(static_cast<ECk_Usf_HandDrawn_DebugMode>(DebugOverride)); }
+    }
+
+    return Effective;
+}
+
+auto
+    UCkUsf_HandDrawnSubsystem::
+    DoOn_CVarChanged()
+    -> void
+{
+    // A debug CVar must never be what instantiates the effect: every world has one of these subsystems,
+    // and the settings default to Enabled, so an unconditional re-sync would switch HandDrawn on in every
+    // world that merely exists the moment anyone touches a console value. Worlds already carrying the
+    // effect re-sync, and an explicit force-on is allowed to create it.
+    if (_HandDrawnMID == nullptr && ck::usf::stylize::Get_EnabledOverride_HandDrawn() != 1)
+    { return; }
+
+    DoSync_ViewEffect();
+}
+
+auto
+    UCkUsf_HandDrawnSubsystem::
+    DoResolve_ProjectDefaultPreset() const
+    -> UCkUsf_HandDrawnPreset*
+{
+    const auto SoftPreset = UCk_Utils_Usf_Stylize_Settings_UE::Get_HandDrawnDefaultPreset();
+
+    // Unset is the "no default style" answer, not a failure — the effect simply stays off.
+    if (SoftPreset.IsNull())
+    { return nullptr; }
+
+    auto* Preset = SoftPreset.LoadSynchronous();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Preset, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Project settings name [{}] as the default HandDrawn preset, but it could not be loaded"),
+        SoftPreset.ToString())
+    {}
+
+    return Preset;
+}
+
+auto
+    UCkUsf_HandDrawnSubsystem::
+    DoApply_ProjectDefault()
+    -> void
+{
+    // A packaged game runs its startup map's BeginPlay from inside FEngineLoop::Init, before
+    // OnFEngineLoopInitComplete flips the blocking-load flag — resolving the soft ref there is the
+    // premature-load class CkCore documents. The retry deliberately does NOT re-test the flag: it is
+    // already ON that delegate, and CkCore's own flag-setting registrar may run after us in add-order.
+    if (UCk_Utils_IO_UE::Get_IsEngineSafeForBlockingLoads_Peek())
+    {
+        DoApply_ProjectDefault_Now();
+        return;
+    }
+
+    FCoreDelegates::OnFEngineLoopInitComplete.AddWeakLambda(this, [this]()
+    {
+        DoApply_ProjectDefault_Now();
+    });
+}
+
+auto
+    UCkUsf_HandDrawnSubsystem::
+    DoApply_ProjectDefault_Now()
+    -> void
+{
+    // A default is a DEFAULT: game code that has already spoken wins. This only bites on the
+    // deferred path — a packaged game runs its startup map's BeginPlay inside FEngineLoop::Init,
+    // so gameplay can legitimately have set settings before the delegate that carries us here
+    // fires, and applying the project row then would silently undo it.
+    if (_SettingsExplicitlySet)
+    { return; }
+
+    auto* DefaultPreset = DoResolve_ProjectDefaultPreset();
+    if (DefaultPreset == nullptr)
+    { return; }
+
+    Apply_Preset(DefaultPreset);
+}
+
+auto
+    UCkUsf_HandDrawnSubsystem::
+    DoWrite_ChangedParams(
+        const FCk_Usf_HandDrawn_Params& InEffective)
     -> void
 {
     const auto WriteAll = _WrittenSettings.IsSet() == false;
-    const auto& Previous = WriteAll ? _Settings : _WrittenSettings.GetValue();
+    const auto& Previous = WriteAll ? InEffective : _WrittenSettings.GetValue();
 
     const auto Set_Scalar = [&](const TCHAR* InName, float InValue, float InPrevious) -> void
     {
@@ -208,66 +387,66 @@ auto
         return InEnableDisable == ECk_EnableDisable::Enable ? 1.0f : 0.0f;
     };
 
-    Set_Scalar(TEXT("StyleStrength"), _Settings.Get_StyleStrength(), Previous.Get_StyleStrength());
+    Set_Scalar(TEXT("StyleStrength"), InEffective.Get_StyleStrength(), Previous.Get_StyleStrength());
 
     Set_Scalar(TEXT("SimplifyColor"),
-        Get_Flag(_Settings.Get_SimplifyColor()), Get_Flag(Previous.Get_SimplifyColor()));
+        Get_Flag(InEffective.Get_SimplifyColor()), Get_Flag(Previous.Get_SimplifyColor()));
     Set_Scalar(TEXT("ColorLevels"),
-        static_cast<float>(_Settings.Get_ColorLevels()), static_cast<float>(Previous.Get_ColorLevels()));
-    Set_Scalar(TEXT("ColorSoftness"), _Settings.Get_ColorSoftness(), Previous.Get_ColorSoftness());
-    Set_Scalar(TEXT("Saturation"), _Settings.Get_Saturation(), Previous.Get_Saturation());
-    Set_Scalar(TEXT("Contrast"), _Settings.Get_Contrast(), Previous.Get_Contrast());
-    Set_Scalar(TEXT("TintStrength"), _Settings.Get_TintStrength(), Previous.Get_TintStrength());
+        static_cast<float>(InEffective.Get_ColorLevels()), static_cast<float>(Previous.Get_ColorLevels()));
+    Set_Scalar(TEXT("ColorSoftness"), InEffective.Get_ColorSoftness(), Previous.Get_ColorSoftness());
+    Set_Scalar(TEXT("Saturation"), InEffective.Get_Saturation(), Previous.Get_Saturation());
+    Set_Scalar(TEXT("Contrast"), InEffective.Get_Contrast(), Previous.Get_Contrast());
+    Set_Scalar(TEXT("TintStrength"), InEffective.Get_TintStrength(), Previous.Get_TintStrength());
     Set_Scalar(TEXT("AffectSky"),
-        Get_Flag(_Settings.Get_AffectSky()), Get_Flag(Previous.Get_AffectSky()));
-    Set_Scalar(TEXT("SkyDistance"), _Settings.Get_SkyDistance(), Previous.Get_SkyDistance());
+        Get_Flag(InEffective.Get_AffectSky()), Get_Flag(Previous.Get_AffectSky()));
+    Set_Scalar(TEXT("SkyDistance"), InEffective.Get_SkyDistance(), Previous.Get_SkyDistance());
 
     Set_Scalar(TEXT("EnableInk"),
-        Get_Flag(_Settings.Get_EnableInk()), Get_Flag(Previous.Get_EnableInk()));
-    Set_Scalar(TEXT("InkThickness"), _Settings.Get_InkThickness(), Previous.Get_InkThickness());
-    Set_Scalar(TEXT("InkOpacity"), _Settings.Get_InkOpacity(), Previous.Get_InkOpacity());
-    Set_Scalar(TEXT("DepthThreshold"), _Settings.Get_DepthThreshold(), Previous.Get_DepthThreshold());
-    Set_Scalar(TEXT("NormalThreshold"), _Settings.Get_NormalThreshold(), Previous.Get_NormalThreshold());
+        Get_Flag(InEffective.Get_EnableInk()), Get_Flag(Previous.Get_EnableInk()));
+    Set_Scalar(TEXT("InkThickness"), InEffective.Get_InkThickness(), Previous.Get_InkThickness());
+    Set_Scalar(TEXT("InkOpacity"), InEffective.Get_InkOpacity(), Previous.Get_InkOpacity());
+    Set_Scalar(TEXT("DepthThreshold"), InEffective.Get_DepthThreshold(), Previous.Get_DepthThreshold());
+    Set_Scalar(TEXT("NormalThreshold"), InEffective.Get_NormalThreshold(), Previous.Get_NormalThreshold());
     Set_Scalar(TEXT("ColorEdgeThreshold"),
-        _Settings.Get_ColorEdgeThreshold(), Previous.Get_ColorEdgeThreshold());
-    Set_Scalar(TEXT("LineVariation"), _Settings.Get_LineVariation(), Previous.Get_LineVariation());
-    Set_Scalar(TEXT("LineScale"), _Settings.Get_LineScale(), Previous.Get_LineScale());
+        InEffective.Get_ColorEdgeThreshold(), Previous.Get_ColorEdgeThreshold());
+    Set_Scalar(TEXT("LineVariation"), InEffective.Get_LineVariation(), Previous.Get_LineVariation());
+    Set_Scalar(TEXT("LineScale"), InEffective.Get_LineScale(), Previous.Get_LineScale());
     Set_Scalar(TEXT("InkFadeStartDistance"),
-        _Settings.Get_InkFadeStartDistance(), Previous.Get_InkFadeStartDistance());
+        InEffective.Get_InkFadeStartDistance(), Previous.Get_InkFadeStartDistance());
     Set_Scalar(TEXT("InkFadeEndDistance"),
-        _Settings.Get_InkFadeEndDistance(), Previous.Get_InkFadeEndDistance());
+        InEffective.Get_InkFadeEndDistance(), Previous.Get_InkFadeEndDistance());
 
     Set_Scalar(TEXT("EnableShadowStrokes"),
-        Get_Flag(_Settings.Get_EnableShadowStrokes()), Get_Flag(Previous.Get_EnableShadowStrokes()));
+        Get_Flag(InEffective.Get_EnableShadowStrokes()), Get_Flag(Previous.Get_EnableShadowStrokes()));
     Set_Scalar(TEXT("StrokePattern"),
-        Get_EnumIndex(_Settings.Get_StrokePattern()), Get_EnumIndex(Previous.Get_StrokePattern()));
+        Get_EnumIndex(InEffective.Get_StrokePattern()), Get_EnumIndex(Previous.Get_StrokePattern()));
     Set_Scalar(TEXT("StrokeSpace"),
-        Get_EnumIndex(_Settings.Get_StrokeSpace()), Get_EnumIndex(Previous.Get_StrokeSpace()));
-    Set_Scalar(TEXT("StrokeStrength"), _Settings.Get_StrokeStrength(), Previous.Get_StrokeStrength());
+        Get_EnumIndex(InEffective.Get_StrokeSpace()), Get_EnumIndex(Previous.Get_StrokeSpace()));
+    Set_Scalar(TEXT("StrokeStrength"), InEffective.Get_StrokeStrength(), Previous.Get_StrokeStrength());
     Set_Scalar(TEXT("StrokeShadowThreshold"),
-        _Settings.Get_StrokeShadowThreshold(), Previous.Get_StrokeShadowThreshold());
-    Set_Scalar(TEXT("StrokePixelSize"), _Settings.Get_StrokePixelSize(), Previous.Get_StrokePixelSize());
-    Set_Scalar(TEXT("StrokeWorldSize"), _Settings.Get_StrokeWorldSize(), Previous.Get_StrokeWorldSize());
+        InEffective.Get_StrokeShadowThreshold(), Previous.Get_StrokeShadowThreshold());
+    Set_Scalar(TEXT("StrokePixelSize"), InEffective.Get_StrokePixelSize(), Previous.Get_StrokePixelSize());
+    Set_Scalar(TEXT("StrokeWorldSize"), InEffective.Get_StrokeWorldSize(), Previous.Get_StrokeWorldSize());
     Set_Scalar(TEXT("StrokeIrregularity"),
-        _Settings.Get_StrokeIrregularity(), Previous.Get_StrokeIrregularity());
+        InEffective.Get_StrokeIrregularity(), Previous.Get_StrokeIrregularity());
     Set_Scalar(TEXT("StrokeTriplanarSharpness"),
-        _Settings.Get_StrokeTriplanarSharpness(), Previous.Get_StrokeTriplanarSharpness());
+        InEffective.Get_StrokeTriplanarSharpness(), Previous.Get_StrokeTriplanarSharpness());
 
     Set_Scalar(TEXT("EnablePaper"),
-        Get_Flag(_Settings.Get_EnablePaper()), Get_Flag(Previous.Get_EnablePaper()));
-    Set_Scalar(TEXT("GrainStrength"), _Settings.Get_GrainStrength(), Previous.Get_GrainStrength());
-    Set_Scalar(TEXT("GrainScale"), _Settings.Get_GrainScale(), Previous.Get_GrainScale());
-    Set_Scalar(TEXT("FiberStrength"), _Settings.Get_FiberStrength(), Previous.Get_FiberStrength());
-    Set_Scalar(TEXT("PaperWarmth"), _Settings.Get_PaperWarmth(), Previous.Get_PaperWarmth());
+        Get_Flag(InEffective.Get_EnablePaper()), Get_Flag(Previous.Get_EnablePaper()));
+    Set_Scalar(TEXT("GrainStrength"), InEffective.Get_GrainStrength(), Previous.Get_GrainStrength());
+    Set_Scalar(TEXT("GrainScale"), InEffective.Get_GrainScale(), Previous.Get_GrainScale());
+    Set_Scalar(TEXT("FiberStrength"), InEffective.Get_FiberStrength(), Previous.Get_FiberStrength());
+    Set_Scalar(TEXT("PaperWarmth"), InEffective.Get_PaperWarmth(), Previous.Get_PaperWarmth());
 
     Set_Scalar(TEXT("DebugMode"),
-        Get_EnumIndex(_Settings.Get_DebugMode()), Get_EnumIndex(Previous.Get_DebugMode()));
+        Get_EnumIndex(InEffective.Get_DebugMode()), Get_EnumIndex(Previous.Get_DebugMode()));
 
-    Set_Vector(TEXT("ShadowTint"), _Settings.Get_ShadowTint(), Previous.Get_ShadowTint());
-    Set_Vector(TEXT("HighlightTint"), _Settings.Get_HighlightTint(), Previous.Get_HighlightTint());
-    Set_Vector(TEXT("InkColor"), _Settings.Get_InkColor(), Previous.Get_InkColor());
+    Set_Vector(TEXT("ShadowTint"), InEffective.Get_ShadowTint(), Previous.Get_ShadowTint());
+    Set_Vector(TEXT("HighlightTint"), InEffective.Get_HighlightTint(), Previous.Get_HighlightTint());
+    Set_Vector(TEXT("InkColor"), InEffective.Get_InkColor(), Previous.Get_InkColor());
 
-    _WrittenSettings = _Settings;
+    _WrittenSettings = InEffective;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -13,7 +13,7 @@ namespace ck::usf
     // InPackageRootOverride is a TEST seam. A real-RHI automation run is spread over concurrent editors, and
     // two of them saving the same generated .uasset kills both (SavePackage ERROR_ALREADY_EXISTS), so the
     // generation tests write to a lane-unique root instead. An empty override IS the shipped root, so every
-    // editor-facing path resolves exactly what it always did.
+    // editor-facing path resolves the shipped package.
     inline auto Get_GeneratedMasterPackagePath(const FName InLookName, const FString& InPackageRootOverride = {}) -> FString
     {
         const auto Root = InPackageRootOverride.IsEmpty() ? Get_GeneratedMasterPackageRoot() : InPackageRootOverride;

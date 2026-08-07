@@ -80,6 +80,9 @@ Before writing any code, navigate the documentation in this order:
 | ECS raycast sensing | `CkRaySense` |
 | replicate render-target pixels / draw calls | `CkRenderTarget` (no doc yet) |
 | runtime shader Looks / outline rendering | `CkUsf` |
+| full-screen hand-drawn look (paint, ink contours, hatching, paper grain) | `CkUsf` — `Stylize/CkUsf_HandDrawnSubsystem` |
+| full-screen cel shading (quantized bands, halftone transitions, per-object pattern via Custom Stencil) | `CkUsf` — `Stylize/CkUsf_CelShadeSubsystem` |
+| post-tonemap palette reduction / ordered dithering / pixelation | `CkUsf` — `Stylize/CkUsf_ScreenDitherSubsystem` |
 | ISM / skeletal-instance rendering | `CkIsmRenderer` / `CkIskmRenderer` |
 | retained editor and high-count entity visualizers | `CkEntityVisualizer` (CkPmg analytical shapes + shared CkIsm primitives) |
 | vertex-animation-texture playback (bake skeletal anims to textures, tick-less ISM instances) | `CkVat` (+ `CkVatEditor` baker) |

@@ -14,7 +14,7 @@ namespace ck
 {
     // Declarative "render this entity with THIS cel pattern" marker, written by
     // UCk_Utils_Usf_CelPattern_UE; a per-renderer sync processor turns it into a Custom-Stencil value
-    // (actor path in CkUsf; ISM/ISKM are recorded follow-ups). Cascade-derived targets are removed by
+    // (actor path in CkUsf; ISM/ISKM proxies are not covered). Cascade-derived targets are removed by
     // Request_ClearCelPattern on the parent; explicit targets never are.
     struct CKUSF_API FFragment_Usf_CelPatternTarget
     {

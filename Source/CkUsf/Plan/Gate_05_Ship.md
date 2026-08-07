@@ -1,6 +1,6 @@
 # Gate 5 — Ship: project defaults, CVars, gyms, docs, audit
 
-> **Status:** ⏳ Pending
+> **Status:** ✅ Done (2026-08-07) — audited (ACCEPT-WITH-FIXES, all applied + re-verified 25/25 standard, 19/19 real-RHI parallel); maintainer [EDITOR-VERIFY] items in PROGRESS.md final entry
 > **Depends on:** Gate 4 ✅
 > **Estimate:** 1–2 sessions — re-date at entry; record actual at exit
 

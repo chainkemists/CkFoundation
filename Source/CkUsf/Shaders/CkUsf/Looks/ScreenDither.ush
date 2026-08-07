@@ -125,9 +125,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_ScreenDither(
     }
 
     // ---- 2. Colour shaping ------------------------------------------------------------------------
-    float3 Shaped = saturate(Downsampled);
-    float ShapedLuma = CkUsf_Stylize_Luminance(Shaped);
-    Shaped = lerp(float3(ShapedLuma, ShapedLuma, ShapedLuma), Shaped, max(Saturation, 0.0));
+    float3 Shaped = CkUsf_Stylize_ApplySaturation(saturate(Downsampled), Saturation);
     Shaped = saturate((Shaped - 0.5) * max(Contrast, 0.0) + 0.5);
 
     bool IsMonochrome = Monochrome > 0.5;

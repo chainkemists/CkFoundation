@@ -169,11 +169,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_HandDrawn(
     // ---- 1. Paint ----------------------------------------------------------------------------------
     // Saturation shapes the colour, then everything tonal happens in the normalized domain: contrast
     // about 0.5 means nothing in unbounded scene-referred linear.
-    float3 Shaped = Original;
-    {
-        float ShapedLuma = CkUsf_Stylize_Luminance(Shaped);
-        Shaped = lerp(float3(ShapedLuma, ShapedLuma, ShapedLuma), Shaped, max(Saturation, 0.0));
-    }
+    float3 Shaped = CkUsf_Stylize_ApplySaturation(Original, Saturation);
 
     float PaintLuma = CkUsf_Stylize_Luminance(Shaped);
     float ToneNormalized = CkUsf_HandDrawn_ToneNormalize(PaintLuma);
