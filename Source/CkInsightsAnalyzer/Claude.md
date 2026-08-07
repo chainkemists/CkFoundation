@@ -1,26 +1,23 @@
 # CkInsightsAnalyzer
 
-**Purpose:** Unreal Insights integration — tooling for analyzing capture files and correlating them with CkFoundation processor timings. Editor-only analysis tool.
+**Purpose:** UI-free Unreal Insights trace analysis, reporting, and commandlet support. The editor tab lives in CkGameplayDebugger's `CkInsightsDebugger` module.
 
-**Depends on:** `CkCore`, `CkEditorTools` (shared `CkStyle::` tokens for the tab UI), `CkLog`.
-**Used by:** Developer workflow only; not referenced by gameplay modules.
+**Depends on:** `CkCore`, `CkLog`, JSON, and Unreal Trace analysis/services.
+**Used by:** `CkInsightsDebugger` and developer commandlet workflows; not referenced by gameplay modules.
 
 ---
 
 ## Key API
 
-- No `_Utils.h`. Exposes editor commands and subsystem for trace analysis.
-- `SCkInsightsAnalyzerTab` — the "Insights Analyzer" editor tab (Tools → Debug):
-  frame bar chart, structured hot-path tree, category/top-timer panels,
-  worst-frames drill-down, stat-tile summary strip. Styled entirely via `CkStyle::`.
+- No `_Utils.h`. Exposes C++ trace-analysis/report types plus `UCkInsightsAnalyzerCommandlet`.
 - `FCk_FrameReport::BuildHotPathTree / ComputeCategorySummary / ComputeTopTimers` —
-  structured (non-markdown) analysis data backing the tab's views.
+  structured (non-markdown) analysis data backing debugger and commandlet consumers.
 
 ---
 
 ## Pattern
 
-Run via editor menu or console command during a profiling session.
+Run headlessly through `-run=CkInsightsAnalyzer`; use CkGameplayDebugger's Insights Analyzer tab for Slate workflows.
 
 ---
 
@@ -49,3 +46,4 @@ Don't ship with Insights integration enabled.
 ## See also
 
 - `CkProfile/Claude.md` — stat groups captured by Insights.
+- `../../../CkGameplayDebugger/Source/CkInsightsDebugger/CLAUDE.md` — editor-tab ownership and UI contracts.

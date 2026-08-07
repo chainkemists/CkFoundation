@@ -2,6 +2,8 @@
 
 Parses Unreal Insights `.utrace` files and generates markdown performance reports with hot-path trees, category summaries, and per-thread breakdowns. A JSON mode emits the same data machine-readable for scripts, CI gates, and AI consumption.
 
+The Slate editor experience is owned by CkGameplayDebugger's `CkInsightsDebugger` module. This Foundation module remains the UI-free analysis/reporting and `-run=CkInsightsAnalyzer` commandlet layer.
+
 ## Key Concepts
 
 - **TraceSession** — Opens a `.utrace` file, exposes frame/timing/thread data for analysis.
