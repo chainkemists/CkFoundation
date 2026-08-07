@@ -26,9 +26,15 @@ namespace CkUsf
         // Nothing here reads Custom Depth/Stencil, so the pre-TAA requirement does not apply.
         _BlendableLocation = ECk_Usf_BlendableLocation::AfterTonemapping;
 
-        // _SceneTextures stays empty: the default trio (SceneColor/Depth/Normal) is what the historical
-        // PostProcess path wires, and only SceneColor is read. Opting into the GBuffer would cost pins
-        // for nothing.
+        // The default trio is stated explicitly because CustomStencil has to be added for the effect
+        // mask, and _SceneTextures is all-or-nothing: a non-empty list replaces the default trio rather
+        // than extending it. Only SceneColor and CustomStencil are actually read; depth and normal are
+        // the historical default this look has always carried. The GBuffer reads stay out — nothing here
+        // reconstructs illumination, so they would cost pins for nothing.
+        _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);
+        _SceneTextures.Add(ECk_Usf_SceneTexture::SceneDepth);
+        _SceneTextures.Add(ECk_Usf_SceneTexture::SceneNormal);
+        _SceneTextures.Add(ECk_Usf_SceneTexture::CustomStencil);
 
         // ---- Pattern ----
         _Parameters.Add(CkUsf::Usf_Scalar(n"DitherPattern", 1.0));       // ECk_Usf_DitherPattern::Bayer4x4
@@ -52,6 +58,11 @@ namespace CkUsf
         _Parameters.Add(CkUsf::Usf_Scalar(n"Contrast", 1.0));
         _Parameters.Add(CkUsf::Usf_Scalar(n"Weight", 1.0));
         _Parameters.Add(CkUsf::Usf_Scalar(n"DebugMode", 0.0));
+
+        // ---- Effect mask ----
+        _Parameters.Add(CkUsf::Usf_Scalar(n"MaskMode", 0.0));            // ECk_Usf_StylizeMaskMode::Off
+        _Parameters.Add(CkUsf::Usf_Scalar(n"MaskStencilMin", 190.0));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"MaskStencilMax", 190.0));
 
         // ---- Vectors ----
         _Parameters.Add(CkUsf::Usf_Vector(n"MonochromeShadowTint", FLinearColor(0.04, 0.06, 0.05, 1.0)));

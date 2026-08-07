@@ -13,7 +13,9 @@ auto
           .Set_Bands(_Bands)
           .Set_Midpoint(_Midpoint)
           .Set_BandOffset(_BandOffset)
+          .Set_DistributionMode(_DistributionMode)
           .Set_Distribution(_Distribution)
+          .Set_BandEdges(_BandEdges)
           .Set_BandSoftness(_BandSoftness)
           .Set_ShadowLift(_ShadowLift)
           .Set_Strength(_Strength)
@@ -70,6 +72,7 @@ auto
           .Set_OutlineDistanceFade(_OutlineDistanceFade)
           .Set_EnableStencilPatterns(_EnableStencilPatterns)
           .Set_StencilBase(_StencilBase)
+          .Set_Mask(_Mask)
           .Set_DebugMode(_DebugMode);
 
     return Params;

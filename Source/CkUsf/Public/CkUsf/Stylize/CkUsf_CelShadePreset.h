@@ -33,9 +33,19 @@ public:
               meta = (UIMin = -1.0, ClampMin = -1.0, UIMax = 1.0, ClampMax = 1.0))
     float _BandOffset = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|CelShade|Bands")
+    ECk_Usf_CelDistribution _DistributionMode = ECk_Usf_CelDistribution::Exponent;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|CelShade|Bands",
-              meta = (UIMin = 0.1, ClampMin = 0.01, UIMax = 4.0))
+              meta = (UIMin = 0.1, ClampMin = 0.01, UIMax = 4.0,
+                      EditCondition = "_DistributionMode == ECk_Usf_CelDistribution::Exponent"))
     float _Distribution = 1.0f;
+
+    // Strictly ascending, strictly inside 0..1, at most 8 entries. N edges make N+1 bands and _Bands is
+    // ignored. The subsystem rejects a list that breaks any of that.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|CelShade|Bands",
+              meta = (EditCondition = "_DistributionMode == ECk_Usf_CelDistribution::CustomEdges"))
+    TArray<float> _BandEdges;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|CelShade|Bands",
               meta = (UIMin = 0.0, ClampMin = 0.0, UIMax = 1.0, ClampMax = 1.0))
@@ -243,6 +253,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|CelShade|Stencil",
               meta = (UIMin = 2, ClampMin = 2, UIMax = 245))
     int32 _StencilBase = 200;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|CelShade|Mask")
+    FCk_Usf_StylizeMask_Params _Mask;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|CelShade")
     ECk_Usf_CelShade_DebugMode _DebugMode = ECk_Usf_CelShade_DebugMode::Final;

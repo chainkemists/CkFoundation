@@ -20,6 +20,18 @@ auto
 
 auto
     FCk_Usf_CelShade_Params::
+    Get_EffectiveBandEdges() const
+    -> TArray<float>
+{
+    auto Effective = _BandEdges;
+    if (Effective.Num() > MaxBandEdges)
+    { Effective.SetNum(MaxBandEdges); }
+
+    return Effective;
+}
+
+auto
+    FCk_Usf_CelShade_Params::
     operator==(
         const ThisType& InOther) const
     -> bool
@@ -28,7 +40,9 @@ auto
         && _Bands == InOther._Bands
         && _Midpoint == InOther._Midpoint
         && _BandOffset == InOther._BandOffset
+        && _DistributionMode == InOther._DistributionMode
         && _Distribution == InOther._Distribution
+        && _BandEdges == InOther._BandEdges
         && _BandSoftness == InOther._BandSoftness
         && _ShadowLift == InOther._ShadowLift
         && _Strength == InOther._Strength
@@ -85,6 +99,7 @@ auto
         && _OutlineDistanceFade == InOther._OutlineDistanceFade
         && _EnableStencilPatterns == InOther._EnableStencilPatterns
         && _StencilBase == InOther._StencilBase
+        && _Mask == InOther._Mask
         && _DebugMode == InOther._DebugMode;
 }
 

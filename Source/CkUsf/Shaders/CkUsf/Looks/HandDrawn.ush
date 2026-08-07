@@ -26,6 +26,12 @@
 // CKUSF_HANDDRAWN_MAX_TONE below is the fallback for the OTHER path — with SimplifyColor off there is no
 // level count to cap anything, and only that constant stands between Contrast > 1 and an unbounded value.
 //
+// THE EFFECT MASK reads Custom Stencil, which makes the pre-TAA placement a REQUIREMENT rather than
+// merely the right choice for the world-attached stroke lattice: the custom-depth buffer is rendered
+// with the TAA-jittered projection, so a mask thresholded after tonemapping shimmers on a stationary
+// camera. MaskMode / MaskStencilMin / MaskStencilMax gate the WHOLE composite per pixel
+// (CkUsf_Stylize_MaskWeight, StylizeCommon.ush) — masked-out pixels are the untouched frame exactly.
+//
 // NOT IMPLEMENTED, ON PURPOSE: temporal stabilization of world-attached strokes on translating or
 // skinned meshes. It needs a frame history a post-process blendable does not have — the same limitation
 // CelShade's world-space patterns carry. ScreenStable is the alternative for animated subjects.
@@ -141,6 +147,9 @@ FCkUsf_SurfaceOutput CkUsf_PP_HandDrawn(
     float FiberStrength,
     float PaperWarmth,
     float DebugMode,
+    float MaskMode,
+    float MaskStencilMin,
+    float MaskStencilMax,
     float3 ShadowTint,
     float3 HighlightTint,
     float3 InkColor)
@@ -151,6 +160,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_HandDrawn(
     float3 Original   = In.SceneColor.rgb;
     float3 Normal     = normalize(In.SceneNormal.rgb + float3(0.0, 0.0, 1e-6));
     float  Depth      = In.SceneDepth.r;
+    float  Stencil    = round(In.CustomStencil.r);
 
     // Everything measured in pixels — stroke size, paper scale, ink thickness — is measured in THIS
     // viewport, PostProcessInput0's own, not the scene buffer's. Mixing the two desyncs a pattern from
@@ -368,6 +378,14 @@ FCkUsf_SurfaceOutput CkUsf_PP_HandDrawn(
     // per-treatment weight to inherit here.
     float3 Result = lerp(Original, Stylized, saturate(StyleStrength));
 
+    // ---- Effect mask -------------------------------------------------------------------------------
+    // Outside the master lerp rather than inside it: the mask decides WHETHER this pixel is drawn on at
+    // all, StyleStrength decides how heavily a drawn one is. Composing them the other way would make a
+    // masked-out pixel "a bit stylized" at high strength.
+    float MaskWeight = CkUsf_Stylize_MaskWeight(
+        (int)(MaskMode + 0.5), Stencil, MaskStencilMin, MaskStencilMax);
+    Result = lerp(Original, Result, MaskWeight);
+
     // ---- Debug -------------------------------------------------------------------------------------
     // Debug views deliberately bypass the master lerp — a mask viewed at StyleStrength 0.3 would be a
     // faint tint over the untouched frame, which is not a diagnostic.
@@ -381,6 +399,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_HandDrawn(
         float Normalized = saturate(Depth / max(SkyDistance, 1.0));
         Result = float3(Normalized, Normalized, Normalized);
     }
+    else if (Debug == 6) { Result = float3(MaskWeight, MaskWeight, MaskWeight); }
 
     O.EmissiveColor = Result;
     O.Opacity = 1.0;

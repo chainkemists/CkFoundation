@@ -95,7 +95,7 @@ auto
 
     InComponent->SetRenderCustomDepth(true);
     InComponent->SetCustomDepthStencilValue(static_cast<int32>(Stencil));
-    _AppliedComponents.Add(InComponent, InPreset);
+    _AppliedComponents.Add(InComponent, FAppliedOutline{InPreset, static_cast<int32>(Stencil)});
 }
 
 auto
@@ -123,15 +123,22 @@ auto
     if (ck::Is_NOT_Valid(InComponent, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
-    auto* Preset = _AppliedComponents.Find(InComponent);
-    if (Preset == nullptr)
+    auto* Applied = _AppliedComponents.Find(InComponent);
+    if (Applied == nullptr)
     { return; }
 
-    InComponent->SetRenderCustomDepth(false);
+    // Only undo what THIS feature still owns. A lower-precedence claim (cel pattern, effect mask) may
+    // have taken the byte over since — its sync processor writes every frame, and by design it does NOT
+    // clear this map. Disabling custom depth unconditionally would then blank that claim permanently:
+    // its own applied-state still says "written", so its sync early-outs forever and nothing re-asserts.
+    // The two sibling features guard their undos identically.
+    if (InComponent->CustomDepthStencilValue == Applied->StencilValue)
+    { InComponent->SetRenderCustomDepth(false); }
+
     // An expired preset must not release: FWeakObjectPtr treats ALL invalid weak ptrs as equal, so a
     // nullptr Find against the weak-keyed _ActivePresets can match an unrelated expired entry.
-    if (Preset->IsValid())
-    { Release_StencilFor(Preset->Get()); }
+    if (Applied->Preset.IsValid())
+    { Release_StencilFor(Applied->Preset.Get()); }
     _AppliedComponents.Remove(InComponent);
 }
 
@@ -350,10 +357,11 @@ auto
 
     for (const auto& DeadComponent : Dead)
     {
-        // Same expired-preset guard as Remove_Outline_From_Component.
-        if (auto* Preset = _AppliedComponents.Find(DeadComponent);
-            Preset != nullptr && Preset->IsValid())
-        { Release_StencilFor(Preset->Get()); }
+        // Same expired-preset guard as Remove_Outline_From_Component. No value guard here: the component
+        // is already gone, so there is nothing to disable and nothing to protect.
+        if (auto* Applied = _AppliedComponents.Find(DeadComponent);
+            Applied != nullptr && Applied->Preset.IsValid())
+        { Release_StencilFor(Applied->Preset.Get()); }
         _AppliedComponents.Remove(DeadComponent);
     }
 }

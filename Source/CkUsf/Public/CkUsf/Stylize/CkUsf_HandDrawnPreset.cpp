@@ -46,6 +46,7 @@ auto
           .Set_GrainScale(_GrainScale)
           .Set_FiberStrength(_FiberStrength)
           .Set_PaperWarmth(_PaperWarmth)
+          .Set_Mask(_Mask)
           .Set_DebugMode(_DebugMode);
 
     return Params;

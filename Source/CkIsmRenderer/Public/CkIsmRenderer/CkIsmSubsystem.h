@@ -131,8 +131,17 @@ public:
         uint8 InStencilValue,
         const TWeakObjectPtr<AActor>& InEditorSelectionOwner = {}) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
 
+    // The stylize-effect-mask twin, keyed the same way: the mask is a direct stencil value too, and there is
+    // exactly one of them per project, so a crowd of masked proxies on one renderer shares one shadow and
+    // nothing needs releasing. See CkIsmRenderer/CLAUDE.md.
+    auto
+    FindOrCreate_StylizeMaskIsmComponent(
+        const UCk_IsmRenderer_Data* InRendererData,
+        uint8 InStencilValue,
+        const TWeakObjectPtr<AActor>& InEditorSelectionOwner = {}) -> TWeakObjectPtr<UInstancedStaticMeshComponent>;
+
 private:
-    // Shared body of both shadow factories: a custom-depth-only twin of InSourceIsm carrying InStencilValue.
+    // Shared body of every shadow factory: a custom-depth-only twin of InSourceIsm carrying InStencilValue.
     static auto
     DoCreate_CustomDepthShadowIsm(
         UInstancedStaticMeshComponent* InSourceIsm,
@@ -161,6 +170,9 @@ private:
 
     using FCelPatternIsmKey = TTuple<TWeakObjectPtr<const UCk_IsmRenderer_Data>, uint8, TWeakObjectPtr<AActor>>;
     TMap<FCelPatternIsmKey, TWeakObjectPtr<UInstancedStaticMeshComponent>> _CelPatternIsmComponentCache;
+
+    using FStylizeMaskIsmKey = TTuple<TWeakObjectPtr<const UCk_IsmRenderer_Data>, uint8, TWeakObjectPtr<AActor>>;
+    TMap<FStylizeMaskIsmKey, TWeakObjectPtr<UInstancedStaticMeshComponent>> _StylizeMaskIsmComponentCache;
 
 #if WITH_EDITORONLY_DATA
 private:

@@ -308,4 +308,36 @@ public:
         DisplayName = "[Ck][IskmBatched] Get Crowd Cel Pattern Rendered Instance Count")
     static int32
     Get_CrowdCelPatternRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    // ---- Stylize effect mask (member-indexed — the cel pattern's twin; see CkUsf/Claude.md § Stylize) ----
+
+    // Put a member inside the stylize effect mask (custom-depth highlight cluster mirrors its skinned pose,
+    // carrying the project's mask Custom-Stencil value). REFUSED on an outlined or patterned member — both
+    // outrank the mask on that member's stencil byte. Hidden members (Plan-1 flip stand-ins) are excluded
+    // while hidden — mask the stand-in proxy via UCk_Utils_Usf_StylizeMask_UE instead.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Member Stylize Mask")
+    static void
+    Set_CrowdMemberStylizeMask(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Clear Crowd Member Stylize Mask")
+    static void
+    Clear_CrowdMemberStylizeMask(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Is Crowd Member Stylize Masked")
+    static bool
+    Get_IsCrowdMemberStylizeMasked(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Stylize Masked Member Count")
+    static int32
+    Get_CrowdStylizeMaskedMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    // Instances currently in the mask highlight clusters (visible masked members only).
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Stylize Mask Rendered Instance Count")
+    static int32
+    Get_CrowdStylizeMaskRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
 };

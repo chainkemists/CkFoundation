@@ -6,6 +6,8 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkUsf/Stylize/CkUsf_StylizeMask_Params.h"
+
 #include "CkUsf_HandDrawn_Params.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -53,7 +55,8 @@ enum class ECk_Usf_HandDrawn_DebugMode : uint8
     ShadowStrokeMask,
     PaperPattern,
     WorldNormals,
-    SceneDepth
+    SceneDepth,
+    StylizeMask   // white where the effect mask lets the look through, black where it is held back
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Usf_HandDrawn_DebugMode);
@@ -278,6 +281,14 @@ private:
               meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0, UIMax = 1.0, ClampMax = 1.0))
     float _PaperWarmth = 0.5f;
 
+    // ---- Effect mask ----
+
+    // Confines the whole look to (or away from) a Custom-Stencil range. This look is pre-TAA, so its mask
+    // edge is temporally resolved like any other geometry edge.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Usf_StylizeMask_Params _Mask;
+
     // ---- Debug ----
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -322,6 +333,7 @@ public:
     CK_PROPERTY(_GrainScale);
     CK_PROPERTY(_FiberStrength);
     CK_PROPERTY(_PaperWarmth);
+    CK_PROPERTY(_Mask);
     CK_PROPERTY(_DebugMode);
 
 public:

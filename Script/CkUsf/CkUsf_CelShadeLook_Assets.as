@@ -118,6 +118,30 @@ namespace CkUsf
 
         _Parameters.Add(CkUsf::Usf_Scalar(n"DebugMode", 0.0));
 
+        // ---- Band distribution ----
+        // Appended after every pre-existing scalar rather than inserted next to Distribution: the
+        // generator binds POSITIONALLY, so inserting would silently re-bind every parameter after the
+        // insertion point in any master not regenerated in lockstep. Still BEFORE the vectors, because
+        // the whole list has to stay grouped by type in the order the .ush declares it.
+        _Parameters.Add(CkUsf::Usf_Scalar(n"DistributionMode", 0.0));   // ECk_Usf_CelDistribution::Exponent
+        _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdgeCount", 1.0));
+        // The list is a FIXED 8 slots + a live count, the ScreenDither palette precedent — a material has
+        // no array parameters. Unused slots are written 1.0 by the subsystem: past the count the shader
+        // ignores them, and 1.0 is the only value that could not fabricate a band if it ever did not.
+        _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdge0", 0.5));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdge1", 1.0));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdge2", 1.0));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdge3", 1.0));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdge4", 1.0));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdge5", 1.0));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdge6", 1.0));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"BandEdge7", 1.0));
+
+        // ---- Effect mask ----
+        _Parameters.Add(CkUsf::Usf_Scalar(n"MaskMode", 0.0));           // ECk_Usf_StylizeMaskMode::Off
+        _Parameters.Add(CkUsf::Usf_Scalar(n"MaskStencilMin", 190.0));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"MaskStencilMax", 190.0));
+
         // ---- Vectors ----
         _Parameters.Add(CkUsf::Usf_Vector(n"ShadowTint", FLinearColor(0.72, 0.78, 1.0, 1.0)));
         _Parameters.Add(CkUsf::Usf_Vector(n"LightTint", FLinearColor(1.0, 0.98, 0.92, 1.0)));

@@ -33,6 +33,29 @@
 //   anything else                           -> the global Pattern
 // Requires r.CustomDepth 3 (Custom Depth-Stencil WITH stencil) and RenderCustomDepth on the mesh.
 //
+// THE EFFECT MASK IS A SECOND, INDEPENDENT CLAIM ON THE SAME BYTE. MaskMode / MaskStencilMin /
+// MaskStencilMax gate the WHOLE look per pixel (see CkUsf_Stylize_MaskWeight in StylizeCommon.ush); the
+// subsystem rejects a mask range that intersects either the pattern span above or the outline
+// subsystem's, because all three read one 8-bit value and an overlap restyles the wrong meshes with
+// nothing naming the cause. Masked-out pixels are the untouched scene colour exactly, not an
+// approximation of it — the mask is the last thing applied, after the ink outline.
+//
+// BAND PLACEMENT HAS TWO MODES (ECk_Usf_CelDistribution). Exponent is the historical one: N bands of
+// EQUAL ramp width with `Distribution` biasing where that spacing sits — one exponent moves every
+// boundary together, so it cannot express "two narrow bands in the shadows, one wide one above".
+// CustomEdges hands the boundaries over directly: BandEdge0..7 (ascending, 0..1) with BandEdgeCount live
+// entries, and the bands are the intervals BETWEEN them, so N edges make N+1 bands and `Bands` is
+// ignored. `Distribution` is forced to 1 there — the edges already ARE the placement, and shaping the
+// ramp underneath them would move the boundaries the artist just authored.
+//
+// CustomEdges OVERRIDES THE PER-GROUP BAND COUNTS TOO. The sky and metal groups swap `Bands` for
+// `SkyBands` / `MetallicBands` in Exponent mode; in CustomEdges the edge list is the placement for
+// EVERY group, so those two counts stop having any effect. That is deliberate, not an oversight: a
+// per-group edge list would be three more 8-slot parameter blocks (24 more pins on an already
+// 84-input node) to express something no shipped preset asks for. Authored band placement is a
+// property of the LOOK here, not of the group. The groups keep their own strengths and pattern
+// strengths, which is what actually distinguishes them.
+//
 // NOT IMPLEMENTED, ON PURPOSE: temporal stabilization of world-space patterns on translating meshes.
 // It needs a frame history a blendable does not have; DebugMode 8 (MotionOffset) therefore reports
 // black rather than pretending to measure something.
@@ -192,6 +215,19 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
     float EnableStencilPatterns,
     float StencilBase,
     float DebugMode,
+    float DistributionMode,
+    float BandEdgeCount,
+    float BandEdge0,
+    float BandEdge1,
+    float BandEdge2,
+    float BandEdge3,
+    float BandEdge4,
+    float BandEdge5,
+    float BandEdge6,
+    float BandEdge7,
+    float MaskMode,
+    float MaskStencilMin,
+    float MaskStencilMax,
     float3 ShadowTint,
     float3 LightTint,
     float3 RimColor,
@@ -309,11 +345,70 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
         : length(fwidth(PatternCoord));
 
     // ---- Band quantization -------------------------------------------------------------------------
-    float Ramp = CkUsf_CelShade_Shape(SourceLuma, Midpoint, Distribution);
-    float BandCount = max(GroupBands, 2.0);
-    float BandPosition = Ramp * BandCount + BandOffset;
-    float BandIndex = clamp(floor(BandPosition), 0.0, BandCount - 1.0);
-    float BandFraction = saturate(BandPosition - floor(BandPosition));
+    // CustomEdges places the boundaries itself, so the ramp underneath them must NOT also be shaped —
+    // an exponent there would move every authored edge by a different amount.
+    bool UsesCustomEdges = DistributionMode > 0.5;
+    float EffectiveDistribution = UsesCustomEdges ? 1.0 : Distribution;
+
+    float Ramp = CkUsf_CelShade_Shape(SourceLuma, Midpoint, EffectiveDistribution);
+
+    float BandCount;
+    float BandIndex;
+    float BandFraction;
+
+    if (UsesCustomEdges)
+    {
+        float Edges[8] = { BandEdge0, BandEdge1, BandEdge2, BandEdge3,
+                           BandEdge4, BandEdge5, BandEdge6, BandEdge7 };
+        int EdgeCount = clamp((int)(BandEdgeCount + 0.5), 1, 8);
+
+        BandCount = (float)EdgeCount + 1.0;
+
+        // BandOffset keeps meaning "slide every boundary by a fraction of a band", which in the
+        // exponent path is exactly what adding it to Ramp * BandCount does.
+        float Shifted = Ramp + BandOffset / BandCount;
+
+        // Counting the edges STRICTLY below the ramp gives the band ordinal directly. It relies on the
+        // list being ASCENDING, which the subsystem is what enforces — a non-ascending list is
+        // rejected there rather than producing monotonic-looking nonsense here.
+        //
+        // Strictly-below, not at-or-below, so the count is bounded by EdgeCount even when the unused
+        // filler slots are read: the subsystem writes 1.0 into every slot past the count, and a ramp of
+        // exactly 1.0 would then be counted as "at" each of them. The `e < EdgeCount` guard already
+        // excludes those slots, so this is belt-and-braces — but it is what makes the filler VALUE
+        // genuinely inert rather than inert-because-of-one-guard.
+        float Index = 0.0;
+        [unroll]
+        for (int e = 0; e < 8; ++e)
+        {
+            if (e < EdgeCount && Shifted > saturate(Edges[e]))
+            { Index += 1.0; }
+        }
+
+        // The band spans [Edges[Index-1], Edges[Index]], with the ramp's own 0 and 1 standing in for
+        // the two missing outer edges.
+        float Low = 0.0;
+        float High = 1.0;
+        [unroll]
+        for (int f = 0; f < 8; ++f)
+        {
+            if (f >= EdgeCount)
+            { continue; }
+
+            if ((float)f == Index - 1.0) { Low = saturate(Edges[f]); }
+            if ((float)f == Index)       { High = saturate(Edges[f]); }
+        }
+
+        BandIndex = Index;
+        BandFraction = saturate((Shifted - Low) / max(High - Low, 1e-4));
+    }
+    else
+    {
+        BandCount = max(GroupBands, 2.0);
+        float BandPosition = Ramp * BandCount + BandOffset;
+        BandIndex = clamp(floor(BandPosition), 0.0, BandCount - 1.0);
+        BandFraction = saturate(BandPosition - floor(BandPosition));
+    }
 
     float LevelLow = CkUsf_CelShade_LevelAt(BandIndex, BandCount, ShadowLift);
     float LevelHigh = CkUsf_CelShade_LevelAt(min(BandIndex + 1.0, BandCount - 1.0), BandCount, ShadowLift);
@@ -342,7 +437,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
     // ---- Apply -------------------------------------------------------------------------------------
     // Scaling the scene colour by the banded/original luminance ratio bands the LIGHT while leaving
     // albedo and hue untouched; replacing the colour outright would flatten every material to one tint.
-    float BandedSource = CkUsf_CelShade_Unshape(Level, Midpoint, Distribution);
+    float BandedSource = CkUsf_CelShade_Unshape(Level, Midpoint, EffectiveDistribution);
     float3 Cel = Scene * (BandedSource / max(SourceLuma, 1e-3));
 
     Cel *= lerp(ShadowTint, LightTint, Level);
@@ -447,6 +542,13 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
         else                     { Result = lerp(Result, OutlineColor, Edge); }
     }
 
+    // ---- Effect mask -------------------------------------------------------------------------------
+    // LAST, so a masked-out pixel is the untouched scene colour exactly — bands, pattern, specular, rim
+    // and the ink outline all sit inside what the mask gates.
+    float MaskWeight = CkUsf_Stylize_MaskWeight(
+        (int)(MaskMode + 0.5), Stencil, MaskStencilMin, MaskStencilMax);
+    Result = lerp(Scene, Result, MaskWeight);
+
     // ---- Debug -------------------------------------------------------------------------------------
     int Debug = (int)(DebugMode + 0.5);
     if (Debug == 1)
@@ -466,6 +568,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
         float Slot = saturate((Stencil - StencilLow) / 11.0);
         Result = StencilSuppresses || StencilSelects ? float3(0.0, Slot, 1.0 - Slot) : float3(0.0, 0.0, 0.0);
     }
+    else if (Debug == 10) { Result = float3(MaskWeight, MaskWeight, MaskWeight); }
 
     O.EmissiveColor = Result;
     O.Opacity = 1.0;

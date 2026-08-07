@@ -28,6 +28,7 @@ auto
           .Set_Weight(_Weight)
           .Set_Saturation(_Saturation)
           .Set_Contrast(_Contrast)
+          .Set_Mask(_Mask)
           .Set_DebugMode(_DebugMode);
 
     return Params;

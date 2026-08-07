@@ -6,7 +6,8 @@
 contract, force-compiles the shaders, and saves it under `/CkFoundation/CkUsf/GeneratedLooks/`.
 Runtime code applies looks via `UCk_Utils_Usf_UE` (master lookup, MID creation, post-process
 attach). Also home to the Shadertoy-style multi-pass renderer, the Custom-Stencil outline subsystem,
-and the three-effect **Stylize** suite (HandDrawn / CelShade / ScreenDither) built on top of all of it.
+and the four-effect **Stylize** suite (HandDrawn / CelShade / ScreenDither / CrossHatch) built on top
+of all of it.
 
 **Depends on:** `CkCore`, `CkEcs`, `CkGraphics`, `CkLog`.
 **Editor twin:** `CkUsfEditor` (generator, validator, console command, save-hook).
@@ -37,6 +38,15 @@ and the three-effect **Stylize** suite (HandDrawn / CelShade / ScreenDither) bui
   `Get_Settings`, `Request_ResetToDefaults`) and nothing else — the feature is strictly full-screen, so
   there is no stencil contract and no entity API. Settings are `FCk_Usf_HandDrawn_Params`; presets are
   `UCkUsf_HandDrawnPreset` data assets (AS: `Script/CkUsf/CkUsf_HandDrawnPresets_Assets.as`).
+- `UCkUsf_CrossHatchSubsystem` (`Stylize/`) — per-world normal-aligned hatching: the same surface as
+  ScreenDither (`Request_SetEnabled` / `Get_IsEnabled`, `Apply_Preset`, `Request_SetSettings` /
+  `Get_Settings`, `Request_ResetToDefaults`). Settings are `FCk_Usf_CrossHatch_Params`; presets are
+  `UCkUsf_CrossHatchPreset` data assets (AS: `Script/CkUsf/CkUsf_CrossHatchPresets_Assets.as`).
+- `UCk_Utils_Usf_StylizeMask_UE` (`Stylize/CkUsf_StylizeMask_Utils.h`) — ENTITY-level membership of the
+  effect mask (`Request_AddToStylizeMask(Handle, Scope)` / `Request_RemoveFromStylizeMask` /
+  `Has_StylizeMask`), plus the range validators every effect's `Request_SetSettings` delegates to
+  (`Get_MaskRangeIsAddressable`, `Get_MaskRangeAvoidsOutline`, `Get_MaskRangeAvoidsCelSpan` /
+  `Get_MaskRangeAvoidsCelPatterns`, `Get_MaskRangeIsFree`). Reuses `ECk_Usf_OutlineScope`.
 - `UCk_Utils_Usf_CelPattern_UE` (`Stylize/CkUsf_CelPattern_Utils.h`) — ENTITY-level cel patterns:
   `Request_SetCelPattern(Handle, Pattern, Scope)` / `Request_ClearCelPattern`. Reuses
   `ECk_Usf_OutlineScope`. Per-renderer sync processors apply it, the same distribution entity outlines use
@@ -49,11 +59,12 @@ and the three-effect **Stylize** suite (HandDrawn / CelShade / ScreenDither) bui
   Design + mechanisms: the *Entity outlines* section below. (A `DESIGN_EntityOutlines.md` that never existed
   was cited by eleven files; all now point here instead.)
 - `UCk_Usf_Stylize_ProjectSettings_UE` (`Stylize/CkUsf_Stylize_ProjectSettings.h`) — one optional
-  default-preset soft ref per effect. Unset = the effect stays off; set = that world subsystem applies it
+  default-preset soft ref per effect, plus `_MaskStencilValue` (the single Custom-Stencil value the
+  entity-level effect mask stamps, default 190). Unset = the effect stays off; set = that world subsystem applies it
   at `OnWorldBeginPlay` with no game code involved. It is a `UCk_Plugin_ProjectSettings_UE`, so it inherits
   the family's `Config = CkFoundation` and the "CkFoundation" settings category — the row lives in
   `DefaultCkFoundation.ini`, NOT `DefaultGame.ini`. Read it through `UCk_Utils_Usf_Stylize_Settings_UE`.
-- `ck.Usf.{HandDrawn,CelShade,ScreenDither}.{Enabled,Debug}` (`Stylize/CkUsf_Stylize_CVars.h`) — the
+- `ck.Usf.{HandDrawn,CelShade,ScreenDither,CrossHatch}.{Enabled,Debug}` (`Stylize/CkUsf_Stylize_CVars.h`) — the
   developer overlay. `-1` on both is "settings decide"; `Enabled` `0`/`1` forces off/on; `Debug` takes the
   effect's DebugMode index.
 - `/CkUsf/Common.ush` — the input/output structs + the shader stdlib (sampling, normals, parallax,
@@ -296,14 +307,16 @@ SolidOutlineSystem, `ECk_Usf_OutlineType` included.
 `_UseFillTexture` samples the subsystem's single *shared* fill texture. Per-preset fill textures are
 a known follow-up — they would need a texture atlas or array.
 
-### Stylize — the three-effect suite
+### Stylize — the four-effect suite
 
-Three PostProcess-domain looks, each with a per-world subsystem and data-asset presets:
+Four PostProcess-domain looks, each with a per-world subsystem and data-asset presets:
 **HandDrawn** (paint → ink → strokes → paper), **CelShade** (quantized bands, halftone transitions,
-sky/metallic/specular/rim groups, its own outline, per-object pattern via Custom Stencil), and
-**ScreenDither** (post-tonemap palette reduction, ordered/noise dithering, pixelation). They are ordinary
+sky/metallic/specular/rim groups, its own outline, per-object pattern via Custom Stencil),
+**ScreenDither** (post-tonemap palette reduction, ordered/noise dithering, pixelation) and
+**CrossHatch** (normal-aligned engraving strokes, density stepped by darkness). They are ordinary
 looks — the generator, validator, MID runtime and blendable placement are the shipped machinery, not
-anything new. Every effect is view-wide; CelShade is the only one with a per-object surface.
+anything new. Every effect is view-wide except for its EFFECT MASK (below); CelShade additionally has a
+per-object pattern surface.
 
 **One value flows through four hands, and each hand can only narrow the previous one:**
 
@@ -350,14 +363,25 @@ Consequences worth knowing before debugging one of these:
   context anyway. Known granularity gap, shared with `UCk_LoadingScreen_Subsystem_UE`: a PIE
   dedicated-server world lives in the editor process and still gets one.
 
-**The Custom-Stencil byte is shared, and the two claims on it are disjoint by construction.**
+**The Custom-Stencil byte is shared, and the THREE claims on it are disjoint by construction.**
 `UCkUsf_OutlineSubsystem` *allocates* refcounted values from the top of the range (240–255);
-`UCkUsf_CelShadeSubsystem` uses *direct* values, `[StencilBase-1, StencilBase+9]`, default 199–209.
-`Request_SetSettings` rejects a span that intersects the outline range or reaches stencil 0, each with its
-own diagnostic. One entity may carry only one of the two: `Request_SetCelPattern` refuses an entity that
-already has an outline target, and the sync processors exclude each other's targets. Both features' undo
-*disables* custom depth rather than restoring prior state — a mesh hand-authored to render custom depth
-does not get that back.
+`UCkUsf_CelShadeSubsystem` uses *direct* values, `[StencilBase-1, StencilBase+9]`, default 199–209; the
+**effect mask** claims a per-effect *range*, which the entity API stamps with the single project value
+`UCk_Usf_Stylize_ProjectSettings_UE::_MaskStencilValue` (default 190, below both). Every effect's
+`Request_SetSettings` rejects a mask range that intersects the outline range, intersects the cel span, is
+inverted, or reaches stencil 0 — each with its own diagnostic. Every feature's undo *disables* custom
+depth rather than restoring prior state — a mesh hand-authored to render custom depth does not get that
+back.
+
+**Precedence is outline > cel pattern > effect mask, and the asymmetry is deliberate.** An entity carries
+at most one claim. A claim REFUSES loudly when a higher-precedence one is already present (upward:
+`Request_SetCelPattern` refuses an outlined entity, `Request_AddToStylizeMask` refuses an outlined OR
+patterned one), and is silently taken over when a higher-precedence one arrives afterwards (downward: the
+sync processors exclude their betters, and the drop processors retire the now-false applied-state so the
+lower claim reappears once the higher one is removed). Refusing upward keeps a caller from destroying a
+silhouette it asked for earlier; yielding downward lets the newer, more specific request win without a
+two-step dance. A *cascade* SKIPS a dependent a higher claim owns with a Verbose log rather than failing
+whole, since the caller asked about the root.
 
 **One saturation policy for all three effects, and the shader half is the one that protects anything.**
 `CkUsf_Stylize_ApplySaturation` (`StylizeCommon.ush`) floors its output at zero, and that floor is what
@@ -379,7 +403,55 @@ blendable being the vehicle:
 | Cel illumination is an APPROXIMATION (`SceneColor / max(BaseColor, eps)`) | A blendable cannot see deferred lighting. The quotient is incoming light for a diffuse dielectric and nothing useful elsewhere — hence the Metallic / `AffectUnlit` / Sky exception groups, which are not tuning knobs | `_QuantizeFinalColor` bands SceneColor luminance directly |
 | World-space patterns and strokes quantize, then stop moving, past ~1e6 uu from the origin | `In.WorldPosition` is float32 | screen space on far-from-origin levels |
 | Paper grain is measured in OUTPUT pixels, so its density changes with output resolution | It is a property of the sheet, not of the scene | tune `_GrainScale` at target resolution |
-| Stacking: cel + dither compose; hand-drawn + dither composes; hand-drawn + cel does not | The first pair sits at different chain locations (pre-TAA vs post-tonemap) and reads disjoint inputs. Hand-drawn and cel both restyle the whole frame at the same location, so the second paints over the first | A/B them from the gyms' `Toggle*Stack` Execs |
+| Stacking: any pre-TAA look composes with dither; two pre-TAA looks do not compose with each other | Dither sits post-tonemap and reads disjoint inputs. Hand-drawn, cel and cross-hatch all restyle the whole frame at the same location, so the second paints over the first | A/B them from the gyms' `Toggle*Stack` Execs; or give two of them disjoint pixels with the effect MASK |
+| An effect-mask edge is ONE pixel wide and never fwidth-smoothed | Stencil is a nominal id — its derivative measures nothing about how far a pixel sits from the range | pre-TAA looks get a temporally resolved edge for free; ScreenDither softens over its 4 axis neighbours |
+
+### Effect mask (Stylize) — one block, four effects
+
+`FCk_Usf_StylizeMask_Params` (`Stylize/CkUsf_StylizeMask_Params.h`) is carried identically by all four
+params structs: a mode (`Off` / `IncludeStencilRange` / `ExcludeStencilRange`) and an inclusive
+Custom-Stencil range. One shared block rather than four near-identical field groups because the stencil
+byte is ONE resource and the rule that keeps its claims disjoint has to be stated once (NN#9).
+
+**Every look applies it as its LAST composite step**, one lerp against the untouched frame
+(`CkUsf_Stylize_MaskWeight`, `StylizeCommon.ush`). A masked-out pixel is therefore the original scene
+colour EXACTLY, not an approximation of it, and masked-out costs the same as masked-in. CelShade puts the
+lerp after its own ink outline so the whole look — bands, pattern, specular, rim, outline — sits inside
+what the mask gates.
+
+**The mask is deliberately NOT fwidth-anti-aliased, unlike every other threshold in these looks.** Stencil
+is a NOMINAL id: its derivative spikes at every id boundary regardless of how far the pixel sits from the
+range, so a footprint built from it would widen the mask by an amount unrelated to the test. Mask edges
+are one pixel wide by construction, and their quality is a property of WHERE the look sits in the chain:
+- **CelShade / HandDrawn / CrossHatch** are pre-TAA, so the edge is temporally resolved like any other
+  geometry edge. HandDrawn's placement was previously a preference (the WorldPosition reconstruction) and
+  is now a REQUIREMENT for the same reason CelShade's always was.
+- **ScreenDither** sits at `AfterTonemapping` while custom depth is rendered with the TAA-jittered
+  projection, so its mask edge is never resolved and a hard test visibly crawls on a stationary camera. It
+  averages the centre + 4 axis neighbours into a 5-level ramp instead (`CkUsf_ScreenDither_MaskWeight`,
+  short-circuited to a single compare when the mask is Off). That is a genuine soft edge, not a fix —
+  sub-pixel crawl inside the ramp remains. A mask that must be pixel-crisp belongs on one of the pre-TAA
+  looks; moving ScreenDither pre-TAA is NOT the alternative, since it would defeat the reason it is placed
+  where it is. Membership is what is averaged, never the stencil VALUE — averaging ids would invent ids
+  nothing wrote.
+
+**Entity API and its per-renderer distribution** mirror the cel pattern's exactly, with one simplification:
+there is no per-entity payload (one project-wide value, so membership IS the payload), hence
+`ck::FFragment_Usf_StylizeMaskTarget` carries only the cascade flag and the sync processors read
+`UCk_Utils_Usf_Stylize_Settings_UE::Get_MaskStencilValue()` instead of consulting a subsystem. Sync
+processors: `FProcessor_Usf_StylizeMaskActor_*` here, `FProcessor_IsmProxy_StylizeMask_*`
+(`CkIsmRenderer/Proxy/CkIsmProxy_StylizeMaskProcessor.h`) and `FProcessor_IskmProxy_StylizeMask_*`
+(`CkIskmRenderer/Proxy/CkIskmProxy_StylizeMaskProcessor.h`); batched Plan-2 members are not entities —
+use `UCk_Utils_IskmBatched_UE::Set_CrowdMemberStylizeMask` / `Clear_CrowdMemberStylizeMask`. The
+drop-on-higher-claim processor is TWO processors per renderer (one keyed on the outline target, one on the
+cel-pattern target), because a processor view is a conjunction and "a higher claim arrived" is a
+disjunction; both bodies are the same idempotent `Try_Remove`.
+
+**Changing `_MaskStencilValue` does NOT retune the effects.** Each effect's own mask RANGE decides whether
+the stamped value is inside the mask, and the shipped params default that range to `[190, 190]`. Move the
+project value and every effect's range has to move with it, or the mask silently stops biting. The gym
+and the `StylizeMaskRangeValidation` test both read the project value rather than restating 190, so a
+project that relocates the reservation keeps both honest.
 
 ### Screen dither (Stylize)
 
@@ -459,6 +531,28 @@ NOT a neutral reparameterization: raising it darkens the lit side while spreadin
 IS neutral — it is inverted exactly on the way out.) Its units are the scene's own pre-exposure linear
 values at this chain location, so changing project exposure or world unit scale means retuning Midpoint,
 not the band count. Tune it first; every other band control is relative to it.
+
+**Band placement has two modes, and `Distribution` cannot express what the second one is for.**
+`ECk_Usf_CelDistribution::Exponent` is the historical path and stays the default: N bands of EQUAL ramp
+width, with `_Distribution` biasing where that spacing sits. One exponent moves every boundary together,
+so it cannot produce "two narrow bands in the shadows and one wide one above" — pulling the first two down
+drags the third with them. `CustomEdges` hands the boundaries over directly: `_BandEdges` lists them, the
+bands are the intervals BETWEEN them (so N edges make N+1 bands and `_Bands` is ignored), and
+`_Distribution` is forced to 1 in the shader because the edges already ARE the placement. The list is a
+FIXED 8 shader scalars plus a live count — the ScreenDither palette precedent, since a material has no
+array parameters — and entries past 8 are dropped, so `Get_EffectiveBandEdges()` is what both the
+validation and the MID write read. Unused slots are written **1.0**, the only filler that cannot fabricate
+a band if the count were ever wrong (the shader derives the band ordinal by COUNTING edges at or below the
+ramp). `Request_SetSettings` rejects an empty, non-ascending, or out-of-`(0,1)` list with zero mutation:
+a non-ascending list does not fail, it silently re-orders the bands, and an edge sitting on 0 or 1 fences
+off a zero-width band no pixel can reach. Shipped demonstration: `DA_Cel_DramaticBands`.
+
+**CustomEdges overrides `_SkyBands` and `_MetallicBands` too** — the edge list is the placement for EVERY
+group, so those two counts stop having any effect in that mode. Deliberate, and stated because silence
+here reads as a bug: a per-group edge list would be three more 8-slot parameter blocks on an already
+84-input node, to express something no shipped preset asks for. Authored placement is a property of the
+LOOK, not of the group; the groups keep their own strengths and pattern strengths, which is what actually
+distinguishes them.
 
 **Strength governs bands and pattern only.** The outline, stepped specular and rim are separate features
 with their own opacity/intensity controls (this look inherits per-group strengths rather than one global
@@ -671,7 +765,100 @@ DarkGothic, PencilWash, Off) — the params-struct defaults ARE StorybookInk, so
 delta from it. Gym: "Stylize: Hand-Drawn" (CkTests) — a preset row over one judge scene, plus a debug row
 that forces the ink / stroke / paper masks on.
 
+### Cross hatch (Stylize)
+
+`/CkUsf/Looks/CrossHatch.ush` + `UCkUsf_CrossHatchSubsystem` (`Source/CkUsf/Public/CkUsf/Stylize/`).
+Placed at `SceneColorAfterDOF` because it reads Custom Stencil for the effect mask (pre-TAA rule above);
+consequence shared with CelShade and HandDrawn — the input and output are scene-referred LINEAR, which is
+the space `_PaperColor` is authored in. A paper value of 1.0 tonemaps to a mid grey, not to paper white,
+which is why every shipped preset's sheet sits above 1.
+
+**The DIRECTION is the whole point, and it is what a screen-space hatch cannot fake.** Classic NPR
+hatching runs ACROSS the form — an engraver's lines curve around a cylinder because they follow its
+surface. Projecting the scene normal to screen and rotating the stroke coordinate by its angle
+reproduces that from a post-process pass, because the projected normal already carries the form's turning.
+`_NormalAlignment` blends between the raw `_AngleOffset` (0 = a fixed screen hatch, the control that
+proves the alignment does anything) and full form-following.
+
+**`_UseWorldSpaceNormals` is an ARTISTIC choice, not a correctness one** — the maintainer asked for the
+tickbox for exactly that reason. Off (default) transforms the normal into VIEW space first, so the hatch
+direction is a property of how the surface faces the CAMERA and the lines keep wrapping a form under
+orbit — the engraving behaviour. On uses `In.SceneNormal` raw, so the direction encodes WORLD orientation
+and re-orients as the camera moves around a static object, which reads as the sheet turning rather than
+the object: wrong for an engraving, right for a top-lit map or a technical drawing whose north is fixed.
+The view-space transform goes through the engine's own `TransformWorldVectorToView` helper (engine
+`Shaders/Private/Common.ush:1999`, verified 2026-08-07) rather than a hand-written multiply, because
+`ResolvedView.TranslatedWorldToView` is the member that moves across engine versions and the helper is
+what absorbs that.
+
+**The direction blend happens on the VECTOR, not on the angle.** Blending angles walks into `atan2`'s
+branch cut: the projected angle wraps from +pi to -pi across a silhouette, so at any intermediate
+`_NormalAlignment` the blended angle sweeps the whole circle backwards along that seam and draws a band of
+wrong-direction strokes. Interpolating the unit vectors and taking `atan2` once at the end has no seam.
+Only 0 and 1 are safe under the naive form, which is exactly why the bug survives a preset walk.
+
+**A normal facing exactly at or away from the camera projects to a zero-length 2D vector** and has no
+direction to contribute — `atan2(0,0)` is undefined, and letting it through would make the centre of every
+sphere and every head-on wall hatch at an angle that flickers with the normal's wobble. Those pixels fall
+back to `_AngleOffset` alone. `ECk_Usf_CrossHatch_DebugMode::HatchDirection` puts the projected length in
+blue precisely so the fallback region is visible rather than mysterious.
+
+**Density is STEPPED, not continuous.** `_LayerCount` slices the darkness range — layer 0 covers all of
+it, layer 1 starts halfway down, and so on, each rotated a further `_LayerAngleStep`. Darker pixels
+accumulate CROSSING stroke fields rather than thicker strokes, which is how the medium works: an engraver
+adds a second pass at an angle, not a fatter burin. The layers are unioned with `max`, never summed —
+summing would double-darken every crossing point into a lattice of dots. `_StrokeThickness` below 1 is
+what keeps the darkest regions showing paper between the strokes instead of filling to black.
+
+**Darkness is normalized through Reinhard**, HandDrawn's approach and for its reason: pre-tonemap light is
+unbounded, so a 0..1 ramp applied to it directly would put every layer boundary in the darks. There are no
+band POSITIONS to place here (CelShade needs its `Midpoint` for that), only a monotone domain to threshold
+in, and Reinhard supplies one with no knob to mistune.
+
+**The stroke coverage test is fwidth-anti-aliased against the stroke COORDINATE**, never the threshold
+VALUE — the coordinate's derivative is smooth while the threshold is periodic and would blow the width up
+at every cell seam. Past a footprint of ~1 the comparison resolves to its average, the correct limit for a
+stroke field below pixel size, which is what keeps distant geometry from moire-ing. The layer loop runs
+its full compile-time bound with an ACTIVE weight rather than an early `continue`, so no derivative ever
+sits inside control flow. `_LayerCount` selects how many of the four contribute.
+
+**`_AffectSky` is a switch, not a threshold.** The sky has no form for the direction to follow, so its
+strokes take whatever angle its normal happens to give — ungated it is the single most obviously wrong
+thing this look can do.
+
+**`ECk_Usf_HandDrawnStrokePattern` is REUSED, not duplicated.** It is the index contract of
+`CkUsf_Stylize_StrokePattern`'s dispatcher, and a second enum over the same four primitives would be one
+more thing to keep in sync. The name says HandDrawn because that feature declared it first.
+
+**Three index contracts** — the subsystem writes each enum's integer value straight into a scalar
+parameter, so reordering an enum silently re-draws the look:
+
+| Enum | Consumer |
+|---|---|
+| `ECk_Usf_HandDrawnStrokePattern` | `CkUsf_Stylize_StrokePattern`'s dispatcher in `StylizeCommon.ush` |
+| `ECk_Usf_CrossHatchBackground` | the background branch in `CrossHatch.ush` |
+| `ECk_Usf_CrossHatch_DebugMode` | the `DebugMode` dispatcher at the end of `CrossHatch.ush` |
+
+**Scene textures wired: the default trio + CustomStencil.** `SceneNormal` is the load-bearing one — the
+hatch direction IS the projected normal, so dropping it would silently turn the look into a screen-space
+texture, which is why `CrossHatchGeneration` asserts it by name. `_PostProcessWorldPosition` is
+deliberately NOT opted into: the stroke lattice is screen-space by construction.
+
+Presets ship in `Script/CkUsf/CkUsf_CrossHatchPresets_Assets.as` (Sketch, Engraving, Blueprint, Off) —
+the params-struct defaults ARE Sketch, so each preset reads as its delta from it. Blueprint doubles as the
+`_NormalAlignment = 0` control. Gym: "Stylize: Cross Hatch" (CkTests) — a preset row and a debug row over
+one judge scene of CURVED forms (a box cannot show a wrapping hatch: one normal per face makes any
+direction look correct), plus a mask row where hand-tagged cubes and entity-API subjects must be
+indistinguishable.
+
 ### Stylize follow-ups
+
+- **The effect mask has no AngelScript AutoTest coverage for its ISM / ISKM / batched paths.** The cel
+  pattern has three (`CkAutoTest_UsfCelPattern_{IsmShadowInstances, IskmApplyRemove, BatchedMembers}`);
+  the mask's renderer distribution is currently covered only by the C++ actor-path test
+  (`StylizeMaskEntityStencilSync`) plus mechanical mimicry of the cel processors. Deliberately deferred
+  rather than half-done: authoring AS AutoTests carries the deletion-churn hazard documented in
+  `CkTests`, and three near-duplicate tests are worth one deliberate pass, not three rushed ones.
 
 - **A cel pattern applied while `EnableStencilPatterns` is on survives the setting being turned off.** Every
   sync processor early-outs on `Get_StencilValueFor() == 0` rather than undoing, so the already-written

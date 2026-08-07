@@ -88,6 +88,9 @@ public:
               meta = (UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0))
     float _Contrast = 1.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|ScreenDither|Mask")
+    FCk_Usf_StylizeMask_Params _Mask;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|ScreenDither")
     ECk_Usf_ScreenDither_DebugMode _DebugMode = ECk_Usf_ScreenDither_DebugMode::Final;
 

@@ -6,6 +6,8 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkUsf/Stylize/CkUsf_StylizeMask_Params.h"
+
 #include "CkUsf_CelShade_Params.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -45,6 +47,24 @@ enum class ECk_Usf_CelPatternSpace : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Usf_CelPatternSpace);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// How the band boundaries are placed along the illumination ramp. Order is a contract with CelShade.ush.
+//
+// Exponent is the historical behaviour and stays the default: N bands of EQUAL ramp width, with
+// `_Distribution` biasing where that equal spacing sits. It cannot express "two narrow bands in the
+// shadows and one wide one everywhere else" — an exponent moves every boundary together.
+// CustomEdges hands the boundary positions to the artist directly: `_BandEdges` lists them, and the
+// bands are the intervals BETWEEN them, so N edges is N+1 bands.
+UENUM(BlueprintType)
+enum class ECk_Usf_CelDistribution : uint8
+{
+    Exponent,
+    CustomEdges
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Usf_CelDistribution);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -88,7 +108,8 @@ enum class ECk_Usf_CelShade_DebugMode : uint8
     PatternThreshold,
     PatternCoordinates,
     MotionOffset,
-    Stencil
+    Stencil,
+    StylizeMask   // white where the effect mask lets the look through, black where it is held back
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Usf_CelShade_DebugMode);
@@ -110,6 +131,11 @@ public:
     // How many Custom-Stencil values above the base the pattern contract owns — one per ECk_Usf_CelPattern
     // entry. With the suppress value at base-1 the whole reserved span is [base-1, base+PatternSlots-1].
     static constexpr int32 PatternSlots = 10;
+
+    // Shader-side width of the custom band-edge list. Entries past this are DROPPED (the palette
+    // precedent in FCk_Usf_ScreenDither_Params) — a material has no array parameters, so the look
+    // carries a fixed set of edge scalars plus a live count.
+    static constexpr int32 MaxBandEdges = 8;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -133,10 +159,30 @@ private:
               meta = (AllowPrivateAccess = true, UIMin = -1.0, ClampMin = -1.0, UIMax = 1.0, ClampMax = 1.0))
     float _BandOffset = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Usf_CelDistribution _DistributionMode = ECk_Usf_CelDistribution::Exponent;
+
     // Exponent on the ramp: > 1 spends more bands on the shadows, < 1 on the highlights.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, UIMin = 0.1, ClampMin = 0.01, UIMax = 4.0))
+              meta = (AllowPrivateAccess = true, UIMin = 0.1, ClampMin = 0.01, UIMax = 4.0,
+                      EditCondition = "_DistributionMode == ECk_Usf_CelDistribution::Exponent"))
     float _Distribution = 1.0f;
+
+    // Band BOUNDARIES along the 0..1 ramp, strictly ascending, in CustomEdges mode. The bands are the
+    // intervals between them, so N edges make N+1 bands and `_Bands` is ignored. Entries past
+    // MaxBandEdges are dropped. The subsystem rejects an empty, non-ascending or out-of-range list
+    // rather than rendering the collapsed bands it would produce.
+    //
+    // It overrides `_SkyBands` and `_MetallicBands` as well: the edge list is the placement for EVERY
+    // group. Deliberate — a per-group list would be three more 8-slot parameter blocks on an already
+    // 84-input node, to express something no shipped preset asks for. Authored placement is a property
+    // of the look, not of the group; the groups keep their own strengths, which is what distinguishes
+    // them in practice.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                      EditCondition = "_DistributionMode == ECk_Usf_CelDistribution::CustomEdges"))
+    TArray<float> _BandEdges;
 
     // Width of the smooth ramp between two bands when the pattern is off. 0 = hard cel edges.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -450,6 +496,14 @@ private:
                       EditCondition = "_EnableStencilPatterns == ECk_EnableDisable::Enable"))
     int32 _StencilBase = 200;
 
+    // ---- Effect mask ----
+
+    // Confines the whole look to (or away from) a Custom-Stencil range. Its range must stay disjoint
+    // from the pattern span above AND from the outline subsystem's — all three write the same byte.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Usf_StylizeMask_Params _Mask;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_Usf_CelShade_DebugMode _DebugMode = ECk_Usf_CelShade_DebugMode::Final;
@@ -459,7 +513,9 @@ public:
     CK_PROPERTY(_Bands);
     CK_PROPERTY(_Midpoint);
     CK_PROPERTY(_BandOffset);
+    CK_PROPERTY(_DistributionMode);
     CK_PROPERTY(_Distribution);
+    CK_PROPERTY(_BandEdges);
     CK_PROPERTY(_BandSoftness);
     CK_PROPERTY(_ShadowLift);
     CK_PROPERTY(_Strength);
@@ -516,6 +572,7 @@ public:
     CK_PROPERTY(_OutlineDistanceFade);
     CK_PROPERTY(_EnableStencilPatterns);
     CK_PROPERTY(_StencilBase);
+    CK_PROPERTY(_Mask);
     CK_PROPERTY(_DebugMode);
 
 public:
@@ -524,6 +581,11 @@ public:
 
     // Highest Custom-Stencil value the pattern contract claims — the last selectable pattern.
     auto Get_StencilRangeMax() const -> int32;
+
+    // The band edges the SHADER will actually see: the authored list truncated to MaxBandEdges. Every
+    // validation and every MID write goes through this, so a list the shader ignores is never what a
+    // guard passed on.
+    auto Get_EffectiveBandEdges() const -> TArray<float>;
 
 public:
     auto operator==(const ThisType& InOther) const -> bool;

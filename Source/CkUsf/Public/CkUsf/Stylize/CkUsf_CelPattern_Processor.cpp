@@ -70,6 +70,34 @@ namespace ck_usf_cel_pattern_processor
             Primitive->SetRenderCustomDepth(false);
         }
     }
+
+    // Whether every primitive still carries what this feature wrote. The applied-state alone is not
+    // enough: another feature's undo can turn custom depth off underneath us (an outline removed from a
+    // component this feature had claimed first), and without re-checking the primitive the sync
+    // early-outs on its own cache forever and the pattern never comes back. The ISKM proxy path
+    // re-asserts per frame for the same reason; this is the actor path's equivalent, restricted to a
+    // comparison so an unchanged frame still costs no writes.
+    auto
+        DoGet_StencilStillApplied(
+            AActor* InActor,
+            int32 InStencilValue)
+        -> bool
+    {
+        TArray<UPrimitiveComponent*> Primitives;
+        InActor->GetComponents(Primitives);
+
+        for (auto* Primitive : Primitives)
+        {
+            if (ck::Is_NOT_Valid(Primitive))
+            { continue; }
+
+            if (NOT Primitive->bRenderCustomDepth ||
+                Primitive->CustomDepthStencilValue != InStencilValue)
+            { return false; }
+        }
+
+        return true;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -105,7 +133,8 @@ namespace ck
 
             if (Applied.Get_Pattern() == InTarget.Get_Pattern() &&
                 Applied.Get_Actor() == Actor &&
-                Applied.Get_StencilValue() == StencilValue)
+                Applied.Get_StencilValue() == StencilValue &&
+                ck_usf_cel_pattern_processor::DoGet_StencilStillApplied(Actor, StencilValue))
             { return; }
 
             ck_usf_cel_pattern_processor::DoDisableCustomDepth(Applied);
@@ -127,6 +156,14 @@ namespace ck
             const FFragment_Usf_OutlineTarget& InOutlineTarget)
         -> void
     {
+        // UNDO before dropping the state that records what to undo. Dropping alone assumes the outline's
+        // own Sync will overwrite the byte this frame — but that Sync can silently no-op (a null
+        // subsystem, an exhausted stencil range), and once this fragment is gone neither _Remove nor
+        // _EndPlay matches the entity, so the mesh keeps this feature's stencil forever with nothing left
+        // that knows to clear it. The undo is value-guarded, so if the outline HAS already written, this
+        // is a no-op. The one-frame gap where the mesh renders no custom depth is accepted.
+        ck_usf_cel_pattern_processor::DoDisableCustomDepth(InApplied);
+
         // Try_Remove, not Remove: the plain-removal processor's view also matches an entity whose cel
         // TARGET is gone as well, and the two run in an unspecified order within their group.
         InHandle.Try_Remove<FFragment_Usf_CelPatternApplied_Actor>();

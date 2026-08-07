@@ -1,0 +1,242 @@
+// /CkUsf/Looks/CrossHatch.ush
+// PostProcess cross-hatching: ink strokes whose DIRECTION follows the scene normal projected to screen
+// and whose DENSITY steps with darkness, drawn over either the scene or a blank sheet.
+//
+// THE DIRECTION IS THE WHOLE POINT, and it is the one thing a screen-space hatch cannot fake. Classic
+// NPR hatching runs ACROSS the form: an engraver's lines curve around a cylinder because they follow its
+// surface, and that is what separates hatching from a texture laid over the frame. Projecting the
+// surface normal to screen and hatching perpendicular to nothing but that projection reproduces it from
+// a post-process pass, because the projected normal already carries the form's turning.
+//
+// TWO NORMAL SPACES, AND THE DIFFERENCE IS VISIBLE UNDER CAMERA MOTION (UseWorldSpaceNormals):
+//   Screen (view-space, the default) — the normal is transformed into view space first, so the hatch
+//     direction is a property of how the surface FACES THE CAMERA. Orbit a sphere and the lines keep
+//     wrapping it the same way, which is what an engraving does.
+//   World — In.SceneNormal is used raw, so the direction is a property of which way the surface faces
+//     IN THE WORLD. The hatching then re-orients as the camera moves around a static object, which reads
+//     as the sheet turning rather than the object. Wrong for an engraving, right when the hatch is meant
+//     to encode world orientation (a top-lit map, a technical drawing whose north is fixed).
+// Neither is a bug fix for the other; the maintainer asked for the tickbox because the choice is
+// artistic. A normal pointing exactly at or away from the camera projects to a zero-length 2D vector and
+// has no direction to give — those pixels fall back to AngleOffset alone rather than to noise.
+//
+// DENSITY IS STEPPED, NOT CONTINUOUS. LayerCount slices the darkness range: layer 0 covers the whole
+// range, layer 1 starts halfway down, and so on, each rotated a further LayerAngleStep. Darker pixels
+// therefore accumulate crossing stroke fields rather than thicker strokes, which is how the medium
+// actually works — an engraver adds a second pass at an angle, not a fatter burin.
+//
+// PLACED AT SceneColorAfterDOF: it reads Custom Stencil for the effect mask, which is rendered with the
+// TAA-jittered projection and shimmers if thresholded after tonemapping. Consequence shared with
+// CelShade and HandDrawn — the input and output are scene-referred LINEAR, so PaperColor is authored in
+// that space and a value of 1.0 tonemaps to a mid grey, not to paper white.
+//
+// EVERY THRESHOLD ON A VARYING QUANTITY IS fwidth-ANTI-ALIASED, and the width comes from the stroke
+// COORDINATE (smooth) rather than the threshold VALUE (periodic — it would blow the width up at every
+// cell seam). The mask is the one deliberate exception; see CkUsf_Stylize_MaskWeight's comment.
+#pragma once
+#include "/CkUsf/Common.ush"
+#include "/CkUsf/StylizeCommon.ush"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Steepest slope any stroke primitive in StylizeCommon.ush reaches per pattern cell. The triangle-wave
+// families (DiagonalPencil / Crosshatch / LooseScribble) are exactly 2; Stipple's radius ramp can reach
+// about 4 at its smallest jittered radius, which merely over-smooths that one pattern's dot edges
+// slightly rather than under-smoothing them. Converts a footprint measured in CELLS into one measured in
+// THRESHOLD units, which is what the coverage comparison needs to anti-alias itself.
+#ifndef CKUSF_CROSSHATCH_STROKE_SLOPE
+#define CKUSF_CROSSHATCH_STROKE_SLOPE 2.0
+#endif
+
+// Hard ceiling on the layer loop. It is a compile-time bound so the loop can be unrolled with the
+// derivatives at uniform control flow; LayerCount selects how many of the four contribute.
+#define CKUSF_CROSSHATCH_MAX_LAYERS 4
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Reinhard, the same normalization HandDrawn's paint path uses and for the same reason: pre-tonemap
+// light is unbounded, so a 0..1 darkness ramp applied to it directly would put every layer boundary in
+// the darks. There are no band POSITIONS to place here (CelShade's Midpoint exists for that), only a
+// monotone domain to threshold in — and Reinhard supplies one with no knob to mistune.
+float CkUsf_CrossHatch_ToneNormalize(float Luminance)
+{
+    float L = max(Luminance, 0.0);
+    return L / (L + 1.0);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCkUsf_SurfaceOutput CkUsf_PP_CrossHatch(
+    FCkUsf_SurfaceInput In,
+    float StyleStrength,
+    float UseWorldSpaceNormals,
+    float AngleOffset,
+    float NormalAlignment,
+    float Spacing,
+    float LayerCount,
+    float LayerAngleStep,
+    float StrokePattern,
+    float StrokeThickness,
+    float StrokeIrregularity,
+    float DarknessBias,
+    float DarknessContrast,
+    float BackgroundMode,
+    float Saturation,
+    float AffectSky,
+    float SkyDistance,
+    float DebugMode,
+    float MaskMode,
+    float MaskStencilMin,
+    float MaskStencilMax,
+    float3 InkColor,
+    float3 PaperColor)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 ViewportUV = In.UV;
+    float3 Scene      = In.SceneColor.rgb;
+    float3 Normal     = normalize(In.SceneNormal.rgb + float3(0.0, 0.0, 1e-6));
+    float  Depth      = In.SceneDepth.r;
+    float  Stencil    = round(In.CustomStencil.r);
+
+    // Every pixel measurement here — stroke spacing above all — is in PostProcessInput0's OWN viewport,
+    // not the scene buffer's. Mixing the two desyncs a lattice from the samples it thresholds; same
+    // lesson ScreenDither, CelShade and HandDrawn carry.
+    float2 ViewSize = GetSceneTextureViewSize(PPI_PostProcessInput0).xy;
+
+    // ---- Hatch direction ---------------------------------------------------------------------------
+    // The engine's own helper rather than a hand-written matrix multiply: TransformWorldVectorToView
+    // resolves ResolvedView.TranslatedWorldToView, which is the member that has moved across engine
+    // versions. Going through the helper is what keeps this from silently reading garbage on an upgrade.
+    float3 DirectionSource = UseWorldSpaceNormals > 0.5 ? Normal : TransformWorldVectorToView(Normal);
+
+    float2 Projected = DirectionSource.xy;
+    float ProjectedLength = length(Projected);
+
+    // The blend happens on the DIRECTION VECTOR, not on the angle. Blending angles walks straight into
+    // atan2's branch cut: the projected angle wraps from +pi to -pi across a silhouette, so at any
+    // intermediate NormalAlignment the blended angle would sweep the whole circle backwards along that
+    // seam and draw a visible band of wrong-direction strokes. Interpolating the unit vectors and
+    // taking atan2 once at the end has no seam — the two directions meet through the shorter arc, and a
+    // degenerate blend (exactly opposite vectors) lands on zero length, which the guard below catches.
+    //
+    // A surface facing exactly at (or away from) the camera projects to nothing and has no direction to
+    // contribute. atan2(0,0) is undefined, and letting it through would make those pixels — the centre
+    // of every sphere, the flat face of every wall seen head-on — hatch at a random angle that flickers
+    // as the normal wobbles. They fall back to AngleOffset alone, which is a defined direction.
+    float BaseAngle = radians(AngleOffset);
+    float2 BaseDirection = float2(cos(BaseAngle), sin(BaseAngle));
+    float2 NormalDirection = ProjectedLength > 1e-3 ? Projected / ProjectedLength : BaseDirection;
+
+    float2 BlendedDirection = lerp(BaseDirection, NormalDirection, saturate(NormalAlignment));
+    float BlendedLength = length(BlendedDirection);
+
+    float Angle = BlendedLength > 1e-4 ? atan2(BlendedDirection.y, BlendedDirection.x) : BaseAngle;
+
+    // ---- Darkness ----------------------------------------------------------------------------------
+    float3 Shaped = CkUsf_Stylize_ApplySaturation(Scene, Saturation);
+    float Tone = CkUsf_CrossHatch_ToneNormalize(CkUsf_Stylize_Luminance(Shaped));
+    Tone = saturate((Tone - 0.5) * max(DarknessContrast, 0.0) + 0.5);
+    float Darkness = saturate(1.0 - Tone + DarknessBias);
+
+    // ---- Hatch layers ------------------------------------------------------------------------------
+    // The loop runs its full compile-time bound with an ACTIVE weight rather than an early `continue`,
+    // so the fwidth below never sits inside control flow. LayerCount is a material parameter and would
+    // be uniform anyway, but derivatives under any branch are the class of bug that only shows up on
+    // one backend.
+    float2 ScreenPixels = ViewportUV * ViewSize;
+    float Layers = clamp(floor(LayerCount + 0.5), 1.0, (float)CKUSF_CROSSHATCH_MAX_LAYERS);
+    int Pattern = (int)(StrokePattern + 0.5);
+    float CellSize = max(Spacing, 1e-3);
+
+    float HatchMask = 0.0;
+    float ActiveLayers = 0.0;
+
+    [unroll]
+    for (int Layer = 0; Layer < CKUSF_CROSSHATCH_MAX_LAYERS; ++Layer)
+    {
+        float LayerIndex = (float)Layer;
+        float Active = LayerIndex < Layers ? 1.0 : 0.0;
+
+        float LayerAngle = Angle + radians(LayerAngleStep) * LayerIndex;
+        float SinA = sin(LayerAngle);
+        float CosA = cos(LayerAngle);
+
+        // Rotating the COORDINATE, not the pattern: the stroke primitives all run along one fixed axis
+        // of their own cell space, so the frame they are evaluated in is the only place a direction can
+        // enter.
+        float2 Rotated = float2(
+            ScreenPixels.x * CosA + ScreenPixels.y * SinA,
+            ScreenPixels.y * CosA - ScreenPixels.x * SinA) / CellSize;
+
+        float Threshold = CkUsf_Stylize_StrokePattern(Pattern, Rotated, StrokeIrregularity);
+
+        // Each layer owns a slice of the darkness range and ramps across it, so a pixel only just into
+        // a layer's slice gets that layer's sparsest strokes rather than all of them at once.
+        float LayerStart = LayerIndex / Layers;
+        float Amount = saturate((Darkness - LayerStart) * Layers) * saturate(StrokeThickness);
+
+        // The footprint comes from the stroke COORDINATE, whose derivative is smooth. Past a footprint
+        // of ~1 the comparison resolves to its average, which is the correct limit for a stroke field
+        // below pixel size — that is what keeps distant geometry from moire-ing into a grey wash.
+        float EdgeWidth = max(length(fwidth(Rotated)) * CKUSF_CROSSHATCH_STROKE_SLOPE, 1e-4);
+        float Coverage = smoothstep(-EdgeWidth, EdgeWidth, Amount - Threshold);
+
+        // Union, not a sum: two crossing stroke fields ink the pixel where EITHER passes, and summing
+        // would double-darken every crossing point into a lattice of dots.
+        HatchMask = max(HatchMask, Coverage * Active);
+        ActiveLayers += (Darkness > LayerStart ? 1.0 : 0.0) * Active;
+    }
+
+    // ---- Composite ---------------------------------------------------------------------------------
+    // Paper is authored in scene-referred LINEAR (this look is pre-tonemap), so a convincing sheet is
+    // well above 1.0 — see the preset defaults. Scene keeps the frame underneath and turns the hatching
+    // into an overlay instead of a drawing.
+    float3 Background = BackgroundMode > 0.5 ? PaperColor : Shaped;
+    float3 Hatched = lerp(Background, InkColor, HatchMask);
+
+    // The sky has no form for the hatch direction to follow, so hatching it produces a field whose angle
+    // is driven by whatever the sky's normal happens to be. Ungated it is the single most obviously
+    // wrong thing this look can do, which is why it gets a switch rather than a threshold.
+    bool IsSky = Depth >= max(SkyDistance, 1.0);
+    bool SkipHatch = IsSky && AffectSky < 0.5;
+
+    // Skipping the hatch must NOT skip the BACKGROUND. In Paper mode the sheet is the surface the whole
+    // drawing sits on, not a property of any subject in it — returning Scene here punches raw,
+    // unbounded scene-referred sky straight through the paper, which at the shipped defaults is a
+    // blown-out hole where the sky should be (and feeds bloom besides). AffectSky governs whether the
+    // sky is HATCHED; the sheet still covers it. In Scene mode Background IS the shaped scene, so this
+    // reduces to the saturation-only path and nothing changes.
+    float3 Result = lerp(Scene, SkipHatch ? Background : Hatched, saturate(StyleStrength));
+
+    // ---- Effect mask -------------------------------------------------------------------------------
+    float MaskWeight = CkUsf_Stylize_MaskWeight(
+        (int)(MaskMode + 0.5), Stencil, MaskStencilMin, MaskStencilMax);
+    Result = lerp(Scene, Result, MaskWeight);
+
+    // ---- Debug -------------------------------------------------------------------------------------
+    // Debug views bypass the master lerp and the mask on purpose: a mask viewed at StyleStrength 0.3
+    // would be a faint tint over the untouched frame, which is not a diagnostic.
+    int Debug = (int)(DebugMode + 0.5);
+    if (Debug == 1)      { Result = float3(HatchMask, HatchMask, HatchMask); }
+    else if (Debug == 2)
+    {
+        // Direction as hue-ish RG: the two channels are the unit vector remapped to 0..1, so a smoothly
+        // turning surface must show a smooth sweep. Hard patches mean the projected normal is degenerate
+        // there and the fallback angle has taken over.
+        float2 Unit = float2(cos(Angle), sin(Angle)) * 0.5 + 0.5;
+        Result = float3(Unit, ProjectedLength);
+    }
+    else if (Debug == 3) { Result = float3(Darkness, Darkness, Darkness); }
+    else if (Debug == 4)
+    {
+        float Normalized = ActiveLayers / (float)CKUSF_CROSSHATCH_MAX_LAYERS;
+        Result = float3(Normalized, Normalized, Normalized);
+    }
+    else if (Debug == 5) { Result = Normal * 0.5 + 0.5; }
+    else if (Debug == 6) { Result = float3(MaskWeight, MaskWeight, MaskWeight); }
+
+    O.EmissiveColor = Result;
+    O.Opacity = 1.0;
+    return O;
+}

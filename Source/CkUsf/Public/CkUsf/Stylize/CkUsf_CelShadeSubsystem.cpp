@@ -3,6 +3,7 @@
 #include "CkUsf/LookDefinition/CkUsf_LookDefinition_Naming.h"
 #include "CkUsf/Outline/CkUsf_OutlineSubsystem.h"
 #include "CkUsf/Stylize/CkUsf_CelShadePreset.h"
+#include "CkUsf/Stylize/CkUsf_StylizeMask_Utils.h"
 #include "CkUsf/Stylize/CkUsf_Stylize_CVars.h"
 #include "CkUsf/Stylize/CkUsf_Stylize_ProjectSettings.h"
 #include "CkUsf_Log.h"
@@ -158,6 +159,77 @@ auto
     if (NOT StencilRangeAvoidsOutline)
     { return; }
 
+    const auto BandEdgesAreValid = Get_BandEdgesAreValid(InSettings);
+
+    CK_ENSURE_IF_NOT(BandEdgesAreValid,
+        TEXT("Request_SetSettings: CelShade DistributionMode is CustomEdges with an EMPTY, NON-ASCENDING "
+             "or out-of-range band-edge list [{}]; the bands are the intervals between the edges, so a "
+             "list like that collapses one to zero width or hides it entirely. Settings left untouched"),
+        FString::JoinBy(InSettings.Get_EffectiveBandEdges(), TEXT(", "),
+            [](float InEdge) -> FString { return FString::SanitizeFloat(InEdge); }))
+    {}
+
+    if (NOT BandEdgesAreValid)
+    { return; }
+
+    const auto& Mask = InSettings.Get_Mask();
+
+    const auto MaskRangeIsAddressable = UCk_Utils_Usf_StylizeMask_UE::Get_MaskRangeIsAddressable(Mask);
+
+    CK_ENSURE_IF_NOT(MaskRangeIsAddressable,
+        TEXT("Request_SetSettings: CelShade effect-mask range [{}, {}] is inverted or reaches the engine's "
+             "NO-STENCIL value 0; it would match every untagged pixel in the view or none at all. "
+             "Settings left untouched"),
+        Mask.Get_StencilMin(), Mask.Get_StencilMax())
+    {}
+
+    if (NOT MaskRangeIsAddressable)
+    { return; }
+
+    const auto MaskRangeAvoidsOutline =
+        UCk_Utils_Usf_StylizeMask_UE::Get_MaskRangeAvoidsOutline(GetWorld(), Mask);
+
+    CK_ENSURE_IF_NOT(MaskRangeAvoidsOutline,
+        TEXT("Request_SetSettings: CelShade effect-mask range [{}, {}] COLLIDES with the outline "
+             "subsystem's allocated range; settings left untouched"),
+        Mask.Get_StencilMin(), Mask.Get_StencilMax())
+    {}
+
+    if (NOT MaskRangeAvoidsOutline)
+    { return; }
+
+    // Against the INCOMING pattern span, not the stored one: both live in this same settings value, so a
+    // caller can move the base and the mask together and only their final relationship matters.
+    const auto MaskRangeAvoidsCelSpan =
+        UCk_Utils_Usf_StylizeMask_UE::Get_MaskRangeAvoidsCelSpan(Mask, InSettings);
+
+    CK_ENSURE_IF_NOT(MaskRangeAvoidsCelSpan,
+        TEXT("Request_SetSettings: CelShade effect-mask range [{}, {}] COLLIDES with its own per-object "
+             "pattern span [{}, {}]; one stencil value cannot both select a pattern and gate the look. "
+             "Settings left untouched"),
+        Mask.Get_StencilMin(), Mask.Get_StencilMax(),
+        InSettings.Get_StencilRangeMin(), InSettings.Get_StencilRangeMax())
+    {}
+
+    if (NOT MaskRangeAvoidsCelSpan)
+    { return; }
+
+    // The same rule the other way round. A sibling's mask was validated against the cel span that existed
+    // when the mask was set; moving StencilBase afterwards would walk this span onto that mask with
+    // nothing having rejected anything.
+    const auto CelSpanAvoidsSiblingMasks =
+        UCk_Utils_Usf_StylizeMask_UE::Get_CelSpanAvoidsSiblingMasks(GetWorld(), InSettings);
+
+    CK_ENSURE_IF_NOT(CelSpanAvoidsSiblingMasks,
+        TEXT("Request_SetSettings: CelShade per-object pattern span [{}, {}] COLLIDES with an effect-mask "
+             "range another stylize effect in this world already holds; one stencil value cannot both "
+             "select a cel pattern and gate that look. Settings left untouched"),
+        InSettings.Get_StencilRangeMin(), InSettings.Get_StencilRangeMax())
+    {}
+
+    if (NOT CelSpanAvoidsSiblingMasks)
+    { return; }
+
     _SettingsExplicitlySet = true;
 
     _Settings = InSettings;
@@ -193,6 +265,37 @@ auto
     -> bool
 {
     return DoGet_StencilRangeIsAddressable(InSettings) && DoGet_StencilRangeAvoidsOutline(InSettings);
+}
+
+auto
+    UCkUsf_CelShadeSubsystem::
+    Get_BandEdgesAreValid(
+        const FCk_Usf_CelShade_Params& InSettings)
+    -> bool
+{
+    if (InSettings.Get_DistributionMode() != ECk_Usf_CelDistribution::CustomEdges)
+    { return true; }
+
+    const auto Edges = InSettings.Get_EffectiveBandEdges();
+
+    // No edges means no boundaries, which is one flat band — the artist asked for custom placement and
+    // would get the look switched off with nothing saying so.
+    if (Edges.IsEmpty())
+    { return false; }
+
+    // Strictly ascending AND strictly inside 0..1: the shader counts edges at or below the ramp to get a
+    // band ordinal, which is only monotone on an ascending list; and an edge sitting exactly on 0 or 1
+    // fences off a zero-width band that no pixel can ever land in.
+    auto Previous = 0.0f;
+    for (const auto Edge : Edges)
+    {
+        if (Edge <= Previous || Edge >= 1.0f)
+        { return false; }
+
+        Previous = Edge;
+    }
+
+    return true;
 }
 
 auto
@@ -562,6 +665,40 @@ auto
     Set_Vector(TEXT("LightTint"), InEffective.Get_LightTint(), Previous.Get_LightTint());
     Set_Vector(TEXT("RimColor"), InEffective.Get_RimColor(), Previous.Get_RimColor());
     Set_Vector(TEXT("OutlineColor"), InEffective.Get_OutlineColor(), Previous.Get_OutlineColor());
+
+    Set_Scalar(TEXT("DistributionMode"),
+        Get_EnumIndex(InEffective.Get_DistributionMode()), Get_EnumIndex(Previous.Get_DistributionMode()));
+
+    // Entries past the shader's fixed 8-wide list are dropped, and unfilled slots are written 1.0 rather
+    // than 0: the shader counts edges at or below the ramp, so a stale 0 in a slot the count no longer
+    // covers would still read as "below" if the count itself were ever wrong, and would silently add a
+    // band. 1.0 is the only filler that cannot.
+    const auto Get_BandEdge = [](const FCk_Usf_CelShade_Params& InParams, int32 InIndex) -> float
+    {
+        const auto Edges = InParams.Get_EffectiveBandEdges();
+        return Edges.IsValidIndex(InIndex) ? Edges[InIndex] : 1.0f;
+    };
+
+    const auto Get_BandEdgeCount = [](const FCk_Usf_CelShade_Params& InParams) -> float
+    {
+        return static_cast<float>(FMath::Clamp(
+            InParams.Get_EffectiveBandEdges().Num(), 1, FCk_Usf_CelShade_Params::MaxBandEdges));
+    };
+
+    Set_Scalar(TEXT("BandEdgeCount"), Get_BandEdgeCount(InEffective), Get_BandEdgeCount(Previous));
+
+    for (auto Index = 0; Index < FCk_Usf_CelShade_Params::MaxBandEdges; ++Index)
+    {
+        Set_Scalar(*FString::Printf(TEXT("BandEdge%d"), Index),
+            Get_BandEdge(InEffective, Index), Get_BandEdge(Previous, Index));
+    }
+
+    Set_Scalar(TEXT("MaskMode"),
+        Get_EnumIndex(InEffective.Get_Mask().Get_Mode()), Get_EnumIndex(Previous.Get_Mask().Get_Mode()));
+    Set_Scalar(TEXT("MaskStencilMin"),
+        Get_Count(InEffective.Get_Mask().Get_StencilMin()), Get_Count(Previous.Get_Mask().Get_StencilMin()));
+    Set_Scalar(TEXT("MaskStencilMax"),
+        Get_Count(InEffective.Get_Mask().Get_StencilMax()), Get_Count(Previous.Get_Mask().Get_StencilMax()));
 
     _WrittenSettings = InEffective;
 }

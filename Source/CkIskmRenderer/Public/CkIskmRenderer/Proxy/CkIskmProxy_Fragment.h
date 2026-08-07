@@ -113,6 +113,26 @@ namespace ck
         CK_DEFINE_CONSTRUCTORS(FFragment_IskmProxy_CelPatternApplied, _Pattern, _StencilValue);
     };
 
+    // ---- entity stylize effect mask (see CkUsf/Claude.md § Stylize) ----
+    //
+    // Applied-state for ck::FFragment_Usf_StylizeMaskTarget on Plan-1 proxies: the Sync processor set Custom
+    // Depth + the project's mask stencil on the BaseSKMC and its submeshes; removing the fragment undoes
+    // both. The cel-pattern twin above minus the pattern — the mask has ONE project-wide value, so the
+    // recorded stencil exists only to tell a no-op refresh from a real change.
+    struct CKISKMRENDERER_API FFragment_IskmProxy_StylizeMaskApplied
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IskmProxy_StylizeMaskApplied);
+
+    private:
+        int32 _StencilValue = 0;
+
+    public:
+        CK_PROPERTY_GET_BY_COPY(_StencilValue);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_IskmProxy_StylizeMaskApplied, _StencilValue);
+    };
+
     // ---- anim state ----
 
     struct CKISKMRENDERER_API FFragment_IskmProxy_AnimState
