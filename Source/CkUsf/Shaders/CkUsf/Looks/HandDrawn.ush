@@ -1,0 +1,392 @@
+// /CkUsf/Looks/HandDrawn.ush
+// PostProcess hand-drawn illustration: four treatments applied in a FIXED order — paint (colour-region
+// reduction + tinting), ink (contour lines), shadow strokes (procedural hatching), paper (grain + fibre
+// + warm cast) — then one master StyleStrength lerp back toward the untouched frame.
+//
+// THE ORDER IS THE CONTRACT. Paint simplifies the regions the ink is then drawn between; strokes go on
+// top of painted regions because hatching is drawn over paint, not under it; paper is LAST because it is
+// the surface everything was drawn ON — applying it earlier would let the posterizer quantize the grain
+// into bands and the ink detectors read the fibre as an edge.
+//
+// STYLESTRENGTH GOVERNS EVERYTHING, unlike CelShade's Strength (which bands only). A drawing is one
+// medium: there is no meaningful state where the ink is at full weight and the paper is absent, so the
+// master weight is a single lerp over the whole composite. The whole-look passthrough is still the
+// subsystem's Enabled — StyleStrength 0 is the same picture by a slower route.
+//
+// PLACED AT SceneColorAfterDOF, which is PRE-TONEMAP: the input is scene-referred LINEAR and unbounded.
+// A 0..1 posterizer applied to that would put every band boundary in the darks, so the paint path
+// normalizes luminance through Reinhard (L/(1+L)) first, quantizes there, and inverts on the way out.
+// Quantization is CELL-CENTRED ((floor(F)+0.5)/N) for a second reason beyond evenness: the top level of
+// an edge-aligned quantizer would be exactly 1.0, whose Reinhard inverse is infinite.
+//
+// THE REAL HIGHLIGHT CEILING IS THE LEVEL COUNT. With SimplifyColor on, the brightest region resolves to
+// (N-0.5)/N, so the restored luminance can never exceed 2N-1 — 9.0 at StorybookInk's 5 levels, 3.0 at
+// DarkGothic's 2. That is what actually suppresses bloom on emissive props, and it is a consequence of
+// the artist's level count, not a safety net: fewer colour regions means a harder highlight clamp.
+// CKUSF_HANDDRAWN_MAX_TONE below is the fallback for the OTHER path — with SimplifyColor off there is no
+// level count to cap anything, and only that constant stands between Contrast > 1 and an unbounded value.
+//
+// NOT IMPLEMENTED, ON PURPOSE: temporal stabilization of world-attached strokes on translating or
+// skinned meshes. It needs a frame history a post-process blendable does not have — the same limitation
+// CelShade's world-space patterns carry. ScreenStable is the alternative for animated subjects.
+#pragma once
+#include "/CkUsf/Common.ush"
+#include "/CkUsf/StylizeCommon.ush"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// The warm cast paper is lerped toward. Slightly hot in red, down in blue — the shift of aged pulp,
+// applied multiplicatively so it tints without lifting black.
+#ifndef CKUSF_HANDDRAWN_PAPER_CAST
+#define CKUSF_HANDDRAWN_PAPER_CAST float3(1.06, 1.00, 0.86)
+#endif
+
+// Anisotropy of the paper fibre noise: fibres run along Y, so the noise is stretched hard in X. A value
+// of 1 would give isotropic clumps, which read as a second grain rather than as a fibre direction.
+#ifndef CKUSF_HANDDRAWN_FIBER_ANISOTROPY
+#define CKUSF_HANDDRAWN_FIBER_ANISOTROPY 0.06
+#endif
+
+// Ceiling on the scene-referred luminance the paint path may restore to. The inverse of the tone
+// normalization is unbounded at 1, and Contrast > 1 can push a bright pixel there — without this a
+// single hot pixel would come back as an arbitrarily large value and detonate bloom. Only reachable
+// with SimplifyColor OFF: with it on, 2N-1 (the level count's own ceiling, see the header) always bites
+// first. 64 is far above anything the tonemapper distinguishes from white, so the cap only ever lands
+// on values that were already going to clip; it is not a per-pixel style decision.
+#ifndef CKUSF_HANDDRAWN_MAX_TONE
+#define CKUSF_HANDDRAWN_MAX_TONE 64.0
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+// Neighbour taps. Each scene texture carries its OWN viewport rect, so a viewport UV must be mapped
+// through that texture's own transform — the house CkUsf_ViewportUVToBufferUV maps to the scene buffer
+// only, which silently drifts under screen percentage / dynamic resolution for any other input. Same
+// lesson ScreenDither and CelShade carry.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_HandDrawn_TapDepth(float2 ViewportUV)
+{
+    float2 UV = ClampSceneTextureUV(
+        ViewportUVToSceneTextureUV(saturate(ViewportUV), PPI_SceneDepth), PPI_SceneDepth);
+    return SceneTextureLookup(UV, PPI_SceneDepth, false).r;
+}
+
+float3 CkUsf_HandDrawn_TapNormal(float2 ViewportUV)
+{
+    float2 UV = ClampSceneTextureUV(
+        ViewportUVToSceneTextureUV(saturate(ViewportUV), PPI_WorldNormal), PPI_WorldNormal);
+    return SceneTextureLookup(UV, PPI_WorldNormal, false).rgb;
+}
+
+float3 CkUsf_HandDrawn_TapColor(float2 ViewportUV)
+{
+    float2 UV = ClampSceneTextureUV(
+        ViewportUVToSceneTextureUV(saturate(ViewportUV), PPI_PostProcessInput0), PPI_PostProcessInput0);
+    return SceneTextureLookup(UV, PPI_PostProcessInput0, false).rgb;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Tone normalization. Reinhard is used rather than an authored exposure anchor (CelShade's Midpoint)
+// because the hand-drawn treatments have no band POSITIONS to place — the paint only needs a monotone
+// 0..1 domain to posterize and threshold in, and Reinhard supplies one with no knob to mistune.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_HandDrawn_ToneNormalize(float Luminance)
+{
+    float L = max(Luminance, 0.0);
+    return L / (L + 1.0);
+}
+
+float CkUsf_HandDrawn_ToneRestore(float Normalized)
+{
+    float N = saturate(Normalized);
+    return min(N / max(1.0 - N, 1e-6), CKUSF_HANDDRAWN_MAX_TONE);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCkUsf_SurfaceOutput CkUsf_PP_HandDrawn(
+    FCkUsf_SurfaceInput In,
+    float StyleStrength,
+    float SimplifyColor,
+    float ColorLevels,
+    float ColorSoftness,
+    float Saturation,
+    float Contrast,
+    float TintStrength,
+    float AffectSky,
+    float SkyDistance,
+    float EnableInk,
+    float InkThickness,
+    float InkOpacity,
+    float DepthThreshold,
+    float NormalThreshold,
+    float ColorEdgeThreshold,
+    float LineVariation,
+    float LineScale,
+    float InkFadeStartDistance,
+    float InkFadeEndDistance,
+    float EnableShadowStrokes,
+    float StrokePattern,
+    float StrokeSpace,
+    float StrokeStrength,
+    float StrokeShadowThreshold,
+    float StrokePixelSize,
+    float StrokeWorldSize,
+    float StrokeIrregularity,
+    float StrokeTriplanarSharpness,
+    float EnablePaper,
+    float GrainStrength,
+    float GrainScale,
+    float FiberStrength,
+    float PaperWarmth,
+    float DebugMode,
+    float3 ShadowTint,
+    float3 HighlightTint,
+    float3 InkColor)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 ViewportUV = In.UV;
+    float3 Original   = In.SceneColor.rgb;
+    float3 Normal     = normalize(In.SceneNormal.rgb + float3(0.0, 0.0, 1e-6));
+    float  Depth      = In.SceneDepth.r;
+
+    // Everything measured in pixels — stroke size, paper scale, ink thickness — is measured in THIS
+    // viewport, PostProcessInput0's own, not the scene buffer's. Mixing the two desyncs a pattern from
+    // the samples it thresholds.
+    float2 ViewSize = GetSceneTextureViewSize(PPI_PostProcessInput0).xy;
+
+    // The sky has no surface to draw on: it is where paint and strokes are most obviously wrong, so it
+    // gets one gate rather than each treatment inventing its own. Ink is deliberately NOT gated — a
+    // silhouette against the sky is the drawing's most important contour. Note the ink distance fade
+    // still applies to it: with a fade configured the sky is past the end distance, so the horizon
+    // contour goes with it. Only an unfaded line (InkFadeEndDistance 0) survives out there.
+    bool IsSky = Depth >= max(SkyDistance, 1.0);
+    bool PaintsSky = AffectSky > 0.5;
+    bool SkipSurfaceTreatments = IsSky && !PaintsSky;
+
+    // ---- 1. Paint ----------------------------------------------------------------------------------
+    // Saturation shapes the colour, then everything tonal happens in the normalized domain: contrast
+    // about 0.5 means nothing in unbounded scene-referred linear.
+    float3 Shaped = Original;
+    {
+        float ShapedLuma = CkUsf_Stylize_Luminance(Shaped);
+        Shaped = lerp(float3(ShapedLuma, ShapedLuma, ShapedLuma), Shaped, max(Saturation, 0.0));
+    }
+
+    float PaintLuma = CkUsf_Stylize_Luminance(Shaped);
+    float ToneNormalized = CkUsf_HandDrawn_ToneNormalize(PaintLuma);
+    ToneNormalized = saturate((ToneNormalized - 0.5) * max(Contrast, 0.0) + 0.5);
+
+    float PaintTone = ToneNormalized;
+    if (SimplifyColor > 0.5)
+    {
+        float Levels = max(ColorLevels, 2.0);
+        float Position = ToneNormalized * Levels;
+        float Index = min(floor(Position), Levels - 1.0);
+        float Fraction = saturate(Position - floor(Position));
+
+        // Cell-centred levels: the level a region resolves to is the CENTRE of its slice, so the
+        // brightest region is (N-0.5)/N rather than 1.0 — see the header on why 1.0 is unusable here.
+        float LevelLow  = (Index + 0.5) / Levels;
+        float LevelHigh = (min(Index + 1.0, Levels - 1.0) + 0.5) / Levels;
+
+        // Softness smooths the boundary between two colour regions. Same shape as CelShade's
+        // BandSoftness, and for the same reason: a hard floor() is a step, and a painted transition is
+        // not a step but a short blend near the region edge.
+        float Blend = ColorSoftness > 1e-4
+            ? smoothstep(saturate(1.0 - ColorSoftness), 1.0, Fraction)
+            : 0.0;
+
+        PaintTone = lerp(LevelLow, LevelHigh, Blend);
+    }
+
+    // Scaling by the tone ratio reduces the LIGHT into regions while leaving hue alone; replacing the
+    // colour outright would flatten every material to one tint.
+    float3 Paint = Shaped * (CkUsf_HandDrawn_ToneRestore(PaintTone) / max(PaintLuma, 1e-4));
+
+    // Dual tint by the luminance split: dark regions take ShadowTint, bright ones HighlightTint, both
+    // multiplicatively so the tint colours the paint rather than replacing it.
+    float3 TintTarget = lerp(ShadowTint, HighlightTint, saturate(PaintTone));
+    Paint *= lerp(float3(1.0, 1.0, 1.0), TintTarget, saturate(TintStrength));
+
+    float3 Stylized = SkipSurfaceTreatments ? Original : Paint;
+
+    // ---- 2. Ink ------------------------------------------------------------------------------------
+    // Three independent detectors, each with its own threshold, ORed together: a depth Laplacian for
+    // silhouettes and creases, a normal-angle test for form lines on a continuous surface, and a
+    // scene-colour difference for the boundaries between two objects at the same depth and orientation.
+    float InkMask = 0.0;
+    if (EnableInk > 0.5)
+    {
+        float2 Texel = max(InkThickness, 1.0) / max(ViewSize, 1.0);
+
+        // Line variation is what separates a drawn contour from a machined one: the whole tap cluster is
+        // displaced by a low-frequency noise, so a straight edge wanders by up to LineVariation texels
+        // along its length instead of tracking the pixel grid exactly.
+        float2 NoisePos = ViewportUV * ViewSize / max(LineScale, 1e-3);
+        float2 Wander = float2(CkUsf_Fbm(NoisePos), CkUsf_Fbm(NoisePos + 31.7)) - 0.5;
+        float2 BaseUV = ViewportUV + Wander * 2.0 * max(LineVariation, 0.0) * Texel;
+
+        const float2 Offsets[4] =
+        {
+            float2( 1.0,  0.0), float2(-1.0,  0.0), float2( 0.0,  1.0), float2( 0.0, -1.0)
+        };
+
+        float CenterDepth = CkUsf_HandDrawn_TapDepth(BaseUV);
+        float3 CenterNormal = normalize(CkUsf_HandDrawn_TapNormal(BaseUV) + float3(0.0, 0.0, 1e-6));
+        float CenterTone = CkUsf_HandDrawn_ToneNormalize(
+            CkUsf_Stylize_Luminance(CkUsf_HandDrawn_TapColor(BaseUV)));
+
+        float DepthSum = 0.0;
+        float NormalDivergence = 0.0;
+        float ColorDivergence = 0.0;
+
+        [unroll]
+        for (int i = 0; i < 4; ++i)
+        {
+            float2 TapUV = BaseUV + Offsets[i] * Texel;
+
+            DepthSum += CkUsf_HandDrawn_TapDepth(TapUV);
+            NormalDivergence = max(NormalDivergence,
+                1.0 - saturate(dot(CenterNormal,
+                    normalize(CkUsf_HandDrawn_TapNormal(TapUV) + float3(0.0, 0.0, 1e-6)))));
+
+            // Compared in the normalized tone domain rather than raw linear: a raw difference is
+            // dominated by whichever pixel is brightest, so the threshold would mean something different
+            // in every part of the frame.
+            float TapTone = CkUsf_HandDrawn_ToneNormalize(
+                CkUsf_Stylize_Luminance(CkUsf_HandDrawn_TapColor(TapUV)));
+            ColorDivergence = max(ColorDivergence, abs(TapTone - CenterTone));
+        }
+
+        // Laplacian, not a gradient: a flat surface at a grazing angle has a large depth gradient but a
+        // near-zero second derivative, so only silhouettes and creases spike. Divided by depth so the
+        // test is distance-independent.
+        float DepthLaplacian = abs(DepthSum - 4.0 * CenterDepth) / max(CenterDepth, 1.0);
+
+        float DepthEdge  = step(max(DepthThreshold, 1e-4), DepthLaplacian);
+        float NormalEdge = step(max(NormalThreshold, 1e-4), NormalDivergence);
+        float ColorEdge  = step(max(ColorEdgeThreshold, 1e-4), ColorDivergence);
+
+        // Distance fade. An end of 0 means no fade at all; below the start the line is at full weight,
+        // past the end it is gone. With an end that is NOT past the start the max() pins the denominator
+        // at the epsilon and the ramp collapses into a hard cutoff at the end distance — the setting
+        // silently stops being a fade. The subsystem rejects that range, so the epsilon here is
+        // numerical safety for the ordered case, not a config fallback for the inverted one.
+        float Fade = 1.0;
+        if (InkFadeEndDistance > 0.0)
+        {
+            Fade = saturate((InkFadeEndDistance - Depth) /
+                max(InkFadeEndDistance - InkFadeStartDistance, 1e-3));
+        }
+
+        InkMask = saturate(DepthEdge + NormalEdge + ColorEdge) * saturate(InkOpacity) * Fade;
+        Stylized = lerp(Stylized, InkColor, InkMask);
+    }
+
+    // ---- 3. Shadow strokes -------------------------------------------------------------------------
+    // Hatching where the painted result is darker than the threshold. The pattern returns a coverage
+    // THRESHOLD (StylizeCommon's convention) and the shade depth is the inked quantity tested against
+    // it, so a region only slightly under the threshold gets the sparsest strokes of the pattern.
+    float StrokeMask = 0.0;
+    if (EnableShadowStrokes > 0.5 && !SkipSurfaceTreatments)
+    {
+        float StrokeThreshold;
+        int Pattern = (int)(StrokePattern + 0.5);
+
+        if (StrokeSpace < 0.5)
+        {
+            // Screen-stable: the lattice is camera-aligned, so it never swims on a moving subject — the
+            // right choice for animated scenes, and the control that proves the world-attached mode is
+            // actually attached to anything.
+            float2 ScreenCoord = ViewportUV * ViewSize / max(StrokePixelSize, 1e-3);
+            StrokeThreshold = CkUsf_Stylize_StrokePattern(Pattern, ScreenCoord, StrokeIrregularity);
+        }
+        else
+        {
+            // World-attached: the lattice lives on the depth-reconstructed scene surface, so it holds
+            // still under camera motion — and SLIDES on anything that translates or skins, which no
+            // amount of tuning fixes from inside a blendable.
+            //
+            // In.WorldPosition arrives as float32, so cell coordinates lose sub-cell precision past
+            // roughly 1e6 uu from the origin — strokes on far-from-origin geometry quantize and then
+            // stop moving. Same limit CelShade's world-space patterns carry.
+            float3 P = In.WorldPosition / max(StrokeWorldSize, 1e-3);
+
+            float3 Weights = pow(abs(Normal), max(StrokeTriplanarSharpness, 1e-3));
+            Weights /= max(Weights.x + Weights.y + Weights.z, 1e-4);
+
+            // The three planar patterns are blended, not the coordinates: blending coordinates across a
+            // corner produces a smeared stroke belonging to no plane.
+            StrokeThreshold =
+                Weights.x * CkUsf_Stylize_StrokePattern(Pattern, P.yz, StrokeIrregularity) +
+                Weights.y * CkUsf_Stylize_StrokePattern(Pattern, P.zx, StrokeIrregularity) +
+                Weights.z * CkUsf_Stylize_StrokePattern(Pattern, P.xy, StrokeIrregularity);
+        }
+
+        // How far under the threshold this pixel sits, normalized so a pixel at the threshold gets no
+        // strokes and black gets the densest the pattern can draw.
+        float ShadowDepthAmount = saturate(
+            (saturate(StrokeShadowThreshold) - saturate(PaintTone)) / max(saturate(StrokeShadowThreshold), 1e-3));
+
+        // max() on the THRESHOLD, not the amount: the stroke patterns bottom out at exactly 0 at a cell
+        // centre, and step(0, 0) is 1 — so a pixel with zero shade would still be inked wherever the
+        // pattern happens to bottom out, speckling the lit half of the frame.
+        StrokeMask = step(max(StrokeThreshold, 1e-4), ShadowDepthAmount) * saturate(StrokeStrength);
+
+        // Strokes are drawn in the ink colour: hatching and contours are the same medium in a drawing,
+        // and a separate stroke colour would let the two disagree about what "the pencil" is.
+        Stylized = lerp(Stylized, InkColor, StrokeMask);
+    }
+
+    // ---- 4. Paper ----------------------------------------------------------------------------------
+    // Applied LAST and over EVERYTHING including the sky, because paper is the surface the whole drawing
+    // sits on, not a property of any subject in it. The grain lattice is in viewport pixels, which is
+    // why the source's docs warn to tune it at the target output resolution: a frame rendered at a
+    // different resolution gets a different number of grains across the same picture.
+    float PaperPattern = 0.0;
+    if (EnablePaper > 0.5)
+    {
+        float2 PaperPos = ViewportUV * ViewSize / max(GrainScale, 1e-3);
+
+        // Per-cell hash, not a smooth noise: paper grain is uncorrelated speckle, and a value noise here
+        // reads as blotching instead.
+        float Grain = CkUsf_Hash21(floor(PaperPos)) - 0.5;
+
+        // Fibre is the opposite — a low-frequency noise stretched hard along one axis, so it reads as a
+        // direction in the sheet rather than as a second grain.
+        float Fiber = CkUsf_Fbm(float2(PaperPos.x * CKUSF_HANDDRAWN_FIBER_ANISOTROPY, PaperPos.y * 0.35)) - 0.5;
+
+        PaperPattern = Grain * max(GrainStrength, 0.0) + Fiber * max(FiberStrength, 0.0);
+
+        // max(), not saturate(): the pattern is signed, and clamping the top half would leave only the
+        // darkening lobe — the grain would read at half its authored amplitude and lose its speckle.
+        Stylized *= max(1.0 + PaperPattern, 0.0);
+        Stylized = lerp(Stylized, Stylized * CKUSF_HANDDRAWN_PAPER_CAST, saturate(PaperWarmth));
+    }
+
+    // ---- Master weight -----------------------------------------------------------------------------
+    // One lerp over the whole composite. See the header: a drawing is one medium, so there is no
+    // per-treatment weight to inherit here.
+    float3 Result = lerp(Original, Stylized, saturate(StyleStrength));
+
+    // ---- Debug -------------------------------------------------------------------------------------
+    // Debug views deliberately bypass the master lerp — a mask viewed at StyleStrength 0.3 would be a
+    // faint tint over the untouched frame, which is not a diagnostic.
+    int Debug = (int)(DebugMode + 0.5);
+    if (Debug == 1)      { Result = float3(InkMask, InkMask, InkMask); }
+    else if (Debug == 2) { Result = float3(StrokeMask, StrokeMask, StrokeMask); }
+    else if (Debug == 3) { Result = saturate(float3(0.5, 0.5, 0.5) + PaperPattern); }
+    else if (Debug == 4) { Result = Normal * 0.5 + 0.5; }
+    else if (Debug == 5)
+    {
+        float Normalized = saturate(Depth / max(SkyDistance, 1.0));
+        Result = float3(Normalized, Normalized, Normalized);
+    }
+
+    O.EmissiveColor = Result;
+    O.Opacity = 1.0;
+    return O;
+}

@@ -32,6 +32,11 @@ subsystem.
   `Request_ResetToDefaults`) plus the Custom-Stencil contract accessors `Get_StencilValueFor`,
   `Get_StencilSuppressValue`, `Get_StencilRangeIsFree`. Settings are `FCk_Usf_CelShade_Params`;
   presets are `UCkUsf_CelShadePreset` data assets (AS: `Script/CkUsf/CkUsf_CelShadePresets_Assets.as`).
+- `UCkUsf_HandDrawnSubsystem` (`Stylize/`) — per-world hand-drawn illustration: the same surface as
+  ScreenDither (`Request_SetEnabled` / `Get_IsEnabled`, `Apply_Preset`, `Request_SetSettings` /
+  `Get_Settings`, `Request_ResetToDefaults`) and nothing else — the feature is strictly full-screen, so
+  there is no stencil contract and no entity API. Settings are `FCk_Usf_HandDrawn_Params`; presets are
+  `UCkUsf_HandDrawnPreset` data assets (AS: `Script/CkUsf/CkUsf_HandDrawnPresets_Assets.as`).
 - `UCk_Utils_Usf_CelPattern_UE` (`Stylize/CkUsf_CelPattern_Utils.h`) — ENTITY-level cel patterns:
   `Request_SetCelPattern(Handle, Pattern, Scope)` / `Request_ClearCelPattern`. Reuses
   `ECk_Usf_OutlineScope`; the actor-path sync processor lives here, ISM/ISKM are follow-ups.
@@ -422,6 +427,92 @@ Presets ship in `Script/CkUsf/CkUsf_CelShadePresets_Assets.as` (Balanced, CleanA
 InkCrosshatch, SoftToon, Off). Gym: "Stylize: Cel Shade" (CkTests) — preset-selector stations over one
 judge scene, plus two per-object rows (hand-tagged stencil cubes and entity-API subjects) that must look
 identical to each other.
+
+### Hand drawn (Stylize)
+
+`/CkUsf/Looks/HandDrawn.ush` + `UCkUsf_HandDrawnSubsystem` (`Source/CkUsf/Public/CkUsf/Stylize/`). Placed
+at `SceneColorAfterDOF`. It reads no Custom Depth/Stencil, so the pre-TAA *requirement* does not apply —
+the placement is chosen for the OTHER pre-TAA property: at after-tonemap locations the WorldPosition
+reconstruction is dynamic-resolution scaled, and the world-attached stroke lattice rides on it.
+Consequence shared with CelShade: the input and output are scene-referred LINEAR.
+
+**Pipeline order is the contract: paint → ink → strokes → paper.** Paint simplifies the regions the ink is
+then drawn between; strokes go on top of painted regions because hatching is drawn over paint; paper is
+LAST because it is the surface everything was drawn ON — applied earlier the posterizer would quantize the
+grain into bands and the ink detectors would read the fibre as an edge.
+
+**`StyleStrength` governs EVERYTHING** — one lerp over the whole composite, unlike CelShade's `Strength`
+(which bands only and leaves the ink drawing at 0). A drawing is one medium: there is no meaningful state
+where the ink is at full weight and the paper is absent. The whole-look passthrough is still the
+subsystem's `Enabled`; `StyleStrength = 0` is the same picture by a slower route.
+
+**Tone is normalized through Reinhard, not an exposure anchor.** Pre-tonemap light is unbounded, so a 0..1
+posterizer applied to it would put every colour-region boundary in the darks. `L/(1+L)` supplies a monotone
+0..1 domain with no knob to mistune — CelShade needs its `Midpoint` because it places band POSITIONS
+against a scene's exposure; the paint here only needs somewhere to quantize and threshold. Quantization is
+CELL-CENTRED (`(floor(F)+0.5)/N`) because the top level of an edge-aligned quantizer would be exactly 1.0,
+whose Reinhard inverse is infinite.
+
+**The highlight ceiling is the LEVEL COUNT, not the constant.** With `_SimplifyColor` on, the brightest
+region resolves to `(N-0.5)/N`, so restored luminance can never exceed `2N-1` — **9.0** at StorybookInk's
+5 levels, **3.0** at DarkGothic's 2. That is what actually keeps emissive props from blooming under the
+look, and it falls out of the artist's level count: fewer colour regions means a harder highlight clamp.
+`CKUSF_HANDDRAWN_MAX_TONE` (64) only bites on the OTHER path — with `_SimplifyColor` off there is no level
+count to cap anything, and that constant is all that stands between `Contrast > 1` and an unbounded value.
+
+**`AffectSky` gates the paint AND the strokes — but never the ink.** A silhouette against the sky is the
+drawing's most important contour, so the sky keeps its horizon line while keeping its own colours. Paper
+still covers it, because paper is the sheet the whole picture sits on, not a property of a subject in it.
+Caveat: the ink DISTANCE FADE still applies out there — with a fade configured the sky sits past the end
+distance and the horizon contour goes with it, so that line survives only while `_InkFadeEndDistance` is 0.
+
+**`Enable in Editor Viewports` (the source feature's Master group) is deliberately dropped.** A per-world
+subsystem plus `Request_SetEnabled` already expresses it: the editor-preview world is its own world with
+its own subsystem instance, so a separate global toggle would be a second, weaker way to say the same
+thing — and one that could disagree with the per-world state.
+
+**Strokes are drawn in `InkColor`.** Hatching and contours are the same medium in a drawing, and a second
+colour would let the two disagree about what the pencil is. (The source feature publishes no stroke colour
+either — this is the clean-room reading of that absence, not an omission.)
+
+**Three index contracts** — the subsystem writes each enum's integer value straight into a scalar
+parameter, so reordering an enum silently re-draws the look:
+
+| Enum | Consumer |
+|---|---|
+| `ECk_Usf_HandDrawnStrokePattern` | `CkUsf_Stylize_StrokePattern`'s dispatcher in `StylizeCommon.ush` |
+| `ECk_Usf_HandDrawnStrokeSpace` | the stroke-space branch in `HandDrawn.ush` |
+| `ECk_Usf_HandDrawn_DebugMode` | the `DebugMode` dispatcher at the end of `HandDrawn.ush` |
+
+**Scene textures wired: the default trio only** (SceneColor / SceneDepth / SceneNormal), plus the
+`_PostProcessWorldPosition` opt-in. Nothing here reconstructs illumination, so no GBuffer read is opted
+into. The WorldPosition opt-in is load-bearing and silently degrades if dropped: `In.WorldPosition` would
+read zero, every pixel would land in the same pattern cell, and the world-attached strokes would look
+screen-locked with nothing failing — hence its own assertion in `HandDrawnGeneration`.
+
+**Neighbour taps go through each scene texture's OWN viewport** (`ViewportUVToSceneTextureUV(uv, PPI_X)` +
+`ClampSceneTextureUV`), and every pixel measurement — ink thickness, stroke pixel size, grain scale, the
+line-variation wavelength — is in `GetSceneTextureViewSize(PPI_PostProcessInput0)`, not
+`CkUsf_ViewportUVToBufferUV`. Same lesson ScreenDither and CelShade carry.
+
+**Rejected loudly by `Request_SetSettings`: an inverted ink fade range.** With `_InkFadeEndDistance` at 0
+the fade is off; any other value must be strictly greater than the start, or the fade's denominator changes
+sign and the contour grows HEAVIER with distance — the opposite of what the setting names, with nothing in
+the frame saying why. Zero-width counts as inverted.
+
+**Documented limitations.** (a) World-attached strokes SLIDE on translating and skinned meshes — correcting
+that needs a frame history a blendable does not have; `ScreenStable` is the alternative, and the gym's
+mover exists to make the difference visible. (b) Paper grain is measured in OUTPUT pixels, so the same
+scene at a different output resolution gets a different number of grains across it — the source feature's
+docs carry the same warning; tune `_GrainScale` at target resolution. (c) `In.WorldPosition` arrives as
+float32, so world-attached stroke cells lose sub-cell precision past roughly 1e6 uu from the origin —
+strokes on far-from-origin geometry quantize and then stop moving. Same limit CelShade's world-space
+patterns carry.
+
+Presets ship in `Script/CkUsf/CkUsf_HandDrawnPresets_Assets.as` (StorybookInk, SoftPainted, BoldAnimation,
+DarkGothic, PencilWash, Off) — the params-struct defaults ARE StorybookInk, so each preset reads as its
+delta from it. Gym: "Stylize: Hand-Drawn" (CkTests) — a preset row over one judge scene, plus a debug row
+that forces the ink / stroke / paper masks on.
 
 ## See also
 
