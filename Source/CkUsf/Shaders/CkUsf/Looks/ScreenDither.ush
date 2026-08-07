@@ -1,0 +1,211 @@
+// /CkUsf/Looks/ScreenDither.ush
+// PostProcess screen dithering and palette reduction. Placed at
+// AfterTonemapping (see the asset's _BlendableLocation) because palette reduction must operate on the
+// final display-referred frame: quantizing scene-referred HDR would band wherever the tonemapper
+// happens to be steep and leave the visible result unrelated to the authored step count.
+//
+// Pipeline, in order (the order IS the contract — the dither threshold must offset the value BEFORE
+// quantization, or the result is plain banding with a noise overlay):
+//   1. pixelation      — snap the viewport UV to a PixelScale grid, optionally 4-tap box filtered
+//   2. colour shaping  — saturation, contrast, optional monochrome collapse
+//   3. encode          — optional linearize + PreGamma, so the bands land where the author wants them
+//   4. dither          — one threshold PER BLOCK (not per pixel), offsetting by up to one step
+//   5. quantize        — N steps per channel, or nearest entry of a custom palette
+//   6. decode + weight — undo the encode, lerp against the untouched original
+//
+// Only SceneColor is read; the generator's default trio also wires depth and normal, which this look
+// leaves unused.
+#pragma once
+#include "/CkUsf/Common.ush"
+#include "/CkUsf/StylizeCommon.ush"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// SceneColor here is PostProcessInput0, whose viewport rect is its OWN — at AfterTonemapping the
+// tonemapped texture can differ in extent from the scene buffer under screen percentage / dynamic
+// resolution. CkUsf_ViewportUVToBufferUV maps to the SCENE buffer, which is the right converter for a
+// depth/normal tap (EdgeOutline.ush) and the wrong one for this input; the engine's own input mapping
+// is what the generated SceneTexture node uses for the centre sample, so the taps must match it.
+float3 CkUsf_ScreenDither_SampleSceneColor(float2 ViewportUV)
+{
+    float2 SceneUV = ClampSceneTextureUV(
+        ViewportUVToSceneTextureUV(saturate(ViewportUV), PPI_PostProcessInput0), PPI_PostProcessInput0);
+    return SceneTextureLookup(SceneUV, PPI_PostProcessInput0, false).rgb;
+}
+
+// Display-encoded -> quantization space. ColorSpace 1 (Linear) undoes the display transfer first, so the
+// steps are evenly spaced in light rather than in code values; PreGamma then biases where they land
+// (> 1 spends more steps on the shadows). Both are inverted on the way out, so neither changes overall
+// brightness — they only move the band positions.
+float3 CkUsf_ScreenDither_Encode(float3 Color, float ColorSpace, float PreGamma)
+{
+    float3 C = saturate(Color);
+    if (ColorSpace > 0.5)
+    { C = pow(C, 2.2); }
+    return pow(C, max(PreGamma, 1e-3));
+}
+
+float3 CkUsf_ScreenDither_Decode(float3 Color, float ColorSpace, float PreGamma)
+{
+    float3 C = pow(saturate(Color), 1.0 / max(PreGamma, 1e-3));
+    if (ColorSpace > 0.5)
+    { C = pow(C, 1.0 / 2.2); }
+    return C;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCkUsf_SurfaceOutput CkUsf_PP_ScreenDither(
+    FCkUsf_SurfaceInput In,
+    float DitherPattern,
+    float PixelScale,
+    float DitherStrength,
+    float Animate,
+    float AnimationPeriod,
+    float BoxFilterDownsample,
+    float StabilizeGrid,
+    float PaletteMode,
+    float ColorSteps,
+    float PaletteCount,
+    float ColorSpace,
+    float PreGamma,
+    float Monochrome,
+    float Saturation,
+    float Contrast,
+    float Weight,
+    float DebugMode,
+    float3 MonochromeShadowTint,
+    float3 MonochromeHighlightTint,
+    float3 PaletteColor0, float3 PaletteColor1, float3 PaletteColor2, float3 PaletteColor3,
+    float3 PaletteColor4, float3 PaletteColor5, float3 PaletteColor6, float3 PaletteColor7)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float2 ViewportUV = In.UV;
+    float3 Original = In.SceneColor.rgb;
+
+    // ---- 1. Pixelation ----------------------------------------------------------------------------
+    // The grid MUST live in PostProcessInput0's own viewport space, because that is the space every
+    // sample below lands in (ViewportUVToSceneTextureUV maps ViewportUV through the INPUT's rect, not
+    // the scene buffer's). Using View.ViewSizeAndInvSize here would put the block lattice and the
+    // samples in two different spaces, which at AfterTonemapping differ under screen percentage or
+    // dynamic resolution — and since BlockIndex doubles as the dither pattern's pixel position, the
+    // pattern would desync from the blocks it is supposed to threshold.
+    float4 InputViewSize = GetSceneTextureViewSize(PPI_PostProcessInput0);
+    float2 ViewSize = InputViewSize.xy;
+    float2 InvViewSize = InputViewSize.zw;
+
+    // StabilizeGrid rounds the block to a WHOLE number of input pixels. A fractional block size (3.5px)
+    // puts a different sub-pixel phase in every block and crawls as the viewport resizes; an integral
+    // one tiles the viewport exactly from its origin.
+    float Scale = StabilizeGrid > 0.5 ? max(round(PixelScale), 1.0) : max(PixelScale, 1.0);
+
+    float2 GridPos = ViewportUV * ViewSize;
+    float2 BlockIndex = floor(GridPos / Scale);
+    float2 BlockCenterUV = (BlockIndex + 0.5) * Scale * InvViewSize;
+
+    float3 Downsampled;
+    if (BoxFilterDownsample > 0.5)
+    {
+        // Four taps at the block's quarter points — the whole block's average rather than whichever
+        // texel its centre happens to land on, which is what keeps thin bright detail from popping in
+        // and out of existence as the camera moves.
+        float2 Quarter = Scale * 0.25 * InvViewSize;
+        Downsampled =
+            (CkUsf_ScreenDither_SampleSceneColor(BlockCenterUV + float2(-Quarter.x, -Quarter.y)) +
+             CkUsf_ScreenDither_SampleSceneColor(BlockCenterUV + float2( Quarter.x, -Quarter.y)) +
+             CkUsf_ScreenDither_SampleSceneColor(BlockCenterUV + float2(-Quarter.x,  Quarter.y)) +
+             CkUsf_ScreenDither_SampleSceneColor(BlockCenterUV + float2( Quarter.x,  Quarter.y))) * 0.25;
+    }
+    else
+    {
+        Downsampled = Scale > 1.0
+            ? CkUsf_ScreenDither_SampleSceneColor(BlockCenterUV)
+            : Original;
+    }
+
+    // ---- 2. Colour shaping ------------------------------------------------------------------------
+    float3 Shaped = saturate(Downsampled);
+    float ShapedLuma = CkUsf_Stylize_Luminance(Shaped);
+    Shaped = lerp(float3(ShapedLuma, ShapedLuma, ShapedLuma), Shaped, max(Saturation, 0.0));
+    Shaped = saturate((Shaped - 0.5) * max(Contrast, 0.0) + 0.5);
+
+    bool IsMonochrome = Monochrome > 0.5;
+    if (IsMonochrome)
+    {
+        float MonoLuma = CkUsf_Stylize_Luminance(Shaped);
+        Shaped = float3(MonoLuma, MonoLuma, MonoLuma);
+    }
+
+    // ---- 3. Encode --------------------------------------------------------------------------------
+    float3 Encoded = CkUsf_ScreenDither_Encode(Shaped, ColorSpace, PreGamma);
+
+    // ---- 4. Dither --------------------------------------------------------------------------------
+    // The threshold is sampled at the BLOCK, not the pixel: a per-pixel threshold inside a pixelated
+    // block would re-introduce the detail the pixelation just removed.
+    float AnimPhase = Animate > 0.5 ? floor(In.Time / max(AnimationPeriod, 1e-4)) : 0.0;
+    float Threshold = CkUsf_Stylize_DitherThreshold((int)(DitherPattern + 0.5), BlockIndex, AnimPhase);
+
+    bool UsesCustomPalette = (PaletteMode > 0.5) && !IsMonochrome;
+    float Steps = max(ColorSteps, 2.0);
+    float StepSize = UsesCustomPalette
+        ? 1.0 / max(PaletteCount, 1.0)
+        : 1.0 / (Steps - 1.0);
+
+    float Offset = (Threshold - 0.5) * StepSize * max(DitherStrength, 0.0);
+    float3 DitherOffset = float3(Offset, Offset, Offset);
+
+    // ---- 5. Quantize ------------------------------------------------------------------------------
+    float3 Quantized;
+    float3 QuantizedNoDither;
+    if (UsesCustomPalette)
+    {
+        float3 Palette[8];
+        Palette[0] = PaletteColor0; Palette[1] = PaletteColor1;
+        Palette[2] = PaletteColor2; Palette[3] = PaletteColor3;
+        Palette[4] = PaletteColor4; Palette[5] = PaletteColor5;
+        Palette[6] = PaletteColor6; Palette[7] = PaletteColor7;
+
+        // The entries are authored in OUTPUT space but the search runs in encode space, so they must be
+        // encoded too. Matching raw entries against an encoded pixel would both pick the wrong entry and
+        // hand Decode a value it never encoded — the author's colour would come out shifted by PreGamma,
+        // breaking this file's contract that the encode moves band POSITIONS and nothing else.
+        [unroll]
+        for (int P = 0; P < 8; ++P)
+        { Palette[P] = CkUsf_ScreenDither_Encode(Palette[P], ColorSpace, PreGamma); }
+
+        int Count = (int)(PaletteCount + 0.5);
+        Quantized = CkUsf_Stylize_NearestPaletteColor(saturate(Encoded + DitherOffset), Palette, Count);
+        QuantizedNoDither = CkUsf_Stylize_NearestPaletteColor(Encoded, Palette, Count);
+    }
+    else
+    {
+        Quantized = CkUsf_Stylize_QuantizeSteps(Encoded + DitherOffset, Steps);
+        QuantizedNoDither = CkUsf_Stylize_QuantizeSteps(Encoded, Steps);
+    }
+
+    // ---- 6. Decode + weight -----------------------------------------------------------------------
+    float3 Decoded = CkUsf_ScreenDither_Decode(Quantized, ColorSpace, PreGamma);
+    float3 DecodedNoDither = CkUsf_ScreenDither_Decode(QuantizedNoDither, ColorSpace, PreGamma);
+
+    if (IsMonochrome)
+    {
+        // Shaped collapsed to grey before quantization, so the quantized value IS the band index in
+        // 0..1 — the tint ramp turns it into exactly N tinted levels rather than N desaturated ones.
+        Decoded = lerp(MonochromeShadowTint, MonochromeHighlightTint, Decoded.r);
+        DecodedNoDither = lerp(MonochromeShadowTint, MonochromeHighlightTint, DecodedNoDither.r);
+    }
+
+    float3 Final = lerp(Original, Decoded, saturate(Weight));
+
+    // ---- Debug ------------------------------------------------------------------------------------
+    int Debug = (int)(DebugMode + 0.5);
+    if (Debug == 1)      { Final = float3(Threshold, Threshold, Threshold); }
+    else if (Debug == 2) { Final = saturate(abs(Encoded - Quantized) / max(StepSize, 1e-4)); }
+    else if (Debug == 3) { Final = DecodedNoDither; }
+    else if (Debug == 4) { Final = Downsampled; }
+
+    O.EmissiveColor = Final;
+    O.Opacity = 1.0;
+    return O;
+}
