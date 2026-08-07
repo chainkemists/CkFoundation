@@ -2,10 +2,13 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/Net/CkNet_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEntityCollection/CkEntityCollection_Utils.h"
 #include "CkObjective/Objective/CkObjective_Utils.h"
 #include "CkObjective/ObjectiveOwner/CkObjectiveOwner_Utils.h"
@@ -44,6 +47,22 @@ namespace ck_objective
             ck::UUtils_Signal_OnObjectiveOwner_ObjectiveRemoved::Broadcast(ObjectiveOwner, ck::MakePayload(ObjectiveOwner, ObjectiveRemoved));
         }
     }
+
+    // Also true during escalated full-scope passes, which tick gated processors before restore provenance is stamped.
+    auto Get_IsLoadGateActive(
+        const FCk_Handle& InHandle)
+        -> bool
+    {
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (ck::Is_NOT_Valid(World))
+        { return false; }
+
+        const auto* EcsWorld = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+        if (ck::Is_NOT_Valid(EcsWorld))
+        { return false; }
+
+        return EcsWorld->Get_IsLoadGateActive();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -59,24 +78,32 @@ namespace ck
             FFragment_ObjectiveOwner_Current& InCurrent)
         -> void
     {
+        // Ahead of the marker consume on purpose: leaving it set re-runs this once the gate drops.
+        if (ck_objective::Get_IsLoadGateActive(InHandle))
+        { return; }
+
         InHandle.Remove<MarkedDirtyBy>();
 
         const auto& CollectionHandle = InCurrent.Get_ObjectivesEntityCollection();
         UUtils_Signal_EntityCollection_OnCollectionUpdated::Bind<&ck_objective::OnObjectiveCollectionUpdated>(
             CollectionHandle, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing);
 
-        if (UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
-        {
-            for (const auto& DefaultObjectives = InParams.Get_DefaultObjectives();
-                const auto& ObjectiveClass : DefaultObjectives)
-            {
-                CK_ENSURE_IF_NOT(ck::IsValid(ObjectiveClass), TEXT("Entity [{}] has an INVALID default Objective in its Params!"), InHandle)
-                { continue; }
+        if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
+        { return; }
 
-                if (ck::IsValid(ObjectiveClass))
-                {
-                    UCk_Utils_ObjectiveOwner_UE::Request_AddObjective(InHandle, FCk_Request_ObjectiveOwner_AddObjective{ObjectiveClass}, {});
-                }
+        // Restored children respawn from their own recipes; seeding on top of them is the duplicate.
+        if (InHandle.Has<FTag_Snapshot_JustRestored>())
+        { return; }
+
+        for (const auto& DefaultObjectives = InParams.Get_DefaultObjectives();
+            const auto& ObjectiveClass : DefaultObjectives)
+        {
+            CK_ENSURE_IF_NOT(ck::IsValid(ObjectiveClass), TEXT("Entity [{}] has an INVALID default Objective in its Params!"), InHandle)
+            { continue; }
+
+            if (ck::IsValid(ObjectiveClass))
+            {
+                UCk_Utils_ObjectiveOwner_UE::Request_AddObjective(InHandle, FCk_Request_ObjectiveOwner_AddObjective{ObjectiveClass}, {});
             }
         }
     }
