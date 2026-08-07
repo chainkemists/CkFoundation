@@ -40,8 +40,8 @@ and the three-effect **Stylize** suite (HandDrawn / CelShade / ScreenDither) bui
 - `UCk_Utils_Usf_CelPattern_UE` (`Stylize/CkUsf_CelPattern_Utils.h`) — ENTITY-level cel patterns:
   `Request_SetCelPattern(Handle, Pattern, Scope)` / `Request_ClearCelPattern`. Reuses
   `ECk_Usf_OutlineScope`. Per-renderer sync processors apply it, the same distribution entity outlines use
-  (actor path here; shadow ISM in CkIsmRenderer; SKMC custom depth in CkIskmRenderer Plan-1). ISKM Plan-2
-  batched crowd members have NO cel-pattern path — see *Stylize follow-ups*.
+  (actor path here; shadow ISM in CkIsmRenderer; SKMC custom depth in CkIskmRenderer Plan-1; batched Plan-2
+  members are not entities — use `UCk_Utils_IskmBatched_UE::Set_CrowdMemberCelPattern`).
 - `UCk_Utils_Usf_Outline_UE` (`Outline/CkUsf_Outline_Utils.h`) — ENTITY-level outlines:
   `Request_ApplyOutline(Handle, Preset, Scope)` / `Request_RemoveOutline`. Per-renderer sync processors
   apply it (actor path here; shadow ISM in CkIsmRenderer; SKMC custom depth in CkIskmRenderer Plan-1;
@@ -493,8 +493,22 @@ against the outline twins:
 - **The drop-on-outline processor means different things per renderer, and both are forced by the mechanism.**
   Where the two features share ONE primitive's stencil byte (actor path, ISKM SKMCs) the drop must NOT clear
   the flags — the outline's own Sync overwrites the byte in the same group, and clearing could blank its
-  silhouette for a frame. Where the cel pattern owns its OWN component (ISM shadow) the drop must fully tear
-  it down, or two custom-depth writers land on the same pixels with the winner undefined.
+  silhouette for a frame. Where the cel pattern owns its OWN component (ISM shadow, ISKM Plan-2 batched
+  cluster) the drop must fully tear it down, or two custom-depth writers land on the same pixels with the
+  winner undefined.
+
+**The batched (ISKM Plan-2) path is member-indexed, not a processor.** Batched crowd members are
+(crowd, index) pairs rather than entities, so there is no Target fragment and no sync processor: the
+imperative `UCk_Utils_IskmBatched_UE::Set_CrowdMemberCelPattern` / `Clear_CrowdMemberCelPattern` reuse the
+outline's highlight-cluster machinery verbatim — one custom-depth-only `UCk_Iskm_BatchedClusterComponent`
+per (crowd, stencil value), holding the patterned members' mirrored `FInstance` data and pushed every
+manager tick so the silhouette tracks the live skinned pose. Same two deltas as everywhere else, in their
+member-indexed form: the group key is the resolved stencil VALUE rather than a preset and nothing is
+allocated or released, and because the pattern owns its own cluster, an outline arriving on a patterned
+member TEARS THAT CLUSTER MEMBERSHIP DOWN (`Set_MemberOutline` clears the member's pattern first). The
+refusal runs the other way, matching `Request_SetCelPattern`: a pattern applied to an already-outlined
+member is rejected loudly with zero mutation. Machinery and the world-space-bounds gotcha it inherits:
+*Plan-2 production guide → Outline (highlight cluster)* in `CkIskmRenderer/Claude.md`.
 
 **One entity, one Custom-Stencil value.** `Request_SetCelPattern` refuses an entity that already carries a
 `ck::FFragment_Usf_OutlineTarget` (loud, zero mutation); a *cascade* skips such a dependent with a Verbose
@@ -632,19 +646,13 @@ that forces the ink / stroke / paper masks on.
 
 ### Stylize follow-ups
 
-- **ISKM Plan-2 batched crowd members have no cel-pattern path** (the one piece of the renderer-sync
-  follow-up left undone, 2026-08-07). Outlines reach them through `Set_CrowdMemberOutline`, which stands up a
-  per-(crowd, preset) custom-depth "highlight cluster" `UCk_Iskm_BatchedClusterComponent` with its own
-  world-space bounds, membership rebuilds and per-tick push — several hundred lines of cluster machinery, not
-  a processor. A cel equivalent would need the same again keyed on the stencil value, and the ISM/ISKM
-  Plan-1 paths cover every case the campaign's gyms exercise. Deferred until a batched crowd actually needs
-  per-member patterns; the shape to copy is *Plan-2 production guide → Outline (highlight cluster)* in
-  `CkIskmRenderer/Claude.md`.
 - **A cel pattern applied while `EnableStencilPatterns` is on survives the setting being turned off.** Every
   sync processor early-outs on `Get_StencilValueFor() == 0` rather than undoing, so the already-written
   stencil (or shadow instance) stays. Deliberate parity across all three renderer paths — the actor path has
   behaved this way since the feature shipped — but it means the switch is not a kill switch for meshes
-  already patterned. `Request_ClearCelPattern` is.
+  already patterned. `Request_ClearCelPattern` is. The batched member API is the one deliberate exception:
+  `Set_CrowdMemberCelPattern` is a one-shot imperative call, not a per-frame processor, so a 0 there is
+  refused LOUDLY at the call site rather than silently skipped — ensuring once per call is diagnosis, not spam.
 - **Per-preset outline fill textures** (recorded earlier, still open): `_UseFillTexture` samples the
   subsystem's single shared texture; per-preset would need an atlas or array.
 

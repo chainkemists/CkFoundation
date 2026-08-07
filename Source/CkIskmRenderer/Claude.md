@@ -45,13 +45,16 @@ its coverage.
   Custom Depth/Stencil on the BaseSKMC and every outfit submesh, re-asserted per frame — minus the stencil
   allocation, because the cel contract is a direct value. Mutually exclusive with the outline per entity (the
   two write the same byte); an outline arriving over a pattern drops the cel applied-state WITHOUT clearing
-  the flags, since the outline's own Sync overwrites the byte in the same group. **Plan-2 batched members
-  have no cel-pattern path** — the outline's highlight-cluster machinery has no equivalent yet (recorded in
-  `CkUsf/Claude.md § Stylize follow-ups`). Test getters: `UCk_Utils_IskmProxy_UE::Get_IsCelPatternApplied` /
-  `Get_CelPatternStencilValue`.
+  the flags, since the outline's own Sync overwrites the byte in the same group. Test getters:
+  `UCk_Utils_IskmProxy_UE::Get_IsCelPatternApplied` / `Get_CelPatternStencilValue`.
 - **Member-level outline (Plan-2, batched):** `UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline/Clear_CrowdMemberOutline/
   Get_CrowdMemberOutlinePreset/Get_CrowdOutlinedMemberCount/Get_CrowdOutlineRenderedInstanceCount` — index-based (batched
   members aren't entities). See *Plan-2 production guide → Outline (highlight cluster)* below.
+- **Member-level cel pattern (Plan-2, batched):** `UCk_Utils_IskmBatched_UE::Set_CrowdMemberCelPattern/
+  Clear_CrowdMemberCelPattern/Get_CrowdMemberCelPatternOr/Get_CrowdMemberCelPatternStencilValue/
+  Get_CrowdCelPatternedMemberCount/Get_CrowdCelPatternRenderedInstanceCount` — the outline's twin on the same
+  highlight-cluster machinery, keyed on the stencil VALUE. See *Plan-2 production guide → Outline (highlight
+  cluster)* below.
 
 ---
 
@@ -150,7 +153,7 @@ draw batches), promote/demote distances + cap in the flip driver, `_SampleFreque
 **Outline (highlight cluster).** `Set_CrowdMemberOutline(i, preset)` stands up one custom-depth-only
 `UCk_Iskm_BatchedClusterComponent` ("highlight cluster") per (crowd, preset) — same flags as a tile, but it holds only
 the outlined members' mirrored `FInstance` data and is pushed every manager tick alongside the tile clusters, so the
-silhouette tracks the live skinned pose. Membership/visibility changes rebuild it (`RebuildOutlineGroup`); fixed bounds
+silhouette tracks the live skinned pose. Membership/visibility changes rebuild it (`Rebuild_HighlightGroup`); fixed bounds
 = union of outlined members' world positions padded by the animated mesh box + half a tile. Hidden (Plan-1-flipped)
 members are excluded — the flip driver outlines their Plan-1 SKMC via `CkUsf`'s entity API instead. **Gotcha:** unlike
 tile clusters (whose local bounds box is centered on the component, so component rotation is a no-op), the highlight
@@ -159,6 +162,18 @@ location/rotation/scale pinned to identity (`SetUsingAbsoluteLocation/Rotation/S
 `SetWorldTransform(Identity)`) — if it inherits the crowd actor's transform (e.g. a spawn-time yaw), `CalcBounds`
 rotates the box away from where the instances actually render and the cluster frustum-culls out at some view angles
 even though the members are on screen.
+
+**Cel pattern (the same highlight cluster).** `Set_CrowdMemberCelPattern(i, pattern)` is the outline's twin and
+shares every line of that machinery — `DoCreate_HighlightCluster` is the ONE construction path, and
+`Rebuild_HighlightGroup` / `Push_HighlightGroup` / the bounds rule / the hidden-member exclusion are common to
+both. Deltas, all forced by the cel contract being a DIRECT stencil value rather than a refcounted preset
+allocation: the group key is the resolved Custom-Stencil value (`Get_StencilValueFor(pattern)`, so two patterns
+are two clusters), nothing is allocated or released, and `Clear_CrowdMemberCelPattern` is the only clear (there
+is no null-pattern sentinel the way a null preset clears an outline). A member carries at most ONE of the two —
+they write the same stencil byte: **the outline wins**, clearing an existing pattern silently on its way in,
+while a pattern applied to an already-outlined member is refused loudly with zero mutation (the entity-level
+`Request_SetCelPattern` refusal, member-indexed). The member records the group key it joined beside the pattern
+it asked for, so a `StencilBase` change between Set and Clear still resolves the group it is actually in.
 
 **Scoped follow-up (documented, not implemented):** per-member sequence **crossfade** (shader 2-frame lerp).
 Requires widening per-instance custom data (floats [0..3] are all taken: curFrame/prevFrame/userA/userB — a blend
