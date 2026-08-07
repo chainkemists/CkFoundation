@@ -173,7 +173,7 @@ private:
     float _Weight = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0))
+              meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0, ClampMax = 2.0))
     float _Saturation = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

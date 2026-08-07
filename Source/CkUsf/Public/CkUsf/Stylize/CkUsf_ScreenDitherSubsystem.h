@@ -32,6 +32,12 @@ public:
     CK_GENERATED_BODY(UCkUsf_ScreenDitherSubsystem);
 
 public:
+    auto ShouldCreateSubsystem(UObject* InOuter) const -> bool override;
+    auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
+    auto Deinitialize() -> void override;
+    auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
+
+public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Usf|ScreenDither",
               DisplayName = "[Ck][Usf] Get Screen Dither Subsystem",
               meta = (WorldContext = "InWorldContextObject"))
@@ -51,7 +57,8 @@ public:
     Get_IsEnabled() const;
 
     // Replaces the whole settings value with the preset's. A null preset is rejected loudly and changes
-    // nothing at all — no partial application.
+    // nothing at all — no partial application. Note this sets the STORED settings; a `ck.Usf.ScreenDither.*`
+    // console override still wins over the result until it is set back to -1.
     UFUNCTION(BlueprintCallable, Category = "Ck|Usf|ScreenDither",
               DisplayName = "[Ck][Usf] Apply Screen Dither Preset")
     void
@@ -69,6 +76,7 @@ public:
     FCk_Usf_ScreenDither_Params
     Get_Settings() const;
 
+    // Back to the project default preset if one is configured, otherwise to the params-struct defaults.
     UFUNCTION(BlueprintCallable, Category = "Ck|Usf|ScreenDither",
               DisplayName = "[Ck][Usf] Request Reset Screen Dither To Defaults")
     void
@@ -77,7 +85,16 @@ public:
 private:
     auto DoEnsure_ViewEffect() -> bool;
     auto DoSync_ViewEffect() -> void;
-    auto DoWrite_ChangedParams() -> void;
+    auto DoWrite_ChangedParams(const FCk_Usf_ScreenDither_Params& InEffective) -> void;
+
+    // The stored settings with any `ck.Usf.ScreenDither.*` console override folded in. Everything that
+    // reaches the MID goes through here, so an override is indistinguishable downstream from a setting.
+    auto DoGet_EffectiveSettings() const -> FCk_Usf_ScreenDither_Params;
+
+    auto DoResolve_ProjectDefaultPreset() const -> UCkUsf_ScreenDitherPreset*;
+    auto DoApply_ProjectDefault() -> void;
+    auto DoApply_ProjectDefault_Now() -> void;
+    auto DoOn_CVarChanged() -> void;
 
 private:
     // Name of the look whose generated master backs this subsystem, and of the .ush entry point's
@@ -96,8 +113,15 @@ private:
 
     FCk_Usf_ScreenDither_Params _Settings;
 
-    // What the MID currently holds. Unset until the first write, which is therefore a full write.
+    // What the MID currently holds — the EFFECTIVE value, not the stored one, so a console override
+    // that changes nothing writes nothing. Unset until the first write, which is therefore a full write.
     TOptional<FCk_Usf_ScreenDither_Params> _WrittenSettings;
+
+    FDelegateHandle _CVarChangedHandle;
+
+    // Set by any explicit Request_SetSettings / Request_SetEnabled. The project default is a
+    // DEFAULT, so it must never overwrite a value game code already chose.
+    bool _SettingsExplicitlySet = false;
 
     // The missing-master warning is worth exactly one line per world, not one per settings change.
     bool _WarnedMissingMaster = false;

@@ -16,7 +16,7 @@ Research: [Plan/Research_yShade_HandDrawn.md](Plan/Research_yShade_HandDrawn.md)
 | 2 | ScreenDither — look + subsystem + presets + tests | [Plan/Gate_02_ScreenDither.md](Plan/Gate_02_ScreenDither.md) | ✅ Done (2026-08-06; gym [EDITOR-VERIFY] pending) |
 | 3 | CelShade — look + subsystem + stencil per-object + entity API | [Plan/Gate_03_CelShade.md](Plan/Gate_03_CelShade.md) | ✅ Done (2026-08-06; gym+illumination [EDITOR-VERIFY] pending) |
 | 4 | HandDrawn — look + subsystem + presets | [Plan/Gate_04_HandDrawn.md](Plan/Gate_04_HandDrawn.md) | ✅ Done (2026-08-07; gym [EDITOR-VERIFY] pending) |
-| 5 | Ship — project defaults, CVars, gyms, docs, audit | [Plan/Gate_05_Ship.md](Plan/Gate_05_Ship.md) | ⏳ Pending |
+| 5 | Ship — project defaults, CVars, gyms, docs, audit | [Plan/Gate_05_Ship.md](Plan/Gate_05_Ship.md) | ✅ Done (2026-08-07; final [EDITOR-VERIFY] pending) |
 
 Gate order rationale: 2 before 3/4 because ScreenDither has the fewest unknowns (no GBuffer
 reads, no stencil, post-tonemap) — it proves the look+subsystem+preset+test recipe end-to-end

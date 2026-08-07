@@ -5,8 +5,8 @@
 (CkUsfEditor) assembles a master `UMaterial` around a Custom node, validates the asset↔HLSL
 contract, force-compiles the shaders, and saves it under `/CkFoundation/CkUsf/GeneratedLooks/`.
 Runtime code applies looks via `UCk_Utils_Usf_UE` (master lookup, MID creation, post-process
-attach). Also home to the Shadertoy-style multi-pass renderer and the Custom-Stencil outline
-subsystem.
+attach). Also home to the Shadertoy-style multi-pass renderer, the Custom-Stencil outline subsystem,
+and the three-effect **Stylize** suite (HandDrawn / CelShade / ScreenDither) built on top of all of it.
 
 **Depends on:** `CkCore`, `CkEcs`, `CkGraphics`, `CkLog`.
 **Editor twin:** `CkUsfEditor` (generator, validator, console command, save-hook).
@@ -44,7 +44,16 @@ subsystem.
   `Request_ApplyOutline(Handle, Preset, Scope)` / `Request_RemoveOutline`. Per-renderer sync processors
   apply it (actor path here; shadow ISM in CkIsmRenderer; SKMC custom depth in CkIskmRenderer Plan-1;
   batched Plan-2 members are not entities — use `UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline`).
-  Design + mechanisms: `DESIGN_EntityOutlines.md`.
+  Design + mechanisms: the *Entity outlines* section below (a `DESIGN_EntityOutlines.md` cited by several
+  files has never existed — see *Stylize follow-ups*).
+- `UCk_Usf_Stylize_ProjectSettings_UE` (`Stylize/CkUsf_Stylize_ProjectSettings.h`) — one optional
+  default-preset soft ref per effect. Unset = the effect stays off; set = that world subsystem applies it
+  at `OnWorldBeginPlay` with no game code involved. It is a `UCk_Plugin_ProjectSettings_UE`, so it inherits
+  the family's `Config = CkFoundation` and the "CkFoundation" settings category — the row lives in
+  `DefaultCkFoundation.ini`, NOT `DefaultGame.ini`. Read it through `UCk_Utils_Usf_Stylize_Settings_UE`.
+- `ck.Usf.{HandDrawn,CelShade,ScreenDither}.{Enabled,Debug}` (`Stylize/CkUsf_Stylize_CVars.h`) — the
+  developer overlay. `-1` on both is "settings decide"; `Enabled` `0`/`1` forces off/on; `Debug` takes the
+  effect's DebugMode index.
 - `/CkUsf/Common.ush` — the input/output structs + the shader stdlib (sampling, normals, parallax,
   triplanar, flow maps, SDFs, color ops, dithering).
 - `/CkUsf/StylizeCommon.ush` — procedural pattern library for the stylize looks (Bayer/noise dither
@@ -285,6 +294,90 @@ SolidOutlineSystem, `ECk_Usf_OutlineType` included.
 `_UseFillTexture` samples the subsystem's single *shared* fill texture. Per-preset fill textures are
 a known follow-up — they would need a texture atlas or array.
 
+### Stylize — the three-effect suite
+
+Three PostProcess-domain looks, each with a per-world subsystem and data-asset presets:
+**HandDrawn** (paint → ink → strokes → paper), **CelShade** (quantized bands, halftone transitions,
+sky/metallic/specular/rim groups, its own outline, per-object pattern via Custom Stencil), and
+**ScreenDither** (post-tonemap palette reduction, ordered/noise dithering, pixelation). They are ordinary
+looks — the generator, validator, MID runtime and blendable placement are the shipped machinery, not
+anything new. Every effect is view-wide; CelShade is the only one with a per-object surface.
+
+**One value flows through four hands, and each hand can only narrow the previous one:**
+
+```
+UCk_Usf_Stylize_ProjectSettings_UE  (unset = off; applied once, at OnWorldBeginPlay; yields to game code)
+        │  Apply_Preset
+UCkUsf_<Effect>Preset             (an authored FCk_Usf_<Effect>_Params, AS- or editor-authored)
+        │  Request_SetSettings / Request_SetEnabled  ← game code lives here
+_Settings                         (the SOURCE OF TRUTH; survives a missing master)
+        │  + ck.Usf.<Effect>.{Enabled,Debug}         ← developer overlay, never persisted
+effective settings ──► MID        (changed fields only)
+```
+
+Consequences worth knowing before debugging one of these:
+
+- **The stored settings are never overwritten by a CVar.** An override is folded in on the way to the MID,
+  so `Get_Settings()` keeps reporting what the game asked for while the screen shows what the console asked
+  for. Set the CVar back to `-1` and the settings value is what renders again, with no re-apply.
+- **`Request_ResetToDefaults` re-reads the project settings**, not the params-struct defaults — it means
+  "back to how this project ships", and only falls through to `FCk_Usf_<Effect>_Params{}` when no default
+  preset is configured.
+- **The effect is created lazily, on first use.** The params default to `Enabled`, so a subsystem that
+  nothing has touched reports Enabled while rendering nothing at all. That is why the CVar re-sync refuses
+  to instantiate an effect it did not already find alive unless `Enabled` is explicitly forced to `1` — and
+  why a gym toggle must track its own state rather than read `Get_IsEnabled()`.
+- **The project default lands at `OnWorldBeginPlay`, not `Initialize`.** Subsystem `Initialize` runs inside
+  `UWorld::InitializeSubsystems`, too early to spawn the view actor; and a packaged game runs its startup
+  map's BeginPlay from inside `FEngineLoop::Init`, *before* `OnFEngineLoopInitComplete` flips
+  `GIsEngineSafeForBlockingLoads`. So the soft-ref resolve is gated on
+  `UCk_Utils_IO_UE::Get_IsEngineSafeForBlockingLoads_Peek()` and otherwise defers onto that delegate — the
+  CkCore deferred-config discipline, applied to a settings row instead of a data asset. The deferred retry
+  deliberately does not re-test the flag: it is already at the safe point, and CkCore's own flag-setting
+  registrar may run after us in the delegate's add-order.
+- **A project default is a DEFAULT: game code that has already spoken wins, on both paths.** Any explicit
+  `Request_SetSettings` / `Request_SetEnabled` latches the subsystem, and the apply checks that latch. This
+  is not theoretical — on the deferred path a packaged game's BeginPlay runs before the delegate fires, so
+  without the latch the project row would land *after* gameplay had configured the effect and silently undo
+  it. `Request_ResetToDefaults` is the deliberate way back to the project row.
+- **None of the three subsystems is created on a dedicated server** (`ShouldCreateSubsystem` →
+  `IsRunningDedicatedServer()`), so a configured default preset cannot make a headless server load a
+  master, build a MID and spawn a post-process actor per world. Callers must already tolerate a null
+  subsystem — `Get_*Subsystem` returns null for an unresolvable world context anyway. Known granularity
+  gap, shared with `UCk_LoadingScreen_Subsystem_UE`: a PIE dedicated-server world lives in the editor
+  process and still gets one.
+
+**The Custom-Stencil byte is shared, and the two claims on it are disjoint by construction.**
+`UCkUsf_OutlineSubsystem` *allocates* refcounted values from the top of the range (240–255);
+`UCkUsf_CelShadeSubsystem` uses *direct* values, `[StencilBase-1, StencilBase+9]`, default 199–209.
+`Request_SetSettings` rejects a span that intersects the outline range or reaches stencil 0, each with its
+own diagnostic. One entity may carry only one of the two: `Request_SetCelPattern` refuses an entity that
+already has an outline target, and the sync processors exclude each other's targets. Both features' undo
+*disables* custom depth rather than restoring prior state — a mesh hand-authored to render custom depth
+does not get that back.
+
+**One saturation policy for all three effects, and the shader half is the one that protects anything.**
+`CkUsf_Stylize_ApplySaturation` (`StylizeCommon.ush`) floors its output at zero, and that floor is what
+makes the parameter safe: values above 1 drive any channel sitting below the pixel's luminance NEGATIVE,
+and CelShade and HandDrawn emit into scene-referred linear where nothing clips it before the tonemapper.
+Shipped presets do reach 1.15. The floor is inert at `Saturation <= 1`.
+The `ClampMax = 2` on the reflected `_Saturation` fields (matching the `UIMax` they already advertised) is
+a details-panel affordance ONLY — it bounds what a designer can type, it does not make the value safe, and
+it constrains nothing reached from C++, Blueprint or AngelScript, all of which write the struct directly.
+Never treat it as the guard.
+
+**Limitations that are design, not defects** — each of these is a documented consequence of a material
+blendable being the vehicle:
+
+| Limitation | Why | The alternative |
+|---|---|---|
+| No temporal stabilization: world-space cel patterns and world-attached strokes SLIDE on translating and skinned meshes | Correcting it needs a frame history a blendable does not have; the source feature's own docs warn of trail artifacts | `PatternSpace = Screen` / `StrokeSpace = ScreenStable` |
+| Cel is DEFERRED-ONLY | The illumination reconstruction reads GBuffer BaseColor/Metallic/Roughness, which the translator rejects under forward and mobile | none — the feature is off on those paths |
+| Cel illumination is an APPROXIMATION (`SceneColor / max(BaseColor, eps)`) | A blendable cannot see deferred lighting. The quotient is incoming light for a diffuse dielectric and nothing useful elsewhere — hence the Metallic / `AffectUnlit` / Sky exception groups, which are not tuning knobs | `_QuantizeFinalColor` bands SceneColor luminance directly |
+| World-space patterns and strokes quantize, then stop moving, past ~1e6 uu from the origin | `In.WorldPosition` is float32 | screen space on far-from-origin levels |
+| Paper grain is measured in OUTPUT pixels, so its density changes with output resolution | It is a property of the sheet, not of the scene | tune `_GrainScale` at target resolution |
+| Stacking: cel + dither compose; hand-drawn + dither composes; hand-drawn + cel does not | The first pair sits at different chain locations (pre-TAA vs post-tonemap) and reads disjoint inputs. Hand-drawn and cel both restyle the whole frame at the same location, so the second paints over the first | A/B them from the gyms' `Toggle*Stack` Execs |
+
 ### Screen dither (Stylize)
 
 `/CkUsf/Looks/ScreenDither.ush` + `UCkUsf_ScreenDitherSubsystem` (`Source/CkUsf/Public/CkUsf/Stylize/`).
@@ -317,7 +410,8 @@ with nothing naming the cause.
 
 **Settings are the source of truth; the MID is a projection.** `Request_SetSettings` stores and only
 then syncs, so Get/Set round-trips whether or not the generated master exists (a fresh checkout warns
-ONCE per world and renders nothing). Only fields that changed are written to the MID.
+ONCE per world and renders nothing). Only fields that changed are written to the MID — of the EFFECTIVE
+value (settings + any `ck.Usf.ScreenDither.*` override), so an override that changes nothing writes nothing.
 `Request_SetEnabled` toggles the post-process component's `bEnabled`, which is why the "Off" preset must
 restore the frame losslessly. `Get_ScreenDitherSubsystem` returns null for an unresolvable world context
 rather than ensuring — the `UCkUsf_OutlineSubsystem` precedent, so a call during world teardown is not a
@@ -516,6 +610,31 @@ Presets ship in `Script/CkUsf/CkUsf_HandDrawnPresets_Assets.as` (StorybookInk, S
 DarkGothic, PencilWash, Off) — the params-struct defaults ARE StorybookInk, so each preset reads as its
 delta from it. Gym: "Stylize: Hand-Drawn" (CkTests) — a preset row over one judge scene, plus a debug row
 that forces the ink / stroke / paper masks on.
+
+### Stylize follow-ups
+
+- **Renderer-module cel-pattern sync.** `Request_SetCelPattern` reaches actor-backed primitives only:
+  `FProcessor_Usf_CelPatternActor_Sync` lives in CkUsf and there is no ISM or ISKM equivalent, so a cel
+  pattern on an instanced or batched-crowd entity is silently inert. Entity OUTLINES already solved the
+  identical problem the right way — one sync processor per renderer module, each recording what it applied
+  in a module-local `...OutlineApplied` fragment (`CkIsmRenderer/Proxy/CkIsmProxy_OutlineProcessor.h`,
+  `CkIskmRenderer/Proxy/CkIskmProxy_OutlineProcessor.h`), plus the member-indexed
+  `UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline` for Plan-2 members, which are not entities at all.
+  Mirror that distribution; the stencil VALUE side needs nothing new, since the cel contract is a direct
+  value rather than an allocation.
+- **`DESIGN_EntityOutlines.md` does not exist and never has**, but ten places cite it:
+  `CkIsmRenderer/Claude.md`, `CkIskmRenderer/Claude.md`, `CkIsmRenderer/Proxy/CkIsmProxy_Utils.h`,
+  `CkIsmRenderer/Proxy/CkIsmProxy_OutlineProcessor.h`, `CkIskmRenderer/Proxy/CkIskmProxy_Utils.h`,
+  `CkIskmRenderer/Proxy/CkIskmProxy_OutlineProcessor.h`, `CkIskmRenderer/Proxy/CkIskmProxy_Fragment.h`,
+  `CkIskmRenderer/Renderer/CkIskm_BatchedUtils.h`, `CkIskmRenderer/Renderer/CkIskm_BatchedCrowd_Actor.h/.cpp`.
+  This file's own citation now points at the *Entity outlines* section above; the other ten still dangle.
+  Either write the design doc or repoint them in one sweep — do not fix them piecemeal.
+- **Per-preset outline fill textures** (recorded earlier, still open): `_UseFillTexture` samples the
+  subsystem's single shared texture; per-preset would need an atlas or array.
+- **`UCkUsf_OutlineSubsystem` has no dedicated-server guard.** The three Stylize subsystems gained one
+  (`ShouldCreateSubsystem` → `IsRunningDedicatedServer()`); the outline subsystem predates it and still
+  builds its params LUT and view machinery on a headless server. Same one-line fix, deliberately left
+  alone here because it is not this feature's code.
 
 ## See also
 

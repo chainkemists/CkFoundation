@@ -81,7 +81,7 @@ public:
     float _Weight = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|ScreenDither",
-              meta = (UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0))
+              meta = (UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0, ClampMax = 2.0))
     float _Saturation = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|ScreenDither",

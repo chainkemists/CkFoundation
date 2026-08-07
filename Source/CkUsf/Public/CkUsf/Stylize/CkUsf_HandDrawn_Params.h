@@ -105,7 +105,7 @@ private:
     // Applied BEFORE the region reduction, so it changes which colours get merged rather than recolouring
     // the result.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0))
+              meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0, ClampMax = 2.0))
     float _Saturation = 0.9f;
 
     // Also pre-shaping, and applied in the look's normalized tone domain — contrast about 0.5 means
