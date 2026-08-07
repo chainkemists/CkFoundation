@@ -93,13 +93,12 @@ namespace ck
         const auto DistanceToCamera = FVector::Dist(CameraLocation, AnchorWorldLocation);
 
         const auto& OcclusionInfo = InParams.Get_OcclusionInfo();
-        auto IsOccluded = false;
+        const auto IsOccluded = [&]() -> bool
         {
             SCOPE_CYCLE_COUNTER(STAT_CkUI_WSWidget_Occlusion);
-            IsOccluded =
-                OcclusionInfo.Get_OcclusionPolicy() == ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded &&
-                UCk_Utils_WorldSpaceWidget_UE::Get_IsAnchorOccluded(InHandle);
-        }
+            return OcclusionInfo.Get_OcclusionPolicy() == ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded &&
+                   UCk_Utils_WorldSpaceWidget_UE::Get_IsAnchorOccluded(InHandle);
+        }();
 
         const auto& FadingInfo = InParams.Get_FadingInfo();
         const auto FadeFactor = FadingInfo.Get_FadingPolicy() == ECk_WorldSpaceWidget_Fading_Policy::FadeWithDistance
