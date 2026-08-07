@@ -23,6 +23,10 @@ subsystem.
   `Apply_PostProcess_ToCamera/Component`, `Set_Scalar/Vector/Texture`.
 - `UCkUsf_MultiPassRenderer` (`MultiPass/`) — BufferA-D + Image passes, double-buffered feedback.
 - `UCkUsf_OutlineSubsystem` (`Outline/`) — per-preset Custom-Stencil outlines + params LUT.
+- `UCkUsf_ScreenDitherSubsystem` (`Stylize/`) — per-world screen dithering / palette reduction:
+  `Request_SetEnabled` / `Get_IsEnabled`, `Apply_Preset`, `Request_SetSettings` / `Get_Settings`,
+  `Request_ResetToDefaults`. Settings are `FCk_Usf_ScreenDither_Params`; presets are
+  `UCkUsf_ScreenDitherPreset` data assets (AS: `Script/CkUsf/CkUsf_ScreenDitherPresets_Assets.as`).
 - `UCk_Utils_Usf_Outline_UE` (`Outline/CkUsf_Outline_Utils.h`) — ENTITY-level outlines:
   `Request_ApplyOutline(Handle, Preset, Scope)` / `Request_RemoveOutline`. Per-renderer sync processors
   apply it (actor path here; shadow ISM in CkIsmRenderer; SKMC custom depth in CkIskmRenderer Plan-1;
@@ -264,6 +268,59 @@ SolidOutlineSystem, `ECk_Usf_OutlineType` included.
 
 `_UseFillTexture` samples the subsystem's single *shared* fill texture. Per-preset fill textures are
 a known follow-up — they would need a texture atlas or array.
+
+### Screen dither (Stylize)
+
+`/CkUsf/Looks/ScreenDither.ush` + `UCkUsf_ScreenDitherSubsystem` (`Source/CkUsf/Public/CkUsf/Stylize/`).
+Placed at `AfterTonemapping` on purpose: palette reduction has to see the final display-referred frame,
+or the authored step count means nothing (quantizing scene-referred HDR bands wherever the tonemapper
+is steep). Nothing here reads Custom Depth/Stencil, so the pre-TAA rule above does not apply.
+
+**Pipeline order is the contract.** pixelate → shape (saturation/contrast/monochrome) → encode
+(colour space + PreGamma) → dither → quantize → decode → weight-lerp against the original. The
+threshold must offset the value *before* quantization; applied after, the result is plain banding with
+a noise overlay, which is exactly the symptom the gym's FourColorHandheld station is there to catch.
+
+**Three index contracts** — the subsystem writes each enum's integer value straight into a scalar
+parameter, so reordering an enum silently re-maps the look:
+
+| Enum | Consumer |
+|---|---|
+| `ECk_Usf_DitherPattern` | `CkUsf_Stylize_DitherThreshold`'s dispatcher in `StylizeCommon.ush` |
+| `ECk_Usf_PaletteMode`, `ECk_Usf_DitherColorSpace` | branches in `ScreenDither.ush` |
+| `ECk_Usf_ScreenDither_DebugMode` | the `DebugMode` dispatcher at the end of `ScreenDither.ush` |
+
+**The custom palette is a FIXED 8 vector parameters + a count**, not an array — a material has no
+array parameters. Entries past 8 are dropped and unused slots are written black, so a shrunk palette
+cannot leave a stale colour behind for the nearest-entry search to find. The shader ENCODES each entry
+before the nearest search, because entries are authored in output space while the search runs in encode
+space — matching raw entries would pick the wrong one and hand Decode a value it never encoded, shifting
+the author's colour by PreGamma. An empty palette in CustomPalette mode is REJECTED (ensure + no
+mutation): every pixel would otherwise snap to the black in the unused slots and the view would go black
+with nothing naming the cause.
+
+**Settings are the source of truth; the MID is a projection.** `Request_SetSettings` stores and only
+then syncs, so Get/Set round-trips whether or not the generated master exists (a fresh checkout warns
+ONCE per world and renders nothing). Only fields that changed are written to the MID.
+`Request_SetEnabled` toggles the post-process component's `bEnabled`, which is why the "Off" preset must
+restore the frame losslessly. `Get_ScreenDitherSubsystem` returns null for an unresolvable world context
+rather than ensuring — the `UCkUsf_OutlineSubsystem` precedent, so a call during world teardown is not a
+diagnostic.
+
+**Everything lives in PostProcessInput0's OWN viewport space, not the scene buffer's** — the taps via
+`ViewportUVToSceneTextureUV(uv, PPI_PostProcessInput0)` + `ClampSceneTextureUV`, and the block grid via
+`GetSceneTextureViewSize(PPI_PostProcessInput0)`. The house `CkUsf_ViewportUVToBufferUV` /
+`View.ViewSizeAndInvSize` pair maps to the SCENE buffer, which is right for a depth/normal tap
+(EdgeOutline) and wrong for PostProcessInput0 at AfterTonemapping, where the tonemapped input carries
+its own rect and size. Mixing the two is not a cosmetic slip: `BlockIndex` doubles as the dither
+pattern's pixel position, so a grid in one space and samples in the other desyncs the pattern from the
+blocks it is meant to threshold. `PixelScale` is therefore measured in input-viewport pixels — display
+resolution at this placement. `_StabilizeGrid` rounds the block to a whole number of them; a fractional
+block size gives every block a different sub-pixel phase and crawls as the viewport resizes.
+
+Presets ship in `Script/CkUsf/CkUsf_ScreenDitherPresets_Assets.as` (Balanced, SubtleColor, RetroPixel,
+FourColorHandheld, AnimatedGrain, Off). Gym: "Stylize: Screen Dither" (CkTests) — stations are preset
+SELECTORS over one shared judge scene, because the effect is view-wide.
 
 ## See also
 

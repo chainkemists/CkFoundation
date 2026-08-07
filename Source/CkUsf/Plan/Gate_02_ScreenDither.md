@@ -1,8 +1,17 @@
 # Gate 2 — ScreenDither: look + subsystem + presets + tests
 
-> **Status:** ⏳ Pending
+> **Status:** ✅ Done (2026-08-06) — code-complete + audited; gym visuals pending maintainer
+> `[EDITOR-VERIFY]` (steps in PROGRESS.md 2026-08-06 Gate-2 entry)
 > **Depends on:** Gate 1 ✅
-> **Estimate:** 1–2 sessions — re-date at entry; record actual at exit
+> **Estimate:** 1–2 sessions — actual: 1 session
+>
+> **Amendments at exit:** adversarial audit (ACCEPT-WITH-FIXES) found and fixed: grid space now
+> `GetSceneTextureViewSize(PPI_PostProcessInput0)` (block sizes are DISPLAY-res pixels at this
+> placement); palette matched in encode space; empty CustomPalette rejected loudly (ensure + no
+> mutation); gym hysteresis. Deviations accepted: `ViewportUVToSceneTextureUV` over the house
+> buffer-UV helper (correct mapping for PostProcessInput0 taps); missing-master = warning not
+> ensure (outline precedent); silent-null subsystem accessor kept (teardown-legitimate), pinned
+> by test. All exit boxes: evidence in PROGRESS.md; landing commit carries this file.
 
 ## Goal
 

@@ -11,8 +11,10 @@ IskmApplyRemove, IsmShadowInstances, VatShadowCustomData}, GeneratesUsableMaster
 MultiPassRendersToTexture, NiagaraSpriteContract, OutlineStencilAlloc,
 FRigVMFunction_DeltaFromPreviousFloat (engine-side pattern match, ignorable). Captured
 2026-08-06 after deleting the stale `utils_world_space_widget.as` (see dated entry).
-**Next action:** Gate 2 entry pre-flight (re-verify Gate 1 exit on HEAD, re-capture baseline,
-read the outline subsystem end-to-end per Gate_02 entry criteria).
+**Gate 2 DONE 2026-08-06** (landed as the commit carrying this entry + CkTests sibling; baseline
+now 15/15 standard / 9/9 real-RHI serial). Gym visuals are the maintainer's [EDITOR-VERIFY]
+(steps in the Gate-2 dated entry).
+**Next action:** Gate 3 (CelShade) entry pre-flight + executor dispatch.
 **Blocked on:** nothing.
 
 ## Decision log
@@ -27,6 +29,29 @@ read the outline subsystem end-to-end per Gate_02 entry criteria).
 | 2026-08-06 | One gym PER effect, shipped inside its feature gate (2–4), Solid Outline gym pattern; stations act as preset SELECTORS (effects are view-wide) over a shared judge scene | Maintainer asked for proper gyms like the outline's; per-gate delivery because each gate's [EDITOR-VERIFY] needs its gym | — |
 
 ## Dated entries (append-only, newest first)
+
+### 2026-08-06 — Gate 2 (ScreenDither) EXIT: executed, adversarially audited, fixed, re-verified
+- Delivered: `Looks/ScreenDither.ush` (27 params), `Stylize/CkUsf_ScreenDither_Params.h/.cpp`
+  (+4 enums), `CkUsf_ScreenDitherPreset`, `CkUsf_ScreenDitherSubsystem` (outline-subsystem
+  mechanics, changed-only MID writes), AS look + 6 presets, `Test_Usf_ScreenDither.cpp` (3 tests),
+  gym "Stylize: Screen Dither" (preset-selector stations + judge scene + Exec cmds), Claude.md
+  section. New tracked master `M_CkUsf_Look_ScreenDither.uasset`.
+- Audit (fresh-context adversarial pass): ACCEPT-WITH-FIXES. CONFIRMED+FIXED: C1 grid space
+  (now `GetSceneTextureViewSize(PPI_PostProcessInput0)`; display-res blocks), C2 palette encode-
+  space match, C3 empty-CustomPalette silent black → loud reject + zero mutation (+ tests), C5
+  null-world test (pins no-crash+nullptr, outline precedent), C6 gym hysteresis (+4 polish).
+  Verified-clean list (enum contracts, 27-name MID seam vs .uasset, cache staleness, passthrough
+  exactness, NN#3 shapes) in the audit record.
+- Ran (post-fix): standard `-nullrhi` Usf → **15/15** (baseline 12/12); real-RHI serial CkUsf →
+  **9/9**, ScreenDither.ush force-compile CLEAN; churn restored.
+- Known/accepted: `AddExpectedError(-1)` proves suppression-tolerant whitelist not fire-count
+  (house idiom; zero-mutation asserts are the real proof); HDR-output saturate clip inert on SDR;
+  PixelScale tastefulness at display res = preset knob (`_PixelScale`).
+- **[EDITOR-VERIFY] (maintainer)**: PIE → Tab → "Stylize: Screen Dither" → walk the 6 stations
+  (Balanced fine texture / SubtleColor subtle / RetroPixel pixelated+reduced / FourColorHandheld
+  EXACTLY 4 greens with ordered dither / AnimatedGrain film grain, no blotches / Off perfectly
+  clean); `Ck_GymStylizeDither_CycleDebug` (Pattern/QuantError/NoDither/Downsampled);
+  master must exist (else `Ck_Usf_GenerateLooks ScreenDither` once).
 
 ### 2026-08-06 — Gate 1 EXIT: compile gate strengthened, mutation-proven; all exit criteria met
 - Executor follow-up landed (Fable-audited, full diff read):
@@ -140,6 +165,8 @@ read the outline subsystem end-to-end per Gate_02 entry criteria).
 | Item | Status | Next step |
 |---|---|---|
 | Gate 1 pre-flight | Resolved 2026-08-06 | — (baseline + engine facts in dated entries) |
-| Gate 2 entry pre-flight | Open | Re-verify Gate 1 exit on HEAD; re-capture baseline; outline subsystem read |
+| Gate 2 entry pre-flight | Resolved 2026-08-06 | — |
+| Gate 2 gym [EDITOR-VERIFY] | Open (maintainer) | Steps in the Gate-2 dated entry |
+| Gate 3 entry pre-flight | Open | Gate_03 entry criteria (stencil/outline reads; GBuffer evidence re-check) |
 
 **Rule: no completion claim may be written anywhere in this file while any row here is unresolved.**
