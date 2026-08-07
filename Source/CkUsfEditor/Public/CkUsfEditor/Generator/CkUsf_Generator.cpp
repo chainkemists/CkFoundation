@@ -399,7 +399,8 @@ namespace ck::usf_editor
         }
     }
 
-    static auto DoGenerate_LookMaterial(UCkUsf_LookDefinition* InDef, FGenerateResult& InOutResult) -> UMaterial*
+    static auto DoGenerate_LookMaterial(
+        UCkUsf_LookDefinition* InDef, FGenerateResult& InOutResult, const FString& InPackageRootOverride) -> UMaterial*
     {
         const auto Validation = Validate_LookDefinition(InDef);
         for (const auto& ValidationWarning : Validation.Warnings)
@@ -428,7 +429,7 @@ namespace ck::usf_editor
         const auto WantsRefraction = IsSurface && IsTranslucent && EffectiveShadingModel != MSM_Unlit;
 
         // ---- Create package + UMaterial (idempotent refresh) ----
-        const auto PkgPath = ck::usf::Get_GeneratedMasterPackagePath(LookName);
+        const auto PkgPath = ck::usf::Get_GeneratedMasterPackagePath(LookName, InPackageRootOverride);
         const auto AssetName = FString::Printf(TEXT("M_CkUsf_Look_%s"), *LookName.ToString());
 
         // An asset-registry stub leaves a previously-generated package partially loaded and SavePackage
@@ -783,10 +784,10 @@ namespace ck::usf_editor
         return Material;
     }
 
-    auto Generate_LookMaterial(UCkUsf_LookDefinition* InDef) -> UMaterial*
+    auto Generate_LookMaterial(UCkUsf_LookDefinition* InDef, const FString& InPackageRootOverride) -> UMaterial*
     {
         FGenerateResult DiscardedResult;   // failures are also logged inside the worker
-        return DoGenerate_LookMaterial(InDef, DiscardedResult);
+        return DoGenerate_LookMaterial(InDef, DiscardedResult, InPackageRootOverride);
     }
 
     // Catches HLSL that compiles as a UMaterial object but fails its shader permutations (notably PostProcess).
@@ -847,7 +848,7 @@ namespace ck::usf_editor
         return false;
     }
 
-    auto Generate_AllLookMaterials() -> FGenerateResult
+    auto Generate_AllLookMaterials(const FString& InPackageRootOverride) -> FGenerateResult
     {
         FGenerateResult Result;
         const auto& ARM = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
@@ -856,7 +857,7 @@ namespace ck::usf_editor
         for (const auto& A : Assets)
         {
             auto* Def = Cast<UCkUsf_LookDefinition>(A.GetAsset());
-            auto* Material = DoGenerate_LookMaterial(Def, Result);
+            auto* Material = DoGenerate_LookMaterial(Def, Result, InPackageRootOverride);
             if (ck::Is_NOT_Valid(Material, ck::IsValid_Policy_NullptrOnly{}))
             { ++Result.NumSkipped; continue; }
 

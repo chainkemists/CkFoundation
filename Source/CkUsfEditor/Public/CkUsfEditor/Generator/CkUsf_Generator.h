@@ -15,11 +15,18 @@ namespace ck::usf_editor
         TArray<FString> Warnings;   // legal-but-drifting looks (e.g. HLSL param-name mismatch)
     };
 
+    // InPackageRootOverride (both functions) redirects the generated package to another content root, e.g.
+    // "/CkFoundation/CkUsf/GeneratedLooksTest/P1234". It exists for the automation lanes: a real-RHI run is
+    // spread over concurrent editors, and two of them saving the same shipped .uasset kills both. Empty is
+    // the shipped root, so the console command, the package-save hook and the generator subsystem produce
+    // byte-identically what they always did.
+
     // Discovers all UCkUsf_LookDefinition assets and generates/refreshes a master per look.
-    CKUSFEDITOR_API auto Generate_AllLookMaterials() -> FGenerateResult;
+    CKUSFEDITOR_API auto Generate_AllLookMaterials(const FString& InPackageRootOverride = {}) -> FGenerateResult;
 
     // Generates/refreshes one master. Returns nullptr on validation failure (logged).
-    CKUSFEDITOR_API auto Generate_LookMaterial(UCkUsf_LookDefinition* InDef) -> UMaterial*;
+    CKUSFEDITOR_API auto Generate_LookMaterial(
+        UCkUsf_LookDefinition* InDef, const FString& InPackageRootOverride = {}) -> UMaterial*;
 
     // Reports a look's real HLSL compile errors (the resource's own error list, so a failure names its file,
     // line and message). Generation runs this itself; it is exported so a test can hold a one-off master to the

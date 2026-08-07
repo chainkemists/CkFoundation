@@ -51,7 +51,10 @@ subsystem.
   thresholds, the 10 cel halftone patterns, the 4 hand-drawn stroke patterns, palette quantization).
   The dispatcher index orders are STENCIL CONTRACTS shared with the asset-side enums — never reorder.
 - Generation (editor): `ck::usf_editor::Generate_AllLookMaterials()` / `Generate_LookMaterial(Def)`
-  (`CkUsfEditor/Generator/CkUsf_Generator.h`); validation in `CkUsf_LookValidator.h`.
+  (`CkUsfEditor/Generator/CkUsf_Generator.h`); validation in `CkUsf_LookValidator.h`. Both take an
+  optional package-root override — TESTS ONLY, so parallel automation lanes generate into lane-unique
+  paths instead of colliding on the shipped `GeneratedLooks/` packages; omitted, the editor-facing
+  output is unchanged.
 
 ## Authoring a new look (the loop)
 
@@ -256,8 +259,8 @@ wires SubsurfaceColor (and Opacity drives the scatter), `ClearCoat` wires ClearC
   (2026-08-06). Its `InForceSynchronousCompile` is what gives a verdict teeth and is DESTRUCTIVE
   (the forced master renders black) — generation passes `false` for the roster; only throwaway test
   masters force. Under `-nullrhi` every generation test skips as environmental — a green there says
-  nothing about HLSL; real verdicts need a `--no-nullrhi` run (serial: parallel lanes regenerating
-  looks collide on SavePackage).
+  nothing about HLSL; real verdicts need a `--no-nullrhi` run (parallel-safe since the generation tests
+  took the package-root override — they no longer write the shipped `GeneratedLooks/`).
 - Refraction is wired only for **lit** translucency (glass): unlit translucent looks stay
   byte-unchanged and no unlit-translucent + refraction permutation is compiled.
 - Usage flags are re-baked from the LookDefinition on every regeneration, and surface masters
