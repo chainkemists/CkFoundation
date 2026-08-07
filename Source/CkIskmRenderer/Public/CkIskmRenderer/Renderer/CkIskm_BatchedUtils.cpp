@@ -557,3 +557,48 @@ int32
     { return 0; }
     return InCrowd->Get_CelPatternRenderedInstanceCount();
 }
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberStylizeMask(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_MemberStylizeMask(InIndex);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Clear_CrowdMemberStylizeMask(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Clear_MemberStylizeMask(InIndex);
+}
+
+bool
+    UCk_Utils_IskmBatched_UE::
+    Get_IsCrowdMemberStylizeMasked(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return false; }
+    return InCrowd->Get_IsMemberStylizeMasked(InIndex);
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdStylizeMaskedMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_StylizeMaskedMemberCount();
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdStylizeMaskRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_StylizeMaskRenderedInstanceCount();
+}

@@ -2,6 +2,7 @@
 
 #include "CkUsf/LookDefinition/CkUsf_LookDefinition_Naming.h"
 #include "CkUsf/Stylize/CkUsf_HandDrawnPreset.h"
+#include "CkUsf/Stylize/CkUsf_StylizeMask_Utils.h"
 #include "CkUsf/Stylize/CkUsf_Stylize_CVars.h"
 #include "CkUsf/Stylize/CkUsf_Stylize_ProjectSettings.h"
 #include "CkUsf_Log.h"
@@ -148,6 +149,45 @@ auto
     {}
 
     if (NOT InkFadeRangeIsOrdered)
+    { return; }
+
+    const auto& Mask = InSettings.Get_Mask();
+
+    const auto MaskRangeIsAddressable = UCk_Utils_Usf_StylizeMask_UE::Get_MaskRangeIsAddressable(Mask);
+
+    CK_ENSURE_IF_NOT(MaskRangeIsAddressable,
+        TEXT("Request_SetSettings: HandDrawn effect-mask range [{}, {}] is inverted or reaches the "
+             "engine's NO-STENCIL value 0; it would match every untagged pixel in the view or none at "
+             "all. Settings left untouched"),
+        Mask.Get_StencilMin(), Mask.Get_StencilMax())
+    {}
+
+    if (NOT MaskRangeIsAddressable)
+    { return; }
+
+    const auto MaskRangeAvoidsOutline =
+        UCk_Utils_Usf_StylizeMask_UE::Get_MaskRangeAvoidsOutline(GetWorld(), Mask);
+
+    CK_ENSURE_IF_NOT(MaskRangeAvoidsOutline,
+        TEXT("Request_SetSettings: HandDrawn effect-mask range [{}, {}] COLLIDES with the outline "
+             "subsystem's allocated range; settings left untouched"),
+        Mask.Get_StencilMin(), Mask.Get_StencilMax())
+    {}
+
+    if (NOT MaskRangeAvoidsOutline)
+    { return; }
+
+    const auto MaskRangeAvoidsCelPatterns =
+        UCk_Utils_Usf_StylizeMask_UE::Get_MaskRangeAvoidsCelPatterns(GetWorld(), Mask);
+
+    CK_ENSURE_IF_NOT(MaskRangeAvoidsCelPatterns,
+        TEXT("Request_SetSettings: HandDrawn effect-mask range [{}, {}] COLLIDES with the CelShade "
+             "per-object pattern span in this world; one stencil value cannot both select a cel pattern "
+             "and gate this look. Settings left untouched"),
+        Mask.Get_StencilMin(), Mask.Get_StencilMax())
+    {}
+
+    if (NOT MaskRangeAvoidsCelPatterns)
     { return; }
 
     _SettingsExplicitlySet = true;
@@ -445,6 +485,20 @@ auto
     Set_Vector(TEXT("ShadowTint"), InEffective.Get_ShadowTint(), Previous.Get_ShadowTint());
     Set_Vector(TEXT("HighlightTint"), InEffective.Get_HighlightTint(), Previous.Get_HighlightTint());
     Set_Vector(TEXT("InkColor"), InEffective.Get_InkColor(), Previous.Get_InkColor());
+
+    const auto Get_MaskBound = [](int32 InValue) -> float
+    {
+        return static_cast<float>(InValue);
+    };
+
+    Set_Scalar(TEXT("MaskMode"),
+        Get_EnumIndex(InEffective.Get_Mask().Get_Mode()), Get_EnumIndex(Previous.Get_Mask().Get_Mode()));
+    Set_Scalar(TEXT("MaskStencilMin"),
+        Get_MaskBound(InEffective.Get_Mask().Get_StencilMin()),
+        Get_MaskBound(Previous.Get_Mask().Get_StencilMin()));
+    Set_Scalar(TEXT("MaskStencilMax"),
+        Get_MaskBound(InEffective.Get_Mask().Get_StencilMax()),
+        Get_MaskBound(Previous.Get_Mask().Get_StencilMax()));
 
     _WrittenSettings = InEffective;
 }

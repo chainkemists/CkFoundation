@@ -173,6 +173,13 @@ public:
 
     // ---- Debug ----
 
+    // ---- Effect mask ----
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|HandDrawn|Mask")
+    FCk_Usf_StylizeMask_Params _Mask;
+
+    // ---- Debug ----
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf|HandDrawn")
     ECk_Usf_HandDrawn_DebugMode _DebugMode = ECk_Usf_HandDrawn_DebugMode::FinalImage;
 

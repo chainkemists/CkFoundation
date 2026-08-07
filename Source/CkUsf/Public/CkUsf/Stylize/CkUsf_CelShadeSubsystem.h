@@ -109,6 +109,15 @@ public:
     int32
     Get_StencilSuppressValue() const;
 
+    // Whether InSettings' custom band-edge list is usable: non-empty, strictly ascending, and every entry
+    // strictly inside 0..1. Public for the same reason the stencil check is — an authoring tool can ask
+    // before it hands a list over, instead of re-deriving the rule.
+    UFUNCTION(BlueprintPure, Category = "Ck|Usf|CelShade",
+              DisplayName = "[Ck][Usf] Get Cel Shade Band Edges Are Valid")
+    static bool
+    Get_BandEdgesAreValid(
+        const FCk_Usf_CelShade_Params& InSettings);
+
 private:
     // The two halves of Get_StencilRangeIsFree, kept apart so Request_SetSettings can name which one a
     // rejected settings value actually broke.

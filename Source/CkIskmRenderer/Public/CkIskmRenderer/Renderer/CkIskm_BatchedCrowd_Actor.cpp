@@ -10,6 +10,7 @@
 #include "CkUsf/Outline/CkUsf_OutlinePreset.h"
 #include "CkUsf/Outline/CkUsf_OutlineSubsystem.h"
 #include "CkUsf/Stylize/CkUsf_CelShadeSubsystem.h"
+#include "CkUsf/Stylize/CkUsf_Stylize_ProjectSettings.h"
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"        // Get_TransientEntity
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h" // Request_CreateEntity
@@ -406,6 +407,11 @@ auto
     {
         Push_HighlightGroup(Pair.Value);
     }
+
+    for (auto& Pair : _StylizeMaskGroups)
+    {
+        Push_HighlightGroup(Pair.Value);
+    }
 }
 
 auto
@@ -746,6 +752,16 @@ auto
     if (const auto* CelPattern = _MemberCelPatterns.Find(InIndex))
     { return _CelGroups.Find(CelPattern->Stencil); }
 
+    // Found by membership rather than by key: a masked member records no stencil of its own.
+    if (_StylizeMaskedMembers.Contains(InIndex))
+    {
+        for (auto& Pair : _StylizeMaskGroups)
+        {
+            if (Pair.Value.Members.Contains(InIndex))
+            { return &Pair.Value; }
+        }
+    }
+
     return nullptr;
 }
 
@@ -807,6 +823,8 @@ void
     // caller asked for the outline and gets it — the reverse order is the one that is refused loudly. Last,
     // after every way this can fail: an outline that never lands must not take the pattern with it.
     Clear_MemberCelPattern(InIndex);
+    // Same rule one precedence level further down — the mask is the lowest of the three claims.
+    Clear_MemberStylizeMask(InIndex);
 
     Group->Members.AddUnique(InIndex);
     _MemberOutlines.Add(InIndex, InPreset);
@@ -949,6 +967,11 @@ void
         Group = &_CelGroups.Add(Stencil, MoveTemp(NewGroup));
     }
 
+    // The pattern outranks the mask and they share the member's Custom-Stencil byte, so the mask cluster
+    // must go — silently, exactly as the outline takes the pattern over. Last, after every way this can
+    // fail: a pattern that never lands must not take the mask with it.
+    Clear_MemberStylizeMask(InIndex);
+
     Group->Members.AddUnique(InIndex);
     _MemberCelPatterns.Add(InIndex, FMemberCelPattern{InPattern, Stencil});
     Rebuild_HighlightGroup(*Group);
@@ -1013,6 +1036,137 @@ int32
 {
     int32 Total = 0;
     for (const auto& Pair : _CelGroups)
+    {
+        if (const auto* Comp = Pair.Value.Comp.Get())
+        { Total += Comp->Get_Instances().Num(); }
+    }
+    return Total;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Stylize effect mask (member-indexed) — see CkUsf/Claude.md § Stylize.
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    Set_MemberStylizeMask(int32 InIndex)
+{
+    // Hoisted out of the ensure body: CK_DISABLE_ENSURE_CHECKS compiles the macro and its body away
+    // entirely, and an out-of-range index reaching the map writes below is memory corruption, not a
+    // diagnostic. The bounds check has to survive the diagnostic being switched off.
+    const auto IndexIsValid = _Members.IsValidIndex(InIndex);
+    CK_ENSURE_IF_NOT(IndexIsValid,
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
+    {}
+    if (NOT IndexIsValid)
+    { return; }
+
+    // The mask is the LAST of the three claims on the member's Custom-Stencil byte, so accepting this would
+    // silently replace the outline or cel pattern the caller asked for earlier. The entity-level
+    // Request_AddToStylizeMask refuses the same way.
+    const auto StencilIsFree = NOT _MemberOutlines.Contains(InIndex) && NOT _MemberCelPatterns.Contains(InIndex);
+    CK_ENSURE_IF_NOT(StencilIsFree,
+        TEXT("[CkIskm] Set_MemberStylizeMask on crowd [{}] member [{}]: the member already carries an "
+             "OUTLINE or a CEL PATTERN, which owns its Custom Stencil value; stylize mask NOT applied"), this, InIndex)
+    {}
+    if (NOT StencilIsFree)
+    { return; }
+
+    // Project config rather than a per-world subsystem: there is exactly ONE mask value per project. 0 is
+    // the engine's "nothing written here", so a cluster carrying it would mark its instances with the value
+    // that means untagged and read as a silent success; the setting clamps at 1, so only a hand-edited .ini
+    // reaches here. This is a one-shot imperative call rather than a per-frame processor, so an unusable
+    // value is refused LOUDLY at the call site instead of being skipped the way the sync processors skip it.
+    const auto StencilValue = UCk_Utils_Usf_Stylize_Settings_UE::Get_MaskStencilValue();
+    const auto StencilIsAddressable = StencilValue > 0 && StencilValue <= MAX_uint8;
+    CK_ENSURE_IF_NOT(StencilIsAddressable,
+        TEXT("[CkIskm] Set_MemberStylizeMask: the project's stylize mask stencil value is [{}], which is "
+             "outside the addressable range [1..{}]; stylize mask dropped"), StencilValue, MAX_uint8)
+    {}
+    if (NOT StencilIsAddressable)
+    { return; }
+
+    const auto Stencil = static_cast<uint8>(StencilValue);
+
+    if (_StylizeMaskedMembers.Contains(InIndex))
+    {
+        if (const auto* Existing = DoFind_MemberHighlightGroup(InIndex);
+            Existing != nullptr && Existing->Stencil == Stencil)
+        { return; }
+
+        Clear_MemberStylizeMask(InIndex); // the project value moved: leave the old group first
+    }
+
+    auto* Group = _StylizeMaskGroups.Find(Stencil);
+    if (Group == nullptr)
+    {
+        auto* Comp = DoCreate_HighlightCluster(Stencil, TEXT("IskmStylizeMaskCluster"));
+        if (ck::Is_NOT_Valid(Comp, ck::IsValid_Policy_NullptrOnly{}))
+        { return; }
+
+        auto NewGroup = FHighlightGroup{};
+        NewGroup.Comp = Comp;
+        NewGroup.Stencil = Stencil;
+        Group = &_StylizeMaskGroups.Add(Stencil, MoveTemp(NewGroup));
+    }
+
+    Group->Members.AddUnique(InIndex);
+    _StylizeMaskedMembers.Add(InIndex);
+    Rebuild_HighlightGroup(*Group);
+}
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    Clear_MemberStylizeMask(int32 InIndex)
+{
+    if (NOT _StylizeMaskedMembers.Contains(InIndex))
+    { return; }
+
+    _StylizeMaskedMembers.Remove(InIndex);
+
+    // Located by membership, not by re-resolving the project value: a setting change between Set and Clear
+    // would otherwise strand the cluster the member is actually in, its component and its instances.
+    for (auto It = _StylizeMaskGroups.CreateIterator(); It; ++It)
+    {
+        auto& Group = It.Value();
+
+        if (Group.Members.RemoveSingleSwap(InIndex) == 0)
+        { continue; }
+
+        if (Group.Members.Num() > 0)
+        {
+            Rebuild_HighlightGroup(Group);
+            return;
+        }
+
+        // No release half: the mask is a direct stencil value, not a refcounted allocation.
+        if (auto* Comp = Group.Comp.Get())
+        { Comp->DestroyComponent(); }
+
+        It.RemoveCurrent();
+        return;
+    }
+}
+
+bool
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_IsMemberStylizeMasked(int32 InIndex) const
+{
+    return _StylizeMaskedMembers.Contains(InIndex);
+}
+
+int32
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_StylizeMaskedMemberCount() const
+{
+    return _StylizeMaskedMembers.Num();
+}
+
+int32
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_StylizeMaskRenderedInstanceCount() const
+{
+    int32 Total = 0;
+    for (const auto& Pair : _StylizeMaskGroups)
     {
         if (const auto* Comp = Pair.Value.Comp.Get())
         { Total += Comp->Get_Instances().Num(); }
@@ -1122,9 +1276,12 @@ void
     _OutlineGroups.Reset();
     _MemberOutlines.Reset();
 
-    // Cel groups have no release half — a direct stencil value is not a refcounted allocation.
+    // Cel and mask groups have no release half — a direct stencil value is not a refcounted allocation.
     _CelGroups.Reset();
     _MemberCelPatterns.Reset();
+
+    _StylizeMaskGroups.Reset();
+    _StylizeMaskedMembers.Reset();
 
     DoDestroy_ControllerEntity();
 

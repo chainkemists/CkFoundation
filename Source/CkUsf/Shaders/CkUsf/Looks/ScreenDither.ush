@@ -13,8 +13,17 @@
 //   5. quantize        — N steps per channel, or nearest entry of a custom palette
 //   6. decode + weight — undo the encode, lerp against the untouched original
 //
-// Only SceneColor is read; the generator's default trio also wires depth and normal, which this look
-// leaves unused.
+// Only SceneColor and CustomStencil are read; the wired depth and normal are the historical default
+// trio, which this look leaves unused.
+//
+// THE EFFECT MASK IS SOFT-EDGED HERE, AND CANNOT BE ANYTHING ELSE. MaskMode / MaskStencilMin /
+// MaskStencilMax gate the whole reduction per pixel, but this look sits AFTER tonemapping while the
+// custom-depth buffer is rendered with the TAA-jittered projection — the mask edge is therefore the one
+// thing in this look that never gets temporally resolved, and a hard test on it visibly crawls on a
+// stationary camera. The centre + 4 axis neighbours are averaged into a 5-level ramp instead: that is a
+// genuine soft edge, not a fix. Sub-pixel crawl inside the ramp remains, and no amount of tapping
+// removes it — a mask that must be pixel-crisp belongs on CelShade or HandDrawn, which are pre-TAA.
+// Moving THIS look pre-TAA is not the alternative: it would defeat the whole reason it is placed here.
 #pragma once
 #include "/CkUsf/Common.ush"
 #include "/CkUsf/StylizeCommon.ush"
@@ -53,6 +62,48 @@ float3 CkUsf_ScreenDither_Decode(float3 Color, float ColorSpace, float PreGamma)
     return C;
 }
 
+float CkUsf_ScreenDither_TapStencil(float2 ViewportUV)
+{
+    float2 UV = ClampSceneTextureUV(
+        ViewportUVToSceneTextureUV(saturate(ViewportUV), PPI_CustomStencil), PPI_CustomStencil);
+    return round(SceneTextureLookup(UV, PPI_CustomStencil, false).r);
+}
+
+// The mask, box-averaged over the centre and its 4 axis neighbours. See the header: a hard stencil test
+// at this chain location has no temporal resolve behind it and crawls. Averaging membership (not the
+// stencil VALUE — averaging ids would invent ids nothing wrote) turns the one-pixel boundary into a
+// 5-level ramp. Off short-circuits before any tap, so an unmasked look pays nothing for this.
+float CkUsf_ScreenDither_MaskWeight(
+    int MaskMode, float2 ViewportUV, float CenterStencil, float MaskMin, float MaskMax)
+{
+    if (MaskMode == 0)
+    { return 1.0; }
+
+    const float2 Offsets[4] =
+    {
+        float2( 1.0,  0.0), float2(-1.0,  0.0), float2( 0.0,  1.0), float2( 0.0, -1.0)
+    };
+
+    // Stepped by CUSTOM STENCIL's own inverse view size, not PostProcessInput0's. The taps sample the
+    // stencil texture, and at this chain location the tonemapped input carries its own rect and size —
+    // stepping by the input's inverse would land the four taps somewhere other than one stencil texel
+    // away under screen percentage / dynamic resolution, softening the mask by the wrong amount (or not
+    // at all). Same "each scene texture has its OWN viewport" lesson every look here carries.
+    float2 StencilInvViewSize = GetSceneTextureViewSize(PPI_CustomStencil).zw;
+
+    float Sum = CkUsf_Stylize_MaskWeight(MaskMode, CenterStencil, MaskMin, MaskMax);
+
+    [unroll]
+    for (int i = 0; i < 4; ++i)
+    {
+        Sum += CkUsf_Stylize_MaskWeight(
+            MaskMode, CkUsf_ScreenDither_TapStencil(ViewportUV + Offsets[i] * StencilInvViewSize),
+            MaskMin, MaskMax);
+    }
+
+    return Sum * 0.2;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 FCkUsf_SurfaceOutput CkUsf_PP_ScreenDither(
@@ -74,6 +125,9 @@ FCkUsf_SurfaceOutput CkUsf_PP_ScreenDither(
     float Contrast,
     float Weight,
     float DebugMode,
+    float MaskMode,
+    float MaskStencilMin,
+    float MaskStencilMax,
     float3 MonochromeShadowTint,
     float3 MonochromeHighlightTint,
     float3 PaletteColor0, float3 PaletteColor1, float3 PaletteColor2, float3 PaletteColor3,
@@ -196,12 +250,20 @@ FCkUsf_SurfaceOutput CkUsf_PP_ScreenDither(
 
     float3 Final = lerp(Original, Decoded, saturate(Weight));
 
+    // ---- Effect mask ------------------------------------------------------------------------------
+    // Composed with Weight rather than folded into it: Weight is how strongly a reduced pixel blends
+    // back, the mask is whether this pixel is reduced at all. A masked-out pixel is the original exactly.
+    float MaskWeight = CkUsf_ScreenDither_MaskWeight(
+        (int)(MaskMode + 0.5), ViewportUV, In.CustomStencil.r, MaskStencilMin, MaskStencilMax);
+    Final = lerp(Original, Final, MaskWeight);
+
     // ---- Debug ------------------------------------------------------------------------------------
     int Debug = (int)(DebugMode + 0.5);
     if (Debug == 1)      { Final = float3(Threshold, Threshold, Threshold); }
     else if (Debug == 2) { Final = saturate(abs(Encoded - Quantized) / max(StepSize, 1e-4)); }
     else if (Debug == 3) { Final = DecodedNoDither; }
     else if (Debug == 4) { Final = Downsampled; }
+    else if (Debug == 5) { Final = float3(MaskWeight, MaskWeight, MaskWeight); }
 
     O.EmissiveColor = Final;
     O.Opacity = 1.0;

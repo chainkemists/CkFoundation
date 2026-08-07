@@ -43,7 +43,7 @@ namespace ck_usf_stylize_cvars
         CVarUsfStylize_HandDrawn_Debug,
         TEXT("Override the HandDrawn debug view: -1 settings-driven, otherwise the "
              "ECk_Usf_HandDrawn_DebugMode index (0 FinalImage, 1 InkMask, 2 ShadowStrokeMask, "
-             "3 PaperPattern, 4 WorldNormals, 5 SceneDepth)."),
+             "3 PaperPattern, 4 WorldNormals, 5 SceneDepth, 6 StylizeMask)."),
         Get_ChangedDelegate(),
         ECVF_Default);
 
@@ -61,7 +61,8 @@ namespace ck_usf_stylize_cvars
         CVarUsfStylize_CelShade_Debug,
         TEXT("Override the CelShade debug view: -1 settings-driven, otherwise the "
              "ECk_Usf_CelShade_DebugMode index (0 Final, 1 BandIndex, 2 OutlineMask, 3 Illumination, "
-             "4 Albedo, 5 Normals, 6 PatternThreshold, 7 PatternCoordinates, 8 MotionOffset, 9 Stencil)."),
+             "4 Albedo, 5 Normals, 6 PatternThreshold, 7 PatternCoordinates, 8 MotionOffset, 9 Stencil, "
+             "10 StylizeMask)."),
         Get_ChangedDelegate(),
         ECVF_Default);
 
@@ -79,7 +80,25 @@ namespace ck_usf_stylize_cvars
         CVarUsfStylize_ScreenDither_Debug,
         TEXT("Override the ScreenDither debug view: -1 settings-driven, otherwise the "
              "ECk_Usf_ScreenDither_DebugMode index (0 Final, 1 Pattern, 2 QuantizationError, "
-             "3 QuantizedWithoutDither, 4 DownsampledInput)."),
+             "3 QuantizedWithoutDither, 4 DownsampledInput, 5 StylizeMask)."),
+        Get_ChangedDelegate(),
+        ECVF_Default);
+
+    int32 CVarUsfStylize_CrossHatch_Enabled = -1;
+    static FAutoConsoleVariableRef CVarUsfStylize_CrossHatch_Enabled_Ref(
+        TEXT("ck.Usf.CrossHatch.Enabled"),
+        CVarUsfStylize_CrossHatch_Enabled,
+        TEXT("Override the CrossHatch stylize effect: -1 settings-driven, 0 force off, 1 force on."),
+        Get_ChangedDelegate(),
+        ECVF_Default);
+
+    int32 CVarUsfStylize_CrossHatch_Debug = -1;
+    static FAutoConsoleVariableRef CVarUsfStylize_CrossHatch_Debug_Ref(
+        TEXT("ck.Usf.CrossHatch.Debug"),
+        CVarUsfStylize_CrossHatch_Debug,
+        TEXT("Override the CrossHatch debug view: -1 settings-driven, otherwise the "
+             "ECk_Usf_CrossHatch_DebugMode index (0 Final, 1 HatchMask, 2 HatchDirection, 3 Darkness, "
+             "4 LayerCoverage, 5 WorldNormals, 6 StylizeMask)."),
         Get_ChangedDelegate(),
         ECVF_Default);
 }
@@ -128,6 +147,20 @@ namespace ck::usf::stylize
         -> int32
     {
         return ck_usf_stylize_cvars::CVarUsfStylize_ScreenDither_Debug;
+    }
+
+    auto
+        Get_EnabledOverride_CrossHatch()
+        -> int32
+    {
+        return ck_usf_stylize_cvars::CVarUsfStylize_CrossHatch_Enabled;
+    }
+
+    auto
+        Get_DebugOverride_CrossHatch()
+        -> int32
+    {
+        return ck_usf_stylize_cvars::CVarUsfStylize_CrossHatch_Debug;
     }
 }
 

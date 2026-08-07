@@ -44,6 +44,15 @@
   writers on the same pixels. The two are mutually exclusive per entity; the outline wins. Test getters:
   `UCk_Utils_IsmProxy_UE::Get_IsCelPatternApplied` / `Get_CelPatternShadowInstanceCount` /
   `Get_CelPatternStencilValue`. Rationale: `CkUsf/Claude.md § Cel shade (Stylize)`.
+- **Entity-level stylize effect mask** (`FProcessor_IsmProxy_StylizeMask_Sync/_TransformSync/_Suspend/
+  _DropAppliedOnOutline/_DropAppliedOnCelPattern/_Remove/_EndPlay`) — driven by `CkUsf`'s
+  `UCk_Utils_Usf_StylizeMask_UE::Request_AddToStylizeMask(Handle, Scope)`, via
+  `UCk_IsmRenderer_Subsystem_UE::FindOrCreate_StylizeMaskIsmComponent`. The cel-pattern set again, with two
+  simplifications and one addition: there is no per-entity payload (the project reserves ONE stencil value,
+  so `_Sync` reads `UCk_Utils_Usf_Stylize_Settings_UE::Get_MaskStencilValue()` instead of consulting a
+  subsystem), and the drop-on-higher-claim processor is TWO processors rather than one because a view is a
+  conjunction while "a higher claim arrived" is a disjunction. Precedence is outline > cel pattern > mask,
+  so this feature's Sync excludes BOTH. Rationale: `CkUsf/Claude.md § Effect mask (Stylize)`.
 
 ---
 

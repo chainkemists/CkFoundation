@@ -56,6 +56,7 @@ auto
         && _GrainScale == InOther._GrainScale
         && _FiberStrength == InOther._FiberStrength
         && _PaperWarmth == InOther._PaperWarmth
+        && _Mask == InOther._Mask
         && _DebugMode == InOther._DebugMode;
 }
 

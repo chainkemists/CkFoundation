@@ -1,7 +1,7 @@
-#include "CkUsf/Stylize/CkUsf_ScreenDitherSubsystem.h"
+#include "CkUsf/Stylize/CkUsf_CrossHatchSubsystem.h"
 
 #include "CkUsf/LookDefinition/CkUsf_LookDefinition_Naming.h"
-#include "CkUsf/Stylize/CkUsf_ScreenDitherPreset.h"
+#include "CkUsf/Stylize/CkUsf_CrossHatchPreset.h"
 #include "CkUsf/Stylize/CkUsf_StylizeMask_Utils.h"
 #include "CkUsf/Stylize/CkUsf_Stylize_CVars.h"
 #include "CkUsf/Stylize/CkUsf_Stylize_ProjectSettings.h"
@@ -20,12 +20,12 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-const FName UCkUsf_ScreenDitherSubsystem::kLookName = TEXT("ScreenDither");
+const FName UCkUsf_CrossHatchSubsystem::kLookName = TEXT("CrossHatch");
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     ShouldCreateSubsystem(
         UObject* InOuter) const
     -> bool
@@ -42,7 +42,7 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     Initialize(
         FSubsystemCollectionBase& InCollection)
     -> void
@@ -50,11 +50,11 @@ auto
     Super::Initialize(InCollection);
 
     _CVarChangedHandle = ck::usf::stylize::Get_OnCVarChanged().AddUObject(
-        this, &UCkUsf_ScreenDitherSubsystem::DoOn_CVarChanged);
+        this, &UCkUsf_CrossHatchSubsystem::DoOn_CVarChanged);
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     Deinitialize()
     -> void
 {
@@ -65,7 +65,7 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     OnWorldBeginPlay(
         UWorld& InWorld)
     -> void
@@ -76,10 +76,10 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
-    Get_ScreenDitherSubsystem(
+    UCkUsf_CrossHatchSubsystem::
+    Get_CrossHatchSubsystem(
         const UObject* InWorldContextObject)
-    -> UCkUsf_ScreenDitherSubsystem*
+    -> UCkUsf_CrossHatchSubsystem*
 {
     if (ck::Is_NOT_Valid(GEngine, ck::IsValid_Policy_NullptrOnly{}))
     { return nullptr; }
@@ -88,11 +88,11 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return nullptr; }
 
-    return World->GetSubsystem<UCkUsf_ScreenDitherSubsystem>();
+    return World->GetSubsystem<UCkUsf_CrossHatchSubsystem>();
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     Request_SetEnabled(
         ECk_EnableDisable InEnabled)
     -> void
@@ -104,7 +104,7 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     Get_IsEnabled() const
     -> ECk_EnableDisable
 {
@@ -112,15 +112,15 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     Apply_Preset(
-        UCkUsf_ScreenDitherPreset* InPreset)
+        UCkUsf_CrossHatchPreset* InPreset)
     -> void
 {
     const auto PresetIsValid = ck::IsValid(InPreset, ck::IsValid_Policy_NullptrOnly{});
 
     CK_ENSURE_IF_NOT(PresetIsValid,
-        TEXT("Apply_Preset: null ScreenDither preset; settings left untouched"))
+        TEXT("Apply_Preset: null CrossHatch preset; settings left untouched"))
     {}
 
     if (NOT PresetIsValid)
@@ -130,31 +130,17 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     Request_SetSettings(
-        const FCk_Usf_ScreenDither_Params& InSettings)
+        const FCk_Usf_CrossHatch_Params& InSettings)
     -> void
 {
-    // An empty palette in CustomPalette mode is not a subtle mistake: every pixel snaps to the black
-    // the unused slots are filled with, so the whole view goes black with nothing naming the cause.
-    const auto PaletteIsUsable =
-        InSettings.Get_PaletteMode() != ECk_Usf_PaletteMode::CustomPalette ||
-        InSettings.Get_Palette().IsEmpty() == false;
-
-    CK_ENSURE_IF_NOT(PaletteIsUsable,
-        TEXT("Request_SetSettings: ScreenDither PaletteMode is CustomPalette with an EMPTY palette; "
-             "settings left untouched"))
-    {}
-
-    if (NOT PaletteIsUsable)
-    { return; }
-
     const auto& Mask = InSettings.Get_Mask();
 
     const auto MaskRangeIsAddressable = UCk_Utils_Usf_StylizeMask_UE::Get_MaskRangeIsAddressable(Mask);
 
     CK_ENSURE_IF_NOT(MaskRangeIsAddressable,
-        TEXT("Request_SetSettings: ScreenDither effect-mask range [{}, {}] is inverted or reaches the "
+        TEXT("Request_SetSettings: CrossHatch effect-mask range [{}, {}] is inverted or reaches the "
              "engine's NO-STENCIL value 0; it would match every untagged pixel in the view or none at "
              "all. Settings left untouched"),
         Mask.Get_StencilMin(), Mask.Get_StencilMax())
@@ -167,7 +153,7 @@ auto
         UCk_Utils_Usf_StylizeMask_UE::Get_MaskRangeAvoidsOutline(GetWorld(), Mask);
 
     CK_ENSURE_IF_NOT(MaskRangeAvoidsOutline,
-        TEXT("Request_SetSettings: ScreenDither effect-mask range [{}, {}] COLLIDES with the outline "
+        TEXT("Request_SetSettings: CrossHatch effect-mask range [{}, {}] COLLIDES with the outline "
              "subsystem's allocated range; settings left untouched"),
         Mask.Get_StencilMin(), Mask.Get_StencilMax())
     {}
@@ -179,7 +165,7 @@ auto
         UCk_Utils_Usf_StylizeMask_UE::Get_MaskRangeAvoidsCelPatterns(GetWorld(), Mask);
 
     CK_ENSURE_IF_NOT(MaskRangeAvoidsCelPatterns,
-        TEXT("Request_SetSettings: ScreenDither effect-mask range [{}, {}] COLLIDES with the CelShade "
+        TEXT("Request_SetSettings: CrossHatch effect-mask range [{}, {}] COLLIDES with the CelShade "
              "per-object pattern span in this world; one stencil value cannot both select a cel pattern "
              "and gate this look. Settings left untouched"),
         Mask.Get_StencilMin(), Mask.Get_StencilMax())
@@ -195,15 +181,15 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     Get_Settings() const
-    -> FCk_Usf_ScreenDither_Params
+    -> FCk_Usf_CrossHatch_Params
 {
     return _Settings;
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     Request_ResetToDefaults()
     -> void
 {
@@ -213,17 +199,17 @@ auto
         return;
     }
 
-    Request_SetSettings(FCk_Usf_ScreenDither_Params{});
+    Request_SetSettings(FCk_Usf_CrossHatch_Params{});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     DoEnsure_ViewEffect()
     -> bool
 {
-    if (_DitherMID != nullptr)
+    if (_CrossHatchMID != nullptr)
     { return true; }
 
     auto* World = GetWorld();
@@ -237,36 +223,36 @@ auto
         if (NOT _WarnedMissingMaster)
         {
             _WarnedMissingMaster = true;
-            ck::usf::Warning(TEXT("ScreenDither master not found at [{}] — run Generate Look Materials. "
+            ck::usf::Warning(TEXT("CrossHatch master not found at [{}] — run Generate Look Materials. "
                                   "Settings are still tracked; nothing renders until the master exists."),
                 MasterPath);
         }
         return false;
     }
 
-    _DitherMID = UMaterialInstanceDynamic::Create(Master, this);
+    _CrossHatchMID = UMaterialInstanceDynamic::Create(Master, this);
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.ObjectFlags |= RF_Transient;
-    SpawnParams.Name = TEXT("CkUsf_ScreenDitherView");
+    SpawnParams.Name = TEXT("CkUsf_CrossHatchView");
     _ViewActor = World->SpawnActor<AActor>(AActor::StaticClass(), SpawnParams);
     if (_ViewActor == nullptr)
     {
-        _DitherMID = nullptr;
+        _CrossHatchMID = nullptr;
         return false;
     }
 
-    _ViewPP = NewObject<UPostProcessComponent>(_ViewActor, TEXT("ScreenDitherPostProcess"));
+    _ViewPP = NewObject<UPostProcessComponent>(_ViewActor, TEXT("CrossHatchPostProcess"));
     _ViewActor->SetRootComponent(_ViewPP);
     _ViewPP->bUnbound = true;
     _ViewPP->RegisterComponent();
-    _ViewPP->Settings.AddBlendable(_DitherMID, 1.0f);
+    _ViewPP->Settings.AddBlendable(_CrossHatchMID, 1.0f);
 
     return true;
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     DoSync_ViewEffect()
     -> void
 {
@@ -284,61 +270,61 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     DoGet_EffectiveSettings() const
-    -> FCk_Usf_ScreenDither_Params
+    -> FCk_Usf_CrossHatch_Params
 {
     auto Effective = _Settings;
 
-    const auto EnabledOverride = ck::usf::stylize::Get_EnabledOverride_ScreenDither();
+    const auto EnabledOverride = ck::usf::stylize::Get_EnabledOverride_CrossHatch();
     if (EnabledOverride >= 0)
     {
         Effective.Set_Enabled(EnabledOverride > 0 ? ECk_EnableDisable::Enable : ECk_EnableDisable::Disable);
     }
 
-    const auto DebugOverride = ck::usf::stylize::Get_DebugOverride_ScreenDither();
+    const auto DebugOverride = ck::usf::stylize::Get_DebugOverride_CrossHatch();
     if (DebugOverride >= 0)
     {
         // UHT appends a _MAX enumerator to every UENUM and IsValidEnumValue accepts it, so
         // one-past-the-end would pass here and then fall through the shader's if-chain to the
         // final image — a debug mode that silently shows no debug view.
-        const auto* DebugEnum = StaticEnum<ECk_Usf_ScreenDither_DebugMode>();
+        const auto* DebugEnum = StaticEnum<ECk_Usf_CrossHatch_DebugMode>();
         const auto DebugOverrideIsValid =
             DebugEnum->IsValidEnumValue(DebugOverride) && DebugOverride != DebugEnum->GetMaxEnumValue();
 
         CK_ENSURE_IF_NOT(DebugOverrideIsValid,
-            TEXT("ck.Usf.ScreenDither.Debug is [{}], which is not an ECk_Usf_ScreenDither_DebugMode value; "
+            TEXT("ck.Usf.CrossHatch.Debug is [{}], which is not an ECk_Usf_CrossHatch_DebugMode value; "
                  "the setting's own debug mode is used instead"), DebugOverride)
         {}
 
         if (DebugOverrideIsValid)
-        { Effective.Set_DebugMode(static_cast<ECk_Usf_ScreenDither_DebugMode>(DebugOverride)); }
+        { Effective.Set_DebugMode(static_cast<ECk_Usf_CrossHatch_DebugMode>(DebugOverride)); }
     }
 
     return Effective;
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     DoOn_CVarChanged()
     -> void
 {
     // A debug CVar must never be what instantiates the effect: every world has one of these subsystems,
-    // and the settings default to Enabled, so an unconditional re-sync would switch dithering on in every
-    // world that merely exists the moment anyone touches a console value. Worlds already carrying the
-    // effect re-sync, and an explicit force-on is allowed to create it.
-    if (_DitherMID == nullptr && ck::usf::stylize::Get_EnabledOverride_ScreenDither() != 1)
+    // and the settings default to Enabled, so an unconditional re-sync would switch CrossHatch on in
+    // every world that merely exists the moment anyone touches a console value. Worlds already carrying
+    // the effect re-sync, and an explicit force-on is allowed to create it.
+    if (_CrossHatchMID == nullptr && ck::usf::stylize::Get_EnabledOverride_CrossHatch() != 1)
     { return; }
 
     DoSync_ViewEffect();
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     DoResolve_ProjectDefaultPreset() const
-    -> UCkUsf_ScreenDitherPreset*
+    -> UCkUsf_CrossHatchPreset*
 {
-    const auto SoftPreset = UCk_Utils_Usf_Stylize_Settings_UE::Get_ScreenDitherDefaultPreset();
+    const auto SoftPreset = UCk_Utils_Usf_Stylize_Settings_UE::Get_CrossHatchDefaultPreset();
 
     // Unset is the "no default style" answer, not a failure — the effect simply stays off.
     if (SoftPreset.IsNull())
@@ -347,7 +333,7 @@ auto
     auto* Preset = SoftPreset.LoadSynchronous();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Preset, ck::IsValid_Policy_NullptrOnly{}),
-        TEXT("Project settings name [{}] as the default ScreenDither preset, but it could not be loaded"),
+        TEXT("Project settings name [{}] as the default CrossHatch preset, but it could not be loaded"),
         SoftPreset.ToString())
     {}
 
@@ -355,7 +341,7 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     DoApply_ProjectDefault()
     -> void
 {
@@ -376,7 +362,7 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     DoApply_ProjectDefault_Now()
     -> void
 {
@@ -395,9 +381,9 @@ auto
 }
 
 auto
-    UCkUsf_ScreenDitherSubsystem::
+    UCkUsf_CrossHatchSubsystem::
     DoWrite_ChangedParams(
-        const FCk_Usf_ScreenDither_Params& InEffective)
+        const FCk_Usf_CrossHatch_Params& InEffective)
     -> void
 {
     const auto WriteAll = _WrittenSettings.IsSet() == false;
@@ -406,13 +392,13 @@ auto
     const auto Set_Scalar = [&](const TCHAR* InName, float InValue, float InPrevious) -> void
     {
         if (WriteAll || InValue != InPrevious)
-        { _DitherMID->SetScalarParameterValue(InName, InValue); }
+        { _CrossHatchMID->SetScalarParameterValue(InName, InValue); }
     };
 
     const auto Set_Vector = [&](const TCHAR* InName, const FLinearColor& InValue, const FLinearColor& InPrevious) -> void
     {
         if (WriteAll || InValue != InPrevious)
-        { _DitherMID->SetVectorParameterValue(InName, InValue); }
+        { _CrossHatchMID->SetVectorParameterValue(InName, InValue); }
     };
 
     const auto Get_EnumIndex = [](auto InEnumValue) -> float
@@ -425,71 +411,50 @@ auto
         return InEnableDisable == ECk_EnableDisable::Enable ? 1.0f : 0.0f;
     };
 
-    Set_Scalar(TEXT("DitherPattern"),
-        Get_EnumIndex(InEffective.Get_Pattern()), Get_EnumIndex(Previous.Get_Pattern()));
-    Set_Scalar(TEXT("PixelScale"), InEffective.Get_PixelScale(), Previous.Get_PixelScale());
-    Set_Scalar(TEXT("DitherStrength"), InEffective.Get_DitherStrength(), Previous.Get_DitherStrength());
-    Set_Scalar(TEXT("Animate"),
-        Get_Flag(InEffective.Get_Animate()), Get_Flag(Previous.Get_Animate()));
-    Set_Scalar(TEXT("AnimationPeriod"), InEffective.Get_AnimationPeriod(), Previous.Get_AnimationPeriod());
-    Set_Scalar(TEXT("BoxFilterDownsample"),
-        Get_Flag(InEffective.Get_BoxFilterDownsample()), Get_Flag(Previous.Get_BoxFilterDownsample()));
-    Set_Scalar(TEXT("StabilizeGrid"),
-        Get_Flag(InEffective.Get_StabilizeGrid()), Get_Flag(Previous.Get_StabilizeGrid()));
-    Set_Scalar(TEXT("PaletteMode"),
-        Get_EnumIndex(InEffective.Get_PaletteMode()), Get_EnumIndex(Previous.Get_PaletteMode()));
-    Set_Scalar(TEXT("ColorSteps"),
-        static_cast<float>(InEffective.Get_ColorSteps()), static_cast<float>(Previous.Get_ColorSteps()));
-    Set_Scalar(TEXT("ColorSpace"),
-        Get_EnumIndex(InEffective.Get_ColorSpace()), Get_EnumIndex(Previous.Get_ColorSpace()));
-    Set_Scalar(TEXT("PreGamma"), InEffective.Get_PreGamma(), Previous.Get_PreGamma());
-    Set_Scalar(TEXT("Monochrome"),
-        Get_Flag(InEffective.Get_Monochrome()), Get_Flag(Previous.Get_Monochrome()));
-    Set_Scalar(TEXT("Saturation"), InEffective.Get_Saturation(), Previous.Get_Saturation());
-    Set_Scalar(TEXT("Contrast"), InEffective.Get_Contrast(), Previous.Get_Contrast());
-    Set_Scalar(TEXT("Weight"), InEffective.Get_Weight(), Previous.Get_Weight());
-    Set_Scalar(TEXT("DebugMode"),
-        Get_EnumIndex(InEffective.Get_DebugMode()), Get_EnumIndex(Previous.Get_DebugMode()));
-
-    Set_Vector(TEXT("MonochromeShadowTint"),
-        InEffective.Get_MonochromeShadowTint(), Previous.Get_MonochromeShadowTint());
-    Set_Vector(TEXT("MonochromeHighlightTint"),
-        InEffective.Get_MonochromeHighlightTint(), Previous.Get_MonochromeHighlightTint());
-
-    // Entries past the shader's fixed 8-wide palette are dropped, and unfilled slots are written black so a
-    // shrunk palette cannot leave a stale colour behind for the nearest-entry search to find.
-    const auto Get_PaletteEntry = [](const FCk_Usf_ScreenDither_Params& InParams, int32 InIndex) -> FLinearColor
-    {
-        return InParams.Get_Palette().IsValidIndex(InIndex) ? InParams.Get_Palette()[InIndex] : FLinearColor::Black;
-    };
-
-    const auto Get_PaletteCount = [](const FCk_Usf_ScreenDither_Params& InParams) -> float
-    {
-        return static_cast<float>(FMath::Clamp(
-            InParams.Get_Palette().Num(), 1, FCk_Usf_ScreenDither_Params::MaxPaletteEntries));
-    };
-
-    Set_Scalar(TEXT("PaletteCount"), Get_PaletteCount(InEffective), Get_PaletteCount(Previous));
-
-    for (auto Index = 0; Index < FCk_Usf_ScreenDither_Params::MaxPaletteEntries; ++Index)
-    {
-        Set_Vector(*FString::Printf(TEXT("PaletteColor%d"), Index),
-            Get_PaletteEntry(InEffective, Index), Get_PaletteEntry(Previous, Index));
-    }
-
-    const auto Get_MaskBound = [](int32 InValue) -> float
+    const auto Get_Count = [](int32 InValue) -> float
     {
         return static_cast<float>(InValue);
     };
 
+    Set_Scalar(TEXT("StyleStrength"), InEffective.Get_StyleStrength(), Previous.Get_StyleStrength());
+    Set_Scalar(TEXT("UseWorldSpaceNormals"),
+        Get_Flag(InEffective.Get_UseWorldSpaceNormals()), Get_Flag(Previous.Get_UseWorldSpaceNormals()));
+    Set_Scalar(TEXT("AngleOffset"), InEffective.Get_AngleOffset(), Previous.Get_AngleOffset());
+    Set_Scalar(TEXT("NormalAlignment"), InEffective.Get_NormalAlignment(), Previous.Get_NormalAlignment());
+
+    Set_Scalar(TEXT("Spacing"), InEffective.Get_Spacing(), Previous.Get_Spacing());
+    Set_Scalar(TEXT("LayerCount"),
+        Get_Count(InEffective.Get_LayerCount()), Get_Count(Previous.Get_LayerCount()));
+    Set_Scalar(TEXT("LayerAngleStep"), InEffective.Get_LayerAngleStep(), Previous.Get_LayerAngleStep());
+    Set_Scalar(TEXT("StrokePattern"),
+        Get_EnumIndex(InEffective.Get_StrokePattern()), Get_EnumIndex(Previous.Get_StrokePattern()));
+    Set_Scalar(TEXT("StrokeThickness"), InEffective.Get_StrokeThickness(), Previous.Get_StrokeThickness());
+    Set_Scalar(TEXT("StrokeIrregularity"),
+        InEffective.Get_StrokeIrregularity(), Previous.Get_StrokeIrregularity());
+
+    Set_Scalar(TEXT("DarknessBias"), InEffective.Get_DarknessBias(), Previous.Get_DarknessBias());
+    Set_Scalar(TEXT("DarknessContrast"), InEffective.Get_DarknessContrast(), Previous.Get_DarknessContrast());
+
+    Set_Scalar(TEXT("BackgroundMode"),
+        Get_EnumIndex(InEffective.Get_BackgroundMode()), Get_EnumIndex(Previous.Get_BackgroundMode()));
+    Set_Scalar(TEXT("Saturation"), InEffective.Get_Saturation(), Previous.Get_Saturation());
+
+    Set_Scalar(TEXT("AffectSky"),
+        Get_Flag(InEffective.Get_AffectSky()), Get_Flag(Previous.Get_AffectSky()));
+    Set_Scalar(TEXT("SkyDistance"), InEffective.Get_SkyDistance(), Previous.Get_SkyDistance());
+
+    Set_Scalar(TEXT("DebugMode"),
+        Get_EnumIndex(InEffective.Get_DebugMode()), Get_EnumIndex(Previous.Get_DebugMode()));
+
     Set_Scalar(TEXT("MaskMode"),
         Get_EnumIndex(InEffective.Get_Mask().Get_Mode()), Get_EnumIndex(Previous.Get_Mask().Get_Mode()));
     Set_Scalar(TEXT("MaskStencilMin"),
-        Get_MaskBound(InEffective.Get_Mask().Get_StencilMin()),
-        Get_MaskBound(Previous.Get_Mask().Get_StencilMin()));
+        Get_Count(InEffective.Get_Mask().Get_StencilMin()), Get_Count(Previous.Get_Mask().Get_StencilMin()));
     Set_Scalar(TEXT("MaskStencilMax"),
-        Get_MaskBound(InEffective.Get_Mask().Get_StencilMax()),
-        Get_MaskBound(Previous.Get_Mask().Get_StencilMax()));
+        Get_Count(InEffective.Get_Mask().Get_StencilMax()), Get_Count(Previous.Get_Mask().Get_StencilMax()));
+
+    Set_Vector(TEXT("InkColor"), InEffective.Get_InkColor(), Previous.Get_InkColor());
+    Set_Vector(TEXT("PaperColor"), InEffective.Get_PaperColor(), Previous.Get_PaperColor());
 
     _WrittenSettings = InEffective;
 }

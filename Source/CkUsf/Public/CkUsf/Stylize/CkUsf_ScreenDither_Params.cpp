@@ -27,6 +27,7 @@ auto
         && _Weight == InOther._Weight
         && _Saturation == InOther._Saturation
         && _Contrast == InOther._Contrast
+        && _Mask == InOther._Mask
         && _DebugMode == InOther._DebugMode;
 }
 
