@@ -591,10 +591,20 @@ namespace ck::angelscriptgenerator::self_heal
         const auto ParamList = FString::Join(ParamParts, TEXT(", "));
         const auto ArgList   = FString::Join(ArgParts,   TEXT(", "));
 
-        const auto Target = InError.Kind == ECk_AsParsedError_Kind::IdentifierNotADataType
-            ? FString::Printf(TEXT("missing type '%s'"), *InError.MissingIdentifier)
-            : FString::Printf(TEXT("%s::%s(%s)"),
-                *InError.TargetNamespace, *InError.FunctionName, *InError.ArgsList);
+        const auto Target = [&]() -> FString
+        {
+            switch (InError.Kind)
+            {
+                case ECk_AsParsedError_Kind::IdentifierNotADataType:
+                    return FString::Printf(TEXT("missing type '%s'"), *InError.MissingIdentifier);
+                case ECk_AsParsedError_Kind::NotAMemberOfStruct:
+                    return FString::Printf(TEXT("deleted field '%s.%s'"),
+                        *InError.LookupScope, *InError.MissingIdentifier);
+                default:
+                    return FString::Printf(TEXT("%s::%s(%s)"),
+                        *InError.TargetNamespace, *InError.FunctionName, *InError.ArgsList);
+            }
+        }();
 
         auto Out = FString{};
         Out += LINE_TERMINATOR;
