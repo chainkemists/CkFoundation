@@ -20,6 +20,7 @@ namespace ck_usf_look_validator
         TEXT("WorldPosition"), TEXT("CameraVector"), TEXT("VertexNormal"),
         TEXT("VertexTangent"), TEXT("PixelDepth"), TEXT("VertexColor"),
         TEXT("SceneColor"), TEXT("SceneDepth"), TEXT("SceneNormal"), TEXT("CustomDepth"), TEXT("CustomStencil"),
+        TEXT("SceneBaseColor"), TEXT("SceneMetallic"), TEXT("SceneRoughness"), TEXT("SceneSpecular"),
         TEXT("ParticleColor"), TEXT("ParticleAlpha"),
         TEXT("DynParam0"), TEXT("DynParam1"), TEXT("DynParam2"), TEXT("DynParam3"),
         TEXT("EmissiveColor"), TEXT("Roughness"), TEXT("Metallic"), TEXT("Specular"),
@@ -422,6 +423,15 @@ namespace ck::usf_editor
                 }
                 SeenTextures.Add(SceneTexture);
             }
+        }
+
+        // Ignored rather than rejected, exactly like _SceneTextures above: surface looks already receive
+        // WorldPosition unconditionally, so asking for it there is redundant, not wrong.
+        if (InDef->_PostProcessWorldPosition && InDef->_Domain != ECk_Usf_Domain::PostProcess)
+        {
+            Result.Warnings.Add(FString::Printf(
+                TEXT("Look [%s]: _PostProcessWorldPosition is set but the domain is not PostProcess — it is ignored (surface looks always receive In.WorldPosition)"),
+                *LookName.ToString()));
         }
 
         if (NOT Result.Get_IsValid())

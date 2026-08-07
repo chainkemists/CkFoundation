@@ -58,7 +58,11 @@ enum class ECk_Usf_SceneTexture : uint8
     SceneDepth,     // PPI_SceneDepth         -> In.SceneDepth
     SceneNormal,    // PPI_WorldNormal        -> In.SceneNormal
     CustomDepth,    // PPI_CustomDepth        -> In.CustomDepth
-    CustomStencil   // PPI_CustomStencil      -> In.CustomStencil
+    CustomStencil,  // PPI_CustomStencil      -> In.CustomStencil
+    BaseColor,      // PPI_BaseColor          -> In.SceneBaseColor
+    Metallic,       // PPI_Metallic           -> In.SceneMetallic
+    Roughness,      // PPI_Roughness          -> In.SceneRoughness
+    Specular        // PPI_Specular           -> In.SceneSpecular
 };
 
 // PostProcess-only: where in the post-processing chain the generated blendable runs (maps to
@@ -156,6 +160,15 @@ public:
     // CustomStencil explicitly (e.g. the SolidOutline look). Ignored for non-PostProcess domains.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
     TArray<ECk_Usf_SceneTexture> _SceneTextures;
+
+    // PostProcess-only: wire the engine's WorldPosition expression into the Custom node (In.WorldPosition).
+    // In a PostProcess material that expression reconstructs the SCENE SURFACE position from depth
+    // (PostProcessMaterialShaders.usf overwrites SvPosition.z with the scene's device Z before the material
+    // parameters are built), so it is the world point the pixel is looking at, not the quad's own position.
+    // Opt-in because it costs the reconstruction on every pixel, and because at after-tonemap / SSR
+    // placements that reconstruction is dynamic-resolution scaled — intended for the pre-TAA locations.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CkUsf")
+    bool _PostProcessWorldPosition = false;
 
     // PostProcess-only: chain placement of the generated blendable (see the enum for the pre- vs post-TAA
     // trade-off — Custom Depth/Stencil looks need a pre-TAA location). Ignored for non-PostProcess domains.

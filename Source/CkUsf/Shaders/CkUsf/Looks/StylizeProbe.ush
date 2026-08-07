@@ -1,0 +1,83 @@
+// /CkUsf/Looks/StylizeProbe.ush
+// Not a shipping look — the HLSL half of the CkUsf wide-Custom-node regression guard
+// (CkTests: CkUsf.StylizeParamCount). It exists to be generated and force-compiled, never applied.
+//
+// Two entry points, one per arm of that test:
+//   CkUsf_Look_StylizeProbe        — 50 parameters (35 scalar + 15 vector) plus every GBuffer scene
+//                                    texture and the opt-in PostProcess world position. Every input is
+//                                    folded into the output so nothing is dead-stripped and the
+//                                    permutation actually carries all 62 Custom-node inputs.
+//   CkUsf_Look_StylizeProbeMinimal — one parameter, no opted-in inputs: the byte-identical arm's
+//                                    subject, whose generated Custom node must stay the historical
+//                                    default-trio shape.
+//
+// Including StylizeCommon.ush is deliberate: it puts the pattern library through a real shader
+// compile, which nothing else does until the first stylize look lands.
+#pragma once
+#include "/CkUsf/Common.ush"
+#include "/CkUsf/StylizeCommon.ush"
+
+FCkUsf_SurfaceOutput CkUsf_Look_StylizeProbe(
+    FCkUsf_SurfaceInput In,
+    float ProbeScalar00, float ProbeScalar01, float ProbeScalar02, float ProbeScalar03, float ProbeScalar04,
+    float ProbeScalar05, float ProbeScalar06, float ProbeScalar07, float ProbeScalar08, float ProbeScalar09,
+    float ProbeScalar10, float ProbeScalar11, float ProbeScalar12, float ProbeScalar13, float ProbeScalar14,
+    float ProbeScalar15, float ProbeScalar16, float ProbeScalar17, float ProbeScalar18, float ProbeScalar19,
+    float ProbeScalar20, float ProbeScalar21, float ProbeScalar22, float ProbeScalar23, float ProbeScalar24,
+    float ProbeScalar25, float ProbeScalar26, float ProbeScalar27, float ProbeScalar28, float ProbeScalar29,
+    float ProbeScalar30, float ProbeScalar31, float ProbeScalar32, float ProbeScalar33, float ProbeScalar34,
+    float3 ProbeVector00, float3 ProbeVector01, float3 ProbeVector02, float3 ProbeVector03, float3 ProbeVector04,
+    float3 ProbeVector05, float3 ProbeVector06, float3 ProbeVector07, float3 ProbeVector08, float3 ProbeVector09,
+    float3 ProbeVector10, float3 ProbeVector11, float3 ProbeVector12, float3 ProbeVector13, float3 ProbeVector14)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    float ScalarSum =
+        ProbeScalar00 + ProbeScalar01 + ProbeScalar02 + ProbeScalar03 + ProbeScalar04 +
+        ProbeScalar05 + ProbeScalar06 + ProbeScalar07 + ProbeScalar08 + ProbeScalar09 +
+        ProbeScalar10 + ProbeScalar11 + ProbeScalar12 + ProbeScalar13 + ProbeScalar14 +
+        ProbeScalar15 + ProbeScalar16 + ProbeScalar17 + ProbeScalar18 + ProbeScalar19 +
+        ProbeScalar20 + ProbeScalar21 + ProbeScalar22 + ProbeScalar23 + ProbeScalar24 +
+        ProbeScalar25 + ProbeScalar26 + ProbeScalar27 + ProbeScalar28 + ProbeScalar29 +
+        ProbeScalar30 + ProbeScalar31 + ProbeScalar32 + ProbeScalar33 + ProbeScalar34;
+
+    float3 VectorSum =
+        ProbeVector00 + ProbeVector01 + ProbeVector02 + ProbeVector03 + ProbeVector04 +
+        ProbeVector05 + ProbeVector06 + ProbeVector07 + ProbeVector08 + ProbeVector09 +
+        ProbeVector10 + ProbeVector11 + ProbeVector12 + ProbeVector13 + ProbeVector14;
+
+    // Every wired scene input contributes, so a missing pin shows up as a compile error rather than
+    // as an optimized-away pin the test would still call connected.
+    float SceneSum =
+        In.SceneColor.r + In.SceneDepth.r + In.SceneNormal.r +
+        In.CustomDepth.r + In.CustomStencil.r +
+        In.SceneBaseColor.r + In.SceneMetallic.r + In.SceneRoughness.r + In.SceneSpecular.r;
+
+    float2 PixelPos = In.UV * View.ViewSizeAndInvSize.xy;
+    float Dither = CkUsf_Stylize_DitherThreshold(5, PixelPos, In.Time);
+    float Halftone = CkUsf_Stylize_HalftonePattern(9, PixelPos * 0.05, 1.0 + ProbeScalar00);
+    float Stroke = CkUsf_Stylize_StrokePattern(2, PixelPos * 0.02, ProbeScalar01);
+
+    float3 Palette[8];
+    [unroll]
+    for (int I = 0; I < 8; ++I)
+    { Palette[I] = float3(I / 8.0, 1.0 - I / 8.0, 0.5); }
+
+    float3 Quantized = CkUsf_Stylize_NearestPaletteColor(
+        CkUsf_Stylize_QuantizeLuminance(saturate(VectorSum), 4.0), Palette, 8);
+
+    float3 WorldTerm = In.WorldPosition * 1e-5;
+
+    O.EmissiveColor = saturate(
+        Quantized + WorldTerm + (ScalarSum + SceneSum + Dither + Halftone + Stroke) * 1e-4);
+    O.Opacity = 1.0;
+    return O;
+}
+
+FCkUsf_SurfaceOutput CkUsf_Look_StylizeProbeMinimal(FCkUsf_SurfaceInput In, float ProbeAmount)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+    O.EmissiveColor = In.SceneColor.rgb * saturate(ProbeAmount);
+    O.Opacity = 1.0;
+    return O;
+}
