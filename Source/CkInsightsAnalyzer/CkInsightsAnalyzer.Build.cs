@@ -1,4 +1,3 @@
-using System.IO;
 using UnrealBuildTool;
 
 public class CkInsightsAnalyzer : CkModuleRules
@@ -14,9 +13,6 @@ public class CkInsightsAnalyzer : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "Slate",
-            "SlateCore",
-            "InputCore",
             "Json",
 
             // Trace data access
@@ -26,24 +22,7 @@ public class CkInsightsAnalyzer : CkModuleRules
 
             // CK dependencies
             "CkCore",
-            "CkEditorTools", // Shared CkStyle:: tokens for the analyzer tab UI
             "CkLog",
         });
-
-        if (Target.bBuildEditor)
-        {
-            PublicDependencyModuleNames.AddRange(new string[]
-            {
-                "UnrealEd",
-                "WorkspaceMenuStructure",
-                "ToolMenus",
-                "TraceInsights",
-            });
-
-            // Access private headers from TraceInsights (custom engine fork)
-            string TraceInsightsPrivate = Path.Combine(
-                EngineDirectory, "Source", "Developer", "TraceInsights", "Private");
-            PrivateIncludePaths.Add(TraceInsightsPrivate);
-        }
     }
 }
