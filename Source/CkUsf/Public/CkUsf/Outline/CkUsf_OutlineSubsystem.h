@@ -129,7 +129,14 @@ private:
 
     struct FStencilSlot { uint8 Value = 0; int32 RefCount = 0; };
     TMap<TWeakObjectPtr<UCkUsf_OutlinePreset>, FStencilSlot> _ActivePresets;
-    TMap<TWeakObjectPtr<UPrimitiveComponent>, TWeakObjectPtr<UCkUsf_OutlinePreset>> _AppliedComponents;
+
+    // The VALUE is recorded alongside the preset because the undo has to be able to tell "this component
+    // still carries what I wrote" from "someone else has taken the byte over since". Without it the undo
+    // is unconditional and blanks whichever feature claimed the component next — the cel pattern and the
+    // effect mask both guard their undos this way, and all three must agree or the last one to write
+    // loses its silhouette when an unrelated feature is removed.
+    struct FAppliedOutline { TWeakObjectPtr<UCkUsf_OutlinePreset> Preset; int32 StencilValue = 0; };
+    TMap<TWeakObjectPtr<UPrimitiveComponent>, FAppliedOutline> _AppliedComponents;
 
     TArray<FFloat16Color> _LutData;
 };

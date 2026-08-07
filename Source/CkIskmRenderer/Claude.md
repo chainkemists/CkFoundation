@@ -47,6 +47,13 @@ its coverage.
   two write the same byte); an outline arriving over a pattern drops the cel applied-state WITHOUT clearing
   the flags, since the outline's own Sync overwrites the byte in the same group. Test getters:
   `UCk_Utils_IskmProxy_UE::Get_IsCelPatternApplied` / `Get_CelPatternStencilValue`.
+- **Entity-level stylize effect mask (Plan-1):** driven by `CkUsf`'s
+  `UCk_Utils_Usf_StylizeMask_UE::Request_AddToStylizeMask(Handle, Scope)`. The cel-pattern processors'
+  twin, minus the per-entity payload — the project reserves ONE stencil value, so `_Sync` reads
+  `UCk_Utils_Usf_Stylize_Settings_UE::Get_MaskStencilValue()` rather than consulting a subsystem. Precedence
+  is outline > cel pattern > mask, so its Sync excludes both and the drop-applied step is TWO processors
+  (a view is a conjunction; "a higher claim arrived" is a disjunction). Flags are NOT cleared on a drop,
+  for the reason the cel twin carries.
 - **Member-level outline (Plan-2, batched):** `UCk_Utils_IskmBatched_UE::Set_CrowdMemberOutline/Clear_CrowdMemberOutline/
   Get_CrowdMemberOutlinePreset/Get_CrowdOutlinedMemberCount/Get_CrowdOutlineRenderedInstanceCount` — index-based (batched
   members aren't entities). See *Plan-2 production guide → Outline (highlight cluster)* below.
@@ -55,6 +62,13 @@ its coverage.
   Get_CrowdCelPatternedMemberCount/Get_CrowdCelPatternRenderedInstanceCount` — the outline's twin on the same
   highlight-cluster machinery, keyed on the stencil VALUE. See *Plan-2 production guide → Outline (highlight
   cluster)* below.
+- **Member-level stylize effect mask (Plan-2, batched):** `UCk_Utils_IskmBatched_UE::Set_CrowdMemberStylizeMask/
+  Clear_CrowdMemberStylizeMask/Get_IsCrowdMemberStylizeMasked/Get_CrowdStylizeMaskedMemberCount/
+  Get_CrowdStylizeMaskRenderedInstanceCount` — the same machinery a precedence level further down. A masked
+  member records NO stencil of its own (the project reserves one value), so its group is found by membership
+  scan rather than by key — re-resolving the project value at clear time would strand the cluster the member
+  is actually in if the setting moved mid-session. Both `Set_MemberOutline` and `Set_MemberCelPattern` clear
+  the mask on their success paths, the same silent downward claim the outline already makes over the pattern.
 
 ---
 

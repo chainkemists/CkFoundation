@@ -114,6 +114,26 @@ namespace CkUsf
         _MetallicStrength = 0.5;
     }
 
+    // UNEQUAL BANDS — the demonstration of ECk_Usf_CelDistribution::CustomEdges. Three bands from two
+    // edges, both crowded into the bottom third of the ramp: the shadows get two boundaries close
+    // together and everything above 0.35 resolves to one wide lit band. An exponent cannot produce this
+    // shape — it moves every boundary together, so pulling the first two down drags the third with them.
+    //
+    // Read it on the gym's gradient wall: two dark bands visibly close to each other with a large flat
+    // region above, not three evenly spread steps.
+    asset DA_Cel_DramaticBands of UCkUsf_CelShadePreset
+    {
+        _Enabled          = ECk_EnableDisable::Enable;
+        _DistributionMode = ECk_Usf_CelDistribution::CustomEdges;
+        _BandEdges.Add(0.12);
+        _BandEdges.Add(0.35);
+        _ShadowLift       = 0.05;
+        _Pattern          = ECk_Usf_CelPattern::Lines;
+        _PatternStrength  = 0.5;
+        _ShadowTint       = FLinearColor(0.62, 0.66, 0.92, 1.0);
+        _OutlineThickness = 1.5;
+    }
+
     // The A/B reference. Everything else is Balanced, so switching to this and back proves the effect is
     // the only difference — the frame must come back completely clean.
     asset DA_Cel_Off of UCkUsf_CelShadePreset

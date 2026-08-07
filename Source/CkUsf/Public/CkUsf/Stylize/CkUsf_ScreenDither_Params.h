@@ -6,6 +6,8 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkUsf/Stylize/CkUsf_StylizeMask_Params.h"
+
 #include "CkUsf_ScreenDither_Params.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -61,7 +63,8 @@ enum class ECk_Usf_ScreenDither_DebugMode : uint8
     Pattern,                 // the raw threshold field
     QuantizationError,       // |value - quantized|, normalized to one step
     QuantizedWithoutDither,  // the same reduction with the threshold offset removed
-    DownsampledInput         // the pixelation result, before any colour work
+    DownsampledInput,        // the pixelation result, before any colour work
+    StylizeMask              // white where the effect mask lets the look through, black where it is held back
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Usf_ScreenDither_DebugMode);
@@ -180,6 +183,12 @@ private:
               meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0, UIMax = 2.0))
     float _Contrast = 1.0f;
 
+    // Confines the whole look to (or away from) a Custom-Stencil range. This look sits AFTER tonemapping,
+    // so its mask edge is never temporally resolved — see the .ush header on why the shader softens it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Usf_StylizeMask_Params _Mask;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_Usf_ScreenDither_DebugMode _DebugMode = ECk_Usf_ScreenDither_DebugMode::Final;
@@ -204,6 +213,7 @@ public:
     CK_PROPERTY(_Weight);
     CK_PROPERTY(_Saturation);
     CK_PROPERTY(_Contrast);
+    CK_PROPERTY(_Mask);
     CK_PROPERTY(_DebugMode);
 
 public:

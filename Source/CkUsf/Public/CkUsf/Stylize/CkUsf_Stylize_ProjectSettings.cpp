@@ -34,4 +34,20 @@ auto
     return Get()->Get_ScreenDitherDefaultPreset();
 }
 
+auto
+    UCk_Utils_Usf_Stylize_Settings_UE::
+    Get_CrossHatchDefaultPreset()
+    -> TSoftObjectPtr<UCkUsf_CrossHatchPreset>
+{
+    return Get()->Get_CrossHatchDefaultPreset();
+}
+
+auto
+    UCk_Utils_Usf_Stylize_Settings_UE::
+    Get_MaskStencilValue()
+    -> int32
+{
+    return Get()->Get_MaskStencilValue();
+}
+
 // --------------------------------------------------------------------------------------------------------------------

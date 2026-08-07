@@ -43,6 +43,33 @@ namespace ck_iskm_cel_pattern_processor
         for (const auto& Submesh : InCurrent.Get_SubmeshSKMCs())
         { ApplyTo(Submesh.Get()); }
     }
+
+    // Undo, but only on the SKMCs still carrying what THIS feature wrote. Used where a higher-precedence
+    // claim is present on the same shared byte: if that claim's own Sync has already overwritten the
+    // value this is a no-op, and if it has not (a null subsystem, an exhausted range) this is what stops
+    // the mesh keeping a stencil no processor is left tracking.
+    auto
+        DoDisableCustomDepthIfStillOurs(
+            const ck::FFragment_IskmProxy_Current& InCurrent,
+            int32 InStencilValue)
+        -> void
+    {
+        const auto& DisableIfOurs = [&](USkeletalMeshComponent* InSkmc)
+        {
+            if (ck::Is_NOT_Valid(InSkmc))
+            { return; }
+
+            if (InSkmc->CustomDepthStencilValue != InStencilValue)
+            { return; }
+
+            InSkmc->SetRenderCustomDepth(false);
+        };
+
+        DisableIfOurs(InCurrent.Get_BaseSKMC().Get());
+
+        for (const auto& Submesh : InCurrent.Get_SubmeshSKMCs())
+        { DisableIfOurs(Submesh.Get()); }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -122,9 +149,16 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_CelPatternApplied& InApplied,
-            const FFragment_Usf_OutlineTarget& InOutlineTarget)
+            const FFragment_Usf_OutlineTarget& InOutlineTarget,
+            const FFragment_IskmProxy_Current& InCurrent)
         -> void
     {
+        // UNDO before dropping the state that records what to undo. Dropping alone assumes the outline's
+        // own Sync overwrites the byte in this same group — but that Sync can silently no-op (a null
+        // subsystem, an exhausted stencil range), and once this fragment is gone neither _Remove nor
+        // _EndPlay matches the entity, so the SKMCs keep this feature's stencil forever with nothing left
+        // that knows to clear it. Value-guarded, so an outline that HAS already written sees a no-op.
+        ck_iskm_cel_pattern_processor::DoDisableCustomDepthIfStillOurs(InCurrent, InApplied.Get_StencilValue());
         InHandle.Try_Remove<FFragment_IskmProxy_CelPatternApplied>();
     }
 

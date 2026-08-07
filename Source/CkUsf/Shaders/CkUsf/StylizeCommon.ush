@@ -361,3 +361,29 @@ float3 CkUsf_Stylize_MonochromeTint(float3 Color, float3 Shadow, float3 Highligh
 {
     return lerp(Shadow, Highlight, CkUsf_Stylize_Luminance(Color));
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+// Effect masking. Every stylize look ends with one lerp between the untouched frame and its stylized
+// result, weighted by this — so "masked out" costs the same as "masked in" and is exactly the original
+// pixel, never an approximation of it.
+//
+// MaskMode is a CONTRACT with ECk_Usf_StylizeMaskMode: Off = 0, IncludeStencilRange = 1,
+// ExcludeStencilRange = 2. The range is INCLUSIVE at both ends; the +-0.5 slack absorbs the float
+// round-trip a stencil id makes through the SceneTexture fetch.
+//
+// Deliberately NOT fwidth-anti-aliased, unlike every threshold on a varying quantity in these looks.
+// Stencil is a NOMINAL id: its derivative spikes at every id boundary regardless of how far this pixel
+// sits from the range, so a footprint built from it would widen the mask by an amount unrelated to the
+// test. Mask edges are therefore one pixel wide by construction, and their quality is a property of WHERE
+// the look sits: a pre-TAA look has its edge temporally resolved like any other geometry edge; a
+// post-tonemap one does not (ScreenDither carries its own softened variant for that reason).
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_Stylize_MaskWeight(int MaskMode, float Stencil, float MaskMin, float MaskMax)
+{
+    if (MaskMode == 0)
+    { return 1.0; }
+
+    float InRange = (Stencil >= MaskMin - 0.5 && Stencil <= MaskMax + 0.5) ? 1.0 : 0.0;
+    return MaskMode == 1 ? InRange : 1.0 - InRange;
+}

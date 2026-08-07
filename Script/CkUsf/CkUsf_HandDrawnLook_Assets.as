@@ -28,10 +28,15 @@ namespace CkUsf
         // locations that reconstruction is dynamic-resolution scaled).
         _BlendableLocation = ECk_Usf_BlendableLocation::SceneColorAfterDOF;
 
-        // _SceneTextures stays empty: the default trio (SceneColor/Depth/Normal) is exactly what the ink
-        // detectors, the sky test and the stroke projection read. Nothing here needs the GBuffer — this
-        // look never reconstructs illumination the way CelShade does, so opting in would cost pins for
-        // nothing.
+        // The default trio (SceneColor/Depth/Normal) is exactly what the ink detectors, the sky test and
+        // the stroke projection read; CustomStencil is the effect mask's. Stated explicitly because
+        // _SceneTextures is all-or-nothing — a non-empty list REPLACES the default trio rather than
+        // extending it. Nothing here needs the GBuffer: this look never reconstructs illumination the way
+        // CelShade does, so opting in would cost pins for nothing.
+        _SceneTextures.Add(ECk_Usf_SceneTexture::SceneColor);
+        _SceneTextures.Add(ECk_Usf_SceneTexture::SceneDepth);
+        _SceneTextures.Add(ECk_Usf_SceneTexture::SceneNormal);
+        _SceneTextures.Add(ECk_Usf_SceneTexture::CustomStencil);
 
         // World-attached strokes are anchored to the depth-reconstructed scene surface position.
         _PostProcessWorldPosition = true;
@@ -80,6 +85,11 @@ namespace CkUsf
         _Parameters.Add(CkUsf::Usf_Scalar(n"PaperWarmth", 0.5));
 
         _Parameters.Add(CkUsf::Usf_Scalar(n"DebugMode", 0.0));
+
+        // ---- Effect mask ----
+        _Parameters.Add(CkUsf::Usf_Scalar(n"MaskMode", 0.0));             // ECk_Usf_StylizeMaskMode::Off
+        _Parameters.Add(CkUsf::Usf_Scalar(n"MaskStencilMin", 190.0));
+        _Parameters.Add(CkUsf::Usf_Scalar(n"MaskStencilMax", 190.0));
 
         // ---- Vectors ----
         _Parameters.Add(CkUsf::Usf_Vector(n"ShadowTint", FLinearColor(0.72, 0.76, 0.90, 1.0)));

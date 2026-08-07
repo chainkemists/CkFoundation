@@ -105,6 +105,30 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Applied-state for the entity stylize effect mask (ck::FFragment_Usf_StylizeMaskTarget from CkUsf). The
+    // cel-pattern twin above, minus the pattern: the mask has ONE project-wide stencil value, so membership
+    // is the whole payload and the recorded value only exists to tell a no-op refresh from a real change
+    // (project config can move between sessions).
+    struct CKISMRENDERER_API FFragment_IsmProxy_StylizeMaskApplied
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IsmProxy_StylizeMaskApplied);
+
+    private:
+        TWeakObjectPtr<UInstancedStaticMeshComponent> _ShadowIsm;
+        FPrimitiveInstanceId _ShadowInstanceId;
+        int32 _StencilValue = 0;
+
+    public:
+        CK_PROPERTY_GET(_ShadowIsm);
+        CK_PROPERTY_GET(_ShadowInstanceId);
+        CK_PROPERTY_GET_BY_COPY(_StencilValue);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_IsmProxy_StylizeMaskApplied, _ShadowIsm, _ShadowInstanceId, _StencilValue);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKISMRENDERER_API FFragment_IsmProxy_Requests
     {
     public:

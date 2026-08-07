@@ -91,7 +91,8 @@ public:
     // AdvanceAnimation. Hidden members (Plan-1 flip stand-ins) are excluded — outline those via the entity API.
 
     // Outline a member with InPreset (replaces any previous preset). Null preset = Clear_MemberOutline.
-    // The outline WINS over a cel pattern on the same member: an existing pattern is cleared first.
+    // The outline WINS over both lower claims on the same member: an existing cel pattern or stylize mask
+    // is cleared first.
     void       Set_MemberOutline(int32 InIndex, UCkUsf_OutlinePreset* InPreset);
     void       Clear_MemberOutline(int32 InIndex);
     UCkUsf_OutlinePreset* Get_MemberOutlinePreset(int32 InIndex) const;
@@ -102,7 +103,8 @@ public:
     // ---- Entity cel pattern (member-indexed) — the outline's twin, see CkUsf/Claude.md § Cel shade ----
     // Same highlight-cluster machinery, one cluster per (crowd, stencil value): the cel contract is a
     // DIRECT stencil value rather than a refcounted preset allocation, so nothing is allocated here and
-    // nothing is released. REJECTED on an outlined member — both write the same Custom-Stencil byte.
+    // nothing is released. REJECTED on an outlined member — both write the same Custom-Stencil byte — and
+    // it WINS over a stylize mask on the same member, clearing it first.
 
     void       Set_MemberCelPattern(int32 InIndex, ECk_Usf_CelPattern InPattern);
     void       Clear_MemberCelPattern(int32 InIndex);
@@ -112,6 +114,18 @@ public:
     int32      Get_MemberCelPatternStencilValue(int32 InIndex) const;
     int32      Get_CelPatternedMemberCount() const;
     int32      Get_CelPatternRenderedInstanceCount() const;
+
+    // ---- Entity stylize effect mask (member-indexed) — see CkUsf/Claude.md § Stylize ----
+    // The cel pattern's twin on the same highlight-cluster machinery, one cluster per (crowd, mask stencil
+    // value) — and since the mask value is project-wide, that is normally one cluster per crowd. Nothing is
+    // allocated and nothing is released. REFUSED on an outlined OR patterned member: the mask is the LAST of
+    // the three claims on the Custom-Stencil byte.
+
+    void       Set_MemberStylizeMask(int32 InIndex);
+    void       Clear_MemberStylizeMask(int32 InIndex);
+    bool       Get_IsMemberStylizeMasked(int32 InIndex) const;
+    int32      Get_StylizeMaskedMemberCount() const;
+    int32      Get_StylizeMaskRenderedInstanceCount() const;
 
     //~ AActor
     virtual void EndPlay(const EEndPlayReason::Type InEndPlayReason) override;
@@ -247,6 +261,13 @@ private:
 
     TMap<uint8, FHighlightGroup> _CelGroups;
     TMap<int32, FMemberCelPattern> _MemberCelPatterns;
+
+    // Mask groups key on the resolved stencil VALUE like the cel groups, but the mask has no per-member
+    // payload — membership IS the state — so a set replaces the cel path's member map. A member therefore
+    // records no key of its own, and its group is found by membership: that is what keeps a project-setting
+    // change between Set and Clear from stranding the cluster the member is actually in.
+    TMap<uint8, FHighlightGroup> _StylizeMaskGroups;
+    TSet<int32> _StylizeMaskedMembers;
 
     // Non-UPROPERTY: ECS handles are value handles into the registry, not GC-tracked (matches _Members).
     TMap<int32, TArray<FMemberCosmetic>> _MemberCosmetics;

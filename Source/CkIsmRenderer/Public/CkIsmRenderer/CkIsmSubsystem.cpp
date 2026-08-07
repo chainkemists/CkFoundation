@@ -404,6 +404,41 @@ auto
 
 auto
     UCk_IsmRenderer_Subsystem_UE::
+    FindOrCreate_StylizeMaskIsmComponent(
+        const UCk_IsmRenderer_Data* InRendererData,
+        uint8 InStencilValue,
+        const TWeakObjectPtr<AActor>& InEditorSelectionOwner)
+    -> TWeakObjectPtr<UInstancedStaticMeshComponent>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InRendererData),
+        TEXT("FindOrCreate_StylizeMaskIsmComponent: INVALID renderer data"))
+    { return {}; }
+
+    const auto Key = FStylizeMaskIsmKey{InRendererData, InStencilValue, InEditorSelectionOwner};
+
+    if (const auto& MaybeFound = _StylizeMaskIsmComponentCache.Find(Key);
+        ck::IsValid(MaybeFound, ck::IsValid_Policy_NullptrOnly{}) && ck::IsValid(*MaybeFound))
+    { return *MaybeFound; }
+
+    // Per-owner previews mirror into a shadow on the same renderer actor as their instances.
+    const auto SourceIsm = FindOrCache_IsmComponent(InRendererData, InEditorSelectionOwner);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(SourceIsm),
+        TEXT("FindOrCreate_StylizeMaskIsmComponent: could NOT resolve the source ISM component for [{}]"), InRendererData)
+    { return {}; }
+
+    auto* ShadowIsm = DoCreate_CustomDepthShadowIsm(SourceIsm.Get(), InStencilValue, TEXT("IsmStylizeMaskShadow"));
+
+    if (ck::Is_NOT_Valid(ShadowIsm))
+    { return {}; }
+
+    return _StylizeMaskIsmComponentCache.Add(Key, ShadowIsm);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_IsmRenderer_Subsystem_UE::
     DoCreate_CustomDepthShadowIsm(
         UInstancedStaticMeshComponent* InSourceIsm,
         uint8 InStencilValue,
