@@ -236,7 +236,7 @@ public:
     static UMaterialInterface*
     Get_CrowdSlotOverrideMaterial(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InSlotIndex);
 
-    // ---- Entity outline (member-indexed — batched members are not entities; see CkUsf/DESIGN_EntityOutlines.md) ----
+    // ---- Entity outline (member-indexed — batched members are not entities; see CkUsf/Claude.md § Entity outlines) ----
 
     // Outline a member with a CkUsf outline preset (custom-depth highlight cluster mirrors its skinned
     // pose). Null preset clears. Hidden members (Plan-1 flip stand-ins) are excluded while hidden —

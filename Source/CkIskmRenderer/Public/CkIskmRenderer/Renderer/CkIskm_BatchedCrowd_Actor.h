@@ -84,7 +84,7 @@ public:
     // Sum of each tile component's CURRENT instance count (i.e. only visible members) — drops when a member is hidden.
     int32      Get_RenderedInstanceCount() const;
 
-    // ---- Entity outline (member-indexed — batched members are not entities; see CkUsf/DESIGN_EntityOutlines.md) ----
+    // ---- Entity outline (member-indexed — batched members are not entities; see CkUsf/Claude.md § Entity outlines) ----
     // One custom-depth-only "highlight cluster" per (crowd, preset) at the world origin, pushed every
     // AdvanceAnimation. Hidden members (Plan-1 flip stand-ins) are excluded — outline those via the entity API.
 

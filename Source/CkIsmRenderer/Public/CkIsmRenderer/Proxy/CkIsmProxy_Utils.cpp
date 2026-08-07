@@ -168,6 +168,47 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
+    Get_IsCelPatternApplied(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
+    return InHandle.Has<ck::FFragment_IsmProxy_CelPatternApplied>();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_CelPatternShadowInstanceCount(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_IsmProxy_CelPatternApplied>())
+    { return INDEX_NONE; }
+
+    const auto& ShadowIsm = InHandle.Get<ck::FFragment_IsmProxy_CelPatternApplied>().Get_ShadowIsm();
+
+    if (ck::Is_NOT_Valid(ShadowIsm))
+    { return INDEX_NONE; }
+
+    return ShadowIsm->GetInstanceCount();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_CelPatternStencilValue(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_IsmProxy_CelPatternApplied>())
+    { return 0; }
+
+    return InHandle.Get<ck::FFragment_IsmProxy_CelPatternApplied>().Get_StencilValue();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
     Get_CustomInstanceData(
         const FCk_Handle_IsmProxy& InHandle)
     -> TArray<float>

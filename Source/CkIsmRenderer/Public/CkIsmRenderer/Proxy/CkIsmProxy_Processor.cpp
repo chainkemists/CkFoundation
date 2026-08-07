@@ -33,6 +33,29 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_IsmProxy_CancelPendingRequests);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_ism_proxy
+{
+    auto
+        Get_TransformWithLocalOffset(
+            const ck::FFragment_IsmProxy_Params& InParams,
+            const FTransform& InTransform)
+        -> FTransform
+    {
+        const auto& CombinedLocation = InTransform.GetLocation() + InParams.Get_LocalLocationOffset();
+        const auto& CombinedRotation = InTransform.GetRotation() * InParams.Get_LocalRotationOffset().Quaternion();
+
+        CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InParams.Get_ScaleMultiplier()),
+            TEXT("IsmProxy Scale Multiplier has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"))
+        { return FTransform{ CombinedRotation.Rotator(), CombinedLocation, FVector::OneVector }; }
+
+        const auto& CombinedScale = InTransform.GetScale3D() * InParams.Get_ScaleMultiplier();
+
+        return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck_ism_proxy_processor
 {
     auto
@@ -115,25 +138,35 @@ namespace ck_ism_proxy_processor
         }
     }
 
-    // Returns nullptr when the proxy carries no outline, or its shadow instance is gone.
+    // Returns nullptr when the proxy carries neither applied-state, or its shadow instance is gone.
+    // Both the outline and the cel pattern mirror this proxy into a custom-depth-only shadow, and a
+    // WPO-animated material silhouettes at its BIND pose unless the shadow instance carries the same
+    // per-instance custom data. The two are mutually exclusive on an entity, so at most one matches.
     auto
-        TryGet_OutlineShadowInstance(
+        TryGet_CustomDepthShadowInstance(
             const FCk_Handle_IsmProxy& InHandle,
             FPrimitiveInstanceId& OutShadowInstanceId)
         -> UInstancedStaticMeshComponent*
     {
-        if (NOT InHandle.Has<ck::FFragment_IsmProxy_OutlineApplied>())
-        { return nullptr; }
+        const auto& TryResolve = [&](const auto& InApplied) -> UInstancedStaticMeshComponent*
+        {
+            auto* ShadowIsm = InApplied.Get_ShadowIsm().Get();
 
-        const auto& Applied = InHandle.Get<ck::FFragment_IsmProxy_OutlineApplied>();
-        auto* ShadowIsm = Applied.Get_ShadowIsm().Get();
+            if (ck::Is_NOT_Valid(ShadowIsm) || NOT ShadowIsm->IsValidId(InApplied.Get_ShadowInstanceId()))
+            { return nullptr; }
 
-        if (ck::Is_NOT_Valid(ShadowIsm) || NOT ShadowIsm->IsValidId(Applied.Get_ShadowInstanceId()))
-        { return nullptr; }
+            OutShadowInstanceId = InApplied.Get_ShadowInstanceId();
 
-        OutShadowInstanceId = Applied.Get_ShadowInstanceId();
+            return ShadowIsm;
+        };
 
-        return ShadowIsm;
+        if (InHandle.Has<ck::FFragment_IsmProxy_OutlineApplied>())
+        { return TryResolve(InHandle.Get<ck::FFragment_IsmProxy_OutlineApplied>()); }
+
+        if (InHandle.Has<ck::FFragment_IsmProxy_CelPatternApplied>())
+        { return TryResolve(InHandle.Get<ck::FFragment_IsmProxy_CelPatternApplied>()); }
+
+        return nullptr;
     }
 }
 
@@ -548,7 +581,7 @@ namespace ck
             }
 
             auto ShadowInstanceId = FPrimitiveInstanceId{};
-            if (auto* ShadowIsm = TryGet_OutlineShadowInstance(InHandle, ShadowInstanceId);
+            if (auto* ShadowIsm = TryGet_CustomDepthShadowInstance(InHandle, ShadowInstanceId);
                 ck::IsValid(ShadowIsm) && ShadowIsm->NumCustomDataFloats == NewCustomData.Num())
             {
                 ShadowIsm->SetCustomDataById(ShadowInstanceId, NewCustomData);
@@ -599,7 +632,7 @@ namespace ck
             }
 
             auto ShadowInstanceId = FPrimitiveInstanceId{};
-            if (auto* ShadowIsm = TryGet_OutlineShadowInstance(InHandle, ShadowInstanceId);
+            if (auto* ShadowIsm = TryGet_CustomDepthShadowInstance(InHandle, ShadowInstanceId);
                 ck::IsValid(ShadowIsm) && ShadowIsm->NumCustomDataFloats > NewCustomDataIndex)
             {
                 ShadowIsm->SetCustomDataValueById(ShadowInstanceId, NewCustomDataIndex, NewCustomDataValue);

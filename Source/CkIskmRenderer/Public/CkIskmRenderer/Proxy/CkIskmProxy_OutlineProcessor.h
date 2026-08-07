@@ -11,7 +11,7 @@
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-// Entity outlines for ISKM Plan-1 proxies (see CkUsf/DESIGN_EntityOutlines.md). Flags are re-asserted per
+// Entity outlines for ISKM Plan-1 proxies (see CkUsf/Claude.md § Entity outlines). Flags are re-asserted per
 // frame (the engine setters early-out when unchanged) so submeshes attached after the outline inherit it.
 // Plan-2 crowd members are not entities — their outline rides ACk_Iskm_BatchedCrowd_Actor's member API.
 
