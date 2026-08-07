@@ -6,6 +6,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h" // FCk_Handle_Transform (cosmetic registration)
 
+#include "CkUsf/Stylize/CkUsf_CelShade_Params.h" // ECk_Usf_CelPattern (member-indexed cel patterns)
+
 #include "CkIskm_BatchedUtils.generated.h"
 
 class UCk_IskmAnimCollection_Data;
@@ -266,4 +268,44 @@ public:
         DisplayName = "[Ck][IskmBatched] Get Crowd Outline Rendered Instance Count")
     static int32
     Get_CrowdOutlineRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    // ---- Cel pattern (member-indexed — the outline's twin; see CkUsf/Claude.md § Cel shade) ----
+
+    // Pattern a member with a CkUsf cel pattern (custom-depth highlight cluster mirrors its skinned pose,
+    // carrying the pattern's Custom-Stencil value). REFUSED on an outlined member — the outline owns that
+    // member's stencil byte. Hidden members (Plan-1 flip stand-ins) are excluded while hidden — pattern
+    // the stand-in proxy via UCk_Utils_Usf_CelPattern_UE instead.
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Set Crowd Member Cel Pattern")
+    static void
+    Set_CrowdMemberCelPattern(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, ECk_Usf_CelPattern InPattern);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Clear Crowd Member Cel Pattern")
+    static void
+    Clear_CrowdMemberCelPattern(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
+    // Returns the member's pattern, or the passed fallback when it has none — a cel pattern has no
+    // "invalid" value to report absence with, so the caller states what absence means.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Member Cel Pattern Or")
+    static ECk_Usf_CelPattern
+    Get_CrowdMemberCelPatternOr(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, ECk_Usf_CelPattern InFallback);
+
+    // Custom-Stencil value the member's cel cluster writes, 0 when it carries no pattern.
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Member Cel Pattern Stencil Value")
+    static int32
+    Get_CrowdMemberCelPatternStencilValue(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Cel Patterned Member Count")
+    static int32
+    Get_CrowdCelPatternedMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
+
+    // Instances currently in the cel highlight clusters (visible patterned members only).
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmBatched",
+        DisplayName = "[Ck][IskmBatched] Get Crowd Cel Pattern Rendered Instance Count")
+    static int32
+    Get_CrowdCelPatternRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd);
 };

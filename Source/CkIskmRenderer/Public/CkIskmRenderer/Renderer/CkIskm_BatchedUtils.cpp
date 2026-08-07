@@ -503,3 +503,57 @@ int32
     { return 0; }
     return InCrowd->Get_OutlineRenderedInstanceCount();
 }
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Set_CrowdMemberCelPattern(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, ECk_Usf_CelPattern InPattern)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Set_MemberCelPattern(InIndex, InPattern);
+}
+
+void
+    UCk_Utils_IskmBatched_UE::
+    Clear_CrowdMemberCelPattern(ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return; }
+    InCrowd->Clear_MemberCelPattern(InIndex);
+}
+
+ECk_Usf_CelPattern
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberCelPatternOr(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex, ECk_Usf_CelPattern InFallback)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return InFallback; }
+    return InCrowd->Get_MemberCelPatternOr(InIndex, InFallback);
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdMemberCelPatternStencilValue(const ACk_Iskm_BatchedCrowd_Actor* InCrowd, int32 InIndex)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_MemberCelPatternStencilValue(InIndex);
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdCelPatternedMemberCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_CelPatternedMemberCount();
+}
+
+int32
+    UCk_Utils_IskmBatched_UE::
+    Get_CrowdCelPatternRenderedInstanceCount(const ACk_Iskm_BatchedCrowd_Actor* InCrowd)
+{
+    if (ck::Is_NOT_Valid(InCrowd))
+    { return 0; }
+    return InCrowd->Get_CelPatternRenderedInstanceCount();
+}
