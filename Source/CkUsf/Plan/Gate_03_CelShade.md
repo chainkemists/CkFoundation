@@ -1,8 +1,24 @@
 # Gate 3 — CelShade: look + subsystem + stencil per-object + entity API
 
-> **Status:** ⏳ Pending
+> **Status:** ✅ Done (2026-08-06) — code-complete + audited; gym visuals + the illumination
+> reconstruction are maintainer `[EDITOR-VERIFY]` (steps in PROGRESS.md Gate-3 entry; prewritten
+> pivot `_QuantizeFinalColor` if bands track albedo).
 > **Depends on:** Gate 2 ✅
-> **Estimate:** 2–3 sessions — re-date at entry; record actual at exit
+> **Estimate:** 2–3 sessions — actual: 1 session
+>
+> **Amendments at exit:** audit (ACCEPT-WITH-FIXES) found+fixed: stale Applied cache lost cel
+> patterns after an outline round-trip (4th processor + disjoint _Remove views); gym entity/stencil
+> rows misaligned; entity test was registry-only (now actor-backed incl. the regression sequence);
+> stencil base <1 unguarded; cascade bypassed the outline-exclusion; dead Specular pin removed
+> (master regenerated); two math-contradicting comments fixed. Decisions: clear = DISABLE not
+> restore (matches outline precedent, documented in 3 places); cel↔outline mutually exclusive per
+> entity (one stencil byte; outline-after-cel wins, cache drops); Strength governs bands/pattern
+> only, Enabled is the passthrough; no deferred request path exists (immediate mutation mirrors
+> Request_ApplyOutline — item 8's Failed_Cancelled conditional was vacuous). Known: Midpoint is in
+> pre-exposed units; float32 world-pos degrades ~1e6 uu; world-space patterns slide on movers
+> (documented limitation). DESIGN_EntityOutlines.md cited by docs does NOT exist in checkout —
+> pattern reconstructed from code (stale-doc follow-up). Toolbox trap: `--discover-fresh` required
+> after adding tests without a rebuild (stale test list = fake green).
 
 ## Goal
 
