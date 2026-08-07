@@ -135,6 +135,42 @@ namespace ck::angelscriptgenerator::self_heal
             return true;
         }
 
+        // "(L:C) '<Member>' is not a member of '<Struct>'" — a field access against a struct that
+        // no longer declares it. Inside a generated ESP canonical this is the deleted-FIELD twin of
+        // the deleted-TYPE case Try_MatchIdentifierNotADataType already covers; the dispatcher keys
+        // the two on the same location predicate. Format captured verbatim from FormatDiagnostics
+        // during the 2026-08-07 OpenSign repro, NOT from the modal's rendering (which differs).
+        auto Try_MatchNotAMemberOfStruct(
+            const FString&    InLine,
+            const FString&    InCurrentFile,
+            FCk_AsParsedError& OutError) -> bool
+        {
+            static const auto Pattern = FRegexPattern{TEXT(
+                R"(^\((\d+):(\d+)\) '([A-Za-z_][A-Za-z0-9_]*)' is not a member of '([A-Za-z_][A-Za-z0-9_]*)'$)")};
+
+            auto Matcher = FRegexMatcher{Pattern, InLine.TrimStartAndEnd()};
+            if (NOT Matcher.FindNext())
+            { return false; }
+
+            const auto OwningStruct = Matcher.GetCaptureGroup(4);
+
+            // Cascade-only match, and load-bearing: AS prints "Unknown" for a type an EARLIER error
+            // left unresolved, so every field access on it reports here. Without this guard the
+            // matcher PROMOTES that noise to a root — today it dies only by matching nothing — and
+            // a root routed to quarantine DELETES a canonical.
+            if (OwningStruct == TEXT("Unknown"))
+            { return false; }
+
+            OutError                   = FCk_AsParsedError{};
+            OutError.Kind              = ECk_AsParsedError_Kind::NotAMemberOfStruct;
+            OutError.FilePath          = InCurrentFile;
+            OutError.Line              = FCString::Atoi(*Matcher.GetCaptureGroup(1));
+            OutError.Column            = FCString::Atoi(*Matcher.GetCaptureGroup(2));
+            OutError.MissingIdentifier = Matcher.GetCaptureGroup(3);
+            OutError.LookupScope       = OwningStruct;
+            return true;
+        }
+
         // Hazelight emits adjacent-string-literal errors as a TWO-line pair:
         //   (L:C) Expected ')' or ','          <- generic, fires for many parse errors
         //   (L:C) Instead found '<string constant>'   <- unique to the splice case
@@ -188,6 +224,7 @@ namespace ck::angelscriptgenerator::self_heal
             if (ck_angelscript_generator_as_error_parser::Try_MatchNoMatchingSignatures(Line, CurrentFile, Error)
                 || ck_angelscript_generator_as_error_parser::Try_MatchBareCtorNoMatchingSignatures(Line, CurrentFile, Error)
                 || ck_angelscript_generator_as_error_parser::Try_MatchIdentifierNotADataType(Line, CurrentFile, Error)
+                || ck_angelscript_generator_as_error_parser::Try_MatchNotAMemberOfStruct(Line, CurrentFile, Error)
                 || ck_angelscript_generator_as_error_parser::Try_MatchAdjacentStringLiteral(Line, CurrentFile, Error))
             {
                 Results.Add(MoveTemp(Error));
@@ -212,7 +249,13 @@ namespace ck::angelscriptgenerator::self_heal
 
         for (const auto& Err : InErrors)
         {
-            auto Key = FString{};
+            // Seeded, not empty: the switch below has no `default` (deliberately — a new kind
+            // should be a compile-time prompt to think about its key). A kind that slips through
+            // anyway then degrades to per-SITE dedup, which over-attempts and is capped, instead
+            // of collapsing every root onto "" and silently dropping all but the first.
+            auto Key = FString::Printf(TEXT("kind%d|%s:%d:%d"),
+                static_cast<int32>(Err.Kind), *Err.FilePath, Err.Line, Err.Column);
+
             switch (Err.Kind)
             {
                 case ECk_AsParsedError_Kind::NoMatchingSignatures:
@@ -231,6 +274,13 @@ namespace ck::angelscriptgenerator::self_heal
                 case ECk_AsParsedError_Kind::BareCtorNoMatchingSignatures:
                     Key = FString::Printf(TEXT("ctor|%s(%s)"),
                         *Err.MissingIdentifier, *Err.ArgsList);
+                    break;
+                case ECk_AsParsedError_Kind::NotAMemberOfStruct:
+                    // FilePath is part of the key because the recovery this feeds is per-CANONICAL:
+                    // two stale canonicals reporting the same dead field are two roots needing two
+                    // quarantines, and collapsing them would heal one per cycle against the cap.
+                    Key = FString::Printf(TEXT("member|%s|%s.%s"),
+                        *Err.FilePath, *Err.LookupScope, *Err.MissingIdentifier);
                     break;
             }
 
