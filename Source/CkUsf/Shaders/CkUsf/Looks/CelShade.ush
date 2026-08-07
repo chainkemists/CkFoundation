@@ -54,6 +54,14 @@
 #define CKUSF_CEL_OCTAVE_REF_DISTANCE 500.0
 #endif
 
+// Steepest slope any halftone primitive in StylizeCommon.ush reaches per pattern cell. The triangle-wave
+// and dot families are exactly 2 (they cross 0..1 over half a cell); Triangles is the one outlier at 3.
+// It converts a footprint measured in CELLS into one measured in THRESHOLD units, which is what the
+// band comparison below needs to anti-alias itself.
+#ifndef CKUSF_CEL_HALFTONE_SLOPE
+#define CKUSF_CEL_HALFTONE_SLOPE 2.0
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 // Neighbour taps. Each scene texture carries its OWN viewport rect, so a viewport UV has to be mapped
 // through that texture's own transform — the house CkUsf_ViewportUVToBufferUV maps to the scene buffer
@@ -79,6 +87,22 @@ float3 CkUsf_CelShade_TapAlbedo(float2 ViewportUV)
     float2 UV = ClampSceneTextureUV(
         ViewportUVToSceneTextureUV(saturate(ViewportUV), PPI_BaseColor), PPI_BaseColor);
     return SceneTextureLookup(UV, PPI_BaseColor, false).rgb;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Edge masks. A hard step() on a measure that hovers AT its threshold flips per pixel, so a MARGINAL
+// edge — a shallow crease on curved armour is the canonical one — renders as a dotted line instead of
+// either a line or nothing. Smoothing across the measure's own per-pixel footprint leaves the authored
+// threshold's meaning untouched (it is still the 50% crossing, so every preset keeps its tuning) and
+// turns the stipple into a continuous line whose ends fade out. Where the measure is far above the
+// threshold — a real silhouette in the depth channel — the footprint scales with it and the mask still
+// resolves to a solid 1.
+// --------------------------------------------------------------------------------------------------------------------
+
+float CkUsf_CelShade_EdgeMask(float Measure, float Threshold)
+{
+    float Width = max(fwidth(Measure) * 0.5, 1e-4);
+    return smoothstep(Threshold - Width, Threshold + Width, Measure);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -239,6 +263,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
     // not got); screen space is camera-aligned and always stable.
     float2 PatternCoord;
     float  PatternThreshold;
+    float3 PatternWorldCell = 0.0;
 
     if (PatternSpace < 0.5)
     {
@@ -264,6 +289,7 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
             Weights.z * CkUsf_Stylize_HalftonePattern(GroupPattern, P.xy, PatternContrast);
 
         PatternCoord = P.xy;
+        PatternWorldCell = P;
     }
     else
     {
@@ -272,6 +298,15 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
             / max(PatternPixelSize * GroupPatternScale, 1e-3);
         PatternThreshold = CkUsf_Stylize_HalftonePattern(GroupPattern, PatternCoord, PatternContrast);
     }
+
+    // Screen footprint of ONE pattern cell, taken at top level so the derivatives are never inside a
+    // branch. It comes from the pattern COORDINATE, whose derivative is smooth, and never from the
+    // threshold VALUE, which is periodic and would blow the footprint up at every cell seam. The world
+    // path measures the full 3D cell coordinate because the threshold is a triplanar blend of all three
+    // planar projections, so any one of them can be the steepest.
+    float PatternCellFootprint = PatternSpace < 0.5
+        ? length(fwidth(PatternWorldCell))
+        : length(fwidth(PatternCoord));
 
     // ---- Band quantization -------------------------------------------------------------------------
     float Ramp = CkUsf_CelShade_Shape(SourceLuma, Midpoint, Distribution);
@@ -290,7 +325,16 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
     float SoftTransition = BandSoftness > 1e-4
         ? smoothstep(saturate(1.0 - BandSoftness), 1.0, BandFraction)
         : 0.0;
-    float PatternTransition = step(PatternThreshold, BandFraction);
+    // Anti-aliased against the pattern's own screen footprint. A bare threshold makes every dot edge a
+    // binary one-pixel boundary: it aliases into moire wherever a cell approaches pixel size (distant
+    // ground planes past the octave ceiling), and the world lattice re-anchors by the TAA jitter every
+    // frame, so those edges crawl under camera motion even on a static wall. Contrast steepens the
+    // primitive's slope, so it widens the footprint by the same factor. Past a footprint of ~1 the
+    // comparison resolves to its average, which is the correct limit for a pattern below pixel size.
+    float PatternEdgeWidth = max(
+        PatternCellFootprint * CKUSF_CEL_HALFTONE_SLOPE * max(PatternContrast, 1e-3), 1e-4);
+    float PatternTransition = smoothstep(
+        -PatternEdgeWidth, PatternEdgeWidth, BandFraction - PatternThreshold);
     float Transition = lerp(SoftTransition, PatternTransition, EffectivePatternStrength);
 
     float Level = lerp(LevelLow, LevelHigh, Transition);
@@ -387,12 +431,15 @@ FCkUsf_SurfaceOutput CkUsf_PP_CelShade(
         // Divided by depth so the test is distance-independent.
         float DepthLaplacian = abs(DepthSum - TapCount * Depth) / max(Depth, 1.0);
 
-        float DepthEdge = step(max(OutlineDepthThreshold, 1e-4), DepthLaplacian);
-        float NormalEdgeMask = step(max(OutlineNormalThreshold, 1e-4), NormalEdge);
-        float AlbedoEdgeMask = step(max(OutlineAlbedoThreshold, 1e-4), AlbedoEdge);
+        float DepthEdge = CkUsf_CelShade_EdgeMask(DepthLaplacian, max(OutlineDepthThreshold, 1e-4));
+        float NormalEdgeMask = CkUsf_CelShade_EdgeMask(NormalEdge, max(OutlineNormalThreshold, 1e-4));
+        float AlbedoEdgeMask = CkUsf_CelShade_EdgeMask(AlbedoEdge, max(OutlineAlbedoThreshold, 1e-4));
 
         float Fade = OutlineDistanceFade > 1.0 ? saturate(1.0 - Depth / OutlineDistanceFade) : 1.0;
-        Edge = saturate(DepthEdge + NormalEdgeMask + AlbedoEdgeMask) * saturate(OutlineOpacity) * Fade;
+        // max, not a saturated sum: for the binary masks this was written against the two are the same
+        // value, but the masks are now soft, and summing three of them lights a full-strength line on a
+        // pixel that is just UNDER all three thresholds. The strongest detector wins instead.
+        Edge = max(DepthEdge, max(NormalEdgeMask, AlbedoEdgeMask)) * saturate(OutlineOpacity) * Fade;
 
         int BlendMode = (int)(OutlineBlendMode + 0.5);
         if (BlendMode == 1)      { Result *= lerp(float3(1.0, 1.0, 1.0), OutlineColor, Edge); }

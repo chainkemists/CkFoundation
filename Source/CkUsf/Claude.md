@@ -470,6 +470,33 @@ a band transition renders as a growing dot/line field rather than a hard edge. `
 pattern-free alternative for the same boundary, which is why the two are BLENDED by pattern strength
 instead of added — a look cannot be both hard-stepped and dithered at one boundary.
 
+**That comparison is anti-aliased against the pattern's own screen footprint, and it has to be.** A bare
+threshold makes every dot edge a binary one-pixel boundary, which is what produced the two symptoms
+reported from PIE on 2026-08-07: moire/crawling dots on a STATIC wall, because the world lattice is built
+from `In.WorldPosition` — depth-reconstructed under the TAA-JITTERED projection, so the "world-locked"
+pattern re-anchors by a sub-pixel of world offset every frame and a hard step flips the boundary pixels
+with it; and speckle on distant geometry, because past `PatternOctaveMax` the cell keeps its world size and
+shrinks on screen without bound. The width comes from the pattern COORDINATE — smooth, being world position
+over cell size — never from the threshold VALUE, which is periodic and would blow the width up at every
+cell seam. `CKUSF_CEL_HALFTONE_SLOPE` converts a footprint in cells into one in threshold units and
+`PatternContrast` scales it, because contrast is exactly what steepens the primitive. Past a footprint of
+~1 the comparison resolves to its average, the correct limit for a pattern below pixel size.
+Distance scaling was NOT the cause and needed no change: `_PatternDistanceScaling` already defaults to 1.0
+and no shipped preset overrides it, so the octave mechanism holds a cell between roughly 15 and 31 screen
+pixels over 500–8000 uu, and the authored `PatternWorldSize` values (8–24 uu) are not too small for the
+judge-scene distances either.
+
+**Every outline edge test is anti-aliased the same way** (`CkUsf_CelShade_EdgeMask`), for the same reason
+one level down: a MARGINAL edge — an armour crease whose normal difference sits right at
+`OutlineNormalThreshold` is the canonical one — flips per pixel under a hard `step` and draws as a DOTTED
+line instead of as a line or as nothing. Smoothing across the measure's own footprint keeps each preset's
+authored threshold meaning exactly (it is still the 50% crossing), which is why no threshold needed
+retuning. Two things deliberately NOT done: replacing the normal detector's max-of-gradients with the depth
+channel's Laplacian (more selective on curved surfaces, recorded as a follow-up — but the two measures are
+on different scales, so swapping it silently re-tunes every preset's `OutlineNormalThreshold`); and adding
+a slope-scaled bias from `fwidth(Normal)`, which is wrong on the math — that derivative spikes AT the
+crease, so it would raise the threshold exactly where the line is wanted.
+
 **Per-object stencil is a DIRECT-VALUE contract, not an allocation** (unlike `UCkUsf_OutlineSubsystem`'s
 refcounted slots): `StencilBase - 1` suppresses transitions on that mesh, `StencilBase + N` forces
 `ECk_Usf_CelPattern` N, anything else takes the global pattern. The span is therefore
