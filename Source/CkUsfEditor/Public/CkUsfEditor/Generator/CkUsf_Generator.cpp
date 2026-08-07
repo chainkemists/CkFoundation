@@ -8,6 +8,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "MaterialEditingLibrary.h"
+#include "MaterialShaderPrecompileMode.h"
 #include "MaterialShared.h"
 #include "ShaderCompiler.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -168,6 +169,12 @@ namespace ck::usf_editor
             case ECk_Usf_SceneTexture::SceneNormal:   return { PPI_WorldNormal,       TEXT("SceneNormal") };
             case ECk_Usf_SceneTexture::CustomDepth:   return { PPI_CustomDepth,       TEXT("CustomDepth") };
             case ECk_Usf_SceneTexture::CustomStencil: return { PPI_CustomStencil,     TEXT("CustomStencil") };
+            // GBuffer reads. PPI_SceneColor is REJECTED in the PostProcess domain, which is why the
+            // SceneColor row above stays on PPI_PostProcessInput0 — never add a PPI_SceneColor row.
+            case ECk_Usf_SceneTexture::BaseColor:     return { PPI_BaseColor,         TEXT("SceneBaseColor") };
+            case ECk_Usf_SceneTexture::Metallic:      return { PPI_Metallic,          TEXT("SceneMetallic") };
+            case ECk_Usf_SceneTexture::Roughness:     return { PPI_Roughness,         TEXT("SceneRoughness") };
+            case ECk_Usf_SceneTexture::Specular:      return { PPI_Specular,          TEXT("SceneSpecular") };
             default:                                  return { PPI_PostProcessInput0, TEXT("SceneColor") };
         }
     }
@@ -209,6 +216,8 @@ namespace ck::usf_editor
                 const auto* Name = Get_SceneTextureWiring(Tex).HlslName;
                 Code += FString::Printf(TEXT("In.%s = %s;\n"), Name, Name);
             }
+            if (InDef->_PostProcessWorldPosition)
+            { Code += TEXT("In.WorldPosition = WorldPosition;\n"); }
         }
         else
         {
@@ -499,6 +508,8 @@ namespace ck::usf_editor
             {
                 FCustomInput In; In.InputName = FName(Get_SceneTextureWiring(Tex).HlslName); Custom->Inputs.Add(In);
             }
+            if (InDef->_PostProcessWorldPosition)
+            { FCustomInput In; In.InputName = TEXT("WorldPosition"); Custom->Inputs.Add(In); }
         }
         else
         {
@@ -556,6 +567,16 @@ namespace ck::usf_editor
             {
                 const auto Wiring = Get_SceneTextureWiring(Tex);
                 AddSceneTexture(Wiring.Id, Wiring.HlslName, SceneTexRow++);
+            }
+
+            // The SAME engine expression the surface branch wires — in the PostProcess domain it resolves to
+            // the depth-reconstructed scene surface position rather than the fullscreen quad's own.
+            if (InDef->_PostProcessWorldPosition)
+            {
+                auto* WorldPositionExpr = UMaterialEditingLibrary::CreateMaterialExpression(
+                    Material, UMaterialExpressionWorldPosition::StaticClass(), -1100, SceneTexRow * 160);
+                UMaterialEditingLibrary::ConnectMaterialExpressions(
+                    WorldPositionExpr, FString(), Custom, TEXT("WorldPosition"));
             }
         }
         else
@@ -769,24 +790,58 @@ namespace ck::usf_editor
     }
 
     // Catches HLSL that compiles as a UMaterial object but fails its shader permutations (notably PostProcess).
-    static auto Validate_LookShaders(UMaterial* InMaterial, FName InLookName, TArray<FString>& OutErrors) -> bool
+    auto Validate_LookShaderCompile(
+        UMaterial* InMaterial, FName InLookName, TArray<FString>& OutErrors, bool InForceSynchronousCompile) -> bool
     {
         if (ck::Is_NOT_Valid(InMaterial, ck::IsValid_Policy_NullptrOnly{}))
         { return true; }
 
-        // A process that cannot render (-nullrhi CI) never builds shader maps, so the check below would read EVERY look as failed.
+        // A process that cannot render (-nullrhi CI) never builds shader maps, so the checks below would read EVERY look as failed.
         if (NOT FApp::CanEverRender())
         { return true; }
+
+        // Opt-in, and DESTRUCTIVE — see the header for why the roster is not force-compiled. Only a caller that
+        // owns a throwaway master and needs a real compile verdict should ask for this.
+        if (InForceSynchronousCompile)
+        {
+            FMaterialUpdateContext UpdateContext;
+            UpdateContext.AddMaterial(InMaterial);
+            InMaterial->ForceRecompileForRendering(EMaterialShaderPrecompileMode::Synchronous);
+        }
 
         if (GShaderCompilingManager != nullptr)
         { GShaderCompilingManager->FinishAllCompilation(); }
 
-        if (NOT InMaterial->IsCompilingOrHadCompileError(GMaxRHIShaderPlatform))
+        // A failed shader job does BOTH of these (ShaderCompiler.cpp:2177): it copies the job's unique errors onto
+        // the resource and hands the material a null shader map. Reading the errors is what makes a failure name
+        // itself instead of pointing at the log — and it is the ONLY one of the two that is trustworthy here:
+        // a missing shader map is also what a not-yet-applied compile looks like, so failing on it reported
+        // 49/49 healthy looks as broken. The errors decide; the missing map is a warning.
+        auto CompileErrors = TArray<FString>{};
+        if (const auto* Resource = InMaterial->GetMaterialResource(GMaxRHIShaderPlatform))
+        { CompileErrors = Resource->GetCompileErrors(); }
+
+        if (NOT InMaterial->IsCompilingOrHadCompileError(GMaxRHIShaderPlatform) && CompileErrors.IsEmpty())
         { return true; }
 
-        const auto Msg = FString::Printf(
-            TEXT("Look [%s] SHADER FAILED TO COMPILE — see the LogShaderCompilers '*.ush ... error:' line above"),
-            *InLookName.ToString());
+        if (CompileErrors.IsEmpty())
+        {
+            ck::usf_editor::Warning(
+                TEXT("Look [{}] has no applied shader map yet, but reported no HLSL errors — treated as clean; "
+                     "a real failure names its error"), InLookName);
+            return true;
+        }
+
+        auto Msg = FString::Printf(
+            TEXT("Look [%s] SHADER FAILED TO COMPILE"), *InLookName.ToString());
+
+        constexpr auto MaxReportedErrors = 3;
+        for (auto Index = 0; Index < FMath::Min(CompileErrors.Num(), MaxReportedErrors); ++Index)
+        { Msg += FString::Printf(TEXT("\n    %s"), *CompileErrors[Index]); }
+
+        if (CompileErrors.Num() > MaxReportedErrors)
+        { Msg += FString::Printf(TEXT("\n    (+%d more — see LogShaderCompilers)"), CompileErrors.Num() - MaxReportedErrors); }
+
         ck::usf_editor::Error(TEXT("{}"), Msg);
         OutErrors.Add(Msg);
         return false;
@@ -806,7 +861,8 @@ namespace ck::usf_editor
             { ++Result.NumSkipped; continue; }
 
             ++Result.NumGenerated;
-            Validate_LookShaders(Material, Def->Get_EffectiveLookName(), Result.Errors);
+            constexpr auto ForceSynchronousCompile = false;   // see the header — forcing leaves masters unrenderable
+            Validate_LookShaderCompile(Material, Def->Get_EffectiveLookName(), Result.Errors, ForceSynchronousCompile);
         }
         ck::usf_editor::Log(TEXT("CkUsf generate: {} generated, {} skipped, {} error(s), {} warning(s)"),
             Result.NumGenerated, Result.NumSkipped, Result.Errors.Num(), Result.Warnings.Num());

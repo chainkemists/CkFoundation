@@ -30,6 +30,9 @@ subsystem.
   Design + mechanisms: `DESIGN_EntityOutlines.md`.
 - `/CkUsf/Common.ush` — the input/output structs + the shader stdlib (sampling, normals, parallax,
   triplanar, flow maps, SDFs, color ops, dithering).
+- `/CkUsf/StylizeCommon.ush` — procedural pattern library for the stylize looks (Bayer/noise dither
+  thresholds, the 10 cel halftone patterns, the 4 hand-drawn stroke patterns, palette quantization).
+  The dispatcher index orders are STENCIL CONTRACTS shared with the asset-side enums — never reorder.
 - Generation (editor): `ck::usf_editor::Generate_AllLookMaterials()` / `Generate_LookMaterial(Def)`
   (`CkUsfEditor/Generator/CkUsf_Generator.h`); validation in `CkUsf_LookValidator.h`.
 
@@ -219,6 +222,25 @@ wires SubsurfaceColor (and Opacity drives the scatter), `ClearCoat` wires ClearC
 
 - An empty `_SceneTextures` falls back to the historical default trio (SceneColor / SceneDepth /
   SceneNormal), so PostProcess looks authored before the field existed regenerate byte-identically.
+- `_SceneTextures` also accepts the GBuffer reads `BaseColor` / `Metallic` / `Roughness` /
+  `Specular` → `In.SceneBaseColor` / `In.SceneMetallic` / `In.SceneRoughness` / `In.SceneSpecular`
+  (deferred only; forward/mobile reject them at translation). BaseColor/Specular are the
+  shading-model-MODIFIED variants; the raw stored values (`PPI_StoredBaseColor`/`PPI_StoredSpecular`)
+  are not wired. The GBuffer uniform buffer is bound at EVERY blendable location — pre-TAA placement
+  is for temporal stability, not availability. NEVER add a `PPI_SceneColor` wiring row: the
+  translator rejects it in the PostProcess domain (SceneColor stays `PPI_PostProcessInput0`).
+- `_PostProcessWorldPosition` (opt-in, PostProcess-only) wires the engine WorldPosition expression,
+  which in a PP material is the depth-reconstructed SCENE SURFACE position. At after-tonemap/SSR
+  locations that reconstruction is dynamic-resolution scaled — intended for the pre-TAA locations.
+  The regeneration negative (`StylizeSceneTextureNegative`) holds both extensions to the
+  byte-identical default-path invariant.
+- **Shader-compile gate:** `Validate_LookShaderCompile` (`CkUsf_Generator.h`) reads the material
+  resource's REAL compile-error list; the bare shader-map null check was mutation-tested toothless
+  (2026-08-06). Its `InForceSynchronousCompile` is what gives a verdict teeth and is DESTRUCTIVE
+  (the forced master renders black) — generation passes `false` for the roster; only throwaway test
+  masters force. Under `-nullrhi` every generation test skips as environmental — a green there says
+  nothing about HLSL; real verdicts need a `--no-nullrhi` run (serial: parallel lanes regenerating
+  looks collide on SavePackage).
 - Refraction is wired only for **lit** translucency (glass): unlit translucent looks stay
   byte-unchanged and no unlit-translucent + refraction permutation is compiled.
 - Usage flags are re-baked from the LookDefinition on every regeneration, and surface masters

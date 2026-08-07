@@ -24,6 +24,13 @@ struct FCkUsf_SurfaceInput
     float4 SceneNormal;    // world-space scene normal (post-process)
     float4 CustomDepth;    // custom depth buffer (post-process; .r = depth) — wired only if the look declares it
     float4 CustomStencil;  // custom stencil buffer (post-process; .r = stencil value) — wired only if declared
+    // GBuffer reads (post-process; each wired only if the look declares it). BaseColor and Specular are the
+    // SHADING-MODEL-modified variants the engine exposes by default — the raw stored values live behind
+    // PPI_StoredBaseColor / PPI_StoredSpecular, which are not wired here.
+    float4 SceneBaseColor; // scene albedo (post-process; .rgb) — may be modified on read by the shading model
+    float4 SceneMetallic;  // scene metallic (post-process; .r)
+    float4 SceneRoughness; // scene roughness (post-process; .r)
+    float4 SceneSpecular;  // scene specular (post-process; .r) — may be modified on read by the shading model
     float4 ParticleColor;      // per-particle color (surface; wired only when the look sets _ParticleColor)
     float4 DynamicParameter;   // Niagara Particles.DynamicMaterialParameter float4 (surface; wired only when
                                // the look sets _ParticleDynamicParameter). Channel meanings are the effect's
@@ -48,6 +55,10 @@ FCkUsf_SurfaceInput CkUsf_DefaultInput()
     I.SceneNormal = float4(0.0, 0.0, 1.0, 0.0);
     I.CustomDepth = float4(0.0, 0.0, 0.0, 0.0);
     I.CustomStencil = float4(0.0, 0.0, 0.0, 0.0);
+    I.SceneBaseColor = float4(0.0, 0.0, 0.0, 0.0);
+    I.SceneMetallic = float4(0.0, 0.0, 0.0, 0.0);
+    I.SceneRoughness = float4(0.0, 0.0, 0.0, 0.0);
+    I.SceneSpecular = float4(0.0, 0.0, 0.0, 0.0);
     // Inert defaults: an unwired particle look reads opaque-white tint and zeroed dynamics, so a look
     // that reads them renders identically on a non-particle mesh instead of going black.
     I.ParticleColor = float4(1.0, 1.0, 1.0, 1.0);
