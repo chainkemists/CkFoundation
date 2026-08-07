@@ -6,6 +6,8 @@
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h" // FCk_Handle_Transform / FCk_Handle (member cosmetics + controller entity)
 
+#include "CkUsf/Stylize/CkUsf_CelShade_Params.h" // ECk_Usf_CelPattern (member-indexed cel patterns)
+
 #include "CkIskm_BatchedCrowd_Actor.generated.h"
 
 class UCk_IskmAnimCollection_Data;
@@ -89,12 +91,27 @@ public:
     // AdvanceAnimation. Hidden members (Plan-1 flip stand-ins) are excluded — outline those via the entity API.
 
     // Outline a member with InPreset (replaces any previous preset). Null preset = Clear_MemberOutline.
+    // The outline WINS over a cel pattern on the same member: an existing pattern is cleared first.
     void       Set_MemberOutline(int32 InIndex, UCkUsf_OutlinePreset* InPreset);
     void       Clear_MemberOutline(int32 InIndex);
     UCkUsf_OutlinePreset* Get_MemberOutlinePreset(int32 InIndex) const;
     int32      Get_OutlinedMemberCount() const;
     // Instances currently in the highlight clusters (visible outlined members only) — test/gym surface.
     int32      Get_OutlineRenderedInstanceCount() const;
+
+    // ---- Entity cel pattern (member-indexed) — the outline's twin, see CkUsf/Claude.md § Cel shade ----
+    // Same highlight-cluster machinery, one cluster per (crowd, stencil value): the cel contract is a
+    // DIRECT stencil value rather than a refcounted preset allocation, so nothing is allocated here and
+    // nothing is released. REJECTED on an outlined member — both write the same Custom-Stencil byte.
+
+    void       Set_MemberCelPattern(int32 InIndex, ECk_Usf_CelPattern InPattern);
+    void       Clear_MemberCelPattern(int32 InIndex);
+    // A cel pattern has no "invalid" value to report absence with, so the caller states what absence means.
+    ECk_Usf_CelPattern Get_MemberCelPatternOr(int32 InIndex, ECk_Usf_CelPattern InFallback) const;
+    // Custom-Stencil value the member's cluster writes, 0 when it carries no pattern — test/gym surface.
+    int32      Get_MemberCelPatternStencilValue(int32 InIndex) const;
+    int32      Get_CelPatternedMemberCount() const;
+    int32      Get_CelPatternRenderedInstanceCount() const;
 
     //~ AActor
     virtual void EndPlay(const EEndPlayReason::Type InEndPlayReason) override;
@@ -192,26 +209,44 @@ private:
 
     TArray<FMember> _Members;
 
-    // ---- entity-outline state ----
+    // ---- custom-depth highlight state (outlines + cel patterns share this machinery) ----
 
     // Not reflected (nested plain struct): the cluster component is kept alive by the actor's
     // OwnedComponents; presets are referenced by weak ptr (dead preset ⇒ group torn down lazily).
-    struct FOutlineGroup
+    struct FHighlightGroup
     {
         TWeakObjectPtr<UCk_Iskm_BatchedClusterComponent> Comp;
         TArray<int32> Members;                    // member indices (hidden ones filtered at build/push)
-        uint8 Stencil = 0;                        // preset's allocated Custom-Stencil (one refcount per group)
+        uint8 Stencil = 0;                        // the Custom-Stencil this cluster writes
         FBox PaddedBounds = FBox(ForceInit);      // world box the fixed bounds cover; exceed → rebuild
     };
 
-    // Full rebuild of a group (Set_Instances + recomputed fixed bounds — proxy recreate). Takes the WEAK map
-    // key so a dead preset's group still resolves; a null-constructed weak would never match the stale key.
-    void RebuildOutlineGroup(const TWeakObjectPtr<UCkUsf_OutlinePreset>& InPreset);
+    // The ONE construction path for both highlight kinds: a custom-depth-only cluster at the world
+    // origin carrying InStencilValue. Null (and an ensure) when the crowd has no collection/mesh.
+    UCk_Iskm_BatchedClusterComponent* DoCreate_HighlightCluster(uint8 InStencilValue, const TCHAR* InNameBase);
+    // Full rebuild of a group (Set_Instances + recomputed fixed bounds — proxy recreate).
+    void Rebuild_HighlightGroup(FHighlightGroup& InGroup);
     // Light per-frame push of live member data into the group's cluster (no bounds work).
-    void PushOutlineGroup(FOutlineGroup& InGroup);
+    void Push_HighlightGroup(FHighlightGroup& InGroup);
+    // The group InIndex belongs to, or null. A member carries at most one — outline and cel pattern
+    // write the same Custom-Stencil byte and are mutually exclusive.
+    FHighlightGroup* DoFind_MemberHighlightGroup(int32 InIndex);
 
-    TMap<TWeakObjectPtr<UCkUsf_OutlinePreset>, FOutlineGroup> _OutlineGroups;
+    TMap<TWeakObjectPtr<UCkUsf_OutlinePreset>, FHighlightGroup> _OutlineGroups;
     TMap<int32, TWeakObjectPtr<UCkUsf_OutlinePreset>> _MemberOutlines;
+
+    // Cel groups are keyed on the resolved stencil VALUE (the ISM shadow's keying — the cel contract is a
+    // direct value, so two patterns are two clusters and nothing is refcounted). The member records the
+    // key it joined alongside the pattern it asked for, so a StencilBase change between Set and Clear
+    // still resolves the group the member is actually in.
+    struct FMemberCelPattern
+    {
+        ECk_Usf_CelPattern Pattern = ECk_Usf_CelPattern::Bayer;
+        uint8              Stencil = 0;
+    };
+
+    TMap<uint8, FHighlightGroup> _CelGroups;
+    TMap<int32, FMemberCelPattern> _MemberCelPatterns;
 
     // Non-UPROPERTY: ECS handles are value handles into the registry, not GC-tracked (matches _Members).
     TMap<int32, TArray<FMemberCosmetic>> _MemberCosmetics;

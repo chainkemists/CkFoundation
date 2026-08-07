@@ -9,6 +9,7 @@
 
 #include "CkUsf/Outline/CkUsf_OutlinePreset.h"
 #include "CkUsf/Outline/CkUsf_OutlineSubsystem.h"
+#include "CkUsf/Stylize/CkUsf_CelShadeSubsystem.h"
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"        // Get_TransientEntity
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h" // Request_CreateEntity
@@ -398,7 +399,12 @@ auto
     // Groups are tiny, so an unconditional per-tick push beats tracking per-group dirtiness.
     for (auto& Pair : _OutlineGroups)
     {
-        PushOutlineGroup(Pair.Value);
+        Push_HighlightGroup(Pair.Value);
+    }
+
+    for (auto& Pair : _CelGroups)
+    {
+        Push_HighlightGroup(Pair.Value);
     }
 }
 
@@ -525,14 +531,10 @@ auto
         if (M.Visible)
         { _DirtyTiles.Add(M.Tile); }
 
-        // Outlined member walking out of its highlight cluster's fixed bounds → rebuild (recomputes bounds).
-        if (const auto* OutlinePreset = _MemberOutlines.Find(InIndex);
-            OutlinePreset != nullptr)
-        {
-            if (const auto* Group = _OutlineGroups.Find(*OutlinePreset);
-                Group != nullptr && NOT Group->PaddedBounds.IsInsideOrOn(InWorldTransform.GetLocation()))
-            { RebuildOutlineGroup(*OutlinePreset); }
-        }
+        // Highlighted member walking out of its cluster's fixed bounds → rebuild (recomputes bounds).
+        if (auto* Group = DoFind_MemberHighlightGroup(InIndex);
+            Group != nullptr && NOT Group->PaddedBounds.IsInsideOrOn(InWorldTransform.GetLocation()))
+        { Rebuild_HighlightGroup(*Group); }
         return;
     }
 
@@ -554,13 +556,9 @@ auto
     _DirtyTiles.Remove(OldTile);
     _DirtyTiles.Remove(NewTile);
 
-    if (const auto* OutlinePreset = _MemberOutlines.Find(InIndex);
-        OutlinePreset != nullptr)
-    {
-        if (const auto* Group = _OutlineGroups.Find(*OutlinePreset);
-            Group != nullptr && NOT Group->PaddedBounds.IsInsideOrOn(InWorldTransform.GetLocation()))
-        { RebuildOutlineGroup(*OutlinePreset); }
-    }
+    if (auto* Group = DoFind_MemberHighlightGroup(InIndex);
+        Group != nullptr && NOT Group->PaddedBounds.IsInsideOrOn(InWorldTransform.GetLocation()))
+    { Rebuild_HighlightGroup(*Group); }
 }
 
 auto
@@ -683,10 +681,9 @@ void
     RebuildTile(_Members[InIndex].Tile);
     _DirtyTiles.Remove(_Members[InIndex].Tile);
 
-    // Hidden members leave their highlight cluster (their Plan-1 stand-in is outlined via the entity API).
-    if (const auto* OutlinePreset = _MemberOutlines.Find(InIndex);
-        OutlinePreset != nullptr)
-    { RebuildOutlineGroup(*OutlinePreset); }
+    // Hidden members leave their highlight cluster (their Plan-1 stand-in is styled via the entity API).
+    if (auto* Group = DoFind_MemberHighlightGroup(InIndex))
+    { Rebuild_HighlightGroup(*Group); }
 }
 
 auto
@@ -704,7 +701,53 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Entity outline (member-indexed) — see CkUsf/Claude.md § Entity outlines.
+// Custom-depth highlights (member-indexed) — see CkUsf/Claude.md § Entity outlines / § Cel shade.
+
+UCk_Iskm_BatchedClusterComponent*
+    ACk_Iskm_BatchedCrowd_Actor::
+    DoCreate_HighlightCluster(uint8 InStencilValue, const TCHAR* InNameBase)
+{
+    USkeletalMesh* Mesh = ck::IsValid(_Collection) ? _Collection->Get_DefaultMesh() : nullptr;
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Mesh),
+        TEXT("[CkIskm] DoCreate_HighlightCluster: crowd [{}] has no collection/mesh"), this)
+    { return nullptr; }
+
+    auto* Comp = NewObject<UCk_Iskm_BatchedClusterComponent>(this,
+        MakeUniqueObjectName(this, UCk_Iskm_BatchedClusterComponent::StaticClass(), InNameBase));
+    Comp->SetupAttachment(_Root);
+    // Instances AND fixed bounds are authored in WORLD space, so this component must stay at identity
+    // regardless of the crowd actor's transform — absolute flags, not just SetWorldLocation. Inheriting
+    // an actor rotation would rotate the bounds box away from the instances. See CkIskmRenderer/CLAUDE.md.
+    Comp->SetUsingAbsoluteLocation(true);
+    Comp->SetUsingAbsoluteRotation(true);
+    Comp->SetUsingAbsoluteScale(true);
+    Comp->RegisterComponent();
+    Comp->SetWorldTransform(FTransform::Identity);
+    Comp->Setup(_Collection, Mesh);
+    Comp->Set_ManagedExternally(true);
+    Comp->CastShadow = false;
+    // Custom-depth-only: the silhouette source the post-process reads.
+    Comp->bRenderInMainPass = false;
+    Comp->SetRenderCustomDepth(true);
+    Comp->SetCustomDepthStencilValue(static_cast<int32>(InStencilValue));
+
+    return Comp;
+}
+
+auto
+    ACk_Iskm_BatchedCrowd_Actor::
+    DoFind_MemberHighlightGroup(int32 InIndex)
+    -> FHighlightGroup*
+{
+    if (const auto* OutlinePreset = _MemberOutlines.Find(InIndex))
+    { return _OutlineGroups.Find(*OutlinePreset); }
+
+    if (const auto* CelPattern = _MemberCelPatterns.Find(InIndex))
+    { return _CelGroups.Find(CelPattern->Stencil); }
+
+    return nullptr;
+}
 
 void
     ACk_Iskm_BatchedCrowd_Actor::
@@ -746,43 +789,28 @@ void
             TEXT("[CkIskm] Set_MemberOutline: stencil range exhausted for preset [{}] — outline dropped"), InPreset)
         { return; }
 
-        USkeletalMesh* Mesh = ck::IsValid(_Collection) ? _Collection->Get_DefaultMesh() : nullptr;
-
-        CK_ENSURE_IF_NOT(ck::IsValid(Mesh),
-            TEXT("[CkIskm] Set_MemberOutline: crowd has no collection/mesh"))
+        auto* Comp = DoCreate_HighlightCluster(Stencil, TEXT("IskmOutlineCluster"));
+        if (ck::Is_NOT_Valid(Comp, ck::IsValid_Policy_NullptrOnly{}))
         {
             OutlineSubsystem->Release_StencilFor(InPreset);
             return;
         }
 
-        auto* Comp = NewObject<UCk_Iskm_BatchedClusterComponent>(this,
-            MakeUniqueObjectName(this, UCk_Iskm_BatchedClusterComponent::StaticClass(), TEXT("IskmOutlineCluster")));
-        Comp->SetupAttachment(_Root);
-        // Instances AND fixed bounds are authored in WORLD space, so this component must stay at identity
-        // regardless of the crowd actor's transform — absolute flags, not just SetWorldLocation. Inheriting
-        // an actor rotation would rotate the bounds box away from the instances. See CkIskmRenderer/CLAUDE.md.
-        Comp->SetUsingAbsoluteLocation(true);
-        Comp->SetUsingAbsoluteRotation(true);
-        Comp->SetUsingAbsoluteScale(true);
-        Comp->RegisterComponent();
-        Comp->SetWorldTransform(FTransform::Identity);
-        Comp->Setup(_Collection, Mesh);
-        Comp->Set_ManagedExternally(true);
-        Comp->CastShadow = false;
-        // Custom-depth-only: the silhouette source for the SolidOutline post-process.
-        Comp->bRenderInMainPass = false;
-        Comp->SetRenderCustomDepth(true);
-        Comp->SetCustomDepthStencilValue(static_cast<int32>(Stencil));
-
-        auto NewGroup = FOutlineGroup{};
+        auto NewGroup = FHighlightGroup{};
         NewGroup.Comp = Comp;
         NewGroup.Stencil = Stencil;
         Group = &_OutlineGroups.Add(InPreset, MoveTemp(NewGroup));
     }
 
+    // The outline WINS: both write the member's Custom-Stencil byte, and leaving the cel cluster alive
+    // would put two custom-depth writers on the same pixels with the winner undefined. Silent because the
+    // caller asked for the outline and gets it — the reverse order is the one that is refused loudly. Last,
+    // after every way this can fail: an outline that never lands must not take the pattern with it.
+    Clear_MemberCelPattern(InIndex);
+
     Group->Members.AddUnique(InIndex);
     _MemberOutlines.Add(InIndex, InPreset);
-    RebuildOutlineGroup(InPreset);
+    Rebuild_HighlightGroup(*Group);
 }
 
 void
@@ -807,7 +835,7 @@ void
 
     if (Group->Members.Num() > 0)
     {
-        RebuildOutlineGroup(PresetKey);
+        Rebuild_HighlightGroup(*Group);
         return;
     }
 
@@ -857,14 +885,148 @@ int32
     return Total;
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+// Cel pattern (member-indexed) — see CkUsf/Claude.md § Cel shade (Stylize).
+
 void
     ACk_Iskm_BatchedCrowd_Actor::
-    RebuildOutlineGroup(const TWeakObjectPtr<UCkUsf_OutlinePreset>& InPreset)
+    Set_MemberCelPattern(int32 InIndex, ECk_Usf_CelPattern InPattern)
 {
-    auto* Group = _OutlineGroups.Find(InPreset);
-    if (ck::Is_NOT_Valid(Group, ck::IsValid_Policy_NullptrOnly{}))
+    CK_ENSURE_IF_NOT(_Members.IsValidIndex(InIndex),
+        TEXT("[CkIskm] Member index [{}] out of range [0..{})"), InIndex, _Members.Num())
     { return; }
-    auto* Comp = Group->Comp.Get();
+
+    // Both features write the member's Custom-Stencil byte, so accepting this would silently replace the
+    // outline the caller asked for earlier. The entity-level Request_SetCelPattern refuses the same way.
+    const auto StencilIsFree = NOT _MemberOutlines.Contains(InIndex);
+    CK_ENSURE_IF_NOT(StencilIsFree,
+        TEXT("[CkIskm] Set_MemberCelPattern on crowd [{}] member [{}]: the member already carries an "
+             "OUTLINE, which owns its Custom Stencil value; cel pattern NOT applied"), this, InIndex)
+    {}
+    if (NOT StencilIsFree)
+    { return; }
+
+    auto* World = GetWorld();
+    auto* CelShadeSubsystem = ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{})
+        ? World->GetSubsystem<UCkUsf_CelShadeSubsystem>()
+        : nullptr;
+
+    CK_ENSURE_IF_NOT(ck::IsValid(CelShadeSubsystem),
+        TEXT("[CkIskm] Set_MemberCelPattern: no CkUsf cel-shade subsystem available"))
+    { return; }
+
+    // 0 is the engine's "nothing written here", which the contract returns when stencil patterns are
+    // disabled in this world's settings — writing it would mark the cluster and read as a silent success.
+    const auto StencilValue = CelShadeSubsystem->Get_StencilValueFor(InPattern);
+    const auto StencilIsAddressable = StencilValue > 0 && StencilValue <= MAX_uint8;
+    CK_ENSURE_IF_NOT(StencilIsAddressable,
+        TEXT("[CkIskm] Set_MemberCelPattern: the cel stencil contract resolves pattern [{}] to [{}] — "
+             "cel pattern dropped"), InPattern, StencilValue)
+    {}
+    if (NOT StencilIsAddressable)
+    { return; }
+
+    const auto Stencil = static_cast<uint8>(StencilValue);
+
+    if (const auto* Existing = _MemberCelPatterns.Find(InIndex);
+        Existing != nullptr)
+    {
+        if (Existing->Pattern == InPattern && Existing->Stencil == Stencil)
+        { return; }
+        Clear_MemberCelPattern(InIndex); // pattern change: leave the old group first
+    }
+
+    auto* Group = _CelGroups.Find(Stencil);
+    if (Group == nullptr)
+    {
+        auto* Comp = DoCreate_HighlightCluster(Stencil, TEXT("IskmCelPatternCluster"));
+        if (ck::Is_NOT_Valid(Comp, ck::IsValid_Policy_NullptrOnly{}))
+        { return; }
+
+        auto NewGroup = FHighlightGroup{};
+        NewGroup.Comp = Comp;
+        NewGroup.Stencil = Stencil;
+        Group = &_CelGroups.Add(Stencil, MoveTemp(NewGroup));
+    }
+
+    Group->Members.AddUnique(InIndex);
+    _MemberCelPatterns.Add(InIndex, FMemberCelPattern{InPattern, Stencil});
+    Rebuild_HighlightGroup(*Group);
+}
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    Clear_MemberCelPattern(int32 InIndex)
+{
+    const auto* Existing = _MemberCelPatterns.Find(InIndex);
+    if (Existing == nullptr)
+    { return; }
+
+    const auto Stencil = Existing->Stencil;
+    _MemberCelPatterns.Remove(InIndex);
+
+    auto* Group = _CelGroups.Find(Stencil);
+    if (Group == nullptr)
+    { return; }
+
+    Group->Members.RemoveSingleSwap(InIndex);
+
+    if (Group->Members.Num() > 0)
+    {
+        Rebuild_HighlightGroup(*Group);
+        return;
+    }
+
+    // No release half: the cel contract is a direct stencil value, not a refcounted allocation.
+    if (auto* Comp = Group->Comp.Get())
+    { Comp->DestroyComponent(); }
+
+    _CelGroups.Remove(Stencil);
+}
+
+ECk_Usf_CelPattern
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_MemberCelPatternOr(int32 InIndex, ECk_Usf_CelPattern InFallback) const
+{
+    const auto* Existing = _MemberCelPatterns.Find(InIndex);
+    return Existing != nullptr ? Existing->Pattern : InFallback;
+}
+
+int32
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_MemberCelPatternStencilValue(int32 InIndex) const
+{
+    const auto* Existing = _MemberCelPatterns.Find(InIndex);
+    return Existing != nullptr ? static_cast<int32>(Existing->Stencil) : 0;
+}
+
+int32
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_CelPatternedMemberCount() const
+{
+    return _MemberCelPatterns.Num();
+}
+
+int32
+    ACk_Iskm_BatchedCrowd_Actor::
+    Get_CelPatternRenderedInstanceCount() const
+{
+    int32 Total = 0;
+    for (const auto& Pair : _CelGroups)
+    {
+        if (const auto* Comp = Pair.Value.Comp.Get())
+        { Total += Comp->Get_Instances().Num(); }
+    }
+    return Total;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+void
+    ACk_Iskm_BatchedCrowd_Actor::
+    Rebuild_HighlightGroup(FHighlightGroup& InGroup)
+{
+    auto* Comp = InGroup.Comp.Get();
     if (ck::Is_NOT_Valid(Comp))
     { return; }
 
@@ -872,8 +1034,8 @@ void
     // members' world transforms directly. Custom depth has no velocity output, so Prev == Current.
     TArray<UCk_Iskm_BatchedClusterComponent::FInstance> Visible;
     auto PositionBounds = FBox{ForceInit};
-    Visible.Reserve(Group->Members.Num());
-    for (const int32 MemberIndex : Group->Members)
+    Visible.Reserve(InGroup.Members.Num());
+    for (const int32 MemberIndex : InGroup.Members)
     {
         const FMember& M = _Members[MemberIndex];
         if (M.Visible == false)
@@ -894,14 +1056,14 @@ void
         if (ck::IsValid(_Collection))
         { MeshBox = _Collection->Get_AnimatedMeshBounds(); }
         else
-        { CK_TRIGGER_ENSURE(TEXT("[CkIskm] RebuildOutlineGroup on crowd [{}] with no AnimCollection — using a placeholder mesh box"), this); }
+        { CK_TRIGGER_ENSURE(TEXT("[CkIskm] Rebuild_HighlightGroup on crowd [{}] with no AnimCollection — using a placeholder mesh box"), this); }
         const FVector MeshSize = MeshBox.GetSize();
         const float Pad = FMath::Max(MeshSize.X, MeshSize.Y) + _TileSize * 0.5f;
 
-        Group->PaddedBounds = FBox(
+        InGroup.PaddedBounds = FBox(
             PositionBounds.Min + FVector(-Pad, -Pad, MeshBox.Min.Z - MeshSize.Z),
             PositionBounds.Max + FVector(+Pad, +Pad, MeshBox.Max.Z + MeshSize.Z));
-        Comp->Set_FixedLocalBounds(Group->PaddedBounds); // component at origin ⇒ local == world
+        Comp->Set_FixedLocalBounds(InGroup.PaddedBounds); // component at origin ⇒ local == world
     }
 
     Comp->Set_Instances(Visible);
@@ -909,7 +1071,7 @@ void
 
 void
     ACk_Iskm_BatchedCrowd_Actor::
-    PushOutlineGroup(FOutlineGroup& InGroup)
+    Push_HighlightGroup(FHighlightGroup& InGroup)
 {
     auto* Comp = InGroup.Comp.Get();
     if (ck::Is_NOT_Valid(Comp))
@@ -929,12 +1091,12 @@ void
         Visible.Add(Inst);
     }
 
-    // Count changes always flow through RebuildOutlineGroup at write time — a mismatch is a bookkeeping bug.
+    // Count changes always flow through Rebuild_HighlightGroup at write time — a mismatch is a bookkeeping bug.
     if (Visible.Num() == Comp->Get_Instances().Num())
     { Comp->Push_LiveInstances(MoveTemp(Visible)); }
     else
     {
-        CK_TRIGGER_ENSURE(TEXT("[CkIskm] PushOutlineGroup count mismatch ({} members visible vs {} instances) — outline bookkeeping bug, recovering via Set_Instances"),
+        CK_TRIGGER_ENSURE(TEXT("[CkIskm] Push_HighlightGroup count mismatch ({} members visible vs {} instances) — highlight bookkeeping bug, recovering via Set_Instances"),
             Visible.Num(), Comp->Get_Instances().Num());
         Comp->Set_Instances(Visible);
     }
@@ -959,6 +1121,10 @@ void
     }
     _OutlineGroups.Reset();
     _MemberOutlines.Reset();
+
+    // Cel groups have no release half — a direct stencil value is not a refcounted allocation.
+    _CelGroups.Reset();
+    _MemberCelPatterns.Reset();
 
     DoDestroy_ControllerEntity();
 
