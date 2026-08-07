@@ -41,7 +41,18 @@ auto
     }
 
     NewWrapperWidget->BuildWidgetHierarchy();
-    NewWrapperWidget->AddToViewport(InZOrder);
+
+    // AddToViewport is a separate Slate stack that always draws OVER CommonUI's
+    // AddToPlayerScreen layout, so ZOrder cannot rank a widget against open menus.
+    // Hoisted because CK_ENSURE_IF_NOT compiles out, taking any inlined call with it.
+    const auto WasAddedToPlayerScreen = NewWrapperWidget->AddToPlayerScreen(InZOrder);
+
+    CK_ENSURE_IF_NOT(WasAddedToPlayerScreen,
+        TEXT("AddToPlayerScreen failed for wrapper [{}] (no owning local player). Falling back to AddToViewport, which draws OVER UI layers."),
+        NewWrapperWidget)
+    {
+        NewWrapperWidget->AddToViewport(InZOrder);
+    }
 
     return NewWrapperWidget;
 }

@@ -417,6 +417,8 @@ private:
         meta=(AllowPrivateAccess = true))
     ECk_UI_Widget_ViewportOperation _InitialViewportOperation = ECk_UI_Widget_ViewportOperation::AddToViewport;
 
+    // Ranks against the CommonUI layout's own _LayoutZOrder (default 10); exceed it
+    // only for a widget that must cover open menus.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
     int32 _ZOrder = 0;
