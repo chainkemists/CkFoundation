@@ -11,6 +11,7 @@
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/Snapshot/CkSnapshot_RestoreMarker.h" // FTag_Snapshot_SaveTransient
 
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Utils.h"
@@ -31,6 +32,10 @@ auto
     { return {}; }
 
     auto NewLayer = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InCamera);
+
+    // Derived presentation — save-transient, the camera's re-drive re-pushes it (see CkSmTask_Utils::Create).
+    NewLayer.Add<ck::FTag_Snapshot_SaveTransient>();
+
     UCk_Utils_Handle_UE::Set_DebugName(NewLayer, InLayerClass->GetFName());
 
     // MUST precede the EntityScript attach below: the layer's DoEnter acquires modifiers through this back-ref.
