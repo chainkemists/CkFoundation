@@ -248,7 +248,13 @@ auto
     SpawnParams.Name = TEXT("CkUsf_OutlineView");
     _ViewActor = World->SpawnActor<AActor>(AActor::StaticClass(), SpawnParams);
     if (_ViewActor == nullptr)
-    { return false; }
+    {
+        // The MID is what this function early-outs on, so leaving it set turns a failed spawn into a
+        // permanent silent success: every later call returns true with no post-process component attached
+        // and outlines never render in this world. Same shape as UCkUsf_ScreenDitherSubsystem's.
+        _OutlineMID = nullptr;
+        return false;
+    }
 
     _ViewPP = NewObject<UPostProcessComponent>(_ViewActor, TEXT("OutlinePostProcess"));
     _ViewActor->SetRootComponent(_ViewPP);
