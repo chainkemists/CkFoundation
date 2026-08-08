@@ -17,6 +17,7 @@ namespace ck
             FCk_Handle_WorldSpaceWidget,
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_WorldSpaceWidget_Params>,
+            ck::TReadOnly<FFragment_WorldSpaceWidget_Tunables>,
             ck::TReadOnly<FFragment_WorldSpaceWidget>,
             TExclude<FTag_WorldSpaceWidget_Disabled>,
             CK_IGNORE_PENDING_KILL>
@@ -32,6 +33,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FFragment_WorldSpaceWidget& InWorldSpaceWidget) -> void;
     };
 
@@ -42,6 +44,7 @@ namespace ck
             FCk_Handle_WorldSpaceWidget,
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_WorldSpaceWidget_Params>,
+            ck::TReadOnly<FFragment_WorldSpaceWidget_Tunables>,
             ck::TReadOnly<FFragment_WorldSpaceWidget>,
             FTag_WorldSpaceWidget_NeedsUpdateScaling,
             TExclude<FTag_WorldSpaceWidget_Disabled>,
@@ -59,6 +62,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
+            const FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FFragment_WorldSpaceWidget& InWorldSpaceWidget) -> void;
     };
 
@@ -68,7 +72,7 @@ namespace ck
             FProcessor_WorldSpaceWidget_HandleRequests,
             FCk_Handle_WorldSpaceWidget,
             ck::TReadWrite<FFragment_WorldSpaceWidget>,
-            ck::TReadWrite<FFragment_WorldSpaceWidget_Params>,
+            ck::TReadWrite<FFragment_WorldSpaceWidget_Tunables>,
             ck::TReadWrite<FFragment_WorldSpaceWidget_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -87,7 +91,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             FFragment_WorldSpaceWidget_Requests& InRequests) const -> void;
 
     private:
@@ -95,28 +99,28 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetLocationInfo& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetScalingInfo& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetFadingInfo& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
-            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetOcclusionInfo& InRequest) -> void;
     };
 

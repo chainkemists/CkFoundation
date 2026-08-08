@@ -104,7 +104,17 @@ auto
         const FCk_WorldSpaceWidget_Spec& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
-    InHandle.Add<ck::FFragment_WorldSpaceWidget_Params>(InParams);
+    InHandle.Add<ck::FFragment_WorldSpaceWidget_Params>(
+        InParams.Get_Widget(),
+        InParams.Get_InitialViewportOperation(),
+        InParams.Get_ZOrder(),
+        InParams.Get_RenderMode(),
+        InParams.Get_WorldComponentInfo());
+    InHandle.Add<ck::FFragment_WorldSpaceWidget_Tunables>(
+        InParams.Get_LocationInfo(),
+        InParams.Get_ScalingInfo(),
+        InParams.Get_FadingInfo(),
+        InParams.Get_OcclusionInfo());
 
     if (InParams.Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::WorldComponent)
     {
@@ -431,7 +441,7 @@ auto
     if (ck::Is_NOT_Valid(InWorldSpaceWidgetHandle))
     { return false; }
 
-    const auto& Params = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Params>();
+    const auto& Tunables = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Tunables>();
     const auto& Current = InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget>();
 
     const auto PlayerController = Current.Get_ResolvedOwningPlayer();
@@ -447,7 +457,7 @@ auto
     { return false; }
 
     const auto& WidgetTransform = InWorldSpaceWidgetHandle.Get<ck::FFragment_Transform>().Get_Transform().GetLocation();
-    const auto& WidgetOffset = Params.Get_LocationInfo().Get_WorldSpaceOffset();
+    const auto& WidgetOffset = Tunables.Get_LocationInfo().Get_WorldSpaceOffset();
 
     const auto AnchorWorldLocation = WidgetTransform + WidgetOffset;
 
@@ -461,7 +471,7 @@ auto
         Hit,
         CameraManager->GetCameraLocation(),
         AnchorWorldLocation,
-        Params.Get_OcclusionInfo().Get_TraceChannel().GetValue(),
+        Tunables.Get_OcclusionInfo().Get_TraceChannel().GetValue(),
         QueryParams);
 
     return Hit.IsValidBlockingHit();
