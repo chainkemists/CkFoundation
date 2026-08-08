@@ -234,3 +234,42 @@ anchor; if so the residue may be empty, and the anchor should move to the featur
   Spec); `FCk_Fragment_*_ParamsDataCustomization` class names in CkAttributeEditor; and the
   PathNetworkFollower handler's parameter still named `InParams` on a `_Tunables` type (the same file
   hosts the network handler's real `InParams`, so it needs a per-function rename, not a file sweep).
+
+## Log (cont. 5) — 2026-08-08: what the post-rebase compiles caught
+
+Five defects, over three build attempts, none of which any textual audit had flagged. They are
+listed with the reason the audit missed each, because the reasons are all different and all
+reusable:
+
+1. **`CkPathNetwork_Utils.cpp` called `Get_Ribbons()` on Params** after the field moved to `_Graph`.
+   Missed because `rg` is LINE-based and the parameter's type sat three lines above its use inside a
+   lambda. **No single-line pattern can bind a use to a type declared elsewhere** — a textual scan
+   cannot answer "did I break a consumer of a field I moved". Only the compiler can.
+2. **`CkPmg_Fragment_TextShapes.h` friended an undeclared class.** `friend class ::X` does NOT
+   introduce `X` at global scope; a new fragment that friends its Utils needs the forward
+   declaration in its own header.
+3. **`FCk_ObjectiveOwner_ParamsData`** — no `FCk_Fragment_` infix, which every sweep required.
+4. **`FCk_Fragment_Goap_ActionParamsData`** — no underscore before `ParamsData`, which even the
+   pattern written as the "broadest possible" check still required.
+5. **`CkWorldSpaceWidget` HandleRequests DID read a Params field** (`Get_RenderMode`, inside
+   SetScalingInfo) after being told it read none.
+
+**The two lessons worth carrying past this campaign:**
+
+- **A count is not a location.** #5 happened because `rg -o 'InParams.Get_X' | uniq -c` was read as
+  evidence about WHICH FUNCTIONS used the field. It answers how many, never where. If the decision
+  depends on where, the query must return where.
+- **Never re-audit with a pattern that shares an assumption with the one that failed.** #3 and #4 are
+  the same mistake twice: a regex missed something, the fix was a slightly wider regex carrying the
+  same separator assumption, and the re-audit "confirmed clean". The escape is to enumerate the bare
+  substring with NO structure assumed —
+  `rg -o '[A-Za-z0-9_]*ParamsData[A-Za-z0-9_]*' | sort -u` — read the whole list, and classify each
+  entry as type / method / local / comment / string. That enumeration should be the FIRST step after
+  a rebase in a rename campaign, not the fifth pattern. Done for both `ParamsData` and `Current`:
+  the only surviving hits are method names, locals, comments, test-name strings, and
+  `...ParamsDataCustomization` class names.
+
+**Structural checks beat pattern checks.** Before the third attempt, two were run that are worth
+keeping as a habit for any view/signature change: (a) every processor's view type order matches its
+`ForEachEntity` parameter order, parsed rather than grepped; (b) no `In*` fragment parameter is used
+in a function whose signature does not declare it.
