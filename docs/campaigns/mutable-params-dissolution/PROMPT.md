@@ -13,6 +13,26 @@ This is NOT a campaign to convert wholesale `using FFragment_X_Params = FCk_X_Sp
 alias is *correct* wherever every Spec field is read at steady state (root CLAUDE.md, "Retained
 immutable config … All-hot features may alias"). Converting one without evidence is churn.
 
+## Maintainer rulings (2026-08-06) — these govern every decision below
+
+1. **The Spec-wrapper shape is BANNED.** A fragment must never hold the Spec as a member
+   (`ParamsType _Params;`). After a feature is converted, apply this decision tree:
+   - the retained fields are a STRICT SUBSET of the Spec → a residue struct naming those fields,
+     `CK_DEFINE_CONSTRUCTORS` over them;
+   - the retained fields match the Spec **1:1** → `using FFragment_X_Params = FCk_X_Spec;`, a plain
+     alias. Not a wrapper struct. The alias is the correct all-hot shape.
+   Either way the fragment never has a Spec-taking constructor and never double-hops
+   (`Get_Params().Get_Field()` disappears).
+2. **Expect the residue to be LEAN.** Experience from the converted features is that most Spec
+   fields exist only to initialize mutable state elsewhere (state fragments, tags, child entities)
+   and are construction-only. A residue that still matches the Spec 1:1 is the exception, not the
+   default — if you reach that conclusion, re-check the field reads before aliasing.
+3. **`_Current` is RETIRED — remove all of them.** 72 `FFragment_*_Current` fragments exist. Each
+   is renamed to the doctrine's primary-state shape (`FFragment_X` when the feature has one obvious
+   primary blob — the Timer/Transform precedent) or split into purpose-named fragments
+   (`_State`, `_Cache`, `_Scratch`, `_Bindings`, `_Tunables`, …). Never `_Runtime`/`_Tracker`/
+   `_Live`/`_Status`. Splitting is driven by the consumer matrix, exactly as in `9347e2062`.
+
 ## Why this class matters (the worked exemplar)
 
 `CkMinimap`, fixed on this branch in `9347e2062`, carried both directions of the defect at once:
