@@ -34,7 +34,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Applied-state for the actor-backed path (entities with FFragment_OwningActor_Current): records the
+    // Applied-state for the actor-backed path (entities with FFragment_OwningActor): records the
     // pattern + actor + stencil value written, so removal/EndPlay can undo without the Target fragment and
     // so the sync processor can tell a no-op refresh from a real change.
     struct CKUSF_API FFragment_Usf_CelPatternApplied_Actor
