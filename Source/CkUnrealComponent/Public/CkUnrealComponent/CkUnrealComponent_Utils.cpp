@@ -31,7 +31,7 @@ namespace ck_actor_component_internal
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_UnrealComponent_UE, FCk_Handle_UnrealComponent,
-    ck::FFragment_UnrealComponent_Current)
+    ck::FFragment_UnrealComponent)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -88,7 +88,7 @@ auto
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwnerEntity, [&](FCk_Handle InNewEntity)
     {
         InNewEntity.Add<ck::FFragment_UnrealComponent_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_UnrealComponent_Current>(InOwnerEntity);
+        InNewEntity.Add<ck::FFragment_UnrealComponent>(InOwnerEntity);
         InNewEntity.Add<ck::FTag_UnrealComponent_NeedsSetup>();
 
         const auto DebugName = InParams.Get_DebugName().IsNone()
@@ -358,7 +358,7 @@ auto
         TEXT("Cannot Get_Component on invalid UnrealComponent handle"))
     { return nullptr; }
 
-    return InUnrealComponent.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+    return InUnrealComponent.Get<ck::FFragment_UnrealComponent>().Get_Component().Get();
 }
 
 auto
@@ -371,7 +371,7 @@ auto
         TEXT("Cannot Get_OwningEntity on invalid UnrealComponent handle"))
     { return {}; }
 
-    return InUnrealComponent.Get<ck::FFragment_UnrealComponent_Current>().Get_OwningEntity();
+    return InUnrealComponent.Get<ck::FFragment_UnrealComponent>().Get_OwningEntity();
 }
 
 auto
@@ -417,7 +417,7 @@ auto
     auto Components = TArray<UActorComponent*>{};
     for (const auto& Handle : Get_AllHandles(InOwnerEntity))
     {
-        if (auto* Component = Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+        if (auto* Component = Handle.Get<ck::FFragment_UnrealComponent>().Get_Component().Get();
             ck::IsValid(Component))
         {
             Components.Emplace(Component);
@@ -438,7 +438,7 @@ auto
 
     for (const auto& Handle : Get_AllHandles(InOwnerEntity))
     {
-        auto* Component = Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+        auto* Component = Handle.Get<ck::FFragment_UnrealComponent>().Get_Component().Get();
         if (ck::IsValid(Component) && Component->IsA(InComponentClass))
         { return Handle; }
     }
@@ -458,7 +458,7 @@ auto
 
     for (const auto& Handle : Get_AllHandles(InOwnerEntity))
     {
-        auto* Component = Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+        auto* Component = Handle.Get<ck::FFragment_UnrealComponent>().Get_Component().Get();
         if (ck::IsValid(Component) && Component->IsA(InComponentClass))
         { Result.Emplace(Handle); }
     }
@@ -476,7 +476,7 @@ auto
     if (ck::Is_NOT_Valid(Handle))
     { return nullptr; }
 
-    return Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+    return Handle.Get<ck::FFragment_UnrealComponent>().Get_Component().Get();
 }
 
 auto
@@ -489,7 +489,7 @@ auto
     auto Components = TArray<UActorComponent*>{};
     for (const auto& Handle : Get_HandlesByType(InOwnerEntity, InComponentClass))
     {
-        if (auto* Component = Handle.Get<ck::FFragment_UnrealComponent_Current>().Get_Component().Get();
+        if (auto* Component = Handle.Get<ck::FFragment_UnrealComponent>().Get_Component().Get();
             ck::IsValid(Component))
         {
             Components.Emplace(Component);

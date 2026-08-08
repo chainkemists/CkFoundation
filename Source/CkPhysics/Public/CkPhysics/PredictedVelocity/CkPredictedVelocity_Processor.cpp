@@ -19,7 +19,7 @@ namespace ck
         FProcessor_PredictedVelocity_Update::ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_PredictedVelocity_Current& InCurrent) const -> void
+            FFragment_PredictedVelocity& InPredictedVelocity) const -> void
     {
         // Zero-dt tick = settle pass: do no time-dependent work. Early-out BEFORE any read/write so the
         // finite-difference divide is skipped AND _PreviousDeltaTime is not poisoned to 0 (which would trip the
@@ -27,8 +27,8 @@ namespace ck
         if (InDeltaT.Get_Seconds() <= 0.0f)
         { return; }
 
-        const auto PreviousDeltaTime = InCurrent._PreviousDeltaTime;
-        const auto PreviousLocation = InCurrent._PreviousLocation;
+        const auto PreviousDeltaTime = InPredictedVelocity._PreviousDeltaTime;
+        const auto PreviousLocation = InPredictedVelocity._PreviousLocation;
 
         const auto& OwnerActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
         CK_ENSURE_IF_NOT(ck::IsValid(OwnerActor),
@@ -45,9 +45,9 @@ namespace ck
 
         const auto& CurrentVelocity = (CurrentLocation - PreviousLocation) / DeltaTime.Get_Seconds();
 
-        InCurrent._PreviousDeltaTime = InDeltaT;
-        InCurrent._PreviousLocation = CurrentLocation;
-        InCurrent._CurrentVelocity = CurrentVelocity;
+        InPredictedVelocity._PreviousDeltaTime = InDeltaT;
+        InPredictedVelocity._PreviousLocation = CurrentLocation;
+        InPredictedVelocity._CurrentVelocity = CurrentVelocity;
 
         auto VelocityHandle = UCk_Utils_Velocity_UE::Cast(InHandle);
 

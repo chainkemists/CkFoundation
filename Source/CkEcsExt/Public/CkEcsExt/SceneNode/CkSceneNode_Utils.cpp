@@ -37,7 +37,7 @@ auto
     -> void
 {
     if (ck::Is_NOT_Valid(InSceneNode) ||
-        NOT InSceneNode.Has_All<ck::SceneNodeParent, ck::FFragment_SceneNode_Current>() ||
+        NOT InSceneNode.Has_All<ck::SceneNodeParent, ck::FFragment_SceneNode>() ||
         InSceneNode.Has<ck::FFragment_SceneNode_UnrealAnchor>())
     { return; }
 
@@ -105,7 +105,7 @@ auto
             ++ChildrenVisited;
             cpu_work::Add(ECk_CpuWorkCounter::SceneQueueAttempts, 1);
             if (ck::IsValid(InChild) &&
-                InChild.Has_All<ck::SceneNodeParent, ck::FFragment_SceneNode_Current>() &&
+                InChild.Has_All<ck::SceneNodeParent, ck::FFragment_SceneNode>() &&
                 NOT InChild.Has<ck::FFragment_SceneNode_UnrealAnchor>())
             {
                 cpu_work::Add(ECk_CpuWorkCounter::SceneQueueAccepted, 1);
@@ -232,15 +232,15 @@ void
         ++ParentMarginals.FindOrAdd(FString::Printf(TEXT("L%d|%s"), InLayer, *ParentName));
     };
 
-    Registry.View<ck::FTag_SceneNode_Layer0, ck::FFragment_SceneNode_Current, ck::SceneNodeParent,
+    Registry.View<ck::FTag_SceneNode_Layer0, ck::FFragment_SceneNode, ck::SceneNodeParent,
                   ck::FFragment_Transform, ck::TExclude<ck::FTag_DestroyEntity_Initiate>>().ForEach(
         [&](const FCk_Entity Entity, const auto&, const ck::SceneNodeParent& Parent, const auto&)
         { CensusNode(Entity, Parent, 0); });
-    Registry.View<ck::FTag_SceneNode_Layer1, ck::FFragment_SceneNode_Current, ck::SceneNodeParent,
+    Registry.View<ck::FTag_SceneNode_Layer1, ck::FFragment_SceneNode, ck::SceneNodeParent,
                   ck::FFragment_Transform, ck::TExclude<ck::FTag_DestroyEntity_Initiate>>().ForEach(
         [&](const FCk_Entity Entity, const auto&, const ck::SceneNodeParent& Parent, const auto&)
         { CensusNode(Entity, Parent, 1); });
-    Registry.View<ck::FTag_SceneNode_Layer2, ck::FFragment_SceneNode_Current, ck::SceneNodeParent,
+    Registry.View<ck::FTag_SceneNode_Layer2, ck::FFragment_SceneNode, ck::SceneNodeParent,
                   ck::FFragment_Transform, ck::TExclude<ck::FTag_DestroyEntity_Initiate>>().ForEach(
         [&](const FCk_Entity Entity, const auto&, const ck::SceneNodeParent& Parent, const auto&)
         { CensusNode(Entity, Parent, 2); });
@@ -405,7 +405,7 @@ auto
 
     PropagateLayerToChildren(InHandle, MyLayerIndex);
 
-    InHandle.Add<ck::FFragment_SceneNode_Current>(InLocalTransform);
+    InHandle.Add<ck::FFragment_SceneNode>(InLocalTransform);
 
     ck::USceneNodeParent_Utils::AddOrReplace(InHandle, InAttachTo);
     InHandle.AddOrGet<ck::FFragment_SceneNode_PropagationState>();
@@ -441,7 +441,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_SceneNode_UE, FCk_Handle_SceneNode,
-    ck::SceneNodeParent, ck::FFragment_SceneNode_Current);
+    ck::SceneNodeParent, ck::FFragment_SceneNode);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -451,7 +451,7 @@ auto
         const FCk_Handle_SceneNode& InSceneNode)
     -> FTransform
 {
-    return InSceneNode.Get<ck::FFragment_SceneNode_Current>().Get_RelativeTransform();
+    return InSceneNode.Get<ck::FFragment_SceneNode>().Get_RelativeTransform();
 }
 
 auto
@@ -503,7 +503,7 @@ auto
     { ck::FUtils_RecordOfSceneNodes::Request_Disconnect(Parent, InSceneNode); }
 
     InSceneNode.Try_Remove<ck::SceneNodeParent>();
-    InSceneNode.Try_Remove<ck::FFragment_SceneNode_Current>();
+    InSceneNode.Try_Remove<ck::FFragment_SceneNode>();
     InSceneNode.Try_Remove<ck::FTag_SceneNode_PropagationQueued>();
 
     RemoveExistingLayerTag(NodeAsTransform);

@@ -26,10 +26,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKCHAOS_API FFragment_GeometryCollection_Current
+    struct CKCHAOS_API FFragment_GeometryCollection
     {
     public:
-        CK_GENERATED_BODY(FFragment_GeometryCollection_Current);
+        CK_GENERATED_BODY(FFragment_GeometryCollection);
 
     public:
         friend class FProcessor_GeometryCollection_HandleRequests;

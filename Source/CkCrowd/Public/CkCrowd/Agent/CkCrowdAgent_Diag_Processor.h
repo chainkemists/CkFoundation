@@ -126,14 +126,14 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_DiagVelocityBridgeTap : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_DiagVelocityBridgeTap, FCk_Handle_CrowdAgent,
             FTag_CrowdDiag_Tracked,
-            ck::TReadOnly<FFragment_Velocity_Current>, ck::TReadWrite<FFragment_CrowdAgent_DiagRecorder>, CK_IGNORE_PENDING_KILL>
+            ck::TReadOnly<FFragment_Velocity>, ck::TReadWrite<FFragment_CrowdAgent_DiagRecorder>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Physics;
         using RunAfter = TDepList<FProcessor_CrowdAgent_VelocityBridge>;
         using RunBefore = TDepList<FProcessor_Velocity_Clamp, FProcessor_CrowdAgent_DiagApplyOffsetTap>;
         using TProcessor::TProcessor;
-        static auto ForEachEntity(TimeType, HandleType, const FFragment_Velocity_Current&, FFragment_CrowdAgent_DiagRecorder&) -> void;
+        static auto ForEachEntity(TimeType, HandleType, const FFragment_Velocity&, FFragment_CrowdAgent_DiagRecorder&) -> void;
     };
 
     class CKCROWD_API FProcessor_CrowdAgent_DiagApplyOffsetTap : public ck_exp::TProcessor<
@@ -176,7 +176,7 @@ namespace ck
             ck::TReadOnly<FFragment_Transform>,
             FTag_CrowdDiag_Tracked,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
-            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Velocity>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_DiagRecorder>,
             CK_IGNORE_PENDING_KILL>
@@ -193,7 +193,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
-            const FFragment_Velocity_Current& InCurrentVelocity,
+            const FFragment_Velocity& InCurrentVelocity,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_DiagRecorder& InRecorder) -> void;
     };

@@ -15,7 +15,7 @@ namespace ck
 {
     class CKPHYSICS_API FProcessor_PredictedVelocity_Update : public TProcessor<
             FProcessor_PredictedVelocity_Update,
-            ck::TReadWrite<FFragment_PredictedVelocity_Current>,
+            ck::TReadWrite<FFragment_PredictedVelocity>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -33,7 +33,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_PredictedVelocity_Current& InCurrent) const -> void;
+            FFragment_PredictedVelocity& InPredictedVelocity) const -> void;
     };
 }
 

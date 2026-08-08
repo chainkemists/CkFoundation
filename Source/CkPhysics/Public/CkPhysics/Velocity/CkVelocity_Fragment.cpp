@@ -35,9 +35,9 @@ static struct FVelocityRepHandlerRegistrar
                 // HydrationApply reuses the net Apply; no explicit replication re-arm tag is added.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
-                    if (NOT Entity.Has<ck::FFragment_Velocity_Current>())
+                    if (NOT Entity.Has<ck::FFragment_Velocity>())
                     { return {}; }
-                    return FInstancedStruct::Make(FCk_RepData_Velocity{Entity.Get<ck::FFragment_Velocity_Current>().Get_CurrentVelocity()});
+                    return FInstancedStruct::Make(FCk_RepData_Velocity{Entity.Get<ck::FFragment_Velocity>().Get_CurrentVelocity()});
                 },
                 .SharedApply = ApplyFn});
     }

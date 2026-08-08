@@ -33,7 +33,7 @@ namespace ck_objective
     auto
         OnObjectiveStatusAttributeChanged(
             const FCk_Handle& InAttributeOwnerEntity,
-            const ck::TPayload_Attribute_OnValueChanged<ck::FFragment_ByteAttribute_Current>& InPayload)
+            const ck::TPayload_Attribute_OnValueChanged<ck::FFragment_ByteAttribute>& InPayload)
         -> void
     {
         const auto& Objective = UCk_Utils_Objective_UE::Cast(InAttributeOwnerEntity);
@@ -55,12 +55,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Objective_Params& InParams,
-            FFragment_Objective_Current& InCurrent)
+            FFragment_Objective& InObjective)
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
-        const auto& StatusAttribute = InCurrent.Get_StatusAttribute();
+        const auto& StatusAttribute = InObjective.Get_StatusAttribute();
         UUtils_Signal_OnByteAttributeValueChanged_Current::Bind<&ck_objective::OnObjectiveStatusAttributeChanged>(
             StatusAttribute, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing);
     }
@@ -72,7 +72,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             const FFragment_Objective_Params& InParams,
             const FFragment_Objective_Requests& InRequestsComp) const
         -> void
@@ -84,7 +84,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                if (DoHandleRequest(InHandle, InCurrent, InParams, InRequest))
+                if (DoHandleRequest(InHandle, InObjective, InParams, InRequest))
                 { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
@@ -99,7 +99,7 @@ namespace ck
         FProcessor_Objective_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Start& InRequest)
         -> bool
@@ -107,7 +107,7 @@ namespace ck
         if (const auto& CurrentStatus = UCk_Utils_Objective_UE::Get_Status(InHandle);
             CurrentStatus == ECk_ObjectiveStatus::NotStarted)
         {
-            DoSetStatus(InHandle, InCurrent, ECk_ObjectiveStatus::Active);
+            DoSetStatus(InHandle, InObjective, ECk_ObjectiveStatus::Active);
             return true;
         }
 
@@ -118,7 +118,7 @@ namespace ck
         FProcessor_Objective_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Complete& InRequest)
         -> bool
@@ -127,8 +127,8 @@ namespace ck
             CurrentStatus != ECk_ObjectiveStatus::Active)
         { return false; }
 
-        InCurrent._CompletionTag = InRequest.Get_MetaData();
-        DoSetStatus(InHandle, InCurrent, ECk_ObjectiveStatus::Completed);
+        InObjective._CompletionTag = InRequest.Get_MetaData();
+        DoSetStatus(InHandle, InObjective, ECk_ObjectiveStatus::Completed);
 
         // TODO: The tag does not carry over through OnObjectiveStatusAttributeChanged on the client
         UUtils_Signal_OnObjective_Completed::Broadcast(InHandle,
@@ -141,7 +141,7 @@ namespace ck
         FProcessor_Objective_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Fail& InRequest)
         -> bool
@@ -150,8 +150,8 @@ namespace ck
             CurrentStatus != ECk_ObjectiveStatus::Active)
         { return false; }
 
-        InCurrent._FailureTag = InRequest.Get_MetaData();
-        DoSetStatus(InHandle, InCurrent, ECk_ObjectiveStatus::Failed);
+        InObjective._FailureTag = InRequest.Get_MetaData();
+        DoSetStatus(InHandle, InObjective, ECk_ObjectiveStatus::Failed);
 
         // TODO: The tag does not carry over through OnObjectiveStatusAttributeChanged on the client
         UUtils_Signal_OnObjective_Failed::Broadcast(InHandle,
@@ -164,7 +164,7 @@ namespace ck
         FProcessor_Objective_HandleRequests::
         DoSetStatus(
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             ECk_ObjectiveStatus NewStatus)
         -> void
     {
@@ -172,7 +172,7 @@ namespace ck
             CurrentStatus == NewStatus)
         { return; }
 
-        auto StatusAttribute = InCurrent.Get_StatusAttribute();
+        auto StatusAttribute = InObjective.Get_StatusAttribute();
         UCk_Utils_ByteAttribute_UE::Request_Override(
             StatusAttribute,
             ck_objective::StatusEnumToByte(NewStatus),
@@ -187,7 +187,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_Objective_Current& InCurrent)
+            const FFragment_Objective& InObjective)
         -> void
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);

@@ -25,10 +25,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKFX_API FFragment_Sfx_Current
+    struct CKFX_API FFragment_Sfx
     {
     public:
-        CK_GENERATED_BODY(FFragment_Sfx_Current);
+        CK_GENERATED_BODY(FFragment_Sfx);
 
     public:
         friend class FProcessor_Sfx_Setup;

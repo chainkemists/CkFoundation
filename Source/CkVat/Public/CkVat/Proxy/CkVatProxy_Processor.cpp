@@ -41,7 +41,7 @@ namespace ck_vat_proxy_processor
     // The 12-scalar per-instance layout the VAT looks decode (Rate == 0 => Floats[2] holds the frozen local time).
     auto
     Pack_CustomData(
-        const ck::FFragment_VatProxy_Current& InCurrent,
+        const ck::FFragment_VatProxy& InVatProxy,
         const UCk_VatCollection_Data& InCollection)
         -> TArray<float>
     {
@@ -63,36 +63,36 @@ namespace ck_vat_proxy_processor
         TArray<float> Floats;
         Floats.SetNumZeroed(UCk_Vat_Subsystem_UE::NumPerInstanceFloats);
 
-        RowsOf(InCurrent.Get_ActiveClipIndex(), Floats[0], Floats[1]);
-        Floats[2] = InCurrent.Get_PlayRate() == 0.0f
-            ? InCurrent.Get_PausedLocalTime().Get_Seconds()
-            : InCurrent.Get_PlaybackStartTime().Get_Seconds();
-        Floats[3] = InCurrent.Get_PlayRate();
+        RowsOf(InVatProxy.Get_ActiveClipIndex(), Floats[0], Floats[1]);
+        Floats[2] = InVatProxy.Get_PlayRate() == 0.0f
+            ? InVatProxy.Get_PausedLocalTime().Get_Seconds()
+            : InVatProxy.Get_PlaybackStartTime().Get_Seconds();
+        Floats[3] = InVatProxy.Get_PlayRate();
 
-        RowsOf(InCurrent.Get_PrevClipIndex(), Floats[4], Floats[5]);
-        Floats[6] = InCurrent.Get_PrevClipStartTime().Get_Seconds();
-        Floats[7] = InCurrent.Get_PrevPlayRate();
+        RowsOf(InVatProxy.Get_PrevClipIndex(), Floats[4], Floats[5]);
+        Floats[6] = InVatProxy.Get_PrevClipStartTime().Get_Seconds();
+        Floats[7] = InVatProxy.Get_PrevPlayRate();
 
-        Floats[8] = InCurrent.Get_TransitionStartTime().Get_Seconds();
-        Floats[9] = InCurrent.Get_TransitionDuration().Get_Seconds();
-        Floats[10] = InCurrent.Get_ActiveLoopMode() == ECk_VatProxy_LoopMode::Once ? 1.0f : 0.0f;
-        Floats[11] = InCurrent.Get_PrevLoopMode() == ECk_VatProxy_LoopMode::Once ? 1.0f : 0.0f;
+        Floats[8] = InVatProxy.Get_TransitionStartTime().Get_Seconds();
+        Floats[9] = InVatProxy.Get_TransitionDuration().Get_Seconds();
+        Floats[10] = InVatProxy.Get_ActiveLoopMode() == ECk_VatProxy_LoopMode::Once ? 1.0f : 0.0f;
+        Floats[11] = InVatProxy.Get_PrevLoopMode() == ECk_VatProxy_LoopMode::Once ? 1.0f : 0.0f;
 
         return Floats;
     }
 
     auto
     Push_CustomData(
-        ck::FFragment_VatProxy_Current& InCurrent,
+        ck::FFragment_VatProxy& InVatProxy,
         const UCk_VatCollection_Data& InCollection)
         -> void
     {
-        if (ck::Is_NOT_Valid(InCurrent.Get_IsmProxy()))
+        if (ck::Is_NOT_Valid(InVatProxy.Get_IsmProxy()))
         { return; } // no visual composed (setup ensure fired) — playback state still advances
 
-        auto IsmProxy = InCurrent.Get_IsmProxy();
+        auto IsmProxy = InVatProxy.Get_IsmProxy();
         UCk_Utils_IsmProxy_UE::Request_SetCustomInstanceData(IsmProxy,
-            FCk_Request_IsmProxy_SetCustomInstanceData{Pack_CustomData(InCurrent, InCollection)}, {});
+            FCk_Request_IsmProxy_SetCustomInstanceData{Pack_CustomData(InVatProxy, InCollection)}, {});
     }
 }
 
@@ -106,7 +106,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent) const
+            FFragment_VatProxy& InVatProxy) const
         -> void
     {
         InHandle.Remove<FTag_VatProxy_NeedsSetup>();
@@ -131,18 +131,18 @@ namespace ck
                 InParams.Get_InitialClipName(), Collection, InHandle)
             { return; }
 
-            InCurrent._ActiveClipIndex = ClipIndex;
-            InCurrent._ActiveLoopMode = InParams.Get_InitialLoopMode();
-            InCurrent._PlayRate = InParams.Get_InitialPlayRate();
-            InCurrent._PlaybackStartTime = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
-            InCurrent._FinishedDispatched = false;
+            InVatProxy._ActiveClipIndex = ClipIndex;
+            InVatProxy._ActiveLoopMode = InParams.Get_InitialLoopMode();
+            InVatProxy._PlayRate = InParams.Get_InitialPlayRate();
+            InVatProxy._PlaybackStartTime = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
+            InVatProxy._FinishedDispatched = false;
 
             if (InParams.Get_PhaseOffset() == ECk_VatProxy_PhaseOffset::RandomPerInstance)
             {
                 const auto& Clips = Collection->Get_BakedData().Get_BakedClips();
                 const auto ClipSeconds = Clips[ClipIndex].Get_PlayLength().Get_Seconds();
-                InCurrent._PlaybackStartTime =
-                    InCurrent._PlaybackStartTime - FCk_Time{FMath::FRandRange(0.0f, ClipSeconds)};
+                InVatProxy._PlaybackStartTime =
+                    InVatProxy._PlaybackStartTime - FCk_Time{FMath::FRandRange(0.0f, ClipSeconds)};
             }
         }
 
@@ -168,9 +168,9 @@ namespace ck
         auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
         auto IsmProxy = UCk_Utils_IsmProxy_UE::Add(TransformHandle,
             FCk_IsmProxy_Spec{RenderState->_RendererData.Get()});
-        InCurrent._IsmProxy = IsmProxy;
+        InVatProxy._IsmProxy = IsmProxy;
 
-        ck_vat_proxy_processor::Push_CustomData(InCurrent, *Collection);
+        ck_vat_proxy_processor::Push_CustomData(InVatProxy, *Collection);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -181,7 +181,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent,
+            FFragment_VatProxy& InVatProxy,
             FFragment_VatProxy_Requests& InRequestsComp) const
         -> void
     {
@@ -194,7 +194,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                if (DoHandleRequest(InHandle, InParams, InCurrent, InRequest))
+                if (DoHandleRequest(InHandle, InParams, InVatProxy, InRequest))
                 { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
@@ -207,7 +207,7 @@ namespace ck
         // One custom-data push per drained batch — playback state only reaches the GPU on change.
         if (const auto* Collection = InParams.Get_Collection().Get();
             ck::IsValid(Collection))
-        { ck_vat_proxy_processor::Push_CustomData(InCurrent, *Collection); }
+        { ck_vat_proxy_processor::Push_CustomData(InVatProxy, *Collection); }
     }
 
     auto
@@ -215,7 +215,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent,
+            FFragment_VatProxy& InVatProxy,
             const FCk_Request_VatProxy_PlayClip& InRequest)
         -> bool
     {
@@ -233,19 +233,19 @@ namespace ck
 
         const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
 
-        InCurrent._PrevClipIndex = InCurrent._ActiveClipIndex;
-        InCurrent._PrevClipStartTime = InCurrent._PlaybackStartTime;
-        InCurrent._PrevPlayRate = InCurrent._PlayRate;
-        InCurrent._PrevLoopMode = InCurrent._ActiveLoopMode;
-        InCurrent._TransitionStartTime = Now;
-        InCurrent._TransitionDuration = InRequest.Get_TransitionDuration();
+        InVatProxy._PrevClipIndex = InVatProxy._ActiveClipIndex;
+        InVatProxy._PrevClipStartTime = InVatProxy._PlaybackStartTime;
+        InVatProxy._PrevPlayRate = InVatProxy._PlayRate;
+        InVatProxy._PrevLoopMode = InVatProxy._ActiveLoopMode;
+        InVatProxy._TransitionStartTime = Now;
+        InVatProxy._TransitionDuration = InRequest.Get_TransitionDuration();
 
-        InCurrent._ActiveClipIndex = ClipIndex;
-        InCurrent._ActiveLoopMode = InRequest.Get_LoopMode();
-        InCurrent._PlayRate = InRequest.Get_PlayRate();
-        InCurrent._PlaybackStartTime = Now;
-        InCurrent._PausedLocalTime = FCk_Time{};
-        InCurrent._FinishedDispatched = false;
+        InVatProxy._ActiveClipIndex = ClipIndex;
+        InVatProxy._ActiveLoopMode = InRequest.Get_LoopMode();
+        InVatProxy._PlayRate = InRequest.Get_PlayRate();
+        InVatProxy._PlaybackStartTime = Now;
+        InVatProxy._PausedLocalTime = FCk_Time{};
+        InVatProxy._FinishedDispatched = false;
 
         return true;
     }
@@ -255,22 +255,22 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent,
+            FFragment_VatProxy& InVatProxy,
             const FCk_Request_VatProxy_Stop& InRequest)
         -> bool
     {
-        if (InCurrent._ActiveClipIndex == INDEX_NONE)
+        if (InVatProxy._ActiveClipIndex == INDEX_NONE)
         { return true; } // nothing playing — reference pose is already static
 
-        if (InCurrent._PlayRate == 0.0f)
+        if (InVatProxy._PlayRate == 0.0f)
         { return true; } // already frozen
 
         const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
         const auto ElapsedLocalSeconds =
-            (Now - InCurrent._PlaybackStartTime).Get_Seconds() * InCurrent._PlayRate;
+            (Now - InVatProxy._PlaybackStartTime).Get_Seconds() * InVatProxy._PlayRate;
 
-        InCurrent._PausedLocalTime = FCk_Time{ElapsedLocalSeconds};
-        InCurrent._PlayRate = 0.0f;
+        InVatProxy._PausedLocalTime = FCk_Time{ElapsedLocalSeconds};
+        InVatProxy._PlayRate = 0.0f;
 
         return true;
     }
@@ -280,16 +280,16 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent,
+            FFragment_VatProxy& InVatProxy,
             const FCk_Request_VatProxy_SetPlayRate& InRequest)
         -> bool
     {
-        if (InCurrent._ActiveClipIndex == INDEX_NONE)
+        if (InVatProxy._ActiveClipIndex == INDEX_NONE)
         { return true; }
 
         const auto NewRate = InRequest.Get_PlayRate();
 
-        if (NewRate == InCurrent._PlayRate)
+        if (NewRate == InVatProxy._PlayRate)
         { return true; }
 
         const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
@@ -298,20 +298,20 @@ namespace ck
         {
             // Rate 0 == freeze at the current position (same contract as Stop).
             const auto ElapsedLocalSeconds =
-                (Now - InCurrent._PlaybackStartTime).Get_Seconds() * InCurrent._PlayRate;
-            InCurrent._PausedLocalTime = FCk_Time{ElapsedLocalSeconds};
-            InCurrent._PlayRate = 0.0f;
+                (Now - InVatProxy._PlaybackStartTime).Get_Seconds() * InVatProxy._PlayRate;
+            InVatProxy._PausedLocalTime = FCk_Time{ElapsedLocalSeconds};
+            InVatProxy._PlayRate = 0.0f;
             return true;
         }
 
         // Rebase the start time so (Now - Start) * Rate stays continuous across the rate change.
-        const auto CurrentLocalSeconds = InCurrent._PlayRate == 0.0f
-            ? InCurrent._PausedLocalTime.Get_Seconds()
-            : (Now - InCurrent._PlaybackStartTime).Get_Seconds() * InCurrent._PlayRate;
+        const auto CurrentLocalSeconds = InVatProxy._PlayRate == 0.0f
+            ? InVatProxy._PausedLocalTime.Get_Seconds()
+            : (Now - InVatProxy._PlaybackStartTime).Get_Seconds() * InVatProxy._PlayRate;
 
-        InCurrent._PlaybackStartTime = Now - FCk_Time{CurrentLocalSeconds / NewRate};
-        InCurrent._PausedLocalTime = FCk_Time{};
-        InCurrent._PlayRate = NewRate;
+        InVatProxy._PlaybackStartTime = Now - FCk_Time{CurrentLocalSeconds / NewRate};
+        InVatProxy._PausedLocalTime = FCk_Time{};
+        InVatProxy._PlayRate = NewRate;
 
         return true;
     }
@@ -337,13 +337,13 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent) const
+            FFragment_VatProxy& InVatProxy) const
         -> void
     {
-        if (InCurrent.Get_ActiveClipIndex() == INDEX_NONE ||
-            InCurrent.Get_ActiveLoopMode() != ECk_VatProxy_LoopMode::Once ||
-            InCurrent.Get_FinishedDispatched() ||
-            InCurrent.Get_PlayRate() <= 0.0f)
+        if (InVatProxy.Get_ActiveClipIndex() == INDEX_NONE ||
+            InVatProxy.Get_ActiveLoopMode() != ECk_VatProxy_LoopMode::Once ||
+            InVatProxy.Get_FinishedDispatched() ||
+            InVatProxy.Get_PlayRate() <= 0.0f)
         { return; }
 
         const auto* Collection = InParams.Get_Collection().Get();
@@ -351,20 +351,20 @@ namespace ck
         { return; } // Setup already ensured loudly
 
         const auto& Clips = Collection->Get_BakedData().Get_BakedClips();
-        CK_ENSURE_IF_NOT(Clips.IsValidIndex(InCurrent.Get_ActiveClipIndex()),
+        CK_ENSURE_IF_NOT(Clips.IsValidIndex(InVatProxy.Get_ActiveClipIndex()),
             TEXT("Vat entity [{}]: active clip index [{}] is out of range of VatCollection [{}]'s baked clip table ([{}] clips) — stale index after a rebake?"),
-            InHandle, InCurrent.Get_ActiveClipIndex(), Collection, Clips.Num())
+            InHandle, InVatProxy.Get_ActiveClipIndex(), Collection, Clips.Num())
         { return; }
 
         const auto Now = ck_vat_proxy_processor::Get_CurrentWorldTime(InHandle);
         const auto ElapsedLocalSeconds =
-            (Now - InCurrent.Get_PlaybackStartTime()).Get_Seconds() * InCurrent.Get_PlayRate();
-        const auto& Clip = Clips[InCurrent.Get_ActiveClipIndex()];
+            (Now - InVatProxy.Get_PlaybackStartTime()).Get_Seconds() * InVatProxy.Get_PlayRate();
+        const auto& Clip = Clips[InVatProxy.Get_ActiveClipIndex()];
 
         if (ElapsedLocalSeconds < Clip.Get_PlayLength().Get_Seconds())
         { return; }
 
-        InCurrent._FinishedDispatched = true;
+        InVatProxy._FinishedDispatched = true;
         UUtils_Signal_VatProxy_OnClipFinished::Broadcast(InHandle, ck::MakePayload(InHandle, Clip.Get_Name()));
     }
 }

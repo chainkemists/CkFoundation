@@ -99,8 +99,8 @@ namespace ck
         {
             case ECk_RenderStatus_Group::Unspecified:
             {
-                InHandle.View<FFragment_OwningActor_Current, CK_IGNORE_PENDING_KILL>().ForEach(
-                [&](EntityType InEntity, const FFragment_OwningActor_Current& InOwningActorComp)
+                InHandle.View<FFragment_OwningActor, CK_IGNORE_PENDING_KILL>().ForEach(
+                [&](EntityType InEntity, const FFragment_OwningActor& InOwningActorComp)
                 {
                     const auto Handle = MakeHandle(InEntity, InHandle);
                     TryAddToRenderedActorsList(InOwningActorComp.Get_EntityOwningActor().Get(), Handle);
@@ -110,8 +110,8 @@ namespace ck
             }
             case ECk_RenderStatus_Group::WorldStatic:
             {
-                InHandle.View<FFragment_OwningActor_Current, FTag_RenderStatus_Group_WorldStatic, CK_IGNORE_PENDING_KILL>().ForEach(
-                [&](EntityType InEntity, const FFragment_OwningActor_Current& InOwningActorComp)
+                InHandle.View<FFragment_OwningActor, FTag_RenderStatus_Group_WorldStatic, CK_IGNORE_PENDING_KILL>().ForEach(
+                [&](EntityType InEntity, const FFragment_OwningActor& InOwningActorComp)
                 {
                     const auto Handle = MakeHandle(InEntity, InHandle);
                     TryAddToRenderedActorsList(InOwningActorComp.Get_EntityOwningActor().Get(), Handle);
@@ -121,8 +121,8 @@ namespace ck
             }
             case ECk_RenderStatus_Group::WorldDynamic:
             {
-                InHandle.View<FFragment_OwningActor_Current, FTag_RenderStatus_Group_WorldDynamic, CK_IGNORE_PENDING_KILL>().ForEach(
-                [&](EntityType InEntity, const FFragment_OwningActor_Current& InOwningActorComp)
+                InHandle.View<FFragment_OwningActor, FTag_RenderStatus_Group_WorldDynamic, CK_IGNORE_PENDING_KILL>().ForEach(
+                [&](EntityType InEntity, const FFragment_OwningActor& InOwningActorComp)
                 {
                     const auto Handle = MakeHandle(InEntity, InHandle);
                     TryAddToRenderedActorsList(InOwningActorComp.Get_EntityOwningActor().Get(), Handle);
@@ -132,8 +132,8 @@ namespace ck
             }
             case ECk_RenderStatus_Group::Pawn:
             {
-                InHandle.View<FFragment_OwningActor_Current, FTag_RenderStatus_Group_Pawn, CK_IGNORE_PENDING_KILL>().ForEach(
-                [&](EntityType InEntity, const FFragment_OwningActor_Current& InOwningActorComp)
+                InHandle.View<FFragment_OwningActor, FTag_RenderStatus_Group_Pawn, CK_IGNORE_PENDING_KILL>().ForEach(
+                [&](EntityType InEntity, const FFragment_OwningActor& InOwningActorComp)
                 {
                     const auto Handle = MakeHandle(InEntity, InHandle);
                     TryAddToRenderedActorsList(InOwningActorComp.Get_EntityOwningActor().Get(), Handle);

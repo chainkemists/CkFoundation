@@ -18,7 +18,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Velocity_Current& InVelocityCurrent,
+            const FFragment_Velocity& InVelocityCurrent,
             const FFragment_Transform& InTransformCurrent,
             const FFragment_AutoReorient_Params& InAutoReorientParams) const
         -> void

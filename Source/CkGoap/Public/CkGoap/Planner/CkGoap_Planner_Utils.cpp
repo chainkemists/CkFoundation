@@ -69,7 +69,7 @@ auto
     UCk_Utils_GameplayLabel_UE::Add(ActionEntity, ActionTag);
 
     ActionEntity.Add<ck::FFragment_Goap_Action_Params>(InParams);
-    ActionEntity.Add<ck::FFragment_Goap_Action_Current>();
+    ActionEntity.Add<ck::FFragment_Goap_Action>();
     ActionEntity.Add<ck::FFragment_Goap_Action_Definition>();
     ActionEntity.Add<ck::FFragment_Goap_Action_Tree>();
 
@@ -101,9 +101,9 @@ auto
 	-> void
 {
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Params>(InParams);
-	InPlannerEntity.Add<ck::FFragment_Goap_Planner_Current>();
+	InPlannerEntity.Add<ck::FFragment_Goap_Planner>();
 
-	auto& Current = InPlannerEntity.Get<ck::FFragment_Goap_Planner_Current>();
+	auto& Current = InPlannerEntity.Get<ck::FFragment_Goap_Planner>();
 	Current._EnableToggle = InParams.Get_InitialToggle();
 
 	InPlannerEntity.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
@@ -399,7 +399,7 @@ auto
 {
 	if (ck::Is_NOT_Valid(InPlanner))
 	{ return ECk_EnableDisable::Disable; }
-	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_EnableToggle();
+	return InPlanner.Get<ck::FFragment_Goap_Planner>().Get_EnableToggle();
 }
 
 auto
@@ -408,7 +408,7 @@ auto
 {
 	if (ck::Is_NOT_Valid(InPlanner))
 	{ return {}; }
-	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_DependencyCycles();
+	return InPlanner.Get<ck::FFragment_Goap_Planner>().Get_DependencyCycles();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -590,7 +590,7 @@ auto
 		TEXT("Invalid Planner handle in Get_HasUnconditionalFallback"))
 	{ return false; }
 
-	return InPlanner.Get<ck::FFragment_Goap_Planner_Current>().Get_HasUnconditionalFallback();
+	return InPlanner.Get<ck::FFragment_Goap_Planner>().Get_HasUnconditionalFallback();
 }
 
 auto
@@ -860,10 +860,10 @@ auto
 	}
 
 	InAction.Add<ck::FFragment_Goap_Planner_Params>(InParams);
-	InAction.Add<ck::FFragment_Goap_Planner_Current>();
+	InAction.Add<ck::FFragment_Goap_Planner>();
 	InAction.Add<ck::FFragment_Goap_Planner_ActionCatalogIndex>();
 
-	auto& Current = InAction.Get<ck::FFragment_Goap_Planner_Current>();
+	auto& Current = InAction.Get<ck::FFragment_Goap_Planner>();
 	Current._EnableToggle = InParams.Get_InitialToggle();
 
 	InAction.AddOrGet<ck::FFragment_Goap_Planner_PlanState>();
@@ -928,7 +928,7 @@ auto
 		return InPlanner;
 	}
 
-	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner_Current>();
+	auto& Current = InPlanner.Get<ck::FFragment_Goap_Planner>();
 	Current._EnableToggle = InToggle;
 
 	// Both gated processors early-out on Disable and resume on re-enable, so a toggle in either

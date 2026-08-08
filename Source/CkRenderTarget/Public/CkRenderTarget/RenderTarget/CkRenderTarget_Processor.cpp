@@ -179,7 +179,7 @@ namespace ck_render_target_processor
     auto
     DrawPixelsToTarget(
         const FCk_Handle_RenderTarget& InRenderTargetEntity,
-        const ck::FFragment_RenderTarget_Current& InCurrent,
+        const ck::FFragment_RenderTarget& InRenderTarget,
         const TArray<uint8>& InPixels,
         const FIntPoint& InSize,
         TStrongObjectPtr<UTexture2D>& InOutUploadTexture) -> void
@@ -187,7 +187,7 @@ namespace ck_render_target_processor
         if (NOT FApp::CanEverRender())
         { return; }
 
-        auto* Target = InCurrent.Get_Target().Get();
+        auto* Target = InRenderTarget.Get_Target().Get();
 
         if (ck::Is_NOT_Valid(Target))
         { return; }
@@ -378,7 +378,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            FFragment_RenderTarget_Current& InCurrent)
+            FFragment_RenderTarget& InRenderTarget)
         -> void
     {
         InRenderTargetEntity.Remove<MarkedDirtyBy>();
@@ -388,7 +388,7 @@ namespace ck
         if (ck::Is_NOT_Valid(ResolvedTarget))
         { return; }
 
-        InCurrent._Target = TStrongObjectPtr{ResolvedTarget};
+        InRenderTarget._Target = TStrongObjectPtr{ResolvedTarget};
 
         // Composition anchor for the snapshot restore view, needed on EVERY sync entity even if it
         // never draws — CkRenderTarget/Claude.md.
@@ -436,7 +436,7 @@ namespace ck
         }
 
         render_target::Verbose(TEXT("RenderTarget [{}] setup complete — target [{}]"),
-            InRenderTargetEntity, InCurrent._Target.Get());
+            InRenderTargetEntity, InRenderTarget._Target.Get());
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -453,7 +453,7 @@ namespace ck
         // Preconditions: evaluate ALL before any mutation, so the repaint below happens exactly
         // once. The restored child's Setup runs BEFORE FGroup_DeferredApply — retry until it has.
         if (NOT InChild.Has<FFragment_RenderTarget_Params>()
-            || NOT InChild.Has<FFragment_RenderTarget_Current>()
+            || NOT InChild.Has<FFragment_RenderTarget>()
             || NOT InChild.Has<FFragment_RenderTarget_AuthoredLog>())
         { return false; }
 
@@ -476,7 +476,7 @@ namespace ck
 
         // Past every NotReady gate: everything below runs exactly once per load.
         auto  RenderTargetEntity = UCk_Utils_RenderTarget_UE::CastChecked(InChild);
-        auto& Current            = InChild.Get<FFragment_RenderTarget_Current>();
+        auto& Current            = InChild.Get<FFragment_RenderTarget>();
         auto& AuthoredLog        = InChild.Get<FFragment_RenderTarget_AuthoredLog>();
         const auto& Batches      = InChannel.Get_Batches();
 
@@ -525,7 +525,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_Requests& InRequests) const
         -> void
     {
@@ -633,10 +633,10 @@ namespace ck
         if (Cmds.IsEmpty())
         { return; }
 
-        DoApplyBatch(InRenderTargetEntity, InCurrent, Cmds);
+        DoApplyBatch(InRenderTargetEntity, InRenderTarget, Cmds);
 
-        const auto BatchSeq = InCurrent._NextBatchSeq;
-        InCurrent._NextBatchSeq = BatchSeq + 1;
+        const auto BatchSeq = InRenderTarget._NextBatchSeq;
+        InRenderTarget._NextBatchSeq = BatchSeq + 1;
 
         // Pixels-only targets reconcile through the pixel stream and never carry instructions.
         if (InParams.Get_Replication() == ECk_Replication::Replicates
@@ -903,7 +903,7 @@ namespace ck
         FProcessor_RenderTarget_HandleRequests::
         DoApplyBatch(
             HandleType InRenderTargetEntity,
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             const TArray<FCk_RenderTarget_DrawCmd>& InCmds)
         -> void
     {
@@ -912,14 +912,14 @@ namespace ck
 
         // Pin BEFORE the render gates: headless machines skip the draw but still hold the cmds in
         // the authored log / channel ring, which GC does not trace.
-        DoPinCmdAssets(InCurrent, InCmds);
+        DoPinCmdAssets(InRenderTarget, InCmds);
 
         // -nullrhi CI and dedicated servers cannot draw — the batch still counts as applied
         // (seq advances, signal fires) so the instruction stream stays consistent across machines.
         if (NOT FApp::CanEverRender())
         { return; }
 
-        auto* Target = InCurrent.Get_Target().Get();
+        auto* Target = InRenderTarget.Get_Target().Get();
 
         // Setup already ensured loudly — stay quiet so one misconfiguration doesn't ensure per batch.
         if (ck::Is_NOT_Valid(Target))
@@ -973,7 +973,7 @@ namespace ck
     auto
         FProcessor_RenderTarget_HandleRequests::
         DoPinCmdAssets(
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             const TArray<FCk_RenderTarget_DrawCmd>& InCmds)
         -> void
     {
@@ -982,14 +982,14 @@ namespace ck
             if (ck::Is_NOT_Valid(InAsset))
             { return; }
 
-            const auto AlreadyPinned = InCurrent._PinnedCmdAssets.ContainsByPredicate(
+            const auto AlreadyPinned = InRenderTarget._PinnedCmdAssets.ContainsByPredicate(
                 [&](const TStrongObjectPtr<UObject>& InPinned) -> bool
                 { return InPinned.Get() == InAsset; });
 
             if (AlreadyPinned)
             { return; }
 
-            InCurrent._PinnedCmdAssets.Emplace(TStrongObjectPtr<UObject>{InAsset});
+            InRenderTarget._PinnedCmdAssets.Emplace(TStrongObjectPtr<UObject>{InAsset});
         };
 
         // Resolve-then-LOAD, and the load half is load-bearing. DoApplyBatch funnels three callers: local
@@ -1192,7 +1192,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_PixelSync& InPixelSync)
         -> void
     {
@@ -1221,7 +1221,7 @@ namespace ck
             return;
         }
 
-        auto* Target = InCurrent.Get_Target().Get();
+        auto* Target = InRenderTarget.Get_Target().Get();
 
         if (ck::Is_NOT_Valid(Target))
         {
@@ -1237,7 +1237,7 @@ namespace ck
         { return; }
 
         InPixelSync._Readback = Readback;
-        InPixelSync._PendingInstructionWatermark = InCurrent.Get_NextBatchSeq() - 1;
+        InPixelSync._PendingInstructionWatermark = InRenderTarget.Get_NextBatchSeq() - 1;
         InRenderTargetEntity.Add<FTag_RenderTarget_PixelSyncInFlight>();
 
         render_target::VeryVerbose(TEXT("RenderTarget [{}] pixel readback enqueued (watermark [{}])"),
@@ -1410,7 +1410,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ReplayQueue& InReplayQueue)
         -> void
     {
@@ -1456,7 +1456,7 @@ namespace ck
                 InRenderTargetEntity.AddOrGet<FTag_RenderTarget_NeedsBaseline>();
             }
 
-            FProcessor_RenderTarget_HandleRequests::DoApplyBatch(InRenderTargetEntity, InCurrent, Batch.Get_Cmds());
+            FProcessor_RenderTarget_HandleRequests::DoApplyBatch(InRenderTargetEntity, InRenderTarget, Batch.Get_Cmds());
             ReplayState._LastAppliedSeq = Seq;
 
             UUtils_Signal_RenderTarget_OnInstructionsApplied::Broadcast(InRenderTargetEntity,
@@ -1786,7 +1786,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ClientStaging& InStaging)
         -> void
     {
@@ -1795,7 +1795,7 @@ namespace ck
             if (NOT InStaging._ApplyJob->_Done)
             { return; }
 
-            DoFinishApply(InRenderTargetEntity, InCurrent, InStaging);
+            DoFinishApply(InRenderTargetEntity, InRenderTarget, InStaging);
         }
 
         if (InRenderTargetEntity.Has<FFragment_RenderTarget_ChunkInbox>())
@@ -1860,7 +1860,7 @@ namespace ck
         FProcessor_RenderTarget_ReceivePixels::
         DoFinishApply(
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ClientStaging& InStaging)
         -> void
     {
@@ -1910,7 +1910,7 @@ namespace ck
         InStaging._LastAppliedPayloadKind = InStaging._ApplyJobKind;
         InStaging._LastAppliedPayloadSeq = InStaging._ApplyJobPayloadSeq;
 
-        DoUploadStagingToTarget(InRenderTargetEntity, InCurrent, InStaging);
+        DoUploadStagingToTarget(InRenderTargetEntity, InRenderTarget, InStaging);
 
         UUtils_Signal_RenderTarget_OnPixelPayloadApplied::Broadcast(InRenderTargetEntity,
             MakePayload(InRenderTargetEntity, InStaging._ApplyJobKind, InStaging._ApplyJobPayloadSeq));
@@ -1923,12 +1923,12 @@ namespace ck
         FProcessor_RenderTarget_ReceivePixels::
         DoUploadStagingToTarget(
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ClientStaging& InStaging)
         -> void
     {
         ck_render_target_processor::DrawPixelsToTarget(
-            InRenderTargetEntity, InCurrent, InStaging._Pixels, InStaging._Size, InStaging._UploadTexture);
+            InRenderTargetEntity, InRenderTarget, InStaging._Pixels, InStaging._Size, InStaging._UploadTexture);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -2055,7 +2055,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            FFragment_RenderTarget_Current& InCurrent,
+            FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_ServerIngressBatches& InIngress)
         -> void
     {
@@ -2073,10 +2073,10 @@ namespace ck
 
         for (const auto& Batch : IngressCopy)
         {
-            FProcessor_RenderTarget_HandleRequests::DoApplyBatch(InRenderTargetEntity, InCurrent, Batch.Get_Cmds());
+            FProcessor_RenderTarget_HandleRequests::DoApplyBatch(InRenderTargetEntity, InRenderTarget, Batch.Get_Cmds());
 
-            const auto BatchSeq = InCurrent._NextBatchSeq;
-            InCurrent._NextBatchSeq = BatchSeq + 1;
+            const auto BatchSeq = InRenderTarget._NextBatchSeq;
+            InRenderTarget._NextBatchSeq = BatchSeq + 1;
 
             if (InParams.Get_SyncMode() != ECk_RenderTarget_SyncMode::Pixels)
             {
@@ -2101,7 +2101,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InRenderTargetEntity,
             const FFragment_RenderTarget_Params& InParams,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_PixelSync& InPixelSync,
             FFragment_RenderTarget_UploadAssembly& InAssembly)
         -> void
@@ -2111,7 +2111,7 @@ namespace ck
             if (NOT InAssembly._ApplyJob->_Done)
             { return; }
 
-            DoFinishUploadApply(InRenderTargetEntity, InCurrent, InPixelSync, InAssembly);
+            DoFinishUploadApply(InRenderTargetEntity, InRenderTarget, InPixelSync, InAssembly);
         }
 
         if (InAssembly._Inbox.IsEmpty())
@@ -2232,7 +2232,7 @@ namespace ck
         FProcessor_RenderTarget_ReceiveClientUploads::
         DoFinishUploadApply(
             HandleType InRenderTargetEntity,
-            const FFragment_RenderTarget_Current& InCurrent,
+            const FFragment_RenderTarget& InRenderTarget,
             FFragment_RenderTarget_PixelSync& InPixelSync,
             FFragment_RenderTarget_UploadAssembly& InAssembly)
         -> void
@@ -2253,10 +2253,10 @@ namespace ck
         // for what is baked into ITS pixels.
         InPixelSync._LastSyncedSnapshot = JobResult->_NewStaging;
         InPixelSync._SnapshotSize = JobResult->_Size;
-        InPixelSync._SnapshotInstructionWatermark = InCurrent.Get_NextBatchSeq() - 1;
+        InPixelSync._SnapshotInstructionWatermark = InRenderTarget.Get_NextBatchSeq() - 1;
 
         ck_render_target_processor::DrawPixelsToTarget(
-            InRenderTargetEntity, InCurrent, InPixelSync._LastSyncedSnapshot, JobResult->_Size, InAssembly._UploadTexture);
+            InRenderTargetEntity, InRenderTarget, InPixelSync._LastSyncedSnapshot, JobResult->_Size, InAssembly._UploadTexture);
 
         const auto PayloadSeq = InPixelSync._NextPayloadSeq;
         InPixelSync._NextPayloadSeq = PayloadSeq + 1;

@@ -1062,8 +1062,8 @@ namespace ck
 
             // An entity may own MORE Jolt bodies than its JoltBody (e.g. a Probe), all sharing the entity id
             // as UserData. Only the JoltBody's own body may write the entity's StepPose.
-            if (NOT Handle.Has<ck::FFragment_JoltBody_Current>() ||
-                Handle.Get<ck::FFragment_JoltBody_Current>().Get_BodyId().GetIndexAndSequenceNumber() != Pair.Key)
+            if (NOT Handle.Has<ck::FFragment_JoltBody>() ||
+                Handle.Get<ck::FFragment_JoltBody>().Get_BodyId().GetIndexAndSequenceNumber() != Pair.Key)
             {
                 Entry.DirtyThisFrame = false;
                 continue;
@@ -1297,7 +1297,7 @@ namespace ck
 
             auto Handle = InTransientEntity.Get_ValidHandle(Entity.Get_ID());
             if (ck::Is_NOT_Valid(Handle) ||
-                NOT Handle.Has<ck::FFragment_JoltCharacter_Current>() ||
+                NOT Handle.Has<ck::FFragment_JoltCharacter>() ||
                 NOT Handle.Has<ck::FFragment_JoltBody_StepPose>())
             {
                 Entry.DirtyThisFrame = false;
@@ -1314,7 +1314,7 @@ namespace ck
 
             Handle.AddOrGet<ck::FTag_JoltBody_TransformDirty>();
 
-            auto& Current = Handle.Get<ck::FFragment_JoltCharacter_Current>();
+            auto& Current = Handle.Get<ck::FFragment_JoltCharacter>();
             Current.Set_GroundNormalMirror(Entry.OutGroundNormal);
             Current.Set_GroundVelocityMirror(Entry.OutGroundVelocity);
 

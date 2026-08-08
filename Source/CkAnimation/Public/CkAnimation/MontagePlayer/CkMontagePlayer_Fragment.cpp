@@ -30,9 +30,9 @@ static struct FMontagePlayerRepHandlerRegistrar
                 .Posture = ECk_Snapshot_Posture::Durable,
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
-                    if (NOT Entity.Has<ck::FFragment_MontagePlayer_Current>())
+                    if (NOT Entity.Has<ck::FFragment_MontagePlayer>())
                     { return {}; }
-                    return FInstancedStruct::Make(FCk_RepData_MontagePlayer{Entity.Get<ck::FFragment_MontagePlayer_Current>().Get_State()});
+                    return FInstancedStruct::Make(FCk_RepData_MontagePlayer{Entity.Get<ck::FFragment_MontagePlayer>().Get_State()});
                 },
                 .SharedApply = ApplyFn});
     }

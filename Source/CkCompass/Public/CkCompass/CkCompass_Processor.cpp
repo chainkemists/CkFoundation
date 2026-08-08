@@ -61,18 +61,18 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent)
+            FFragment_Compass& InCompass)
         -> void
     {
         InCompassEntity.Remove<MarkedDirtyBy>();
 
-        if (ck::Is_NOT_Valid(InCurrent._Observer))
+        if (ck::Is_NOT_Valid(InCompass._Observer))
         {
-            InCurrent._Observer = InCompassEntity;
+            InCompass._Observer = InCompassEntity;
         }
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = ProjectImmediately;
+        InCompass._TimeSinceUpdate = ProjectImmediately;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -82,7 +82,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             const FFragment_Compass_Params& InParams,
             FFragment_Compass_Requests& InRequests) const
         -> void
@@ -98,7 +98,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InCompassEntity, Result);
 
-            DoHandleRequest(InCompassEntity, InCurrent, InParams, InRequest);
+            DoHandleRequest(InCompassEntity, InCompass, InParams, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             {
@@ -118,50 +118,50 @@ namespace ck
         FProcessor_Compass_HandleRequests::
         DoHandleRequest(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             const FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetCategoryFilter& InRequest)
         -> void
     {
         compass::VeryVerbose(TEXT("Handling SetCategoryFilter Request for Compass with Entity [{}]"), InCompassEntity);
 
-        InCurrent._CategoryFilter = InRequest.Get_CategoryFilter();
+        InCompass._CategoryFilter = InRequest.Get_CategoryFilter();
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = ProjectImmediately;
+        InCompass._TimeSinceUpdate = ProjectImmediately;
     }
 
     auto
         FProcessor_Compass_HandleRequests::
         DoHandleRequest(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             const FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetManualHeading& InRequest)
         -> void
     {
         compass::VeryVerbose(TEXT("Handling SetManualHeading Request for Compass with Entity [{}]"), InCompassEntity);
 
-        InCurrent._ManualHeadingDegrees = InRequest.Get_HeadingDegrees();
+        InCompass._ManualHeadingDegrees = InRequest.Get_HeadingDegrees();
     }
 
     auto
         FProcessor_Compass_HandleRequests::
         DoHandleRequest(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             const FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetObserver& InRequest)
         -> void
     {
         compass::VeryVerbose(TEXT("Handling SetObserver Request for Compass with Entity [{}]"), InCompassEntity);
 
-        InCurrent._Observer = ck::IsValid(InRequest.Get_Observer())
+        InCompass._Observer = ck::IsValid(InRequest.Get_Observer())
             ? InRequest.Get_Observer()
             : InCompassEntity;
 
         const auto ProjectImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = ProjectImmediately;
+        InCompass._TimeSinceUpdate = ProjectImmediately;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -185,17 +185,17 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch) const
         -> void
     {
-        if (ck::Is_NOT_Valid(InCurrent._Observer))
+        if (ck::Is_NOT_Valid(InCompass._Observer))
         {
-            DoClearAllEntries(InCompassEntity, InCurrent, InScratch);
+            DoClearAllEntries(InCompassEntity, InCompass, InScratch);
             return;
         }
 
-        const auto& Observer = InCurrent._Observer;
+        const auto& Observer = InCompass._Observer;
 
         auto ObserverTransform = UCk_Utils_Transform_UE::Cast(Observer);
 
@@ -203,32 +203,32 @@ namespace ck
             TEXT("Compass [{}] Observer [{}] has no Transform feature. The Compass cannot project POIs without an observer position"),
             InCompassEntity, Observer)
         {
-            DoClearAllEntries(InCompassEntity, InCurrent, InScratch);
+            DoClearAllEntries(InCompassEntity, InCompass, InScratch);
             return;
         }
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkCompass_Heading);
-            InCurrent._HeadingDegrees = FRotator::ClampAxis(DoResolveHeading(InCompassEntity, InParams, InCurrent, Observer));
+            InCompass._HeadingDegrees = FRotator::ClampAxis(DoResolveHeading(InCompassEntity, InParams, InCompass, Observer));
         }
 
-        InCurrent._TimeSinceUpdate += InDeltaT;
+        InCompass._TimeSinceUpdate += InDeltaT;
 
         const auto UpdateInterval = InParams.Get_UpdateInterval();
 
-        if (UpdateInterval > FCk_Time::ZeroSecond() && InCurrent._TimeSinceUpdate < UpdateInterval)
+        if (UpdateInterval > FCk_Time::ZeroSecond() && InCompass._TimeSinceUpdate < UpdateInterval)
         { return; }
 
-        InCurrent._TimeSinceUpdate = FCk_Time::ZeroSecond();
+        InCompass._TimeSinceUpdate = FCk_Time::ZeroSecond();
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkCompass_Projection);
-            DoProjectPois(InCompassEntity, InParams, InCurrent, InScratch, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(ObserverTransform));
+            DoProjectPois(InCompassEntity, InParams, InCompass, InScratch, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(ObserverTransform));
         }
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkCompass_DiffSignals);
-            DoDiffAndPublishEntries(InCompassEntity, InCurrent, InScratch);
+            DoDiffAndPublishEntries(InCompassEntity, InCompass, InScratch);
         }
     }
 
@@ -237,7 +237,7 @@ namespace ck
         DoResolveHeading(
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            const FFragment_Compass_Current& InCurrent,
+            const FFragment_Compass& InCompass,
             const FCk_Handle& InObserver)
         -> float
     {
@@ -245,7 +245,7 @@ namespace ck
         {
             case ECk_Compass_HeadingSource::Manual:
             {
-                return InCurrent._ManualHeadingDegrees;
+                return InCompass._ManualHeadingDegrees;
             }
             case ECk_Compass_HeadingSource::CameraView:
             case ECk_Compass_HeadingSource::Auto:
@@ -273,12 +273,12 @@ namespace ck
                     return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(ObserverTransform).Yaw;
                 }
 
-                return InCurrent._HeadingDegrees;
+                return InCompass._HeadingDegrees;
             }
             default:
             {
                 CK_INVALID_ENUM(HeadingSource);
-                return InCurrent._HeadingDegrees;
+                return InCompass._HeadingDegrees;
             }
         }
     }
@@ -288,7 +288,7 @@ namespace ck
         DoProjectPois(
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch,
             const FVector& InObserverLocation)
         -> void
@@ -296,9 +296,9 @@ namespace ck
         auto& Scratch = InScratch._Entries;
         Scratch.Reset();
 
-        const auto& CategoryFilter = InCurrent.Get_CategoryFilter();
+        const auto& CategoryFilter = InCompass.Get_CategoryFilter();
         const auto FilterIsEmpty = CategoryFilter.IsEmpty();
-        const auto HeadingDegrees = InCurrent._HeadingDegrees;
+        const auto HeadingDegrees = InCompass._HeadingDegrees;
         const auto ArcDegrees = InParams.Get_ArcDegrees();
 
         auto& PoiEntities = InScratch._PoiEntities;
@@ -472,12 +472,12 @@ namespace ck
         FProcessor_Compass_Update::
         DoDiffAndPublishEntries(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch)
         -> void
     {
         const auto& NewEntries = InScratch._Entries;
-        const auto& OldEntries = InCurrent._Entries;
+        const auto& OldEntries = InCompass._Entries;
 
         // Stable ordered membership cannot emit appeared/disappeared signals. Still publish the
         // newly projected entries: positions and other display values can change without membership.
@@ -525,23 +525,23 @@ namespace ck
             }
         }
 
-        Swap(InCurrent._Entries, InScratch._Entries);
+        Swap(InCompass._Entries, InScratch._Entries);
     }
 
     auto
         FProcessor_Compass_Update::
         DoClearAllEntries(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch)
         -> void
     {
-        for (const auto& Entry : InCurrent._Entries)
+        for (const auto& Entry : InCompass._Entries)
         {
             UUtils_Signal_OnCompassEntryDisappeared::Broadcast(InCompassEntity, MakePayload(InCompassEntity, Entry.Get_Poi()));
         }
 
-        InCurrent._Entries.Reset();
+        InCompass._Entries.Reset();
         InScratch._Entries.Reset();
     }
 
@@ -553,16 +553,16 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch)
         -> void
     {
-        for (const auto& Entry : InCurrent._Entries)
+        for (const auto& Entry : InCompass._Entries)
         {
             UUtils_Signal_OnCompassEntryDisappeared::Broadcast(InCompassEntity, MakePayload(InCompassEntity, Entry.Get_Poi()));
         }
 
-        InCurrent._Entries.Reset();
+        InCompass._Entries.Reset();
         InScratch._Entries.Reset();
     }
 }

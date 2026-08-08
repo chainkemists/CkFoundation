@@ -150,11 +150,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FFragment_Transform& InTransform)
             -> void
     {
-        auto MeshComponent = InCurrent._MeshComponent.Get();
+        auto MeshComponent = InDebugShape._MeshComponent.Get();
         // EndPlay resets _MeshComponent and a transform tick can race that window — skip, don't ensure.
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
@@ -270,7 +270,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
             const FFragment_Pmg_DebugShape_Lines& InLines,
-            const FFragment_Pmg_DebugShape_Current& InCurrent)
+            const FFragment_Pmg_DebugShape& InDebugShape)
             -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_Pmg_DebugDrawLines);
@@ -279,7 +279,7 @@ namespace ck
         // Consumed BEFORE the early-outs below, or a shape with no mesh or no lines re-fires forever.
         InHandle.Remove<MarkedDirtyBy>();
 
-        auto MeshComponent = InCurrent._MeshComponent.Get();
+        auto MeshComponent = InDebugShape._MeshComponent.Get();
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
@@ -341,7 +341,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void
     {
         const auto& Duration = InCommon.Get_Duration();
@@ -350,7 +350,7 @@ namespace ck
         { return; }
 
         auto Now = UCk_Utils_Time_UE::Get_WorldTime(FCk_Utils_Time_GetWorldTime_Params(UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle))).Get_WorldTime().Get_Time();
-        const auto ElapsedTime = Now - InCurrent._SpawnTime;
+        const auto ElapsedTime = Now - InDebugShape._SpawnTime;
 
         if (ElapsedTime.Get_Seconds() >= Duration.Get_Seconds())
         {
@@ -365,12 +365,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void
     {
         ck::pmg::Verbose(TEXT("Tearing down Pmg DebugShape [{}]"), InHandle);
 
-        auto MeshComponent = InCurrent._MeshComponent.Get();
+        auto MeshComponent = InDebugShape._MeshComponent.Get();
         if (ck::IsValid(MeshComponent))
         {
             // unpin before DestroyComponent (destroy garbage-marks the object, failing release's validity check)
@@ -378,7 +378,7 @@ namespace ck
             MeshComponent->DestroyComponent();
         }
 
-        InCurrent._MeshComponent.Reset();
+        InDebugShape._MeshComponent.Reset();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -402,7 +402,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             FFragment_Pmg_DebugShape_Requests& InRequestsComp) const
         -> void
     {
@@ -416,7 +416,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = ck::MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InCommon, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InCommon, InDebugShape, InRequest);
 
                 Result = ECk_Request_OperationResult::Succeeded;
             }), ck::policy::DontResetContainer{});
@@ -428,7 +428,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetColor& InRequest)
         -> void
     {
@@ -436,12 +436,12 @@ namespace ck
 
         InCommon._Color = NewColor;
 
-        if (auto* MID = pmg_debug_shape_helpers::Get_DynamicMaterial(InCurrent._MeshComponent.Get()))
+        if (auto* MID = pmg_debug_shape_helpers::Get_DynamicMaterial(InDebugShape._MeshComponent.Get()))
         {
             MID->SetVectorParameterValue(FName(TEXT("Color")), pmg_debug_shape::Get_FillColor(NewColor));
         }
 
-        if (auto* MeshComponent = InCurrent._MeshComponent.Get();
+        if (auto* MeshComponent = InDebugShape._MeshComponent.Get();
             ck::IsValid(MeshComponent))
         {
             if (auto* WireframeMID = Cast<UMaterialInstanceDynamic>(
@@ -459,7 +459,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest)
         -> void
     {
@@ -478,7 +478,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest)
         -> void
     {
@@ -491,7 +491,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetDuration& InRequest)
         -> void
     {
@@ -504,7 +504,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest)
         -> void
     {
@@ -512,7 +512,7 @@ namespace ck
         InCommon._RenderMode = NewMode;
 
         // Mirrors the visibility logic in FinalizeMeshComponent_Basic.
-        if (auto* Mesh = InCurrent._MeshComponent.Get())
+        if (auto* Mesh = InDebugShape._MeshComponent.Get())
         {
             const auto ShouldBeVisible = NewMode != ECk_Pmg_RenderMode::Hidden &&
                                          NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
@@ -526,14 +526,14 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest)
         -> void
     {
         const auto NewEnable = InRequest.Get_NewEnableCollision();
         InCommon._EnableCollision = NewEnable;
 
-        if (auto* Mesh = InCurrent._MeshComponent.Get())
+        if (auto* Mesh = InDebugShape._MeshComponent.Get())
         {
             Mesh->SetCollisionEnabled(NewEnable
                 ? ECollisionEnabled::QueryAndPhysics

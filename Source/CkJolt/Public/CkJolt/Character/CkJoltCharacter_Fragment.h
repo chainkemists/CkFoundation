@@ -42,10 +42,10 @@ namespace ck
     // _Character owns the CharacterVirtual for the entity's lifetime; the FJoltWorld registry holds a
     // NON-owning raw pointer alongside. The _Mirror fields are refreshed by DoApplyCharacterPoses_GameThread;
     // the _Pending* fields are the intent inbox HandleRequests writes and PreStep drains before the step.
-    struct CKJOLT_API FFragment_JoltCharacter_Current
+    struct CKJOLT_API FFragment_JoltCharacter
     {
     public:
-        CK_GENERATED_BODY(FFragment_JoltCharacter_Current);
+        CK_GENERATED_BODY(FFragment_JoltCharacter);
 
     public:
         friend class FProcessor_JoltCharacter_Setup;

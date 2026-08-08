@@ -15,11 +15,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSUBSTEP_API FFragment_Substep_Current
+    struct CKSUBSTEP_API FFragment_Substep
     {
         friend class FProcessor_Substep_Update;
 
-        CK_GENERATED_BODY(FFragment_Substep_Current);
+        CK_GENERATED_BODY(FFragment_Substep);
 
     private:
         FCk_Time _DeltaOverflowFromLastFrame;

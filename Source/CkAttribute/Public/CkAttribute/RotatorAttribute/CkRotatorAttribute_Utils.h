@@ -28,7 +28,7 @@ public:
 private:
     using RotatorAttribute_Utils_Min = ck::TUtils_Attribute<ck::FFragment_RotatorAttribute_Min>;
     using RotatorAttribute_Utils_Max = ck::TUtils_Attribute<ck::FFragment_RotatorAttribute_Max>;
-    using RotatorAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_RotatorAttribute_Current>;
+    using RotatorAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_RotatorAttribute>;
 
     using RecordOfRotatorAttributes_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfRotatorAttributes>;
 
@@ -272,7 +272,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_RotatorAttributeModifier);
 
 private:
-    using RotatorAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_RotatorAttributeModifier_Current>;
+    using RotatorAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_RotatorAttributeModifier>;
     using RotatorAttributeModifier_Utils_Min     = ck::TUtils_AttributeModifier<ck::FFragment_RotatorAttributeModifier_Min>;
     using RotatorAttributeModifier_Utils_Max     = ck::TUtils_AttributeModifier<ck::FFragment_RotatorAttributeModifier_Max>;
 

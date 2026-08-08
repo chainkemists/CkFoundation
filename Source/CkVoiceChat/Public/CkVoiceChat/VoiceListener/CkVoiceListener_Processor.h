@@ -14,7 +14,7 @@ namespace ck
     class CKVOICECHAT_API FProcessor_VoiceListener_HandleRequests : public ck_exp::TProcessor<
         FProcessor_VoiceListener_HandleRequests,
         FCk_Handle_VoiceListener,
-        ck::TReadWrite<FFragment_VoiceListener_Current>,
+        ck::TReadWrite<FFragment_VoiceListener>,
         ck::TReadWrite<FFragment_VoiceListener_Requests>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -31,26 +31,26 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceListenerEntity,
-            FFragment_VoiceListener_Current& InCurrent,
+            FFragment_VoiceListener& InVoiceListener,
             FFragment_VoiceListener_Requests& InRequests) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceListener_Current& InCurrent,
+            FFragment_VoiceListener& InVoiceListener,
             const FCk_Request_VoiceListener_MuteTalker& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceListener_Current& InCurrent,
+            FFragment_VoiceListener& InVoiceListener,
             const FCk_Request_VoiceListener_UnmuteTalker& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceListener_Current& InCurrent,
+            FFragment_VoiceListener& InVoiceListener,
             const FCk_Request_VoiceListener_SetTalkerVolume& InRequest) -> bool;
     };
 
@@ -88,7 +88,7 @@ namespace ck
     class CKVOICECHAT_API FProcessor_VoiceListener_SyncMutes : public ck_exp::TProcessor<
         FProcessor_VoiceListener_SyncMutes,
         FCk_Handle_VoiceListener,
-        ck::TReadOnly<FFragment_VoiceListener_Current>,
+        ck::TReadOnly<FFragment_VoiceListener>,
         FTag_VoiceListener_MutesDirty,
         CK_IGNORE_PENDING_KILL>
     {
@@ -105,7 +105,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceListenerEntity,
-            const FFragment_VoiceListener_Current& InCurrent)
+            const FFragment_VoiceListener& InVoiceListener)
             -> void;
     };
 

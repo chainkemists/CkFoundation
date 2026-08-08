@@ -66,10 +66,10 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-	struct CKGOAP_API FFragment_Goap_Planner_Current
+	struct CKGOAP_API FFragment_Goap_Planner
 	{
 	public:
-		CK_GENERATED_BODY(FFragment_Goap_Planner_Current);
+		CK_GENERATED_BODY(FFragment_Goap_Planner);
 
 		friend class ::UCk_Utils_Goap_Planner_UE;
 		friend class FProcessor_Goap_Planner_Setup;

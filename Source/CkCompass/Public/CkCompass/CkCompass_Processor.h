@@ -15,7 +15,7 @@ namespace ck
         FProcessor_Compass_Setup,
         FCk_Handle_Compass,
         ck::TReadOnly<FFragment_Compass_Params>,
-        ck::TReadWrite<FFragment_Compass_Current>,
+        ck::TReadWrite<FFragment_Compass>,
         FTag_Compass_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -33,7 +33,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent)
+            FFragment_Compass& InCompass)
             -> void;
     };
 
@@ -41,7 +41,7 @@ namespace ck
 
     class CKCOMPASS_API FProcessor_Compass_HandleRequests
         : public ck_exp::TProcessor<FProcessor_Compass_HandleRequests, FCk_Handle_Compass,
-            ck::TReadWrite<FFragment_Compass_Current>, ck::TReadOnly<FFragment_Compass_Params>, ck::TReadWrite<FFragment_Compass_Requests>,
+            ck::TReadWrite<FFragment_Compass>, ck::TReadOnly<FFragment_Compass_Params>, ck::TReadWrite<FFragment_Compass_Requests>,
             TExclude<FTag_Compass_NeedsSetup>, TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -58,7 +58,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             const FFragment_Compass_Params& InParams,
             FFragment_Compass_Requests& InRequests) const -> void;
 
@@ -66,21 +66,21 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             const FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetCategoryFilter& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             const FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetManualHeading& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             const FFragment_Compass_Params& InParams,
             const FCk_Request_Compass_SetObserver& InRequest) -> void;
     };
@@ -118,7 +118,7 @@ namespace ck
         FProcessor_Compass_Update,
         FCk_Handle_Compass,
         ck::TReadOnly<FFragment_Compass_Params>,
-        ck::TReadWrite<FFragment_Compass_Current>,
+        ck::TReadWrite<FFragment_Compass>,
         ck::TReadWrite<FFragment_Compass_Scratch>,
         TExclude<FTag_Compass_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -139,7 +139,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch) const -> void;
 
     private:
@@ -147,27 +147,27 @@ namespace ck
         DoResolveHeading(
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            const FFragment_Compass_Current& InCurrent,
+            const FFragment_Compass& InCompass,
             const FCk_Handle& InObserver) -> float;
 
         static auto
         DoProjectPois(
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch,
             const FVector& InObserverLocation) -> void;
 
         static auto
         DoDiffAndPublishEntries(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch) -> void;
 
         static auto
         DoClearAllEntries(
             HandleType InCompassEntity,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch) -> void;
     };
 
@@ -177,7 +177,7 @@ namespace ck
         FProcessor_Compass_EndPlay,
         FCk_Handle_Compass,
         ck::TReadOnly<FFragment_Compass_Params>,
-        ck::TReadWrite<FFragment_Compass_Current>,
+        ck::TReadWrite<FFragment_Compass>,
         ck::TReadWrite<FFragment_Compass_Scratch>,
         CK_IF_END_PLAY>
     {
@@ -194,7 +194,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCompassEntity,
             const FFragment_Compass_Params& InParams,
-            FFragment_Compass_Current& InCurrent,
+            FFragment_Compass& InCompass,
             FFragment_Compass_Scratch& InScratch)
             -> void;
     };

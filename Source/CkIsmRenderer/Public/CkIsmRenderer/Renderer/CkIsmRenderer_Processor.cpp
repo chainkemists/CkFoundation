@@ -37,7 +37,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmRenderer_Params& InParams,
-            const FFragment_OwningActor_Current& InOwningActorCurrent) const
+            const FFragment_OwningActor& InOwningActorCurrent) const
         -> void
     {
         const auto& Actor = InOwningActorCurrent.Get_EntityOwningActor().Get();
@@ -93,13 +93,13 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_IsmRenderer_Current& InCurrent)
+            const FFragment_IsmRenderer& InIsmRenderer)
             -> void
     {
-        if (ck::Is_NOT_Valid(InCurrent.Get_IsmComponent()))
+        if (ck::Is_NOT_Valid(InIsmRenderer.Get_IsmComponent()))
         { return; }
 
-        InCurrent.Get_IsmComponent()->ClearInstances();
+        InIsmRenderer.Get_IsmComponent()->ClearInstances();
     }
 }
 

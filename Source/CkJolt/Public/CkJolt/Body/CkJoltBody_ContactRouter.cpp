@@ -28,10 +28,10 @@ namespace ck::jolt_body
             bool InOtherIsSensor)
         -> void
     {
-        if (ck::Is_NOT_Valid(InSelfEntity) || NOT InSelfEntity.Has<ck::FFragment_JoltBody_Current>())
+        if (ck::Is_NOT_Valid(InSelfEntity) || NOT InSelfEntity.Has<ck::FFragment_JoltBody>())
         { return; }
 
-        if (InSelfEntity.Get<ck::FFragment_JoltBody_Current>().Get_BodyId().GetIndexAndSequenceNumber() != InSelfBodyIndexAndSeq)
+        if (InSelfEntity.Get<ck::FFragment_JoltBody>().Get_BodyId().GetIndexAndSequenceNumber() != InSelfBodyIndexAndSeq)
         { return; }
 
         auto SelfHandle = InSelfEntity;

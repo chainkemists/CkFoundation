@@ -35,7 +35,7 @@ auto
     auto GridBase = FCk_Handle{InGrid};
 
     ck::RecordOf_GridPlacements_Utils::AddIfMissing(GridBase);
-    InGrid.AddOrGet<ck::FFragment_2dGridOccupancy_Current>();
+    InGrid.AddOrGet<ck::FFragment_2dGridOccupancy>();
 
     // Safe on clients too — the client sync path reuses this helper, and TryAddContainerFragment
     // plus the Replicate processor are themselves host/authority gated.

@@ -13,7 +13,7 @@ namespace ck
     class CKENTITYTAG_API FProcessor_EntityTagQuery_HandleRequests : public ck_exp::TProcessor<
             FProcessor_EntityTagQuery_HandleRequests,
             FCk_Handle_EntityTagQuery,
-            ck::TReadWrite<FFragment_EntityTagQuery_Current>,
+            ck::TReadWrite<FFragment_EntityTagQuery>,
             ck::TReadWrite<FFragment_EntityTagQuery_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -27,18 +27,18 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_EntityTagQuery_Current& InCurrent,
+            FFragment_EntityTagQuery& InEntityTagQuery,
             FFragment_EntityTagQuery_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
         DoHandleRequest(
-            FFragment_EntityTagQuery_Current& InCurrent,
+            FFragment_EntityTagQuery& InEntityTagQuery,
             const FCk_Request_EntityTagQuery_AddRequirement& InRequest) -> void;
 
         static auto
         DoHandleRequest(
-            FFragment_EntityTagQuery_Current& InCurrent,
+            FFragment_EntityTagQuery& InEntityTagQuery,
             const FCk_Request_EntityTagQuery_RemoveRequirement& InRequest) -> void;
     };
 
@@ -73,7 +73,7 @@ namespace ck
     class CKENTITYTAG_API FProcessor_EntityTagQuery_Evaluate : public ck_exp::TProcessor<
             FProcessor_EntityTagQuery_Evaluate,
             FCk_Handle_EntityTagQuery,
-            ck::TReadWrite<FFragment_EntityTagQuery_Current>,
+            ck::TReadWrite<FFragment_EntityTagQuery>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -85,7 +85,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_EntityTagQuery_Current& InCurrent) const -> void;
+            FFragment_EntityTagQuery& InEntityTagQuery) const -> void;
 
     private:
         /**
@@ -96,7 +96,7 @@ namespace ck
         static auto
         DoTryConsume_UnchangedTagVersions(
             HandleType InHandle,
-            FFragment_EntityTagQuery_Current& InCurrent) -> bool;
+            FFragment_EntityTagQuery& InEntityTagQuery) -> bool;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -127,7 +127,7 @@ namespace ck
     class CKENTITYTAG_API FProcessor_EntityTagQuery_Query_Destructor : public ck_exp::TProcessor<
             FProcessor_EntityTagQuery_Query_Destructor,
             FCk_Handle_EntityTagQuery,
-            ck::TReadOnly<FFragment_EntityTagQuery_Current>,
+            ck::TReadOnly<FFragment_EntityTagQuery>,
             CK_IF_END_PLAY>
     {
     public:
@@ -139,6 +139,6 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityTagQuery_Current& InCurrent) const -> void;
+            const FFragment_EntityTagQuery& InEntityTagQuery) const -> void;
     };
 }

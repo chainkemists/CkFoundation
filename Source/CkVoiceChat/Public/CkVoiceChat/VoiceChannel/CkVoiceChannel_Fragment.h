@@ -30,10 +30,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKVOICECHAT_API FFragment_VoiceChannel_Current
+    struct CKVOICECHAT_API FFragment_VoiceChannel
     {
     public:
-        CK_GENERATED_BODY(FFragment_VoiceChannel_Current);
+        CK_GENERATED_BODY(FFragment_VoiceChannel);
 
     public:
         friend class FProcessor_VoiceChannel_Setup;

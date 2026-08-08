@@ -47,7 +47,7 @@ auto
 
         InNewEntity.Add<ck::FFragment_JoltConstraint_Params>(InParams);
 
-        auto& Current = InNewEntity.Add<ck::FFragment_JoltConstraint_Current>();
+        auto& Current = InNewEntity.Add<ck::FFragment_JoltConstraint>();
         Current._BodyA = static_cast<FCk_Handle>(InBodyA);
         Current._BodyB = OtherBody;
         Current._BodyBIsWorldAnchor = BodyBIsWorldAnchor;
@@ -60,7 +60,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_JoltConstraint_UE, FCk_Handle_JoltConstraint, ck::FFragment_JoltConstraint_Current, ck::FFragment_JoltConstraint_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_JoltConstraint_UE, FCk_Handle_JoltConstraint, ck::FFragment_JoltConstraint, ck::FFragment_JoltConstraint_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -87,7 +87,7 @@ auto
         TEXT("Invalid JoltConstraint Handle passed to Get_IsConstraintAdded"))
     { return false; }
 
-    return InConstraint.Get<ck::FFragment_JoltConstraint_Current>().Get_ConstraintAdded();
+    return InConstraint.Get<ck::FFragment_JoltConstraint>().Get_ConstraintAdded();
 }
 
 auto
@@ -148,7 +148,7 @@ auto
         InConstraint, Get_ConstraintType(InConstraint))
     { return 0.0f; }
 
-    const auto& Current = InConstraint.Get<ck::FFragment_JoltConstraint_Current>();
+    const auto& Current = InConstraint.Get<ck::FFragment_JoltConstraint>();
     if (Current._Constraint.GetPtr() == nullptr)
     { return 0.0f; }
 

@@ -33,7 +33,7 @@ auto
 {
     InHandle.Add<ck::FTag_Objective_NeedsSetup>();
     InHandle.Add<ck::FFragment_Objective_Params>(InParams);
-    auto& Current = InHandle.Add<ck::FFragment_Objective_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_Objective>();
 
     const auto StatusAttributeParams = FCk_ByteAttribute_Spec{TAG_ByteAttribute_Objective_Status, ck_objective_utils::StatusEnumToByte(ECk_ObjectiveStatus::NotStarted)};
     Current._StatusAttribute = UCk_Utils_ByteAttribute_UE::Add(InHandle, StatusAttributeParams, ECk_Replication::Replicates);
@@ -46,7 +46,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Objective_UE, FCk_Handle_Objective,
-    ck::FFragment_Objective_Current, ck::FFragment_Objective_Params)
+    ck::FFragment_Objective, ck::FFragment_Objective_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -103,7 +103,7 @@ auto
         const FCk_Handle_Objective& InObjective)
     -> ECk_ObjectiveStatus
 {
-    const auto& Current = InObjective.Get<ck::FFragment_Objective_Current>();
+    const auto& Current = InObjective.Get<ck::FFragment_Objective>();
 
     const uint8 StatusValue = UCk_Utils_ByteAttribute_UE::Get_FinalValue(
         Current.Get_StatusAttribute(),

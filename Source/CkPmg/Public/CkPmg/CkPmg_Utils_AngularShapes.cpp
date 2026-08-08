@@ -41,7 +41,7 @@ auto
     Params.Set_Axis(InDefaultAxis);
     InHandle.Add<ck::FFragment_Pmg_Wedge_Params>(Params);
 
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);
@@ -127,7 +127,7 @@ auto
     Params.Set_Axis(InDefaultAxis);
     InHandle.Add<ck::FFragment_Pmg_Arc_Params>(Params);
 
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);
@@ -215,7 +215,7 @@ auto
     Params.Set_Axis(InDefaultAxis);
     InHandle.Add<ck::FFragment_Pmg_WedgeCone_Params>(Params);
 
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);

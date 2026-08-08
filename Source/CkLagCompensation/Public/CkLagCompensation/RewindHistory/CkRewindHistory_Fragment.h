@@ -23,10 +23,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKLAGCOMPENSATION_API FFragment_RewindHistory_Current
+    struct CKLAGCOMPENSATION_API FFragment_RewindHistory
     {
     public:
-        CK_GENERATED_BODY(FFragment_RewindHistory_Current);
+        CK_GENERATED_BODY(FFragment_RewindHistory);
 
     public:
         friend class FProcessor_RewindHistory_Record;

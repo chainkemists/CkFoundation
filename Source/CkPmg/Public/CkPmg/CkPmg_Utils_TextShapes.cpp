@@ -32,7 +32,7 @@ auto
     Params.Set_DrawFilled(InDrawFilled);
     InHandle.Add<ck::FFragment_Pmg_Text_Params>(Params);
 
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);

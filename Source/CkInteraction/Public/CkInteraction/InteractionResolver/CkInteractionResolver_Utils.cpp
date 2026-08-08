@@ -31,7 +31,7 @@ auto
     -> FCk_Handle_InteractionResolver
 {
     InInteractSource.Add<ck::FFragment_InteractionResolver_Params>(InParams);
-    InInteractSource.Add<ck::FFragment_InteractionResolver_Current>();
+    InInteractSource.Add<ck::FFragment_InteractionResolver>();
 
     CK_ENSURE_IF_NOT(NOT InParams.Get_IntentChannelMappings().IsEmpty(),
         TEXT("InteractionResolver added to Handle [{}] has an EMPTY IntentChannelMappings. It will not function correctly!"),
@@ -58,7 +58,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_InteractionResolver_UE, FCk_Handle_InteractionResolver,
-    ck::FFragment_InteractionResolver_Params, ck::FFragment_InteractionResolver_Current)
+    ck::FFragment_InteractionResolver_Params, ck::FFragment_InteractionResolver)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -150,7 +150,7 @@ auto
         FGameplayTag InIntent)
     -> TArray<FCk_Handle_InteractTarget>
 {
-    const auto& Current = InResolver.Get<ck::FFragment_InteractionResolver_Current>();
+    const auto& Current = InResolver.Get<ck::FFragment_InteractionResolver>();
     const auto CachedTargets = Current.Get_CachedBestTargets().Find(InIntent);
 
     if (ck::Is_NOT_Valid(CachedTargets, ck::IsValid_Policy_NullptrOnly{}))

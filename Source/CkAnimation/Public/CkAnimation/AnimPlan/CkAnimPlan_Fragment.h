@@ -31,10 +31,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKANIMATION_API FFragment_AnimPlan_Current
+    struct CKANIMATION_API FFragment_AnimPlan
     {
     public:
-        CK_GENERATED_BODY(FFragment_AnimPlan_Current);
+        CK_GENERATED_BODY(FFragment_AnimPlan);
 
     public:
         friend class FProcessor_AnimPlan_HandleRequests;

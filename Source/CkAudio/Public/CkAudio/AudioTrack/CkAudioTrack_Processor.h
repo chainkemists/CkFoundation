@@ -16,7 +16,7 @@ namespace ck
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
             TReadOnly<FFragment_AudioTrack_PendingSetup>,
-            TReadWrite<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack>,
             TReadWrite<FFragment_AudioTrack_ComponentBindings>,
             FTag_AudioTrack_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -35,7 +35,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_PendingSetup& InPendingSetup,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_ComponentBindings& InBindings)
             -> void;
 
@@ -43,7 +43,7 @@ namespace ck
         static auto
         DoBindAudioComponentDelegates(
             HandleType InHandle,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_ComponentBindings& InBindings) -> void;
 
         static auto
@@ -57,7 +57,7 @@ namespace ck
             FProcessor_AudioTrack_HandleRequests,
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
-            TReadWrite<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack>,
             TReadOnly<FFragment_AudioTrack_Requests>,
             TExclude<FTag_AudioTrack_NeedsSetup>,
             TExclude<FTag_Transform_Updated>,
@@ -78,7 +78,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             const FFragment_AudioTrack_Requests& InRequestsComp) const -> void;
 
     private:
@@ -86,21 +86,21 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             const FCk_Request_AudioTrack_Play& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             const FCk_Request_AudioTrack_Stop& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             const FCk_Request_AudioTrack_SetVolume& InRequest) -> void;
     };
 
@@ -136,7 +136,7 @@ namespace ck
             FProcessor_AudioTrack_Playback,
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
-            TReadWrite<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack>,
             FTag_AudioTrack_IsFading,
             CK_IGNORE_PENDING_KILL>
     {
@@ -154,7 +154,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent)
+            FFragment_AudioTrack& InAudioTrack)
             -> void;
     };
 
@@ -163,7 +163,7 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioTrack_SpatialUpdate : public ck_exp::TProcessor<
             FProcessor_AudioTrack_SpatialUpdate,
             FCk_Handle_AudioTrack,
-            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadOnly<FFragment_AudioTrack>,
             TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
@@ -181,7 +181,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             const FFragment_Transform& InTransform)
             -> void;
     };
@@ -192,7 +192,7 @@ namespace ck
             FProcessor_AudioTrack_EndPlay,
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
-            TReadWrite<FFragment_AudioTrack_Current>,
+            TReadWrite<FFragment_AudioTrack>,
             TReadWrite<FFragment_AudioTrack_ComponentBindings>,
             CK_IF_END_PLAY>
     {
@@ -208,13 +208,13 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_ComponentBindings& InBindings)
             -> void;
 
         static auto
         DoUnbindAudioComponentDelegates(
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_ComponentBindings& InBindings) -> void;
     };
 }
@@ -227,7 +227,7 @@ namespace ck
             FProcessor_AudioTrack_DebugDraw_Individual_Spatial,
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
-            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadOnly<FFragment_AudioTrack>,
             TReadWrite<FFragment_AudioTrack_Debug>,
             TReadOnly<FFragment_Transform>,
             FTag_AudioTrack_DebugDraw,
@@ -246,7 +246,7 @@ namespace ck
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_Debug& InDebug,
             const FFragment_Transform& InTransform)
             -> void;
@@ -258,7 +258,7 @@ namespace ck
             FProcessor_AudioTrack_DebugDraw_Individual_NonSpatial,
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
-            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadOnly<FFragment_AudioTrack>,
             TReadWrite<FFragment_AudioTrack_Debug>,
             FTag_AudioTrack_DebugDraw,
             TExclude<FFragment_Transform>,
@@ -280,7 +280,7 @@ namespace ck
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_Debug& InDebug) const -> void;
 
     private:
@@ -293,7 +293,7 @@ namespace ck
             FProcessor_AudioTrack_DebugDraw_All_Spatial,
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
-            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadOnly<FFragment_AudioTrack>,
             TReadWrite<FFragment_AudioTrack_Debug>,
             TReadOnly<FFragment_Transform>,
             TExclude<FTag_AudioTrack_NeedsSetup>,
@@ -317,7 +317,7 @@ namespace ck
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_Debug& InDebug,
             const FFragment_Transform& InTransform)
             -> void;
@@ -329,7 +329,7 @@ namespace ck
             FProcessor_AudioTrack_DebugDraw_All_NonSpatial,
             FCk_Handle_AudioTrack,
             TReadOnly<FFragment_AudioTrack_Params>,
-            TReadOnly<FFragment_AudioTrack_Current>,
+            TReadOnly<FFragment_AudioTrack>,
             TReadWrite<FFragment_AudioTrack_Debug>,
             TExclude<FFragment_Transform>,
             TExclude<FTag_AudioTrack_NeedsSetup>,
@@ -355,7 +355,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_Debug& InDebug)
             -> void;
 

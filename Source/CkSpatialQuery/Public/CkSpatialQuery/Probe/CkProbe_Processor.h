@@ -39,10 +39,10 @@ namespace ck::details
     template <typename T_ShapeFragment>
     struct TProbeShapeFactory;
 
-    template <> struct TProbeShapeFactory<FFragment_ShapeBox_Current>;
-    template <> struct TProbeShapeFactory<FFragment_ShapeSphere_Current>;
-    template <> struct TProbeShapeFactory<FFragment_ShapeCapsule_Current>;
-    template <> struct TProbeShapeFactory<FFragment_ShapeCylinder_Current>;
+    template <> struct TProbeShapeFactory<FFragment_ShapeBox>;
+    template <> struct TProbeShapeFactory<FFragment_ShapeSphere>;
+    template <> struct TProbeShapeFactory<FFragment_ShapeCapsule>;
+    template <> struct TProbeShapeFactory<FFragment_ShapeCylinder>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ namespace ck::details
             FCk_Handle_Probe,
             ck::TReadOnly<T_ShapeFragment>,
             ck::TReadOnly<FFragment_Probe_Params>,
-            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadWrite<FFragment_Probe>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Probe_NeedsSetup,
             TExclude<FTag_SceneNode_RelativeTransformUpdated>,
@@ -63,7 +63,7 @@ namespace ck::details
             FCk_Handle_Probe,
             ck::TReadOnly<T_ShapeFragment>,
             ck::TReadOnly<FFragment_Probe_Params>,
-            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadWrite<FFragment_Probe>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Probe_NeedsSetup,
             TExclude<FTag_SceneNode_RelativeTransformUpdated>,
@@ -92,7 +92,7 @@ namespace ck::details
             HandleType InHandle,
             const T_ShapeFragment& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FFragment_Transform& InTransform) const -> void;
 
     private:
@@ -107,7 +107,7 @@ namespace ck::details
         FCk_Handle_Probe,
         ck::TReadOnly<T_ShapeFragment>,
         ck::TReadOnly<FFragment_Probe_Params>,
-        ck::TReadWrite<FFragment_Probe_Current>,
+        ck::TReadWrite<FFragment_Probe>,
         FTag_Probe_ShapeUpdated,
         TExclude<FTag_Probe_NeedsSetup>,
         TExclude<FTag_Probe_Disabled>,
@@ -118,7 +118,7 @@ namespace ck::details
             FCk_Handle_Probe,
             ck::TReadOnly<T_ShapeFragment>,
             ck::TReadOnly<FFragment_Probe_Params>,
-            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadWrite<FFragment_Probe>,
             FTag_Probe_ShapeUpdated,
             TExclude<FTag_Probe_NeedsSetup>,
             TExclude<FTag_Probe_Disabled>,
@@ -145,7 +145,7 @@ namespace ck::details
             HandleType InHandle,
             const T_ShapeFragment& InShape,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) const -> void;
+            FFragment_Probe& InProbe) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
@@ -153,15 +153,15 @@ namespace ck::details
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FProcessor_BoxProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeBox_Current>;
-    using FProcessor_SphereProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeSphere_Current>;
-    using FProcessor_CapsuleProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeCapsule_Current>;
-    using FProcessor_CylinderProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeCylinder_Current>;
+    using FProcessor_BoxProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeBox>;
+    using FProcessor_SphereProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeSphere>;
+    using FProcessor_CapsuleProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeCapsule>;
+    using FProcessor_CylinderProbe_Setup = TProcessor_ProbeSetup<FFragment_ShapeCylinder>;
 
-    using FProcessor_BoxProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeBox_Current>;
-    using FProcessor_SphereProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeSphere_Current>;
-    using FProcessor_CapsuleProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeCapsule_Current>;
-    using FProcessor_CylinderProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeCylinder_Current>;
+    using FProcessor_BoxProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeBox>;
+    using FProcessor_SphereProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeSphere>;
+    using FProcessor_CapsuleProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeCapsule>;
+    using FProcessor_CylinderProbe_UpdateShape = TProcessor_ProbeUpdateShape<FFragment_ShapeCylinder>;
 }
 
 namespace ck
@@ -200,7 +200,7 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Probe_UpdateTransform,
             FCk_Handle_Probe,
-            ck::TReadOnly<FFragment_Probe_Current>,
+            ck::TReadOnly<FFragment_Probe>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_Probe_LinearCast>,
@@ -225,7 +225,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Probe_Current& InCurrent,
+            const FFragment_Probe& InProbe,
             const FFragment_Transform& InTransform) -> void;
 
     private:
@@ -248,7 +248,7 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform_LinearCast : public TParallelProcessor<
             FProcessor_Probe_UpdateTransform_LinearCast,
             FCk_Handle_Probe,
-            TReadOnly<FFragment_Probe_Current>,
+            TReadOnly<FFragment_Probe>,
             TReadOnly<FFragment_Transform_Previous>,
             TReadOnly<FFragment_Transform>,
             FTag_Probe_LinearCast,
@@ -270,7 +270,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Probe_Current& InCurrent,
+            const FFragment_Probe& InProbe,
             const FFragment_Transform_Previous& InPreviousTransform,
             const FFragment_Transform& InTransform) const -> void;
 
@@ -284,7 +284,7 @@ namespace ck
             FProcessor_Probe_EnsureStaticNotMoved_DEBUG,
             FCk_Handle_Probe,
             ck::TReadOnly<FFragment_Probe_Params>,
-            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadWrite<FFragment_Probe>,
             FTag_Probe_MotionType_Static,
             FTag_Transform_Updated,
             TExclude<FTag_Probe_NeedsSetup>,
@@ -301,7 +301,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) -> void;
+            FFragment_Probe& InProbe) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -361,7 +361,7 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Probe_HandleRequests,
             FCk_Handle_Probe,
-            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadWrite<FFragment_Probe>,
             ck::TReadOnly<FFragment_Probe_Requests>,
             TExclude<FTag_Probe_NeedsSetup>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -388,32 +388,32 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FFragment_Probe_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FCk_Request_Probe_BeginOverlap& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FCk_Request_Probe_OverlapUpdated& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
+            FFragment_Probe& InProbe,
             const FCk_Request_Probe_EndOverlap& InRequest) -> ECk_Request_OperationResult;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_Probe_Current& InCurrent,
+            const FFragment_Probe& InProbe,
             const FCk_Request_Probe_EnableDisable& InRequest) const -> ECk_Request_OperationResult;
 
     private:
@@ -426,7 +426,7 @@ namespace ck
             FProcessor_Probe_IdleCensus,
             FCk_Handle_Probe,
             ck::TReadOnly<FFragment_Probe_Params>,
-            ck::TReadOnly<FFragment_Probe_Current>,
+            ck::TReadOnly<FFragment_Probe>,
             TExclude<FTag_Probe_LinearCast>,
             TExclude<FTag_Probe_Disabled>,
             TExclude<FTag_Probe_NeedsSetup>,
@@ -450,7 +450,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            const FFragment_Probe_Current& InCurrent) -> void;
+            const FFragment_Probe& InProbe) -> void;
 
     private:
         struct FProbeCensusRow
@@ -515,7 +515,7 @@ namespace ck
             FProcessor_Probe_EndPlay,
             FCk_Handle_Probe,
             ck::TReadOnly<FFragment_Probe_Params>,
-            ck::TReadWrite<FFragment_Probe_Current>,
+            ck::TReadWrite<FFragment_Probe>,
             CK_IF_END_PLAY>
     {
     public:
@@ -534,7 +534,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) const -> void;
+            FFragment_Probe& InProbe) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;

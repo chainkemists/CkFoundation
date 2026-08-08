@@ -14,7 +14,7 @@ namespace ck
     class CKMINIMAP_API FProcessor_Minimap_Setup : public ck_exp::TProcessor<
         FProcessor_Minimap_Setup,
         FCk_Handle_Minimap,
-        ck::TReadWrite<FFragment_Minimap_Current>,
+        ck::TReadWrite<FFragment_Minimap>,
         FTag_Minimap_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -31,7 +31,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent)
+            FFragment_Minimap& InMinimap)
             -> void;
     };
 
@@ -39,7 +39,7 @@ namespace ck
 
     class CKMINIMAP_API FProcessor_Minimap_HandleRequests
         : public ck_exp::TProcessor<FProcessor_Minimap_HandleRequests, FCk_Handle_Minimap,
-            ck::TReadWrite<FFragment_Minimap_Current>, ck::TReadOnly<FFragment_Minimap_Params>, ck::TReadWrite<FFragment_Minimap_Requests>,
+            ck::TReadWrite<FFragment_Minimap>, ck::TReadOnly<FFragment_Minimap_Params>, ck::TReadWrite<FFragment_Minimap_Requests>,
             TExclude<FTag_Minimap_NeedsSetup>, TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -56,7 +56,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             FFragment_Minimap_Requests& InRequests) const -> void;
 
@@ -66,35 +66,35 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetViewExtent& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetCategoryFilter& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetObserver& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetRotationMode& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             const FFragment_Minimap_Params& InParams,
             const FCk_Request_Minimap_SetFogOfWar& InRequest) -> void;
     };
@@ -128,7 +128,7 @@ namespace ck
         FProcessor_Minimap_Update,
         FCk_Handle_Minimap,
         ck::TReadOnly<FFragment_Minimap_Params>,
-        ck::TReadWrite<FFragment_Minimap_Current>,
+        ck::TReadWrite<FFragment_Minimap>,
         ck::TReadWrite<FFragment_Minimap_Scratch>,
         TExclude<FTag_Minimap_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -151,32 +151,32 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch) const -> void;
 
     private:
         static auto
         DoResolveViewYaw(
             const FCk_Handle& InObserver,
-            const FFragment_Minimap_Current& InCurrent) -> float;
+            const FFragment_Minimap& InMinimap) -> float;
 
         static auto
         DoProjectPois(
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch) -> void;
 
         static auto
         DoDiffAndPublishEntries(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch) -> void;
 
         static auto
         DoClearAllEntries(
             HandleType InMinimapEntity,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch) -> void;
     };
 
@@ -186,7 +186,7 @@ namespace ck
         FProcessor_Minimap_EndPlay,
         FCk_Handle_Minimap,
         ck::TReadOnly<FFragment_Minimap_Params>,
-        ck::TReadWrite<FFragment_Minimap_Current>,
+        ck::TReadWrite<FFragment_Minimap>,
         ck::TReadWrite<FFragment_Minimap_Scratch>,
         CK_IF_END_PLAY>
     {
@@ -203,7 +203,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InMinimapEntity,
             const FFragment_Minimap_Params& InParams,
-            FFragment_Minimap_Current& InCurrent,
+            FFragment_Minimap& InMinimap,
             FFragment_Minimap_Scratch& InScratch)
             -> void;
     };

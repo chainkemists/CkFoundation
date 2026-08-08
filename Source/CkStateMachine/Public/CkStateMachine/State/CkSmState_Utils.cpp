@@ -31,7 +31,7 @@ auto
     if (NOT InStateMachine.Has<ck::FFragment_Sm_Breakpoints>())
     { return; }
 
-    const auto& SmCurrent = InStateMachine.Get<ck::FFragment_Sm_Current>();
+    const auto& SmCurrent = InStateMachine.Get<ck::FFragment_Sm>();
     const auto TransitionKey = ck::FFragment_Sm_Breakpoints::FTransitionKey{
         SmCurrent.Get_CurrentStateClass(), InTargetStateClass};
 

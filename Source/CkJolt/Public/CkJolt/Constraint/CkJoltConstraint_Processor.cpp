@@ -99,12 +99,12 @@ namespace ck_jolt_constraint_processor
             InConstraintEntity, InWhich)
         { return {}; }
 
-        CK_ENSURE_IF_NOT(InBodyEntity.Has<ck::FFragment_JoltBody_Current>(),
+        CK_ENSURE_IF_NOT(InBodyEntity.Has<ck::FFragment_JoltBody>(),
             TEXT("JoltConstraint on Entity [{}]: body [{}] entity [{}] has NO JoltBody feature — the constraint will never be created."),
             InConstraintEntity, InWhich, InBodyEntity)
         { return {}; }
 
-        const auto& BodyCurrent = InBodyEntity.Get<ck::FFragment_JoltBody_Current>();
+        const auto& BodyCurrent = InBodyEntity.Get<ck::FFragment_JoltBody>();
         if (NOT BodyCurrent.Get_BodyAdded())
         { return FResolvedBody{EResolveOutcome::Retry, {}}; }
 
@@ -135,7 +135,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            FFragment_JoltConstraint_Current& InCurrent)
+            FFragment_JoltConstraint& InJoltConstraint)
         -> void
     {
         using namespace JPH;
@@ -143,14 +143,14 @@ namespace ck
 
         InHandle.Remove<MarkedDirtyBy>();
 
-        const auto ResolvedA = Resolve_BodyId(InHandle, InCurrent.Get_BodyA(), TEXT("A"));
+        const auto ResolvedA = Resolve_BodyId(InHandle, InJoltConstraint.Get_BodyA(), TEXT("A"));
         if (ResolvedA._Outcome == EResolveOutcome::Failed)
         { return; }
 
         auto ResolvedB = FResolvedBody{EResolveOutcome::Ready, BodyID{}};
-        if (NOT InCurrent.Get_BodyBIsWorldAnchor())
+        if (NOT InJoltConstraint.Get_BodyBIsWorldAnchor())
         {
-            ResolvedB = Resolve_BodyId(InHandle, InCurrent.Get_BodyB(), TEXT("B"));
+            ResolvedB = Resolve_BodyId(InHandle, InJoltConstraint.Get_BodyB(), TEXT("B"));
             if (ResolvedB._Outcome == EResolveOutcome::Failed)
             { return; }
         }
@@ -255,8 +255,8 @@ namespace ck
         // Wake the bodies or a sleeping one hangs mid-air until something else wakes it.
         BodyInterface.ActivateConstraint(Constraint);
 
-        InCurrent._Constraint = Constraint;
-        InCurrent._ConstraintAdded = true;
+        InJoltConstraint._Constraint = Constraint;
+        InJoltConstraint._ConstraintAdded = true;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -280,7 +280,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            FFragment_JoltConstraint_Current& InCurrent,
+            FFragment_JoltConstraint& InJoltConstraint,
             FFragment_JoltConstraint_Requests& InRequestsComp) const
         -> void
     {
@@ -295,7 +295,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+            DoHandleRequest(InHandle, InParams, InJoltConstraint, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             {
@@ -316,21 +316,21 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            const FFragment_JoltConstraint_Current& InCurrent,
+            const FFragment_JoltConstraint& InJoltConstraint,
             const FCk_Request_JoltConstraint_SetEnabled& InRequest) const
         -> void
     {
-        if (InCurrent._Constraint.GetPtr() == nullptr)
+        if (InJoltConstraint._Constraint.GetPtr() == nullptr)
         { return; }
 
-        InCurrent._Constraint->SetEnabled(InRequest.Get_Enabled() == ECk_EnableDisable::Enable);
+        InJoltConstraint._Constraint->SetEnabled(InRequest.Get_Enabled() == ECk_EnableDisable::Enable);
 
         // Re-enabling must wake the bodies or the constraint stays visually inert until something else does.
         if (InRequest.Get_Enabled() == ECk_EnableDisable::Enable)
         {
             const auto PhysicsSystem = _PhysicsSystem.Pin();
             if (ck::IsValid(PhysicsSystem))
-            { PhysicsSystem->GetBodyInterface().ActivateConstraint(InCurrent._Constraint.GetPtr()); }
+            { PhysicsSystem->GetBodyInterface().ActivateConstraint(InJoltConstraint._Constraint.GetPtr()); }
         }
     }
 
@@ -339,11 +339,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            const FFragment_JoltConstraint_Current& InCurrent,
+            const FFragment_JoltConstraint& InJoltConstraint,
             const FCk_Request_JoltConstraint_Distance_SetRange& InRequest) const
         -> void
     {
-        if (InCurrent._Constraint.GetPtr() == nullptr)
+        if (InJoltConstraint._Constraint.GetPtr() == nullptr)
         { return; }
 
         CK_ENSURE_IF_NOT(InParams.Get_ConstraintType() == ECk_JoltConstraint_Type::Distance,
@@ -356,12 +356,12 @@ namespace ck
             InHandle, InRequest.Get_MinDistance(), InRequest.Get_MaxDistance())
         { return; }
 
-        auto* Distance = static_cast<JPH::DistanceConstraint*>(InCurrent._Constraint.GetPtr());
+        auto* Distance = static_cast<JPH::DistanceConstraint*>(InJoltConstraint._Constraint.GetPtr());
         Distance->SetDistance(InRequest.Get_MinDistance(), InRequest.Get_MaxDistance());
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
         if (ck::IsValid(PhysicsSystem))
-        { PhysicsSystem->GetBodyInterface().ActivateConstraint(InCurrent._Constraint.GetPtr()); }
+        { PhysicsSystem->GetBodyInterface().ActivateConstraint(InJoltConstraint._Constraint.GetPtr()); }
     }
 
     auto
@@ -369,11 +369,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_JoltConstraint_Params& InParams,
-            const FFragment_JoltConstraint_Current& InCurrent,
+            const FFragment_JoltConstraint& InJoltConstraint,
             const FCk_Request_JoltConstraint_Hinge_SetMotor& InRequest) const
         -> void
     {
-        if (InCurrent._Constraint.GetPtr() == nullptr)
+        if (InJoltConstraint._Constraint.GetPtr() == nullptr)
         { return; }
 
         CK_ENSURE_IF_NOT(InParams.Get_ConstraintType() == ECk_JoltConstraint_Type::Hinge,
@@ -381,7 +381,7 @@ namespace ck
             InHandle, InParams.Get_ConstraintType())
         { return; }
 
-        auto* Hinge = static_cast<JPH::HingeConstraint*>(InCurrent._Constraint.GetPtr());
+        auto* Hinge = static_cast<JPH::HingeConstraint*>(InJoltConstraint._Constraint.GetPtr());
 
         switch (InRequest.Get_MotorState())
         {
@@ -406,7 +406,7 @@ namespace ck
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
         if (ck::IsValid(PhysicsSystem))
-        { PhysicsSystem->GetBodyInterface().ActivateConstraint(InCurrent._Constraint.GetPtr()); }
+        { PhysicsSystem->GetBodyInterface().ActivateConstraint(InJoltConstraint._Constraint.GetPtr()); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -428,16 +428,16 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_JoltConstraint_Current& InCurrent) const
+            FFragment_JoltConstraint& InJoltConstraint) const
         -> void
     {
         using namespace ck_jolt_constraint_processor;
 
-        if (InCurrent._Constraint.GetPtr() == nullptr)
+        if (InJoltConstraint._Constraint.GetPtr() == nullptr)
         { return; }
 
-        const auto BodyAGone = Get_IsBodyEntityGone(InCurrent.Get_BodyA());
-        const auto BodyBGone = NOT InCurrent.Get_BodyBIsWorldAnchor() && Get_IsBodyEntityGone(InCurrent.Get_BodyB());
+        const auto BodyAGone = Get_IsBodyEntityGone(InJoltConstraint.Get_BodyA());
+        const auto BodyBGone = NOT InJoltConstraint.Get_BodyBIsWorldAnchor() && Get_IsBodyEntityGone(InJoltConstraint.Get_BodyB());
 
         if (NOT (BodyAGone || BodyBGone))
         { return; }
@@ -447,11 +447,11 @@ namespace ck
         { _JoltWorld->WaitForAsyncStep(); }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
-        if (ck::IsValid(PhysicsSystem) && InCurrent.Get_ConstraintAdded())
-        { PhysicsSystem->RemoveConstraint(InCurrent._Constraint.GetPtr()); }
+        if (ck::IsValid(PhysicsSystem) && InJoltConstraint.Get_ConstraintAdded())
+        { PhysicsSystem->RemoveConstraint(InJoltConstraint._Constraint.GetPtr()); }
 
-        InCurrent._Constraint = nullptr;
-        InCurrent._ConstraintAdded = false;
+        InJoltConstraint._Constraint = nullptr;
+        InJoltConstraint._ConstraintAdded = false;
 
         // The constraint entity is inert now — let it die properly next frame (its EndPlay will no-op).
         auto DestroyHandle = static_cast<FCk_Handle>(InHandle);
@@ -477,10 +477,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_JoltConstraint_Current& InCurrent) const
+            FFragment_JoltConstraint& InJoltConstraint) const
         -> void
     {
-        if (InCurrent._Constraint.GetPtr() == nullptr)
+        if (InJoltConstraint._Constraint.GetPtr() == nullptr)
         { return; }
 
         // ASYNC GUARD: mirrors FProcessor_JoltBody_EndPlay.
@@ -492,15 +492,15 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(PhysicsSystem),
             TEXT("PhysicsSystem is INVALID during JoltConstraint [{}] teardown — subsystem already deinitialized?"), InHandle)
         {
-            InCurrent._Constraint = nullptr;
+            InJoltConstraint._Constraint = nullptr;
             return;
         }
 
-        if (InCurrent.Get_ConstraintAdded())
-        { PhysicsSystem->RemoveConstraint(InCurrent._Constraint.GetPtr()); }
+        if (InJoltConstraint.Get_ConstraintAdded())
+        { PhysicsSystem->RemoveConstraint(InJoltConstraint._Constraint.GetPtr()); }
 
-        InCurrent._Constraint = nullptr;
-        InCurrent._ConstraintAdded = false;
+        InJoltConstraint._Constraint = nullptr;
+        InJoltConstraint._ConstraintAdded = false;
     }
 
     // --------------------------------------------------------------------------------------------------------------------

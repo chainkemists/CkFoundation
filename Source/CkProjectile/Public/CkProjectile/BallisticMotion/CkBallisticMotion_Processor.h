@@ -16,7 +16,7 @@ namespace ck
             FProcessor_BallisticMotion_HandleRequests,
             FCk_Handle_BallisticMotion,
             ck::TReadOnly<FFragment_BallisticMotion_Params>,
-            ck::TReadWrite<FFragment_BallisticMotion_Current>,
+            ck::TReadWrite<FFragment_BallisticMotion>,
             ck::TReadOnly<FFragment_BallisticMotion_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -34,7 +34,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
+            FFragment_BallisticMotion& InBallisticMotion,
             const FFragment_BallisticMotion_Requests& InRequestsComp) const -> void;
 
     private:
@@ -42,14 +42,14 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
+            FFragment_BallisticMotion& InBallisticMotion,
             const FCk_Request_BallisticMotion_Launch& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
+            FFragment_BallisticMotion& InBallisticMotion,
             const FCk_Request_BallisticMotion_Stop& InRequest) -> void;
     };
 
@@ -86,8 +86,8 @@ namespace ck
             FCk_Handle_BallisticMotion,
             FTag_BallisticMotion_Active,
             ck::TReadOnly<FFragment_BallisticMotion_Params>,
-            ck::TReadWrite<FFragment_BallisticMotion_Current>,
-            ck::TReadOnly<FFragment_Probe_Current>,
+            ck::TReadWrite<FFragment_BallisticMotion>,
+            ck::TReadOnly<FFragment_Probe>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -103,15 +103,15 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
-            const FFragment_Probe_Current& InProbeCurrent) -> void;
+            FFragment_BallisticMotion& InBallisticMotion,
+            const FFragment_Probe& InProbeCurrent) -> void;
 
     private:
         static auto
         DoHandleImpact(
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
+            FFragment_BallisticMotion& InBallisticMotion,
             const FCk_Probe_OverlapInfo& InOverlap) -> void;
     };
 
@@ -122,7 +122,7 @@ namespace ck
             FCk_Handle_BallisticMotion,
             FTag_BallisticMotion_Active,
             ck::TReadOnly<FFragment_BallisticMotion_Params>,
-            ck::TReadWrite<FFragment_BallisticMotion_Current>,
+            ck::TReadWrite<FFragment_BallisticMotion>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -138,7 +138,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent) -> void;
+            FFragment_BallisticMotion& InBallisticMotion) -> void;
     };
 }
 

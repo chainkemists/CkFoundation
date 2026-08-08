@@ -65,10 +65,10 @@ namespace ck
             const FCk_Handle_DialogEmitter& InEmitter)
         -> ECk_Dialog_ConditionResult
     {
-        const auto HasScript = InConditionEntity.Has<ck::FFragment_EntityScript_Current>();
+        const auto HasScript = InConditionEntity.Has<ck::FFragment_EntityScript>();
 
         auto* Script = HasScript
-            ? InConditionEntity.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get()
+            ? InConditionEntity.Get<ck::FFragment_EntityScript>().Get_Script().Get()
             : nullptr;
         auto* Condition = Cast<UCk_DialogCondition_EntityScript>(Script);
 

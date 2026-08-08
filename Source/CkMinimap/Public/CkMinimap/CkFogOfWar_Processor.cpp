@@ -108,7 +108,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InFogEntity,
             const FFragment_FogOfWar_Params& InParams,
-            FFragment_FogOfWar_Current& InCurrent)
+            FFragment_FogOfWar& InFogOfWar)
         -> void
     {
         InFogEntity.Remove<MarkedDirtyBy>();
@@ -127,11 +127,11 @@ namespace ck
             InFogEntity, CellCounts.X, CellCounts.Y, ck_fog_of_war_processor::MaxTotalCells)
         { return; }
 
-        InCurrent._Explored.Init(false, static_cast<int32>(TotalCells));
-        InCurrent._CellCounts = CellCounts;
+        InFogOfWar._Explored.Init(false, static_cast<int32>(TotalCells));
+        InFogOfWar._CellCounts = CellCounts;
 
         const auto RunUpdateImmediately = FCk_Time{TNumericLimits<double>::Max()};
-        InCurrent._TimeSinceUpdate = RunUpdateImmediately;
+        InFogOfWar._TimeSinceUpdate = RunUpdateImmediately;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -141,7 +141,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             FFragment_FogOfWar_Requests& InRequests) const
         -> void
@@ -163,12 +163,12 @@ namespace ck
             if constexpr (std::is_same_v<T, FCk_Request_FogOfWar_AddRevealer> ||
                 std::is_same_v<T, FCk_Request_FogOfWar_SetExplored>)
             {
-                if (DoHandleRequest(InFogEntity, InCurrent, InParams, InRequest))
+                if (DoHandleRequest(InFogEntity, InFogOfWar, InParams, InRequest))
                 { Result = ECk_Request_OperationResult::Succeeded; }
             }
             else
             {
-                DoHandleRequest(InFogEntity, InCurrent, InParams, InRequest);
+                DoHandleRequest(InFogEntity, InFogOfWar, InParams, InRequest);
                 Result = ECk_Request_OperationResult::Succeeded;
             }
 
@@ -178,7 +178,7 @@ namespace ck
             }
         }), policy::DontResetContainer{});
 
-        ck_fog_of_war_processor::DoFlushRevealedBatch(InFogEntity, InCurrent._NewlyRevealedScratch);
+        ck_fog_of_war_processor::DoFlushRevealedBatch(InFogEntity, InFogOfWar._NewlyRevealedScratch);
 
         if (InRequests._Requests.IsEmpty())
         {
@@ -190,7 +190,7 @@ namespace ck
         FProcessor_FogOfWar_HandleRequests::
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_AddRevealer& InRequest)
         -> bool
@@ -202,7 +202,7 @@ namespace ck
         minimap::VeryVerbose(TEXT("Handling AddRevealer [{}] Request for FogOfWar with Entity [{}]"),
             InRequest.Get_Revealer(), InFogEntity);
 
-        InCurrent._Revealers.AddUnique(InRequest.Get_Revealer());
+        InFogOfWar._Revealers.AddUnique(InRequest.Get_Revealer());
 
         return true;
     }
@@ -211,7 +211,7 @@ namespace ck
         FProcessor_FogOfWar_HandleRequests::
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_RemoveRevealer& InRequest)
         -> void
@@ -219,14 +219,14 @@ namespace ck
         minimap::VeryVerbose(TEXT("Handling RemoveRevealer [{}] Request for FogOfWar with Entity [{}]"),
             InRequest.Get_Revealer(), InFogEntity);
 
-        InCurrent._Revealers.Remove(InRequest.Get_Revealer());
+        InFogOfWar._Revealers.Remove(InRequest.Get_Revealer());
     }
 
     auto
         FProcessor_FogOfWar_HandleRequests::
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_RevealLocation& InRequest)
         -> void
@@ -238,54 +238,54 @@ namespace ck
             : InParams.Get_RevealRadius();
 
         ck_fog_of_war_processor::DoStampCircle(InParams.Get_Bounds(), InParams.Get_CellSize(),
-            InCurrent._CellCounts, InCurrent._Explored, InRequest.Get_Location(), Radius,
-            InCurrent._NewlyRevealedScratch);
+            InFogOfWar._CellCounts, InFogOfWar._Explored, InRequest.Get_Location(), Radius,
+            InFogOfWar._NewlyRevealedScratch);
     }
 
     auto
         FProcessor_FogOfWar_HandleRequests::
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_RevealAll& InRequest)
         -> void
     {
-        if (InCurrent._Explored.IsEmpty())
+        if (InFogOfWar._Explored.IsEmpty())
         { return; }
 
         minimap::VeryVerbose(TEXT("Handling RevealAll Request for FogOfWar with Entity [{}]"), InFogEntity);
 
-        for (auto CellIndex = 0; CellIndex < InCurrent._Explored.Num(); ++CellIndex)
+        for (auto CellIndex = 0; CellIndex < InFogOfWar._Explored.Num(); ++CellIndex)
         {
-            if (InCurrent._Explored[CellIndex])
+            if (InFogOfWar._Explored[CellIndex])
             { continue; }
 
-            InCurrent._NewlyRevealedScratch.Add(CellIndex);
+            InFogOfWar._NewlyRevealedScratch.Add(CellIndex);
         }
 
-        InCurrent._Explored.SetRange(0, InCurrent._Explored.Num(), true);
+        InFogOfWar._Explored.SetRange(0, InFogOfWar._Explored.Num(), true);
     }
 
     auto
         FProcessor_FogOfWar_HandleRequests::
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_Reset& InRequest)
         -> void
     {
-        const auto NothingToReset = InCurrent._Explored.IsEmpty() || InCurrent._Explored.CountSetBits() == 0;
+        const auto NothingToReset = InFogOfWar._Explored.IsEmpty() || InFogOfWar._Explored.CountSetBits() == 0;
 
         if (NothingToReset)
         { return; }
 
         minimap::VeryVerbose(TEXT("Handling Reset Request for FogOfWar with Entity [{}]"), InFogEntity);
 
-        InCurrent._Explored.Init(false, InCurrent._Explored.Num());
+        InFogOfWar._Explored.Init(false, InFogOfWar._Explored.Num());
 
-        InCurrent._NewlyRevealedScratch.Reset();
+        InFogOfWar._NewlyRevealedScratch.Reset();
 
         UUtils_Signal_OnFogOfWarReset::Broadcast(InFogEntity, MakePayload(InFogEntity));
     }
@@ -294,27 +294,27 @@ namespace ck
         FProcessor_FogOfWar_HandleRequests::
         DoHandleRequest(
             HandleType InFogEntity,
-            FFragment_FogOfWar_Current& InCurrent,
+            FFragment_FogOfWar& InFogOfWar,
             const FFragment_FogOfWar_Params& InParams,
             const FCk_Request_FogOfWar_SetExplored& InRequest)
         -> bool
     {
         const auto& Payload = InRequest.Get_ExploredData();
 
-        CK_ENSURE_IF_NOT(Payload.Get_CellCountX() == InCurrent._CellCounts.X &&
-            Payload.Get_CellCountY() == InCurrent._CellCounts.Y,
+        CK_ENSURE_IF_NOT(Payload.Get_CellCountX() == InFogOfWar._CellCounts.X &&
+            Payload.Get_CellCountY() == InFogOfWar._CellCounts.Y,
             TEXT("SetExplored on FogOfWar [{}] carries a [{}x{}] grid but the live grid is [{}x{}] — the map or "
                  "its Bounds/CellSize changed since this data was captured. Dropping the restore, keeping the "
                  "fresh grid"),
             InFogEntity, Payload.Get_CellCountX(), Payload.Get_CellCountY(),
-            InCurrent._CellCounts.X, InCurrent._CellCounts.Y)
+            InFogOfWar._CellCounts.X, InFogOfWar._CellCounts.Y)
         { return false; }
 
         minimap::VeryVerbose(TEXT("Handling SetExplored Request for FogOfWar with Entity [{}]"), InFogEntity);
 
         const auto& PackedCells = Payload.Get_PackedCells();
 
-        for (auto CellIndex = 0; CellIndex < InCurrent._Explored.Num(); ++CellIndex)
+        for (auto CellIndex = 0; CellIndex < InFogOfWar._Explored.Num(); ++CellIndex)
         {
             const auto ByteIndex = CellIndex / 8;
 
@@ -323,11 +323,11 @@ namespace ck
 
             const auto IsSetInPayload = (PackedCells[ByteIndex] & (1 << (CellIndex % 8))) != 0;
 
-            if (NOT IsSetInPayload || InCurrent._Explored[CellIndex])
+            if (NOT IsSetInPayload || InFogOfWar._Explored[CellIndex])
             { continue; }
 
-            InCurrent._Explored[CellIndex] = true;
-            InCurrent._NewlyRevealedScratch.Add(CellIndex);
+            InFogOfWar._Explored[CellIndex] = true;
+            InFogOfWar._NewlyRevealedScratch.Add(CellIndex);
         }
 
         return true;
@@ -354,31 +354,31 @@ namespace ck
             TimeType InDeltaT,
             HandleType InFogEntity,
             const FFragment_FogOfWar_Params& InParams,
-            FFragment_FogOfWar_Current& InCurrent) const
+            FFragment_FogOfWar& InFogOfWar) const
         -> void
     {
-        if (InCurrent._Explored.IsEmpty())
+        if (InFogOfWar._Explored.IsEmpty())
         { return; }
 
-        InCurrent._TimeSinceUpdate += InDeltaT;
+        InFogOfWar._TimeSinceUpdate += InDeltaT;
 
         const auto UpdateInterval = InParams.Get_UpdateInterval();
 
-        if (UpdateInterval > FCk_Time::ZeroSecond() && InCurrent._TimeSinceUpdate < UpdateInterval)
+        if (UpdateInterval > FCk_Time::ZeroSecond() && InFogOfWar._TimeSinceUpdate < UpdateInterval)
         { return; }
 
-        InCurrent._TimeSinceUpdate = FCk_Time::ZeroSecond();
+        InFogOfWar._TimeSinceUpdate = FCk_Time::ZeroSecond();
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkFogOfWar_Reveal);
 
             // Revealers die (pawn destroyed, possession changed) as part of normal play — prune silently
-            InCurrent._Revealers.RemoveAll([](const FCk_Handle& InRevealer)
+            InFogOfWar._Revealers.RemoveAll([](const FCk_Handle& InRevealer)
             {
                 return ck::Is_NOT_Valid(InRevealer);
             });
 
-            for (const auto& Revealer : InCurrent._Revealers)
+            for (const auto& Revealer : InFogOfWar._Revealers)
             {
                 const auto RevealerTransform = UCk_Utils_Transform_UE::Cast(Revealer);
 
@@ -386,13 +386,13 @@ namespace ck
                 { continue; }
 
                 ck_fog_of_war_processor::DoStampCircle(InParams.Get_Bounds(), InParams.Get_CellSize(),
-                    InCurrent._CellCounts, InCurrent._Explored,
+                    InFogOfWar._CellCounts, InFogOfWar._Explored,
                     UCk_Utils_Transform_UE::Get_EntityCurrentLocation(RevealerTransform),
-                    InParams.Get_RevealRadius(), InCurrent._NewlyRevealedScratch);
+                    InParams.Get_RevealRadius(), InFogOfWar._NewlyRevealedScratch);
             }
         }
 
-        ck_fog_of_war_processor::DoFlushRevealedBatch(InFogEntity, InCurrent._NewlyRevealedScratch);
+        ck_fog_of_war_processor::DoFlushRevealedBatch(InFogEntity, InFogOfWar._NewlyRevealedScratch);
     }
 }
 

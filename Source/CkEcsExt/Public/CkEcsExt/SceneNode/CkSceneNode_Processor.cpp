@@ -49,7 +49,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SceneNode_Current& InCurrent,
+            FFragment_SceneNode& InSceneNode,
             const FFragment_SceneNode_Requests& InRequestsComp) const
         -> void
     {
@@ -62,7 +62,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InSceneNode, InRequest);
 
                 Result = ECk_Request_OperationResult::Succeeded;
 
@@ -78,14 +78,14 @@ namespace ck
         FProcessor_SceneNode_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_SceneNode_Current& InCurrent,
+            FFragment_SceneNode& InSceneNode,
             const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest)
         -> void
     {
-        if (InCurrent.Get_RelativeTransform().Equals(InRequest.Get_NewRelativeTransform()))
+        if (InSceneNode.Get_RelativeTransform().Equals(InRequest.Get_NewRelativeTransform()))
         { return; }
 
-        InCurrent._RelativeTransform = InRequest.Get_NewRelativeTransform();
+        InSceneNode._RelativeTransform = InRequest.Get_NewRelativeTransform();
 
         InHandle.AddOrGet<FTag_SceneNode_RelativeTransformUpdated>();
         FUtils_SceneNodePropagation::Queue(InHandle);
@@ -112,7 +112,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_SceneNode_UnrealAnchor& InAnchor,
-            const FFragment_SceneNode_Current& InCurrent,
+            const FFragment_SceneNode& InSceneNode,
             FFragment_Transform& InTransform,
             FFragment_Transform_Previous& InPrevTransform)
         -> void
@@ -131,7 +131,7 @@ namespace ck
             ? Component->GetComponentTransform()
             : Component->GetSocketTransform(InAnchor.Get_Socket());
 
-        const auto NewTransform = InCurrent.Get_RelativeTransform() * AnchorWorld;
+        const auto NewTransform = InSceneNode.Get_RelativeTransform() * AnchorWorld;
 
         if (InTransform.Get_Transform().Equals(NewTransform))
         { return; }
@@ -192,7 +192,7 @@ namespace ck
             typename Super::TimeType InDeltaT,
             typename Super::HandleType InHandle,
             const SceneNodeParent& InParent,
-            const FFragment_SceneNode_Current& InCurrent,
+            const FFragment_SceneNode& InSceneNode,
             FFragment_Transform& InTransform,
             FFragment_Transform_Previous& InPrevTransform,
             const FFragment_SceneNode_PropagationState& InPropagationState)
@@ -220,7 +220,7 @@ namespace ck
         { return; }
 
         const auto& ParentTransform = ReadOnlyParent.template Get<FFragment_Transform>().Get_Transform();
-        const auto NewTransform = InCurrent.Get_RelativeTransform() * ParentTransform;
+        const auto NewTransform = InSceneNode.Get_RelativeTransform() * ParentTransform;
 
         const auto ComponentsModified = UCk_Utils_Transform_UE::Apply_SetTransform_DirectWrite(
             InTransform, InPrevTransform, NewTransform);

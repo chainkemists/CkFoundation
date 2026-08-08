@@ -25,10 +25,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKINTERACTION_API FFragment_Interaction_Current
+    struct CKINTERACTION_API FFragment_Interaction
     {
     public:
-        CK_GENERATED_BODY(FFragment_Interaction_Current);
+        CK_GENERATED_BODY(FFragment_Interaction);
 
     public:
         friend class FProcessor_Interaction_Setup;

@@ -474,7 +474,7 @@ namespace ck
                 SenderLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
                     UCk_Utils_Transform_UE::CastChecked(InVoiceTalkerEntity));
 
-                for (const auto& Overlap : Proximity->Get_RangeProbe().Get<FFragment_Probe_Current>().Get_CurrentOverlaps())
+                for (const auto& Overlap : Proximity->Get_RangeProbe().Get<FFragment_Probe>().Get_CurrentOverlaps())
                 {
                     const auto& PresenceChild = Overlap.Get_OtherEntity();
 

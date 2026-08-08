@@ -10,17 +10,17 @@ class UCk_Utils_OwningActor_UE;
 
 namespace ck
 {
-    struct CKECS_API FFragment_OwningActor_Current
+    struct CKECS_API FFragment_OwningActor
     {
     public:
-        CK_GENERATED_BODY(FFragment_OwningActor_Current);
+        CK_GENERATED_BODY(FFragment_OwningActor);
 
     public:
         friend class UCk_Utils_OwningActor_UE;
 
     public:
-        FFragment_OwningActor_Current() = default;
-        explicit FFragment_OwningActor_Current(
+        FFragment_OwningActor() = default;
+        explicit FFragment_OwningActor(
             AActor* InEntityOwningActor);
 
     private:

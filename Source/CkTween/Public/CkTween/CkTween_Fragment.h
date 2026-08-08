@@ -29,10 +29,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKTWEEN_API FFragment_Tween_Current
+    struct CKTWEEN_API FFragment_Tween
     {
     public:
-        CK_GENERATED_BODY(FFragment_Tween_Current);
+        CK_GENERATED_BODY(FFragment_Tween);
 
     private:
         float _CurrentTime = 0.0f;
@@ -44,7 +44,7 @@ namespace ck
         float _TimeMultiplier = 1.0f;
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Tween_Current, _CurrentValue);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Tween, _CurrentValue);
 
         CK_PROPERTY(_CurrentTime);
         CK_PROPERTY(_YoyoDelayTimer);

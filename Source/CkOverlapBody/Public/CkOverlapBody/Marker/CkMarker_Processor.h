@@ -13,7 +13,7 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Marker_Setup : public ck_exp::TProcessor<
             FProcessor_Marker_Setup,
             FCk_Handle_Marker,
-            TReadWrite<FFragment_Marker_Current>,
+            TReadWrite<FFragment_Marker>,
             TReadOnly<FFragment_Marker_Params>,
             FTag_Marker_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -32,7 +32,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp) const -> void;
     };
 
@@ -41,7 +41,7 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Marker_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Marker_HandleRequests,
             FCk_Handle_Marker,
-            TReadWrite<FFragment_Marker_Current>,
+            TReadWrite<FFragment_Marker>,
             TReadOnly<FFragment_Marker_Params>,
             TReadOnly<FFragment_Marker_Requests>,
             FTag_Marker_SetupComplete,
@@ -60,20 +60,20 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp,
             const FFragment_Marker_Requests& InRequestsComp) const -> void;
 
     private:
         static auto DoHandleRequest(
             HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp,
             const FCk_Request_Marker_EnableDisable& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp,
             const FCk_Request_Marker_Resize& InRequest) -> void;
     };
@@ -107,7 +107,7 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Marker_EndPlay : public ck_exp::TProcessor<
             FProcessor_Marker_EndPlay,
             FCk_Handle_Marker,
-            TReadWrite<FFragment_Marker_Current>,
+            TReadWrite<FFragment_Marker>,
             TReadOnly<FFragment_Marker_Params>,
             FTag_Marker_SetupComplete,
             CK_IF_END_PLAY>
@@ -122,7 +122,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp) const -> void;
     };
 
@@ -131,7 +131,7 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Marker_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Marker_UpdateTransform,
             FCk_Handle_Marker,
-            TReadOnly<FFragment_Marker_Current>,
+            TReadOnly<FFragment_Marker>,
             TReadOnly<FFragment_Marker_Params>,
             FTag_Marker_UpdateTransform,
             FTag_Marker_SetupComplete,
@@ -147,7 +147,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            const FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params&  InParamsComp) const -> void;
     };
 

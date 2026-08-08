@@ -55,7 +55,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Velocity_Params& InParams,
-            FFragment_Velocity_Current& InCurrent) const
+            FFragment_Velocity& InVelocity) const
         -> void
     {
         if (UCk_Utils_OwningActor_UE::Has(InHandle))
@@ -108,7 +108,7 @@ namespace ck
         };
 
         const auto& Rotation = DoGet_RotationFromEntityOrTargetEntity();
-        InCurrent._CurrentVelocity = Rotation.RotateVector(InParams.Get_StartingVelocity());
+        InVelocity._CurrentVelocity = Rotation.RotateVector(InParams.Get_StartingVelocity());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -118,17 +118,17 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Velocity_Current& InCurrent,
+            FFragment_Velocity& InVelocity,
             const FFragment_Velocity_MinMax& InMinMax) const
         -> void
     {
-        const auto& CurrentVelocity = InCurrent.Get_CurrentVelocity();
+        const auto& CurrentVelocity = InVelocity.Get_CurrentVelocity();
         const auto& ClampMin = InMinMax.Get_MinSpeed().Get(0.0f);
         const auto& ClampMax = InMinMax.Get_MaxSpeed().Get(CurrentVelocity.Length());
 
         const auto ClampRange = FCk_FloatRange{ClampMin, ClampMax};
 
-        InCurrent._CurrentVelocity = UCk_Utils_Vector3_UE::Get_ClampedLength(CurrentVelocity, ClampRange);
+        InVelocity._CurrentVelocity = UCk_Utils_Vector3_UE::Get_ClampedLength(CurrentVelocity, ClampRange);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -138,12 +138,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Velocity_Current& InVelocity,
+            const FFragment_Velocity& InVelocity,
             const FFragment_Velocity_Target& InTarget) const
         -> void
     {
         auto TargetEntity  = InTarget.Get_Entity();
-        auto& TargetVelocity = TargetEntity.Get<FFragment_Velocity_Current>();
+        auto& TargetVelocity = TargetEntity.Get<FFragment_Velocity>();
 
         TargetVelocity._CurrentVelocity += InVelocity.Get_CurrentVelocity();
 
@@ -157,12 +157,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Velocity_Current& InVelocity,
+            const FFragment_Velocity& InVelocity,
             const FFragment_Velocity_Target& InTarget) const
         -> void
     {
         auto TargetEntity = InTarget.Get_Entity();
-        auto& TargetVelocity = TargetEntity.Get<FFragment_Velocity_Current>();
+        auto& TargetVelocity = TargetEntity.Get<FFragment_Velocity>();
 
         TargetVelocity._CurrentVelocity -= InVelocity._CurrentVelocity;
     }
@@ -319,7 +319,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Velocity_Current& InCurrent,
+            const FFragment_Velocity& InVelocity,
             const FFragment_ContainerRef_Velocity& InContainerRef) const
         -> void
     {

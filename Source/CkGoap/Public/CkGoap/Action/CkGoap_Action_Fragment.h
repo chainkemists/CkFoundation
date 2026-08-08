@@ -39,10 +39,10 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-	struct CKGOAP_API FFragment_Goap_Action_Current
+	struct CKGOAP_API FFragment_Goap_Action
 	{
 	public:
-		CK_GENERATED_BODY(FFragment_Goap_Action_Current);
+		CK_GENERATED_BODY(FFragment_Goap_Action);
 
 		friend class ::UCk_Utils_Goap_Action_UE;
 		friend class ::UCk_Utils_Goap_Planner_UE;

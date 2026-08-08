@@ -26,10 +26,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPROJECTILE_API FFragment_Homing_Current
+    struct CKPROJECTILE_API FFragment_Homing
     {
     public:
-        CK_GENERATED_BODY(FFragment_Homing_Current);
+        CK_GENERATED_BODY(FFragment_Homing);
 
     public:
         friend class FProcessor_Homing_HandleRequests;

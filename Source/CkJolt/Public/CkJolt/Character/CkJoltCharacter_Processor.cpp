@@ -93,7 +93,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltCharacter_Params& InParams,
-            FFragment_JoltCharacter_Current& InCurrent)
+            FFragment_JoltCharacter& InJoltCharacter)
         -> void
     {
         using namespace JPH;
@@ -161,8 +161,8 @@ namespace ck
 
         Character->SetListener(_JoltWorld->Get_CharacterContactListener());
 
-        InCurrent._Character = Character;
-        InCurrent._ObjectLayer = Layer;
+        InJoltCharacter._Character = Character;
+        InJoltCharacter._ObjectLayer = Layer;
 
         auto Entry = FCk_Jolt_CharacterEntry{};
         Entry.Character = Character.GetPtr();
@@ -199,7 +199,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_JoltCharacter_Current& InCurrent,
+            FFragment_JoltCharacter& InJoltCharacter,
             FFragment_JoltCharacter_Requests& InRequestsComp) const
         -> void
     {
@@ -214,7 +214,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            DoHandleRequest(InHandle, InCurrent, InRequest);
+            DoHandleRequest(InHandle, InJoltCharacter, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             {
@@ -234,36 +234,36 @@ namespace ck
         FProcessor_JoltCharacter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_JoltCharacter_Current& InCurrent,
+            FFragment_JoltCharacter& InJoltCharacter,
             const FCk_Request_JoltCharacter_Move& InRequest) const
         -> void
     {
         // Continuous intent: stored on Current, drained into the FJoltWorld entry by PreStep each frame.
-        InCurrent._PendingMoveVelocity = InRequest.Get_DesiredVelocity();
+        InJoltCharacter._PendingMoveVelocity = InRequest.Get_DesiredVelocity();
     }
 
     auto
         FProcessor_JoltCharacter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_JoltCharacter_Current& InCurrent,
+            FFragment_JoltCharacter& InJoltCharacter,
             const FCk_Request_JoltCharacter_Jump& InRequest) const
         -> void
     {
         // One-shot intent: armed on Current, transferred (once) into the entry by PreStep, consumed by the step.
-        InCurrent._PendingJumpVelocity = InRequest.Get_JumpVelocity();
-        InCurrent._HasPendingJump = true;
+        InJoltCharacter._PendingJumpVelocity = InRequest.Get_JumpVelocity();
+        InJoltCharacter._HasPendingJump = true;
     }
 
     auto
         FProcessor_JoltCharacter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_JoltCharacter_Current& InCurrent,
+            FFragment_JoltCharacter& InJoltCharacter,
             const FCk_Request_JoltCharacter_Teleport& InRequest) const
         -> void
     {
-        auto* Character = InCurrent._Character.GetPtr();
+        auto* Character = InJoltCharacter._Character.GetPtr();
         if (ck::Is_NOT_Valid(Character, ck::IsValid_Policy_NullptrOnly{}))
         { return; }
 
@@ -330,20 +330,20 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltCharacter_Params& InParams,
-            FFragment_JoltCharacter_Current& InCurrent) const
+            FFragment_JoltCharacter& InJoltCharacter) const
         -> void
     {
         const auto EntityId = static_cast<uint64>(InHandle.Get_Entity().Get_ID());
 
         _JoltWorld->Push_CharacterIntent(
             EntityId,
-            InCurrent._PendingMoveVelocity,
+            InJoltCharacter._PendingMoveVelocity,
             InParams.Get_PushPolicy(),
-            InCurrent._HasPendingJump,
-            InCurrent._PendingJumpVelocity);
+            InJoltCharacter._HasPendingJump,
+            InJoltCharacter._PendingJumpVelocity);
 
         // The jump is armed on the entry now, so clear the inbox flag: transferred exactly once, never re-armed.
-        InCurrent._HasPendingJump = false;
+        InJoltCharacter._HasPendingJump = false;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -365,7 +365,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltCharacter_Params& InParams,
-            FFragment_JoltCharacter_Current& InCurrent) const
+            FFragment_JoltCharacter& InJoltCharacter) const
         -> void
     {
         // ASYNC GUARD: FGroup_EndPlay runs later in the SAME tick that kicked this frame's async step, and
@@ -387,7 +387,7 @@ namespace ck
 
         // Dropping the owning Ref destroys the CharacterVirtual; it is NOT in the body interface, so unlike a
         // JoltBody there is no body to Remove/Destroy.
-        InCurrent._Character = nullptr;
+        InJoltCharacter._Character = nullptr;
     }
 
     // --------------------------------------------------------------------------------------------------------------------

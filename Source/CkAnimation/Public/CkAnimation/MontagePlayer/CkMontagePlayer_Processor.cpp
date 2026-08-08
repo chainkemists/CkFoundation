@@ -107,7 +107,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_MontagePlayer_Params& InParams,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             FFragment_MontagePlayer_Requests& InRequestsComp) const
         -> void
     {
@@ -130,7 +130,7 @@ namespace ck
             return;
         }
 
-        InCurrent._LastSeenAnimInstance = AI;
+        InMontagePlayer._LastSeenAnimInstance = AI;
 
         // While the head Play's preload batch is still loading, the fragment is left untouched so
         // everything behind the head stays queued in order; the tag is not this drain's dirty marker
@@ -162,7 +162,7 @@ namespace ck
                     auto Result = ECk_Request_OperationResult::Failed;
                     const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                    Result = DoHandleRequest(InHandle, AI, InCurrent, InRequest);
+                    Result = DoHandleRequest(InHandle, AI, InMontagePlayer, InRequest);
 
                     if (InRequest.Get_IsRequestHandleValid())
                     {
@@ -203,7 +203,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_Play& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -237,10 +237,10 @@ namespace ck
 
         const auto FromReplication = InRequest.Get_FromReplication();
 
-        const auto PreviousMontage = InCurrent._ActiveMontage.Get();
+        const auto PreviousMontage = InMontagePlayer._ActiveMontage.Get();
         if (ck::IsValid(PreviousMontage) && PreviousMontage != Montage)
         {
-            const auto PreviousState = InCurrent._State;
+            const auto PreviousState = InMontagePlayer._State;
             InAnimInstance->Montage_Stop(static_cast<float>(PreviousState.Get_BlendOutTime().Get_Seconds()), PreviousMontage);
             UUtils_Signal_MontagePlayer_OnFinished::Broadcast(
                 InHandle, ck::MakePayload(InHandle, PreviousState, ECk_MontagePlayer_FinishReason::Interrupted));
@@ -264,7 +264,7 @@ namespace ck
         else
         {
             NewState
-                .Set_PlayInstanceId(InCurrent._State.Get_PlayInstanceId() + 1)
+                .Set_PlayInstanceId(InMontagePlayer._State.Get_PlayInstanceId() + 1)
                 .Set_ServerStartTime(Get_NowFor(InHandle));
         }
 
@@ -285,10 +285,10 @@ namespace ck
                 // Silent drop: server already finished — neither Started nor Finished fires. The
                 // montage ends up stopped, which is what the replicated state asked for, so this
                 // counts as honoured rather than failed.
-                InCurrent._State = NewState;
-                InCurrent._State.Set_Kind(ECk_MontagePlayer_StateKind::Stop);
-                InCurrent._ActiveMontage = nullptr;
-                InCurrent._CatchUpRemaining = FCk_Time::ZeroSecond();
+                InMontagePlayer._State = NewState;
+                InMontagePlayer._State.Set_Kind(ECk_MontagePlayer_StateKind::Stop);
+                InMontagePlayer._ActiveMontage = nullptr;
+                InMontagePlayer._CatchUpRemaining = FCk_Time::ZeroSecond();
                 InHandle.Remove<FTag_MontagePlayer_HasActiveMontage>();
                 return ECk_Request_OperationResult::Succeeded;
             }
@@ -313,8 +313,8 @@ namespace ck
         {
             UUtils_Signal_MontagePlayer_OnFinished::Broadcast(
                 InHandle, ck::MakePayload(InHandle, NewState, ECk_MontagePlayer_FinishReason::Failed_SlotMismatch));
-            InCurrent._ActiveMontage = nullptr;
-            InCurrent._CatchUpRemaining = FCk_Time::ZeroSecond();
+            InMontagePlayer._ActiveMontage = nullptr;
+            InMontagePlayer._CatchUpRemaining = FCk_Time::ZeroSecond();
             InHandle.Remove<FTag_MontagePlayer_HasActiveMontage>();
             return ECk_Request_OperationResult::Failed;
         }
@@ -324,7 +324,7 @@ namespace ck
             InAnimInstance->Montage_JumpToSection(NewState.Get_SectionName(), Montage);
         }
 
-        InCurrent._CatchUpRemaining = BurnCatchUp ? _SyncTargetTime : FCk_Time::ZeroSecond();
+        InMontagePlayer._CatchUpRemaining = BurnCatchUp ? _SyncTargetTime : FCk_Time::ZeroSecond();
 
         const auto Snapshot = NewState;
         auto HandleCopy = InHandle;
@@ -339,8 +339,8 @@ namespace ck
             });
         InAnimInstance->Montage_SetEndDelegate(Lambda, Montage);
 
-        InCurrent._State = NewState;
-        InCurrent._ActiveMontage = Montage;
+        InMontagePlayer._State = NewState;
+        InMontagePlayer._ActiveMontage = Montage;
         InHandle.AddOrGet<FTag_MontagePlayer_HasActiveMontage>();
 
         UUtils_Signal_MontagePlayer_OnStarted::Broadcast(InHandle, ck::MakePayload(InHandle, Snapshot));
@@ -356,11 +356,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_Stop& InRequest)
         -> ECk_Request_OperationResult
     {
-        auto* Montage = InCurrent._ActiveMontage.Get();
+        auto* Montage = InMontagePlayer._ActiveMontage.Get();
         if (ck::Is_NOT_Valid(Montage))
         {
             // Idempotent: nothing is playing, so the desired end state (stopped) already holds.
@@ -371,16 +371,16 @@ namespace ck
 
         InAnimInstance->Montage_Stop(static_cast<float>(InRequest.Get_BlendOutTime().Get_Seconds()), Montage);
 
-        InCurrent._State.Set_BlendOutTime(InRequest.Get_BlendOutTime());
-        InCurrent._State.Set_Kind(ECk_MontagePlayer_StateKind::Stop);
+        InMontagePlayer._State.Set_BlendOutTime(InRequest.Get_BlendOutTime());
+        InMontagePlayer._State.Set_Kind(ECk_MontagePlayer_StateKind::Stop);
 
         if (FromReplication)
-        { InCurrent._State.Set_PlayInstanceId(InRequest.Get_AuthoritativePlayInstanceId()); }
+        { InMontagePlayer._State.Set_PlayInstanceId(InRequest.Get_AuthoritativePlayInstanceId()); }
         else
-        { InCurrent._State.Set_PlayInstanceId(InCurrent._State.Get_PlayInstanceId() + 1); }
+        { InMontagePlayer._State.Set_PlayInstanceId(InMontagePlayer._State.Get_PlayInstanceId() + 1); }
 
-        InCurrent._ActiveMontage = nullptr;
-        InCurrent._CatchUpRemaining = FCk_Time::ZeroSecond();
+        InMontagePlayer._ActiveMontage = nullptr;
+        InMontagePlayer._CatchUpRemaining = FCk_Time::ZeroSecond();
         InHandle.Remove<FTag_MontagePlayer_HasActiveMontage>();
 
         if (NOT FromReplication)
@@ -394,11 +394,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_Pause& InRequest)
         -> ECk_Request_OperationResult
     {
-        auto* Montage = InCurrent._ActiveMontage.Get();
+        auto* Montage = InMontagePlayer._ActiveMontage.Get();
         if (ck::Is_NOT_Valid(Montage))
         {
             // Nothing is playing — there is no montage to pause, so the caller's intent cannot be
@@ -411,12 +411,12 @@ namespace ck
         if (auto* MontageInstance = InAnimInstance->GetActiveInstanceForMontage(Montage))
         { MontageInstance->Pause(); }
 
-        InCurrent._State.Set_Kind(ECk_MontagePlayer_StateKind::Pause);
+        InMontagePlayer._State.Set_Kind(ECk_MontagePlayer_StateKind::Pause);
 
         if (FromReplication)
-        { InCurrent._State.Set_PlayInstanceId(InRequest.Get_AuthoritativePlayInstanceId()); }
+        { InMontagePlayer._State.Set_PlayInstanceId(InRequest.Get_AuthoritativePlayInstanceId()); }
         else
-        { InCurrent._State.Set_PlayInstanceId(InCurrent._State.Get_PlayInstanceId() + 1); }
+        { InMontagePlayer._State.Set_PlayInstanceId(InMontagePlayer._State.Get_PlayInstanceId() + 1); }
 
         if (NOT FromReplication)
         { UCk_Utils_MontagePlayer_UE::Request_TryReplicateMontagePlayer(InHandle); }
@@ -429,11 +429,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_Resume& InRequest)
         -> ECk_Request_OperationResult
     {
-        auto* Montage = InCurrent._ActiveMontage.Get();
+        auto* Montage = InMontagePlayer._ActiveMontage.Get();
         if (ck::Is_NOT_Valid(Montage))
         {
             // Nothing is playing — there is no montage to resume (missing target).
@@ -444,12 +444,12 @@ namespace ck
 
         InAnimInstance->Montage_Resume(Montage);
 
-        InCurrent._State.Set_Kind(ECk_MontagePlayer_StateKind::Resume);
+        InMontagePlayer._State.Set_Kind(ECk_MontagePlayer_StateKind::Resume);
 
         if (FromReplication)
-        { InCurrent._State.Set_PlayInstanceId(InRequest.Get_AuthoritativePlayInstanceId()); }
+        { InMontagePlayer._State.Set_PlayInstanceId(InRequest.Get_AuthoritativePlayInstanceId()); }
         else
-        { InCurrent._State.Set_PlayInstanceId(InCurrent._State.Get_PlayInstanceId() + 1); }
+        { InMontagePlayer._State.Set_PlayInstanceId(InMontagePlayer._State.Get_PlayInstanceId() + 1); }
 
         if (NOT FromReplication)
         { UCk_Utils_MontagePlayer_UE::Request_TryReplicateMontagePlayer(InHandle); }
@@ -462,11 +462,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_JumpToSection& InRequest)
         -> ECk_Request_OperationResult
     {
-        auto* Montage = InCurrent._ActiveMontage.Get();
+        auto* Montage = InMontagePlayer._ActiveMontage.Get();
         if (ck::Is_NOT_Valid(Montage))
         {
             // Nothing is playing — there is no section to jump within (missing target).
@@ -477,13 +477,13 @@ namespace ck
 
         InAnimInstance->Montage_JumpToSection(InRequest.Get_SectionName(), Montage);
 
-        InCurrent._State.Set_SectionName(InRequest.Get_SectionName());
-        InCurrent._State.Set_Kind(ECk_MontagePlayer_StateKind::JumpToSection);
+        InMontagePlayer._State.Set_SectionName(InRequest.Get_SectionName());
+        InMontagePlayer._State.Set_Kind(ECk_MontagePlayer_StateKind::JumpToSection);
 
         if (FromReplication)
-        { InCurrent._State.Set_PlayInstanceId(InRequest.Get_AuthoritativePlayInstanceId()); }
+        { InMontagePlayer._State.Set_PlayInstanceId(InRequest.Get_AuthoritativePlayInstanceId()); }
         else
-        { InCurrent._State.Set_PlayInstanceId(InCurrent._State.Get_PlayInstanceId() + 1); }
+        { InMontagePlayer._State.Set_PlayInstanceId(InMontagePlayer._State.Get_PlayInstanceId() + 1); }
 
         if (NOT FromReplication)
         { UCk_Utils_MontagePlayer_UE::Request_TryReplicateMontagePlayer(InHandle); }
@@ -512,7 +512,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_MontagePlayer_Params& InParams,
-            FFragment_MontagePlayer_Current& InCurrent) const
+            FFragment_MontagePlayer& InMontagePlayer) const
         -> void
     {
         auto* SkelMeshComp = InParams.Get_Params().Get_SkeletalMeshComponent().Get();
@@ -520,36 +520,36 @@ namespace ck
         { return; }
 
         auto* CurrentAI = SkelMeshComp->GetAnimInstance();
-        const auto* LastSeenAI = InCurrent._LastSeenAnimInstance.Get();
+        const auto* LastSeenAI = InMontagePlayer._LastSeenAnimInstance.Get();
 
         if (CurrentAI != LastSeenAI && ck::IsValid(LastSeenAI))
         {
-            const auto Snapshot = InCurrent._State;
+            const auto Snapshot = InMontagePlayer._State;
             UUtils_Signal_MontagePlayer_OnFinished::Broadcast(
                 InHandle, ck::MakePayload(InHandle, Snapshot, ECk_MontagePlayer_FinishReason::Interrupted));
 
-            InCurrent._ActiveMontage = nullptr;
-            InCurrent._LastSeenAnimInstance = CurrentAI;
-            InCurrent._CatchUpRemaining = FCk_Time::ZeroSecond();
+            InMontagePlayer._ActiveMontage = nullptr;
+            InMontagePlayer._LastSeenAnimInstance = CurrentAI;
+            InMontagePlayer._CatchUpRemaining = FCk_Time::ZeroSecond();
             InHandle.Remove<FTag_MontagePlayer_HasActiveMontage>();
 
             if (UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
             {
-                InCurrent._State.Set_PlayInstanceId(InCurrent._State.Get_PlayInstanceId() + 1);
-                InCurrent._State.Set_Kind(ECk_MontagePlayer_StateKind::Stop);
+                InMontagePlayer._State.Set_PlayInstanceId(InMontagePlayer._State.Get_PlayInstanceId() + 1);
+                InMontagePlayer._State.Set_Kind(ECk_MontagePlayer_StateKind::Stop);
                 UCk_Utils_MontagePlayer_UE::Request_TryReplicateMontagePlayer(InHandle);
             }
 
             return;
         }
 
-        if (InCurrent._CatchUpRemaining > FCk_Time::ZeroSecond())
+        if (InMontagePlayer._CatchUpRemaining > FCk_Time::ZeroSecond())
         {
-            InCurrent._CatchUpRemaining -= InDeltaT;
-            if (InCurrent._CatchUpRemaining <= FCk_Time::ZeroSecond())
+            InMontagePlayer._CatchUpRemaining -= InDeltaT;
+            if (InMontagePlayer._CatchUpRemaining <= FCk_Time::ZeroSecond())
             {
-                InCurrent._CatchUpRemaining = FCk_Time::ZeroSecond();
-                if (auto* Montage = InCurrent._ActiveMontage.Get(); ck::IsValid(Montage) && ck::IsValid(CurrentAI))
+                InMontagePlayer._CatchUpRemaining = FCk_Time::ZeroSecond();
+                if (auto* Montage = InMontagePlayer._ActiveMontage.Get(); ck::IsValid(Montage) && ck::IsValid(CurrentAI))
                 {
                     CurrentAI->Montage_SetPlayRate(Montage, 1.0f);
                 }
@@ -575,7 +575,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_MontagePlayer_Current& InCurrent,
+            const FFragment_MontagePlayer& InMontagePlayer,
             const FFragment_ContainerRef_MontagePlayer& InRepRef) const
         -> void
     {

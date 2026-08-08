@@ -29,10 +29,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOVERLAPBODY_API FFragment_Marker_Current
+    struct CKOVERLAPBODY_API FFragment_Marker
     {
     public:
-        CK_GENERATED_BODY(FFragment_Marker_Current);
+        CK_GENERATED_BODY(FFragment_Marker);
 
     public:
         friend class FProcessor_Marker_Setup;
@@ -52,7 +52,7 @@ namespace ck
         CK_PROPERTY_GET(_Marker);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Marker_Current, _EnableDisable);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Marker, _EnableDisable);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -24,7 +24,7 @@ namespace ck
         FProcessor_IsmRenderer_Setup,
         FCk_Handle_IsmRenderer,
         TReadOnly<FFragment_IsmRenderer_Params>,
-        TReadOnly<FFragment_OwningActor_Current>,
+        TReadOnly<FFragment_OwningActor>,
         FTag_IsmRenderer_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -46,7 +46,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmRenderer_Params& InParams,
-            const FFragment_OwningActor_Current& InOwningActorCurrent) const -> void;
+            const FFragment_OwningActor& InOwningActorCurrent) const -> void;
 
     private:
         template<typename T_IsmCompType>
@@ -75,7 +75,7 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmRenderer_ClearInstances : public ck_exp::TProcessor<
         FProcessor_IsmRenderer_ClearInstances,
         FCk_Handle_IsmRenderer,
-        TReadOnly<FFragment_IsmRenderer_Current>,
+        TReadOnly<FFragment_IsmRenderer>,
         FTag_IsmRenderer_Movable,
         FTag_IsmRenderer_UpdateByRecreating,
         CK_IGNORE_PENDING_KILL>
@@ -90,7 +90,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_IsmRenderer_Current& InCurrent) -> void;
+            const FFragment_IsmRenderer& InIsmRenderer) -> void;
     };
 }
 
@@ -152,7 +152,7 @@ namespace ck
             }
         }
 
-        _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent = InIsmActorComp;
+        _RendererEntity.Get<FFragment_IsmRenderer>()._IsmComponent = InIsmActorComp;
 
         InIsmActorComp->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params->Get_PhysicsInfo().Get_Collision()));
         InIsmActorComp->SetCollisionProfileName(Params->Get_PhysicsInfo().Get_CollisionProfileName().Name);

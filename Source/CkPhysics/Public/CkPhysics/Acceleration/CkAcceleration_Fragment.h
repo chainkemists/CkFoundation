@@ -43,10 +43,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FFragment_Acceleration_Current
+    struct CKPHYSICS_API FFragment_Acceleration
     {
     public:
-        CK_GENERATED_BODY(FFragment_Acceleration_Current);
+        CK_GENERATED_BODY(FFragment_Acceleration);
 
     public:
         friend class UCk_Utils_Acceleration_UE;
@@ -61,7 +61,7 @@ namespace ck
         CK_PROPERTY_GET(_CurrentAcceleration);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Acceleration_Current, _CurrentAcceleration);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Acceleration, _CurrentAcceleration);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
