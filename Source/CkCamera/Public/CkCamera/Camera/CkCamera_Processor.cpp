@@ -327,7 +327,7 @@ namespace ck
 
         // Camera-authoritative control rotation. One-way by design: the camera reads input intention, never control
         // rotation, so this can never feed back into the POV.
-        if (InHandle.Get<FFragment_Camera_Params>().Get_Params().Get_DriveControllerControlRotation())
+        if (InHandle.Get<FFragment_Camera_Params>().Get_DriveControllerControlRotation())
         {
             if (auto* Pawn = Cast<APawn>(UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(InHandle));
                 ck::IsValid(Pawn))
