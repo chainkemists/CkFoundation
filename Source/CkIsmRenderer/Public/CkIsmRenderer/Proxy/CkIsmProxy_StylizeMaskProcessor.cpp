@@ -66,7 +66,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Usf_StylizeMaskTarget& InTarget,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_IsmProxy& InIsmProxy,
             const FFragment_Transform& InTransform) const
         -> void
     {
@@ -120,7 +120,7 @@ namespace ck
         const auto& InstanceTransform = Get_TransformWithLocalOffset(InParams, InTransform.Get_Transform());
         const auto& ShadowInstanceId = ShadowIsm->AddInstanceById(InstanceTransform, TransformAsWorldSpace);
 
-        if (const auto& CustomData = InCurrent.Get_CustomInstanceDataValues();
+        if (const auto& CustomData = InIsmProxy.Get_CustomInstanceDataValues();
             NOT CustomData.IsEmpty() && ShadowIsm->NumCustomDataFloats == CustomData.Num())
         { ShadowIsm->SetCustomDataById(ShadowInstanceId, CustomData); }
 

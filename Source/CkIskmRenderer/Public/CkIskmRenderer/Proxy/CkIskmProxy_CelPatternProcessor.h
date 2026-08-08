@@ -25,7 +25,7 @@ namespace ck
         FProcessor_IskmProxy_CelPattern_Sync,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_Usf_CelPatternTarget>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         TExclude<FFragment_Usf_OutlineResolved>,
         TExclude<FTag_IskmProxy_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -49,7 +49,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_CelPatternTarget& InTarget,
-            const FFragment_IskmProxy_Current& InCurrent) const -> void;
+            const FFragment_IskmProxy& InIskmProxy) const -> void;
 
     private:
         TWeakObjectPtr<UWorld> _World;
@@ -66,7 +66,7 @@ namespace ck
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_CelPatternApplied>,
         TReadOnly<FFragment_Usf_OutlineResolved>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -84,7 +84,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_IskmProxy_CelPatternApplied& InApplied,
             const FFragment_Usf_OutlineResolved& InOutlineResolved,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -95,7 +95,7 @@ namespace ck
         FProcessor_IskmProxy_CelPattern_Remove,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_CelPatternApplied>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         TExclude<FFragment_Usf_CelPatternTarget>,
         TExclude<FFragment_Usf_OutlineResolved>,
         CK_IGNORE_PENDING_KILL>
@@ -114,7 +114,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_CelPatternApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -125,7 +125,7 @@ namespace ck
         FProcessor_IskmProxy_CelPattern_EndPlay,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_CelPatternApplied>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         CK_IF_END_PLAY>
     {
     public:
@@ -141,7 +141,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_CelPatternApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 }
 

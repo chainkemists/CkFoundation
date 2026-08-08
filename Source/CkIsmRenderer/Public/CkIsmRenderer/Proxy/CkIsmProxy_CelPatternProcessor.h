@@ -35,7 +35,7 @@ namespace ck
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_Usf_CelPatternTarget>,
         TReadOnly<FFragment_IsmProxy_Params>,
-        TReadOnly<FFragment_IsmProxy_Current>,
+        TReadOnly<FFragment_IsmProxy>,
         TReadOnly<FFragment_Transform>,
         TExclude<FFragment_Usf_OutlineResolved>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
@@ -62,7 +62,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Usf_CelPatternTarget& InTarget,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_IsmProxy& InIsmProxy,
             const FFragment_Transform& InTransform) const -> void;
 
     private:

@@ -32,7 +32,7 @@ namespace ck
         FProcessor_IskmProxy_StylizeMask_Sync,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_Usf_StylizeMaskTarget>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         TExclude<FFragment_Usf_OutlineResolved>,
         TExclude<FFragment_Usf_CelPatternTarget>,
         TExclude<FTag_IskmProxy_NeedsSetup>,
@@ -55,7 +55,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_StylizeMaskTarget& InTarget,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ namespace ck
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_StylizeMaskApplied>,
         TReadOnly<FFragment_Usf_OutlineResolved>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -87,7 +87,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
             const FFragment_Usf_OutlineResolved& InOutlineResolved,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ namespace ck
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_StylizeMaskApplied>,
         TReadOnly<FFragment_Usf_CelPatternTarget>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -114,7 +114,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
             const FFragment_Usf_CelPatternTarget& InCelPatternTarget,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -125,7 +125,7 @@ namespace ck
         FProcessor_IskmProxy_StylizeMask_Remove,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_StylizeMaskApplied>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         TExclude<FFragment_Usf_StylizeMaskTarget>,
         TExclude<FFragment_Usf_OutlineResolved>,
         TExclude<FFragment_Usf_CelPatternTarget>,
@@ -145,7 +145,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -156,7 +156,7 @@ namespace ck
         FProcessor_IskmProxy_StylizeMask_EndPlay,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_StylizeMaskApplied>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         CK_IF_END_PLAY>
     {
     public:
@@ -172,7 +172,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 }
 

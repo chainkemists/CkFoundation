@@ -22,7 +22,7 @@ namespace ck_iskm_stylize_mask_processor
 {
     auto
         DoSetCustomDepthOnProxySkmcs(
-            const ck::FFragment_IskmProxy_Current& InCurrent,
+            const ck::FFragment_IskmProxy& InIskmProxy,
             bool InEnabled,
             int32 InStencilValue)
         -> void
@@ -36,9 +36,9 @@ namespace ck_iskm_stylize_mask_processor
             InSkmc->SetCustomDepthStencilValue(InStencilValue);
         };
 
-        ApplyTo(InCurrent.Get_BaseSKMC().Get());
+        ApplyTo(InIskmProxy.Get_BaseSKMC().Get());
 
-        for (const auto& Submesh : InCurrent.Get_SubmeshSKMCs())
+        for (const auto& Submesh : InIskmProxy.Get_SubmeshSKMCs())
         { ApplyTo(Submesh.Get()); }
     }
 
@@ -48,7 +48,7 @@ namespace ck_iskm_stylize_mask_processor
     // exhausted range) this is what stops the mesh keeping a stencil no processor is left tracking.
     auto
         DoDisableCustomDepthIfStillOurs(
-            const ck::FFragment_IskmProxy_Current& InCurrent,
+            const ck::FFragment_IskmProxy& InIskmProxy,
             int32 InStencilValue)
         -> void
     {
@@ -63,9 +63,9 @@ namespace ck_iskm_stylize_mask_processor
             InSkmc->SetRenderCustomDepth(false);
         };
 
-        DisableIfOurs(InCurrent.Get_BaseSKMC().Get());
+        DisableIfOurs(InIskmProxy.Get_BaseSKMC().Get());
 
-        for (const auto& Submesh : InCurrent.Get_SubmeshSKMCs())
+        for (const auto& Submesh : InIskmProxy.Get_SubmeshSKMCs())
         { DisableIfOurs(Submesh.Get()); }
     }
 }
@@ -80,12 +80,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_StylizeMaskTarget& InTarget,
-            const FFragment_IskmProxy_Current& InCurrent)
+            const FFragment_IskmProxy& InIskmProxy)
         -> void
     {
         using namespace ck_iskm_stylize_mask_processor;
 
-        if (ck::Is_NOT_Valid(InCurrent.Get_BaseSKMC().Get()))
+        if (ck::Is_NOT_Valid(InIskmProxy.Get_BaseSKMC().Get()))
         { return; } // Setup incomplete or SKMC released — nothing to flag yet
 
         // Project config rather than a per-world subsystem: the mask claims ONE byte value for the whole
@@ -107,16 +107,16 @@ namespace ck
             {
                 // Re-assert every frame: the setters early-out when unchanged, and this is what makes
                 // late-attached outfit submeshes (and mesh swaps) inherit the mask automatically.
-                DoSetCustomDepthOnProxySkmcs(InCurrent, true, StencilValue);
+                DoSetCustomDepthOnProxySkmcs(InIskmProxy, true, StencilValue);
                 return;
             }
 
             // The project's mask value moved: undo, then fall through to re-apply.
-            DoSetCustomDepthOnProxySkmcs(InCurrent, false, 0);
+            DoSetCustomDepthOnProxySkmcs(InIskmProxy, false, 0);
             InHandle.Remove<FFragment_IskmProxy_StylizeMaskApplied>();
         }
 
-        DoSetCustomDepthOnProxySkmcs(InCurrent, true, StencilValue);
+        DoSetCustomDepthOnProxySkmcs(InIskmProxy, true, StencilValue);
         InHandle.AddOrGet<FFragment_IskmProxy_StylizeMaskApplied>() =
             FFragment_IskmProxy_StylizeMaskApplied{StencilValue};
 
@@ -132,7 +132,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
             const FFragment_Usf_OutlineResolved& InOutlineResolved,
-            const FFragment_IskmProxy_Current& InCurrent)
+            const FFragment_IskmProxy& InIskmProxy)
         -> void
     {
         // UNDO before dropping the state that records what to undo. Dropping alone assumes the higher
@@ -141,7 +141,7 @@ namespace ck
         // gone neither _Remove nor _EndPlay matches the entity, so the SKMCs keep this feature's stencil
         // forever with nothing left that knows to clear it. Value-guarded, so a higher claim that HAS
         // already written sees a no-op.
-        ck_iskm_stylize_mask_processor::DoDisableCustomDepthIfStillOurs(InCurrent, InApplied.Get_StencilValue());
+        ck_iskm_stylize_mask_processor::DoDisableCustomDepthIfStillOurs(InIskmProxy, InApplied.Get_StencilValue());
         InHandle.Try_Remove<FFragment_IskmProxy_StylizeMaskApplied>();
     }
 
@@ -154,11 +154,11 @@ namespace ck
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
             const FFragment_Usf_CelPatternTarget& InCelPatternTarget,
-            const FFragment_IskmProxy_Current& InCurrent)
+            const FFragment_IskmProxy& InIskmProxy)
         -> void
     {
         // Undo first — same reasoning as the outline twin above.
-        ck_iskm_stylize_mask_processor::DoDisableCustomDepthIfStillOurs(InCurrent, InApplied.Get_StencilValue());
+        ck_iskm_stylize_mask_processor::DoDisableCustomDepthIfStillOurs(InIskmProxy, InApplied.Get_StencilValue());
         InHandle.Try_Remove<FFragment_IskmProxy_StylizeMaskApplied>();
     }
 
@@ -170,10 +170,10 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent)
+            const FFragment_IskmProxy& InIskmProxy)
         -> void
     {
-        ck_iskm_stylize_mask_processor::DoSetCustomDepthOnProxySkmcs(InCurrent, false, 0);
+        ck_iskm_stylize_mask_processor::DoSetCustomDepthOnProxySkmcs(InIskmProxy, false, 0);
         InHandle.Try_Remove<FFragment_IskmProxy_StylizeMaskApplied>();
     }
 
@@ -185,10 +185,10 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent)
+            const FFragment_IskmProxy& InIskmProxy)
         -> void
     {
-        ck_iskm_stylize_mask_processor::DoSetCustomDepthOnProxySkmcs(InCurrent, false, 0);
+        ck_iskm_stylize_mask_processor::DoSetCustomDepthOnProxySkmcs(InIskmProxy, false, 0);
         InHandle.Try_Remove<FFragment_IskmProxy_StylizeMaskApplied>();
     }
 }

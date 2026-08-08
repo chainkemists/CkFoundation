@@ -24,7 +24,7 @@ namespace ck
     class CKUSF_API FProcessor_Usf_CelPatternActor_Sync : public TProcessor<
         FProcessor_Usf_CelPatternActor_Sync,
         TReadOnly<FFragment_Usf_CelPatternTarget>,
-        TReadOnly<FFragment_OwningActor_Current>,
+        TReadOnly<FFragment_OwningActor>,
         TExclude<FFragment_Usf_OutlineResolved>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -42,7 +42,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_CelPatternTarget& InTarget,
-            const FFragment_OwningActor_Current& InOwningActor) -> void;
+            const FFragment_OwningActor& InOwningActor) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

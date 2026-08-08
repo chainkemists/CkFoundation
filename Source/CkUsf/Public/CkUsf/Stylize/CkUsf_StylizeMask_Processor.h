@@ -25,7 +25,7 @@ namespace ck
     class CKUSF_API FProcessor_Usf_StylizeMaskActor_Sync : public TProcessor<
         FProcessor_Usf_StylizeMaskActor_Sync,
         TReadOnly<FFragment_Usf_StylizeMaskTarget>,
-        TReadOnly<FFragment_OwningActor_Current>,
+        TReadOnly<FFragment_OwningActor>,
         TExclude<FFragment_Usf_OutlineResolved>,
         TExclude<FFragment_Usf_CelPatternTarget>,
         CK_IGNORE_PENDING_KILL>
@@ -44,7 +44,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_StylizeMaskTarget& InTarget,
-            const FFragment_OwningActor_Current& InOwningActor) -> void;
+            const FFragment_OwningActor& InOwningActor) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
