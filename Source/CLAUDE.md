@@ -99,6 +99,7 @@ Before writing any code, navigate the documentation in this order:
 | save/restore world state (snapshots) | `CkSnapshot` (v3 rebuild+hydrate — see `CkSnapshot/Claude.md`) — features persist via a Produce/HydrationApply handler on `FCk_PersistenceHandlerRegistry` (`CkEcs/Persistence/`, save subset `Get_SaveHandlerTypes`), NOT a per-fragment macro (`CK_REGISTER_SNAPSHOTABLE` removed 2026-07-13) |
 | session state machine | `CkGameSession` |
 | CommonUI-based UI layer | `CkUI` |
+| drive a UMG widget from an entity's world transform (screen projection, clamping, distance scale/fade, occlusion) | `CkWorldSpaceWidget` (+ `UCk_WidgetComponent_UE` for the world-component path) |
 | dependency-gated loading screen | `CkLoadingScreen` (subsystem + `ICk_LoadingProcess` holders) |
 | Enhanced Input IMC lifecycle | `CkInput` |
 | async asset loading → fragments | `CkResourceLoader` |
@@ -221,7 +222,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkTargeting | Actor,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkTimer | Core,Ecs,EcsExt,Label,Log,Profile,Record |
 | CkTween | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Spline,Timer |
-| CkUI | Core,Ecs,EcsExt,GameSession,Graphics,Log,Settings,ThirdParty |
+| CkUI | Core,Ecs,GameSession,Graphics,Log,Settings,ThirdParty (EcsExt dropped 2026-08-08 — WorldSpaceWidget was its only consumer) |
 | CkUnrealComponent | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkUsf | Core,Ecs,Graphics,Log |
 | CkVat | Core,Ecs,EcsExt,Graphics,IsmRenderer,Log,Usf |
@@ -230,6 +231,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkVoiceChat | ActorRelay,Core,Ecs,EcsExt,Label,Log,Record,ResourceLoader,Settings,Shapes,SpatialQuery (P4 2026-08-04 — feature-complete; engine deps AudioMixer/DeveloperSettings/GameplayTags/NetCore/Voice; never Relationship) |
 | CkVoxelNav | AStar,Core,Ecs,EcsExt,Jolt,Label,Log,Navigation,Profile,Record,Settings,ThirdParty (volumetric free-space nav; all geometry queries via CkJolt's JPH-free surface — no direct Jolt includes) |
 | CkWatermark | Core,Ecs,Jolt,Log,Memory,Settings,UI |
+| CkWorldSpaceWidget | Core,Ecs,EcsExt,Log,Settings,ThirdParty,UI (extracted from CkUI 2026-08-08; hosts `UCk_WidgetComponent_UE`) |
 
 ### T5 — editor modules (25 UncookedOnly + 3 Editor; runtime code must NEVER depend on these)
 

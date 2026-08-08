@@ -1,16 +1,20 @@
 # CkUI
 
-**Purpose:** UI utilities — widget math helpers (line/plane intersection for 3D-to-screen projection), UI entity lifecycle, and bridge between UE's `UMG` and the ECS world.
+**Purpose:** UI framework — layer stack and primary game layout, HUD, extension points, the widget
+base classes, per-player UI policy (input suspension, cursor lock, navigation config), and screen fade.
 
-**Depends on:** `CkCore`, `CkEcs`, `CkEcsExt`, `CkGameSession`, `CkLog`, `CkSettings`, `CkThirdParty`.
-**Used by:** `CkCueEditor`, `CkDynamicEditor`, `CkEditorToolbar`, `CkWatermark`.
+**Depends on:** `CkCore`, `CkEcs`, `CkGameSession`, `CkGraphics`, `CkLog`, `CkSettings`, `CkThirdParty`.
+**Used by:** `CkCompass`, `CkCueEditor`, `CkDynamicEditor`, `CkEditorToolbar`, `CkMinimap`, `CkUIDebugger`,
+`CkUIEditor`, `CkWatermark`, `CkWorldSpaceWidget`.
+
+The world-space widget feature moved out to `CkWorldSpaceWidget` — it was the only ECS feature quartet
+here, and the only reason this module depended on `CkEcsExt`.
 
 ---
 
 ## Key API
 
 - `ECk_LinePlaneIntersectionStatus` — result of 3D projection queries.
-- UI entity lifecycle (show/hide, bind to entity position).
 - `UCk_Utils_UI_UE::Request_LockCursorToWidget` / `Request_UnlockCursor` — confine the mouse cursor
   to a `UWidget`'s screen bounds. Slate owns the lock afterwards (rect follows layout changes, auto-
   releases when the widget leaves the screen), so there is no per-frame upkeep and no teardown unlock.
@@ -30,13 +34,10 @@
 
 ## Pattern
 
-Attach a UI entity to a gameplay entity; the UI processor updates the widget's screen position each frame from the entity's world transform.
-
----
-
-## Anti-patterns
-
-Don't update widget positions from Tick in a `UUserWidget` subclass — route through the UI processor so updates are batched.
+Widgets receive their entity through the ECS ContextReceiver on `UCk_UserWidget_UE` — the layer stack
+injects context on push, and the widget reads it in `OnValidContextInjected`. Layout is data-driven:
+a `UCk_UI_LayoutConfigAsset` declares the layers and their HUD elements, and the Layout Subsystem
+registers those elements as extension-point contributions.
 
 ---
 
@@ -80,33 +81,10 @@ stale layout on screen with dead bindings AND suppressed `OnLayoutReady`, so gam
 never re-injected the fresh world's context. Adopt-and-rebind is unsafe: the surviving widgets hold
 dead entity handles.
 
-**WorldSpaceWidget — legacy-plugin provenance.** All inherited from the legacy WorldSpaceWidgets
-plugin: `ECk_WorldSpaceWidget_Clamping_Policy` collapses its two interacting bools
-(`bShouldClampToViewport` + `bShouldClampByBounds`) into one policy;
-`ECk_WorldSpaceWidget_Occlusion_Policy::HideWhenOccluded` mirrors `bShouldBeOccluded`;
-`ECk_WorldSpaceWidget_RenderMode::WorldComponent` matches the legacy `/Script/UMG.WidgetComponent`
-callout; `FCk_WorldSpaceWidget_OcclusionInfo::_TraceChannel` defaults to `ECC_Camera` because that is
-the channel the legacy plugin traced on; `_DrawAtDesiredSize` carries
-`UWidgetComponent::bDrawAtDesiredSize` semantics, which is what legacy WidgetComponent callouts
-authored.
-
-**WorldSpaceWidget gotchas.**
-- `WorldComponent` mode hands the content-widget INSTANCE (`Params._Widget`) to
-  `UWidgetComponent::SetWidget`, and only after `RegisterComponentWithWorld`. Do not rely on the
-  component's own `InitWidget`/`SetWidgetClass` instantiation — unreliable for runtime-created
-  components, and `GetWidget()` comes back null.
-- The reconfiguration requests (`FCk_Request_WorldSpaceWidget_SetLocationInfo` / `SetScalingInfo` /
-  `SetFadingInfo` / `SetOcclusionInfo`) each overwrite the matching sub-struct on the live Params
-  fragment through the deferred `HandleRequests` processor. `SetScalingInfo` additionally flips
-  `FTag_WorldSpaceWidget_NeedsUpdateScaling` so distance-scaling can be toggled at runtime — the
-  legacy parity gap was that the tag was granted only at creation.
-- EndPlay must remove the WRAPPER from the viewport, not the content widget: the wrapper is what
-  `Request_WrapWidget` added, and removing it takes its content child with it. Removing only the
-  content leaked the wrapper into the viewport forever.
-
 ---
 
 ## See also
 
+- `CkWorldSpaceWidget/Claude.md` — the entity-driven world-space widget feature that used to live here.
 - `CkGameSession/Claude.md` — session state drives some UI visibility.
 - `CkGraphics/Claude.md`.

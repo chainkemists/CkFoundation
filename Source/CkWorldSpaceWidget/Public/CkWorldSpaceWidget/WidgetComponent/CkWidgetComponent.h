@@ -22,7 +22,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_WidgetComponent_WidgetSpacePolicy);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_WidgetComponent_Params
+struct CKWORLDSPACEWIDGET_API FCk_WidgetComponent_Params
 {
     GENERATED_BODY()
 
@@ -46,7 +46,7 @@ public:
 UCLASS(Abstract,
        HideCategories("Replication", "ComponentTick", "Activation", "Tags", "ComponentReplication", "Mobile", "RayTracing",
                       "Collision", "AssetUserData", "Cooking", "Sockets", "Variable", "Navigation", "HLOD", "Physics")  )
-class CKUI_API UCk_WidgetComponent_UE : public UWidgetComponent
+class CKWORLDSPACEWIDGET_API UCk_WidgetComponent_UE : public UWidgetComponent
 {
     GENERATED_BODY()
 

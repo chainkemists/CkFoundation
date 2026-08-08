@@ -1147,6 +1147,16 @@
       ]
     },
     {
+      "Name": "CkWorldSpaceWidget",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkUIEditor",
       "Type": "UncookedOnly",
       "LoadingPhase": "Default",
