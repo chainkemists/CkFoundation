@@ -30,17 +30,17 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_Transform& InTransform,
             FFragment_CrowdAgent_ProbeRef& InProbeRef) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_SetupProc);
 
-        const auto Radius = InParams.Get_Radius();
-        const auto Height = InParams.Get_Height();
+        const auto Radius = InTunables.Get_Radius();
+        const auto Height = InTunables.Get_Height();
         const auto HalfHeight = Height * 0.5f;
-        const auto ProbeRadius = Radius + InParams.Get_SeparationLookahead();
+        const auto ProbeRadius = Radius + InTunables.Get_SeparationLookahead();
 
         ck::crowd::VeryVerbose(TEXT("CrowdAgent setup: [{}] (radius={}, height={}, probe_radius={})"),
             InHandle, Radius, Height, ProbeRadius);

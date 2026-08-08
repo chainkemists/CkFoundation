@@ -55,7 +55,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_PendingDisplacement& InPending)
         -> void
@@ -77,7 +77,7 @@ namespace ck
         if (Neighbors.Num() == 0)
         { return; }
 
-        const auto SelfRadius = InParams.Get_Radius();
+        const auto SelfRadius = InTunables.Get_Radius();
         const auto NeighborRadius = SelfRadius;  // approximation -- neighbors share radius
         const auto CombinedRadius = SelfRadius + NeighborRadius;
 
@@ -106,7 +106,7 @@ namespace ck
         const auto SelfYield = IsSelfFailedHeld
             ? 0.0f
             : InHandle.Has<FTag_CrowdAgent_Idle>()
-                ? InParams.Get_PushApartIdleYield()
+                ? InTunables.Get_PushApartIdleYield()
                 : 1.0f;
 
         auto Displacement = FVector::ZeroVector;

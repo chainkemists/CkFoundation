@@ -120,7 +120,7 @@ namespace ck
         TimeType InDeltaT,
         HandleType InHandle,
         const FFragment_Transform& InTransform,
-        const FFragment_CrowdAgent_Params& InParams,
+        const FFragment_CrowdAgent_Tunables& InTunables,
         const FFragment_CrowdAgent_NeighborCache& InCache,
         const FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache,
         const FFragment_CrowdAgent_LocalBoundary& InBoundary,
@@ -145,24 +145,24 @@ namespace ck
 
         auto DesiredVelocity = InDesired.Get_Velocity();
         auto VolumeWallBuild = ck_crowd_agent_avoidance_sample_algorithm::BuildAvoidanceVolumeWalls(
-            AgentLocation, InParams.Get_Radius(), InAvoidanceVolumeCache.Get_Obstacles());
+            AgentLocation, InTunables.Get_Radius(), InAvoidanceVolumeCache.Get_Obstacles());
         Walls.Append(VolumeWallBuild._Walls);
         if (NOT VolumeWallBuild._EscapeDirection.IsNearlyZero())
-        { DesiredVelocity = VolumeWallBuild._EscapeDirection * InParams.Get_MaxSpeed(); }
+        { DesiredVelocity = VolumeWallBuild._EscapeDirection * InTunables.Get_MaxSpeed(); }
         const auto SelfVelocity = UCk_Utils_Velocity_UE::Cast(SelfAgent);
         const auto CurrentVelocity = ck::IsValid(SelfVelocity)
             ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(SelfVelocity)
             : FVector::ZeroVector;
         const auto Parameters = ck_crowd_agent_avoidance_sample_algorithm::FScoringParameters{
-            InParams.Get_Radius(), InParams.Get_MaxSpeed(), Settings->Get_AvoidanceHorizonTime(),
+            InTunables.Get_Radius(), InTunables.Get_MaxSpeed(), Settings->Get_AvoidanceHorizonTime(),
             Settings->Get_AvoidanceWeightDesVel(), Settings->Get_AvoidanceWeightCurVel(),
             Settings->Get_AvoidanceWeightSide(), Settings->Get_AvoidanceWeightToi(),
             Settings->Get_AvoidanceSidePreference(),
             ck_crowd_agent_avoidance_sample_algorithm::MakeReachabilityParameters(
                 Settings->Get_AccelClampMode(),
                 InDesired.Get_LastVelocity(),
-                InParams.Get_MaxAcceleration(),
-                InParams.Get_MaxTurnRate(),
+                InTunables.Get_MaxAcceleration(),
+                InTunables.Get_MaxTurnRate(),
                 static_cast<float>(InDeltaT.Get_Seconds())),
             ck_crowd_agent_avoidance_sample_algorithm::FWallParameters{AgentLocation, Walls}};
         auto Cloud = ck_crowd_agent_avoidance_sample_algorithm::BuildSampleCloud(
@@ -484,7 +484,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_Velocity& InCurrentVelocity,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_DiagRecorder& InRecorder)
@@ -641,7 +641,7 @@ namespace ck
             // Path-following can supply a more specific active radius than the agent Params.
             const auto ActiveArrivalRadius = Pipeline._ActiveArrivalRadius > KINDA_SMALL_NUMBER
                 ? Pipeline._ActiveArrivalRadius
-                : InParams.Get_ArrivalRadius();
+                : InTunables.Get_ArrivalRadius();
             if (TrackGoalDistance <= ActiveArrivalRadius)
             {
                 InRecorder._Reached = true;
@@ -653,7 +653,7 @@ namespace ck
         const auto Radius = static_cast<float>(ToSpatialCenter.Size2D());
         const auto ActiveArrivalRadius = Pipeline._ActiveArrivalRadius > KINDA_SMALL_NUMBER
             ? Pipeline._ActiveArrivalRadius
-            : InParams.Get_ArrivalRadius();
+            : InTunables.Get_ArrivalRadius();
         const auto MinLoopRadius = ActiveArrivalRadius + 10.0f;
         const auto IsLoopEligible = NOT InRecorder._Reached &&
             Speed >= ck_crowd_agent_diag_processor::LoopMinSpeedCm && Radius >= MinLoopRadius;

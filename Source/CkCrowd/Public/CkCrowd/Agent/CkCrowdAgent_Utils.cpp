@@ -43,7 +43,7 @@ auto
         InOwner)
     { return Cast(InOwner); }
 
-    InOwner.Add<ck::FFragment_CrowdAgent_Params>(InParams);
+    InOwner.Add<ck::FFragment_CrowdAgent_Tunables>(InParams);
     InOwner.Add<ck::FFragment_CrowdAgent_PathFollow>();
     InOwner.Add<ck::FFragment_CrowdAgent_DesiredVelocity>();
     InOwner.Add<ck::FFragment_CrowdAgent_FaceAngle>();
@@ -490,7 +490,7 @@ auto
         TEXT("Invalid CrowdAgent handle [{}] passed to Get_MaxSpeed"), InAgent)
     { return 0.0f; }
 
-    return InAgent.Get<ck::FFragment_CrowdAgent_Params>().Get_MaxSpeed();
+    return InAgent.Get<ck::FFragment_CrowdAgent_Tunables>().Get_MaxSpeed();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -925,6 +925,6 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_CrowdAgent_UE, FCk_Handle_CrowdAgent, ck::FFragment_CrowdAgent_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_CrowdAgent_UE, FCk_Handle_CrowdAgent, ck::FFragment_CrowdAgent_Tunables);
 
 // --------------------------------------------------------------------------------------------------------------------

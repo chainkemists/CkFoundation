@@ -30,7 +30,7 @@ namespace ck
             ck::TReadOnly<FFragment_Transform>,
             FTag_CrowdAgent_Walking,
             FTag_CrowdAgent_HasProbe,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadOnly<FFragment_Nav_PathResult>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
@@ -53,7 +53,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
@@ -64,7 +64,7 @@ namespace ck
         auto
         DoBlock(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             ECk_CrowdAgent_BlockedReason InReason,
@@ -77,7 +77,7 @@ namespace ck
         auto
         DoRepathAtActiveGoal(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect,
             FFragment_CrowdAgent_DesiredVelocity& InDesired) const -> void;
@@ -93,7 +93,7 @@ namespace ck
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_Transform>,
             FTag_CrowdAgent_GoalBlocked,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_BlockDetect>,
@@ -117,7 +117,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect,

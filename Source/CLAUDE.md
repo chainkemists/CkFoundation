@@ -408,7 +408,7 @@ widgets); `Recycle` only when per-instance construction cost dominates and you h
 Full model: `CkCore/Public/CkCore/ObjectPooling/README.md`.
 
 ```cpp
-struct FFragment_AudioTrack_Current
+struct FFragment_AudioTrack
 {
     friend class FProcessor_AudioTrack_Setup;
     friend class FProcessor_AudioTrack_EndPlay;
@@ -435,19 +435,19 @@ auto AudioComponent = UCk_Utils_Object_UE::Request_CreateNewObject<UAudioCompone
 CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Failed to create AudioComponent for AudioTrack [{}]"), InHandle)
 { return; }
 
-InCurrent._AudioComponent = AudioComponent;
+InAudioTrack._AudioComponent = AudioComponent;
 
 // LifetimeMonitor — observe, fire signals, DO NOT destroy:
-auto Component = InCurrent._AudioComponent.Get();
+auto Component = InAudioTrack._AudioComponent.Get();
 if (ck::IsValid(Component) && NOT Component->IsActive())
 { UUtils_Signal_OnFinished::Broadcast(InHandle, ...); }
 
 // EndPlay — unpin BEFORE destroying (destroy garbage-marks the object, failing release validity):
-if (ck::IsValid(InCurrent._AudioComponent))
+if (ck::IsValid(InAudioTrack._AudioComponent))
 {
-    UCk_Utils_Object_UE::TryReleaseToPool(InCurrent._AudioComponent.Get());
-    InCurrent._AudioComponent->DestroyComponent();
-    InCurrent._AudioComponent = nullptr;
+    UCk_Utils_Object_UE::TryReleaseToPool(InAudioTrack._AudioComponent.Get());
+    InAudioTrack._AudioComponent->DestroyComponent();
+    InAudioTrack._AudioComponent = nullptr;
 }
 ```
 

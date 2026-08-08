@@ -35,8 +35,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
-            const FFragment_VoxelNavPath_Params& InPathParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
+            const FFragment_VoxelNavPath_Volume& InPathVolume,
             const FFragment_VoxelNavPath_Result& InPathResult,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_PathTrouble& InPathTrouble)
@@ -67,7 +67,7 @@ namespace ck
 
         // An agent whose volume binding went away is being pathed by CkNavigation instead, and must
         // never be transitioned by a result left over from when it was not.
-        if (ck::Is_NOT_Valid(InPathParams.Get_Volume()))
+        if (ck::Is_NOT_Valid(InPathVolume.Get_Volume()))
         { return; }
 
         // A result computed for the PREVIOUS goal must never transition the agent. The result carries no
@@ -86,7 +86,7 @@ namespace ck
         if (IsWalking && InHandle.Has<FFragment_CrowdAgent_InstalledVoxelPath>())
         {
             const auto CurrentVolumeEpoch =
-                UCk_Utils_VoxelNavVolume_UE::Get_BuildEpoch(InPathParams.Get_Volume());
+                UCk_Utils_VoxelNavVolume_UE::Get_BuildEpoch(InPathVolume.Get_Volume());
             const auto& Installed = InHandle.Get<FFragment_CrowdAgent_InstalledVoxelPath>();
 
             if (CurrentVolumeEpoch != Installed.Get_VolumeEpoch() &&
@@ -100,7 +100,7 @@ namespace ck
                 UCk_Utils_VoxelNavPath_UE::Request_FindPath(
                     Path,
                     FCk_Request_VoxelNavPath_FindPath{
-                        InPathParams.Get_Volume(),
+                        InPathVolume.Get_Volume(),
                         InTransform.Get_Transform().GetLocation(),
                         InPathFollow.Get_ActiveGoal()},
                     {});
@@ -218,7 +218,7 @@ namespace ck
                 FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
                 FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                     NonConstHandle,
-                    InParams,
+                    InTunables,
                     InPathFollow,
                     InPathFollow.Get_ActiveGoal());
 

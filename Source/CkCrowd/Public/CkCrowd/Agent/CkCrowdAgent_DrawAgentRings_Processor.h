@@ -19,7 +19,7 @@ namespace ck
             FProcessor_CrowdAgent_DrawAgentRings,
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_Transform>,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadOnly<FFragment_CrowdAgent_PathFollow>,
             ck::TReadOnly<FFragment_CrowdAgent_DesiredVelocity>,
             CK_IGNORE_PENDING_KILL>
@@ -33,7 +33,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_CrowdAgent_DesiredVelocity& InDesiredVelocity) -> void;
     };

@@ -84,7 +84,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams) const
+            const FFragment_CrowdAgent_Tunables& InTunables) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawBody_SetupProc);
@@ -93,8 +93,8 @@ namespace ck
         if (ck::Is_NOT_Valid(AgentTransform))
         { return; }
 
-        const auto Radius     = InParams.Get_Radius();
-        const auto HalfHeight = InParams.Get_Height() * 0.5f;
+        const auto Radius     = InTunables.Get_Radius();
+        const auto HalfHeight = InTunables.Get_Height() * 0.5f;
 
         if (Radius <= 0.0f || HalfHeight <= 0.0f)
         { return; }

@@ -21,7 +21,7 @@ namespace ck
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_Transform>,
             FTag_CrowdAgent_HasProbe,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadOnly<FFragment_CrowdAgent_SeparationForce>,
             TExclude<FTag_CrowdAgent_Disabled>,
@@ -44,7 +44,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             const FFragment_CrowdAgent_SeparationForce& InSeparationForce) -> void;
     };
