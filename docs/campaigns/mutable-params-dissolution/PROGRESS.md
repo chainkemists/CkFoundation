@@ -104,3 +104,39 @@ anchor; if so the residue may be empty, and the anchor should move to the featur
   shared checkout mid-work. Before every gate, verify all three submodules:
   CkFoundation on this branch, CkTests at `2cd9c62`, CkGameplayDebugger at `28fad97`. A mismatch
   produces compile errors in modules you never touched, which reads exactly like your own regression.
+
+## Log (cont. 2)
+
+- 2026-08-06/07: **WRAPPER WORKSTREAM COMPLETE AND GATED.** `30ea12fd3` (the batch) + `ef5a8ffd6`
+  (the fixes real compilation found) + CkTests `f9d592cc` + superproject `9261659`.
+  **Gate: build clean, zero AngelScript errors, full suite 1004 / 1002 passed / 2 failed** — the two
+  being the known pre-existing PathNetworkFollower pair BY NAME with identical assertion text.
+  Final tally: **22 of 24 aliased**, 2 reverted (empty Spec), 1 untouched (CkMontagePlayer).
+
+- **RULING 1 NEEDS A THIRD BRANCH: the EMPTY Spec.** `FCk_ResolverTarget_Spec` and
+  `FCk_PredictedVelocity_Spec` have no data members at all. `CkRegistry.h` classifies EMPTY types as
+  TAGS and static_asserts they derive from `ck::TTag`, so aliasing them turned two fragments into
+  tags and broke the build. **The wrapper is load-bearing there** — wrapping an empty Spec in a
+  struct with a member makes it non-empty, hence a fragment. Decision tree is therefore:
+  - retained fields a strict subset of the Spec → residue struct;
+  - retained fields match the Spec 1:1 → `using FFragment_X_Params = FCk_X_Spec;`;
+  - **Spec is EMPTY → leave the wrapper.** The fragment carries no data and exists only as the
+    Has/Cast anchor. Doctrinally that wants a real `CK_DEFINE_ECS_TAG`, but that changes
+    Add/Has/Cast semantics and the anchor — a design call, not a mechanical conversion.
+
+- **PRE-GATE CHECK IS FOUR REPOS, NOT THREE.** The earlier note said "verify all three submodules".
+  That was wrong and cost a full gate cycle: the **superproject** is itself a consumer of the
+  renamed API (`CkPlugins/Script/PlaceableTests/*.as`), and it was sitting on `dev` while the three
+  submodules were on the branch. Worse, the superproject's campaign commit `af63213` was
+  **ORPHANED** — `git branch --contains` returned nothing, no ref pointed at it, and it would
+  eventually have been garbage-collected. It is now `9261659` on a real superproject branch.
+  Before EVERY gate verify all four: superproject, CkFoundation, CkTests, CkGameplayDebugger.
+
+- **What real compilation caught that static analysis could not** (4 classes, 3 compiles):
+  1. An alias cannot be forward-declared (`struct FFragment_X_Params;` → C2371, ~46 cascade errors).
+  2. Sweeps scoped to CkFoundation/Source MISS CkTests and CkGameplayDebugger — they are separate
+     submodules. A "zero residual" audit is only as wide as the tree you walked.
+  3. Empty Specs register as tags (above).
+  4. Superproject AngelScript on an orphaned commit — and AS failures fail the run via
+     `AS_COMPILE_FAILED` (exit 76) with **zero tests executed**, because the editor keeps stale
+     bytecode. A suite that reports Total: 0 is not a pass.
