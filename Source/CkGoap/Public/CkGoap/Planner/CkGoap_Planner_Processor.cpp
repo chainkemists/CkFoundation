@@ -121,7 +121,7 @@ auto
 		TimeType InDeltaT,
 		HandleType InHandle,
 		const FFragment_Goap_Planner_Params& InParams,
-		FFragment_Goap_Planner_Current& InCurrent,
+		FFragment_Goap_Planner& InPlannerComp,
 		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource,
 		FFragment_Goap_Planner_Goal& InGoal) -> void
@@ -149,7 +149,7 @@ auto
 
 	if (DirectChildren.IsEmpty())
 	{
-		InCurrent._DependencyCycles.Reset();
+		InPlannerComp._DependencyCycles.Reset();
 		InHandle.Remove<FTag_Goap_Planner_RequiresSetup>();
 		return;
 	}
@@ -211,7 +211,7 @@ auto
 
 	const auto Sccs = ck_CkGoap_Planner_setup_internal::TarjanScc(Adj);
 
-	InCurrent._DependencyCycles.Reset();
+	InPlannerComp._DependencyCycles.Reset();
 	for (const auto& Scc : Sccs)
 	{
 		if (Scc.Num() == 1)
@@ -257,15 +257,15 @@ auto
 
 		auto CycleConditions = CycleConditionsSet.Array();
 
-		InCurrent._DependencyCycles.Add(
+		InPlannerComp._DependencyCycles.Add(
 			FCk_GoapDiagnostic_DependencyCycle{MoveTemp(ActionsInCycle), MoveTemp(CycleConditions)});
 	}
 
-	if (InCurrent._DependencyCycles.Num() > 0)
+	if (InPlannerComp._DependencyCycles.Num() > 0)
 	{
 		ck::goap::Warning(
 			TEXT("Planner [{}] has [{}] dependency cycle(s) among its direct children."),
-			InHandle, InCurrent._DependencyCycles.Num());
+			InHandle, InPlannerComp._DependencyCycles.Num());
 	}
 
 	// Keys absent from the registry are silently dropped here; Request_SetGoal owns _InvalidGoal,
@@ -325,7 +325,7 @@ auto
 		return false;
 	}();
 
-	InCurrent._HasUnconditionalFallback = HasUnconditionalFallback;
+	InPlannerComp._HasUnconditionalFallback = HasUnconditionalFallback;
 
 	if (NOT HasUnconditionalFallback && NOT InParams.Get_AllowPlanFailed())
 	{
@@ -483,7 +483,7 @@ auto
 
 	if (ck::IsValid(InParent))
 	{
-		auto& ChildCurrent = InPlanner.template Get<FFragment_Goap_Action_Current>();
+		auto& ChildCurrent = InPlanner.template Get<FFragment_Goap_Action>();
 		const auto& ParentParams = InParent.template Get<FFragment_Goap_Action_Params>();
 		ChildCurrent._ActiveParentAction = ParentParams.Get_ActionClass();
 	}
@@ -537,7 +537,7 @@ auto
 	// Synchronous: a deferred request would land after the next activation pass on this Action.
 	DoUnsubscribeActionFromWorldState(InPlanner);
 
-	auto& Current   = InPlanner.template Get<FFragment_Goap_Action_Current>();
+	auto& Current   = InPlanner.template Get<FFragment_Goap_Action>();
 	auto& Goal      = InPlanner.template Get<FFragment_Goap_Planner_Goal>();
 	auto& PlanState = InPlanner.template Get<FFragment_Goap_Planner_PlanState>();
 	auto& WSSource  = InPlanner.template Get<FFragment_Goap_Planner_WorldStateSource>();
@@ -573,7 +573,7 @@ auto
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Planner_Current& InCurrent,
+		const FFragment_Goap_Planner& InPlannerComp,
 		const FFragment_Goap_Planner_PlanState& InPlanState,
 		FFragment_Goap_Planner_Activation& InActivation) const -> void
 {
@@ -587,7 +587,7 @@ auto
 
 	// The one path that KEEPS the tag: a disabled Planner must be revisited on re-enable, and the
 	// enable toggle is not the only thing that can have changed while it sat disabled.
-	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
+	if (InPlannerComp.Get_EnableToggle() == ECk_EnableDisable::Disable)
 	{ return; }
 
 	const auto PlanStatus = InPlanState.Get_PlanStatus();

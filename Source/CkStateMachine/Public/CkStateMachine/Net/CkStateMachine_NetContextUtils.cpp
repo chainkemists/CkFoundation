@@ -137,10 +137,10 @@ namespace ck::statemachine
             ECk_SmRunStatus InNewStatus)
         -> void
     {
-        if (NOT InEntity.Has<ck::FFragment_Sm_Current>())
+        if (NOT InEntity.Has<ck::FFragment_Sm>())
         { return; }
 
-        auto& Current = InEntity.Get<ck::FFragment_Sm_Current>();
+        auto& Current = InEntity.Get<ck::FFragment_Sm>();
         const auto OldStatus = Current.Get_RunStatus();
         if (OldStatus == InNewStatus)
         { return; }

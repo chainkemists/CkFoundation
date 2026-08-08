@@ -20,7 +20,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_ShapeSphere_Params>(InParams);
-    InHandle.Add<ck::FFragment_ShapeSphere_Current>(InParams.Get_InitialDimensions());
+    InHandle.Add<ck::FFragment_ShapeSphere>(InParams.Get_InitialDimensions());
 
     return Cast(InHandle);
 }
@@ -39,7 +39,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ShapeSphere_UE, FCk_Handle_ShapeSphere,
-    ck::FFragment_ShapeSphere_Params, ck::FFragment_ShapeSphere_Current)
+    ck::FFragment_ShapeSphere_Params, ck::FFragment_ShapeSphere)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ auto
         const FCk_Handle_ShapeSphere& InShapeSphere)
         -> FCk_ShapeSphere_Dimensions
 {
-    return InShapeSphere.Get<ck::FFragment_ShapeSphere_Current>().Get_Dimensions();
+    return InShapeSphere.Get<ck::FFragment_ShapeSphere>().Get_Dimensions();
 }
 
 auto

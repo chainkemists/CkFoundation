@@ -22,7 +22,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_2dGridBlocker_Params& InParams,
-            FFragment_2dGridBlocker_Current& InCurrent) const
+            FFragment_2dGridBlocker& In2dGridBlocker) const
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
@@ -48,11 +48,11 @@ namespace ck
 
                 // Counted tag: Add == increment. Composes with shape and other blockers.
                 Cell.Add<FTag_2dGridCell_Disabled>();
-                InCurrent._StampedCells.Add(Coord);
+                In2dGridBlocker._StampedCells.Add(Coord);
             }
         }
 
-        InCurrent._IsActive = true;
+        In2dGridBlocker._IsActive = true;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_2dGridBlocker_Params& InParams,
-            FFragment_2dGridBlocker_Current& InCurrent,
+            FFragment_2dGridBlocker& In2dGridBlocker,
             FFragment_2dGridBlocker_Requests& InRequestsComp) const
         -> void
     {
@@ -82,7 +82,7 @@ namespace ck
 
         InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_2dGridBlocker_Requests& InRequests)
         {
-            auto FinalActive = InCurrent._IsActive;
+            auto FinalActive = In2dGridBlocker._IsActive;
             auto AnyRequest = false;
 
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
@@ -103,18 +103,18 @@ namespace ck
             if (NOT AnyRequest)
             { return; }
 
-            if (FinalActive == InCurrent._IsActive)
+            if (FinalActive == In2dGridBlocker._IsActive)
             { return; }
 
             if (ck::Is_NOT_Valid(Grid))
             {
-                InCurrent._IsActive = FinalActive;
+                In2dGridBlocker._IsActive = FinalActive;
                 return;
             }
 
             if (FinalActive)
             {
-                for (const auto& Coord : InCurrent._StampedCells)
+                for (const auto& Coord : In2dGridBlocker._StampedCells)
                 {
                     auto Cell = UCk_Utils_2dGridSystem_UE::Get_CellAt(Grid, Coord);
                     if (ck::IsValid(Cell))
@@ -123,7 +123,7 @@ namespace ck
             }
             else
             {
-                for (const auto& Coord : InCurrent._StampedCells)
+                for (const auto& Coord : In2dGridBlocker._StampedCells)
                 {
                     auto Cell = UCk_Utils_2dGridSystem_UE::Get_CellAt(Grid, Coord);
                     if (ck::IsValid(Cell))
@@ -131,7 +131,7 @@ namespace ck
                 }
             }
 
-            InCurrent._IsActive = FinalActive;
+            In2dGridBlocker._IsActive = FinalActive;
         });
     }
 

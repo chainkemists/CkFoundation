@@ -130,7 +130,7 @@ auto
 {
     auto ScriptEntity = DoGet_ScriptEntity();
 
-    if (NOT ScriptEntity.Has<ck::FFragment_SmTask_Current>())
+    if (NOT ScriptEntity.Has<ck::FFragment_SmTask>())
     { return; }
 
     // Single write path: the util owns the unbroadcast-terminal-result latch and the Running→terminal

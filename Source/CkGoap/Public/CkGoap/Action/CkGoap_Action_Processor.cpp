@@ -296,7 +296,7 @@ auto
 		TimeType InDeltaT,
 		HandleType InHandle,
 		const FFragment_Goap_Planner_Params& InParams,
-		const FFragment_Goap_Planner_Current& InCurrent,
+		const FFragment_Goap_Planner& InPlannerComp,
 		const FFragment_Goap_Planner_WorldStateSource& InWSSource,
 		FFragment_Goap_Planner_ReplanThrottle& InThrottle) -> void
 {
@@ -306,7 +306,7 @@ auto
 
 	// Dirty / initial-plan tags stay set while disabled, so a re-enable resumes
 	// from the deferred state.
-	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
+	if (InPlannerComp.Get_EnableToggle() == ECk_EnableDisable::Disable)
 	{ return; }
 
 	// Planner-side Setup (cycle detection + goal resolution) must land first.
@@ -382,7 +382,7 @@ auto
 		TimeType InDeltaT,
 		HandleType InHandle,
 		const FFragment_Goap_Planner_Params& InParams,
-		const FFragment_Goap_Planner_Current& InCurrent,
+		const FFragment_Goap_Planner& InPlannerComp,
 		FFragment_AStar_Tunables& InAStarParams,
 		FFragment_Goap_Planner_PlanState& InPlanState,
 		FFragment_Goap_Planner_Goal& InGoal,
@@ -395,7 +395,7 @@ auto
 	SCOPE_CYCLE_COUNTER(STAT_Goap_HandleRequestsProc);
 
 	(void)InParams;
-	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
+	if (InPlannerComp.Get_EnableToggle() == ECk_EnableDisable::Disable)
 	{ return; }
 
 	const auto IsParentPlanInFlight = [&]() -> bool
@@ -489,7 +489,7 @@ auto
 					InPlanState._PlanCost = 0.0f;
 					InHandle.Try_Remove<FTag_Goap_Planner_PlanInFlight>();
 
-					CK_ENSURE_IF_NOT(InCurrent.Get_HasUnconditionalFallback() || InParams.Get_AllowPlanFailed(),
+					CK_ENSURE_IF_NOT(InPlannerComp.Get_HasUnconditionalFallback() || InParams.Get_AllowPlanFailed(),
 						TEXT("Planner [{}] (tag [{}]) reached PlanFailed at HandleRequests because the "
 							 "resolved WorldStateSource is invalid, and the catalog has no unconditional "
 							 "fallback Action AND _AllowPlanFailed=false. Set "
@@ -752,14 +752,14 @@ auto
 		TimeType InDeltaT,
 		HandleType InHandle,
 		const FFragment_Goap_Planner_Params& InParams,
-		const FFragment_Goap_Planner_Current& InCurrent,
+		const FFragment_Goap_Planner& InPlannerComp,
 		const FFragment_Goap_Planner_Result& InResult,
 		const FFragment_Goap_Planner_PlanContext& InPlanContext,
 		FFragment_Goap_Planner_PlanState& InPlanState) -> void
 {
 	SCOPE_CYCLE_COUNTER(STAT_Goap_Planner_HandleResult);
 
-	if (InCurrent.Get_EnableToggle() == ECk_EnableDisable::Disable)
+	if (InPlannerComp.Get_EnableToggle() == ECk_EnableDisable::Disable)
 	{ return; }
 
 	InHandle.Remove<FTag_AStar_SearchComplete>();
@@ -831,7 +831,7 @@ auto
 			InPlanState._Plan.Reset();
 			InPlanState._PlanCost = 0.0f;
 
-			CK_ENSURE_IF_NOT(InCurrent.Get_HasUnconditionalFallback() || InParams.Get_AllowPlanFailed(),
+			CK_ENSURE_IF_NOT(InPlannerComp.Get_HasUnconditionalFallback() || InParams.Get_AllowPlanFailed(),
 				TEXT("Planner [{}] (tag [{}]) reached PlanFailed but has no unconditional fallback "
 					 "Action and PlannerParams._AllowPlanFailed=false. Add a fallback Action "
 					 "(no preconditions, effect=goal, cost ~999.0) or set _AllowPlanFailed=true."),

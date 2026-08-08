@@ -73,7 +73,7 @@ auto
     InHandle.Add<ck::FFragment_Aggro_CapParams>(InParams.Get_CapParams());
     InHandle.Add<ck::FFragment_Aggro_EvaluationParams>(InParams.Get_EvaluationParams());
 
-    InHandle.Add<ck::FFragment_Aggro_Current>();
+    InHandle.Add<ck::FFragment_Aggro>();
     InHandle.Add<ck::FFragment_Aggro_EvaluationClock>();
     InHandle.Add<ck::FFragment_Aggro_TargetMap>();
 
@@ -192,7 +192,7 @@ auto
         const FCk_Handle_Aggro& InAggro)
     -> FCk_Handle_AggroTarget
 {
-    return InAggro.Get<ck::FFragment_Aggro_Current>().Get_ActiveTarget();
+    return InAggro.Get<ck::FFragment_Aggro>().Get_ActiveTarget();
 }
 
 auto

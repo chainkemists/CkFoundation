@@ -14,7 +14,7 @@ namespace ck
             FProcessor_2dGridBlocker_Setup,
             FCk_Handle_2dGridBlocker,
             TReadOnly<FFragment_2dGridBlocker_Params>,
-            TReadWrite<FFragment_2dGridBlocker_Current>,
+            TReadWrite<FFragment_2dGridBlocker>,
             FTag_2dGridBlocker_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -31,7 +31,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_2dGridBlocker_Params& InParams,
-            FFragment_2dGridBlocker_Current& InCurrent) const -> void;
+            FFragment_2dGridBlocker& In2dGridBlocker) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -40,7 +40,7 @@ namespace ck
             FProcessor_2dGridBlocker_Requests,
             FCk_Handle_2dGridBlocker,
             TReadOnly<FFragment_2dGridBlocker_Params>,
-            TReadWrite<FFragment_2dGridBlocker_Current>,
+            TReadWrite<FFragment_2dGridBlocker>,
             TReadWrite<FFragment_2dGridBlocker_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -64,7 +64,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_2dGridBlocker_Params& InParams,
-            FFragment_2dGridBlocker_Current& InCurrent,
+            FFragment_2dGridBlocker& In2dGridBlocker,
             FFragment_2dGridBlocker_Requests& InRequestsComp) const -> void;
     };
 

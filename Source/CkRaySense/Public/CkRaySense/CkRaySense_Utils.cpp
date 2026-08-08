@@ -21,7 +21,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_RaySense_Params>(InParams);
-    InHandle.Add<ck::FFragment_RaySense_Current>();
+    InHandle.Add<ck::FFragment_RaySense>();
 
     return Cast(InHandle);
 }
@@ -42,7 +42,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_RaySense_UE, FCk_Handle_RaySense,
-    ck::FFragment_RaySense_Params, ck::FFragment_RaySense_Current)
+    ck::FFragment_RaySense_Params, ck::FFragment_RaySense)
 
 // --------------------------------------------------------------------------------------------------------------------
 

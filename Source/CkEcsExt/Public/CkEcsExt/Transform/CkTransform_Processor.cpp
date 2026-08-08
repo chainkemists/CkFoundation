@@ -770,10 +770,10 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Signal_TransformUpdate& InSignal,
-            const FFragment_Transform& InCurrent)
+            const FFragment_Transform& InTransform)
         -> void
     {
-        UUtils_Signal_TransformUpdate::Broadcast(InHandle, MakePayload(InHandle, InCurrent.Get_Transform()));
+        UUtils_Signal_TransformUpdate::Broadcast(InHandle, MakePayload(InHandle, InTransform.Get_Transform()));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -824,7 +824,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform& InCurrent,
+            FFragment_Transform& InTransform,
             const FFragment_ContainerRef_Location& InLocRef)
             -> void
     {
@@ -832,18 +832,18 @@ namespace ck
         if (ck::Is_NOT_Valid(Driver))
         { return; }
 
-        const auto Mod = InCurrent.Get_ComponentsModified();
+        const auto Mod = InTransform.Get_ComponentsModified();
 
         if (EnumHasAnyFlags(Mod, ECk_TransformComponents::Location))
-        { Driver->SetFragmentData<FCk_RepData_Location>(FCk_RepData_Location{InCurrent.Get_Transform().GetLocation()}); }
+        { Driver->SetFragmentData<FCk_RepData_Location>(FCk_RepData_Location{InTransform.Get_Transform().GetLocation()}); }
 
         if (EnumHasAnyFlags(Mod, ECk_TransformComponents::Rotation))
-        { Driver->SetFragmentData<FCk_RepData_Rotation>(FCk_RepData_Rotation{InCurrent.Get_Transform().GetRotation()}); }
+        { Driver->SetFragmentData<FCk_RepData_Rotation>(FCk_RepData_Rotation{InTransform.Get_Transform().GetRotation()}); }
 
         if (EnumHasAnyFlags(Mod, ECk_TransformComponents::Scale))
-        { Driver->SetFragmentData<FCk_RepData_Scale>(FCk_RepData_Scale{InCurrent.Get_Transform().GetScale3D()}); }
+        { Driver->SetFragmentData<FCk_RepData_Scale>(FCk_RepData_Scale{InTransform.Get_Transform().GetScale3D()}); }
 
-        InCurrent.Set_ComponentsModified(ECk_TransformComponents::None);
+        InTransform.Set_ComponentsModified(ECk_TransformComponents::None);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -854,7 +854,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
-            const FFragment_Transform& InCurrent,
+            const FFragment_Transform& InTransform,
             FFragment_TransformInterpolation_NewGoal_Location& InGoal)
             -> void
     {
@@ -863,7 +863,7 @@ namespace ck
             UCk_Utils_Transform_UE::Request_SetLocation
             (
                 InHandle,
-                FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + InGoal.Get_InterpolationOffset()},
+                FCk_Request_Transform_SetLocation{InTransform.Get_Transform().GetLocation() + InGoal.Get_InterpolationOffset()},
                 {}
             );
 
@@ -891,7 +891,7 @@ namespace ck
                 UCk_Utils_Transform_UE::Request_SetLocation
                 (
                     InHandle,
-                    FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + FinalOffset},
+                    FCk_Request_Transform_SetLocation{InTransform.Get_Transform().GetLocation() + FinalOffset},
                     {}
                 );
             }
@@ -905,7 +905,7 @@ namespace ck
         UCk_Utils_Transform_UE::Request_SetLocation
         (
             InHandle,
-            FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + GoalFraction},
+            FCk_Request_Transform_SetLocation{InTransform.Get_Transform().GetLocation() + GoalFraction},
             {}
         );
     }
@@ -916,7 +916,7 @@ namespace ck
             const TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
-            const FFragment_Transform& InCurrent,
+            const FFragment_Transform& InTransform,
             FFragment_TransformInterpolation_NewGoal_Rotation& InGoal)
             -> void
     {
@@ -925,7 +925,7 @@ namespace ck
             UCk_Utils_Transform_UE::Request_SetRotation
             (
                 InHandle,
-                FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + InGoal.Get_InterpolationOffset()},
+                FCk_Request_Transform_SetRotation{InTransform.Get_Transform().GetRotation().Rotator() + InGoal.Get_InterpolationOffset()},
                 {}
             );
 
@@ -951,7 +951,7 @@ namespace ck
                 UCk_Utils_Transform_UE::Request_SetRotation
                 (
                     InHandle,
-                    FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + FinalOffset},
+                    FCk_Request_Transform_SetRotation{InTransform.Get_Transform().GetRotation().Rotator() + FinalOffset},
                     {}
                 );
             }
@@ -965,7 +965,7 @@ namespace ck
         UCk_Utils_Transform_UE::Request_SetRotation
         (
             InHandle,
-            FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + GoalFraction},
+            FCk_Request_Transform_SetRotation{InTransform.Get_Transform().GetRotation().Rotator() + GoalFraction},
             {}
         );
     }

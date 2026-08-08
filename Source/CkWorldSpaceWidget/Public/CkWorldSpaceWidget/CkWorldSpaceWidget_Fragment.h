@@ -29,23 +29,23 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKWORLDSPACEWIDGET_API FFragment_WorldSpaceWidget_Current
+    struct CKWORLDSPACEWIDGET_API FFragment_WorldSpaceWidget
     {
     public:
-        CK_GENERATED_BODY(FFragment_WorldSpaceWidget_Current);
+        CK_GENERATED_BODY(FFragment_WorldSpaceWidget);
 
     public:
         friend class FProcessor_WorldSpaceWidget_HandleRequests;
         friend class UCk_Utils_WorldSpaceWidget_UE;
 
     public:
-        FFragment_WorldSpaceWidget_Current() = default;
+        FFragment_WorldSpaceWidget() = default;
 
         explicit
-        FFragment_WorldSpaceWidget_Current(
+        FFragment_WorldSpaceWidget(
             UCk_WorldSpaceWidget_Wrapper_UE* InWrapperWidget);
 
-        FFragment_WorldSpaceWidget_Current(
+        FFragment_WorldSpaceWidget(
             UWidgetComponent* InWidgetComponent,
             UUserWidget* InContentWidget);
 

@@ -156,11 +156,11 @@ namespace ck
         }
 
         // Husk layers (owner destroyed) have no EntityScript; a bare Get would ensure every frame — CkCamera/CLAUDE.md.
-        if (NOT InLayer.Has<ck::FFragment_EntityScript_Current>())
+        if (NOT InLayer.Has<ck::FFragment_EntityScript>())
         { return; }
 
         if (auto* Script = ::Cast<UCk_CameraLayer_EntityScript>(
-                InLayer.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get());
+                InLayer.Get<ck::FFragment_EntityScript>().Get_Script().Get());
             ck::IsValid(Script))
         {
             Script->Blend(InLayer, Alpha);

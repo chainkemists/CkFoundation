@@ -14,7 +14,7 @@ namespace ck
             FProcessor_Sfx_Setup,
             FCk_Handle_Sfx,
             TReadOnly<FFragment_Sfx_Params>,
-            TReadWrite<FFragment_Sfx_Current>,
+            TReadWrite<FFragment_Sfx>,
             FTag_Sfx_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -31,7 +31,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sfx_Params& InParams,
-            FFragment_Sfx_Current& InCurrent)
+            FFragment_Sfx& InSfx)
             -> void;
     };
 
@@ -41,7 +41,7 @@ namespace ck
             FProcessor_Sfx_HandleRequests,
             FCk_Handle_Sfx,
             TReadOnly<FFragment_Sfx_Params>,
-            TReadWrite<FFragment_Sfx_Current>,
+            TReadWrite<FFragment_Sfx>,
             TReadWrite<FFragment_Sfx_Requests>,
             TExclude<FTag_Sfx_NeedsSetup>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -61,7 +61,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Sfx_Params& InParams,
-            FFragment_Sfx_Current& InCurrent,
+            FFragment_Sfx& InSfx,
             FFragment_Sfx_Requests& InRequestsComp) const -> void;
 
     private:
@@ -69,14 +69,14 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sfx_Params& InParams,
-            FFragment_Sfx_Current& InCurrent,
+            FFragment_Sfx& InSfx,
             const FCk_Request_Sfx_PlayAttached& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Sfx_Params& InParams,
-            FFragment_Sfx_Current& InCurrent,
+            FFragment_Sfx& InSfx,
             const FCk_Request_Sfx_PlayAtLocation& InRequest) -> ECk_Request_OperationResult;
     };
 
@@ -111,7 +111,7 @@ namespace ck
     class CKFX_API FProcessor_Sfx_EndPlay : public ck_exp::TProcessor<
             FProcessor_Sfx_EndPlay,
             FCk_Handle_Sfx,
-            TReadWrite<FFragment_Sfx_Current>,
+            TReadWrite<FFragment_Sfx>,
             CK_IF_END_PLAY>
     {
     public:
@@ -125,7 +125,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Sfx_Current& InCurrent)
+            FFragment_Sfx& InSfx)
             -> void;
     };
 }

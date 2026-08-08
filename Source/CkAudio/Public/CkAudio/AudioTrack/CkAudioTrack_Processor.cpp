@@ -58,11 +58,11 @@ namespace ck
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
             const FFragment_AudioTrack_PendingSetup& InPendingSetup,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_ComponentBindings& InBindings)
             -> void
     {
-        if (NOT InCurrent._LoadedAssets.Get_IsRequested())
+        if (NOT InAudioTrack._LoadedAssets.Get_IsRequested())
         {
             const auto SoundIsAuthored = ck::IsValid(InParams.Get_Sound());
             CK_ENSURE_IF_NOT(SoundIsAuthored, TEXT("Cannot setup AudioTrack [{}] - its Sound soft reference is unset"), InHandle)
@@ -82,25 +82,25 @@ namespace ck
             if (ck::IsValid(InPendingSetup.Get_LibrarySoundClassSettings()))
             { PathsToLoad.Emplace(InPendingSetup.Get_LibrarySoundClassSettings().ToSoftObjectPath()); }
 
-            InCurrent._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            InAudioTrack._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
                 TEXT("AudioTrack.Setup"), PathsToLoad);
         }
 
-        if (NOT InCurrent._LoadedAssets.Get_IsReady())
+        if (NOT InAudioTrack._LoadedAssets.Get_IsReady())
         {
             InHandle.AddOrGet<FTag_AudioTrack_PendingAssetLoad>();
             return;
         }
 
         const auto ResolvedSound = Cast<USoundBase>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_Sound().ToSoftObjectPath()));
-        const auto AssetsAreLoaded = NOT InCurrent._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSound);
+            InAudioTrack._LoadedAssets.Get_ResolvedObject(InParams.Get_Sound().ToSoftObjectPath()));
+        const auto AssetsAreLoaded = NOT InAudioTrack._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSound);
 
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot setup AudioTrack [{}] - loading its Sound [{}] (or a library setting) through CkResourceLoader failed"),
             InHandle, InParams.Get_Sound().ToSoftObjectPath())
         {
-            InCurrent._LoadedAssets = {};
+            InAudioTrack._LoadedAssets = {};
             InHandle.Try_Remove<FTag_AudioTrack_PendingAssetLoad>();
             InHandle.Remove<MarkedDirtyBy>();
             InHandle.Remove<FFragment_AudioTrack_PendingSetup>();
@@ -114,11 +114,11 @@ namespace ck
         // reference dies with the fragment.
         const auto ScriptAsset = InPendingSetup.Get_ScriptAsset();
         const auto ResolvedLibraryAttenuation = Cast<USoundAttenuation>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(InPendingSetup.Get_LibraryAttenuationSettings().ToSoftObjectPath()));
+            InAudioTrack._LoadedAssets.Get_ResolvedObject(InPendingSetup.Get_LibraryAttenuationSettings().ToSoftObjectPath()));
         const auto ResolvedLibraryConcurrency = Cast<USoundConcurrency>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(InPendingSetup.Get_LibraryConcurrencySettings().ToSoftObjectPath()));
+            InAudioTrack._LoadedAssets.Get_ResolvedObject(InPendingSetup.Get_LibraryConcurrencySettings().ToSoftObjectPath()));
         const auto ResolvedLibrarySoundClass = Cast<USoundClass>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(InPendingSetup.Get_LibrarySoundClassSettings().ToSoftObjectPath()));
+            InAudioTrack._LoadedAssets.Get_ResolvedObject(InPendingSetup.Get_LibrarySoundClassSettings().ToSoftObjectPath()));
         InHandle.Remove<FFragment_AudioTrack_PendingSetup>();
 
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
@@ -291,13 +291,13 @@ namespace ck
             }
         }
 
-        InCurrent._AudioComponent = AudioComponent;
-        InCurrent._State = ECk_AudioTrack_State::Stopped;
-        InCurrent._CurrentVolume = 0.0f;
-        InCurrent._TargetVolume = 0.0f;
-        InCurrent._FadeSpeed = 0.0f;
+        InAudioTrack._AudioComponent = AudioComponent;
+        InAudioTrack._State = ECk_AudioTrack_State::Stopped;
+        InAudioTrack._CurrentVolume = 0.0f;
+        InAudioTrack._TargetVolume = 0.0f;
+        InAudioTrack._FadeSpeed = 0.0f;
 
-        DoBindAudioComponentDelegates(InHandle, InCurrent, InBindings);
+        DoBindAudioComponentDelegates(InHandle, InAudioTrack, InBindings);
 
         if (IsSpatial)
         {
@@ -316,11 +316,11 @@ namespace ck
         FProcessor_AudioTrack_Setup::
         DoBindAudioComponentDelegates(
             HandleType InHandle,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_ComponentBindings& InBindings)
         -> void
     {
-        auto AudioComponent = InCurrent._AudioComponent.Get();
+        auto AudioComponent = InAudioTrack._AudioComponent.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Cannot bind delegates - AudioComponent is invalid"))
         { return; }
 
@@ -328,9 +328,9 @@ namespace ck
             [InHandle](const UAudioComponent* InAudioComp, EAudioComponentPlayState InPlayState)
             {
                 auto NonConstHandle = InHandle;
-                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack_Current>())
+                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack>())
                 {
-                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack_Current>();
+                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack>();
                     const auto NewState = ConvertToAudioTrackState(InPlayState);
 
                     ck::audio::VeryVerbose(TEXT("AudioTrack [{}] state changed: [{}] -> [{}]"),
@@ -348,9 +348,9 @@ namespace ck
             [InHandle](const UAudioComponent* InAudioComp, bool bIsVirtualized)
             {
                 auto NonConstHandle = InHandle;
-                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack_Current>())
+                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack>())
                 {
-                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack_Current>();
+                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack>();
                     Current._IsVirtualized = bIsVirtualized;
 
                     ck::audio::VeryVerbose(TEXT("AudioTrack [{}] virtualization changed: [{}]"),
@@ -366,9 +366,9 @@ namespace ck
             [InHandle](const UAudioComponent* InAudioComp, const USoundWave* InSoundWave, float InPercent)
             {
                 auto NonConstHandle = InHandle;
-                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack_Current>())
+                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack>())
                 {
-                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack_Current>();
+                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack>();
                     Current._PlaybackPercent = InPercent;
 
                     UUtils_Signal_OnAudioTrack_PlaybackPercent::Broadcast(NonConstHandle,
@@ -405,9 +405,9 @@ namespace ck
             [InHandle](UAudioComponent* InAudioComp)
             {
                 auto NonConstHandle = InHandle;
-                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack_Current>())
+                if (ck::IsValid(NonConstHandle) && NonConstHandle.Has<FFragment_AudioTrack>())
                 {
-                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack_Current>();
+                    auto& Current = NonConstHandle.Get<FFragment_AudioTrack>();
 
                     ck::audio::VeryVerbose(TEXT("AudioTrack [{}] finished - cleaning up state"), NonConstHandle);
 
@@ -460,7 +460,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             const FFragment_AudioTrack_Requests& InRequestsComp) const
         -> void
     {
@@ -471,7 +471,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InParams, InAudioTrack, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -488,15 +488,15 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             const FCk_Request_AudioTrack_Play& InRequest)
         -> void
     {
-        CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(InAudioTrack._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
 
         ck::audio::Verbose(TEXT("Handling play request for AudioTrack [{}] - Current State: [{}]"),
-            InParams.Get_TrackName(), InCurrent._State);
+            InParams.Get_TrackName(), InAudioTrack._State);
 
         auto FadeTime = InRequest.Get_FadeInTime();
         if (FadeTime <= FCk_Time::ZeroSecond())
@@ -504,45 +504,45 @@ namespace ck
 
         const auto TargetVolume = InParams.Get_Volume();
 
-        if (InCurrent._State == ECk_AudioTrack_State::Stopped || NOT InCurrent._AudioComponent->IsPlaying())
+        if (InAudioTrack._State == ECk_AudioTrack_State::Stopped || NOT InAudioTrack._AudioComponent->IsPlaying())
         {
             const auto ResolvedSound = Cast<USoundBase>(
-                InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_Sound().ToSoftObjectPath()));
+                InAudioTrack._LoadedAssets.Get_ResolvedObject(InParams.Get_Sound().ToSoftObjectPath()));
             const auto SoundIsResolved = ck::IsValid(ResolvedSound);
 
             CK_ENSURE_IF_NOT(SoundIsResolved, TEXT("Cannot play AudioTrack [{}] - its resolved Sound is missing. "
                 "Setup completed, so the loader-rooted asset should still be alive; this should be unreachable."), InHandle)
             { return; }
 
-            InCurrent._AudioComponent->SetSound(ResolvedSound);
-            InCurrent._AudioComponent->SetBoolParameter(TEXT("Loop"), InParams.Get_LoopBehavior() == ECk_LoopBehavior::Loop);
-            InCurrent._AudioComponent->Play();
+            InAudioTrack._AudioComponent->SetSound(ResolvedSound);
+            InAudioTrack._AudioComponent->SetBoolParameter(TEXT("Loop"), InParams.Get_LoopBehavior() == ECk_LoopBehavior::Loop);
+            InAudioTrack._AudioComponent->Play();
 
-            InCurrent._State = FadeTime > FCk_Time::ZeroSecond() ? ECk_AudioTrack_State::FadingIn : ECk_AudioTrack_State::Playing;
+            InAudioTrack._State = FadeTime > FCk_Time::ZeroSecond() ? ECk_AudioTrack_State::FadingIn : ECk_AudioTrack_State::Playing;
 
-            UUtils_Signal_OnAudioTrack_PlaybackStarted::Broadcast(InHandle, MakePayload(InHandle, InCurrent._State));
+            UUtils_Signal_OnAudioTrack_PlaybackStarted::Broadcast(InHandle, MakePayload(InHandle, InAudioTrack._State));
         }
-        else if (InCurrent._State == ECk_AudioTrack_State::FadingOut)
+        else if (InAudioTrack._State == ECk_AudioTrack_State::FadingOut)
         {
             ck::audio::Verbose(TEXT("AudioTrack [{}] canceling fade-out and starting fade-in"), InParams.Get_TrackName());
 
-            InCurrent._State = FadeTime > FCk_Time::ZeroSecond() ? ECk_AudioTrack_State::FadingIn : ECk_AudioTrack_State::Playing;
+            InAudioTrack._State = FadeTime > FCk_Time::ZeroSecond() ? ECk_AudioTrack_State::FadingIn : ECk_AudioTrack_State::Playing;
 
-            UUtils_Signal_OnAudioTrack_PlaybackStarted::Broadcast(InHandle, MakePayload(InHandle, InCurrent._State));
+            UUtils_Signal_OnAudioTrack_PlaybackStarted::Broadcast(InHandle, MakePayload(InHandle, InAudioTrack._State));
         }
 
         if (FadeTime > FCk_Time::ZeroSecond())
         {
-            InCurrent._TargetVolume = TargetVolume;
-            InCurrent._FadeSpeed = (TargetVolume - InCurrent._CurrentVolume) / FadeTime.Get_Seconds();
+            InAudioTrack._TargetVolume = TargetVolume;
+            InAudioTrack._FadeSpeed = (TargetVolume - InAudioTrack._CurrentVolume) / FadeTime.Get_Seconds();
             InHandle.AddOrGet<FTag_AudioTrack_IsFading>();
         }
         else
         {
-            InCurrent._CurrentVolume = TargetVolume;
-            InCurrent._TargetVolume = TargetVolume;
-            InCurrent._AudioComponent->SetVolumeMultiplier(TargetVolume);
-            InCurrent._State = ECk_AudioTrack_State::Playing;
+            InAudioTrack._CurrentVolume = TargetVolume;
+            InAudioTrack._TargetVolume = TargetVolume;
+            InAudioTrack._AudioComponent->SetVolumeMultiplier(TargetVolume);
+            InAudioTrack._State = ECk_AudioTrack_State::Playing;
             InHandle.Try_Remove<FTag_AudioTrack_IsFading>();
         }
 
@@ -554,11 +554,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             const FCk_Request_AudioTrack_Stop& InRequest)
         -> void
     {
-        CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(InAudioTrack._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
 
         ck::audio::Verbose(TEXT("Handling stop request for AudioTrack [{}]"), InParams.Get_TrackName());
@@ -569,25 +569,25 @@ namespace ck
             FadeTime = InParams.Get_DefaultFadeOutTime();
         }
 
-        if (FadeTime > FCk_Time::ZeroSecond() && InCurrent._CurrentVolume > 0.0f)
+        if (FadeTime > FCk_Time::ZeroSecond() && InAudioTrack._CurrentVolume > 0.0f)
         {
-            InCurrent._TargetVolume = 0.0f;
-            InCurrent._FadeSpeed = -InCurrent._CurrentVolume / FadeTime.Get_Seconds();
-            InCurrent._State = ECk_AudioTrack_State::FadingOut;
+            InAudioTrack._TargetVolume = 0.0f;
+            InAudioTrack._FadeSpeed = -InAudioTrack._CurrentVolume / FadeTime.Get_Seconds();
+            InAudioTrack._State = ECk_AudioTrack_State::FadingOut;
             InHandle.AddOrGet<FTag_AudioTrack_IsFading>();
         }
         else
         {
-            InCurrent._AudioComponent->Stop();
-            InCurrent._State = ECk_AudioTrack_State::Stopped;
-            InCurrent._CurrentVolume = 0.0f;
-            InCurrent._TargetVolume = 0.0f;
-            InCurrent._AudioComponent->SetVolumeMultiplier(0.0f);
+            InAudioTrack._AudioComponent->Stop();
+            InAudioTrack._State = ECk_AudioTrack_State::Stopped;
+            InAudioTrack._CurrentVolume = 0.0f;
+            InAudioTrack._TargetVolume = 0.0f;
+            InAudioTrack._AudioComponent->SetVolumeMultiplier(0.0f);
 
             InHandle.Try_Remove<FTag_AudioTrack_IsPlaying>();
             InHandle.Try_Remove<FTag_AudioTrack_IsFading>();
 
-            UUtils_Signal_OnAudioTrack_PlaybackFinished::Broadcast(InHandle, MakePayload(InHandle, InCurrent._State));
+            UUtils_Signal_OnAudioTrack_PlaybackFinished::Broadcast(InHandle, MakePayload(InHandle, InAudioTrack._State));
         }
     }
 
@@ -596,11 +596,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             const FCk_Request_AudioTrack_SetVolume& InRequest)
         -> void
     {
-        CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(InAudioTrack._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
 
         ck::audio::VeryVerbose(TEXT("Handling volume request for AudioTrack [{}] to [{}]"),
@@ -611,15 +611,15 @@ namespace ck
 
         if (FadeTime > FCk_Time::ZeroSecond())
         {
-            InCurrent._TargetVolume = TargetVolume;
-            InCurrent._FadeSpeed = (TargetVolume - InCurrent._CurrentVolume) / FadeTime.Get_Seconds();
+            InAudioTrack._TargetVolume = TargetVolume;
+            InAudioTrack._FadeSpeed = (TargetVolume - InAudioTrack._CurrentVolume) / FadeTime.Get_Seconds();
             InHandle.AddOrGet<FTag_AudioTrack_IsFading>();
         }
         else
         {
-            InCurrent._CurrentVolume = TargetVolume;
-            InCurrent._TargetVolume = TargetVolume;
-            InCurrent._AudioComponent->SetVolumeMultiplier(TargetVolume);
+            InAudioTrack._CurrentVolume = TargetVolume;
+            InAudioTrack._TargetVolume = TargetVolume;
+            InAudioTrack._AudioComponent->SetVolumeMultiplier(TargetVolume);
         }
     }
 
@@ -644,60 +644,60 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent)
+            FFragment_AudioTrack& InAudioTrack)
             -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_Audio_Playback);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(InCurrent._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(InAudioTrack._AudioComponent), TEXT("AudioTrack [{}] has no AudioComponent"), InHandle)
         { return; }
 
-        if (NOT FMath::IsNearlyZero(InCurrent._FadeSpeed))
+        if (NOT FMath::IsNearlyZero(InAudioTrack._FadeSpeed))
         {
-            const auto DeltaVolume = InCurrent._FadeSpeed * InDeltaT.Get_Seconds();
-            auto NewVolume = InCurrent._CurrentVolume + DeltaVolume;
+            const auto DeltaVolume = InAudioTrack._FadeSpeed * InDeltaT.Get_Seconds();
+            auto NewVolume = InAudioTrack._CurrentVolume + DeltaVolume;
 
-            const auto FadeCompleted = (InCurrent._FadeSpeed > 0.0f && NewVolume >= InCurrent._TargetVolume) ||
-                                      (InCurrent._FadeSpeed < 0.0f && NewVolume <= InCurrent._TargetVolume);
+            const auto FadeCompleted = (InAudioTrack._FadeSpeed > 0.0f && NewVolume >= InAudioTrack._TargetVolume) ||
+                                      (InAudioTrack._FadeSpeed < 0.0f && NewVolume <= InAudioTrack._TargetVolume);
 
             if (FadeCompleted)
             {
-                NewVolume = InCurrent._TargetVolume;
-                InCurrent._FadeSpeed = 0.0f;
+                NewVolume = InAudioTrack._TargetVolume;
+                InAudioTrack._FadeSpeed = 0.0f;
                 InHandle.Remove<FTag_AudioTrack_IsFading>();
 
-                if (InCurrent._State == ECk_AudioTrack_State::FadingIn)
+                if (InAudioTrack._State == ECk_AudioTrack_State::FadingIn)
                 {
-                    InCurrent._State = ECk_AudioTrack_State::Playing;
+                    InAudioTrack._State = ECk_AudioTrack_State::Playing;
                 }
-                else if (InCurrent._State == ECk_AudioTrack_State::FadingOut)
+                else if (InAudioTrack._State == ECk_AudioTrack_State::FadingOut)
                 {
-                    InCurrent._State = ECk_AudioTrack_State::Stopped;
-                    InCurrent._AudioComponent->Stop();
+                    InAudioTrack._State = ECk_AudioTrack_State::Stopped;
+                    InAudioTrack._AudioComponent->Stop();
                     InHandle.Try_Remove<FTag_AudioTrack_IsPlaying>();
 
-                    UUtils_Signal_OnAudioTrack_PlaybackFinished::Broadcast(InHandle, MakePayload(InHandle, InCurrent._State));
+                    UUtils_Signal_OnAudioTrack_PlaybackFinished::Broadcast(InHandle, MakePayload(InHandle, InAudioTrack._State));
                 }
 
-                UUtils_Signal_OnAudioTrack_FadeCompleted::Broadcast(InHandle, MakePayload(InHandle, NewVolume, InCurrent._State));
+                UUtils_Signal_OnAudioTrack_FadeCompleted::Broadcast(InHandle, MakePayload(InHandle, NewVolume, InAudioTrack._State));
             }
 
-            InCurrent._CurrentVolume = NewVolume;
-            InCurrent._AudioComponent->SetVolumeMultiplier(NewVolume);
+            InAudioTrack._CurrentVolume = NewVolume;
+            InAudioTrack._AudioComponent->SetVolumeMultiplier(NewVolume);
         }
 
         if (InHandle.Has<FTag_AudioTrack_IsPlaying>() &&
-            InCurrent._State == ECk_AudioTrack_State::Playing &&
-            NOT InCurrent._AudioComponent->IsPlaying())
+            InAudioTrack._State == ECk_AudioTrack_State::Playing &&
+            NOT InAudioTrack._AudioComponent->IsPlaying())
         {
             ck::audio::VeryVerbose(TEXT("AudioTrack [{}] finished playing naturally"), InParams.Get_TrackName());
 
-            InCurrent._State = ECk_AudioTrack_State::Stopped;
-            InCurrent._CurrentVolume = 0.0f;
-            InCurrent._TargetVolume = 0.0f;
+            InAudioTrack._State = ECk_AudioTrack_State::Stopped;
+            InAudioTrack._CurrentVolume = 0.0f;
+            InAudioTrack._TargetVolume = 0.0f;
             InHandle.Try_Remove<FTag_AudioTrack_IsPlaying>();
 
-            UUtils_Signal_OnAudioTrack_PlaybackFinished::Broadcast(InHandle, MakePayload(InHandle, InCurrent._State));
+            UUtils_Signal_OnAudioTrack_PlaybackFinished::Broadcast(InHandle, MakePayload(InHandle, InAudioTrack._State));
         }
     }
 
@@ -708,21 +708,21 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             const FFragment_Transform& InTransform)
             -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_Audio_SpatialUpdate);
 
-        if (ck::Is_NOT_Valid(InCurrent._AudioComponent))
+        if (ck::Is_NOT_Valid(InAudioTrack._AudioComponent))
         { return; }
 
         auto HandleTransform = UCk_Utils_Transform_UE::Cast(InHandle);
 
         const auto& WorldTransform = InTransform.Get_Transform();
-        InCurrent._AudioComponent->SetWorldLocation(WorldTransform.GetLocation());
-        InCurrent._AudioComponent->SetWorldRotation(WorldTransform.GetRotation());
-        InCurrent._AudioComponent->OnUpdateTransform(EUpdateTransformFlags::SkipPhysicsUpdate);
+        InAudioTrack._AudioComponent->SetWorldLocation(WorldTransform.GetLocation());
+        InAudioTrack._AudioComponent->SetWorldRotation(WorldTransform.GetRotation());
+        InAudioTrack._AudioComponent->OnUpdateTransform(EUpdateTransformFlags::SkipPhysicsUpdate);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -733,37 +733,37 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_ComponentBindings& InBindings)
             -> void
     {
         ck::audio::Verbose(TEXT("Tearing down AudioTrack [{}]"), InParams.Get_TrackName());
 
-        if (ck::IsValid(InCurrent._AudioComponent))
+        if (ck::IsValid(InAudioTrack._AudioComponent))
         {
-            DoUnbindAudioComponentDelegates(InCurrent, InBindings);
+            DoUnbindAudioComponentDelegates(InAudioTrack, InBindings);
 
-            InCurrent._AudioComponent->Stop();
-            InCurrent._AudioComponent->SetSound(nullptr);
+            InAudioTrack._AudioComponent->Stop();
+            InAudioTrack._AudioComponent->SetSound(nullptr);
 
             // unpin before DestroyComponent (destroy garbage-marks the object, failing release validity)
-            UCk_Utils_Object_UE::TryReleaseToPool(InCurrent._AudioComponent.Get());
-            InCurrent._AudioComponent->DestroyComponent();
-            InCurrent._AudioComponent = nullptr;
+            UCk_Utils_Object_UE::TryReleaseToPool(InAudioTrack._AudioComponent.Get());
+            InAudioTrack._AudioComponent->DestroyComponent();
+            InAudioTrack._AudioComponent = nullptr;
         }
 
         // Drops the streamable handle — the track's assets become collectible again
-        InCurrent._LoadedAssets = {};
+        InAudioTrack._LoadedAssets = {};
     }
 
     auto
         FProcessor_AudioTrack_EndPlay::
         DoUnbindAudioComponentDelegates(
-            FFragment_AudioTrack_Current& InCurrent,
+            FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_ComponentBindings& InBindings)
         -> void
     {
-        auto AudioComponent = InCurrent._AudioComponent.Get();
+        auto AudioComponent = InAudioTrack._AudioComponent.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(AudioComponent), TEXT("Cannot unbind delegates - AudioComponent is invalid"))
         { return; }
 
@@ -815,11 +815,11 @@ namespace ck
         AudioTrack_UpdateDebugInfo(
             FCk_Handle_AudioTrack InHandle,
             FCk_Time InDeltaT,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_Debug& InDebug)
         -> void
     {
-        switch (InCurrent.Get_State())
+        switch (InAudioTrack.Get_State())
         {
             case ECk_AudioTrack_State::Playing:
                 InDebug._StateColor = LinearColor::Green;
@@ -839,14 +839,14 @@ namespace ck
                 break;
         }
 
-        if (InCurrent.Get_State() == ECk_AudioTrack_State::Playing ||
-            InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn)
+        if (InAudioTrack.Get_State() == ECk_AudioTrack_State::Playing ||
+            InAudioTrack.Get_State() == ECk_AudioTrack_State::FadingIn)
         {
             constexpr auto PulseFrequency = 2.0f; // Hz
             const auto CurrentTime = InDebug._LastPulseTime + InDeltaT;
 
             const auto PulseAmount = FMath::Sin(CurrentTime.Get_Seconds() * PulseFrequency * 2.0f * PI) * 0.3f + 0.7f;
-            InDebug._CurrentPulseScale = PulseAmount * InCurrent.Get_CurrentVolume();
+            InDebug._CurrentPulseScale = PulseAmount * InAudioTrack.Get_CurrentVolume();
 
             InDebug._LastPulseTime = CurrentTime;
         }
@@ -861,7 +861,7 @@ namespace ck
         AudioTrack_DrawSpatialDebug(
             FCk_Handle_AudioTrack InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             const FFragment_AudioTrack_Debug& InDebug,
             const FTransform& InTransform)
         -> void
@@ -887,13 +887,13 @@ namespace ck
             0.0f
         );
 
-        if (InCurrent.Get_CurrentVolume() > 0.01f)
+        if (InAudioTrack.Get_CurrentVolume() > 0.01f)
         {
             constexpr auto BarHeight = 60.0f;
             constexpr auto BarWidth = 8.0f;
             constexpr auto BarDepth = 8.0f;
 
-            const auto FilledHeight = BarHeight * InCurrent.Get_CurrentVolume();
+            const auto FilledHeight = BarHeight * InAudioTrack.Get_CurrentVolume();
             const auto BarBasePos = Position;
 
             const auto FrameExtent = FVector(BarWidth * 0.5f, BarDepth * 0.5f, BarHeight * 0.5f);
@@ -945,14 +945,14 @@ namespace ck
 
         auto BoundaryRadius = MaxRadius;
 
-        if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn)
+        if (InAudioTrack.Get_State() == ECk_AudioTrack_State::FadingIn)
         {
-            const auto FadeProgress = InCurrent.Get_CurrentVolume() / InParams.Get_Volume();
+            const auto FadeProgress = InAudioTrack.Get_CurrentVolume() / InParams.Get_Volume();
             BoundaryRadius = MaxRadius * FadeProgress;
         }
-        else if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingOut)
+        else if (InAudioTrack.Get_State() == ECk_AudioTrack_State::FadingOut)
         {
-            const auto FadeProgress = InCurrent.Get_CurrentVolume() / InParams.Get_Volume();
+            const auto FadeProgress = InAudioTrack.Get_CurrentVolume() / InParams.Get_Volume();
             BoundaryRadius = MaxRadius * FadeProgress;
         }
 
@@ -969,10 +969,10 @@ namespace ck
             false // don't draw axis
         );
 
-        if (InCurrent.Get_State() == ECk_AudioTrack_State::Playing ||
-            InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn)
+        if (InAudioTrack.Get_State() == ECk_AudioTrack_State::Playing ||
+            InAudioTrack.Get_State() == ECk_AudioTrack_State::FadingIn)
         {
-            const auto WaveSpeed = InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn ? 3.0f : 2.0f;
+            const auto WaveSpeed = InAudioTrack.Get_State() == ECk_AudioTrack_State::FadingIn ? 3.0f : 2.0f;
             const auto CurrentTime = InDebug.Get_LastPulseTime().Get_Seconds();
 
             for (int32 WaveIndex = 0; WaveIndex < 3; ++WaveIndex)
@@ -1002,7 +1002,7 @@ namespace ck
                 }
             }
         }
-        else if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingOut)
+        else if (InAudioTrack.Get_State() == ECk_AudioTrack_State::FadingOut)
         {
             constexpr auto WaveSpeed = 1.0f;
             const auto CurrentTime = InDebug.Get_LastPulseTime().Get_Seconds();
@@ -1030,10 +1030,10 @@ namespace ck
             }
         }
 
-        if (InCurrent.Get_PlaybackPercent() > 0.0f && InCurrent.Get_PlaybackPercent() <= 1.0f)
+        if (InAudioTrack.Get_PlaybackPercent() > 0.0f && InAudioTrack.Get_PlaybackPercent() <= 1.0f)
         {
             const auto ProgressRadius = BoundaryRadius + 10.0f;
-            const auto ProgressAngle = 360.0f * InCurrent.Get_PlaybackPercent();
+            const auto ProgressAngle = 360.0f * InAudioTrack.Get_PlaybackPercent();
             const auto NumProgressSegments = FMath::Max(4, static_cast<int32>(ProgressAngle / 10.0f));
 
             for (int32 I = 0; I < NumProgressSegments; ++I)
@@ -1068,14 +1068,14 @@ namespace ck
             ? ck::Format_UE(TEXT("{}\n{}\nVol: {:.2f} | Progress: {:.1f}%\nState: {}"),
                 TrackNameStr,
                 SoundAssetName,
-                InCurrent.Get_CurrentVolume(),
-                InCurrent.Get_PlaybackPercent() * 100.0f,
-                InCurrent.Get_State())
+                InAudioTrack.Get_CurrentVolume(),
+                InAudioTrack.Get_PlaybackPercent() * 100.0f,
+                InAudioTrack.Get_State())
             : ck::Format_UE(TEXT("{}\nVol: {:.2f} | Progress: {:.1f}%\nState: {}"),
                 TrackNameStr,
-                InCurrent.Get_CurrentVolume(),
-                InCurrent.Get_PlaybackPercent() * 100.0f,
-                InCurrent.Get_State());
+                InAudioTrack.Get_CurrentVolume(),
+                InAudioTrack.Get_PlaybackPercent() * 100.0f,
+                InAudioTrack.Get_State());
 
         UCk_Utils_DebugDraw_UE::DrawDebugString(
             World,
@@ -1085,10 +1085,10 @@ namespace ck
             0.0f
         );
 
-        if (InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn ||
-            InCurrent.Get_State() == ECk_AudioTrack_State::FadingOut)
+        if (InAudioTrack.Get_State() == ECk_AudioTrack_State::FadingIn ||
+            InAudioTrack.Get_State() == ECk_AudioTrack_State::FadingOut)
         {
-            const auto FadeDirection = InCurrent.Get_State() == ECk_AudioTrack_State::FadingIn ?
+            const auto FadeDirection = InAudioTrack.Get_State() == ECk_AudioTrack_State::FadingIn ?
                 FVector::UpVector : FVector::DownVector;
             const auto ArrowStart = Position + FVector(0, 0, BoundaryRadius + 20.0f);
             const auto ArrowEnd = ArrowStart + (FadeDirection * 30.0f);
@@ -1109,7 +1109,7 @@ namespace ck
         AudioTrack_DrawNonSpatialDebug(
             FCk_Handle_AudioTrack InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             const FFragment_AudioTrack_Debug& InDebug)
             -> void
     {
@@ -1143,7 +1143,7 @@ namespace ck
         DebugSubsystem->Request_DrawRect_OnScreen(FCk_Request_DebugDrawOnScreen_Rect{BackgroundRect}
             .Set_RectColor(PulseColor * 0.3f)); // Dimmed background
 
-        const auto VolumeBarWidth = RectSize.X * InCurrent.Get_CurrentVolume();
+        const auto VolumeBarWidth = RectSize.X * InAudioTrack.Get_CurrentVolume();
         const auto VolumeBarRect = FBox2D(
             RectPosition + FVector2D(5.0f, 5.0f),
             RectPosition + FVector2D(VolumeBarWidth - 5.0f, 15.0f)
@@ -1199,7 +1199,7 @@ namespace ck
             ++NextLineIndex;
         }
 
-        const auto VolumeText = ck::Format_UE(TEXT("Vol: {:.2f}"), InCurrent.Get_CurrentVolume());
+        const auto VolumeText = ck::Format_UE(TEXT("Vol: {:.2f}"), InAudioTrack.Get_CurrentVolume());
         const auto VolumeTextPos = TextStartPos + FVector2D(0.0f, LineHeight * NextLineIndex);
         DebugSubsystem->Request_DrawText_OnScreen(
             FCk_Request_DebugDrawOnScreen_Text{VolumeTextPos, VolumeText}
@@ -1207,7 +1207,7 @@ namespace ck
             .Set_TextScale(TextScale)
         );
 
-        const auto ProgressText = ck::Format_UE(TEXT("Progress: {:.1f}%"), InCurrent.Get_PlaybackPercent() * 100.0f);
+        const auto ProgressText = ck::Format_UE(TEXT("Progress: {:.1f}%"), InAudioTrack.Get_PlaybackPercent() * 100.0f);
         const auto ProgressTextPos = TextStartPos + FVector2D(0.0f, LineHeight * (NextLineIndex + 1));
         DebugSubsystem->Request_DrawText_OnScreen(
             FCk_Request_DebugDrawOnScreen_Text{ProgressTextPos, ProgressText}
@@ -1215,7 +1215,7 @@ namespace ck
             .Set_TextScale(TextScale)
         );
 
-        const auto StateText = ck::Format_UE(TEXT("State: {}"), InCurrent.Get_State());
+        const auto StateText = ck::Format_UE(TEXT("State: {}"), InAudioTrack.Get_State());
         const auto StateTextPos = TextStartPos + FVector2D(0.0f, LineHeight * (NextLineIndex + 2));
         DebugSubsystem->Request_DrawText_OnScreen(
             FCk_Request_DebugDrawOnScreen_Text{StateTextPos, StateText}
@@ -1230,13 +1230,13 @@ namespace ck
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_Debug& InDebug,
             const FFragment_Transform& InTransform)
             -> void
     {
-        AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InCurrent, InDebug);
-        AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
+        AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InAudioTrack, InDebug);
+        AudioTrack_DrawSpatialDebug(InHandle, InParams, InAudioTrack, InDebug, InTransform.Get_Transform());
     }
 
     auto
@@ -1245,15 +1245,15 @@ namespace ck
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_Debug& InDebug) const
         -> void
     {
         InDebug._HUDSlotIndex = _NonSpatialSlotCounter;
         _NonSpatialSlotCounter++;
 
-        AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InCurrent, InDebug);
-        AudioTrack_DrawNonSpatialDebug(InHandle, InParams, InCurrent, InDebug);
+        AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InAudioTrack, InDebug);
+        AudioTrack_DrawNonSpatialDebug(InHandle, InParams, InAudioTrack, InDebug);
     }
 
     auto
@@ -1274,13 +1274,13 @@ namespace ck
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_Debug& InDebug,
             const FFragment_Transform& InTransform)
             -> void
     {
-        AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InCurrent, InDebug);
-        AudioTrack_DrawSpatialDebug(InHandle, InParams, InCurrent, InDebug, InTransform.Get_Transform());
+        AudioTrack_UpdateDebugInfo(InHandle, InDeltaT, InAudioTrack, InDebug);
+        AudioTrack_DrawSpatialDebug(InHandle, InParams, InAudioTrack, InDebug, InTransform.Get_Transform());
     }
 
     auto
@@ -1294,9 +1294,9 @@ namespace ck
 
         _TracksToProcess.Reset();
 
-        _TransientEntity.View<FFragment_AudioTrack_Params, FFragment_AudioTrack_Current, FFragment_AudioTrack_Debug,
+        _TransientEntity.View<FFragment_AudioTrack_Params, FFragment_AudioTrack, FFragment_AudioTrack_Debug,
             TExclude<FFragment_Transform>, TExclude<FTag_AudioTrack_NeedsSetup>, CK_IGNORE_PENDING_KILL>().ForEach(
-        [&](EntityType InEntity, const FFragment_AudioTrack_Params& InParams, const FFragment_AudioTrack_Current& InCurrent, FFragment_AudioTrack_Debug& InDebug)
+        [&](EntityType InEntity, const FFragment_AudioTrack_Params& InParams, const FFragment_AudioTrack& InAudioTrack, FFragment_AudioTrack_Debug& InDebug)
         {
             _TracksToProcess.Emplace(FCk_Entity{InEntity});
         });
@@ -1306,11 +1306,11 @@ namespace ck
             auto HandleA = ck::MakeHandle(A, _TransientEntity);
             auto HandleB = ck::MakeHandle(B, _TransientEntity);
 
-            if (NOT HandleA.Has<FFragment_AudioTrack_Current>() || NOT HandleB.Has<FFragment_AudioTrack_Current>())
+            if (NOT HandleA.Has<FFragment_AudioTrack>() || NOT HandleB.Has<FFragment_AudioTrack>())
             { return false; }
 
-            const auto& StateA = HandleA.Get<FFragment_AudioTrack_Current>().Get_State();
-            const auto& StateB = HandleB.Get<FFragment_AudioTrack_Current>().Get_State();
+            const auto& StateA = HandleA.Get<FFragment_AudioTrack>().Get_State();
+            const auto& StateB = HandleB.Get<FFragment_AudioTrack>().Get_State();
 
             const auto GetStatePriority = [](ECk_AudioTrack_State State) -> int32
             {
@@ -1336,12 +1336,12 @@ namespace ck
             const auto TypeSafeHandle = UCk_Utils_AudioTrack_UE::Cast(Handle);
 
             if (NOT Handle.Has<FFragment_AudioTrack_Params>() ||
-                NOT Handle.Has<FFragment_AudioTrack_Current>() ||
+                NOT Handle.Has<FFragment_AudioTrack>() ||
                 NOT Handle.Has<FFragment_AudioTrack_Debug>())
             { continue; }
 
             const auto& Params = Handle.Get<FFragment_AudioTrack_Params>();
-            const auto& Current = Handle.Get<FFragment_AudioTrack_Current>();
+            const auto& Current = Handle.Get<FFragment_AudioTrack>();
             auto& Debug = Handle.Get<FFragment_AudioTrack_Debug>();
 
             Debug._HUDSlotIndex = _NonSpatialSlotCounter;
@@ -1358,7 +1358,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioTrack_Params& InParams,
-            const FFragment_AudioTrack_Current& InCurrent,
+            const FFragment_AudioTrack& InAudioTrack,
             FFragment_AudioTrack_Debug& InDebug)
             -> void
     {

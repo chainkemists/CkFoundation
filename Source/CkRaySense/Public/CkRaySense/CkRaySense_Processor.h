@@ -26,10 +26,10 @@ namespace ck
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
-            TExclude<FFragment_ShapeBox_Current>,
-            TExclude<FFragment_ShapeCapsule_Current>,
-            TExclude<FFragment_ShapeSphere_Current>,
-            TExclude<FFragment_ShapeCylinder_Current>,
+            TExclude<FFragment_ShapeBox>,
+            TExclude<FFragment_ShapeCapsule>,
+            TExclude<FFragment_ShapeSphere>,
+            TExclude<FFragment_ShapeCylinder>,
             TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -57,7 +57,7 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_BoxSweep_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_BoxSweep_Update,
             FCk_Handle_RaySense,
-            ck::TReadOnly<FFragment_ShapeBox_Current>,
+            ck::TReadOnly<FFragment_ShapeBox>,
             ck::TReadOnly<FFragment_RaySense_Params>,
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
@@ -79,7 +79,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeBox_Current& InShape,
+            const FFragment_ShapeBox& InShape,
             const FFragment_RaySense_Params& InParams,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) -> void;
@@ -90,7 +90,7 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_SphereSweep_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_SphereSweep_Update,
             FCk_Handle_RaySense,
-            ck::TReadOnly<FFragment_ShapeSphere_Current>,
+            ck::TReadOnly<FFragment_ShapeSphere>,
             ck::TReadOnly<FFragment_RaySense_Params>,
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
@@ -112,7 +112,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeSphere_Current& InShape,
+            const FFragment_ShapeSphere& InShape,
             const FFragment_RaySense_Params& InParams,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) -> void;
@@ -123,7 +123,7 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_CapsuleSweep_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_CapsuleSweep_Update,
             FCk_Handle_RaySense,
-            ck::TReadOnly<FFragment_ShapeCapsule_Current>,
+            ck::TReadOnly<FFragment_ShapeCapsule>,
             ck::TReadOnly<FFragment_RaySense_Params>,
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
@@ -145,7 +145,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeCapsule_Current& InShape,
+            const FFragment_ShapeCapsule& InShape,
             const FFragment_RaySense_Params& InParams,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) -> void;
@@ -156,7 +156,7 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_CylinderSweep_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_CylinderSweep_Update,
             FCk_Handle_RaySense,
-            ck::TReadOnly<FFragment_ShapeCylinder_Current>,
+            ck::TReadOnly<FFragment_ShapeCylinder>,
             ck::TReadOnly<FFragment_RaySense_Params>,
             ck::TReadOnly<FFragment_Transform_Previous>,
             ck::TReadOnly<FFragment_Transform>,
@@ -177,7 +177,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeCylinder_Current& InShape,
+            const FFragment_ShapeCylinder& InShape,
             const FFragment_RaySense_Params& InParams,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) -> void;

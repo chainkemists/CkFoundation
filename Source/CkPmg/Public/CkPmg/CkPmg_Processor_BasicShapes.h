@@ -19,7 +19,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Sphere_Params>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -36,7 +36,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_Sphere_Params& InParams,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -47,7 +47,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Box_Params>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -64,7 +64,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_Box_Params& InParams,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -75,7 +75,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Cone_Params>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -92,7 +92,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_Cone_Params& InParams,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -103,7 +103,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Cylinder_Params>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -120,7 +120,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_Cylinder_Params& InParams,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -131,7 +131,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Capsule_Params>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -148,7 +148,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_Capsule_Params& InParams,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -159,7 +159,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Pyramid_Params>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -176,7 +176,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_Pyramid_Params& InParams,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -187,7 +187,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Hemisphere_Params>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -204,7 +204,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_Hemisphere_Params& InParams,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -215,7 +215,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Torus_Params>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -232,7 +232,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_Torus_Params& InParams,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 

@@ -23,7 +23,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_VfxCue_Params>(InParams);
-    InHandle.Add<ck::FFragment_VfxCue_Current>();
+    InHandle.Add<ck::FFragment_VfxCue>();
     InHandle.Add<ck::FTag_VfxCue_NeedsSetup>();
 
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, *ck::Format_UE(TEXT("VfxCue: {}"), InVfxCueScript.Get_CueName()));
@@ -34,7 +34,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VfxCue_UE, FCk_Handle_VfxCue,
-    ck::FFragment_VfxCue_Current)
+    ck::FFragment_VfxCue)
 
 // --------------------------------------------------------------------------------------------------------------------
 

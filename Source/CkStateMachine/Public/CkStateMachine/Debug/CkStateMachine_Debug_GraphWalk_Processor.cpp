@@ -130,7 +130,7 @@ namespace ck
 
         for (const auto& Pending : Progress._PendingEntities)
         {
-            if (NOT Pending.EntityHandle.Has<FFragment_EntityScript_Current>())
+            if (NOT Pending.EntityHandle.Has<FFragment_EntityScript>())
             { return; }
         }
 

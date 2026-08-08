@@ -21,7 +21,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeSphere_Params& InParams,
-            FFragment_ShapeSphere_Current& InCurrent,
+            FFragment_ShapeSphere& InShapeSphere,
             FFragment_ShapeSphere_Requests& InRequestsComp) const
         -> void
     {
@@ -34,7 +34,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InParams, InShapeSphere, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -51,16 +51,16 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_ShapeSphere_Params& InParams,
-            FFragment_ShapeSphere_Current& InCurrent,
+            FFragment_ShapeSphere& InShapeSphere,
             const FCk_Request_ShapeSphere_UpdateDimensions& InRequest)
         -> void
     {
         const auto& NewDimensions = InRequest.Get_NewDimensions();
 
-        if (InCurrent.Get_Dimensions() == NewDimensions)
+        if (InShapeSphere.Get_Dimensions() == NewDimensions)
         { return; }
 
-        InCurrent._Dimensions = NewDimensions;
+        InShapeSphere._Dimensions = NewDimensions;
         UUtils_Signal_OnShapeSphereDimensionsChanged::Broadcast(InHandle, MakePayload(InHandle, NewDimensions));
 #if WITH_EDITOR
         UCk_Utils_Shapes_UE::Notify_DimensionsChanged(InHandle.ConvertToHandle());

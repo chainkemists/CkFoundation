@@ -40,7 +40,7 @@ namespace ck
     class CKUSF_API FProcessor_Usf_OutlineActor_Sync : public TProcessor<
         FProcessor_Usf_OutlineActor_Sync,
         TReadOnly<FFragment_Usf_OutlineResolved>,
-        TReadOnly<FFragment_OwningActor_Current>,
+        TReadOnly<FFragment_OwningActor>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -51,7 +51,7 @@ namespace ck
 
         static auto ForEachEntity(TimeType InDeltaT, HandleType InHandle,
                                   const FFragment_Usf_OutlineResolved& InResolved,
-                                  const FFragment_OwningActor_Current& InOwningActor) -> void;
+                                  const FFragment_OwningActor& InOwningActor) -> void;
     };
 
     class CKUSF_API FProcessor_Usf_OutlineActor_Remove : public TProcessor<

@@ -31,7 +31,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_FogOfWar_Params>(InParams);
-    InHandle.Add<ck::FFragment_FogOfWar_Current>();
+    InHandle.Add<ck::FFragment_FogOfWar>();
     InHandle.Add<ck::FTag_FogOfWar_NeedsSetup>();
 
     return UCk_Utils_FogOfWar_UE::CastChecked(InHandle);
@@ -39,7 +39,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_FogOfWar_UE, FCk_Handle_FogOfWar, ck::FFragment_FogOfWar_Current, ck::FFragment_FogOfWar_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_FogOfWar_UE, FCk_Handle_FogOfWar, ck::FFragment_FogOfWar, ck::FFragment_FogOfWar_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ auto
         FVector InWorldLocation)
     -> bool
 {
-    const auto& Current = InFogOfWar.Get<ck::FFragment_FogOfWar_Current>();
+    const auto& Current = InFogOfWar.Get<ck::FFragment_FogOfWar>();
 
     // An unallocated grid is a LEGITIMATE transient (composed mid-frame, queried before its Setup pump), so
     // it gates nothing rather than ensuring — a PERMANENT one is already reported by Setup's own ensures.
@@ -74,7 +74,7 @@ auto
         const FCk_Handle_FogOfWar& InFogOfWar)
     -> float
 {
-    const auto& Explored = InFogOfWar.Get<ck::FFragment_FogOfWar_Current>().Get_Explored();
+    const auto& Explored = InFogOfWar.Get<ck::FFragment_FogOfWar>().Get_Explored();
 
     if (Explored.IsEmpty())
     { return 0.0f; }
@@ -88,7 +88,7 @@ auto
         const FCk_Handle_FogOfWar& InFogOfWar)
     -> FIntPoint
 {
-    return InFogOfWar.Get<ck::FFragment_FogOfWar_Current>().Get_CellCounts();
+    return InFogOfWar.Get<ck::FFragment_FogOfWar>().Get_CellCounts();
 }
 
 auto
@@ -97,7 +97,7 @@ auto
         const FCk_Handle_FogOfWar& InFogOfWar)
     -> FCk_RepData_FogOfWar
 {
-    const auto& Current = InFogOfWar.Get<ck::FFragment_FogOfWar_Current>();
+    const auto& Current = InFogOfWar.Get<ck::FFragment_FogOfWar>();
     const auto& Explored = Current.Get_Explored();
 
     auto Payload = FCk_RepData_FogOfWar{};

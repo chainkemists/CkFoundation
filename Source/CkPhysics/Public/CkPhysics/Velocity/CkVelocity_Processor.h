@@ -17,7 +17,7 @@ namespace ck
     class CKPHYSICS_API FProcessor_Velocity_Setup : public TProcessor<
             FProcessor_Velocity_Setup,
             ck::TReadOnly<FFragment_Velocity_Params>,
-            ck::TReadWrite<FFragment_Velocity_Current>,
+            ck::TReadWrite<FFragment_Velocity>,
             FTag_Velocity_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -38,14 +38,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Velocity_Params& InParams,
-            FFragment_Velocity_Current& InCurrent) const -> void;
+            FFragment_Velocity& InVelocity) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKPHYSICS_API FProcessor_Velocity_Clamp : public TProcessor<
             FProcessor_Velocity_Clamp,
-            ck::TReadWrite<FFragment_Velocity_Current>,
+            ck::TReadWrite<FFragment_Velocity>,
             ck::TReadOnly<FFragment_Velocity_MinMax>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -62,7 +62,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Velocity_Current& InCurrent,
+            FFragment_Velocity& InVelocity,
             const FFragment_Velocity_MinMax& InMinMax) const -> void;
     };
 
@@ -70,7 +70,7 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_VelocityModifier_Setup : public TProcessor<
             FProcessor_VelocityModifier_Setup,
-            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Velocity>,
             ck::TReadOnly<FFragment_Velocity_Target>,
             FTag_VelocityModifier,
             FTag_VelocityModifier_NeedsSetup,
@@ -89,7 +89,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Velocity_Current& InVelocity,
+            const FFragment_Velocity& InVelocity,
             const FFragment_Velocity_Target& InTarget) const -> void;
     };
 
@@ -97,7 +97,7 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_VelocityModifier_EndPlay : public TProcessor<
             FProcessor_VelocityModifier_EndPlay,
-            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Velocity>,
             ck::TReadOnly<FFragment_Velocity_Target>,
             FTag_VelocityModifier,
             CK_IF_END_PLAY>
@@ -113,7 +113,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Velocity_Current& InVelocity,
+            const FFragment_Velocity& InVelocity,
             const FFragment_Velocity_Target& InTarget) const -> void;
     };
 
@@ -237,7 +237,7 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_Velocity_Replicate : public TProcessor<
             FProcessor_Velocity_Replicate,
-            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_Velocity>,
             ck::TReadOnly<FFragment_ContainerRef_Velocity>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -252,7 +252,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Velocity_Current& InCurrent,
+            const FFragment_Velocity& InVelocity,
             const FFragment_ContainerRef_Velocity& InContainerRef) const -> void;
     };
 

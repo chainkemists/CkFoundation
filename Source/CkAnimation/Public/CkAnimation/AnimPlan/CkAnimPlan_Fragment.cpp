@@ -44,11 +44,11 @@ static struct FAnimPlanRepHandlerRegistrar
                 // wire-builder FProcessor_AnimPlan_Replicate. UNSET when this entity is not an AnimPlan.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
-                    if (NOT Entity.Has<ck::FFragment_AnimPlan_Current>())
+                    if (NOT Entity.Has<ck::FFragment_AnimPlan>())
                     { return {}; }
 
                     const auto& Params  = Entity.Get<ck::FFragment_AnimPlan_Params>();
-                    const auto& Current = Entity.Get<ck::FFragment_AnimPlan_Current>();
+                    const auto& Current = Entity.Get<ck::FFragment_AnimPlan>();
 
                     auto Data = FCk_RepData_AnimPlans{};
                     Data.AnimPlans.Emplace(FCk_AnimPlan_State{
@@ -67,7 +67,7 @@ static struct FAnimPlanRepHandlerRegistrar
                 // saved state directly. The OWNER-keyed DoApplyAnimPlans (net Apply) never resolves it.
                 .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                 {
-                    if (NOT Entity.Has<ck::FFragment_AnimPlan_Current>())
+                    if (NOT Entity.Has<ck::FFragment_AnimPlan>())
                     { return ECk_Persistence_ApplyResult::NotReady; }
 
                     auto Plan = UCk_Utils_AnimPlan_UE::Cast(Entity);

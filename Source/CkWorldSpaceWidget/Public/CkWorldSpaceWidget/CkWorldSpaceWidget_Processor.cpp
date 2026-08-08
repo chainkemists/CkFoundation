@@ -51,12 +51,12 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
-            const FFragment_WorldSpaceWidget_Current& InCurrent)
+            const FFragment_WorldSpaceWidget& InWorldSpaceWidget)
         -> void
     {
         if (InParams.Get_RenderMode() == ECk_WorldSpaceWidget_RenderMode::WorldComponent)
         {
-            const auto WidgetComponent = InCurrent.Get_WidgetComponent().Get();
+            const auto WidgetComponent = InWorldSpaceWidget.Get_WidgetComponent().Get();
 
             if (ck::Is_NOT_Valid(WidgetComponent))
             {
@@ -70,7 +70,7 @@ namespace ck
             return;
         }
 
-        const auto WrapperWidget = InCurrent.Get_WrapperWidget().Get();
+        const auto WrapperWidget = InWorldSpaceWidget.Get_WrapperWidget().Get();
 
         if (ck::Is_NOT_Valid(WrapperWidget))
         {
@@ -87,7 +87,7 @@ namespace ck
             { WrapperWidget->SetRenderOpacity(0.0f); }
         };
 
-        if (ck::Is_NOT_Valid(InCurrent.Get_WidgetOwningLocalPlayer()))
+        if (ck::Is_NOT_Valid(InWorldSpaceWidget.Get_WidgetOwningLocalPlayer()))
         {
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
             return;
@@ -95,13 +95,13 @@ namespace ck
 
         // Ejected/SIE renders from the editor camera, which no PlayerController represents — a
         // projection through the player would pin the widget to the frozen game view, so hide instead.
-        if (InCurrent.Get_IsRenderViewEjected())
+        if (InWorldSpaceWidget.Get_IsRenderViewEjected())
         {
             HideWidget();
             return;
         }
 
-        const auto PlayerController = InCurrent.Get_ResolvedOwningPlayer();
+        const auto PlayerController = InWorldSpaceWidget.Get_ResolvedOwningPlayer();
 
         // Transient by design: the local player is alive but between controllers (DebugCamera swap,
         // travel, possession churn) — hide rather than paint at a stale position.
@@ -245,7 +245,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Transform& InTransform,
             const FFragment_WorldSpaceWidget_Params& InParams,
-            const FFragment_WorldSpaceWidget_Current& InCurrent)
+            const FFragment_WorldSpaceWidget& InWorldSpaceWidget)
         -> void
     {
         // WorldComponent widgets are 3D objects — perspective scaling is native.
@@ -260,10 +260,10 @@ namespace ck
         }
 
         // Hidden by UpdateLocation while ejected — a scale from the frozen game camera is meaningless.
-        if (InCurrent.Get_IsRenderViewEjected())
+        if (InWorldSpaceWidget.Get_IsRenderViewEjected())
         { return; }
 
-        const auto PlayerController = InCurrent.Get_ResolvedOwningPlayer();
+        const auto PlayerController = InWorldSpaceWidget.Get_ResolvedOwningPlayer();
 
         // Transient by design: between controllers (DebugCamera swap, travel, possession churn).
         if (ck::Is_NOT_Valid(PlayerController))
@@ -285,7 +285,7 @@ namespace ck
             UE::Math::TVector2(ScalingInfo.Get_MaxScale(), ScalingInfo.Get_MinScale()),
             DistanceFromTargetToViewport);
 
-        InCurrent.Get_WrapperWidget()->Request_SetWidgetScale(FVector2D{WidgetScale, WidgetScale});
+        InWorldSpaceWidget.Get_WrapperWidget()->Request_SetWidgetScale(FVector2D{WidgetScale, WidgetScale});
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -295,7 +295,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget& InWorldSpaceWidget,
             FFragment_WorldSpaceWidget_Params& InParams,
             FFragment_WorldSpaceWidget_Requests& InRequests) const
         -> void
@@ -311,7 +311,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            DoHandleRequest(InHandle, InCurrent, InParams, InRequest);
+            DoHandleRequest(InHandle, InWorldSpaceWidget, InParams, InRequest);
 
             Result = ECk_Request_OperationResult::Succeeded;
 
@@ -327,7 +327,7 @@ namespace ck
         FProcessor_WorldSpaceWidget_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget& InWorldSpaceWidget,
             FFragment_WorldSpaceWidget_Params& InParams,
             const FCk_Request_WorldSpaceWidget_SetLocationInfo& InRequest)
         -> void
@@ -339,7 +339,7 @@ namespace ck
         FProcessor_WorldSpaceWidget_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget& InWorldSpaceWidget,
             FFragment_WorldSpaceWidget_Params& InParams,
             const FCk_Request_WorldSpaceWidget_SetScalingInfo& InRequest)
         -> void
@@ -359,7 +359,7 @@ namespace ck
         InHandle.Try_Remove<FTag_WorldSpaceWidget_NeedsUpdateScaling>();
 
         // Reset the scale box so it does not stay stuck at the last distance-driven scale.
-        if (const auto WrapperWidget = InCurrent.Get_WrapperWidget().Get();
+        if (const auto WrapperWidget = InWorldSpaceWidget.Get_WrapperWidget().Get();
             ck::IsValid(WrapperWidget))
         { WrapperWidget->Request_SetWidgetScale(FVector2D{1.0, 1.0}); }
     }
@@ -368,7 +368,7 @@ namespace ck
         FProcessor_WorldSpaceWidget_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget& InWorldSpaceWidget,
             FFragment_WorldSpaceWidget_Params& InParams,
             const FCk_Request_WorldSpaceWidget_SetFadingInfo& InRequest)
         -> void
@@ -380,7 +380,7 @@ namespace ck
         FProcessor_WorldSpaceWidget_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_WorldSpaceWidget_Current& InCurrent,
+            FFragment_WorldSpaceWidget& InWorldSpaceWidget,
             FFragment_WorldSpaceWidget_Params& InParams,
             const FCk_Request_WorldSpaceWidget_SetOcclusionInfo& InRequest)
         -> void
@@ -409,10 +409,10 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_WorldSpaceWidget_Params& InParams,
-            FFragment_WorldSpaceWidget_Current& InCurrent)
+            FFragment_WorldSpaceWidget& InWorldSpaceWidget)
         -> void
     {
-        if (const auto WidgetComponent = InCurrent.Get_WidgetComponent().Get();
+        if (const auto WidgetComponent = InWorldSpaceWidget.Get_WidgetComponent().Get();
             ck::IsValid(WidgetComponent))
         {
             // unpin before DestroyComponent (destroy garbage-marks the object, failing release validity)
@@ -422,7 +422,7 @@ namespace ck
 
         // The WRAPPER, not the content widget, is what Request_WrapWidget added to the viewport;
         // removing it takes its content child with it.
-        if (const auto WrapperWidget = InCurrent.Get_WrapperWidget().Get();
+        if (const auto WrapperWidget = InWorldSpaceWidget.Get_WrapperWidget().Get();
             ck::IsValid(WrapperWidget))
         {
             WrapperWidget->RemoveFromParent();

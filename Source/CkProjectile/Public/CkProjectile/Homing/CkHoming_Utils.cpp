@@ -30,7 +30,7 @@ auto
 
     InHandle.Add<ck::FFragment_Homing_Params>(InParams);
 
-    auto& Current = InHandle.Add<ck::FFragment_Homing_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_Homing>();
 
     const auto AccelerationHandle = UCk_Utils_Acceleration_UE::CastChecked(InHandle);
     Current._BaseAcceleration = UCk_Utils_Acceleration_UE::Get_CurrentAcceleration(AccelerationHandle);
@@ -51,7 +51,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Homing_UE, FCk_Handle_Homing, ck::FFragment_Homing_Params, ck::FFragment_Homing_Current)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Homing_UE, FCk_Handle_Homing, ck::FFragment_Homing_Params, ck::FFragment_Homing)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -163,7 +163,7 @@ auto
         const FCk_Handle_Homing& InHandle)
     -> ECk_Homing_TargetMode
 {
-    return InHandle.Get<ck::FFragment_Homing_Current>().Get_TargetMode();
+    return InHandle.Get<ck::FFragment_Homing>().Get_TargetMode();
 }
 
 auto
@@ -172,7 +172,7 @@ auto
         const FCk_Handle_Homing& InHandle)
     -> FCk_Handle
 {
-    return InHandle.Get<ck::FFragment_Homing_Current>().Get_TargetEntity();
+    return InHandle.Get<ck::FFragment_Homing>().Get_TargetEntity();
 }
 
 auto
@@ -181,7 +181,7 @@ auto
         const FCk_Handle_Homing& InHandle)
     -> FCk_Homing_GuidanceState
 {
-    return InHandle.Get<ck::FFragment_Homing_Current>().Get_LastGuidanceState();
+    return InHandle.Get<ck::FFragment_Homing>().Get_LastGuidanceState();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

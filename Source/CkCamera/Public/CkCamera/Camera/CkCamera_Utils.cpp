@@ -42,7 +42,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_Camera_Params>(InParams.Get_DriveControllerControlRotation());
-    InHandle.AddOrGet<ck::FFragment_Camera_Current>();
+    InHandle.AddOrGet<ck::FFragment_Camera>();
     InHandle.AddOrGet<ck::FFragment_Camera_Pov>();
 
     ck::FUtils_RecordOfCameraLayers::AddIfMissing(InHandle);
@@ -82,7 +82,7 @@ auto
     // return a default (origin) FMinimalViewInfo and the camera would snap on the first frame after Add. The
     // transform is guaranteed — Add requires a transform handle.
     {
-        auto& Current = Director.Get<ck::FFragment_Camera_Current>();
+        auto& Current = Director.Get<ck::FFragment_Camera>();
         auto& Pov = Director.Get<ck::FFragment_Camera_Pov>();
 
         auto Input = ck::camera::FPov_Input{};
@@ -154,7 +154,7 @@ auto
         const FCk_Handle_Camera& InCamera)
     -> TSubclassOf<UCk_CameraLayer_EntityScript>
 {
-    return InCamera.Get<ck::FFragment_Camera_Current>().Get_DominantLayerClass();
+    return InCamera.Get<ck::FFragment_Camera>().Get_DominantLayerClass();
 }
 
 auto
@@ -163,7 +163,7 @@ auto
         const FCk_Handle_Camera& InCamera)
     -> FCk_CameraProfile
 {
-    return InCamera.Get<ck::FFragment_Camera_Current>().Get_ComposedProfile();
+    return InCamera.Get<ck::FFragment_Camera>().Get_ComposedProfile();
 }
 
 auto
@@ -323,7 +323,7 @@ auto
     Request_Set_UseFixedBoomRotation(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
-    InCamera.Get<ck::FFragment_Camera_Current>().Set_UseFixedBoomRotation(bInEnabled);
+    InCamera.Get<ck::FFragment_Camera>().Set_UseFixedBoomRotation(bInEnabled);
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
@@ -335,7 +335,7 @@ auto
     Request_Set_ConstrainAspectRatio(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
-    InCamera.Get<ck::FFragment_Camera_Current>().Set_ConstrainAspectRatio(bInEnabled);
+    InCamera.Get<ck::FFragment_Camera>().Set_ConstrainAspectRatio(bInEnabled);
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
@@ -366,7 +366,7 @@ auto
     Request_Set_HasOrientationControl(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
-    InCamera.Get<ck::FFragment_Camera_Current>().Set_HasOrientationControl(bInEnabled);
+    InCamera.Get<ck::FFragment_Camera>().Set_HasOrientationControl(bInEnabled);
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
@@ -378,7 +378,7 @@ auto
     Request_Set_HasAutoReorient(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
-    InCamera.Get<ck::FFragment_Camera_Current>().Set_HasAutoReorient(bInEnabled);
+    InCamera.Get<ck::FFragment_Camera>().Set_HasAutoReorient(bInEnabled);
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
@@ -390,7 +390,7 @@ auto
     Request_Set_HasCollision(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
-    InCamera.Get<ck::FFragment_Camera_Current>().Set_HasCollision(bInEnabled);
+    InCamera.Get<ck::FFragment_Camera>().Set_HasCollision(bInEnabled);
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
@@ -402,7 +402,7 @@ auto
     Request_Set_UseAsyncTrace(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
-    InCamera.Get<ck::FFragment_Camera_Current>().Set_UseAsyncTrace(bInEnabled);
+    InCamera.Get<ck::FFragment_Camera>().Set_UseAsyncTrace(bInEnabled);
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
@@ -414,7 +414,7 @@ auto
     Request_Set_UsePostProcess(FCk_Handle_Camera& InCamera, bool bInEnabled, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
-    InCamera.Get<ck::FFragment_Camera_Current>().Set_UsePostProcess(bInEnabled);
+    InCamera.Get<ck::FFragment_Camera>().Set_UsePostProcess(bInEnabled);
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InCamera, ECk_Request_OperationResult::Succeeded);
@@ -662,7 +662,7 @@ auto
 
     // ---- Non-attribute leaves (bools + curves) → Current ----
     {
-        auto& CurrentFrag = InCamera.AddOrGet<ck::FFragment_Camera_Current>();
+        auto& CurrentFrag = InCamera.AddOrGet<ck::FFragment_Camera>();
         CurrentFrag.Set_UseFixedBoomRotation(InDefaults.Get_Rig().Get_UseFixedBoomRotation());
         CurrentFrag.Set_ConstrainAspectRatio(InDefaults.Get_Sensor().Get_ConstrainAspectRatio());
         CurrentFrag.Set_ProjectionMode(InDefaults.Get_Sensor().Get_ProjectionMode());
@@ -691,7 +691,7 @@ auto
 
     auto Profile = FCk_CameraProfile{};
 
-    const auto& CurrentFrag = InCamera.Get<ck::FFragment_Camera_Current>();
+    const auto& CurrentFrag = InCamera.Get<ck::FFragment_Camera>();
 
     // ---- Rig ----
     {

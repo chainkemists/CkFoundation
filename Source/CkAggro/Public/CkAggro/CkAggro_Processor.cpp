@@ -64,7 +64,7 @@ namespace ck
             HandleType InAggro,
             FFragment_Aggro_Requests& InRequests,
             FFragment_Aggro_TargetMap& InTargetMap,
-            FFragment_Aggro_Current& InCurrent) const
+            FFragment_Aggro& InAggroComp) const
         -> void
     {
         const auto RequestsCopy = InRequests._Requests;
@@ -76,7 +76,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InAggro, Result);
 
-            DoHandleRequest(InAggro, InTargetMap, InCurrent, InRequest);
+            DoHandleRequest(InAggro, InTargetMap, InAggroComp, InRequest);
 
             if (InRequest.Get_IsRequestHandleValid())
             { InRequest.GetAndDestroyRequestHandle(); }
@@ -93,7 +93,7 @@ namespace ck
         DoHandleRequest(
             HandleType InAggro,
             FFragment_Aggro_TargetMap& InTargetMap,
-            FFragment_Aggro_Current& InCurrent,
+            FFragment_Aggro& InAggroComp,
             const FCk_Request_Aggro_AddThreat& InRequest)
         -> void
     {
@@ -131,7 +131,7 @@ namespace ck
         DoHandleRequest(
             HandleType InAggro,
             FFragment_Aggro_TargetMap& InTargetMap,
-            FFragment_Aggro_Current& InCurrent,
+            FFragment_Aggro& InAggroComp,
             const FCk_Request_Aggro_RemoveTarget& InRequest)
         -> void
     {
@@ -148,7 +148,7 @@ namespace ck
         DoHandleRequest(
             HandleType InAggro,
             FFragment_Aggro_TargetMap& InTargetMap,
-            FFragment_Aggro_Current& InCurrent,
+            FFragment_Aggro& InAggroComp,
             const FCk_Request_Aggro_ClearAllTargets& InRequest)
         -> void
     {
@@ -164,7 +164,7 @@ namespace ck
         DoHandleRequest(
             HandleType InAggro,
             FFragment_Aggro_TargetMap& InTargetMap,
-            FFragment_Aggro_Current& InCurrent,
+            FFragment_Aggro& InAggroComp,
             const FCk_Request_Aggro_SetActiveTarget& InRequest)
         -> void
     {
@@ -176,7 +176,7 @@ namespace ck
         if (ck::Is_NOT_Valid(NewActive))
         { return; }
 
-        auto PrevActive = InCurrent._ActiveTarget;
+        auto PrevActive = InAggroComp._ActiveTarget;
         if (PrevActive == NewActive)
         { return; }
 
@@ -186,9 +186,9 @@ namespace ck
         { PrevActive.Try_Remove<ck::FTag_AggroTarget_IsActive>(); }
         NewActive.AddOrGet<ck::FTag_AggroTarget_IsActive>();
 
-        InCurrent._ActiveTarget          = NewActive;
-        InCurrent._ActiveTargetStartTime = Now;
-        InCurrent._LastSwitchTime        = Now;
+        InAggroComp._ActiveTarget          = NewActive;
+        InAggroComp._ActiveTargetStartTime = Now;
+        InAggroComp._LastSwitchTime        = Now;
 
         UUtils_Signal_OnAggroActiveTargetChanged::Broadcast(InAggro, MakePayload(InAggro, PrevActive, NewActive));
     }
@@ -198,16 +198,16 @@ namespace ck
         DoHandleRequest(
             HandleType InAggro,
             FFragment_Aggro_TargetMap& InTargetMap,
-            FFragment_Aggro_Current& InCurrent,
+            FFragment_Aggro& InAggroComp,
             const FCk_Request_Aggro_ClearActiveTarget& InRequest)
         -> void
     {
-        auto PrevActive = InCurrent._ActiveTarget;
+        auto PrevActive = InAggroComp._ActiveTarget;
         if (ck::Is_NOT_Valid(PrevActive))
         { return; }
 
         PrevActive.Try_Remove<ck::FTag_AggroTarget_IsActive>();
-        InCurrent._ActiveTarget = FCk_Handle_AggroTarget{};
+        InAggroComp._ActiveTarget = FCk_Handle_AggroTarget{};
         InAggro.AddOrGet<ck::FTag_Aggro_SelectionPending>();
 
         UUtils_Signal_OnAggroActiveTargetChanged::Broadcast(InAggro, MakePayload(InAggro, PrevActive, FCk_Handle_AggroTarget{}));
@@ -263,7 +263,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InAggro,
-            FFragment_Aggro_Current& InCurrent,
+            FFragment_Aggro& InAggroComp,
             const FFragment_Aggro_SelectionParams& InSelectionParams,
             const FFragment_Aggro_TargetMap& InTargetMap) const
         -> void
@@ -306,7 +306,7 @@ namespace ck
             }
         }
 
-        auto       Incumbent         = InCurrent.Get_ActiveTarget();
+        auto       Incumbent         = InAggroComp.Get_ActiveTarget();
         const auto IncumbentEligible = Is_Eligible(Incumbent);
 
         auto NewActive = Incumbent;
@@ -321,8 +321,8 @@ namespace ck
         else if (ck::IsValid(Best) && Best != Incumbent)
         {
             const auto IncumbentScore  = Incumbent.Get<ck::FFragment_AggroTarget_Score>().Get_Score();
-            const auto SecsSinceSwitch = (Now - InCurrent.Get_LastSwitchTime()).Get_Seconds();
-            const auto SecsSinceStart  = (Now - InCurrent.Get_ActiveTargetStartTime()).Get_Seconds();
+            const auto SecsSinceSwitch = (Now - InAggroComp.Get_LastSwitchTime()).Get_Seconds();
+            const auto SecsSinceStart  = (Now - InAggroComp.Get_ActiveTargetStartTime()).Get_Seconds();
 
             if (UCk_Utils_Aggro_UE::Should_SwitchTarget(
                     BestScore, IncumbentScore, InSelectionParams.Get_CurrentTargetBias(),
@@ -343,11 +343,11 @@ namespace ck
             if (ck::IsValid(NewActive))
             {
                 NewActive.AddOrGet<ck::FTag_AggroTarget_IsActive>();
-                InCurrent._ActiveTargetStartTime = Now;
-                InCurrent._LastSwitchTime        = Now;
+                InAggroComp._ActiveTargetStartTime = Now;
+                InAggroComp._LastSwitchTime        = Now;
             }
 
-            InCurrent._ActiveTarget = NewActive;
+            InAggroComp._ActiveTarget = NewActive;
 
             UUtils_Signal_OnAggroActiveTargetChanged::Broadcast(InAggro, MakePayload(InAggro, Incumbent, NewActive));
         }

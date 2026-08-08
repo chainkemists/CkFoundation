@@ -23,7 +23,7 @@ auto
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner, [&](FCk_Handle InNewEntity)
     {
         InNewEntity.Add<ck::FFragment_GeometryCollection_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_GeometryCollection_Current>();
+        InNewEntity.Add<ck::FFragment_GeometryCollection>();
     });
 
     auto NewGeometryCollectionEntity = Cast(NewEntity);
@@ -36,7 +36,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_GeometryCollection_UE, FCk_Handle_GeometryCollection,
-    ck::FFragment_GeometryCollection_Params, ck::FFragment_GeometryCollection_Current)
+    ck::FFragment_GeometryCollection_Params, ck::FFragment_GeometryCollection)
 
 // --------------------------------------------------------------------------------------------------------------------
 

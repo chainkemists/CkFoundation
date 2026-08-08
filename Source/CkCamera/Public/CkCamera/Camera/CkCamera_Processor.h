@@ -74,7 +74,7 @@ namespace ck
     class CKCAMERA_API FProcessor_CameraLayer_Lifecycle : public ck_exp::TProcessor<
             FProcessor_CameraLayer_Lifecycle,
             FCk_Handle_Camera,
-            TReadWrite<FFragment_Camera_Current>,
+            TReadWrite<FFragment_Camera>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -88,14 +88,14 @@ namespace ck
         static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Camera_Current& InCurrent) -> void;
+            FFragment_Camera& InCamera) -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
     class CKCAMERA_API FProcessor_Camera_UpdatePOV : public ck_exp::TProcessor<
             FProcessor_Camera_UpdatePOV,
             FCk_Handle_Camera,
-            TReadWrite<FFragment_Camera_Current>,
+            TReadWrite<FFragment_Camera>,
             TReadWrite<FFragment_Camera_Pov>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -110,7 +110,7 @@ namespace ck
         static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Camera_Current& InCurrent,
+            FFragment_Camera& InCamera,
             FFragment_Camera_Pov& InPov) -> void;
     };
 }

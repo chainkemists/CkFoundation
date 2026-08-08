@@ -70,10 +70,10 @@ namespace ck { namespace details
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSPATIALQUERY_API FFragment_Probe_Current
+    struct CKSPATIALQUERY_API FFragment_Probe
     {
     public:
-        CK_GENERATED_BODY(FFragment_Probe_Current);
+        CK_GENERATED_BODY(FFragment_Probe);
 
     public:
         template <typename T_ShapeFragment>

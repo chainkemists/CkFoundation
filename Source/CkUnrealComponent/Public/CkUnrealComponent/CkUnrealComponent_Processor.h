@@ -16,7 +16,7 @@ namespace ck
             FProcessor_UnrealComponent_Setup,
             FCk_Handle_UnrealComponent,
             ck::TReadOnly<FFragment_UnrealComponent_Params>,
-            ck::TReadWrite<FFragment_UnrealComponent_Current>,
+            ck::TReadWrite<FFragment_UnrealComponent>,
             FTag_UnrealComponent_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -32,7 +32,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_UnrealComponent_Params& InParams,
-            FFragment_UnrealComponent_Current& InCurrent) -> void;
+            FFragment_UnrealComponent& InUnrealComponent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ namespace ck
     class CKUNREALCOMPONENT_API FProcessor_UnrealComponent_Tick : public ck_exp::TProcessor<
             FProcessor_UnrealComponent_Tick,
             FCk_Handle_UnrealComponent,
-            ck::TReadOnly<FFragment_UnrealComponent_Current>,
+            ck::TReadOnly<FFragment_UnrealComponent>,
             FTag_UnrealComponent_TickViaProcessor,
             TExclude<FTag_UnrealComponent_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
@@ -83,7 +83,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_UnrealComponent_Current& InCurrent) -> void;
+            const FFragment_UnrealComponent& InUnrealComponent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -91,7 +91,7 @@ namespace ck
     class CKUNREALCOMPONENT_API FProcessor_UnrealComponent_EndPlay : public ck_exp::TProcessor<
             FProcessor_UnrealComponent_EndPlay,
             FCk_Handle_UnrealComponent,
-            ck::TReadWrite<FFragment_UnrealComponent_Current>,
+            ck::TReadWrite<FFragment_UnrealComponent>,
             CK_IF_END_PLAY>
     {
     public:
@@ -106,7 +106,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_UnrealComponent_Current& InCurrent) -> void;
+            FFragment_UnrealComponent& InUnrealComponent) -> void;
     };
 }
 

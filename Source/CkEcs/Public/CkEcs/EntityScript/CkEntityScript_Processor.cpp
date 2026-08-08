@@ -233,9 +233,9 @@ namespace ck
         auto NewEntity = InRequest.Get_NewEntity();
 
         NewEntityScript->_AssociatedEntity = NewEntity;
-        NewEntity.Add<FFragment_EntityScript_Current>(NewEntityScript);
+        NewEntity.Add<FFragment_EntityScript>(NewEntityScript);
 
-        CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+        CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript, NewEntity,
             TEXT("EntityScript created: {}"), EntityScriptClassArchetype);
 
         // ---- Retain the construction recipe (save/load rebuild+hydrate, RuntimeSpawned) ----------
@@ -277,14 +277,14 @@ namespace ck
                          "This event will be ignored as it is only invoked for ONGOING construction of EntityScript"),
                 NewEntity, NewEntityScript) {}
 
-                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript, NewEntity,
                     TEXT("Construct() returned Finished"));
                 NewEntity.Add<FTag_EntityScript_FinishConstruction>();
                 break;
             }
             case ECk_EntityScript_ConstructionFlow::Continue:
             {
-                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, NewEntity,
+                CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript, NewEntity,
                     TEXT("Construct() returned Continue"));
                 NewEntity.Add<FTag_EntityScript_ContinueConstruction>();
                 break;
@@ -377,18 +377,18 @@ namespace ck
             [[maybe_unused]]
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InCurrent)
+            const FFragment_EntityScript& InEntityScript)
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
-        const auto& EntityScript = InCurrent.Get_Script().Get();
+        const auto& EntityScript = InEntityScript.Get_Script().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScript),
             TEXT("EntityScript is INVALID for [{}] when attempting to invoke ContinueConstruction on it"), InHandle)
         { return; }
 
-        CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
+        CK_CALLSTACK_RECORD(ck::FFragment_EntityScript, InHandle);
         EntityScript->ContinueConstruction(InHandle);
     }
 
@@ -443,12 +443,12 @@ namespace ck
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InCurrent)
+            const FFragment_EntityScript& InEntityScript)
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
-        CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InHandle,
+        CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript, InHandle,
             TEXT("Construction finished, ready for BeginPlay"));
         InHandle.Add<FTag_EntityScript_BeginPlay>();
 
@@ -458,7 +458,7 @@ namespace ck
 
         UUtils_Signal_OnConstructed::Broadcast(InHandle, ck::MakePayload(InHandle));
 
-        if (ck::Is_NOT_Valid(InCurrent.Get_Script()))
+        if (ck::Is_NOT_Valid(InEntityScript.Get_Script()))
         { return; }
 
         auto WasConsumed = false;
@@ -467,9 +467,9 @@ namespace ck
         if (ck::IsValid(LifetimeOwner) && LifetimeOwner.Has<FFragment_PendingReplication>())
         {
             auto& PendingFragment = LifetimeOwner.AddOrGet<FFragment_PendingReplication>();
-            auto* Cdo = InCurrent.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
+            auto* Cdo = InEntityScript.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
             auto PendingEntity = PendingFragment.ConsumeFirst(
-                InCurrent.Get_Script()->GetClass(), Cdo, InHandle);
+                InEntityScript.Get_Script()->GetClass(), Cdo, InHandle);
 
             if (ck::IsValid(PendingEntity))
             {
@@ -480,7 +480,7 @@ namespace ck
         }
 
         if (NOT WasConsumed
-            && InCurrent.Get_Script()->Get_EffectiveReplication() == ECk_Replication::Replicates
+            && InEntityScript.Get_Script()->Get_EffectiveReplication() == ECk_Replication::Replicates
             && ck::IsValid(LifetimeOwner)
             && UCk_Utils_Net_UE::Get_EntityNetMode(LifetimeOwner) == ECk_Net_NetModeType::Client)
         {
@@ -509,7 +509,7 @@ namespace ck
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InCurrent,
+            const FFragment_EntityScript& InEntityScript,
             const FFragment_EntityScript_PendingReplicationRetryTimestamp& InTimestamp)
         -> void
     {
@@ -518,9 +518,9 @@ namespace ck
         if (ck::IsValid(LifetimeOwner) && LifetimeOwner.Has<FFragment_PendingReplication>())
         {
             auto& PendingFragment = LifetimeOwner.AddOrGet<FFragment_PendingReplication>();
-            auto* Cdo = InCurrent.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
+            auto* Cdo = InEntityScript.Get_Script()->GetClass()->GetDefaultObject<UCk_EntityScript_UE>();
             auto PendingEntity = PendingFragment.ConsumeFirst(
-                InCurrent.Get_Script()->GetClass(), Cdo, InHandle);
+                InEntityScript.Get_Script()->GetClass(), Cdo, InHandle);
 
             if (ck::IsValid(PendingEntity))
             {
@@ -548,7 +548,7 @@ namespace ck
                      "No matching PendingEntity was found on the client."),
                 ElapsedSeconds,
                 InHandle,
-                InCurrent.Get_Script()->GetClass()->GetName());
+                InEntityScript.Get_Script()->GetClass()->GetName());
 
             InHandle.Remove<FTag_EntityScript_PendingReplicationRetry>();
             InHandle.Remove<FFragment_EntityScript_PendingReplicationRetryTimestamp>();
@@ -562,17 +562,17 @@ namespace ck
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InCurrent)
+            const FFragment_EntityScript& InEntityScript)
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
-        const auto& EntityScript = InCurrent.Get_Script().Get();
+        const auto& EntityScript = InEntityScript.Get_Script().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke BeginPlay on it"), InHandle)
         { return; }
 
-        CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
+        CK_CALLSTACK_RECORD(ck::FFragment_EntityScript, InHandle);
         EntityScript->BeginPlay();
 
         InHandle.Add<FTag_EntityScript_HasBegunPlay>();
@@ -585,22 +585,22 @@ namespace ck
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            FFragment_EntityScript_Current& InCurrent)
+            FFragment_EntityScript& InEntityScript)
         -> void
     {
-        auto* EntityScript = InCurrent.Get_Script().Get();
+        auto* EntityScript = InEntityScript.Get_Script().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke EndPlay on it"), InHandle)
         { return; }
 
-        CK_CALLSTACK_RECORD(ck::FFragment_EntityScript_Current, InHandle);
+        CK_CALLSTACK_RECORD(ck::FFragment_EntityScript, InHandle);
         EntityScript->EndPlay();
         InHandle.Add<FTag_EntityScript_HasEndedPlay>();
 
         // release the instance (Poolable recycles, force-new unpins; no-op for CDO/snapshot scripts).
         // Clear the weak ptr so a same-frame re-issue is unobservable through this dead entity
         UCk_Utils_Object_UE::TryReleaseToPool(EntityScript);
-        InCurrent._Script.Reset();
+        InEntityScript._Script.Reset();
     }
 }
 

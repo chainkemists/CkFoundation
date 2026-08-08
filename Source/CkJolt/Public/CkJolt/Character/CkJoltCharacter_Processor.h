@@ -34,7 +34,7 @@ namespace ck
             FProcessor_JoltCharacter_Setup,
             FCk_Handle_JoltCharacter,
             ck::TReadOnly<FFragment_JoltCharacter_Params>,
-            ck::TReadWrite<FFragment_JoltCharacter_Current>,
+            ck::TReadWrite<FFragment_JoltCharacter>,
             FTag_JoltCharacter_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -56,7 +56,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltCharacter_Params& InParams,
-            FFragment_JoltCharacter_Current& InCurrent) -> void;
+            FFragment_JoltCharacter& InJoltCharacter) -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem>            _PhysicsSystem;
@@ -69,7 +69,7 @@ namespace ck
     class CKJOLT_API FProcessor_JoltCharacter_HandleRequests : public ck_exp::TProcessor<
             FProcessor_JoltCharacter_HandleRequests,
             FCk_Handle_JoltCharacter,
-            ck::TReadWrite<FFragment_JoltCharacter_Current>,
+            ck::TReadWrite<FFragment_JoltCharacter>,
             ck::TReadWrite<FFragment_JoltCharacter_Requests>,
             TExclude<FTag_JoltCharacter_NeedsSetup>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -91,26 +91,26 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_JoltCharacter_Current& InCurrent,
+            FFragment_JoltCharacter& InJoltCharacter,
             FFragment_JoltCharacter_Requests& InRequestsComp) const -> void;
 
     private:
         auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_JoltCharacter_Current& InCurrent,
+            FFragment_JoltCharacter& InJoltCharacter,
             const FCk_Request_JoltCharacter_Move& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_JoltCharacter_Current& InCurrent,
+            FFragment_JoltCharacter& InJoltCharacter,
             const FCk_Request_JoltCharacter_Jump& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_JoltCharacter_Current& InCurrent,
+            FFragment_JoltCharacter& InJoltCharacter,
             const FCk_Request_JoltCharacter_Teleport& InRequest) const -> void;
 
     private:
@@ -151,7 +151,7 @@ namespace ck
             FProcessor_JoltCharacter_PreStep,
             FCk_Handle_JoltCharacter,
             ck::TReadOnly<FFragment_JoltCharacter_Params>,
-            ck::TReadWrite<FFragment_JoltCharacter_Current>,
+            ck::TReadWrite<FFragment_JoltCharacter>,
             TExclude<FTag_JoltCharacter_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -173,7 +173,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltCharacter_Params& InParams,
-            FFragment_JoltCharacter_Current& InCurrent) const -> void;
+            FFragment_JoltCharacter& InJoltCharacter) const -> void;
 
     private:
         FJoltWorld* _JoltWorld = nullptr;
@@ -185,7 +185,7 @@ namespace ck
             FProcessor_JoltCharacter_EndPlay,
             FCk_Handle_JoltCharacter,
             ck::TReadOnly<FFragment_JoltCharacter_Params>,
-            ck::TReadWrite<FFragment_JoltCharacter_Current>,
+            ck::TReadWrite<FFragment_JoltCharacter>,
             CK_IF_END_PLAY>
     {
     public:
@@ -204,7 +204,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltCharacter_Params& InParams,
-            FFragment_JoltCharacter_Current& InCurrent) const -> void;
+            FFragment_JoltCharacter& InJoltCharacter) const -> void;
 
     private:
         FJoltWorld* _JoltWorld = nullptr;

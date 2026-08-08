@@ -46,10 +46,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKRESOLVER_API FFragment_ResolverDataBundle_Current
+    struct CKRESOLVER_API FFragment_ResolverDataBundle
     {
     public:
-        CK_GENERATED_BODY(FFragment_ResolverDataBundle_Current);
+        CK_GENERATED_BODY(FFragment_ResolverDataBundle);
 
     public:
         friend class FProcessor_ResolverDataBundle_StartNewPhase;

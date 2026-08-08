@@ -31,10 +31,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKVISIBLERANGE_API FFragment_VisibleRange_Current
+    struct CKVISIBLERANGE_API FFragment_VisibleRange
     {
     public:
-        CK_GENERATED_BODY(FFragment_VisibleRange_Current);
+        CK_GENERATED_BODY(FFragment_VisibleRange);
 
     public:
         template <int32 T_BucketIndex>

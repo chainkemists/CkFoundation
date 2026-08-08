@@ -22,10 +22,10 @@ static struct FCkEntityTagSaveHandlerRegistrar
             .Posture = ECk_Snapshot_Posture::Durable,
             .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
             {
-                if (NOT Entity.Has<ck::FFragment_EntityTag_Current>())
+                if (NOT Entity.Has<ck::FFragment_EntityTag>())
                 { return {}; }
 
-                const auto& Tags = Entity.Get<ck::FFragment_EntityTag_Current>().Get_Tags();
+                const auto& Tags = Entity.Get<ck::FFragment_EntityTag>().Get_Tags();
                 if (Tags.IsEmpty())
                 { return {}; }
 

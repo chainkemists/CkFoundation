@@ -23,10 +23,10 @@ namespace ck
     // _BodiesInScene tracks the collision-sync flip state: bodies flipped out of the scene still EXIST
     // (their ids stay in _BodyIds, ready to re-add) but are absent from the broadphase — the removal
     // funnel must destroy them WITHOUT removing them again.
-    struct CKJOLT_API FFragment_JoltStaticActor_Current
+    struct CKJOLT_API FFragment_JoltStaticActor
     {
     public:
-        CK_GENERATED_BODY(FFragment_JoltStaticActor_Current);
+        CK_GENERATED_BODY(FFragment_JoltStaticActor);
 
     public:
         friend class FProcessor_JoltStaticActor_EndPlay;

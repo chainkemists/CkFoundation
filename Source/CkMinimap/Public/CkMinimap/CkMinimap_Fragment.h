@@ -25,7 +25,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // The retained immutable residue of FCk_Minimap_Spec. _ViewExtent, _RotationMode and
-    // _CategoryFilter are DISSOLVED into FFragment_Minimap_Current: all three are request-mutable,
+    // _CategoryFilter are DISSOLVED into FFragment_Minimap: all three are request-mutable,
     // so an authored copy retained here goes stale the instant a Request_Set* lands. _CategoryFilter
     // was previously mutated IN this fragment via the reflected Spec's setter, which is the only
     // reason HandleRequests took it ReadWrite - it no longer does.
@@ -55,10 +55,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKMINIMAP_API FFragment_Minimap_Current
+    struct CKMINIMAP_API FFragment_Minimap
     {
     public:
-        CK_GENERATED_BODY(FFragment_Minimap_Current);
+        CK_GENERATED_BODY(FFragment_Minimap);
 
     public:
         friend class FProcessor_Minimap_Setup;

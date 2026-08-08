@@ -24,7 +24,7 @@ namespace ck_pmg_processor_symbol_shapes
     auto SetupMeshComponent_Symbol(
         const FCk_Handle_Pmg_DebugShape& InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
-        ck::FFragment_Pmg_DebugShape_Current& InCurrent,
+        ck::FFragment_Pmg_DebugShape& InDebugShape,
         float InDeltaT)
         -> UProceduralMeshComponent*
     {
@@ -58,7 +58,7 @@ namespace ck_pmg_processor_symbol_shapes
         UProceduralMeshComponent* InMeshComponent,
         FCk_Handle InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
-        ck::FFragment_Pmg_DebugShape_Current& InCurrent,
+        ck::FFragment_Pmg_DebugShape& InDebugShape,
         float InDeltaT)
         -> void
     {
@@ -97,7 +97,7 @@ namespace ck_pmg_processor_symbol_shapes
         InMeshComponent->UpdateBounds();
         InMeshComponent->MarkRenderStateDirty();
 
-        InCurrent = ck::FFragment_Pmg_DebugShape_Current{InMeshComponent, FCk_Time{InDeltaT}};
+        InDebugShape = ck::FFragment_Pmg_DebugShape{InMeshComponent, FCk_Time{InDeltaT}};
         InHandle.Remove<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
         if (InHandle.Has<ck::FFragment_Transform>())
@@ -417,15 +417,15 @@ namespace ck
         HandleType InHandle,
         const FFragment_Pmg_MagnifyingGlass_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
         -> void
     {
-        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         ck_pmg_processor_symbol_shapes_impl::GenerateDebugShape_MagnifyingGlass(MeshComponent, InParams.Get_Size(), InParams.Get_Axis());
-        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -487,15 +487,15 @@ namespace ck
         HandleType InHandle,
         const FFragment_Pmg_QuestionMark_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
         -> void
     {
-        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         ck_pmg_processor_symbol_shapes_impl::GenerateDebugShape_QuestionMark(MeshComponent, InParams.Get_Size(), InParams.Get_Axis());
-        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -577,15 +577,15 @@ namespace ck
         HandleType InHandle,
         const FFragment_Pmg_ExclamationMark_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
         -> void
     {
-        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         ck_pmg_processor_symbol_shapes_impl::GenerateDebugShape_ExclamationMark(MeshComponent, InParams.Get_Size(), InParams.Get_Axis());
-        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -641,15 +641,15 @@ namespace ck
         HandleType InHandle,
         const FFragment_Pmg_Flag_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
         -> void
     {
-        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         ck_pmg_processor_symbol_shapes_impl::GenerateDebugShape_Flag(MeshComponent, InParams.Get_Size(), InParams.Get_Axis());
-        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {
@@ -704,15 +704,15 @@ namespace ck
         HandleType InHandle,
         const FFragment_Pmg_Pin_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
         -> void
     {
-        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        auto MeshComponent = ck_pmg_processor_symbol_shapes::SetupMeshComponent_Symbol(InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
         ck_pmg_processor_symbol_shapes_impl::GenerateDebugShape_Pin(MeshComponent, InParams.Get_Size(), InParams.Get_Axis());
-        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_symbol_shapes::FinalizeMeshComponent_Symbol(MeshComponent, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
 
         if (InCommon.Get_DrawLines())
         {

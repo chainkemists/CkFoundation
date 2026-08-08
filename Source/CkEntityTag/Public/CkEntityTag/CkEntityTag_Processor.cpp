@@ -117,11 +117,11 @@ namespace ck
         ForEachEntity(
             TimeType,
             HandleType InHandle,
-            const FFragment_EntityTag_Current& InCurrent) const
+            const FFragment_EntityTag& InEntityTag) const
         -> void
     {
         auto MutatedEntity = InHandle;
-        for (const auto& TagCount : InCurrent.Get_Tags())
+        for (const auto& TagCount : InEntityTag.Get_Tags())
         {
             UCk_Utils_EntityTag_UE::DoBroadcast_AnyEntityListeners(
                 MutatedEntity, TagCount._Name, ECk_EntityTagUpdate::Removed);

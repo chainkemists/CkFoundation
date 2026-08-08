@@ -36,7 +36,7 @@ auto
 
     auto NewInteractionEntityBase = PendingEntity.Get_EntityUnderConstruction();
     NewInteractionEntityBase.Add<ck::FFragment_Interaction_Params>(InParams);
-    NewInteractionEntityBase.Add<ck::FFragment_Interaction_Current>();
+    NewInteractionEntityBase.Add<ck::FFragment_Interaction>();
 
     auto NewInteractionEntity = Cast(NewInteractionEntityBase);
 
@@ -74,7 +74,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Interaction_UE, FCk_Handle_Interaction,
-    ck::FFragment_Interaction_Params, ck::FFragment_Interaction_Current)
+    ck::FFragment_Interaction_Params, ck::FFragment_Interaction)
 
 // --------------------------------------------------------------------------------------------------------------------
 

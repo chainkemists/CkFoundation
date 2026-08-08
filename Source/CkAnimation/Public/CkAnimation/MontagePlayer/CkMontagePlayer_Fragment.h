@@ -78,10 +78,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKANIMATION_API FFragment_MontagePlayer_Current
+    struct CKANIMATION_API FFragment_MontagePlayer
     {
     public:
-        CK_GENERATED_BODY(FFragment_MontagePlayer_Current);
+        CK_GENERATED_BODY(FFragment_MontagePlayer);
 
     public:
         friend class FProcessor_MontagePlayer_HandleRequests;
@@ -106,7 +106,7 @@ namespace ck
         CK_PROPERTY_GET(_CatchUpRemaining);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_MontagePlayer_Current, _State);
+        CK_DEFINE_CONSTRUCTORS(FFragment_MontagePlayer, _State);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

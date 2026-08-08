@@ -53,20 +53,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECS_API FFragment_EntityScript_Current
+    struct CKECS_API FFragment_EntityScript
     {
     public:
-        CK_GENERATED_BODY(FFragment_EntityScript_Current);
+        CK_GENERATED_BODY(FFragment_EntityScript);
 
     public:
         friend class UCk_Utils_EntityScript_UE;
         friend class FProcessor_EntityScript_EndPlay;
 
     public:
-        FFragment_EntityScript_Current() = default;
+        FFragment_EntityScript() = default;
 
         explicit
-        FFragment_EntityScript_Current(
+        FFragment_EntityScript(
             UCk_EntityScript_UE* InScript);
 
     private:
@@ -115,7 +115,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_EntityScript_Current);
+    CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_EntityScript);
 
     // --------------------------------------------------------------------------------------------------------------------
 

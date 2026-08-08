@@ -17,7 +17,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Text_Params>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -34,7 +34,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_Text_Params& InParams,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 }

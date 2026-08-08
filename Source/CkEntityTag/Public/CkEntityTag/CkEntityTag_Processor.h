@@ -88,7 +88,7 @@ namespace ck
     class CKENTITYTAG_API FProcessor_EntityTag_BroadcastOnDestroy : public ck_exp::TProcessor<
             FProcessor_EntityTag_BroadcastOnDestroy,
             FCk_Handle,
-            ck::TReadOnly<FFragment_EntityTag_Current>,
+            ck::TReadOnly<FFragment_EntityTag>,
             CK_IF_END_PLAY>
     {
     public:
@@ -100,6 +100,6 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityTag_Current& InCurrent) const -> void;
+            const FFragment_EntityTag& InEntityTag) const -> void;
     };
 }

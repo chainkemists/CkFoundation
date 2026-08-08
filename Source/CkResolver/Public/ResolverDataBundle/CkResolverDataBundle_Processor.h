@@ -16,7 +16,7 @@ namespace ck
         FProcessor_ResolverDataBundle_StartNewPhase,
         FCk_Handle_ResolverDataBundle,
         ck::TReadOnly<FFragment_ResolverDataBundle_Params>,
-        ck::TReadWrite<FFragment_ResolverDataBundle_Current>,
+        ck::TReadWrite<FFragment_ResolverDataBundle>,
         FTag_ResolverDataBundle_StartNewPhase,
         CK_IGNORE_PENDING_KILL>
     {
@@ -38,7 +38,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ResolverDataBundle_Params& InParams,
-            FFragment_ResolverDataBundle_Current& InCurrent) const -> void;
+            FFragment_ResolverDataBundle& InResolverDataBundle) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ namespace ck
     class CKRESOLVER_API FProcessor_ResolverDataBundle_HandleRequests : public ck_exp::TProcessor<
         FProcessor_ResolverDataBundle_HandleRequests,
         FCk_Handle_ResolverDataBundle,
-        ck::TReadWrite<FFragment_ResolverDataBundle_Current>,
+        ck::TReadWrite<FFragment_ResolverDataBundle>,
         ck::TReadWrite<FFragment_ResolverDataBundle_Requests>,
         ck::TExclude<FTag_ResolverDataBundle_StartNewPhase>,
         ck::TExclude<FTag_DestroyEntity_Initiate>,
@@ -70,20 +70,20 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ResolverDataBundle_Current& InComp,
+            FFragment_ResolverDataBundle& InComp,
             FFragment_ResolverDataBundle_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_ResolverDataBundle_Current& InComp,
+            FFragment_ResolverDataBundle& InComp,
             const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_ResolverDataBundle_Current& InComp,
+            FFragment_ResolverDataBundle& InComp,
             const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest) -> void;
     };
 
@@ -118,7 +118,7 @@ namespace ck
     class CKRESOLVER_API FProcessor_ResolverDataBundle_ResolveOperations : public ck_exp::TProcessor<
         FProcessor_ResolverDataBundle_ResolveOperations,
         FCk_Handle_ResolverDataBundle,
-        ck::TReadWrite<FFragment_ResolverDataBundle_Current>,
+        ck::TReadWrite<FFragment_ResolverDataBundle>,
         ck::TReadOnly<FFragment_ResolverDataBundle_PendingOperations>,
         ck::TExclude<FTag_ResolverDataBundle_StartNewPhase>,
         CK_IGNORE_PENDING_KILL>
@@ -141,7 +141,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ResolverDataBundle_Current& InCurrent,
+            FFragment_ResolverDataBundle& InResolverDataBundle,
             const FFragment_ResolverDataBundle_PendingOperations& InPendingOperations) -> void;
     };
 
@@ -151,7 +151,7 @@ namespace ck
         FProcessor_ResolverDataBundle_Calculate,
         FCk_Handle_ResolverDataBundle,
         ck::TReadOnly<FFragment_ResolverDataBundle_Params>,
-        ck::TReadWrite<FFragment_ResolverDataBundle_Current>,
+        ck::TReadWrite<FFragment_ResolverDataBundle>,
         FTag_ResolverDataBundle_NeedsCalculate,
         ck::TExclude<FFragment_ResolverDataBundle_Requests>,
         ck::TExclude<FFragment_ResolverDataBundle_PendingOperations>,
@@ -173,7 +173,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ResolverDataBundle_Params& InParams,
-            FFragment_ResolverDataBundle_Current& InCurrent) -> void;
+            FFragment_ResolverDataBundle& InResolverDataBundle) -> void;
     };
 }
 

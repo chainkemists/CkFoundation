@@ -22,7 +22,7 @@ auto
     -> FCk_Handle_2dGridBlocker
 {
     InHandle.Add<ck::FFragment_2dGridBlocker_Params>(InParams);
-    InHandle.Add<ck::FFragment_2dGridBlocker_Current>();
+    InHandle.Add<ck::FFragment_2dGridBlocker>();
     InHandle.Add<ck::FTag_2dGridBlocker_NeedsSetup>();
 
     auto DeathWatch = FCk_Delegate_OnBeginDestroy{};
@@ -69,7 +69,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_2dGridBlocker_UE, FCk_Handle_2dGridBlocker,
-    ck::FFragment_2dGridBlocker_Params, ck::FFragment_2dGridBlocker_Current)
+    ck::FFragment_2dGridBlocker_Params, ck::FFragment_2dGridBlocker)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -108,7 +108,7 @@ auto
         const FCk_Handle_2dGridBlocker& InBlocker)
     -> TArray<FIntPoint>
 {
-    return InBlocker.Get<ck::FFragment_2dGridBlocker_Current>().Get_StampedCells();
+    return InBlocker.Get<ck::FFragment_2dGridBlocker>().Get_StampedCells();
 }
 
 auto
@@ -144,10 +144,10 @@ auto
         FCk_Handle InHandle)
     -> void
 {
-    if (NOT InHandle.Has<ck::FFragment_2dGridBlocker_Current>())
+    if (NOT InHandle.Has<ck::FFragment_2dGridBlocker>())
     { return; }
 
-    auto& Current = InHandle.Get<ck::FFragment_2dGridBlocker_Current>();
+    auto& Current = InHandle.Get<ck::FFragment_2dGridBlocker>();
 
     // Only release the block if it's currently active; an inactive blocker has
     // already decremented its cells and must not double-decrement on destroy.

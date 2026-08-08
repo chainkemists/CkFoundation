@@ -16,7 +16,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_OwningActor_Current& InOwningActorComp)
+            const FFragment_OwningActor& InOwningActorComp)
             -> void
     {
         const auto& EntityOwningActor = InOwningActorComp.Get_EntityOwningActor().Get();

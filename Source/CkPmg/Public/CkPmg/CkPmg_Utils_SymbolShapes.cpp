@@ -33,7 +33,7 @@ auto
     Params.Set_Axis(InDefaultAxis);
     InHandle.Add<ck::FFragment_Pmg_MagnifyingGlass_Params>(Params);
 
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);
@@ -103,7 +103,7 @@ auto
     Params.Set_Axis(InDefaultAxis);
     InHandle.Add<ck::FFragment_Pmg_QuestionMark_Params>(Params);
 
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);
@@ -173,7 +173,7 @@ auto
     Params.Set_Axis(InDefaultAxis);
     InHandle.Add<ck::FFragment_Pmg_ExclamationMark_Params>(Params);
 
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);
@@ -243,7 +243,7 @@ auto
     Params.Set_Axis(InDefaultAxis);
     InHandle.Add<ck::FFragment_Pmg_Flag_Params>(Params);
 
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);
@@ -313,7 +313,7 @@ auto
     Params.Set_Axis(InDefaultAxis);
     InHandle.Add<ck::FFragment_Pmg_Pin_Params>(Params);
 
-    InHandle.Add<ck::FFragment_Pmg_DebugShape_Current>();
+    InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     UCk_Utils_Transform_UE::Add(InHandle, InTransform, ECk_Replication::DoesNotReplicate);

@@ -33,8 +33,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmTask_Current& InCurrent,
-            const FFragment_EntityScript_Current& InScriptFragment)
+            FFragment_SmTask& InSmTask,
+            const FFragment_EntityScript& InScriptFragment)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_SmTask_TickProc);
@@ -84,7 +84,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InScriptFragment)
+            const FFragment_EntityScript& InScriptFragment)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_SmTask_Exit);
@@ -111,7 +111,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_SmTask_Current& InCurrent)
+            const FFragment_SmTask& InSmTask)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_SmTask_FireFinishedSignal);
@@ -119,7 +119,7 @@ namespace ck
         InHandle.Remove<FTag_SmTask_ResultDirty>();
 
         UUtils_Signal_OnSmTaskFinished::Broadcast(InHandle,
-            MakePayload(InHandle, InCurrent.Get_LastResult()));
+            MakePayload(InHandle, InSmTask.Get_LastResult()));
     }
 }
 

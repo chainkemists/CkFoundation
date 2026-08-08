@@ -16,7 +16,7 @@ namespace ck
             FProcessor_Pmg_Donut_Setup,
             FCk_Handle_Pmg_Donut,
             ck::TReadOnly<FFragment_Pmg_Donut_Params>,
-            ck::TReadWrite<FFragment_Pmg_Donut_Current>,
+            ck::TReadWrite<FFragment_Pmg_Donut>,
             FTag_Pmg_Donut_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -33,7 +33,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_Donut_Params& InParams,
-            FFragment_Pmg_Donut_Current& InCurrent)
+            FFragment_Pmg_Donut& InDonut)
             -> void;
     };
 
@@ -42,7 +42,7 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Donut_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Pmg_Donut_HandleRequests,
             FCk_Handle_Pmg_Donut,
-            ck::TReadWrite<FFragment_Pmg_Donut_Current>,
+            ck::TReadWrite<FFragment_Pmg_Donut>,
             ck::TReadOnly<FFragment_Pmg_Donut_UpdateParams>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -60,7 +60,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_Donut_Current& InCurrent,
+            FFragment_Pmg_Donut& InDonut,
             const FFragment_Pmg_Donut_UpdateParams& InRequest) const
             -> void;
 
@@ -68,7 +68,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Pmg_Donut_Current& InCurrent,
+            FFragment_Pmg_Donut& InDonut,
             const FCk_Request_Pmg_Donut_UpdateParams& InRequest)
             -> void;
     };
@@ -103,7 +103,7 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Donut_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Pmg_Donut_UpdateTransform,
             FCk_Handle_Pmg_Donut,
-            ck::TReadWrite<FFragment_Pmg_Donut_Current>,
+            ck::TReadWrite<FFragment_Pmg_Donut>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_Pmg_Donut_NeedsSetup>,
@@ -119,7 +119,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_Donut_Current& InCurrent,
+            FFragment_Pmg_Donut& InDonut,
             const FFragment_Transform& InTransform)
             -> void;
     };
@@ -152,7 +152,7 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Donut_EndPlay : public ck_exp::TProcessor<
             FProcessor_Pmg_Donut_EndPlay,
             FCk_Handle_Pmg_Donut,
-            ck::TReadWrite<FFragment_Pmg_Donut_Current>,
+            ck::TReadWrite<FFragment_Pmg_Donut>,
             CK_IF_END_PLAY>
     {
     public:
@@ -164,7 +164,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_Donut_Current& InCurrent)
+            FFragment_Pmg_Donut& InDonut)
             -> void;
     };
 }

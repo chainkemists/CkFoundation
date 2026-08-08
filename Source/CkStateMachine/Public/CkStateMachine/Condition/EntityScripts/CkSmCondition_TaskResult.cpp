@@ -30,10 +30,10 @@ auto
     UCk_Utils_StateMachine_UE::RecordOfSmTasks_Utils::ForEach_ValidEntry(ParentState,
     [&](FCk_Handle_SmTask InTask)
     {
-        if (NOT InTask.Has<ck::FFragment_EntityScript_Current>())
+        if (NOT InTask.Has<ck::FFragment_EntityScript>())
         { return; }
 
-        auto* Script = InTask.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+        auto* Script = InTask.Get<ck::FFragment_EntityScript>().Get_Script().Get();
         if (ck::Is_NOT_Valid(Script))
         { return; }
 

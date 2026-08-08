@@ -44,10 +44,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPMG_API FFragment_Pmg_Donut_Current
+    struct CKPMG_API FFragment_Pmg_Donut
     {
     public:
-        CK_GENERATED_BODY(FFragment_Pmg_Donut_Current);
+        CK_GENERATED_BODY(FFragment_Pmg_Donut);
 
     public:
         friend class FProcessor_Pmg_Donut_Setup;
@@ -202,10 +202,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPMG_API FFragment_Pmg_DebugShape_Current
+    struct CKPMG_API FFragment_Pmg_DebugShape
     {
     public:
-        CK_GENERATED_BODY(FFragment_Pmg_DebugShape_Current);
+        CK_GENERATED_BODY(FFragment_Pmg_DebugShape);
 
     public:
         friend class FProcessor_Pmg_DebugShape_UpdateTransform;
@@ -247,7 +247,7 @@ namespace ck
         friend class FProcessor_Pmg_Text_Setup;
 
     private:
-        // Subsystem-owned (see FFragment_Pmg_Donut_Current::_MeshComponent)
+        // Subsystem-owned (see FFragment_Pmg_Donut::_MeshComponent)
         TWeakObjectPtr<UProceduralMeshComponent> _MeshComponent;
         FCk_Time _SpawnTime;
 
@@ -255,7 +255,7 @@ namespace ck
         CK_PROPERTY_GET(_MeshComponent);
         CK_PROPERTY_GET(_SpawnTime);
 
-        CK_DEFINE_CONSTRUCTORS(FFragment_Pmg_DebugShape_Current, _MeshComponent, _SpawnTime);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Pmg_DebugShape, _MeshComponent, _SpawnTime);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

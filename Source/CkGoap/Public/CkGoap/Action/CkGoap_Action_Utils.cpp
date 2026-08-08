@@ -111,7 +111,7 @@ auto
 {
 	if (ck::Is_NOT_Valid(InAction))
 	{ return nullptr; }
-	return InAction.Get<ck::FFragment_Goap_Action_Current>().Get_ActiveParentAction();
+	return InAction.Get<ck::FFragment_Goap_Action>().Get_ActiveParentAction();
 }
 
 auto

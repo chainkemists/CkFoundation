@@ -32,10 +32,10 @@ namespace ck
      *  It is updated only when a dirty region is actually EMITTED, so slow sub-threshold drift accumulates
      *  against the last pose that was published rather than against last frame's - drift below the
      *  threshold still crosses it eventually instead of being lost one frame at a time. */
-    struct CKVOXELNAV_API FFragment_VoxelNavOccluder_Current
+    struct CKVOXELNAV_API FFragment_VoxelNavOccluder
     {
     public:
-        CK_GENERATED_BODY(FFragment_VoxelNavOccluder_Current);
+        CK_GENERATED_BODY(FFragment_VoxelNavOccluder);
 
         friend class FProcessor_VoxelNavOccluder_Setup;
         friend class FProcessor_VoxelNavOccluder_Track;

@@ -61,7 +61,7 @@ auto
         InParams.Get_MotionQuality(),
         InParams.Get_SurfaceInfo());
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
-    InHandle.Add<ck::FFragment_Probe_Current>();
+    InHandle.Add<ck::FFragment_Probe>();
 
     const auto IsLinearCastProbe =
         InParams.Get_MotionQuality() == ECk_MotionQuality::LinearCast &&
@@ -107,7 +107,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Probe_UE, FCk_Handle_Probe,
-    ck::FFragment_Probe_Params, ck::FFragment_Probe_Current)
+    ck::FFragment_Probe_Params, ck::FFragment_Probe)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -220,7 +220,7 @@ auto
         const FCk_Handle& InOtherEntity)
     -> bool
 {
-    const auto& CurrentOverlaps = InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps();
+    const auto& CurrentOverlaps = InProbe.Get<ck::FFragment_Probe>().Get_CurrentOverlaps();
 
     if (CurrentOverlaps.Contains(FCk_Probe_OverlapInfo{InOtherEntity}))
     { return true; }
@@ -259,7 +259,7 @@ auto
         const FCk_Handle_Probe& InProbe)
     -> TSet<FCk_Probe_OverlapInfo>
 {
-    return InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps();
+    return InProbe.Get<ck::FFragment_Probe>().Get_CurrentOverlaps();
 }
 
 auto

@@ -94,10 +94,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSTATEMACHINE_API FFragment_Sm_Current
+    struct CKSTATEMACHINE_API FFragment_Sm
     {
     public:
-        CK_GENERATED_BODY(FFragment_Sm_Current);
+        CK_GENERATED_BODY(FFragment_Sm);
 
         friend class FProcessor_Sm_HandleRequests;
         friend class FProcessor_Sm_CommitPendingTransition;
@@ -119,7 +119,7 @@ namespace ck
         CK_PROPERTY_GET(_CurrentStateClass);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Sm_Current, _RunStatus, _CurrentStateHandle, _CurrentStateClass);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Sm, _RunStatus, _CurrentStateHandle, _CurrentStateClass);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -253,7 +253,7 @@ namespace ck
         EPhase _Phase = EPhase::Start;
 
         // One-shot request guards — each Request_* is enqueued exactly once; the ladder then
-        // observes FFragment_Sm_Current until the request's effect lands (requests are deferred).
+        // observes FFragment_Sm until the request's effect lands (requests are deferred).
         bool _StartEnqueued = false;
         bool _StopEnqueued = false;
         bool _TransitionEnqueued = false;

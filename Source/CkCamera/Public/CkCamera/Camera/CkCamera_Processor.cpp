@@ -169,7 +169,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Camera_Current& InCurrent)
+            FFragment_Camera& InCamera)
         -> void
     {
         auto Dominant         = FCk_Handle_CameraLayer{};
@@ -196,10 +196,10 @@ namespace ck
             if (NOT InLayer.Has<FTag_CameraLayer_Active>())
             { return; }
 
-            if (InLayer.Has<FFragment_EntityScript_Current>())
+            if (InLayer.Has<FFragment_EntityScript>())
             {
                 if (auto* Script = Cast<UCk_CameraLayer_EntityScript>(
-                        InLayer.Get<FFragment_EntityScript_Current>().Get_Script().Get());
+                        InLayer.Get<FFragment_EntityScript>().Get_Script().Get());
                     ck::IsValid(Script))
                 {
                     if (Script->Get_TickMode() == ECk_Camera_TickMode::Tick)
@@ -217,15 +217,15 @@ namespace ck
         });
 
         // The tuner attributes were already recomputed earlier this frame.
-        InCurrent._ComposedProfile = ::UCk_Utils_Camera_UE::Get_Profile(InHandle);
+        InCamera._ComposedProfile = ::UCk_Utils_Camera_UE::Get_Profile(InHandle);
 
-        InCurrent._DominantLookAt.Reset();
-        InCurrent._ViewTarget         = FCk_Camera_ViewTargetResolved{};
-        InCurrent._DominantLayerClass = nullptr;
+        InCamera._DominantLookAt.Reset();
+        InCamera._ViewTarget         = FCk_Camera_ViewTargetResolved{};
+        InCamera._DominantLayerClass = nullptr;
         if (ck::IsValid(Dominant))
         {
             const auto& DominantParams = Dominant.Get<FFragment_CameraLayer_Params>();
-            InCurrent._DominantLayerClass = DominantParams.Get_LayerClass();
+            InCamera._DominantLayerClass = DominantParams.Get_LayerClass();
 
             const auto& CameraTarget = DominantParams.Get_CameraTarget();
             if (const auto& TargetHandle = CameraTarget.Get_Target();
@@ -235,14 +235,14 @@ namespace ck
                 {
                     case ECk_Camera_TargetMode::LookAt:
                     {
-                        InCurrent._DominantLookAt = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TargetHandle);
+                        InCamera._DominantLookAt = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TargetHandle);
                         break;
                     }
                     case ECk_Camera_TargetMode::ViewTarget:
                     {
-                        InCurrent._ViewTarget._IsActive = true;
-                        InCurrent._ViewTarget._Target   = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TargetHandle);
-                        InCurrent._ViewTarget._Alpha    = DominantAlpha;
+                        InCamera._ViewTarget._IsActive = true;
+                        InCamera._ViewTarget._Target   = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TargetHandle);
+                        InCamera._ViewTarget._Alpha    = DominantAlpha;
                         break;
                     }
                 }
@@ -257,11 +257,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Camera_Current& InCurrent,
+            FFragment_Camera& InCamera,
             FFragment_Camera_Pov& InPov)
         -> void
     {
-        const auto& Profile = InCurrent.Get_ComposedProfile();
+        const auto& Profile = InCamera.Get_ComposedProfile();
         const auto& Sensor  = Profile.Get_Sensor();
 
         // Add requires a transform handle, so a director always has its input anchor — read it directly.
@@ -269,7 +269,7 @@ namespace ck
         Input._AnchorTransform      = InHandle.Get<ck::FFragment_Transform>().Get_Transform();
         Input._OrientationIntention = InPov.Get_OrientationIntention();
         Input._DeltaSeconds         = static_cast<float>(InDeltaT.Get_Seconds());
-        Input._LookAtLocation       = InCurrent._DominantLookAt;
+        Input._LookAtLocation       = InCamera._DominantLookAt;
         Input._World                = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         // An actor-less director is legal (Add requires only a transform); with no owning actor there is
         // simply nothing for the boom trace to ignore.
@@ -286,9 +286,9 @@ namespace ck
         // Overrides boom/framing, not the anchor, and leaves FOV alone (the layer's FOV modifier eases that
         // independently). Inactive = the rig POV passes through untouched.
         auto FinalXf = InPov._PovState._CameraTransform;
-        if (InCurrent._ViewTarget._IsActive)
+        if (InCamera._ViewTarget._IsActive)
         {
-            FinalXf.Blend(InPov._PovState._CameraTransform, InCurrent._ViewTarget._Target, InCurrent._ViewTarget._Alpha);
+            FinalXf.Blend(InPov._PovState._CameraTransform, InCamera._ViewTarget._Target, InCamera._ViewTarget._Alpha);
         }
 
         auto ViewInfo = FMinimalViewInfo{};

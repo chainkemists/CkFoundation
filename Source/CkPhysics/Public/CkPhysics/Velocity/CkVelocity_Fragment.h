@@ -61,10 +61,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FFragment_Velocity_Current
+    struct CKPHYSICS_API FFragment_Velocity
     {
     public:
-        CK_GENERATED_BODY(FFragment_Velocity_Current);
+        CK_GENERATED_BODY(FFragment_Velocity);
 
     public:
         friend class UCk_Utils_Velocity_UE;
@@ -80,7 +80,7 @@ namespace ck
         CK_PROPERTY_GET(_CurrentVelocity);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Velocity_Current, _CurrentVelocity);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Velocity, _CurrentVelocity);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

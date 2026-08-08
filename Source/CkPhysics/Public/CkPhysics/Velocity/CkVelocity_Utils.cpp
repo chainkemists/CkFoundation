@@ -23,7 +23,7 @@ auto
     -> FCk_Handle_Velocity
 {
     InHandle.Add<ck::FFragment_Velocity_Params>(InParams);
-    InHandle.Add<ck::FFragment_Velocity_Current>(InParams.Get_StartingVelocity());
+    InHandle.Add<ck::FFragment_Velocity>(InParams.Get_StartingVelocity());
     InHandle.Add<ck::FTag_Velocity_NeedsSetup>();
 
     // World coordinates are finished by the seed above; LOCAL ones still owe a rotation, and the Transform to
@@ -46,7 +46,7 @@ auto
 
     if (InReplicates != ECk_Replication::DoesNotReplicate)
     {
-        // Seed with REAL data at construction (FFragment_Velocity_Current was composed above with the starting
+        // Seed with REAL data at construction (FFragment_Velocity was composed above with the starting
         // velocity, so Produce reads it). Consume the registered Produce — one projection for wire + save.
         const auto Produced = UCk_Utils_Net_UE::TryProduce<FCk_RepData_Velocity>(InHandle);
         if (Produced.IsSet())
@@ -91,7 +91,7 @@ auto
         }
     }
 
-    return InHandle.Get<ck::FFragment_Velocity_Current>().Get_CurrentVelocity();
+    return InHandle.Get<ck::FFragment_Velocity>().Get_CurrentVelocity();
 }
 
 auto
@@ -102,7 +102,7 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    InHandle.Get<ck::FFragment_Velocity_Current>()._CurrentVelocity = InNewVelocity;
+    InHandle.Get<ck::FFragment_Velocity>()._CurrentVelocity = InNewVelocity;
 
     if (InHandle.Has<ck::FFragment_MovementComponent>())
     {

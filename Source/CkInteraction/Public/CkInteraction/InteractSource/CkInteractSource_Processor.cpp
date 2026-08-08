@@ -41,7 +41,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
-            FFragment_InteractSource_Current& InComp) const
+            FFragment_InteractSource& InComp) const
         -> void
     {
     }
@@ -67,7 +67,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
-            FFragment_InteractSource_Current& InComp,
+            FFragment_InteractSource& InComp,
             FFragment_InteractSource_Requests& InRequestsComp) const
         -> void
     {
@@ -95,16 +95,16 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
-            FFragment_InteractSource_Current& InCurrent,
+            FFragment_InteractSource& InInteractSource,
             const FCk_Request_InteractSource_StartInteraction& InRequest) const
         -> void
     {
         auto InteractionEntity = InRequest.Get_Interaction();
 
-        InCurrent._InteractionsPendingAdd.Remove(InRequest.Get_Interaction());
+        InInteractSource._InteractionsPendingAdd.Remove(InRequest.Get_Interaction());
 
         ck::interaction::VeryVerbose(TEXT("InteractSource [{}] StartInteraction: interaction [{}]. Channel: [{}]. Current interactions: {}"),
-            InHandle, InteractionEntity, UCk_Utils_InteractSource_UE::Get_InteractionChannel(InHandle), InCurrent._InteractionFinishedSignals.Num());
+            InHandle, InteractionEntity, UCk_Utils_InteractSource_UE::Get_InteractionChannel(InHandle), InInteractSource._InteractionFinishedSignals.Num());
 
         UUtils_Signal_InteractSource_OnNewInteraction::Broadcast(InHandle, ck::MakePayload(InHandle, InteractionEntity));
 
@@ -115,7 +115,7 @@ namespace ck
             ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
             ECk_Signal_PostFireBehavior::DoNothing
         );
-        InCurrent._InteractionFinishedSignals.Add(InteractionEntity, OnInteractionFinishedConnection);
+        InInteractSource._InteractionFinishedSignals.Add(InteractionEntity, OnInteractionFinishedConnection);
     }
 
     auto
@@ -123,7 +123,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
-            FFragment_InteractSource_Current& InCurrent,
+            FFragment_InteractSource& InInteractSource,
             const FCk_Request_InteractSource_CancelInteraction& InRequest) const
         -> void
     {
@@ -159,7 +159,7 @@ namespace ck
 
         UUtils_Signal_InteractSource_OnInteractionFinished::Broadcast(InteractSource, ck::MakePayload(InteractSource, InteractionHandle, SucceededFailed));
 
-        auto& Current = InteractSource.Get<FFragment_InteractSource_Current>();
+        auto& Current = InteractSource.Get<FFragment_InteractSource>();
 
         if (auto InteractionFinishedSignal = Current._InteractionFinishedSignals.Find(InteractionHandle);
             ck::IsValid(InteractionFinishedSignal, IsValid_Policy_NullptrOnly{}))
@@ -191,7 +191,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
-            FFragment_InteractSource_Current& InComp)
+            FFragment_InteractSource& InComp)
         -> void
     {
         // TODO: This processor doesn't get called, can cause issues if teardown is mid interaction!!!

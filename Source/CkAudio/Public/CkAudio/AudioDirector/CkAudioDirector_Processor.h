@@ -11,7 +11,7 @@ namespace ck
             FProcessor_AudioDirector_Setup,
             FCk_Handle_AudioDirector,
             TReadOnly<FFragment_AudioDirector_Params>,
-            TReadWrite<FFragment_AudioDirector_Current>,
+            TReadWrite<FFragment_AudioDirector>,
             FTag_AudioDirector_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -28,7 +28,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent) const -> void;
+            FFragment_AudioDirector& InAudioDirector) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -37,7 +37,7 @@ namespace ck
             FProcessor_AudioDirector_HandleRequests,
             FCk_Handle_AudioDirector,
             TReadOnly<FFragment_AudioDirector_Params>,
-            TReadWrite<FFragment_AudioDirector_Current>,
+            TReadWrite<FFragment_AudioDirector>,
             TReadWrite<FFragment_AudioDirector_Requests>,
             TExclude<FTag_AudioDirector_NeedsSetup>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -57,7 +57,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             FFragment_AudioDirector_Requests& InRequestsComp) const -> void;
 
     private:
@@ -65,28 +65,28 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             const FCk_Request_AudioDirector_AddTrack& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             const FCk_Request_AudioDirector_StartTrack& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             const FCk_Request_AudioDirector_StopTrack& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             const FCk_Request_AudioDirector_StopAllTracks& InRequest) -> void;
 
     private:
@@ -94,7 +94,7 @@ namespace ck
         DoHandlePriorityOverride(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             FCk_Handle_AudioTrack InNewTrack,
             int32 InNewTrackPriority,
             ECk_AudioTrack_OverrideBehavior InOverrideBehavior) -> void;
@@ -102,12 +102,12 @@ namespace ck
         static auto
         DoStopLowerPriorityTracks(
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             int32 InNewTrackPriority) -> void;
 
         static auto
         DoGetActiveTrackCount(
-            const FFragment_AudioDirector_Current& InCurrent) -> int32;
+            const FFragment_AudioDirector& InAudioDirector) -> int32;
 
         static auto
         ResolveFadeTime(
@@ -148,7 +148,7 @@ namespace ck
     class CKAUDIO_API FProcessor_AudioDirector_TrackStateMonitor : public ck_exp::TProcessor<
             FProcessor_AudioDirector_TrackStateMonitor,
             FCk_Handle_AudioDirector,
-            TReadWrite<FFragment_AudioDirector_Current>,
+            TReadWrite<FFragment_AudioDirector>,
             TExclude<FTag_AudioDirector_NeedsSetup>,
             TExclude<FFragment_AudioDirector_Requests>,
             CK_IGNORE_PENDING_KILL>
@@ -165,14 +165,14 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             const HandleType& InHandle,
-            FFragment_AudioDirector_Current& InCurrent)
+            FFragment_AudioDirector& InAudioDirector)
             -> void;
 
     private:
         static auto
         DoCheckAllTracksFinished(
             HandleType InHandle,
-            FFragment_AudioDirector_Current& InCurrent) -> void;
+            FFragment_AudioDirector& InAudioDirector) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -181,7 +181,7 @@ namespace ck
             FProcessor_AudioDirector_EndPlay,
             FCk_Handle_AudioDirector,
             TReadOnly<FFragment_AudioDirector_Params>,
-            TReadWrite<FFragment_AudioDirector_Current>,
+            TReadWrite<FFragment_AudioDirector>,
             CK_IF_END_PLAY>
     {
     public:
@@ -196,6 +196,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent) const -> void;
+            FFragment_AudioDirector& InAudioDirector) const -> void;
     };
 }
