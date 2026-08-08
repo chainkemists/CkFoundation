@@ -41,7 +41,7 @@ auto
              "FCk_Camera_Spec — none was provided."), InHandle)
     { return {}; }
 
-    InHandle.Add<ck::FFragment_Camera_Params>(InParams);
+    InHandle.Add<ck::FFragment_Camera_Params>(InParams.Get_DriveControllerControlRotation());
     InHandle.AddOrGet<ck::FFragment_Camera_Current>();
     InHandle.AddOrGet<ck::FFragment_Camera_Pov>();
 
