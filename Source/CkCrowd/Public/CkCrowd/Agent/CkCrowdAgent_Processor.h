@@ -17,7 +17,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_Setup : public ck_exp::TProcessor<
         FProcessor_CrowdAgent_Setup,
         FCk_Handle_CrowdAgent,
-        ck::TReadOnly<FFragment_CrowdAgent_Params>,
+        ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
         ck::TReadOnly<FFragment_Transform>,
         ck::TReadWrite<FFragment_CrowdAgent_ProbeRef>,
         FTag_CrowdAgent_NeedsSetup,
@@ -34,7 +34,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_Transform& InTransform,
             FFragment_CrowdAgent_ProbeRef& InProbeRef) const -> void;
     };

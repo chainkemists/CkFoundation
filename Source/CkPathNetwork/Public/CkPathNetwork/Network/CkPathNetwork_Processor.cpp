@@ -877,7 +877,7 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_CkPathNetwork_Setup);
 
-        InGraph._Network = pathnetwork::Build_NetworkFromRibbons(InParams.Get_Ribbons(), InParams.Get_BuildParams());
+        InGraph._Network = pathnetwork::Build_NetworkFromRibbons(InGraph.Get_Ribbons(), InParams.Get_BuildParams());
         InGraph._RouteGraphStaticDataByPolicy.Reset();
         InGraph._Epoch += 1;
 
@@ -885,7 +885,7 @@ namespace ck
         NonConstHandle.Try_Remove<FTag_PathNetwork_NeedsBuild>();
 
         ck::pathnetwork::Display(TEXT("PathNetwork [{}] built: [{}] ribbons -> [{}] nodes, [{}] edges (epoch [{}])"),
-            InHandle, InParams.Get_Ribbons().Num(), InGraph.Get_Network()._Nodes.Num(),
+            InHandle, InGraph.Get_Ribbons().Num(), InGraph.Get_Network()._Nodes.Num(),
             InGraph.Get_Network()._Edges.Num(), InGraph.Get_Epoch());
     }
 
@@ -896,7 +896,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_PathNetwork_Params& InParams,
+            const FFragment_PathNetwork_Params& InParams,
             FFragment_PathNetwork_Graph& InGraph,
             FFragment_PathNetwork_Requests& InRequests) const
         -> void
@@ -926,18 +926,18 @@ namespace ck
         FProcessor_PathNetwork_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_PathNetwork_Params& InParams,
+            const FFragment_PathNetwork_Params& InParams,
             FFragment_PathNetwork_Graph& InGraph,
             const FCk_Request_PathNetwork_Rebuild& InRequest)
         -> void
     {
-        InParams._Ribbons = InRequest.Get_NewRibbons();
-        InGraph._Network = pathnetwork::Build_NetworkFromRibbons(InParams.Get_Ribbons(), InParams.Get_BuildParams());
+        InGraph._Ribbons = InRequest.Get_NewRibbons();
+        InGraph._Network = pathnetwork::Build_NetworkFromRibbons(InGraph.Get_Ribbons(), InParams.Get_BuildParams());
         InGraph._RouteGraphStaticDataByPolicy.Reset();
         InGraph._Epoch += 1;
 
         ck::pathnetwork::Display(TEXT("PathNetwork [{}] rebuilt: [{}] ribbons -> [{}] nodes, [{}] edges (epoch [{}])"),
-            InHandle, InParams.Get_Ribbons().Num(), InGraph.Get_Network()._Nodes.Num(),
+            InHandle, InGraph.Get_Ribbons().Num(), InGraph.Get_Network()._Nodes.Num(),
             InGraph.Get_Network()._Edges.Num(), InGraph.Get_Epoch());
     }
 

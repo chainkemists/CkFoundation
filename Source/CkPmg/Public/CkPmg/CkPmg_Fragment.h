@@ -26,21 +26,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPMG_API FFragment_Pmg_Donut_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Pmg_Donut_Params);
-
-    public:
-        friend class FProcessor_Pmg_Donut_Setup;
-        friend class UCk_Utils_Pmg_Donut_UE;
-
-    private:
-        FCk_Pmg_Donut_Spec _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-    };
+    using FFragment_Pmg_Donut_Params = FCk_Pmg_Donut_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

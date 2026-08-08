@@ -23,7 +23,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_DesiredVelocity& InDesired)
         -> void
     {
@@ -35,9 +35,9 @@ namespace ck
             return;
         }
 
-        const auto MaxSpeed = InParams.Get_MaxSpeed();
-        const auto MaxAccel = InParams.Get_MaxAcceleration();
-        const auto MaxTurnRate = InParams.Get_MaxTurnRate();
+        const auto MaxSpeed = InTunables.Get_MaxSpeed();
+        const auto MaxAccel = InTunables.Get_MaxAcceleration();
+        const auto MaxTurnRate = InTunables.Get_MaxTurnRate();
         const auto Dt = static_cast<float>(InDeltaT.Get_Seconds());
 
         const auto LastVel = InDesired.Get_LastVelocity();

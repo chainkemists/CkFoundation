@@ -55,25 +55,26 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKANIMATION_API FFragment_MontagePlayer_Params
+    /** The skeletal mesh this player drives. A BINDING rather than authored config: a live component
+     *  cannot be captured in or rebuilt from a snapshot payload, so Request_RebindSkeletalMeshComponent
+     *  replaces it after a restore. That is also why it is not named _Params -- nothing here is
+     *  immutable. */
+    struct CKANIMATION_API FFragment_MontagePlayer_SkeletalMesh
     {
     public:
-        CK_GENERATED_BODY(FFragment_MontagePlayer_Params);
+        CK_GENERATED_BODY(FFragment_MontagePlayer_SkeletalMesh);
 
     public:
-        friend class ::UCk_Utils_MontagePlayer_UE; // Request_RebindSkeletalMeshComponent replaces _Params post-restore
-
-    public:
-        using ParamsType = FCk_MontagePlayer_Spec;
+        friend class ::UCk_Utils_MontagePlayer_UE;
 
     private:
-        ParamsType _Params;
+        TWeakObjectPtr<USkeletalMeshComponent> _SkeletalMeshComponent;
 
     public:
-        CK_PROPERTY_GET(_Params);
+        CK_PROPERTY_GET(_SkeletalMeshComponent);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_MontagePlayer_Params, _Params);
+        CK_DEFINE_CONSTRUCTORS(FFragment_MontagePlayer_SkeletalMesh, _SkeletalMeshComponent);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

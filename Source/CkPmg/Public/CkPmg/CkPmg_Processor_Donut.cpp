@@ -218,21 +218,21 @@ namespace ck
         // Batch-first so the applied material is the one the batch roots; the resident-or-null
         // fallback covers params built raw with an already-loaded material.
         auto ResolvedMaterial = MaterialPreloadBatch.Get_IsRequested()
-            ? ::Cast<UMaterialInterface>(MaterialPreloadBatch.Get_ResolvedObject(InParams.Get_Params().Get_Material().ToSoftObjectPath()))
-            : InParams.Get_Params().Get_Material().Get();
+            ? ::Cast<UMaterialInterface>(MaterialPreloadBatch.Get_ResolvedObject(InParams.Get_Material().ToSoftObjectPath()))
+            : InParams.Get_Material().Get();
 
         CK_ENSURE_IF_NOT(NOT MaterialPreloadFailed,
             TEXT("Pmg Donut [{}]: preload of Material [{}] failed — falling back to the default material."),
-            InHandle, InParams.Get_Params().Get_Material().ToSoftObjectPath().ToString())
+            InHandle, InParams.Get_Material().ToSoftObjectPath().ToString())
         { ResolvedMaterial = nullptr; }
 
-        InDonut._InnerRadius = InParams.Get_Params().Get_InnerRadius();
-        InDonut._OuterRadius = InParams.Get_Params().Get_OuterRadius();
-        InDonut._Segments = InParams.Get_Params().Get_Segments();
-        InDonut._FillAngle = InParams.Get_Params().Get_FillAngle();
+        InDonut._InnerRadius = InParams.Get_InnerRadius();
+        InDonut._OuterRadius = InParams.Get_OuterRadius();
+        InDonut._Segments = InParams.Get_Segments();
+        InDonut._FillAngle = InParams.Get_FillAngle();
         InDonut._Material = ResolvedMaterial;
-        InDonut._EnableCollision = InParams.Get_Params().Get_EnableCollision();
-        InDonut._RenderMode = InParams.Get_Params().Get_RenderMode();
+        InDonut._EnableCollision = InParams.Get_EnableCollision();
+        InDonut._RenderMode = InParams.Get_RenderMode();
 
         ck_pmg::DoGenerateDonutMesh(
             MeshComponent,

@@ -44,7 +44,7 @@ namespace ck
             FProcessor_CrowdAgent_StationaryMarkup,
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_Transform>,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadWrite<FFragment_CrowdAgent_NavMarkup>,
             TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
@@ -61,7 +61,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_NavMarkup& InMarkup) -> void;
 
         // Shared with the EndPlay processor — lives here because this class is the fragment's friend.

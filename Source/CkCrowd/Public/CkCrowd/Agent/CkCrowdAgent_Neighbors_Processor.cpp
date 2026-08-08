@@ -36,7 +36,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_ProbeRef& InProbeRef,
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_PathFollow& InPathFollow,
@@ -186,7 +186,7 @@ namespace ck
             return A.Get_Distance() < B.Get_Distance();
         });
 
-        const auto MaxN = FMath::Max(1, InParams.Get_MaxNeighborsForSteering());
+        const auto MaxN = FMath::Max(1, InTunables.Get_MaxNeighborsForSteering());
         if (InNeighborCache._Neighbors.Num() > MaxN)
         {
             InNeighborCache._Neighbors.SetNum(MaxN, EAllowShrinking::No);

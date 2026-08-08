@@ -20,7 +20,52 @@ class UCk_Utils_VoxelNavPath_UE;
 
 namespace ck
 {
-    using FFragment_VoxelNavPath_Params = FCk_VoxelNavPath_Spec;
+    /** The retained immutable residue of FCk_VoxelNavPath_Spec: what the search still reads on every
+     *  plan. The Spec's `_Volume` is not here -- Request_SetVolume replaces it, so it is a binding
+     *  and lives in FFragment_VoxelNavPath_Volume. */
+    struct CKVOXELNAV_API FFragment_VoxelNavPath_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoxelNavPath_Params);
+
+    private:
+        float _AgentRadiusUu = 0.0f;
+
+        float _HeuristicScale = 1.0f;
+
+        ECk_EnableDisable _NodeSizeCompensation = ECk_EnableDisable::Disable;
+
+    public:
+        CK_PROPERTY_GET(_AgentRadiusUu);
+        CK_PROPERTY_GET(_HeuristicScale);
+        CK_PROPERTY_GET(_NodeSizeCompensation);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_VoxelNavPath_Params, _AgentRadiusUu, _HeuristicScale,
+            _NodeSizeCompensation);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    /** The volume this agent currently plans through. Distinct from FFragment_VoxelNavPath_Result's
+     *  `_Volume`, which records the volume a COMPLETED plan was made against: rebinding here must not
+     *  retroactively change what an in-flight result claims it planned on. */
+    struct CKVOXELNAV_API FFragment_VoxelNavPath_Volume
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_VoxelNavPath_Volume);
+
+        friend class ::UCk_Utils_VoxelNavPath_UE;
+
+    private:
+        FCk_Handle_VoxelNavVolume _Volume;
+
+    public:
+        CK_PROPERTY_GET(_Volume);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_VoxelNavPath_Volume, _Volume);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 

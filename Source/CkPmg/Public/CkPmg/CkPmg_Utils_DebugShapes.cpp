@@ -89,7 +89,7 @@ auto
         return InHandle;
     }
 
-    InHandle.Get<ck::FFragment_Pmg_Text_Params>().Set_Text(InNewText);
+    InHandle.Get<ck::FFragment_Pmg_Text>()._Text = InNewText;
     InHandle.AddOrGet<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
