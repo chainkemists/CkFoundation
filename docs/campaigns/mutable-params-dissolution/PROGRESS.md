@@ -273,3 +273,30 @@ reusable:
 keeping as a habit for any view/signature change: (a) every processor's view type order matches its
 `ForEachEntity` parameter order, parsed rather than grepped; (b) no `In*` fragment parameter is used
 in a function whose signature does not declare it.
+
+## Log (cont. 6) — 2026-08-08: GREEN on the rebased tree
+
+**Gate 5: 1032 total / 1030 passed / 2 failed** — the known `PathNetworkFollower` pair by name
+(`DesiredNavmeshClearanceMovesInward`, `ProjectsRibbonWaypointWithinNavQueryExtent`), same assertion
+text as the pre-rebase baseline. Integrity on the SAME run: 0 `inline discovery FAILED`,
+0 `AS_COMPILE_FAILED`, 0 compile/link errors.
+
+- **Compare failures by NAME, never by count.** The total moved 1004 -> 1032 because dev's commits
+  added 28 tests. A count-based "no regressions" check would have read as a 28-test regression, or
+  worse, hidden two real ones behind a net-zero.
+
+- **`Build succeeded` + a passing test count is NOT sufficient evidence on this toolchain.** Gate 4
+  reported `=== Build succeeded ===`, 0 compile errors, and ran 42 tests — while the editor was
+  executing the PREVIOUS build's script bytecode. The tell is in the logs, not the summary:
+      toolbox log     : `inline discovery FAILED` / `AS_COMPILE_FAILED`
+      per-editor logs : `Angelscript: Error` (Saved/Logs/CkPlugins_N.log, NOT the toolbox log)
+  Check those three before believing ANY green run.
+
+- **First editor run after new AS-visible C++ API always fails, by construction.** `Script/Generated/`
+  is UNTRACKED and generator-owned; the editor compiles AngelScript BEFORE CkAngelscriptGenerator
+  emits updated `utils_*.as` wrappers. Rebasing onto dev brought a new UFUNCTION
+  (`Get_AllRibbonsInWorld`, `e9a8b4fa4`) plus a `.as` test calling it, so the first run that reached
+  the AS stage could not resolve it. The generator then wrote the wrapper and the next run was clean.
+  Diagnosis method that settled it: the wrapper on disk CONTAINED the symbol the error said was
+  missing — which is the signature of a generate-after-compile ordering issue, not a code defect.
+  Do not "fix" the script; re-run.
