@@ -38,7 +38,7 @@ namespace ck
 
         auto AdjustedTickRate = InDeltaT + InCurrent.Get_DeltaOverflowFromLastFrame();
 
-        if (InParams.Get_Data().Get_TickRate() == TimeType::ZeroSecond())
+        if (InParams.Get_TickRate() == TimeType::ZeroSecond())
         {
             constexpr auto StepNumber = 1;
             UUtils_Signal_OnSubstepUpdate::Broadcast(InHandle, MakePayload(InHandle, InDeltaT, StepNumber, InDeltaT));
@@ -46,7 +46,7 @@ namespace ck
             return;
         }
 
-        const auto& TickRate = InParams.Get_Data().Get_TickRate();
+        const auto& TickRate = InParams.Get_TickRate();
 
         auto StepNumber = 0;
         while(AdjustedTickRate >= TickRate)

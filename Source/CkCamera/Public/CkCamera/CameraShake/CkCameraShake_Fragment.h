@@ -15,23 +15,7 @@ class UCk_Utils_CameraShake_UE;
 
 namespace ck
 {
-    struct CKCAMERA_API FFragment_CameraShake_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_CameraShake_Params);
-
-    public:
-        using ParamsType = FCk_CameraShake_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_CameraShake_Params, _Params);
-    };
+    using FFragment_CameraShake_Params = FCk_CameraShake_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

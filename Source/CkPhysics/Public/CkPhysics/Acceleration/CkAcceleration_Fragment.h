@@ -39,23 +39,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FFragment_Acceleration_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Acceleration_Params);
-
-    public:
-        using ParamsType = FCk_Acceleration_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Acceleration_Params, _Params);
-    };
+    using FFragment_Acceleration_Params = FCk_Acceleration_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -82,23 +66,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FFragment_BulkAccelerationModifier_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_BulkAccelerationModifier_Params);
-
-    public:
-        using ParamsType = FCk_BulkAccelerationModifier_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_BulkAccelerationModifier_Params, _Params);
-    };
+    using FFragment_BulkAccelerationModifier_Params = FCk_BulkAccelerationModifier_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -182,7 +182,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> ECk_Net_ReplicationType
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_ReplicationType();
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_ReplicationType();
 }
 
 auto
@@ -191,7 +191,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FCk_Sensor_PhysicsInfo
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_PhysicsParams();
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_PhysicsParams();
 }
 
 auto
@@ -200,7 +200,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FCk_Sensor_ShapeInfo
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_ShapeParams();
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_ShapeParams();
 }
 
 auto
@@ -209,7 +209,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FCk_Sensor_DebugInfo
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_DebugParams();
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_DebugParams();
 }
 
 auto
@@ -218,7 +218,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FTransform
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_RelativeTransform();
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_RelativeTransform();
 }
 
 auto
@@ -227,7 +227,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FVector
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_RelativeTransform().GetLocation();
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_RelativeTransform().GetLocation();
 }
 
 auto
@@ -236,7 +236,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FRotator
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_RelativeTransform().GetRotation().Rotator();
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_RelativeTransform().GetRotation().Rotator();
 }
 
 auto
@@ -245,7 +245,7 @@ auto
         const FCk_Handle_Sensor& InSensorEntity)
     -> FVector
 {
-    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_RelativeTransform().GetScale3D();
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_RelativeTransform().GetScale3D();
 }
 
 auto
@@ -662,7 +662,7 @@ auto
     const auto& Params = InHandle.Get<ck::FFragment_Sensor_Params>();
     const auto& Current = InHandle.Get<ck::FFragment_Sensor_Current>();
 
-    UCk_Utils_MarkerAndSensor_UE::Draw_Sensor_DebugLines(InOuter, Current, Params.Get_Params());
+    UCk_Utils_MarkerAndSensor_UE::Draw_Sensor_DebugLines(InOuter, Current, Params);
 }
 
 auto

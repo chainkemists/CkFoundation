@@ -107,22 +107,22 @@ namespace ck
         if (CanInteractResult != ECk_CanInteractWithResult::CanInteractWith)
         {
             ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] rejected StartInteraction from source [{}]. Channel: [{}]. Result: [{}]"),
-                InHandle, InteractSourceRawHandle, InParams.Get_Params().Get_InteractionChannel(), CanInteractResult);
+                InHandle, InteractSourceRawHandle, InParams.Get_InteractionChannel(), CanInteractResult);
             return;
         }
 
         ck::interaction::VeryVerbose(TEXT("InteractTarget [{}] creating interaction. Channel: [{}], Policy: [{}], Duration: {}s, Source: [{}]"),
-            InHandle, InParams.Get_Params().Get_InteractionChannel(), InParams.Get_Params().Get_CompletionPolicy(),
-            InParams.Get_Params().Get_InteractionDuration().Get_Seconds(), InteractSourceRawHandle);
+            InHandle, InParams.Get_InteractionChannel(), InParams.Get_CompletionPolicy(),
+            InParams.Get_InteractionDuration().Get_Seconds(), InteractSourceRawHandle);
 
         auto InteractionEntity = UCk_Utils_Interaction_UE::Add(InHandle,
             FCk_Interaction_Spec(
-                InParams.Get_Params().Get_InteractionChannel(),
+                InParams.Get_InteractionChannel(),
                 InteractSourceRawHandle,
                 InteractInstigatorRawHandle,
                 InHandle,
-                InParams.Get_Params().Get_CompletionPolicy(),
-                InParams.Get_Params().Get_InteractionDuration()));
+                InParams.Get_CompletionPolicy(),
+                InParams.Get_InteractionDuration()));
 
         UUtils_Signal_InteractTarget_OnNewInteraction::Broadcast(InHandle, ck::MakePayload(InHandle, InteractionEntity));
 

@@ -54,7 +54,7 @@ namespace ck
 
         if (PreviousCurrent.Get_AnimState() != InCurrent.Get_AnimState() || PreviousCurrent.Get_AnimCluster() != InCurrent.Get_AnimCluster())
         {
-            const auto& AnimGoal = InParams.Get_Params().Get_AnimGoal();
+            const auto& AnimGoal = InParams.Get_AnimGoal();
             const auto PreviousAnimState = FCk_AnimPlan_State{AnimGoal, PreviousCurrent.Get_AnimCluster(), PreviousCurrent.Get_AnimState()};
             const auto NewAnimState = FCk_AnimPlan_State{AnimGoal, InCurrent.Get_AnimCluster(), InCurrent.Get_AnimState()};
 
@@ -149,7 +149,7 @@ namespace ck
             LifetimeOwner, [&](FCk_RepData_AnimPlans& Data)
         {
             const auto ToReplicate = FCk_AnimPlan_State{
-                InParams.Get_Params().Get_AnimGoal(), InCurrent.Get_AnimCluster(), InCurrent.Get_AnimState()};
+                InParams.Get_AnimGoal(), InCurrent.Get_AnimCluster(), InCurrent.Get_AnimState()};
 
             const auto Found = Data.AnimPlans.FindByPredicate([&](const FCk_AnimPlan_State& InElement)
             {

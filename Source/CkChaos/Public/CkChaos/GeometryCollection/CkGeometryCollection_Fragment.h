@@ -22,23 +22,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKCHAOS_API FFragment_GeometryCollection_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_GeometryCollection_Params);
-
-    public:
-        using ParamsType = FCk_GeometryCollection_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_GeometryCollection_Params, _Params);
-    };
+    using FFragment_GeometryCollection_Params = FCk_GeometryCollection_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
