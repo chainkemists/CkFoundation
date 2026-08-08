@@ -38,9 +38,9 @@ auto
 		GridGraphFragment._StartNode = StartNode;
 		InNewEntity.Add<ck::FFragment_AStarTest_GridGraph>(GridGraphFragment);
 
-		auto Params = ck::FFragment_AStar_Params{};
+		auto Params = ck::FFragment_AStar_Tunables{};
 		Params.Set_BudgetMicroseconds(InBudgetMicroseconds);
-		InNewEntity.Add<ck::FFragment_AStar_Params>(Params);
+		InNewEntity.Add<ck::FFragment_AStar_Tunables>(Params);
 
 		InNewEntity.Add<ck::FFragment_AStarTest_SearchState>();
 		InNewEntity.Add<ck::FFragment_AStarTest_Result>();
@@ -73,7 +73,7 @@ auto
 	const auto& Graph = GridGraphFragment._Graph;
 	const auto StartNode = GridGraphFragment._StartNode;
 	const auto GoalNode = Graph.Get_GoalNode();
-	const auto& Params = InHandle.Get<ck::FFragment_AStar_Params>();
+	const auto& Params = InHandle.Get<ck::FFragment_AStar_Tunables>();
 
 	SearchState._State = ck::astar::TSearchState<int32, ck::astar::FGridGraph>{
 		Graph, StartNode, GoalNode};
@@ -303,7 +303,7 @@ auto
 	CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid handle in Set_BudgetMicroseconds"))
 	{ return; }
 
-	InHandle.Get<ck::FFragment_AStar_Params>().Set_BudgetMicroseconds(InBudgetMicroseconds);
+	InHandle.Get<ck::FFragment_AStar_Tunables>().Set_BudgetMicroseconds(InBudgetMicroseconds);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -318,7 +318,7 @@ auto
 	CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Invalid handle in Set_CostThreshold"))
 	{ return; }
 
-	InHandle.Get<ck::FFragment_AStar_Params>().Set_CostThreshold(InCostThreshold);
+	InHandle.Get<ck::FFragment_AStar_Tunables>().Set_CostThreshold(InCostThreshold);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

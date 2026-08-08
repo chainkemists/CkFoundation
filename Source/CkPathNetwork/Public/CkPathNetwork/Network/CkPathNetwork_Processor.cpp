@@ -981,7 +981,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_PathNetworkFollower_Params& InParams,
+            FFragment_PathNetworkFollower_Tunables& InParams,
             FFragment_PathNetworkFollower_Corridor& InCorridor,
             FFragment_PathNetworkFollower_Requests& InRequests) const
         -> void
@@ -1038,7 +1038,7 @@ namespace ck
         FProcessor_PathNetworkFollower_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_PathNetworkFollower_Params& InParams,
+            const FFragment_PathNetworkFollower_Tunables& InParams,
             FFragment_PathNetworkFollower_Corridor& InCorridor,
             const FCk_Request_PathNetworkFollower_FindRoute& InRequest,
             ECk_Request_OperationResult& OutResult) const
@@ -2034,7 +2034,7 @@ namespace ck
         FProcessor_PathNetworkFollower_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_PathNetworkFollower_Params& InParams,
+            FFragment_PathNetworkFollower_Tunables& InParams,
             FFragment_PathNetworkFollower_Corridor& InCorridor,
             const FCk_Request_PathNetworkFollower_UpdateTuning& InRequest,
             ECk_Request_OperationResult& OutResult) const
@@ -2131,7 +2131,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_PathNetworkFollower_Params& InParams,
+            const FFragment_PathNetworkFollower_Tunables& InParams,
             FFragment_PathNetworkFollower_Corridor& InCorridor) const
         -> void
     {

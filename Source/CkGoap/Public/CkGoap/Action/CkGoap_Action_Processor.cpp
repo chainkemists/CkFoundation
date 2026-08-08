@@ -383,7 +383,7 @@ auto
 		HandleType InHandle,
 		const FFragment_Goap_Planner_Params& InParams,
 		const FFragment_Goap_Planner_Current& InCurrent,
-		FFragment_AStar_Params& InAStarParams,
+		FFragment_AStar_Tunables& InAStarParams,
 		FFragment_Goap_Planner_PlanState& InPlanState,
 		FFragment_Goap_Planner_Goal& InGoal,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource,
