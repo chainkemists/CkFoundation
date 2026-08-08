@@ -72,6 +72,7 @@ namespace ck
             FProcessor_WorldSpaceWidget_HandleRequests,
             FCk_Handle_WorldSpaceWidget,
             ck::TReadWrite<FFragment_WorldSpaceWidget>,
+            ck::TReadOnly<FFragment_WorldSpaceWidget_Params>,
             ck::TReadWrite<FFragment_WorldSpaceWidget_Tunables>,
             ck::TReadWrite<FFragment_WorldSpaceWidget_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -91,6 +92,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
+            const FFragment_WorldSpaceWidget_Params& InParams,
             FFragment_WorldSpaceWidget_Tunables& InTunables,
             FFragment_WorldSpaceWidget_Requests& InRequests) const -> void;
 
@@ -99,6 +101,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
+            const FFragment_WorldSpaceWidget_Params& InParams,
             FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetLocationInfo& InRequest) -> void;
 
@@ -106,6 +109,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
+            const FFragment_WorldSpaceWidget_Params& InParams,
             FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetScalingInfo& InRequest) -> void;
 
@@ -113,6 +117,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
+            const FFragment_WorldSpaceWidget_Params& InParams,
             FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetFadingInfo& InRequest) -> void;
 
@@ -120,6 +125,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_WorldSpaceWidget& InWorldSpaceWidget,
+            const FFragment_WorldSpaceWidget_Params& InParams,
             FFragment_WorldSpaceWidget_Tunables& InTunables,
             const FCk_Request_WorldSpaceWidget_SetOcclusionInfo& InRequest) -> void;
     };
