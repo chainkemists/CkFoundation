@@ -26,7 +26,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_FaceAngle& InFaceAngle)
         -> void
@@ -93,7 +93,7 @@ namespace ck
 
         // One budget per axis, the yaw-only processor's constant: a turn that costs both is allowed to
         // spend the full rate on each, exactly as a pure yaw turn does.
-        const auto MaxDelta = InParams.Get_MaxTurnRate() * InDeltaT.Get_Seconds();
+        const auto MaxDelta = InTunables.Get_MaxTurnRate() * InDeltaT.Get_Seconds();
         const auto AppliedYawRad = CurrentYawRad + FMath::Clamp(DeltaYaw, -MaxDelta, MaxDelta);
         const auto AppliedPitchRad = CurrentPitchRad + FMath::Clamp(DeltaPitch, -MaxDelta, MaxDelta);
 

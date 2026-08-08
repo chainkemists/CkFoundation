@@ -128,7 +128,7 @@ namespace ck_crowd_agent_handle_requests
 
     auto Get_PlanPhaseFilter(
         FCk_Handle_CrowdAgent                      InHandle,
-        const ck::FFragment_CrowdAgent_Params&     InParams,
+        const ck::FFragment_CrowdAgent_Tunables&     InTunables,
         const ck::FFragment_CrowdAgent_PathFollow& InPathFollow,
         ECk_CrowdAgent_PathProvider                InProvider,
         bool                                       InForcePermissive) -> FCk_CrowdAgent_PlanPhaseFilter
@@ -148,7 +148,7 @@ namespace ck_crowd_agent_handle_requests
         {
             Filter._Phase = ECk_CrowdAgent_PlanPhase::Permissive;
             Filter._UsesStrictStandingCrowdFilter = false;
-            Filter._QueryFilter = InParams.Get_NavQueryFilter();
+            Filter._QueryFilter = InTunables.Get_NavQueryFilter();
             Filter._QueryFilterOverlay = UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
                 ECk_CrowdAvoidanceVolume_QueryPhase::Permissive);
             return Filter;
@@ -161,7 +161,7 @@ namespace ck_crowd_agent_handle_requests
 
         if (NOT StationaryStrictWanted)
         {
-            Filter._QueryFilter = InParams.Get_NavQueryFilter();
+            Filter._QueryFilter = InTunables.Get_NavQueryFilter();
             return Filter;
         }
 
@@ -169,13 +169,13 @@ namespace ck_crowd_agent_handle_requests
         {
             // GroundNav prices standing-crowd markup per plate. Its strict verdict is applied to
             // the returned route at install, because denying a coarse plate over-denies the field.
-            Filter._QueryFilter = InParams.Get_NavQueryFilter();
+            Filter._QueryFilter = InTunables.Get_NavQueryFilter();
             return Filter;
         }
 
-        if (InParams.Get_NavQueryFilterStrict().IsValid())
+        if (InTunables.Get_NavQueryFilterStrict().IsValid())
         {
-            Filter._QueryFilter = InParams.Get_NavQueryFilterStrict();
+            Filter._QueryFilter = InTunables.Get_NavQueryFilterStrict();
             return Filter;
         }
 
@@ -212,7 +212,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_MoveRequests& InRequests) const
@@ -231,7 +231,7 @@ namespace ck
                 { LastPolicyRequest = Policy; }
             }
             if (LastPolicyRequest != nullptr)
-            { InParams._NavQueryFilter = LastPolicyRequest->Get_NavQueryFilter(); }
+            { InTunables._NavQueryFilter = LastPolicyRequest->Get_NavQueryFilter(); }
             // Whether a movement command actually dispatched a route. Asked per-request rather
             // than by diffing the revision across the whole batch, because ENDING an episode
             // advances the revision too — a Stop in this batch would otherwise read as "a route
@@ -254,7 +254,7 @@ namespace ck
                 if constexpr (CanDispatchRoute)
                 {
                     Result = DoHandleRequest(
-                        InHandle, InParams, InPathFollow, InDesired, InRequest);
+                        InHandle, InTunables, InPathFollow, InDesired, InRequest);
 
                     if (InPathFollow.Get_ActiveNavigationRequestRevision() != RevisionBeforeRequest)
                     { MovementCommandDispatched = true; }
@@ -263,7 +263,7 @@ namespace ck
                 {
                     // These overloads are void and have no rejection path, so reaching the line
                     // after the call IS the success condition.
-                    DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, InRequest);
+                    DoHandleRequest(InHandle, InTunables, InPathFollow, InDesired, InRequest);
                     Result = ECk_Request_OperationResult::Succeeded;
                 }
             }), policy::DontResetContainer{});
@@ -275,7 +275,7 @@ namespace ck
                 && LastPolicyRequest->Get_ForceReplan() == ECk_EnableDisable::Enable
                 && NOT MovementCommandDispatched)
             {
-                DoForceReplan(InHandle, InParams, InPathFollow, InDesired);
+                DoForceReplan(InHandle, InTunables, InPathFollow, InDesired);
             }
         });
     }
@@ -285,21 +285,21 @@ namespace ck
     auto
         FProcessor_CrowdAgent_HandleRequests::
         GetPlanQueryFilterTag(
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> FGameplayTag
     {
         if (InPathFollow.Get_PlanUsesStrictStandingCrowdFilter())
         {
             if (InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::GroundNav)
-            { return InParams.Get_NavQueryFilter(); }
+            { return InTunables.Get_NavQueryFilter(); }
 
-            if (InParams.Get_NavQueryFilterStrict().IsValid())
-            { return InParams.Get_NavQueryFilterStrict(); }
+            if (InTunables.Get_NavQueryFilterStrict().IsValid())
+            { return InTunables.Get_NavQueryFilterStrict(); }
 
             return TAG_Nav_Filter_Crowd_AvoidStandingCrowds;
         }
-        return InParams.Get_NavQueryFilter();
+        return InTunables.Get_NavQueryFilter();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -308,7 +308,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         ApplyMarkupEscapeStart(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FVector& InGoal,
             FCk_Request_PathNetworkFollower_FindRoute& InOutRequest)
         -> void
@@ -322,7 +322,7 @@ namespace ck
             InHandle.Get_Entity(),
             UCk_Utils_Transform_UE::Get_EntityCurrentLocation(Transform),
             InGoal,
-            InParams.Get_Radius());
+            InTunables.Get_Radius());
         if (Escaped.IsSet())
         {
             InOutRequest.Set_StartOverride(ECk_EnableDisable::Enable)
@@ -336,7 +336,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_MoveTo& InRequest)
@@ -390,7 +390,7 @@ namespace ck
 
         const auto ArrivalRadius = InRequest.Get_ArrivalRadiusOverrideMode() == ECk_Override::Override
             ? InRequest.Get_ArrivalRadiusOverrideValue()
-            : InParams.Get_ArrivalRadius();
+            : InTunables.Get_ArrivalRadius();
 
         InPathFollow._WaypointIndex = 0;
         InPathFollow._ProtectedLeadingWaypointCount = 0;
@@ -417,7 +417,7 @@ namespace ck
         InPathFollow._StrictPlanFailed = false;
         InPathFollow._StrictStandingCrowdPlanFailed = false;
 
-        RequestPathForActiveGoal(InHandle, InParams, InPathFollow);
+        RequestPathForActiveGoal(InHandle, InTunables, InPathFollow);
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] MoveTo {} (arrival={})"),
             InHandle, Goal, ArrivalRadius);
@@ -430,7 +430,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         Request_NavigationPath(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FVector& InGoal,
             bool InForcePermissivePlan,
@@ -462,7 +462,7 @@ namespace ck
             // GroundNav prices strict standing-crowd markup and verifies the returned geometry at
             // install; its request must therefore retain the agent's base filter.
             const auto PlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
-                InHandle, InParams, InPathFollow, ECk_CrowdAgent_PathProvider::GroundNav, InForcePermissivePlan);
+                InHandle, InTunables, InPathFollow, ECk_CrowdAgent_PathProvider::GroundNav, InForcePermissivePlan);
 
             InPathFollow._PlanPhase = PlanFilter._Phase;
             InPathFollow._PlanUsesStrictStandingCrowdFilter = PlanFilter._UsesStrictStandingCrowdFilter;
@@ -479,7 +479,7 @@ namespace ck
             if (NOT UCk_Utils_GroundNavPath_UE::Has(InHandle))
             {
                 UCk_Utils_GroundNavPath_UE::Add(
-                    InHandle, FCk_Fragment_GroundNavPath_ParamsData{InParams.Get_Radius()});
+                    InHandle, FCk_Fragment_GroundNavPath_ParamsData{InTunables.Get_Radius()});
             }
 
             auto Path = UCk_Utils_GroundNavPath_UE::CastChecked(InHandle);
@@ -489,16 +489,16 @@ namespace ck
             auto Request = FCk_Request_GroundNavPath_FindPath{From, InGoal};
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             Request.Set_PlanMode(InPlanMode);
-            Request.Set_DeniedLinkIds(InParams.Get_DeniedLinkIds());
-            Request.Set_DeniedLinkUserTypeTags(InParams.Get_DeniedLinkUserTypeTags());
-            Request.Set_LinkCostMultipliers(InParams.Get_LinkCostMultipliers());
+            Request.Set_DeniedLinkIds(InTunables.Get_DeniedLinkIds());
+            Request.Set_DeniedLinkUserTypeTags(InTunables.Get_DeniedLinkUserTypeTags());
+            Request.Set_LinkCostMultipliers(InTunables.Get_LinkCostMultipliers());
             Request.Set_QueryFilter(PlanFilter.Get_EffectiveQueryFilter());
             Request.Set_QueryFilterOverlay(PlanFilter._QueryFilterOverlay);
 
             if (PlanFilter._Phase == ECk_CrowdAgent_PlanPhase::Strict)
             {
                 const auto Obstacles = Try_GetStrictDynamicObstacles(
-                    InHandle, InGoal, InParams.Get_Radius(), InPathFollow.Get_ActiveArrivalRadius());
+                    InHandle, InGoal, InTunables.Get_Radius(), InPathFollow.Get_ActiveArrivalRadius());
                 const auto HasObstacles = Obstacles.IsSet();
                 CK_ENSURE_IF_NOT(HasObstacles,
                     TEXT("CrowdAgent [{}] refused strict GroundNav dispatch: confirmed dynamic blocker geometry is malformed"),
@@ -523,7 +523,7 @@ namespace ck
             InHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
 
         auto Request = FCk_Request_Nav_FindPath{InGoal};
-        ApplyPlanPhase(InHandle, InParams, InPathFollow, Request, InForcePermissivePlan);
+        ApplyPlanPhase(InHandle, InTunables, InPathFollow, Request, InForcePermissivePlan);
         Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
         InPathFollow._PendingEscapePrefix.Reset();
         InPathFollow._ProtectedLeadingWaypointCount = 0;
@@ -538,7 +538,7 @@ namespace ck
                 InHandle.Get_Entity(),
                 UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle),
                 InGoal,
-                InParams.Get_Radius());
+                InTunables.Get_Radius());
             if (Escaped.IsSet())
             {
                 auto EscapePrefix = TArray<FVector>{};
@@ -549,11 +549,11 @@ namespace ck
                     Escaped.GetValue(),
                     InGoal,
                     InPathFollow.Get_ActiveArrivalRadius(),
-                    InParams,
+                    InTunables,
                     InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                         ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                         : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
-                    InParams.Get_NavQueryFilter(),
+                    InTunables.Get_NavQueryFilter(),
                     EscapePrefix) == ECk_CrowdAgent_StationaryMarkupPathResult::Succeeded)
                 {
                     Request.Set_StartOverride(ECk_EnableDisable::Enable)
@@ -581,7 +581,7 @@ namespace ck
             if (NOT UCk_Utils_GroundNavPath_UE::Has(InHandle))
             {
                 UCk_Utils_GroundNavPath_UE::Add(
-                    InHandle, FCk_Fragment_GroundNavPath_ParamsData{InParams.Get_Radius()});
+                    InHandle, FCk_Fragment_GroundNavPath_ParamsData{InTunables.Get_Radius()});
             }
 
             auto ShadowPath = UCk_Utils_GroundNavPath_UE::CastChecked(InHandle);
@@ -592,19 +592,19 @@ namespace ck
             ShadowRequest.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             ShadowRequest.Set_IsShadow(ECk_EnableDisable::Enable);
             // The shadow plans under the agent's own veto so the comparison stays like for like.
-            ShadowRequest.Set_DeniedLinkIds(InParams.Get_DeniedLinkIds());
-            ShadowRequest.Set_DeniedLinkUserTypeTags(InParams.Get_DeniedLinkUserTypeTags());
-            ShadowRequest.Set_LinkCostMultipliers(InParams.Get_LinkCostMultipliers());
+            ShadowRequest.Set_DeniedLinkIds(InTunables.Get_DeniedLinkIds());
+            ShadowRequest.Set_DeniedLinkUserTypeTags(InTunables.Get_DeniedLinkUserTypeTags());
+            ShadowRequest.Set_LinkCostMultipliers(InTunables.Get_LinkCostMultipliers());
             // Same helper the GroundNav branch stamps its request from — the shadow must plan under
             // the identical filter/overlay so the A/B comparison stays like for like.
             const auto ShadowPlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
-                InHandle, InParams, InPathFollow, ECk_CrowdAgent_PathProvider::GroundNav, InForcePermissivePlan);
+                InHandle, InTunables, InPathFollow, ECk_CrowdAgent_PathProvider::GroundNav, InForcePermissivePlan);
             ShadowRequest.Set_QueryFilter(ShadowPlanFilter.Get_EffectiveQueryFilter());
             ShadowRequest.Set_QueryFilterOverlay(ShadowPlanFilter._QueryFilterOverlay);
             if (ShadowPlanFilter._Phase == ECk_CrowdAgent_PlanPhase::Strict)
             {
                 const auto Obstacles = Try_GetStrictDynamicObstacles(
-                    InHandle, InGoal, InParams.Get_Radius(), InPathFollow.Get_ActiveArrivalRadius());
+                    InHandle, InGoal, InTunables.Get_Radius(), InPathFollow.Get_ActiveArrivalRadius());
                 const auto HasObstacles = Obstacles.IsSet();
                 CK_ENSURE_IF_NOT(HasObstacles,
                     TEXT("CrowdAgent [{}] refused strict GroundNav shadow dispatch: confirmed dynamic blocker geometry is malformed"),
@@ -649,14 +649,14 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         ApplyPlanPhase(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FCk_Request_Nav_FindPath& InOutRequest,
             bool InForcePermissive)
         -> void
     {
         const auto PlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
-            InHandle, InParams, InPathFollow, ECk_CrowdAgent_PathProvider::Navigation, InForcePermissive);
+            InHandle, InTunables, InPathFollow, ECk_CrowdAgent_PathProvider::Navigation, InForcePermissive);
 
         InPathFollow._PlanPhase = PlanFilter._Phase;
         InPathFollow._PlanUsesStrictStandingCrowdFilter = PlanFilter._UsesStrictStandingCrowdFilter;
@@ -786,7 +786,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         RequestPathForActiveGoal(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow)
         -> void
     {
@@ -798,7 +798,7 @@ namespace ck
         DoAbandonActiveProviderQuery(InHandle, InPathFollow);
 
         const auto HasValidVoxelVolume = UCk_Utils_VoxelNavPath_UE::Has(InHandle)
-            && ck::IsValid(InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume());
+            && ck::IsValid(InHandle.Get<FFragment_VoxelNavPath_Volume>().Get_Volume());
         const auto IsActiveVoxelProvider = HasValidVoxelVolume
             && (InHandle.Has<FFragment_CrowdAgent_InstalledVoxelPath>()
                 || (InHandle.Has<FTag_CrowdAgent_PathPending>()
@@ -819,7 +819,7 @@ namespace ck
             UCk_Utils_VoxelNavPath_UE::Request_FindPath(
                 Path,
                 FCk_Request_VoxelNavPath_FindPath{
-                    InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume(), From, Goal},
+                    InHandle.Get<FFragment_VoxelNavPath_Volume>().Get_Volume(), From, Goal},
                 {});
             return;
         }
@@ -840,20 +840,20 @@ namespace ck
                 ? ECk_CrowdAgent_PlanPhase::Strict
                 : ECk_CrowdAgent_PlanPhase::Permissive;
             InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
-            Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_NavQueryFilter(InTunables.Get_NavQueryFilter());
             Request.Set_QueryFilterOverlay(
                 UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
                     InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                         ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                         : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
-            Request.Set_AgentRadiusUu(InParams.Get_Radius());
-            ApplyMarkupEscapeStart(InHandle, InParams, Goal, Request);
+            Request.Set_AgentRadiusUu(InTunables.Get_Radius());
+            ApplyMarkupEscapeStart(InHandle, InTunables, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
             return;
         }
 
-        Request_NavigationPath(InHandle, InParams, InPathFollow, Goal);
+        Request_NavigationPath(InHandle, InTunables, InPathFollow, Goal);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -862,7 +862,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_FollowTarget& InRequest)
@@ -882,7 +882,7 @@ namespace ck
         MoveTo.Set_ArrivalRadiusOverrideMode(InRequest.Get_ArrivalRadiusOverrideMode());
         MoveTo.Set_ArrivalRadiusOverrideValue(InRequest.Get_ArrivalRadiusOverrideValue());
         const auto MoveResult = DoHandleRequest(
-            InHandle, InParams, InPathFollow, InDesired, MoveTo);
+            InHandle, InTunables, InPathFollow, InDesired, MoveTo);
         if (MoveResult != ECk_Request_OperationResult::Succeeded)
         { return MoveResult; }
 
@@ -901,7 +901,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_Stop& InRequest)
@@ -944,7 +944,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_EnableDisable& InRequest)
@@ -957,7 +957,7 @@ namespace ck
                 if (InHandle.Has<FTag_CrowdAgent_Disabled>())
                 { return; }
 
-                DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, FCk_Request_CrowdAgent_Stop{});
+                DoHandleRequest(InHandle, InTunables, InPathFollow, InDesired, FCk_Request_CrowdAgent_Stop{});
 
                 // The velocity bridge is excluded from now on, so nothing else would clear a stale velocity.
                 if (auto Velocity = UCk_Utils_Velocity_UE::Cast(InHandle);
@@ -1041,7 +1041,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         DoForceReplan(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesiredVelocity)
         -> void
@@ -1061,7 +1061,7 @@ namespace ck
         // would create a false stale-result guarantee. Persist the policy for
         // future Recast fallback but leave the current volumetric route intact.
         if (UCk_Utils_VoxelNavPath_UE::Has(InHandle)
-            && ck::IsValid(InHandle.Get<FFragment_VoxelNavPath_Params>().Get_Volume()))
+            && ck::IsValid(InHandle.Get<FFragment_VoxelNavPath_Volume>().Get_Volume()))
         {
             ck::crowd::Verbose(TEXT("CrowdAgent [{}] stored nav-query policy without replanning its Voxel route"),
                 InHandle);
@@ -1082,7 +1082,7 @@ namespace ck
 
         // Preserve _ActiveGoal, _ActiveArrivalRadius, move episode/correlation, FollowTarget and
         // desired velocity. This is a route replacement, not a terminal movement transition.
-        RequestPathForActiveGoal(InHandle, InParams, InPathFollow);
+        RequestPathForActiveGoal(InHandle, InTunables, InPathFollow);
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] nav-query policy forced replan to {}"),
             InHandle, InPathFollow.Get_ActiveGoal());
     }
@@ -1093,7 +1093,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_SetNavQueryFilter& InRequest)
@@ -1109,13 +1109,13 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_SetMaxSpeed& InRequest)
         -> void
     {
-        InParams._MaxSpeed = InRequest.Get_MaxSpeed();
+        InTunables._MaxSpeed = InRequest.Get_MaxSpeed();
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] SetMaxSpeed {}"), InHandle, InRequest.Get_MaxSpeed());
     }
@@ -1124,7 +1124,7 @@ namespace ck
         FProcessor_CrowdAgent_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale& InRequest)

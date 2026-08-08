@@ -22,7 +22,7 @@ namespace ck
             FProcessor_CrowdAgent_NeighborSync,
             FCk_Handle_CrowdAgent,
             FTag_CrowdAgent_HasProbe,
-            TReadOnly<FFragment_CrowdAgent_Params>,
+            TReadOnly<FFragment_CrowdAgent_Tunables>,
             TReadOnly<FFragment_CrowdAgent_ProbeRef>,
             TReadOnly<FFragment_Transform>,
             TReadOnly<FFragment_CrowdAgent_PathFollow>,
@@ -43,7 +43,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_ProbeRef& InProbeRef,
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_PathFollow& InPathFollow,

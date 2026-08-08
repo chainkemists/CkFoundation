@@ -100,8 +100,12 @@ auto
 
     auto NewNetworkEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_PathNetwork>(InOwner);
 
-    NewNetworkEntity.Add<ck::FFragment_PathNetwork_Params>(InParams);
+    NewNetworkEntity.Add<ck::FFragment_PathNetwork_Params>(
+        InParams.Get_BuildParams(),
+        InParams.Get_UseRecommendedFollowerTuning(),
+        InParams.Get_RecommendedFollowerTuning());
     NewNetworkEntity.Add<ck::FFragment_PathNetwork_Graph>();
+    NewNetworkEntity.Get<ck::FFragment_PathNetwork_Graph>()._Ribbons = InParams.Get_Ribbons();
     NewNetworkEntity.Add<ck::FTag_PathNetwork_NeedsBuild>();
 
     ck::pathnetwork::Verbose(TEXT("PathNetwork added to [{}] -> [{}] ([{}] authored ribbons)"),
@@ -282,7 +286,7 @@ auto
     }
 
     auto NewRibbons = ck::algo::Filter(
-        InNetwork.Get<ck::FFragment_PathNetwork_Params>().Get_Ribbons(),
+        InNetwork.Get<ck::FFragment_PathNetwork_Graph>().Get_Ribbons(),
         [](const FCk_PathNetwork_Ribbon& InRibbon)
         { return InRibbon.Get_Source() == ECk_PathNetwork_RibbonSource::Authored; });
 

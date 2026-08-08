@@ -69,7 +69,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_NavMarkup& InMarkup)
         -> void
     {
@@ -162,17 +162,17 @@ namespace ck
             InMarkup._SecondsSincePaint += static_cast<float>(InDeltaT.Get_Seconds());
 
             const auto Drift = FVector::Dist2D(Location, InMarkup._MarkupLocation);
-            if (Drift <= InParams.Get_Radius() * REPAINT_DRIFT_FRACTION)
+            if (Drift <= InTunables.Get_Radius() * REPAINT_DRIFT_FRACTION)
             { return; }
 
             Remove_Markup(InHandle, InMarkup);
             InMarkup._StationarySeconds = Settings.Get_StationaryMarkupDelaySeconds();
         }
 
-        const auto HalfExtentXY = InParams.Get_Radius() * Settings.Get_StationaryMarkupExtentMultiplier();
+        const auto HalfExtentXY = InTunables.Get_Radius() * Settings.Get_StationaryMarkupExtentMultiplier();
         // Full height as the VERTICAL half-extent is deliberate: the modifier only marks polys
         // INSIDE the box, and a half-height band bottoms out above the floor and paints nothing.
-        const auto HalfExtents = FVector{HalfExtentXY, HalfExtentXY, InParams.Get_Height()};
+        const auto HalfExtents = FVector{HalfExtentXY, HalfExtentXY, InTunables.Get_Height()};
 
         // The area TAG, not a UNavArea class: whichever provider answers this world paints the disc,
         // and Recast still resolves this tag to UCk_NavArea_CrowdAgent through its own area table.

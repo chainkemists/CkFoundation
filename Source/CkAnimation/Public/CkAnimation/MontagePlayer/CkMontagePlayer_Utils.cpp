@@ -26,7 +26,7 @@ auto
         TEXT("MontagePlayer already exists on Entity [{}] — only one MontagePlayer per entity is supported."), InHandle)
     { return Cast(InHandle); }
 
-    InHandle.Add<ck::FFragment_MontagePlayer_Params>(InParams);
+    InHandle.Add<ck::FFragment_MontagePlayer_SkeletalMesh>(InParams.Get_SkeletalMeshComponent());
     InHandle.Add<ck::FFragment_MontagePlayer>();
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
@@ -75,8 +75,8 @@ auto
 
     // The SKMC is the one param that cannot round-trip a save/load — a live component can't be captured or
     // rebuilt from a snapshot payload — so replace the whole Params payload with one wrapping the re-created mesh.
-    auto& ParamsFragment = InMontagePlayer.Get<ck::FFragment_MontagePlayer_Params>();
-    ParamsFragment._Params = FCk_MontagePlayer_Spec{InSkeletalMeshComponent};
+    InMontagePlayer.Get<ck::FFragment_MontagePlayer_SkeletalMesh>()._SkeletalMeshComponent =
+        InSkeletalMeshComponent;
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InMontagePlayer, ECk_Request_OperationResult::Succeeded);
@@ -86,7 +86,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_MontagePlayer_UE, FCk_Handle_MontagePlayer, ck::FFragment_MontagePlayer_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_MontagePlayer_UE, FCk_Handle_MontagePlayer, ck::FFragment_MontagePlayer_SkeletalMesh);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -144,7 +144,7 @@ auto
         return InHandle;
     }
 
-    auto* SkelMeshComp = InHandle.Get<ck::FFragment_MontagePlayer_Params>().Get_Params().Get_SkeletalMeshComponent().Get();
+    auto* SkelMeshComp = InHandle.Get<ck::FFragment_MontagePlayer_SkeletalMesh>().Get_SkeletalMeshComponent().Get();
 
     auto Request = InRequest;
 

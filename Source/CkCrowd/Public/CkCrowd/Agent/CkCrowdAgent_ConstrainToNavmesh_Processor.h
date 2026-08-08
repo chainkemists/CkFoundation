@@ -73,7 +73,7 @@ namespace ck
             FProcessor_CrowdAgent_ConstrainToNavmesh,
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_Transform>,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             ck::TReadWrite<FFragment_CrowdAgent_Grounding>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
@@ -98,7 +98,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
             FFragment_CrowdAgent_Grounding& InGrounding,
             FFragment_CrowdAgent_PathFollow& InPathFollow) const -> void;
@@ -127,7 +127,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
             FFragment_CrowdAgent_Grounding& InGrounding,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
@@ -141,7 +141,7 @@ namespace ck
         auto
         DoRecord_ContainmentEscape(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FVector& InResolvedLocation) const -> void;
 
     private:
