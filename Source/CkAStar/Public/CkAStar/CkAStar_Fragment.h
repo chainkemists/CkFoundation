@@ -17,10 +17,10 @@ CK_DEFINE_ECS_TAG(FTag_AStar_SearchComplete);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-struct CKASTAR_API FFragment_AStar_Params
+struct CKASTAR_API FFragment_AStar_Tunables
 {
 public:
-	CK_GENERATED_BODY(FFragment_AStar_Params);
+	CK_GENERATED_BODY(FFragment_AStar_Tunables);
 
 	friend class UCk_Utils_AStar_UE;
 

@@ -132,13 +132,13 @@ auto
 		InPlannerEntity.Add<ck::FFragment_Goap_Planner_Activation>(ActivationFrag);
 	}
 
-	// Seeded from PlannerParams — otherwise the A* budget falls back to FFragment_AStar_Params'
+	// Seeded from PlannerParams — otherwise the A* budget falls back to FFragment_AStar_Tunables'
 	// own 500us default instead of the Planner's 50000us.
 	{
-		auto AStarParams = ck::FFragment_AStar_Params{};
+		auto AStarParams = ck::FFragment_AStar_Tunables{};
 		AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
 		AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
-		InPlannerEntity.Add<ck::FFragment_AStar_Params>(AStarParams);
+		InPlannerEntity.Add<ck::FFragment_AStar_Tunables>(AStarParams);
 	}
 	InPlannerEntity.Add<ck::FFragment_AStar_Debug>();
 
@@ -890,7 +890,7 @@ auto
 	// resolve to the same types the host already carries as an Action, so Add would
 	// duplicate-assert. PlannerParams' budget/threshold overwrite the ActionParams-seeded ones.
 	{
-		auto& AStarParams = InAction.AddOrGet<ck::FFragment_AStar_Params>();
+		auto& AStarParams = InAction.AddOrGet<ck::FFragment_AStar_Tunables>();
 		AStarParams.Set_BudgetMicroseconds(InParams.Get_SearchBudgetMicroseconds());
 		AStarParams.Set_CostThreshold(InParams.Get_CostThreshold());
 	}

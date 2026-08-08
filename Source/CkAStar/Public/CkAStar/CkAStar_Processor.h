@@ -27,7 +27,7 @@ template <
 class TProcessor_AStar_Execute : public TParallelProcessor<
 	T_DerivedProcessor,
 	T_HandleType,
-	TReadOnly<FFragment_AStar_Params>,
+	TReadOnly<FFragment_AStar_Tunables>,
 	TReadWrite<T_SearchStateFragment>,
 	TReadWrite<T_ResultFragment>,
 	FTag_AStar_SearchActive,
@@ -36,7 +36,7 @@ class TProcessor_AStar_Execute : public TParallelProcessor<
 	using Super = TParallelProcessor<
 		T_DerivedProcessor,
 		T_HandleType,
-		TReadOnly<FFragment_AStar_Params>,
+		TReadOnly<FFragment_AStar_Tunables>,
 		TReadWrite<T_SearchStateFragment>,
 		TReadWrite<T_ResultFragment>,
 		FTag_AStar_SearchActive,
@@ -49,7 +49,7 @@ public:
 	ForEachEntity(
 		typename Super::TimeType InDeltaT,
 		typename Super::HandleType InHandle,
-		const FFragment_AStar_Params& InParams,
+		const FFragment_AStar_Tunables& InParams,
 		T_SearchStateFragment& InSearchState,
 		T_ResultFragment& InResult) -> void
 	{
