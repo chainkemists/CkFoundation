@@ -223,7 +223,7 @@ namespace ck
         TimeType InDeltaT,
         HandleType InHandle,
         const FFragment_Transform& InTransform,
-        const FFragment_CrowdAgent_Params& InParams,
+        const FFragment_CrowdAgent_Tunables& InTunables,
         const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
         const FFragment_CrowdAgent_AvoidanceVolumeCache& InAvoidanceVolumeCache,
         FFragment_CrowdAgent_DesiredVelocity& InDesired,
@@ -273,7 +273,7 @@ namespace ck
         auto Walls = ck_crowd_agent_avoidance_sample_algorithm::FWallSegments{};
         if (Settings->Get_AvoidanceWallSegments() == ECk_AvoidanceWallSegmentsMode::Enabled)
         {
-            const auto QueryRange = InParams.Get_Radius() * Settings->Get_AvoidanceWallQueryRangeMultiplier();
+            const auto QueryRange = InTunables.Get_Radius() * Settings->Get_AvoidanceWallQueryRangeMultiplier();
             const auto RefreshDistance =
                 QueryRange * ck_crowd_agent_avoidance_sample::BOUNDARY_REFRESH_RANGE_FRACTION;
 
@@ -284,7 +284,7 @@ namespace ck
                 FVector::DistSquared2D(AgentLocation, InBoundary.Get_Centre()) > FMath::Square(RefreshDistance))
             {
                 const auto ProjectionExtent =
-                    FVector{InParams.Get_Radius(), InParams.Get_Radius(), InParams.Get_Height()};
+                    FVector{InTunables.Get_Radius(), InTunables.Get_Radius(), InTunables.Get_Height()};
                 DoRefreshLocalBoundary(SelfAgent, AgentLocation, QueryRange, ProjectionExtent, InBoundary);
             }
 
@@ -307,7 +307,7 @@ namespace ck
                 NOT ck_crowd_agent_avoidance_sample::Has_ExplicitAlwaysSampleOverride(SelfAgent) &&
                 ck_crowd_agent_avoidance_sample_algorithm::Is_InTightCorridor(
                     AgentLocation,
-                    InParams.Get_Radius(),
+                    InTunables.Get_Radius(),
                     Settings->Get_CorridorStandDownSlackCm(),
                     Walls))
             {
@@ -317,7 +317,7 @@ namespace ck
                     : FVector::ZeroVector;
                 const auto StationarySpeedThreshold = Settings->Get_BlockedStationarySpeedThreshold();
                 const auto VetoRange =
-                    (4.0f * InParams.Get_Radius()) + Settings->Get_CorridorStandDownSlackCm();
+                    (4.0f * InTunables.Get_Radius()) + Settings->Get_CorridorStandDownSlackCm();
 
                 const auto StationaryNeighbourNearby = ck::algo::AnyOf(InNeighborCache.Get_Neighbors(),
                     [&](const auto& InNbr) -> bool
@@ -336,22 +336,22 @@ namespace ck
 
         auto DesiredVelocity = InDesired.Get_Velocity();
         const auto VolumeWallBuild = ck_crowd_agent_avoidance_sample_algorithm::BuildAvoidanceVolumeWalls(
-            AgentLocation, InParams.Get_Radius(), InAvoidanceVolumeCache.Get_Obstacles());
+            AgentLocation, InTunables.Get_Radius(), InAvoidanceVolumeCache.Get_Obstacles());
         Walls.Append(VolumeWallBuild._Walls);
         if (NOT VolumeWallBuild._EscapeDirection.IsNearlyZero())
-        { DesiredVelocity = VolumeWallBuild._EscapeDirection * InParams.Get_MaxSpeed(); }
+        { DesiredVelocity = VolumeWallBuild._EscapeDirection * InTunables.Get_MaxSpeed(); }
         const auto Velocity = UCk_Utils_Velocity_UE::Cast(SelfAgent);
         const auto CurrentVelocity = ck::IsValid(Velocity) ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(Velocity) : FVector::ZeroVector;
         const auto Parameters = ck_crowd_agent_avoidance_sample_algorithm::FScoringParameters{
-            InParams.Get_Radius(), InParams.Get_MaxSpeed(), Settings->Get_AvoidanceHorizonTime(),
+            InTunables.Get_Radius(), InTunables.Get_MaxSpeed(), Settings->Get_AvoidanceHorizonTime(),
             Settings->Get_AvoidanceWeightDesVel(), Settings->Get_AvoidanceWeightCurVel(),
             Settings->Get_AvoidanceWeightSide(), Settings->Get_AvoidanceWeightToi(),
             Settings->Get_AvoidanceSidePreference(),
             ck_crowd_agent_avoidance_sample_algorithm::MakeReachabilityParameters(
                 Settings->Get_AccelClampMode(),
                 InDesired.Get_LastVelocity(),
-                InParams.Get_MaxAcceleration(),
-                InParams.Get_MaxTurnRate(),
+                InTunables.Get_MaxAcceleration(),
+                InTunables.Get_MaxTurnRate(),
                 static_cast<float>(InDeltaT.Get_Seconds()),
                 InDesired.Get_CloseGoalStrafeActive()),
             ck_crowd_agent_avoidance_sample_algorithm::FWallParameters{AgentLocation, Walls}};

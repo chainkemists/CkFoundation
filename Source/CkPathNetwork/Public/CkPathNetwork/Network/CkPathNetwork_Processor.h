@@ -41,7 +41,7 @@ namespace ck
     class CKPATHNETWORK_API FProcessor_PathNetwork_HandleRequests : public ck_exp::TProcessor<
         FProcessor_PathNetwork_HandleRequests,
         FCk_Handle_PathNetwork,
-        ck::TReadWrite<FFragment_PathNetwork_Params>,
+        ck::TReadOnly<FFragment_PathNetwork_Params>,
         ck::TReadWrite<FFragment_PathNetwork_Graph>,
         ck::TReadWrite<FFragment_PathNetwork_Requests>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -57,14 +57,14 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_PathNetwork_Params& InParams,
+            const FFragment_PathNetwork_Params& InParams,
             FFragment_PathNetwork_Graph& InGraph,
             FFragment_PathNetwork_Requests& InRequests) const -> void;
 
     private:
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_PathNetwork_Params& InParams,
+            const FFragment_PathNetwork_Params& InParams,
             FFragment_PathNetwork_Graph& InGraph,
             const FCk_Request_PathNetwork_Rebuild& InRequest) -> void;
     };

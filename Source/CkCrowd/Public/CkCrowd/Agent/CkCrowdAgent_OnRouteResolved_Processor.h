@@ -25,7 +25,7 @@ namespace ck
             FProcessor_CrowdAgent_OnRouteResolved,
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_Transform>,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadOnly<FFragment_PathNetworkFollower_Corridor>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_PathTrouble>,
@@ -53,7 +53,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_PathNetworkFollower_Corridor& InCorridor,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_PathTrouble& InPathTrouble) -> void;

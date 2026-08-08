@@ -24,13 +24,13 @@ auto
     ck::pmg_debug_shape::AddCommon(InHandle, Common);
 
     auto Params = ck::FFragment_Pmg_Text_Params{};
-    Params.Set_Text(InText);
     Params.Set_FontOverride(TStrongObjectPtr<UFontFace>{InFontOverride});
     Params.Set_Size(InSize);
     Params.Set_Align(InAlign);
     Params.Set_Axis(InDefaultAxis);
     Params.Set_DrawFilled(InDrawFilled);
     InHandle.Add<ck::FFragment_Pmg_Text_Params>(Params);
+    InHandle.Add<ck::FFragment_Pmg_Text>(InText);
 
     InHandle.Add<ck::FFragment_Pmg_DebugShape>();
     InHandle.Add<ck::FTag_Pmg_DebugShape_NeedsSetup>();

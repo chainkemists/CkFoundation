@@ -57,7 +57,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_SeparationForce& InSeparationForce,
@@ -150,7 +150,7 @@ namespace ck
         // cannot retire a waypoint the agent's turn-limited arc missed and path-follow would then
         // aim BACKWARD at it. The FINAL waypoint is deliberately never retired here (Num() - 1
         // bound) — goal arrival belongs to the final-stop branch, which is what fires OnGoalReached.
-        const auto WaypointArrivalRadius = InParams.Get_WaypointArrivalRadius();
+        const auto WaypointArrivalRadius = InTunables.Get_WaypointArrivalRadius();
         while (InPathFollow._WaypointIndex < Waypoints.Num() - 1)
         {
             const auto& Waypoint = Waypoints[InPathFollow._WaypointIndex];
@@ -306,9 +306,9 @@ namespace ck
             return;
         }
 
-        const auto MaxSpeed = InParams.Get_MaxSpeed();
-        const auto MaxAccel = InParams.Get_MaxAcceleration();
-        const auto MaxTurnRate = InParams.Get_MaxTurnRate();
+        const auto MaxSpeed = InTunables.Get_MaxSpeed();
+        const auto MaxAccel = InTunables.Get_MaxAcceleration();
+        const auto MaxTurnRate = InTunables.Get_MaxTurnRate();
 
         // Inverse of the v²/(2a) stopping distance: the fastest we can still stop in time.
         auto BrakingSpeedCap = MaxSpeed;

@@ -106,12 +106,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_MontagePlayer_Params& InParams,
+            const FFragment_MontagePlayer_SkeletalMesh& InSkeletalMesh,
             FFragment_MontagePlayer& InMontagePlayer,
             FFragment_MontagePlayer_Requests& InRequestsComp) const
         -> void
     {
-        auto* SkelMeshComp = InParams.Get_Params().Get_SkeletalMeshComponent().Get();
+        auto* SkelMeshComp = InSkeletalMesh.Get_SkeletalMeshComponent().Get();
         const auto SkelMeshCompIsValid = ck::IsValid(SkelMeshComp);
         CK_ENSURE_IF_NOT(SkelMeshCompIsValid,
             TEXT("SkeletalMeshComponent on MontagePlayer [{}] is no longer valid."), InHandle)
@@ -511,11 +511,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_MontagePlayer_Params& InParams,
+            const FFragment_MontagePlayer_SkeletalMesh& InSkeletalMesh,
             FFragment_MontagePlayer& InMontagePlayer) const
         -> void
     {
-        auto* SkelMeshComp = InParams.Get_Params().Get_SkeletalMeshComponent().Get();
+        auto* SkelMeshComp = InSkeletalMesh.Get_SkeletalMeshComponent().Get();
         if (ck::Is_NOT_Valid(SkelMeshComp))
         { return; }
 

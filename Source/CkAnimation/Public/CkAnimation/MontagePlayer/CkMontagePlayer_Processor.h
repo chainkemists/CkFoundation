@@ -17,7 +17,7 @@ namespace ck
     class CKANIMATION_API FProcessor_MontagePlayer_HandleRequests : public ck_exp::TProcessor<
             FProcessor_MontagePlayer_HandleRequests,
             FCk_Handle_MontagePlayer,
-            TReadOnly<FFragment_MontagePlayer_Params>,
+            TReadOnly<FFragment_MontagePlayer_SkeletalMesh>,
             TReadWrite<FFragment_MontagePlayer>,
             TReadWrite<FFragment_MontagePlayer_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -39,7 +39,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_MontagePlayer_Params& InParams,
+            const FFragment_MontagePlayer_SkeletalMesh& InSkeletalMesh,
             FFragment_MontagePlayer& InMontagePlayer,
             FFragment_MontagePlayer_Requests& InRequestsComp) const -> void;
 
@@ -114,7 +114,7 @@ namespace ck
     class CKANIMATION_API FProcessor_MontagePlayer_MonitorAnimInstance : public ck_exp::TProcessor<
             FProcessor_MontagePlayer_MonitorAnimInstance,
             FCk_Handle_MontagePlayer,
-            TReadOnly<FFragment_MontagePlayer_Params>,
+            TReadOnly<FFragment_MontagePlayer_SkeletalMesh>,
             TReadWrite<FFragment_MontagePlayer>,
             FTag_MontagePlayer_HasActiveMontage,
             CK_IGNORE_PENDING_KILL>
@@ -131,7 +131,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_MontagePlayer_Params& InParams,
+            const FFragment_MontagePlayer_SkeletalMesh& InSkeletalMesh,
             FFragment_MontagePlayer& InMontagePlayer) const -> void;
     };
 

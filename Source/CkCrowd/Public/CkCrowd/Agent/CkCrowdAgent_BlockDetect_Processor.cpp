@@ -160,8 +160,8 @@ namespace ck
             if (NOT NeighbourHasSettled)
             { return {}; }
 
-            const auto NeighbourRadius = NeighbourAgent.Has<FFragment_CrowdAgent_Params>()
-                ? NeighbourAgent.Get<FFragment_CrowdAgent_Params>().Get_Radius()
+            const auto NeighbourRadius = NeighbourAgent.Has<FFragment_CrowdAgent_Tunables>()
+                ? NeighbourAgent.Get<FFragment_CrowdAgent_Tunables>().Get_Radius()
                 : InSelfRadius;
 
             const auto NeighbourDistanceToGoal =
@@ -374,7 +374,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_Nav_PathResult& InPathResult,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
@@ -401,9 +401,9 @@ namespace ck
         if (NOT IsValid(Settings))
         { return; }
 
-        const auto MaxSpeed = InParams.Get_MaxSpeed();
-        const auto MaxAccel = InParams.Get_MaxAcceleration();
-        const auto SelfRadius = InParams.Get_Radius();
+        const auto MaxSpeed = InTunables.Get_MaxSpeed();
+        const auto MaxAccel = InTunables.Get_MaxAcceleration();
+        const auto SelfRadius = InTunables.Get_Radius();
         const auto ArrivalRadius = InPathFollow.Get_ActiveArrivalRadius();
 
         // ---- Geometric detector (primary) --------------------------------------------------------
@@ -438,7 +438,7 @@ namespace ck
 
             if (ck::IsValid(Blocker))
             {
-                DoBlock(InHandle, InParams, InBlockDetect, InDesired,
+                DoBlock(InHandle, InTunables, InBlockDetect, InDesired,
                     ECk_CrowdAgent_BlockedReason::GoalOccupied, Blocker, DistanceToFinal);
                 return;
             }
@@ -470,7 +470,7 @@ namespace ck
 
             if (ck::IsValid(CrowdBlocker))
             {
-                DoBlock(InHandle, InParams, InBlockDetect, InDesired,
+                DoBlock(InHandle, InTunables, InBlockDetect, InDesired,
                     ECk_CrowdAgent_BlockedReason::GoalCrowded, CrowdBlocker, DistanceToFinal);
                 return;
             }
@@ -507,11 +507,11 @@ namespace ck
                         InBlockDetect._StallRepathCount,
                         Settings->Get_BlockDetectionMaxStallRepaths());
 
-                    DoRepathAtActiveGoal(InHandle, InParams, InPathFollow, InBlockDetect, InDesired);
+                    DoRepathAtActiveGoal(InHandle, InTunables, InPathFollow, InBlockDetect, InDesired);
                     return;
                 }
 
-                DoBlock(InHandle, InParams, InBlockDetect, InDesired,
+                DoBlock(InHandle, InTunables, InBlockDetect, InDesired,
                     ECk_CrowdAgent_BlockedReason::NoProgress, FCk_Handle{}, DistanceToFinal);
                 return;
             }
@@ -564,11 +564,11 @@ namespace ck
                 Settings->Get_BlockDetectionMaxStallRepaths(),
                 InPathFollow.Get_ActiveGoal());
 
-            DoRepathAtActiveGoal(InHandle, InParams, InPathFollow, InBlockDetect, InDesired);
+            DoRepathAtActiveGoal(InHandle, InTunables, InPathFollow, InBlockDetect, InDesired);
             return;
         }
 
-        DoBlock(InHandle, InParams, InBlockDetect, InDesired,
+        DoBlock(InHandle, InTunables, InBlockDetect, InDesired,
             ECk_CrowdAgent_BlockedReason::NoProgress, FCk_Handle{}, DistanceToFinal);
     }
 
@@ -578,7 +578,7 @@ namespace ck
         FProcessor_CrowdAgent_BlockDetect::
         DoRepathAtActiveGoal(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect,
             FFragment_CrowdAgent_DesiredVelocity& InDesired) const
@@ -601,14 +601,14 @@ namespace ck
         InDesired._LastVelocity = FVector::ZeroVector;
 
         FProcessor_CrowdAgent_HandleRequests::RequestPathForActiveGoal(
-            NonConstHandle, InParams, InPathFollow);
+            NonConstHandle, InTunables, InPathFollow);
     }
 
     auto
         FProcessor_CrowdAgent_BlockDetect::
         DoBlock(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             ECk_CrowdAgent_BlockedReason InReason,
@@ -662,7 +662,7 @@ namespace ck
                 InHandle, InReason, InDistanceToGoal, InBlocker);
         }
 
-        if (InParams.Get_BlockedPolicy() == ECk_CrowdAgent_BlockedPolicy::FailMove)
+        if (InTunables.Get_BlockedPolicy() == ECk_CrowdAgent_BlockedPolicy::FailMove)
         {
             NonConstHandle.Try_Remove<FTag_CrowdAgent_GoalBlocked>();
             NonConstHandle.AddOrGet<FTag_CrowdAgent_GoalFailedHold>();
@@ -693,7 +693,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_BlockDetect& InBlockDetect,
@@ -729,7 +729,7 @@ namespace ck
             ck_crowdagent_blockdetect::Does_RememberedBlockerStillObstruct(
                 SelfLoc,
                 InPathFollow.Get_ActiveGoal(),
-                InParams.Get_Radius(),
+                InTunables.Get_Radius(),
                 InPathFollow.Get_ActiveArrivalRadius(),
                 Settings->Get_CrowdedGoalContactPadCm(),
                 Settings->Get_BlockedStationarySpeedThreshold(),
@@ -744,7 +744,7 @@ namespace ck
             SelfLoc,
             FVector::ZeroVector,
             InPathFollow.Get_ActiveGoal(),
-            InParams.Get_Radius(),
+            InTunables.Get_Radius(),
             InPathFollow.Get_ActiveArrivalRadius(),
             Settings->Get_BlockedStationarySpeedThreshold(),
             InNeighborCache);
@@ -763,7 +763,7 @@ namespace ck
             const auto CrowdBlocker = ck_crowdagent_blockdetect::Get_CrowdedGoalBlocker(
                 SelfLoc,
                 InPathFollow.Get_ActiveGoal(),
-                InParams.Get_Radius(),
+                InTunables.Get_Radius(),
                 InPathFollow.Get_ActiveArrivalRadius(),
                 Settings->Get_CrowdedGoalContactPadCm(),
                 Settings->Get_StationaryMarkupMode() == ECk_CrowdStationaryMarkupMode::Enabled,
@@ -830,15 +830,15 @@ namespace ck
                 ? ECk_CrowdAgent_PlanPhase::Strict
                 : ECk_CrowdAgent_PlanPhase::Permissive;
             InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
-            Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
+            Request.Set_NavQueryFilter(InTunables.Get_NavQueryFilter());
             Request.Set_QueryFilterOverlay(
                 UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
                     InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                         ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                         : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
-            Request.Set_AgentRadiusUu(InParams.Get_Radius());
+            Request.Set_AgentRadiusUu(InTunables.Get_Radius());
             FProcessor_CrowdAgent_HandleRequests::ApplyMarkupEscapeStart(
-                NonConstHandle, InParams, Goal, Request);
+                NonConstHandle, InTunables, Goal, Request);
             Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
             UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
         }
@@ -847,7 +847,7 @@ namespace ck
             // The resume itself is the new evidence — the recheck just saw the blocker gone — so
             // the strict phase gets a fresh attempt.
             FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
-                NonConstHandle, InParams, InPathFollow, Goal);
+                NonConstHandle, InTunables, InPathFollow, Goal);
         }
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] goal CLEARED — resuming to {}"), InHandle, Goal);

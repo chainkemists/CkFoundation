@@ -29,7 +29,11 @@ auto
         TEXT("Entity [{}] already has the VoxelNavPath feature"), InHandle)
     { return Cast(InHandle); }
 
-    InHandle.Add<ck::FFragment_VoxelNavPath_Params>(InParams);
+    InHandle.Add<ck::FFragment_VoxelNavPath_Params>(
+        InParams.Get_AgentRadiusUu(),
+        InParams.Get_HeuristicScale(),
+        InParams.Get_NodeSizeCompensation());
+    InHandle.Add<ck::FFragment_VoxelNavPath_Volume>(InParams.Get_Volume());
     InHandle.Add<ck::FFragment_VoxelNavPath_Result>();
 
     ck::voxelnav::Verbose(TEXT("VoxelNav Path added to [{}] (agent radius [{}]uu)"),
@@ -132,7 +136,7 @@ auto
         return InPath;
     }
 
-    InPath.Get<ck::FFragment_VoxelNavPath_Params>().Set_Volume(InVolume);
+    InPath.Get<ck::FFragment_VoxelNavPath_Volume>()._Volume = InVolume;
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
     InDelegate.ExecuteIfBound(InPath, ECk_Request_OperationResult::Succeeded);

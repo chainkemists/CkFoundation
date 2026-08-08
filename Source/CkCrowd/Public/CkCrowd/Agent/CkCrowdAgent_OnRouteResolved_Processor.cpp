@@ -74,7 +74,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_PathNetworkFollower_Corridor& InCorridor,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_PathTrouble& InPathTrouble)
@@ -152,7 +152,7 @@ namespace ck
                         FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
                         FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                             NonConstHandle,
-                            InParams,
+                            InTunables,
                             InPathFollow,
                             InPathFollow.Get_ActiveGoal());
                     }
@@ -167,7 +167,7 @@ namespace ck
                         InHandle.Get_Entity(),
                         AgentLocation,
                         ActiveGoal,
-                        InParams.Get_Radius());
+                        InTunables.Get_Radius());
                 auto EscapeWaypoints = TArray<FVector>{};
                 const auto EscapePathResult = EscapedStart.IsSet()
                     ? FProcessor_CrowdAgent_PathRefresh::
@@ -178,11 +178,11 @@ namespace ck
                         EscapedStart.GetValue(),
                         ActiveGoal,
                         InPathFollow.Get_ActiveArrivalRadius(),
-                        InParams,
+                        InTunables,
                         InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                             ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                             : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
-                        InParams.Get_NavQueryFilter(),
+                        InTunables.Get_NavQueryFilter(),
                         EscapeWaypoints)
                     : ECk_CrowdAgent_StationaryMarkupPathResult::NotNeeded;
                 if (EscapePathResult == ECk_CrowdAgent_StationaryMarkupPathResult::Malformed)
@@ -197,7 +197,7 @@ namespace ck
                     InPathFollow._ProtectedLeadingWaypointCount = 0;
                     FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
                     FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
-                        NonConstHandle, InParams, InPathFollow, InPathFollow.Get_ActiveGoal());
+                        NonConstHandle, InTunables, InPathFollow, InPathFollow.Get_ActiveGoal());
                     break;
                 }
                 const auto UsedNavigableEscapePrefix =
@@ -213,13 +213,13 @@ namespace ck
                         InHandle.Get_Entity(),
                         DetourStart,
                         ActiveGoal,
-                        InParams,
+                        InTunables,
                         InPathFollow.Get_ActiveArrivalRadius(),
                         WaypointsToInstall,
                         InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                             ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
                             : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive,
-                        InParams.Get_NavQueryFilter(),
+                        InTunables.Get_NavQueryFilter(),
                         DetouredWaypoints);
                 if (DetourPathResult == ECk_CrowdAgent_StationaryMarkupPathResult::Malformed)
                 {
@@ -233,7 +233,7 @@ namespace ck
                     InPathFollow._ProtectedLeadingWaypointCount = 0;
                     FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
                     FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
-                        NonConstHandle, InParams, InPathFollow, InPathFollow.Get_ActiveGoal());
+                        NonConstHandle, InTunables, InPathFollow, InPathFollow.Get_ActiveGoal());
                     break;
                 }
                 const auto UsedStationaryMarkupDetour =
@@ -286,7 +286,7 @@ namespace ck
                             NonConstHandle.AddOrGet<FTag_CrowdAgent_PathNetworkFallbackPending>();
                             FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
                             FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
-                                NonConstHandle, InParams, InPathFollow, InPathFollow.Get_ActiveGoal());
+                                NonConstHandle, InTunables, InPathFollow, InPathFollow.Get_ActiveGoal());
                         }
                         break;
                     }
@@ -445,7 +445,7 @@ namespace ck
                 FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
                 FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                     NonConstHandle,
-                    InParams,
+                    InTunables,
                     InPathFollow,
                     InPathFollow.Get_ActiveGoal());
 

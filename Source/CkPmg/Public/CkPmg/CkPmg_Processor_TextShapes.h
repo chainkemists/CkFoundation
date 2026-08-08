@@ -16,6 +16,7 @@ namespace ck
             FProcessor_Pmg_Text_Setup,
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_Text_Params>,
+            ck::TReadOnly<FFragment_Pmg_Text>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
             ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_NeedsSetup,
@@ -33,6 +34,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_Text_Params& InParams,
+            const FFragment_Pmg_Text& InText,
             const FFragment_Pmg_DebugShape_Common& InCommon,
             FFragment_Pmg_DebugShape& InDebugShape)
             -> void;

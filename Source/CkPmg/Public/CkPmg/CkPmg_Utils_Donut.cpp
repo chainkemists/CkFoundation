@@ -41,8 +41,7 @@ auto
         TEXT("Segments must be at least 3 for Entity [{}]"), InHandle)
     { return {}; }
 
-    auto& ParamsFragment = InHandle.Add<ck::FFragment_Pmg_Donut_Params>();
-    ParamsFragment._Params = InParams;
+    InHandle.Add<ck::FFragment_Pmg_Donut_Params>(InParams);
 
     auto& Current = InHandle.Add<ck::FFragment_Pmg_Donut>();
     InHandle.Add<ck::FTag_Pmg_Donut_NeedsSetup>();

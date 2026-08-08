@@ -319,14 +319,14 @@ namespace ck::ck_crowd_agent_avoidance_sample_algorithm
 
     inline auto HasAvoidanceTag(const FCk_Handle& InAgent, const FGameplayTag& InTag) -> bool
     {
-        if (InAgent.Has<FFragment_CrowdAgent_Params>() &&
-            InAgent.Get<FFragment_CrowdAgent_Params>().Get_Tags().HasTagExact(InTag))
+        if (InAgent.Has<FFragment_CrowdAgent_Tunables>() &&
+            InAgent.Get<FFragment_CrowdAgent_Tunables>().Get_Tags().HasTagExact(InTag))
         { return true; }
 
         const auto Owner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAgent);
-        if (ck::Is_NOT_Valid(Owner) || NOT Owner.Has<FFragment_CrowdAgent_Params>())
+        if (ck::Is_NOT_Valid(Owner) || NOT Owner.Has<FFragment_CrowdAgent_Tunables>())
         { return false; }
-        return Owner.Get<FFragment_CrowdAgent_Params>().Get_Tags().HasTagExact(InTag);
+        return Owner.Get<FFragment_CrowdAgent_Tunables>().Get_Tags().HasTagExact(InTag);
     }
 
     inline auto ShouldSample(

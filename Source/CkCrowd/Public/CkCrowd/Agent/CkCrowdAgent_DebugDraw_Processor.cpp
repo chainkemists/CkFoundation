@@ -45,7 +45,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             const FFragment_CrowdAgent_SeparationForce& InSeparationForce)
         -> void
@@ -60,7 +60,7 @@ namespace ck
         { return; }
 
         const auto Feet = InTransform.Get_Transform().GetLocation();
-        const auto Center = Feet + FVector{0.0, 0.0, InParams.Get_Height() * 0.5};
+        const auto Center = Feet + FVector{0.0, 0.0, InTunables.Get_Height() * 0.5};
 
         // --- Separation radius circle (yellow, on the ground at agent feet) -------------------
         constexpr auto CircleSegments = 24;
@@ -69,7 +69,7 @@ namespace ck
         UCk_Utils_DebugDraw_UE::DrawDebugCircle_PlaneAxis(
             World,
             Feet,
-            InParams.Get_SeparationRadius(),
+            InTunables.Get_SeparationRadius(),
             ECk_Plane_Axis::XY,
             CircleSegments,
             FLinearColor{1.0f, 0.85f, 0.0f, 0.6f},

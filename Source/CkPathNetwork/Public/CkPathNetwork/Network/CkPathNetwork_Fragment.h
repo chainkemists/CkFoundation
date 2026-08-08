@@ -13,12 +13,38 @@
 
 namespace ck
 {
-    using FFragment_PathNetwork_Params = FCk_PathNetwork_Spec;
     using FFragment_PathNetworkFollower_Tunables = FCk_PathNetworkFollower_Spec;
+
+    /** The retained immutable residue of FCk_PathNetwork_Spec. The Spec's `_Ribbons` are not here:
+     *  Request_Rebuild replaces them, so they belong with the network they build -- see
+     *  FFragment_PathNetwork_Graph. */
+    struct CKPATHNETWORK_API FFragment_PathNetwork_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_PathNetwork_Params);
+
+    private:
+        FCk_PathNetwork_BuildParams _BuildParams;
+
+        ECk_EnableDisable _UseRecommendedFollowerTuning = ECk_EnableDisable::Disable;
+
+        FCk_PathNetworkFollower_Tuning _RecommendedFollowerTuning;
+
+    public:
+        CK_PROPERTY_GET(_BuildParams);
+        CK_PROPERTY_GET(_UseRecommendedFollowerTuning);
+        CK_PROPERTY_GET(_RecommendedFollowerTuning);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_PathNetwork_Params, _BuildParams,
+            _UseRecommendedFollowerTuning, _RecommendedFollowerTuning);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     // _Epoch bumps on every (re)build; corridors planned against an older one replan.
+    // _Ribbons is the source the rest of this fragment is derived from -- Rebuild replaces the two
+    // together, and keeping them apart is what let a stale ribbon set outlive its network.
     struct CKPATHNETWORK_API FFragment_PathNetwork_Graph
     {
     public:
@@ -30,6 +56,7 @@ namespace ck
         friend class ::UCk_Utils_PathNetwork_UE;
 
     private:
+        TArray<FCk_PathNetwork_Ribbon> _Ribbons;
         pathnetwork::FBuiltNetwork _Network;
         int32 _Epoch = 0;
         TMap<
@@ -39,6 +66,7 @@ namespace ck
             _RouteGraphStaticDataByPolicy;
 
     public:
+        CK_PROPERTY_GET(_Ribbons);
         CK_PROPERTY_GET(_Network);
         CK_PROPERTY_GET(_Epoch);
     };

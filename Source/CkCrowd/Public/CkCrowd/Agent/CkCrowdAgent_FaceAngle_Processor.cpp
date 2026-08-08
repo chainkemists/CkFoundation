@@ -26,7 +26,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_FaceAngle& InFaceAngle)
         -> void
@@ -74,7 +74,7 @@ namespace ck
         if (FMath::IsNearlyZero(DeltaYaw))
         { return; }
 
-        const auto MaxDelta = InParams.Get_MaxTurnRate() * InDeltaT.Get_Seconds();
+        const auto MaxDelta = InTunables.Get_MaxTurnRate() * InDeltaT.Get_Seconds();
         const auto AppliedDelta = FMath::Clamp(DeltaYaw, -MaxDelta, MaxDelta);
 
         const auto Offset = FRotator(0.0f, FMath::RadiansToDegrees(AppliedDelta), 0.0f);

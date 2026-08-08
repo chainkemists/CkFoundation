@@ -89,7 +89,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_HandleRequests : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_HandleRequests,
             FCk_Handle_CrowdAgent,
-            ck::TReadWrite<FFragment_CrowdAgent_Params>,
+            ck::TReadWrite<FFragment_CrowdAgent_Tunables>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             ck::TReadWrite<FFragment_CrowdAgent_MoveRequests>,
@@ -108,7 +108,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_MoveRequests& InRequests) const -> void;
@@ -116,7 +116,7 @@ namespace ck
         static auto
 		Request_NavigationPath(
 			HandleType InHandle,
-			const FFragment_CrowdAgent_Params& InParams,
+			const FFragment_CrowdAgent_Tunables& InTunables,
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
 			const FVector& InGoal,
 			bool InForcePermissivePlan = false,
@@ -153,7 +153,7 @@ namespace ck
 		static auto
 		RequestPathForActiveGoal(
 			HandleType InHandle,
-			const FFragment_CrowdAgent_Params& InParams,
+			const FFragment_CrowdAgent_Tunables& InTunables,
 			FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
 
 		// Stamps the planning phase and its filter onto a CkNavigation FindPath request. Every
@@ -203,7 +203,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_MoveTo& InRequest) -> ECk_Request_OperationResult;
@@ -211,7 +211,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_FollowTarget& InRequest) -> ECk_Request_OperationResult;
@@ -219,7 +219,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_Stop& InRequest) -> void;
@@ -246,14 +246,14 @@ namespace ck
 		static auto
 		DoForceReplan(
 			HandleType InHandle,
-			const FFragment_CrowdAgent_Params& InParams,
+			const FFragment_CrowdAgent_Tunables& InTunables,
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
 			FFragment_CrowdAgent_DesiredVelocity& InDesiredVelocity) -> void;
 
         static auto
 		DoHandleRequest(
 			HandleType InHandle,
-			FFragment_CrowdAgent_Params& InParams,
+			FFragment_CrowdAgent_Tunables& InTunables,
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
 			FFragment_CrowdAgent_DesiredVelocity& InDesired,
 			const FCk_Request_CrowdAgent_SetNavQueryFilter& InRequest) -> void;
@@ -261,7 +261,7 @@ namespace ck
 		static auto
 		DoHandleRequest(
 			HandleType InHandle,
-			FFragment_CrowdAgent_Params& InParams,
+			FFragment_CrowdAgent_Tunables& InTunables,
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
 			FFragment_CrowdAgent_DesiredVelocity& InDesired,
 			const FCk_Request_CrowdAgent_SetMaxSpeed& InRequest) -> void;

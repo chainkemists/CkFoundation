@@ -55,7 +55,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_PathFollow& InPathFollow,
             const FFragment_CrowdAgent_DesiredVelocity& InDesiredVelocity)
         -> void
@@ -80,8 +80,8 @@ namespace ck
         const auto Velocity = InDesiredVelocity.Get_Velocity();
         const auto Speed    = Velocity.Size();
 
-        const auto MaxTurnRate = InParams.Get_MaxTurnRate();
-        const auto MaxSpeed    = InParams.Get_MaxSpeed();
+        const auto MaxTurnRate = InTunables.Get_MaxTurnRate();
+        const auto MaxSpeed    = InTunables.Get_MaxSpeed();
 
         // A stale _ActiveGoal on an idle agent would draw a misleading ring at wherever it last went.
         if (InHandle.Has<FTag_CrowdAgent_Walking>())

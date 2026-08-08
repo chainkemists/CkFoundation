@@ -32,7 +32,7 @@ namespace ck
             FProcessor_CrowdAgent_PushApart,
             FCk_Handle_CrowdAgent,
             FTag_CrowdAgent_HasProbe,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             TExclude<FTag_CrowdAgent_Disabled>,
@@ -56,7 +56,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_PendingDisplacement& InPending) -> void;
     };

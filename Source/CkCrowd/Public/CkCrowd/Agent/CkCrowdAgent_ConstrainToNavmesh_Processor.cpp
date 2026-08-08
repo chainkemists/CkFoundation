@@ -48,7 +48,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
             FFragment_CrowdAgent_Grounding& InGrounding,
             FFragment_CrowdAgent_PathFollow& InPathFollow) const
@@ -58,11 +58,11 @@ namespace ck
 
         auto ResolvedOffset = FVector::ZeroVector;
 
-        DoConstrain(InDeltaT, InHandle, InTransform, InParams, InPending, InGrounding, InPathFollow,
+        DoConstrain(InDeltaT, InHandle, InTransform, InTunables, InPending, InGrounding, InPathFollow,
             ResolvedOffset);
 
         DoRecord_ContainmentEscape(
-            InHandle, InParams, InTransform.Get_Transform().GetLocation() + ResolvedOffset);
+            InHandle, InTunables, InTransform.Get_Transform().GetLocation() + ResolvedOffset);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -127,7 +127,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PendingDisplacement& InPending,
             FFragment_CrowdAgent_Grounding& InGrounding,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
@@ -234,8 +234,8 @@ namespace ck
 
         const auto From = InTransform.Get_Transform().GetLocation();
 
-        const auto HorizontalExtent = InParams.Get_Radius();
-        const auto VerticalExtent = InParams.Get_Height();
+        const auto HorizontalExtent = InTunables.Get_Radius();
+        const auto VerticalExtent = InTunables.Get_Height();
         const auto ProjectionExtent = FVector{HorizontalExtent, HorizontalExtent, VerticalExtent};
 
         const auto StartProjection = UCk_Utils_NavSurface_UE::Try_ProjectPoint(
@@ -270,7 +270,7 @@ namespace ck
 
             if (RecoveryAccepted)
             {
-                if (RecoveryOffset.Size() > InParams.Get_Radius())
+                if (RecoveryOffset.Size() > InTunables.Get_Radius())
                 {
                     ck::crowd::Log(
                         TEXT("CrowdAgent [{}] recovered onto the navmesh at [{}] — correction [{}]uu (dz [{}]uu)"),
@@ -342,7 +342,7 @@ namespace ck
             const auto VerticalOffset = ResolveVerticalDriftOffset(
                 From, StartProjection.Get_Location(), UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyMinCorrectionCm());
 
-            if (FMath::Abs(VerticalOffset.Z) > InParams.Get_Radius())
+            if (FMath::Abs(VerticalOffset.Z) > InTunables.Get_Radius())
             {
                 ck::crowd::Log(
                     TEXT("CrowdAgent [{}] grounding verify corrected dz [{}]uu at [{}]"),
@@ -373,7 +373,7 @@ namespace ck
         // escape the projection extent.
         const auto SurfaceOffset = ResolveSurfaceOffset(From, SurfaceWalk.Get_ReachedLocation());
 
-        if (FMath::Abs(SurfaceOffset.Z) > InParams.Get_Radius())
+        if (FMath::Abs(SurfaceOffset.Z) > InTunables.Get_Radius())
         {
             ck::crowd::Log(
                 TEXT("CrowdAgent [{}] surface walk folded dz [{}]uu at [{}]"),
@@ -404,7 +404,7 @@ namespace ck
         FProcessor_CrowdAgent_ConstrainToNavmesh::
         DoRecord_ContainmentEscape(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FVector& InResolvedLocation) const
         -> void
     {
@@ -426,9 +426,9 @@ namespace ck
         // surfaces rather than about two differently sized searches.
         const auto ProjectionExtent = FVector
         {
-            InParams.Get_Radius(),
-            InParams.Get_Radius(),
-            InParams.Get_Height()
+            InTunables.Get_Radius(),
+            InTunables.Get_Radius(),
+            InTunables.Get_Height()
         };
 
         const auto Query = FCk_NavSurface_ProjectionQuery{InResolvedLocation}

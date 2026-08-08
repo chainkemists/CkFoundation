@@ -19,7 +19,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_AccelClamp : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_AccelClamp,
             FCk_Handle_CrowdAgent,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
@@ -38,7 +38,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_DesiredVelocity& InDesired) -> void;
     };
 }

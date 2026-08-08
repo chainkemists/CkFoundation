@@ -23,7 +23,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             const FFragment_CrowdAgent_TransientPersonalSpace& InPersonalSpace,
             FFragment_CrowdAgent_SeparationForce& InSeparationForce)
@@ -33,9 +33,9 @@ namespace ck
 
         INC_DWORD_STAT(STAT_CkCrowd_ActiveAgents);
 
-        const auto SeparationRadius = InParams.Get_SeparationRadius() * InPersonalSpace.Get_Scale();
-        const auto SeparationWeight = InParams.Get_SeparationWeight();
-        const auto MaxSpeed = InParams.Get_MaxSpeed();
+        const auto SeparationRadius = InTunables.Get_SeparationRadius() * InPersonalSpace.Get_Scale();
+        const auto SeparationWeight = InTunables.Get_SeparationWeight();
+        const auto MaxSpeed = InTunables.Get_MaxSpeed();
 
         // A permeable agent passes THROUGH bodies, so it has no repulsion at all. Handled here
         // rather than by TExclude precisely because this processor is the only writer of the force
@@ -106,7 +106,7 @@ namespace ck
         // Blending toward last frame's force kills the frame-to-frame flicker that drove
         // vibration in head-on encounters.
         const auto LastForce = InSeparationForce.Get_Force();
-        const auto Inertia = FMath::Clamp(InParams.Get_SeparationInertia(), 0.0f, 1.0f);
+        const auto Inertia = FMath::Clamp(InTunables.Get_SeparationInertia(), 0.0f, 1.0f);
         InSeparationForce._Force = FMath::Lerp(NewForce, LastForce, Inertia);
     }
 }

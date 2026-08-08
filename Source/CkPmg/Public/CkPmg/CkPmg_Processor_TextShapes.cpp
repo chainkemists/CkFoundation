@@ -239,6 +239,7 @@ namespace ck
         TimeType InDeltaT,
         HandleType InHandle,
         const FFragment_Pmg_Text_Params& InParams,
+        const FFragment_Pmg_Text& InText,
         const FFragment_Pmg_DebugShape_Common& InCommon,
         FFragment_Pmg_DebugShape& InDebugShape)
         -> void
@@ -274,7 +275,7 @@ namespace ck
         }
 
         TArray<ck_pmg_processor_text_shapes_impl::FPlacedGlyph_Text> Placed;
-        ck_pmg_processor_text_shapes_impl::LayoutText(InParams.Get_Text(), FaceChain, InParams.Get_Size(), InParams.Get_LineSpacing(),
+        ck_pmg_processor_text_shapes_impl::LayoutText(InText.Get_Text(), FaceChain, InParams.Get_Size(), InParams.Get_LineSpacing(),
             InParams.Get_Align(), InParams.Get_MaxGlyphs(), Placed);
 
         // Applied to BOTH the filled mesh and the wireframe below, or the two tiers drift apart.

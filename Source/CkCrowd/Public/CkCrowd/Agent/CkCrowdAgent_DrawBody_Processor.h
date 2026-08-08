@@ -23,7 +23,7 @@ namespace ck
             FProcessor_CrowdAgent_DrawBody_Setup,
             FCk_Handle_CrowdAgent,
             FTag_CrowdAgent_HasProbe,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             TExclude<FTag_CrowdAgent_DebugBody_Setup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -39,7 +39,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams) const -> void;
+            const FFragment_CrowdAgent_Tunables& InTunables) const -> void;
     };
 
     // Per-tick refresh of each shape's visibility and colour from the DrawAgentBody toggle and the

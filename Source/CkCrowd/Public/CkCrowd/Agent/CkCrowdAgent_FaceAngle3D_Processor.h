@@ -31,7 +31,7 @@ namespace ck
             FCk_Handle_CrowdAgent,
             FTag_CrowdAgent_Flying,
             ck::TReadOnly<FFragment_Transform>,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             ck::TReadOnly<FFragment_CrowdAgent_DesiredVelocity>,
             ck::TReadWrite<FFragment_CrowdAgent_FaceAngle>,
             TExclude<FTag_CrowdAgent_Disabled>,
@@ -53,7 +53,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_DesiredVelocity& InDesired,
             FFragment_CrowdAgent_FaceAngle& InFaceAngle) -> void;
     };
