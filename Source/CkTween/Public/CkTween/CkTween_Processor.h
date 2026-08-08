@@ -22,7 +22,7 @@ namespace ck
         FProcessor_Tween_Update,
         FCk_Handle_Tween,
         ck::TReadOnly<FFragment_Tween_Params>,
-        ck::TReadWrite<FFragment_Tween_Current>,
+        ck::TReadWrite<FFragment_Tween>,
         FTag_Tween_Playing,
         TExclude<FTag_Tween_Paused>,
         TExclude<FTag_Tween_Completed>,
@@ -40,12 +40,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
-            FFragment_Tween_Current& InCurrent) -> void;
+            FFragment_Tween& InTween) -> void;
 
     private:
-        static auto DoCalculateProgress(const FFragment_Tween_Params& InParams, const FFragment_Tween_Current& InCurrent) -> FCk_FloatRange_0to1;
-        static auto DoComputeValue(HandleType InHandle, const FFragment_Tween_Params& InParams, const FFragment_Tween_Current& InCurrent, FCk_FloatRange_0to1 InProgress) -> FCk_TweenValue;
-        static auto DoCheckLoopCompletion(HandleType InHandle, const FFragment_Tween_Params& InParams, FFragment_Tween_Current& InCurrent) -> void;
+        static auto DoCalculateProgress(const FFragment_Tween_Params& InParams, const FFragment_Tween& InTween) -> FCk_FloatRange_0to1;
+        static auto DoComputeValue(HandleType InHandle, const FFragment_Tween_Params& InParams, const FFragment_Tween& InTween, FCk_FloatRange_0to1 InProgress) -> FCk_TweenValue;
+        static auto DoCheckLoopCompletion(HandleType InHandle, const FFragment_Tween_Params& InParams, FFragment_Tween& InTween) -> void;
         static auto DoStartNextTweenInQueue(HandleType InHandle) -> void;
         static auto DoResolveValue(const FCk_TweenValue& InValue, ECk_TweenTarget InTargetType) -> FCk_TweenValue;
     };
@@ -55,7 +55,7 @@ namespace ck
     class CKTWEEN_API FProcessor_Tween_HandleYoyoDelays : public ck_exp::TProcessor<
         FProcessor_Tween_HandleYoyoDelays,
         FCk_Handle_Tween,
-        ck::TReadWrite<FFragment_Tween_Current>,
+        ck::TReadWrite<FFragment_Tween>,
         FTag_Tween_InYoyoDelay,
         TExclude<FTag_Tween_Paused>,
         CK_IGNORE_PENDING_KILL>
@@ -70,7 +70,7 @@ namespace ck
     	ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent) -> void;
+            FFragment_Tween& InTween) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -78,7 +78,7 @@ namespace ck
     class CKTWEEN_API FProcessor_Tween_HandleRequests : public ck_exp::TProcessor<
         FProcessor_Tween_HandleRequests,
         FCk_Handle_Tween,
-        ck::TReadWrite<FFragment_Tween_Current>,
+        ck::TReadWrite<FFragment_Tween>,
         ck::TReadOnly<FFragment_Tween_Requests>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -93,7 +93,7 @@ namespace ck
     	ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FFragment_Tween_Requests& InRequestsComp) const -> void;
 
     private:
@@ -102,31 +102,31 @@ namespace ck
         static auto
     	DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_Pause& InRequest) -> ECk_Request_OperationResult;
 
         static auto
     	DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_Resume& InRequest) -> ECk_Request_OperationResult;
 
         static auto
     	DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_Stop& InRequest) -> ECk_Request_OperationResult;
 
         static auto
     	DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_Restart& InRequest) -> ECk_Request_OperationResult;
 
         static auto
     	DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_SetTimeMultiplier& InRequest) -> ECk_Request_OperationResult;
 
         static auto DoRecaptureCurveBase(HandleType InHandle) -> void;
@@ -164,7 +164,7 @@ namespace ck
         FProcessor_Tween_ApplyToTransform,
         FCk_Handle_Tween,
         ck::TReadOnly<FFragment_Tween_Params>,
-        ck::TReadOnly<FFragment_Tween_Current>,
+        ck::TReadOnly<FFragment_Tween>,
         FTag_Tween_Playing,
         TExclude<FTag_Tween_Paused>,
         TExclude<FTag_Tween_Completed>,
@@ -183,7 +183,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
-            const FFragment_Tween_Current& InCurrent) -> void;
+            const FFragment_Tween& InTween) -> void;
 
     };
 
@@ -192,7 +192,7 @@ namespace ck
     class CKTWEEN_API FProcessor_Tween_ApplySplineFollow : public ck_exp::TProcessor<
         FProcessor_Tween_ApplySplineFollow,
         FCk_Handle_Tween,
-        ck::TReadOnly<FFragment_Tween_Current>,
+        ck::TReadOnly<FFragment_Tween>,
         ck::TReadOnly<FFragment_Tween_SplineFollow>,
         FTag_Tween_Playing,
         TExclude<FTag_Tween_Paused>,
@@ -210,7 +210,7 @@ namespace ck
     	ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Tween_Current& InCurrent,
+            const FFragment_Tween& InTween,
             const FFragment_Tween_SplineFollow& InSplineFollow) -> void;
     };
 }

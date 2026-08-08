@@ -153,14 +153,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltBody_Params& InParams,
-            FFragment_JoltBody_Current& InCurrent)
+            FFragment_JoltBody& InJoltBody)
         -> void
     {
         using namespace JPH;
 
         if (InParams.Get_ShapeSource() == ECk_JoltBody_ShapeSource::StaticMeshAsset)
         {
-            auto& PreloadBatch = InCurrent._MeshPreloadBatch;
+            auto& PreloadBatch = InJoltBody._MeshPreloadBatch;
 
             if (NOT PreloadBatch.Get_IsRequested() && ck::IsValid(InParams.Get_StaticMesh()))
             {
@@ -204,7 +204,7 @@ namespace ck
             }
             case ECk_JoltBody_ShapeSource::StaticMeshAsset:
             {
-                const auto& PreloadBatch = InCurrent._MeshPreloadBatch;
+                const auto& PreloadBatch = InJoltBody._MeshPreloadBatch;
                 const auto PreloadFailed = PreloadBatch.Get_IsRequested() && PreloadBatch.Get_HasFailed();
 
                 CK_ENSURE_IF_NOT(NOT PreloadFailed,
@@ -390,8 +390,8 @@ namespace ck
 
         Body->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
 
-        InCurrent._BodyId = Body->GetID();
-        InCurrent._Shape = Shape;
+        InJoltBody._BodyId = Body->GetID();
+        InJoltBody._Shape = Shape;
 
         // Seed the step-pose buffer so the very first interpolation reads a valid prev==curr==spawn pose.
         auto& StepPose = InHandle.Get<ck::FFragment_JoltBody_StepPose>();
@@ -444,10 +444,10 @@ namespace ck
         for (const auto& Pending : InPending)
         {
             auto Handle = _TransientEntity.Get_ValidHandle(Pending._Entity.Get_ID());
-            if (ck::Is_NOT_Valid(Handle) || NOT Handle.Has<ck::FFragment_JoltBody_Current>())
+            if (ck::Is_NOT_Valid(Handle) || NOT Handle.Has<ck::FFragment_JoltBody>())
             { continue; }
 
-            Handle.Get<ck::FFragment_JoltBody_Current>()._BodyAdded = true;
+            Handle.Get<ck::FFragment_JoltBody>()._BodyAdded = true;
         }
     }
 
@@ -476,7 +476,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_JoltBody_Params& InParams,
-            FFragment_JoltBody_Current& InCurrent,
+            FFragment_JoltBody& InJoltBody,
             FFragment_JoltBody_Requests& InRequestsComp) const
         -> void
     {
@@ -496,9 +496,9 @@ namespace ck
             using RequestType = std::decay_t<decltype(InRequest)>;
             if constexpr (std::is_same_v<RequestType, FCk_Request_JoltBody_SetMotionType> ||
                           std::is_same_v<RequestType, FCk_Request_JoltBody_SetCollisionProfile>)
-            { DoHandleRequest(InHandle, InParams, InCurrent, InRequest); }
+            { DoHandleRequest(InHandle, InParams, InJoltBody, InRequest); }
             else
-            { DoHandleRequest(InHandle, InCurrent, InRequest); }
+            { DoHandleRequest(InHandle, InJoltBody, InRequest); }
 
             if (InRequest.Get_IsRequestHandleValid())
             {
@@ -518,11 +518,11 @@ namespace ck
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetSleepState& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -535,12 +535,12 @@ namespace ck
         {
             case ECk_Jolt_SleepState::Awake:
             {
-                BodyInterface.ActivateBody(InCurrent.Get_BodyId());
+                BodyInterface.ActivateBody(InJoltBody.Get_BodyId());
                 break;
             }
             case ECk_Jolt_SleepState::Asleep:
             {
-                BodyInterface.DeactivateBody(InCurrent.Get_BodyId());
+                BodyInterface.DeactivateBody(InJoltBody.Get_BodyId());
                 break;
             }
         }
@@ -550,11 +550,11 @@ namespace ck
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddForce& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -564,18 +564,18 @@ namespace ck
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         // AddForce defaults to EActivation::Activate — a settled body wakes to receive the force.
-        BodyInterface.AddForce(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Force()));
+        BodyInterface.AddForce(InJoltBody.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Force()));
     }
 
     auto
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddForceAtLocation& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -585,7 +585,7 @@ namespace ck
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         BodyInterface.AddForce(
-            InCurrent.Get_BodyId(),
+            InJoltBody.Get_BodyId(),
             ck::jolt::Conv(InRequest.Get_Force()),
             ck::jolt::Conv(InRequest.Get_WorldLocation()));
     }
@@ -594,11 +594,11 @@ namespace ck
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddTorque& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -607,18 +607,18 @@ namespace ck
 
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        BodyInterface.AddTorque(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Torque()));
+        BodyInterface.AddTorque(InJoltBody.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Torque()));
     }
 
     auto
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddImpulse& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -628,18 +628,18 @@ namespace ck
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         // BodyInterface::AddImpulse activates the body internally if it is asleep.
-        BodyInterface.AddImpulse(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Impulse()));
+        BodyInterface.AddImpulse(InJoltBody.Get_BodyId(), ck::jolt::Conv(InRequest.Get_Impulse()));
     }
 
     auto
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddImpulseAtLocation& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -649,7 +649,7 @@ namespace ck
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         BodyInterface.AddImpulse(
-            InCurrent.Get_BodyId(),
+            InJoltBody.Get_BodyId(),
             ck::jolt::Conv(InRequest.Get_Impulse()),
             ck::jolt::Conv(InRequest.Get_WorldLocation()));
     }
@@ -658,11 +658,11 @@ namespace ck
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddAngularImpulse& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -671,18 +671,18 @@ namespace ck
 
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        BodyInterface.AddAngularImpulse(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_AngularImpulse()));
+        BodyInterface.AddAngularImpulse(InJoltBody.Get_BodyId(), ck::jolt::Conv(InRequest.Get_AngularImpulse()));
     }
 
     auto
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetLinearVelocity& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -692,18 +692,18 @@ namespace ck
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
         // Set*Velocity activates the body if needed (per Jolt's BodyInterface contract).
-        BodyInterface.SetLinearVelocity(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_LinearVelocity()));
+        BodyInterface.SetLinearVelocity(InJoltBody.Get_BodyId(), ck::jolt::Conv(InRequest.Get_LinearVelocity()));
     }
 
     auto
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetAngularVelocity& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -712,18 +712,18 @@ namespace ck
 
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        BodyInterface.SetAngularVelocity(InCurrent.Get_BodyId(), ck::jolt::Conv(InRequest.Get_AngularVelocity()));
+        BodyInterface.SetAngularVelocity(InJoltBody.Get_BodyId(), ck::jolt::Conv(InRequest.Get_AngularVelocity()));
     }
 
     auto
         FProcessor_JoltBody_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_Teleport& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -737,7 +737,7 @@ namespace ck
 
         // Activate: a settled body must wake, else the teleport is silently dropped on a sleeping body.
         BodyInterface.SetPositionAndRotation(
-            InCurrent.Get_BodyId(),
+            InJoltBody.Get_BodyId(),
             ck::jolt::Conv(NewLocation),
             ck::jolt::Conv(NewRotation),
             JPH::EActivation::Activate);
@@ -746,7 +746,7 @@ namespace ck
         {
             case ECk_Jolt_TeleportVelocityPolicy::ResetVelocity:
             {
-                BodyInterface.SetLinearAndAngularVelocity(InCurrent.Get_BodyId(), JPH::Vec3::sZero(), JPH::Vec3::sZero());
+                BodyInterface.SetLinearAndAngularVelocity(InJoltBody.Get_BodyId(), JPH::Vec3::sZero(), JPH::Vec3::sZero());
                 break;
             }
             case ECk_Jolt_TeleportVelocityPolicy::KeepVelocity:
@@ -786,7 +786,7 @@ namespace ck
         // which the next capture+apply would sweep the entity back across. Reaping re-seeds it prev==curr.
         if (_JoltWorld != nullptr)
         {
-            _JoltWorld->Remove_PoseBufferEntry(InCurrent.Get_BodyId().GetIndexAndSequenceNumber());
+            _JoltWorld->Remove_PoseBufferEntry(InJoltBody.Get_BodyId().GetIndexAndSequenceNumber());
         }
     }
 
@@ -795,11 +795,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_JoltBody_Params& InParams,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetMotionType& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -821,7 +821,7 @@ namespace ck
             ? JPH::EActivation::DontActivate
             : JPH::EActivation::Activate;
 
-        BodyInterface.SetMotionType(InCurrent.Get_BodyId(), ck::jolt::Conv(NewMotionType), Activation);
+        BodyInterface.SetMotionType(InJoltBody.Get_BodyId(), ck::jolt::Conv(NewMotionType), Activation);
 
         InParams.Set_MotionType(NewMotionType);
 
@@ -872,11 +872,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_JoltBody_Params& InParams,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetCollisionProfile& InRequest) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -914,7 +914,7 @@ namespace ck
         if (Layer == JPH::cObjectLayerInvalid)
         { return; }
 
-        PhysicsSystem->GetBodyInterface().SetObjectLayer(InCurrent.Get_BodyId(), Layer);
+        PhysicsSystem->GetBodyInterface().SetObjectLayer(InJoltBody.Get_BodyId(), Layer);
 
         InParams.Set_CollisionProfileName(NewProfileName);
     }
@@ -954,7 +954,7 @@ namespace ck
             { continue; }
 
             auto Handle = _TransientEntity.Get_ValidHandle(Entity.Get_ID());
-            if (ck::Is_NOT_Valid(Handle) || NOT Handle.Has<ck::FFragment_JoltBody_Current>())
+            if (ck::Is_NOT_Valid(Handle) || NOT Handle.Has<ck::FFragment_JoltBody>())
             { continue; }
 
             // This loop reaches entities by id and writes to them without ever constructing a view, so the
@@ -964,7 +964,7 @@ namespace ck
             { continue; }
 
             // An entity may own more Jolt bodies than its JoltBody (e.g. a Probe), all sharing the entity id.
-            if (Handle.Get<ck::FFragment_JoltBody_Current>().Get_BodyId().GetIndexAndSequenceNumber() != Event.BodyIndexAndSeq)
+            if (Handle.Get<ck::FFragment_JoltBody>().Get_BodyId().GetIndexAndSequenceNumber() != Event.BodyIndexAndSeq)
             { continue; }
 
             switch (Event.NewState)
@@ -1025,11 +1025,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FFragment_Transform& InTransform) const
         -> void
     {
-        if (NOT InCurrent.Get_BodyAdded())
+        if (NOT InJoltBody.Get_BodyAdded())
         { return; }
 
         const auto PhysicsSystem = _PhysicsSystem.Pin();
@@ -1041,7 +1041,7 @@ namespace ck
         const auto& Transform = InTransform.Get_Transform();
 
         BodyInterface.MoveKinematic(
-            InCurrent.Get_BodyId(),
+            InJoltBody.Get_BodyId(),
             ck::jolt::Conv(Transform.GetLocation()),
             ck::jolt::Conv(Transform.GetRotation()),
             _PendingSimTime);
@@ -1115,7 +1115,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltBody_Params& InParams,
-            FFragment_JoltBody_Current& InCurrent) const
+            FFragment_JoltBody& InJoltBody) const
         -> void
     {
         // ASYNC GUARD: FGroup_EndPlay runs later in the SAME tick that kicked this frame's async step, and the
@@ -1128,7 +1128,7 @@ namespace ck
         auto ReleaseHandle = InHandle;
         ck::physics_ownership::Release_Jolt(ReleaseHandle);
 
-        const auto& BodyId = InCurrent.Get_BodyId();
+        const auto& BodyId = InJoltBody.Get_BodyId();
 
         // Setup never created a body (ensure-skip path, or no Jolt subsystem): nothing Jolt-side to free, and
         // demanding a PhysicsSystem here would turn that legal state into an ensure.

@@ -40,7 +40,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Acceleration_Params& InParams,
-            FFragment_Acceleration_Current& InCurrent) const
+            FFragment_Acceleration& InAcceleration) const
         -> void
     {
         // Setup treats this Durable fragment as an INPUT, never as something to re-derive. Add already seeded
@@ -73,7 +73,7 @@ namespace ck
         };
 
         const auto& Rotation = DoGetRotationFromEntityOrTargetEntity();
-        InCurrent._CurrentAcceleration = Rotation.RotateVector(InParams.Get_StartingAcceleration());
+        InAcceleration._CurrentAcceleration = Rotation.RotateVector(InParams.Get_StartingAcceleration());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -83,12 +83,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Acceleration_Current& InAcceleration,
+            const FFragment_Acceleration& InAcceleration,
             const FFragment_Acceleration_Target& InTarget) const
         -> void
     {
         auto TargetEntity  = InTarget.Get_Entity();
-        auto& TargetAcceleration = TargetEntity.Get<FFragment_Acceleration_Current>();
+        auto& TargetAcceleration = TargetEntity.Get<FFragment_Acceleration>();
 
         TargetAcceleration._CurrentAcceleration += InAcceleration.Get_CurrentAcceleration();
 
@@ -102,12 +102,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Acceleration_Current& InAcceleration,
+            const FFragment_Acceleration& InAcceleration,
             const FFragment_Acceleration_Target& InTarget) const
         -> void
     {
         auto TargetEntity = InTarget.Get_Entity();
-        auto& TargetAcceleration = TargetEntity.Get<FFragment_Acceleration_Current>();
+        auto& TargetAcceleration = TargetEntity.Get<FFragment_Acceleration>();
 
         TargetAcceleration._CurrentAcceleration -= InAcceleration._CurrentAcceleration;
     }
@@ -254,7 +254,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Acceleration_Current& InCurrent,
+            const FFragment_Acceleration& InAcceleration,
             const FFragment_ContainerRef_Acceleration& InContainerRef) const
         -> void
     {

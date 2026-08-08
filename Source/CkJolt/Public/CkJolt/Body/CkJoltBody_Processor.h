@@ -40,7 +40,7 @@ namespace ck
             FProcessor_JoltBody_Setup,
             FCk_Handle_JoltBody,
             ck::TReadOnly<FFragment_JoltBody_Params>,
-            ck::TReadWrite<FFragment_JoltBody_Current>,
+            ck::TReadWrite<FFragment_JoltBody>,
             FTag_JoltBody_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -62,7 +62,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltBody_Params& InParams,
-            FFragment_JoltBody_Current& InCurrent) -> void;
+            FFragment_JoltBody& InJoltBody) -> void;
 
     private:
         struct FPendingBody
@@ -96,7 +96,7 @@ namespace ck
             FProcessor_JoltBody_HandleRequests,
             FCk_Handle_JoltBody,
             ck::TReadWrite<FFragment_JoltBody_Params>,
-            ck::TReadWrite<FFragment_JoltBody_Current>,
+            ck::TReadWrite<FFragment_JoltBody>,
             ck::TReadWrite<FFragment_JoltBody_Requests>,
             TExclude<FTag_JoltBody_NeedsSetup>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -119,68 +119,68 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_JoltBody_Params& InParams,
-            FFragment_JoltBody_Current& InCurrent,
+            FFragment_JoltBody& InJoltBody,
             FFragment_JoltBody_Requests& InRequestsComp) const -> void;
 
     private:
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetSleepState& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddForce& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddForceAtLocation& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddTorque& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddImpulse& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddImpulseAtLocation& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_AddAngularImpulse& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetLinearVelocity& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetAngularVelocity& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_Teleport& InRequest) const -> void;
 
         // The two runtime mutators below also rewrite InParams, so they take it non-const.
@@ -188,14 +188,14 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_JoltBody_Params& InParams,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetMotionType& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
             FFragment_JoltBody_Params& InParams,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FCk_Request_JoltBody_SetCollisionProfile& InRequest) const -> void;
 
     private:
@@ -258,7 +258,7 @@ namespace ck
     class CKJOLT_API FProcessor_JoltBody_KinematicPush : public ck_exp::TProcessor<
             FProcessor_JoltBody_KinematicPush,
             FCk_Handle_JoltBody,
-            ck::TReadOnly<FFragment_JoltBody_Current>,
+            ck::TReadOnly<FFragment_JoltBody>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_JoltBody_KinematicFromECS,
             CK_IGNORE_PENDING_KILL>
@@ -277,7 +277,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_JoltBody_Current& InCurrent,
+            const FFragment_JoltBody& InJoltBody,
             const FFragment_Transform& InTransform) const -> void;
 
     private:
@@ -327,7 +327,7 @@ namespace ck
             FProcessor_JoltBody_EndPlay,
             FCk_Handle_JoltBody,
             ck::TReadOnly<FFragment_JoltBody_Params>,
-            ck::TReadWrite<FFragment_JoltBody_Current>,
+            ck::TReadWrite<FFragment_JoltBody>,
             CK_IF_END_PLAY>
     {
     public:
@@ -347,7 +347,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_JoltBody_Params& InParams,
-            FFragment_JoltBody_Current& InCurrent) const -> void;
+            FFragment_JoltBody& InJoltBody) const -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;

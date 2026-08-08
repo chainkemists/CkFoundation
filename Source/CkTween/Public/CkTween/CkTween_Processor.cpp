@@ -208,23 +208,23 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
-            FFragment_Tween_Current& InCurrent)
+            FFragment_Tween& InTween)
             -> void
     {
-        const auto DeltaTime = InDeltaT.Get_Seconds() * InCurrent.Get_TimeMultiplier();
-        InCurrent.Set_CurrentTime(InCurrent.Get_CurrentTime() + DeltaTime);
+        const auto DeltaTime = InDeltaT.Get_Seconds() * InTween.Get_TimeMultiplier();
+        InTween.Set_CurrentTime(InTween.Get_CurrentTime() + DeltaTime);
 
-        const auto Progress = DoCalculateProgress(InParams, InCurrent);
+        const auto Progress = DoCalculateProgress(InParams, InTween);
 
-        const auto InterpolatedValue = DoComputeValue(InHandle, InParams, InCurrent, Progress);
-        InCurrent.Set_CurrentValue(InterpolatedValue);
+        const auto InterpolatedValue = DoComputeValue(InHandle, InParams, InTween, Progress);
+        InTween.Set_CurrentValue(InterpolatedValue);
 
         UUtils_Signal_OnTweenUpdate::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Tween_Payload_OnUpdate{InterpolatedValue, Progress}));
 
-        if (InCurrent.Get_CurrentTime() >= InParams.Get_Duration())
+        if (InTween.Get_CurrentTime() >= InParams.Get_Duration())
         {
-            DoCheckLoopCompletion(InHandle, InParams, InCurrent);
+            DoCheckLoopCompletion(InHandle, InParams, InTween);
         }
     }
 
@@ -232,13 +232,13 @@ namespace ck
         FProcessor_Tween_Update::
         DoCalculateProgress(
             const FFragment_Tween_Params& InParams,
-            const FFragment_Tween_Current& InCurrent)
+            const FFragment_Tween& InTween)
         -> FCk_FloatRange_0to1
     {
         if (InParams.Get_Duration() <= 0.0f)
         { return UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(1.0f); }
 
-        const auto Progress = FMath::Clamp(InCurrent.Get_CurrentTime() / InParams.Get_Duration(), 0.0f, 1.0f);
+        const auto Progress = FMath::Clamp(InTween.Get_CurrentTime() / InParams.Get_Duration(), 0.0f, 1.0f);
         return UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(Progress);
     }
 
@@ -286,7 +286,7 @@ namespace ck
         DoComputeValue(
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
-            const FFragment_Tween_Current& InCurrent,
+            const FFragment_Tween& InTween,
             FCk_FloatRange_0to1 InProgress)
         -> FCk_TweenValue
     {
@@ -296,11 +296,11 @@ namespace ck
         if (InHandle.Has<FFragment_Tween_CurveDrive>())
         {
             return ck_tween::EvaluateCurveDrive(
-                InHandle.Get<FFragment_Tween_CurveDrive>(), InCurrent.Get_CurrentTime(), InProgress);
+                InHandle.Get<FFragment_Tween_CurveDrive>(), InTween.Get_CurrentTime(), InProgress);
         }
 
-        const auto& StartValueRef = InCurrent.Get_IsReversed() ? InParams.Get_EndValue() : InParams.Get_StartValue();
-        const auto& EndValueRef = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
+        const auto& StartValueRef = InTween.Get_IsReversed() ? InParams.Get_EndValue() : InParams.Get_StartValue();
+        const auto& EndValueRef = InTween.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
 
         const auto StartValue = DoResolveValue(StartValueRef, InParams.Get_Target());
         const auto EndValue = DoResolveValue(EndValueRef, InParams.Get_Target());
@@ -328,17 +328,17 @@ namespace ck
         DoCheckLoopCompletion(
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
-            FFragment_Tween_Current& InCurrent)
+            FFragment_Tween& InTween)
         -> void
     {
-        const auto CurrentLoop = InCurrent.Get_CurrentLoop() + 1;
+        const auto CurrentLoop = InTween.Get_CurrentLoop() + 1;
 
         if (const auto ShouldLoop = InParams.Get_LoopCount() == -1 || CurrentLoop < InParams.Get_LoopCount();
             NOT ShouldLoop)
         {
             InHandle.Remove<FTag_Tween_Playing>();
             InHandle.Add<FTag_Tween_Completed>();
-            InCurrent.Set_State(ECk_TweenState::Completed);
+            InTween.Set_State(ECk_TweenState::Completed);
 
             // A curve-driven tween's end is its curve sampled at the far end, NOT EndValue -- which
             // it never used. A shake curve whose last key is 0 therefore lands exactly on the
@@ -353,11 +353,11 @@ namespace ck
                         UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(1.0f));
                 }
 
-                const auto& FinalValueRef = InCurrent.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
+                const auto& FinalValueRef = InTween.Get_IsReversed() ? InParams.Get_StartValue() : InParams.Get_EndValue();
                 return DoResolveValue(FinalValueRef, InParams.Get_Target());
             }();
 
-            InCurrent.Set_CurrentValue(FinalValue);
+            InTween.Set_CurrentValue(FinalValue);
 
             // ApplyToTransform excludes FTag_Tween_Completed, so the final value must be applied here.
             ck_tween::ApplyValueToTransform(InHandle, FinalValue, InParams.Get_Target());
@@ -381,8 +381,8 @@ namespace ck
             return;
         }
 
-        InCurrent.Set_CurrentLoop(CurrentLoop);
-        InCurrent.Set_CurrentTime(0.0f);
+        InTween.Set_CurrentLoop(CurrentLoop);
+        InTween.Set_CurrentTime(0.0f);
 
         UUtils_Signal_OnTweenLoop::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Tween_Payload_OnLoop{CurrentLoop}));
@@ -391,17 +391,17 @@ namespace ck
         {
             case ECk_TweenLoopType::Restart:
             {
-                InCurrent.Set_IsReversed(false);
+                InTween.Set_IsReversed(false);
                 break;
             }
             case ECk_TweenLoopType::Yoyo:
             {
-                InCurrent.Set_IsReversed(NOT InCurrent.Get_IsReversed());
+                InTween.Set_IsReversed(NOT InTween.Get_IsReversed());
 
                 if (InParams.Get_YoyoDelay() > 0.0f)
                 {
                     InHandle.Add<FTag_Tween_InYoyoDelay>();
-                    InCurrent.Set_YoyoDelayTimer(InParams.Get_YoyoDelay());
+                    InTween.Set_YoyoDelayTimer(InParams.Get_YoyoDelay());
                 }
                 break;
             }
@@ -441,13 +441,13 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent)
+            FFragment_Tween& InTween)
             -> void
     {
-        const auto DeltaTime = InDeltaT.Get_Seconds() * InCurrent.Get_TimeMultiplier();
+        const auto DeltaTime = InDeltaT.Get_Seconds() * InTween.Get_TimeMultiplier();
 
-        const auto NewYoyoDelayTimer = InCurrent.Get_YoyoDelayTimer() - DeltaTime;
-        InCurrent.Set_YoyoDelayTimer(FMath::Max(0.0f, NewYoyoDelayTimer));
+        const auto NewYoyoDelayTimer = InTween.Get_YoyoDelayTimer() - DeltaTime;
+        InTween.Set_YoyoDelayTimer(FMath::Max(0.0f, NewYoyoDelayTimer));
 
         if (NewYoyoDelayTimer <= 0.0f)
         {
@@ -462,7 +462,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FFragment_Tween_Requests& InRequestsComp) const
         -> void
     {
@@ -473,7 +473,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                Result = DoHandleRequest(InHandle, InCurrent, InRequest);
+                Result = DoHandleRequest(InHandle, InTween, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -487,22 +487,22 @@ namespace ck
         FProcessor_Tween_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_Pause& InRequest)
         -> ECk_Request_OperationResult
     {
-        if (InCurrent.Get_State() != ECk_TweenState::Playing)
+        if (InTween.Get_State() != ECk_TweenState::Playing)
         {
             // Already paused: the caller's intent holds afterwards, so the no-op Succeeded. A
             // terminal tween can never become paused, so only that path genuinely Failed.
-            return InCurrent.Get_State() == ECk_TweenState::Paused
+            return InTween.Get_State() == ECk_TweenState::Paused
                 ? ECk_Request_OperationResult::Succeeded
                 : ECk_Request_OperationResult::Failed;
         }
 
         InHandle.Remove<FTag_Tween_Playing>();
         InHandle.Add<FTag_Tween_Paused>();
-        InCurrent.Set_State(ECk_TweenState::Paused);
+        InTween.Set_State(ECk_TweenState::Paused);
 
         return ECk_Request_OperationResult::Succeeded;
     }
@@ -511,22 +511,22 @@ namespace ck
         FProcessor_Tween_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_Resume& InRequest)
         -> ECk_Request_OperationResult
     {
-        if (InCurrent.Get_State() != ECk_TweenState::Paused)
+        if (InTween.Get_State() != ECk_TweenState::Paused)
         {
             // Already playing: the caller's intent holds afterwards, so the no-op Succeeded. A
             // terminal tween can never resume, so only that path genuinely Failed.
-            return InCurrent.Get_State() == ECk_TweenState::Playing
+            return InTween.Get_State() == ECk_TweenState::Playing
                 ? ECk_Request_OperationResult::Succeeded
                 : ECk_Request_OperationResult::Failed;
         }
 
         InHandle.Remove<FTag_Tween_Paused>();
         InHandle.Add<FTag_Tween_Playing>();
-        InCurrent.Set_State(ECk_TweenState::Playing);
+        InTween.Set_State(ECk_TweenState::Playing);
 
         return ECk_Request_OperationResult::Succeeded;
     }
@@ -535,7 +535,7 @@ namespace ck
         FProcessor_Tween_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_Stop& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -544,8 +544,8 @@ namespace ck
         // Reachable without misuse — requests are deferred, so a tween can finish between the call
         // and this handler. The tween is stopped either way, so the caller's intent holds and this
         // no-op reports Succeeded.
-        if (InCurrent.Get_State() != ECk_TweenState::Playing &&
-            InCurrent.Get_State() != ECk_TweenState::Paused)
+        if (InTween.Get_State() != ECk_TweenState::Playing &&
+            InTween.Get_State() != ECk_TweenState::Paused)
         { return ECk_Request_OperationResult::Succeeded; }
 
         InHandle.Try_Remove<FTag_Tween_Playing>();
@@ -553,10 +553,10 @@ namespace ck
         InHandle.Try_Remove<FTag_Tween_InYoyoDelay>();
 
         InHandle.Add<FTag_Tween_Completed>();
-        InCurrent.Set_State(ECk_TweenState::Cancelled);
+        InTween.Set_State(ECk_TweenState::Cancelled);
 
         UUtils_Signal_OnTweenComplete::Broadcast(InHandle,
-            MakePayload(InHandle, FCk_Tween_Payload_OnComplete{InCurrent.Get_CurrentValue()}));
+            MakePayload(InHandle, FCk_Tween_Payload_OnComplete{InTween.Get_CurrentValue()}));
 
         if (InRequest.Get_Behavior() == ECk_TweenStopBehavior::SelfDestruct)
         {
@@ -570,7 +570,7 @@ namespace ck
         FProcessor_Tween_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_Restart& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -578,13 +578,13 @@ namespace ck
         // curve-offset tween must NOT re-read the base. That is the spammable re-trigger case (hold
         // to shake), and re-reading mid-flight would capture the half-shaken pose as the new rest,
         // so every re-trigger would walk the prop a little further from where it started.
-        const auto WasPlaying = InCurrent.Get_State() == ECk_TweenState::Playing;
+        const auto WasPlaying = InTween.Get_State() == ECk_TweenState::Playing;
 
-        InCurrent.Set_CurrentTime(0.0f);
-        InCurrent.Set_YoyoDelayTimer(0.0f);
-        InCurrent.Set_State(ECk_TweenState::Playing);
-        InCurrent.Set_CurrentLoop(0);
-        InCurrent.Set_IsReversed(false);
+        InTween.Set_CurrentTime(0.0f);
+        InTween.Set_YoyoDelayTimer(0.0f);
+        InTween.Set_State(ECk_TweenState::Playing);
+        InTween.Set_CurrentLoop(0);
+        InTween.Set_IsReversed(false);
 
         // Restart is valid from ANY prior state, including Playing, so every state tag is cleared
         // first — otherwise the bare Add below ensures.
@@ -670,11 +670,11 @@ namespace ck
         FProcessor_Tween_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Tween_Current& InCurrent,
+            FFragment_Tween& InTween,
             const FCk_Request_Tween_SetTimeMultiplier& InRequest)
         -> ECk_Request_OperationResult
     {
-        InCurrent.Set_TimeMultiplier(FMath::Max(0.0f, InRequest.Get_Multiplier()));
+        InTween.Set_TimeMultiplier(FMath::Max(0.0f, InRequest.Get_Multiplier()));
 
         return ECk_Request_OperationResult::Succeeded;
     }
@@ -700,10 +700,10 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Tween_Params& InParams,
-            const FFragment_Tween_Current& InCurrent)
+            const FFragment_Tween& InTween)
             -> void
     {
-        ck_tween::ApplyValueToTransform(InHandle, InCurrent.Get_CurrentValue(), InParams.Get_Target());
+        ck_tween::ApplyValueToTransform(InHandle, InTween.Get_CurrentValue(), InParams.Get_Target());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -713,11 +713,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Tween_Current& InCurrent,
+            const FFragment_Tween& InTween,
             const FFragment_Tween_SplineFollow& InSplineFollow)
             -> void
     {
-        const auto Progress = InCurrent.Get_CurrentValue().GetAsFloat();
+        const auto Progress = InTween.Get_CurrentValue().GetAsFloat();
         ck_tween::ApplyProgressToSplineFollow(InHandle, InSplineFollow, Progress);
     }
 }

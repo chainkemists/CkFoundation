@@ -20,7 +20,7 @@ namespace ck
         using TFragment_Attribute<FCk_Handle_ByteAttribute, uint8, T_Component>::TFragment_Attribute;
     };
 
-    using FFragment_ByteAttribute_Current = TFragment_ByteAttribute<ECk_MinMaxCurrent::Current>;
+    using FFragment_ByteAttribute = TFragment_ByteAttribute<ECk_MinMaxCurrent::Current>;
     using FFragment_ByteAttribute_Min = TFragment_ByteAttribute<ECk_MinMaxCurrent::Min>;
     using FFragment_ByteAttribute_Max = TFragment_ByteAttribute<ECk_MinMaxCurrent::Max>;
 
@@ -33,7 +33,7 @@ namespace ck
         using TFragment_AttributeModifier<FCk_Handle_ByteAttributeModifier, TFragment_ByteAttribute<T_Component>>::TFragment_AttributeModifier;
     };
 
-    using FFragment_ByteAttributeModifier_Current = TFragment_ByteAttributeModifier<ECk_MinMaxCurrent::Current>;
+    using FFragment_ByteAttributeModifier = TFragment_ByteAttributeModifier<ECk_MinMaxCurrent::Current>;
     using FFragment_ByteAttributeModifier_Min = TFragment_ByteAttributeModifier<ECk_MinMaxCurrent::Min>;
     using FFragment_ByteAttributeModifier_Max = TFragment_ByteAttributeModifier<ECk_MinMaxCurrent::Max>;
 
@@ -44,9 +44,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_ByteAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_ByteAttribute>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_ByteAttribute_Current>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_ByteAttribute>& InPayload) const
         {
             return FCk_Payload_ByteAttribute_OnValueChanged
             {
@@ -98,9 +98,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnClamped<FFragment_ByteAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnClamped<FFragment_ByteAttribute>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnClamped<FFragment_ByteAttribute_Current>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnClamped<FFragment_ByteAttribute>& InPayload) const
         {
             return FCk_Payload_ByteAttribute_OnClamped
             {
@@ -116,10 +116,10 @@ namespace ck
 
     // Value Changed
     using UUtils_Signal_OnByteAttributeValueChanged_Current = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_ByteAttribute_Current, FCk_Delegate_ByteAttribute_OnValueChanged>;
+        FFragment_ByteAttribute, FCk_Delegate_ByteAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnByteAttributeValueChanged_Current_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_ByteAttribute_Current, FCk_Delegate_ByteAttribute_OnValueChanged>;
+        FFragment_ByteAttribute, FCk_Delegate_ByteAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnByteAttributeValueChanged_Min = TUtils_Signal_OnAttributeValueChanged<
         FFragment_ByteAttribute_Min, FCk_Delegate_ByteAttribute_OnValueChanged>;
@@ -135,16 +135,16 @@ namespace ck
 
     // Clamped
     using UUtils_Signal_OnByteAttributeMinClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_ByteAttribute_Current, FFragment_ByteAttribute_Min, FCk_Delegate_ByteAttribute_OnClamped>;
+        FFragment_ByteAttribute, FFragment_ByteAttribute_Min, FCk_Delegate_ByteAttribute_OnClamped>;
 
     using UUtils_Signal_OnByteAttributeMinClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_ByteAttribute_Current, FFragment_ByteAttribute_Min, FCk_Delegate_ByteAttribute_OnClamped>;
+        FFragment_ByteAttribute, FFragment_ByteAttribute_Min, FCk_Delegate_ByteAttribute_OnClamped>;
 
     using UUtils_Signal_OnByteAttributeMaxClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_ByteAttribute_Current, FFragment_ByteAttribute_Max, FCk_Delegate_ByteAttribute_OnClamped>;
+        FFragment_ByteAttribute, FFragment_ByteAttribute_Max, FCk_Delegate_ByteAttribute_OnClamped>;
 
     using UUtils_Signal_OnByteAttributeMaxClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_ByteAttribute_Current, FFragment_ByteAttribute_Max, FCk_Delegate_ByteAttribute_OnClamped>;
+        FFragment_ByteAttribute, FFragment_ByteAttribute_Max, FCk_Delegate_ByteAttribute_OnClamped>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

@@ -15,7 +15,7 @@ namespace ck
             FProcessor_VatProxy_Setup,
             FCk_Handle_VatProxy,
             TReadOnly<FFragment_VatProxy_Params>,
-            TReadWrite<FFragment_VatProxy_Current>,
+            TReadWrite<FFragment_VatProxy>,
             FTag_VatProxy_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -33,7 +33,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent) const -> void;
+            FFragment_VatProxy& InVatProxy) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ namespace ck
             FProcessor_VatProxy_HandleRequests,
             FCk_Handle_VatProxy,
             TReadOnly<FFragment_VatProxy_Params>,
-            TReadWrite<FFragment_VatProxy_Current>,
+            TReadWrite<FFragment_VatProxy>,
             TReadWrite<FFragment_VatProxy_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -61,7 +61,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent,
+            FFragment_VatProxy& InVatProxy,
             FFragment_VatProxy_Requests& InRequestsComp) const -> void;
 
     private:
@@ -69,21 +69,21 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent,
+            FFragment_VatProxy& InVatProxy,
             const FCk_Request_VatProxy_PlayClip& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent,
+            FFragment_VatProxy& InVatProxy,
             const FCk_Request_VatProxy_Stop& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent,
+            FFragment_VatProxy& InVatProxy,
             const FCk_Request_VatProxy_SetPlayRate& InRequest) -> bool;
     };
 
@@ -121,7 +121,7 @@ namespace ck
             FProcessor_VatProxy_FireSignals,
             FCk_Handle_VatProxy,
             TReadOnly<FFragment_VatProxy_Params>,
-            TReadWrite<FFragment_VatProxy_Current>,
+            TReadWrite<FFragment_VatProxy>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -137,7 +137,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VatProxy_Params& InParams,
-            FFragment_VatProxy_Current& InCurrent) const -> void;
+            FFragment_VatProxy& InVatProxy) const -> void;
     };
 }
 

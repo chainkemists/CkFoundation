@@ -44,7 +44,7 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_DebugShape_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_UpdateTransform,
             FCk_Handle_Pmg_DebugShape,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             ck::TReadOnly<FFragment_Transform>,
             FTag_Transform_Updated,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
@@ -61,7 +61,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FFragment_Transform& InTransform)
             -> void;
     };
@@ -73,7 +73,7 @@ namespace ck
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Lines>,
-            ck::TReadOnly<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_LinesNeedBaking,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
@@ -93,7 +93,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
             const FFragment_Pmg_DebugShape_Lines& InLines,
-            const FFragment_Pmg_DebugShape_Current& InCurrent)
+            const FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -131,14 +131,14 @@ namespace ck
             FProcessor_Pmg_DebugShape_CheckDuration,
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
             TExclude<FTag_Pmg_DebugShape_PersistentDuration>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
-        // Chained so the three writers of FFragment_Pmg_DebugShape_Current run in a fixed order.
+        // Chained so the three writers of FFragment_Pmg_DebugShape run in a fixed order.
         using RunAfter = TDepList<FGroup_Pmg_DebugShape_Setup, FProcessor_Pmg_DebugShape_UpdateTransform>;
         using TProcessor::TProcessor;
 
@@ -148,7 +148,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -160,7 +160,7 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_DebugShape_EndPlay : public ck_exp::TProcessor<
             FProcessor_Pmg_DebugShape_EndPlay,
             FCk_Handle_Pmg_DebugShape,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             CK_IF_END_PLAY>
     {
     public:
@@ -172,7 +172,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InDebugShape)
             -> void;
     };
 
@@ -182,7 +182,7 @@ namespace ck
             FProcessor_Pmg_DebugShape_HandleRequests,
             FCk_Handle_Pmg_DebugShape,
             ck::TReadWrite<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             ck::TReadWrite<FFragment_Pmg_DebugShape_Requests>,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -202,7 +202,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             FFragment_Pmg_DebugShape_Requests& InRequestsComp) const
             -> void;
 
@@ -211,7 +211,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetColor& InRequest)
             -> void;
 
@@ -219,7 +219,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetLineThickness& InRequest)
             -> void;
 
@@ -227,7 +227,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetDrawLines& InRequest)
             -> void;
 
@@ -235,7 +235,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetDuration& InRequest)
             -> void;
 
@@ -243,7 +243,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetRenderMode& InRequest)
             -> void;
 
@@ -251,7 +251,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent,
+            FFragment_Pmg_DebugShape& InDebugShape,
             const FCk_Request_Pmg_DebugShape_SetEnableCollision& InRequest)
             -> void;
     };

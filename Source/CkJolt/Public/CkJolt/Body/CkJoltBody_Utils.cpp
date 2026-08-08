@@ -39,7 +39,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_JoltBody_Params>(InParams);
-    InHandle.Add<ck::FFragment_JoltBody_Current>();
+    InHandle.Add<ck::FFragment_JoltBody>();
     InHandle.Add<ck::FFragment_JoltBody_StepPose>();
     InHandle.Add<ck::FTag_JoltBody_NeedsSetup>();
 
@@ -78,7 +78,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_JoltBody_UE, FCk_Handle_JoltBody, ck::FFragment_JoltBody_Current, ck::FFragment_JoltBody_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_JoltBody_UE, FCk_Handle_JoltBody, ck::FFragment_JoltBody, ck::FFragment_JoltBody_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -108,7 +108,7 @@ auto
         const FCk_Handle_JoltBody& InJoltBody)
     -> bool
 {
-    return InJoltBody.Get<ck::FFragment_JoltBody_Current>().Get_BodyAdded();
+    return InJoltBody.Get<ck::FFragment_JoltBody>().Get_BodyAdded();
 }
 
 auto
@@ -122,7 +122,7 @@ auto
     { return FVector::ZeroVector; }
 
     // Not-yet-added is a legitimate transient state (setup is deferred) — report zero, never ensure.
-    const auto& Current = InJoltBody.Get<ck::FFragment_JoltBody_Current>();
+    const auto& Current = InJoltBody.Get<ck::FFragment_JoltBody>();
     if (NOT Current.Get_BodyAdded())
     { return FVector::ZeroVector; }
 

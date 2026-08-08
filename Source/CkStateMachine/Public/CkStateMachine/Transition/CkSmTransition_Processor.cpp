@@ -48,7 +48,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmTransition_Current& InCurrent)
+            FFragment_SmTransition& InSmTransition)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_SmTransition_Evaluate);

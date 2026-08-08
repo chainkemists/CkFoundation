@@ -18,7 +18,7 @@ auto
         UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_Name());
 
         InNewEntity.Add<ck::FFragment_Sfx_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_Sfx_Current>();
+        InNewEntity.Add<ck::FFragment_Sfx>();
         InNewEntity.Add<ck::FTag_Sfx_NeedsSetup>();
     });
 
@@ -55,7 +55,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Sfx_UE, FCk_Handle_Sfx, ck::FFragment_Sfx_Current, ck::FFragment_Sfx_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Sfx_UE, FCk_Handle_Sfx, ck::FFragment_Sfx, ck::FFragment_Sfx_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -77,7 +77,7 @@ auto
 {
     // Resolved from the loader-rooted batch on Current — null until Setup has loaded the assets
     const auto& Params = InSfxHandle.Get<ck::FFragment_Sfx_Params>();
-    const auto& Current = InSfxHandle.Get<ck::FFragment_Sfx_Current>();
+    const auto& Current = InSfxHandle.Get<ck::FFragment_Sfx>();
 
     return ::Cast<USoundBase>(Current._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));
 }

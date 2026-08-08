@@ -14,7 +14,7 @@ namespace ck
             FProcessor_ShapeCylinder_HandleRequests,
             FCk_Handle_ShapeCylinder,
             ck::TReadOnly<FFragment_ShapeCylinder_Params>,
-            ck::TReadWrite<FFragment_ShapeCylinder_Current>,
+            ck::TReadWrite<FFragment_ShapeCylinder>,
             ck::TReadWrite<FFragment_ShapeCylinder_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
@@ -31,7 +31,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeCylinder_Params& InParams,
-            FFragment_ShapeCylinder_Current& InCurrent,
+            FFragment_ShapeCylinder& InShapeCylinder,
             FFragment_ShapeCylinder_Requests& InRequestsComp) const -> void;
 
     private:
@@ -39,7 +39,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_ShapeCylinder_Params& InParams,
-            FFragment_ShapeCylinder_Current& InCurrent,
+            FFragment_ShapeCylinder& InShapeCylinder,
             const FCk_Request_ShapeCylinder_UpdateDimensions& InRequest) -> void;
     };
 

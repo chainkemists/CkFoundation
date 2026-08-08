@@ -33,7 +33,7 @@ namespace ck
 
     // The retained immutable residue of FCk_PoiDisplayDefinition_Spec: the fields projectors read
     // straight off Params every update. _Tint and _SizeHint are DISSOLVED - they are seeded into
-    // FFragment_PoiDisplayDefinition_Current at Add and mutated only through the request processor,
+    // FFragment_PoiDisplayDefinition at Add and mutated only through the request processor,
     // so the authored copies would go stale the instant anything called Request_Set*. Leaving them
     // here made "never draw from Params" a rule the reader had to know; omitting them makes it a
     // compile error.
@@ -67,10 +67,10 @@ namespace ck
     //
     // Only the MUTABLE half of the visual state lives here. The icon is immutable post-Add and is read
     // straight off Params, so it is deliberately absent.
-    struct CKPOIDISPLAYDEFINITION_API FFragment_PoiDisplayDefinition_Current
+    struct CKPOIDISPLAYDEFINITION_API FFragment_PoiDisplayDefinition
     {
     public:
-        CK_GENERATED_BODY(FFragment_PoiDisplayDefinition_Current);
+        CK_GENERATED_BODY(FFragment_PoiDisplayDefinition);
 
     public:
         friend class FProcessor_PoiDisplayDefinition_HandleRequests;

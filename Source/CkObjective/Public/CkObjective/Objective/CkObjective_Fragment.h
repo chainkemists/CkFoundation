@@ -28,10 +28,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOBJECTIVE_API FFragment_Objective_Current
+    struct CKOBJECTIVE_API FFragment_Objective
     {
     public:
-        CK_GENERATED_BODY(FFragment_Objective_Current);
+        CK_GENERATED_BODY(FFragment_Objective);
 
     public:
         friend class FProcessor_Objective_Setup;

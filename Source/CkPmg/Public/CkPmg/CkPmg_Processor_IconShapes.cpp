@@ -13,7 +13,7 @@ auto
         HandleType InHandle,
         const FFragment_Pmg_Warning_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
     -> void
 {
     InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
@@ -117,7 +117,7 @@ auto
         HandleType InHandle,
         const FFragment_Pmg_Prohibition_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
     -> void
 {
     InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
@@ -204,7 +204,7 @@ auto
         HandleType InHandle,
         const FFragment_Pmg_NoEntry_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
     -> void
 {
     InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();
@@ -275,7 +275,7 @@ auto
         HandleType InHandle,
         const FFragment_Pmg_InfoCircle_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
     -> void
 {
     InHandle.Remove<FTag_Pmg_DebugShape_NeedsSetup>();

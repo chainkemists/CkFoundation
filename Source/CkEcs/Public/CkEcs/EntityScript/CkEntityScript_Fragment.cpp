@@ -7,14 +7,14 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKECS_API, entity_script, ck::FFragment_EntityScript_Current);
+CK_ECS_DEFINE_CALLSTACK_ANGELSCRIPT_UTILS(CKECS_API, entity_script, ck::FFragment_EntityScript);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    FFragment_EntityScript_Current::
-        FFragment_EntityScript_Current(
+    FFragment_EntityScript::
+        FFragment_EntityScript(
             UCk_EntityScript_UE* InScript)
         : _Script(InScript)
     {
@@ -58,9 +58,9 @@ namespace ck
         { return {}; }
 
         const auto* ConstructedScript = static_cast<const UCk_EntityScript_UE*>(nullptr);
-        if (InConstructedEntity.Has<FFragment_EntityScript_Current>())
+        if (InConstructedEntity.Has<FFragment_EntityScript>())
         {
-            ConstructedScript = InConstructedEntity.Get<FFragment_EntityScript_Current>().Get_Script().Get();
+            ConstructedScript = InConstructedEntity.Get<FFragment_EntityScript>().Get_Script().Get();
         }
 
         for (auto Index = 0; Index < Pending->Num(); ++Index)

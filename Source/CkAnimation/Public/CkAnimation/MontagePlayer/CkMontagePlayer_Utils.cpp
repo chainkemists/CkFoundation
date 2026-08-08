@@ -27,7 +27,7 @@ auto
     { return Cast(InHandle); }
 
     InHandle.Add<ck::FFragment_MontagePlayer_Params>(InParams);
-    InHandle.Add<ck::FFragment_MontagePlayer_Current>();
+    InHandle.Add<ck::FFragment_MontagePlayer>();
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
@@ -96,7 +96,7 @@ auto
         const FCk_Handle_MontagePlayer& InHandle)
     -> UAnimMontage*
 {
-    return InHandle.Get<ck::FFragment_MontagePlayer_Current>().Get_ActiveMontage().Get();
+    return InHandle.Get<ck::FFragment_MontagePlayer>().Get_ActiveMontage().Get();
 }
 
 auto
@@ -105,7 +105,7 @@ auto
         const FCk_Handle_MontagePlayer& InHandle)
     -> FName
 {
-    return InHandle.Get<ck::FFragment_MontagePlayer_Current>().Get_State().Get_SectionName();
+    return InHandle.Get<ck::FFragment_MontagePlayer>().Get_State().Get_SectionName();
 }
 
 auto
@@ -123,7 +123,7 @@ auto
         const FCk_Handle_MontagePlayer& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_MontagePlayer_Current>().Get_State().Get_PlayInstanceId();
+    return InHandle.Get<ck::FFragment_MontagePlayer>().Get_State().Get_PlayInstanceId();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

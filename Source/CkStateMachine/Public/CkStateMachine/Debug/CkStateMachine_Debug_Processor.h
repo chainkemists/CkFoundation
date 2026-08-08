@@ -18,7 +18,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_Sm_Debug : public ck_exp::TProcessor<
         FProcessor_Sm_Debug,
         FCk_Handle_StateMachine,
-        ck::TReadOnly<FFragment_Sm_Current>,
+        ck::TReadOnly<FFragment_Sm>,
         ck::TReadOnly<FFragment_Sm_Params>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -41,7 +41,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Sm_Current& InCurrent,
+            const FFragment_Sm& InSm,
             const FFragment_Sm_Params& InParams) -> void;
 
     private:
@@ -49,7 +49,7 @@ namespace ck
         DoCacheCurrentState(
             HandleType InHandle,
             FFragment_Sm_Debug& InDebug,
-            const FFragment_Sm_Current& InCurrent) -> void;
+            const FFragment_Sm& InSm) -> void;
 
     private:
         bool _LastTickToggleOn = false;

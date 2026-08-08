@@ -21,7 +21,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EulerIntegrator_Current& InIntegratorComp)
+            const FFragment_EulerIntegrator& InIntegratorComp)
         -> void
     {
         if (InIntegratorComp.Get_DistanceOffset().IsNearlyZero())

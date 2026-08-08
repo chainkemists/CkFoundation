@@ -22,10 +22,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKRESOLVER_API FFragment_ResolverSource_Current
+    struct CKRESOLVER_API FFragment_ResolverSource
     {
     public:
-        CK_GENERATED_BODY(FFragment_ResolverSource_Current);
+        CK_GENERATED_BODY(FFragment_ResolverSource);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

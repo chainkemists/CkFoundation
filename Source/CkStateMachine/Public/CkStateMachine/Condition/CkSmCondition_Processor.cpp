@@ -39,7 +39,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InScriptFragment)
+            const FFragment_EntityScript& InScriptFragment)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_SmCondition_Exit);
@@ -66,12 +66,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmCondition_Current& InCurrent)
+            FFragment_SmCondition& InSmCondition)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_SmCondition_ResetEveryFrame);
 
-        InCurrent._Result = ECk_SmConditionResult::Undetermined;
+        InSmCondition._Result = ECk_SmConditionResult::Undetermined;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -81,16 +81,16 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmCondition_Current& InCurrent)
+            FFragment_SmCondition& InSmCondition)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_SmCondition_PolledProc);
 
-        CK_ENSURE_IF_NOT(InHandle.Has<FFragment_EntityScript_Current>(),
-            TEXT("Polled condition entity [{}] is missing FFragment_EntityScript_Current — tag should not have been added without a script"), InHandle)
+        CK_ENSURE_IF_NOT(InHandle.Has<FFragment_EntityScript>(),
+            TEXT("Polled condition entity [{}] is missing FFragment_EntityScript — tag should not have been added without a script"), InHandle)
         { return; }
 
-        const auto& ScriptFragment = InHandle.Get<FFragment_EntityScript_Current>();
+        const auto& ScriptFragment = InHandle.Get<FFragment_EntityScript>();
         auto* Script = ScriptFragment.Get_Script().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Script),
@@ -120,7 +120,7 @@ namespace ck
         {
             SCOPE_CYCLE_COUNTER(STAT_SmCondition_Evaluate);
 
-            InCurrent._Result = ConditionScript->Evaluate(InHandle, InDeltaT)
+            InSmCondition._Result = ConditionScript->Evaluate(InHandle, InDeltaT)
                 ? ECk_SmConditionResult::Pass
                 : ECk_SmConditionResult::Fail;
         }

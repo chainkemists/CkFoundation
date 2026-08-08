@@ -22,7 +22,7 @@ namespace ck
         FProcessor_IskmProxy_Outline_Sync,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_Usf_OutlineResolved>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         TExclude<FTag_IskmProxy_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -45,7 +45,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_OutlineResolved& InResolved,
-            const FFragment_IskmProxy_Current& InCurrent) const -> void;
+            const FFragment_IskmProxy& InIskmProxy) const -> void;
 
     private:
         TWeakObjectPtr<UWorld> _World;
@@ -57,7 +57,7 @@ namespace ck
         FProcessor_IskmProxy_Outline_Remove,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_OutlineApplied>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         TExclude<FFragment_Usf_OutlineResolved>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -75,7 +75,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_OutlineApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ namespace ck
         FProcessor_IskmProxy_Outline_EndPlay,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_OutlineApplied>,
-        TReadOnly<FFragment_IskmProxy_Current>,
+        TReadOnly<FFragment_IskmProxy>,
         CK_IF_END_PLAY>
     {
     public:
@@ -102,7 +102,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_OutlineApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent) -> void;
+            const FFragment_IskmProxy& InIskmProxy) -> void;
     };
 }
 

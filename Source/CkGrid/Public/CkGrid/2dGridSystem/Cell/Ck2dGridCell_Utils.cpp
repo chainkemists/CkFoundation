@@ -19,7 +19,7 @@ auto
         ECk_EnableDisable InEnabledState)
     -> FCk_Handle_2dGridCell
 {
-    auto CellEntity = InParentGrid.Get<ck::FFragment_2dGridSystem_Current>().Request_CreateCellEntity();
+    auto CellEntity = InParentGrid.Get<ck::FFragment_2dGridSystem>().Request_CreateCellEntity();
     UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(CellEntity, InParentGrid);
 
     CellEntity.Add<ck::FFragment_2dGridCell_Params>(InParams);

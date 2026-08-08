@@ -21,18 +21,18 @@ namespace ck
             FCk_Time InDeltaT,
             FCk_Handle_VisibleRange InHandle,
             const FFragment_VisibleRange_Params& InParams,
-            FFragment_VisibleRange_Current& InCurrent)
+            FFragment_VisibleRange& InVisibleRange)
         -> void
     {
         cadence::TryConsume_FirstEval<FCk_Handle_VisibleRange>(InHandle);
 
-        InCurrent._FadeAlpha = UCk_Utils_VisibleRange_UE::Compute_FadeAlpha(
-            InParams.Get_MinRange(), InParams.Get_MaxRange(), InParams.Get_FadeBandCm(), InCurrent._Distance);
+        InVisibleRange._FadeAlpha = UCk_Utils_VisibleRange_UE::Compute_FadeAlpha(
+            InParams.Get_MinRange(), InParams.Get_MaxRange(), InParams.Get_FadeBandCm(), InVisibleRange._Distance);
 
         const auto IsOutOfRange = NOT UCk_Utils_VisibleRange_UE::Compute_IsInRange(
-            InParams.Get_MinRange(), InParams.Get_MaxRange(), InCurrent._Distance);
+            InParams.Get_MinRange(), InParams.Get_MaxRange(), InVisibleRange._Distance);
 
-        if (IsOutOfRange == InCurrent._IsOutOfRange)
+        if (IsOutOfRange == InVisibleRange._IsOutOfRange)
         { return; }
 
         visiblerange::VeryVerbose(TEXT("VisibleRange own-range boundary crossed for Entity [{}]. IsOutOfRange [{}]"), InHandle, IsOutOfRange);
@@ -48,7 +48,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VisibleRange_Current& InCurrent,
+            FFragment_VisibleRange& InVisibleRange,
             FFragment_VisibleRange_Requests& InRequests) const
         -> void
     {
@@ -61,7 +61,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            DoHandleRequest(InHandle, InCurrent, InRequest);
+            DoHandleRequest(InHandle, InVisibleRange, InRequest);
 
             Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
@@ -74,13 +74,13 @@ namespace ck
         FProcessor_VisibleRange_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisibleRange_Current& InCurrent,
+            FFragment_VisibleRange& InVisibleRange,
             const FCk_Request_VisibleRange_ApplyRangeState& InRequest)
         -> void
     {
         const auto NewIsOutOfRange = InRequest.Get_IsOutOfRange();
 
-        if (NewIsOutOfRange == InCurrent._IsOutOfRange)
+        if (NewIsOutOfRange == InVisibleRange._IsOutOfRange)
         { return; }
 
         const auto WasVisible = NOT InHandle.Has<FTag_VisibleRange_Hidden>();
@@ -90,7 +90,7 @@ namespace ck
         else
         { InHandle.Remove<FTag_VisibleRange_Hidden>(); }
 
-        InCurrent._IsOutOfRange = NewIsOutOfRange;
+        InVisibleRange._IsOutOfRange = NewIsOutOfRange;
 
         const auto IsVisible = NOT InHandle.Has<FTag_VisibleRange_Hidden>();
 
@@ -105,13 +105,13 @@ namespace ck
         FProcessor_VisibleRange_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisibleRange_Current& InCurrent,
+            FFragment_VisibleRange& InVisibleRange,
             const FCk_Request_VisibleRange_SetVisibility& InRequest)
         -> void
     {
         const auto NewIsExplicitlyHidden = InRequest.Get_ShowHide() == ECk_VisibleRange_ShowHide::Hide;
 
-        if (NewIsExplicitlyHidden == InCurrent._IsExplicitlyHidden)
+        if (NewIsExplicitlyHidden == InVisibleRange._IsExplicitlyHidden)
         { return; }
 
         const auto WasVisible = NOT InHandle.Has<FTag_VisibleRange_Hidden>();
@@ -121,7 +121,7 @@ namespace ck
         else
         { InHandle.Remove<FTag_VisibleRange_Hidden>(); }
 
-        InCurrent._IsExplicitlyHidden = NewIsExplicitlyHidden;
+        InVisibleRange._IsExplicitlyHidden = NewIsExplicitlyHidden;
 
         const auto IsVisible = NOT InHandle.Has<FTag_VisibleRange_Hidden>();
 

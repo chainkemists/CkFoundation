@@ -181,7 +181,7 @@ auto
         FName InTag)
     -> void
 {
-    auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag_Current>();
+    auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag>();
 
     const auto TagIndex = ck::algo::FindIndex(Current._Tags, [InTag](const ck::FEntityTagCount& InPair)
     {
@@ -239,7 +239,7 @@ auto
         FGameplayTag InTag)
     -> void
 {
-    auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag_Current>();
+    auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag>();
 
     const auto GameplayTagIndex = ck::algo::FindIndex(Current._GameplayTagCounts,
         [InTag](const ck::FEntityGameplayTagCount& InPair)
@@ -282,10 +282,10 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return false; }
 
-    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    if (NOT InHandle.Has<ck::FFragment_EntityTag>())
     { return false; }
 
-    const auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_EntityTag>();
 
     return ck::algo::AnyOf(Current._Tags, [InTag](const ck::FEntityTagCount& InPair)
     {
@@ -309,7 +309,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_EntityTag_Current>();
+    return ck::IsValid(InHandle) && InHandle.Has<ck::FFragment_EntityTag>();
 }
 
 auto
@@ -322,10 +322,10 @@ auto
         TEXT("Unable to get entity tags on Handle [{}] that is INVALID"), InHandle)
     { return {}; }
 
-    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    if (NOT InHandle.Has<ck::FFragment_EntityTag>())
     { return {}; }
 
-    const auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_EntityTag>();
 
     auto Container = FGameplayTagContainer{};
     for (const auto& GameplayTagCount : Current._GameplayTagCounts)
@@ -373,10 +373,10 @@ auto
         TEXT("Unable to get entity tags on Handle [{}] that is INVALID"), InHandle)
     { return {}; }
 
-    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    if (NOT InHandle.Has<ck::FFragment_EntityTag>())
     { return {}; }
 
-    const auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_EntityTag>();
     return ck::algo::Transform<TArray<FName>>(Current._Tags, [](const ck::FEntityTagCount& InPair)
     {
         return InPair._Name;
@@ -421,10 +421,10 @@ auto
         FName InTag)
     -> void
 {
-    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    if (NOT InHandle.Has<ck::FFragment_EntityTag>())
     { return; }
 
-    auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+    auto& Current = InHandle.Get<ck::FFragment_EntityTag>();
 
     const auto TagIndex = ck::algo::FindIndex(Current._Tags, [InTag](const ck::FEntityTagCount& InPair)
     {
@@ -450,7 +450,7 @@ auto
 
     if (NowEmpty)
     {
-        InHandle.Try_Remove<ck::FFragment_EntityTag_Current>();
+        InHandle.Try_Remove<ck::FFragment_EntityTag>();
     }
 
     if (WasRemoved)
@@ -505,10 +505,10 @@ auto
         FGameplayTag InTag)
     -> void
 {
-    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    if (NOT InHandle.Has<ck::FFragment_EntityTag>())
     { return; }
 
-    auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+    auto& Current = InHandle.Get<ck::FFragment_EntityTag>();
 
     const auto GameplayTagIndex = ck::algo::FindIndex(Current._GameplayTagCounts,
         [InTag](const ck::FEntityGameplayTagCount& InPair)
@@ -580,7 +580,7 @@ auto
 {
     // RestoreSet is the one applier that may run on an entity whose Construct seeded no EntityTag,
     // so Current can legitimately be absent here.
-    auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag_Current>();
+    auto& Current = InHandle.AddOrGet<ck::FFragment_EntityTag>();
 
     const auto Num = FMath::Min(InTagNames.Num(), InCounts.Num());
 
@@ -661,7 +661,7 @@ auto
 
     if (NowEmpty)
     {
-        InHandle.Try_Remove<ck::FFragment_EntityTag_Current>();
+        InHandle.Try_Remove<ck::FFragment_EntityTag>();
     }
 }
 

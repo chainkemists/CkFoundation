@@ -23,7 +23,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // The retained immutable residue of FCk_Compass_Spec. _CategoryFilter is DISSOLVED into
-    // FFragment_Compass_Current: it is request-mutable (Request_SetCategoryFilter), and it used to be
+    // FFragment_Compass: it is request-mutable (Request_SetCategoryFilter), and it used to be
     // mutated IN this fragment through the reflected Spec's own setter, which is the only reason
     // HandleRequests took Params ReadWrite. Same defect and same fix as CkMinimap (9347e2062).
     struct CKCOMPASS_API FFragment_Compass_Params
@@ -50,10 +50,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKCOMPASS_API FFragment_Compass_Current
+    struct CKCOMPASS_API FFragment_Compass
     {
     public:
-        CK_GENERATED_BODY(FFragment_Compass_Current);
+        CK_GENERATED_BODY(FFragment_Compass);
 
     public:
         friend class FProcessor_Compass_Setup;

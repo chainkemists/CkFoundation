@@ -39,7 +39,7 @@ auto
     auto NewInteractTargetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_InteractTarget>(InInteractTargetOwner);
 
     NewInteractTargetEntity.Add<ck::FFragment_InteractTarget_Params>(InParams);
-    NewInteractTargetEntity.Add<ck::FFragment_InteractTarget_Current>();
+    NewInteractTargetEntity.Add<ck::FFragment_InteractTarget>();
     NewInteractTargetEntity.Add<ck::FTag_InteractTarget_RequiresSetup>();
 
     UCk_Utils_GameplayLabel_UE::Add(NewInteractTargetEntity, InParams.Get_InteractionChannel());
@@ -113,7 +113,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_InteractTarget_UE, FCk_Handle_InteractTarget,
-    ck::FFragment_InteractTarget_Params, ck::FFragment_InteractTarget_Current)
+    ck::FFragment_InteractTarget_Params, ck::FFragment_InteractTarget)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -169,7 +169,7 @@ auto
         const FCk_Handle_InteractTarget& InHandle)
     -> ECk_EnableDisable
 {
-    return InHandle.Get<ck::FFragment_InteractTarget_Current>()._Enabled;
+    return InHandle.Get<ck::FFragment_InteractTarget>()._Enabled;
 }
 
 auto
@@ -179,7 +179,7 @@ auto
         ECk_EnableDisable InEnabled)
     -> void
 {
-    InHandle.Get<ck::FFragment_InteractTarget_Current>()._Enabled = InEnabled;
+    InHandle.Get<ck::FFragment_InteractTarget>()._Enabled = InEnabled;
 
     if (InEnabled == ECk_EnableDisable::Disable)
     {

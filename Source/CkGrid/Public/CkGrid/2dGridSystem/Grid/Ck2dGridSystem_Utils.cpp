@@ -36,7 +36,7 @@ auto
 
     auto PivotSceneNode = UCk_Utils_SceneNode_UE::Create(InHandle, InParams.Get_Pivot());
     UCk_Utils_Handle_UE::Set_DebugName(PivotSceneNode, TEXT("GridPivot"));
-    InHandle.Add<ck::FFragment_2dGridSystem_Current>(PivotSceneNode);
+    InHandle.Add<ck::FFragment_2dGridSystem>(PivotSceneNode);
     auto GridEntity = UCk_Utils_2dGridSystem_UE::Cast(InHandle);
 
     const auto& Dimensions = InParams.Get_Dimensions();
@@ -111,7 +111,7 @@ auto
         TEXT("Request_RecomposeFromSnapshot on [{}]: no restored 2dGridSystem Params"), InHandle)
     { return {}; }
 
-    CK_ENSURE_IF_NOT(NOT InHandle.Has<ck::FFragment_2dGridSystem_Current>(),
+    CK_ENSURE_IF_NOT(NOT InHandle.Has<ck::FFragment_2dGridSystem>(),
         TEXT("Request_RecomposeFromSnapshot on [{}]: grid already composed"), InHandle)
     { return {}; }
 
@@ -121,7 +121,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_2dGridSystem_UE, FCk_Handle_2dGridSystem,
-    ck::FFragment_2dGridSystem_Params, ck::FFragment_2dGridSystem_Current)
+    ck::FFragment_2dGridSystem_Params, ck::FFragment_2dGridSystem)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -141,7 +141,7 @@ auto
         ECk_LocalWorld InLocalWorld)
     -> FTransform
 {
-    const auto& Pivot = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
+    const auto& Pivot = InGrid.Get<ck::FFragment_2dGridSystem>().Get_Pivot();
     switch(InLocalWorld)
     {
         case ECk_LocalWorld::Local:
@@ -173,7 +173,7 @@ auto
         return;
     }
 
-    auto Pivot = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
+    auto Pivot = InGrid.Get<ck::FFragment_2dGridSystem>().Get_Pivot();
     UCk_Utils_SceneNode_UE::Request_UpdateOffset(Pivot,
         FCk_Request_SceneNode_UpdateRelativeTransform{FTransform{InRotationOffset, InLocationOffset}}, {});
 
@@ -251,7 +251,7 @@ auto
         }
     }
 
-    auto Pivot = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_Pivot();
+    auto Pivot = InGrid.Get<ck::FFragment_2dGridSystem>().Get_Pivot();
     auto NewTransform = UCk_Utils_SceneNode_UE::Get_Offset(Pivot);
 
     NewTransform.SetLocation(FVector(-PivotOffset.X, -PivotOffset.Y, NewTransform.GetLocation().Z));
@@ -300,7 +300,7 @@ auto
     { return {}; }
 
     const auto Index = UCk_Utils_Grid2D_UE::Get_CoordinateAsIndex(InCoordinate, Dimensions);
-    const auto& CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
+    const auto& CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem>().Get_CellRegistry();
 
     constexpr auto TransientEntityOffset = 1;
     const auto Entity = FCk_Entity{static_cast<FCk_Entity::IdType>(Index + TransientEntityOffset)};
@@ -758,7 +758,7 @@ auto
     CK_ENSURE_IF_NOT(IsGridValid, TEXT("ForEach_Cell: grid handle is invalid"))
     { return; }
 
-    auto CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem_Current>().Get_CellRegistry();
+    auto CellRegistry = InGrid.Get<ck::FFragment_2dGridSystem>().Get_CellRegistry();
 
     const auto IsCellRegistryValid = ck::IsValid(CellRegistry);
     CK_ENSURE_IF_NOT(IsCellRegistryValid, TEXT("ForEach_Cell: grid cell registry is invalid"))

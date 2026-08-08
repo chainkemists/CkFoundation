@@ -20,7 +20,7 @@ class CKGOAP_API FProcessor_Goap_Planner_Setup : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_Setup,
 	FCk_Handle_Goap_Planner,
 	ck::TReadOnly<FFragment_Goap_Planner_Params>,
-	ck::TReadWrite<FFragment_Goap_Planner_Current>,
+	ck::TReadWrite<FFragment_Goap_Planner>,
 	ck::TReadOnly<FFragment_Goap_Planner_ActionCatalogIndex>,
 	ck::TReadWrite<FFragment_Goap_Planner_WorldStateSource>,
 	ck::TReadWrite<FFragment_Goap_Planner_Goal>,
@@ -41,7 +41,7 @@ public:
 		TimeType InDeltaT,
 		HandleType InHandle,
 		const FFragment_Goap_Planner_Params& InParams,
-		FFragment_Goap_Planner_Current& InCurrent,
+		FFragment_Goap_Planner& InPlannerComp,
 		const FFragment_Goap_Planner_ActionCatalogIndex& InCatalogIndex,
 		FFragment_Goap_Planner_WorldStateSource& InWSSource,
 		FFragment_Goap_Planner_Goal& InGoal) -> void;
@@ -52,7 +52,7 @@ public:
 class CKGOAP_API FProcessor_Goap_Planner_UpdateActivation : public ck_exp::TProcessor<
 	FProcessor_Goap_Planner_UpdateActivation,
 	FCk_Handle_Goap_Planner,
-	ck::TReadOnly<FFragment_Goap_Planner_Current>,
+	ck::TReadOnly<FFragment_Goap_Planner>,
 	ck::TReadOnly<FFragment_Goap_Planner_PlanState>,
 	ck::TReadWrite<FFragment_Goap_Planner_Activation>,
 	FTag_Goap_Planner_ActivationDirty,
@@ -70,7 +70,7 @@ public:
 	ForEachEntity(
 		TimeType InDeltaT,
 		HandleType InHandle,
-		const FFragment_Goap_Planner_Current& InCurrent,
+		const FFragment_Goap_Planner& InPlannerComp,
 		const FFragment_Goap_Planner_PlanState& InPlanState,
 		FFragment_Goap_Planner_Activation& InActivation) const -> void;
 

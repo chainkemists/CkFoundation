@@ -45,10 +45,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOBJECTIVE_API FFragment_ObjectiveOwner_Current
+    struct CKOBJECTIVE_API FFragment_ObjectiveOwner
     {
     public:
-        CK_GENERATED_BODY(FFragment_ObjectiveOwner_Current);
+        CK_GENERATED_BODY(FFragment_ObjectiveOwner);
 
     public:
         friend class FProcessor_ObjectiveOwner_Setup;
@@ -62,7 +62,7 @@ namespace ck
         CK_PROPERTY_GET(_ObjectivesEntityCollection);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_ObjectiveOwner_Current, _ObjectivesEntityCollection);
+        CK_DEFINE_CONSTRUCTORS(FFragment_ObjectiveOwner, _ObjectivesEntityCollection);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

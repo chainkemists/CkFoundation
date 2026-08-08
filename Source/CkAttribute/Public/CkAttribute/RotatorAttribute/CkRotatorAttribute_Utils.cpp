@@ -153,7 +153,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_RotatorAttribute_UE, FCk_Handle_RotatorAttribute, ck::FFragment_RotatorAttribute_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_RotatorAttribute_UE, FCk_Handle_RotatorAttribute, ck::FFragment_RotatorAttribute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -916,7 +916,7 @@ auto
         const FCk_Handle& InModifierEntity)
     -> bool
 {
-    return InModifierEntity.Has_Any<ck::FFragment_RotatorAttributeModifier_Min, ck::FFragment_RotatorAttributeModifier_Current,ck::FFragment_RotatorAttributeModifier_Max>();
+    return InModifierEntity.Has_Any<ck::FFragment_RotatorAttributeModifier_Min, ck::FFragment_RotatorAttributeModifier,ck::FFragment_RotatorAttributeModifier_Max>();
 }
 
 auto

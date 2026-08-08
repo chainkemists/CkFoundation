@@ -28,7 +28,7 @@ public:
 private:
     using FloatAttribute_Utils_Min = ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Min>;
     using FloatAttribute_Utils_Max = ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Max>;
-    using FloatAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Current>;
+    using FloatAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_FloatAttribute>;
 
     using RecordOfFloatAttributes_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes>;
 
@@ -366,7 +366,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_FloatAttributeModifier);
 
 private:
-    using FloatAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Current>;
+    using FloatAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier>;
     using FloatAttributeModifier_Utils_Min     = ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Min>;
     using FloatAttributeModifier_Utils_Max     = ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Max>;
 

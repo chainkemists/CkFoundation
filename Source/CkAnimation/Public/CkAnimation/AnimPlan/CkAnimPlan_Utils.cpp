@@ -20,7 +20,7 @@ auto
     UCk_Utils_GameplayLabel_UE::Add(NewAnimPlanEntity, InParams.Get_AnimGoal());
 
     NewAnimPlanEntity.Add<ck::FFragment_AnimPlan_Params>(InParams);
-    auto& Current = NewAnimPlanEntity.Add<ck::FFragment_AnimPlan_Current>();
+    auto& Current = NewAnimPlanEntity.Add<ck::FFragment_AnimPlan>();
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
@@ -153,7 +153,7 @@ auto
     -> FCk_AnimPlan_Cluster
 {
     const auto& Params = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Params>();
-    const auto& Current = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Current>();
+    const auto& Current = InAnimPlanEntity.Get<ck::FFragment_AnimPlan>();
 
     return FCk_AnimPlan_Cluster{Params.Get_AnimGoal(), Current.Get_AnimCluster()};
 }
@@ -165,7 +165,7 @@ auto
     -> FCk_AnimPlan_State
 {
     const auto& Params = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Params>();
-    const auto& Current = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Current>();
+    const auto& Current = InAnimPlanEntity.Get<ck::FFragment_AnimPlan>();
 
     return FCk_AnimPlan_State{Params.Get_AnimGoal(), Current.Get_AnimCluster(), Current.Get_AnimState()};
 }

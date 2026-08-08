@@ -4,16 +4,16 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-ck::FFragment_2dGridSystem_Current::FFragment_2dGridSystem_Current() = default;
+ck::FFragment_2dGridSystem::FFragment_2dGridSystem() = default;
 
-ck::FFragment_2dGridSystem_Current::FFragment_2dGridSystem_Current(FCk_Handle_SceneNode InPivot)
+ck::FFragment_2dGridSystem::FFragment_2dGridSystem(FCk_Handle_SceneNode InPivot)
 	: _CellEcsWorld(MakeUnique<ck::FEcsWorld>())
 	, _Pivot(InPivot)
 {
 }
 
 auto
-	ck::FFragment_2dGridSystem_Current::
+	ck::FFragment_2dGridSystem::
 	Request_CreateCellEntity()
 	-> FCk_Handle
 {
@@ -23,7 +23,7 @@ auto
 }
 
 auto
-	ck::FFragment_2dGridSystem_Current::
+	ck::FFragment_2dGridSystem::
 	Get_CellRegistry() const
 	-> FCk_Registry
 {

@@ -48,10 +48,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSTATEMACHINE_API FFragment_SmCondition_Current
+    struct CKSTATEMACHINE_API FFragment_SmCondition
     {
     public:
-        CK_GENERATED_BODY(FFragment_SmCondition_Current);
+        CK_GENERATED_BODY(FFragment_SmCondition);
 
         friend class FProcessor_SmCondition_ResetEveryFrame;
         friend class FProcessor_SmCondition_Polled;

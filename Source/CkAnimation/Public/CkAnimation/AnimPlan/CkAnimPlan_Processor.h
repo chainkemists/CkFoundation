@@ -16,7 +16,7 @@ namespace ck
             FProcessor_AnimPlan_HandleRequests,
             FCk_Handle_AnimPlan,
             TReadOnly<FFragment_AnimPlan_Params>,
-            TReadWrite<FFragment_AnimPlan_Current>,
+            TReadWrite<FFragment_AnimPlan>,
             TReadWrite<FFragment_AnimPlan_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -34,20 +34,20 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AnimPlan_Params& InParams,
-            FFragment_AnimPlan_Current& InCurrent,
+            FFragment_AnimPlan& InAnimPlan,
             FFragment_AnimPlan_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_AnimPlan_Current& InCurrent,
+            FFragment_AnimPlan& InAnimPlan,
             const FCk_Request_AnimPlan_UpdateAnimCluster& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_AnimPlan_Current& InCurrent,
+            FFragment_AnimPlan& InAnimPlan,
             const FCk_Request_AnimPlan_UpdateAnimState& InRequest) -> void;
     };
 
@@ -80,7 +80,7 @@ namespace ck
             FProcessor_AnimPlan_Replicate,
             FCk_Handle_AnimPlan,
             TReadOnly<FFragment_AnimPlan_Params>,
-            TReadWrite<FFragment_AnimPlan_Current>,
+            TReadWrite<FFragment_AnimPlan>,
             FTag_AnimPlan_MayRequireReplication,
             CK_IGNORE_PENDING_KILL>
     {
@@ -103,7 +103,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AnimPlan_Params& InParams,
-            FFragment_AnimPlan_Current& InCurrent) const -> void;
+            FFragment_AnimPlan& InAnimPlan) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

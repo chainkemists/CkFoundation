@@ -39,9 +39,9 @@ auto
         InParams.Get_FixedBounds(),
         InParams.Get_MaxEntries(),
         InParams.Get_UpdateInterval());
-    InHandle.Add<ck::FFragment_Minimap_Current>();
+    InHandle.Add<ck::FFragment_Minimap>();
 
-    auto& Current = InHandle.Get<ck::FFragment_Minimap_Current>();
+    auto& Current = InHandle.Get<ck::FFragment_Minimap>();
     Current._RotationMode   = InParams.Get_RotationMode();
     Current._CategoryFilter = InParams.Get_CategoryFilter();
     Current._ViewExtent     = InParams.Get_ViewExtent();
@@ -105,7 +105,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Minimap_UE, FCk_Handle_Minimap, ck::FFragment_Minimap_Current, ck::FFragment_Minimap_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Minimap_UE, FCk_Handle_Minimap, ck::FFragment_Minimap, ck::FFragment_Minimap_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -159,7 +159,7 @@ auto
         const FCk_Handle_Minimap& InMinimap)
     -> TArray<FCk_Minimap_Entry>
 {
-    return InMinimap.Get<ck::FFragment_Minimap_Current>().Get_Entries();
+    return InMinimap.Get<ck::FFragment_Minimap>().Get_Entries();
 }
 
 auto
@@ -168,7 +168,7 @@ auto
         const FCk_Handle_Minimap& InMinimap)
     -> FCk_Handle
 {
-    return InMinimap.Get<ck::FFragment_Minimap_Current>().Get_Observer();
+    return InMinimap.Get<ck::FFragment_Minimap>().Get_Observer();
 }
 
 auto
@@ -177,7 +177,7 @@ auto
         const FCk_Handle_Minimap& InMinimap)
     -> FVector
 {
-    return InMinimap.Get<ck::FFragment_Minimap_Current>().Get_ViewOrigin();
+    return InMinimap.Get<ck::FFragment_Minimap>().Get_ViewOrigin();
 }
 
 auto
@@ -186,7 +186,7 @@ auto
         const FCk_Handle_Minimap& InMinimap)
     -> float
 {
-    return InMinimap.Get<ck::FFragment_Minimap_Current>().Get_ViewYawDegrees();
+    return InMinimap.Get<ck::FFragment_Minimap>().Get_ViewYawDegrees();
 }
 
 auto
@@ -195,7 +195,7 @@ auto
         const FCk_Handle_Minimap& InMinimap)
     -> float
 {
-    return InMinimap.Get<ck::FFragment_Minimap_Current>().Get_ViewExtent();
+    return InMinimap.Get<ck::FFragment_Minimap>().Get_ViewExtent();
 }
 
 auto
@@ -213,7 +213,7 @@ auto
         const FCk_Handle_Minimap& InMinimap)
     -> ECk_Minimap_RotationMode
 {
-    return InMinimap.Get<ck::FFragment_Minimap_Current>().Get_RotationMode();
+    return InMinimap.Get<ck::FFragment_Minimap>().Get_RotationMode();
 }
 
 auto
@@ -242,7 +242,7 @@ auto
     -> FVector2D
 {
     const auto& Params = InMinimap.Get<ck::FFragment_Minimap_Params>();
-    const auto& Current = InMinimap.Get<ck::FFragment_Minimap_Current>();
+    const auto& Current = InMinimap.Get<ck::FFragment_Minimap>();
 
     if (Params.Get_ProjectionMode() == ECk_Minimap_ProjectionMode::FixedBounds)
     {

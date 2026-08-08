@@ -21,7 +21,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle) && InHandle.Has_All<ck::FFragment_SmTransition_Params, ck::FFragment_SmTransition_Current>();
+    return ck::IsValid(InHandle) && InHandle.Has_All<ck::FFragment_SmTransition_Params, ck::FFragment_SmTransition>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(TransitionEntity,
         *ck::Format_UE(TEXT("Transition -> {}"), InTargetStateClass->GetFName()));
 
-    TransitionEntity.Add<ck::FFragment_SmTransition_Current>();
+    TransitionEntity.Add<ck::FFragment_SmTransition>();
     TransitionEntity.Add<ck::FFragment_SmTransition_Params>(
         ck::FFragment_SmTransition_Params{InTargetStateClass});
 
@@ -162,7 +162,7 @@ auto
         FCk_Handle_SmTransition& InTransition)
     -> FCk_Handle_SmTransition
 {
-    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Undetermined);
+    InTransition.Get<ck::FFragment_SmTransition>().Set_Result(ECk_SmTransitionResult::Undetermined);
     InTransition.AddOrGet<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
@@ -175,7 +175,7 @@ auto
         ECk_SmTransitionResult InResult)
     -> FCk_Handle_SmTransition
 {
-    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(InResult);
+    InTransition.Get<ck::FFragment_SmTransition>().Set_Result(InResult);
     InTransition.Try_Remove<ck::FTag_SmTransition_Evaluating>();
 
     return InTransition;
@@ -187,7 +187,7 @@ auto
         FCk_Handle_SmTransition& InTransition)
     -> FCk_Handle_SmTransition
 {
-    InTransition.Get<ck::FFragment_SmTransition_Current>().Set_Result(ECk_SmTransitionResult::Undetermined);
+    InTransition.Get<ck::FFragment_SmTransition>().Set_Result(ECk_SmTransitionResult::Undetermined);
 
     if (Get_IsFullyEventDriven(InTransition))
     { return InTransition; }
@@ -223,7 +223,7 @@ auto
         const FCk_Handle_SmTransition& InTransition)
     -> ECk_SmTransitionResult
 {
-    return InTransition.Get<ck::FFragment_SmTransition_Current>().Get_Result();
+    return InTransition.Get<ck::FFragment_SmTransition>().Get_Result();
 }
 
 auto

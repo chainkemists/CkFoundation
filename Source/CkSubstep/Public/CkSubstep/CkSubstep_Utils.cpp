@@ -14,7 +14,7 @@ auto
     -> FCk_Handle_Substep
 {
     InHandle.Add<ck::FFragment_Substep_Params>(InParams);
-    InHandle.Add<ck::FFragment_Substep_Current>();
+    InHandle.Add<ck::FFragment_Substep>();
     InHandle.Add<ck::FTag_Substep_FirstUpdate>();
 
     auto SubstepHandle = Cast(InHandle);
@@ -51,7 +51,7 @@ auto
     { return Add(InHandle, InParams); }
 
     MaybeExistingSubstepEntity.Replace<ck::FFragment_Substep_Params>(InParams);
-    MaybeExistingSubstepEntity.Replace<ck::FFragment_Substep_Current>();
+    MaybeExistingSubstepEntity.Replace<ck::FFragment_Substep>();
 
     if (NOT MaybeExistingSubstepEntity.Has<ck::FTag_Substep_FirstUpdate>())
     {
@@ -68,7 +68,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Substep_UE, FCk_Handle_Substep, ck::FFragment_Substep_Params, ck::FFragment_Substep_Current)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Substep_UE, FCk_Handle_Substep, ck::FFragment_Substep_Params, ck::FFragment_Substep)
 
 // --------------------------------------------------------------------------------------------------------------------
 

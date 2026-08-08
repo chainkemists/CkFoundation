@@ -26,10 +26,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPROJECTILE_API FFragment_BallisticMotion_Current
+    struct CKPROJECTILE_API FFragment_BallisticMotion
     {
     public:
-        CK_GENERATED_BODY(FFragment_BallisticMotion_Current);
+        CK_GENERATED_BODY(FFragment_BallisticMotion);
 
     public:
         friend class FProcessor_BallisticMotion_HandleRequests;

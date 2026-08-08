@@ -44,7 +44,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp) const
         -> void
     {
@@ -62,7 +62,7 @@ namespace ck
         if (ck::Is_NOT_Valid(MarkerAttachedEntityAndActor.Get_Actor()))
         { return; }
 
-        InCurrentComp._AttachedEntityAndActor = MarkerAttachedEntityAndActor;
+        InMarkerComp._AttachedEntityAndActor = MarkerAttachedEntityAndActor;
 
         const auto& Params        = InParamsComp;
         const auto& ShapeParams   = Params.Get_ShapeParams();
@@ -133,7 +133,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp,
             const FFragment_Marker_Requests& InRequestsComp) const
         -> void
@@ -146,7 +146,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InMarkerEntity, Result);
 
-                DoHandleRequest(InMarkerEntity, InCurrentComp, InParamsComp, InRequest);
+                DoHandleRequest(InMarkerEntity, InMarkerComp, InParamsComp, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -162,7 +162,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InMarkerEntity, Result);
 
-                DoHandleRequest(InMarkerEntity, InCurrentComp, InParamsComp, InRequest);
+                DoHandleRequest(InMarkerEntity, InMarkerComp, InParamsComp, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -178,25 +178,25 @@ namespace ck
         FProcessor_Marker_HandleRequests::
         DoHandleRequest(
             HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp,
             const FCk_Request_Marker_EnableDisable& InRequest)
         -> void
     {
         // Validate BEFORE committing the new state (mirrors the Sensor twin): writing _EnableDisable
         // first would make a failed request short-circuit every identical retry at the equality check.
-        const auto& Marker = InCurrentComp.Get_Marker().Get();
+        const auto& Marker = InMarkerComp.Get_Marker().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Marker), TEXT("Entity [{}] has an Invalid Marker stored!"), InMarkerEntity)
         { return; }
 
-        const auto& CurrentEnableDisable = InCurrentComp.Get_EnableDisable();
+        const auto& CurrentEnableDisable = InMarkerComp.Get_EnableDisable();
         const auto& NewEnableDisable = InRequest.Get_EnableDisable();
 
         if (CurrentEnableDisable == NewEnableDisable)
         { return; }
 
-        InCurrentComp._EnableDisable = NewEnableDisable;
+        InMarkerComp._EnableDisable = NewEnableDisable;
         const auto& CollisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
                                          ? ECollisionEnabled::QueryOnly
                                          : ECollisionEnabled::NoCollision;
@@ -207,14 +207,14 @@ namespace ck
         UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, NewEnableDisable);
         UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, CollisionEnabled);
 
-        UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, NewEnableDisable));
+        UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InMarkerComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, NewEnableDisable));
     }
 
     auto
         FProcessor_Marker_HandleRequests::
         DoHandleRequest(
             HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp,
             const FCk_Request_Marker_Resize& InRequest)
         -> void
@@ -230,7 +230,7 @@ namespace ck
             ParamsShapeType)
         { return; }
 
-        const auto& Marker = InCurrentComp.Get_Marker().Get();
+        const auto& Marker = InMarkerComp.Get_Marker().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Marker), TEXT("Entity [{}] has an Invalid Marker stored!"), InMarkerEntity)
         { return; }
@@ -314,24 +314,24 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
+            FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params& InParamsComp) const
         -> void
     {
-        if (InCurrentComp.Get_EnableDisable() == ECk_EnableDisable::Disable)
+        if (InMarkerComp.Get_EnableDisable() == ECk_EnableDisable::Disable)
         { return; }
 
-        InCurrentComp._EnableDisable = ECk_EnableDisable::Disable;
+        InMarkerComp._EnableDisable = ECk_EnableDisable::Disable;
 
         // Since we are in the teardown, we are ok if the marker object is pending kill
         constexpr auto IncludePendingKill = true;
-        const auto& Marker = InCurrentComp.Get_Marker().Get(IncludePendingKill);
+        const auto& Marker = InMarkerComp.Get_Marker().Get(IncludePendingKill);
 
         if (ck::Is_NOT_Valid(Marker, ck::IsValid_Policy_IncludePendingKill{}))
         {
             ck::overlap_body::Verbose(TEXT("Expected Marker Actor Component of Entity [{}] to still exist during the Teardown process. "
                 "However, it's possible that that the Actor and it's components were pulled from under us on Client machines due to the way "
-                "destruction is handled in Unreal."), InCurrentComp.Get_AttachedEntityAndActor().Get_Handle());
+                "destruction is handled in Unreal."), InMarkerComp.Get_AttachedEntityAndActor().Get_Handle());
             return;
         }
 
@@ -346,11 +346,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            const FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker& InMarkerComp,
             const FFragment_Marker_Params&  InParamsComp) const
         -> void
     {
-        const auto& MarkerAttachedEntityAndActor = InCurrentComp.Get_AttachedEntityAndActor();
+        const auto& MarkerAttachedEntityAndActor = InMarkerComp.Get_AttachedEntityAndActor();
         const auto& MarkerAttachedActor          = MarkerAttachedEntityAndActor.Get_Actor();
 
         CK_ENSURE_IF_NOT(ck::IsValid(MarkerAttachedActor),
@@ -358,7 +358,7 @@ namespace ck
             InMarkerEntity)
         { return; }
 
-        const auto& Marker = InCurrentComp.Get_Marker().Get();
+        const auto& Marker = InMarkerComp.Get_Marker().Get();
         CK_ENSURE_IF_NOT(ck::IsValid(Marker), TEXT("Invalid Marker Actor Component stored for Marker Entity [{}]"), InMarkerEntity)
         { return; }
 
@@ -390,8 +390,8 @@ namespace ck
         if (NOT UCk_Utils_OverlapBody_Settings_UE::Get_DebugPreviewAllMarkers())
         { return; }
 
-        _Registry.View<FFragment_Marker_Current, CK_IGNORE_PENDING_KILL>().ForEach(
-        [&](FCk_Entity InMarkerEntity, const FFragment_Marker_Current& InMarkerCurrent)
+        _Registry.View<FFragment_Marker, CK_IGNORE_PENDING_KILL>().ForEach(
+        [&](FCk_Entity InMarkerEntity, const FFragment_Marker& InMarkerCurrent)
         {
             if (ck::Is_NOT_Valid(InMarkerCurrent.Get_Marker()))
             { return; }

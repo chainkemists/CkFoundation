@@ -20,7 +20,7 @@ namespace ck
         using TFragment_Attribute<FCk_Handle_RotatorAttribute, FRotator, T_Component>::TFragment_Attribute;
     };
 
-    using FFragment_RotatorAttribute_Current = TFragment_RotatorAttribute<ECk_MinMaxCurrent::Current>;
+    using FFragment_RotatorAttribute = TFragment_RotatorAttribute<ECk_MinMaxCurrent::Current>;
     using FFragment_RotatorAttribute_Min = TFragment_RotatorAttribute<ECk_MinMaxCurrent::Min>;
     using FFragment_RotatorAttribute_Max = TFragment_RotatorAttribute<ECk_MinMaxCurrent::Max>;
 
@@ -33,7 +33,7 @@ namespace ck
         using TFragment_AttributeModifier<FCk_Handle_RotatorAttributeModifier, TFragment_RotatorAttribute<T_Component>>::TFragment_AttributeModifier;
     };
 
-    using FFragment_RotatorAttributeModifier_Current = TFragment_RotatorAttributeModifier<ECk_MinMaxCurrent::Current>;
+    using FFragment_RotatorAttributeModifier = TFragment_RotatorAttributeModifier<ECk_MinMaxCurrent::Current>;
     using FFragment_RotatorAttributeModifier_Min = TFragment_RotatorAttributeModifier<ECk_MinMaxCurrent::Min>;
     using FFragment_RotatorAttributeModifier_Max = TFragment_RotatorAttributeModifier<ECk_MinMaxCurrent::Max>;
 
@@ -87,9 +87,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_RotatorAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_RotatorAttribute>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_RotatorAttribute_Current>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_RotatorAttribute>& InPayload) const
         {
             return FCk_Payload_RotatorAttribute_OnValueChanged
             {
@@ -105,9 +105,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnClamped<FFragment_RotatorAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnClamped<FFragment_RotatorAttribute>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnClamped<FFragment_RotatorAttribute_Current>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnClamped<FFragment_RotatorAttribute>& InPayload) const
         {
             return FCk_Payload_RotatorAttribute_OnClamped
             {
@@ -159,10 +159,10 @@ namespace ck
 
     // Value Changed
     using UUtils_Signal_OnRotatorAttributeValueChanged_Current = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_RotatorAttribute_Current, FCk_Delegate_RotatorAttribute_OnValueChanged>;
+        FFragment_RotatorAttribute, FCk_Delegate_RotatorAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnRotatorAttributeValueChanged_Current_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_RotatorAttribute_Current, FCk_Delegate_RotatorAttribute_OnValueChanged>;
+        FFragment_RotatorAttribute, FCk_Delegate_RotatorAttribute_OnValueChanged>;
 
     using UUtils_Signal_OnRotatorAttributeValueChanged_Min = TUtils_Signal_OnAttributeValueChanged<
         FFragment_RotatorAttribute_Min, FCk_Delegate_RotatorAttribute_OnValueChanged>;
@@ -178,16 +178,16 @@ namespace ck
 
     // Clamped
     using UUtils_Signal_OnRotatorAttributeMinClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_RotatorAttribute_Current, FFragment_RotatorAttribute_Min, FCk_Delegate_RotatorAttribute_OnClamped>;
+        FFragment_RotatorAttribute, FFragment_RotatorAttribute_Min, FCk_Delegate_RotatorAttribute_OnClamped>;
 
     using UUtils_Signal_OnRotatorAttributeMinClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_RotatorAttribute_Current, FFragment_RotatorAttribute_Min, FCk_Delegate_RotatorAttribute_OnClamped>;
+        FFragment_RotatorAttribute, FFragment_RotatorAttribute_Min, FCk_Delegate_RotatorAttribute_OnClamped>;
 
     using UUtils_Signal_OnRotatorAttributeMaxClamped = TUtils_Signal_OnAttributeClamped<
-        FFragment_RotatorAttribute_Current, FFragment_RotatorAttribute_Max, FCk_Delegate_RotatorAttribute_OnClamped>;
+        FFragment_RotatorAttribute, FFragment_RotatorAttribute_Max, FCk_Delegate_RotatorAttribute_OnClamped>;
 
     using UUtils_Signal_OnRotatorAttributeMaxClamped_PostFireUnbind = TUtils_Signal_OnAttributeClamped_PostFireUnbind<
-        FFragment_RotatorAttribute_Current, FFragment_RotatorAttribute_Max, FCk_Delegate_RotatorAttribute_OnClamped>;
+        FFragment_RotatorAttribute, FFragment_RotatorAttribute_Max, FCk_Delegate_RotatorAttribute_OnClamped>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

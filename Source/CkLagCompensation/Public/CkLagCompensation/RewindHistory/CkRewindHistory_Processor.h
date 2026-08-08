@@ -18,7 +18,7 @@ namespace ck
             FProcessor_RewindHistory_Record,
             FCk_Handle_RewindHistory,
             ck::TReadOnly<FFragment_RewindHistory_Params>,
-            ck::TReadWrite<FFragment_RewindHistory_Current>,
+            ck::TReadWrite<FFragment_RewindHistory>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -33,7 +33,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_RewindHistory_Params& InParams,
-            FFragment_RewindHistory_Current& InCurrent) -> void;
+            FFragment_RewindHistory& InRewindHistory) -> void;
     };
 }
 

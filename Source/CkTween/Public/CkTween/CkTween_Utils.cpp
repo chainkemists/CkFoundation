@@ -957,7 +957,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Tween_UE, FCk_Handle_Tween,
-    ck::FFragment_Tween_Params, ck::FFragment_Tween_Current)
+    ck::FFragment_Tween_Params, ck::FFragment_Tween)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -967,7 +967,7 @@ auto
         const FCk_Handle_Tween& InTween)
     -> ECk_TweenState
 {
-    return InTween.Get<ck::FFragment_Tween_Current>().Get_State();
+    return InTween.Get<ck::FFragment_Tween>().Get_State();
 }
 
 auto
@@ -977,7 +977,7 @@ auto
     -> FCk_FloatRange_0to1
 {
     const auto& Params = InTween.Get<ck::FFragment_Tween_Params>();
-    const auto& Current = InTween.Get<ck::FFragment_Tween_Current>();
+    const auto& Current = InTween.Get<ck::FFragment_Tween>();
 
     if (Params.Get_Duration() <= 0.0f)
     { return UCk_Utils_FloatRange_UE::Make_FloatRange_0to1(1.0f); }
@@ -992,7 +992,7 @@ auto
         const FCk_Handle_Tween& InTween)
     -> FCk_TweenValue
 {
-    return InTween.Get<ck::FFragment_Tween_Current>().Get_CurrentValue();
+    return InTween.Get<ck::FFragment_Tween>().Get_CurrentValue();
 }
 
 auto
@@ -1001,7 +1001,7 @@ auto
         const FCk_Handle_Tween& InTween)
     -> int32
 {
-    return InTween.Get<ck::FFragment_Tween_Current>().Get_CurrentLoop();
+    return InTween.Get<ck::FFragment_Tween>().Get_CurrentLoop();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1215,7 +1215,7 @@ auto
 
     TweenEntity.Add<ck::FTag_Tween_Playing>();
     TweenEntity.Add<ck::FFragment_Tween_Params>(Params);
-    TweenEntity.Add<ck::FFragment_Tween_Current>(InStartValue);
+    TweenEntity.Add<ck::FFragment_Tween>(InStartValue);
 
     return Cast(TweenEntity);
 }

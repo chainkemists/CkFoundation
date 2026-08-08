@@ -121,7 +121,7 @@ namespace ck_pmg_processor_text_shapes_impl
         UProceduralMeshComponent* InMeshComponent,
         FCk_Handle InHandle,
         const ck::FFragment_Pmg_DebugShape_Common& InCommon,
-        ck::FFragment_Pmg_DebugShape_Current& InCurrent,
+        ck::FFragment_Pmg_DebugShape& InDebugShape,
         float InDeltaT)
         -> void
     {
@@ -160,7 +160,7 @@ namespace ck_pmg_processor_text_shapes_impl
         InMeshComponent->UpdateBounds();
         InMeshComponent->MarkRenderStateDirty();
 
-        InCurrent = ck::FFragment_Pmg_DebugShape_Current{InMeshComponent, FCk_Time{InDeltaT}};
+        InDebugShape = ck::FFragment_Pmg_DebugShape{InMeshComponent, FCk_Time{InDeltaT}};
         InHandle.Remove<ck::FTag_Pmg_DebugShape_NeedsSetup>();
 
         if (InHandle.Has<ck::FFragment_Transform>())
@@ -240,12 +240,12 @@ namespace ck
         HandleType InHandle,
         const FFragment_Pmg_Text_Params& InParams,
         const FFragment_Pmg_DebugShape_Common& InCommon,
-        FFragment_Pmg_DebugShape_Current& InCurrent)
+        FFragment_Pmg_DebugShape& InDebugShape)
         -> void
     {
         // The procmesh must exist BEFORE any early-out below: a no-font return would otherwise clear
         // NeedsSetup with an invalid mesh, which FProcessor_Pmg_DebugShape_UpdateTransform ensures on.
-        auto* Mesh = InCurrent._MeshComponent.Get();
+        auto* Mesh = InDebugShape._MeshComponent.Get();
         if (ck::Is_NOT_Valid(Mesh))
         {
             Mesh = ck_pmg_processor_text_shapes_impl::SetupMeshComponent_Text(InHandle);
@@ -269,7 +269,7 @@ namespace ck
         if (FaceChain.Num() == 0)
         {
             // No usable font (e.g. dedicated server): leave the shape inert with a valid empty mesh.
-            ck_pmg_processor_text_shapes_impl::FinalizeMeshComponent_Text(Mesh, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+            ck_pmg_processor_text_shapes_impl::FinalizeMeshComponent_Text(Mesh, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
             return;
         }
 
@@ -322,7 +322,7 @@ namespace ck
             }
         }
 
-        ck_pmg_processor_text_shapes_impl::FinalizeMeshComponent_Text(Mesh, InHandle, InCommon, InCurrent, InDeltaT.Get_Seconds());
+        ck_pmg_processor_text_shapes_impl::FinalizeMeshComponent_Text(Mesh, InHandle, InCommon, InDebugShape, InDeltaT.Get_Seconds());
 
         // ---- Wireframe tier ----
         if (InCommon.Get_DrawLines())

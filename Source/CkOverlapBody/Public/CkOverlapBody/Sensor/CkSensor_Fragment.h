@@ -29,10 +29,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOVERLAPBODY_API FFragment_Sensor_Current
+    struct CKOVERLAPBODY_API FFragment_Sensor
     {
     public:
-        CK_GENERATED_BODY(FFragment_Sensor_Current);
+        CK_GENERATED_BODY(FFragment_Sensor);
 
     public:
         friend class FProcessor_Sensor_HandleRequests;
@@ -57,7 +57,7 @@ namespace ck
         CK_PROPERTY_GET(_CurrentNonMarkerOverlaps);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Sensor_Current, _EnableDisable);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Sensor, _EnableDisable);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

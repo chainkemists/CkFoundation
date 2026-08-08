@@ -50,7 +50,7 @@ namespace ck
         InAvoidanceVolumeCache._Obstacles.Reset();
 
         auto ProbeHandle = InProbeRef.Get_ProbeChild();
-        if (ck::Is_NOT_Valid(ProbeHandle) || NOT ProbeHandle.Has<FFragment_Probe_Current>())
+        if (ck::Is_NOT_Valid(ProbeHandle) || NOT ProbeHandle.Has<FFragment_Probe>())
         { return; }
 
         // Runs on worker threads — reads only; the handle debug-info attach is thread-gated in FCk_Handle.
@@ -64,7 +64,7 @@ namespace ck
             ? UCk_Utils_Velocity_UE::Get_CurrentVelocity(SelfVelocity)
             : FVector::ZeroVector;
 
-        const auto& Overlaps = ProbeHandle.Get<FFragment_Probe_Current>().Get_CurrentOverlaps();
+        const auto& Overlaps = ProbeHandle.Get<FFragment_Probe>().Get_CurrentOverlaps();
         if (Overlaps.Num() == 0)
         { return; }
 

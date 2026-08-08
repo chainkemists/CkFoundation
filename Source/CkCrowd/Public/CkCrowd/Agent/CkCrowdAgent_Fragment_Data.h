@@ -500,7 +500,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 // Output of the steering processor: the velocity the agent WANTS this frame. The velocity-bridge
-// processor copies it into FFragment_Velocity_Current.
+// processor copies it into FFragment_Velocity.
 USTRUCT(BlueprintType)
 struct CKCROWD_API FCk_Fragment_CrowdAgent_DesiredVelocityData
 {
@@ -521,7 +521,7 @@ private:
     FVector _Velocity = FVector::ZeroVector;
 
     // Last frame's _Velocity AFTER AccelClamp ramped it, and the baseline for next tick's clamp.
-    // Independent of CkPhysics' FFragment_Velocity_Current, which has been min/max trimmed.
+    // Independent of CkPhysics' FFragment_Velocity, which has been min/max trimmed.
     UPROPERTY()
     FVector _LastVelocity = FVector::ZeroVector;
 

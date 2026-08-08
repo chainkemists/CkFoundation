@@ -25,11 +25,11 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AnimPlan_Params& InParams,
-            FFragment_AnimPlan_Current& InCurrent,
+            FFragment_AnimPlan& InAnimPlan,
             FFragment_AnimPlan_Requests& InRequestsComp) const
         -> void
     {
-        const auto PreviousCurrent = InCurrent;
+        const auto PreviousCurrent = InAnimPlan;
 
         InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_AnimPlan_Requests& InRequests)
         {
@@ -41,7 +41,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InAnimPlan, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -52,11 +52,11 @@ namespace ck
             }));
         });
 
-        if (PreviousCurrent.Get_AnimState() != InCurrent.Get_AnimState() || PreviousCurrent.Get_AnimCluster() != InCurrent.Get_AnimCluster())
+        if (PreviousCurrent.Get_AnimState() != InAnimPlan.Get_AnimState() || PreviousCurrent.Get_AnimCluster() != InAnimPlan.Get_AnimCluster())
         {
             const auto& AnimGoal = InParams.Get_AnimGoal();
             const auto PreviousAnimState = FCk_AnimPlan_State{AnimGoal, PreviousCurrent.Get_AnimCluster(), PreviousCurrent.Get_AnimState()};
-            const auto NewAnimState = FCk_AnimPlan_State{AnimGoal, InCurrent.Get_AnimCluster(), InCurrent.Get_AnimState()};
+            const auto NewAnimState = FCk_AnimPlan_State{AnimGoal, InAnimPlan.Get_AnimCluster(), InAnimPlan.Get_AnimState()};
 
             UUtils_Signal_AnimPlan_OnPlanChanged::Broadcast(InHandle, ck::MakePayload(InHandle, PreviousAnimState, NewAnimState));
 
@@ -68,31 +68,31 @@ namespace ck
         FProcessor_AnimPlan_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_AnimPlan_Current& InCurrent,
+            FFragment_AnimPlan& InAnimPlan,
             const FCk_Request_AnimPlan_UpdateAnimCluster& InRequest)
         -> void
     {
         const auto& NewAnimCluster = InRequest.Get_NewAnimCluster();
 
-        if (InCurrent.Get_AnimCluster() == NewAnimCluster)
+        if (InAnimPlan.Get_AnimCluster() == NewAnimCluster)
         { return; }
 
-        InCurrent._AnimCluster = NewAnimCluster;
-        InCurrent._AnimState = FGameplayTag::EmptyTag;
+        InAnimPlan._AnimCluster = NewAnimCluster;
+        InAnimPlan._AnimState = FGameplayTag::EmptyTag;
     }
 
     auto
         FProcessor_AnimPlan_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_AnimPlan_Current& InCurrent,
+            FFragment_AnimPlan& InAnimPlan,
             const FCk_Request_AnimPlan_UpdateAnimState& InRequest)
         -> void
     {
         const auto& NewAnimState = InRequest.Get_NewAnimState();
         const auto& NewAnimCluster = InRequest.Get_NewAnimCluster();
 
-        if (InCurrent.Get_AnimCluster() == NewAnimCluster && InCurrent.Get_AnimState() == NewAnimState)
+        if (InAnimPlan.Get_AnimCluster() == NewAnimCluster && InAnimPlan.Get_AnimState() == NewAnimState)
         { return; }
 
         if (ck::IsValid(NewAnimState))
@@ -104,8 +104,8 @@ namespace ck
             { return; }
         }
 
-        InCurrent._AnimCluster = NewAnimCluster;
-        InCurrent._AnimState = NewAnimState;
+        InAnimPlan._AnimCluster = NewAnimCluster;
+        InAnimPlan._AnimState = NewAnimState;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -140,7 +140,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AnimPlan_Params& InParams,
-            FFragment_AnimPlan_Current& InCurrent) const
+            FFragment_AnimPlan& InAnimPlan) const
         -> void
     {
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
@@ -149,7 +149,7 @@ namespace ck
             LifetimeOwner, [&](FCk_RepData_AnimPlans& Data)
         {
             const auto ToReplicate = FCk_AnimPlan_State{
-                InParams.Get_AnimGoal(), InCurrent.Get_AnimCluster(), InCurrent.Get_AnimState()};
+                InParams.Get_AnimGoal(), InAnimPlan.Get_AnimCluster(), InAnimPlan.Get_AnimState()};
 
             const auto Found = Data.AnimPlans.FindByPredicate([&](const FCk_AnimPlan_State& InElement)
             {

@@ -169,13 +169,13 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_Donut_Params& InParams,
-            FFragment_Pmg_Donut_Current& InCurrent)
+            FFragment_Pmg_Donut& InDonut)
             -> void
     {
         // Returning before the NeedsSetup removal below is what re-arms this Setup next tick; the
         // pending tag is not the dirty marker, so marking it cannot re-pump the frame.
-        if (InCurrent._MaterialPreloadBatch.Get_IsRequested() &&
-            NOT InCurrent._MaterialPreloadBatch.Get_IsReady())
+        if (InDonut._MaterialPreloadBatch.Get_IsRequested() &&
+            NOT InDonut._MaterialPreloadBatch.Get_IsReady())
         {
             InHandle.AddOrGet<FTag_Pmg_Donut_PendingAssetLoad>();
             return;
@@ -212,7 +212,7 @@ namespace ck
         MeshComponent->SetHiddenInGame(true);
         MeshComponent->SetCastShadow(true);
 
-        const auto& MaterialPreloadBatch = InCurrent._MaterialPreloadBatch;
+        const auto& MaterialPreloadBatch = InDonut._MaterialPreloadBatch;
         const auto MaterialPreloadFailed = MaterialPreloadBatch.Get_IsRequested() && MaterialPreloadBatch.Get_HasFailed();
 
         // Batch-first so the applied material is the one the batch roots; the resident-or-null
@@ -226,23 +226,23 @@ namespace ck
             InHandle, InParams.Get_Params().Get_Material().ToSoftObjectPath().ToString())
         { ResolvedMaterial = nullptr; }
 
-        InCurrent._InnerRadius = InParams.Get_Params().Get_InnerRadius();
-        InCurrent._OuterRadius = InParams.Get_Params().Get_OuterRadius();
-        InCurrent._Segments = InParams.Get_Params().Get_Segments();
-        InCurrent._FillAngle = InParams.Get_Params().Get_FillAngle();
-        InCurrent._Material = ResolvedMaterial;
-        InCurrent._EnableCollision = InParams.Get_Params().Get_EnableCollision();
-        InCurrent._RenderMode = InParams.Get_Params().Get_RenderMode();
+        InDonut._InnerRadius = InParams.Get_Params().Get_InnerRadius();
+        InDonut._OuterRadius = InParams.Get_Params().Get_OuterRadius();
+        InDonut._Segments = InParams.Get_Params().Get_Segments();
+        InDonut._FillAngle = InParams.Get_Params().Get_FillAngle();
+        InDonut._Material = ResolvedMaterial;
+        InDonut._EnableCollision = InParams.Get_Params().Get_EnableCollision();
+        InDonut._RenderMode = InParams.Get_Params().Get_RenderMode();
 
         ck_pmg::DoGenerateDonutMesh(
             MeshComponent,
-            InCurrent._InnerRadius,
-            InCurrent._OuterRadius,
-            InCurrent._Segments,
-            InCurrent._FillAngle,
-            InCurrent._RenderMode);
+            InDonut._InnerRadius,
+            InDonut._OuterRadius,
+            InDonut._Segments,
+            InDonut._FillAngle,
+            InDonut._RenderMode);
 
-        const auto ShouldBeVisible = InCurrent._RenderMode != ECk_Pmg_RenderMode::Hidden &&
+        const auto ShouldBeVisible = InDonut._RenderMode != ECk_Pmg_RenderMode::Hidden &&
                                      NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
         MeshComponent->SetVisibility(ShouldBeVisible, true);
         MeshComponent->SetHiddenInGame(NOT ShouldBeVisible);
@@ -250,9 +250,9 @@ namespace ck
         MeshComponent->SetRenderInMainPass(true);
         MeshComponent->SetRenderInDepthPass(true);
 
-        if (ck::IsValid(InCurrent._Material))
+        if (ck::IsValid(InDonut._Material))
         {
-            MeshComponent->SetMaterial(0, InCurrent._Material);
+            MeshComponent->SetMaterial(0, InDonut._Material);
         }
         else
         {
@@ -265,12 +265,12 @@ namespace ck
         }
 
         MeshComponent->SetCollisionEnabled(
-            InCurrent._EnableCollision ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+            InDonut._EnableCollision ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 
         MeshComponent->UpdateBounds();
         MeshComponent->MarkRenderStateDirty();
 
-        InCurrent._MeshComponent = MeshComponent;
+        InDonut._MeshComponent = MeshComponent;
 
         if (InHandle.Has<ck::FFragment_Transform>())
         {
@@ -293,7 +293,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_Donut_Current& InCurrent,
+            FFragment_Pmg_Donut& InDonut,
             const FFragment_Pmg_Donut_UpdateParams& InRequest) const
             -> void
     {
@@ -317,7 +317,7 @@ namespace ck
         auto Result = ECk_Request_OperationResult::Failed;
         const auto Guard = ck::MakeCompletionGuard(RequestCopy, InHandle, Result);
 
-        DoHandleRequest(InHandle, InCurrent, InRequest);
+        DoHandleRequest(InHandle, InDonut, InRequest);
 
         Result = ECk_Request_OperationResult::Succeeded;
 
@@ -329,13 +329,13 @@ namespace ck
         FProcessor_Pmg_Donut_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Pmg_Donut_Current& InCurrent,
+            FFragment_Pmg_Donut& InDonut,
             const FCk_Request_Pmg_Donut_UpdateParams& InRequest)
             -> void
     {
         ck::pmg::Verbose(TEXT("Handling update params request for Pmg Donut [{}]"), InHandle);
 
-        auto MeshComponent = InCurrent._MeshComponent.Get();
+        auto MeshComponent = InDonut._MeshComponent.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(MeshComponent),
             TEXT("Pmg Donut [{}] has invalid mesh component"), InHandle)
         { return; }
@@ -344,25 +344,25 @@ namespace ck
 
         if (InRequest.Get_InnerRadius().IsSet())
         {
-            InCurrent._InnerRadius = InRequest.Get_InnerRadius().GetValue();
+            InDonut._InnerRadius = InRequest.Get_InnerRadius().GetValue();
             NeedsRegeneration = true;
         }
 
         if (InRequest.Get_OuterRadius().IsSet())
         {
-            InCurrent._OuterRadius = InRequest.Get_OuterRadius().GetValue();
+            InDonut._OuterRadius = InRequest.Get_OuterRadius().GetValue();
             NeedsRegeneration = true;
         }
 
         if (InRequest.Get_Segments().IsSet())
         {
-            InCurrent._Segments = InRequest.Get_Segments().GetValue();
+            InDonut._Segments = InRequest.Get_Segments().GetValue();
             NeedsRegeneration = true;
         }
 
         if (InRequest.Get_FillAngle().IsSet())
         {
-            InCurrent._FillAngle = InRequest.Get_FillAngle().GetValue();
+            InDonut._FillAngle = InRequest.Get_FillAngle().GetValue();
             NeedsRegeneration = true;
         }
 
@@ -385,31 +385,31 @@ namespace ck
 
             if (ck::IsValid(ResolvedMaterial))
             {
-                InCurrent._Material = ResolvedMaterial;
-                MeshComponent->SetMaterial(0, InCurrent._Material);
-                InCurrent._MaterialPreloadBatch = PreloadBatch;
+                InDonut._Material = ResolvedMaterial;
+                MeshComponent->SetMaterial(0, InDonut._Material);
+                InDonut._MaterialPreloadBatch = PreloadBatch;
             }
         }
 
         if (InRequest.Get_EnableCollision().IsSet())
         {
-            InCurrent._EnableCollision = InRequest.Get_EnableCollision().GetValue();
+            InDonut._EnableCollision = InRequest.Get_EnableCollision().GetValue();
             MeshComponent->SetCollisionEnabled(
-                InCurrent._EnableCollision ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+                InDonut._EnableCollision ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
         }
 
         if (InRequest.Get_RenderMode().IsSet())
         {
-            const auto OldRenderMode = InCurrent._RenderMode;
-            InCurrent._RenderMode = InRequest.Get_RenderMode().GetValue();
+            const auto OldRenderMode = InDonut._RenderMode;
+            InDonut._RenderMode = InRequest.Get_RenderMode().GetValue();
 
-            const auto ShouldBeVisible = InCurrent._RenderMode != ECk_Pmg_RenderMode::Hidden &&
+            const auto ShouldBeVisible = InDonut._RenderMode != ECk_Pmg_RenderMode::Hidden &&
                                          NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
             MeshComponent->SetVisibility(ShouldBeVisible, true);
             MeshComponent->SetHiddenInGame(NOT ShouldBeVisible);
 
             const auto OldIsDoubleSided = OldRenderMode == ECk_Pmg_RenderMode::DoubleSided;
-            const auto NewIsDoubleSided = InCurrent._RenderMode == ECk_Pmg_RenderMode::DoubleSided;
+            const auto NewIsDoubleSided = InDonut._RenderMode == ECk_Pmg_RenderMode::DoubleSided;
             if (OldIsDoubleSided != NewIsDoubleSided)
             {
                 NeedsRegeneration = true;
@@ -418,18 +418,18 @@ namespace ck
 
         if (NeedsRegeneration)
         {
-            CK_ENSURE_IF_NOT(InCurrent._InnerRadius < InCurrent._OuterRadius,
+            CK_ENSURE_IF_NOT(InDonut._InnerRadius < InDonut._OuterRadius,
                 TEXT("Inner radius must be less than outer radius for Pmg Donut [{}]"), InHandle)
             { return; }
 
             MeshComponent->ClearAllMeshSections();
             ck_pmg::DoGenerateDonutMesh(
                 MeshComponent,
-                InCurrent._InnerRadius,
-                InCurrent._OuterRadius,
-                InCurrent._Segments,
-                InCurrent._FillAngle,
-                InCurrent._RenderMode);
+                InDonut._InnerRadius,
+                InDonut._OuterRadius,
+                InDonut._Segments,
+                InDonut._FillAngle,
+                InDonut._RenderMode);
 
             ck::pmg::Verbose(TEXT("Pmg Donut [{}] mesh regenerated"), InHandle);
         }
@@ -457,11 +457,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_Donut_Current& InCurrent,
+            FFragment_Pmg_Donut& InDonut,
             const FFragment_Transform& InTransform)
             -> void
     {
-        auto MeshComponent = InCurrent._MeshComponent.Get();
+        auto MeshComponent = InDonut._MeshComponent.Get();
         // Tolerate a torn-down mesh (reset by EndPlay during teardown) — skip gracefully.
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
@@ -477,14 +477,14 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Pmg_Donut_Current& InCurrent)
+            const FFragment_Pmg_Donut& InDonut)
             -> void
     {
-        auto* MeshComponent = InCurrent._MeshComponent.Get();
+        auto* MeshComponent = InDonut._MeshComponent.Get();
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 
-        const auto ShouldBeVisible = InCurrent._RenderMode != ECk_Pmg_RenderMode::Hidden &&
+        const auto ShouldBeVisible = InDonut._RenderMode != ECk_Pmg_RenderMode::Hidden &&
                                      NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode();
         MeshComponent->SetVisibility(ShouldBeVisible, true);
         MeshComponent->SetHiddenInGame(NOT ShouldBeVisible);
@@ -498,12 +498,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Pmg_Donut_Current& InCurrent)
+            FFragment_Pmg_Donut& InDonut)
             -> void
     {
         ck::pmg::Verbose(TEXT("Tearing down Pmg Donut [{}]"), InHandle);
 
-        auto MeshComponent = InCurrent._MeshComponent.Get();
+        auto MeshComponent = InDonut._MeshComponent.Get();
         if (ck::IsValid(MeshComponent))
         {
             // unpin before DestroyComponent (destroy garbage-marks the object, failing release's validity check)
@@ -511,7 +511,7 @@ namespace ck
             MeshComponent->DestroyComponent();
         }
 
-        InCurrent._MeshComponent.Reset();
+        InDonut._MeshComponent.Reset();
     }
 }
 

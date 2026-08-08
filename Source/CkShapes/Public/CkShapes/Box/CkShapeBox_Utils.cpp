@@ -21,7 +21,7 @@ auto
     }
 
     InHandle.Add<ck::FFragment_ShapeBox_Params>(InParams);
-    InHandle.Add<ck::FFragment_ShapeBox_Current>(InParams.Get_InitialDimensions());
+    InHandle.Add<ck::FFragment_ShapeBox>(InParams.Get_InitialDimensions());
 
     return Cast(InHandle);
 }
@@ -42,7 +42,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ShapeBox_UE, FCk_Handle_ShapeBox,
-    ck::FFragment_ShapeBox_Params, ck::FFragment_ShapeBox_Current)
+    ck::FFragment_ShapeBox_Params, ck::FFragment_ShapeBox)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -67,7 +67,7 @@ auto
         const FCk_Handle_ShapeBox& InShapeBox)
         -> FCk_ShapeBox_Dimensions
 {
-    return InShapeBox.Get<ck::FFragment_ShapeBox_Current>().Get_Dimensions();
+    return InShapeBox.Get<ck::FFragment_ShapeBox>().Get_Dimensions();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -18,7 +18,7 @@ namespace ck
     class CKGRID_API FProcessor_2dGridOccupancy_StampCells : public ck_exp::TProcessor<
             FProcessor_2dGridOccupancy_StampCells,
             FCk_Handle_2dGridSystem,
-            TReadWrite<FFragment_2dGridOccupancy_Current>,
+            TReadWrite<FFragment_2dGridOccupancy>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -32,7 +32,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_2dGridOccupancy_Current& InCurrent) const -> void;
+            FFragment_2dGridOccupancy& In2dGridOccupancy) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

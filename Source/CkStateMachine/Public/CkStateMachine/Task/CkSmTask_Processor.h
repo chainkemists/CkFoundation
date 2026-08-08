@@ -21,8 +21,8 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmTask_Tick : public ck_exp::TProcessor<
         FProcessor_SmTask_Tick,
         FCk_Handle_SmTask,
-        TReadWrite<FFragment_SmTask_Current>,
-        TReadOnly<FFragment_EntityScript_Current>,
+        TReadWrite<FFragment_SmTask>,
+        TReadOnly<FFragment_EntityScript>,
         FTag_SmTask_Tick,
         FTag_SmTask_Active,
         TExclude<FTag_SmTask_PendingExit>,
@@ -40,8 +40,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmTask_Current& InCurrent,
-            const FFragment_EntityScript_Current& InScriptFragment) -> void;
+            FFragment_SmTask& InSmTask,
+            const FFragment_EntityScript& InScriptFragment) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmTask_FireFinishedSignal : public ck_exp::TProcessor<
         FProcessor_SmTask_FireFinishedSignal,
         FCk_Handle_SmTask,
-        TReadOnly<FFragment_SmTask_Current>,
+        TReadOnly<FFragment_SmTask>,
         FTag_SmTask_ResultDirty,
         CK_IGNORE_PENDING_KILL>
     {
@@ -69,7 +69,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_SmTask_Current& InCurrent) -> void;
+            const FFragment_SmTask& InSmTask) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -79,7 +79,7 @@ namespace ck
         FProcessor_SmTask_Exit,
         FCk_Handle_SmTask,
         FTag_SmTask_PendingExit,
-        TReadOnly<FFragment_EntityScript_Current>,
+        TReadOnly<FFragment_EntityScript>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -97,7 +97,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InScriptFragment) -> void;
+            const FFragment_EntityScript& InScriptFragment) -> void;
     };
 }
 

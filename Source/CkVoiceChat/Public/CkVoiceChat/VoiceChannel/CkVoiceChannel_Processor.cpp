@@ -33,7 +33,7 @@ namespace ck_voice_channel_processor
     auto
     Push_ControlPlane(
         FCk_Handle_VoiceChannel InChannel,
-        const ck::FFragment_VoiceChannel_Current& InCurrent) -> void
+        const ck::FFragment_VoiceChannel& InVoiceChannel) -> void
     {
         auto HostEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InChannel);
 
@@ -47,19 +47,19 @@ namespace ck_voice_channel_processor
                 const auto& ChannelName = InChannel.Get<ck::FFragment_VoiceChannel_Params>().Get_ChannelName();
 
                 auto& Entry = InRepData.FindOrAdd_Channel(ChannelName);
-                Entry.Set_ChannelIdx(InCurrent.Get_ChannelIdx());
+                Entry.Set_ChannelIdx(InVoiceChannel.Get_ChannelIdx());
 
                 auto Members = TArray<FCk_RepData_VoiceChat_Member>{};
-                Members.Reserve(InCurrent.Get_Members().Num());
-                for (const auto& [MemberHandle, MemberFlags] : InCurrent.Get_Members())
+                Members.Reserve(InVoiceChannel.Get_Members().Num());
+                for (const auto& [MemberHandle, MemberFlags] : InVoiceChannel.Get_Members())
                 {
                     Members.Emplace(FCk_RepData_VoiceChat_Member{MemberHandle, MemberFlags});
                 }
                 Entry.Set_Members(MoveTemp(Members));
 
                 auto Muted = TArray<FCk_Handle>{};
-                Muted.Reserve(InCurrent.Get_ServerMuted().Num());
-                for (const auto& MutedHandle : InCurrent.Get_ServerMuted())
+                Muted.Reserve(InVoiceChannel.Get_ServerMuted().Num());
+                for (const auto& MutedHandle : InVoiceChannel.Get_ServerMuted())
                 {
                     Muted.Emplace(MutedHandle);
                 }
@@ -96,7 +96,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
             const FFragment_VoiceChannel_Params& InParams,
-            FFragment_VoiceChannel_Current& InCurrent)
+            FFragment_VoiceChannel& InVoiceChannel)
         -> void
     {
         // A spatializing channel that authors no attenuation falls back to the module default -
@@ -117,7 +117,7 @@ namespace ck
         // to load. Resolution runs on EVERY machine - clients apply the config at playback.
         if (ck::IsValid(Attenuation) || ck::IsValid(SourceEffectChain))
         {
-            if (NOT InCurrent._LoadedAudioAssets.Get_IsRequested())
+            if (NOT InVoiceChannel._LoadedAudioAssets.Get_IsRequested())
             {
                 auto PathsToLoad = TArray<FSoftObjectPath>{};
 
@@ -126,25 +126,25 @@ namespace ck
                 if (ck::IsValid(SourceEffectChain))
                 { PathsToLoad.Emplace(SourceEffectChain.ToSoftObjectPath()); }
 
-                InCurrent._LoadedAudioAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+                InVoiceChannel._LoadedAudioAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
                     TEXT("VoiceChannel.Setup"), PathsToLoad);
             }
 
-            if (NOT InCurrent._LoadedAudioAssets.Get_IsReady())
+            if (NOT InVoiceChannel._LoadedAudioAssets.Get_IsReady())
             {
                 InVoiceChannelEntity.AddOrGet<FTag_VoiceChannel_PendingAssetLoad>();
                 return;
             }
 
             const auto ResolvedAttenuation = ck::IsValid(Attenuation)
-                ? Cast<USoundAttenuation>(InCurrent._LoadedAudioAssets.Get_ResolvedObject(Attenuation.ToSoftObjectPath()))
+                ? Cast<USoundAttenuation>(InVoiceChannel._LoadedAudioAssets.Get_ResolvedObject(Attenuation.ToSoftObjectPath()))
                 : nullptr;
             const auto ResolvedSourceEffectChain = ck::IsValid(SourceEffectChain)
-                ? Cast<USoundEffectSourcePresetChain>(InCurrent._LoadedAudioAssets.Get_ResolvedObject(SourceEffectChain.ToSoftObjectPath()))
+                ? Cast<USoundEffectSourcePresetChain>(InVoiceChannel._LoadedAudioAssets.Get_ResolvedObject(SourceEffectChain.ToSoftObjectPath()))
                 : nullptr;
 
             const auto EveryAuthoredAssetResolved =
-                NOT InCurrent._LoadedAudioAssets.Get_HasFailed() &&
+                NOT InVoiceChannel._LoadedAudioAssets.Get_HasFailed() &&
                 (ck::Is_NOT_Valid(Attenuation) || ck::IsValid(ResolvedAttenuation)) &&
                 (ck::Is_NOT_Valid(SourceEffectChain) || ck::IsValid(ResolvedSourceEffectChain));
 
@@ -153,16 +153,16 @@ namespace ck
                      "(Attenuation [{}], SourceEffectChain [{}]) - playback on this machine falls back to module defaults"),
                 InVoiceChannelEntity, Attenuation.ToSoftObjectPath(), SourceEffectChain.ToSoftObjectPath())
             {
-                InCurrent._LoadedAudioAssets = {};
-                InCurrent._ResolvedAttenuation = nullptr;
-                InCurrent._ResolvedSourceEffectChain = nullptr;
+                InVoiceChannel._LoadedAudioAssets = {};
+                InVoiceChannel._ResolvedAttenuation = nullptr;
+                InVoiceChannel._ResolvedSourceEffectChain = nullptr;
                 InVoiceChannelEntity.Try_Remove<FTag_VoiceChannel_PendingAssetLoad>();
                 InVoiceChannelEntity.Remove<MarkedDirtyBy>();
                 return;
             }
 
-            InCurrent._ResolvedAttenuation = ResolvedAttenuation;
-            InCurrent._ResolvedSourceEffectChain = ResolvedSourceEffectChain;
+            InVoiceChannel._ResolvedAttenuation = ResolvedAttenuation;
+            InVoiceChannel._ResolvedSourceEffectChain = ResolvedSourceEffectChain;
             InVoiceChannelEntity.Try_Remove<FTag_VoiceChannel_PendingAssetLoad>();
         }
 
@@ -180,7 +180,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
             const FFragment_VoiceChannel_Params& InParams,
-            FFragment_VoiceChannel_Current& InCurrent)
+            FFragment_VoiceChannel& InVoiceChannel)
         -> void
     {
         InVoiceChannelEntity.Remove<MarkedDirtyBy>();
@@ -197,12 +197,12 @@ namespace ck
         { return; }
 
         const auto NewIdx = static_cast<uint8>(Registry._NextIdx++);
-        InCurrent._ChannelIdx = NewIdx;
+        InVoiceChannel._ChannelIdx = NewIdx;
 
         Registry._Entries.Emplace(FCk_VoiceChat_ChannelRegistryEntry{
             InParams.Get_ChannelName(), InVoiceChannelEntity, NewIdx});
 
-        ck_voice_channel_processor::Push_ControlPlane(InVoiceChannelEntity, InCurrent);
+        ck_voice_channel_processor::Push_ControlPlane(InVoiceChannelEntity, InVoiceChannel);
 
         voice_chat::VeryVerbose(TEXT("Assigned ChannelIdx [{}] to VoiceChannel [{}] ([{}])"),
             NewIdx, InVoiceChannelEntity, InParams.Get_ChannelName());
@@ -215,7 +215,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             FFragment_VoiceChannel_Requests& InRequests) const
         -> void
     {
@@ -228,10 +228,10 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InVoiceChannelEntity, Result);
 
-            if (DoHandleRequest(InVoiceChannelEntity, InCurrent, InRequest))
+            if (DoHandleRequest(InVoiceChannelEntity, InVoiceChannel, InRequest))
             {
                 Result = ECk_Request_OperationResult::Succeeded;
-                ck_voice_channel_processor::Push_ControlPlane(InVoiceChannelEntity, InCurrent);
+                ck_voice_channel_processor::Push_ControlPlane(InVoiceChannelEntity, InVoiceChannel);
             }
         }), policy::DontResetContainer{});
 
@@ -245,7 +245,7 @@ namespace ck
         FProcessor_VoiceChannel_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_Join& InRequest)
         -> bool
     {
@@ -256,8 +256,8 @@ namespace ck
             TEXT("Join on VoiceChannel [{}] with an invalid Talker handle"), InHandle)
         { return false; }
 
-        const auto WasAlreadyMember = InCurrent._Members.Contains(Talker);
-        InCurrent._Members.Add(Talker, InRequest.Get_MemberFlags());
+        const auto WasAlreadyMember = InVoiceChannel._Members.Contains(Talker);
+        InVoiceChannel._Members.Add(Talker, InRequest.Get_MemberFlags());
 
         if (NOT WasAlreadyMember)
         {
@@ -272,13 +272,13 @@ namespace ck
         FProcessor_VoiceChannel_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_Leave& InRequest)
         -> bool
     {
         const auto& Talker = InRequest.Get_Talker();
 
-        if (InCurrent._Members.Remove(Talker) > 0)
+        if (InVoiceChannel._Members.Remove(Talker) > 0)
         {
             UUtils_Signal_OnVoiceChannel_MemberLeft::Broadcast(InHandle, MakePayload(InHandle, Talker));
             ck_voice_channel_processor::MarkTalker_ProximityDirty(InHandle, Talker);
@@ -293,18 +293,18 @@ namespace ck
         FProcessor_VoiceChannel_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_SetMemberFlags& InRequest)
         -> bool
     {
         const auto& Talker = InRequest.Get_Talker();
 
-        const auto IsMember = InCurrent._Members.Contains(Talker);
+        const auto IsMember = InVoiceChannel._Members.Contains(Talker);
         CK_ENSURE_IF_NOT(IsMember,
             TEXT("SetMemberFlags on VoiceChannel [{}] for Talker [{}] who is not a member"), InHandle, Talker)
         { return false; }
 
-        InCurrent._Members.Add(Talker, InRequest.Get_MemberFlags());
+        InVoiceChannel._Members.Add(Talker, InRequest.Get_MemberFlags());
         return true;
     }
 
@@ -312,7 +312,7 @@ namespace ck
         FProcessor_VoiceChannel_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_ServerMute& InRequest)
         -> bool
     {
@@ -323,7 +323,7 @@ namespace ck
             TEXT("ServerMute on VoiceChannel [{}] with an invalid Talker handle"), InHandle)
         { return false; }
 
-        InCurrent._ServerMuted.Add(Talker);
+        InVoiceChannel._ServerMuted.Add(Talker);
         return true;
     }
 
@@ -331,11 +331,11 @@ namespace ck
         FProcessor_VoiceChannel_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_ServerUnmute& InRequest)
         -> bool
     {
-        InCurrent._ServerMuted.Remove(InRequest.Get_Talker());
+        InVoiceChannel._ServerMuted.Remove(InRequest.Get_Talker());
         return true;
     }
 
@@ -346,10 +346,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
-            const FFragment_VoiceChannel_Current& InCurrent)
+            const FFragment_VoiceChannel& InVoiceChannel)
         -> void
     {
-        for (const auto& [MemberHandle, MemberFlags] : InCurrent.Get_Members())
+        for (const auto& [MemberHandle, MemberFlags] : InVoiceChannel.Get_Members())
         {
             ck_voice_channel_processor::MarkTalker_ProximityDirty(InVoiceChannelEntity, MemberHandle);
         }

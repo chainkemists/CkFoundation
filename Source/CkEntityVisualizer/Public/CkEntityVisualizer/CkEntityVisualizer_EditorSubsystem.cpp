@@ -444,25 +444,25 @@ auto
 
         const auto& DebugInfo = Source.Get<ck::FFragment_Probe_DebugInfo>();
         auto ProbeVisual = FCk_Handle_Pmg_DebugShape{};
-        if (Source.Has<ck::FFragment_ShapeBox_Current>())
+        if (Source.Has<ck::FFragment_ShapeBox>())
         {
             ProbeVisual = UCk_Utils_EntityVisualizer_UE::Create_ProbePreview_Pmg(
-                SourceTransform, Source.Get<ck::FFragment_ShapeBox_Current>(), DebugInfo);
+                SourceTransform, Source.Get<ck::FFragment_ShapeBox>(), DebugInfo);
         }
-        else if (Source.Has<ck::FFragment_ShapeSphere_Current>())
+        else if (Source.Has<ck::FFragment_ShapeSphere>())
         {
             ProbeVisual = UCk_Utils_EntityVisualizer_UE::Create_ProbePreview_Pmg(
-                SourceTransform, Source.Get<ck::FFragment_ShapeSphere_Current>(), DebugInfo);
+                SourceTransform, Source.Get<ck::FFragment_ShapeSphere>(), DebugInfo);
         }
-        else if (Source.Has<ck::FFragment_ShapeCapsule_Current>())
+        else if (Source.Has<ck::FFragment_ShapeCapsule>())
         {
             ProbeVisual = UCk_Utils_EntityVisualizer_UE::Create_ProbePreview_Pmg(
-                SourceTransform, Source.Get<ck::FFragment_ShapeCapsule_Current>(), DebugInfo);
+                SourceTransform, Source.Get<ck::FFragment_ShapeCapsule>(), DebugInfo);
         }
-        else if (Source.Has<ck::FFragment_ShapeCylinder_Current>())
+        else if (Source.Has<ck::FFragment_ShapeCylinder>())
         {
             ProbeVisual = UCk_Utils_EntityVisualizer_UE::Create_ProbePreview_Pmg(
-                SourceTransform, Source.Get<ck::FFragment_ShapeCylinder_Current>(), DebugInfo);
+                SourceTransform, Source.Get<ck::FFragment_ShapeCylinder>(), DebugInfo);
         }
 
         if (ck::IsValid(ProbeVisual))

@@ -20,7 +20,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_ShapeCapsule_Params>(InParams);
-    InHandle.Add<ck::FFragment_ShapeCapsule_Current>(InParams.Get_InitialDimensions());
+    InHandle.Add<ck::FFragment_ShapeCapsule>(InParams.Get_InitialDimensions());
 
     return Cast(InHandle);
 }
@@ -39,7 +39,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ShapeCapsule_UE, FCk_Handle_ShapeCapsule,
-    ck::FFragment_ShapeCapsule_Params, ck::FFragment_ShapeCapsule_Current)
+    ck::FFragment_ShapeCapsule_Params, ck::FFragment_ShapeCapsule)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ auto
         const FCk_Handle_ShapeCapsule& InShapeCapsule)
         -> FCk_ShapeCapsule_Dimensions
 {
-    return InShapeCapsule.Get<ck::FFragment_ShapeCapsule_Current>().Get_Dimensions();
+    return InShapeCapsule.Get<ck::FFragment_ShapeCapsule>().Get_Dimensions();
 }
 
 auto

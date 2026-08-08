@@ -36,8 +36,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VfxCue_Params& InParams,
-            FFragment_VfxCue_Current& InCurrent,
-            const FFragment_EntityScript_Current& InEntityScript)
+            FFragment_VfxCue& InVfxCue,
+            const FFragment_EntityScript& InEntityScript)
             -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
@@ -108,22 +108,22 @@ namespace ck
             }
         }
 
-        InCurrent._NiagaraComponent = TStrongObjectPtr{NiagaraComponent};
-        InCurrent._HasFiredFinished = false;
+        InVfxCue._NiagaraComponent = TStrongObjectPtr{NiagaraComponent};
+        InVfxCue._HasFiredFinished = false;
 
         switch (VfxCueScript->Get_DurationMode())
         {
             case ECk_VfxCue_DurationMode::UseSystemDuration:
             {
-                InCurrent._EffectDuration = FCk_Time{10.0f};
+                InVfxCue._EffectDuration = FCk_Time{10.0f};
                 ck::vfx::Verbose(TEXT("VfxCue [{}] using default duration fallback: 10s"), InHandle);
                 break;
             }
             case ECk_VfxCue_DurationMode::Override:
-                InCurrent._EffectDuration = VfxCueScript->Get_DurationOverride();
+                InVfxCue._EffectDuration = VfxCueScript->Get_DurationOverride();
                 break;
             case ECk_VfxCue_DurationMode::Infinite:
-                InCurrent._EffectDuration = FCk_Time{-1.0f};
+                InVfxCue._EffectDuration = FCk_Time{-1.0f};
                 break;
             default:
                 CK_INVALID_ENUM(VfxCueScript->Get_DurationMode());
@@ -131,7 +131,7 @@ namespace ck
         }
 
         ck::vfx::VeryVerbose(TEXT("VfxCue [{}] setup complete, duration: [{}]"),
-            InHandle, InCurrent._EffectDuration);
+            InHandle, InVfxCue._EffectDuration);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -141,8 +141,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VfxCue_Current& InCurrent,
-            const FFragment_EntityScript_Current& InEntityScript,
+            FFragment_VfxCue& InVfxCue,
+            const FFragment_EntityScript& InEntityScript,
             const FFragment_VfxCue_Requests& InRequestsComp) const
             -> void
     {
@@ -153,7 +153,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                if (DoHandleRequest(InHandle, InCurrent, InEntityScript, InRequest))
+                if (DoHandleRequest(InHandle, InVfxCue, InEntityScript, InRequest))
                 { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
@@ -168,8 +168,8 @@ namespace ck
         FProcessor_VfxCue_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VfxCue_Current& InCurrent,
-            const FFragment_EntityScript_Current& InEntityScript,
+            FFragment_VfxCue& InVfxCue,
+            const FFragment_EntityScript& InEntityScript,
             const FCk_Request_VfxCue_Play& InRequest)
             -> bool
     {
@@ -180,7 +180,7 @@ namespace ck
 
         ck::vfx::Verbose(TEXT("Handling play request for VfxCue [{}]"), InHandle);
 
-        auto NiagaraComponent = InCurrent._NiagaraComponent.Get();
+        auto NiagaraComponent = InVfxCue._NiagaraComponent.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(NiagaraComponent),
             TEXT("VfxCue [{}] has invalid NiagaraComponent"), InHandle)
         { return false; }
@@ -195,13 +195,13 @@ namespace ck
 
         constexpr auto ResetOnActivate = true;
         NiagaraComponent->Activate(ResetOnActivate);
-        InCurrent._EffectStartTime = TimeResult.Get_WorldTime().Get_Time();
-        InCurrent._HasFiredFinished = false;
+        InVfxCue._EffectStartTime = TimeResult.Get_WorldTime().Get_Time();
+        InVfxCue._HasFiredFinished = false;
 
         InHandle.Add<FTag_VfxCue_IsPlaying>();
 
         ck::vfx::Verbose(TEXT("VfxCue [{}] started playing at time [{}]"),
-            InHandle, InCurrent._EffectStartTime);
+            InHandle, InVfxCue._EffectStartTime);
 
         UUtils_Signal_OnVfxCue_Started::Broadcast(InHandle, MakePayload(InHandle));
 
@@ -212,14 +212,14 @@ namespace ck
         FProcessor_VfxCue_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VfxCue_Current& InCurrent,
-            const FFragment_EntityScript_Current& InEntityScript,
+            FFragment_VfxCue& InVfxCue,
+            const FFragment_EntityScript& InEntityScript,
             const FCk_Request_VfxCue_Stop& InRequest)
             -> bool
     {
         ck::vfx::Verbose(TEXT("Handling stop request for VfxCue [{}]"), InHandle);
 
-        auto NiagaraComponent = InCurrent._NiagaraComponent.Get();
+        auto NiagaraComponent = InVfxCue._NiagaraComponent.Get();
         if (ck::IsValid(NiagaraComponent))
         {
             NiagaraComponent->Deactivate();
@@ -227,9 +227,9 @@ namespace ck
 
         InHandle.Remove<FTag_VfxCue_IsPlaying>();
 
-        if (NOT InCurrent._HasFiredFinished)
+        if (NOT InVfxCue._HasFiredFinished)
         {
-            InCurrent._HasFiredFinished = true;
+            InVfxCue._HasFiredFinished = true;
             UUtils_Signal_OnVfxCue_Finished::Broadcast(InHandle, MakePayload(InHandle));
         }
 
@@ -256,29 +256,29 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VfxCue_Current& InCurrent)
+            FFragment_VfxCue& InVfxCue)
             -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_Vfx_CueLifetimeMonitor);
         INC_DWORD_STAT(STAT_Vfx_ActiveManagedEffects);
 
-        auto NiagaraComponent = InCurrent._NiagaraComponent.Get();
+        auto NiagaraComponent = InVfxCue._NiagaraComponent.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(NiagaraComponent),
             TEXT("VfxCue [{}] has invalid NiagaraComponent"), InHandle)
         { return; }
 
-        if (NiagaraComponent->IsActive() == false && NOT InCurrent._HasFiredFinished)
+        if (NiagaraComponent->IsActive() == false && NOT InVfxCue._HasFiredFinished)
         {
             ck::vfx::Verbose(TEXT("VfxCue [{}] system finished, firing OnFinished"), InHandle);
 
-            InCurrent._HasFiredFinished = true;
+            InVfxCue._HasFiredFinished = true;
             InHandle.Remove<FTag_VfxCue_IsPlaying>();
 
             UUtils_Signal_OnVfxCue_Finished::Broadcast(InHandle, MakePayload(InHandle));
             return;
         }
 
-        if (InCurrent._EffectDuration.Get_Seconds() > 0.0f)
+        if (InVfxCue._EffectDuration.Get_Seconds() > 0.0f)
         {
             const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
             CK_ENSURE_IF_NOT(ck::IsValid(World),
@@ -289,13 +289,13 @@ namespace ck
             const auto TimeResult = UCk_Utils_Time_UE::Get_WorldTime(TimeParams);
             const auto CurrentTime = TimeResult.Get_WorldTime().Get_Time();
 
-            const auto ElapsedTime = CurrentTime - InCurrent._EffectStartTime;
+            const auto ElapsedTime = CurrentTime - InVfxCue._EffectStartTime;
 
-            if (ElapsedTime >= InCurrent._EffectDuration && NOT InCurrent._HasFiredFinished)
+            if (ElapsedTime >= InVfxCue._EffectDuration && NOT InVfxCue._HasFiredFinished)
             {
                 ck::vfx::Verbose(TEXT("VfxCue [{}] duration timeout reached, firing OnFinished"), InHandle);
 
-                InCurrent._HasFiredFinished = true;
+                InVfxCue._HasFiredFinished = true;
                 InHandle.Remove<FTag_VfxCue_IsPlaying>();
                 NiagaraComponent->Deactivate();
 
@@ -311,19 +311,19 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VfxCue_Current& InCurrent)
+            FFragment_VfxCue& InVfxCue)
             -> void
     {
         ck::vfx::Verbose(TEXT("Tearing down VfxCue [{}]"), InHandle);
 
-        auto NiagaraComponent = InCurrent._NiagaraComponent.Get();
+        auto NiagaraComponent = InVfxCue._NiagaraComponent.Get();
         if (ck::IsValid(NiagaraComponent))
         {
             NiagaraComponent->DestroyComponent();
         }
 
-        InCurrent._NiagaraComponent.Reset();
-        InCurrent._HasFiredFinished = false;
+        InVfxCue._NiagaraComponent.Reset();
+        InVfxCue._HasFiredFinished = false;
     }
 }
 

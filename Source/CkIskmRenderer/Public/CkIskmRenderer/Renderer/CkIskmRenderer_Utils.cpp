@@ -20,7 +20,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_IskmRenderer_Params>(InRendererData);
-    InHandle.Add<ck::FFragment_IskmRenderer_Current>();
+    InHandle.Add<ck::FFragment_IskmRenderer>();
     InHandle.Add<ck::FTag_IskmRenderer_NeedsSetup>();
 
     return Cast(InHandle);
@@ -41,7 +41,7 @@ auto
     UCk_Utils_IskmRenderer_UE::
     Has(const FCk_Handle& InHandle) -> bool
 {
-    return InHandle.Has_All<ck::FFragment_IskmRenderer_Params, ck::FFragment_IskmRenderer_Current>();
+    return InHandle.Has_All<ck::FFragment_IskmRenderer_Params, ck::FFragment_IskmRenderer>();
 }
 
 auto

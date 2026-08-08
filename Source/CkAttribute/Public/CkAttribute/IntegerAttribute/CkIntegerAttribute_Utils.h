@@ -29,7 +29,7 @@ public:
 private:
     using IntegerAttribute_Utils_Min = ck::TUtils_Attribute<ck::FFragment_IntegerAttribute_Min>;
     using IntegerAttribute_Utils_Max = ck::TUtils_Attribute<ck::FFragment_IntegerAttribute_Max>;
-    using IntegerAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_IntegerAttribute_Current>;
+    using IntegerAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_IntegerAttribute>;
 
     using RecordOfIntegerAttributes_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfIntegerAttributes>;
 
@@ -360,7 +360,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_IntegerAttributeModifier);
 
 private:
-    using IntegerAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_IntegerAttributeModifier_Current>;
+    using IntegerAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_IntegerAttributeModifier>;
     using IntegerAttributeModifier_Utils_Min     = ck::TUtils_AttributeModifier<ck::FFragment_IntegerAttributeModifier_Min>;
     using IntegerAttributeModifier_Utils_Max     = ck::TUtils_AttributeModifier<ck::FFragment_IntegerAttributeModifier_Max>;
 

@@ -39,18 +39,18 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ResolverDataBundle_Params& InParams,
-            FFragment_ResolverDataBundle_Current& InCurrent) const
+            FFragment_ResolverDataBundle& InResolverDataBundle) const
         -> void
     {
         const auto& Phases = InParams.Get_Phases();
 
         [[maybe_unused]]
-        const auto& PhaseNamePrevious = Phases.IsValidIndex(InCurrent.Get_CurrentPhaseIndex()) ?
-            Phases[InCurrent.Get_CurrentPhaseIndex()].Get_PhaseName() : TAG_ResolverDataBundle_InvalidPhase;
+        const auto& PhaseNamePrevious = Phases.IsValidIndex(InResolverDataBundle.Get_CurrentPhaseIndex()) ?
+            Phases[InResolverDataBundle.Get_CurrentPhaseIndex()].Get_PhaseName() : TAG_ResolverDataBundle_InvalidPhase;
 
-        InCurrent._CurrentPhaseIndex++;
+        InResolverDataBundle._CurrentPhaseIndex++;
 
-        if (NOT Phases.IsValidIndex(InCurrent._CurrentPhaseIndex))
+        if (NOT Phases.IsValidIndex(InResolverDataBundle._CurrentPhaseIndex))
         {
             UCk_Utils_ResolverDataBundle_UE::DoMarkBundle_AsCalculateDone(InHandle);
 
@@ -60,8 +60,8 @@ namespace ck
                 .Set_Instigator(Params.Get_Instigator())
                 .Set_Target(Params.Get_Target())
                 .Set_Causer(Params.Get_Causer())
-                .Set_FinalValue(InCurrent.Get_FinalValue())
-                .Set_Metadata(InCurrent.Get_MetadataTags());
+                .Set_FinalValue(InResolverDataBundle.Get_FinalValue())
+                .Set_Metadata(InResolverDataBundle.Get_MetadataTags());
 
             UUtils_Signal_ResolverDataBundle_AllPhasesComplete::Broadcast(InHandle, ck::MakePayload(InHandle, Payload));
         }
@@ -75,7 +75,7 @@ namespace ck
             // Requests/PendingOperations, so it still waits for those to drain either way.
             InHandle.AddOrGet<FTag_ResolverDataBundle_NeedsCalculate>();
 
-            const auto& PhaseName = InParams.Get_Phases()[InCurrent.Get_CurrentPhaseIndex()].Get_PhaseName();
+            const auto& PhaseName = InParams.Get_Phases()[InResolverDataBundle.Get_CurrentPhaseIndex()].Get_PhaseName();
             UUtils_Signal_ResolverDataBundle_PhaseStart::Broadcast(InHandle, ck::MakePayload(InHandle, PhaseName));
         }
 
@@ -97,7 +97,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ResolverDataBundle_Current& InComp,
+            FFragment_ResolverDataBundle& InComp,
             FFragment_ResolverDataBundle_Requests& InRequestsComp) const
         -> void
     {
@@ -143,7 +143,7 @@ namespace ck
         FProcessor_ResolverDataBundle_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_ResolverDataBundle_Current& InComp,
+            FFragment_ResolverDataBundle& InComp,
             const FCk_Request_ResolverDataBundle_ModifierOperation& InRequest)
         -> void
     {
@@ -163,7 +163,7 @@ namespace ck
         FProcessor_ResolverDataBundle_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_ResolverDataBundle_Current& InComp,
+            FFragment_ResolverDataBundle& InComp,
             const FCk_Request_ResolverDataBundle_MetadataOperation& InRequest)
         -> void
     {
@@ -209,7 +209,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ResolverDataBundle_Current& InCurrent,
+            FFragment_ResolverDataBundle& InResolverDataBundle,
             const FFragment_ResolverDataBundle_PendingOperations& InPendingOperationsComp)
         -> void
     {
@@ -245,21 +245,21 @@ namespace ck
             {
                 for (const auto& MetadataOperation : InPendingOperations.Get_PendingMetadataOperations())
                 {
-                    InCurrent._MetadataTags.AppendTags(MetadataOperation.Get_TagsToAdd());
-                    InCurrent._MetadataTags.RemoveTags(MetadataOperation.Get_TagsToRemove());
+                    InResolverDataBundle._MetadataTags.AppendTags(MetadataOperation.Get_TagsToAdd());
+                    InResolverDataBundle._MetadataTags.RemoveTags(MetadataOperation.Get_TagsToRemove());
                 }
 
                 for (const auto& MetadataOperation : InPendingOperations.Get_PendingMetadataOperations_Conditionals())
                 {
-                    if (NOT MetadataOperation.Get_BundleTagRequirements().RequirementsMet(InCurrent.Get_MetadataTags()))
+                    if (NOT MetadataOperation.Get_BundleTagRequirements().RequirementsMet(InResolverDataBundle.Get_MetadataTags()))
                     {
                         resolver::Verbose(TEXT("IGNORING MetadataOperation for DataBundle [{}] with Owner [{}] because the requirements are NOT met"),
                             InHandle, UCk_Utils_ResolverDataBundle_UE::Get_Instigator(InHandle));
                         continue;
                     }
 
-                    InCurrent._MetadataTags.AppendTags(MetadataOperation.Get_Operation().Get_TagsToAdd());
-                    InCurrent._MetadataTags.RemoveTags(MetadataOperation.Get_Operation().Get_TagsToRemove());
+                    InResolverDataBundle._MetadataTags.AppendTags(MetadataOperation.Get_Operation().Get_TagsToAdd());
+                    InResolverDataBundle._MetadataTags.RemoveTags(MetadataOperation.Get_Operation().Get_TagsToRemove());
                 }
 
             }; ResolvePendingMetadataOperations();
@@ -273,7 +273,7 @@ namespace ck
 
                 for (const auto& ModifierOperation : InPendingOperations.Get_PendingModifiersOperations_Conditionals())
                 {
-                    if (NOT ModifierOperation.Get_BundleTagRequirements().RequirementsMet(InCurrent.Get_MetadataTags()))
+                    if (NOT ModifierOperation.Get_BundleTagRequirements().RequirementsMet(InResolverDataBundle.Get_MetadataTags()))
                     {
                         resolver::Verbose(TEXT("IGNORING ModifierOperation for DataBundle [{}] with Owner [{}] because the requirements are NOT met"),
                             InHandle, UCk_Utils_ResolverDataBundle_UE::Get_Instigator(InHandle));
@@ -295,7 +295,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ResolverDataBundle_Params& InParams,
-            FFragment_ResolverDataBundle_Current& InCurrent)
+            FFragment_ResolverDataBundle& InResolverDataBundle)
         -> void
     {
         const auto& ResolverDataBaseValue_AttributeName =
@@ -314,7 +314,7 @@ namespace ck
         const auto& ResolverDataTotalScalarValue = UCk_Utils_FloatAttribute_UE::Get_FinalValue(ResolverDataTotalScalarValue_Attribute);
 
         const auto& CalculatedFinalValue = FMath::Max((ResolverDataBaseValue + ResolverDataBonusValue) * ResolverDataTotalScalarValue, 0);
-        InCurrent._FinalValue = CalculatedFinalValue;
+        InResolverDataBundle._FinalValue = CalculatedFinalValue;
 
         resolver::Verbose(TEXT("Calculated Final Value [{}] of ResolverData Bundle [{}]"), CalculatedFinalValue, InHandle);
 
@@ -329,7 +329,7 @@ namespace ck
             .Set_Target(Target)
             .Set_Causer(ResolverCause)
             .Set_FinalValue(CalculatedFinalValue)
-            .Set_Metadata(InCurrent.Get_MetadataTags());
+            .Set_Metadata(InResolverDataBundle.Get_MetadataTags());
 
         // Consume the readiness marker before advancing: DoTryStartNewPhase re-arms StartNewPhase,
         // which stamps a fresh NeedsCalculate for the next phase. Leaving this one in place would let

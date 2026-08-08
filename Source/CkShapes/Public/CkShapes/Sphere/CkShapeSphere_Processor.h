@@ -14,7 +14,7 @@ namespace ck
             FProcessor_ShapeSphere_HandleRequests,
             FCk_Handle_ShapeSphere,
             ck::TReadOnly<FFragment_ShapeSphere_Params>,
-            ck::TReadWrite<FFragment_ShapeSphere_Current>,
+            ck::TReadWrite<FFragment_ShapeSphere>,
             ck::TReadWrite<FFragment_ShapeSphere_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
@@ -31,7 +31,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeSphere_Params& InParams,
-            FFragment_ShapeSphere_Current& InCurrent,
+            FFragment_ShapeSphere& InShapeSphere,
             FFragment_ShapeSphere_Requests& InRequestsComp) const -> void;
 
     private:
@@ -39,7 +39,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_ShapeSphere_Params& InParams,
-            FFragment_ShapeSphere_Current& InCurrent,
+            FFragment_ShapeSphere& InShapeSphere,
             const FCk_Request_ShapeSphere_UpdateDimensions& InRequest) -> void;
     };
 

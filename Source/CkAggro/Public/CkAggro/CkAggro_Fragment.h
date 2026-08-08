@@ -43,10 +43,10 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    struct CKAGGRO_API FFragment_Aggro_Current
+    struct CKAGGRO_API FFragment_Aggro
     {
     public:
-        CK_GENERATED_BODY(FFragment_Aggro_Current);
+        CK_GENERATED_BODY(FFragment_Aggro);
 
     public:
         friend class FProcessor_Aggro_SelectActiveTarget;

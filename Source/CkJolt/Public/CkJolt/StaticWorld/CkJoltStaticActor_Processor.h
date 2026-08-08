@@ -18,7 +18,7 @@ namespace ck
     class CKJOLT_API FProcessor_JoltStaticActor_EndPlay : public ck_exp::TProcessor<
             FProcessor_JoltStaticActor_EndPlay,
             FCk_Handle_JoltStaticActor,
-            ck::TReadWrite<FFragment_JoltStaticActor_Current>,
+            ck::TReadWrite<FFragment_JoltStaticActor>,
             CK_IF_END_PLAY>
     {
     public:
@@ -36,7 +36,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_JoltStaticActor_Current& InCurrent) const -> void;
+            FFragment_JoltStaticActor& InJoltStaticActor) const -> void;
 
     private:
         TWeakObjectPtr<UCk_JoltStaticWorld_Subsystem_UE> _StaticWorldSubsystem;

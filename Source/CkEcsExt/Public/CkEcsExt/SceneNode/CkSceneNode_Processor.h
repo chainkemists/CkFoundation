@@ -18,7 +18,7 @@ namespace ck
     class CKECSEXT_API FProcessor_SceneNode_HandleRequests : public ck_exp::TProcessor<
             FProcessor_SceneNode_HandleRequests,
             FCk_Handle_SceneNode,
-            ck::TReadWrite<FFragment_SceneNode_Current>,
+            ck::TReadWrite<FFragment_SceneNode>,
             ck::TReadOnly<FFragment_SceneNode_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -35,14 +35,14 @@ namespace ck
     	ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SceneNode_Current& InCurrent,
+            FFragment_SceneNode& InSceneNode,
             const FFragment_SceneNode_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_SceneNode_Current& InCurrent,
+            FFragment_SceneNode& InSceneNode,
             const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest) -> void;
     };
 
@@ -81,7 +81,7 @@ namespace ck
             FProcessor_SceneNode_FollowUnrealAnchor,
             FCk_Handle_SceneNode,
             TReadOnly<FFragment_SceneNode_UnrealAnchor>,
-            TReadOnly<FFragment_SceneNode_Current>,
+            TReadOnly<FFragment_SceneNode>,
             TReadWrite<FFragment_Transform>,
             TReadWrite<FFragment_Transform_Previous>,
             CK_IGNORE_PENDING_KILL>
@@ -98,7 +98,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_SceneNode_UnrealAnchor& InAnchor,
-            const FFragment_SceneNode_Current& InCurrent,
+            const FFragment_SceneNode& InSceneNode,
             FFragment_Transform& InTransform,
             FFragment_Transform_Previous& InPrevTransform) -> void;
     };
@@ -251,7 +251,7 @@ namespace ck
             FCk_Handle_SceneNode,
             T_Layer,
             TReadOnly<SceneNodeParent>,
-            TReadOnly<FFragment_SceneNode_Current>,
+            TReadOnly<FFragment_SceneNode>,
             TReadWrite<FFragment_Transform>,
             TReadWrite<FFragment_Transform_Previous>,
             TReadOnly<FFragment_SceneNode_PropagationState>,
@@ -260,7 +260,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
         using Super = TParallelProcessor<TProcessor_SceneNode_Update<T_Layer>, FCk_Handle_SceneNode, T_Layer,
-            TReadOnly<SceneNodeParent>, TReadOnly<FFragment_SceneNode_Current>,
+            TReadOnly<SceneNodeParent>, TReadOnly<FFragment_SceneNode>,
             TReadWrite<FFragment_Transform>, TReadWrite<FFragment_Transform_Previous>,
             TReadOnly<FFragment_SceneNode_PropagationState>, FTag_SceneNode_PropagationQueued,
             TExclude<FFragment_SceneNode_UnrealAnchor>,
@@ -282,7 +282,7 @@ namespace ck
             typename Super::TimeType InDeltaT,
             typename Super::HandleType InHandle,
             const SceneNodeParent& InParent,
-            const FFragment_SceneNode_Current& InCurrent,
+            const FFragment_SceneNode& InSceneNode,
             FFragment_Transform& InTransform,
             FFragment_Transform_Previous& InPrevTransform,
             const FFragment_SceneNode_PropagationState& InPropagationState) -> void;

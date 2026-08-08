@@ -22,7 +22,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmCondition_ResetEveryFrame : public ck_exp::TProcessor<
         FProcessor_SmCondition_ResetEveryFrame,
         FCk_Handle_SmCondition,
-        TReadWrite<FFragment_SmCondition_Current>,
+        TReadWrite<FFragment_SmCondition>,
         FTag_SmCondition_Polled,
         FTag_SmCondition_Evaluating,
         TExclude<FTag_SmCondition_PendingExit>,
@@ -40,7 +40,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmCondition_Current& InCurrent) -> void;
+            FFragment_SmCondition& InSmCondition) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ namespace ck
     class CKSTATEMACHINE_API FProcessor_SmCondition_Polled : public ck_exp::TProcessor<
         FProcessor_SmCondition_Polled,
         FCk_Handle_SmCondition,
-        TReadWrite<FFragment_SmCondition_Current>,
+        TReadWrite<FFragment_SmCondition>,
         FTag_SmCondition_Polled,
         FTag_SmCondition_Evaluating,
         TExclude<FTag_SmCondition_PendingExit>,
@@ -67,7 +67,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_SmCondition_Current& InCurrent) -> void;
+            FFragment_SmCondition& InSmCondition) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -77,7 +77,7 @@ namespace ck
         FProcessor_SmCondition_Exit,
         FCk_Handle_SmCondition,
         FTag_SmCondition_PendingExit,
-        TReadOnly<FFragment_EntityScript_Current>,
+        TReadOnly<FFragment_EntityScript>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -95,7 +95,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InScriptFragment) -> void;
+            const FFragment_EntityScript& InScriptFragment) -> void;
     };
 }
 

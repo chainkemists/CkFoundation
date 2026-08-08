@@ -176,7 +176,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_IntegerAttribute_UE, FCk_Handle_IntegerAttribute, ck::FFragment_IntegerAttribute_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_IntegerAttribute_UE, FCk_Handle_IntegerAttribute, ck::FFragment_IntegerAttribute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -1071,7 +1071,7 @@ auto
         const FCk_Handle& InModifierEntity)
     -> bool
 {
-    return InModifierEntity.Has_Any<ck::FFragment_IntegerAttributeModifier_Min, ck::FFragment_IntegerAttributeModifier_Current,ck::FFragment_IntegerAttributeModifier_Max>();
+    return InModifierEntity.Has_Any<ck::FFragment_IntegerAttributeModifier_Min, ck::FFragment_IntegerAttributeModifier,ck::FFragment_IntegerAttributeModifier_Max>();
 }
 
 auto

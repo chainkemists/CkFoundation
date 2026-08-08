@@ -47,7 +47,7 @@ namespace ck
         FCk_Handle_Aggro,
         TReadWrite<FFragment_Aggro_Requests>,
         TReadWrite<FFragment_Aggro_TargetMap>,
-        TReadWrite<FFragment_Aggro_Current>,
+        TReadWrite<FFragment_Aggro>,
         TExclude<FTag_Aggro_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -68,19 +68,19 @@ namespace ck
             HandleType InAggro,
             FFragment_Aggro_Requests& InRequests,
             FFragment_Aggro_TargetMap& InTargetMap,
-            FFragment_Aggro_Current& InCurrent) const -> void;
+            FFragment_Aggro& InAggroComp) const -> void;
 
     private:
         static auto
-        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro_Current& InCurrent, const FCk_Request_Aggro_AddThreat& InRequest) -> void;
+        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro& InAggroComp, const FCk_Request_Aggro_AddThreat& InRequest) -> void;
         static auto
-        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro_Current& InCurrent, const FCk_Request_Aggro_RemoveTarget& InRequest) -> void;
+        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro& InAggroComp, const FCk_Request_Aggro_RemoveTarget& InRequest) -> void;
         static auto
-        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro_Current& InCurrent, const FCk_Request_Aggro_ClearAllTargets& InRequest) -> void;
+        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro& InAggroComp, const FCk_Request_Aggro_ClearAllTargets& InRequest) -> void;
         static auto
-        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro_Current& InCurrent, const FCk_Request_Aggro_SetActiveTarget& InRequest) -> void;
+        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro& InAggroComp, const FCk_Request_Aggro_SetActiveTarget& InRequest) -> void;
         static auto
-        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro_Current& InCurrent, const FCk_Request_Aggro_ClearActiveTarget& InRequest) -> void;
+        DoHandleRequest(HandleType InAggro, FFragment_Aggro_TargetMap& InTargetMap, FFragment_Aggro& InAggroComp, const FCk_Request_Aggro_ClearActiveTarget& InRequest) -> void;
     };
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -144,7 +144,7 @@ namespace ck
     class CKAGGRO_API FProcessor_Aggro_SelectActiveTarget : public ck_exp::TProcessor<
         FProcessor_Aggro_SelectActiveTarget,
         FCk_Handle_Aggro,
-        TReadWrite<FFragment_Aggro_Current>,
+        TReadWrite<FFragment_Aggro>,
         TReadOnly<FFragment_Aggro_SelectionParams>,
         TReadOnly<FFragment_Aggro_TargetMap>,
         FTag_Aggro_SelectionPending,
@@ -165,7 +165,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InAggro,
-            FFragment_Aggro_Current& InCurrent,
+            FFragment_Aggro& InAggroComp,
             const FFragment_Aggro_SelectionParams& InSelectionParams,
             const FFragment_Aggro_TargetMap& InTargetMap) const -> void;
     };

@@ -15,7 +15,7 @@ namespace ck
         FProcessor_VoiceChannel_Setup,
         FCk_Handle_VoiceChannel,
         ck::TReadOnly<FFragment_VoiceChannel_Params>,
-        ck::TReadWrite<FFragment_VoiceChannel_Current>,
+        ck::TReadWrite<FFragment_VoiceChannel>,
         FTag_VoiceChannel_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -32,7 +32,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
             const FFragment_VoiceChannel_Params& InParams,
-            FFragment_VoiceChannel_Current& InCurrent)
+            FFragment_VoiceChannel& InVoiceChannel)
             -> void;
     };
 
@@ -46,7 +46,7 @@ namespace ck
         FProcessor_VoiceChannel_AssignIdx,
         FCk_Handle_VoiceChannel,
         ck::TReadOnly<FFragment_VoiceChannel_Params>,
-        ck::TReadWrite<FFragment_VoiceChannel_Current>,
+        ck::TReadWrite<FFragment_VoiceChannel>,
         FTag_VoiceChannel_NeedsIdx,
         CK_IGNORE_PENDING_KILL>
     {
@@ -65,7 +65,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
             const FFragment_VoiceChannel_Params& InParams,
-            FFragment_VoiceChannel_Current& InCurrent)
+            FFragment_VoiceChannel& InVoiceChannel)
             -> void;
     };
 
@@ -74,7 +74,7 @@ namespace ck
     class CKVOICECHAT_API FProcessor_VoiceChannel_HandleRequests : public ck_exp::TProcessor<
         FProcessor_VoiceChannel_HandleRequests,
         FCk_Handle_VoiceChannel,
-        ck::TReadWrite<FFragment_VoiceChannel_Current>,
+        ck::TReadWrite<FFragment_VoiceChannel>,
         ck::TReadWrite<FFragment_VoiceChannel_Requests>,
         TExclude<FTag_VoiceChannel_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -93,38 +93,38 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             FFragment_VoiceChannel_Requests& InRequests) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_Join& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_Leave& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_SetMemberFlags& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_ServerMute& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VoiceChannel_Current& InCurrent,
+            FFragment_VoiceChannel& InVoiceChannel,
             const FCk_Request_VoiceChannel_ServerUnmute& InRequest) -> bool;
     };
 
@@ -136,7 +136,7 @@ namespace ck
     class CKVOICECHAT_API FProcessor_VoiceChannel_EndPlay : public ck_exp::TProcessor<
         FProcessor_VoiceChannel_EndPlay,
         FCk_Handle_VoiceChannel,
-        ck::TReadOnly<FFragment_VoiceChannel_Current>,
+        ck::TReadOnly<FFragment_VoiceChannel>,
         CK_IF_END_PLAY>
     {
     public:
@@ -151,7 +151,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InVoiceChannelEntity,
-            const FFragment_VoiceChannel_Current& InCurrent)
+            const FFragment_VoiceChannel& InVoiceChannel)
             -> void;
     };
 

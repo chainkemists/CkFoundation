@@ -46,10 +46,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSTATEMACHINE_API FFragment_SmTransition_Current
+    struct CKSTATEMACHINE_API FFragment_SmTransition
     {
     public:
-        CK_GENERATED_BODY(FFragment_SmTransition_Current);
+        CK_GENERATED_BODY(FFragment_SmTransition);
 
         friend class FProcessor_SmTransition_Evaluate;
 

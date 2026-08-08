@@ -33,15 +33,15 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent) const
+            FFragment_AudioDirector& InAudioDirector) const
             -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
         ck::audio::Verbose(TEXT("Setting up AudioDirector [{}]"), InHandle);
 
-        InCurrent._CurrentHighestPriority = -1;
-        InCurrent._TracksByName.Empty();
+        InAudioDirector._CurrentHighestPriority = -1;
+        InAudioDirector._TracksByName.Empty();
 
         ck::audio::VeryVerbose(TEXT("AudioDirector [{}] setup complete"), InHandle);
     }
@@ -54,7 +54,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             FFragment_AudioDirector_Requests& InRequestsComp) const
             -> void
     {
@@ -65,7 +65,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InParams, InAudioDirector, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -82,7 +82,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             const FCk_Request_AudioDirector_AddTrack& InRequest)
             -> void
     {
@@ -91,14 +91,14 @@ namespace ck
 
         ck::audio::Verbose(TEXT("Adding track [{}] to AudioDirector [{}]"), TrackName, InHandle);
 
-        if (InCurrent._TracksByName.Contains(TrackName))
+        if (InAudioDirector._TracksByName.Contains(TrackName))
         {
             ck::audio::Warning(TEXT("Track [{}] already exists in AudioDirector [{}], skipping"), TrackName, InHandle);
             return;
         }
 
         auto TrackHandle = UCk_Utils_AudioTrack_UE::Create(InHandle, TrackParams);
-        InCurrent._TracksByName.Add(TrackName, TrackHandle);
+        InAudioDirector._TracksByName.Add(TrackName, TrackHandle);
 
         ck::audio::VeryVerbose(TEXT("Successfully added track [{}] as [{}] to AudioDirector [{}]"),
             TrackName, TrackHandle, InHandle);
@@ -111,7 +111,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             const FCk_Request_AudioDirector_StartTrack& InRequest)
             -> void
     {
@@ -119,7 +119,7 @@ namespace ck
 
         ck::audio::Verbose(TEXT("Starting track [{}] on AudioDirector [{}]"), TrackName, InHandle);
 
-        auto* TrackHandlePtr = InCurrent._TracksByName.Find(TrackName);
+        auto* TrackHandlePtr = InAudioDirector._TracksByName.Find(TrackName);
         CK_ENSURE_IF_NOT(TrackHandlePtr != nullptr,
             TEXT("Track [{}] not found in AudioDirector [{}]"), TrackName, InHandle)
         { return; }
@@ -131,27 +131,27 @@ namespace ck
 
         const auto TrackPriority = UCk_Utils_AudioTrack_UE::Get_Priority(TrackHandle);
 
-        if (TrackPriority > InCurrent._CurrentHighestPriority ||
-            (TrackPriority == InCurrent._CurrentHighestPriority && InParams.Get_SamePriorityBehavior() == ECk_SamePriorityBehavior::Allow))
+        if (TrackPriority > InAudioDirector._CurrentHighestPriority ||
+            (TrackPriority == InAudioDirector._CurrentHighestPriority && InParams.Get_SamePriorityBehavior() == ECk_SamePriorityBehavior::Allow))
         {
             const auto OverrideBehavior = UCk_Utils_AudioTrack_UE::Get_OverrideBehavior(TrackHandle);
-            DoHandlePriorityOverride(InHandle, InParams, InCurrent, TrackHandle, TrackPriority, OverrideBehavior);
+            DoHandlePriorityOverride(InHandle, InParams, InAudioDirector, TrackHandle, TrackPriority, OverrideBehavior);
         }
-        else if (TrackPriority == InCurrent._CurrentHighestPriority)
+        else if (TrackPriority == InAudioDirector._CurrentHighestPriority)
         {
             ck::audio::VeryVerbose(TEXT("Track [{}] priority [{}] blocked by SamePriorityBehavior on AudioDirector [{}]"),
                 TrackName, TrackPriority, InHandle);
             return;
         }
-        else if (TrackPriority < InCurrent._CurrentHighestPriority)
+        else if (TrackPriority < InAudioDirector._CurrentHighestPriority)
         {
             ck::audio::VeryVerbose(TEXT("Track [{}] priority [{}] is lower than current highest [{}], ignoring"),
-                TrackName, TrackPriority, InCurrent._CurrentHighestPriority);
+                TrackName, TrackPriority, InAudioDirector._CurrentHighestPriority);
             return;
         }
 
         // Enforce max concurrent tracks
-        const auto NumActiveTracks = DoGetActiveTrackCount(InCurrent);
+        const auto NumActiveTracks = DoGetActiveTrackCount(InAudioDirector);
         if (NumActiveTracks >= InParams.Get_MaxConcurrentTracks())
         {
             ck::audio::VeryVerbose(TEXT("Track [{}] rejected - AudioDirector [{}] already at max concurrent tracks [{}]"),
@@ -162,7 +162,7 @@ namespace ck
         auto FadeInTime = ResolveFadeTime(InRequest.Get_FadeInTime(), InParams.Get_DefaultCrossfadeDuration(), TrackHandle, true);
 
         UCk_Utils_AudioTrack_UE::Request_Play(TrackHandle, FadeInTime, {});
-        InCurrent._CurrentHighestPriority = TrackPriority;
+        InAudioDirector._CurrentHighestPriority = TrackPriority;
 
         ck::audio::Verbose(TEXT("Started track [{}] with priority [{}] on AudioDirector [{}]"),
             TrackName, TrackPriority, InHandle);
@@ -175,7 +175,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             const FCk_Request_AudioDirector_StopTrack& InRequest)
             -> void
     {
@@ -183,7 +183,7 @@ namespace ck
 
         ck::audio::Verbose(TEXT("Stopping track [{}] on AudioDirector [{}]"), TrackName, InHandle);
 
-        auto* TrackHandlePtr = InCurrent._TracksByName.Find(TrackName);
+        auto* TrackHandlePtr = InAudioDirector._TracksByName.Find(TrackName);
         CK_ENSURE_IF_NOT(TrackHandlePtr != nullptr,
             TEXT("Track [{}] not found in AudioDirector [{}]"), TrackName, InHandle)
         { return; }
@@ -198,10 +198,10 @@ namespace ck
         UCk_Utils_AudioTrack_UE::Request_Stop(TrackHandle, FadeOutTime, {});
 
         const auto TrackPriority = UCk_Utils_AudioTrack_UE::Get_Priority(TrackHandle);
-        if (TrackPriority >= InCurrent._CurrentHighestPriority)
+        if (TrackPriority >= InAudioDirector._CurrentHighestPriority)
         {
             auto NewHighestPriority = -1;
-            for (const auto& [OtherTrackName, OtherTrackHandle] : InCurrent._TracksByName)
+            for (const auto& [OtherTrackName, OtherTrackHandle] : InAudioDirector._TracksByName)
             {
                 if (OtherTrackHandle != TrackHandle && ck::IsValid(OtherTrackHandle))
                 {
@@ -213,11 +213,11 @@ namespace ck
                     }
                 }
             }
-            InCurrent._CurrentHighestPriority = NewHighestPriority;
+            InAudioDirector._CurrentHighestPriority = NewHighestPriority;
         }
 
         ck::audio::Verbose(TEXT("Stopped track [{}] on AudioDirector [{}], new highest priority: [{}]"),
-            TrackName, InHandle, InCurrent._CurrentHighestPriority);
+            TrackName, InHandle, InAudioDirector._CurrentHighestPriority);
 
         UUtils_Signal_OnAudioDirector_TrackStopped::Broadcast(InHandle, MakePayload(InHandle, TrackName, TrackHandle));
     }
@@ -227,7 +227,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             const FCk_Request_AudioDirector_StopAllTracks& InRequest)
             -> void
     {
@@ -246,7 +246,7 @@ namespace ck
             }
         }
 
-        for (auto& [TrackName, TrackHandle] : InCurrent._TracksByName)
+        for (auto& [TrackName, TrackHandle] : InAudioDirector._TracksByName)
         {
             if (ck::IsValid(TrackHandle))
             {
@@ -255,7 +255,7 @@ namespace ck
             }
         }
 
-        InCurrent._CurrentHighestPriority = -1;
+        InAudioDirector._CurrentHighestPriority = -1;
 
         ck::audio::Verbose(TEXT("Stopped all tracks on AudioDirector [{}]"), InHandle);
     }
@@ -267,7 +267,7 @@ namespace ck
         DoHandlePriorityOverride(
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             FCk_Handle_AudioTrack InNewTrack,
             int32 InNewTrackPriority,
             ECk_AudioTrack_OverrideBehavior InOverrideBehavior)
@@ -280,13 +280,13 @@ namespace ck
         {
             case ECk_AudioTrack_OverrideBehavior::Interrupt:
             {
-                DoStopLowerPriorityTracks(InParams, InCurrent, InNewTrackPriority);
+                DoStopLowerPriorityTracks(InParams, InAudioDirector, InNewTrackPriority);
                 break;
             }
             case ECk_AudioTrack_OverrideBehavior::Crossfade:
             {
                 const auto CrossfadeTime = InParams.Get_DefaultCrossfadeDuration().Get(FCk_Time{2.0f});
-                for (auto& [TrackName, TrackHandle] : InCurrent._TracksByName)
+                for (auto& [TrackName, TrackHandle] : InAudioDirector._TracksByName)
                 {
                     if (TrackHandle != InNewTrack && ck::IsValid(TrackHandle))
                     {
@@ -314,11 +314,11 @@ namespace ck
         FProcessor_AudioDirector_HandleRequests::
         DoStopLowerPriorityTracks(
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent,
+            FFragment_AudioDirector& InAudioDirector,
             int32 InNewTrackPriority)
             -> void
     {
-        for (auto& [TrackName, TrackHandle] : InCurrent._TracksByName)
+        for (auto& [TrackName, TrackHandle] : InAudioDirector._TracksByName)
         {
             if (ck::IsValid(TrackHandle))
             {
@@ -338,11 +338,11 @@ namespace ck
     auto
         FProcessor_AudioDirector_HandleRequests::
         DoGetActiveTrackCount(
-            const FFragment_AudioDirector_Current& InCurrent)
+            const FFragment_AudioDirector& InAudioDirector)
             -> int32
     {
         int32 Count = 0;
-        for (const auto& [TrackName, TrackHandle] : InCurrent.Get_TracksByName())
+        for (const auto& [TrackName, TrackHandle] : InAudioDirector.Get_TracksByName())
         {
             if (ck::Is_NOT_Valid(TrackHandle))
             { continue; }
@@ -412,35 +412,35 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             const HandleType& InHandle,
-            FFragment_AudioDirector_Current& InCurrent)
+            FFragment_AudioDirector& InAudioDirector)
             -> void
     {
-        DoCheckAllTracksFinished(InHandle, InCurrent);
+        DoCheckAllTracksFinished(InHandle, InAudioDirector);
     }
 
     auto
         FProcessor_AudioDirector_TrackStateMonitor::
         DoCheckAllTracksFinished(
             HandleType InHandle,
-            FFragment_AudioDirector_Current& InCurrent)
+            FFragment_AudioDirector& InAudioDirector)
             -> void
     {
-        if (InCurrent.Get_TracksByName().IsEmpty())
+        if (InAudioDirector.Get_TracksByName().IsEmpty())
         {
-            InCurrent._ActiveTracks.Empty();
-            InCurrent._HasFiredAllTracksFinished = false;
+            InAudioDirector._ActiveTracks.Empty();
+            InAudioDirector._HasFiredAllTracksFinished = false;
             return;
         }
 
-        InCurrent._ActiveTracks.Empty();
+        InAudioDirector._ActiveTracks.Empty();
         bool HasPlayingTracks = false;
 
-        for (const auto& [TrackName, TrackHandle] : InCurrent.Get_TracksByName())
+        for (const auto& [TrackName, TrackHandle] : InAudioDirector.Get_TracksByName())
         {
             if (ck::Is_NOT_Valid(TrackHandle))
             { continue; }
 
-            InCurrent._ActiveTracks.Add(TrackHandle);
+            InAudioDirector._ActiveTracks.Add(TrackHandle);
 
             if (TrackHandle.Has_Any<FTag_AudioTrack_NeedsSetup, FFragment_AudioTrack_Requests>())
             {
@@ -460,10 +460,10 @@ namespace ck
         }
 
         if (NOT HasPlayingTracks &&
-            NOT InCurrent._ActiveTracks.IsEmpty() &&
-            NOT InCurrent._HasFiredAllTracksFinished)
+            NOT InAudioDirector._ActiveTracks.IsEmpty() &&
+            NOT InAudioDirector._HasFiredAllTracksFinished)
         {
-            InCurrent._HasFiredAllTracksFinished = true;
+            InAudioDirector._HasFiredAllTracksFinished = true;
 
             ck::audio::Verbose(TEXT("AudioDirector [{}] - All tracks finished, firing OnAllTracksFinished signal"), InHandle);
 
@@ -471,7 +471,7 @@ namespace ck
         }
         else if (HasPlayingTracks)
         {
-            InCurrent._HasFiredAllTracksFinished = false;
+            InAudioDirector._HasFiredAllTracksFinished = false;
         }
     }
 
@@ -483,12 +483,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_AudioDirector_Params& InParams,
-            FFragment_AudioDirector_Current& InCurrent) const
+            FFragment_AudioDirector& InAudioDirector) const
             -> void
     {
         ck::audio::Verbose(TEXT("Tearing down AudioDirector [{}]"), InHandle);
 
-        for (auto& [TrackName, TrackHandle] : InCurrent._TracksByName)
+        for (auto& [TrackName, TrackHandle] : InAudioDirector._TracksByName)
         {
             if (ck::IsValid(TrackHandle))
             {
@@ -496,8 +496,8 @@ namespace ck
             }
         }
 
-        InCurrent._TracksByName.Empty();
-        InCurrent._CurrentHighestPriority = -1;
+        InAudioDirector._TracksByName.Empty();
+        InAudioDirector._CurrentHighestPriority = -1;
 
         ck::audio::VeryVerbose(TEXT("AudioDirector [{}] teardown complete"), InHandle);
     }

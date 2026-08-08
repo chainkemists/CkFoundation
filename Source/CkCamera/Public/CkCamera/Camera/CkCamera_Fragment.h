@@ -63,10 +63,10 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    struct CKCAMERA_API FFragment_Camera_Current
+    struct CKCAMERA_API FFragment_Camera
     {
     public:
-        CK_GENERATED_BODY(FFragment_Camera_Current);
+        CK_GENERATED_BODY(FFragment_Camera);
 
     public:
         friend class FProcessor_CameraLayer_Lifecycle;
@@ -251,7 +251,7 @@ namespace ck
     public:
         FCameraAttr_Rotation _Pitch;
         FCameraAttr_Rotation _Yaw;
-        // _XIntentionCurve / _YIntentionCurve live on FFragment_Camera_Current (FAlphaBlend, not attributes).
+        // _XIntentionCurve / _YIntentionCurve live on FFragment_Camera (FAlphaBlend, not attributes).
     };
 
     struct CKCAMERA_API FFragment_Camera_AutoReorient

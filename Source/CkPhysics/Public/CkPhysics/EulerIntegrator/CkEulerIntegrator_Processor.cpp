@@ -27,9 +27,9 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_EulerIntegrator_Current& InIntegrator,
-            FFragment_Velocity_Current& InVelocity,
-            const FFragment_Acceleration_Current& InAcceleration,
+            FFragment_EulerIntegrator& InIntegrator,
+            FFragment_Velocity& InVelocity,
+            const FFragment_Acceleration& InAcceleration,
             const FFragment_ContainerRef_Velocity& InVelocityContainerRef) const
         -> void
     {
@@ -42,7 +42,7 @@ namespace ck
         const auto& Acceleration = InAcceleration.Get_CurrentAcceleration();
         const auto& NewVelocity = OldVelocity + Acceleration * InDeltaT.Get_Seconds();
 
-        InVelocity = FFragment_Velocity_Current{NewVelocity};
+        InVelocity = FFragment_Velocity{NewVelocity};
 
         const auto [VelDir, VelLength] = [&]()
         {
@@ -68,16 +68,16 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_EulerIntegrator_Current& InIntegrator,
-            FFragment_Velocity_Current& InVelocity,
-            const FFragment_Acceleration_Current& InAcceleration)
+            FFragment_EulerIntegrator& InIntegrator,
+            FFragment_Velocity& InVelocity,
+            const FFragment_Acceleration& InAcceleration)
         -> void
     {
         const auto& OldVelocity = InVelocity.Get_CurrentVelocity();
         const auto& Acceleration = InAcceleration.Get_CurrentAcceleration();
         const auto& NewVelocity = OldVelocity + Acceleration * InDeltaT.Get_Seconds();
 
-        InVelocity = FFragment_Velocity_Current{NewVelocity};
+        InVelocity = FFragment_Velocity{NewVelocity};
 
         const auto [VelDir, VelLength] = [&]()
         {

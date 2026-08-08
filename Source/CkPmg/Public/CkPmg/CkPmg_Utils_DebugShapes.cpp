@@ -54,7 +54,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Pmg_DebugShape_UE, FCk_Handle_Pmg_DebugShape,
-    ck::FFragment_Pmg_DebugShape_Current)
+    ck::FFragment_Pmg_DebugShape)
 
 // --------------------------------------------------------------------------------------------------------------------
 

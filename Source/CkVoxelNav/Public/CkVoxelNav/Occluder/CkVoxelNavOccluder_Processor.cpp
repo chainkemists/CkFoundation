@@ -53,12 +53,12 @@ namespace ck_voxelnav_occluder_processor
     auto
         Get_BoundsMovedBy(
             const FBox& InPrevious,
-            const FBox& InCurrent)
+            const FBox& InVoxelNavOccluder)
         -> double
     {
         return FMath::Max(
-            (InPrevious.Min - InCurrent.Min).GetAbsMax(),
-            (InPrevious.Max - InCurrent.Max).GetAbsMax());
+            (InPrevious.Min - InVoxelNavOccluder.Min).GetAbsMax(),
+            (InPrevious.Max - InVoxelNavOccluder.Max).GetAbsMax());
     }
 }
 
@@ -72,7 +72,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InOccluderEntity,
             const FFragment_VoxelNavOccluder_Params& InParams,
-            FFragment_VoxelNavOccluder_Current& InCurrent)
+            FFragment_VoxelNavOccluder& InVoxelNavOccluder)
         -> void
     {
         using namespace ck_voxelnav_occluder_processor;
@@ -100,7 +100,7 @@ namespace ck
                  "transform, so compose Transform onto it before the occluder"), InOccluderEntity)
         { return; }
 
-        InCurrent._TrackedBounds = Get_WorldBounds(
+        InVoxelNavOccluder._TrackedBounds = Get_WorldBounds(
             UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle), InParams);
     }
 
@@ -112,7 +112,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InOccluderEntity,
             const FFragment_VoxelNavOccluder_Params& InParams,
-            FFragment_VoxelNavOccluder_Current& InCurrent) const
+            FFragment_VoxelNavOccluder& InVoxelNavOccluder) const
         -> void
     {
         using namespace ck_voxelnav_occluder_processor;
@@ -129,19 +129,19 @@ namespace ck
         const auto CurrentBounds = Get_WorldBounds(
             UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle), InParams);
 
-        if (InCurrent._TrackedBounds.IsValid == 0)
+        if (InVoxelNavOccluder._TrackedBounds.IsValid == 0)
         {
-            InCurrent._TrackedBounds = CurrentBounds;
+            InVoxelNavOccluder._TrackedBounds = CurrentBounds;
             return;
         }
 
-        if (Get_BoundsMovedBy(InCurrent._TrackedBounds, CurrentBounds) < Get_MovementThresholdUu(InParams))
+        if (Get_BoundsMovedBy(InVoxelNavOccluder._TrackedBounds, CurrentBounds) < Get_MovementThresholdUu(InParams))
         { return; }
 
         // BOTH halves. The new bounds say where space became blocked; the old ones say where it became free
         // again, and a repair handed only the new bounds leaves the obstacle's departure point occupied
         // forever.
-        const auto DirtyBounds = InCurrent._TrackedBounds + CurrentBounds;
+        const auto DirtyBounds = InVoxelNavOccluder._TrackedBounds + CurrentBounds;
 
         auto ReachedVolumeEntities = TArray<FCk_Entity>{};
 
@@ -175,8 +175,8 @@ namespace ck
                 Volume, FCk_Request_VoxelNavVolume_MarkDirty{DirtyBounds}, {});
         }
 
-        InCurrent._TrackedBounds = CurrentBounds;
-        ++InCurrent._TimesDirtied;
+        InVoxelNavOccluder._TrackedBounds = CurrentBounds;
+        ++InVoxelNavOccluder._TimesDirtied;
 
         voxelnav::VeryVerbose(TEXT("VoxelNav Occluder [{}] moved and dirtied [{}]"),
             InOccluderEntity, DirtyBounds);

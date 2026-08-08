@@ -645,7 +645,7 @@ namespace ck
                 const auto& LocalListener = TransientEntity.Get<FFragment_VoiceChat_LocalListener>().Get_Listener();
 
                 if (ck::IsValid(LocalListener)
-                    && LocalListener.Get<FFragment_VoiceListener_Current>().Get_MutedTalkers().Contains(InVoiceTalkerEntity))
+                    && LocalListener.Get<FFragment_VoiceListener>().Get_MutedTalkers().Contains(InVoiceTalkerEntity))
                 { BundlesCopy.Reset(); }
             }
         }

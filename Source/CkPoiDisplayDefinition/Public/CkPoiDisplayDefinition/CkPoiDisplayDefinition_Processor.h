@@ -12,7 +12,7 @@ namespace ck
 {
     class CKPOIDISPLAYDEFINITION_API FProcessor_PoiDisplayDefinition_HandleRequests
         : public ck_exp::TProcessor<FProcessor_PoiDisplayDefinition_HandleRequests, FCk_Handle_PoiDisplayDefinition,
-            ck::TReadWrite<FFragment_PoiDisplayDefinition_Current>, ck::TReadWrite<FFragment_PoiDisplayDefinition_Requests>,
+            ck::TReadWrite<FFragment_PoiDisplayDefinition>, ck::TReadWrite<FFragment_PoiDisplayDefinition_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -27,7 +27,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_PoiDisplayDefinition_Current& InCurrent,
+            FFragment_PoiDisplayDefinition& InPoiDisplayDefinition,
             FFragment_PoiDisplayDefinition_Requests& InRequests) const
             -> void;
 
@@ -37,13 +37,13 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_PoiDisplayDefinition_Current& InCurrent,
+            FFragment_PoiDisplayDefinition& InPoiDisplayDefinition,
             const FCk_Request_PoiDisplayDefinition_SetTint& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_PoiDisplayDefinition_Current& InCurrent,
+            FFragment_PoiDisplayDefinition& InPoiDisplayDefinition,
             const FCk_Request_PoiDisplayDefinition_SetSizeHint& InRequest) -> bool;
     };
 

@@ -24,7 +24,7 @@ auto
         AActor* InOwningActor)
     -> void
 {
-    InHandle.Add<ck::FFragment_OwningActor_Current>(InOwningActor);
+    InHandle.Add<ck::FFragment_OwningActor>(InOwningActor);
 
     if (NOT UCk_Utils_Net_UE::Has(InHandle))
     { return; }
@@ -67,7 +67,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FFragment_OwningActor_Current>();
+    return InHandle.Has<ck::FFragment_OwningActor>();
 }
 
 auto
@@ -150,7 +150,7 @@ auto
     constexpr auto EvenIfPendingKill = true;
     return FCk_EntityOwningActor_BasicDetails
     {
-        InHandle.Get<ck::FFragment_OwningActor_Current, ck::IsValid_Policy_IncludePendingKill>().Get_EntityOwningActor().Get(EvenIfPendingKill), InHandle
+        InHandle.Get<ck::FFragment_OwningActor, ck::IsValid_Policy_IncludePendingKill>().Get_EntityOwningActor().Get(EvenIfPendingKill), InHandle
     };
 }
 

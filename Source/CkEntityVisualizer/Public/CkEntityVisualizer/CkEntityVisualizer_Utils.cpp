@@ -302,7 +302,7 @@ auto
     UCk_Utils_EntityVisualizer_UE::
     Create_ProbePreview_Pmg(
         FCk_Handle_Transform& InAttachTo,
-        const ck::FFragment_ShapeBox_Current& InShape,
+        const ck::FFragment_ShapeBox& InShape,
         const ck::FFragment_Probe_DebugInfo& InDebugInfo)
     -> FCk_Handle_Pmg_DebugShape
 {
@@ -316,7 +316,7 @@ auto
     UCk_Utils_EntityVisualizer_UE::
     Create_ProbePreview_Pmg(
         FCk_Handle_Transform& InAttachTo,
-        const ck::FFragment_ShapeSphere_Current& InShape,
+        const ck::FFragment_ShapeSphere& InShape,
         const ck::FFragment_Probe_DebugInfo& InDebugInfo)
     -> FCk_Handle_Pmg_DebugShape
 {
@@ -330,7 +330,7 @@ auto
     UCk_Utils_EntityVisualizer_UE::
     Create_ProbePreview_Pmg(
         FCk_Handle_Transform& InAttachTo,
-        const ck::FFragment_ShapeCapsule_Current& InShape,
+        const ck::FFragment_ShapeCapsule& InShape,
         const ck::FFragment_Probe_DebugInfo& InDebugInfo)
     -> FCk_Handle_Pmg_DebugShape
 {
@@ -346,7 +346,7 @@ auto
     UCk_Utils_EntityVisualizer_UE::
     Create_ProbePreview_Pmg(
         FCk_Handle_Transform& InAttachTo,
-        const ck::FFragment_ShapeCylinder_Current& InShape,
+        const ck::FFragment_ShapeCylinder& InShape,
         const ck::FFragment_Probe_DebugInfo& InDebugInfo)
     -> FCk_Handle_Pmg_DebugShape
 {

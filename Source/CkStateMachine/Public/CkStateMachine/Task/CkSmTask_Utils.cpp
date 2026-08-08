@@ -19,7 +19,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle) && InHandle.Has_All<ck::FFragment_SmTask_Current, ck::FFragment_SmTask_Params>();
+    return ck::IsValid(InHandle) && InHandle.Has_All<ck::FFragment_SmTask, ck::FFragment_SmTask_Params>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ auto
         }
     }
 
-    TaskEntity.Add<ck::FFragment_SmTask_Current>();
+    TaskEntity.Add<ck::FFragment_SmTask>();
     TaskEntity.Add<ck::FFragment_SmTask_Params>(InTaskClass);
 
     auto TaskEntityTyped = CastChecked(TaskEntity);
@@ -110,7 +110,7 @@ auto
         ECk_SmTaskResult InResult)
     -> FCk_Handle_SmTask
 {
-    auto& Current = InTask.Get<ck::FFragment_SmTask_Current>();
+    auto& Current = InTask.Get<ck::FFragment_SmTask>();
     const auto PrevResult = Current.Get_LastResult();
 
     // A terminal result not yet broadcast (ResultDirty pending) must not be clobbered back to
@@ -140,7 +140,7 @@ auto
         const FCk_Handle_SmTask& InTask)
     -> ECk_SmTaskResult
 {
-    return InTask.Get<ck::FFragment_SmTask_Current>().Get_LastResult();
+    return InTask.Get<ck::FFragment_SmTask>().Get_LastResult();
 }
 
 auto

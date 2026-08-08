@@ -17,10 +17,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSHAPES_API FFragment_ShapeBox_Current
+    struct CKSHAPES_API FFragment_ShapeBox
     {
     public:
-        CK_GENERATED_BODY(FFragment_ShapeBox_Current);
+        CK_GENERATED_BODY(FFragment_ShapeBox);
 
     public:
         friend class FProcessor_ShapeBox_HandleRequests;
@@ -33,7 +33,7 @@ namespace ck
         CK_PROPERTY_GET(_Dimensions);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_ShapeBox_Current, _Dimensions);
+        CK_DEFINE_CONSTRUCTORS(FFragment_ShapeBox, _Dimensions);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

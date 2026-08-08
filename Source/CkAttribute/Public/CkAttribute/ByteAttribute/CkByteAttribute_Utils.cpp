@@ -143,7 +143,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ByteAttribute_UE, FCk_Handle_ByteAttribute, ck::FFragment_ByteAttribute_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ByteAttribute_UE, FCk_Handle_ByteAttribute, ck::FFragment_ByteAttribute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -936,7 +936,7 @@ auto
         const FCk_Handle& InModifierEntity)
     -> bool
 {
-    return InModifierEntity.Has_Any<ck::FFragment_ByteAttributeModifier_Min, ck::FFragment_ByteAttributeModifier_Current,ck::FFragment_ByteAttributeModifier_Max>();
+    return InModifierEntity.Has_Any<ck::FFragment_ByteAttributeModifier_Min, ck::FFragment_ByteAttributeModifier,ck::FFragment_ByteAttributeModifier_Max>();
 }
 
 auto

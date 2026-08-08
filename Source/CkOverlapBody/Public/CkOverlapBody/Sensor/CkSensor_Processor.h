@@ -13,7 +13,7 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Sensor_Setup : public ck_exp::TProcessor<
             FProcessor_Sensor_Setup,
             FCk_Handle_Sensor,
-            ck::TReadWrite<FFragment_Sensor_Current>,
+            ck::TReadWrite<FFragment_Sensor>,
             ck::TReadOnly<FFragment_Sensor_Params>,
             FTag_Sensor_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -32,7 +32,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
+            FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params& InParamsComp) const -> void;
     };
 
@@ -41,7 +41,7 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Sensor_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Sensor_HandleRequests,
             FCk_Handle_Sensor,
-            ck::TReadWrite<FFragment_Sensor_Current>,
+            ck::TReadWrite<FFragment_Sensor>,
             ck::TReadOnly<FFragment_Sensor_Params>,
             ck::TReadOnly<FFragment_Sensor_Requests>,
             FTag_Sensor_SetupComplete,
@@ -60,44 +60,44 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Sensor_Current& InCurrentComp,
+            FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params& InParamsComp,
             const FFragment_Sensor_Requests& InRequestsComp) const -> void;
 
     private:
         static auto DoHandleRequest(
             HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
+            FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_EnableDisable& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
+            FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_Resize& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
+            FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnBeginOverlap& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
+            FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnEndOverlap& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
+            FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
+            FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest) -> void;
     };
@@ -131,7 +131,7 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Sensor_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Sensor_UpdateTransform,
             FCk_Handle_Sensor,
-            ck::TReadOnly<FFragment_Sensor_Current>,
+            ck::TReadOnly<FFragment_Sensor>,
             ck::TReadOnly<FFragment_Sensor_Params>,
             FTag_Sensor_UpdateTransform,
             FTag_Sensor_SetupComplete,
@@ -147,7 +147,7 @@ namespace ck
         static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InSensorEntity,
-            const FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params&  InParamsComp) -> void;
     };
 
@@ -156,7 +156,7 @@ namespace ck
     class CKOVERLAPBODY_API FProcessor_Sensor_EndPlay : public ck_exp::TProcessor<
             FProcessor_Sensor_EndPlay,
             FCk_Handle_Sensor,
-            ck::TReadWrite<FFragment_Sensor_Current>,
+            ck::TReadWrite<FFragment_Sensor>,
             ck::TReadOnly<FFragment_Sensor_Params>,
             FTag_Sensor_SetupComplete,
             CK_IF_END_PLAY>
@@ -171,7 +171,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
+            FFragment_Sensor& InSensorComp,
             const FFragment_Sensor_Params& InParamsComp) const -> void;
     };
 

@@ -37,7 +37,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_IskmProxy_Params>(InParams);
-    InHandle.Add<ck::FFragment_IskmProxy_Current>();
+    InHandle.Add<ck::FFragment_IskmProxy>();
     InHandle.Add<ck::FFragment_IskmProxy_AnimState>();
     InHandle.Add<ck::FFragment_IskmProxy_PoseSource>();
     InHandle.Add<ck::FFragment_IskmProxy_CustomData>();
@@ -69,7 +69,7 @@ auto
 {
     return InHandle.Has_All<
         ck::FFragment_IskmProxy_Params,
-        ck::FFragment_IskmProxy_Current,
+        ck::FFragment_IskmProxy,
         ck::FFragment_IskmProxy_AnimState>();
 }
 
@@ -93,7 +93,7 @@ auto
 {
     if (ck::Is_NOT_Valid(InHandle))
     { return 0.0f; }
-    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy>().Get_BaseSKMC().Get();
     if (ck::Is_NOT_Valid(SKMC))
     { return 0.0f; }
     return SKMC->GetPosition();
@@ -151,7 +151,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return nullptr; }
 
-    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy>().Get_BaseSKMC().Get();
     if (ck::Is_NOT_Valid(SKMC))
     { return nullptr; }
 
@@ -188,7 +188,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return 0.0f; }
 
-    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy>().Get_BaseSKMC().Get();
     if (ck::Is_NOT_Valid(SKMC))
     { return 0.0f; }
 
@@ -202,7 +202,7 @@ auto
 {
     if (ck::Is_NOT_Valid(InHandle))
     { return 0; }
-    return InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_AttachedSubmeshIndices().Num();
+    return InHandle.Get<ck::FFragment_IskmProxy>().Get_AttachedSubmeshIndices().Num();
 }
 
 auto
@@ -291,7 +291,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return nullptr; }
 
-    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy>().Get_BaseSKMC().Get();
     if (ck::Is_NOT_Valid(SKMC))
     { return nullptr; }
 
@@ -310,7 +310,7 @@ auto
 
     if (ck::Is_NOT_Valid(InHandle))
     { return FTransform::Identity; }
-    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy>().Get_BaseSKMC().Get();
     if (ck::Is_NOT_Valid(SKMC))
     { return FTransform::Identity; }
     const auto Space = (InSpace == ECk_IskmProxy_TransformSpace::Component)
@@ -437,7 +437,7 @@ auto
     OutResult = FCk_IskmProxy_LineTraceResult{};
     if (ck::Is_NOT_Valid(InHandle))
     { return false; }
-    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy>().Get_BaseSKMC().Get();
     if (ck::Is_NOT_Valid(SKMC))
     { return false; }
 

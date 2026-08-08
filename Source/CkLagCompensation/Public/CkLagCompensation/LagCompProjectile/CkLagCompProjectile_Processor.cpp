@@ -107,8 +107,8 @@ namespace ck
 
         auto RewindHits = TArray<FCk_LagComp_RewindHit>{};
 
-        InHandle.View<FFragment_RewindHistory_Params, FFragment_RewindHistory_Current>().ForEach(
-        [&](FCk_Entity InHistoryEntity, FFragment_RewindHistory_Params&, FFragment_RewindHistory_Current& InHistoryCurrent)
+        InHandle.View<FFragment_RewindHistory_Params, FFragment_RewindHistory>().ForEach(
+        [&](FCk_Entity InHistoryEntity, FFragment_RewindHistory_Params&, FFragment_RewindHistory& InHistoryCurrent)
         {
             auto HistoryHandle = ck::MakeHandle(InHistoryEntity, InHandle);
 

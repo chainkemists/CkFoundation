@@ -20,7 +20,7 @@ namespace ck
     class CKCROWD_API FProcessor_CrowdAgent_ApplyOffset : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_ApplyOffset,
             FCk_Handle_CrowdAgent,
-            ck::TReadOnly<FFragment_EulerIntegrator_Current>,
+            ck::TReadOnly<FFragment_EulerIntegrator>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             FTag_EulerIntegrator_NeedsUpdate,
             TExclude<FTag_CrowdAgent_Disabled>,
@@ -43,7 +43,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EulerIntegrator_Current& InIntegrator,
+            const FFragment_EulerIntegrator& InIntegrator,
             FFragment_CrowdAgent_PendingDisplacement& InPending) -> void;
     };
 }

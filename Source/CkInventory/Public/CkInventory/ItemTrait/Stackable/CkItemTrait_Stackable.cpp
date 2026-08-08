@@ -21,7 +21,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_IntegerAttribute_InventoryItem_StackCount, TEXT("Inte
 static auto
 DoRelayAttributeChangeToStackableSignal(
     FCk_Handle InOwnerEntity,
-    ck::TPayload_Attribute_OnValueChanged<ck::FFragment_IntegerAttribute_Current> InPayload) -> void
+    ck::TPayload_Attribute_OnValueChanged<ck::FFragment_IntegerAttribute> InPayload) -> void
 {
     auto ItemHandle = UCk_Utils_Item_UE::CastChecked(InOwnerEntity);
     ck::UUtils_Signal_Stackable_OnStackCountChanged::Broadcast(

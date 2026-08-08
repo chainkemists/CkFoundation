@@ -27,7 +27,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_IsmRenderer_Params>(InParams);
-    InHandle.Add<ck::FFragment_IsmRenderer_Current>();
+    InHandle.Add<ck::FFragment_IsmRenderer>();
     InHandle.Add<ck::FTag_IsmRenderer_NeedsSetup>();
 
     if (InParams->Get_UpdatePolicy() == ECk_Ism_InstanceUpdatePolicy::Recreate)
@@ -42,7 +42,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return InHandle.Has_All<ck::FFragment_IsmRenderer_Current, ck::FFragment_IsmRenderer_Params>();
+    return InHandle.Has_All<ck::FFragment_IsmRenderer, ck::FFragment_IsmRenderer_Params>();
 }
 
 auto
@@ -51,7 +51,7 @@ auto
         const FCk_Handle_IsmRenderer& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_IsmRenderer_Current>().Get_IsmComponent()->GetInstanceCount();
+    return InHandle.Get<ck::FFragment_IsmRenderer>().Get_IsmComponent()->GetInstanceCount();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

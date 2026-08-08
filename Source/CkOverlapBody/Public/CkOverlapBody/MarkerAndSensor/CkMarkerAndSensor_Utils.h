@@ -40,13 +40,13 @@ public:
     static auto
     Draw_Marker_DebugLines(
         UObject* InOuter,
-        const ck::FFragment_Marker_Current& InMarkerCurrent,
+        const ck::FFragment_Marker& InMarkerCurrent,
         const FCk_Marker_Spec& InMarkerParams) -> void;
 
     static auto
     Draw_Sensor_DebugLines(
         UObject* InOuter,
-        const ck::FFragment_Sensor_Current& InSensorCurrent,
+        const ck::FFragment_Sensor& InSensorCurrent,
         const FCk_Sensor_Spec& InSensorParams) -> void;
 
 public:
@@ -150,14 +150,14 @@ auto
 
     const auto& [shapeComp, enableDisable] = [&]() -> TTuple<UShapeComponent*, ECk_EnableDisable>
     {
-        if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FFragment_Marker_Current>)
+        if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FFragment_Marker>)
         {
             const auto& MarkerCurrent = InMarkerOrSensorCurrent;
             const auto& Marker = MarkerCurrent.Get_Marker().Get();
 
             return MakeTuple(Marker, MarkerCurrent.Get_EnableDisable());
         }
-        else if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FFragment_Sensor_Current>)
+        else if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FFragment_Sensor>)
         {
             const auto& SensorCurrent = InMarkerOrSensorCurrent;
             const auto& Sensor = SensorCurrent.Get_Sensor().Get();
@@ -388,14 +388,14 @@ auto
         {
             case ECk_OverlapBody_Type::Marker:
             {
-                InMarkerOrSensorEntity.Get<ck::FFragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Marker>()._Marker = Cast<UShapeComponent>(InActorComp);
                 auto MarkerEntity = UCk_Utils_Marker_UE::Cast(InMarkerOrSensorEntity);
                 UCk_Utils_Marker_UE::Request_MarkMarker_AsSetupComplete(MarkerEntity);
                 break;
             }
             case ECk_OverlapBody_Type::Sensor:
             {
-                InMarkerOrSensorEntity.Get<ck::FFragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Sensor>()._Sensor = Cast<UShapeComponent>(InActorComp);
                 auto SensorEntity = UCk_Utils_Sensor_UE::Cast(InMarkerOrSensorEntity);
                 UCk_Utils_Sensor_UE::Request_MarkSensor_AsSetupComplete(SensorEntity);
                 break;
@@ -469,14 +469,14 @@ auto
         {
             case ECk_OverlapBody_Type::Marker:
             {
-                InMarkerOrSensorEntity.Get<ck::FFragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Marker>()._Marker = Cast<UShapeComponent>(InActorComp);
                 auto MarkerEntity = UCk_Utils_Marker_UE::Cast(InMarkerOrSensorEntity);
                 UCk_Utils_Marker_UE::Request_MarkMarker_AsSetupComplete(MarkerEntity);
                 break;
             }
             case ECk_OverlapBody_Type::Sensor:
             {
-                InMarkerOrSensorEntity.Get<ck::FFragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Sensor>()._Sensor = Cast<UShapeComponent>(InActorComp);
                 auto SensorEntity = UCk_Utils_Sensor_UE::Cast(InMarkerOrSensorEntity);
                 UCk_Utils_Sensor_UE::Request_MarkSensor_AsSetupComplete(SensorEntity);
                 break;
@@ -550,14 +550,14 @@ auto
         {
             case ECk_OverlapBody_Type::Marker:
             {
-                InMarkerOrSensorEntity.Get<ck::FFragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Marker>()._Marker = Cast<UShapeComponent>(InActorComp);
                 auto MarkerEntity = UCk_Utils_Marker_UE::Cast(InMarkerOrSensorEntity);
                 UCk_Utils_Marker_UE::Request_MarkMarker_AsSetupComplete(MarkerEntity);
                 break;
             }
             case ECk_OverlapBody_Type::Sensor:
             {
-                InMarkerOrSensorEntity.Get<ck::FFragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Sensor>()._Sensor = Cast<UShapeComponent>(InActorComp);
                 auto SensorEntity = UCk_Utils_Sensor_UE::Cast(InMarkerOrSensorEntity);
                 UCk_Utils_Sensor_UE::Request_MarkSensor_AsSetupComplete(SensorEntity);
                 break;

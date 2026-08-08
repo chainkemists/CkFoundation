@@ -35,9 +35,9 @@ static struct FAccelerationRepHandlerRegistrar
                 // HydrationApply reuses the net Apply; no explicit replication re-arm tag is added.
                 .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                 {
-                    if (NOT Entity.Has<ck::FFragment_Acceleration_Current>())
+                    if (NOT Entity.Has<ck::FFragment_Acceleration>())
                     { return {}; }
-                    return FInstancedStruct::Make(FCk_RepData_Acceleration{Entity.Get<ck::FFragment_Acceleration_Current>().Get_CurrentAcceleration()});
+                    return FInstancedStruct::Make(FCk_RepData_Acceleration{Entity.Get<ck::FFragment_Acceleration>().Get_CurrentAcceleration()});
                 },
                 .SharedApply = ApplyFn});
     }

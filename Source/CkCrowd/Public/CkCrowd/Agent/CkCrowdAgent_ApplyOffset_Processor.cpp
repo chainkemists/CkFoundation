@@ -21,7 +21,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EulerIntegrator_Current& InIntegrator,
+            const FFragment_EulerIntegrator& InIntegrator,
             FFragment_CrowdAgent_PendingDisplacement& InPending)
         -> void
     {

@@ -29,7 +29,7 @@ auto
         UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_Name());
 
         InNewEntity.Add<ck::FFragment_Vfx_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_Vfx_Current>();
+        InNewEntity.Add<ck::FFragment_Vfx>();
         InNewEntity.Add<ck::FTag_Vfx_NeedsSetup>();
     });
 
@@ -66,7 +66,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Vfx_UE, FCk_Handle_Vfx, ck::FFragment_Vfx_Current, ck::FFragment_Vfx_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Vfx_UE, FCk_Handle_Vfx, ck::FFragment_Vfx, ck::FFragment_Vfx_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 

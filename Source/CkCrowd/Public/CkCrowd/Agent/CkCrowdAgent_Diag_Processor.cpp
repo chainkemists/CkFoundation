@@ -448,7 +448,7 @@ namespace ck
     auto FProcessor_CrowdAgent_DiagVelocityBridgeTap::ForEachEntity(
         TimeType,
         HandleType,
-        const FFragment_Velocity_Current& InCurrentVelocity,
+        const FFragment_Velocity& InCurrentVelocity,
         FFragment_CrowdAgent_DiagRecorder& InRecorder)
     -> void
     {
@@ -485,7 +485,7 @@ namespace ck
             HandleType,
             const FFragment_Transform& InTransform,
             const FFragment_CrowdAgent_Params& InParams,
-            const FFragment_Velocity_Current& InCurrentVelocity,
+            const FFragment_Velocity& InCurrentVelocity,
             const FFragment_CrowdAgent_NeighborCache& InNeighborCache,
             FFragment_CrowdAgent_DiagRecorder& InRecorder)
         -> void

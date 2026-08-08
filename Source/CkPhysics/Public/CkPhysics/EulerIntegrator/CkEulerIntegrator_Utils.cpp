@@ -11,7 +11,7 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    InHandle.Add<ck::FFragment_EulerIntegrator_Current>();
+    InHandle.Add<ck::FFragment_EulerIntegrator>();
     InHandle.Add<ck::FTag_EulerIntegrator_NeedsUpdate>();
     InHandle.Add<ck::FTag_EulerIntegrator_DoOnePredictiveUpdate>();
 
@@ -26,7 +26,7 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> void
 {
-    InHandle.Remove<ck::FFragment_EulerIntegrator_Current>();
+    InHandle.Remove<ck::FFragment_EulerIntegrator>();
     InHandle.Remove<ck::FTag_EulerIntegrator_NeedsUpdate>();
 
     // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.

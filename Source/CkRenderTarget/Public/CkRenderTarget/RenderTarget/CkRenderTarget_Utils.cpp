@@ -51,7 +51,7 @@ auto
         UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_SyncName());
 
         InNewEntity.Add<ck::FFragment_RenderTarget_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_RenderTarget_Current>();
+        InNewEntity.Add<ck::FFragment_RenderTarget>();
         InNewEntity.Add<ck::FFragment_RenderTarget_PixelSync>();
         InNewEntity.Add<ck::FFragment_RenderTarget_ClientStaging>();
         InNewEntity.Add<ck::FTag_RenderTarget_NeedsSetup>();
@@ -79,7 +79,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_RenderTarget_UE, FCk_Handle_RenderTarget,
-    ck::FFragment_RenderTarget_Current, ck::FFragment_RenderTarget_Params);
+    ck::FFragment_RenderTarget, ck::FFragment_RenderTarget_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -110,7 +110,7 @@ auto
         const FCk_Handle_RenderTarget& InRenderTargetEntity)
     -> UTextureRenderTarget2D*
 {
-    return InRenderTargetEntity.Get<ck::FFragment_RenderTarget_Current>().Get_Target().Get();
+    return InRenderTargetEntity.Get<ck::FFragment_RenderTarget>().Get_Target().Get();
 }
 
 auto
@@ -128,7 +128,7 @@ auto
     -> int32
 {
     const auto LocallyAuthoredSeq =
-        InRenderTargetEntity.Get<ck::FFragment_RenderTarget_Current>().Get_NextBatchSeq() - 1;
+        InRenderTargetEntity.Get<ck::FFragment_RenderTarget>().Get_NextBatchSeq() - 1;
 
     const auto ReplayedSeq = InRenderTargetEntity.Has<ck::FFragment_RenderTarget_ClientReplayState>()
         ? InRenderTargetEntity.Get<ck::FFragment_RenderTarget_ClientReplayState>().Get_LastAppliedSeq()
@@ -467,7 +467,7 @@ auto
         && NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InRenderTargetEntity);
 
     PixelSync._PendingInstructionWatermark =
-        InRenderTargetEntity.Get<ck::FFragment_RenderTarget_Current>().Get_NextBatchSeq() - 1;
+        InRenderTargetEntity.Get<ck::FFragment_RenderTarget>().Get_NextBatchSeq() - 1;
     PixelSync._JobResult = ck::render_target::pixel::Launch_DiffAndCompressJob(
         InPixels, InSize,
         IsUploadBound ? TArray<uint8>{} : PixelSync._LastSyncedSnapshot,
@@ -497,7 +497,7 @@ auto
 
     ck_render_target_processor::DrawPixelsToTarget(
         InRenderTargetEntity,
-        InRenderTargetEntity.Get<ck::FFragment_RenderTarget_Current>(),
+        InRenderTargetEntity.Get<ck::FFragment_RenderTarget>(),
         PixelSync.Get_LastSyncedSnapshot(),
         PixelSync.Get_SnapshotSize(),
         Staging._UploadTexture);

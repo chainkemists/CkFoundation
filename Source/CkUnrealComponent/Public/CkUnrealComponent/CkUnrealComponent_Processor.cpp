@@ -60,7 +60,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_UnrealComponent_Params& InParams,
-            FFragment_UnrealComponent_Current& InCurrent)
+            FFragment_UnrealComponent& InUnrealComponent)
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
@@ -93,9 +93,9 @@ namespace ck
 
         if (IsSceneComponent)
         {
-            CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InCurrent._OwningEntity),
+            CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InUnrealComponent._OwningEntity),
                 TEXT("UnrealComponent [{}] is a SceneComponent but its OwningEntity [{}] has no Transform fragment"),
-                InHandle, InCurrent._OwningEntity)
+                InHandle, InUnrealComponent._OwningEntity)
             { return; }
         }
 
@@ -131,7 +131,7 @@ namespace ck
 
         NewComponent->RegisterComponentWithWorld(World);
 
-        InCurrent._Component = NewComponent;
+        InUnrealComponent._Component = NewComponent;
 
         if (IsSceneComponent)
         {
@@ -139,7 +139,7 @@ namespace ck
 
             if (NOT InHandle.Has<FTag_UnrealComponent_TransformPushDisabled>())
             {
-                auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InCurrent.Get_OwningEntity());
+                auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InUnrealComponent.Get_OwningEntity());
                 ck_unreal_component_processor::PushTransformIfChanged(
                     CastChecked<USceneComponent>(NewComponent),
                     UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform));
@@ -270,14 +270,14 @@ namespace ck
                     if (Enabled) { ++NonSceneRejected; }
                     return;
                 }
-                if (NOT InComponentHandle.Has<FFragment_UnrealComponent_Current>())
+                if (NOT InComponentHandle.Has<FFragment_UnrealComponent>())
                 {
                     if (Enabled) { ++MissingTransform; }
                     return;
                 }
 
                 auto* SceneComponent = Cast<USceneComponent>(
-                    InComponentHandle.Get<FFragment_UnrealComponent_Current>().Get_Component().Get());
+                    InComponentHandle.Get<FFragment_UnrealComponent>().Get_Component().Get());
                 if (Enabled && ck::Is_NOT_Valid(SceneComponent))
                 {
                     ++Invalid;
@@ -328,10 +328,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_UnrealComponent_Current& InCurrent)
+            const FFragment_UnrealComponent& InUnrealComponent)
         -> void
     {
-        auto Component = InCurrent.Get_Component().Get();
+        auto Component = InUnrealComponent.Get_Component().Get();
         if (ck::Is_NOT_Valid(Component))
         { return; }
 
@@ -348,14 +348,14 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_UnrealComponent_Current& InCurrent)
+            FFragment_UnrealComponent& InUnrealComponent)
         -> void
     {
         ck::unreal_component::Verbose(TEXT("Tearing down UnrealComponent [{}]"), InHandle);
 
         UUtils_Signal_UnrealComponent_OnRemoved::Broadcast(InHandle, MakePayload(InHandle));
 
-        auto Component = InCurrent._Component.Get();
+        auto Component = InUnrealComponent._Component.Get();
         if (ck::IsValid(Component))
         {
             // Baked static-world bodies must go BEFORE the component: the subsystem's removal map is
@@ -375,7 +375,7 @@ namespace ck
             Component->DestroyComponent();
         }
 
-        InCurrent._Component.Reset();
+        InUnrealComponent._Component.Reset();
     }
 }
 

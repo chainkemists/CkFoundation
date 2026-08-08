@@ -33,13 +33,13 @@ namespace ck_state_machine_replication
             == ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled;
     }
 
-    // True pre-Setup (no FFragment_Sm_Current yet) AND while a stash is already in-flight — the
+    // True pre-Setup (no FFragment_Sm yet) AND while a stash is already in-flight — the
     // second clause is what preserves arrival order across back-to-back deliveries.
     auto
     Sm_ShouldStash(
         const FCk_Handle& Entity) -> bool
     {
-        if (NOT Entity.Has<ck::FFragment_Sm_Current>())
+        if (NOT Entity.Has<ck::FFragment_Sm>())
         { return true; }
 
         if (Entity.Has<ck::FFragment_Sm_PendingReplicationEntries>())
@@ -93,8 +93,8 @@ namespace ck_state_machine_replication
             Entity, LastApplied, FirstSeq, Latest.Get_Seq(),
             Latest.Get_NewStateClass(), Latest.Get_Seq());
 
-        const auto LocalCurrentClass = Entity.Has<ck::FFragment_Sm_Current>()
-            ? Entity.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass()
+        const auto LocalCurrentClass = Entity.Has<ck::FFragment_Sm>()
+            ? Entity.Get<ck::FFragment_Sm>().Get_CurrentStateClass()
             : TSubclassOf<UCk_SmState_EntityScript>{};
 
         if (LocalCurrentClass == Latest.Get_NewStateClass())
@@ -274,7 +274,7 @@ namespace ck_state_machine_replication
         TSubclassOf<UCk_SmState_EntityScript>    DesiredStateClass,
         const TArray<FCk_Sm_SavedStateOverride>& SavedOverrides) -> ECk_Persistence_ApplyResult
     {
-        if (NOT Entity.Has<ck::FFragment_Sm_Current>())
+        if (NOT Entity.Has<ck::FFragment_Sm>())
         { return ECk_Persistence_ApplyResult::NotReady; }
 
         // Overrides FIRST — the override write must precede the restore transition.
@@ -302,14 +302,14 @@ namespace ck_state_machine_replication
                         // carry runtime SM fragments, but persisting those payloads would conflict with owner redrive.
                         if (Entity.Has<ck::FTag_Snapshot_SaveTransient>())
                         { return {}; }
-                        if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
+                        if (NOT Entity.Has<ck::FFragment_Sm>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
                         { return {}; }
                         const auto& Params = Entity.Get<ck::FFragment_Sm_Params>();
                         if (NOT Params.Get_ShouldPersistCurrentState()
                             || Params.Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithHistory)
                         { return {}; }
 
-                        const auto& Current = Entity.Get<ck::FFragment_Sm_Current>();
+                        const auto& Current = Entity.Get<ck::FFragment_Sm>();
 
                         auto Payload = FCk_RepData_StateMachine_WithHistory{};
                         Payload.Set_RunStatus(Current.Get_RunStatus());
@@ -357,14 +357,14 @@ namespace ck_state_machine_replication
                     {
                         if (Entity.Has<ck::FTag_Snapshot_SaveTransient>())
                         { return {}; }
-                        if (NOT Entity.Has<ck::FFragment_Sm_Current>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
+                        if (NOT Entity.Has<ck::FFragment_Sm>() || NOT Entity.Has<ck::FFragment_Sm_Params>())
                         { return {}; }
                         const auto& Params = Entity.Get<ck::FFragment_Sm_Params>();
                         if (NOT Params.Get_ShouldPersistCurrentState()
                             || Params.Get_ReplicationModel() != ECk_Sm_ReplicationModel::WithoutHistory)
                         { return {}; }
 
-                        const auto& Current = Entity.Get<ck::FFragment_Sm_Current>();
+                        const auto& Current = Entity.Get<ck::FFragment_Sm>();
 
                         auto Payload = FCk_RepData_StateMachine_NoHistory{};
                         Payload.Set_CurrentStateClass(Current.Get_CurrentStateClass());
@@ -385,8 +385,8 @@ namespace ck_state_machine_replication
 
                         if (Old.IsSet() || NewSeq > 0)
                         {
-                            const auto FromClass = Old.IsSet() && Entity.Has<ck::FFragment_Sm_Current>()
-                                ? Entity.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass()
+                            const auto FromClass = Old.IsSet() && Entity.Has<ck::FFragment_Sm>()
+                                ? Entity.Get<ck::FFragment_Sm>().Get_CurrentStateClass()
                                 : TSubclassOf<UCk_SmState_EntityScript>{};
 
                             const auto Event = FCk_Sm_TransitionEvent

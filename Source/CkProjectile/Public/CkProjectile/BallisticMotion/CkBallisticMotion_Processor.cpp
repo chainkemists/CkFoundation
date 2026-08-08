@@ -49,7 +49,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
+            FFragment_BallisticMotion& InBallisticMotion,
             const FFragment_BallisticMotion_Requests& InRequestsComp) const
         -> void
     {
@@ -64,7 +64,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                DoHandleRequest(InHandle, InParams, InBallisticMotion, InRequest);
 
                 if (InRequest.Get_IsRequestHandleValid())
                 {
@@ -81,7 +81,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
+            FFragment_BallisticMotion& InBallisticMotion,
             const FCk_Request_BallisticMotion_Launch& InRequest)
         -> void
     {
@@ -108,15 +108,15 @@ namespace ck
         const auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
         const auto StartLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
 
-        InCurrent._InitialConditions = FCk_Ballistic_InitialConditions{StartTime, StartLocation, InRequest.Get_StartVelocity()};
-        InCurrent._CurrentVelocity = InRequest.Get_StartVelocity();
-        InCurrent._TrajectorySegmentIndex = 0;
-        InCurrent._HandledImpactEntities.Reset();
+        InBallisticMotion._InitialConditions = FCk_Ballistic_InitialConditions{StartTime, StartLocation, InRequest.Get_StartVelocity()};
+        InBallisticMotion._CurrentVelocity = InRequest.Get_StartVelocity();
+        InBallisticMotion._TrajectorySegmentIndex = 0;
+        InBallisticMotion._HandledImpactEntities.Reset();
 
         InHandle.AddOrGet<FTag_BallisticMotion_Active>();
 
         UUtils_Signal_BallisticMotion_OnTrajectoryChanged::Broadcast(InHandle,
-            MakePayload(InHandle, InCurrent.Get_InitialConditions(), InCurrent.Get_TrajectorySegmentIndex()));
+            MakePayload(InHandle, InBallisticMotion.Get_InitialConditions(), InBallisticMotion.Get_TrajectorySegmentIndex()));
     }
 
     auto
@@ -124,7 +124,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
+            FFragment_BallisticMotion& InBallisticMotion,
             const FCk_Request_BallisticMotion_Stop& InRequest)
         -> void
     {
@@ -155,14 +155,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
-            const FFragment_Probe_Current& InProbeCurrent)
+            FFragment_BallisticMotion& InBallisticMotion,
+            const FFragment_Probe& InProbeCurrent)
         -> void
     {
         const auto& CurrentOverlaps = InProbeCurrent.Get_CurrentOverlaps();
 
         // A handled contact stays muted only while the overlap persists
-        for (auto It = InCurrent._HandledImpactEntities.CreateIterator(); It; ++It)
+        for (auto It = InBallisticMotion._HandledImpactEntities.CreateIterator(); It; ++It)
         {
             const auto StillOverlapping = CurrentOverlaps.Contains(FCk_Probe_OverlapInfo{*It});
 
@@ -174,10 +174,10 @@ namespace ck
 
         for (const auto& Overlap : CurrentOverlaps)
         {
-            if (InCurrent._HandledImpactEntities.Contains(Overlap.Get_OtherEntity()))
+            if (InBallisticMotion._HandledImpactEntities.Contains(Overlap.Get_OtherEntity()))
             { continue; }
 
-            DoHandleImpact(InHandle, InParams, InCurrent, Overlap);
+            DoHandleImpact(InHandle, InParams, InBallisticMotion, Overlap);
 
             // Each impact re-anchors the trajectory — remaining overlaps refer to the old
             // segment and are handled on subsequent frames if their contacts persist
@@ -190,11 +190,11 @@ namespace ck
         DoHandleImpact(
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent,
+            FFragment_BallisticMotion& InBallisticMotion,
             const FCk_Probe_OverlapInfo& InOverlap)
         -> void
     {
-        const auto& InitialConditions = InCurrent.Get_InitialConditions();
+        const auto& InitialConditions = InBallisticMotion.Get_InitialConditions();
         const auto& TrajectoryParams = InParams.Get_TrajectoryParams();
 
         auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
@@ -204,7 +204,7 @@ namespace ck
             : InOverlap.Get_ContactPoints()[0];
 
         const auto TimeOfFlightToImpact = FCk_Time{FMath::Max(
-            ballistics::Get_TimeOfFlightTo(InitialConditions, TrajectoryParams, ImpactLocation, InCurrent.Get_CurrentVelocity()).Get_Seconds(),
+            ballistics::Get_TimeOfFlightTo(InitialConditions, TrajectoryParams, ImpactLocation, InBallisticMotion.Get_CurrentVelocity()).Get_Seconds(),
             0.0)};
 
         const auto ImpactWorldTime = InitialConditions.Get_StartTime() + TimeOfFlightToImpact;
@@ -221,7 +221,7 @@ namespace ck
             return FVector::DotProduct(Normal, ImpactVelocity) > 0.0 ? -Normal : Normal;
         }();
 
-        InCurrent._HandledImpactEntities.Add(InOverlap.Get_OtherEntity());
+        InBallisticMotion._HandledImpactEntities.Add(InOverlap.Get_OtherEntity());
 
         const auto ReflectedVelocity = [&]() -> FVector
         {
@@ -255,12 +255,12 @@ namespace ck
 
         const auto BounceLocation = ImpactLocation + ImpactNormal * InParams.Get_ImpactNudgeDistance();
 
-        InCurrent._InitialConditions = FCk_Ballistic_InitialConditions{ImpactWorldTime, BounceLocation, ReflectedVelocity};
-        InCurrent._CurrentVelocity = ReflectedVelocity;
-        ++InCurrent._TrajectorySegmentIndex;
+        InBallisticMotion._InitialConditions = FCk_Ballistic_InitialConditions{ImpactWorldTime, BounceLocation, ReflectedVelocity};
+        InBallisticMotion._CurrentVelocity = ReflectedVelocity;
+        ++InBallisticMotion._TrajectorySegmentIndex;
 
         UUtils_Signal_BallisticMotion_OnTrajectoryChanged::Broadcast(InHandle,
-            MakePayload(InHandle, InCurrent.Get_InitialConditions(), InCurrent.Get_TrajectorySegmentIndex()));
+            MakePayload(InHandle, InBallisticMotion.Get_InitialConditions(), InBallisticMotion.Get_TrajectorySegmentIndex()));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -271,10 +271,10 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_BallisticMotion_Params& InParams,
-            FFragment_BallisticMotion_Current& InCurrent)
+            FFragment_BallisticMotion& InBallisticMotion)
         -> void
     {
-        const auto& InitialConditions = InCurrent.Get_InitialConditions();
+        const auto& InitialConditions = InBallisticMotion.Get_InitialConditions();
         const auto& TrajectoryParams = InParams.Get_TrajectoryParams();
 
         const auto Now = ballistic_motion_detail::Get_CurrentWorldTime(InHandle);
@@ -283,7 +283,7 @@ namespace ck
         const auto NewLocation = ballistics::Get_PositionAtTime(InitialConditions, TrajectoryParams, TimeSinceStart);
         const auto NewVelocity = ballistics::Get_VelocityAtTime(InitialConditions, TrajectoryParams, TimeSinceStart);
 
-        InCurrent._CurrentVelocity = NewVelocity;
+        InBallisticMotion._CurrentVelocity = NewVelocity;
 
         auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
 

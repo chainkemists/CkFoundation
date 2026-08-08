@@ -24,7 +24,7 @@ namespace ck_iskm_outline_processor
 {
     auto
         DoSetCustomDepthOnProxySkmcs(
-            const ck::FFragment_IskmProxy_Current& InCurrent,
+            const ck::FFragment_IskmProxy& InIskmProxy,
             bool InEnabled,
             uint8 InStencilValue)
         -> void
@@ -38,9 +38,9 @@ namespace ck_iskm_outline_processor
             InSkmc->SetCustomDepthStencilValue(static_cast<int32>(InStencilValue));
         };
 
-        ApplyTo(InCurrent.Get_BaseSKMC().Get());
+        ApplyTo(InIskmProxy.Get_BaseSKMC().Get());
 
-        for (const auto& Submesh : InCurrent.Get_SubmeshSKMCs())
+        for (const auto& Submesh : InIskmProxy.Get_SubmeshSKMCs())
         { ApplyTo(Submesh.Get()); }
     }
 
@@ -83,7 +83,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_OutlineResolved& InResolved,
-            const FFragment_IskmProxy_Current& InCurrent) const
+            const FFragment_IskmProxy& InIskmProxy) const
         -> void
     {
         using namespace ck_iskm_outline_processor;
@@ -93,7 +93,7 @@ namespace ck
         if (ck::Is_NOT_Valid(Preset))
         { return; }
 
-        if (ck::Is_NOT_Valid(InCurrent.Get_BaseSKMC().Get()))
+        if (ck::Is_NOT_Valid(InIskmProxy.Get_BaseSKMC().Get()))
         { return; } // Setup incomplete or SKMC released — nothing to flag yet
 
         if (InHandle.Has<FFragment_IskmProxy_OutlineApplied>())
@@ -104,12 +104,12 @@ namespace ck
             {
                 // Re-assert every frame: the setters early-out when unchanged, and this is what makes
                 // late-attached outfit submeshes (and mesh swaps) inherit the outline automatically.
-                DoSetCustomDepthOnProxySkmcs(InCurrent, true, Applied.Get_StencilValue());
+                DoSetCustomDepthOnProxySkmcs(InIskmProxy, true, Applied.Get_StencilValue());
                 return;
             }
 
             // Preset drift: undo, then fall through to re-apply.
-            DoSetCustomDepthOnProxySkmcs(InCurrent, false, 0);
+            DoSetCustomDepthOnProxySkmcs(InIskmProxy, false, 0);
             DoReleaseStencil(InHandle, Applied);
             InHandle.Remove<FFragment_IskmProxy_OutlineApplied>();
         }
@@ -125,7 +125,7 @@ namespace ck
         if (Stencil == 0)
         { return; } // stencil range exhausted — already warned by the subsystem
 
-        DoSetCustomDepthOnProxySkmcs(InCurrent, true, Stencil);
+        DoSetCustomDepthOnProxySkmcs(InIskmProxy, true, Stencil);
         InHandle.AddOrGet<FFragment_IskmProxy_OutlineApplied>() =
             FFragment_IskmProxy_OutlineApplied{TStrongObjectPtr{Preset}, Stencil};
 
@@ -140,12 +140,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_OutlineApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent)
+            const FFragment_IskmProxy& InIskmProxy)
         -> void
     {
         using namespace ck_iskm_outline_processor;
 
-        DoSetCustomDepthOnProxySkmcs(InCurrent, false, 0);
+        DoSetCustomDepthOnProxySkmcs(InIskmProxy, false, 0);
         DoReleaseStencil(InHandle, InApplied);
         InHandle.Remove<FFragment_IskmProxy_OutlineApplied>();
     }
@@ -158,12 +158,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_OutlineApplied& InApplied,
-            const FFragment_IskmProxy_Current& InCurrent)
+            const FFragment_IskmProxy& InIskmProxy)
         -> void
     {
         using namespace ck_iskm_outline_processor;
 
-        DoSetCustomDepthOnProxySkmcs(InCurrent, false, 0);
+        DoSetCustomDepthOnProxySkmcs(InIskmProxy, false, 0);
         DoReleaseStencil(InHandle, InApplied);
         InHandle.Remove<FFragment_IskmProxy_OutlineApplied>();
     }

@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_JoltStaticActor_UE, FCk_Handle_JoltStaticActor, ck::FFragment_JoltStaticActor_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_JoltStaticActor_UE, FCk_Handle_JoltStaticActor, ck::FFragment_JoltStaticActor);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ auto
         const FCk_Handle_JoltStaticActor& InJoltStaticActor)
     -> AActor*
 {
-    return const_cast<AActor*>(InJoltStaticActor.Get<ck::FFragment_JoltStaticActor_Current>().Get_SourceActor().Get());
+    return const_cast<AActor*>(InJoltStaticActor.Get<ck::FFragment_JoltStaticActor>().Get_SourceActor().Get());
 }
 
 auto
@@ -25,7 +25,7 @@ auto
         const FCk_Handle_JoltStaticActor& InJoltStaticActor)
     -> FName
 {
-    return InJoltStaticActor.Get<ck::FFragment_JoltStaticActor_Current>().Get_SourceActorName();
+    return InJoltStaticActor.Get<ck::FFragment_JoltStaticActor>().Get_SourceActorName();
 }
 
 auto
@@ -34,7 +34,7 @@ auto
         const FCk_Handle_JoltStaticActor& InJoltStaticActor)
     -> int32
 {
-    return InJoltStaticActor.Get<ck::FFragment_JoltStaticActor_Current>().Get_BodyIds().Num();
+    return InJoltStaticActor.Get<ck::FFragment_JoltStaticActor>().Get_BodyIds().Num();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

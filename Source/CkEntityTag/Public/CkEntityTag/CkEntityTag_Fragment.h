@@ -19,7 +19,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // Presence in the per-tag hashed EnTT storage (the view behind ForEach_Entity) IS the entity's
-    // "Has" answer for that tag; the count itself lives in FFragment_EntityTag_Current._Tags.
+    // "Has" answer for that tag; the count itself lives in FFragment_EntityTag._Tags.
     using FFragment_EntityTag_StorageParams = FCk_EntityTag_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -52,10 +52,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKENTITYTAG_API FFragment_EntityTag_Current
+    struct CKENTITYTAG_API FFragment_EntityTag
     {
     public:
-        CK_GENERATED_BODY(FFragment_EntityTag_Current);
+        CK_GENERATED_BODY(FFragment_EntityTag);
 
         friend class ::UCk_Utils_EntityTag_UE;
 
@@ -68,7 +68,7 @@ namespace ck
         CK_PROPERTY_GET(_GameplayTagCounts);
 
     public:
-        FFragment_EntityTag_Current() = default;
+        FFragment_EntityTag() = default;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -34,7 +34,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_JoltCharacter_Params>(InParams);
-    InHandle.Add<ck::FFragment_JoltCharacter_Current>();
+    InHandle.Add<ck::FFragment_JoltCharacter>();
     // A character interpolates through the JoltBody StepPose + WritebackInterpolated path, hence the reuse.
     InHandle.Add<ck::FFragment_JoltBody_StepPose>();
     InHandle.Add<ck::FTag_JoltCharacter_NeedsSetup>();
@@ -44,7 +44,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_JoltCharacter_UE, FCk_Handle_JoltCharacter, ck::FFragment_JoltCharacter_Current, ck::FFragment_JoltCharacter_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_JoltCharacter_UE, FCk_Handle_JoltCharacter, ck::FFragment_JoltCharacter, ck::FFragment_JoltCharacter_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ auto
         const FCk_Handle_JoltCharacter& InJoltCharacter)
     -> ECk_JoltCharacter_GroundState
 {
-    return InJoltCharacter.Get<ck::FFragment_JoltCharacter_Current>().Get_GroundStateMirror();
+    return InJoltCharacter.Get<ck::FFragment_JoltCharacter>().Get_GroundStateMirror();
 }
 
 auto
@@ -63,7 +63,7 @@ auto
         const FCk_Handle_JoltCharacter& InJoltCharacter)
     -> FVector
 {
-    return InJoltCharacter.Get<ck::FFragment_JoltCharacter_Current>().Get_GroundNormalMirror();
+    return InJoltCharacter.Get<ck::FFragment_JoltCharacter>().Get_GroundNormalMirror();
 }
 
 auto
@@ -72,7 +72,7 @@ auto
         const FCk_Handle_JoltCharacter& InJoltCharacter)
     -> FVector
 {
-    return InJoltCharacter.Get<ck::FFragment_JoltCharacter_Current>().Get_GroundVelocityMirror();
+    return InJoltCharacter.Get<ck::FFragment_JoltCharacter>().Get_GroundVelocityMirror();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -14,7 +14,7 @@ namespace ck
             FProcessor_Vfx_Setup,
             FCk_Handle_Vfx,
             TReadOnly<FFragment_Vfx_Params>,
-            TReadWrite<FFragment_Vfx_Current>,
+            TReadWrite<FFragment_Vfx>,
             FTag_Vfx_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -31,7 +31,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx_Current& InCurrent)
+            FFragment_Vfx& InCurrent)
             -> void;
     };
 
@@ -41,7 +41,7 @@ namespace ck
             FProcessor_Vfx_HandleRequests,
             FCk_Handle_Vfx,
             TReadOnly<FFragment_Vfx_Params>,
-            TReadWrite<FFragment_Vfx_Current>,
+            TReadWrite<FFragment_Vfx>,
             TReadWrite<FFragment_Vfx_Requests>,
             TExclude<FTag_Vfx_NeedsSetup>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -61,7 +61,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx_Current& InCurrent,
+            FFragment_Vfx& InCurrent,
             FFragment_Vfx_Requests& InRequestsComp) const -> void;
 
     private:
@@ -69,14 +69,14 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx_Current& InCurrent,
+            FFragment_Vfx& InCurrent,
             const FCk_Request_Vfx_PlayAttached& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx_Current& InCurrent,
+            FFragment_Vfx& InCurrent,
             const FCk_Request_Vfx_PlayAtLocation& InRequest) -> ECk_Request_OperationResult;
     };
 
@@ -111,7 +111,7 @@ namespace ck
     class CKFX_API FProcessor_Vfx_EndPlay : public ck_exp::TProcessor<
             FProcessor_Vfx_EndPlay,
             FCk_Handle_Vfx,
-            TReadWrite<FFragment_Vfx_Current>,
+            TReadWrite<FFragment_Vfx>,
             CK_IF_END_PLAY>
     {
     public:
@@ -125,7 +125,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Vfx_Current& InCurrent)
+            FFragment_Vfx& InCurrent)
             -> void;
     };
 }

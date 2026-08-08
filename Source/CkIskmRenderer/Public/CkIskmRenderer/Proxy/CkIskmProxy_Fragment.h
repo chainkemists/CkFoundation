@@ -40,10 +40,10 @@ namespace ck
     // Do NOT leak `_BaseSKMC` access outside `UCk_Utils_IskmProxy_UE` and the proxy processors below:
     // the public API (Get_SocketTransform, LineTrace_Instance, ...) must stay implementable from the
     // Plan-2 SOA shape (instance index + version) that eventually replaces the per-entity SKMC.
-    struct CKISKMRENDERER_API FFragment_IskmProxy_Current
+    struct CKISKMRENDERER_API FFragment_IskmProxy
     {
     public:
-        CK_GENERATED_BODY(FFragment_IskmProxy_Current);
+        CK_GENERATED_BODY(FFragment_IskmProxy);
         friend class FProcessor_IskmProxy_Setup;
         friend class FProcessor_IskmProxy_HandleRequests;
         friend class FProcessor_IskmProxy_HandleLateCustomDataRequests;

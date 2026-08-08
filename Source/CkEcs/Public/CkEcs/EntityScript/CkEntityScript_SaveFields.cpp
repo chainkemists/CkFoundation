@@ -48,10 +48,10 @@ namespace ck_entity_script_save_fields
                     // declares no SaveGame field: those cases have nothing to persist.
                     .Produce = [](FCk_Handle& Entity) -> TOptional<FInstancedStruct>
                     {
-                        if (NOT Entity.Has<ck::FFragment_EntityScript_Current>())
+                        if (NOT Entity.Has<ck::FFragment_EntityScript>())
                         { return {}; }
 
-                        auto* Script = Entity.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+                        auto* Script = Entity.Get<ck::FFragment_EntityScript>().Get_Script().Get();
                         if (ck::Is_NOT_Valid(Script))
                         { return {}; }
 
@@ -77,10 +77,10 @@ namespace ck_entity_script_save_fields
                     },
                     .HydrationApply = [](FCk_Handle& Entity, const FInstancedStruct& New, const TOptional<FInstancedStruct>& /*Old*/) -> ECk_Persistence_ApplyResult
                     {
-                        if (NOT Entity.Has<ck::FFragment_EntityScript_Current>())
+                        if (NOT Entity.Has<ck::FFragment_EntityScript>())
                         { return ECk_Persistence_ApplyResult::NotReady; }
 
-                        auto* Script = Entity.Get<ck::FFragment_EntityScript_Current>().Get_Script().Get();
+                        auto* Script = Entity.Get<ck::FFragment_EntityScript>().Get_Script().Get();
                         if (ck::Is_NOT_Valid(Script))
                         { return ECk_Persistence_ApplyResult::NotReady; }
 

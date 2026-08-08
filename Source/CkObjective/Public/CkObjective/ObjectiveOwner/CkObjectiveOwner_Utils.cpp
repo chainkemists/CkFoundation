@@ -25,7 +25,7 @@ auto
         FCk_EntityCollection_Spec{TAG_Label_EntityCollection_Objectives}, ECk_Replication::Replicates);
 
     InHandle.Add<ck::FFragment_ObjectiveOwner_Params>(InParams);
-    InHandle.Add<ck::FFragment_ObjectiveOwner_Current>(ObjectivesCollectionHandle);
+    InHandle.Add<ck::FFragment_ObjectiveOwner>(ObjectivesCollectionHandle);
     InHandle.Add<ck::FTag_ObjectiveOwner_NeedsSetup>();
 
     return Cast(InHandle);
@@ -87,7 +87,7 @@ auto
         FGameplayTag InObjectiveName)
     -> FCk_Handle_Objective
 {
-    const auto& CollectionHandle = InObjectiveOwner.Get<ck::FFragment_ObjectiveOwner_Current>().Get_ObjectivesEntityCollection();
+    const auto& CollectionHandle = InObjectiveOwner.Get<ck::FFragment_ObjectiveOwner>().Get_ObjectivesEntityCollection();
     const auto& Objective = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils::Get_ValidEntry_ByTag(CollectionHandle, InObjectiveName);
     return UCk_Utils_Objective_UE::Cast(Objective);
 }
@@ -120,7 +120,7 @@ auto
         InFunc(UCk_Utils_Objective_UE::Cast(InEntity));
     };
 
-    const auto& CollectionHandle = InObjectiveOwner.Get<ck::FFragment_ObjectiveOwner_Current>().Get_ObjectivesEntityCollection();
+    const auto& CollectionHandle = InObjectiveOwner.Get<ck::FFragment_ObjectiveOwner>().Get_ObjectivesEntityCollection();
     UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils::ForEach_ValidEntry(CollectionHandle, TypeUnsafeFunc);
 }
 
@@ -154,7 +154,7 @@ auto
         InFunc(UCk_Utils_Objective_UE::Cast(InEntity));
     };
 
-    const auto& CollectionHandle = InObjectiveOwner.Get<ck::FFragment_ObjectiveOwner_Current>().Get_ObjectivesEntityCollection();
+    const auto& CollectionHandle = InObjectiveOwner.Get<ck::FFragment_ObjectiveOwner>().Get_ObjectivesEntityCollection();
     UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils::ForEach_ValidEntry_If(CollectionHandle, TypeUnsafeFunc, [&](const FCk_Handle& InObjective)
     {
         return UCk_Utils_Objective_UE::Get_Status(UCk_Utils_Objective_UE::Cast(InObjective)) == InObjectiveStatus;

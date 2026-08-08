@@ -38,10 +38,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKJOLT_API FFragment_JoltConstraint_Current
+    struct CKJOLT_API FFragment_JoltConstraint
     {
     public:
-        CK_GENERATED_BODY(FFragment_JoltConstraint_Current);
+        CK_GENERATED_BODY(FFragment_JoltConstraint);
 
     public:
         friend class FProcessor_JoltConstraint_Setup;

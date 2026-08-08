@@ -19,7 +19,7 @@ namespace ck
             FProcessor_Homing_HandleRequests,
             FCk_Handle_Homing,
             ck::TReadOnly<FFragment_Homing_Params>,
-            ck::TReadWrite<FFragment_Homing_Current>,
+            ck::TReadWrite<FFragment_Homing>,
             ck::TReadOnly<FFragment_Homing_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -37,7 +37,7 @@ namespace ck
             TimeType InDeltaT,
             FCk_Handle_Homing& InHandle,
             const FFragment_Homing_Params& InParams,
-            FFragment_Homing_Current& InCurrent,
+            FFragment_Homing& InHoming,
             const FFragment_Homing_Requests& InRequestsComp) const -> void;
 
     private:
@@ -47,31 +47,31 @@ namespace ck
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
-            FFragment_Homing_Current& InCurrent,
+            FFragment_Homing& InHoming,
             const FCk_Request_Homing_SetTargetEntity& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
-            FFragment_Homing_Current& InCurrent,
+            FFragment_Homing& InHoming,
             const FCk_Request_Homing_SetTargetLocation& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
-            FFragment_Homing_Current& InCurrent,
+            FFragment_Homing& InHoming,
             const FCk_Request_Homing_ClearTarget& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
-            FFragment_Homing_Current& InCurrent,
+            FFragment_Homing& InHoming,
             const FCk_Request_Homing_SetDesiredTimeToImpact& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             FCk_Handle_Homing InHandle,
-            FFragment_Homing_Current& InCurrent,
+            FFragment_Homing& InHoming,
             const FCk_Request_Homing_EnableDisable& InRequest) -> bool;
     };
 
@@ -114,9 +114,9 @@ namespace ck
             FTag_Homing_Active,
             FTag_HasAuthority,
             ck::TReadOnly<FFragment_Homing_Params>,
-            ck::TReadWrite<FFragment_Homing_Current>,
-            ck::TReadOnly<FFragment_Velocity_Current>,
-            ck::TReadWrite<FFragment_Acceleration_Current>,
+            ck::TReadWrite<FFragment_Homing>,
+            ck::TReadOnly<FFragment_Velocity>,
+            ck::TReadWrite<FFragment_Acceleration>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -137,21 +137,21 @@ namespace ck
             TimeType InDeltaT,
             FCk_Handle_Homing& InHandle,
             const FFragment_Homing_Params& InParams,
-            FFragment_Homing_Current& InCurrent,
-            const FFragment_Velocity_Current& InVelocity,
-            FFragment_Acceleration_Current& InAcceleration) const -> void;
+            FFragment_Homing& InHoming,
+            const FFragment_Velocity& InVelocity,
+            FFragment_Acceleration& InAcceleration) const -> void;
 
     private:
         static auto
         DoDeactivate(
             FCk_Handle_Homing InHandle,
-            FFragment_Homing_Current& InCurrent) -> void;
+            FFragment_Homing& InHoming) -> void;
 
         static auto
         DoCheckForMissedTarget(
             FCk_Handle_Homing InHandle,
             const FFragment_Homing_Params& InParams,
-            FFragment_Homing_Current& InCurrent,
+            FFragment_Homing& InHoming,
             const FCk_Homing_GuidanceState& InState) -> void;
     };
 }

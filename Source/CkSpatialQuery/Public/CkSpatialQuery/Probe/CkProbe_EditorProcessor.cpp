@@ -53,7 +53,7 @@ namespace ck
         DrawProbeShape(
             const UWorld* InWorld,
             const FTransform& InTransform,
-            const FFragment_ShapeBox_Current& InShape,
+            const FFragment_ShapeBox& InShape,
             const FFragment_Probe_DebugInfo& InDebugInfo) -> void
         {
             UCk_Utils_DebugDraw_UE::DrawDebugBox(
@@ -70,7 +70,7 @@ namespace ck
         DrawProbeShape(
             const UWorld* InWorld,
             const FTransform& InTransform,
-            const FFragment_ShapeSphere_Current& InShape,
+            const FFragment_ShapeSphere& InShape,
             const FFragment_Probe_DebugInfo& InDebugInfo) -> void
         {
             UCk_Utils_DebugDraw_UE::DrawDebugSphere(
@@ -87,7 +87,7 @@ namespace ck
         DrawProbeShape(
             const UWorld* InWorld,
             const FTransform& InTransform,
-            const FFragment_ShapeCapsule_Current& InShape,
+            const FFragment_ShapeCapsule& InShape,
             const FFragment_Probe_DebugInfo& InDebugInfo) -> void
         {
             UCk_Utils_DebugDraw_UE::DrawDebugCapsule(
@@ -105,7 +105,7 @@ namespace ck
         DrawProbeShape(
             const UWorld* InWorld,
             const FTransform& InTransform,
-            const FFragment_ShapeCylinder_Current& InShape,
+            const FFragment_ShapeCylinder& InShape,
             const FFragment_Probe_DebugInfo& InDebugInfo) -> void
         {
             const auto& Dimensions = InShape.Get_Dimensions();
@@ -160,10 +160,10 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
     // Explicit instantiations so the registrations above link.
 
-    template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeBox_Current>;
-    template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeSphere_Current>;
-    template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCapsule_Current>;
-    template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCylinder_Current>;
+    template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeBox>;
+    template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeSphere>;
+    template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCapsule>;
+    template class TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCylinder>;
 }
 
 #endif

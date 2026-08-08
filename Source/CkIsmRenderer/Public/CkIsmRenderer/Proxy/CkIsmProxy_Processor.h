@@ -32,7 +32,7 @@ namespace ck
         FProcessor_IsmProxy_Setup,
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_IsmProxy_Params>,
-        TReadWrite<FFragment_IsmProxy_Current>,
+        TReadWrite<FFragment_IsmProxy>,
         FTag_IsmProxy_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -51,7 +51,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent) const -> void;
+            FFragment_IsmProxy& InIsmProxy) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ namespace ck
         FProcessor_IsmProxy_AddInstance,
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_IsmProxy_Params>,
-        TReadWrite<FFragment_IsmProxy_Current>,
+        TReadWrite<FFragment_IsmProxy>,
         TReadOnly<FFragment_Transform>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TExclude<FTag_IsmProxy_Disabled>,
@@ -88,7 +88,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FFragment_Transform& InCurrentTransform) const -> void;
 
     private:
@@ -101,7 +101,7 @@ namespace ck
         FProcessor_IsmProxy_TransformInstance,
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_IsmProxy_Params>,
-        TReadOnly<FFragment_IsmProxy_Current>,
+        TReadOnly<FFragment_IsmProxy>,
         TReadOnly<FFragment_Transform>,
         TExclude<FTag_IsmProxy_Disabled>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
@@ -131,7 +131,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_IsmProxy& InIsmProxy,
             const FFragment_Transform& InTransform) -> void;
 
     private:
@@ -150,7 +150,7 @@ namespace ck
         FProcessor_IsmProxy_EnsureStaticNotMoved_DEBUG,
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_IsmProxy_Params>,
-        TReadOnly<FFragment_IsmProxy_Current>,
+        TReadOnly<FFragment_IsmProxy>,
         TReadOnly<FFragment_Transform>,
         TExclude<FTag_IsmProxy_Disabled>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
@@ -185,7 +185,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            const FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_IsmProxy& InIsmProxy,
             const FFragment_Transform& InTransform) -> void;
 
     private:
@@ -198,7 +198,7 @@ namespace ck
         FProcessor_IsmProxy_EndPlay,
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_IsmProxy_Params>,
-        TReadWrite<FFragment_IsmProxy_Current>,
+        TReadWrite<FFragment_IsmProxy>,
         CK_IF_END_PLAY>
     {
     public:
@@ -218,7 +218,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent) const -> void;
+            FFragment_IsmProxy& InIsmProxy) const -> void;
 
     private:
         TWeakObjectPtr<UWorld> _World;
@@ -230,7 +230,7 @@ namespace ck
         FProcessor_IsmProxy_HandleRequests,
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_IsmProxy_Params>,
-        TReadWrite<FFragment_IsmProxy_Current>,
+        TReadWrite<FFragment_IsmProxy>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TReadOnly<FFragment_IsmProxy_Requests>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -255,7 +255,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FFragment_IsmProxy_Requests& InRequestsComp) const -> void;
 
     private:
@@ -263,27 +263,27 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_SetCustomInstanceData& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest) const -> void;
 
         auto DoHandleRequest(
             FCk_Handle_IsmProxy& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_SetCustomPrimitiveData& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_EnableDisable& InRequest) const -> void;
 
     private:

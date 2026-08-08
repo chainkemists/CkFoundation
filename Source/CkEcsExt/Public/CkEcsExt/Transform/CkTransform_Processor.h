@@ -201,7 +201,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Signal_TransformUpdate& InSignal,
-            const FFragment_Transform& InCurrent) -> void;
+            const FFragment_Transform& InTransform) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -271,7 +271,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform& InCurrent,
+            FFragment_Transform& InTransform,
             const FFragment_ContainerRef_Location& InLocRef) -> void;
     };
 
@@ -299,7 +299,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
-            const FFragment_Transform& InCurrent,
+            const FFragment_Transform& InTransform,
             FFragment_TransformInterpolation_NewGoal_Location& InGoal) -> void;
     };
 
@@ -327,7 +327,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
-            const FFragment_Transform& InCurrent,
+            const FFragment_Transform& InTransform,
             FFragment_TransformInterpolation_NewGoal_Rotation& InGoal) -> void;
     };
 }

@@ -27,10 +27,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKAUDIO_API FFragment_AudioDirector_Current
+    struct CKAUDIO_API FFragment_AudioDirector
     {
     public:
-        CK_GENERATED_BODY(FFragment_AudioDirector_Current);
+        CK_GENERATED_BODY(FFragment_AudioDirector);
 
     public:
         friend class FProcessor_AudioDirector_Setup;

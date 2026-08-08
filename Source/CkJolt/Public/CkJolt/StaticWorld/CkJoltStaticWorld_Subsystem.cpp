@@ -583,10 +583,10 @@ auto
     if (ck::Is_NOT_Valid(InActorEntity, ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
-    if (NOT InActorEntity.Has<ck::FFragment_JoltStaticActor_Current>())
+    if (NOT InActorEntity.Has<ck::FFragment_JoltStaticActor>())
     { return; }
 
-    auto& Fragment = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    auto& Fragment = InActorEntity.Get<ck::FFragment_JoltStaticActor>();
 
     // Before the empty-guard: a bodiless entity still owes its event-route cleanup. Idempotent.
     DoUnbind_CollisionSync(InActorEntity);
@@ -1320,7 +1320,7 @@ auto
         if (ck::Is_NOT_Valid(ActorEntity))
         { continue; }
 
-        auto& Fragment = ActorEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+        auto& Fragment = ActorEntity.Get<ck::FFragment_JoltStaticActor>();
         const auto EntityUserData = static_cast<uint64>(ActorEntity.Get_Entity().Get_ID());
 
         for (const auto& Record : Group.Get_Bodies())
@@ -1407,9 +1407,9 @@ auto
     if (ck::Is_NOT_Valid(NewEntity))
     { return {}; }
 
-    NewEntity.Add<ck::FFragment_JoltStaticActor_Current>();
+    NewEntity.Add<ck::FFragment_JoltStaticActor>();
 
-    auto& Fragment = NewEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    auto& Fragment = NewEntity.Get<ck::FFragment_JoltStaticActor>();
     Fragment._SourceActor = &InSourceActor;
     Fragment._SourceActorName = InSourceActor.GetFName();
     Fragment._DataLayerNames = InCookedDataLayerNames == nullptr
@@ -1436,7 +1436,7 @@ auto
     if (BodyInterface == nullptr)
     { return; }
 
-    auto& Fragment = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    auto& Fragment = InActorEntity.Get<ck::FFragment_JoltStaticActor>();
     const auto EntityUserData = static_cast<uint64>(InActorEntity.Get_Entity().Get_ID());
 
     for (const auto& Extracted : InExtracted)

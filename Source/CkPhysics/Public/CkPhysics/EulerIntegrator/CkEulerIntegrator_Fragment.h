@@ -16,10 +16,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FFragment_EulerIntegrator_Current
+    struct CKPHYSICS_API FFragment_EulerIntegrator
     {
     public:
-        CK_GENERATED_BODY(FFragment_EulerIntegrator_Current);
+        CK_GENERATED_BODY(FFragment_EulerIntegrator);
 
     public:
         friend class FProcessor_EulerIntegrator_DoOnePredictiveUpdate;

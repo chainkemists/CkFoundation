@@ -15,7 +15,7 @@ namespace ck
             FProcessor_2dGridSystem_DebugDrawAll,
             FCk_Handle_2dGridSystem,
             TReadOnly<ck::FFragment_2dGridSystem_Params>,
-            TReadOnly<ck::FFragment_2dGridSystem_Current>,
+            TReadOnly<ck::FFragment_2dGridSystem>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -33,7 +33,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_2dGridSystem_Params& InParams,
-            const FFragment_2dGridSystem_Current& InCurrent) -> void;
+            const FFragment_2dGridSystem& In2dGridSystem) -> void;
     };
 }
 

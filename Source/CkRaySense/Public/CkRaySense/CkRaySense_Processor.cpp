@@ -209,7 +209,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeBox_Current& InShape,
+            const FFragment_ShapeBox& InShape,
             const FFragment_RaySense_Params& InParams,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform)
@@ -253,7 +253,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeSphere_Current& InShape,
+            const FFragment_ShapeSphere& InShape,
             const FFragment_RaySense_Params& InParams,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform)
@@ -296,7 +296,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeCapsule_Current& InShape,
+            const FFragment_ShapeCapsule& InShape,
             const FFragment_RaySense_Params& InParams,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform)
@@ -340,7 +340,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ShapeCylinder_Current& InShape,
+            const FFragment_ShapeCylinder& InShape,
             const FFragment_RaySense_Params& InParams,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform)

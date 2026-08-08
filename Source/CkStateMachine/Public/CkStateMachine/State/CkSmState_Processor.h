@@ -79,7 +79,7 @@ namespace ck
         FProcessor_SmState_Exit,
         FCk_Handle_SmState,
         FTag_SmState_PendingExit,
-        TReadOnly<FFragment_EntityScript_Current>,
+        TReadOnly<FFragment_EntityScript>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -99,7 +99,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InScriptFragment) -> void;
+            const FFragment_EntityScript& InScriptFragment) -> void;
     };
 }
 

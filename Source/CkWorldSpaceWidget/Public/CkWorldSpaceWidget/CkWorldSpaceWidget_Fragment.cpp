@@ -7,8 +7,8 @@
 
 namespace ck
 {
-    FFragment_WorldSpaceWidget_Current::
-        FFragment_WorldSpaceWidget_Current(
+    FFragment_WorldSpaceWidget::
+        FFragment_WorldSpaceWidget(
             UCk_WorldSpaceWidget_Wrapper_UE* InWrapperWidget)
         : _ContentWidgetHardRef(InWrapperWidget->Get_ContentWidget())
         , _WrapperWidget(InWrapperWidget)
@@ -16,8 +16,8 @@ namespace ck
     {
     }
 
-    FFragment_WorldSpaceWidget_Current::
-        FFragment_WorldSpaceWidget_Current(
+    FFragment_WorldSpaceWidget::
+        FFragment_WorldSpaceWidget(
             UWidgetComponent* InWidgetComponent,
             UUserWidget* InContentWidget)
         : _ContentWidgetHardRef(InContentWidget)

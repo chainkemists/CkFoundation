@@ -38,7 +38,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx_Current& InCurrent)
+            FFragment_Vfx& InCurrent)
             -> void
     {
         const auto& Params = InParams;
@@ -85,7 +85,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx_Current& InCurrent,
+            FFragment_Vfx& InCurrent,
             FFragment_Vfx_Requests& InRequestsComp) const
         -> void
     {
@@ -112,7 +112,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx_Current& InCurrent,
+            FFragment_Vfx& InCurrent,
             const FCk_Request_Vfx_PlayAttached& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -175,7 +175,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx_Current& InCurrent,
+            FFragment_Vfx& InCurrent,
             const FCk_Request_Vfx_PlayAtLocation& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -248,7 +248,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Vfx_Current& InCurrent)
+            FFragment_Vfx& InCurrent)
             -> void
     {
         InCurrent._LoadedAssets = {};

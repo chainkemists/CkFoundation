@@ -60,7 +60,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Sm_Current& InCurrent,
+            const FFragment_Sm& InSm,
             const FFragment_Sm_Params& InParams)
         -> void
     {
@@ -68,7 +68,7 @@ namespace ck
 
         auto& Debug = InHandle.AddOrGet<FFragment_Sm_Debug>();
 
-        auto RunStatus = InCurrent.Get_RunStatus();
+        auto RunStatus = InSm.Get_RunStatus();
 
         if (Debug._LastObservedRunStatus == ECk_SmRunStatus::Stopped
             && RunStatus == ECk_SmRunStatus::Running)
@@ -147,7 +147,7 @@ namespace ck
         }
 #endif
 
-        auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
+        auto CurrentStateClass = InSm.Get_CurrentStateClass();
 
         if (auto InitialStateClass = InParams.Get_InitialStateClass();
             ck::IsValid(InitialStateClass))
@@ -171,9 +171,9 @@ namespace ck
             Debug._CurrentStateEnteredAtRealTime = FPlatformTime::Seconds();
         }
 
-        if (ck::IsValid(CurrentStateClass) && ck::IsValid(InCurrent.Get_CurrentStateHandle()))
+        if (ck::IsValid(CurrentStateClass) && ck::IsValid(InSm.Get_CurrentStateHandle()))
         {
-            DoCacheCurrentState(InHandle, Debug, InCurrent);
+            DoCacheCurrentState(InHandle, Debug, InSm);
         }
     }
 
@@ -280,11 +280,11 @@ namespace ck
         DoCacheCurrentState(
             HandleType InHandle,
             FFragment_Sm_Debug& InDebug,
-            const FFragment_Sm_Current& InCurrent)
+            const FFragment_Sm& InSm)
         -> void
     {
-        const auto CurrentStateClass = InCurrent.Get_CurrentStateClass();
-        auto StateHandle = InCurrent.Get_CurrentStateHandle();
+        const auto CurrentStateClass = InSm.Get_CurrentStateClass();
+        auto StateHandle = InSm.Get_CurrentStateHandle();
 
         // All _CachedStates mutations are deferred to the end: holding a reference into a TMap while
         // Adding to it dangles once a rehash relocates elements, corrupting subsequent writes.
@@ -379,7 +379,7 @@ namespace ck
                 }
             }
 
-            CachedTask.LastResult = InTask.Get<FFragment_SmTask_Current>().Get_LastResult();
+            CachedTask.LastResult = InTask.Get<FFragment_SmTask>().Get_LastResult();
 
             NewCachedState.Tasks.Add(MoveTemp(CachedTask));
         });

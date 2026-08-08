@@ -18,7 +18,7 @@ namespace ck
         T_BucketIndex,
         FCk_Handle_VisibleRange,
         ck::TReadOnly<FFragment_VisibleRange_Params>,
-        ck::TReadWrite<FFragment_VisibleRange_Current>,
+        ck::TReadWrite<FFragment_VisibleRange>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -38,7 +38,7 @@ namespace ck
             FCk_Time InDeltaT,
             FCk_Handle_VisibleRange InHandle,
             const FFragment_VisibleRange_Params& InParams,
-            FFragment_VisibleRange_Current& InCurrent)
+            FFragment_VisibleRange& InVisibleRange)
             -> void;
     };
 
@@ -46,7 +46,7 @@ namespace ck
 
     class CKVISIBLERANGE_API FProcessor_VisibleRange_HandleRequests
         : public ck_exp::TProcessor<FProcessor_VisibleRange_HandleRequests, FCk_Handle_VisibleRange,
-            ck::TReadWrite<FFragment_VisibleRange_Current>, ck::TReadWrite<FFragment_VisibleRange_Requests>,
+            ck::TReadWrite<FFragment_VisibleRange>, ck::TReadWrite<FFragment_VisibleRange_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -62,7 +62,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VisibleRange_Current& InCurrent,
+            FFragment_VisibleRange& InVisibleRange,
             FFragment_VisibleRange_Requests& InRequests) const
             -> void;
 
@@ -70,13 +70,13 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisibleRange_Current& InCurrent,
+            FFragment_VisibleRange& InVisibleRange,
             const FCk_Request_VisibleRange_ApplyRangeState& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisibleRange_Current& InCurrent,
+            FFragment_VisibleRange& InVisibleRange,
             const FCk_Request_VisibleRange_SetVisibility& InRequest) -> void;
     };
 

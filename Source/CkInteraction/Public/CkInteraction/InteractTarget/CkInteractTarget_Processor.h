@@ -14,7 +14,7 @@ namespace ck
             FProcessor_InteractTarget_Setup,
             FCk_Handle_InteractTarget,
             TReadOnly<FFragment_InteractTarget_Params>,
-            TReadWrite<FFragment_InteractTarget_Current>,
+            TReadWrite<FFragment_InteractTarget>,
             FTag_InteractTarget_RequiresSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -36,14 +36,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp) -> void;
+            FFragment_InteractTarget& InComp) -> void;
     };
 
     class CKINTERACTION_API FProcessor_InteractTarget_HandleRequests : public ck_exp::TProcessor<
             FProcessor_InteractTarget_HandleRequests,
             FCk_Handle_InteractTarget,
             TReadOnly<FFragment_InteractTarget_Params>,
-            TReadWrite<FFragment_InteractTarget_Current>,
+            TReadWrite<FFragment_InteractTarget>,
             TReadWrite<FFragment_InteractTarget_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -67,7 +67,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp,
+            FFragment_InteractTarget& InComp,
             FFragment_InteractTarget_Requests& InRequestsComp) const -> void;
 
     private:
@@ -75,14 +75,14 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InCurrent,
+            FFragment_InteractTarget& InInteractTarget,
             const FCk_Try_InteractTarget_StartInteraction& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InCurrent,
+            FFragment_InteractTarget& InInteractTarget,
             const FCk_Request_InteractTarget_CancelInteraction& InRequest) const -> void;
 
     private:
@@ -124,7 +124,7 @@ namespace ck
             FProcessor_InteractTarget_EndPlay,
             FCk_Handle_InteractTarget,
             TReadOnly<FFragment_InteractTarget_Params>,
-            TReadWrite<FFragment_InteractTarget_Current>,
+            TReadWrite<FFragment_InteractTarget>,
             CK_IF_END_PLAY>
     {
     public:
@@ -139,7 +139,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp) -> void;
+            FFragment_InteractTarget& InComp) -> void;
     };
 
 }

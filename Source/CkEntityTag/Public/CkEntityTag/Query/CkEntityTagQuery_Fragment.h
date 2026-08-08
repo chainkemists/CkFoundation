@@ -17,10 +17,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKENTITYTAG_API FFragment_EntityTagQuery_Current
+    struct CKENTITYTAG_API FFragment_EntityTagQuery
     {
     public:
-        CK_GENERATED_BODY(FFragment_EntityTagQuery_Current);
+        CK_GENERATED_BODY(FFragment_EntityTagQuery);
 
         friend class FProcessor_EntityTagQuery_HandleRequests;
         friend class FProcessor_EntityTagQuery_Evaluate;

@@ -18,7 +18,7 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_BallisticMotion_Params>(InParams);
-    InHandle.Add<ck::FFragment_BallisticMotion_Current>();
+    InHandle.Add<ck::FFragment_BallisticMotion>();
 
     return Cast(InHandle);
 }
@@ -26,7 +26,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_BallisticMotion_UE, FCk_Handle_BallisticMotion,
-    ck::FFragment_BallisticMotion_Params, ck::FFragment_BallisticMotion_Current)
+    ck::FFragment_BallisticMotion_Params, ck::FFragment_BallisticMotion)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ auto
         const FCk_Handle_BallisticMotion& InHandle)
     -> FVector
 {
-    return InHandle.Get<ck::FFragment_BallisticMotion_Current>().Get_CurrentVelocity();
+    return InHandle.Get<ck::FFragment_BallisticMotion>().Get_CurrentVelocity();
 }
 
 auto
@@ -54,7 +54,7 @@ auto
         const FCk_Handle_BallisticMotion& InHandle)
     -> FCk_Ballistic_InitialConditions
 {
-    return InHandle.Get<ck::FFragment_BallisticMotion_Current>().Get_InitialConditions();
+    return InHandle.Get<ck::FFragment_BallisticMotion>().Get_InitialConditions();
 }
 
 auto
@@ -63,7 +63,7 @@ auto
         const FCk_Handle_BallisticMotion& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_BallisticMotion_Current>().Get_TrajectorySegmentIndex();
+    return InHandle.Get<ck::FFragment_BallisticMotion>().Get_TrajectorySegmentIndex();
 }
 
 auto

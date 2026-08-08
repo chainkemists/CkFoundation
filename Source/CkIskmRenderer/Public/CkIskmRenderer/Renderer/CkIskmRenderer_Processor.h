@@ -12,7 +12,7 @@ namespace ck
         FProcessor_IskmRenderer_Setup,
         FCk_Handle_IskmRenderer,
         TReadOnly<FFragment_IskmRenderer_Params>,
-        TReadWrite<FFragment_IskmRenderer_Current>,
+        TReadWrite<FFragment_IskmRenderer>,
         FTag_IskmRenderer_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -31,6 +31,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmRenderer_Params& InParams,
-            FFragment_IskmRenderer_Current& InCurrent) const -> void;
+            FFragment_IskmRenderer& InIskmRenderer) const -> void;
     };
 }

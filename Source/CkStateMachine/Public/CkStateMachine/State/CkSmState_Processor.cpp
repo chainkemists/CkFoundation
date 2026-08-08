@@ -54,7 +54,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_EntityScript_Current& InScriptFragment)
+            const FFragment_EntityScript& InScriptFragment)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_SmState_Exit);

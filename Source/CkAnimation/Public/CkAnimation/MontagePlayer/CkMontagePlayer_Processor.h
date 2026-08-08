@@ -18,7 +18,7 @@ namespace ck
             FProcessor_MontagePlayer_HandleRequests,
             FCk_Handle_MontagePlayer,
             TReadOnly<FFragment_MontagePlayer_Params>,
-            TReadWrite<FFragment_MontagePlayer_Current>,
+            TReadWrite<FFragment_MontagePlayer>,
             TReadWrite<FFragment_MontagePlayer_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -40,7 +40,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_MontagePlayer_Params& InParams,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             FFragment_MontagePlayer_Requests& InRequestsComp) const -> void;
 
     private:
@@ -54,35 +54,35 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_Play& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_Stop& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_Pause& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_Resume& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             UAnimInstance* InAnimInstance,
-            FFragment_MontagePlayer_Current& InCurrent,
+            FFragment_MontagePlayer& InMontagePlayer,
             const FCk_Request_MontagePlayer_JumpToSection& InRequest) -> ECk_Request_OperationResult;
     };
 
@@ -115,7 +115,7 @@ namespace ck
             FProcessor_MontagePlayer_MonitorAnimInstance,
             FCk_Handle_MontagePlayer,
             TReadOnly<FFragment_MontagePlayer_Params>,
-            TReadWrite<FFragment_MontagePlayer_Current>,
+            TReadWrite<FFragment_MontagePlayer>,
             FTag_MontagePlayer_HasActiveMontage,
             CK_IGNORE_PENDING_KILL>
     {
@@ -132,7 +132,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_MontagePlayer_Params& InParams,
-            FFragment_MontagePlayer_Current& InCurrent) const -> void;
+            FFragment_MontagePlayer& InMontagePlayer) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -145,7 +145,7 @@ namespace ck
     class CKANIMATION_API FProcessor_MontagePlayer_Replicate : public ck_exp::TProcessor<
             FProcessor_MontagePlayer_Replicate,
             FCk_Handle_MontagePlayer,
-            TReadOnly<FFragment_MontagePlayer_Current>,
+            TReadOnly<FFragment_MontagePlayer>,
             TReadOnly<FFragment_ContainerRef_MontagePlayer>,
             FTag_MontagePlayer_MayRequireReplication,
             CK_IGNORE_PENDING_KILL>
@@ -168,7 +168,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_MontagePlayer_Current& InCurrent,
+            const FFragment_MontagePlayer& InMontagePlayer,
             const FFragment_ContainerRef_MontagePlayer& InRepRef) const -> void;
     };
 }

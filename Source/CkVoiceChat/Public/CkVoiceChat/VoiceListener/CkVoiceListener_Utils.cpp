@@ -14,7 +14,7 @@ auto
 {
     ck::voice_chat::VeryVerbose(TEXT("Adding VoiceListener feature to Entity [{}]"), InHandle);
 
-    InHandle.Add<ck::FFragment_VoiceListener_Current>();
+    InHandle.Add<ck::FFragment_VoiceListener>();
 
     auto Listener = Cast(InHandle);
 
@@ -29,7 +29,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VoiceListener_UE, FCk_Handle_VoiceListener,
-    ck::FFragment_VoiceListener_Current);
+    ck::FFragment_VoiceListener);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -96,7 +96,7 @@ auto
         const FCk_Handle_VoiceTalker& InVoiceTalker)
     -> bool
 {
-    return InVoiceListener.Get<ck::FFragment_VoiceListener_Current>().Get_MutedTalkers().Contains(InVoiceTalker);
+    return InVoiceListener.Get<ck::FFragment_VoiceListener>().Get_MutedTalkers().Contains(InVoiceTalker);
 }
 
 auto
@@ -106,7 +106,7 @@ auto
         const FCk_Handle_VoiceTalker& InVoiceTalker)
     -> float
 {
-    const auto& TalkerVolumes = InVoiceListener.Get<ck::FFragment_VoiceListener_Current>().Get_TalkerVolumes();
+    const auto& TalkerVolumes = InVoiceListener.Get<ck::FFragment_VoiceListener>().Get_TalkerVolumes();
 
     if (const auto* FoundVolume = TalkerVolumes.Find(InVoiceTalker))
     { return *FoundVolume; }

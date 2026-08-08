@@ -18,7 +18,7 @@ auto
     ck::audio::VeryVerbose(TEXT("Adding AudioDirector feature to Entity [{}]"), InHandle);
 
     InHandle.Add<ck::FFragment_AudioDirector_Params>(InParams);
-    InHandle.Add<ck::FFragment_AudioDirector_Current>();
+    InHandle.Add<ck::FFragment_AudioDirector>();
     InHandle.Add<ck::FTag_AudioDirector_NeedsSetup>();
 
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, TEXT("AudioDirector"));
@@ -40,7 +40,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AudioDirector_UE, FCk_Handle_AudioDirector,
-    ck::FFragment_AudioDirector_Params, ck::FFragment_AudioDirector_Current)
+    ck::FFragment_AudioDirector_Params, ck::FFragment_AudioDirector)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ auto
         const FCk_Handle_AudioDirector& InDirector)
         -> int32
 {
-    return InDirector.Get<ck::FFragment_AudioDirector_Current>().Get_CurrentHighestPriority();
+    return InDirector.Get<ck::FFragment_AudioDirector>().Get_CurrentHighestPriority();
 }
 
 auto
@@ -60,7 +60,7 @@ auto
         FName InTrackName)
         -> FCk_Handle_AudioTrack
 {
-    const auto& TracksByName = InDirector.Get<ck::FFragment_AudioDirector_Current>().Get_TracksByName();
+    const auto& TracksByName = InDirector.Get<ck::FFragment_AudioDirector>().Get_TracksByName();
 
     if (const auto* FoundTrack = TracksByName.Find(InTrackName))
     {
@@ -77,7 +77,7 @@ auto
         -> TArray<FCk_Handle_AudioTrack>
 {
     auto Result = TArray<FCk_Handle_AudioTrack>{};
-    const auto& TracksByName = InDirector.Get<ck::FFragment_AudioDirector_Current>().Get_TracksByName();
+    const auto& TracksByName = InDirector.Get<ck::FFragment_AudioDirector>().Get_TracksByName();
 
     for (const auto& [TagName, TrackHandle] : TracksByName)
     {

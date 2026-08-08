@@ -15,7 +15,7 @@ auto
     -> FCk_Handle_VisibleRange
 {
     InHandle.Add<ck::FFragment_VisibleRange_Params>(InParams);
-    InHandle.Add<ck::FFragment_VisibleRange_Current>();
+    InHandle.Add<ck::FFragment_VisibleRange>();
 
     ck::cadence::AddCadenceTags<FCk_Handle_VisibleRange>(InHandle, InParams.Get_UpdateInterval());
 
@@ -24,7 +24,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VisibleRange_UE, FCk_Handle_VisibleRange, ck::FFragment_VisibleRange_Current, ck::FFragment_VisibleRange_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VisibleRange_UE, FCk_Handle_VisibleRange, ck::FFragment_VisibleRange, ck::FFragment_VisibleRange_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ auto
         const FCk_Handle_VisibleRange& InHandle)
     -> float
 {
-    return InHandle.Get<ck::FFragment_VisibleRange_Current>().Get_FadeAlpha();
+    return InHandle.Get<ck::FFragment_VisibleRange>().Get_FadeAlpha();
 }
 
 auto
@@ -82,7 +82,7 @@ auto
         float InDistance)
     -> FCk_Handle_VisibleRange
 {
-    InHandle.Get<ck::FFragment_VisibleRange_Current>()._Distance = InDistance;
+    InHandle.Get<ck::FFragment_VisibleRange>()._Distance = InDistance;
 
     return InHandle;
 }

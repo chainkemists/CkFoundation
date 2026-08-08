@@ -20,7 +20,7 @@ namespace ck
             TimeType InDeltaT,
             FCk_Handle_Substep& InHandle,
             const FFragment_Substep_Params& InParams,
-            FFragment_Substep_Current& InCurrent) const
+            FFragment_Substep& InSubstep) const
         -> void
     {
         // Zero-dt tick = settle pass: do no time-dependent work and consume no one-shot markers. Early-out before
@@ -33,10 +33,10 @@ namespace ck
         {
             UUtils_Signal_OnSubstepFirstUpdate::Broadcast(InHandle, MakePayload(InHandle, InDeltaT));
             InHandle.Remove<FTag_Substep_FirstUpdate>();
-            InCurrent._DeltaOverflowFromLastFrame = FCk_Time::ZeroSecond();
+            InSubstep._DeltaOverflowFromLastFrame = FCk_Time::ZeroSecond();
         }
 
-        auto AdjustedTickRate = InDeltaT + InCurrent.Get_DeltaOverflowFromLastFrame();
+        auto AdjustedTickRate = InDeltaT + InSubstep.Get_DeltaOverflowFromLastFrame();
 
         if (InParams.Get_TickRate() == TimeType::ZeroSecond())
         {
@@ -60,7 +60,7 @@ namespace ck
             { break; }
         }
 
-        InCurrent._DeltaOverflowFromLastFrame = AdjustedTickRate;
+        InSubstep._DeltaOverflowFromLastFrame = AdjustedTickRate;
         UUtils_Signal_OnSubstepFrameEnd::Broadcast(InHandle, MakePayload(InHandle, InDeltaT));
     }
 }

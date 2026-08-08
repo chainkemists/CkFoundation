@@ -16,7 +16,7 @@ namespace ck
     class CKPHYSICS_API FProcessor_Acceleration_Setup : public TProcessor<
             FProcessor_Acceleration_Setup,
             ck::TReadOnly<FFragment_Acceleration_Params>,
-            ck::TReadWrite<FFragment_Acceleration_Current>,
+            ck::TReadWrite<FFragment_Acceleration>,
             FTag_Acceleration_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -37,14 +37,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Acceleration_Params& InParams,
-            FFragment_Acceleration_Current& InCurrent) const -> void;
+            FFragment_Acceleration& InAcceleration) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKPHYSICS_API FProcessor_AccelerationModifier_Setup : public TProcessor<
             FProcessor_AccelerationModifier_Setup,
-            ck::TReadOnly<FFragment_Acceleration_Current>,
+            ck::TReadOnly<FFragment_Acceleration>,
             ck::TReadOnly<FFragment_Acceleration_Target>,
             FTag_AccelerationModifier,
             FTag_AccelerationModifier_NeedsSetup,
@@ -63,7 +63,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Acceleration_Current& InAcceleration,
+            const FFragment_Acceleration& InAcceleration,
             const FFragment_Acceleration_Target& InTarget) const -> void;
     };
 
@@ -71,7 +71,7 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_AccelerationModifier_EndPlay : public TProcessor<
             FProcessor_AccelerationModifier_EndPlay,
-            ck::TReadOnly<FFragment_Acceleration_Current>,
+            ck::TReadOnly<FFragment_Acceleration>,
             ck::TReadOnly<FFragment_Acceleration_Target>,
             FTag_AccelerationModifier,
             CK_IF_END_PLAY>
@@ -87,7 +87,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Acceleration_Current& InAcceleration,
+            const FFragment_Acceleration& InAcceleration,
             const FFragment_Acceleration_Target& InTarget) const -> void;
     };
 
@@ -212,7 +212,7 @@ namespace ck
 
     class CKPHYSICS_API FProcessor_Acceleration_Replicate : public TProcessor<
             FProcessor_Acceleration_Replicate,
-            ck::TReadOnly<FFragment_Acceleration_Current>,
+            ck::TReadOnly<FFragment_Acceleration>,
             ck::TReadOnly<FFragment_ContainerRef_Acceleration>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -227,7 +227,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Acceleration_Current& InCurrent,
+            const FFragment_Acceleration& InAcceleration,
             const FFragment_ContainerRef_Acceleration& InContainerRef) const -> void;
     };
 

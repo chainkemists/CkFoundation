@@ -157,8 +157,8 @@ auto
 
     // A single synthesized event (server's local current → incoming target) drives the transition
     // through the standard commit pipeline, which publishes a NoHistory delta to non-owning clients.
-    const auto LocalCurrentClass = InSMHandle.Has<ck::FFragment_Sm_Current>()
-        ? InSMHandle.Get<ck::FFragment_Sm_Current>().Get_CurrentStateClass()
+    const auto LocalCurrentClass = InSMHandle.Has<ck::FFragment_Sm>()
+        ? InSMHandle.Get<ck::FFragment_Sm>().Get_CurrentStateClass()
         : TSubclassOf<UCk_SmState_EntityScript>{};
 
     const auto Event = FCk_Sm_TransitionEvent

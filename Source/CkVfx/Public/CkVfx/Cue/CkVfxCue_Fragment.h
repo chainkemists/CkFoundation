@@ -23,10 +23,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKVFX_API FFragment_VfxCue_Current
+    struct CKVFX_API FFragment_VfxCue
     {
     public:
-        CK_GENERATED_BODY(FFragment_VfxCue_Current);
+        CK_GENERATED_BODY(FFragment_VfxCue);
 
     public:
         friend class FProcessor_VfxCue_Setup;

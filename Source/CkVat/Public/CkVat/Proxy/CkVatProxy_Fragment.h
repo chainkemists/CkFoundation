@@ -36,10 +36,10 @@ namespace ck
     // Playback state for the GPU-time-driven model (the GPU derives the frame from
     // (WorldTime - _PlaybackStartTime) * _PlayRate) — written on CHANGE only, never per frame, and
     // packed into per-instance custom data.
-    struct CKVAT_API FFragment_VatProxy_Current
+    struct CKVAT_API FFragment_VatProxy
     {
     public:
-        CK_GENERATED_BODY(FFragment_VatProxy_Current);
+        CK_GENERATED_BODY(FFragment_VatProxy);
 
     public:
         friend class FProcessor_VatProxy_Setup;

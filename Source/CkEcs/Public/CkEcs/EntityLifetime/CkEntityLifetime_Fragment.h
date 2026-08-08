@@ -38,7 +38,7 @@ namespace ck
     // must never round-trip through a save (no tag does).
     CK_DEFINE_ECS_TAG(FTag_ConstructSpawned);
 
-    // Construction-window marker for a definition-built entity, which carries NO FFragment_EntityScript_Current and
+    // Construction-window marker for a definition-built entity, which carries NO FFragment_EntityScript and
     // so would be missed by the ConstructSpawned stamp above. Held for the SYNCHRONOUS span of ConstructionInfo
     // execution only. A live construction marker is not a persistent property and is never captured.
     CK_DEFINE_ECS_TAG(FTag_DefinitionBuild_InProgress);

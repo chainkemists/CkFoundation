@@ -49,7 +49,7 @@ auto
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
     NewMarkerEntity.Add<ck::FFragment_Marker_Params>(ParamsToUse);
-    NewMarkerEntity.Add<ck::FFragment_Marker_Current>(ParamsToUse.Get_StartingState());
+    NewMarkerEntity.Add<ck::FFragment_Marker>(ParamsToUse.Get_StartingState());
     NewMarkerEntity.Add<ck::FTag_Marker_NeedsSetup>();
 
     UCk_Utils_GameplayLabel_UE::Add(NewMarkerEntity, MarkerName);
@@ -77,7 +77,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Marker_UE, FCk_Handle_Marker, ck::FFragment_Marker_Params, ck::FFragment_Marker_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Marker_UE, FCk_Handle_Marker, ck::FFragment_Marker_Params, ck::FFragment_Marker);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -284,7 +284,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> ECk_EnableDisable
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Current>().Get_EnableDisable();
+    return InMarkerEntity.Get<ck::FFragment_Marker>().Get_EnableDisable();
 }
 
 auto
@@ -293,7 +293,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> UShapeComponent*
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Current>().Get_Marker().Get();
+    return InMarkerEntity.Get<ck::FFragment_Marker>().Get_Marker().Get();
 }
 
 auto
@@ -302,7 +302,7 @@ auto
         const FCk_Handle_Marker& InMarkerEntity)
     -> FCk_EntityOwningActor_BasicDetails
 {
-    return InMarkerEntity.Get<ck::FFragment_Marker_Current>().Get_AttachedEntityAndActor();
+    return InMarkerEntity.Get<ck::FFragment_Marker>().Get_AttachedEntityAndActor();
 }
 
 auto
@@ -366,7 +366,7 @@ auto
     -> void
 {
     const auto& Params = InHandle.Get<ck::FFragment_Marker_Params>();
-    const auto& Current = InHandle.Get<ck::FFragment_Marker_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_Marker>();
 
     UCk_Utils_MarkerAndSensor_UE::Draw_Marker_DebugLines(InOuter, Current, Params);
 }

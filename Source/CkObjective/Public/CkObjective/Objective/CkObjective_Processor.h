@@ -15,7 +15,7 @@ namespace ck
             FProcessor_Objective_Setup,
             FCk_Handle_Objective,
             TReadOnly<FFragment_Objective_Params>,
-            TReadWrite<FFragment_Objective_Current>,
+            TReadWrite<FFragment_Objective>,
             FTag_Objective_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
     {
@@ -33,7 +33,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Objective_Params& InParams,
-            FFragment_Objective_Current& InCurrent) -> void;
+            FFragment_Objective& InObjective) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ namespace ck
     class CKOBJECTIVE_API FProcessor_Objective_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Objective_HandleRequests,
             FCk_Handle_Objective,
-            TReadWrite<FFragment_Objective_Current>,
+            TReadWrite<FFragment_Objective>,
             TReadOnly<FFragment_Objective_Params>,
             TReadOnly<FFragment_Objective_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
@@ -60,7 +60,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             const FFragment_Objective_Params& InParams,
             const FFragment_Objective_Requests& InRequestsComp) const -> void;
 
@@ -68,21 +68,21 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Start& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Complete& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             const FFragment_Objective_Params& InParams,
             const FCk_Request_Objective_Fail& InRequest) -> bool;
 
@@ -90,7 +90,7 @@ namespace ck
         static auto
         DoSetStatus(
             HandleType InHandle,
-            FFragment_Objective_Current& InCurrent,
+            FFragment_Objective& InObjective,
             ECk_ObjectiveStatus NewStatus) -> void;
     };
 
@@ -99,7 +99,7 @@ namespace ck
     class CKOBJECTIVE_API FProcessor_Objective_EndPlay : public ck_exp::TProcessor<
             FProcessor_Objective_EndPlay,
             FCk_Handle_Objective,
-            TReadOnly<FFragment_Objective_Current>,
+            TReadOnly<FFragment_Objective>,
             CK_IF_END_PLAY>
     {
     public:
@@ -111,7 +111,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_Objective_Current& InCurrent) -> void;
+            const FFragment_Objective& InObjective) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

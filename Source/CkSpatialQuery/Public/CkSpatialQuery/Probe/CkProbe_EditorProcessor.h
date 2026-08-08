@@ -63,10 +63,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FProcessor_Probe_Preview_Box_EditorTime      = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeBox_Current>;
-    using FProcessor_Probe_Preview_Sphere_EditorTime   = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeSphere_Current>;
-    using FProcessor_Probe_Preview_Capsule_EditorTime  = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCapsule_Current>;
-    using FProcessor_Probe_Preview_Cylinder_EditorTime = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCylinder_Current>;
+    using FProcessor_Probe_Preview_Box_EditorTime      = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeBox>;
+    using FProcessor_Probe_Preview_Sphere_EditorTime   = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeSphere>;
+    using FProcessor_Probe_Preview_Capsule_EditorTime  = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCapsule>;
+    using FProcessor_Probe_Preview_Cylinder_EditorTime = TProcessor_Probe_Preview_EditorTime<FFragment_ShapeCylinder>;
 }
 
 #endif

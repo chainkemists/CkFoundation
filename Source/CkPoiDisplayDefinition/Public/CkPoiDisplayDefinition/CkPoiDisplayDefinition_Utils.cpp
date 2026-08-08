@@ -45,9 +45,9 @@ auto
 
     // Current takes the MUTABLE half of the authored seed, and owns it from here on. The icon is
     // immutable post-Add and is served straight from Params, so it is not copied here.
-    InHandle.Add<ck::FFragment_PoiDisplayDefinition_Current>();
+    InHandle.Add<ck::FFragment_PoiDisplayDefinition>();
 
-    auto& Current = InHandle.Get<ck::FFragment_PoiDisplayDefinition_Current>();
+    auto& Current = InHandle.Get<ck::FFragment_PoiDisplayDefinition>();
     Current._Tint     = InParams.Get_Tint();
     Current._SizeHint = InParams.Get_SizeHint();
 
@@ -60,7 +60,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_PoiDisplayDefinition_UE, FCk_Handle_PoiDisplayDefinition, ck::FFragment_PoiDisplayDefinition_Params, ck::FFragment_PoiDisplayDefinition_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_PoiDisplayDefinition_UE, FCk_Handle_PoiDisplayDefinition, ck::FFragment_PoiDisplayDefinition_Params, ck::FFragment_PoiDisplayDefinition);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -181,7 +181,7 @@ auto
         const FCk_Handle_PoiDisplayDefinition& InHandle)
     -> FLinearColor
 {
-    return InHandle.Get<ck::FFragment_PoiDisplayDefinition_Current>().Get_Tint();
+    return InHandle.Get<ck::FFragment_PoiDisplayDefinition>().Get_Tint();
 }
 
 auto
@@ -190,7 +190,7 @@ auto
         const FCk_Handle_PoiDisplayDefinition& InHandle)
     -> FVector2D
 {
-    return InHandle.Get<ck::FFragment_PoiDisplayDefinition_Current>().Get_SizeHint();
+    return InHandle.Get<ck::FFragment_PoiDisplayDefinition>().Get_SizeHint();
 }
 
 auto

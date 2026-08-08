@@ -174,7 +174,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_FloatAttribute_UE, FCk_Handle_FloatAttribute, ck::FFragment_FloatAttribute_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_FloatAttribute_UE, FCk_Handle_FloatAttribute, ck::FFragment_FloatAttribute);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -1085,7 +1085,7 @@ auto
         const FCk_Handle& InModifierEntity)
     -> bool
 {
-    return InModifierEntity.Has_Any<ck::FFragment_FloatAttributeModifier_Min, ck::FFragment_FloatAttributeModifier_Current,ck::FFragment_FloatAttributeModifier_Max>();
+    return InModifierEntity.Has_Any<ck::FFragment_FloatAttributeModifier_Min, ck::FFragment_FloatAttributeModifier,ck::FFragment_FloatAttributeModifier_Max>();
 }
 
 auto

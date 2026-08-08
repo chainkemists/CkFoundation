@@ -36,7 +36,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_2dGridSystem_Params& InParams,
-            const FFragment_2dGridSystem_Current& InCurrent)
+            const FFragment_2dGridSystem& In2dGridSystem)
             -> void
     {
         const auto WorldContext = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);

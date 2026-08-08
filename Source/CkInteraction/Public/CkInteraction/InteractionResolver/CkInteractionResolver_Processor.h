@@ -17,7 +17,7 @@ namespace ck
             FProcessor_InteractionResolver_HandleRequests,
             FCk_Handle_InteractionResolver,
             TReadOnly<FFragment_InteractionResolver_Params>,
-            TReadWrite<FFragment_InteractionResolver_Current>,
+            TReadWrite<FFragment_InteractionResolver>,
             TReadOnly<FFragment_InteractionResolver_Requests>,
             TExclude<FTag_DestroyEntity_Initiate>,
             CK_IGNORE_PENDING_KILL>
@@ -41,7 +41,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FFragment_InteractionResolver_Requests& InRequestsComp) const
             -> void;
 
@@ -50,7 +50,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_StartIntent& InRequest)
             -> void;
 
@@ -58,7 +58,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_StopIntent& InRequest)
             -> void;
 
@@ -66,7 +66,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_AddInteractTarget& InRequest)
             -> void;
 
@@ -74,7 +74,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_RemoveInteractTarget& InRequest)
             -> void;
 
@@ -82,7 +82,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent,
+            FFragment_InteractionResolver& InInteractionResolver,
             const FCk_Request_InteractionResolver_RemoveAllTargetsByChannel& InRequest)
             -> void;
     };
@@ -121,7 +121,7 @@ namespace ck
             FProcessor_InteractionResolver_Persistent,
             FCk_Handle_InteractionResolver,
             TReadOnly<FFragment_InteractionResolver_Params>,
-            TReadWrite<FFragment_InteractionResolver_Current>,
+            TReadWrite<FFragment_InteractionResolver>,
             FTag_InteractionResolver_ResolveDirty,
             CK_IGNORE_PENDING_KILL>
     {
@@ -138,7 +138,7 @@ namespace ck
             TimeType InDeltaT,
             const HandleType& InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent)
+            FFragment_InteractionResolver& InInteractionResolver)
             -> void;
 
     private:
@@ -146,7 +146,7 @@ namespace ck
         DoUpdateCachedTargets(
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent)
+            FFragment_InteractionResolver& InInteractionResolver)
             -> void;
     };
 
@@ -157,7 +157,7 @@ namespace ck
             FProcessor_InteractionResolver_EndPlay,
             FCk_Handle_InteractionResolver,
             TReadOnly<FFragment_InteractionResolver_Params>,
-            TReadWrite<FFragment_InteractionResolver_Current>,
+            TReadWrite<FFragment_InteractionResolver>,
             CK_IF_END_PLAY>
     {
     public:
@@ -172,7 +172,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractionResolver_Params& InParams,
-            FFragment_InteractionResolver_Current& InCurrent)
+            FFragment_InteractionResolver& InInteractionResolver)
             -> void;
     };
 

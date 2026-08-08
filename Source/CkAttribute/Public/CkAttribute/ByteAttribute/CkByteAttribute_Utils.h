@@ -28,7 +28,7 @@ public:
 private:
     using ByteAttribute_Utils_Min = ck::TUtils_Attribute<ck::FFragment_ByteAttribute_Min>;
     using ByteAttribute_Utils_Max = ck::TUtils_Attribute<ck::FFragment_ByteAttribute_Max>;
-    using ByteAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_ByteAttribute_Current>;
+    using ByteAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_ByteAttribute>;
 
     using RecordOfByteAttributes_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfByteAttributes>;
 
@@ -286,7 +286,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_ByteAttributeModifier);
 
 private:
-    using ByteAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Current>;
+    using ByteAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier>;
     using ByteAttributeModifier_Utils_Min     = ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Min>;
     using ByteAttributeModifier_Utils_Max     = ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Max>;
 

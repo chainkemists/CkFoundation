@@ -456,9 +456,9 @@ namespace ck
             if (Owner.Has<ck::FFragment_Aggro_TargetMap>())
             { Owner.Get<ck::FFragment_Aggro_TargetMap>()._TargetsByTrackedEntity.Remove(Tracked); }
 
-            if (Owner.Has<ck::FFragment_Aggro_Current>())
+            if (Owner.Has<ck::FFragment_Aggro>())
             {
-                auto& Current = Owner.Get<ck::FFragment_Aggro_Current>();
+                auto& Current = Owner.Get<ck::FFragment_Aggro>();
                 if (Current.Get_ActiveTarget() == InTarget)
                 {
                     // Deliberately do NOT clear _ActiveTarget here — only stamp for re-selection.
@@ -503,7 +503,7 @@ namespace ck
         const auto TrackedEntity = ck::UAggroTarget_TrackedEntity_Utils::Get_StoredEntity(InTarget);
         Owner.Get<ck::FFragment_Aggro_TargetMap>()._TargetsByTrackedEntity.Remove(TrackedEntity);
 
-        auto& Current = Owner.Get<ck::FFragment_Aggro_Current>();
+        auto& Current = Owner.Get<ck::FFragment_Aggro>();
         if (Current.Get_ActiveTarget() == InTarget)
         {
             Current._ActiveTarget = FCk_Handle_AggroTarget{};

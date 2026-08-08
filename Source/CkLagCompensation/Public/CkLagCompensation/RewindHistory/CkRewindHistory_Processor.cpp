@@ -141,7 +141,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_RewindHistory_Params& InParams,
-            FFragment_RewindHistory_Current& InCurrent)
+            FFragment_RewindHistory& InRewindHistory)
         -> void
     {
         if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
@@ -153,9 +153,9 @@ namespace ck
 
         const auto ForceRecord = InHandle.Has<FTag_RewindHistory_ForceRecord>();
         const auto IntervalElapsed =
-            (Now - InCurrent.Get_LastRecordTime()) >= rewind_history_detail::Get_EffectiveRecordInterval(InParams);
+            (Now - InRewindHistory.Get_LastRecordTime()) >= rewind_history_detail::Get_EffectiveRecordInterval(InParams);
 
-        if (NOT ForceRecord && NOT IntervalElapsed && InCurrent.Get_Frames().Get_Count() > 0)
+        if (NOT ForceRecord && NOT IntervalElapsed && InRewindHistory.Get_Frames().Get_Count() > 0)
         { return; }
 
         InHandle.Try_Remove<FTag_RewindHistory_ForceRecord>();
@@ -176,14 +176,14 @@ namespace ck
             Bounds += lag_comp::Get_SnapshotWorldBounds(Snapshot);
         }
 
-        InCurrent._Frames.Push(FCk_LagComp_RewindFrame{Now, MoveTemp(Snapshots), Bounds});
-        InCurrent._LastRecordTime = Now;
+        InRewindHistory._Frames.Push(FCk_LagComp_RewindFrame{Now, MoveTemp(Snapshots), Bounds});
+        InRewindHistory._LastRecordTime = Now;
 
 #if !UE_BUILD_SHIPPING
         if (NOT ck::diagnostic_visibility::Is_HiddenForStreamerMode() &&
             rewind_history_cvars::CVarDebugDraw.GetValueOnGameThread())
         {
-            rewind_history_detail::DoDraw_OldestFrame(World, InCurrent.Get_Frames(),
+            rewind_history_detail::DoDraw_OldestFrame(World, InRewindHistory.Get_Frames(),
                 rewind_history_detail::Get_EffectiveRecordInterval(InParams));
         }
 #endif

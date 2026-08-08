@@ -42,7 +42,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp)
+            FFragment_InteractTarget& InComp)
         -> void
     {
     }
@@ -68,7 +68,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp,
+            FFragment_InteractTarget& InComp,
             FFragment_InteractTarget_Requests& InRequestsComp) const
         -> void
     {
@@ -96,7 +96,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InCurrent,
+            FFragment_InteractTarget& InInteractTarget,
             const FCk_Try_InteractTarget_StartInteraction& InRequest) const
         -> void
     {
@@ -133,7 +133,7 @@ namespace ck
             ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
             ECk_Signal_PostFireBehavior::DoNothing
         );
-        InCurrent._InteractionFinishedSignals.Add(InteractionEntity, OnInteractionFinishedConnection);
+        InInteractTarget._InteractionFinishedSignals.Add(InteractionEntity, OnInteractionFinishedConnection);
 
         if (auto InteractSource = UCk_Utils_InteractSource_UE::Cast(InteractSourceRawHandle);
             ck::IsValid(InteractSource))
@@ -147,7 +147,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InCurrent,
+            FFragment_InteractTarget& InInteractTarget,
             const FCk_Request_InteractTarget_CancelInteraction& InRequest) const
         -> void
     {
@@ -198,7 +198,7 @@ namespace ck
 
         UUtils_Signal_InteractTarget_OnInteractionFinished::Broadcast(InteractTarget, ck::MakePayload(InteractTarget, InteractionHandle, SucceededFailed));
 
-        auto& Current = InteractTarget.Get<FFragment_InteractTarget_Current>();
+        auto& Current = InteractTarget.Get<FFragment_InteractTarget>();
 
         if (auto InteractionFinishedSignal = Current._InteractionFinishedSignals.Find(InteractionHandle);
             ck::IsValid(InteractionFinishedSignal, IsValid_Policy_NullptrOnly{}))
@@ -234,7 +234,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp)
+            FFragment_InteractTarget& InComp)
         -> void
     {
         // TODO: this processor does not get called — teardown mid-interaction leaks the bindings.

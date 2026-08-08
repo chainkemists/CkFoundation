@@ -58,12 +58,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ObjectiveOwner_Params& InParams,
-            FFragment_ObjectiveOwner_Current& InCurrent)
+            FFragment_ObjectiveOwner& InObjectiveOwner)
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
 
-        const auto& CollectionHandle = InCurrent.Get_ObjectivesEntityCollection();
+        const auto& CollectionHandle = InObjectiveOwner.Get_ObjectivesEntityCollection();
         UUtils_Signal_EntityCollection_OnCollectionUpdated::Bind<&ck_objective::OnObjectiveCollectionUpdated>(
             CollectionHandle, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing);
 
@@ -101,7 +101,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ObjectiveOwner_Current& InCurrent,
+            FFragment_ObjectiveOwner& InObjectiveOwner,
             const FFragment_ObjectiveOwner_Requests& InRequestsComp) const
         -> void
     {
@@ -112,7 +112,7 @@ namespace ck
                 auto Result = ECk_Request_OperationResult::Failed;
                 const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                if (DoHandleRequest(InHandle, InCurrent, InRequest))
+                if (DoHandleRequest(InHandle, InObjectiveOwner, InRequest))
                 { Result = ECk_Request_OperationResult::Succeeded; }
 
                 if (InRequest.Get_IsRequestHandleValid())
@@ -127,7 +127,7 @@ namespace ck
         FProcessor_ObjectiveOwner_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_ObjectiveOwner_Current& InCurrent,
+            FFragment_ObjectiveOwner& InObjectiveOwner,
             const FCk_Request_ObjectiveOwner_AddObjective& InRequest)
         -> bool
     {
@@ -146,7 +146,7 @@ namespace ck
             { return; }
 
             auto ObjectiveEntity = UCk_Utils_Objective_UE::Cast(InConstructedEntity);
-            auto CollectionHandle = ObjectiveOwner.Get<FFragment_ObjectiveOwner_Current>().Get_ObjectivesEntityCollection();
+            auto CollectionHandle = ObjectiveOwner.Get<FFragment_ObjectiveOwner>().Get_ObjectivesEntityCollection();
 
             UCk_Utils_EntityCollection_UE::Request_AddEntities(CollectionHandle, FCk_Request_EntityCollection_AddEntities{{ObjectiveEntity}}, {});
 
@@ -166,7 +166,7 @@ namespace ck
         FProcessor_ObjectiveOwner_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_ObjectiveOwner_Current& InCurrent,
+            FFragment_ObjectiveOwner& InObjectiveOwner,
             const FCk_Request_ObjectiveOwner_RemoveObjective& InRequest)
         -> bool
     {
@@ -175,7 +175,7 @@ namespace ck
         if (ck::Is_NOT_Valid(ObjectiveHandle, ck::IsValid_Policy_IncludePendingKill{}))
         { return false; }
 
-        auto CollectionHandle = InCurrent.Get_ObjectivesEntityCollection();
+        auto CollectionHandle = InObjectiveOwner.Get_ObjectivesEntityCollection();
 
         UCk_Utils_EntityCollection_UE::Request_RemoveEntities(CollectionHandle, FCk_Request_EntityCollection_RemoveEntities{ {ObjectiveHandle} }, {});
 
