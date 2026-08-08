@@ -108,7 +108,7 @@ namespace ck
         };
 
         const auto& Rotation = DoGet_RotationFromEntityOrTargetEntity();
-        InCurrent._CurrentVelocity = Rotation.RotateVector(InParams.Get_Params().Get_StartingVelocity());
+        InCurrent._CurrentVelocity = Rotation.RotateVector(InParams.Get_StartingVelocity());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -177,7 +177,7 @@ namespace ck
             const FFragment_BulkVelocityModifier_Params& InParams) const
         -> void
     {
-        const auto& TargetVelocityChannels = InParams.Get_Params().Get_TargetChannels();
+        const auto& TargetVelocityChannels = InParams.Get_TargetChannels();
 
         {
             SCOPE_CYCLE_COUNTER(STAT_CkPhysics_BulkVelocitySetupScan);
@@ -219,7 +219,7 @@ namespace ck
         InHandle.View<FFragment_BulkVelocityModifier_Params, FTag_BulkVelocityModifier_GlobalScope>().ForEach(
         [&](FCk_Entity InModifierEntity, const FFragment_BulkVelocityModifier_Params& InMultiTargetVelocityModifierParams)
         {
-            if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetVelocityModifierParams.Get_Params().Get_TargetChannels()))
+            if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetVelocityModifierParams.Get_TargetChannels()))
             { return; }
 
             INC_DWORD_STAT(STAT_CkPhysics_BulkVelocityTargetsMatched);
@@ -244,7 +244,7 @@ namespace ck
             FFragment_BulkVelocityModifier_Requests& InRequests) const
         -> void
     {
-        const auto& TargetVelocityChannels = InParams.Get_Params().Get_TargetChannels();
+        const auto& TargetVelocityChannels = InParams.Get_TargetChannels();
 
         algo::ForEachRequest(InRequests._Requests, ck::Visitor(
         [&](const auto& InRequest)
@@ -290,7 +290,7 @@ namespace ck
             UCk_Utils_GameplayLabel_UE::Get_Label(InHandle),
             FCk_VelocityModifier_Spec
             {
-                InParams.Get_Params().Get_VelocityParams()
+                InParams.Get_VelocityParams()
             }
         );
     }

@@ -27,23 +27,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKENTITYCOLLECTION_API FFragment_EntityCollection_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_EntityCollection_Params);
-
-    public:
-        using ParamsType = FCk_EntityCollection_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_EntityCollection_Params, _Params);
-    };
+    using FFragment_EntityCollection_Params = FCk_EntityCollection_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

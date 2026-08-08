@@ -77,7 +77,7 @@ namespace ck
                 InHandle,
                 Target,
                 InNewResolution.Get_Causer(),
-                InParams.Get_Params().Get_ResolutionPhases()
+                InParams.Get_ResolutionPhases()
             }
         );
 

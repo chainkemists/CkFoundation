@@ -41,7 +41,7 @@ namespace ck
             FFragment_Vfx_Current& InCurrent)
             -> void
     {
-        const auto& Params = InParams.Get_Params();
+        const auto& Params = InParams;
 
         if (NOT InCurrent._LoadedAssets.Get_IsRequested())
         {
@@ -118,7 +118,7 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Fx_VfxSpawnAttached);
 
-        const auto& Params = InParams.Get_Params();
+        const auto& Params = InParams;
 
         const auto ResolvedSystem = Cast<UNiagaraSystem>(
             InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
@@ -181,7 +181,7 @@ namespace ck
     {
         SCOPE_CYCLE_COUNTER(STAT_Fx_VfxSpawnAtLocation);
 
-        const auto& Params = InParams.Get_Params();
+        const auto& Params = InParams;
 
         const auto ResolvedSystem = Cast<UNiagaraSystem>(
             InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));

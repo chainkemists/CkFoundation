@@ -256,7 +256,7 @@ namespace ck
         using Previous_CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Previous_Utils;
         using CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils;
 
-        const auto& CollectionName = InParams.Get_Params().Get_Name();
+        const auto& CollectionName = InParams.Get_Name();
 
         const auto PreviousContent = Previous_CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
         const auto CurrentContent = CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);

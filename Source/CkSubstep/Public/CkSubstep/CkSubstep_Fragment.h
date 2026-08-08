@@ -11,21 +11,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSUBSTEP_API FFragment_Substep_Params
-    {
-        CK_GENERATED_BODY(FFragment_Substep_Params);
-
-    public:
-        using ParamsType = FCk_Substep_Spec;
-
-    private:
-        ParamsType _Data;
-
-    public:
-        CK_PROPERTY_GET(_Data);
-
-        CK_DEFINE_CONSTRUCTORS(FFragment_Substep_Params, _Data);
-    };
+    using FFragment_Substep_Params = FCk_Substep_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

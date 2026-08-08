@@ -99,18 +99,18 @@ namespace ck
             const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest)
         -> bool
     {
-        auto GC = InParams.Get_Params().Get_GeometryCollection();
+        auto GC = InParams.Get_GeometryCollection();
 
         CK_LOG_ERROR_IF_NOT(ck::chaos, ck::IsValid(GC),
             TEXT("Unable to ApplyRadialStrain to GeometryCollection [{}] because the Geometry Collection Component [{}] is INVALID"),
             InHandle, GC)
         { return false; }
 
-        const auto& Proxy = InParams.Get_Params().Get_GeometryCollection()->GetPhysicsProxy();
+        const auto& Proxy = InParams.Get_GeometryCollection()->GetPhysicsProxy();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Proxy, ck::IsValid_Policy_NullptrOnly{}),
             TEXT("Unable to ApplyRadialStrain to GeometryCollection [{}] because the PhysProxy of Geometry Collection Component [{}] is INVALID"),
-            InHandle, InParams.Get_Params().Get_GeometryCollection())
+            InHandle, InParams.Get_GeometryCollection())
         { return false; }
 
         CK_ENSURE_IF_NOT(InRequest.Get_Radius() > 0.0f,
@@ -219,7 +219,7 @@ namespace ck
     {
         InHandle.Remove<FTag_GeometryCollection_CrumbleNonAnchoredClusters>();
 
-        const auto GeometryCollectionComponent = InParams.Get_Params().Get_GeometryCollection();
+        const auto GeometryCollectionComponent = InParams.Get_GeometryCollection();
 
         CK_ENSURE_IF_NOT(ck::IsValid(GeometryCollectionComponent),
             TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the Geometry Collection Component [{}] is INVALID"),
@@ -274,7 +274,7 @@ namespace ck
     {
         InHandle.Remove<MarkedDirtyBy>();
 
-        const auto GeometryCollectionComponent = InParams.Get_Params().Get_GeometryCollection();
+        const auto GeometryCollectionComponent = InParams.Get_GeometryCollection();
 
         CK_ENSURE_IF_NOT(ck::IsValid(GeometryCollectionComponent),
             TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the Geometry Collection Component [{}] is INVALID"),

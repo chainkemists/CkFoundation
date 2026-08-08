@@ -42,7 +42,7 @@ namespace ck
             FFragment_ResolverDataBundle_Current& InCurrent) const
         -> void
     {
-        const auto& Phases = InParams.Get_Params().Get_Phases();
+        const auto& Phases = InParams.Get_Phases();
 
         [[maybe_unused]]
         const auto& PhaseNamePrevious = Phases.IsValidIndex(InCurrent.Get_CurrentPhaseIndex()) ?
@@ -54,7 +54,7 @@ namespace ck
         {
             UCk_Utils_ResolverDataBundle_UE::DoMarkBundle_AsCalculateDone(InHandle);
 
-            const auto& Params = InParams.Get_Params();
+            const auto& Params = InParams;
             const auto Payload = FCk_Payload_ResolverDataBundle_Resolved{}
                 .Set_DataBundle(InHandle)
                 .Set_Instigator(Params.Get_Instigator())
@@ -75,7 +75,7 @@ namespace ck
             // Requests/PendingOperations, so it still waits for those to drain either way.
             InHandle.AddOrGet<FTag_ResolverDataBundle_NeedsCalculate>();
 
-            const auto& PhaseName = InParams.Get_Params().Get_Phases()[InCurrent.Get_CurrentPhaseIndex()].Get_PhaseName();
+            const auto& PhaseName = InParams.Get_Phases()[InCurrent.Get_CurrentPhaseIndex()].Get_PhaseName();
             UUtils_Signal_ResolverDataBundle_PhaseStart::Broadcast(InHandle, ck::MakePayload(InHandle, PhaseName));
         }
 
@@ -318,9 +318,9 @@ namespace ck
 
         resolver::Verbose(TEXT("Calculated Final Value [{}] of ResolverData Bundle [{}]"), CalculatedFinalValue, InHandle);
 
-        const auto& Instigator = InParams.Get_Params().Get_Instigator();
-        const auto& Target = InParams.Get_Params().Get_Target();
-        const auto& ResolverCause = InParams.Get_Params().Get_Causer();
+        const auto& Instigator = InParams.Get_Instigator();
+        const auto& Target = InParams.Get_Target();
+        const auto& ResolverCause = InParams.Get_Causer();
         const auto& PhaseName = UCk_Utils_ResolverDataBundle_UE::Get_CurrentPhase(InHandle);
 
         const auto Payload = FCk_Payload_ResolverDataBundle_Resolved{}

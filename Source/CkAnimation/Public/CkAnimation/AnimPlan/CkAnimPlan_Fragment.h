@@ -27,23 +27,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKANIMATION_API FFragment_AnimPlan_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_AnimPlan_Params);
-
-    public:
-        using ParamsType = FCk_AnimPlan_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_AnimPlan_Params, _Params);
-    };
+    using FFragment_AnimPlan_Params = FCk_AnimPlan_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

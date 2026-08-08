@@ -47,7 +47,7 @@ static struct FAnimPlanRepHandlerRegistrar
                     if (NOT Entity.Has<ck::FFragment_AnimPlan_Current>())
                     { return {}; }
 
-                    const auto& Params  = Entity.Get<ck::FFragment_AnimPlan_Params>().Get_Params();
+                    const auto& Params  = Entity.Get<ck::FFragment_AnimPlan_Params>();
                     const auto& Current = Entity.Get<ck::FFragment_AnimPlan_Current>();
 
                     auto Data = FCk_RepData_AnimPlans{};

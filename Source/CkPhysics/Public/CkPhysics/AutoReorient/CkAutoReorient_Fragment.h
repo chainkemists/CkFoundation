@@ -13,23 +13,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FFragment_AutoReorient_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_AutoReorient_Params);
-
-    public:
-        using ParamsType = FCk_AutoReorient_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_AutoReorient_Params, _Params);
-    };
+    using FFragment_AutoReorient_Params = FCk_AutoReorient_Spec;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

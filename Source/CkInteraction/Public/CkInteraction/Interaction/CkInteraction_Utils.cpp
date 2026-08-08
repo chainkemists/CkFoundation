@@ -190,7 +190,7 @@ auto
         const FCk_Handle_Interaction& InHandle)
     -> FCk_Handle
 {
-    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_Source();
+    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Source();
 }
 
 auto
@@ -218,7 +218,7 @@ auto
         const FCk_Handle_Interaction& InHandle)
     -> FCk_Handle
 {
-    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_Instigator();
+    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Instigator();
 }
 
 auto
@@ -227,7 +227,7 @@ auto
         const FCk_Handle_Interaction& InHandle)
     -> FCk_Handle
 {
-    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_Target();
+    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Target();
 }
 
 auto
@@ -255,7 +255,7 @@ auto
         const FCk_Handle_Interaction& InHandle)
     -> const FGameplayTag&
 {
-    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_InteractionChannel();
+    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_InteractionChannel();
 }
 
 auto
@@ -264,7 +264,7 @@ auto
         const FCk_Handle_Interaction& InHandle)
     -> ECk_Interaction_CompletionPolicy
 {
-    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_CompletionPolicy();
+    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_CompletionPolicy();
 }
 
 auto

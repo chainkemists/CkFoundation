@@ -122,7 +122,7 @@ auto
         const FCk_Handle_InteractSource& InHandle)
     -> const FGameplayTag&
 {
-    return InHandle.Get<ck::FFragment_InteractSource_Params>().Get_Params().Get_InteractionChannel();
+    return InHandle.Get<ck::FFragment_InteractSource_Params>().Get_InteractionChannel();
 }
 
 auto
@@ -131,7 +131,7 @@ auto
         const FCk_Handle_InteractSource& InHandle)
     -> ECk_InteractionSource_ConcurrentInteractionsPolicy
 {
-    return InHandle.Get<ck::FFragment_InteractSource_Params>().Get_Params().Get_ConcurrentInteractionsPolicy();
+    return InHandle.Get<ck::FFragment_InteractSource_Params>().Get_ConcurrentInteractionsPolicy();
 }
 
 auto

@@ -76,7 +76,7 @@ auto
     -> USoundBase*
 {
     // Resolved from the loader-rooted batch on Current — null until Setup has loaded the assets
-    const auto& Params = InSfxHandle.Get<ck::FFragment_Sfx_Params>().Get_Params();
+    const auto& Params = InSfxHandle.Get<ck::FFragment_Sfx_Params>();
     const auto& Current = InSfxHandle.Get<ck::FFragment_Sfx_Current>();
 
     return ::Cast<USoundBase>(Current._LoadedAssets.Get_ResolvedObject(Params.Get_SoundCue().ToSoftObjectPath()));

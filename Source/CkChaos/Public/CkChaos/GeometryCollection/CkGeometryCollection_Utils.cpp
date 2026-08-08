@@ -95,7 +95,7 @@ auto
         const FCk_Handle_GeometryCollection& InGeometryCollection)
     -> UGeometryCollectionComponent*
 {
-    const auto& Ptr = InGeometryCollection.Get<ck::FFragment_GeometryCollection_Params>().Get_Params().Get_GeometryCollection();
+    const auto& Ptr = InGeometryCollection.Get<ck::FFragment_GeometryCollection_Params>().Get_GeometryCollection();
 
     return Ptr.Get();
 }

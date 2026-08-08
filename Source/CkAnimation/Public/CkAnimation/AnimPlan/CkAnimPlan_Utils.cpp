@@ -143,7 +143,7 @@ auto
         const FCk_Handle_AnimPlan& InAnimPlanEntity)
     -> FCk_AnimPlan_Goal
 {
-    return FCk_AnimPlan_Goal{InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Params>().Get_Params().Get_AnimGoal()};
+    return FCk_AnimPlan_Goal{InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Params>().Get_AnimGoal()};
 }
 
 auto
@@ -152,7 +152,7 @@ auto
         const FCk_Handle_AnimPlan& InAnimPlanEntity)
     -> FCk_AnimPlan_Cluster
 {
-    const auto& Params = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Params>().Get_Params();
+    const auto& Params = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Params>();
     const auto& Current = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Current>();
 
     return FCk_AnimPlan_Cluster{Params.Get_AnimGoal(), Current.Get_AnimCluster()};
@@ -164,7 +164,7 @@ auto
         const FCk_Handle_AnimPlan& InAnimPlanEntity)
     -> FCk_AnimPlan_State
 {
-    const auto& Params = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Params>().Get_Params();
+    const auto& Params = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Params>();
     const auto& Current = InAnimPlanEntity.Get<ck::FFragment_AnimPlan_Current>();
 
     return FCk_AnimPlan_State{Params.Get_AnimGoal(), Current.Get_AnimCluster(), Current.Get_AnimState()};

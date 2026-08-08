@@ -95,7 +95,7 @@ namespace ck
 
         InCurrentComp._AttachedEntityAndActor = SensorAttachedEntityAndActor;
 
-        const auto& Params      = InParamsComp.Get_Params();
+        const auto& Params      = InParamsComp;
         const auto& ShapeParams = Params.Get_ShapeParams();
         const auto& PhysicsParams = Params.Get_PhysicsParams();
 
@@ -232,7 +232,7 @@ namespace ck
 
         const auto SensorBasicDetails =  FCk_Sensor_BasicDetails
         {
-            InParamsComp.Get_Params().Get_SensorName(),
+            InParamsComp.Get_SensorName(),
             InSensorEntity,
             InCurrentComp.Get_AttachedEntityAndActor()
         };
@@ -249,7 +249,7 @@ namespace ck
                                          ? ECollisionEnabled::QueryOnly
                                          : ECollisionEnabled::NoCollision;
 
-        const auto& Params     = InParamsComp.Get_Params();
+        const auto& Params     = InParamsComp;
         const auto& SensorName = Params.Get_SensorName();
 
         if (NewEnableDisable == ECk_EnableDisable::Disable)
@@ -274,7 +274,7 @@ namespace ck
             const FCk_Request_Sensor_Resize& InRequest)
         -> void
     {
-        const auto& ParamsShapeType = InParamsComp.Get_Params().Get_ShapeParams().Get_ShapeDimensions().Get_ShapeType();
+        const auto& ParamsShapeType = InParamsComp.Get_ShapeParams().Get_ShapeDimensions().Get_ShapeType();
         const auto& NewSensorDimensions = InRequest.Get_NewSensorDimensions();
         const auto& ShapeType = NewSensorDimensions.Get_ShapeType();
 
@@ -363,7 +363,7 @@ namespace ck
         const auto& OverlappedMarkerName    = OverlappedMarkerDetails.Get_MarkerName();
         const auto& OverlappedMarkerEntity  = OverlappedMarkerDetails.Get_MarkerEntity();
 
-        const auto& SensorFilteringInfo = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
+        const auto& SensorFilteringInfo = InParamsComp.Get_FilteringParams().Get_MarkerNames();
 
         CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity, ck::IsValid_Policy_IncludePendingKill{}),
             TEXT("Sensor [{}] received BeginOverlap with Marker [{}] that has an INVALID Entity"),
@@ -425,7 +425,7 @@ namespace ck
         const auto& OverlappedMarkerName    = OverlappedMarkerDetails.Get_MarkerName();
         const auto& OverlappedMarkerEntity  = OverlappedMarkerDetails.Get_MarkerEntity();
 
-        const auto& SensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
+        const auto& SensorFilteringInfo  = InParamsComp.Get_FilteringParams().Get_MarkerNames();
 
         CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity, ck::IsValid_Policy_IncludePendingKill{}),
             TEXT("Sensor [{}] received EndOverlap with Marker [{}] that has an INVALID Entity"),
@@ -577,13 +577,13 @@ namespace ck
         { return; }
 
         const auto& BoneTransform = UCk_Utils_MarkerAndSensor_UE::Get_MarkerOrSensor_BoneFollowTransform(
-            InSensorEntity, SensorAttachedEntityAndActor, InParamsComp.Get_Params().Get_AttachmentParams());
+            InSensorEntity, SensorAttachedEntityAndActor, InParamsComp.Get_AttachmentParams());
 
         if (ck::Is_NOT_Valid(BoneTransform))
         { return; }
 
         Sensor->SetWorldTransform(*BoneTransform);
-        Sensor->AddLocalTransform(InParamsComp.Get_Params().Get_RelativeTransform());
+        Sensor->AddLocalTransform(InParamsComp.Get_RelativeTransform());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -620,7 +620,7 @@ namespace ck
 
         const auto SensorBasicDetails =  FCk_Sensor_BasicDetails
         {
-            InParamsComp.Get_Params().Get_SensorName(),
+            InParamsComp.Get_SensorName(),
             InSensorEntity,
             InCurrentComp.Get_AttachedEntityAndActor()
         };

@@ -105,7 +105,7 @@ auto
         const FCk_Handle_AnimAsset& InAnimAssetEntity)
     -> FCk_AnimAsset_Animation
 {
-    const auto& AnimAssetParams = InAnimAssetEntity.Get<ck::FFragment_AnimAsset_Params>().Get_Params();
+    const auto& AnimAssetParams = InAnimAssetEntity.Get<ck::FFragment_AnimAsset_Params>();
 
     return AnimAssetParams.Get_AnimationAsset();
 }

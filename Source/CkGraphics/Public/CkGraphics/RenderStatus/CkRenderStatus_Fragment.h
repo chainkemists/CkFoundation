@@ -18,23 +18,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKGRAPHICS_API FFragment_RenderStatus_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_RenderStatus_Params);
-
-    public:
-        using ParamsType = FCk_RenderStatus_Spec;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_RenderStatus_Params, _Params);
-    };
+    using FFragment_RenderStatus_Params = FCk_RenderStatus_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 

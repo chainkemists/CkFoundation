@@ -87,7 +87,7 @@ namespace ck
             return false;
         }
 
-        const auto& Params = InParams.Get_Params();
+        const auto& Params = InParams;
         const auto& CameraShake = Params.Get_CameraShake();
         const auto& Scale = Params.Get_Scale();
 
@@ -106,7 +106,7 @@ namespace ck
             const FCk_Request_CameraShake_PlayAtLocation& InRequest) const
         -> bool
     {
-        const auto& Params                 = InParams.Get_Params();
+        const auto& Params                 = InParams;
         const auto& CameraShake            = Params.Get_CameraShake();
         const auto& InnerRadius            = Params.Get_InnerRadius();
         const auto& OuterRadius            = Params.Get_OuterRadius();
