@@ -18,6 +18,32 @@ auto
 {
     Super::Initialize(Collection);
 
+    DoBindToSettingsAndRegisterScanPaths();
+}
+
+auto
+    UCk_KeyBinding_Subsystem::
+    PlayerControllerChanged(
+        APlayerController* NewPlayerController)
+    -> void
+{
+    Super::PlayerControllerChanged(NewPlayerController);
+
+    DoBindToSettingsAndRegisterScanPaths();
+}
+
+auto
+    UCk_KeyBinding_Subsystem::
+    DoBindToSettingsAndRegisterScanPaths()
+    -> void
+{
+    // The engine creates UEnhancedInputUserSettings from PlayerControllerChanged, AFTER the
+    // subsystem collection initializes — at Initialize time GetUserSettings() is always null, so
+    // this must be re-attempted from PlayerControllerChanged (and lazily from BindTo) until the
+    // settings object exists.
+    if (_Bound)
+    { return; }
+
     const auto* LocalPlayer = GetLocalPlayer();
     if (ck::Is_NOT_Valid(LocalPlayer))
     { return; }
@@ -103,6 +129,8 @@ auto
         const FCk_Handle_KeybindListener& Listener)
     -> void
 {
+    DoBindToSettingsAndRegisterScanPaths();
+
     auto& Entry = _Watchers.AddDefaulted_GetRef();
     Entry.MappingName = Listener.Get_MappingName();
     Entry.Slot = Listener.Get_Slot();
