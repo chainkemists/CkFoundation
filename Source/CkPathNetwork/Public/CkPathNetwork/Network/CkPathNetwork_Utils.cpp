@@ -143,10 +143,10 @@ auto
         CK_IGNORE_PENDING_KILL>().ForEach(
         [&Ribbons](
             FCk_Entity,
-            const ck::FFragment_PathNetwork_Params& InParams,
-            const ck::FFragment_PathNetwork_Graph&)
+            const ck::FFragment_PathNetwork_Params&,
+            const ck::FFragment_PathNetwork_Graph& InGraph)
         {
-            Ribbons.Append(InParams.Get_Ribbons());
+            Ribbons.Append(InGraph.Get_Ribbons());
         });
     return Ribbons;
 }
