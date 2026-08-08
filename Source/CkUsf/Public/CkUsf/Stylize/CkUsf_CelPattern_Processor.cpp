@@ -110,7 +110,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_CelPatternTarget& InTarget,
-            const FFragment_OwningActor_Current& InOwningActor)
+            const FFragment_OwningActor& InOwningActor)
         -> void
     {
         auto* Actor = InOwningActor.Get_EntityOwningActor().Get();
